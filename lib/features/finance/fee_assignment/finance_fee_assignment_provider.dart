@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/repository_providers.dart';
 import '../finance_models.dart';
 
 final financeFeeAssignmentLoadingProvider = StateProvider<bool>((ref) => false);
@@ -7,32 +8,7 @@ final financeFeeAssignmentErrorProvider = StateProvider<bool>((ref) => false);
 final financeSelectedHandoffIdProvider = StateProvider<String?>((ref) => null);
 
 final financeInstallmentPlansProvider = Provider<List<InstallmentPlan>>(
-  (ref) => const [
-    InstallmentPlan(
-      id: 'plan_quarterly',
-      label: '3-term quarterly',
-      installmentCount: 3,
-      type: InstallmentPlanType.quarterly,
-    ),
-    InstallmentPlan(
-      id: 'plan_termly',
-      label: '4-term termly',
-      installmentCount: 4,
-      type: InstallmentPlanType.termly,
-    ),
-    InstallmentPlan(
-      id: 'plan_monthly',
-      label: '10-month monthly',
-      installmentCount: 10,
-      type: InstallmentPlanType.monthly,
-    ),
-    InstallmentPlan(
-      id: 'plan_annual',
-      label: 'Annual single payment',
-      installmentCount: 1,
-      type: InstallmentPlanType.annual,
-    ),
-  ],
+  (ref) => ref.read(financeRepositoryProvider).getInstallmentPlans(),
 );
 
 final financeAssignmentDraftProvider = StateProvider<FeeAssignmentDraft?>(

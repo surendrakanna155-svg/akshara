@@ -82,7 +82,8 @@ class AksharaInsightCard extends StatelessWidget {
                       ),
                       if (onAction != null) ...[
                         const SizedBox(width: AksharaSpacing.s2),
-                        TextButton(
+                        Flexible(
+                          child: TextButton(
                           onPressed: onAction,
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
@@ -99,7 +100,9 @@ class AksharaInsightCard extends StatelessWidget {
                             style: text.labelLarge.copyWith(
                               color: colors.primary,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
+                        ),
                         ),
                       ],
                     ],

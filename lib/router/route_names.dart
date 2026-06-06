@@ -83,14 +83,27 @@ abstract final class RouteNames {
   static const String financeStudentAccounts = '/finance/student-accounts';
   static const String financeFeeAssignment = '/finance/fee-assignment';
   static const String financeCollections = '/finance/collections';
+  static const String financeDefaulters = '/finance/defaulters';
+  static const String financeRefunds = '/finance/refunds';
+  static const String financeDiscounts = '/finance/discounts';
+  static const String financeReports = '/finance/reports';
+  static const String financeSettings = '/finance/settings';
 
-  /// All finance module routes (FN-01 → FN-05).
+  static String financeCollectionDetail(String collectionId) =>
+      '$financeCollections/$collectionId';
+
+  /// All finance module routes (FN-01 → FN-11).
   static const List<String> financeRoutes = [
     financeDashboard,
     financeFeeStructures,
     financeStudentAccounts,
     financeFeeAssignment,
     financeCollections,
+    financeDefaulters,
+    financeRefunds,
+    financeDiscounts,
+    financeReports,
+    financeSettings,
   ];
   static const String sis = '/sis';
   static const String sisDashboard = '/sis/dashboard';

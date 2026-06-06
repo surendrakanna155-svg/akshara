@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../admissions/admissions_models.dart';
 
-/// Finance sub-module destinations (FN-01 → FN-05 Phase 1).
+/// Finance sub-module destinations (FN-01 → FN-11).
 enum FinanceScreen {
   dashboard,
   feeStructures,
   studentAccounts,
   feeAssignment,
-  collections;
+  collections,
+  collectionDetail,
+  defaulters,
+  refunds,
+  discounts,
+  reports,
+  settings;
 
   String get label => switch (this) {
         FinanceScreen.dashboard => 'Dashboard',
@@ -16,6 +22,12 @@ enum FinanceScreen {
         FinanceScreen.studentAccounts => 'Student Accounts',
         FinanceScreen.feeAssignment => 'Fee Assignment',
         FinanceScreen.collections => 'Collections',
+        FinanceScreen.collectionDetail => 'Collection Detail',
+        FinanceScreen.defaulters => 'Defaulters',
+        FinanceScreen.refunds => 'Refunds',
+        FinanceScreen.discounts => 'Discounts',
+        FinanceScreen.reports => 'Reports',
+        FinanceScreen.settings => 'Settings',
       };
 }
 
@@ -276,4 +288,362 @@ class FinanceHandoffQueueItem {
 
   final ApprovedStudentHandoff handoff;
   final FeeHandoffStatus effectiveStatus;
+}
+
+// --- Phase 2 models (FN-06 → FN-11) ---
+
+enum DefaulterAgingBucket { current, days1to30, days31to60, days61to90, over90 }
+
+enum RefundStatus { pending, approved, rejected, processed }
+
+enum DiscountApprovalStatus { pending, approved, rejected, active }
+
+enum ScholarshipType { merit, needBased, sibling, staffChild, sports }
+
+@immutable
+class PaymentTimelineEntry {
+  const PaymentTimelineEntry({
+    required this.id,
+    required this.label,
+    required this.amount,
+    required this.timestamp,
+    required this.status,
+    required this.mode,
+  });
+
+  final String id;
+  final String label;
+  final String amount;
+  final String timestamp;
+  final CollectionStatus status;
+  final String mode;
+}
+
+@immutable
+class InstallmentHistoryEntry {
+  const InstallmentHistoryEntry({
+    required this.id,
+    required this.termLabel,
+    required this.dueDate,
+    required this.amount,
+    required this.paidAmount,
+    required this.status,
+  });
+
+  final String id;
+  final String termLabel;
+  final String dueDate;
+  final String amount;
+  final String paidAmount;
+  final CollectionStatus status;
+}
+
+@immutable
+class ReceiptLink {
+  const ReceiptLink({
+    required this.receiptNumber,
+    required this.amount,
+    required this.dateLabel,
+    required this.parentReceiptRoute,
+  });
+
+  final String receiptNumber;
+  final String amount;
+  final String dateLabel;
+  final String parentReceiptRoute;
+}
+
+@immutable
+class CollectionDetail {
+  const CollectionDetail({
+    required this.payment,
+    required this.summaryKpis,
+    required this.paymentTimeline,
+    required this.installmentHistory,
+    required this.receiptLinks,
+    required this.feeAccountId,
+    required this.aiInsight,
+  });
+
+  final CollectionPayment payment;
+  final List<FinanceKpi> summaryKpis;
+  final List<PaymentTimelineEntry> paymentTimeline;
+  final List<InstallmentHistoryEntry> installmentHistory;
+  final List<ReceiptLink> receiptLinks;
+  final String feeAccountId;
+  final String aiInsight;
+}
+
+@immutable
+class AgingBucketSummary {
+  const AgingBucketSummary({
+    required this.bucket,
+    required this.label,
+    required this.studentCount,
+    required this.totalAmount,
+  });
+
+  final DefaulterAgingBucket bucket;
+  final String label;
+  final int studentCount;
+  final String totalAmount;
+}
+
+@immutable
+class ContactHistoryEntry {
+  const ContactHistoryEntry({
+    required this.id,
+    required this.timestamp,
+    required this.channel,
+    required this.outcome,
+    required this.notes,
+  });
+
+  final String id;
+  final String timestamp;
+  final String channel;
+  final String outcome;
+  final String notes;
+}
+
+@immutable
+class DefaulterRecord {
+  const DefaulterRecord({
+    required this.id,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.classLabel,
+    required this.overdueAmount,
+    required this.daysOverdue,
+    required this.bucket,
+    required this.lastContact,
+    required this.collectionProbability,
+    required this.contactHistory,
+    required this.feeAccountId,
+  });
+
+  final String id;
+  final String studentName;
+  final String admissionNumber;
+  final String classLabel;
+  final String overdueAmount;
+  final int daysOverdue;
+  final DefaulterAgingBucket bucket;
+  final String lastContact;
+  final int collectionProbability;
+  final List<ContactHistoryEntry> contactHistory;
+  final String feeAccountId;
+}
+
+@immutable
+class DefaultersDashboardData {
+  const DefaultersDashboardData({
+    required this.kpis,
+    required this.agingBuckets,
+    required this.defaulters,
+    required this.aiInsight,
+    required this.aiActionLabel,
+  });
+
+  final List<FinanceKpi> kpis;
+  final List<AgingBucketSummary> agingBuckets;
+  final List<DefaulterRecord> defaulters;
+  final String aiInsight;
+  final String aiActionLabel;
+}
+
+@immutable
+class RefundRequest {
+  const RefundRequest({
+    required this.id,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.classLabel,
+    required this.amount,
+    required this.reason,
+    required this.requestedAt,
+    required this.status,
+    required this.approver,
+    required this.feeAccountId,
+    required this.originalReceipt,
+  });
+
+  final String id;
+  final String studentName;
+  final String admissionNumber;
+  final String classLabel;
+  final String amount;
+  final String reason;
+  final String requestedAt;
+  final RefundStatus status;
+  final String approver;
+  final String feeAccountId;
+  final String originalReceipt;
+}
+
+@immutable
+class ScholarshipCatalogItem {
+  const ScholarshipCatalogItem({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.maxDiscount,
+    required this.eligibility,
+    required this.activeAssignments,
+  });
+
+  final String id;
+  final String name;
+  final ScholarshipType type;
+  final String maxDiscount;
+  final String eligibility;
+  final int activeAssignments;
+}
+
+@immutable
+class DiscountRule {
+  const DiscountRule({
+    required this.id,
+    required this.name,
+    required this.discountPercent,
+    required this.appliesTo,
+    required this.status,
+  });
+
+  final String id;
+  final String name;
+  final String discountPercent;
+  final String appliesTo;
+  final DiscountApprovalStatus status;
+}
+
+@immutable
+class StudentDiscountAssignment {
+  const StudentDiscountAssignment({
+    required this.id,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.scholarshipName,
+    required this.discountAmount,
+    required this.status,
+    required this.impactOnFees,
+  });
+
+  final String id;
+  final String studentName;
+  final String admissionNumber;
+  final String scholarshipName;
+  final String discountAmount;
+  final DiscountApprovalStatus status;
+  final String impactOnFees;
+}
+
+@immutable
+class DiscountsDashboardData {
+  const DiscountsDashboardData({
+    required this.kpis,
+    required this.scholarships,
+    required this.rules,
+    required this.assignments,
+    required this.impactSummary,
+  });
+
+  final List<FinanceKpi> kpis;
+  final List<ScholarshipCatalogItem> scholarships;
+  final List<DiscountRule> rules;
+  final List<StudentDiscountAssignment> assignments;
+  final String impactSummary;
+}
+
+enum FinanceReportType {
+  collection,
+  outstanding,
+  discount,
+  refund,
+}
+
+@immutable
+class FinanceReportCatalogItem {
+  const FinanceReportCatalogItem({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.type,
+    required this.lastGenerated,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final FinanceReportType type;
+  final String lastGenerated;
+}
+
+@immutable
+class FinanceReportTrendPoint {
+  const FinanceReportTrendPoint({
+    required this.label,
+    required this.value,
+    required this.target,
+  });
+
+  final String label;
+  final double value;
+  final double target;
+}
+
+@immutable
+class FinanceReportsData {
+  const FinanceReportsData({
+    required this.catalog,
+    required this.collectionTrend,
+    required this.outstandingTrend,
+    required this.selectedReportId,
+  });
+
+  final List<FinanceReportCatalogItem> catalog;
+  final List<FinanceReportTrendPoint> collectionTrend;
+  final List<FinanceReportTrendPoint> outstandingTrend;
+  final String selectedReportId;
+}
+
+@immutable
+class FinanceSettingItem {
+  const FinanceSettingItem({
+    required this.id,
+    required this.label,
+    required this.value,
+    required this.description,
+    required this.editable,
+  });
+
+  final String id;
+  final String label;
+  final String value;
+  final String description;
+  final bool editable;
+}
+
+@immutable
+class FinanceSettingsSection {
+  const FinanceSettingsSection({
+    required this.id,
+    required this.title,
+    required this.items,
+  });
+
+  final String id;
+  final String title;
+  final List<FinanceSettingItem> items;
+}
+
+@immutable
+class FinanceSettingsData {
+  const FinanceSettingsData({
+    required this.sections,
+    required this.academicYear,
+  });
+
+  final List<FinanceSettingsSection> sections;
+  final String academicYear;
 }

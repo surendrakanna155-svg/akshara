@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../router/route_names.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
@@ -152,7 +155,8 @@ class _CollectionsTable extends StatelessWidget {
       label: 'Collections payment list, ${payments.length} items',
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: DataTable(
+        child: Material(
+          child: DataTable(
           headingRowHeight: 48,
           dataRowMinHeight: 52,
           dataRowMaxHeight: 64,
@@ -170,6 +174,9 @@ class _CollectionsTable extends StatelessWidget {
           rows: [
             for (final payment in payments)
               DataRow(
+                onSelectChanged: (_) => context.go(
+                  RouteNames.financeCollectionDetail(payment.id),
+                ),
                 cells: [
                   DataCell(Text(payment.receiptNumber)),
                   DataCell(Text(payment.studentName)),
@@ -183,6 +190,7 @@ class _CollectionsTable extends StatelessWidget {
                 ],
               ),
           ],
+          ),
         ),
       ),
     );
@@ -222,7 +230,10 @@ class _CollectionMobileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AksharaSpacing.s3),
         side: BorderSide(color: colors.outlineVariant),
       ),
-      child: Padding(
+      child: InkWell(
+        onTap: () => context.go(RouteNames.financeCollectionDetail(payment.id)),
+        borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+        child: Padding(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,6 +249,7 @@ class _CollectionMobileCard extends StatelessWidget {
             _CollectionStatusChip(status: payment.status),
           ],
         ),
+      ),
       ),
     );
   }

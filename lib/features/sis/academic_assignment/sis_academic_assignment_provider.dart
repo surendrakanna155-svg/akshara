@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/repository_providers.dart';
 import '../registry/sis_registry_provider.dart';
 import '../sis_models.dart';
 
@@ -10,15 +11,15 @@ final sisSelectedAssignmentStudentIdProvider = StateProvider<String?>(
 );
 
 final sisClassOptionsProvider = Provider<List<String>>(
-  (ref) => const ['Nursery', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
+  (ref) => ref.read(sisRepositoryProvider).getClassOptions(),
 );
 
 final sisSectionOptionsProvider = Provider<List<String>>(
-  (ref) => const ['A', 'B', 'C', 'D'],
+  (ref) => ref.read(sisRepositoryProvider).getSectionOptions(),
 );
 
 final sisAcademicYearOptionsProvider = Provider<List<String>>(
-  (ref) => const ['2026–27', '2025–26'],
+  (ref) => ref.read(sisRepositoryProvider).getAcademicYearOptions(),
 );
 
 final sisAssignmentDraftProvider = StateProvider<SisAcademicAssignmentDraft?>(

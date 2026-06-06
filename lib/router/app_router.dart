@@ -393,6 +393,50 @@ GoRouter createAppRouter({
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: financeCollectionsRouteBuilder(context, state),
                 ),
+                routes: [
+                  GoRoute(
+                    path: ':collectionId',
+                    name: 'financeCollectionDetail',
+                    pageBuilder: (context, state) => NoTransitionPage(
+                      child: financeCollectionDetailRouteBuilder(context, state),
+                    ),
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'defaulters',
+                name: 'financeDefaulters',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeDefaultersRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'refunds',
+                name: 'financeRefunds',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeRefundsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'discounts',
+                name: 'financeDiscounts',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeDiscountsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'reports',
+                name: 'financeReports',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeReportsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'settings',
+                name: 'financeSettings',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeSettingsRouteBuilder(context, state),
+                ),
               ),
             ],
           ),

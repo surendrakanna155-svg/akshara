@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/repository_providers.dart';
 import '../admissions_models.dart';
 
 final admissionsApplicationsLoadingProvider =
@@ -14,7 +15,7 @@ final admissionsApplicationsProvider =
   if (ref.watch(admissionsApplicationsLoadingProvider)) return const [];
   if (ref.watch(admissionsApplicationsErrorProvider)) return const [];
   if (ref.watch(admissionsApplicationsEmptyProvider)) return const [];
-  return _mockApplications();
+  return ref.read(admissionsRepositoryProvider).getApplications();
 });
 
 final admissionsApplicationWorkflowProvider =
@@ -57,74 +58,3 @@ final admissionsApplicationWorkflowProvider =
     approved: approved,
   );
 });
-
-List<AdmissionsApplication> _mockApplications() {
-  return const [
-    AdmissionsApplication(
-      id: 'APP-2208',
-      studentName: 'Ananya Reddy',
-      classLabel: '5',
-      parentName: 'Rajesh Reddy',
-      submittedLabel: '4 Jun 2026',
-      status: ApplicationStatus.underReview,
-      documentsComplete: 4,
-      documentsTotal: 5,
-      counselor: 'Meera N.',
-    ),
-    AdmissionsApplication(
-      id: 'APP-2201',
-      studentName: 'Karthik Sharma',
-      classLabel: '8',
-      parentName: 'Lakshmi Sharma',
-      submittedLabel: '3 Jun 2026',
-      status: ApplicationStatus.documentsPending,
-      documentsComplete: 2,
-      documentsTotal: 5,
-      counselor: 'Rahul V.',
-    ),
-    AdmissionsApplication(
-      id: 'APP-2194',
-      studentName: 'Priya Menon',
-      classLabel: '3',
-      parentName: 'Suresh Menon',
-      submittedLabel: '2 Jun 2026',
-      status: ApplicationStatus.submitted,
-      documentsComplete: 5,
-      documentsTotal: 5,
-      counselor: 'Meera N.',
-    ),
-    AdmissionsApplication(
-      id: 'APP-2188',
-      studentName: 'Arjun Patel',
-      classLabel: '10',
-      parentName: 'Anita Patel',
-      submittedLabel: '1 Jun 2026',
-      status: ApplicationStatus.approved,
-      documentsComplete: 5,
-      documentsTotal: 5,
-      counselor: 'Sneha K.',
-    ),
-    AdmissionsApplication(
-      id: 'APP-2180',
-      studentName: 'Divya Iyer',
-      classLabel: '6',
-      parentName: 'Vikram Iyer',
-      submittedLabel: '—',
-      status: ApplicationStatus.draft,
-      documentsComplete: 0,
-      documentsTotal: 5,
-      counselor: 'Arun D.',
-    ),
-    AdmissionsApplication(
-      id: 'APP-2175',
-      studentName: 'Emma Thomas',
-      classLabel: '7',
-      parentName: 'Joseph Thomas',
-      submittedLabel: '28 May 2026',
-      status: ApplicationStatus.rejected,
-      documentsComplete: 3,
-      documentsTotal: 5,
-      counselor: 'Sneha K.',
-    ),
-  ];
-}

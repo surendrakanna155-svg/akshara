@@ -2,13 +2,18 @@ import '../admin/models/admin_nav_models.dart';
 import '../../router/route_names.dart';
 import 'finance_models.dart';
 
-/// Primary finance sub-navigation tabs (FN-01 → FN-05).
+/// Primary finance sub-navigation tabs (FN-01 → FN-11).
 const List<FinanceScreen> kFinanceNavScreens = [
   FinanceScreen.dashboard,
   FinanceScreen.feeStructures,
   FinanceScreen.studentAccounts,
   FinanceScreen.feeAssignment,
   FinanceScreen.collections,
+  FinanceScreen.defaulters,
+  FinanceScreen.refunds,
+  FinanceScreen.discounts,
+  FinanceScreen.reports,
+  FinanceScreen.settings,
 ];
 
 extension FinanceScreenRoutes on FinanceScreen {
@@ -18,6 +23,12 @@ extension FinanceScreenRoutes on FinanceScreen {
         FinanceScreen.studentAccounts => RouteNames.financeStudentAccounts,
         FinanceScreen.feeAssignment => RouteNames.financeFeeAssignment,
         FinanceScreen.collections => RouteNames.financeCollections,
+        FinanceScreen.collectionDetail => RouteNames.financeCollections,
+        FinanceScreen.defaulters => RouteNames.financeDefaulters,
+        FinanceScreen.refunds => RouteNames.financeRefunds,
+        FinanceScreen.discounts => RouteNames.financeDiscounts,
+        FinanceScreen.reports => RouteNames.financeReports,
+        FinanceScreen.settings => RouteNames.financeSettings,
       };
 }
 
@@ -38,8 +49,11 @@ List<AdminBreadcrumb> financeBreadcrumbs(FinanceScreen screen) {
 
 /// Resolves [FinanceScreen] from a router location path.
 FinanceScreen? financeScreenForLocation(String location) {
-  for (final screen in FinanceScreen.values) {
-    if (location == screen.route || location.startsWith('${screen.route}/')) {
+  if (location.startsWith('${RouteNames.financeCollections}/')) {
+    return FinanceScreen.collections;
+  }
+  for (final screen in kFinanceNavScreens) {
+    if (location == screen.route) {
       return screen;
     }
   }

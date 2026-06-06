@@ -27,7 +27,9 @@ class FinanceSubNav extends StatelessWidget {
             for (final screen in kFinanceNavScreens) ...[
               _FinanceSubNavTab(
                 label: screen.label,
-                selected: screen == current,
+                selected: screen == current ||
+                    (current == FinanceScreen.collectionDetail &&
+                        screen == FinanceScreen.collections),
                 onTap: () {
                   if (screen != current) {
                     context.go(screen.route);
