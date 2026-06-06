@@ -1,0 +1,351 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 11C
+ACADEMIC OPERATIONS DATABASE SCHEMA
+
+====================================================
+1. TABLE: student_attendance
+====================================================
+
+id UUID PRIMARY KEY
+school_id UUID
+academic_year_id UUID
+
+student_id UUID
+class_id UUID
+section_id UUID
+
+attendance_date DATE
+
+status VARCHAR(20)
+
+remarks TEXT
+
+created_at TIMESTAMP
+
+Indexes:
+student_id
+attendance_date
+
+====================================================
+2. TABLE: staff_attendance
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+staff_id UUID
+
+attendance_date DATE
+
+check_in_time TIMESTAMP
+check_out_time TIMESTAMP
+
+status VARCHAR(20)
+
+attendance_method VARCHAR(50)
+
+====================================================
+3. TABLE: face_recognition_logs
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+staff_id UUID
+
+captured_image_url TEXT
+
+match_score DECIMAL
+
+verification_status VARCHAR(50)
+
+captured_at TIMESTAMP
+
+====================================================
+4. TABLE: geo_fence_logs
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+staff_id UUID
+
+latitude DECIMAL
+longitude DECIMAL
+
+inside_boundary BOOLEAN
+
+captured_at TIMESTAMP
+
+====================================================
+5. TABLE: attendance_overrides
+====================================================
+
+id UUID PRIMARY KEY
+
+attendance_id UUID
+
+approved_by UUID
+
+reason TEXT
+
+created_at TIMESTAMP
+
+====================================================
+6. TABLE: timetables
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+academic_year_id UUID
+
+class_id UUID
+section_id UUID
+
+effective_from DATE
+
+====================================================
+7. TABLE: timetable_periods
+====================================================
+
+id UUID PRIMARY KEY
+
+timetable_id UUID
+
+subject_id UUID
+teacher_id UUID
+
+day_of_week VARCHAR(20)
+
+period_number INTEGER
+
+start_time TIME
+end_time TIME
+
+====================================================
+8. TABLE: substitute_assignments
+====================================================
+
+id UUID PRIMARY KEY
+
+original_teacher_id UUID
+substitute_teacher_id UUID
+
+class_id UUID
+
+assignment_date DATE
+
+====================================================
+9. TABLE: homework
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+teacher_id UUID
+subject_id UUID
+
+title VARCHAR(255)
+
+description TEXT
+
+due_date DATE
+
+created_at TIMESTAMP
+
+====================================================
+10. TABLE: assignments
+====================================================
+
+id UUID PRIMARY KEY
+
+homework_id UUID
+
+assignment_type VARCHAR(50)
+
+attachment_url TEXT
+
+====================================================
+11. TABLE: assignment_submissions
+====================================================
+
+id UUID PRIMARY KEY
+
+assignment_id UUID
+
+student_id UUID
+
+submission_url TEXT
+
+submitted_at TIMESTAMP
+
+status VARCHAR(50)
+
+====================================================
+12. TABLE: exams
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+exam_name VARCHAR(255)
+
+exam_type VARCHAR(100)
+
+start_date DATE
+end_date DATE
+
+====================================================
+13. TABLE: exam_schedules
+====================================================
+
+id UUID PRIMARY KEY
+
+exam_id UUID
+
+subject_id UUID
+
+exam_date DATE
+
+start_time TIME
+end_time TIME
+
+====================================================
+14. TABLE: marks
+====================================================
+
+id UUID PRIMARY KEY
+
+exam_id UUID
+
+student_id UUID
+
+subject_id UUID
+
+maximum_marks DECIMAL
+obtained_marks DECIMAL
+
+====================================================
+15. TABLE: grades
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+grade_name VARCHAR(20)
+
+minimum_score DECIMAL
+maximum_score DECIMAL
+
+====================================================
+16. TABLE: report_cards
+====================================================
+
+id UUID PRIMARY KEY
+
+student_id UUID
+
+exam_id UUID
+
+grade VARCHAR(20)
+
+percentage DECIMAL
+
+generated_at TIMESTAMP
+
+====================================================
+17. TABLE: notifications
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+title VARCHAR(255)
+
+message TEXT
+
+target_role VARCHAR(100)
+
+created_at TIMESTAMP
+
+====================================================
+18. TABLE: announcements
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+title VARCHAR(255)
+
+content TEXT
+
+published_at TIMESTAMP
+
+====================================================
+19. TABLE: messages
+====================================================
+
+id UUID PRIMARY KEY
+
+sender_id UUID
+
+receiver_id UUID
+
+message TEXT
+
+sent_at TIMESTAMP
+
+====================================================
+20. TABLE: translation_logs
+====================================================
+
+id UUID PRIMARY KEY
+
+source_language VARCHAR(50)
+
+target_language VARCHAR(50)
+
+original_text TEXT
+
+translated_text TEXT
+
+====================================================
+21. TABLE RELATIONSHIP SUMMARY
+====================================================
+
+Students
+→ Attendance
+→ Homework Submissions
+→ Marks
+→ Report Cards
+
+Teachers
+→ Timetable
+→ Homework
+→ Attendance
+
+Exams
+→ Marks
+→ Report Cards
+
+====================================================
+22. NEXT DATABASE PHASE
+====================================================
+
+Part 11D
+
+Finance Schema
+Payroll Schema
+Hostel Schema
+Transport Schema
+Marketing CRM Schema
+
+END OF PART 11C

@@ -1,0 +1,246 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 2
+DETAILED FUNCTIONAL REQUIREMENTS
+
+====================================================
+1. STUDENT INFORMATION MANAGEMENT
+====================================================
+
+Features:
+- Student Registration
+- Student Profile Management
+- Admission Number Generation
+- Academic History
+- Medical Information
+- Parent Mapping
+- Document Upload
+- Student Promotion
+- Student Transfer
+- Student Exit Management
+
+Student Profile Includes:
+- Personal Information
+- Academic Information
+- Transport Information
+- Hostel Information
+- Emergency Contacts
+- Profile Photo
+
+====================================================
+2. PARENT MANAGEMENT
+====================================================
+
+Features:
+- Parent Profiles
+- Multiple Children Mapping
+- Attendance Tracking
+- Homework Tracking
+- Fee Tracking
+- Bus Tracking
+- School Communication
+
+Parent Dashboard:
+- Today's Attendance
+- Homework
+- Notices
+- Upcoming Events
+- Fee Due Status
+- Academic Performance
+
+====================================================
+3. TEACHER MANAGEMENT
+====================================================
+
+Features:
+- Teacher Profiles
+- Subject Assignment
+- Class Assignment
+- Attendance Management
+- Leave Management
+- Performance Reports
+
+Teacher Dashboard:
+- Today's Classes
+- Pending Homework
+- Attendance Tasks
+- Messages
+- Announcements
+
+====================================================
+4. ATTENDANCE MANAGEMENT
+====================================================
+
+Teacher Attendance:
+
+Methods:
+- Geo Fence
+- Face Recognition
+- Biometric (Optional)
+- QR Code (Optional)
+- Web Attendance
+- Manual Override
+
+Validation Rules:
+- Staff must be inside school boundary.
+- Face must match registered profile.
+- Manual changes must be audited.
+
+Student Attendance:
+- Daily Attendance
+- Subject Attendance
+- Period Attendance
+- Hostel Attendance
+
+AI Features:
+- Absentee Analysis
+- Attendance Risk Prediction
+
+====================================================
+5. TIMETABLE MANAGEMENT
+====================================================
+
+Features:
+- Class Timetable
+- Teacher Timetable
+- Room Allocation
+- Substitute Management
+
+AI Features:
+- Auto Rescheduling
+- Substitute Suggestions
+
+====================================================
+6. HOMEWORK MANAGEMENT
+====================================================
+
+Features:
+- Homework Creation
+- Assignment Upload
+- Due Dates
+- Student Submission
+- Teacher Evaluation
+
+AI Features:
+- Worksheet Generation
+- Homework Suggestions
+
+====================================================
+7. EXAMINATION MANAGEMENT
+====================================================
+
+Features:
+- Exam Scheduling
+- Marks Entry
+- Grade Calculation
+- Report Cards
+- Ranking
+
+AI Features:
+- Weak Subject Detection
+- Improvement Suggestions
+- Student Analytics
+
+====================================================
+8. COMMUNICATION MANAGEMENT
+====================================================
+
+Channels:
+- Push Notifications
+- SMS
+- Email
+- WhatsApp Deep Links
+
+Message Levels:
+- School Wide
+- Class Wise
+- Individual
+
+AI Translation:
+- Telugu
+- Hindi
+- Tamil
+- Kannada
+- Malayalam
+- Urdu
+- English
+
+====================================================
+9. ONLINE CLASS MANAGEMENT
+====================================================
+
+Google Meet Integration
+
+Features:
+- Schedule Meeting
+- Join Meeting
+- Attendance Tracking
+- Recordings
+- Homework Assignment
+
+====================================================
+10. LEAVE MANAGEMENT
+====================================================
+
+Features:
+- Teacher Leave
+- Staff Leave
+- Student Leave
+
+Approval Flow:
+Employee
+→ Principal
+→ Approved/Rejected
+
+====================================================
+11. CERTIFICATE MANAGEMENT
+====================================================
+
+Generate:
+- Bonafide
+- Conduct
+- Transfer Certificate
+- Study Certificate
+- Achievement Certificate
+
+PDF Export Supported
+
+====================================================
+12. DISCIPLINE MANAGEMENT
+====================================================
+
+Features:
+- Warnings
+- Appreciations
+- Behaviour Reports
+- Parent Notifications
+
+====================================================
+13. HEALTH MANAGEMENT
+====================================================
+
+Track:
+- Blood Group
+- Allergies
+- Medical Conditions
+- Medicines
+- Health Visits
+
+====================================================
+14. DOCUMENT VAULT
+====================================================
+
+Store:
+- Aadhaar
+- Birth Certificate
+- Marks Memos
+- Transfer Certificates
+- Photos
+
+Features:
+- Encrypted Storage
+- Download Controls
+- Audit Logs
+
+END OF PART 2

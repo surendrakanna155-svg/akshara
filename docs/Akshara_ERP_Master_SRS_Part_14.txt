@@ -1,0 +1,308 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 14
+AI ARCHITECTURE & COPILOT DESIGN
+
+====================================================
+1. AI OVERVIEW
+====================================================
+
+Objective:
+
+Provide intelligent automation across academics,
+administration, finance, admissions, marketing,
+transport and communication.
+
+AI Platform:
+
+OpenAI API
+
+Future Support:
+
+Multiple AI Providers
+Local Models
+Enterprise AI Deployments
+
+====================================================
+2. TEACHER AI ASSISTANT
+====================================================
+
+Features:
+
+- Homework Generator
+- Worksheet Generator
+- Question Paper Generator
+- Lesson Plan Generator
+- Parent Message Generator
+- Student Performance Insights
+
+Examples:
+
+Generate Class 8 Science Worksheet.
+
+Create lesson plan for Photosynthesis.
+
+====================================================
+3. CLASS TEACHER AI
+====================================================
+
+Features:
+
+- Attendance Analysis
+- Student Risk Detection
+- Parent Communication Drafts
+- Behaviour Insights
+
+====================================================
+4. PRINCIPAL AI ASSISTANT
+====================================================
+
+Features:
+
+- Attendance Trends
+- Staff Analysis
+- Academic Performance Reports
+- Timetable Optimization
+
+Examples:
+
+Which students are at attendance risk?
+
+====================================================
+5. MANAGEMENT AI ASSISTANT
+====================================================
+
+Features:
+
+- Revenue Analysis
+- Expense Analysis
+- Budget Monitoring
+- School Growth Analysis
+
+====================================================
+6. FINANCE AI ASSISTANT
+====================================================
+
+Features:
+
+- Fee Collection Forecast
+- Expense Forecast
+- Salary Analytics
+- Budget Suggestions
+
+Examples:
+
+Show fee defaulters.
+
+Predict next month's collections.
+
+====================================================
+7. PARENT AI ASSISTANT
+====================================================
+
+Features:
+
+- Child Progress Summary
+- Homework Explanations
+- Attendance Summary
+
+Languages:
+
+English
+Telugu
+Hindi
+Tamil
+Kannada
+Malayalam
+Urdu
+
+====================================================
+8. STUDENT AI ASSISTANT
+====================================================
+
+Features:
+
+- Doubt Clarification
+- Homework Help
+- Study Recommendations
+- Practice Questions
+
+====================================================
+9. MARKETING AI ASSISTANT
+====================================================
+
+Features:
+
+- Poster Generation
+- Caption Generation
+- Campaign Ideas
+- Admission Campaign Planning
+
+====================================================
+10. ADMISSION AI ASSISTANT
+====================================================
+
+Features:
+
+- Lead Follow-up Drafts
+- Parent FAQs
+- Admission Guidance
+
+====================================================
+11. AI MESSAGE GENERATOR
+====================================================
+
+Input:
+
+Student absent 3 days.
+
+Output:
+
+Professional parent communication.
+
+Auto Translation Supported.
+
+====================================================
+12. AI TRANSLATION ENGINE
+====================================================
+
+Supported Languages:
+
+English
+Telugu
+Hindi
+Tamil
+Kannada
+Malayalam
+Urdu
+
+Use Cases:
+
+Messages
+Notifications
+Announcements
+
+====================================================
+13. AI TIMETABLE OPTIMIZER
+====================================================
+
+Features:
+
+- Teacher Substitution
+- Period Optimization
+- Conflict Detection
+
+====================================================
+14. ATTENDANCE RISK PREDICTION
+====================================================
+
+Predict:
+
+Students likely to fall below
+attendance requirements.
+
+====================================================
+15. PERFORMANCE PREDICTION
+====================================================
+
+Identify:
+
+- Weak Subjects
+- Improvement Areas
+- Academic Risks
+
+====================================================
+16. FEE DEFAULT PREDICTION
+====================================================
+
+Predict:
+
+Potential fee collection issues.
+
+====================================================
+17. TRANSPORT AI
+====================================================
+
+Features:
+
+- Delay Prediction
+- Route Optimization
+
+====================================================
+18. HOSTEL AI
+====================================================
+
+Features:
+
+- Occupancy Analysis
+- Attendance Monitoring
+- Health Incident Tracking
+
+====================================================
+19. ERP COPILOT
+====================================================
+
+Natural Language Queries:
+
+Show pending fees.
+
+Show attendance below 75%.
+
+Show salary expenses.
+
+Generate monthly report.
+
+====================================================
+20. AI USAGE CONTROL
+====================================================
+
+Track:
+
+- Requests
+- Tokens
+- Costs
+- Users
+
+====================================================
+21. AI SAFETY RULES
+====================================================
+
+AI Must Not:
+
+- Reveal Private Data
+- Access Unauthorized Records
+- Expose Financial Data
+
+====================================================
+22. AI PRIVACY RULES
+====================================================
+
+AI responses limited by user role.
+
+Parents:
+Own child only.
+
+Teachers:
+Assigned students only.
+
+====================================================
+23. FUTURE AI ROADMAP
+====================================================
+
+AI Voice Assistant
+
+Local Language Voice Support
+
+Predictive Analytics
+
+Smart Classroom AI
+
+====================================================
+24. NEXT DOCUMENT
+====================================================
+
+Part 15:
+Infrastructure Blueprint & Production Architecture
+
+END OF PART 14

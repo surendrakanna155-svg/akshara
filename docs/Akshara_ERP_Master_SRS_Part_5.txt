@@ -1,0 +1,331 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 5
+SECURITY, PRIVACY, MULTI-TENANT SAAS & COMPLIANCE
+
+====================================================
+1. SECURITY OVERVIEW
+====================================================
+
+Objective:
+Provide enterprise-grade security for schools, parents,
+students, teachers, and management.
+
+Core Principles:
+
+- Security by Design
+- Privacy by Default
+- Least Privilege Access
+- Auditability
+- Data Ownership
+
+====================================================
+2. DATA OWNERSHIP POLICY
+====================================================
+
+School owns all data.
+
+Akshara ERP acts only as a technology provider.
+
+Data Ownership Includes:
+
+- Student Data
+- Parent Data
+- Teacher Data
+- Financial Data
+- Hostel Data
+- Transport Data
+- Academic Data
+
+Akshara ERP does not claim ownership.
+
+====================================================
+3. DATA PRIVACY POLICY
+====================================================
+
+Akshara Employees Cannot Access:
+
+- Parent Phone Numbers
+- Student Personal Data
+- Staff Personal Data
+- Salary Records
+- Financial Records
+- Medical Records
+- Private Messages
+
+Only platform-level metrics are visible.
+
+Examples:
+
+Visible:
+- Total Schools
+- Active Users
+- Storage Usage
+
+Not Visible:
+- Student Names
+- Parent Contacts
+- Fee Records
+- Salary Information
+
+====================================================
+4. MULTI TENANT ARCHITECTURE
+====================================================
+
+Each record contains:
+
+school_id
+
+Benefits:
+
+- School Isolation
+- Scalability
+- Cost Efficiency
+
+Security:
+
+- Row Level Security
+- Tenant Isolation
+- API Protection
+
+School A can never access School B data.
+
+====================================================
+5. PREMIUM DEDICATED DATABASE PLAN
+====================================================
+
+For schools requiring maximum privacy.
+
+Includes:
+
+- Dedicated Database
+- Dedicated Storage
+- Dedicated Backups
+- Dedicated Encryption Keys
+
+Additional Subscription Cost Applies.
+
+====================================================
+6. ENTERPRISE PRIVATE CLOUD PLAN
+====================================================
+
+Includes:
+
+- Dedicated Database Server
+- Dedicated Storage Server
+- Dedicated Backup Server
+
+School owns environment.
+
+Akshara manages infrastructure.
+
+====================================================
+7. ENCRYPTION STRATEGY
+====================================================
+
+Data In Transit:
+
+- HTTPS
+- TLS Encryption
+
+Data At Rest:
+
+- Database Encryption
+- Storage Encryption
+
+Documents:
+
+- Encrypted Storage
+
+====================================================
+8. AUTHENTICATION
+====================================================
+
+Methods:
+
+- Email Login
+- Mobile OTP Login
+- Password Login
+
+Future:
+
+- SSO
+- SAML
+- Enterprise Login
+
+====================================================
+9. ROLE BASED ACCESS CONTROL
+====================================================
+
+Every role receives only required permissions.
+
+Examples:
+
+Teacher:
+- View Assigned Students
+- Cannot View Salary Records
+
+Finance:
+- View Fees
+- Cannot Modify Attendance
+
+Parent:
+- View Own Child Only
+
+====================================================
+10. AUDIT LOGGING
+====================================================
+
+Track:
+
+- Login Activity
+- Attendance Changes
+- Fee Changes
+- Salary Changes
+- Exports
+- Configuration Changes
+
+Audit logs cannot be modified.
+
+====================================================
+11. BACKUP STRATEGY
+====================================================
+
+Daily Backups
+
+Weekly Backups
+
+Monthly Backups
+
+Backup Retention:
+
+- Daily: 30 Days
+- Weekly: 12 Weeks
+- Monthly: 12 Months
+
+====================================================
+12. DISASTER RECOVERY
+====================================================
+
+Scenarios:
+
+- Server Failure
+- Database Corruption
+- Storage Failure
+
+Recovery Goals:
+
+- Minimal Downtime
+- Data Restoration
+- Service Continuity
+
+====================================================
+13. SUPPORT ACCESS CONTROL
+====================================================
+
+Support access requires:
+
+1. School Request
+2. School Approval
+3. Time Limited Access
+4. Audit Logging
+
+====================================================
+14. DEVICE MANAGEMENT
+====================================================
+
+Track:
+
+- Registered Devices
+- Active Sessions
+- Login History
+
+Features:
+
+- Remote Logout
+- Session Revocation
+
+====================================================
+15. COMPLIANCE FRAMEWORK
+====================================================
+
+Goals:
+
+- Indian Data Protection Compliance
+- GDPR-Oriented Practices
+- Student Privacy Protection
+- Data Minimization
+
+====================================================
+16. FILE SECURITY
+====================================================
+
+Protect:
+
+- Student Documents
+- Financial Reports
+- Certificates
+- Medical Records
+
+Features:
+
+- Secure Upload
+- Secure Download
+- Expiring Links
+
+====================================================
+17. API SECURITY
+====================================================
+
+Protection:
+
+- Authentication Tokens
+- Role Validation
+- Rate Limiting
+- Request Validation
+
+====================================================
+18. SECURITY ROADMAP
+====================================================
+
+Phase 1:
+- Encryption
+- Audit Logs
+- Access Control
+
+Phase 2:
+- Two Factor Authentication
+- Device Controls
+
+Phase 3:
+- Advanced Monitoring
+- Threat Detection
+
+====================================================
+19. LEGAL AGREEMENTS
+====================================================
+
+School Agreement
+
+Privacy Policy
+
+Terms of Service
+
+Data Processing Agreement
+
+====================================================
+20. AKSHARA SECURITY PROMISE
+====================================================
+
+Akshara ERP will never:
+
+- Sell Student Data
+- Sell Parent Data
+- Sell School Data
+- Share Financial Data
+- Share Staff Data
+
+Without explicit authorization.
+
+END OF PART 5

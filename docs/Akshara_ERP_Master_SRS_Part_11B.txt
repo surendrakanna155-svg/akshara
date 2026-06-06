@@ -1,0 +1,323 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 11B
+DETAILED DATABASE SCHEMA - CORE SYSTEM
+
+====================================================
+1. TABLE: schools
+====================================================
+
+Purpose:
+Master school information.
+
+Columns:
+
+id UUID PRIMARY KEY
+school_name VARCHAR(255)
+school_code VARCHAR(50)
+email VARCHAR(255)
+phone VARCHAR(20)
+address TEXT
+city VARCHAR(100)
+state VARCHAR(100)
+country VARCHAR(100)
+status VARCHAR(50)
+
+created_at TIMESTAMP
+updated_at TIMESTAMP
+
+Indexes:
+school_code
+
+====================================================
+2. TABLE: school_branches
+====================================================
+
+id UUID PRIMARY KEY
+school_id UUID
+
+branch_name VARCHAR(255)
+branch_code VARCHAR(50)
+
+address TEXT
+
+created_at TIMESTAMP
+
+Relationships:
+school_id -> schools.id
+
+====================================================
+3. TABLE: academic_years
+====================================================
+
+id UUID PRIMARY KEY
+school_id UUID
+
+year_name VARCHAR(50)
+
+start_date DATE
+end_date DATE
+
+status VARCHAR(50)
+
+====================================================
+4. TABLE: users
+====================================================
+
+id UUID PRIMARY KEY
+school_id UUID
+
+email VARCHAR(255)
+mobile VARCHAR(20)
+
+password_hash TEXT
+
+first_name VARCHAR(100)
+last_name VARCHAR(100)
+
+profile_photo_url TEXT
+
+language_preference VARCHAR(50)
+
+status VARCHAR(50)
+
+created_at TIMESTAMP
+updated_at TIMESTAMP
+
+Indexes:
+
+email
+mobile
+school_id
+
+====================================================
+5. TABLE: roles
+====================================================
+
+id UUID PRIMARY KEY
+
+role_name VARCHAR(100)
+
+description TEXT
+
+====================================================
+6. TABLE: permissions
+====================================================
+
+id UUID PRIMARY KEY
+
+permission_name VARCHAR(255)
+
+description TEXT
+
+====================================================
+7. TABLE: role_permissions
+====================================================
+
+id UUID PRIMARY KEY
+
+role_id UUID
+permission_id UUID
+
+====================================================
+8. TABLE: user_roles
+====================================================
+
+id UUID PRIMARY KEY
+
+user_id UUID
+role_id UUID
+
+====================================================
+9. TABLE: students
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+branch_id UUID
+
+admission_number VARCHAR(100)
+
+first_name VARCHAR(100)
+last_name VARCHAR(100)
+
+gender VARCHAR(20)
+
+date_of_birth DATE
+
+blood_group VARCHAR(20)
+
+status VARCHAR(50)
+
+created_at TIMESTAMP
+
+Indexes:
+
+school_id
+admission_number
+
+====================================================
+10. TABLE: student_profiles
+====================================================
+
+id UUID PRIMARY KEY
+
+student_id UUID
+
+address TEXT
+
+father_name VARCHAR(255)
+mother_name VARCHAR(255)
+
+guardian_name VARCHAR(255)
+
+emergency_contact VARCHAR(20)
+
+====================================================
+11. TABLE: parents
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+first_name VARCHAR(100)
+last_name VARCHAR(100)
+
+mobile VARCHAR(20)
+email VARCHAR(255)
+
+preferred_language VARCHAR(50)
+
+====================================================
+12. TABLE: parent_student_mapping
+====================================================
+
+id UUID PRIMARY KEY
+
+parent_id UUID
+student_id UUID
+
+relationship VARCHAR(50)
+
+====================================================
+13. TABLE: staff
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+employee_code VARCHAR(100)
+
+first_name VARCHAR(100)
+last_name VARCHAR(100)
+
+joining_date DATE
+
+mobile VARCHAR(20)
+
+email VARCHAR(255)
+
+status VARCHAR(50)
+
+====================================================
+14. TABLE: teachers
+====================================================
+
+id UUID PRIMARY KEY
+
+staff_id UUID
+
+teacher_type VARCHAR(50)
+
+subject_specialization VARCHAR(255)
+
+====================================================
+15. TABLE: classes
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+class_name VARCHAR(100)
+
+====================================================
+16. TABLE: sections
+====================================================
+
+id UUID PRIMARY KEY
+
+class_id UUID
+
+section_name VARCHAR(50)
+
+====================================================
+17. TABLE: subjects
+====================================================
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+subject_name VARCHAR(255)
+
+subject_code VARCHAR(50)
+
+====================================================
+18. TABLE: class_teacher_mapping
+====================================================
+
+id UUID PRIMARY KEY
+
+teacher_id UUID
+class_id UUID
+section_id UUID
+
+====================================================
+19. TABLE RELATIONSHIP SUMMARY
+====================================================
+
+School
+→ Branches
+
+School
+→ Users
+
+School
+→ Students
+
+School
+→ Parents
+
+School
+→ Staff
+
+School
+→ Academic Years
+
+Classes
+→ Sections
+
+Teachers
+→ Classes
+
+Parents
+→ Students
+
+====================================================
+20. NEXT DATABASE PHASE
+====================================================
+
+Part 11C:
+
+Attendance Tables
+Timetable Tables
+Homework Tables
+Exam Tables
+Communication Tables
+
+END OF PART 11B

@@ -1,0 +1,315 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 20
+QA TEST CASES, UAT SCENARIOS & GO-LIVE CHECKLIST
+
+====================================================
+1. OBJECTIVE
+====================================================
+
+Ensure product quality, reliability, security,
+performance and successful production deployment.
+
+====================================================
+2. TESTING TYPES
+====================================================
+
+- Unit Testing
+- Integration Testing
+- System Testing
+- Regression Testing
+- Security Testing
+- Load Testing
+- User Acceptance Testing
+
+====================================================
+3. AUTHENTICATION TEST CASES
+====================================================
+
+Verify:
+
+- Login Success
+- Login Failure
+- OTP Login
+- Password Reset
+- Session Expiry
+- Logout
+
+Expected:
+
+Only valid users can access system.
+
+====================================================
+4. ROLE ACCESS TEST CASES
+====================================================
+
+Verify:
+
+Teacher cannot access finance.
+
+Parent cannot access other students.
+
+Student cannot access management screens.
+
+====================================================
+5. STUDENT MODULE TEST CASES
+====================================================
+
+Verify:
+
+- Create Student
+- Edit Student
+- Archive Student
+- View Student Profile
+
+====================================================
+6. ATTENDANCE TEST CASES
+====================================================
+
+Verify:
+
+- Student Attendance
+- Staff Attendance
+- Geo Fence Validation
+- Face Recognition Validation
+- Attendance Corrections
+
+====================================================
+7. HOMEWORK TEST CASES
+====================================================
+
+Verify:
+
+- Create Homework
+- Submit Homework
+- Teacher Review
+
+====================================================
+8. EXAMINATION TEST CASES
+====================================================
+
+Verify:
+
+- Create Exam
+- Enter Marks
+- Generate Report Card
+
+====================================================
+9. FINANCE TEST CASES
+====================================================
+
+Verify:
+
+- Fee Collection
+- Online Payment
+- Receipt Generation
+- Expense Entry
+- Salary Processing
+
+====================================================
+10. HOSTEL TEST CASES
+====================================================
+
+Verify:
+
+- Room Allocation
+- Bed Allocation
+- Attendance
+- Visitor Tracking
+
+====================================================
+11. TRANSPORT TEST CASES
+====================================================
+
+Verify:
+
+- GPS Tracking
+- Route Assignment
+- Driver Assignment
+
+====================================================
+12. CRM TEST CASES
+====================================================
+
+Verify:
+
+- Lead Creation
+- Follow Up
+- Admission Conversion
+
+====================================================
+13. AI TEST CASES
+====================================================
+
+Verify:
+
+- Message Generation
+- Translation
+- Worksheet Creation
+- Copilot Queries
+
+====================================================
+14. SECURITY TEST CASES
+====================================================
+
+Verify:
+
+- Unauthorized Access
+- Token Expiry
+- Role Restrictions
+- Data Isolation
+
+====================================================
+15. PRIVACY TEST CASES
+====================================================
+
+Verify:
+
+School A cannot access School B data.
+
+Akshara staff cannot access restricted data.
+
+====================================================
+16. PERFORMANCE TEST CASES
+====================================================
+
+Verify:
+
+1000+ Concurrent Users
+
+Response Time < 2 Seconds
+
+====================================================
+17. LOAD TESTING
+====================================================
+
+Simulate:
+
+10 Schools
+
+50 Schools
+
+100 Schools
+
+====================================================
+18. USER ACCEPTANCE TESTING
+====================================================
+
+Participants:
+
+Principal
+Teachers
+Parents
+Students
+Finance Team
+
+====================================================
+19. UAT SCENARIOS
+====================================================
+
+Scenario 1:
+
+Teacher marks attendance.
+
+Scenario 2:
+
+Parent pays fees.
+
+Scenario 3:
+
+Principal approves leave.
+
+Scenario 4:
+
+Management views reports.
+
+====================================================
+20. PRE GO LIVE CHECKLIST
+====================================================
+
+Database Backups Ready
+
+Monitoring Enabled
+
+Notifications Working
+
+Payments Working
+
+Security Review Complete
+
+====================================================
+21. GO LIVE CHECKLIST
+====================================================
+
+Production Deployment Complete
+
+Smoke Tests Passed
+
+Critical Issues Resolved
+
+====================================================
+22. POST GO LIVE CHECKLIST
+====================================================
+
+Monitor Logs
+
+Monitor Performance
+
+Monitor Errors
+
+====================================================
+23. SUPPORT PLAN
+====================================================
+
+Level 1 Support
+
+Level 2 Support
+
+Engineering Escalation
+
+====================================================
+24. RELEASE ACCEPTANCE CRITERIA
+====================================================
+
+No Critical Bugs
+
+Security Passed
+
+Performance Passed
+
+UAT Approved
+
+====================================================
+25. PROJECT PACKAGE STATUS
+====================================================
+
+Master SRS Completed
+
+Database Architecture Completed
+
+UI Architecture Completed
+
+API Architecture Completed
+
+AI Architecture Completed
+
+Infrastructure Blueprint Completed
+
+Development Plan Completed
+
+QA Plan Completed
+
+====================================================
+26. AKSHARA ERP DOCUMENTATION STATUS
+====================================================
+
+Part 1 - Part 20 Complete
+
+Architecture Package Ready
+
+Development Ready
+
+Deployment Planning Ready
+
+END OF PART 20

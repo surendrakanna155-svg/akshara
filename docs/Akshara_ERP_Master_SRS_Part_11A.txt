@@ -1,0 +1,343 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 11A
+DATABASE DESIGN RULES & STANDARDS
+
+====================================================
+1. PURPOSE
+====================================================
+
+This document defines database design standards
+for Akshara ERP.
+
+These rules must be followed by all developers,
+architects and future modules.
+
+Goal:
+Ensure scalability, maintainability, security,
+performance and future extensibility.
+
+====================================================
+2. DATABASE ENGINE
+====================================================
+
+Primary Database:
+
+PostgreSQL
+
+Managed Through:
+
+Supabase
+
+====================================================
+3. MULTI-TENANT RULE
+====================================================
+
+Every business table must contain:
+
+school_id
+
+Example:
+
+students
+teachers
+attendance
+fees
+hostel_records
+
+Purpose:
+
+Ensure complete school isolation.
+
+====================================================
+4. BRANCH SUPPORT RULE
+====================================================
+
+Every operational table should support:
+
+branch_id
+
+Example:
+
+School:
+ABC Group
+
+Branches:
+
+Branch A
+Branch B
+Branch C
+
+====================================================
+5. ACADEMIC YEAR RULE
+====================================================
+
+Every academic table should contain:
+
+academic_year_id
+
+Examples:
+
+Attendance
+Marks
+Homework
+Timetable
+
+====================================================
+6. PRIMARY KEY STANDARD
+====================================================
+
+Use:
+
+UUID
+
+Avoid:
+
+Auto Increment IDs
+
+Reason:
+
+Better scalability and security.
+
+====================================================
+7. SOFT DELETE RULE
+====================================================
+
+Never permanently delete records.
+
+Use:
+
+is_deleted
+deleted_at
+
+Benefits:
+
+Auditability
+Recovery
+
+====================================================
+8. AUDIT RULE
+====================================================
+
+Every important table should contain:
+
+created_at
+created_by
+
+updated_at
+updated_by
+
+====================================================
+9. FILE STORAGE RULE
+====================================================
+
+Files stored in:
+
+Cloudflare R2
+
+Database stores only:
+
+file_url
+file_name
+file_type
+
+Never store large files in PostgreSQL.
+
+====================================================
+10. USER MANAGEMENT RULE
+====================================================
+
+Single User Table
+
+All users stored in:
+
+users
+
+Roles determine access.
+
+Examples:
+
+Teacher
+Parent
+Student
+Finance
+
+====================================================
+11. ROLE MANAGEMENT RULE
+====================================================
+
+Use:
+
+roles
+permissions
+role_permissions
+
+Never hardcode permissions.
+
+====================================================
+12. SECURITY RULE
+====================================================
+
+Enable:
+
+Row Level Security
+
+For every table containing school data.
+
+====================================================
+13. INDEXING RULE
+====================================================
+
+Mandatory Indexes:
+
+school_id
+branch_id
+academic_year_id
+
+High Frequency Search Columns
+
+====================================================
+14. ATTENDANCE DESIGN RULE
+====================================================
+
+Attendance Records:
+
+Immutable
+
+Changes logged in:
+
+attendance_audit_logs
+
+====================================================
+15. FINANCE DESIGN RULE
+====================================================
+
+All money movements tracked.
+
+No financial record deletion allowed.
+
+Only reversals.
+
+====================================================
+16. AI LOGGING RULE
+====================================================
+
+Store:
+
+ai_requests
+ai_responses
+
+Track:
+
+usage
+cost
+user
+
+====================================================
+17. TRANSLATION RULE
+====================================================
+
+Store:
+
+source_message
+translated_message
+language
+
+====================================================
+18. NOTIFICATION RULE
+====================================================
+
+Notifications must contain:
+
+target_role
+target_user
+school_id
+
+====================================================
+19. REPORTING RULE
+====================================================
+
+Reports should use:
+
+precomputed summaries
+
+Avoid expensive queries.
+
+====================================================
+20. BACKUP RULE
+====================================================
+
+Daily Backups
+
+Weekly Backups
+
+Monthly Backups
+
+====================================================
+21. DATA RETENTION RULE
+====================================================
+
+Audit Logs:
+
+Minimum 7 Years
+
+Financial Records:
+
+Minimum 7 Years
+
+Student Records:
+
+Configurable
+
+====================================================
+22. API COMPATIBILITY RULE
+====================================================
+
+Database changes must not break APIs.
+
+Use migrations.
+
+====================================================
+23. FEATURE FLAG RULE
+====================================================
+
+Future modules must be controlled by:
+
+feature_flags
+
+Examples:
+
+RFID
+Smart Classroom
+Voice AI
+
+====================================================
+24. FUTURE EXPANSION RULE
+====================================================
+
+Database must support future modules:
+
+- RFID
+- LMS
+- Smart Classroom
+- Voice Assistant
+- Online Exams
+- School Store
+- Canteen
+
+Without redesign.
+
+====================================================
+25. FINAL DATABASE PRINCIPLES
+====================================================
+
+1. Security First
+2. Privacy First
+3. Audit Everything
+4. Never Lose Data
+5. Modular Design
+6. Multi-Tenant Ready
+7. Future Expansion Ready
+
+END OF PART 11A

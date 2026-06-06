@@ -1,0 +1,304 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 3
+FINANCE, HOSTEL, TRANSPORT & OPERATIONS
+
+====================================================
+1. FINANCE MANAGEMENT SYSTEM
+====================================================
+
+Objective:
+Provide complete financial control for school management.
+
+Modules:
+
+- Fee Management
+- Accounting
+- Payroll
+- Budgeting
+- Expense Management
+- Income Management
+- Financial Reports
+- Audit Management
+
+====================================================
+2. FEE MANAGEMENT
+====================================================
+
+Fee Types:
+- Tuition Fee
+- Admission Fee
+- Hostel Fee
+- Transport Fee
+- Exam Fee
+- Activity Fee
+- Special Fee
+
+Features:
+- Fee Structures
+- Installments
+- Due Dates
+- Discounts
+- Scholarships
+- Fine Calculation
+
+Payment Methods:
+- UPI
+- Razorpay
+- PhonePe
+- Google Pay
+- Net Banking
+- Cash
+- Cheque
+
+Reports:
+- Pending Fees
+- Collection Reports
+- Defaulters List
+- Class-wise Collection
+- Year-wise Collection
+
+AI Features:
+- Smart Fee Reminders
+- Collection Forecast
+
+====================================================
+3. ACCOUNTING SYSTEM
+====================================================
+
+Income Tracking:
+- Student Fees
+- Donations
+- Grants
+- Other Income
+
+Expense Tracking:
+- Salaries
+- Fuel
+- Electricity
+- Water
+- Internet
+- Maintenance
+- Marketing
+- Purchases
+- Miscellaneous
+
+Accounting Records:
+- Cash Book
+- Day Book
+- General Ledger
+- Expense Ledger
+- Income Ledger
+
+Reports:
+- Profit & Loss
+- Balance Sheet
+- Cash Flow
+- Expense Analysis
+- Revenue Analysis
+
+====================================================
+4. PAYROLL MANAGEMENT
+====================================================
+
+Features:
+- Salary Structures
+- Salary Processing
+- Bonuses
+- Deductions
+- Payslips
+- Tax Reports
+
+Reports:
+- Monthly Payroll
+- Salary History
+- Department Salary Reports
+
+====================================================
+5. BUDGET MANAGEMENT
+====================================================
+
+Features:
+- Annual Budget
+- Department Budgets
+- Budget Approval Workflow
+- Budget Monitoring
+
+Reports:
+- Budget vs Actual
+- Overspending Alerts
+
+====================================================
+6. HOSTEL MANAGEMENT
+====================================================
+
+Hostel Warden Dashboard
+
+Features:
+- Hostel Registration
+- Room Allocation
+- Bed Allocation
+- Hostel Attendance
+- Visitor Management
+- Parent Communication
+- Hostel Fee Tracking
+
+====================================================
+7. HOSTEL ATTENDANCE
+====================================================
+
+Attendance Types:
+- Morning
+- Evening
+- Night
+
+Alerts:
+- Student Missing
+- Late Entry
+- Unauthorized Exit
+
+====================================================
+8. MESS MANAGEMENT
+====================================================
+
+Features:
+- Menu Planning
+- Meal Tracking
+- Inventory Tracking
+- Expense Tracking
+
+Reports:
+- Food Cost Analysis
+- Monthly Consumption
+
+====================================================
+9. HOSTEL HEALTH MANAGEMENT
+====================================================
+
+Track:
+- Illness
+- Medication
+- Doctor Visits
+- Emergency Cases
+
+====================================================
+10. TRANSPORT MANAGEMENT
+====================================================
+
+Features:
+- Vehicle Management
+- Driver Management
+- Route Management
+- Student Assignment
+
+====================================================
+11. GPS BUS TRACKING
+====================================================
+
+Features:
+- Live Tracking
+- Route Monitoring
+- ETA Calculation
+- Delay Alerts
+
+Parent Features:
+- Live Bus Location
+- Arrival Notifications
+
+====================================================
+12. DRIVER MANAGEMENT
+====================================================
+
+Track:
+- Driver Details
+- License Information
+- Attendance
+- Performance Records
+
+====================================================
+13. LIBRARY MANAGEMENT
+====================================================
+
+Features:
+- Book Catalog
+- Issue Books
+- Return Books
+- Fine Calculation
+- Digital Records
+
+Reports:
+- Available Books
+- Overdue Books
+- Popular Books
+
+====================================================
+14. INVENTORY MANAGEMENT
+====================================================
+
+Track:
+- Furniture
+- Computers
+- Lab Equipment
+- Projectors
+- Sports Equipment
+
+Features:
+- Purchase Records
+- Maintenance Logs
+- Asset Allocation
+
+====================================================
+15. VISITOR MANAGEMENT
+====================================================
+
+Features:
+- Visitor Registration
+- QR Visitor Pass
+- Visitor Logs
+- Entry/Exit Tracking
+
+Reports:
+- Daily Visitors
+- Visitor History
+
+====================================================
+16. VENDOR MANAGEMENT
+====================================================
+
+Manage:
+- Uniform Vendors
+- Book Suppliers
+- Equipment Suppliers
+- Transport Vendors
+
+Features:
+- Contracts
+- Payments
+- Purchase Orders
+
+====================================================
+17. PROCUREMENT MANAGEMENT
+====================================================
+
+Features:
+- Purchase Requests
+- Approvals
+- Vendor Quotations
+- Purchase Orders
+
+====================================================
+18. AUDIT MANAGEMENT
+====================================================
+
+Track:
+- Financial Changes
+- Fee Modifications
+- Salary Changes
+- Inventory Changes
+
+Reports:
+- Audit Trails
+- User Activity Logs
+
+END OF PART 3

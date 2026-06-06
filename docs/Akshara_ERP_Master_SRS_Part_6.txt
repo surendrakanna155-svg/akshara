@@ -1,0 +1,322 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 6
+ROLE & PERMISSION MATRIX
+
+====================================================
+1. SUPER ADMIN
+====================================================
+
+Permissions:
+
+- Create Schools
+- Delete Schools
+- Manage Subscriptions
+- Manage Plans
+- Manage Platform Settings
+- Access Analytics
+- Access System Logs
+- Manage White Label Configurations
+
+Full System Access
+
+====================================================
+2. AKSHARA DIRECTOR
+====================================================
+
+Permissions:
+
+- View Revenue
+- View School Growth
+- View Marketing Reports
+- View Subscription Reports
+- View Customer Success Reports
+
+Cannot access school private data.
+
+====================================================
+3. AKSHARA SALES TEAM
+====================================================
+
+Permissions:
+
+- Create Leads
+- Manage Leads
+- Schedule Demos
+- Generate Proposals
+- Track Conversions
+
+====================================================
+4. AKSHARA MARKETING TEAM
+====================================================
+
+Permissions:
+
+- Manage Campaigns
+- Social Media Planning
+- Lead Generation
+- Marketing Reports
+
+====================================================
+5. AKSHARA SUPPORT TEAM
+====================================================
+
+Permissions:
+
+- View Support Tickets
+- Resolve Issues
+- Access School Data ONLY with approval
+
+====================================================
+6. SCHOOL DIRECTOR
+====================================================
+
+Permissions:
+
+- View All School Reports
+- View Finance Reports
+- View Staff Reports
+- Approve Major Decisions
+- Strategic Management
+
+====================================================
+7. SCHOOL MANAGEMENT
+====================================================
+
+Permissions:
+
+- Manage School Operations
+- View Finance
+- Manage Staff
+- Manage Fees
+- Manage Salaries
+- Approve Budgets
+
+====================================================
+8. PRINCIPAL
+====================================================
+
+Permissions:
+
+- Manage Academics
+- Manage Attendance
+- Manage Timetable
+- Approve Leaves
+- Manage Teachers
+- School Notifications
+
+====================================================
+9. VICE PRINCIPAL
+====================================================
+
+Permissions:
+
+- Delegated Principal Functions
+- Attendance Monitoring
+- Timetable Monitoring
+
+====================================================
+10. FINANCE MANAGER
+====================================================
+
+Permissions:
+
+- Fee Collection
+- Payroll Processing
+- Accounting
+- Budget Tracking
+- Financial Reports
+
+Cannot modify attendance.
+
+====================================================
+11. SCHOOL MARKETING EXECUTIVE
+====================================================
+
+Permissions:
+
+- Admissions CRM
+- Lead Management
+- Campaign Management
+- Poster Creation
+
+====================================================
+12. HR MANAGER
+====================================================
+
+Permissions:
+
+- Recruitment
+- Staff Records
+- Interview Tracking
+- Employee Lifecycle
+
+====================================================
+13. TEACHER
+====================================================
+
+Permissions:
+
+- Mark Attendance
+- Assign Homework
+- Enter Marks
+- Send Parent Messages
+- View Assigned Classes
+
+Cannot access finance.
+
+====================================================
+14. CLASS TEACHER
+====================================================
+
+Additional Permissions:
+
+- View Class Analytics
+- Parent Communication
+- Student Performance Monitoring
+
+====================================================
+15. HOSTEL WARDEN
+====================================================
+
+Permissions:
+
+- Hostel Attendance
+- Room Allocation
+- Bed Allocation
+- Visitor Management
+- Hostel Reports
+
+====================================================
+16. TRANSPORT COORDINATOR
+====================================================
+
+Permissions:
+
+- Route Management
+- Vehicle Tracking
+- Driver Management
+
+====================================================
+17. LIBRARY STAFF
+====================================================
+
+Permissions:
+
+- Manage Books
+- Issue Books
+- Return Books
+- Fine Collection
+
+====================================================
+18. INVENTORY MANAGER
+====================================================
+
+Permissions:
+
+- Asset Management
+- Procurement Tracking
+- Maintenance Records
+
+====================================================
+19. HEALTH STAFF
+====================================================
+
+Permissions:
+
+- Medical Records
+- Health Incidents
+- Medicine Tracking
+
+====================================================
+20. PARENT
+====================================================
+
+Permissions:
+
+- View Own Child Data
+- Pay Fees
+- Track Attendance
+- Track Homework
+- Track Bus
+- Download Report Cards
+
+Cannot view other students.
+
+====================================================
+21. STUDENT
+====================================================
+
+Permissions:
+
+- View Attendance
+- View Homework
+- View Timetable
+- View Results
+- Access Learning Content
+
+====================================================
+22. ALUMNI
+====================================================
+
+Permissions:
+
+- Alumni Directory
+- Events
+- Donations
+- Networking
+
+====================================================
+23. ROLE RESTRICTIONS
+====================================================
+
+No role can access data outside assigned permissions.
+
+All sensitive operations logged.
+
+====================================================
+24. APPROVAL MATRIX
+====================================================
+
+Teacher Leave:
+Teacher → Principal
+
+Budget Approval:
+Finance → Management
+
+Admission Approval:
+Marketing → Principal
+
+Salary Approval:
+Finance → Management
+
+====================================================
+25. DATA EXPORT RIGHTS
+====================================================
+
+Allowed:
+
+- Director
+- Management
+- Finance
+
+Restricted:
+
+- Teachers
+- Students
+- Parents
+
+====================================================
+26. AUDIT REQUIREMENTS
+====================================================
+
+Every action logged:
+
+- Login
+- Data Change
+- Export
+- Delete
+- Approval
+
+END OF PART 6

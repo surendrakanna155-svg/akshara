@@ -1,0 +1,418 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 11E
+SUPPORTING SYSTEM DATABASE SCHEMA
+
+====================================================
+1. LIBRARY MANAGEMENT
+====================================================
+
+TABLE: books
+
+id UUID PRIMARY KEY
+school_id UUID
+
+book_title VARCHAR(255)
+book_code VARCHAR(100)
+author VARCHAR(255)
+
+category VARCHAR(100)
+
+quantity INTEGER
+
+====================================================
+2. BOOK ISSUES
+====================================================
+
+TABLE: book_issues
+
+id UUID PRIMARY KEY
+
+book_id UUID
+student_id UUID
+
+issued_date DATE
+due_date DATE
+
+====================================================
+3. BOOK RETURNS
+====================================================
+
+TABLE: book_returns
+
+id UUID PRIMARY KEY
+
+issue_id UUID
+
+returned_date DATE
+
+fine_amount DECIMAL
+
+====================================================
+4. INVENTORY ASSETS
+====================================================
+
+TABLE: assets
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+asset_name VARCHAR(255)
+
+asset_category VARCHAR(100)
+
+purchase_date DATE
+
+asset_value DECIMAL
+
+====================================================
+5. ASSET ALLOCATIONS
+====================================================
+
+TABLE: asset_allocations
+
+id UUID PRIMARY KEY
+
+asset_id UUID
+
+allocated_to UUID
+
+allocation_date DATE
+
+====================================================
+6. MAINTENANCE LOGS
+====================================================
+
+TABLE: maintenance_logs
+
+id UUID PRIMARY KEY
+
+asset_id UUID
+
+maintenance_type VARCHAR(100)
+
+maintenance_date DATE
+
+remarks TEXT
+
+====================================================
+7. VISITORS
+====================================================
+
+TABLE: visitors
+
+id UUID PRIMARY KEY
+
+visitor_name VARCHAR(255)
+
+mobile VARCHAR(20)
+
+purpose TEXT
+
+====================================================
+8. VISITOR LOGS
+====================================================
+
+TABLE: visitor_logs
+
+id UUID PRIMARY KEY
+
+visitor_id UUID
+
+check_in TIMESTAMP
+check_out TIMESTAMP
+
+====================================================
+9. VISITOR PASSES
+====================================================
+
+TABLE: visitor_passes
+
+id UUID PRIMARY KEY
+
+visitor_id UUID
+
+pass_code VARCHAR(100)
+
+valid_until TIMESTAMP
+
+====================================================
+10. HEALTH RECORDS
+====================================================
+
+TABLE: medical_records
+
+id UUID PRIMARY KEY
+
+student_id UUID
+
+blood_group VARCHAR(20)
+
+allergies TEXT
+
+medical_conditions TEXT
+
+====================================================
+11. HEALTH VISITS
+====================================================
+
+TABLE: health_visits
+
+id UUID PRIMARY KEY
+
+student_id UUID
+
+visit_date DATE
+
+reason TEXT
+
+treatment TEXT
+
+====================================================
+12. MEDICATIONS
+====================================================
+
+TABLE: medications
+
+id UUID PRIMARY KEY
+
+student_id UUID
+
+medicine_name VARCHAR(255)
+
+dosage VARCHAR(100)
+
+====================================================
+13. DOCUMENTS
+====================================================
+
+TABLE: documents
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+document_name VARCHAR(255)
+
+document_type VARCHAR(100)
+
+file_url TEXT
+
+====================================================
+14. DOCUMENT ACCESS LOGS
+====================================================
+
+TABLE: document_access_logs
+
+id UUID PRIMARY KEY
+
+document_id UUID
+
+accessed_by UUID
+
+accessed_at TIMESTAMP
+
+====================================================
+15. AUDIT LOGS
+====================================================
+
+TABLE: audit_logs
+
+id UUID PRIMARY KEY
+
+user_id UUID
+
+action_type VARCHAR(100)
+
+entity_name VARCHAR(100)
+
+entity_id UUID
+
+created_at TIMESTAMP
+
+====================================================
+16. LOGIN LOGS
+====================================================
+
+TABLE: login_logs
+
+id UUID PRIMARY KEY
+
+user_id UUID
+
+device_name VARCHAR(255)
+
+ip_address VARCHAR(100)
+
+login_time TIMESTAMP
+
+====================================================
+17. EXPORT LOGS
+====================================================
+
+TABLE: export_logs
+
+id UUID PRIMARY KEY
+
+user_id UUID
+
+export_type VARCHAR(100)
+
+exported_at TIMESTAMP
+
+====================================================
+18. ACTIVITY LOGS
+====================================================
+
+TABLE: activity_logs
+
+id UUID PRIMARY KEY
+
+user_id UUID
+
+activity TEXT
+
+created_at TIMESTAMP
+
+====================================================
+19. SUPPORT TICKETS
+====================================================
+
+TABLE: support_tickets
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+ticket_title VARCHAR(255)
+
+ticket_description TEXT
+
+status VARCHAR(50)
+
+created_at TIMESTAMP
+
+====================================================
+20. TICKET COMMENTS
+====================================================
+
+TABLE: ticket_comments
+
+id UUID PRIMARY KEY
+
+ticket_id UUID
+
+comment_text TEXT
+
+commented_by UUID
+
+====================================================
+21. TICKET STATUS LOGS
+====================================================
+
+TABLE: ticket_status_logs
+
+id UUID PRIMARY KEY
+
+ticket_id UUID
+
+old_status VARCHAR(50)
+
+new_status VARCHAR(50)
+
+changed_at TIMESTAMP
+
+====================================================
+22. FEATURE FLAGS
+====================================================
+
+TABLE: feature_flags
+
+id UUID PRIMARY KEY
+
+feature_name VARCHAR(255)
+
+feature_key VARCHAR(100)
+
+is_enabled BOOLEAN
+
+====================================================
+23. SCHOOL FEATURE FLAGS
+====================================================
+
+TABLE: school_feature_flags
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+feature_flag_id UUID
+
+is_enabled BOOLEAN
+
+====================================================
+24. DEVICE REGISTRATIONS
+====================================================
+
+TABLE: device_registrations
+
+id UUID PRIMARY KEY
+
+user_id UUID
+
+device_name VARCHAR(255)
+
+device_type VARCHAR(100)
+
+registered_at TIMESTAMP
+
+====================================================
+25. SYSTEM CONFIGURATION
+====================================================
+
+TABLE: system_settings
+
+id UUID PRIMARY KEY
+
+setting_key VARCHAR(255)
+
+setting_value TEXT
+
+====================================================
+26. DATABASE ARCHITECTURE STATUS
+====================================================
+
+Core Schema - Completed
+Academic Schema - Completed
+Finance Schema - Completed
+Hostel Schema - Completed
+Transport Schema - Completed
+Marketing CRM Schema - Completed
+AI Schema - Completed
+Library Schema - Completed
+Inventory Schema - Completed
+Visitor Schema - Completed
+Health Schema - Completed
+Document Vault Schema - Completed
+Audit Schema - Completed
+Support Schema - Completed
+
+====================================================
+27. NEXT DOCUMENTS
+====================================================
+
+Part 12:
+Screen Flow Specifications
+
+Part 13:
+API Contracts
+
+Part 14:
+AI Architecture
+
+Part 15:
+Infrastructure Blueprint
+
+END OF PART 11E

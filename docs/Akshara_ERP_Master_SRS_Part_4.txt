@@ -1,0 +1,312 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 4
+ADMISSIONS, MARKETING CRM, ALUMNI & BUSINESS OPERATIONS
+
+====================================================
+1. ADMISSIONS CRM
+====================================================
+
+Objective:
+Digitize and automate the complete admission process.
+
+Lead Sources:
+- Website
+- Walk-in
+- Referral
+- WhatsApp
+- Facebook
+- Instagram
+- Google Ads
+
+Lead Pipeline:
+
+New Enquiry
+→ Contacted
+→ School Visit Scheduled
+→ Demo Class
+→ Follow-up
+→ Admission Confirmed
+→ Joined
+
+Features:
+- Lead Capture
+- Lead Assignment
+- Follow-up Tracking
+- Admission Status Tracking
+- Document Collection
+- Admission Approval
+
+Reports:
+- Admission Conversion Rate
+- Lead Source Performance
+- Counselor Performance
+
+====================================================
+2. MARKETING CRM
+====================================================
+
+Features:
+- Campaign Management
+- Lead Tracking
+- Marketing Analytics
+- School Promotion
+
+Channels:
+- Facebook
+- Instagram
+- WhatsApp
+- YouTube
+- Google Ads
+
+Reports:
+- Leads Generated
+- Cost Per Lead
+- Campaign ROI
+- Admission Conversion
+
+====================================================
+3. AI POSTER GENERATOR
+====================================================
+
+Generate:
+
+- Admission Posters
+- Achievement Posters
+- Event Posters
+- Festival Posters
+- Examination Posters
+- Results Posters
+
+Output Formats:
+- WhatsApp
+- Instagram
+- Facebook
+- Print Ready
+
+====================================================
+4. AI CAPTION GENERATOR
+====================================================
+
+Generate:
+
+- Social Media Captions
+- Event Descriptions
+- Admission Content
+- Achievement Content
+
+Languages:
+- English
+- Telugu
+- Hindi
+- Tamil
+- Urdu
+
+====================================================
+5. SCHOOL WEBSITE INTEGRATION
+====================================================
+
+Features:
+- News Publishing
+- Event Publishing
+- Achievement Publishing
+- Gallery Publishing
+
+Automatic Sync:
+ERP → Website
+
+====================================================
+6. SOCIAL MEDIA PLANNER
+====================================================
+
+Features:
+- Content Calendar
+- Campaign Scheduling
+- Reminder System
+
+Track:
+- Posts
+- Engagement
+- Reach
+
+====================================================
+7. SCHOOL GALLERY
+====================================================
+
+Features:
+- Event Albums
+- Photo Galleries
+- Video Galleries
+
+Permissions:
+- Parent Access
+- Student Access
+- Teacher Access
+
+====================================================
+8. ALUMNI PORTAL
+====================================================
+
+Features:
+- Alumni Profiles
+- Success Stories
+- Networking
+- Donations
+- Events
+
+Reports:
+- Alumni Engagement
+- Donations Tracking
+
+====================================================
+9. RECRUITMENT MANAGEMENT
+====================================================
+
+Features:
+- Job Posting
+- Candidate Tracking
+- Interview Scheduling
+- Selection Workflow
+
+Pipeline:
+
+Applied
+→ Screening
+→ Interview
+→ Selected
+→ Joined
+
+====================================================
+10. REFERRAL PROGRAM
+====================================================
+
+Features:
+- Parent Referrals
+- Student Referrals
+- Alumni Referrals
+
+Track:
+- Referral Source
+- Admission Result
+
+====================================================
+11. AKSHARA ERP COMPANY DASHBOARD
+====================================================
+
+Company Metrics:
+
+- Total Schools
+- Active Schools
+- Trial Schools
+- Expiring Schools
+- Revenue
+- Subscription Status
+
+====================================================
+12. SALES CRM
+====================================================
+
+Track:
+
+- School Leads
+- Product Demos
+- Proposals
+- Conversions
+
+Pipeline:
+
+Lead
+→ Contacted
+→ Demo
+→ Proposal
+→ Negotiation
+→ Won
+
+====================================================
+13. CUSTOMER SUCCESS MANAGEMENT
+====================================================
+
+Track:
+
+- School Activity
+- Feature Usage
+- Adoption Rate
+- Renewal Probability
+
+AI Alerts:
+
+- Low Usage Schools
+- Churn Risk Schools
+
+====================================================
+14. SUPPORT TICKET SYSTEM
+====================================================
+
+Features:
+
+- Ticket Creation
+- Ticket Assignment
+- Resolution Tracking
+
+Statuses:
+
+Open
+In Progress
+Resolved
+Closed
+
+====================================================
+15. SUBSCRIPTION MANAGEMENT
+====================================================
+
+Plans:
+
+Standard
+Premium
+Enterprise
+
+Features:
+
+- Billing
+- Renewals
+- Invoices
+- Plan Upgrades
+
+====================================================
+16. WHITE LABEL MANAGEMENT
+====================================================
+
+Each School Can Have:
+
+- Custom Logo
+- Custom Theme
+- Custom Domain
+- Custom Login Page
+
+====================================================
+17. BUSINESS ANALYTICS
+====================================================
+
+Track:
+
+- School Growth
+- Student Growth
+- Revenue Growth
+- Marketing Performance
+
+====================================================
+18. AI BUSINESS COPILOT
+====================================================
+
+Examples:
+
+Show schools expiring next month.
+
+Which marketing campaign generated most admissions?
+
+Show revenue trends.
+
+Predict school churn risk.
+
+END OF PART 4

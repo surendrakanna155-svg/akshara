@@ -1,0 +1,348 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 7
+DATABASE ARCHITECTURE & ENTITY DESIGN
+
+====================================================
+1. DATABASE ARCHITECTURE OVERVIEW
+====================================================
+
+Database Engine:
+PostgreSQL
+
+Architecture:
+Multi-Tenant SaaS
+
+Isolation Method:
+school_id based tenant isolation
+
+Security:
+Row Level Security (RLS)
+
+====================================================
+2. CORE TABLE GROUPS
+====================================================
+
+Master Tables
+Academic Tables
+Finance Tables
+Transport Tables
+Hostel Tables
+Marketing CRM Tables
+HR Tables
+Audit Tables
+AI Tables
+System Tables
+
+====================================================
+3. SCHOOL TABLES
+====================================================
+
+schools
+school_branches
+school_settings
+school_branding
+school_subscriptions
+
+Purpose:
+Store school level information.
+
+====================================================
+4. USER TABLES
+====================================================
+
+users
+roles
+permissions
+role_permissions
+user_sessions
+devices
+
+Purpose:
+Authentication and authorization.
+
+====================================================
+5. STUDENT TABLES
+====================================================
+
+students
+student_profiles
+student_documents
+student_medical_records
+student_promotions
+student_transfers
+student_achievements
+
+====================================================
+6. PARENT TABLES
+====================================================
+
+parents
+parent_student_mapping
+parent_preferences
+parent_notifications
+
+====================================================
+7. STAFF TABLES
+====================================================
+
+staff
+teachers
+staff_attendance
+staff_leaves
+staff_documents
+staff_performance
+
+====================================================
+8. ACADEMIC TABLES
+====================================================
+
+classes
+sections
+subjects
+academic_years
+curriculum
+lesson_plans
+syllabus_tracking
+
+====================================================
+9. ATTENDANCE TABLES
+====================================================
+
+student_attendance
+teacher_attendance
+attendance_overrides
+attendance_audit_logs
+
+====================================================
+10. TIMETABLE TABLES
+====================================================
+
+timetables
+teacher_timetables
+class_timetables
+substitute_assignments
+
+====================================================
+11. HOMEWORK TABLES
+====================================================
+
+homework
+assignments
+submissions
+assignment_feedback
+
+====================================================
+12. EXAMINATION TABLES
+====================================================
+
+exams
+exam_schedules
+marks
+grades
+report_cards
+rankings
+
+====================================================
+13. COMMUNICATION TABLES
+====================================================
+
+notifications
+messages
+announcements
+translation_logs
+
+====================================================
+14. FINANCE TABLES
+====================================================
+
+fee_structures
+fee_payments
+fee_discounts
+fee_fines
+
+income_records
+expense_records
+
+budgets
+budget_allocations
+
+cash_book
+general_ledger
+journal_entries
+
+====================================================
+15. PAYROLL TABLES
+====================================================
+
+salary_structures
+salary_payments
+payslips
+deductions
+bonuses
+
+====================================================
+16. HOSTEL TABLES
+====================================================
+
+hostels
+hostel_blocks
+hostel_rooms
+hostel_beds
+
+hostel_allocations
+hostel_attendance
+
+mess_menus
+mess_expenses
+
+====================================================
+17. TRANSPORT TABLES
+====================================================
+
+vehicles
+drivers
+routes
+route_stops
+
+student_transport_assignments
+
+gps_tracking_logs
+
+====================================================
+18. LIBRARY TABLES
+====================================================
+
+books
+book_categories
+book_issues
+book_returns
+library_fines
+
+====================================================
+19. INVENTORY TABLES
+====================================================
+
+assets
+asset_categories
+asset_allocations
+maintenance_logs
+
+====================================================
+20. VISITOR TABLES
+====================================================
+
+visitors
+visitor_logs
+visitor_passes
+
+====================================================
+21. HEALTH TABLES
+====================================================
+
+medical_records
+health_visits
+medications
+
+====================================================
+22. DISCIPLINE TABLES
+====================================================
+
+discipline_records
+warnings
+appreciations
+
+====================================================
+23. DOCUMENT VAULT TABLES
+====================================================
+
+documents
+document_categories
+document_access_logs
+
+====================================================
+24. ADMISSIONS CRM TABLES
+====================================================
+
+leads
+lead_sources
+lead_activities
+admissions
+
+====================================================
+25. MARKETING TABLES
+====================================================
+
+campaigns
+campaign_metrics
+social_posts
+content_calendar
+
+====================================================
+26. ALUMNI TABLES
+====================================================
+
+alumni
+alumni_events
+alumni_donations
+
+====================================================
+27. HR TABLES
+====================================================
+
+job_openings
+candidates
+interviews
+offers
+
+====================================================
+28. AI TABLES
+====================================================
+
+ai_requests
+ai_responses
+ai_usage_logs
+
+====================================================
+29. SUPPORT TABLES
+====================================================
+
+support_tickets
+ticket_comments
+ticket_status_logs
+
+====================================================
+30. AUDIT TABLES
+====================================================
+
+audit_logs
+login_logs
+export_logs
+activity_logs
+
+====================================================
+31. ESTIMATED DATABASE SIZE
+====================================================
+
+Phase 1:
+60-80 Tables
+
+Phase 2:
+100-120 Tables
+
+Phase 3:
+120-150 Tables
+
+====================================================
+32. DATABASE DESIGN PRINCIPLES
+====================================================
+
+- Normalize Data
+- Avoid Duplication
+- Tenant Isolation
+- Auditability
+- Scalability
+- Security First
+
+END OF PART 7

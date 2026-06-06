@@ -1,0 +1,284 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 8
+UI/UX DESIGN & SCREEN SPECIFICATION
+
+====================================================
+1. DESIGN PRINCIPLES
+====================================================
+
+Theme:
+- Primary Blue
+- White Background
+- Red Alerts
+- Green Success
+
+Principles:
+- Mobile First
+- Simple Navigation
+- Rural User Friendly
+- Multi Language Support
+- Accessibility Support
+
+====================================================
+2. COMMON APP STRUCTURE
+====================================================
+
+Login
+Dashboard
+Notifications
+Profile
+Settings
+Help & Support
+
+====================================================
+3. STUDENT APP SCREENS
+====================================================
+
+Dashboard
+Attendance
+Homework
+Assignments
+Timetable
+Exam Results
+Report Cards
+Practice Papers
+Online Classes
+Bus Tracking
+School Gallery
+Notifications
+Profile
+
+Approx Screens: 15+
+
+====================================================
+4. PARENT APP SCREENS
+====================================================
+
+Dashboard
+Attendance
+Homework
+Fee Payments
+Transport Tracking
+Messages
+School Notices
+Events
+Certificates
+Academic Reports
+Profile
+
+Approx Screens: 20+
+
+====================================================
+5. TEACHER APP SCREENS
+====================================================
+
+Dashboard
+Attendance Entry
+Homework Creation
+Assignments
+Marks Entry
+Class Analytics
+Messages
+Leave Requests
+Timetable
+AI Assistant
+
+Approx Screens: 25+
+
+====================================================
+6. PRINCIPAL DASHBOARD
+====================================================
+
+School Overview
+Attendance Analytics
+Teacher Management
+Leave Approvals
+Timetable Management
+Exam Analytics
+AI Insights
+School Announcements
+
+Approx Screens: 20+
+
+====================================================
+7. MANAGEMENT DASHBOARD
+====================================================
+
+Revenue Dashboard
+Expense Dashboard
+Salary Dashboard
+Admission Dashboard
+School Analytics
+Reports
+
+Approx Screens: 25+
+
+====================================================
+8. FINANCE DASHBOARD
+====================================================
+
+Fee Collection
+Pending Fees
+Payroll
+Expenses
+Budgets
+Accounting Reports
+Audit Reports
+
+Approx Screens: 30+
+
+====================================================
+9. MARKETING DASHBOARD
+====================================================
+
+Admissions CRM
+Lead Management
+Campaign Analytics
+AI Poster Generator
+Content Planner
+Referral Tracking
+
+Approx Screens: 25+
+
+====================================================
+10. HOSTEL DASHBOARD
+====================================================
+
+Hostel Overview
+Room Allocation
+Attendance
+Mess Management
+Visitor Tracking
+Health Records
+
+Approx Screens: 20+
+
+====================================================
+11. TRANSPORT DASHBOARD
+====================================================
+
+Vehicle Tracking
+Route Management
+Driver Management
+Transport Reports
+
+Approx Screens: 15+
+
+====================================================
+12. LIBRARY DASHBOARD
+====================================================
+
+Books
+Issue Books
+Returns
+Fines
+Reports
+
+Approx Screens: 10+
+
+====================================================
+13. HR DASHBOARD
+====================================================
+
+Recruitment
+Candidates
+Interviews
+Offers
+Employee Records
+
+Approx Screens: 15+
+
+====================================================
+14. AKSHARA ERP COMPANY DASHBOARD
+====================================================
+
+Schools Overview
+Revenue Analytics
+Subscription Management
+Support Tickets
+Marketing Analytics
+Product Usage Analytics
+
+Approx Screens: 25+
+
+====================================================
+15. PROFILE & SETTINGS
+====================================================
+
+Profile
+Language Selection
+Notification Preferences
+Security Settings
+Device Management
+
+====================================================
+16. MULTI LANGUAGE UI
+====================================================
+
+Supported:
+
+- English
+- Telugu
+- Hindi
+- Tamil
+- Kannada
+- Malayalam
+- Urdu
+
+User can switch language anytime.
+
+====================================================
+17. ACCESSIBILITY FEATURES
+====================================================
+
+- Large Text
+- High Contrast Mode
+- Screen Reader Support
+- Simplified Navigation
+
+====================================================
+18. NAVIGATION MODEL
+====================================================
+
+Mobile:
+Bottom Navigation
+
+Web:
+Sidebar Navigation
+
+Tablet:
+Hybrid Navigation
+
+====================================================
+19. DASHBOARD WIDGETS
+====================================================
+
+Attendance
+Fees
+Homework
+Transport
+Notifications
+AI Insights
+Reports
+
+====================================================
+20. ESTIMATED SCREEN COUNT
+====================================================
+
+Student App: 15+
+Parent App: 20+
+Teacher App: 25+
+Principal Portal: 20+
+Management Portal: 25+
+Finance Portal: 30+
+Marketing Portal: 25+
+Hostel Portal: 20+
+Transport Portal: 15+
+Akshara Portal: 25+
+
+Total Estimated Screens:
+220 - 300 Screens
+
+END OF PART 8

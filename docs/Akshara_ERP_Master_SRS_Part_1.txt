@@ -1,0 +1,172 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 1
+
+1. EXECUTIVE SUMMARY
+
+Product Name:
+Akshara ERP
+
+Product Category:
+Cloud-Based Multi-Tenant School ERP SaaS Platform
+
+Product Vision:
+Akshara ERP aims to become a unified digital ecosystem for educational institutions by connecting school management, principals, teachers, parents, students, finance departments, hostel operations, transport operations, marketing teams, and the Akshara ERP company itself through a single secure platform.
+
+The system will eliminate manual processes, improve communication, automate repetitive tasks using Artificial Intelligence, and provide real-time insights for better decision making.
+
+2. BUSINESS OBJECTIVES
+
+Primary Objectives:
+
+- School Digitization
+- Parent Engagement
+- Operational Efficiency
+- Financial Transparency
+- Growth Platform for Admissions and Marketing
+
+3. PRODUCT SCOPE
+
+Mobile Applications:
+- Student App
+- Parent App
+- Teacher App
+- Staff App
+
+Web Portals:
+- Principal Portal
+- Management Portal
+- Finance Portal
+- Marketing Portal
+- Hostel Portal
+- Transport Portal
+
+Akshara Control Center:
+- Internal ERP Company Dashboard
+
+4. TARGET CUSTOMERS
+
+Tier 1: Small Schools (100-500 Students)
+Tier 2: Medium Schools (500-3000 Students)
+Tier 3: Large Schools (3000+ Students)
+Tier 4: School Chains
+Tier 5: Residential Schools
+
+5. STAKEHOLDERS
+
+Internal:
+- Akshara Director
+- Product Team
+- Support Team
+- Marketing Team
+- Sales Team
+
+School:
+- School Director
+- Management
+- Principal
+- Vice Principal
+- Teachers
+- Finance Team
+- Parents
+- Students
+
+6. USER ROLES
+
+Akshara Roles:
+- Super Admin
+- Director
+- Sales Manager
+- Marketing Manager
+- Support Engineer
+
+School Roles:
+- School Director
+- Management
+- Principal
+- Vice Principal
+- Finance Manager
+- Marketing Executive
+- Teacher
+- Class Teacher
+- Hostel Warden
+- Transport Coordinator
+- Parent
+- Student
+- Alumni
+
+7. HIGH LEVEL MODULES
+
+Academic:
+- Student Management
+- Attendance
+- Timetable
+- Homework
+- Examinations
+- Report Cards
+
+Administrative:
+- Staff Management
+- Leave Management
+- Notifications
+- Visitor Management
+
+Financial:
+- Fees
+- Accounting
+- Payroll
+- Expense Management
+
+Transport:
+- GPS Tracking
+- Route Management
+- Driver Management
+
+Hostel:
+- Room Allocation
+- Attendance
+- Mess Management
+
+Marketing:
+- Admissions CRM
+- Campaign Management
+- AI Poster Generator
+
+AI:
+- Teacher Assistant
+- Parent Assistant
+- Principal Assistant
+- Finance Assistant
+- ERP Copilot
+
+8. PRODUCT PRINCIPLES
+
+- Mobile First
+- Security First
+- Multi-Language Support
+- Offline Friendly
+- Scalable Architecture
+- Privacy Focused
+
+9. SUPPORTED LANGUAGES
+
+- English
+- Telugu
+- Hindi
+- Tamil
+- Kannada
+- Malayalam
+- Urdu
+
+10. UNIQUE SELLING POINTS
+
+- AI Powered ERP
+- Face Recognition + Geo Fence Attendance
+- Multi-Language Communication
+- Marketing CRM
+- Complete Finance Suite
+- White Label Support
+- Privacy First Architecture
+
+END OF PART 1

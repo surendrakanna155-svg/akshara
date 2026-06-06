@@ -1,0 +1,308 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 16
+DETAILED UI WIREFRAMES & DESIGN SYSTEM
+
+====================================================
+1. DESIGN SYSTEM OVERVIEW
+====================================================
+
+Primary Color:
+Blue
+
+Secondary Color:
+White
+
+Alert Color:
+Red
+
+Success Color:
+Green
+
+Design Style:
+Modern
+Clean
+Minimal
+Professional
+
+====================================================
+2. LOGIN SCREEN
+====================================================
+
+Components:
+
+- School Logo
+- Language Selector
+- Mobile Number
+- Email
+- Password
+- OTP Login
+- Forgot Password
+
+Actions:
+
+Login
+Reset Password
+
+====================================================
+3. DASHBOARD STANDARDS
+====================================================
+
+Every Dashboard Contains:
+
+- Header
+- Notifications
+- Quick Actions
+- KPI Cards
+- Recent Activity
+- AI Insights
+
+====================================================
+4. STUDENT DASHBOARD
+====================================================
+
+Widgets:
+
+Attendance %
+Homework Due
+Upcoming Exams
+Bus Status
+Notifications
+
+Quick Actions:
+
+View Homework
+Join Class
+Download Report Card
+
+====================================================
+5. PARENT DASHBOARD
+====================================================
+
+Widgets:
+
+Child Attendance
+Fee Status
+Homework
+Bus Tracking
+School Notices
+
+Quick Actions:
+
+Pay Fee
+Contact Teacher
+Download Report
+
+====================================================
+6. TEACHER DASHBOARD
+====================================================
+
+Widgets:
+
+Today's Classes
+Pending Homework
+Attendance Tasks
+Messages
+
+Quick Actions:
+
+Mark Attendance
+Create Homework
+Enter Marks
+
+====================================================
+7. PRINCIPAL DASHBOARD
+====================================================
+
+Widgets:
+
+Student Attendance
+Teacher Attendance
+Leave Requests
+Exam Analytics
+AI Suggestions
+
+Quick Actions:
+
+Approve Leave
+Publish Notice
+Manage Timetable
+
+====================================================
+8. MANAGEMENT DASHBOARD
+====================================================
+
+Widgets:
+
+Revenue
+Expenses
+Admissions
+Salaries
+Growth Analytics
+
+Quick Actions:
+
+Approve Budget
+View Reports
+
+====================================================
+9. FINANCE DASHBOARD
+====================================================
+
+Widgets:
+
+Collections
+Pending Fees
+Expenses
+Payroll
+
+Quick Actions:
+
+Collect Fee
+Generate Report
+
+====================================================
+10. MARKETING DASHBOARD
+====================================================
+
+Widgets:
+
+New Leads
+Admissions
+Campaign Results
+Referrals
+
+Quick Actions:
+
+Create Campaign
+Generate Poster
+
+====================================================
+11. HOSTEL DASHBOARD
+====================================================
+
+Widgets:
+
+Occupancy
+Attendance
+Visitors
+Health Alerts
+
+Quick Actions:
+
+Allocate Room
+Record Attendance
+
+====================================================
+12. TRANSPORT DASHBOARD
+====================================================
+
+Widgets:
+
+Active Vehicles
+Live Tracking
+Driver Attendance
+
+Quick Actions:
+
+Track Vehicle
+Manage Route
+
+====================================================
+13. SCHOOL DIRECTOR DASHBOARD
+====================================================
+
+Widgets:
+
+School Performance
+Revenue Trends
+Admission Growth
+Staff Strength
+
+AI Executive Summary
+
+====================================================
+14. AKSHARA DIRECTOR DASHBOARD
+====================================================
+
+Widgets:
+
+Total Schools
+MRR
+ARR
+Support Tickets
+Lead Funnel
+
+====================================================
+15. ATTENDANCE SCREENS
+====================================================
+
+Teacher Attendance:
+
+Geo Fence Status
+Face Verification
+Attendance Result
+
+Student Attendance:
+
+Class List
+Present/Absent
+Remarks
+
+====================================================
+16. HOMEWORK SCREENS
+====================================================
+
+Create Homework
+Upload Attachment
+Select Class
+Due Date
+
+====================================================
+17. EXAMINATION SCREENS
+====================================================
+
+Exam Setup
+Marks Entry
+Report Cards
+Analytics
+
+====================================================
+18. FEE PAYMENT SCREENS
+====================================================
+
+Pending Fees
+Payment Gateway
+Receipt Download
+
+====================================================
+19. AI COPILOT SCREEN
+====================================================
+
+Chat Interface
+
+Suggested Prompts
+
+Recent Queries
+
+====================================================
+20. DESIGN RULES
+====================================================
+
+Maximum 3 clicks to important actions.
+
+Responsive Design.
+
+Mobile First.
+
+Accessibility Friendly.
+
+====================================================
+21. NEXT DOCUMENT
+====================================================
+
+Part 17:
+Production Database DDL & SQL Blueprint
+
+END OF PART 16

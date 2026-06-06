@@ -1,0 +1,88 @@
+
+AKSHARA SCHOOL ERP PLATFORM
+MASTER SRS (WORKING DRAFT)
+
+LATEST ADDITIONS:
+- Face Recognition Attendance for Staff
+- Geo-Fencing + Face Verification Required
+- Attendance accepted only when:
+  1. User is inside school geo-fence
+  2. Face matches registered staff profile
+- Mobile-first design
+- No separate biometric hardware required for initial deployment
+- Manual attendance override by management
+- QR attendance optional
+- Web portal attendance optional
+
+CORE MODULES:
+1. Authentication & Role Management
+2. Student Information System
+3. Parent Portal
+4. Teacher Portal
+5. Principal Dashboard
+6. Management Dashboard
+7. Finance & Accounting
+8. Fee Management
+9. Salary Management
+10. Attendance Management
+11. Timetable Management
+12. Homework Management
+13. Examination Management
+14. Notifications & Messaging
+15. AI Message Translation
+16. Bus Tracking
+17. Transport Management
+18. Hostel Management
+19. Library Management
+20. Inventory Management
+21. Visitor Management
+22. Health Records
+23. Discipline Management
+24. Document Vault
+25. Online Classes (Google Meet)
+26. Alumni Portal
+27. Marketing & Admissions CRM
+28. AI Poster Generator
+29. School Website Sync
+30. School ERP AI Copilot
+31. Recruitment Management
+32. Vendor Management
+33. Certificate Generator
+34. Parent Teacher Meeting System
+35. Academic Planning & Lesson Plans
+36. Multi-Language Support
+37. White Label School Branding
+
+SUPPORTED LANGUAGES:
+English, Telugu, Hindi, Tamil, Kannada, Malayalam, Urdu
+
+SECURITY:
+- Multi-school tenant isolation
+- Encryption at rest
+- Encryption in transit
+- Daily backups
+- Audit logs
+- Dedicated database option for premium schools
+
+TECH STACK:
+Frontend: Flutter
+Backend: Supabase
+Database: PostgreSQL
+Storage: Cloudflare R2
+Payments: Razorpay
+Notifications: Firebase Cloud Messaging
+Maps: Google Maps
+AI: OpenAI API
+Source Control: GitHub
+
+NEXT DOCUMENTS TO CREATE:
+1. Database Architecture
+2. ER Diagrams
+3. Role Permission Matrix
+4. UI/UX Wireframes
+5. API Specifications
+6. Testing Plan
+7. Deployment Plan
+8. SaaS Architecture
+9. Security Architecture
+10. Backup & Recovery Plan

@@ -1,0 +1,533 @@
+
+AKSHARA ERP
+MASTER DOCUMENT INDEX & REFERENCE GUIDE
+VERSION 1.0
+
+PURPOSE
+This document acts as a master index for all Akshara ERP documents.
+Use it to quickly identify which document contains specific information.
+
+====================================================
+PART 1
+EXECUTIVE SUMMARY & PRODUCT VISION
+====================================================
+
+Contains:
+- Product Vision
+- Business Objectives
+- Product Scope
+- Stakeholders
+- User Roles
+- High Level Modules
+- Supported Languages
+- Unique Selling Points
+
+Use When:
+You need a quick overview of the entire product.
+
+====================================================
+PART 2
+CORE FUNCTIONAL REQUIREMENTS
+====================================================
+
+Contains:
+- Student Management
+- Parent Management
+- Teacher Management
+- Attendance
+- Timetable
+- Homework
+- Exams
+- Communication
+- Online Classes
+- Leave Management
+- Certificates
+- Health Records
+- Document Vault
+
+====================================================
+PART 3
+FINANCE, HOSTEL & OPERATIONS
+====================================================
+
+Contains:
+- Fees
+- Accounting
+- Payroll
+- Budgets
+- Hostel
+- Mess
+- Transport
+- Library
+- Inventory
+- Vendors
+- Procurement
+- Audit
+
+====================================================
+PART 4
+ADMISSIONS, CRM & BUSINESS
+====================================================
+
+Contains:
+- Admissions CRM
+- Marketing CRM
+- AI Poster Generator
+- AI Caption Generator
+- Website Integration
+- Alumni Portal
+- Recruitment
+- Sales CRM
+- Subscription Management
+- White Labeling
+
+====================================================
+PART 5
+SECURITY & PRIVACY
+====================================================
+
+Contains:
+- Data Ownership
+- Privacy Policy
+- Multi-Tenant Architecture
+- Dedicated Databases
+- Enterprise Deployments
+- Encryption
+- Authentication
+- Audit Logs
+- Backup Strategy
+- Disaster Recovery
+
+IMPORTANT:
+Show this document to schools concerned about data privacy.
+
+====================================================
+PART 6
+ROLE & PERMISSION MATRIX
+====================================================
+
+Contains:
+- Super Admin Permissions
+- Director Permissions
+- Principal Permissions
+- Teacher Permissions
+- Parent Permissions
+- Student Permissions
+- Approval Matrix
+
+====================================================
+PART 7
+DATABASE ARCHITECTURE
+====================================================
+
+Contains:
+- Database Overview
+- Core Tables
+- Academic Tables
+- Finance Tables
+- Hostel Tables
+- CRM Tables
+- AI Tables
+
+====================================================
+PART 8
+UI/UX SPECIFICATION
+====================================================
+
+Contains:
+- Screen Inventory
+- Dashboard Concepts
+- Navigation Design
+- Accessibility
+- Language Support
+
+====================================================
+PART 9
+API ARCHITECTURE
+====================================================
+
+Contains:
+- API Categories
+- Integrations
+- Authentication APIs
+- Finance APIs
+- AI APIs
+- Notification APIs
+
+====================================================
+PART 10
+TESTING & DEPLOYMENT
+====================================================
+
+Contains:
+- QA Strategy
+- CI/CD
+- Staging
+- Production
+- Monitoring
+- Release Management
+
+====================================================
+PART 11A
+DATABASE RULES
+====================================================
+
+Contains:
+- Naming Standards
+- Audit Rules
+- Soft Delete Rules
+- School Isolation Rules
+- File Storage Rules
+
+====================================================
+PART 11B
+CORE DATABASE SCHEMA
+====================================================
+
+Contains:
+- Schools
+- Users
+- Roles
+- Students
+- Parents
+- Teachers
+- Classes
+- Subjects
+
+====================================================
+PART 11C
+ACADEMIC DATABASE SCHEMA
+====================================================
+
+Contains:
+- Attendance
+- Timetables
+- Homework
+- Assignments
+- Exams
+- Marks
+- Notifications
+
+====================================================
+PART 11D
+ENTERPRISE DATABASE SCHEMA
+====================================================
+
+Contains:
+- Finance
+- Payroll
+- Hostel
+- Transport
+- Marketing CRM
+- AI Tables
+
+====================================================
+PART 11E
+SUPPORTING DATABASE SCHEMA
+====================================================
+
+Contains:
+- Library
+- Inventory
+- Visitors
+- Health
+- Documents
+- Audit Logs
+- Support Tickets
+
+====================================================
+PART 12
+SCREEN FLOW SPECIFICATION
+====================================================
+
+Contains:
+- Login Flow
+- Student Flow
+- Parent Flow
+- Teacher Flow
+- Principal Flow
+- Management Flow
+- Marketing Flow
+- AI Flow
+
+====================================================
+PART 13
+API CONTRACTS
+====================================================
+
+Contains:
+- Request Examples
+- Response Examples
+- Error Standards
+- Versioning Standards
+
+====================================================
+PART 14
+AI ARCHITECTURE
+====================================================
+
+Contains:
+- Teacher AI
+- Parent AI
+- Student AI
+- Principal AI
+- Finance AI
+- Marketing AI
+- ERP Copilot
+- Translation Engine
+
+====================================================
+PART 15
+INFRASTRUCTURE BLUEPRINT
+====================================================
+
+Contains:
+- Flutter
+- Supabase
+- PostgreSQL
+- Cloudflare R2
+- Firebase
+- OpenAI
+- Google Maps
+- Razorpay
+- Scaling Strategy
+
+====================================================
+PART 16
+UI WIREFRAMES & DESIGN SYSTEM
+====================================================
+
+Contains:
+- Design System
+- Dashboard Layouts
+- Screen Concepts
+- Navigation Standards
+
+====================================================
+PART 17
+DATABASE DDL BLUEPRINT
+====================================================
+
+Contains:
+- Production Standards
+- SQL Guidelines
+- Indexing
+- Migrations
+- RLS Policies
+
+====================================================
+PART 18
+FLUTTER ARCHITECTURE
+====================================================
+
+Contains:
+- Folder Structure
+- Riverpod
+- Clean Architecture
+- Repository Pattern
+- Localization
+- Offline Strategy
+
+====================================================
+PART 19
+SPRINT PLAN
+====================================================
+
+Contains:
+- Team Structure
+- MVP Scope
+- Sprint Roadmap
+- Version Plan
+
+====================================================
+PART 20
+QA & GO-LIVE
+====================================================
+
+Contains:
+- Test Cases
+- UAT Scenarios
+- Go-Live Checklist
+- Release Acceptance
+
+====================================================
+QUICK REFERENCE
+====================================================
+
+Want feature details?
+→ Part 2, 3, 4
+
+Want security details?
+→ Part 5
+
+Want permissions?
+→ Part 6
+
+Want database?
+→ Part 7, 11A-11E, 17
+
+Want UI?
+→ Part 8, 12, 16
+
+Want APIs?
+→ Part 9, 13
+
+Want AI?
+→ Part 14
+
+Want infrastructure?
+→ Part 15
+
+Want Flutter code structure?
+→ Part 18
+
+Want development roadmap?
+→ Part 19
+
+Want testing?
+→ Part 20
+
+====================================================
+MODULE SPECIFICATIONS (FIGMA / UI)
+====================================================
+
+Consolidated module specs in /docs (Markdown).
+Use Finance.md as the reference template for structure.
+
+Design System
+→ DesignSystem.md (AKS-DS-SPEC-v1.0)
+→ FigmaDesignSystemBuildGuide.md (AKS-FIGMA-BUILD-v1.0) — step-by-step Figma library build
+
+Technical Architecture
+→ TechnicalArchitecture.md (AKS-TECH-ARCH-v1.0)
+
+Platform Standards
+→ Audit.md (AKS-AUDIT-SPEC-v1.0) — cross-module audit events
+→ Reports.md (AKS-RPT-CATALOG-v1.0) — enterprise report catalog
+
+Architecture Review & Gap Register
+→ ArchitectureReview.md (AKS-ARCH-REVIEW-v1.0)
+
+Web Admin Modules
+→ Finance.md (FN-01–11) — fee, payroll, ledger, audit
+→ Management.md (MG-01–08) — approvals, executive oversight
+→ Admissions.md (AD-01–10) — CRM, pipeline, registration
+→ Marketing.md (MK-01–10) — campaigns, leads, attribution
+→ Transport.md (TR-01–09) — routes, GPS, drivers
+→ Hostel.md (HO-01–09) — rooms, mess, visitors
+→ HR.md (HR-01–09) — employees, recruitment, leave
+→ Director.md (DR-01–09) — multi-school chain view
+
+Executive & Academic Portals
+→ Principal.md (PR-01–16) — attendance, approvals, academics
+→ Notifications.md (NT-01–06) — inbox, create, templates, delivery
+
+Operations & Platform (Phase 4)
+→ Library.md (LB-01–08)
+→ Inventory.md (INV-01–08)
+→ Alumni.md (AL-01–10, AL-M mobile)
+→ AksharaControlCenter.md (ACC-01–12) — platform admin, not school Director
+
+Mobile Master Index
+→ MobileScreenInventory.md — all [M] frames Parent/Student/Teacher + companions
+
+Mobile App Specs
+→ Parent.md (P-01–25) — fees, attendance, Razorpay, messaging
+→ Student.md (S-01–20) — homework, timetable, results
+→ Teacher.md (T-01–22) — attendance, staff check-in, class teacher
+
+Academic Core
+→ Academic.md (AC-01–08) — homework, exams, timetable, report cards
+→ StudentSIS.md (SIS-01–08) — registry, promotion, transfer, parent mapping
+
+Duplicate / Alias Files
+→ finance.md — same content as Finance.md (case-insensitive FS)
+→ Finance_Module_Specification.md — consolidated copy; prefer Finance.md
+
+====================================================
+QUICK MODULE LOOKUP
+====================================================
+
+Want fee collection UI?
+→ Finance.md FN-02
+
+Want approval workflows?
+→ Management.md MG-03
+→ Principal.md PR-06 (leave), PR-07 (admissions)
+
+Want lead vs pipeline ownership?
+→ Marketing.md (attribution) + Admissions.md (conversion)
+→ ArchitectureReview.md AR-004
+
+Want notification events and inbox?
+→ Notifications.md
+
+Want principal academic controls?
+→ Principal.md
+
+Want parent fee payment flow?
+→ Parent.md P-09–P-11
+
+Want teacher staff check-in?
+→ Teacher.md T-05
+
+Want student record lifecycle?
+→ StudentSIS.md
+
+Want homework and exams admin?
+→ Academic.md
+
+Want Flutter folder structure and RBAC?
+→ TechnicalArchitecture.md
+
+Want design tokens and components?
+→ DesignSystem.md
+
+Want Figma layer structure and auto-layout settings?
+→ FigmaDesignSystemBuildGuide.md
+
+Pixel-perfect screen build specs (mobile dashboards):
+→ figma-screens/PA-01-ParentDashboard-M.md
+→ figma-screens/PA-02-ParentAttendance-M.md
+→ figma-screens/PA-03-ParentFees-M.md
+→ figma-screens/TA-01-TeacherDashboard-M.md
+→ figma-screens/ST-01-StudentDashboard-M.md
+
+====================================================
+PHASE 1 REMEDIATION STATUS
+====================================================
+
+Completed:
+- Finance nav FN-05/FN-06 typo corrected (Finance.md)
+- Principal.md created (PR-01–16)
+- Notifications.md created (NT-01–06)
+- Master Index updated (this section)
+
+Completed Phase 2:
+- Parent.md (P-01–25)
+- Student.md (S-01–20)
+- Teacher.md (T-01–22)
+- Academic.md (AC-01–08)
+- StudentSIS.md (SIS-01–08)
+
+Completed Phase 3:
+- MG-03 approval tabs (Budget, Expense, Payroll, Vendor, Marketing)
+- Hostel leave workflow + HO-D-07/08/09
+- Audit.md platform audit standard + DesignSystem §24–26
+- Reports.md enterprise catalog + dashboard tier model
+- Lead ownership AR-004 (Marketing.md + Admissions.md)
+- AD-D-10 ConvertEnquiryToLead · MK-D-10 HandoffToCRM
+
+Completed Phase 4:
+- Library.md (LB-01–08)
+- Inventory.md (INV-01–08)
+- Alumni.md (AL-01–10 + AL-M mobile)
+- AksharaControlCenter.md (ACC-01–12)
+- MobileScreenInventory.md (master [M] catalog)
+- AI Copilot sections: Finance §19, Transport §16, Hostel §16, Director §16
+- Director vs Akshara Director persona split (AR-018)
+
+Documentation complete for Figma Phase 1:
+→ All module specs · platform standards · mobile inventory · report catalog
+
+MASTER INDEX COMPLETE

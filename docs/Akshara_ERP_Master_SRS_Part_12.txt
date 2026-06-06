@@ -1,0 +1,277 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 12
+SCREEN FLOW & NAVIGATION SPECIFICATION
+
+====================================================
+1. PURPOSE
+====================================================
+
+Define user journeys, navigation structure,
+screen hierarchy and workflow transitions.
+
+====================================================
+2. LOGIN FLOW
+====================================================
+
+Splash Screen
+→ Language Selection
+→ Login Screen
+→ OTP / Password Authentication
+→ Dashboard
+
+Roles redirected automatically.
+
+====================================================
+3. STUDENT APP FLOW
+====================================================
+
+Dashboard
+├── Attendance
+├── Homework
+├── Assignments
+├── Timetable
+├── Online Classes
+├── Practice Papers
+├── Exam Results
+├── Report Cards
+├── Bus Tracking
+├── Notifications
+├── School Gallery
+└── Profile
+
+====================================================
+4. PARENT APP FLOW
+====================================================
+
+Dashboard
+├── Child Attendance
+├── Homework
+├── Fee Payments
+├── Report Cards
+├── Teacher Messages
+├── Bus Tracking
+├── Certificates
+├── Events
+├── Notifications
+└── Profile
+
+Quick Actions:
+
+Pay Fee
+Contact Teacher
+Download Report Card
+
+====================================================
+5. TEACHER APP FLOW
+====================================================
+
+Dashboard
+├── Mark Attendance
+├── Create Homework
+├── Assignments
+├── Enter Marks
+├── Timetable
+├── Parent Messages
+├── Leave Requests
+├── AI Assistant
+└── Profile
+
+====================================================
+6. CLASS TEACHER FLOW
+====================================================
+
+Dashboard
+├── Student List
+├── Attendance Analysis
+├── Performance Analysis
+├── Parent Communication
+├── Behaviour Tracking
+└── Reports
+
+====================================================
+7. PRINCIPAL PORTAL FLOW
+====================================================
+
+Dashboard
+├── Attendance Analytics
+├── Timetable Management
+├── Teacher Management
+├── Leave Approvals
+├── Exam Analytics
+├── Academic Planning
+├── Announcements
+└── AI Insights
+
+====================================================
+8. MANAGEMENT PORTAL FLOW
+====================================================
+
+Dashboard
+├── Revenue
+├── Expenses
+├── Salaries
+├── Admissions
+├── Reports
+├── Budgets
+├── Vendor Management
+└── School Analytics
+
+====================================================
+9. FINANCE PORTAL FLOW
+====================================================
+
+Dashboard
+├── Fee Collection
+├── Pending Fees
+├── Payroll
+├── Expenses
+├── Income
+├── Ledgers
+├── Budgets
+└── Financial Reports
+
+====================================================
+10. MARKETING PORTAL FLOW
+====================================================
+
+Dashboard
+├── Leads
+├── Admissions CRM
+├── Campaigns
+├── AI Posters
+├── Social Planner
+├── Referrals
+└── Analytics
+
+====================================================
+11. HOSTEL PORTAL FLOW
+====================================================
+
+Dashboard
+├── Room Allocation
+├── Bed Allocation
+├── Hostel Attendance
+├── Mess Management
+├── Visitors
+├── Health Records
+└── Reports
+
+====================================================
+12. TRANSPORT PORTAL FLOW
+====================================================
+
+Dashboard
+├── Vehicles
+├── Drivers
+├── Routes
+├── GPS Tracking
+├── Student Allocation
+└── Reports
+
+====================================================
+13. LIBRARY PORTAL FLOW
+====================================================
+
+Dashboard
+├── Books
+├── Issue Books
+├── Return Books
+├── Fines
+└── Reports
+
+====================================================
+14. HR PORTAL FLOW
+====================================================
+
+Dashboard
+├── Recruitment
+├── Candidates
+├── Interviews
+├── Staff Records
+└── Reports
+
+====================================================
+15. AKSHARA COMPANY FLOW
+====================================================
+
+Dashboard
+├── Schools
+├── Revenue
+├── Subscriptions
+├── Leads
+├── Marketing
+├── Support Tickets
+├── Product Analytics
+└── Customer Success
+
+====================================================
+16. GLOBAL SEARCH
+====================================================
+
+Available For:
+
+Principal
+Management
+Finance
+Akshara Admin
+
+Search:
+Students
+Teachers
+Fees
+Attendance
+Reports
+
+====================================================
+17. AI COPILOT FLOW
+====================================================
+
+User Question
+→ AI Processing
+→ Response
+→ Suggested Actions
+
+Examples:
+
+Show pending fees.
+Generate worksheet.
+Show attendance risks.
+
+====================================================
+18. NOTIFICATION FLOW
+====================================================
+
+Create Notification
+→ Select Audience
+→ Translate
+→ Publish
+
+Delivery:
+
+Push
+Email
+SMS
+WhatsApp Deep Link
+
+====================================================
+19. SCREEN DESIGN STANDARDS
+====================================================
+
+Maximum 3-click navigation.
+
+Mobile first design.
+
+Consistent navigation.
+
+Large touch targets.
+
+====================================================
+20. NEXT DOCUMENT
+====================================================
+
+Part 13:
+Detailed API Contracts
+
+END OF PART 12

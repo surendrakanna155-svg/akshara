@@ -1,0 +1,258 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 18
+FLUTTER PROJECT STRUCTURE & CODING STANDARDS
+
+====================================================
+1. OBJECTIVE
+====================================================
+
+Define a scalable Flutter architecture for
+Android, iOS, Web and Tablet applications.
+
+====================================================
+2. TECHNOLOGY STACK
+====================================================
+
+Frontend:
+Flutter
+
+Backend:
+Supabase
+
+Database:
+PostgreSQL
+
+State Management:
+Riverpod
+
+Routing:
+Go Router
+
+====================================================
+3. PROJECT STRUCTURE
+====================================================
+
+lib/
+
+├── core/
+├── config/
+├── shared/
+├── features/
+├── services/
+├── models/
+├── repositories/
+├── widgets/
+├── localization/
+├── routes/
+├── theme/
+└── main.dart
+
+====================================================
+4. FEATURE MODULE STRUCTURE
+====================================================
+
+features/
+
+attendance/
+students/
+teachers/
+finance/
+hostel/
+transport/
+marketing/
+ai/
+
+Each module contains:
+
+data/
+domain/
+presentation/
+
+====================================================
+5. CLEAN ARCHITECTURE
+====================================================
+
+Presentation Layer
+→ Domain Layer
+→ Data Layer
+
+Benefits:
+
+Testability
+Maintainability
+Scalability
+
+====================================================
+6. STATE MANAGEMENT
+====================================================
+
+Riverpod
+
+Used For:
+
+Authentication
+User State
+Attendance
+Realtime Updates
+
+====================================================
+7. REPOSITORY PATTERN
+====================================================
+
+UI never talks directly to APIs.
+
+UI
+→ Repository
+→ Service
+→ API
+
+====================================================
+8. DEPENDENCY INJECTION
+====================================================
+
+Use Riverpod Providers
+
+Benefits:
+
+Loose Coupling
+
+====================================================
+9. API LAYER
+====================================================
+
+Folder:
+
+services/api/
+
+Responsibilities:
+
+Authentication
+Requests
+Responses
+Error Handling
+
+====================================================
+10. ERROR HANDLING
+====================================================
+
+Global Error Handler
+
+User Friendly Messages
+
+Crash Reporting
+
+====================================================
+11. LOCALIZATION
+====================================================
+
+Supported Languages:
+
+English
+Telugu
+Hindi
+Tamil
+Kannada
+Malayalam
+Urdu
+
+====================================================
+12. THEME SYSTEM
+====================================================
+
+Light Theme
+
+Future:
+Dark Theme
+
+====================================================
+13. RESPONSIVE DESIGN
+====================================================
+
+Mobile
+Tablet
+Desktop
+Web
+
+====================================================
+14. OFFLINE STRATEGY
+====================================================
+
+Cache:
+
+Attendance
+Homework
+Timetable
+
+Sync when online.
+
+====================================================
+15. FILE STORAGE
+====================================================
+
+Cloudflare R2
+
+Files:
+
+Documents
+Images
+Certificates
+
+====================================================
+16. NOTIFICATION HANDLING
+====================================================
+
+Firebase Cloud Messaging
+
+Foreground Notifications
+
+Background Notifications
+
+====================================================
+17. SECURITY STANDARDS
+====================================================
+
+Secure Storage
+
+JWT Protection
+
+Role Validation
+
+====================================================
+18. CODE STANDARDS
+====================================================
+
+Naming:
+
+camelCase
+PascalCase
+
+No hardcoded values.
+
+====================================================
+19. TESTING STANDARDS
+====================================================
+
+Unit Tests
+
+Widget Tests
+
+Integration Tests
+
+====================================================
+20. CI/CD STANDARDS
+====================================================
+
+GitHub Actions
+
+Automated Builds
+
+====================================================
+21. NEXT DOCUMENT
+====================================================
+
+Part 19:
+Development Sprint Plan
+
+END OF PART 18

@@ -1,0 +1,438 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 11D
+ENTERPRISE OPERATIONS DATABASE SCHEMA
+
+====================================================
+1. FEE STRUCTURES
+====================================================
+
+TABLE: fee_structures
+
+id UUID PRIMARY KEY
+school_id UUID
+academic_year_id UUID
+class_id UUID
+
+fee_name VARCHAR(255)
+amount DECIMAL
+frequency VARCHAR(50)
+
+created_at TIMESTAMP
+
+====================================================
+2. FEE PAYMENTS
+====================================================
+
+TABLE: fee_payments
+
+id UUID PRIMARY KEY
+student_id UUID
+fee_structure_id UUID
+
+amount_paid DECIMAL
+payment_method VARCHAR(50)
+
+transaction_reference VARCHAR(255)
+
+payment_date TIMESTAMP
+
+====================================================
+3. SCHOLARSHIPS
+====================================================
+
+TABLE: scholarships
+
+id UUID PRIMARY KEY
+student_id UUID
+
+scholarship_name VARCHAR(255)
+discount_percentage DECIMAL
+
+approved_by UUID
+
+====================================================
+4. FEE DISCOUNTS
+====================================================
+
+TABLE: fee_discounts
+
+id UUID PRIMARY KEY
+student_id UUID
+
+discount_type VARCHAR(100)
+discount_amount DECIMAL
+
+====================================================
+5. INCOME RECORDS
+====================================================
+
+TABLE: income_records
+
+id UUID PRIMARY KEY
+school_id UUID
+
+income_type VARCHAR(100)
+amount DECIMAL
+
+description TEXT
+
+income_date DATE
+
+====================================================
+6. EXPENSE RECORDS
+====================================================
+
+TABLE: expense_records
+
+id UUID PRIMARY KEY
+school_id UUID
+
+expense_type VARCHAR(100)
+amount DECIMAL
+
+description TEXT
+
+expense_date DATE
+
+====================================================
+7. GENERAL LEDGER
+====================================================
+
+TABLE: general_ledger
+
+id UUID PRIMARY KEY
+
+transaction_type VARCHAR(50)
+
+reference_id UUID
+
+amount DECIMAL
+
+entry_date TIMESTAMP
+
+====================================================
+8. BUDGETS
+====================================================
+
+TABLE: budgets
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+department VARCHAR(100)
+
+allocated_amount DECIMAL
+
+financial_year VARCHAR(20)
+
+====================================================
+9. PAYROLL STRUCTURES
+====================================================
+
+TABLE: salary_structures
+
+id UUID PRIMARY KEY
+
+staff_id UUID
+
+basic_salary DECIMAL
+allowances DECIMAL
+
+effective_from DATE
+
+====================================================
+10. SALARY PAYMENTS
+====================================================
+
+TABLE: salary_payments
+
+id UUID PRIMARY KEY
+
+staff_id UUID
+
+salary_month VARCHAR(20)
+
+gross_salary DECIMAL
+net_salary DECIMAL
+
+payment_date DATE
+
+====================================================
+11. DEDUCTIONS
+====================================================
+
+TABLE: salary_deductions
+
+id UUID PRIMARY KEY
+
+salary_payment_id UUID
+
+deduction_type VARCHAR(100)
+amount DECIMAL
+
+====================================================
+12. HOSTELS
+====================================================
+
+TABLE: hostels
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+hostel_name VARCHAR(255)
+
+gender_type VARCHAR(50)
+
+====================================================
+13. HOSTEL BLOCKS
+====================================================
+
+TABLE: hostel_blocks
+
+id UUID PRIMARY KEY
+
+hostel_id UUID
+
+block_name VARCHAR(100)
+
+====================================================
+14. HOSTEL ROOMS
+====================================================
+
+TABLE: hostel_rooms
+
+id UUID PRIMARY KEY
+
+block_id UUID
+
+room_number VARCHAR(50)
+
+capacity INTEGER
+
+====================================================
+15. HOSTEL BEDS
+====================================================
+
+TABLE: hostel_beds
+
+id UUID PRIMARY KEY
+
+room_id UUID
+
+bed_number VARCHAR(50)
+
+====================================================
+16. HOSTEL ALLOCATIONS
+====================================================
+
+TABLE: hostel_allocations
+
+id UUID PRIMARY KEY
+
+student_id UUID
+bed_id UUID
+
+allocated_date DATE
+
+====================================================
+17. MESS MENUS
+====================================================
+
+TABLE: mess_menus
+
+id UUID PRIMARY KEY
+
+hostel_id UUID
+
+meal_type VARCHAR(50)
+
+menu_details TEXT
+
+====================================================
+18. VEHICLES
+====================================================
+
+TABLE: vehicles
+
+id UUID PRIMARY KEY
+
+vehicle_number VARCHAR(50)
+
+vehicle_type VARCHAR(50)
+
+capacity INTEGER
+
+====================================================
+19. DRIVERS
+====================================================
+
+TABLE: drivers
+
+id UUID PRIMARY KEY
+
+vehicle_id UUID
+
+driver_name VARCHAR(255)
+
+mobile VARCHAR(20)
+
+====================================================
+20. ROUTES
+====================================================
+
+TABLE: routes
+
+id UUID PRIMARY KEY
+
+route_name VARCHAR(255)
+
+route_code VARCHAR(50)
+
+====================================================
+21. ROUTE STOPS
+====================================================
+
+TABLE: route_stops
+
+id UUID PRIMARY KEY
+
+route_id UUID
+
+stop_name VARCHAR(255)
+
+sequence_number INTEGER
+
+====================================================
+22. GPS TRACKING LOGS
+====================================================
+
+TABLE: gps_tracking_logs
+
+id UUID PRIMARY KEY
+
+vehicle_id UUID
+
+latitude DECIMAL
+longitude DECIMAL
+
+captured_at TIMESTAMP
+
+====================================================
+23. LEADS
+====================================================
+
+TABLE: leads
+
+id UUID PRIMARY KEY
+
+school_id UUID
+
+lead_name VARCHAR(255)
+
+mobile VARCHAR(20)
+
+source VARCHAR(100)
+
+status VARCHAR(50)
+
+====================================================
+24. CAMPAIGNS
+====================================================
+
+TABLE: campaigns
+
+id UUID PRIMARY KEY
+
+campaign_name VARCHAR(255)
+
+channel VARCHAR(100)
+
+budget DECIMAL
+
+====================================================
+25. REFERRALS
+====================================================
+
+TABLE: referrals
+
+id UUID PRIMARY KEY
+
+referrer_name VARCHAR(255)
+
+referral_source VARCHAR(100)
+
+====================================================
+26. ADMISSIONS
+====================================================
+
+TABLE: admissions
+
+id UUID PRIMARY KEY
+
+lead_id UUID
+
+student_id UUID
+
+admission_date DATE
+
+====================================================
+27. AI REQUESTS
+====================================================
+
+TABLE: ai_requests
+
+id UUID PRIMARY KEY
+
+user_id UUID
+
+prompt TEXT
+
+requested_at TIMESTAMP
+
+====================================================
+28. AI RESPONSES
+====================================================
+
+TABLE: ai_responses
+
+id UUID PRIMARY KEY
+
+request_id UUID
+
+response TEXT
+
+generated_at TIMESTAMP
+
+====================================================
+29. AI USAGE LOGS
+====================================================
+
+TABLE: ai_usage_logs
+
+id UUID PRIMARY KEY
+
+user_id UUID
+
+tokens_used INTEGER
+
+estimated_cost DECIMAL
+
+====================================================
+30. NEXT DATABASE PHASE
+====================================================
+
+Part 11E
+
+Library Schema
+Inventory Schema
+Visitor Schema
+Health Schema
+Document Vault Schema
+Audit Schema
+Support Ticket Schema
+
+END OF PART 11D

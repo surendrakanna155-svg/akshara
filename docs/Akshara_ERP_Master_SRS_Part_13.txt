@@ -1,0 +1,300 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 13
+DETAILED API CONTRACTS
+
+====================================================
+1. API STANDARDS
+====================================================
+
+Base URL:
+/api/v1
+
+Format:
+JSON
+
+Authentication:
+JWT Bearer Token
+
+Response Format:
+
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": {}
+}
+
+====================================================
+2. LOGIN API
+====================================================
+
+POST /auth/login
+
+Request:
+
+{
+  "email":"user@example.com",
+  "password":"******"
+}
+
+Response:
+
+{
+  "success":true,
+  "token":"jwt_token",
+  "role":"teacher"
+}
+
+====================================================
+3. STUDENT CREATE API
+====================================================
+
+POST /students
+
+Request:
+
+{
+  "school_id":"uuid",
+  "admission_number":"A001",
+  "first_name":"Ravi",
+  "last_name":"Kumar"
+}
+
+Response:
+
+{
+  "success":true,
+  "student_id":"uuid"
+}
+
+====================================================
+4. STUDENT LIST API
+====================================================
+
+GET /students
+
+Filters:
+
+class_id
+section_id
+status
+
+====================================================
+5. ATTENDANCE API
+====================================================
+
+POST /attendance/student
+
+Request:
+
+{
+  "student_id":"uuid",
+  "status":"present"
+}
+
+====================================================
+6. STAFF ATTENDANCE API
+====================================================
+
+POST /attendance/staff
+
+Request:
+
+{
+  "staff_id":"uuid",
+  "latitude":"xx",
+  "longitude":"yy",
+  "face_verified":true
+}
+
+====================================================
+7. HOMEWORK API
+====================================================
+
+POST /homework
+
+Request:
+
+{
+  "title":"Science Homework",
+  "class_id":"uuid",
+  "due_date":"2026-06-30"
+}
+
+====================================================
+8. EXAM MARKS API
+====================================================
+
+POST /marks
+
+Request:
+
+{
+  "student_id":"uuid",
+  "subject_id":"uuid",
+  "marks":95
+}
+
+====================================================
+9. FEE PAYMENT API
+====================================================
+
+POST /fees/payment
+
+Request:
+
+{
+  "student_id":"uuid",
+  "amount":5000,
+  "payment_method":"UPI"
+}
+
+====================================================
+10. PAYROLL API
+====================================================
+
+POST /salary/process
+
+Request:
+
+{
+  "staff_id":"uuid",
+  "month":"June-2026"
+}
+
+====================================================
+11. HOSTEL API
+====================================================
+
+POST /hostel/allocate
+
+Request:
+
+{
+  "student_id":"uuid",
+  "bed_id":"uuid"
+}
+
+====================================================
+12. TRANSPORT API
+====================================================
+
+GET /transport/live-location/{vehicle_id}
+
+Response:
+
+{
+  "latitude":"xx",
+  "longitude":"yy",
+  "eta":"15 mins"
+}
+
+====================================================
+13. NOTIFICATION API
+====================================================
+
+POST /notifications/send
+
+Audience:
+- School
+- Class
+- Student
+- Staff
+
+====================================================
+14. MESSAGE API
+====================================================
+
+POST /messages/send
+
+Supports:
+- Teacher to Parent
+- Principal to Staff
+- Management to School
+
+====================================================
+15. AI MESSAGE API
+====================================================
+
+POST /ai/generate-message
+
+Input:
+
+"Student absent for 3 days"
+
+Output:
+
+Polite translated parent message
+
+====================================================
+16. AI COPILOT API
+====================================================
+
+POST /ai/copilot
+
+Examples:
+
+Show fee defaulters.
+Show attendance risks.
+Generate worksheet.
+
+====================================================
+17. DOCUMENT API
+====================================================
+
+POST /documents/upload
+
+Supported:
+
+PDF
+Images
+Certificates
+
+====================================================
+18. REPORT API
+====================================================
+
+GET /reports/attendance
+GET /reports/finance
+GET /reports/exams
+
+====================================================
+19. SUPPORT TICKET API
+====================================================
+
+POST /support/tickets
+
+GET /support/tickets
+
+====================================================
+20. ERROR RESPONSE STANDARD
+====================================================
+
+{
+  "success":false,
+  "error_code":"INVALID_INPUT",
+  "message":"Validation failed"
+}
+
+====================================================
+21. API VERSIONING POLICY
+====================================================
+
+Current:
+v1
+
+Future:
+v2
+v3
+
+Backward compatibility required.
+
+====================================================
+22. NEXT DOCUMENT
+====================================================
+
+Part 14:
+AI Architecture & Copilot Design
+
+END OF PART 13

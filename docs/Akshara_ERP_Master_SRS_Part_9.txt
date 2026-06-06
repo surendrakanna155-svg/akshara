@@ -1,0 +1,315 @@
+
+AKSHARA ERP
+MASTER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)
+VERSION 1.0 - PART 9
+API ARCHITECTURE & SYSTEM INTEGRATIONS
+
+====================================================
+1. API ARCHITECTURE OVERVIEW
+====================================================
+
+Architecture Style:
+REST API + Realtime Services
+
+Backend:
+Supabase
+
+Authentication:
+JWT Tokens
+
+API Versioning:
+/api/v1
+
+====================================================
+2. AUTHENTICATION APIS
+====================================================
+
+POST /auth/login
+POST /auth/logout
+POST /auth/refresh-token
+POST /auth/forgot-password
+POST /auth/reset-password
+POST /auth/verify-otp
+
+Functions:
+- Login
+- Logout
+- Session Validation
+- Password Recovery
+
+====================================================
+3. USER MANAGEMENT APIS
+====================================================
+
+GET /users
+GET /users/{id}
+POST /users
+PUT /users/{id}
+DELETE /users/{id}
+
+====================================================
+4. STUDENT APIS
+====================================================
+
+GET /students
+GET /students/{id}
+POST /students
+PUT /students/{id}
+
+Modules:
+
+- Profile
+- Documents
+- Academic Records
+- Medical Records
+
+====================================================
+5. PARENT APIS
+====================================================
+
+GET /parents
+GET /parents/{id}
+POST /parents
+PUT /parents/{id}
+
+====================================================
+6. TEACHER APIS
+====================================================
+
+GET /teachers
+POST /teachers
+PUT /teachers
+DELETE /teachers
+
+====================================================
+7. ATTENDANCE APIS
+====================================================
+
+POST /attendance/staff
+POST /attendance/student
+
+GET /attendance/report
+
+Face Recognition Validation
+Geo Fence Validation
+
+====================================================
+8. TIMETABLE APIS
+====================================================
+
+GET /timetable
+POST /timetable
+PUT /timetable
+
+AI Rescheduling Endpoint
+
+====================================================
+9. HOMEWORK APIS
+====================================================
+
+POST /homework
+GET /homework
+PUT /homework
+
+Submission APIs
+
+====================================================
+10. EXAMINATION APIS
+====================================================
+
+POST /exams
+POST /marks
+GET /report-cards
+
+====================================================
+11. COMMUNICATION APIS
+====================================================
+
+POST /notifications
+POST /messages
+GET /announcements
+
+Translation APIs
+
+====================================================
+12. FINANCE APIS
+====================================================
+
+POST /fees
+POST /payments
+GET /finance/reports
+
+Expense APIs
+Income APIs
+
+====================================================
+13. PAYROLL APIS
+====================================================
+
+POST /salary
+GET /payslips
+GET /salary/reports
+
+====================================================
+14. HOSTEL APIS
+====================================================
+
+POST /hostel/allocation
+POST /hostel/attendance
+
+GET /hostel/reports
+
+====================================================
+15. TRANSPORT APIS
+====================================================
+
+GET /vehicles
+GET /routes
+
+POST /gps/location
+
+Realtime Location Updates
+
+====================================================
+16. LIBRARY APIS
+====================================================
+
+POST /books
+POST /issue-book
+POST /return-book
+
+====================================================
+17. INVENTORY APIS
+====================================================
+
+POST /assets
+GET /assets
+
+Maintenance APIs
+
+====================================================
+18. ADMISSIONS CRM APIS
+====================================================
+
+POST /leads
+GET /leads
+
+Lead Pipeline APIs
+
+====================================================
+19. MARKETING APIS
+====================================================
+
+POST /campaigns
+GET /campaigns
+
+Poster Generation APIs
+
+====================================================
+20. AI APIS
+====================================================
+
+POST /ai/teacher-assistant
+POST /ai/principal-assistant
+POST /ai/finance-assistant
+POST /ai/parent-assistant
+
+====================================================
+21. FILE MANAGEMENT APIS
+====================================================
+
+POST /upload
+GET /files
+
+Documents
+Images
+Certificates
+
+====================================================
+22. AUDIT APIS
+====================================================
+
+GET /audit-logs
+GET /activity-logs
+
+====================================================
+23. SUPPORT APIS
+====================================================
+
+POST /tickets
+GET /tickets
+
+====================================================
+24. WHATSAPP INTEGRATION
+====================================================
+
+Features:
+
+- Parent Messaging
+- Attendance Alerts
+- Fee Reminders
+
+Deep Link Support
+
+====================================================
+25. GOOGLE MEET INTEGRATION
+====================================================
+
+Features:
+
+- Create Meeting
+- Join Meeting
+- Attendance Tracking
+
+====================================================
+26. RAZORPAY INTEGRATION
+====================================================
+
+Features:
+
+- Fee Payments
+- Hostel Payments
+- Transport Payments
+
+====================================================
+27. GOOGLE MAPS INTEGRATION
+====================================================
+
+Features:
+
+- Bus Tracking
+- Geo Fence Validation
+- ETA Calculation
+
+====================================================
+28. FIREBASE INTEGRATION
+====================================================
+
+Push Notifications
+
+Realtime Alerts
+
+====================================================
+29. API SECURITY
+====================================================
+
+JWT Authentication
+Role Validation
+Rate Limiting
+Request Validation
+Tenant Validation
+
+====================================================
+30. API PERFORMANCE TARGETS
+====================================================
+
+Average Response:
+< 2 Seconds
+
+Realtime Updates:
+< 5 Seconds
+
+Availability:
+99.9%
+
+END OF PART 9
