@@ -27,6 +27,7 @@ class AttendanceKpiCard extends StatelessWidget {
       detail: kpi.detail,
       accent: kpi.tone.kpiAccent,
       icon: Icons.fact_check_outlined,
+      height: 96,
       onTap: onTap,
       semanticLabel: '${kpi.label}: ${kpi.value}. ${kpi.detail}',
     );
@@ -55,6 +56,7 @@ class HomeworkCountKpiCard extends StatelessWidget {
       detail: 'Tap to view all',
       accent: KpiAccent.warning,
       icon: Icons.assignment_outlined,
+      height: 96,
       onTap: onTap,
       semanticLabel: '$count $label',
     );

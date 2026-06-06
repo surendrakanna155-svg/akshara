@@ -18,16 +18,18 @@ class ParentFeesScreen extends ConsumerWidget {
     this.onPayNow,
     this.onViewReceipt,
     this.onPaymentHistoryItemTap,
+    this.onOpenReceipts,
     this.onNotificationsTap,
   });
 
-  /// Navigates to PA-10 fee payment (future).
+  /// Navigates to PA-10 fee payment.
   final void Function({String? installmentId})? onPayNow;
 
-  /// Navigates to PA-11 receipt (future).
+  /// Navigates to PA-11 receipt detail.
   final void Function(String installmentId)? onViewReceipt;
 
   final void Function(PaymentHistoryItem item)? onPaymentHistoryItemTap;
+  final VoidCallback? onOpenReceipts;
   final VoidCallback? onNotificationsTap;
 
   static const double _tabletBreakpoint = 768;
@@ -45,7 +47,13 @@ class ParentFeesScreen extends ConsumerWidget {
         unreadNotifications: data.unreadNotifications,
         showReceiptHistory: true,
         trailingPadding: true,
-        onReceiptHistoryTap: () => _showPaymentHistory(context, data),
+        onReceiptHistoryTap: () {
+          if (onOpenReceipts != null) {
+            onOpenReceipts!();
+          } else {
+            _showPaymentHistory(context, data);
+          }
+        },
         onNotificationsTap: onNotificationsTap,
       ),
       body: isLoading

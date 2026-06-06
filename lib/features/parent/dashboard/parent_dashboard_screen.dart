@@ -94,7 +94,11 @@ class ParentDashboardScreen extends ConsumerWidget {
                             onItemTap: (id) => _navigate(id),
                           ),
                           const SizedBox(height: AksharaSpacing.s4),
-                          const AksharaSectionHeader(title: 'School Notices'),
+                          AksharaSectionHeader(
+                            title: 'School Notices',
+                            trailingLabel: 'See all',
+                            onTrailingTap: () => _navigate('notices'),
+                          ),
                           const SizedBox(height: AksharaSpacing.s3),
                           NoticeCarousel(
                             notices: data.notices,
@@ -102,7 +106,11 @@ class ParentDashboardScreen extends ConsumerWidget {
                                 _navigate('notice_${notice.id}'),
                           ),
                           const SizedBox(height: AksharaSpacing.s4),
-                          const AksharaSectionHeader(title: 'Upcoming Events'),
+                          AksharaSectionHeader(
+                            title: 'Upcoming Events',
+                            trailingLabel: 'See all',
+                            onTrailingTap: () => _navigate('events'),
+                          ),
                           const SizedBox(height: AksharaSpacing.s3),
                           EventCardList(
                             events: data.events,

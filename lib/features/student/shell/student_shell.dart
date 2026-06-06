@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../router/student_navigation.dart';
 import '../../../theme/theme_extensions.dart';
 
 /// Student mobile shell with bottom navigation (Home · Learn · Schedule · Results).
@@ -23,18 +22,21 @@ class StudentShell extends StatelessWidget {
       selectedIcon: Icons.home,
     ),
     _StudentNavDestination(
+      route: RouteNames.studentHomework,
       actionId: 'homework_list',
       label: 'Learn',
       icon: Icons.menu_book_outlined,
       selectedIcon: Icons.menu_book,
     ),
     _StudentNavDestination(
+      route: RouteNames.studentTimetable,
       actionId: 'full_schedule',
       label: 'Schedule',
       icon: Icons.calendar_view_week_outlined,
       selectedIcon: Icons.calendar_view_week,
     ),
     _StudentNavDestination(
+      route: RouteNames.studentExams,
       actionId: 'exam_results',
       label: 'Results',
       icon: Icons.emoji_events_outlined,
@@ -43,8 +45,15 @@ class StudentShell extends StatelessWidget {
   ];
 
   int _selectedIndex(String location) {
-    if (location.startsWith(RouteNames.studentDashboard)) {
-      return 0;
+    if (location.startsWith(RouteNames.studentHomework)) {
+      return 1;
+    }
+    if (location.startsWith(RouteNames.studentTimetable)) {
+      return 2;
+    }
+    if (location.startsWith(RouteNames.studentExams) ||
+        location.startsWith(RouteNames.studentAttendance)) {
+      return 3;
     }
     return 0;
   }
@@ -63,10 +72,6 @@ class StudentShell extends StatelessWidget {
           final destination = _destinations[index];
           if (destination.route != null && destination.route != path) {
             context.go(destination.route!);
-            return;
-          }
-          if (destination.actionId != 'home') {
-            handleStudentNavigation(context, destination.actionId);
           }
         },
         destinations: [

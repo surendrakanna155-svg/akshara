@@ -61,14 +61,19 @@ class ParentDashboardData {
           icon: Icons.payments_outlined,
         ),
         DashboardQuickAction(
-          id: 'contact_teacher',
-          label: 'Contact Teacher',
-          icon: Icons.chat_outlined,
+          id: 'homework',
+          label: 'Homework',
+          icon: Icons.assignment_outlined,
         ),
         DashboardQuickAction(
-          id: 'report_card',
-          label: 'Report Card',
-          icon: Icons.description_outlined,
+          id: 'timetable',
+          label: 'Timetable',
+          icon: Icons.calendar_view_week_outlined,
+        ),
+        DashboardQuickAction(
+          id: 'exams',
+          label: 'Exams',
+          icon: Icons.grading_outlined,
         ),
       ],
       todaySummary: [
@@ -83,6 +88,12 @@ class ParentDashboardData {
           icon: Icons.assignment_outlined,
           iconTone: DashboardChipTone.primary,
           title: '2 homework due today',
+        ),
+        TodaySummaryItem(
+          id: 'timetable',
+          icon: Icons.calendar_view_week_outlined,
+          iconTone: DashboardChipTone.primary,
+          title: 'Period 3 · Mathematics now',
         ),
         TodaySummaryItem(
           id: 'fees',

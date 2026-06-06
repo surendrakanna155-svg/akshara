@@ -88,7 +88,7 @@ class _ClassScheduleRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AksharaSpacing.s3,
-                vertical: AksharaSpacing.s4,
+                vertical: AksharaSpacing.s2,
               ),
               child: Row(
                 children: [

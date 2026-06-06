@@ -223,33 +223,36 @@ class _AttendanceLegend extends StatelessWidget {
 
     return SizedBox(
       height: 32,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _LegendItem(
-            label: 'Present',
-            dotColor: ext.success,
-            textStyle: text.bodySmall,
-          ),
-          const SizedBox(width: AksharaSpacing.s4),
-          _LegendItem(
-            label: 'Absent',
-            dotColor: colors.error,
-            textStyle: text.bodySmall,
-          ),
-          const SizedBox(width: AksharaSpacing.s4),
-          _LegendItem(
-            label: 'Late',
-            dotColor: ext.warning,
-            textStyle: text.bodySmall,
-          ),
-          const SizedBox(width: AksharaSpacing.s4),
-          _LegendItem(
-            label: 'Holiday',
-            dotColor: colors.onSurfaceVariant,
-            textStyle: text.bodySmall,
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _LegendItem(
+              label: 'Present',
+              dotColor: ext.success,
+              textStyle: text.bodySmall,
+            ),
+            const SizedBox(width: AksharaSpacing.s3),
+            _LegendItem(
+              label: 'Absent',
+              dotColor: colors.error,
+              textStyle: text.bodySmall,
+            ),
+            const SizedBox(width: AksharaSpacing.s3),
+            _LegendItem(
+              label: 'Late',
+              dotColor: ext.warning,
+              textStyle: text.bodySmall,
+            ),
+            const SizedBox(width: AksharaSpacing.s3),
+            _LegendItem(
+              label: 'Holiday',
+              dotColor: colors.onSurfaceVariant,
+              textStyle: text.bodySmall,
+            ),
+          ],
+        ),
       ),
     );
   }

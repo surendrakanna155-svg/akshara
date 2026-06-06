@@ -121,39 +121,48 @@ class _StripKpiCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: AksharaRadius.card,
-        child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.s3),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: AksharaKpiCard.iconBoxSize,
-                height: AksharaKpiCard.iconBoxSize,
-                decoration: BoxDecoration(
-                  color: accentColors.container,
-                  borderRadius: AksharaRadius.chip,
+        child: SizedBox(
+          height: 88,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AksharaSpacing.s3,
+              vertical: AksharaSpacing.s2,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: AksharaKpiCard.iconBoxSize,
+                  height: AksharaKpiCard.iconBoxSize,
+                  decoration: BoxDecoration(
+                    color: accentColors.container,
+                    borderRadius: AksharaRadius.chip,
+                  ),
+                  child: Icon(
+                    resolvedIcon,
+                    size: 18,
+                    color: accentColors.foreground,
+                  ),
                 ),
-                child: Icon(
-                  resolvedIcon,
-                  size: 18,
-                  color: accentColors.foreground,
+                const SizedBox(height: AksharaSpacing.s1),
+                Text(
+                  value,
+                  style: text.titleSmall.copyWith(color: colors.onSurface),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const Spacer(),
-              Text(
-                value,
-                style: text.titleSmall.copyWith(color: colors.onSurface),
-              ),
-              Text(
-                subtitle,
-                style: text.bodySmall.copyWith(
-                  color: colors.onSurfaceVariant,
+                Text(
+                  subtitle,
+                  style: text.bodySmall.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -263,19 +272,20 @@ class _StatusKpiCard extends StatelessWidget {
         child: SizedBox(
           height: height,
           child: Padding(
-            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            padding: const EdgeInsets.all(AksharaSpacing.s3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    Icon(icon, size: 20, color: accentColors.foreground),
-                    const SizedBox(width: AksharaSpacing.s2),
+                    Icon(icon, size: 18, color: accentColors.foreground),
+                    const SizedBox(width: AksharaSpacing.s1),
                     Expanded(
                       child: Text(
                         value,
-                        style: text.titleMedium.copyWith(
+                        style: text.titleSmall.copyWith(
                           color: accentColors.foreground,
                           fontWeight: FontWeight.w700,
                         ),
@@ -285,18 +295,20 @@ class _StatusKpiCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: AksharaSpacing.s1),
                 Text(
                   label,
-                  style: text.labelMedium.copyWith(
+                  style: text.labelSmall.copyWith(
                     color: colors.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   detail,
                   style: text.bodySmall.copyWith(
                     color: colors.onSurfaceVariant,
+                    fontSize: 11,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -345,28 +357,28 @@ class _CountKpiCard extends StatelessWidget {
         child: SizedBox(
           height: height,
           child: Padding(
-            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            padding: const EdgeInsets.all(AksharaSpacing.s3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    Icon(icon, size: 20, color: accentColors.foreground),
-                    const SizedBox(width: AksharaSpacing.s2),
+                    Icon(icon, size: 18, color: accentColors.foreground),
+                    const SizedBox(width: AksharaSpacing.s1),
                     Text(
                       '$count',
-                      style: text.titleMedium.copyWith(
+                      style: text.titleSmall.copyWith(
                         color: accentColors.foreground,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: AksharaSpacing.s1),
                 Text(
                   label,
-                  style: text.labelMedium.copyWith(
+                  style: text.labelSmall.copyWith(
                     color: colors.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
@@ -375,7 +387,10 @@ class _CountKpiCard extends StatelessWidget {
                   detail,
                   style: text.bodySmall.copyWith(
                     color: colors.onSurfaceVariant,
+                    fontSize: 11,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

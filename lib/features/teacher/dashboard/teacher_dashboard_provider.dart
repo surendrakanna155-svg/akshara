@@ -203,6 +203,12 @@ class TeacherDashboardData {
           count: 3,
           label: 'Unread messages',
         ),
+        PendingTask(
+          id: 'leave',
+          icon: Icons.event_busy_outlined,
+          count: 1,
+          label: 'Leave request',
+        ),
       ],
       classTeacher: ClassTeacherInfo(
         classLabel: '8-A',
@@ -211,18 +217,23 @@ class TeacherDashboardData {
       quickActions: [
         TeacherQuickAction(
           id: 'mark_attendance',
-          label: 'Mark Attendance',
+          label: 'Attendance',
           icon: Icons.fact_check_outlined,
         ),
         TeacherQuickAction(
-          id: 'create_homework',
-          label: 'Create Homework',
-          icon: Icons.note_add_outlined,
+          id: 'homework',
+          label: 'Homework',
+          icon: Icons.assignment_outlined,
         ),
         TeacherQuickAction(
           id: 'timetable',
           label: 'Timetable',
           icon: Icons.calendar_view_week_outlined,
+        ),
+        TeacherQuickAction(
+          id: 'exams',
+          label: 'Exams',
+          icon: Icons.grading_outlined,
         ),
         TeacherQuickAction(
           id: 'messages',

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../academics/widgets/academics_shortcuts_strip.dart';
 import 'attendance_calendar.dart';
 import 'attendance_kpi_strip.dart';
 import 'attendance_models.dart';
@@ -16,9 +17,11 @@ class ParentAttendanceScreen extends ConsumerStatefulWidget {
   const ParentAttendanceScreen({
     super.key,
     this.onNotificationsTap,
+    this.onAcademicsNavigate,
   });
 
   final VoidCallback? onNotificationsTap;
+  final void Function(String destination)? onAcademicsNavigate;
 
   static const double _tabletBreakpoint = 768;
   static const double _tabletMaxContentWidth = 480;
@@ -88,6 +91,15 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          AcademicsShortcutsStrip(
+                            onTimetableTap: () =>
+                                widget.onAcademicsNavigate?.call('timetable'),
+                            onHomeworkTap: () =>
+                                widget.onAcademicsNavigate?.call('homework'),
+                            onExamsTap: () =>
+                                widget.onAcademicsNavigate?.call('exams'),
+                          ),
+                          const SizedBox(height: AksharaSpacing.s4),
                           AttendanceMonthSelector(
                             monthLabel: data.monthLabel,
                             onPrevious: () => _changeMonth(-1),

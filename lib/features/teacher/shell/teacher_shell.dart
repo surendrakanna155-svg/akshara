@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../router/teacher_navigation.dart';
 import '../../../theme/theme_extensions.dart';
 
 /// Teacher mobile shell with bottom navigation (Home · Classes · Teach · Messages).
@@ -23,18 +22,21 @@ class TeacherShell extends StatelessWidget {
       selectedIcon: Icons.home,
     ),
     _TeacherNavDestination(
+      route: RouteNames.teacherAttendance,
       actionId: 'mark_attendance',
       label: 'Classes',
       icon: Icons.class_outlined,
       selectedIcon: Icons.class_,
     ),
     _TeacherNavDestination(
-      actionId: 'create_homework',
+      route: RouteNames.teacherHomework,
+      actionId: 'homework',
       label: 'Teach',
       icon: Icons.edit_note_outlined,
       selectedIcon: Icons.edit_note,
     ),
     _TeacherNavDestination(
+      route: RouteNames.teacherMessages,
       actionId: 'messages',
       label: 'Messages',
       icon: Icons.chat_bubble_outline,
@@ -43,8 +45,16 @@ class TeacherShell extends StatelessWidget {
   ];
 
   int _selectedIndex(String location) {
-    if (location.startsWith(RouteNames.teacherDashboard)) {
-      return 0;
+    if (location.startsWith(RouteNames.teacherAttendance) ||
+        location.startsWith(RouteNames.teacherTimetable)) {
+      return 1;
+    }
+    if (location.startsWith(RouteNames.teacherHomework) ||
+        location.startsWith(RouteNames.teacherExams)) {
+      return 2;
+    }
+    if (location.startsWith(RouteNames.teacherMessages)) {
+      return 3;
     }
     return 0;
   }
@@ -61,13 +71,8 @@ class TeacherShell extends StatelessWidget {
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {
           final destination = _destinations[index];
-          if (destination.route != null &&
-              destination.route != path) {
+          if (destination.route != null && destination.route != path) {
             context.go(destination.route!);
-            return;
-          }
-          if (destination.actionId != 'home') {
-            handleTeacherNavigation(context, destination.actionId);
           }
         },
         destinations: [

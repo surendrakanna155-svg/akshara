@@ -9,16 +9,20 @@ void handleTeacherNavigation(BuildContext context, String actionId) {
     case 'mark_attendance':
     case 'staff_check_in':
     case 'staff_check_in_now':
-      break;
+      context.go(RouteNames.teacherAttendance);
     case 'create_homework':
-      break;
+    case 'hw_review':
+    case 'homework':
+      context.go(RouteNames.teacherHomework);
     case 'timetable':
-      break;
+      context.go(RouteNames.teacherTimetable);
+    case 'exams':
+      context.go(RouteNames.teacherExams);
     case 'messages':
     case 'unread_messages':
-      break;
-    case 'hw_review':
-      break;
+      context.go(RouteNames.teacherMessages);
+    case 'leave':
+      context.go(RouteNames.teacherLeave);
     case 'notifications':
       context.push(RouteNames.parentNotifications);
     case 'class_teacher_dashboard':
@@ -27,9 +31,12 @@ void handleTeacherNavigation(BuildContext context, String actionId) {
     case 'home':
       break;
     default:
-      if (actionId.startsWith('mark_attendance_') ||
-          actionId.startsWith('class_')) {
-        break;
+      if (actionId.startsWith('mark_attendance_')) {
+        context.go(RouteNames.teacherAttendance);
+      } else if (actionId.startsWith('class_')) {
+        context.go(RouteNames.teacherTimetable);
+      } else if (actionId.startsWith('thread_')) {
+        context.push(RouteNames.teacherConversation(actionId));
       }
       break;
   }

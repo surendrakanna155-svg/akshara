@@ -138,12 +138,16 @@ class AksharaAppBar extends StatelessWidget implements PreferredSizeWidget {
           (titleTrailing != null
               ? Row(
                   children: [
-                    Text(
-                      titleText!,
-                      style: text.titleLarge.copyWith(color: colors.onSurface),
+                    Flexible(
+                      child: Text(
+                        titleText!,
+                        style: text.titleLarge.copyWith(color: colors.onSurface),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: AksharaSpacing.s3),
-                    titleTrailing!,
+                    Flexible(child: titleTrailing!),
                   ],
                 )
               : Column(

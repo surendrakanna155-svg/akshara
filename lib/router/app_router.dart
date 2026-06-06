@@ -8,12 +8,35 @@ import '../features/auth/splash_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/parent/attendance/parent_attendance_screen.dart';
 import '../features/parent/dashboard/parent_dashboard_screen.dart';
+import '../features/parent/events/parent_events_screen.dart';
+import '../features/parent/exams/parent_exams_screen.dart';
 import '../features/parent/fees/parent_fees_screen.dart';
+import '../features/parent/homework/parent_homework_screen.dart';
+import '../features/parent/leave/parent_leave_screen.dart';
+import '../features/parent/payment/parent_payment_screen.dart';
+import '../features/parent/receipts/parent_receipt_detail_screen.dart';
+import '../features/parent/receipts/parent_receipts_screen.dart';
+import '../features/parent/notices/parent_notices_screen.dart';
+import '../features/parent/profile/parent_profile_screen.dart';
 import '../features/parent/shell/parent_shell.dart';
+import '../features/parent/timetable/parent_timetable_screen.dart';
+import '../features/student/attendance/student_attendance_screen.dart';
 import '../features/student/dashboard/student_dashboard_screen.dart';
+import '../features/student/exams/student_exams_screen.dart';
+import '../features/student/homework/student_homework_screen.dart';
+import '../features/student/notices/student_notices_screen.dart';
+import '../features/student/profile/student_profile_screen.dart';
 import '../features/student/shell/student_shell.dart';
+import '../features/student/timetable/student_timetable_screen.dart';
+import '../features/teacher/attendance/teacher_attendance_screen.dart';
 import '../features/teacher/dashboard/teacher_dashboard_screen.dart';
+import '../features/teacher/exams/teacher_exams_screen.dart';
+import '../features/teacher/homework/teacher_homework_screen.dart';
+import '../features/teacher/leave/teacher_leave_screen.dart';
+import '../features/teacher/messages/teacher_conversation_screen.dart';
+import '../features/teacher/messages/teacher_messages_screen.dart';
 import '../features/teacher/shell/teacher_shell.dart';
+import '../features/teacher/timetable/teacher_timetable_screen.dart';
 import 'parent_navigation.dart';
 import 'route_names.dart';
 import 'student_navigation.dart';
@@ -92,6 +115,78 @@ GoRouter createAppRouter({
               child: parentFeesRouteBuilder(context, state),
             ),
           ),
+          GoRoute(
+            path: RouteNames.parentTimetable,
+            name: 'parentTimetable',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentTimetableRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentHomework,
+            name: 'parentHomework',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentHomeworkRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentExams,
+            name: 'parentExams',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentExamsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentNotices,
+            name: 'parentNotices',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentNoticesRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentEvents,
+            name: 'parentEvents',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentEventsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentProfile,
+            name: 'parentProfile',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentProfileRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentPayment,
+            name: 'parentPayment',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentPaymentRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentLeave,
+            name: 'parentLeave',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentLeaveRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentReceipts,
+            name: 'parentReceipts',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentReceiptsRouteBuilder(context, state),
+            ),
+            routes: [
+              GoRoute(
+                path: ':receiptId',
+                name: 'parentReceiptDetail',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: parentReceiptDetailRouteBuilder(context, state),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
@@ -108,6 +203,57 @@ GoRouter createAppRouter({
               child: teacherDashboardRouteBuilder(context, state),
             ),
           ),
+          GoRoute(
+            path: RouteNames.teacherAttendance,
+            name: 'teacherAttendance',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherAttendanceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherTimetable,
+            name: 'teacherTimetable',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherTimetableRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherHomework,
+            name: 'teacherHomework',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherHomeworkRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherExams,
+            name: 'teacherExams',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherExamsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherLeave,
+            name: 'teacherLeave',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherLeaveRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherMessages,
+            name: 'teacherMessages',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherMessagesRouteBuilder(context, state),
+            ),
+            routes: [
+              GoRoute(
+                path: ':threadId',
+                name: 'teacherConversation',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: teacherConversationRouteBuilder(context, state),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
@@ -122,6 +268,48 @@ GoRouter createAppRouter({
             name: 'studentDashboard',
             pageBuilder: (context, state) => NoTransitionPage(
               child: studentDashboardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentAttendance,
+            name: 'studentAttendance',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentAttendanceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentTimetable,
+            name: 'studentTimetable',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentTimetableRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentHomework,
+            name: 'studentHomework',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentHomeworkRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentExams,
+            name: 'studentExams',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentExamsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentNotices,
+            name: 'studentNotices',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentNoticesRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentProfile,
+            name: 'studentProfile',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentProfileRouteBuilder(context, state),
             ),
           ),
         ],
@@ -211,12 +399,154 @@ Widget parentAttendanceRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentAttendanceScreen(
     onNotificationsTap: () =>
         context.push(RouteNames.parentNotifications),
+    onAcademicsNavigate: (destination) =>
+        handleParentAcademicsNavigation(context, destination),
   );
 }
 
 /// Fees screen with notification bell routing.
 Widget parentFeesRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentFeesScreen(
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+    onPayNow: ({String? installmentId}) => handleParentFeesNavigation(
+      context,
+      installmentId: installmentId,
+      openPayment: true,
+    ),
+    onViewReceipt: (installmentId) => handleParentFeesNavigation(
+      context,
+      receiptId: _receiptIdForInstallment(installmentId),
+    ),
+    onPaymentHistoryItemTap: (item) => handleParentFeesNavigation(
+      context,
+      receiptId: switch (item.id) {
+        'ph_1' => 'rcpt_term_1',
+        'ph_2' => 'rcpt_ph_2',
+        'ph_3' => 'rcpt_ph_3',
+        'ph_4' => 'rcpt_ph_4',
+        _ => 'rcpt_${item.id}',
+      },
+    ),
+    onOpenReceipts: () => handleParentFeesNavigation(
+      context,
+      openReceipts: true,
+    ),
+  );
+}
+
+String _receiptIdForInstallment(String installmentId) {
+  return switch (installmentId) {
+    'term_1' => 'rcpt_term_1',
+    'term_2' => 'rcpt_term_2',
+    _ => 'rcpt_$installmentId',
+  };
+}
+
+/// Timetable screen (PA-04).
+Widget parentTimetableRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentTimetableScreen(
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+  );
+}
+
+/// Homework list screen (PA-05).
+Widget parentHomeworkRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentHomeworkScreen(
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+  );
+}
+
+/// Exams screen (PA-06).
+Widget parentExamsRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentExamsScreen(
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+  );
+}
+
+/// School notices screen (PA-07).
+Widget parentNoticesRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentNoticesScreen(
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+  );
+}
+
+/// School events screen (PA-08).
+Widget parentEventsRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentEventsScreen(
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+  );
+}
+
+/// Parent profile screen (PA-09).
+Widget parentProfileRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentProfileScreen(
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+    onLeaveTap: () => context.go(RouteNames.parentLeave),
+    onReceiptsTap: () => context.go(RouteNames.parentReceipts),
+  );
+}
+
+/// Fee payment flow (PA-10).
+Widget parentPaymentRouteBuilder(BuildContext context, GoRouterState state) {
+  final installmentId =
+      state.uri.queryParameters['installmentId'] ?? 'term_2';
+
+  return ParentPaymentScreen(
+    key: ValueKey('payment-$installmentId'),
+    installmentId: installmentId,
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+    onViewReceipt: (receiptId) =>
+        handleParentFeesNavigation(context, receiptId: receiptId),
+    onBackToFees: () => context.go(RouteNames.parentFees),
+  );
+}
+
+/// Receipts list (PA-11).
+Widget parentReceiptsRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentReceiptsScreen(
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+    onReceiptTap: (receipt) => context.push(
+      RouteNames.parentReceiptDetail(receipt.id),
+    ),
+  );
+}
+
+/// Receipt detail (PA-11).
+Widget parentReceiptDetailRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  final receiptId = state.pathParameters['receiptId'] ?? '';
+
+  return ParentReceiptDetailScreen(
+    receiptId: receiptId,
+    onNotificationsTap: () =>
+        context.push(RouteNames.parentNotifications),
+    onDownload: (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Receipt download started (mock).')),
+      );
+    },
+    onShare: (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Share sheet opened (mock).')),
+      );
+    },
+  );
+}
+
+/// Leave requests (PA-12).
+Widget parentLeaveRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentLeaveScreen(
     onNotificationsTap: () =>
         context.push(RouteNames.parentNotifications),
   );
@@ -229,9 +559,101 @@ Widget teacherDashboardRouteBuilder(BuildContext context, GoRouterState state) {
   );
 }
 
+VoidCallback _teacherNotificationsTap(BuildContext context) =>
+    () => context.push(RouteNames.parentNotifications);
+
+Widget teacherAttendanceRouteBuilder(BuildContext context, GoRouterState state) {
+  return TeacherAttendanceScreen(
+    onNotificationsTap: _teacherNotificationsTap(context),
+  );
+}
+
+Widget teacherTimetableRouteBuilder(BuildContext context, GoRouterState state) {
+  return TeacherTimetableScreen(
+    onNotificationsTap: _teacherNotificationsTap(context),
+  );
+}
+
+Widget teacherHomeworkRouteBuilder(BuildContext context, GoRouterState state) {
+  return TeacherHomeworkScreen(
+    onNotificationsTap: _teacherNotificationsTap(context),
+  );
+}
+
+Widget teacherExamsRouteBuilder(BuildContext context, GoRouterState state) {
+  return TeacherExamsScreen(
+    onNotificationsTap: _teacherNotificationsTap(context),
+  );
+}
+
+Widget teacherMessagesRouteBuilder(BuildContext context, GoRouterState state) {
+  return TeacherMessagesScreen(
+    onNotificationsTap: _teacherNotificationsTap(context),
+    onThreadTap: (thread) =>
+        context.push(RouteNames.teacherConversation(thread.id)),
+  );
+}
+
+Widget teacherConversationRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  final threadId = state.pathParameters['threadId'] ?? '';
+  return TeacherConversationScreen(
+    threadId: threadId,
+    onNotificationsTap: _teacherNotificationsTap(context),
+  );
+}
+
+Widget teacherLeaveRouteBuilder(BuildContext context, GoRouterState state) {
+  return TeacherLeaveScreen(
+    onNotificationsTap: _teacherNotificationsTap(context),
+  );
+}
+
 /// Student dashboard wired with router navigation.
 Widget studentDashboardRouteBuilder(BuildContext context, GoRouterState state) {
   return StudentDashboardScreen(
     onNavigate: (actionId) => handleStudentNavigation(context, actionId),
+  );
+}
+
+VoidCallback _studentNotificationsTap(BuildContext context) =>
+    () => context.push(RouteNames.parentNotifications);
+
+Widget studentAttendanceRouteBuilder(BuildContext context, GoRouterState state) {
+  return StudentAttendanceScreen(
+    onNotificationsTap: _studentNotificationsTap(context),
+  );
+}
+
+Widget studentTimetableRouteBuilder(BuildContext context, GoRouterState state) {
+  return StudentTimetableScreen(
+    onNotificationsTap: _studentNotificationsTap(context),
+  );
+}
+
+Widget studentHomeworkRouteBuilder(BuildContext context, GoRouterState state) {
+  return StudentHomeworkScreen(
+    onNotificationsTap: _studentNotificationsTap(context),
+  );
+}
+
+Widget studentExamsRouteBuilder(BuildContext context, GoRouterState state) {
+  return StudentExamsScreen(
+    onNotificationsTap: _studentNotificationsTap(context),
+  );
+}
+
+Widget studentNoticesRouteBuilder(BuildContext context, GoRouterState state) {
+  return StudentNoticesScreen(
+    onNotificationsTap: _studentNotificationsTap(context),
+  );
+}
+
+Widget studentProfileRouteBuilder(BuildContext context, GoRouterState state) {
+  return StudentProfileScreen(
+    onNotificationsTap: _studentNotificationsTap(context),
+    onSettingsTap: () {},
   );
 }

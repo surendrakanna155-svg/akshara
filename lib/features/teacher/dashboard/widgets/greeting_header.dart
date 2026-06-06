@@ -47,6 +47,8 @@ class GreetingHeader extends StatelessWidget {
                       color: colors.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

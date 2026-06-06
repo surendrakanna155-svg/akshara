@@ -75,7 +75,7 @@ class _TaskTile extends StatelessWidget {
   final PendingTask task;
   final VoidCallback? onTap;
 
-  static const double tileHeight = 72;
+  static const double tileHeight = 80;
 
   @override
   Widget build(BuildContext context) {

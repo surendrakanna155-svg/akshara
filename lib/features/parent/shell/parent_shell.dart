@@ -35,11 +35,24 @@ class ParentShell extends StatelessWidget {
   ];
 
   int _selectedIndex(String location) {
-    if (location.startsWith(RouteNames.parentAttendance)) {
+    if (location.startsWith(RouteNames.parentAttendance) ||
+        location.startsWith(RouteNames.parentTimetable) ||
+        location.startsWith(RouteNames.parentHomework) ||
+        location.startsWith(RouteNames.parentExams)) {
       return 1;
     }
-    if (location.startsWith(RouteNames.parentFees)) {
+    if (location.startsWith(RouteNames.parentFees) ||
+        location.startsWith(RouteNames.parentPayment) ||
+        location.startsWith(RouteNames.parentReceipts)) {
       return 2;
+    }
+    if (location.startsWith(RouteNames.parentLeave)) {
+      return 0;
+    }
+    if (location.startsWith(RouteNames.parentNotices) ||
+        location.startsWith(RouteNames.parentEvents) ||
+        location.startsWith(RouteNames.parentProfile)) {
+      return 0;
     }
     return 0;
   }
