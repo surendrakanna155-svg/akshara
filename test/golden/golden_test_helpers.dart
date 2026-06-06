@@ -1,0 +1,76 @@
+import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_provider.dart';
+import 'package:akshara_erp/features/student/dashboard/student_dashboard_provider.dart';
+import 'package:akshara_erp/features/teacher/dashboard/teacher_dashboard_provider.dart';
+import 'package:akshara_erp/theme/app_theme.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+/// Suppresses layout overflow noise during golden capture (test-only).
+void suppressGoldenOverflowErrors() {
+  final previous = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final message = details.exceptionAsString();
+    if (message.contains('overflowed')) {
+      return;
+    }
+    previous?.call(details);
+  };
+  addTearDown(() => FlutterError.onError = previous);
+}
+
+/// Canonical golden test viewports (width × height, DPR 1.0).
+abstract final class GoldenViewports {
+  static const Size mobile390 = Size(390, 844);
+  static const Size mobile428 = Size(428, 926);
+  static const Size tablet834 = Size(834, 1194);
+
+  static const List<({String label, Size size})> all = [
+    (label: '390x844', size: mobile390),
+    (label: '428x926', size: mobile428),
+    (label: '834x1194', size: tablet834),
+  ];
+}
+
+/// Applies a fixed viewport for deterministic golden captures.
+void useGoldenViewport(WidgetTester tester, Size viewport) {
+  tester.view.physicalSize = viewport;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(() {
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+}
+
+/// Pumps a dashboard screen with stable mock providers (no loading, no network).
+Future<void> pumpGoldenDashboard(
+  WidgetTester tester, {
+  required Widget screen,
+  required Size viewport,
+  List<Override> extraOverrides = const [],
+}) async {
+  suppressGoldenOverflowErrors();
+  useGoldenViewport(tester, viewport);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        parentDashboardLoadingProvider.overrideWith((ref) => false),
+        teacherDashboardLoadingProvider.overrideWith((ref) => false),
+        studentDashboardLoadingProvider.overrideWith((ref) => false),
+        ...extraOverrides,
+      ],
+      child: MaterialApp(
+        theme: AksharaAppTheme.light(),
+        debugShowCheckedModeBanner: false,
+        home: screen,
+      ),
+    ),
+  );
+
+  // Single frame — avoids animation settle loops.
+  await tester.pump();
+}
+
+String goldenFileName(String prefix, String viewportLabel) =>
+    'goldens/${prefix}_$viewportLabel.png';

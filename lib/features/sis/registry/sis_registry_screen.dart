@@ -1,0 +1,237 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../router/route_names.dart';
+import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
+import '../../admin/admin_layout.dart';
+import '../sis_models.dart';
+import '../widgets/sis_module_scaffold.dart';
+import 'sis_registry_provider.dart';
+
+/// SIS-02 — Student Registry.
+class SisRegistryScreen extends ConsumerStatefulWidget {
+  const SisRegistryScreen({super.key});
+
+  @override
+  ConsumerState<SisRegistryScreen> createState() => _SisRegistryScreenState();
+}
+
+class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
+  late final TextEditingController _searchController;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  static const List<String> filterLabels = [
+    'All',
+    'Active',
+    'Prospect',
+    'Class 10',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final isLoading = ref.watch(sisRegistryLoadingProvider);
+    final isError = ref.watch(sisRegistryErrorProvider);
+    final isEmpty = ref.watch(sisRegistryEmptyProvider);
+    final students = ref.watch(sisFilteredStudentsProvider);
+    final filterIndex = ref.watch(sisRegistryFilterProvider);
+
+    return SisModuleScaffold(
+      screen: SisScreen.registry,
+      filters: filterLabels,
+      selectedFilterIndex: filterIndex,
+      onFilterSelected: (index) =>
+          ref.read(sisRegistryFilterProvider.notifier).state = index,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Export'),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+          Semantics(
+            label: 'Student search',
+            child: Material(
+              child: TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  labelText: 'Search student or admission number',
+                  prefixIcon: Icon(Icons.search),
+                  hintText: 'e.g. ADM-2026-0138',
+                ),
+                onChanged: (value) =>
+                    ref.read(sisRegistrySearchProvider.notifier).state = value,
+              ),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
+              child: AksharaLoadingState(
+                semanticLabel: 'Loading student registry',
+              ),
+            )
+          else if (isError)
+            const AksharaErrorState(
+              message: 'Unable to load student registry.',
+            )
+          else if (isEmpty || students.isEmpty)
+            const AksharaEmptyState(
+              message: 'No students match your search or filters.',
+              icon: Icons.people_outline,
+            )
+          else if (AdminLayout.isMobile(context))
+            Column(
+              children: [
+                for (final student in students) ...[
+                  _StudentMobileCard(
+                    student: student,
+                    onTap: () => context.go(
+                      RouteNames.sisStudentDetail(student.id),
+                    ),
+                  ),
+                  const SizedBox(height: AksharaSpacing.s3),
+                ],
+              ],
+            )
+          else
+            _StudentRegistryTable(students: students),
+        ],
+      ),
+    );
+  }
+}
+
+class _StudentRegistryTable extends StatelessWidget {
+  const _StudentRegistryTable({required this.students});
+
+  final List<SisStudent> students;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: 'Student registry, ${students.length} students',
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowHeight: 48,
+          dataRowMinHeight: 52,
+          dataRowMaxHeight: 64,
+          columns: const [
+            DataColumn(label: Text('Student')),
+            DataColumn(label: Text('Admission No.')),
+            DataColumn(label: Text('Class')),
+            DataColumn(label: Text('Section')),
+            DataColumn(label: Text('Status')),
+            DataColumn(label: Text('Actions')),
+          ],
+          rows: [
+            for (final student in students)
+              DataRow(
+                cells: [
+                  DataCell(Text(student.studentName)),
+                  DataCell(Text(student.admissionNumber)),
+                  DataCell(Text(student.classLabel)),
+                  DataCell(Text(student.section)),
+                  DataCell(_StudentStatusChip(status: student.status)),
+                  DataCell(
+                    TextButton(
+                      onPressed: () => context.go(
+                        RouteNames.sisStudentDetail(student.id),
+                      ),
+                      child: const Text('View'),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StudentStatusChip extends StatelessWidget {
+  const _StudentStatusChip({required this.status});
+
+  final SisStudentStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, tone) = switch (status) {
+      SisStudentStatus.active => ('Active', KpiAccent.success),
+      SisStudentStatus.prospect => ('Prospect', KpiAccent.warning),
+      SisStudentStatus.transferred => ('Transferred', KpiAccent.primary),
+      SisStudentStatus.exited => ('Exited', KpiAccent.neutral),
+      SisStudentStatus.alumni => ('Alumni', KpiAccent.neutral),
+    };
+    return AksharaStatusChip(label: label, tone: tone);
+  }
+}
+
+class _StudentMobileCard extends StatelessWidget {
+  const _StudentMobileCard({required this.student, required this.onTap});
+
+  final SisStudent student;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+
+    return Semantics(
+      button: true,
+      label: '${student.studentName}, ${student.admissionNumber}',
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+          side: BorderSide(color: colors.outlineVariant),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+          child: Padding(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(student.studentName, style: text.titleSmall),
+                Text(
+                  '${student.admissionNumber} · Class ${student.classLabel}-${student.section}',
+                  style: text.bodySmall,
+                ),
+                const SizedBox(height: AksharaSpacing.s2),
+                _StudentStatusChip(status: student.status),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

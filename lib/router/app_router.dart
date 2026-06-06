@@ -37,6 +37,11 @@ import '../features/teacher/messages/teacher_conversation_screen.dart';
 import '../features/teacher/messages/teacher_messages_screen.dart';
 import '../features/teacher/shell/teacher_shell.dart';
 import '../features/teacher/timetable/teacher_timetable_screen.dart';
+import '../features/admin/admin_shell.dart';
+import 'admin_navigation.dart';
+import 'admissions_navigation.dart';
+import 'finance_navigation.dart';
+import 'sis_navigation.dart';
 import 'parent_navigation.dart';
 import 'route_names.dart';
 import 'student_navigation.dart';
@@ -261,6 +266,211 @@ GoRouter createAppRouter({
         redirect: (context, state) => RouteNames.studentDashboard,
       ),
       ShellRoute(
+        builder: (context, state, child) => AdminShell(child: child),
+        routes: [
+          GoRoute(
+            path: RouteNames.admin,
+            name: 'admin',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: adminHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.admissions,
+            name: 'admissions',
+            redirect: admissionsRootRedirect,
+            routes: [
+              GoRoute(
+                path: 'dashboard',
+                name: 'admissionsDashboard',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsDashboardRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'leads',
+                name: 'admissionsLeads',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsLeadsRouteBuilder(context, state),
+                ),
+                routes: [
+                  GoRoute(
+                    path: ':leadId',
+                    name: 'admissionsLeadDetail',
+                    pageBuilder: (context, state) => NoTransitionPage(
+                      child: admissionsLeadDetailRouteBuilder(context, state),
+                    ),
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'applications',
+                name: 'admissionsApplications',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsApplicationsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'enrollment',
+                name: 'admissionsEnrollment',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsEnrollmentRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'documents',
+                name: 'admissionsDocuments',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsDocumentsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'approval',
+                name: 'admissionsApproval',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsApprovalRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'fee-handoff',
+                name: 'admissionsFeeHandoff',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsFeeHandoffRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'reports',
+                name: 'admissionsReports',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsReportsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'settings',
+                name: 'admissionsSettings',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: admissionsSettingsRouteBuilder(context, state),
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RouteNames.finance,
+            name: 'finance',
+            redirect: financeRootRedirect,
+            routes: [
+              GoRoute(
+                path: 'dashboard',
+                name: 'financeDashboard',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeDashboardRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'fee-structures',
+                name: 'financeFeeStructures',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeFeeStructuresRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'student-accounts',
+                name: 'financeStudentAccounts',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeStudentAccountsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'fee-assignment',
+                name: 'financeFeeAssignment',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeFeeAssignmentRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'collections',
+                name: 'financeCollections',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeCollectionsRouteBuilder(context, state),
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RouteNames.sis,
+            name: 'sis',
+            redirect: sisRootRedirect,
+            routes: [
+              GoRoute(
+                path: 'dashboard',
+                name: 'sisDashboard',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisDashboardRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'students',
+                name: 'sisStudents',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisStudentsRouteBuilder(context, state),
+                ),
+                routes: [
+                  GoRoute(
+                    path: ':studentId',
+                    name: 'sisStudentDetail',
+                    pageBuilder: (context, state) => NoTransitionPage(
+                      child: sisStudentDetailRouteBuilder(context, state),
+                    ),
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'academic-assignment',
+                name: 'sisAcademicAssignment',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisAcademicAssignmentRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'admissions-conversion',
+                name: 'sisAdmissionsConversion',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisAdmissionsConversionRouteBuilder(context, state),
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RouteNames.hr,
+            name: 'hr',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: hrRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.management,
+            name: 'management',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: managementRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.transport,
+            name: 'transport',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: transportRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.hostel,
+            name: 'hostel',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: hostelRouteBuilder(context, state),
+            ),
+          ),
+        ],
+      ),
+      ShellRoute(
         builder: (context, state, child) => StudentShell(child: child),
         routes: [
           GoRoute(
@@ -363,15 +573,21 @@ String? _authRedirect(AuthState auth, String location) {
 bool _isProtectedRoute(String location) {
   return location.startsWith('/parent') ||
       location.startsWith('/teacher') ||
-      location.startsWith('/student');
+      location.startsWith('/student') ||
+      isAdminErpRoute(location);
 }
 
 bool _canAccessRoute(AuthState auth, String location) {
+  if (isAdminErpRoute(location)) {
+    return auth.role == UserRole.staff;
+  }
+
   return switch (auth.role) {
     UserRole.parent => location.startsWith('/parent'),
     UserRole.teacher => location.startsWith('/teacher'),
     UserRole.student => location.startsWith('/student'),
-    UserRole.staff => location.startsWith('/teacher'),
+    UserRole.staff =>
+      location.startsWith('/teacher') || isAdminErpRoute(location),
     null => false,
   };
 }

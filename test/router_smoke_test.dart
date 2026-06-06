@@ -13,6 +13,13 @@ AuthState get _studentAuth => const AuthState(
       role: UserRole.student,
     );
 
+AuthState get _staffAuth => const AuthState(
+      status: AuthStatus.authenticated,
+      phoneNumber: '9876543210',
+      displayName: 'ERP Staff',
+      role: UserRole.staff,
+    );
+
 AuthState get _parentAuth => const AuthState(
       status: AuthStatus.authenticated,
       phoneNumber: '9876543210',
@@ -133,6 +140,61 @@ void main() {
         expect(router.routeInformationProvider.value.uri.path, route);
         expect(find.text(title), findsAtLeastNWidgets(1));
       }
+    });
+
+    testWidgets('allows authenticated staff to reach admin ERP routes', (
+      tester,
+    ) async {
+      final router = createAppRouter(auth: _staffAuth);
+      await pumpAksharaRouter(tester, router: router);
+
+      final routes = <(String, String)>[
+        (RouteNames.admin, 'Admin Hub'),
+        (RouteNames.admissionsDashboard, 'Total Leads (MTD)'),
+        (RouteNames.admissionsLeads, 'LD-1042'),
+        (RouteNames.admissionsApplications, 'APP-2208'),
+        (RouteNames.admissionsLeadDetail('LD-1042'), 'Ananya Reddy'),
+        (RouteNames.admissionsEnrollment, 'Student profile'),
+        (RouteNames.admissionsDocuments, 'Pending'),
+        (RouteNames.admissionsApproval, 'Ananya Reddy'),
+        (RouteNames.admissionsFeeHandoff, 'Send to Finance'),
+        (RouteNames.admissionsReports, 'Conversion funnel'),
+        (RouteNames.admissionsSettings, 'Lead stages'),
+        (RouteNames.financeDashboard, 'Fee Collected (MTD)'),
+        (RouteNames.financeFeeStructures, 'Fee structure catalog'),
+        (RouteNames.financeStudentAccounts, 'Arjun Patel'),
+        (RouteNames.financeFeeAssignment, 'Admissions handoff queue'),
+        (RouteNames.financeCollections, 'Collected today'),
+        (RouteNames.sisDashboard, 'Total Students'),
+        (RouteNames.sisStudents, 'Arjun Patel'),
+        (RouteNames.sisStudentDetail('SIS-STU-10421'), 'Arjun Patel'),
+        (RouteNames.sisAcademicAssignment, 'Academic assignment'),
+        (RouteNames.sisAdmissionsConversion, 'Admissions conversion'),
+        (RouteNames.hr, 'HR'),
+        (RouteNames.management, 'Management'),
+        (RouteNames.transport, 'Transport'),
+        (RouteNames.hostel, 'Hostel'),
+      ];
+
+      for (final (route, title) in routes) {
+        router.go(route);
+        await tester.pumpAndSettle();
+
+        expect(router.routeInformationProvider.value.uri.path, route);
+        expect(find.text(title), findsAtLeastNWidgets(1));
+      }
+    });
+
+    testWidgets('blocks parent from admin ERP routes', (tester) async {
+      final router = createAppRouter(auth: _parentAuth);
+      await pumpAksharaRouter(tester, router: router);
+      router.go(RouteNames.admin);
+      await tester.pump();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.parentDashboard,
+      );
     });
 
     testWidgets('blocks student from teacher routes', (tester) async {
