@@ -1,14 +1,39 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/repository_config.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import '../integration/sis_finance_integration_provider.dart';
 import '../registry/sis_registry_provider.dart';
+import '../sis_async_state.dart';
 import '../sis_models.dart';
 
 final sisProfileLoadingProvider = StateProvider<bool>((ref) => false);
 final sisProfileErrorProvider = StateProvider<bool>((ref) => false);
 
+final sisStudentProfileFutureProvider =
+    FutureProvider.family<SisStudentProfile, String>((ref, studentId) async {
+  return ref.read(sisRepositoryProvider).getStudentProfile(
+        query: ref.watch(repositoryQueryProvider),
+        studentId: studentId,
+      );
+});
+
+final sisStudentProfileViewStateProvider =
+    Provider.family<SisViewState<SisStudentProfile>, String>((ref, studentId) {
+  return resolveSisAsync(
+    ref.watch(sisStudentProfileFutureProvider(studentId)),
+    forceLoading: ref.watch(sisProfileLoadingProvider),
+    forceError: ref.watch(sisProfileErrorProvider),
+  );
+});
+
 final sisStudentProfileProvider =
     Provider.family<SisStudentProfile?, String>((ref, studentId) {
+  if (isModuleApiEnabled(ref, sisApiEnabledProvider)) {
+    return ref.watch(sisStudentProfileViewStateProvider(studentId)).data;
+  }
+
   if (ref.watch(sisProfileLoadingProvider)) return null;
   if (ref.watch(sisProfileErrorProvider)) return null;
 
@@ -84,7 +109,8 @@ SisStudentProfile _buildProfile(
       SisTimelineEvent(
         dateLabel: student.enrolledAt,
         title: 'Enrolled in SIS',
-        detail: '${student.classLabel}-${student.section} · ${student.academicYear}',
+        detail:
+            '${student.classLabel}-${student.section} · ${student.academicYear}',
       ),
       const SisTimelineEvent(
         dateLabel: 'Dec 2025',

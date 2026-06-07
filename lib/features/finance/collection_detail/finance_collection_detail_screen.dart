@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
@@ -26,50 +24,27 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeCollectionDetailLoadingProvider);
-    final isError = ref.watch(financeCollectionDetailErrorProvider);
-    final detail = ref.watch(financeCollectionDetailProvider(collectionId));
+    final viewState =
+        ref.watch(financeCollectionDetailViewStateProvider(collectionId));
 
     return FinanceModuleScaffold(
       screen: FinanceScreen.collectionDetail,
       showFilterBar: false,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        detail: detail,
+      body: FinanceAsyncBody<CollectionDetail?>(
+        state: viewState,
+        loadingLabel: 'Loading collection detail',
+        emptyMessage: 'Collection record not found.',
+        emptyIcon: Icons.receipt_long_outlined,
+        onRetry: () => retryFinanceFuture(
+          ref,
+          financeCollectionDetailFutureProvider(collectionId),
+        ),
+        builder: (detail) => _buildDetailContent(context, detail!),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required CollectionDetail? detail,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading collection detail',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load collection detail.',
-      );
-    }
-
-    if (detail == null) {
-      return const AksharaEmptyState(
-        message: 'Collection record not found.',
-        icon: Icons.receipt_long_outlined,
-      );
-    }
-
+  Widget _buildDetailContent(BuildContext context, CollectionDetail detail) {
     final payment = detail.payment;
     final isMobile = AdminLayout.isMobile(context);
 

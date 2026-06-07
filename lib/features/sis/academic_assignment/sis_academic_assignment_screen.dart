@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../registry/sis_registry_provider.dart';
+import '../sis_async_state.dart';
+import '../sis_mutations_provider.dart';
 import '../sis_models.dart';
+import '../sis_requests.dart';
 import '../widgets/sis_module_scaffold.dart';
 import 'sis_academic_assignment_provider.dart';
 
@@ -38,8 +39,7 @@ class _SisAcademicAssignmentScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(sisAcademicAssignmentLoadingProvider);
-    final isError = ref.watch(sisAcademicAssignmentErrorProvider);
+    final viewState = ref.watch(sisAcademicAssignmentScreenViewStateProvider);
     final students = ref.watch(sisStudentsProvider);
     final selected = ref.watch(sisSelectedAssignmentStudentProvider);
     final classes = ref.watch(sisClassOptionsProvider);
@@ -65,90 +65,152 @@ class _SisAcademicAssignmentScreenState
             style: context.aksharaText.bodyMedium,
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading academic assignment',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load academic assignment data.',
-            )
-          else if (students.isEmpty)
-            const AksharaEmptyState(
-              message: 'No students available for assignment.',
-              icon: Icons.class_outlined,
-            )
-          else if (isMobile)
-            Column(
-              children: [
-                _StudentPicker(
-                  students: students,
-                  selectedId: selected?.id,
-                  onSelect: (id) => ref
-                      .read(sisSelectedAssignmentStudentIdProvider.notifier)
-                      .state = id,
-                ),
-                if (selected != null) ...[
-                  const SizedBox(height: AksharaSpacing.s4),
-                  _AssignmentForm(
-                    student: selected,
-                    classes: classes,
-                    sections: sections,
-                    years: years,
-                    classLabel: _classLabel,
-                    section: _section,
-                    academicYear: _academicYear,
-                    onClassChanged: (v) => setState(() => _classLabel = v),
-                    onSectionChanged: (v) => setState(() => _section = v),
-                    onYearChanged: (v) => setState(() => _academicYear = v),
+          SisAsyncBody<List<SisStudent>>(
+            state: viewState,
+            loadingLabel: 'Loading academic assignment',
+            emptyMessage: 'No students available for assignment.',
+            emptyIcon: Icons.class_outlined,
+            onRetry: () {
+              retrySisFuture(ref, sisStudentsFutureProvider);
+              retrySisFuture(ref, sisAcademicAssignmentFutureProvider);
+            },
+            builder: (_) {
+              if (selected != null) {
+                _classLabel = selected.classLabel;
+                _section = selected.section;
+                _academicYear = selected.academicYear;
+              }
+              if (isMobile) {
+                return Column(
+                  children: [
+                    _StudentPicker(
+                      students: students,
+                      selectedId: selected?.id,
+                      onSelect: (id) => ref
+                          .read(sisSelectedAssignmentStudentIdProvider.notifier)
+                          .state = id,
+                    ),
+                    if (selected != null) ...[
+                      const SizedBox(height: AksharaSpacing.s4),
+                      _AssignmentForm(
+                        student: selected,
+                        classes: classes,
+                        sections: sections,
+                        years: years,
+                        classLabel: _classLabel,
+                        section: _section,
+                        academicYear: _academicYear,
+                        onClassChanged: (v) => setState(() => _classLabel = v),
+                        onSectionChanged: (v) => setState(() => _section = v),
+                        onYearChanged: (v) => setState(() => _academicYear = v),
+                        onSaveAssignment: () => _saveAssignment(selected),
+                        onPromote: () => _updateStatus(
+                          selected,
+                          SisStudentStatus.active,
+                          'Promoted',
+                        ),
+                        onTransfer: () => _updateStatus(
+                          selected,
+                          SisStudentStatus.transferred,
+                          'Marked for transfer',
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _StudentPicker(
+                      students: students,
+                      selectedId: selected?.id,
+                      onSelect: (id) => ref
+                          .read(sisSelectedAssignmentStudentIdProvider.notifier)
+                          .state = id,
+                    ),
+                  ),
+                  const SizedBox(width: AksharaSpacing.s6),
+                  Expanded(
+                    flex: 3,
+                    child: selected == null
+                        ? const AksharaEmptyState(
+                            message: 'Select a student to assign.',
+                            icon: Icons.person_search_outlined,
+                          )
+                        : _AssignmentForm(
+                            student: selected,
+                            classes: classes,
+                            sections: sections,
+                            years: years,
+                            classLabel: _classLabel,
+                            section: _section,
+                            academicYear: _academicYear,
+                            onClassChanged: (v) =>
+                                setState(() => _classLabel = v),
+                            onSectionChanged: (v) =>
+                                setState(() => _section = v),
+                            onYearChanged: (v) =>
+                                setState(() => _academicYear = v),
+                            onSaveAssignment: () => _saveAssignment(selected),
+                            onPromote: () => _updateStatus(
+                              selected,
+                              SisStudentStatus.active,
+                              'Promoted',
+                            ),
+                            onTransfer: () => _updateStatus(
+                              selected,
+                              SisStudentStatus.transferred,
+                              'Marked for transfer',
+                            ),
+                          ),
                   ),
                 ],
-              ],
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _StudentPicker(
-                    students: students,
-                    selectedId: selected?.id,
-                    onSelect: (id) => ref
-                        .read(sisSelectedAssignmentStudentIdProvider.notifier)
-                        .state = id,
-                  ),
-                ),
-                const SizedBox(width: AksharaSpacing.s6),
-                Expanded(
-                  flex: 3,
-                  child: selected == null
-                      ? const AksharaEmptyState(
-                          message: 'Select a student to assign.',
-                          icon: Icons.person_search_outlined,
-                        )
-                      : _AssignmentForm(
-                          student: selected,
-                          classes: classes,
-                          sections: sections,
-                          years: years,
-                          classLabel: _classLabel,
-                          section: _section,
-                          academicYear: _academicYear,
-                          onClassChanged: (v) =>
-                              setState(() => _classLabel = v),
-                          onSectionChanged: (v) => setState(() => _section = v),
-                          onYearChanged: (v) =>
-                              setState(() => _academicYear = v),
-                        ),
-                ),
-              ],
-            ),
+              );
+            },
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _saveAssignment(SisStudent student) async {
+    final updated = await ref
+        .read(assignAcademicAssignmentProvider.notifier)
+        .execute(
+          AcademicAssignmentRequest(
+            studentId: student.id,
+            classLabel: _classLabel,
+            section: _section,
+            academicYear: _academicYear,
+          ),
+        );
+    if (!mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Assigned ${updated.studentName} to Class ${updated.classLabel}-${updated.section}',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateStatus(
+    SisStudent student,
+    SisStudentStatus status,
+    String label,
+  ) async {
+    final updated = await ref
+        .read(updateStudentStatusProvider.notifier)
+        .execute(
+          studentId: student.id,
+          request: UpdateStudentStatusRequest(status: status),
+        );
+    if (!mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$label ${updated.studentName}')),
     );
   }
 }
@@ -200,6 +262,9 @@ class _AssignmentForm extends StatelessWidget {
     required this.onClassChanged,
     required this.onSectionChanged,
     required this.onYearChanged,
+    required this.onSaveAssignment,
+    required this.onPromote,
+    required this.onTransfer,
   });
 
   final SisStudent student;
@@ -212,6 +277,9 @@ class _AssignmentForm extends StatelessWidget {
   final ValueChanged<String> onClassChanged;
   final ValueChanged<String> onSectionChanged;
   final ValueChanged<String> onYearChanged;
+  final VoidCallback onSaveAssignment;
+  final VoidCallback onPromote;
+  final VoidCallback onTransfer;
 
   @override
   Widget build(BuildContext context) {
@@ -277,23 +345,15 @@ class _AssignmentForm extends StatelessWidget {
               runSpacing: AksharaSpacing.s3,
               children: [
                 OutlinedButton(
-                  onPressed: () {},
+                  onPressed: onPromote,
                   child: const Text('Promote'),
                 ),
                 OutlinedButton(
-                  onPressed: () {},
+                  onPressed: onTransfer,
                   child: const Text('Transfer'),
                 ),
                 FilledButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Assigned ${student.studentName} to Class $classLabel-$section',
-                        ),
-                      ),
-                    );
-                  },
+                  onPressed: onSaveAssignment,
                   child: const Text('Save assignment'),
                 ),
               ],

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../widgets/finance_module_scaffold.dart';
 import '../widgets/finance_responsive_grid.dart';
@@ -20,58 +18,34 @@ class FinanceReportsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeReportsLoadingProvider);
-    final isError = ref.watch(financeReportsErrorProvider);
-    final isEmpty = ref.watch(financeReportsEmptyProvider);
-    final data = ref.watch(financeReportsProvider);
+    final viewState = ref.watch(financeReportsViewStateProvider);
     final selectedReportId = ref.watch(financeSelectedReportIdProvider);
 
     return FinanceModuleScaffold(
       screen: FinanceScreen.reports,
       showFilterBar: false,
-      body: _buildBody(
-        context,
-        ref: ref,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
-        selectedReportId: selectedReportId,
+      body: FinanceAsyncBody<FinanceReportsData>(
+        state: viewState,
+        loadingLabel: 'Loading finance reports',
+        emptyMessage: 'No finance reports available.',
+        emptyIcon: Icons.assessment_outlined,
+        onRetry: () => retryFinanceFuture(ref, financeReportsFutureProvider),
+        builder: (data) => _buildContent(
+          context,
+          ref: ref,
+          data: data,
+          selectedReportId: selectedReportId,
+        ),
       ),
     );
   }
 
-  Widget _buildBody(
+  Widget _buildContent(
     BuildContext context, {
     required WidgetRef ref,
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required FinanceReportsData? data,
+    required FinanceReportsData data,
     required String selectedReportId,
   }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading finance reports',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load finance reports.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No finance reports available.',
-        icon: Icons.assessment_outlined,
-      );
-    }
-
     final selectedReport = data.catalog.firstWhere(
       (item) => item.id == selectedReportId,
       orElse: () => data.catalog.first,

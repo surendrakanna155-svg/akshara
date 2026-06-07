@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('teacherMessages providers', () {
-    test('teacherMessageThreadsProvider exposes inbox threads', () {
+    test('teacherMessageThreadsProvider exposes inbox threads', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(threads.first.messages, isNotEmpty);
     });
 
-    test('teacherMessageThreadProvider resolves thread by id', () {
+    test('teacherMessageThreadProvider resolves thread by id', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -26,7 +26,7 @@ void main() {
       expect(thread?.unreadCount, 1);
     });
 
-    test('teacherMessageMailboxProvider switches mailbox tab', () {
+    test('teacherMessageMailboxProvider switches mailbox tab', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -36,7 +36,7 @@ void main() {
           MessageMailbox.compose);
     });
 
-    test('teacherComposeDraftProvider validates compose form', () {
+    test('teacherComposeDraftProvider validates compose form', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -52,7 +52,7 @@ void main() {
       expect(container.read(teacherComposeDraftProvider).isValid, isTrue);
     });
 
-    test('teacherMessagesEmptyProvider clears threads', () {
+    test('teacherMessagesEmptyProvider clears threads', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

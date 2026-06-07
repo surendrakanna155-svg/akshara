@@ -1,3 +1,5 @@
+import 'package:akshara_erp/core/security/erp_role.dart';
+import 'package:akshara_erp/features/auth/auth_claims.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/auth/login_screen.dart';
 import 'package:akshara_erp/router/app_router.dart';
@@ -13,11 +15,20 @@ AuthState get _studentAuth => const AuthState(
       role: UserRole.student,
     );
 
-AuthState get _staffAuth => const AuthState(
+AuthState get _staffAuth => AuthState(
       status: AuthStatus.authenticated,
       phoneNumber: '9876543210',
       displayName: 'ERP Staff',
       role: UserRole.staff,
+      claims: AuthClaims.demoForRole(erpRole: ErpRole.superAdmin),
+    );
+
+AuthState get _financeStaffAuth => AuthState(
+      status: AuthStatus.authenticated,
+      phoneNumber: '9876543210',
+      displayName: 'Finance Staff',
+      role: UserRole.staff,
+      claims: AuthClaims.demoForRole(erpRole: ErpRole.financeAdmin),
     );
 
 AuthState get _parentAuth => const AuthState(
@@ -33,7 +44,7 @@ void main() {
       expect(homeRouteForRole(UserRole.parent), RouteNames.parentDashboard);
       expect(homeRouteForRole(UserRole.teacher), RouteNames.teacherDashboard);
       expect(homeRouteForRole(UserRole.student), RouteNames.studentDashboard);
-      expect(homeRouteForRole(UserRole.staff), RouteNames.teacherDashboard);
+      expect(homeRouteForRole(UserRole.staff), RouteNames.admin);
       expect(homeRouteForRole(null), RouteNames.login);
     });
   });
@@ -43,7 +54,7 @@ void main() {
       tester,
     ) async {
       final router = createAppRouter(
-        auth: const AuthState(status: AuthStatus.unauthenticated),
+        readAuth: () => const AuthState(status: AuthStatus.unauthenticated),
       );
 
       await pumpAksharaRouter(tester, router: router);
@@ -60,16 +71,19 @@ void main() {
     testWidgets('allows authenticated teacher to reach teacher module routes', (
       tester,
     ) async {
-      final router = createAppRouter(
-        auth: const AuthState(
-          status: AuthStatus.authenticated,
-          phoneNumber: '9876543210',
-          displayName: 'Priya Sharma',
-          role: UserRole.teacher,
-        ),
+      const teacherAuth = AuthState(
+        status: AuthStatus.authenticated,
+        phoneNumber: '9876543210',
+        displayName: 'Priya Sharma',
+        role: UserRole.teacher,
       );
+      final router = createAppRouter(readAuth: () => teacherAuth);
 
-      await pumpAksharaRouter(tester, router: router);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: teacherAuth,
+      );
 
       const routes = <(String, String)>[
         (RouteNames.teacherDashboard, 'Dashboard'),
@@ -93,8 +107,8 @@ void main() {
     testWidgets('allows authenticated parent to reach parent module routes', (
       tester,
     ) async {
-      final router = createAppRouter(auth: _parentAuth);
-      await pumpAksharaRouter(tester, router: router);
+      final router = createAppRouter(readAuth: () => _parentAuth);
+      await pumpAksharaRouter(tester, router: router, authOverride: _parentAuth);
 
       const routes = <(String, String)>[
         (RouteNames.parentTimetable, 'Timetable'),
@@ -120,8 +134,8 @@ void main() {
     testWidgets('allows authenticated student to reach student module routes', (
       tester,
     ) async {
-      final router = createAppRouter(auth: _studentAuth);
-      await pumpAksharaRouter(tester, router: router);
+      final router = createAppRouter(readAuth: () => _studentAuth);
+      await pumpAksharaRouter(tester, router: router, authOverride: _studentAuth);
 
       const routes = <(String, String)>[
         (RouteNames.studentDashboard, 'Home'),
@@ -145,8 +159,8 @@ void main() {
     testWidgets('allows authenticated staff to reach admin ERP routes', (
       tester,
     ) async {
-      final router = createAppRouter(auth: _staffAuth);
-      await pumpAksharaRouter(tester, router: router);
+      final router = createAppRouter(readAuth: () => _staffAuth);
+      await pumpAksharaRouter(tester, router: router, authOverride: _staffAuth);
 
       final routes = <(String, String)>[
         (RouteNames.admin, 'Admin Hub'),
@@ -176,14 +190,82 @@ void main() {
         (RouteNames.sisStudentDetail('SIS-STU-10421'), 'Arjun Patel'),
         (RouteNames.sisAcademicAssignment, 'Academic assignment'),
         (RouteNames.sisAdmissionsConversion, 'Admissions conversion'),
-        (RouteNames.hr, 'HR'),
-        (RouteNames.management, 'Management'),
-        (RouteNames.transport, 'Transport'),
-        (RouteNames.hostel, 'Hostel'),
+        (RouteNames.hrDashboard, 'Total Employees'),
+        (RouteNames.hrEmployees, 'Employee directory'),
+        (RouteNames.hrEmployeeDetail('HR-EMP-101'), 'Priya Sharma'),
+        (RouteNames.hrAttendance, 'Staff attendance'),
+        (RouteNames.hrLeave, 'Leave requests'),
+        (RouteNames.hrPayroll, 'Payroll runs'),
+        (RouteNames.hrRecruitment, 'Recruitment pipeline'),
+        (RouteNames.hrPerformance, 'Performance reviews'),
+        (RouteNames.hrSettings, 'HR settings'),
+        (RouteNames.managementDashboard, 'Revenue (MTD)'),
+        (RouteNames.managementAnalytics, 'Class summary'),
+        (RouteNames.managementAdmissions, 'Funnel stages'),
+        (RouteNames.managementFinance, 'Finance module drill-down'),
+        (RouteNames.managementAcademics, 'Subject performance'),
+        (RouteNames.managementPerformance, 'Class performance'),
+        (RouteNames.managementTasks, 'Approval queue'),
+        (RouteNames.managementSettings, 'Management settings'),
+        (RouteNames.transportDashboard, 'Active Buses'),
+        (RouteNames.transportRoutes, 'Route catalog'),
+        (RouteNames.transportVehicles, 'Vehicle registry'),
+        (RouteNames.transportDrivers, 'Driver roster'),
+        (RouteNames.transportAllocation, 'Student transport allocation'),
+        (RouteNames.transportAttendance, 'AM pickup attendance'),
+        (RouteNames.transportTracking, 'Vehicle telemetry'),
+        (RouteNames.transportReports, 'Report catalog'),
+        (RouteNames.transportSettings, 'Transport settings'),
+        (RouteNames.hostelDashboard, 'Occupancy'),
+        (RouteNames.hostelStudents, 'Hostel residents'),
+        (RouteNames.hostelRooms, 'Room catalog'),
+        (RouteNames.hostelAttendance, 'Hostel attendance roster'),
+        (RouteNames.hostelLeave, 'Leave requests'),
+        (RouteNames.hostelMess, 'Weekly menu'),
+        (RouteNames.hostelVisitors, 'Active visitors'),
+        (RouteNames.hostelReports, 'Report catalog'),
+        (RouteNames.libraryDashboard, 'Total Books'),
+        (RouteNames.libraryCatalog, 'Book catalog'),
+        (RouteNames.libraryIssues, 'Issue books'),
+        (RouteNames.libraryReturns, 'Return books'),
+        (RouteNames.libraryMembers, 'Library members'),
+        (RouteNames.libraryFines, 'Overdue fines'),
+        (RouteNames.libraryResources, 'Digital resources'),
+        (RouteNames.libraryReports, 'Report catalog'),
+        (RouteNames.inventoryDashboard, 'Total Assets'),
+        (RouteNames.inventoryAssets, 'Asset registry'),
+        (RouteNames.inventoryCategories, 'Category catalog'),
+        (RouteNames.inventoryAllocation, 'Asset allocation'),
+        (RouteNames.inventoryMaintenance, 'Maintenance schedule'),
+        (RouteNames.inventoryProcurement, 'Purchase orders'),
+        (RouteNames.inventoryVendors, 'Vendor directory'),
+        (RouteNames.inventoryReports, 'Report catalog'),
+        (RouteNames.alumniDashboard, 'Total Alumni'),
+        (RouteNames.alumniRegistry, 'Alumni registry'),
+        (RouteNames.alumniProfileDetail('ALM-001'), 'Arjun Patel'),
+        (RouteNames.alumniEvents, 'Event calendar'),
+        (RouteNames.alumniDonations, 'Donation ledger'),
+        (RouteNames.alumniCampaigns, 'Fundraising campaigns'),
+        (RouteNames.alumniMentorship, 'Mentorship pairs'),
+        (RouteNames.alumniReports, 'Report catalog'),
+        (RouteNames.alumniSettings, 'Alumni settings'),
+        (RouteNames.controlCenterDashboard, 'Total Schools'),
+        (RouteNames.controlCenterSchools, 'Schools registry'),
+        (RouteNames.controlCenterSubscriptions, 'Subscription plans'),
+        (RouteNames.controlCenterBilling, 'Platform revenue'),
+        (RouteNames.controlCenterCrm, 'Sales pipeline'),
+        (RouteNames.controlCenterSupport, 'Support tickets'),
+        (RouteNames.controlCenterSuccess, 'Customer success'),
+        (RouteNames.controlCenterWhiteLabel, 'White label configurations'),
+        (RouteNames.controlCenterAnalytics, 'Platform analytics'),
+        (RouteNames.controlCenterMonitoring, 'Platform monitoring'),
+        (RouteNames.controlCenterRoles, 'Platform roles'),
+        (RouteNames.controlCenterSettings, 'Platform settings'),
       ];
 
       for (final (route, title) in routes) {
         router.go(route);
+        await settleRiverpodFutures(tester);
         await tester.pumpAndSettle();
 
         expect(router.routeInformationProvider.value.uri.path, route);
@@ -192,8 +274,8 @@ void main() {
     });
 
     testWidgets('blocks parent from admin ERP routes', (tester) async {
-      final router = createAppRouter(auth: _parentAuth);
-      await pumpAksharaRouter(tester, router: router);
+      final router = createAppRouter(readAuth: () => _parentAuth);
+      await pumpAksharaRouter(tester, router: router, authOverride: _parentAuth);
       router.go(RouteNames.admin);
       await tester.pump();
 
@@ -203,23 +285,62 @@ void main() {
       );
     });
 
-    testWidgets('blocks student from teacher routes', (tester) async {
-      final router = createAppRouter(
-        auth: const AuthState(
-          status: AuthStatus.authenticated,
-          phoneNumber: '9876543210',
-          displayName: 'Ravi Kumar',
-          role: UserRole.student,
-        ),
+    testWidgets('finance staff sees access denied on control center', (
+      tester,
+    ) async {
+      final router = createAppRouter(readAuth: () => _financeStaffAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: _financeStaffAuth,
       );
 
-      await pumpAksharaRouter(tester, router: router);
+      router.go(RouteNames.controlCenterDashboard);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.controlCenterDashboard,
+      );
+      expect(find.text('Access Denied'), findsOneWidget);
+    });
+
+    testWidgets('blocks student from teacher routes', (tester) async {
+      final router = createAppRouter(readAuth: () => _studentAuth);
+
+      await pumpAksharaRouter(tester, router: router, authOverride: _studentAuth);
       router.go(RouteNames.teacherDashboard);
       await tester.pump();
 
       expect(
         router.routeInformationProvider.value.uri.path,
         RouteNames.studentDashboard,
+      );
+    });
+
+    testWidgets('redirects otpPending users to OTP verification', (
+      tester,
+    ) async {
+      const otpPending = AuthState(
+        status: AuthStatus.otpPending,
+        phoneNumber: '9876543210',
+        role: UserRole.parent,
+      );
+      final router = createAppRouter(readAuth: () => otpPending);
+
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: otpPending,
+        settleSplash: false,
+      );
+
+      router.go(RouteNames.login);
+      await tester.pump();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.otpVerification,
       );
     });
   });

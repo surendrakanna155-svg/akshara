@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentExamsProvider', () {
-    test('returns mock exams payload', () {
+    test('returns mock exams payload', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -17,7 +17,7 @@ void main() {
       expect(data.examResults, isNotEmpty);
     });
 
-    test('parentExamSectionProvider defaults to upcoming', () {
+    test('parentExamSectionProvider defaults to upcoming', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -27,7 +27,7 @@ void main() {
       );
     });
 
-    test('parentExamsEmptyProvider clears both sections', () {
+    test('parentExamsEmptyProvider clears both sections', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

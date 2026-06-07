@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('studentProfile providers', () {
-    test('studentProfileProvider exposes student and parent details', () {
+    test('studentProfileProvider exposes student and parent details', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

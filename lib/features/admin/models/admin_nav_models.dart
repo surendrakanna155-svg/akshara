@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/security/permissions.dart';
+
 /// ERP module route groups surfaced in the admin navigation rail.
 enum AdminModule {
   admin,
@@ -10,19 +12,10 @@ enum AdminModule {
   management,
   transport,
   hostel,
-}
-
-/// Staff personas for role-aware admin navigation (Admissions.md §2).
-enum AdminPersona {
-  superAdmin,
-  counselor,
-  marketingExecutive,
-  principal,
-  management,
-  financeAdmin,
-  hrAdmin,
-  transportAdmin,
-  hostelAdmin,
+  library,
+  inventory,
+  alumni,
+  controlCenter,
 }
 
 /// Single breadcrumb segment for [AdminAppBar].
@@ -46,7 +39,7 @@ class AdminNavDestination {
     required this.label,
     required this.icon,
     required this.selectedIcon,
-    required this.allowedPersonas,
+    required this.requiredPermission,
   });
 
   final AdminModule module;
@@ -54,9 +47,7 @@ class AdminNavDestination {
   final String label;
   final IconData icon;
   final IconData selectedIcon;
-  final Set<AdminPersona> allowedPersonas;
-
-  bool isVisibleFor(AdminPersona persona) => allowedPersonas.contains(persona);
+  final Permission requiredPermission;
 }
 
 /// Canonical module metadata for placeholders and breadcrumbs.

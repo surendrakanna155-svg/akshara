@@ -127,6 +127,28 @@ class SisStudent {
 }
 
 @immutable
+class SisAcademicAssignmentData {
+  const SisAcademicAssignmentData({
+    required this.classOptions,
+    required this.sectionOptions,
+    required this.academicYearOptions,
+  });
+
+  final List<String> classOptions;
+  final List<String> sectionOptions;
+  final List<String> academicYearOptions;
+}
+
+@immutable
+class SisAdmissionsConversionData {
+  const SisAdmissionsConversionData({
+    required this.queue,
+  });
+
+  final List<SisEnrollmentQueueItem> queue;
+}
+
+@immutable
 class SisParentDetails {
   const SisParentDetails({
     required this.guardianName,

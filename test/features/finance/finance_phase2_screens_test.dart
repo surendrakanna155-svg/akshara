@@ -13,6 +13,7 @@ import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../test_helpers.dart';
 
 void useViewport(WidgetTester tester, Size size) {
   tester.view.physicalSize = size;
@@ -32,13 +33,14 @@ Future<void> pumpFinanceScreen(
   useViewport(tester, viewport);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: overrides,
+      overrides: erpWidgetTestOverrides(overrides),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: screen,
       ),
     ),
   );
+  await settleRiverpodFutures(tester);
   await tester.pumpAndSettle();
 }
 
@@ -63,9 +65,9 @@ void main() {
       useViewport(tester, const Size(1440, 900));
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             financeCollectionDetailLoadingProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const FinanceCollectionDetailScreen(collectionId: 'col_1'),
@@ -186,9 +188,9 @@ void main() {
       useViewport(tester, const Size(390, 844));
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             financeSettingsLoadingProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const FinanceSettingsScreen(),

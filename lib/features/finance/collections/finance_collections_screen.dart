@@ -5,13 +5,12 @@ import 'package:go_router/go_router.dart';
 import '../../../router/route_names.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
@@ -30,9 +29,7 @@ class FinanceCollectionsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeCollectionsLoadingProvider);
-    final isError = ref.watch(financeCollectionsErrorProvider);
-    final isEmpty = ref.watch(financeCollectionsEmptyProvider);
+    final viewState = ref.watch(financeCollectionsViewStateProvider);
     final payments = ref.watch(financeFilteredCollectionsProvider);
     final summary = ref.watch(financeDailySummaryProvider);
     final filterIndex = ref.watch(financeCollectionFilterProvider);
@@ -98,45 +95,52 @@ class FinanceCollectionsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading collections',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(message: 'Unable to load collections.')
-          else if (isEmpty || payments.isEmpty)
-            AksharaEmptyState(
-              message: receiptQuery.isEmpty
-                  ? 'No collection records for the selected filters.'
-                  : 'No receipts match "$receiptQuery".',
-              icon: Icons.receipt_long_outlined,
-            )
-          else ...[
-            const AksharaSectionHeader(title: 'Payment list'),
-            const SizedBox(height: AksharaSpacing.s3),
-            if (AdminLayout.isMobile(context))
-              Column(
+          FinanceAsyncBody<List<CollectionPayment>>(
+            state: viewState,
+            loadingLabel: 'Loading collections',
+            emptyMessage: receiptQuery.isEmpty
+                ? 'No collection records for the selected filters.'
+                : 'No receipts match "$receiptQuery".',
+            emptyIcon: Icons.receipt_long_outlined,
+            onRetry: () =>
+                retryFinanceFuture(ref, financeCollectionsFutureProvider),
+            builder: (_) {
+              if (payments.isEmpty) {
+                return AksharaEmptyState(
+                  message: receiptQuery.isEmpty
+                      ? 'No collection records for the selected filters.'
+                      : 'No receipts match "$receiptQuery".',
+                  icon: Icons.receipt_long_outlined,
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final payment in payments) ...[
-                    _CollectionMobileCard(payment: payment),
-                    const SizedBox(height: AksharaSpacing.s3),
-                  ],
+                  const AksharaSectionHeader(title: 'Payment list'),
+                  const SizedBox(height: AksharaSpacing.s3),
+                  if (AdminLayout.isMobile(context))
+                    Column(
+                      children: [
+                        for (final payment in payments) ...[
+                          _CollectionMobileCard(payment: payment),
+                          const SizedBox(height: AksharaSpacing.s3),
+                        ],
+                      ],
+                    )
+                  else
+                    _CollectionsTable(payments: payments),
+                  const SizedBox(height: AksharaSpacing.s6),
+                  OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.balance_outlined),
+                    label: Text(
+                      'Reconciliation (${summary.pendingReconciliation} pending)',
+                    ),
+                  ),
                 ],
-              )
-            else
-              _CollectionsTable(payments: payments),
-            const SizedBox(height: AksharaSpacing.s6),
-            OutlinedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.balance_outlined),
-              label: Text(
-                'Reconciliation (${summary.pendingReconciliation} pending)',
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ],
       ),
     );

@@ -1,10 +1,11 @@
 import 'package:akshara_erp/app/app.dart';
-import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
 import 'package:akshara_erp/features/auth/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'helpers/auth_test_overrides.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -20,9 +21,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
+        overrides: authStorageTestOverrides(prefs),
         child: const AksharaApp(),
       ),
     );

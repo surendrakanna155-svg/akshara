@@ -18,12 +18,14 @@ Future<void> pumpParentScreen(WidgetTester tester, Widget screen) async {
   useMobileViewport(tester);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: erpWidgetTestOverrides(),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: screen,
       ),
     ),
   );
+  await settleRiverpodFutures(tester);
   await tester.pumpAndSettle();
 }
 
@@ -43,11 +45,11 @@ void main() {
     testWidgets('ParentPaymentScreen shows failure state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentPaymentPhaseProvider.overrideWith(
               (ref) => PaymentFlowPhase.failure,
             ),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentPaymentScreen(installmentId: 'term_2'),
@@ -63,11 +65,11 @@ void main() {
     testWidgets('ParentPaymentScreen shows processing state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentPaymentPhaseProvider.overrideWith(
               (ref) => PaymentFlowPhase.processing,
             ),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentPaymentScreen(installmentId: 'term_2'),
@@ -92,9 +94,9 @@ void main() {
     ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentReceiptsEmptyProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentReceiptsScreen(),
@@ -131,9 +133,9 @@ void main() {
     testWidgets('ParentLeaveScreen shows error state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentLeaveErrorProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentLeaveScreen(),

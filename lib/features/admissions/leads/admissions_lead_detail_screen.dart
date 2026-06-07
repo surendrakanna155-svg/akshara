@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
+import '../admissions_async_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
 import '../../admin/admin_shell.dart';
+import '../admissions_workflow_actions.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_sub_nav.dart';
 import 'admissions_lead_detail_provider.dart';
+import 'admissions_leads_provider.dart';
 import 'widgets/admissions_lead_followup_history.dart';
 import 'widgets/admissions_lead_profile_panel.dart';
 import 'widgets/admissions_lead_score_panel.dart';
@@ -30,8 +34,11 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(admissionsLeadDetailLoadingProvider(leadId));
-    final isError = ref.watch(admissionsLeadDetailErrorProvider(leadId));
+    final leadsState = ref.watch(admissionsLeadsViewStateProvider);
+    final isLoading = ref.watch(admissionsLeadDetailLoadingProvider(leadId)) ||
+        leadsState.isLoading;
+    final isError = ref.watch(admissionsLeadDetailErrorProvider(leadId)) ||
+        leadsState.hasError;
     final isEmpty = ref.watch(admissionsLeadDetailEmptyProvider(leadId));
     final profile = ref.watch(admissionsLeadDetailProvider(leadId));
     final isMobile = AdminLayout.isMobile(context);
@@ -53,7 +60,16 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
               child: AksharaLoadingState(semanticLabel: 'Loading lead detail'),
             )
           else if (isError)
-            const AksharaErrorState(message: 'Unable to load lead detail.')
+            AksharaErrorState.fromFailure(
+              leadsState.failure ??
+                  const ApiFailure(
+                    type: ApiFailureType.unknown,
+                    message: 'Unable to load lead detail.',
+                    code: 'LEAD_DETAIL',
+                  ),
+              onRetry: () =>
+                  retryAdmissionsFuture(ref, admissionsLeadsFutureProvider),
+            )
           else if (isEmpty || profile == null)
             const AksharaEmptyState(
               message: 'Lead not found.',
@@ -106,6 +122,34 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
             const AksharaSectionHeader(title: 'Follow-up history'),
             const SizedBox(height: AksharaSpacing.s3),
             AdmissionsLeadFollowUpHistory(records: profile.followUpHistory),
+            const SizedBox(height: AksharaSpacing.s4),
+            Wrap(
+              spacing: AksharaSpacing.s2,
+              runSpacing: AksharaSpacing.s2,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      showAddLeadNoteDialog(context, ref, leadId),
+                  icon: const Icon(Icons.note_add_outlined),
+                  label: const Text('Add note'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      showAddFollowUpDialog(context, ref, leadId),
+                  icon: const Icon(Icons.event_outlined),
+                  label: const Text('Add follow-up'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => showChangeLeadStageDialog(
+                    context,
+                    ref,
+                    profile.lead,
+                  ),
+                  icon: const Icon(Icons.swap_horiz),
+                  label: const Text('Change stage'),
+                ),
+              ],
+            ),
           ],
         ],
       ),

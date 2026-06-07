@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'auth_claims.dart';
+
 /// Akshara ERP roles — persisted for multi-app routing (Parent, Teacher, etc.).
 enum UserRole {
   parent,
@@ -101,6 +103,7 @@ class AuthState {
     this.role,
     this.selectedChild,
     this.linkedChildren = const [],
+    this.claims,
   });
 
   final AuthStatus status;
@@ -109,6 +112,9 @@ class AuthState {
   final UserRole? role;
   final LinkedChild? selectedChild;
   final List<LinkedChild> linkedChildren;
+
+  /// Mock JWT claims (userId, erpRole, tenant, permissions).
+  final AuthClaims? claims;
 
   bool get isAuthenticated => status == AuthStatus.authenticated;
 
@@ -121,10 +127,12 @@ class AuthState {
     UserRole? role,
     LinkedChild? selectedChild,
     List<LinkedChild>? linkedChildren,
+    AuthClaims? claims,
     bool clearPhone = false,
     bool clearDisplayName = false,
     bool clearRole = false,
     bool clearSelectedChild = false,
+    bool clearClaims = false,
   }) {
     return AuthState(
       status: status ?? this.status,
@@ -136,6 +144,7 @@ class AuthState {
           ? null
           : (selectedChild ?? this.selectedChild),
       linkedChildren: linkedChildren ?? this.linkedChildren,
+      claims: clearClaims ? null : (claims ?? this.claims),
     );
   }
 }

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_module_scaffold.dart';
@@ -17,44 +16,32 @@ class AdmissionsSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(admissionsSettingsLoadingProvider);
-    final isError = ref.watch(admissionsSettingsErrorProvider);
-    final settings = ref.watch(admissionsSettingsProvider);
+    final viewState = ref.watch(admissionsSettingsViewStateProvider);
     final isMobile = AdminLayout.isMobile(context);
 
     return AdmissionsModuleScaffold(
       screen: AdmissionsScreen.settings,
       showFilterBar: false,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading admissions settings',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load admissions settings.',
-            )
-          else if (settings == null)
-            const SizedBox.shrink()
-          else if (isMobile)
-            Column(
-              children: _sections(settings),
-            )
-          else
-            Wrap(
-              spacing: AksharaSpacing.s4,
-              runSpacing: AksharaSpacing.s4,
-              children: [
-                for (final section in _sections(settings))
-                  SizedBox(width: 540, child: section),
-              ],
-            ),
-        ],
+      body: AdmissionsAsyncBody<AdmissionsSettingsData>(
+        state: viewState,
+        loadingLabel: 'Loading admissions settings',
+        emptyMessage: 'No settings available.',
+        emptyIcon: Icons.settings_outlined,
+        onRetry: () =>
+            retryAdmissionsFuture(ref, admissionsSettingsFutureProvider),
+        builder: (settings) {
+          if (isMobile) {
+            return Column(children: _sections(settings));
+          }
+          return Wrap(
+            spacing: AksharaSpacing.s4,
+            runSpacing: AksharaSpacing.s4,
+            children: [
+              for (final section in _sections(settings))
+                SizedBox(width: 540, child: section),
+            ],
+          );
+        },
       ),
     );
   }

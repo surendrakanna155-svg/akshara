@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../integration/finance_admissions_handoff_provider.dart';
 import '../widgets/finance_collection_trend_chart.dart';
@@ -30,10 +28,7 @@ class FinanceDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeDashboardLoadingProvider);
-    final isError = ref.watch(financeDashboardErrorProvider);
-    final isEmpty = ref.watch(financeDashboardEmptyProvider);
-    final data = ref.watch(financeDashboardProvider);
+    final viewState = ref.watch(financeDashboardViewStateProvider);
     final filterIndex = ref.watch(financeDashboardFilterProvider);
     final handoffQueue = ref.watch(financePendingHandoffsProvider);
 
@@ -43,47 +38,26 @@ class FinanceDashboardScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(financeDashboardFilterProvider.notifier).state = index,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
-        handoffQueue: handoffQueue,
+      body: FinanceAsyncBody<FinanceDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading finance dashboard',
+        emptyMessage: 'No finance data for the selected filters.',
+        emptyIcon: Icons.account_balance_wallet_outlined,
+        onRetry: () => retryFinanceFuture(ref, financeDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(
+          context,
+          data: data,
+          handoffQueue: handoffQueue,
+        ),
       ),
     );
   }
 
-  Widget _buildBody(
+  Widget _buildDashboardContent(
     BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required FinanceDashboardData? data,
+    required FinanceDashboardData data,
     required List<FinanceHandoffQueueItem> handoffQueue,
   }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading finance dashboard',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load finance dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No finance data for the selected filters.',
-        icon: Icons.account_balance_wallet_outlined,
-      );
-    }
-
     final isMobile = AdminLayout.isMobile(context);
     final chartHeight = isMobile ? 240.0 : 300.0;
 

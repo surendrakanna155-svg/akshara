@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 
 /// Shared conversion status overrides (updated by SIS admissions conversion).
@@ -11,13 +14,14 @@ final enrollmentConversionOverridesProvider =
 final enrollmentConvertedStudentIdsProvider =
     StateProvider<Map<String, String>>((ref) => {});
 
-final admissionsPendingEnrollmentsProvider =
-    Provider<List<PendingEnrollmentRecord>>((ref) {
+final admissionsPendingEnrollmentsFutureProvider =
+    FutureProvider<List<PendingEnrollmentRecord>>((ref) async {
   final overrides = ref.watch(enrollmentConversionOverridesProvider);
   final studentIds = ref.watch(enrollmentConvertedStudentIdsProvider);
-  return ref
+  final enrollments = await ref
       .read(admissionsRepositoryProvider)
-      .getPendingEnrollments()
+      .getPendingEnrollments(query: ref.watch(repositoryQueryProvider));
+  return enrollments
       .map((record) {
         final status = overrides[record.id] ?? record.conversionStatus;
         final previewId = studentIds[record.id] ?? record.previewStudentId;
@@ -39,4 +43,24 @@ final admissionsPendingEnrollmentsProvider =
         );
       })
       .toList(growable: false);
+});
+
+final admissionsPendingEnrollmentsProvider =
+    Provider<List<PendingEnrollmentRecord>>((ref) {
+  return watchRepositoryFuture(
+        ref,
+        ref.watch(admissionsPendingEnrollmentsFutureProvider),
+        manualLoading: false,
+        manualError: false,
+        manualEmpty: false,
+      ) ??
+      const [];
+});
+
+final admissionsPendingEnrollmentsViewStateProvider =
+    Provider<AdmissionsViewState<List<PendingEnrollmentRecord>>>((ref) {
+  return resolveAdmissionsAsync(
+    ref.watch(admissionsPendingEnrollmentsFutureProvider),
+    isDataEmpty: (records) => records.isEmpty,
+  );
 });

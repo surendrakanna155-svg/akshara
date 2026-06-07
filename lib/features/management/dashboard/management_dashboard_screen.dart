@@ -1,0 +1,424 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../router/route_names.dart';
+import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_insight_card.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/akshara_warning_banner.dart';
+import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
+import '../../admin/admin_layout.dart';
+import '../management_models.dart';
+import '../management_providers.dart';
+import '../widgets/management_kpi_row.dart';
+import '../widgets/management_module_scaffold.dart';
+import '../widgets/management_segment_panel.dart';
+import '../widgets/management_trend_chart.dart';
+
+/// MG-01 — Management Dashboard.
+class ManagementDashboardScreen extends ConsumerWidget {
+  const ManagementDashboardScreen({super.key});
+
+  static const List<String> filterLabels = [
+    'FY 2026-27',
+    'Q1',
+    'All quarters',
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(managementDashboardLoadingProvider);
+    final isError = ref.watch(managementDashboardErrorProvider);
+    final isEmpty = ref.watch(managementDashboardEmptyProvider);
+    final data = ref.watch(managementDashboardProvider);
+    final filterIndex = ref.watch(managementDashboardFilterProvider);
+
+    return ManagementModuleScaffold(
+      screen: ManagementScreen.dashboard,
+      filters: filterLabels,
+      selectedFilterIndex: filterIndex,
+      onFilterSelected: (index) =>
+          ref.read(managementDashboardFilterProvider.notifier).state = index,
+      filterTrailing: OutlinedButton.icon(
+        onPressed: () {},
+        icon: const Icon(Icons.download_outlined, size: 18),
+        label: const Text('Export'),
+      ),
+      body: _buildBody(
+        context,
+        isLoading: isLoading,
+        isError: isError,
+        isEmpty: isEmpty,
+        data: data,
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context, {
+    required bool isLoading,
+    required bool isError,
+    required bool isEmpty,
+    required ManagementDashboardData? data,
+  }) {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
+        child: AksharaLoadingState(
+          semanticLabel: 'Loading management dashboard',
+        ),
+      );
+    }
+
+    if (isError) {
+      return const AksharaErrorState(
+        message: 'Unable to load management dashboard.',
+      );
+    }
+
+    if (isEmpty || data == null) {
+      return const AksharaEmptyState(
+        message: 'No management data for the selected filters.',
+        icon: Icons.dashboard_outlined,
+      );
+    }
+
+    final isMobile = AdminLayout.isMobile(context);
+    final chartHeight = isMobile ? 240.0 : 300.0;
+    final queuePreview = data.approvalQueue.take(5).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (data.feeSnapshot.defaulters > 40)
+          AksharaWarningBanner(
+            message:
+                '${data.feeSnapshot.defaulters} fee defaulters with ${data.feeSnapshot.outstanding} outstanding.',
+            actionLabel: 'View defaulters',
+            onAction: () => context.go(RouteNames.financeDefaulters),
+          ),
+        if (data.feeSnapshot.defaulters > 40)
+          const SizedBox(height: AksharaSpacing.s4),
+        ManagementKpiRow(
+          desktopColumns: 3,
+          kpis: data.kpis,
+        ),
+        const SizedBox(height: AksharaSpacing.s6),
+        if (isMobile) ...[
+          ManagementTrendChart(
+            title: 'Revenue trend',
+            points: data.revenueTrend,
+            height: chartHeight,
+          ),
+          const SizedBox(height: AksharaSpacing.s6),
+          ManagementSegmentPanel(
+            title: 'Expense breakdown',
+            segments: data.expenseBreakdown,
+            height: chartHeight,
+          ),
+        ] else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: ManagementTrendChart(
+                  title: 'Revenue trend',
+                  points: data.revenueTrend,
+                  height: chartHeight,
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s6),
+              Expanded(
+                flex: 2,
+                child: ManagementSegmentPanel(
+                  title: 'Expense breakdown',
+                  segments: data.expenseBreakdown,
+                  height: chartHeight,
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: AksharaSpacing.s6),
+        const AksharaSectionHeader(title: 'Approval queue'),
+        const SizedBox(height: AksharaSpacing.s3),
+        _ApprovalQueuePreview(items: queuePreview),
+        const SizedBox(height: AksharaSpacing.s6),
+        if (isMobile) ...[
+          _AdmissionsSnapshotCard(snapshot: data.admissionsSnapshot),
+          const SizedBox(height: AksharaSpacing.s4),
+          _FeeSnapshotCard(snapshot: data.feeSnapshot),
+        ] else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _AdmissionsSnapshotCard(
+                  snapshot: data.admissionsSnapshot,
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s6),
+              Expanded(
+                child: _FeeSnapshotCard(snapshot: data.feeSnapshot),
+              ),
+            ],
+          ),
+        const SizedBox(height: AksharaSpacing.s6),
+        AksharaInsightCard(
+          message: data.aiInsight,
+          actionLabel: 'View approvals',
+          icon: Icons.auto_awesome_outlined,
+          semanticLabelPrefix: 'AI management insight',
+          onAction: () => context.go(RouteNames.managementTasks),
+        ),
+      ],
+    );
+  }
+}
+
+class _ApprovalQueuePreview extends StatelessWidget {
+  const _ApprovalQueuePreview({required this.items});
+
+  final List<ManagementApprovalItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Semantics(
+        label: 'No pending approvals',
+        child: Text(
+          'No items in the approval queue.',
+          style: context.aksharaText.bodyMedium.copyWith(
+            color: context.colors.onSurfaceVariant,
+          ),
+        ),
+      );
+    }
+
+    if (AdminLayout.isMobile(context)) {
+      return Column(
+        children: [
+          for (final item in items) ...[
+            _ApprovalQueueCard(item: item),
+            const SizedBox(height: AksharaSpacing.s3),
+          ],
+        ],
+      );
+    }
+
+    return Semantics(
+      container: true,
+      label: 'Approval queue preview, ${items.length} items',
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Material(
+          child: DataTable(
+            headingRowHeight: 48,
+            dataRowMinHeight: 52,
+            dataRowMaxHeight: 64,
+            columns: const [
+              DataColumn(label: Text('Title')),
+              DataColumn(label: Text('Requester')),
+              DataColumn(label: Text('Amount')),
+              DataColumn(label: Text('Date')),
+              DataColumn(label: Text('Status')),
+            ],
+            rows: [
+              for (final item in items)
+                DataRow(
+                  onSelectChanged: (_) => context.go(RouteNames.managementTasks),
+                  cells: [
+                    DataCell(Text(item.title)),
+                    DataCell(Text(item.requester)),
+                    DataCell(Text(item.amount)),
+                    DataCell(Text(item.dateLabel)),
+                    DataCell(_ApprovalStatusChip(status: item.status)),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ApprovalQueueCard extends StatelessWidget {
+  const _ApprovalQueueCard({required this.item});
+
+  final ManagementApprovalItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+
+    return Semantics(
+      label: 'Approval: ${item.title}, ${item.amount}',
+      child: Card(
+        elevation: 0,
+        child: InkWell(
+          onTap: () => context.go(RouteNames.managementTasks),
+          child: Padding(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.title, style: text.titleSmall),
+                const SizedBox(height: AksharaSpacing.s2),
+                Text(
+                  '${item.requester} · ${item.amount} · ${item.dateLabel}',
+                  style: text.bodySmall,
+                ),
+                const SizedBox(height: AksharaSpacing.s2),
+                _ApprovalStatusChip(status: item.status),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ApprovalStatusChip extends StatelessWidget {
+  const _ApprovalStatusChip({required this.status});
+
+  final ManagementApprovalStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, tone) = switch (status) {
+      ManagementApprovalStatus.pending => ('Pending', KpiAccent.warning),
+      ManagementApprovalStatus.approved => ('Approved', KpiAccent.success),
+      ManagementApprovalStatus.rejected => ('Rejected', KpiAccent.error),
+    };
+    return AksharaStatusChip(label: label, tone: tone);
+  }
+}
+
+class _AdmissionsSnapshotCard extends StatelessWidget {
+  const _AdmissionsSnapshotCard({required this.snapshot});
+
+  final ManagementAdmissionsSnapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+
+    return Semantics(
+      container: true,
+      label:
+          'Admissions snapshot: ${snapshot.leadsMtd} leads, ${snapshot.joined} joined',
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: colors.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Admissions snapshot', style: text.titleMedium),
+              const SizedBox(height: AksharaSpacing.s4),
+              _SnapshotMetric(
+                label: 'Leads (MTD)',
+                value: '${snapshot.leadsMtd}',
+              ),
+              _SnapshotMetric(
+                label: 'Confirmed',
+                value: '${snapshot.confirmed}',
+              ),
+              _SnapshotMetric(
+                label: 'Joined',
+                value: '${snapshot.joined}',
+              ),
+              _SnapshotMetric(
+                label: 'Conversion rate',
+                value: snapshot.conversionRate,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FeeSnapshotCard extends StatelessWidget {
+  const _FeeSnapshotCard({required this.snapshot});
+
+  final ManagementFeeSnapshot snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+
+    return Semantics(
+      container: true,
+      label:
+          'Fee snapshot: ${snapshot.collectionRate} collected, ${snapshot.defaulters} defaulters',
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: colors.outlineVariant),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Fee collection', style: text.titleMedium),
+              const SizedBox(height: AksharaSpacing.s4),
+              _SnapshotMetric(
+                label: 'Collected (MTD)',
+                value: snapshot.collectedMtd,
+              ),
+              _SnapshotMetric(
+                label: 'Outstanding',
+                value: snapshot.outstanding,
+              ),
+              _SnapshotMetric(
+                label: 'Collection rate',
+                value: snapshot.collectionRate,
+              ),
+              _SnapshotMetric(
+                label: 'Defaulters',
+                value: '${snapshot.defaulters}',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SnapshotMetric extends StatelessWidget {
+  const _SnapshotMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: text.bodyMedium)),
+          Text(value, style: text.titleSmall),
+        ],
+      ),
+    );
+  }
+}

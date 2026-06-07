@@ -10,6 +10,7 @@ import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../test_helpers.dart';
 
 void useDesktopViewport(WidgetTester tester) {
   tester.view.physicalSize = const Size(1440, 900);
@@ -24,12 +25,14 @@ Future<void> pumpSisScreen(WidgetTester tester, Widget screen) async {
   useDesktopViewport(tester);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: erpWidgetTestOverrides(),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: screen,
       ),
     ),
   );
+  await settleRiverpodFutures(tester);
   await tester.pumpAndSettle();
 }
 
@@ -51,9 +54,9 @@ void main() {
       useDesktopViewport(tester);
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             sisDashboardLoadingProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const SisDashboardScreen(),
@@ -76,9 +79,9 @@ void main() {
       useDesktopViewport(tester);
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             sisRegistryEmptyProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const SisRegistryScreen(),

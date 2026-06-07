@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_workflow_actions.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_settings_provider.dart';
 
@@ -16,49 +16,27 @@ class FinanceSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeSettingsLoadingProvider);
-    final isError = ref.watch(financeSettingsErrorProvider);
-    final data = ref.watch(financeSettingsProvider);
+    final viewState = ref.watch(financeSettingsViewStateProvider);
 
     return FinanceModuleScaffold(
       screen: FinanceScreen.settings,
       showFilterBar: false,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        data: data,
+      body: FinanceAsyncBody<FinanceSettingsData>(
+        state: viewState,
+        loadingLabel: 'Loading finance settings',
+        emptyMessage: 'Finance settings are not configured.',
+        emptyIcon: Icons.settings_outlined,
+        onRetry: () => retryFinanceFuture(ref, financeSettingsFutureProvider),
+        builder: (data) => _buildContent(context, ref: ref, data: data),
       ),
     );
   }
 
-  Widget _buildBody(
+  Widget _buildContent(
     BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required FinanceSettingsData? data,
+    required WidgetRef ref,
+    required FinanceSettingsData data,
   }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading finance settings',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load finance settings.',
-      );
-    }
-
-    if (data == null) {
-      return const AksharaErrorState(
-        message: 'Finance settings are not configured.',
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -69,7 +47,7 @@ class FinanceSettingsScreen extends ConsumerWidget {
         ),
         const SizedBox(height: AksharaSpacing.s6),
         for (final section in data.sections) ...[
-          _SettingsSection(section: section),
+          _SettingsSection(section: section, ref: ref),
           const SizedBox(height: AksharaSpacing.s6),
         ],
       ],
@@ -78,9 +56,10 @@ class FinanceSettingsScreen extends ConsumerWidget {
 }
 
 class _SettingsSection extends StatelessWidget {
-  const _SettingsSection({required this.section});
+  const _SettingsSection({required this.section, required this.ref});
 
   final FinanceSettingsSection section;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +76,11 @@ class _SettingsSection extends StatelessWidget {
             child: Column(
               children: [
                 for (var i = 0; i < section.items.length; i++) ...[
-                  _SettingItemTile(item: section.items[i]),
+                  _SettingItemTile(
+                    item: section.items[i],
+                    sectionId: section.id,
+                    ref: ref,
+                  ),
                   if (i < section.items.length - 1)
                     const Divider(height: 1),
                 ],
@@ -111,9 +94,15 @@ class _SettingsSection extends StatelessWidget {
 }
 
 class _SettingItemTile extends StatelessWidget {
-  const _SettingItemTile({required this.item});
+  const _SettingItemTile({
+    required this.item,
+    required this.sectionId,
+    required this.ref,
+  });
 
   final FinanceSettingItem item;
+  final String sectionId;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +127,12 @@ class _SettingItemTile extends StatelessWidget {
         ),
         trailing: item.editable
             ? IconButton(
-                onPressed: () {},
+                onPressed: () => showEditFinanceSettingDialog(
+                  context,
+                  ref,
+                  item: item,
+                  sectionId: sectionId,
+                ),
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: 'Edit ${item.label}',
               )

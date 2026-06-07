@@ -2,13 +2,24 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/security/erp_role.dart';
+import 'auth_claims.dart';
 import 'auth_models.dart';
 
 /// SharedPreferences key — bump suffix when persisted schema changes.
-const String kAuthSessionStorageKey = 'auth_session_v1';
+const String kAuthSessionStorageKey = 'auth_session_v2';
+
+/// Legacy session key (migrated on read).
+const String kAuthSessionStorageKeyV1 = 'auth_session_v1';
 
 /// Last demo role chosen on the login screen.
 const String kDemoRolePreferenceKey = 'demo_role_preference';
+
+/// Staff ERP role for demo staff sessions.
+const String kStaffErpRolePreferenceKey = 'staff_erp_role_preference';
+
+/// Whether staff chose "remember session" on staff login.
+const String kRememberStaffSessionKey = 'remember_staff_session_v1';
 
 /// Serializable session snapshot written to device storage.
 class PersistedAuthSession {
@@ -20,6 +31,7 @@ class PersistedAuthSession {
     required this.selectedChildId,
     required this.selectedChildName,
     required this.selectedChildClass,
+    this.claims,
   });
 
   final bool isLoggedIn;
@@ -29,6 +41,7 @@ class PersistedAuthSession {
   final String selectedChildId;
   final String selectedChildName;
   final String selectedChildClass;
+  final AuthClaims? claims;
 
   factory PersistedAuthSession.fromAuthState(AuthState state) {
     if (!state.isAuthenticated ||
@@ -51,10 +64,12 @@ class PersistedAuthSession {
       selectedChildId: child?.id ?? '',
       selectedChildName: child?.name ?? '',
       selectedChildClass: child?.classLabel ?? '',
+      claims: state.claims,
     );
   }
 
   factory PersistedAuthSession.fromJson(Map<String, dynamic> json) {
+    final claimsJson = json['claims'];
     return PersistedAuthSession(
       isLoggedIn: json['isLoggedIn'] as bool? ?? false,
       phoneNumber: json['phoneNumber'] as String? ?? '',
@@ -63,6 +78,9 @@ class PersistedAuthSession {
       selectedChildId: json['selectedChildId'] as String? ?? '',
       selectedChildName: json['selectedChildName'] as String? ?? '',
       selectedChildClass: json['selectedChildClass'] as String? ?? '',
+      claims: claimsJson is Map<String, dynamic>
+          ? AuthClaims.fromJson(claimsJson)
+          : null,
     );
   }
 
@@ -74,14 +92,20 @@ class PersistedAuthSession {
         'selectedChildId': selectedChildId,
         'selectedChildName': selectedChildName,
         'selectedChildClass': selectedChildClass,
+        if (claims != null) 'claims': claims!.toJson(),
       };
 
   bool get isValid {
     final roleEnum = UserRole.fromName(role);
-    if (!isLoggedIn ||
-        phoneNumber.length != 10 ||
-        displayName.isEmpty ||
-        roleEnum == null) {
+    if (!isLoggedIn || displayName.isEmpty || roleEnum == null) {
+      return false;
+    }
+
+    if (roleEnum == UserRole.staff) {
+      return phoneNumber.isNotEmpty;
+    }
+
+    if (phoneNumber.length != 10) {
       return false;
     }
 
@@ -110,14 +134,33 @@ class AuthSessionStorage {
     return UserRole.fromName(_prefs.getString(kDemoRolePreferenceKey));
   }
 
+  ErpRole? readStaffErpRolePreferenceSync() {
+    return ErpRole.fromName(_prefs.getString(kStaffErpRolePreferenceKey));
+  }
+
   Future<void> writeDemoRolePreference(UserRole role) async {
     await _prefs.setString(kDemoRolePreferenceKey, role.name);
   }
 
+  Future<void> writeStaffErpRolePreference(ErpRole role) async {
+    await _prefs.setString(kStaffErpRolePreferenceKey, role.name);
+  }
+
+  bool readRememberStaffSessionSync() {
+    return _prefs.getBool(kRememberStaffSessionKey) ?? true;
+  }
+
+  Future<void> writeRememberStaffSession(bool value) async {
+    await _prefs.setBool(kRememberStaffSessionKey, value);
+  }
+
   Future<PersistedAuthSession?> read() async {
-    final raw = _prefs.getString(kAuthSessionStorageKey);
+    var raw = _prefs.getString(kAuthSessionStorageKey);
     if (raw == null || raw.isEmpty) {
-      return null;
+      raw = _prefs.getString(kAuthSessionStorageKeyV1);
+      if (raw == null || raw.isEmpty) {
+        return null;
+      }
     }
 
     try {

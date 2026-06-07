@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
 import '../integration/sis_admissions_integration_provider.dart';
+import '../sis_async_state.dart';
 import '../sis_models.dart';
 import '../widgets/sis_distribution_panel.dart';
 import '../widgets/sis_enrollment_queue.dart';
@@ -29,10 +27,7 @@ class SisDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(sisDashboardLoadingProvider);
-    final isError = ref.watch(sisDashboardErrorProvider);
-    final isEmpty = ref.watch(sisDashboardEmptyProvider);
-    final data = ref.watch(sisDashboardProvider);
+    final viewState = ref.watch(sisDashboardViewStateProvider);
     final filterIndex = ref.watch(sisDashboardFilterProvider);
     final conversionQueue = ref.watch(sisPendingEnrollmentsProvider);
 
@@ -42,45 +37,26 @@ class SisDashboardScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(sisDashboardFilterProvider.notifier).state = index,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
-        conversionQueue: conversionQueue,
+      body: SisAsyncBody<SisDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading student SIS dashboard',
+        emptyMessage: 'No student data for the selected filters.',
+        emptyIcon: Icons.school_outlined,
+        onRetry: () => retrySisFuture(ref, sisDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(
+          context,
+          data: data,
+          conversionQueue: conversionQueue,
+        ),
       ),
     );
   }
 
-  Widget _buildBody(
+  Widget _buildDashboardContent(
     BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required SisDashboardData? data,
+    required SisDashboardData data,
     required List<SisEnrollmentQueueItem> conversionQueue,
   }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(semanticLabel: 'Loading student SIS dashboard'),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load student SIS dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No student data for the selected filters.',
-        icon: Icons.school_outlined,
-      );
-    }
-
     final isMobile = AdminLayout.isMobile(context);
 
     return Column(

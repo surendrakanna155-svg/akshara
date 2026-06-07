@@ -20,12 +20,14 @@ Future<void> pumpStudentScreen(WidgetTester tester, Widget screen) async {
   useMobileViewport(tester);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: erpWidgetTestOverrides(),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: screen,
       ),
     ),
   );
+  await settleRiverpodFutures(tester);
   await tester.pumpAndSettle();
 }
 
@@ -44,9 +46,9 @@ void main() {
     testWidgets('StudentAttendanceScreen shows loading state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             studentAttendanceLoadingProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const StudentAttendanceScreen(),
@@ -80,9 +82,9 @@ void main() {
     testWidgets('StudentHomeworkScreen shows empty state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             studentHomeworkEmptyProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const StudentHomeworkScreen(),
@@ -113,9 +115,9 @@ void main() {
     testWidgets('StudentNoticesScreen shows error state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             studentNoticesErrorProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const StudentNoticesScreen(),
@@ -142,9 +144,9 @@ void main() {
     testWidgets('StudentProfileScreen shows error state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             studentProfileErrorProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const StudentProfileScreen(),

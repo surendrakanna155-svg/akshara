@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/finance/finance_models.dart';
+import '../../../features/finance/finance_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/finance_repository.dart';
+import '../repository_query.dart';
 
 /// In-memory finance data for MVP and Phase 2 screens.
 class MockFinanceRepository implements FinanceRepository {
+  final _FinanceMutableStore _store = _FinanceMutableStore();
   @override
-  FinanceDashboardData getDashboard() {
+  Future<FinanceDashboardData> getDashboard({required RepositoryQuery query}) async {
     return const FinanceDashboardData(
       outstandingAmount: '₹18.6L',
       defaultersCount: 47,
@@ -123,10 +126,10 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  List<CollectionPayment> getCollections() => _payments;
+  Future<List<CollectionPayment>> getCollections({required RepositoryQuery query}) async => _payments;
 
   @override
-  DailyCollectionSummary getDailySummary() {
+  Future<DailyCollectionSummary> getDailySummary({required RepositoryQuery query}) async {
     return const DailyCollectionSummary(
       dateLabel: 'Today, 5 Jun 2026',
       totalCollected: '₹2,41,500',
@@ -138,171 +141,25 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  List<FinanceFeeStructure> getFeeStructures(String year) {
-    return [
-      FinanceFeeStructure(
-        id: 'fee_std',
-        name: 'Standard CBSE',
-        academicYear: year,
-        totalAnnual: '₹1,85,000',
-        classRange: 'Nursery – 12',
-        status: FeeStructureStatus.active,
-        installmentOptions: const [3, 4],
-        categories: const [
-          FeeCategoryLine(
-            category: FeeStructureCategory.tuition,
-            label: 'Tuition',
-            amount: '₹1,45,000',
-          ),
-          FeeCategoryLine(
-            category: FeeStructureCategory.activity,
-            label: 'Activity & Labs',
-            amount: '₹40,000',
-          ),
-        ],
-      ),
-      FinanceFeeStructure(
-        id: 'fee_premium',
-        name: 'Premium + Transport',
-        academicYear: year,
-        totalAnnual: '₹2,15,000',
-        classRange: '1 – 12',
-        status: FeeStructureStatus.active,
-        installmentOptions: const [3, 4],
-        categories: const [
-          FeeCategoryLine(
-            category: FeeStructureCategory.tuition,
-            label: 'Tuition',
-            amount: '₹1,55,000',
-          ),
-          FeeCategoryLine(
-            category: FeeStructureCategory.transport,
-            label: 'Transport',
-            amount: '₹30,000',
-          ),
-          FeeCategoryLine(
-            category: FeeStructureCategory.activity,
-            label: 'Activity',
-            amount: '₹30,000',
-          ),
-        ],
-      ),
-      FinanceFeeStructure(
-        id: 'fee_hostel',
-        name: 'Boarding Package',
-        academicYear: year,
-        totalAnnual: '₹3,40,000',
-        classRange: '5 – 12',
-        status: FeeStructureStatus.active,
-        installmentOptions: const [4, 6],
-        categories: const [
-          FeeCategoryLine(
-            category: FeeStructureCategory.tuition,
-            label: 'Tuition',
-            amount: '₹1,80,000',
-          ),
-          FeeCategoryLine(
-            category: FeeStructureCategory.hostel,
-            label: 'Hostel',
-            amount: '₹1,20,000',
-          ),
-          FeeCategoryLine(
-            category: FeeStructureCategory.transport,
-            label: 'Transport',
-            amount: '₹25,000',
-          ),
-          FeeCategoryLine(
-            category: FeeStructureCategory.activity,
-            label: 'Activity',
-            amount: '₹15,000',
-          ),
-        ],
-      ),
-      const FinanceFeeStructure(
-        id: 'fee_legacy',
-        name: 'Legacy 2024 Plan',
-        academicYear: '2024-25',
-        totalAnnual: '₹1,65,000',
-        classRange: 'Nursery – 12',
-        status: FeeStructureStatus.inactive,
-        installmentOptions: [3],
-        categories: [
-          FeeCategoryLine(
-            category: FeeStructureCategory.tuition,
-            label: 'Tuition',
-            amount: '₹1,65,000',
-          ),
-        ],
-      ),
-    ]
-        .where(
-          (s) =>
-              s.academicYear == year || s.status == FeeStructureStatus.inactive,
-        )
-        .toList();
+  Future<List<FinanceFeeStructure>> getFeeStructures({
+    required RepositoryQuery query,
+    required String academicYear,
+  }) async {
+    return _store.feeStructuresForYear(academicYear);
   }
 
   @override
-  List<String> getAcademicYears() => const ['2026-27', '2025-26', '2024-25'];
+  Future<List<String>> getAcademicYears({required RepositoryQuery query}) async => const ['2026-27', '2025-26', '2024-25'];
 
   @override
-  List<StudentFeeAccount> getStudentAccounts() => const [
-        StudentFeeAccount(
-          id: 'acct_1',
-          studentName: 'Arjun Patel',
-          admissionNumber: 'ADM-2026-0138',
-          classLabel: '10',
-          feeStructureName: 'Standard CBSE',
-          totalDue: '₹1,85,000',
-          totalPaid: '₹62,000',
-          balance: '₹1,23,000',
-          status: FeeAccountStatus.active,
-          lastPaymentDate: 'Today',
-          installmentPlan: '3-term quarterly',
-        ),
-        StudentFeeAccount(
-          id: 'acct_2',
-          studentName: 'Ananya Reddy',
-          admissionNumber: 'ADM-2026-0142',
-          classLabel: '5',
-          feeStructureName: 'Premium + Transport',
-          totalDue: '₹2,15,000',
-          totalPaid: '₹0',
-          balance: '₹2,15,000',
-          status: FeeAccountStatus.pending,
-          lastPaymentDate: '—',
-          installmentPlan: '3-term quarterly',
-        ),
-        StudentFeeAccount(
-          id: 'acct_3',
-          studentName: 'Emma Thomas',
-          admissionNumber: 'ADM-2026-0135',
-          classLabel: '7',
-          feeStructureName: 'Boarding Package',
-          totalDue: '₹3,40,000',
-          totalPaid: '₹85,000',
-          balance: '₹2,55,000',
-          status: FeeAccountStatus.active,
-          lastPaymentDate: '2 days ago',
-          installmentPlan: '4-term termly',
-        ),
-        StudentFeeAccount(
-          id: 'acct_4',
-          studentName: 'Priya Sharma',
-          admissionNumber: 'ADM-2025-0092',
-          classLabel: '8',
-          feeStructureName: 'Standard CBSE',
-          totalDue: '₹1,85,000',
-          totalPaid: '₹1,20,000',
-          balance: '₹65,000',
-          status: FeeAccountStatus.overdue,
-          lastPaymentDate: '45 days ago',
-          installmentPlan: '3-term quarterly',
-        ),
-      ];
+  Future<List<StudentFeeAccount>> getStudentAccounts({
+    required RepositoryQuery query,
+  }) async {
+    return List.unmodifiable(_store.studentAccounts);
+  }
 
   @override
-  List<InstallmentPlan> getInstallmentPlans() => const [
+  Future<List<InstallmentPlan>> getInstallmentPlans({required RepositoryQuery query}) async => const [
         InstallmentPlan(
           id: 'plan_quarterly',
           label: '3-term quarterly',
@@ -330,7 +187,7 @@ class MockFinanceRepository implements FinanceRepository {
       ];
 
   @override
-  CollectionDetail? getCollectionDetail(String collectionId) {
+  Future<CollectionDetail?> getCollectionDetail({required RepositoryQuery query, required String collectionId}) async {
     for (final payment in _payments) {
       if (payment.id == collectionId) {
         return CollectionDetail(
@@ -443,7 +300,7 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  DefaultersDashboardData getDefaultersDashboard() {
+  Future<DefaultersDashboardData> getDefaultersDashboard({required RepositoryQuery query}) async {
     return const DefaultersDashboardData(
       kpis: [
         FinanceKpi(
@@ -586,166 +443,21 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  List<RefundRequest> getRefundRequests() => const [
-        RefundRequest(
-          id: 'ref_1',
-          studentName: 'Kavya Iyer',
-          admissionNumber: 'ADM-2025-0101',
-          classLabel: '6',
-          amount: '₹52,000',
-          reason: 'Withdrawal — family relocation',
-          requestedAt: '4 Jun 2026',
-          status: RefundStatus.pending,
-          approver: 'Finance Manager',
-          feeAccountId: 'acct_5',
-          originalReceipt: 'RCP-2026-8836',
-        ),
-        RefundRequest(
-          id: 'ref_2',
-          studentName: 'Rohan Mehta',
-          admissionNumber: 'ADM-2025-0114',
-          classLabel: '9',
-          amount: '₹12,500',
-          reason: 'Transport fee overcharge',
-          requestedAt: '2 Jun 2026',
-          status: RefundStatus.approved,
-          approver: 'Principal Sharma',
-          feeAccountId: 'acct_6',
-          originalReceipt: 'RCP-2026-8820',
-        ),
-        RefundRequest(
-          id: 'ref_3',
-          studentName: 'Divya Iyer',
-          admissionNumber: 'ADM-2025-0088',
-          classLabel: '4',
-          amount: '₹8,000',
-          reason: 'Activity fee duplicate payment',
-          requestedAt: '28 May 2026',
-          status: RefundStatus.processed,
-          approver: 'Finance Manager',
-          feeAccountId: 'acct_7',
-          originalReceipt: 'RCP-2026-8795',
-        ),
-      ];
-
-  @override
-  DiscountsDashboardData getDiscountsDashboard() {
-    return const DiscountsDashboardData(
-      kpis: [
-        FinanceKpi(
-          id: 'active_scholarships',
-          value: '8',
-          label: 'Active scholarships',
-          icon: Icons.school_outlined,
-          accentName: 'primary',
-        ),
-        FinanceKpi(
-          id: 'assigned',
-          value: '24',
-          label: 'Student assignments',
-          icon: Icons.people_outline,
-          accentName: 'success',
-        ),
-        FinanceKpi(
-          id: 'pending_approval',
-          value: '3',
-          label: 'Pending approval',
-          icon: Icons.pending_actions_outlined,
-          accentName: 'warning',
-        ),
-        FinanceKpi(
-          id: 'impact',
-          value: '₹4.2L',
-          label: 'Discount impact (YTD)',
-          icon: Icons.savings_outlined,
-          accentName: 'neutral',
-        ),
-      ],
-      scholarships: [
-        ScholarshipCatalogItem(
-          id: 'sch_1',
-          name: 'Merit Scholarship',
-          type: ScholarshipType.merit,
-          maxDiscount: '25%',
-          eligibility: 'Top 10% academic performance',
-          activeAssignments: 8,
-        ),
-        ScholarshipCatalogItem(
-          id: 'sch_2',
-          name: 'Sibling Discount',
-          type: ScholarshipType.sibling,
-          maxDiscount: '10%',
-          eligibility: 'Second child enrolled',
-          activeAssignments: 12,
-        ),
-        ScholarshipCatalogItem(
-          id: 'sch_3',
-          name: 'Sports Excellence',
-          type: ScholarshipType.sports,
-          maxDiscount: '15%',
-          eligibility: 'State-level sports achievement',
-          activeAssignments: 4,
-        ),
-      ],
-      rules: [
-        DiscountRule(
-          id: 'rule_1',
-          name: 'Early bird payment',
-          discountPercent: '5%',
-          appliesTo: 'Annual fee — paid before 30 Apr',
-          status: DiscountApprovalStatus.active,
-        ),
-        DiscountRule(
-          id: 'rule_2',
-          name: 'Staff child waiver',
-          discountPercent: '50%',
-          appliesTo: 'Tuition component only',
-          status: DiscountApprovalStatus.active,
-        ),
-        DiscountRule(
-          id: 'rule_3',
-          name: 'Need-based aid',
-          discountPercent: 'Up to 40%',
-          appliesTo: 'Management approval required',
-          status: DiscountApprovalStatus.pending,
-        ),
-      ],
-      assignments: [
-        StudentDiscountAssignment(
-          id: 'asgn_1',
-          studentName: 'Arjun Patel',
-          admissionNumber: 'ADM-2026-0138',
-          scholarshipName: 'Merit Scholarship',
-          discountAmount: '₹46,250',
-          status: DiscountApprovalStatus.active,
-          impactOnFees: '25% off tuition',
-        ),
-        StudentDiscountAssignment(
-          id: 'asgn_2',
-          studentName: 'Emma Thomas',
-          admissionNumber: 'ADM-2026-0135',
-          scholarshipName: 'Sports Excellence',
-          discountAmount: '₹27,000',
-          status: DiscountApprovalStatus.approved,
-          impactOnFees: '15% off annual fee',
-        ),
-        StudentDiscountAssignment(
-          id: 'asgn_3',
-          studentName: 'Ananya Reddy',
-          admissionNumber: 'ADM-2026-0142',
-          scholarshipName: 'Sibling Discount',
-          discountAmount: '₹21,500',
-          status: DiscountApprovalStatus.pending,
-          impactOnFees: '10% off — pending docs',
-        ),
-      ],
-      impactSummary:
-          'Discounts reduced gross collections by ₹4.2L YTD. Merit scholarships account for 48% of total impact.',
-    );
+  Future<List<RefundRequest>> getRefundRequests({
+    required RepositoryQuery query,
+  }) async {
+    return List.unmodifiable(_store.refundRequests);
   }
 
   @override
-  FinanceReportsData getReportsData() {
+  Future<DiscountsDashboardData> getDiscountsDashboard({
+    required RepositoryQuery query,
+  }) async {
+    return _store.discountsDashboard;
+  }
+
+  @override
+  Future<FinanceReportsData> getReportsData({required RepositoryQuery query}) async {
     return const FinanceReportsData(
       selectedReportId: 'rpt_collection',
       catalog: [
@@ -798,132 +510,241 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  FinanceSettingsData getSettings() {
-    return const FinanceSettingsData(
-      academicYear: '2026-27',
-      sections: [
-        FinanceSettingsSection(
-          id: 'academic',
-          title: 'Academic year setup',
-          items: [
-            FinanceSettingItem(
-              id: 'year',
-              label: 'Active academic year',
-              value: '2026-27',
-              description: 'Fee structures and assignments use this year',
-              editable: true,
-            ),
-            FinanceSettingItem(
-              id: 'term_dates',
-              label: 'Term dates',
-              value: 'Apr – Mar (3 terms)',
-              description: 'Installment due dates derived from term calendar',
-              editable: true,
-            ),
-          ],
-        ),
-        FinanceSettingsSection(
-          id: 'receipts',
-          title: 'Receipt numbering',
-          items: [
-            FinanceSettingItem(
-              id: 'prefix',
-              label: 'Receipt prefix',
-              value: 'RCP-2026-',
-              description: 'Auto-incremented per transaction (PA-11)',
-              editable: true,
-            ),
-            FinanceSettingItem(
-              id: 'next_number',
-              label: 'Next receipt number',
-              value: '8842',
-              description: 'Last issued: RCP-2026-8841',
-              editable: false,
-            ),
-          ],
-        ),
-        FinanceSettingsSection(
-          id: 'gateway',
-          title: 'Payment gateway',
-          items: [
-            FinanceSettingItem(
-              id: 'upi',
-              label: 'UPI gateway',
-              value: 'Razorpay (sandbox)',
-              description: 'Parent App payment flow (PA-10)',
-              editable: true,
-            ),
-            FinanceSettingItem(
-              id: 'card',
-              label: 'Card payments',
-              value: 'Disabled',
-              description: 'Enable for online card collection',
-              editable: true,
-            ),
-          ],
-        ),
-        FinanceSettingsSection(
-          id: 'workflow',
-          title: 'Finance workflow',
-          items: [
-            FinanceSettingItem(
-              id: 'handoff',
-              label: 'Admissions handoff',
-              value: 'Auto-queue on approval',
-              description: 'AD-08 → FN-04 fee assignment',
-              editable: true,
-            ),
-            FinanceSettingItem(
-              id: 'refund_approval',
-              label: 'Refund approval',
-              value: 'Principal + Finance',
-              description: 'Dual approval for refunds > ₹25,000',
-              editable: true,
-            ),
-          ],
-        ),
-        FinanceSettingsSection(
-          id: 'reminders',
-          title: 'Reminder settings',
-          items: [
-            FinanceSettingItem(
-              id: 'due_reminder',
-              label: 'Due date reminder',
-              value: '3 days before',
-              description: 'Push + WhatsApp via Parent App',
-              editable: true,
-            ),
-            FinanceSettingItem(
-              id: 'overdue',
-              label: 'Overdue escalation',
-              value: '7 / 15 / 30 days',
-              description: 'Escalation ladder for defaulters (FN-07)',
-              editable: true,
-            ),
-          ],
-        ),
-        FinanceSettingsSection(
-          id: 'policy',
-          title: 'Collection policy',
-          items: [
-            FinanceSettingItem(
-              id: 'late_fee',
-              label: 'Late fee',
-              value: '₹500 / month',
-              description: 'Applied after 15-day grace period',
-              editable: true,
-            ),
-            FinanceSettingItem(
-              id: 'min_payment',
-              label: 'Minimum partial payment',
-              value: '25% of installment',
-              description: 'Allowed for hardship cases',
-              editable: true,
-            ),
-          ],
-        ),
-      ],
+  Future<FinanceSettingsData> getSettings({
+    required RepositoryQuery query,
+  }) async {
+    return _store.settings;
+  }
+
+  @override
+  Future<FinanceFeeStructure> createFeeStructure({
+    required RepositoryQuery query,
+    required CreateFeeStructureRequest request,
+  }) async {
+    final structure = FinanceFeeStructure(
+      id: _store.nextId('fee_'),
+      name: request.name,
+      academicYear: request.academicYear,
+      totalAnnual: request.totalAnnual,
+      classRange: request.classRange,
+      categories: request.categories,
+      status: request.status,
+      installmentOptions: request.installmentOptions,
     );
+    _store.feeStructures.insert(0, structure);
+    return structure;
+  }
+
+  @override
+  Future<FinanceFeeStructure> updateFeeStructure({
+    required RepositoryQuery query,
+    required String feeStructureId,
+    required UpdateFeeStructureRequest request,
+  }) async {
+    final index =
+        _store.feeStructures.indexWhere((item) => item.id == feeStructureId);
+    if (index < 0) throw StateError('Fee structure not found: $feeStructureId');
+    final current = _store.feeStructures[index];
+    final updated = FinanceFeeStructure(
+      id: current.id,
+      name: request.name ?? current.name,
+      academicYear: request.academicYear ?? current.academicYear,
+      totalAnnual: request.totalAnnual ?? current.totalAnnual,
+      classRange: request.classRange ?? current.classRange,
+      categories: request.categories ?? current.categories,
+      status: request.status ?? current.status,
+      installmentOptions:
+          request.installmentOptions ?? current.installmentOptions,
+    );
+    _store.feeStructures[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<StudentFeeAccount> createStudentAccount({
+    required RepositoryQuery query,
+    required CreateStudentAccountRequest request,
+  }) async {
+    final structure = _store.findFeeStructure(request.feeStructureId);
+    final planLabel = request.installmentPlanLabel.isNotEmpty
+        ? request.installmentPlanLabel
+        : _store.planLabel(request.installmentPlanId);
+    final totalDue =
+        request.totalDue.isNotEmpty ? request.totalDue : structure.totalAnnual;
+    final account = StudentFeeAccount(
+      id: _store.nextId('acct_'),
+      studentName: request.studentName,
+      admissionNumber: request.admissionNumber,
+      classLabel: request.classLabel,
+      feeStructureName: structure.name,
+      totalDue: totalDue,
+      totalPaid: '₹0',
+      balance: totalDue,
+      status: FeeAccountStatus.pending,
+      lastPaymentDate: '—',
+      installmentPlan: planLabel,
+    );
+    _store.studentAccounts.insert(0, account);
+    return account;
+  }
+
+  @override
+  Future<StudentFeeAccount> updateStudentAccount({
+    required RepositoryQuery query,
+    required String accountId,
+    required UpdateStudentAccountRequest request,
+  }) async {
+    final index =
+        _store.studentAccounts.indexWhere((item) => item.id == accountId);
+    if (index < 0) throw StateError('Student account not found: $accountId');
+    final current = _store.studentAccounts[index];
+    final structureName = request.feeStructureId != null
+        ? _store.findFeeStructure(request.feeStructureId!).name
+        : current.feeStructureName;
+    final planLabel = request.installmentPlanId != null
+        ? (request.installmentPlanLabel ??
+            _store.planLabel(request.installmentPlanId!))
+        : current.installmentPlan;
+    final updated = StudentFeeAccount(
+      id: current.id,
+      studentName: current.studentName,
+      admissionNumber: current.admissionNumber,
+      classLabel: current.classLabel,
+      feeStructureName: structureName,
+      totalDue: request.totalDue ?? current.totalDue,
+      totalPaid: request.totalPaid ?? current.totalPaid,
+      balance: request.balance ?? current.balance,
+      status: request.status ?? current.status,
+      lastPaymentDate: current.lastPaymentDate,
+      installmentPlan: planLabel,
+    );
+    _store.studentAccounts[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<StudentFeeAccount> assignFeePlan({
+    required RepositoryQuery query,
+    required AssignFeePlanRequest request,
+  }) async {
+    return createStudentAccount(
+      query: query,
+      request: CreateStudentAccountRequest(
+        studentName: request.studentName,
+        admissionNumber: request.admissionNumber,
+        classLabel: request.classLabel,
+        feeStructureId: request.feeStructureId,
+        installmentPlanId: request.installmentPlanId,
+        totalDue: _store.findFeeStructure(request.feeStructureId).totalAnnual,
+        installmentPlanLabel: _store.planLabel(request.installmentPlanId),
+      ),
+    );
+  }
+
+  @override
+  Future<RefundRequest> createRefund({
+    required RepositoryQuery query,
+    required CreateRefundRequest request,
+  }) async {
+    final account = _store.findStudentAccount(request.feeAccountId);
+    final refund = RefundRequest(
+      id: _store.nextId('ref_'),
+      studentName:
+          request.studentName.isNotEmpty ? request.studentName : account.studentName,
+      admissionNumber: request.admissionNumber.isNotEmpty
+          ? request.admissionNumber
+          : account.admissionNumber,
+      classLabel:
+          request.classLabel.isNotEmpty ? request.classLabel : account.classLabel,
+      amount: request.amount,
+      reason: request.reason,
+      requestedAt: 'Today',
+      status: RefundStatus.pending,
+      approver: 'Finance Manager',
+      feeAccountId: request.feeAccountId,
+      originalReceipt: request.originalReceipt,
+    );
+    _store.refundRequests.insert(0, refund);
+    return refund;
+  }
+
+  @override
+  Future<RefundRequest> approveRefund({
+    required RepositoryQuery query,
+    required String refundId,
+    ApproveRefundRequest request = const ApproveRefundRequest(),
+  }) async {
+    final index =
+        _store.refundRequests.indexWhere((item) => item.id == refundId);
+    if (index < 0) throw StateError('Refund not found: $refundId');
+    final current = _store.refundRequests[index];
+    final updated = RefundRequest(
+      id: current.id,
+      studentName: current.studentName,
+      admissionNumber: current.admissionNumber,
+      classLabel: current.classLabel,
+      amount: current.amount,
+      reason: current.reason,
+      requestedAt: current.requestedAt,
+      status: RefundStatus.approved,
+      approver: request.approver,
+      feeAccountId: current.feeAccountId,
+      originalReceipt: current.originalReceipt,
+    );
+    _store.refundRequests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<ScholarshipCatalogItem> createScholarship({
+    required RepositoryQuery query,
+    required CreateScholarshipRequest request,
+  }) async {
+    final scholarship = ScholarshipCatalogItem(
+      id: _store.nextId('sch_'),
+      name: request.name,
+      type: request.type,
+      maxDiscount: request.maxDiscount,
+      eligibility: request.eligibility,
+      activeAssignments: 0,
+    );
+    _store.scholarships.insert(0, scholarship);
+    return scholarship;
+  }
+
+  @override
+  Future<ScholarshipCatalogItem> updateScholarship({
+    required RepositoryQuery query,
+    required String scholarshipId,
+    required UpdateScholarshipRequest request,
+  }) async {
+    final index =
+        _store.scholarships.indexWhere((item) => item.id == scholarshipId);
+    if (index < 0) throw StateError('Scholarship not found: $scholarshipId');
+    final current = _store.scholarships[index];
+    final updated = ScholarshipCatalogItem(
+      id: current.id,
+      name: request.name ?? current.name,
+      type: request.type ?? current.type,
+      maxDiscount: request.maxDiscount ?? current.maxDiscount,
+      eligibility: request.eligibility ?? current.eligibility,
+      activeAssignments: current.activeAssignments,
+    );
+    _store.scholarships[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<FinanceSettingsData> updateSettings({
+    required RepositoryQuery query,
+    required UpdateFinanceSettingsRequest request,
+  }) async {
+    _store.settings = _store.copySettings(
+      _store.settings,
+      academicYear: request.academicYear,
+      updates: request.updates,
+    );
+    return _store.settings;
   }
 
   String _accountIdForAdmission(String admissionNumber) => switch (admissionNumber) {
@@ -1016,4 +837,536 @@ class MockFinanceRepository implements FinanceRepository {
       classLabel: '6',
     ),
   ];
+}
+
+class _FinanceMutableStore {
+  _FinanceMutableStore()
+      : feeStructures = List.of(_seedFeeStructures),
+        studentAccounts = List.of(_seedStudentAccounts),
+        refundRequests = List.of(_seedRefundRequests),
+        scholarships = List.of(_seedScholarships),
+        settings = _seedSettings;
+
+  List<FinanceFeeStructure> feeStructures;
+  List<StudentFeeAccount> studentAccounts;
+  List<RefundRequest> refundRequests;
+  List<ScholarshipCatalogItem> scholarships;
+  FinanceSettingsData settings;
+  int _counter = 100;
+
+  String nextId(String prefix) => '$prefix${_counter++}';
+
+  List<FinanceFeeStructure> feeStructuresForYear(String academicYear) {
+    return feeStructures
+        .where(
+          (structure) =>
+              structure.academicYear == academicYear ||
+              structure.status == FeeStructureStatus.inactive,
+        )
+        .toList(growable: false);
+  }
+
+  FinanceFeeStructure findFeeStructure(String id) {
+    return feeStructures.firstWhere(
+      (structure) => structure.id == id,
+      orElse: () => throw StateError('Fee structure not found: $id'),
+    );
+  }
+
+  StudentFeeAccount findStudentAccount(String id) {
+    return studentAccounts.firstWhere(
+      (account) => account.id == id,
+      orElse: () => throw StateError('Student account not found: $id'),
+    );
+  }
+
+  String planLabel(String planId) => switch (planId) {
+        'plan_quarterly' => '3-term quarterly',
+        'plan_termly' => '4-term termly',
+        'plan_monthly' => '10-month monthly',
+        'plan_annual' => 'Annual single payment',
+        _ => 'Custom plan',
+      };
+
+  DiscountsDashboardData get discountsDashboard => DiscountsDashboardData(
+        kpis: const [
+          FinanceKpi(
+            id: 'active_scholarships',
+            value: '8',
+            label: 'Active scholarships',
+            icon: Icons.school_outlined,
+            accentName: 'primary',
+          ),
+          FinanceKpi(
+            id: 'assigned',
+            value: '24',
+            label: 'Student assignments',
+            icon: Icons.people_outline,
+            accentName: 'success',
+          ),
+          FinanceKpi(
+            id: 'pending_approval',
+            value: '3',
+            label: 'Pending approval',
+            icon: Icons.pending_actions_outlined,
+            accentName: 'warning',
+          ),
+          FinanceKpi(
+            id: 'impact',
+            value: '₹4.2L',
+            label: 'Discount impact (YTD)',
+            icon: Icons.savings_outlined,
+            accentName: 'neutral',
+          ),
+        ],
+        scholarships: scholarships,
+        rules: const [
+          DiscountRule(
+            id: 'rule_1',
+            name: 'Early bird payment',
+            discountPercent: '5%',
+            appliesTo: 'Annual fee — paid before 30 Apr',
+            status: DiscountApprovalStatus.active,
+          ),
+          DiscountRule(
+            id: 'rule_2',
+            name: 'Staff child waiver',
+            discountPercent: '50%',
+            appliesTo: 'Tuition component only',
+            status: DiscountApprovalStatus.active,
+          ),
+          DiscountRule(
+            id: 'rule_3',
+            name: 'Need-based aid',
+            discountPercent: 'Up to 40%',
+            appliesTo: 'Management approval required',
+            status: DiscountApprovalStatus.pending,
+          ),
+        ],
+        assignments: const [
+          StudentDiscountAssignment(
+            id: 'asgn_1',
+            studentName: 'Arjun Patel',
+            admissionNumber: 'ADM-2026-0138',
+            scholarshipName: 'Merit Scholarship',
+            discountAmount: '₹46,250',
+            status: DiscountApprovalStatus.active,
+            impactOnFees: '25% off tuition',
+          ),
+          StudentDiscountAssignment(
+            id: 'asgn_2',
+            studentName: 'Emma Thomas',
+            admissionNumber: 'ADM-2026-0135',
+            scholarshipName: 'Sports Excellence',
+            discountAmount: '₹27,000',
+            status: DiscountApprovalStatus.approved,
+            impactOnFees: '15% off annual fee',
+          ),
+          StudentDiscountAssignment(
+            id: 'asgn_3',
+            studentName: 'Ananya Reddy',
+            admissionNumber: 'ADM-2026-0142',
+            scholarshipName: 'Sibling Discount',
+            discountAmount: '₹21,500',
+            status: DiscountApprovalStatus.pending,
+            impactOnFees: '10% off — pending docs',
+          ),
+        ],
+        impactSummary:
+            'Discounts reduced gross collections by ₹4.2L YTD. Merit scholarships account for 48% of total impact.',
+      );
+
+  FinanceSettingsData copySettings(
+    FinanceSettingsData current, {
+    String? academicYear,
+    List<FinanceSettingUpdate> updates = const [],
+  }) {
+    final sections = [
+      for (final section in current.sections)
+        FinanceSettingsSection(
+          id: section.id,
+          title: section.title,
+          items: [
+            for (final item in section.items)
+              FinanceSettingItem(
+                id: item.id,
+                label: item.label,
+                value: _valueForUpdate(
+                  sectionId: section.id,
+                  itemId: item.id,
+                  current: item.value,
+                  updates: updates,
+                ),
+                description: item.description,
+                editable: item.editable,
+              ),
+          ],
+        ),
+    ];
+    return FinanceSettingsData(
+      academicYear: academicYear ?? current.academicYear,
+      sections: sections,
+    );
+  }
+
+  String _valueForUpdate({
+    required String sectionId,
+    required String itemId,
+    required String current,
+    required List<FinanceSettingUpdate> updates,
+  }) {
+    for (final update in updates) {
+      if (update.sectionId == sectionId && update.itemId == itemId) {
+        return update.value;
+      }
+    }
+    return current;
+  }
+
+  static final List<FinanceFeeStructure> _seedFeeStructures = [
+    const FinanceFeeStructure(
+      id: 'fee_std',
+      name: 'Standard CBSE',
+      academicYear: '2026-27',
+      totalAnnual: '₹1,85,000',
+      classRange: 'Nursery – 12',
+      status: FeeStructureStatus.active,
+      installmentOptions: [3, 4],
+      categories: [
+        FeeCategoryLine(
+          category: FeeStructureCategory.tuition,
+          label: 'Tuition',
+          amount: '₹1,45,000',
+        ),
+        FeeCategoryLine(
+          category: FeeStructureCategory.activity,
+          label: 'Activity & Labs',
+          amount: '₹40,000',
+        ),
+      ],
+    ),
+    const FinanceFeeStructure(
+      id: 'fee_premium',
+      name: 'Premium + Transport',
+      academicYear: '2026-27',
+      totalAnnual: '₹2,15,000',
+      classRange: '1 – 12',
+      status: FeeStructureStatus.active,
+      installmentOptions: [3, 4],
+      categories: [
+        FeeCategoryLine(
+          category: FeeStructureCategory.tuition,
+          label: 'Tuition',
+          amount: '₹1,55,000',
+        ),
+        FeeCategoryLine(
+          category: FeeStructureCategory.transport,
+          label: 'Transport',
+          amount: '₹30,000',
+        ),
+        FeeCategoryLine(
+          category: FeeStructureCategory.activity,
+          label: 'Activity',
+          amount: '₹30,000',
+        ),
+      ],
+    ),
+    const FinanceFeeStructure(
+      id: 'fee_hostel',
+      name: 'Boarding Package',
+      academicYear: '2026-27',
+      totalAnnual: '₹3,40,000',
+      classRange: '5 – 12',
+      status: FeeStructureStatus.active,
+      installmentOptions: [4, 6],
+      categories: [
+        FeeCategoryLine(
+          category: FeeStructureCategory.tuition,
+          label: 'Tuition',
+          amount: '₹1,80,000',
+        ),
+        FeeCategoryLine(
+          category: FeeStructureCategory.hostel,
+          label: 'Hostel',
+          amount: '₹1,20,000',
+        ),
+        FeeCategoryLine(
+          category: FeeStructureCategory.transport,
+          label: 'Transport',
+          amount: '₹25,000',
+        ),
+        FeeCategoryLine(
+          category: FeeStructureCategory.activity,
+          label: 'Activity',
+          amount: '₹15,000',
+        ),
+      ],
+    ),
+    const FinanceFeeStructure(
+      id: 'fee_legacy',
+      name: 'Legacy 2024 Plan',
+      academicYear: '2024-25',
+      totalAnnual: '₹1,65,000',
+      classRange: 'Nursery – 12',
+      status: FeeStructureStatus.inactive,
+      installmentOptions: [3],
+      categories: [
+        FeeCategoryLine(
+          category: FeeStructureCategory.tuition,
+          label: 'Tuition',
+          amount: '₹1,65,000',
+        ),
+      ],
+    ),
+  ];
+
+  static final List<StudentFeeAccount> _seedStudentAccounts = [
+    const StudentFeeAccount(
+      id: 'acct_1',
+      studentName: 'Arjun Patel',
+      admissionNumber: 'ADM-2026-0138',
+      classLabel: '10',
+      feeStructureName: 'Standard CBSE',
+      totalDue: '₹1,85,000',
+      totalPaid: '₹62,000',
+      balance: '₹1,23,000',
+      status: FeeAccountStatus.active,
+      lastPaymentDate: 'Today',
+      installmentPlan: '3-term quarterly',
+    ),
+    const StudentFeeAccount(
+      id: 'acct_2',
+      studentName: 'Ananya Reddy',
+      admissionNumber: 'ADM-2026-0142',
+      classLabel: '5',
+      feeStructureName: 'Premium + Transport',
+      totalDue: '₹2,15,000',
+      totalPaid: '₹0',
+      balance: '₹2,15,000',
+      status: FeeAccountStatus.pending,
+      lastPaymentDate: '—',
+      installmentPlan: '3-term quarterly',
+    ),
+    const StudentFeeAccount(
+      id: 'acct_3',
+      studentName: 'Emma Thomas',
+      admissionNumber: 'ADM-2026-0135',
+      classLabel: '7',
+      feeStructureName: 'Boarding Package',
+      totalDue: '₹3,40,000',
+      totalPaid: '₹85,000',
+      balance: '₹2,55,000',
+      status: FeeAccountStatus.active,
+      lastPaymentDate: '2 days ago',
+      installmentPlan: '4-term termly',
+    ),
+    const StudentFeeAccount(
+      id: 'acct_4',
+      studentName: 'Priya Sharma',
+      admissionNumber: 'ADM-2025-0092',
+      classLabel: '8',
+      feeStructureName: 'Standard CBSE',
+      totalDue: '₹1,85,000',
+      totalPaid: '₹1,20,000',
+      balance: '₹65,000',
+      status: FeeAccountStatus.overdue,
+      lastPaymentDate: '45 days ago',
+      installmentPlan: '3-term quarterly',
+    ),
+  ];
+
+  static final List<RefundRequest> _seedRefundRequests = [
+    const RefundRequest(
+      id: 'ref_1',
+      studentName: 'Kavya Iyer',
+      admissionNumber: 'ADM-2025-0101',
+      classLabel: '6',
+      amount: '₹52,000',
+      reason: 'Withdrawal — family relocation',
+      requestedAt: '4 Jun 2026',
+      status: RefundStatus.pending,
+      approver: 'Finance Manager',
+      feeAccountId: 'acct_5',
+      originalReceipt: 'RCP-2026-8836',
+    ),
+    const RefundRequest(
+      id: 'ref_2',
+      studentName: 'Rohan Mehta',
+      admissionNumber: 'ADM-2025-0114',
+      classLabel: '9',
+      amount: '₹12,500',
+      reason: 'Transport fee overcharge',
+      requestedAt: '2 Jun 2026',
+      status: RefundStatus.approved,
+      approver: 'Principal Sharma',
+      feeAccountId: 'acct_6',
+      originalReceipt: 'RCP-2026-8820',
+    ),
+    const RefundRequest(
+      id: 'ref_3',
+      studentName: 'Divya Iyer',
+      admissionNumber: 'ADM-2025-0088',
+      classLabel: '4',
+      amount: '₹8,000',
+      reason: 'Activity fee duplicate payment',
+      requestedAt: '28 May 2026',
+      status: RefundStatus.processed,
+      approver: 'Finance Manager',
+      feeAccountId: 'acct_7',
+      originalReceipt: 'RCP-2026-8795',
+    ),
+  ];
+
+  static final List<ScholarshipCatalogItem> _seedScholarships = [
+    const ScholarshipCatalogItem(
+      id: 'sch_1',
+      name: 'Merit Scholarship',
+      type: ScholarshipType.merit,
+      maxDiscount: '25%',
+      eligibility: 'Top 10% academic performance',
+      activeAssignments: 8,
+    ),
+    const ScholarshipCatalogItem(
+      id: 'sch_2',
+      name: 'Sibling Discount',
+      type: ScholarshipType.sibling,
+      maxDiscount: '10%',
+      eligibility: 'Second child enrolled',
+      activeAssignments: 12,
+    ),
+    const ScholarshipCatalogItem(
+      id: 'sch_3',
+      name: 'Sports Excellence',
+      type: ScholarshipType.sports,
+      maxDiscount: '15%',
+      eligibility: 'State-level sports achievement',
+      activeAssignments: 4,
+    ),
+  ];
+
+  static const FinanceSettingsData _seedSettings = FinanceSettingsData(
+    academicYear: '2026-27',
+    sections: [
+      FinanceSettingsSection(
+        id: 'academic',
+        title: 'Academic year setup',
+        items: [
+          FinanceSettingItem(
+            id: 'year',
+            label: 'Active academic year',
+            value: '2026-27',
+            description: 'Fee structures and assignments use this year',
+            editable: true,
+          ),
+          FinanceSettingItem(
+            id: 'term_dates',
+            label: 'Term dates',
+            value: 'Apr – Mar (3 terms)',
+            description: 'Installment due dates derived from term calendar',
+            editable: true,
+          ),
+        ],
+      ),
+      FinanceSettingsSection(
+        id: 'receipts',
+        title: 'Receipt numbering',
+        items: [
+          FinanceSettingItem(
+            id: 'prefix',
+            label: 'Receipt prefix',
+            value: 'RCP-2026-',
+            description: 'Auto-incremented per transaction (PA-11)',
+            editable: true,
+          ),
+          FinanceSettingItem(
+            id: 'next_number',
+            label: 'Next receipt number',
+            value: '8842',
+            description: 'Last issued: RCP-2026-8841',
+            editable: false,
+          ),
+        ],
+      ),
+      FinanceSettingsSection(
+        id: 'gateway',
+        title: 'Payment gateway',
+        items: [
+          FinanceSettingItem(
+            id: 'upi',
+            label: 'UPI gateway',
+            value: 'Razorpay (sandbox)',
+            description: 'Parent App payment flow (PA-10)',
+            editable: true,
+          ),
+          FinanceSettingItem(
+            id: 'card',
+            label: 'Card payments',
+            value: 'Disabled',
+            description: 'Enable for online card collection',
+            editable: true,
+          ),
+        ],
+      ),
+      FinanceSettingsSection(
+        id: 'workflow',
+        title: 'Finance workflow',
+        items: [
+          FinanceSettingItem(
+            id: 'handoff',
+            label: 'Admissions handoff',
+            value: 'Auto-queue on approval',
+            description: 'AD-08 → FN-04 fee assignment',
+            editable: true,
+          ),
+          FinanceSettingItem(
+            id: 'refund_approval',
+            label: 'Refund approval',
+            value: 'Principal + Finance',
+            description: 'Dual approval for refunds > ₹25,000',
+            editable: true,
+          ),
+        ],
+      ),
+      FinanceSettingsSection(
+        id: 'reminders',
+        title: 'Reminder settings',
+        items: [
+          FinanceSettingItem(
+            id: 'due_reminder',
+            label: 'Due date reminder',
+            value: '3 days before',
+            description: 'Push + WhatsApp via Parent App',
+            editable: true,
+          ),
+          FinanceSettingItem(
+            id: 'overdue',
+            label: 'Overdue escalation',
+            value: '7 / 15 / 30 days',
+            description: 'Escalation ladder for defaulters (FN-07)',
+            editable: true,
+          ),
+        ],
+      ),
+      FinanceSettingsSection(
+        id: 'policy',
+        title: 'Collection policy',
+        items: [
+          FinanceSettingItem(
+            id: 'late_fee',
+            label: 'Late fee',
+            value: '₹500 / month',
+            description: 'Applied after 15-day grace period',
+            editable: true,
+          ),
+          FinanceSettingItem(
+            id: 'min_payment',
+            label: 'Minimum partial payment',
+            value: '25% of installment',
+            description: 'Allowed for hardship cases',
+            editable: true,
+          ),
+        ],
+      ),
+    ],
+  );
 }

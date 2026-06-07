@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 
 final admissionsApplicationsLoadingProvider =
@@ -10,12 +13,34 @@ final admissionsApplicationsEmptyProvider = StateProvider<bool>((ref) => false);
 
 final admissionsApplicationsFilterProvider = StateProvider<int>((ref) => 0);
 
+final admissionsApplicationsFutureProvider =
+    FutureProvider<List<AdmissionsApplication>>((ref) async {
+  return ref
+      .read(admissionsRepositoryProvider)
+      .getApplications(query: ref.watch(repositoryQueryProvider));
+});
+
 final admissionsApplicationsProvider =
     Provider<List<AdmissionsApplication>>((ref) {
-  if (ref.watch(admissionsApplicationsLoadingProvider)) return const [];
-  if (ref.watch(admissionsApplicationsErrorProvider)) return const [];
-  if (ref.watch(admissionsApplicationsEmptyProvider)) return const [];
-  return ref.read(admissionsRepositoryProvider).getApplications();
+  return watchRepositoryFuture(
+        ref,
+        ref.watch(admissionsApplicationsFutureProvider),
+        manualLoading: ref.watch(admissionsApplicationsLoadingProvider),
+        manualError: ref.watch(admissionsApplicationsErrorProvider),
+        manualEmpty: ref.watch(admissionsApplicationsEmptyProvider),
+      ) ??
+      const [];
+});
+
+final admissionsApplicationsViewStateProvider =
+    Provider<AdmissionsViewState<List<AdmissionsApplication>>>((ref) {
+  return resolveAdmissionsAsync(
+    ref.watch(admissionsApplicationsFutureProvider),
+    forceLoading: ref.watch(admissionsApplicationsLoadingProvider),
+    forceError: ref.watch(admissionsApplicationsErrorProvider),
+    forceEmpty: ref.watch(admissionsApplicationsEmptyProvider),
+    isDataEmpty: (apps) => apps.isEmpty,
+  );
 });
 
 final admissionsApplicationWorkflowProvider =

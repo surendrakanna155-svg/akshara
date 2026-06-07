@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_workflow_actions.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_refunds_provider.dart';
 
@@ -26,9 +26,7 @@ class FinanceRefundsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeRefundsLoadingProvider);
-    final isError = ref.watch(financeRefundsErrorProvider);
-    final isEmpty = ref.watch(financeRefundsEmptyProvider);
+    final viewState = ref.watch(financeRefundsViewStateProvider);
     final refunds = ref.watch(financeFilteredRefundsProvider);
     final selected = ref.watch(financeSelectedRefundProvider);
     final filterIndex = ref.watch(financeRefundsFilterProvider);
@@ -40,46 +38,34 @@ class FinanceRefundsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(financeRefundsFilterProvider.notifier).state = index,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        refunds: refunds,
-        selected: selected,
-        isMobile: isMobile,
-        onSelect: (id) =>
-            ref.read(financeSelectedRefundIdProvider.notifier).state = id,
+      body: FinanceAsyncBody<List<RefundRequest>>(
+        state: viewState,
+        loadingLabel: 'Loading refund requests',
+        emptyMessage: 'No refund requests for the selected filters.',
+        emptyIcon: Icons.currency_exchange_outlined,
+        onRetry: () => retryFinanceFuture(ref, financeRefundsFutureProvider),
+        builder: (_) => _buildContent(
+          context,
+          widgetRef: ref,
+          refunds: refunds,
+          selected: selected,
+          isMobile: isMobile,
+          onSelect: (id) =>
+              ref.read(financeSelectedRefundIdProvider.notifier).state = id,
+        ),
       ),
     );
   }
 
-  Widget _buildBody(
+  Widget _buildContent(
     BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
+    required WidgetRef widgetRef,
     required List<RefundRequest> refunds,
     required RefundRequest? selected,
     required bool isMobile,
     required ValueChanged<String> onSelect,
   }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading refund requests',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load refund requests.',
-      );
-    }
-
-    if (isEmpty || refunds.isEmpty) {
+    if (refunds.isEmpty) {
       return const AksharaEmptyState(
         message: 'No refund requests for the selected filters.',
         icon: Icons.currency_exchange_outlined,
@@ -99,7 +85,7 @@ class FinanceRefundsScreen extends ConsumerWidget {
           ],
           if (selected != null) ...[
             const SizedBox(height: AksharaSpacing.s4),
-            _RefundDetailPanel(refund: selected),
+            _RefundDetailPanel(refund: selected, widgetRef: widgetRef),
           ],
         ],
       );
@@ -133,7 +119,7 @@ class FinanceRefundsScreen extends ConsumerWidget {
                   message: 'Select a refund request.',
                   icon: Icons.currency_exchange_outlined,
                 )
-              : _RefundDetailPanel(refund: selected),
+              : _RefundDetailPanel(refund: selected, widgetRef: widgetRef),
         ),
       ],
     );
@@ -194,9 +180,10 @@ class _RefundListTile extends StatelessWidget {
 }
 
 class _RefundDetailPanel extends StatelessWidget {
-  const _RefundDetailPanel({required this.refund});
+  const _RefundDetailPanel({required this.refund, required this.widgetRef});
 
   final RefundRequest refund;
+  final WidgetRef widgetRef;
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +245,13 @@ class _RefundDetailPanel extends StatelessWidget {
               const SizedBox(width: AksharaSpacing.s3),
               Expanded(
                 child: FilledButton(
-                  onPressed: () {},
+                  onPressed: refund.status == RefundStatus.pending
+                      ? () => approveSelectedRefund(
+                            context,
+                            widgetRef,
+                            refund: refund,
+                          )
+                      : null,
                   child: const Text('Approve'),
                 ),
               ),

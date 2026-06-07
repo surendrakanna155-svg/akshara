@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/providers/repository_future.dart';
+
 import '../../../core/repositories/repository_providers.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 
 final financeStudentAccountsLoadingProvider = StateProvider<bool>((ref) => false);
@@ -9,11 +13,27 @@ final financeStudentAccountsEmptyProvider = StateProvider<bool>((ref) => false);
 final financeStudentSearchQueryProvider = StateProvider<String>((ref) => '');
 final financeSelectedAccountIdProvider = StateProvider<String?>((ref) => null);
 
+final financeStudentAccountsFutureProvider = FutureProvider<List<StudentFeeAccount>>((ref) async {
+return ref.read(financeRepositoryProvider).getStudentAccounts(query: ref.watch(repositoryQueryProvider));
+});
+
 final financeStudentAccountsProvider = Provider<List<StudentFeeAccount>>((ref) {
-  if (ref.watch(financeStudentAccountsLoadingProvider)) return const [];
-  if (ref.watch(financeStudentAccountsErrorProvider)) return const [];
-  if (ref.watch(financeStudentAccountsEmptyProvider)) return const [];
-  return ref.read(financeRepositoryProvider).getStudentAccounts();
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(financeStudentAccountsFutureProvider),
+    manualLoading: ref.watch(financeStudentAccountsLoadingProvider), manualError: ref.watch(financeStudentAccountsErrorProvider), manualEmpty: ref.watch(financeStudentAccountsEmptyProvider),
+  ) ?? const [];
+});
+
+final financeStudentAccountsViewStateProvider =
+    Provider<FinanceViewState<List<StudentFeeAccount>>>((ref) {
+  return resolveFinanceAsync(
+    ref.watch(financeStudentAccountsFutureProvider),
+    forceLoading: ref.watch(financeStudentAccountsLoadingProvider),
+    forceError: ref.watch(financeStudentAccountsErrorProvider),
+    forceEmpty: ref.watch(financeStudentAccountsEmptyProvider),
+    isDataEmpty: (accounts) => accounts.isEmpty,
+  );
 });
 
 final financeFilteredStudentAccountsProvider =

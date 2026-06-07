@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentReceiptsProvider', () {
-    test('returns mock receipts list', () {
+    test('returns mock receipts list', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -15,7 +15,7 @@ void main() {
       expect(data.childName, 'Ravi Kumar');
     });
 
-    test('filters receipts by category', () {
+    test('filters receipts by category', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -27,7 +27,7 @@ void main() {
       expect(items.every((item) => item.category == 'transport'), isTrue);
     });
 
-    test('search filters by receipt number', () {
+    test('search filters by receipt number', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -38,7 +38,7 @@ void main() {
       expect(items.first.title, 'Admission fee');
     });
 
-    test('parentReceiptDetailProvider resolves receipt by id', () {
+    test('parentReceiptDetailProvider resolves receipt by id', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

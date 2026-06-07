@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentEventsProvider', () {
-    test('returns upcoming and past events', () {
+    test('returns upcoming and past events', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(data.pastEvents, isNotEmpty);
     });
 
-    test('parentEventSectionProvider defaults to upcoming', () {
+    test('parentEventSectionProvider defaults to upcoming', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -26,7 +26,7 @@ void main() {
       );
     });
 
-    test('parentEventsEmptyProvider clears both sections', () {
+    test('parentEventsEmptyProvider clears both sections', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

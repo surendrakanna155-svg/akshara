@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentLeaveProvider', () {
-    test('returns mock leave history', () {
+    test('returns mock leave history', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -15,7 +15,7 @@ void main() {
       expect(data.childName, 'Ravi Kumar');
     });
 
-    test('leaveApplyDraft is invalid until required fields are set', () {
+    test('leaveApplyDraft is invalid until required fields are set', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -30,7 +30,7 @@ void main() {
       expect(container.read(leaveApplyDraftProvider).isValid, isTrue);
     });
 
-    test('parentLeaveEmptyProvider clears history', () {
+    test('parentLeaveEmptyProvider clears history', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

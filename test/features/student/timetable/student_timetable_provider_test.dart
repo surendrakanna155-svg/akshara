@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('studentTimetable providers', () {
-    test('studentTimetableProvider exposes weekly schedule', () {
+    test('studentTimetableProvider exposes weekly schedule', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -15,7 +15,7 @@ void main() {
       expect(data.selectedDay?.periods, isNotEmpty);
     });
 
-    test('studentTimetableSelectedDayProvider switches day', () {
+    test('studentTimetableSelectedDayProvider switches day', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -25,7 +25,7 @@ void main() {
       expect(data.selectedDay?.id, 'mon');
     });
 
-    test('studentTimetableEmptyProvider clears schedule', () {
+    test('studentTimetableEmptyProvider clears schedule', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

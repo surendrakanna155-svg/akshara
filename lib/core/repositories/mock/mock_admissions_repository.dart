@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/admissions/admissions_models.dart';
+import '../../../features/admissions/admissions_requests.dart';
 import '../interfaces/admissions_repository.dart';
+import '../repository_query.dart';
+import 'mock_admissions_write_store.dart';
 
 /// In-memory admissions data for MVP screens.
 class MockAdmissionsRepository implements AdmissionsRepository {
   @override
-  AdmissionsDashboardData getDashboard() {
+  Future<AdmissionsDashboardData> getDashboard({required RepositoryQuery query}) async {
     return AdmissionsDashboardData(
       kpis: const [
         AdmissionsKpi(
@@ -175,9 +178,12 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  List<AdmissionsLead> getLeads() {
-    return const [
-      AdmissionsLead(
+  Future<List<AdmissionsLead>> getLeads({required RepositoryQuery query}) async {
+    if (_store.leads != null) {
+      return List.from(_store.leads!);
+    }
+    final leads = [
+      const AdmissionsLead(
         id: 'LD-1042',
         parentName: 'Rajesh Reddy',
         studentName: 'Ananya Reddy',
@@ -190,7 +196,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         score: LeadScore.hot,
         nextFollowUpLabel: '5 Jun · 10:00 AM',
       ),
-      AdmissionsLead(
+      const AdmissionsLead(
         id: 'LD-1038',
         parentName: 'Lakshmi Sharma',
         studentName: 'Karthik Sharma',
@@ -203,7 +209,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         score: LeadScore.warm,
         nextFollowUpLabel: '6 Jun · 11:30 AM',
       ),
-      AdmissionsLead(
+      const AdmissionsLead(
         id: 'LD-1031',
         parentName: 'Suresh Menon',
         studentName: 'Priya Menon',
@@ -216,7 +222,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         score: LeadScore.hot,
         nextFollowUpLabel: '5 Jun · 2:00 PM',
       ),
-      AdmissionsLead(
+      const AdmissionsLead(
         id: 'LD-1024',
         parentName: 'Anita Patel',
         studentName: 'Arjun Patel',
@@ -229,7 +235,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         score: LeadScore.warm,
         nextFollowUpLabel: '7 Jun · 9:00 AM',
       ),
-      AdmissionsLead(
+      const AdmissionsLead(
         id: 'LD-1019',
         parentName: 'Vikram Iyer',
         studentName: 'Divya Iyer',
@@ -242,7 +248,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         score: LeadScore.cold,
         nextFollowUpLabel: '8 Jun · 4:00 PM',
       ),
-      AdmissionsLead(
+      const AdmissionsLead(
         id: 'LD-1012',
         parentName: 'Meena Krishnan',
         studentName: 'Rohan Krishnan',
@@ -255,7 +261,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         score: LeadScore.warm,
         nextFollowUpLabel: '5 Jun · 5:30 PM',
       ),
-      AdmissionsLead(
+      const AdmissionsLead(
         id: 'LD-1008',
         parentName: 'Joseph Thomas',
         studentName: 'Emma Thomas',
@@ -269,12 +275,17 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         nextFollowUpLabel: 'Completed',
       ),
     ];
+    _store.leads = List.from(leads);
+    return leads;
   }
 
   @override
-  List<AdmissionsApplication> getApplications() {
-    return const [
-      AdmissionsApplication(
+  Future<List<AdmissionsApplication>> getApplications({required RepositoryQuery query}) async {
+    if (_store.applications != null) {
+      return List.from(_store.applications!);
+    }
+    final applications = [
+      const AdmissionsApplication(
         id: 'APP-2208',
         studentName: 'Ananya Reddy',
         classLabel: '5',
@@ -285,7 +296,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         documentsTotal: 5,
         counselor: 'Meera N.',
       ),
-      AdmissionsApplication(
+      const AdmissionsApplication(
         id: 'APP-2201',
         studentName: 'Karthik Sharma',
         classLabel: '8',
@@ -296,7 +307,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         documentsTotal: 5,
         counselor: 'Rahul V.',
       ),
-      AdmissionsApplication(
+      const AdmissionsApplication(
         id: 'APP-2194',
         studentName: 'Priya Menon',
         classLabel: '3',
@@ -307,7 +318,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         documentsTotal: 5,
         counselor: 'Meera N.',
       ),
-      AdmissionsApplication(
+      const AdmissionsApplication(
         id: 'APP-2188',
         studentName: 'Arjun Patel',
         classLabel: '10',
@@ -318,7 +329,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         documentsTotal: 5,
         counselor: 'Sneha K.',
       ),
-      AdmissionsApplication(
+      const AdmissionsApplication(
         id: 'APP-2180',
         studentName: 'Divya Iyer',
         classLabel: '6',
@@ -329,7 +340,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         documentsTotal: 5,
         counselor: 'Arun D.',
       ),
-      AdmissionsApplication(
+      const AdmissionsApplication(
         id: 'APP-2175',
         studentName: 'Emma Thomas',
         classLabel: '7',
@@ -341,12 +352,17 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         counselor: 'Sneha K.',
       ),
     ];
+    _store.applications = List.from(applications);
+    return applications;
   }
 
   @override
-  List<StudentDocumentRecord> getDocuments() {
-    return const [
-      StudentDocumentRecord(
+  Future<List<StudentDocumentRecord>> getDocuments({required RepositoryQuery query}) async {
+    if (_store.documents != null) {
+      return List.from(_store.documents!);
+    }
+    final documents = [
+      const StudentDocumentRecord(
         id: 'doc_1',
         studentName: 'Ananya Reddy',
         classLabel: '5',
@@ -357,7 +373,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         verifiedBy: 'Meera N.',
         leadId: 'LD-1042',
       ),
-      StudentDocumentRecord(
+      const StudentDocumentRecord(
         id: 'doc_2',
         studentName: 'Ananya Reddy',
         classLabel: '5',
@@ -368,7 +384,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         verifiedBy: null,
         leadId: 'LD-1042',
       ),
-      StudentDocumentRecord(
+      const StudentDocumentRecord(
         id: 'doc_3',
         studentName: 'Ananya Reddy',
         classLabel: '5',
@@ -379,7 +395,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         verifiedBy: null,
         leadId: 'LD-1042',
       ),
-      StudentDocumentRecord(
+      const StudentDocumentRecord(
         id: 'doc_4',
         studentName: 'Karthik Sharma',
         classLabel: '8',
@@ -390,7 +406,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         verifiedBy: 'Rahul V.',
         leadId: 'LD-1038',
       ),
-      StudentDocumentRecord(
+      const StudentDocumentRecord(
         id: 'doc_5',
         studentName: 'Karthik Sharma',
         classLabel: '8',
@@ -401,7 +417,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         verifiedBy: 'Rahul V.',
         leadId: 'LD-1038',
       ),
-      StudentDocumentRecord(
+      const StudentDocumentRecord(
         id: 'doc_6',
         studentName: 'Arjun Patel',
         classLabel: '10',
@@ -413,10 +429,12 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         leadId: 'LD-1024',
       ),
     ];
+    _store.documents = List.from(documents);
+    return documents;
   }
 
   @override
-  List<PendingEnrollmentRecord> getPendingEnrollments() {
+  Future<List<PendingEnrollmentRecord>> getPendingEnrollments({required RepositoryQuery query}) async {
     return const [
       PendingEnrollmentRecord(
         id: 'enr_1',
@@ -466,7 +484,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  List<ApprovedStudentHandoff> getApprovedHandoffs() {
+  Future<List<ApprovedStudentHandoff>> getApprovedHandoffs({required RepositoryQuery query}) async {
     return const [
       ApprovedStudentHandoff(
         id: 'handoff_1',
@@ -511,7 +529,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  List<FeeStructureOption> getFeeStructureOptions() {
+  Future<List<FeeStructureOption>> getFeeStructureOptions({required RepositoryQuery query}) async {
     return const [
       FeeStructureOption(
         id: 'fee_std',
@@ -535,7 +553,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  List<ApprovalQueueItem> getApprovalQueue() {
+  Future<List<ApprovalQueueItem>> getApprovalQueue({required RepositoryQuery query}) async {
     return const [
       ApprovalQueueItem(
         id: 'appr_1',
@@ -580,7 +598,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  AdmissionsReportsData getReports() {
+  Future<AdmissionsReportsData> getReports({required RepositoryQuery query}) async {
     return const AdmissionsReportsData(
       funnelSegments: [
         ChartSegment(label: 'Enquiries', value: 312, percent: 100),
@@ -669,7 +687,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  AdmissionsSettingsData getSettings() {
+  Future<AdmissionsSettingsData> getSettings({required RepositoryQuery query}) async {
     return AdmissionsSettingsData(
       leadStages: [
         for (final stage in LeadStage.values)
@@ -764,7 +782,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  EnrollmentFormState getEnrollmentPrefill() {
+  Future<EnrollmentFormState> getEnrollmentPrefill({required RepositoryQuery query}) async {
     return const EnrollmentFormState(
       student: EnrollmentStudentProfile(
         fullName: 'Ananya Reddy',
@@ -809,5 +827,426 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         daysInStage: 4,
       ),
     ];
+  }
+
+  MockAdmissionsWriteStore get _store => MockAdmissionsWriteStore.instance;
+
+  Future<void> _ensureLeads(RepositoryQuery query) async {
+    _store.leads ??= List.from(await getLeads(query: query));
+  }
+
+  Future<void> _ensureApplications(RepositoryQuery query) async {
+    _store.applications ??= List.from(await getApplications(query: query));
+  }
+
+  Future<void> _ensureDocuments(RepositoryQuery query) async {
+    _store.documents ??= List.from(await getDocuments(query: query));
+  }
+
+  Future<void> _ensureEnrollments(RepositoryQuery query) async {
+    _store.enrollments ??= List.from(await getPendingEnrollments(query: query));
+  }
+
+  Future<void> _ensureHandoffs(RepositoryQuery query) async {
+    _store.handoffs ??= List.from(await getApprovedHandoffs(query: query));
+  }
+
+  Future<void> _ensureApprovalQueue(RepositoryQuery query) async {
+    _store.approvalQueue ??= List.from(await getApprovalQueue(query: query));
+  }
+
+  @override
+  Future<AdmissionsLead> createLead({
+    required RepositoryQuery query,
+    required CreateLeadRequest request,
+  }) async {
+    await _ensureLeads(query);
+    final lead = AdmissionsLead(
+      id: _store.nextLeadId(),
+      parentName: request.parentName,
+      studentName: request.studentName,
+      classLabel: request.classLabel,
+      phone: request.phone,
+      source: request.source,
+      campaign: request.campaign,
+      stage: LeadStage.newEnquiry,
+      counselor: request.counselor.isEmpty ? 'Unassigned' : request.counselor,
+      score: LeadScore.warm,
+      nextFollowUpLabel: 'Schedule first call',
+    );
+    _store.leads!.insert(0, lead);
+    return lead;
+  }
+
+  @override
+  Future<AdmissionsLead> updateLead({
+    required RepositoryQuery query,
+    required String leadId,
+    required UpdateLeadRequest request,
+  }) async {
+    await _ensureLeads(query);
+    final index = _store.leads!.indexWhere((lead) => lead.id == leadId);
+    if (index < 0) throw StateError('Lead not found: $leadId');
+    final updated = _store.copyLead(
+      _store.leads![index],
+      parentName: request.parentName,
+      studentName: request.studentName,
+      classLabel: request.classLabel,
+      phone: request.phone,
+      source: request.source,
+      campaign: request.campaign,
+    );
+    _store.leads![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<AdmissionsLead> assignCounselor({
+    required RepositoryQuery query,
+    required String leadId,
+    required AssignCounselorRequest request,
+  }) async {
+    await _ensureLeads(query);
+    final index = _store.leads!.indexWhere((lead) => lead.id == leadId);
+    if (index < 0) throw StateError('Lead not found: $leadId');
+    final updated = _store.copyLead(
+      _store.leads![index],
+      counselor: request.counselor,
+    );
+    _store.leads![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<AdmissionsLead> changeLeadStage({
+    required RepositoryQuery query,
+    required String leadId,
+    required ChangeLeadStageRequest request,
+  }) async {
+    await _ensureLeads(query);
+    final index = _store.leads!.indexWhere((lead) => lead.id == leadId);
+    if (index < 0) throw StateError('Lead not found: $leadId');
+    final updated = _store.copyLead(
+      _store.leads![index],
+      stage: request.stage,
+    );
+    _store.leads![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<LeadFollowUpRecord> addLeadFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required FollowUpRequest request,
+  }) async {
+    await _ensureLeads(query);
+    return LeadFollowUpRecord(
+      id: 'FU-${DateTime.now().millisecondsSinceEpoch}',
+      scheduledLabel: request.scheduledLabel,
+      completedLabel: '',
+      task: request.task,
+      counselor: request.counselor,
+      status: FollowUpStatus.pending,
+      outcome: request.outcome,
+    );
+  }
+
+  @override
+  Future<LeadActivityItem> addLeadNote({
+    required RepositoryQuery query,
+    required String leadId,
+    required LeadNoteRequest request,
+  }) async {
+    return LeadActivityItem(
+      id: 'ACT-${DateTime.now().millisecondsSinceEpoch}',
+      timestampLabel: 'Just now',
+      title: 'Note added',
+      description: request.content,
+      actor: 'Counselor',
+      type: LeadActivityType.note,
+    );
+  }
+
+  @override
+  Future<AdmissionsApplication> createApplication({
+    required RepositoryQuery query,
+    required CreateApplicationRequest request,
+  }) async {
+    await _ensureApplications(query);
+    final app = AdmissionsApplication(
+      id: _store.nextAppId(),
+      studentName: request.studentName,
+      classLabel: request.classLabel,
+      parentName: request.parentName,
+      submittedLabel: 'Draft',
+      status: ApplicationStatus.draft,
+      documentsComplete: 0,
+      documentsTotal: 6,
+      counselor: request.counselor,
+    );
+    _store.applications!.insert(0, app);
+    return app;
+  }
+
+  @override
+  Future<AdmissionsApplication> updateApplication({
+    required RepositoryQuery query,
+    required String applicationId,
+    required UpdateApplicationRequest request,
+  }) async {
+    await _ensureApplications(query);
+    final index =
+        _store.applications!.indexWhere((app) => app.id == applicationId);
+    if (index < 0) throw StateError('Application not found: $applicationId');
+    final updated = _store.copyApplication(
+      _store.applications![index],
+      studentName: request.studentName,
+      classLabel: request.classLabel,
+      parentName: request.parentName,
+      counselor: request.counselor,
+    );
+    _store.applications![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<AdmissionsApplication> submitApplication({
+    required RepositoryQuery query,
+    required String applicationId,
+  }) async {
+    await _ensureApplications(query);
+    final index =
+        _store.applications!.indexWhere((app) => app.id == applicationId);
+    if (index < 0) throw StateError('Application not found: $applicationId');
+    final updated = _store.copyApplication(
+      _store.applications![index],
+      status: ApplicationStatus.submitted,
+      submittedLabel: 'Submitted today',
+    );
+    _store.applications![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<PendingEnrollmentRecord> submitEnrollment({
+    required RepositoryQuery query,
+    required EnrollmentSubmitRequest request,
+  }) async {
+    await _ensureEnrollments(query);
+    final admissionNumber = 'ADM-2026-${_store.nextEnrollId().split('-').last}';
+    final record = PendingEnrollmentRecord(
+      id: _store.nextEnrollId(),
+      studentName: request.student.fullName,
+      applicationId: request.applicationId ?? 'APP-2208',
+      seekingClass: request.academic.seekingClass,
+      section: request.academic.section,
+      academicYear: request.academic.academicYear,
+      guardianName: request.parent.guardianName,
+      phone: request.parent.phone,
+      submittedAt: 'Just now',
+      conversionStatus: EnrollmentConversionStatus.pending,
+      generatedAdmissionNumber: admissionNumber,
+      gender: request.student.gender,
+      dateOfBirth: request.student.dateOfBirth,
+    );
+    _store.enrollments!.insert(0, record);
+    return record;
+  }
+
+  @override
+  Future<GeneratedAdmissionNumber> generateAdmissionNumber({
+    required RepositoryQuery query,
+    required GenerateAdmissionNumberRequest request,
+  }) async {
+    return GeneratedAdmissionNumber(
+      admissionNumber: 'ADM-2026-${DateTime.now().millisecondsSinceEpoch % 10000}',
+    );
+  }
+
+  @override
+  Future<StudentDocumentRecord> uploadDocument({
+    required RepositoryQuery query,
+    required DocumentUploadRequest request,
+  }) async {
+    await _ensureDocuments(query);
+    final doc = StudentDocumentRecord(
+      id: _store.nextDocId(),
+      studentName: request.studentName,
+      classLabel: request.classLabel,
+      documentType: request.documentType,
+      isRequired: true,
+      status: DocumentVerificationStatus.uploaded,
+      uploadedLabel: 'Just now',
+      verifiedBy: null,
+      leadId: request.leadId,
+    );
+    _store.documents!.insert(0, doc);
+    return doc;
+  }
+
+  @override
+  Future<StudentDocumentRecord> approveDocument({
+    required RepositoryQuery query,
+    required String documentId,
+    required DocumentVerificationRequest request,
+  }) async {
+    await _ensureDocuments(query);
+    return _updateDocumentStatus(
+      documentId,
+      DocumentVerificationStatus.verified,
+      verifiedBy: 'Verifier',
+    );
+  }
+
+  @override
+  Future<StudentDocumentRecord> rejectDocument({
+    required RepositoryQuery query,
+    required String documentId,
+    required DocumentVerificationRequest request,
+  }) async {
+    await _ensureDocuments(query);
+    return _updateDocumentStatus(
+      documentId,
+      DocumentVerificationStatus.rejected,
+      verifiedBy: 'Verifier',
+    );
+  }
+
+  StudentDocumentRecord _updateDocumentStatus(
+    String documentId,
+    DocumentVerificationStatus status, {
+    required String verifiedBy,
+  }) {
+    final index =
+        _store.documents!.indexWhere((doc) => doc.id == documentId);
+    if (index < 0) throw StateError('Document not found: $documentId');
+    final current = _store.documents![index];
+    final updated = StudentDocumentRecord(
+      id: current.id,
+      studentName: current.studentName,
+      classLabel: current.classLabel,
+      documentType: current.documentType,
+      isRequired: current.isRequired,
+      status: status,
+      uploadedLabel: current.uploadedLabel,
+      verifiedBy: verifiedBy,
+      leadId: current.leadId,
+    );
+    _store.documents![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<ApprovalQueueItem> approveAdmission({
+    required RepositoryQuery query,
+    required String approvalId,
+    required ApprovalDecisionRequest request,
+  }) async {
+    await _ensureApprovalQueue(query);
+    return _updateApprovalDecision(approvalId, ApprovalDecision.approved);
+  }
+
+  @override
+  Future<ApprovalQueueItem> rejectAdmission({
+    required RepositoryQuery query,
+    required String approvalId,
+    required ApprovalDecisionRequest request,
+  }) async {
+    await _ensureApprovalQueue(query);
+    return _updateApprovalDecision(approvalId, ApprovalDecision.rejected);
+  }
+
+  ApprovalQueueItem _updateApprovalDecision(
+    String approvalId,
+    ApprovalDecision decision,
+  ) {
+    final index =
+        _store.approvalQueue!.indexWhere((item) => item.id == approvalId);
+    if (index < 0) throw StateError('Approval not found: $approvalId');
+    final current = _store.approvalQueue![index];
+    final updated = ApprovalQueueItem(
+      id: current.id,
+      applicationId: current.applicationId,
+      studentName: current.studentName,
+      classLabel: current.classLabel,
+      parentName: current.parentName,
+      counselor: current.counselor,
+      submittedLabel: current.submittedLabel,
+      documentsComplete: current.documentsComplete,
+      documentsTotal: current.documentsTotal,
+      decision: decision,
+      aiScore: current.aiScore,
+    );
+    _store.approvalQueue![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<CounselorNote> addApprovalNote({
+    required RepositoryQuery query,
+    required String approvalId,
+    required ApprovalNoteRequest request,
+  }) async {
+    return CounselorNote(
+      id: 'NOTE-${DateTime.now().millisecondsSinceEpoch}',
+      author: 'Principal',
+      timestampLabel: 'Just now',
+      content: request.content,
+    );
+  }
+
+  @override
+  Future<ApprovedStudentHandoff> sendToFinance({
+    required RepositoryQuery query,
+    required FinanceHandoffRequest request,
+  }) async {
+    await _ensureHandoffs(query);
+    final index =
+        _store.handoffs!.indexWhere((item) => item.id == request.handoffId);
+    if (index < 0) throw StateError('Handoff not found: ${request.handoffId}');
+    final current = _store.handoffs![index];
+    final updated = ApprovedStudentHandoff(
+      id: current.id,
+      studentName: current.studentName,
+      classLabel: current.classLabel,
+      applicationId: current.applicationId,
+      admissionNumber: current.admissionNumber,
+      needsTransport: current.needsTransport,
+      needsHostel: current.needsHostel,
+      selectedFeeStructureId: request.feeStructureId,
+      handoffStatus: FeeHandoffStatus.sentToFinance,
+      previewStudentId: current.previewStudentId,
+      sisHandoffLabel: 'Sent to Finance',
+    );
+    _store.handoffs![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<ApprovedStudentHandoff> updateHandoffStatus({
+    required RepositoryQuery query,
+    required String handoffId,
+    required UpdateHandoffStatusRequest request,
+  }) async {
+    await _ensureHandoffs(query);
+    final index = _store.handoffs!.indexWhere((item) => item.id == handoffId);
+    if (index < 0) throw StateError('Handoff not found: $handoffId');
+    final current = _store.handoffs![index];
+    final updated = ApprovedStudentHandoff(
+      id: current.id,
+      studentName: current.studentName,
+      classLabel: current.classLabel,
+      applicationId: current.applicationId,
+      admissionNumber: current.admissionNumber,
+      needsTransport: current.needsTransport,
+      needsHostel: current.needsHostel,
+      selectedFeeStructureId: current.selectedFeeStructureId,
+      handoffStatus: request.status,
+      previewStudentId: current.previewStudentId,
+      sisHandoffLabel: current.sisHandoffLabel,
+    );
+    _store.handoffs![index] = updated;
+    return updated;
   }
 }

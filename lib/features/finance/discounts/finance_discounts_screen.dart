@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_workflow_actions.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_discounts_provider.dart';
@@ -21,53 +20,27 @@ class FinanceDiscountsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeDiscountsLoadingProvider);
-    final isError = ref.watch(financeDiscountsErrorProvider);
-    final isEmpty = ref.watch(financeDiscountsEmptyProvider);
-    final data = ref.watch(financeDiscountsProvider);
+    final viewState = ref.watch(financeDiscountsViewStateProvider);
 
     return FinanceModuleScaffold(
       screen: FinanceScreen.discounts,
       showFilterBar: false,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: FinanceAsyncBody<DiscountsDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading discounts and scholarships',
+        emptyMessage: 'No discount or scholarship data available.',
+        emptyIcon: Icons.school_outlined,
+        onRetry: () => retryFinanceFuture(ref, financeDiscountsFutureProvider),
+        builder: (data) => _buildContent(context, ref: ref, data: data),
       ),
     );
   }
 
-  Widget _buildBody(
+  Widget _buildContent(
     BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required DiscountsDashboardData? data,
+    required WidgetRef ref,
+    required DiscountsDashboardData data,
   }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading discounts and scholarships',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load discounts and scholarships.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No discount or scholarship data available.',
-        icon: Icons.school_outlined,
-      );
-    }
-
     final isMobile = AdminLayout.isMobile(context);
 
     return Column(
@@ -79,7 +52,18 @@ class FinanceDiscountsScreen extends ConsumerWidget {
           kpis: data.kpis,
         ),
         const SizedBox(height: AksharaSpacing.s6),
-        const AksharaSectionHeader(title: 'Scholarship catalog'),
+        Row(
+          children: [
+            const Expanded(
+              child: AksharaSectionHeader(title: 'Scholarship catalog'),
+            ),
+            FilledButton.icon(
+              onPressed: () => showCreateScholarshipDialog(context, ref),
+              icon: const Icon(Icons.add),
+              label: const Text('Add scholarship'),
+            ),
+          ],
+        ),
         const SizedBox(height: AksharaSpacing.s3),
         if (isMobile)
           Column(

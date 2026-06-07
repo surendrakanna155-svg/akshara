@@ -2,14 +2,16 @@ import 'package:akshara_erp/features/admissions/approval/admissions_approval_pro
 import 'package:akshara_erp/features/admissions/fee_handoff/admissions_fee_handoff_provider.dart';
 import 'package:akshara_erp/features/admissions/reports/admissions_reports_provider.dart';
 import 'package:akshara_erp/features/admissions/settings/admissions_settings_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('admissionsApprovalProvider', () {
-    test('exposes pending approval queue', () {
-      final container = ProviderContainer();
+    test('exposes pending approval queue', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsApprovalQueueFutureProvider.future);
 
       final queue = container.read(admissionsApprovalQueueProvider);
       expect(queue, hasLength(3));
@@ -19,9 +21,10 @@ void main() {
       );
     });
 
-    test('loads review detail for selected approval', () {
-      final container = ProviderContainer();
+    test('loads review detail for selected approval', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsApprovalQueueFutureProvider.future);
 
       final review = container.read(admissionsApprovalReviewProvider('appr_1'));
       expect(review, isNotNull);
@@ -31,9 +34,11 @@ void main() {
   });
 
   group('admissionsFeeHandoffProvider', () {
-    test('exposes approved students and fee structures', () {
-      final container = ProviderContainer();
+    test('exposes approved students and fee structures', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsApprovedHandoffsFutureProvider.future);
+      await container.read(admissionsFeeStructuresFutureProvider.future);
 
       final handoffs = container.read(admissionsApprovedHandoffsProvider);
       final structures = container.read(admissionsFeeStructuresProvider);
@@ -45,9 +50,10 @@ void main() {
   });
 
   group('admissionsReportsProvider', () {
-    test('exposes funnel, source, counselor, and status data', () {
-      final container = ProviderContainer();
+    test('exposes funnel, source, counselor, and status data', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsReportsFutureProvider.future);
 
       final data = container.read(admissionsReportsProvider);
       expect(data, isNotNull);
@@ -59,9 +65,10 @@ void main() {
   });
 
   group('admissionsSettingsProvider', () {
-    test('exposes CRM configuration sections', () {
-      final container = ProviderContainer();
+    test('exposes CRM configuration sections', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsSettingsFutureProvider.future);
 
       final settings = container.read(admissionsSettingsProvider);
       expect(settings, isNotNull);

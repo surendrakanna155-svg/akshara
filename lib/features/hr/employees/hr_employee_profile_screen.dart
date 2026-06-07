@@ -1,0 +1,288 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
+import '../../admin/admin_layout.dart';
+import '../hr_models.dart';
+import '../hr_navigation.dart';
+import '../hr_providers.dart';
+import '../widgets/hr_module_scaffold.dart';
+
+/// HR-03 — Employee Profile (child route, not in sub-nav).
+class HrEmployeeProfileScreen extends ConsumerWidget {
+  const HrEmployeeProfileScreen({
+    super.key,
+    required this.employeeId,
+  });
+
+  final String employeeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(hrEmployeeProfileLoadingProvider);
+    final isError = ref.watch(hrEmployeeProfileErrorProvider);
+    final detail = ref.watch(hrEmployeeDetailProvider(employeeId));
+
+    return HrModuleScaffold(
+      screen: HrScreen.employees,
+      breadcrumbs: detail == null
+          ? hrBreadcrumbs(HrScreen.employees)
+          : hrEmployeeProfileBreadcrumbs(employeeName: detail.employee.name),
+      showFilterBar: false,
+      body: _buildBody(
+        context,
+        isLoading: isLoading,
+        isError: isError,
+        detail: detail,
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context, {
+    required bool isLoading,
+    required bool isError,
+    required HrEmployeeDetail? detail,
+  }) {
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
+        child: AksharaLoadingState(semanticLabel: 'Loading employee profile'),
+      );
+    }
+
+    if (isError) {
+      return const AksharaErrorState(
+        message: 'Unable to load employee profile.',
+      );
+    }
+
+    if (detail == null) {
+      return const AksharaEmptyState(
+        message: 'Employee not found.',
+        icon: Icons.person_off_outlined,
+      );
+    }
+
+    final employee = detail.employee;
+    final text = context.aksharaText;
+    final isMobile = AdminLayout.isMobile(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          container: true,
+          label: 'Employee profile for ${employee.name}',
+          child: Card(
+            elevation: 0,
+            child: Padding(
+              padding: const EdgeInsets.all(AksharaSpacing.s5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(employee.name, style: text.headlineSmall),
+                      ),
+                      _ProfileStatusChip(status: employee.status),
+                    ],
+                  ),
+                  const SizedBox(height: AksharaSpacing.s2),
+                  Text(employee.designation, style: text.titleMedium),
+                  Text(
+                    '${employee.department.name} · ${employee.employeeCode}',
+                    style: text.bodyMedium,
+                  ),
+                  if (employee.classLabel != null)
+                    Text(
+                      'Class ${employee.classLabel}',
+                      style: text.bodySmall,
+                    ),
+                  const SizedBox(height: AksharaSpacing.s3),
+                  Text('Manager: ${detail.reportingManager}',
+                      style: text.bodySmall),
+                  Text('Email: ${employee.email}', style: text.bodySmall),
+                  Text('Phone: ${employee.phone}', style: text.bodySmall),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AksharaSpacing.s6),
+        if (isMobile) ...[
+          _LeaveBalancesCard(balances: detail.leaveBalances),
+          const SizedBox(height: AksharaSpacing.s4),
+          _RecentAttendanceCard(records: detail.recentAttendance),
+        ] else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _LeaveBalancesCard(balances: detail.leaveBalances)),
+              const SizedBox(width: AksharaSpacing.s6),
+              Expanded(
+                child: _RecentAttendanceCard(records: detail.recentAttendance),
+              ),
+            ],
+          ),
+        const SizedBox(height: AksharaSpacing.s6),
+        const AksharaSectionHeader(title: 'Documents'),
+        const SizedBox(height: AksharaSpacing.s3),
+        _DocumentsList(documents: detail.documents),
+        if (detail.integrationNotes.isNotEmpty) ...[
+          const SizedBox(height: AksharaSpacing.s6),
+          const AksharaSectionHeader(title: 'Integrations'),
+          const SizedBox(height: AksharaSpacing.s3),
+          for (final note in detail.integrationNotes)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+              child: Text(note, style: text.bodySmall),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ProfileStatusChip extends StatelessWidget {
+  const _ProfileStatusChip({required this.status});
+
+  final HrEmployeeStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, tone) = switch (status) {
+      HrEmployeeStatus.active => ('Active', KpiAccent.success),
+      HrEmployeeStatus.onLeave => ('On leave', KpiAccent.warning),
+      HrEmployeeStatus.probation => ('Probation', KpiAccent.primary),
+      HrEmployeeStatus.inactive => ('Inactive', KpiAccent.neutral),
+    };
+
+    return AksharaStatusChip(label: label, tone: tone);
+  }
+}
+
+class _LeaveBalancesCard extends StatelessWidget {
+  const _LeaveBalancesCard({required this.balances});
+
+  final List<HrEmployeeLeaveBalance> balances;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+
+    return Semantics(
+      container: true,
+      label: 'Leave balances',
+      child: Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AksharaSectionHeader(title: 'Leave balances'),
+              const SizedBox(height: AksharaSpacing.s3),
+              for (final balance in balances)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          balance.leaveType.name,
+                          style: text.bodyMedium,
+                        ),
+                      ),
+                      Text(
+                        '${balance.available - balance.used} left',
+                        style: text.titleSmall,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentAttendanceCard extends StatelessWidget {
+  const _RecentAttendanceCard({required this.records});
+
+  final List<HrAttendanceRecord> records;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+
+    return Semantics(
+      container: true,
+      label: 'Recent attendance, ${records.length} records',
+      child: Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AksharaSectionHeader(title: 'Recent attendance'),
+              const SizedBox(height: AksharaSpacing.s3),
+              if (records.isEmpty)
+                Text('No attendance records.', style: text.bodySmall)
+              else
+                for (final record in records)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+                    child: Text(
+                      '${record.date}: ${record.checkIn} – ${record.checkOut} (${record.status.name})',
+                      style: text.bodySmall,
+                    ),
+                  ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DocumentsList extends StatelessWidget {
+  const _DocumentsList({required this.documents});
+
+  final List<HrEmployeeDocument> documents;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: 'Employee documents, ${documents.length} files',
+      child: Card(
+        elevation: 0,
+        child: Column(
+          children: [
+            for (var i = 0; i < documents.length; i++) ...[
+              ListTile(
+                title: Text(documents[i].title),
+                subtitle: Text(
+                  '${documents[i].uploadedOn} · ${documents[i].status}',
+                ),
+                trailing: const Icon(Icons.description_outlined),
+              ),
+              if (i < documents.length - 1) const Divider(height: 1),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,652 @@
+import 'package:flutter/material.dart';
+
+import '../../../features/transport/transport_models.dart';
+import '../../../router/route_names.dart';
+import '../interfaces/transport_repository.dart';
+import '../repository_query.dart';
+
+class MockTransportRepository implements TransportRepository {
+  static const _occupancyMetrics = OccupancyMetrics(
+    totalCapacity: 860,
+    allocatedSeats: 842,
+    unassignedStudents: 2,
+    utilizationPercent: 88,
+  );
+
+  static const _stopsRoute12 = [
+    TransportStop(
+      id: 'stop_1',
+      name: 'Lake View Colony',
+      sequence: 1,
+      scheduledTime: '7:05 AM',
+      status: TransportStopStatus.completed,
+      latitude: 17.4484,
+      longitude: 78.3908,
+    ),
+    TransportStop(
+      id: 'stop_2',
+      name: 'Green Park Gate',
+      sequence: 2,
+      scheduledTime: '7:18 AM',
+      status: TransportStopStatus.next,
+      latitude: 17.4521,
+      longitude: 78.4012,
+    ),
+    TransportStop(
+      id: 'stop_3',
+      name: 'Akshara Main Gate',
+      sequence: 3,
+      scheduledTime: '7:35 AM',
+      status: TransportStopStatus.upcoming,
+      latitude: 17.4612,
+      longitude: 78.4123,
+    ),
+  ];
+
+  static const _allocations = [
+    StudentTransportAllocation(
+      id: 'alloc_1',
+      studentName: 'Arjun Patel',
+      admissionNumber: 'ADM-2026-0138',
+      classLabel: '10',
+      pickupStop: 'Lake View Colony',
+      dropStop: 'Akshara Main Gate',
+      routeName: 'Route 12 — North',
+      busNumber: 'BUS-07',
+      shift: TransportShift.both,
+      sisStudentId: 'SIS-STU-10421',
+    ),
+    StudentTransportAllocation(
+      id: 'alloc_2',
+      studentName: 'Emma Thomas',
+      admissionNumber: 'ADM-2026-0135',
+      classLabel: '7',
+      pickupStop: 'Green Park Gate',
+      dropStop: 'Akshara Main Gate',
+      routeName: 'Route 12 — North',
+      busNumber: 'BUS-07',
+      shift: TransportShift.both,
+      sisStudentId: 'SIS-STU-10418',
+    ),
+    StudentTransportAllocation(
+      id: 'alloc_3',
+      studentName: 'Ananya Reddy',
+      admissionNumber: 'ADM-2026-0142',
+      classLabel: '5',
+      pickupStop: 'Hitech City',
+      dropStop: 'Akshara Main Gate',
+      routeName: 'Route 08 — West',
+      busNumber: 'BUS-03',
+      shift: TransportShift.am,
+      sisStudentId: 'SIS-STU-10422',
+    ),
+    StudentTransportAllocation(
+      id: 'alloc_4',
+      studentName: 'Priya Sharma',
+      admissionNumber: 'ADM-2025-0092',
+      classLabel: '8',
+      pickupStop: 'Madhapur Junction',
+      dropStop: 'Akshara Main Gate',
+      routeName: 'Route 05 — Central',
+      busNumber: 'BUS-02',
+      shift: TransportShift.both,
+      sisStudentId: 'SIS-STU-10415',
+    ),
+  ];
+
+  @override
+  Future<TransportDashboardData> getDashboard({required RepositoryQuery query}) async {
+    return const TransportDashboardData(
+      kpis: [
+        TransportKpi(
+          id: 'active_buses',
+          value: '18',
+          label: 'Active Buses',
+          icon: Icons.directions_bus_outlined,
+          accentName: 'primary',
+        ),
+        TransportKpi(
+          id: 'on_time',
+          value: '94%',
+          label: 'On-Time Rate',
+          icon: Icons.schedule_outlined,
+          accentName: 'success',
+        ),
+        TransportKpi(
+          id: 'delayed',
+          value: '2',
+          label: 'Delayed',
+          icon: Icons.warning_amber_outlined,
+          accentName: 'error',
+        ),
+        TransportKpi(
+          id: 'picked',
+          value: '842',
+          label: 'Students Picked',
+          icon: Icons.groups_outlined,
+          accentName: 'success',
+        ),
+        TransportKpi(
+          id: 'driver_absent',
+          value: '1',
+          label: 'Driver Absent',
+          icon: Icons.person_off_outlined,
+          accentName: 'warning',
+        ),
+        TransportKpi(
+          id: 'fuel',
+          value: '₹84K',
+          label: 'Fuel Cost (MTD)',
+          icon: Icons.local_gas_station_outlined,
+          accentName: 'neutral',
+          detail: 'Finance integration placeholder',
+        ),
+      ],
+      vehicleAssignments: [
+        VehicleAssignment(
+          id: 'va_1',
+          busNumber: 'BUS-07',
+          routeName: 'Route 12 — North',
+          driverName: 'Ramesh Kumar',
+          shift: TransportShift.am,
+          studentCount: 42,
+          trackingStatus: TrackingStatus.moving,
+          etaLabel: '4 min',
+        ),
+        VehicleAssignment(
+          id: 'va_2',
+          busNumber: 'BUS-03',
+          routeName: 'Route 08 — West',
+          driverName: 'Suresh Naidu',
+          shift: TransportShift.am,
+          studentCount: 38,
+          trackingStatus: TrackingStatus.delayed,
+          etaLabel: '12 min late',
+        ),
+        VehicleAssignment(
+          id: 'va_3',
+          busNumber: 'BUS-02',
+          routeName: 'Route 05 — Central',
+          driverName: 'Vijay Reddy',
+          shift: TransportShift.am,
+          studentCount: 45,
+          trackingStatus: TrackingStatus.idle,
+          etaLabel: 'At stop',
+        ),
+      ],
+      activeDelays: [
+        'Route 08 — West delayed 12 min (traffic at Hitech City)',
+        'BUS-11 GPS offline since 7:42 AM',
+      ],
+      routePerformance: [
+        RoutePerformance(
+          routeName: 'Route 12 — North',
+          onTimePercent: '96%',
+          avgDelayMinutes: 3,
+          utilizationPercent: 88,
+          incidents: 0,
+        ),
+        RoutePerformance(
+          routeName: 'Route 08 — West',
+          onTimePercent: '82%',
+          avgDelayMinutes: 11,
+          utilizationPercent: 76,
+          incidents: 1,
+        ),
+        RoutePerformance(
+          routeName: 'Route 05 — Central',
+          onTimePercent: '94%',
+          avgDelayMinutes: 4,
+          utilizationPercent: 90,
+          incidents: 0,
+        ),
+      ],
+      occupancy: _occupancyMetrics,
+      aiInsight:
+          'Route 08 — West shows recurring delays at Hitech City. Consider stop reorder or alternate path. 2 students unassigned — link to SIS-02 registry.',
+    );
+  }
+
+  @override
+  Future<List<TransportRoute>> getRoutes({required RepositoryQuery query}) async => const [
+        TransportRoute(
+          id: 'route_12',
+          name: 'Route 12 — North',
+          stopCount: 8,
+          distanceKm: '14.2 km',
+          amDeparture: '6:45 AM',
+          pmDeparture: '3:30 PM',
+          assignedBus: 'BUS-07',
+          studentCount: 42,
+          status: TransportRouteStatus.active,
+          stops: _stopsRoute12,
+          shift: TransportShift.both,
+        ),
+        TransportRoute(
+          id: 'route_08',
+          name: 'Route 08 — West',
+          stopCount: 6,
+          distanceKm: '11.8 km',
+          amDeparture: '6:55 AM',
+          pmDeparture: '3:40 PM',
+          assignedBus: 'BUS-03',
+          studentCount: 38,
+          status: TransportRouteStatus.active,
+          stops: _stopsRoute12,
+          shift: TransportShift.both,
+        ),
+        TransportRoute(
+          id: 'route_05',
+          name: 'Route 05 — Central',
+          stopCount: 7,
+          distanceKm: '9.5 km',
+          amDeparture: '7:00 AM',
+          pmDeparture: '3:45 PM',
+          assignedBus: 'BUS-02',
+          studentCount: 45,
+          status: TransportRouteStatus.active,
+          stops: _stopsRoute12,
+          shift: TransportShift.both,
+        ),
+        TransportRoute(
+          id: 'route_15',
+          name: 'Route 15 — South (Draft)',
+          stopCount: 5,
+          distanceKm: '12.0 km',
+          amDeparture: '—',
+          pmDeparture: '—',
+          assignedBus: '—',
+          studentCount: 0,
+          status: TransportRouteStatus.draft,
+          stops: [],
+          shift: TransportShift.am,
+        ),
+      ];
+
+  @override
+  Future<List<TransportVehicle>> getVehicles({required RepositoryQuery query}) async => const [
+        TransportVehicle(
+          id: 'veh_7',
+          busNumber: 'BUS-07',
+          registration: 'TS 09 AB 4521',
+          capacity: 48,
+          routeName: 'Route 12 — North',
+          gpsDeviceId: 'GPS-TR-007',
+          insuranceExpiry: 'Dec 2026',
+          fitnessExpiry: 'Aug 2026',
+          status: TransportVehicleStatus.active,
+          occupancyPercent: 88,
+        ),
+        TransportVehicle(
+          id: 'veh_3',
+          busNumber: 'BUS-03',
+          registration: 'TS 09 CD 8832',
+          capacity: 40,
+          routeName: 'Route 08 — West',
+          gpsDeviceId: 'GPS-TR-003',
+          insuranceExpiry: 'Nov 2026',
+          fitnessExpiry: 'Jul 2026',
+          status: TransportVehicleStatus.active,
+          occupancyPercent: 76,
+        ),
+        TransportVehicle(
+          id: 'veh_2',
+          busNumber: 'BUS-02',
+          registration: 'TS 09 EF 1102',
+          capacity: 50,
+          routeName: 'Route 05 — Central',
+          gpsDeviceId: 'GPS-TR-002',
+          insuranceExpiry: 'Jan 2027',
+          fitnessExpiry: 'Sep 2026',
+          status: TransportVehicleStatus.active,
+          occupancyPercent: 90,
+        ),
+        TransportVehicle(
+          id: 'veh_11',
+          busNumber: 'BUS-11',
+          registration: 'TS 09 GH 7744',
+          capacity: 45,
+          routeName: 'Route 03 — East',
+          gpsDeviceId: 'GPS-TR-011',
+          insuranceExpiry: 'Oct 2026',
+          fitnessExpiry: 'Jun 2026',
+          status: TransportVehicleStatus.maintenance,
+          occupancyPercent: 0,
+        ),
+      ];
+
+  @override
+  Future<List<TransportDriver>> getDrivers({required RepositoryQuery query}) async => const [
+        TransportDriver(
+          id: 'drv_1',
+          name: 'Ramesh Kumar',
+          licenseNumber: 'DL-TS-2018-4521',
+          licenseExpiry: 'Mar 2028',
+          phone: '+91 98765 22001',
+          assignedBus: 'BUS-07',
+          attendancePercent: '98%',
+          rating: '4.8',
+          status: TransportDriverStatus.active,
+        ),
+        TransportDriver(
+          id: 'drv_2',
+          name: 'Suresh Naidu',
+          licenseNumber: 'DL-TS-2016-8832',
+          licenseExpiry: 'Jun 2027',
+          phone: '+91 91234 33002',
+          assignedBus: 'BUS-03',
+          attendancePercent: '96%',
+          rating: '4.5',
+          status: TransportDriverStatus.active,
+        ),
+        TransportDriver(
+          id: 'drv_3',
+          name: 'Vijay Reddy',
+          licenseNumber: 'DL-TS-2019-1102',
+          licenseExpiry: 'Dec 2028',
+          phone: '+91 99887 44003',
+          assignedBus: 'BUS-02',
+          attendancePercent: '100%',
+          rating: '4.9',
+          status: TransportDriverStatus.active,
+        ),
+        TransportDriver(
+          id: 'drv_4',
+          name: 'Kiran Das',
+          licenseNumber: 'DL-TS-2015-7744',
+          licenseExpiry: 'Apr 2026',
+          phone: '+91 94440 55004',
+          assignedBus: '—',
+          attendancePercent: '0%',
+          rating: '4.2',
+          status: TransportDriverStatus.onLeave,
+        ),
+      ];
+
+  @override
+  Future<List<StudentTransportAllocation>> getAllocations({required RepositoryQuery query}) async => _allocations;
+
+  @override
+  Future<List<TransportAttendanceRecord>> getAttendanceRecords({required RepositoryQuery query}) async => const [
+        TransportAttendanceRecord(
+          id: 'att_1',
+          studentName: 'Arjun Patel',
+          stopName: 'Lake View Colony',
+          routeName: 'Route 12 — North',
+          scheduledTime: '7:05 AM',
+          actualTime: '7:06 AM',
+          status: TransportAttendanceStatus.picked,
+          parentNotified: false,
+          shift: TransportShift.am,
+        ),
+        TransportAttendanceRecord(
+          id: 'att_2',
+          studentName: 'Emma Thomas',
+          stopName: 'Green Park Gate',
+          routeName: 'Route 12 — North',
+          scheduledTime: '7:18 AM',
+          actualTime: '—',
+          status: TransportAttendanceStatus.waiting,
+          parentNotified: false,
+          shift: TransportShift.am,
+        ),
+        TransportAttendanceRecord(
+          id: 'att_3',
+          studentName: 'Ananya Reddy',
+          stopName: 'Hitech City',
+          routeName: 'Route 08 — West',
+          scheduledTime: '7:10 AM',
+          actualTime: '7:22 AM',
+          status: TransportAttendanceStatus.picked,
+          parentNotified: true,
+          shift: TransportShift.am,
+        ),
+        TransportAttendanceRecord(
+          id: 'att_4',
+          studentName: 'Rohan Mehta',
+          stopName: 'Banjara Hills',
+          routeName: 'Route 05 — Central',
+          scheduledTime: '7:12 AM',
+          actualTime: '—',
+          status: TransportAttendanceStatus.absent,
+          parentNotified: true,
+          shift: TransportShift.am,
+        ),
+      ];
+
+  @override
+  Future<TransportTrackingPlaceholderData> getTrackingPlaceholder({required RepositoryQuery query}) async {
+    return const TransportTrackingPlaceholderData(
+      mapPlaceholderLabel: 'Live map integration — Google Maps / Mapbox',
+      integrationNote:
+          'GPS architecture placeholder. Future: real-time bus tracking in Parent App (PA route info) and Student app.',
+      parentAppRoute: RouteNames.parentDashboard,
+      vehicles: [
+        TrackingVehicleStatus(
+          busNumber: 'BUS-07',
+          routeName: 'Route 12 — North',
+          driverName: 'Ramesh Kumar',
+          status: TrackingStatus.moving,
+          speedKph: 32,
+          lastPing: '30 sec ago',
+          nextStop: 'Green Park Gate',
+          studentCount: 42,
+          etaMinutes: 4,
+          latitude: 17.4502,
+          longitude: 78.3965,
+        ),
+        TrackingVehicleStatus(
+          busNumber: 'BUS-03',
+          routeName: 'Route 08 — West',
+          driverName: 'Suresh Naidu',
+          status: TrackingStatus.delayed,
+          speedKph: 18,
+          lastPing: '1 min ago',
+          nextStop: 'Hitech City',
+          studentCount: 38,
+          etaMinutes: 12,
+          latitude: 17.4438,
+          longitude: 78.3812,
+        ),
+        TrackingVehicleStatus(
+          busNumber: 'BUS-11',
+          routeName: 'Route 03 — East',
+          driverName: '—',
+          status: TrackingStatus.offline,
+          speedKph: 0,
+          lastPing: '18 min ago',
+          nextStop: '—',
+          studentCount: 0,
+          etaMinutes: 0,
+          latitude: 17.4680,
+          longitude: 78.4200,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<TransportReportsData> getReports({required RepositoryQuery query}) async {
+    return const TransportReportsData(
+      catalog: [
+        TransportReportCatalogItem(
+          id: 'rpt_on_time',
+          title: 'On-Time Performance',
+          description: 'Route punctuality trend and delay analysis',
+          lastGenerated: '5 Jun 2026',
+        ),
+        TransportReportCatalogItem(
+          id: 'rpt_utilization',
+          title: 'Route Utilization',
+          description: 'Capacity usage and occupancy by route',
+          lastGenerated: '4 Jun 2026',
+        ),
+        TransportReportCatalogItem(
+          id: 'rpt_fuel',
+          title: 'Fuel Analysis',
+          description: 'Fuel cost vs distance — Finance FN placeholder',
+          lastGenerated: '1 Jun 2026',
+        ),
+        TransportReportCatalogItem(
+          id: 'rpt_driver',
+          title: 'Driver Attendance',
+          description: 'Driver presence and rating summary',
+          lastGenerated: '3 Jun 2026',
+        ),
+        TransportReportCatalogItem(
+          id: 'rpt_students',
+          title: 'Student Transport List',
+          description: 'SIS-linked allocation export',
+          lastGenerated: '5 Jun 2026',
+        ),
+        TransportReportCatalogItem(
+          id: 'rpt_incidents',
+          title: 'Incident Log',
+          description: 'Delays, absences, and GPS offline events',
+          lastGenerated: '2 Jun 2026',
+        ),
+      ],
+      onTimeTrend: [
+        TransportTrendPoint(label: 'Jan', amountLakhs: 92, targetLakhs: 95),
+        TransportTrendPoint(label: 'Feb', amountLakhs: 94, targetLakhs: 95),
+        TransportTrendPoint(label: 'Mar', amountLakhs: 93, targetLakhs: 95),
+        TransportTrendPoint(label: 'Apr', amountLakhs: 95, targetLakhs: 95),
+        TransportTrendPoint(label: 'May', amountLakhs: 94, targetLakhs: 95),
+        TransportTrendPoint(label: 'Jun', amountLakhs: 94, targetLakhs: 95),
+      ],
+      delayByRoute: [
+        TransportSegment(label: 'Route 08', value: 11, percent: 35),
+        TransportSegment(label: 'Route 12', value: 3, percent: 10),
+        TransportSegment(label: 'Route 05', value: 4, percent: 12),
+        TransportSegment(label: 'Route 03', value: 8, percent: 25),
+      ],
+      fuelTrend: [
+        TransportTrendPoint(label: 'Jan', amountLakhs: 7.2, targetLakhs: 8.0),
+        TransportTrendPoint(label: 'Feb', amountLakhs: 7.8, targetLakhs: 8.0),
+        TransportTrendPoint(label: 'Mar', amountLakhs: 8.1, targetLakhs: 8.5),
+        TransportTrendPoint(label: 'Apr', amountLakhs: 8.4, targetLakhs: 8.5),
+        TransportTrendPoint(label: 'May', amountLakhs: 8.0, targetLakhs: 8.5),
+        TransportTrendPoint(label: 'Jun', amountLakhs: 8.4, targetLakhs: 8.5),
+      ],
+    );
+  }
+
+  @override
+  Future<TransportSettingsData> getSettings({required RepositoryQuery query}) async {
+    return const TransportSettingsData(
+      defaultShift: TransportShift.am,
+      sections: [
+        TransportSettingsSection(
+          id: 'shifts',
+          title: 'Shift configuration',
+          items: [
+            TransportSettingItem(
+              id: 'am_start',
+              label: 'AM pickup window',
+              value: '6:30 – 8:00 AM',
+              description: 'Default morning shift schedule',
+              editable: true,
+            ),
+            TransportSettingItem(
+              id: 'pm_start',
+              label: 'PM drop window',
+              value: '3:15 – 4:30 PM',
+              description: 'Afternoon return schedule',
+              editable: true,
+            ),
+          ],
+        ),
+        TransportSettingsSection(
+          id: 'gps',
+          title: 'GPS & tracking',
+          items: [
+            TransportSettingItem(
+              id: 'provider',
+              label: 'GPS provider',
+              value: 'FleetTrack (sandbox)',
+              description: 'TR-07 live map placeholder',
+              editable: true,
+            ),
+            TransportSettingItem(
+              id: 'ping_interval',
+              label: 'Ping interval',
+              value: '30 seconds',
+              description: 'Vehicle location refresh rate',
+              editable: true,
+            ),
+          ],
+        ),
+        TransportSettingsSection(
+          id: 'parent',
+          title: 'Parent app integration',
+          items: [
+            TransportSettingItem(
+              id: 'route_info',
+              label: 'Route information',
+              value: 'Enabled',
+              description: 'Parent sees assigned route and bus (PA dashboard)',
+              editable: false,
+            ),
+            TransportSettingItem(
+              id: 'delay_notify',
+              label: 'Delay notifications',
+              value: 'Push + SMS',
+              description: 'Notify parents on pickup delays',
+              editable: true,
+            ),
+          ],
+        ),
+        TransportSettingsSection(
+          id: 'finance',
+          title: 'Finance integration',
+          items: [
+            TransportSettingItem(
+              id: 'transport_fee',
+              label: 'Transport fee component',
+              value: 'Linked to FN-02 fee structures',
+              description: 'Future: transport fee billing placeholder',
+              editable: false,
+            ),
+            TransportSettingItem(
+              id: 'fuel_expense',
+              label: 'Fuel expense posting',
+              value: 'Manual (Finance FN-05 placeholder)',
+              description: 'Fuel cost MTD sync to finance',
+              editable: false,
+            ),
+          ],
+        ),
+        TransportSettingsSection(
+          id: 'sis',
+          title: 'Student SIS integration',
+          items: [
+            TransportSettingItem(
+              id: 'allocation_sync',
+              label: 'Allocation sync',
+              value: 'SIS-STU IDs linked',
+              description: 'TR-05 allocations reference SIS registry',
+              editable: false,
+            ),
+            TransportSettingItem(
+              id: 'attendance_sync',
+              label: 'Attendance sync',
+              value: 'TR-06 → SIS attendance placeholder',
+              description: 'Transport pickup status feeds student record',
+              editable: false,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<OccupancyMetrics> getOccupancyMetrics({required RepositoryQuery query}) async {
+    return const OccupancyMetrics(
+      totalCapacity: 860,
+      allocatedSeats: 842,
+      unassignedStudents: 2,
+      utilizationPercent: 88,
+    );
+  }
+}

@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/providers/repository_future.dart';
+
 import '../../../core/repositories/repository_providers.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 
 final financeRefundsLoadingProvider = StateProvider<bool>((ref) => false);
@@ -9,11 +13,27 @@ final financeRefundsEmptyProvider = StateProvider<bool>((ref) => false);
 final financeRefundsFilterProvider = StateProvider<int>((ref) => 0);
 final financeSelectedRefundIdProvider = StateProvider<String?>((ref) => null);
 
+final financeRefundsFutureProvider = FutureProvider<List<RefundRequest>>((ref) async {
+return ref.read(financeRepositoryProvider).getRefundRequests(query: ref.watch(repositoryQueryProvider));
+});
+
 final financeRefundsProvider = Provider<List<RefundRequest>>((ref) {
-  if (ref.watch(financeRefundsLoadingProvider)) return const [];
-  if (ref.watch(financeRefundsErrorProvider)) return const [];
-  if (ref.watch(financeRefundsEmptyProvider)) return const [];
-  return ref.read(financeRepositoryProvider).getRefundRequests();
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(financeRefundsFutureProvider),
+    manualLoading: ref.watch(financeRefundsLoadingProvider), manualError: ref.watch(financeRefundsErrorProvider), manualEmpty: ref.watch(financeRefundsEmptyProvider),
+  ) ?? const [];
+});
+
+final financeRefundsViewStateProvider =
+    Provider<FinanceViewState<List<RefundRequest>>>((ref) {
+  return resolveFinanceAsync(
+    ref.watch(financeRefundsFutureProvider),
+    forceLoading: ref.watch(financeRefundsLoadingProvider),
+    forceError: ref.watch(financeRefundsErrorProvider),
+    forceEmpty: ref.watch(financeRefundsEmptyProvider),
+    isDataEmpty: (refunds) => refunds.isEmpty,
+  );
 });
 
 final financeFilteredRefundsProvider = Provider<List<RefundRequest>>((ref) {

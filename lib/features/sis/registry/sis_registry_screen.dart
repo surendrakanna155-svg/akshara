@@ -4,12 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../sis_async_state.dart';
 import '../sis_models.dart';
 import '../widgets/sis_module_scaffold.dart';
 import 'sis_registry_provider.dart';
@@ -46,9 +45,7 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(sisRegistryLoadingProvider);
-    final isError = ref.watch(sisRegistryErrorProvider);
-    final isEmpty = ref.watch(sisRegistryEmptyProvider);
+    final viewState = ref.watch(sisRegistryViewStateProvider);
     final students = ref.watch(sisFilteredStudentsProvider);
     final filterIndex = ref.watch(sisRegistryFilterProvider);
 
@@ -86,38 +83,37 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading student registry',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load student registry.',
-            )
-          else if (isEmpty || students.isEmpty)
-            const AksharaEmptyState(
-              message: 'No students match your search or filters.',
-              icon: Icons.people_outline,
-            )
-          else if (AdminLayout.isMobile(context))
-            Column(
-              children: [
-                for (final student in students) ...[
-                  _StudentMobileCard(
-                    student: student,
-                    onTap: () => context.go(
-                      RouteNames.sisStudentDetail(student.id),
-                    ),
-                  ),
-                  const SizedBox(height: AksharaSpacing.s3),
-                ],
-              ],
-            )
-          else
-            _StudentRegistryTable(students: students),
+          SisAsyncBody<List<SisStudent>>(
+            state: viewState,
+            loadingLabel: 'Loading student registry',
+            emptyMessage: 'No students match your search or filters.',
+            emptyIcon: Icons.people_outline,
+            onRetry: () => retrySisFuture(ref, sisStudentsFutureProvider),
+            builder: (_) {
+              if (students.isEmpty) {
+                return const AksharaEmptyState(
+                  message: 'No students match your search or filters.',
+                  icon: Icons.people_outline,
+                );
+              }
+              if (AdminLayout.isMobile(context)) {
+                return Column(
+                  children: [
+                    for (final student in students) ...[
+                      _StudentMobileCard(
+                        student: student,
+                        onTap: () => context.go(
+                          RouteNames.sisStudentDetail(student.id),
+                        ),
+                      ),
+                      const SizedBox(height: AksharaSpacing.s3),
+                    ],
+                  ],
+                );
+              }
+              return _StudentRegistryTable(students: students);
+            },
+          ),
         ],
       ),
     );

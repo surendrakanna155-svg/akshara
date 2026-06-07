@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentPaymentProvider', () {
-    test('returns term 2 payment summary by default', () {
+    test('returns term 2 payment summary by default', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(summary.childName, 'Ravi Kumar');
     });
 
-    test('parentPaymentMethodProvider defaults to UPI', () {
+    test('parentPaymentMethodProvider defaults to UPI', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -26,7 +26,7 @@ void main() {
       );
     });
 
-    test('installment id updates summary payload', () {
+    test('installment id updates summary payload', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -38,7 +38,7 @@ void main() {
       expect(summary.totalAmount, 8000);
     });
 
-    test('parentPaymentErrorProvider blocks summary read', () {
+    test('parentPaymentErrorProvider blocks summary read', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

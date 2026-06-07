@@ -5,6 +5,7 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../auth/auth_logout.dart';
 import 'parent_profile_provider.dart';
 import 'profile_models.dart';
 import 'widgets/profile_child_row.dart';
@@ -156,6 +157,32 @@ class ParentProfileScreen extends ConsumerWidget {
                                     'Manage notification preferences and app security from settings.',
                                 actionLabel: 'Open settings',
                                 onAction: onSettingsTap,
+                              ),
+                              const SizedBox(height: AksharaSpacing.s6),
+                              OutlinedButton.icon(
+                                onPressed: () => confirmAndLogout(context, ref),
+                                icon: Icon(
+                                  Icons.logout,
+                                  color: context.colors.error,
+                                ),
+                                label: Text(
+                                  'Log out',
+                                  style: TextStyle(
+                                    color: context.colors.error,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  minimumSize: const Size.fromHeight(48),
+                                  side: BorderSide(
+                                    color: context.colors.error.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AksharaRadius.button,
+                                  ),
+                                ),
                               ),
                             ],
                           ),

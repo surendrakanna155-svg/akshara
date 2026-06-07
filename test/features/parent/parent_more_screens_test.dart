@@ -16,12 +16,14 @@ Future<void> pumpParentScreen(WidgetTester tester, Widget screen) async {
   useMobileViewport(tester);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: erpWidgetTestOverrides(),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: screen,
       ),
     ),
   );
+  await settleRiverpodFutures(tester);
   await tester.pumpAndSettle();
 }
 
@@ -41,9 +43,9 @@ void main() {
     testWidgets('ParentNoticesScreen shows loading state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentNoticesLoadingProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentNoticesScreen(),
@@ -69,9 +71,9 @@ void main() {
     ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentEventsEmptyProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentEventsScreen(),
@@ -91,14 +93,15 @@ void main() {
       expect(find.text('Suresh Kumar'), findsOneWidget);
       expect(find.text('Ravi Kumar'), findsOneWidget);
       expect(find.text('Ananya Kumar'), findsOneWidget);
+      expect(find.text('Log out'), findsOneWidget);
     });
 
     testWidgets('ParentProfileScreen shows error state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentProfileErrorProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentProfileScreen(),

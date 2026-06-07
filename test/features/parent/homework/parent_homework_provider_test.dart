@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentHomework providers', () {
-    test('parentHomeworkDataProvider exposes mock child context', () {
+    test('parentHomeworkDataProvider exposes mock child context', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(data.items, isNotEmpty);
     });
 
-    test('homeworkFilterProvider filters pending items', () {
+    test('homeworkFilterProvider filters pending items', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -31,7 +31,7 @@ void main() {
       );
     });
 
-    test('homeworkFilterProvider filters overdue items', () {
+    test('homeworkFilterProvider filters overdue items', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -46,7 +46,7 @@ void main() {
       );
     });
 
-    test('parentHomeworkEmptyProvider clears homework list', () {
+    test('parentHomeworkEmptyProvider clears homework list', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

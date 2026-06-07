@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('teacherLeave providers', () {
-    test('teacherLeaveBalanceProvider exposes leave balance', () {
+    test('teacherLeaveBalanceProvider exposes leave balance', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(balance.earnedRemaining, 12);
     });
 
-    test('teacherLeaveHistoryProvider exposes approval timeline', () {
+    test('teacherLeaveHistoryProvider exposes approval timeline', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -27,7 +27,7 @@ void main() {
       expect(history.first.status, TeacherLeaveStatus.pending);
     });
 
-    test('teacherLeaveApplyDraftProvider validates apply form', () {
+    test('teacherLeaveApplyDraftProvider validates apply form', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -43,7 +43,7 @@ void main() {
       expect(container.read(teacherLeaveApplyDraftProvider).isValid, isTrue);
     });
 
-    test('teacherLeaveEmptyProvider clears history', () {
+    test('teacherLeaveEmptyProvider clears history', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

@@ -1,8 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/audit/audit_event.dart';
+import '../../core/audit/audit_provider.dart';
+import '../../core/auth/auth_providers.dart';
+import '../../core/auth/auth_security_providers.dart';
+import '../../core/auth/auth_session_manager.dart';
+import '../../core/auth/token_refresh_service.dart';
 import '../../core/providers/shared_preferences_provider.dart';
+import '../../core/security/server_permission_models.dart';
+import '../../core/security/server_permission_provider.dart';
+import '../../core/security/erp_role.dart';
+import 'auth_claims.dart';
 import 'auth_models.dart';
 import 'auth_session_storage.dart';
+import 'auth_token_models.dart';
+import 'auth_token_provider.dart';
+import 'staff/staff_login_provider.dart';
 
 /// Demo OTP accepted by mock verification (any 6-digit code also works).
 const String kMockValidOtp = '123456';
@@ -26,6 +39,12 @@ final authSessionStorageProvider = Provider<AuthSessionStorage>((ref) {
 final demoLoginRoleProvider = StateProvider<UserRole>((ref) {
   final storage = ref.watch(authSessionStorageProvider);
   return storage.readDemoRolePreferenceSync() ?? UserRole.parent;
+});
+
+/// Staff ERP role for demo staff sessions (persisted locally).
+final staffErpRoleProvider = StateProvider<ErpRole>((ref) {
+  final storage = ref.watch(authSessionStorageProvider);
+  return storage.readStaffErpRolePreferenceSync() ?? ErpRole.superAdmin;
 });
 
 /// Currently selected child — convenience for parent feature modules.
@@ -55,13 +74,15 @@ class AuthNotifier extends Notifier<AuthState> {
       return;
     }
 
+    await loadCachedServerPermissions(ref);
+
     final persisted = await _storage.read();
     if (persisted == null) {
       state = const AuthState(status: AuthStatus.unauthenticated);
       return;
     }
 
-    final role = UserRole.fromName(persisted.role);
+    final role = UserRole.fromName(persisted.role) ?? UserRole.parent;
     final selectedChild = persisted.hasSelectedChild
         ? LinkedChild(
             id: persisted.selectedChildId,
@@ -70,6 +91,45 @@ class AuthNotifier extends Notifier<AuthState> {
           )
         : null;
 
+    final tokenStorage = ref.read(tokenStorageProvider);
+    final tokens = await tokenStorage.read();
+    var claims = persisted.claims ?? _claimsForRole(role);
+    final sessionMetadata = await ref.read(sessionMetadataStorageProvider).read();
+
+    final sessionManager = ref.read(authSessionManagerProvider);
+    final restore = await sessionManager.restoreSession(
+      tokens: tokens,
+      claims: claims,
+      sessionMetadata: sessionMetadata,
+      refreshCallback: ref.read(tokenRefreshCallbackProvider),
+      onTokensRefreshed: tokenStorage.write,
+      onEvent: (event) {
+        if (event == AuthSessionEvent.expired) {
+          logout();
+        }
+      },
+    );
+
+    if (!restore.isValid) {
+      await logout();
+      return;
+    }
+
+    claims = restore.claims ?? claims;
+    final activeTokens = restore.tokens ?? tokens;
+    if (activeTokens != null) {
+      _scheduleRefresh(activeTokens);
+      await _touchSessionMetadata(activeTokens);
+    }
+
+    if (claims != null && isAuthApiEnabled(ref)) {
+      await syncAuthPermissions(
+        ref,
+        userId: claims.userId,
+        tenantId: claims.tenantId,
+      );
+    }
+
     state = AuthState(
       status: AuthStatus.authenticated,
       phoneNumber: persisted.phoneNumber,
@@ -77,7 +137,33 @@ class AuthNotifier extends Notifier<AuthState> {
       role: role,
       selectedChild: selectedChild,
       linkedChildren: _linkedChildrenForRole(role),
+      claims: claims,
     );
+  }
+
+  /// Persists staff ERP role for the next staff session.
+  Future<void> setStaffErpRole(ErpRole erpRole) async {
+    await _storage.writeStaffErpRolePreference(erpRole);
+    ref.read(staffErpRoleProvider.notifier).state = erpRole;
+    if (state.isAuthenticated && state.role == UserRole.staff) {
+      final previous = state.claims?.erpRole;
+      state = state.copyWith(
+        claims: AuthClaims.demoForRole(erpRole: erpRole, userId: state.claims?.userId),
+      );
+      await _persistSession();
+      if (previous != erpRole) {
+        await recordAuditEvent(
+          ref,
+          type: AuditEventType.roleChange,
+          userId: state.claims?.userId,
+          tenantId: state.claims?.tenantId,
+          metadata: {
+            'from': previous?.name ?? '',
+            'to': erpRole.name,
+          },
+        );
+      }
+    }
   }
 
   /// Sends a mock OTP to [phoneNumber] for the selected demo [role].
@@ -128,10 +214,74 @@ class AuthNotifier extends Notifier<AuthState> {
       role: role,
       selectedChild: session.selectedChild,
       linkedChildren: session.linkedChildren,
+      claims: _claimsForRole(role),
     );
 
     await _persistSession();
+    await _issueDemoTokens();
+    await _auditLogin();
     return true;
+  }
+
+  /// Completes production staff login after OTP verification.
+  Future<void> completeStaffLogin(StaffAuthResult result) async {
+    await _storage.writeStaffErpRolePreference(result.claims.erpRole);
+    await _storage.writeRememberStaffSession(result.rememberSession);
+    ref.read(staffErpRoleProvider.notifier).state = result.claims.erpRole;
+
+    final identifier = ref.read(staffLoginProvider).identifier;
+
+    state = AuthState(
+      status: AuthStatus.authenticated,
+      phoneNumber: identifier,
+      displayName: result.displayName,
+      role: UserRole.staff,
+      claims: result.claims,
+    );
+
+    await ref.read(tokenStorageProvider).write(result.tokens);
+    if (result.rememberSession) {
+      await _persistSession();
+    }
+    _scheduleRefresh(result.tokens);
+
+    if (isAuthApiEnabled(ref)) {
+      await syncAuthPermissions(
+        ref,
+        userId: result.claims.userId,
+        tenantId: result.claims.tenantId,
+      );
+    }
+
+    if (!isAuthApiEnabled(ref)) {
+      await _auditLogin();
+    }
+  }
+
+  /// Establishes a staff ERP session with mock JWT claims (tests / dev tools).
+  Future<void> signInStaff({
+    required String phoneNumber,
+    required String displayName,
+    ErpRole? erpRole,
+  }) async {
+    final ErpRole resolvedErpRole =
+        erpRole ?? ref.read(staffErpRoleProvider);
+    await _storage.writeStaffErpRolePreference(resolvedErpRole);
+    ref.read(staffErpRoleProvider.notifier).state = resolvedErpRole;
+
+    state = AuthState(
+      status: AuthStatus.authenticated,
+      phoneNumber: _normalizePhone(phoneNumber),
+      displayName: displayName,
+      role: UserRole.staff,
+      claims: AuthClaims.demoForRole(
+        erpRole: resolvedErpRole,
+        userId: 'user_${_normalizePhone(phoneNumber)}',
+      ),
+    );
+    await _persistSession();
+    await _issueDemoTokens();
+    await _auditLogin();
   }
 
   /// Updates active child and persists selection for next app launch.
@@ -160,8 +310,124 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    final userId = state.claims?.userId;
+    final tenantId = state.claims?.tenantId;
+    ref.read(authSessionManagerProvider).resetSecurityState();
+
+    if (isAuthApiEnabled(ref)) {
+      await ref.read(authRepositoryProvider).logout();
+    }
+
     await _storage.clear();
+    await ref.read(tokenStorageProvider).clear();
+    await ref.read(sessionMetadataStorageProvider).clear();
+    await ref.read(tokenRevocationServiceProvider).clearLocalRevocations();
+    await ref.read(serverPermissionCacheProvider).clear();
+    ref.read(serverPermissionSyncProvider.notifier).state =
+        const ServerPermissionSyncState();
     state = const AuthState(status: AuthStatus.unauthenticated);
+
+    if (!isAuthApiEnabled(ref)) {
+      await recordAuditEvent(
+        ref,
+        type: AuditEventType.logout,
+        userId: userId,
+        tenantId: tenantId,
+      );
+    }
+  }
+
+  /// Revokes all server sessions and clears the local auth state.
+  Future<void> logoutAll() async {
+    await ref.read(tokenRevocationServiceProvider).revokeAllSessions();
+    await logout();
+  }
+
+  /// Issues mock API tokens and syncs expiry into [AuthClaims].
+  Future<void> _issueDemoTokens() async {
+    final tokens = AuthTokens.demo();
+    await ref.read(tokenStorageProvider).write(tokens);
+    final claims = state.claims;
+    if (claims != null) {
+      state = state.copyWith(
+        claims: claims.copyWith(accessTokenExpiresAt: tokens.expiresAt),
+      );
+      await _persistSession();
+    }
+    _scheduleRefresh(tokens);
+  }
+
+  void _scheduleRefresh(AuthTokens tokens) {
+    ref.read(authSessionManagerProvider).scheduleTokenRefresh(
+          tokens: tokens,
+          onRefreshDue: () async {
+            final refreshCallback = ref.read(tokenRefreshCallbackProvider);
+            final current = await ref.read(tokenStorageProvider).read();
+            if (current == null || refreshCallback == null) return;
+
+            final outcome = await ref
+                .read(tokenRefreshServiceProvider)
+                .refreshIfNeeded(
+                  tokens: current,
+                  refreshCallback: refreshCallback,
+                  onRefreshed: (refreshed) async {
+                    ref
+                        .read(authSessionManagerProvider)
+                        .recordTokenRotation(previous: current, next: refreshed);
+                    await ref.read(tokenStorageProvider).write(refreshed);
+                    final claims = state.claims;
+                    if (claims != null) {
+                      state = state.copyWith(
+                        claims: claims.copyWith(
+                          accessTokenExpiresAt: refreshed.expiresAt,
+                        ),
+                      );
+                      await _persistSession();
+                      if (isAuthApiEnabled(ref)) {
+                        await syncAuthPermissions(
+                          ref,
+                          userId: claims.userId,
+                          tenantId: claims.tenantId,
+                        );
+                      }
+                    }
+                    _scheduleRefresh(refreshed);
+                  },
+                );
+
+            if (outcome.status == TokenRefreshStatus.expired) {
+              await logout();
+            }
+          },
+        );
+  }
+
+  Future<void> _touchSessionMetadata(AuthTokens tokens) async {
+    final storage = ref.read(sessionMetadataStorageProvider);
+    final policy = ref.read(sessionExpirationPolicyProvider);
+    final existing = await storage.read();
+    final metadata = ref.read(authSessionManagerProvider).touchSession(
+          existing ??
+              policy.startSession(
+                sessionId: tokens.sessionId,
+                deviceId: tokens.deviceId,
+              ),
+        );
+    await storage.write(metadata);
+  }
+
+  Future<void> _auditLogin() async {
+    await recordAuditEvent(
+      ref,
+      type: AuditEventType.login,
+      userId: state.claims?.userId,
+      tenantId: state.claims?.tenantId,
+      schoolId: state.claims?.schoolId,
+      metadata: {
+        'role': state.role?.name ?? '',
+        'erpRole': state.claims?.erpRole.name ?? '',
+      },
+    );
   }
 
   Future<void> _persistSession() async {
@@ -194,6 +460,20 @@ class AuthNotifier extends Notifier<AuthState> {
     return switch (role) {
       UserRole.parent => kMockLinkedChildren,
       _ => const [],
+    };
+  }
+
+  AuthClaims? _claimsForRole(UserRole role) {
+    return switch (role) {
+      UserRole.staff => AuthClaims.demoForRole(
+          erpRole: ref.read(staffErpRoleProvider),
+          userId: state.phoneNumber != null
+              ? 'user_${state.phoneNumber}'
+              : 'user_staff_demo',
+        ),
+      UserRole.teacher => AuthClaims.demoForRole(erpRole: ErpRole.teacher),
+      UserRole.parent => AuthClaims.demoForRole(erpRole: ErpRole.parent),
+      UserRole.student => AuthClaims.demoForRole(erpRole: ErpRole.student),
     };
   }
 

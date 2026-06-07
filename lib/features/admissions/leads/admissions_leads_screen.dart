@@ -4,12 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
+import '../admissions_async_state.dart';
+import '../admissions_models.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_navigation.dart';
+import '../admissions_workflow_actions.dart';
 import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_leads_provider.dart';
 import 'widgets/admissions_leads_table.dart';
@@ -26,10 +26,7 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(admissionsLeadsLoadingProvider);
-    final isError = ref.watch(admissionsLeadsErrorProvider);
-    final isEmpty = ref.watch(admissionsLeadsEmptyProvider);
-    final leads = ref.watch(admissionsLeadsProvider);
+    final viewState = ref.watch(admissionsLeadsViewStateProvider);
     final filterIndex = ref.watch(admissionsLeadsFilterProvider);
 
     return AdmissionsModuleScaffold(
@@ -39,7 +36,7 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
       onFilterSelected: (index) =>
           ref.read(admissionsLeadsFilterProvider.notifier).state = index,
       filterTrailing: FilledButton.icon(
-        onPressed: () {},
+        onPressed: () => showCreateLeadDialog(context, ref),
         icon: const Icon(Icons.add, size: 18),
         label: const Text('New Lead'),
       ),
@@ -54,26 +51,22 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
             semanticLabel: 'Marketing acquisition data is read-only',
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(semanticLabel: 'Loading leads'),
-            )
-          else if (isError)
-            const AksharaErrorState(message: 'Unable to load leads.')
-          else if (isEmpty || leads.isEmpty)
-            const AksharaEmptyState(
-              message: 'No leads match the selected filters.',
-              icon: Icons.contacts_outlined,
-              actionLabel: 'Add lead',
-            )
-          else
-            AdmissionsLeadsTable(
+          AdmissionsAsyncBody<List<AdmissionsLead>>(
+            state: viewState,
+            loadingLabel: 'Loading leads',
+            emptyMessage: 'No leads match the selected filters.',
+            emptyIcon: Icons.contacts_outlined,
+            emptyActionLabel: 'Add lead',
+            onEmptyAction: () => showCreateLeadDialog(context, ref),
+            onRetry: () =>
+                retryAdmissionsFuture(ref, admissionsLeadsFutureProvider),
+            builder: (leads) => AdmissionsLeadsTable(
               leads: leads,
               onView: (lead) =>
                   context.push(RouteNames.admissionsLeadDetail(lead.id)),
-              onAssign: (_) {},
+              onAssign: (lead) => showAssignCounselorDialog(context, ref, lead),
             ),
+          ),
         ],
       ),
     );

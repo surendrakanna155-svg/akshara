@@ -16,12 +16,14 @@ Future<void> pumpParentScreen(WidgetTester tester, Widget screen) async {
   useMobileViewport(tester);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: erpWidgetTestOverrides(),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: screen,
       ),
     ),
   );
+  await settleRiverpodFutures(tester);
   await tester.pumpAndSettle();
 }
 
@@ -40,9 +42,9 @@ void main() {
     testWidgets('ParentTimetableScreen shows loading state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentTimetableLoadingProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentTimetableScreen(),
@@ -66,9 +68,9 @@ void main() {
     testWidgets('ParentHomeworkScreen shows error state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentHomeworkErrorProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentHomeworkScreen(),
@@ -98,9 +100,9 @@ void main() {
     ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             parentExamsEmptyProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const ParentExamsScreen(),

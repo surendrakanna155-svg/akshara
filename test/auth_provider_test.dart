@@ -1,10 +1,11 @@
-import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/auth/auth_provider.dart';
 import 'package:akshara_erp/features/auth/auth_session_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'helpers/auth_test_overrides.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,9 +17,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
     container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
+      overrides: authStorageTestOverrides(prefs),
     );
   });
 

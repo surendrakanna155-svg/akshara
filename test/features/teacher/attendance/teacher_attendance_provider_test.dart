@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('teacherAttendance providers', () {
-    test('teacherAttendanceProvider exposes mock roster for Priya Sharma', () {
+    test('teacherAttendanceProvider exposes mock roster for Priya Sharma', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -17,7 +17,7 @@ void main() {
       expect(data.unmarkedCount, greaterThan(0));
     });
 
-    test('teacherAttendanceClassProvider switches class roster', () {
+    test('teacherAttendanceClassProvider switches class roster', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -29,7 +29,7 @@ void main() {
       expect(data.students, isNotEmpty);
     });
 
-    test('teacherAttendanceEmptyProvider clears classes and students', () {
+    test('teacherAttendanceEmptyProvider clears classes and students', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -40,7 +40,7 @@ void main() {
       expect(data.students, isEmpty);
     });
 
-    test('draft and submit flags update attendance payload', () {
+    test('draft and submit flags update attendance payload', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -55,7 +55,7 @@ void main() {
       expect(data.isSubmitted, isTrue);
     });
 
-    test('attendance KPI counts derive from student marks', () {
+    test('attendance KPI counts derive from student marks', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

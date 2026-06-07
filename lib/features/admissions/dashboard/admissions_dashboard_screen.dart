@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_chart_panel.dart';
@@ -30,10 +28,7 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(admissionsDashboardLoadingProvider);
-    final isError = ref.watch(admissionsDashboardErrorProvider);
-    final isEmpty = ref.watch(admissionsDashboardEmptyProvider);
-    final data = ref.watch(admissionsDashboardProvider);
+    final viewState = ref.watch(admissionsDashboardViewStateProvider);
     final filterIndex = ref.watch(admissionsDashboardFilterProvider);
 
     return AdmissionsModuleScaffold(
@@ -42,45 +37,24 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(admissionsDashboardFilterProvider.notifier).state = index,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: AdmissionsAsyncBody<AdmissionsDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading admissions dashboard',
+        emptyMessage: 'No admissions data for the selected filters.',
+        emptyIcon: Icons.dashboard_outlined,
+        onRetry: () => retryAdmissionsFuture(
+          ref,
+          admissionsDashboardFutureProvider,
+        ),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required AdmissionsDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading admissions dashboard',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load admissions dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No admissions data for the selected filters.',
-        icon: Icons.dashboard_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(
+    BuildContext context,
+    AdmissionsDashboardData data,
+  ) {
     final isMobile = AdminLayout.isMobile(context);
     final chartHeight = isMobile ? 280.0 : 320.0;
 

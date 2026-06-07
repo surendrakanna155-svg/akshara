@@ -6,6 +6,8 @@ abstract final class RouteNames {
   static const String splash = '/splash';
   static const String login = '/login';
   static const String otpVerification = '/otp';
+  static const String staffLogin = '/staff/login';
+  static const String staffOtp = '/staff/otp';
 
   // Parent app (mobile)
   static const String parent = '/parent';
@@ -123,9 +125,192 @@ abstract final class RouteNames {
   ];
 
   static const String hr = '/hr';
+  static const String hrDashboard = '/hr/dashboard';
+  static const String hrEmployees = '/hr/employees';
+  static const String hrAttendance = '/hr/attendance';
+  static const String hrLeave = '/hr/leave';
+  static const String hrPayroll = '/hr/payroll';
+  static const String hrRecruitment = '/hr/recruitment';
+  static const String hrPerformance = '/hr/performance';
+  static const String hrSettings = '/hr/settings';
+
+  static String hrEmployeeDetail(String employeeId) =>
+      '$hrEmployees/$employeeId';
+
+  /// All HR module routes (HR-01 → HR-09).
+  static const List<String> hrModuleRoutes = [
+    hrDashboard,
+    hrEmployees,
+    hrAttendance,
+    hrLeave,
+    hrPayroll,
+    hrRecruitment,
+    hrPerformance,
+    hrSettings,
+  ];
   static const String management = '/management';
+  static const String managementDashboard = '/management/dashboard';
+  static const String managementAnalytics = '/management/analytics';
+  static const String managementAdmissions = '/management/admissions';
+  static const String managementFinance = '/management/finance';
+  static const String managementAcademics = '/management/academics';
+  static const String managementPerformance = '/management/performance';
+  static const String managementTasks = '/management/tasks';
+  static const String managementSettings = '/management/settings';
+
+  /// All management module routes (MG-01 → MG-08).
+  static const List<String> managementRoutes = [
+    managementDashboard,
+    managementAnalytics,
+    managementAdmissions,
+    managementFinance,
+    managementAcademics,
+    managementPerformance,
+    managementTasks,
+    managementSettings,
+  ];
   static const String transport = '/transport';
+  static const String transportDashboard = '/transport/dashboard';
+  static const String transportRoutes = '/transport/routes';
+  static const String transportVehicles = '/transport/vehicles';
+  static const String transportDrivers = '/transport/drivers';
+  static const String transportAllocation = '/transport/allocation';
+  static const String transportAttendance = '/transport/attendance';
+  static const String transportTracking = '/transport/tracking';
+  static const String transportReports = '/transport/reports';
+  static const String transportSettings = '/transport/settings';
+
+  /// All transport module routes (TR-01 → TR-09).
+  static const List<String> transportModuleRoutes = [
+    transportDashboard,
+    transportRoutes,
+    transportVehicles,
+    transportDrivers,
+    transportAllocation,
+    transportAttendance,
+    transportTracking,
+    transportReports,
+    transportSettings,
+  ];
   static const String hostel = '/hostel';
+  static const String hostelDashboard = '/hostel/dashboard';
+  static const String hostelStudents = '/hostel/students';
+  static const String hostelRooms = '/hostel/rooms';
+  static const String hostelAttendance = '/hostel/attendance';
+  static const String hostelLeave = '/hostel/leave';
+  static const String hostelMess = '/hostel/mess';
+  static const String hostelVisitors = '/hostel/visitors';
+  static const String hostelReports = '/hostel/reports';
+
+  /// All hostel module routes (HO-01 → HO-08).
+  static const List<String> hostelModuleRoutes = [
+    hostelDashboard,
+    hostelStudents,
+    hostelRooms,
+    hostelAttendance,
+    hostelLeave,
+    hostelMess,
+    hostelVisitors,
+    hostelReports,
+  ];
+  static const String library = '/library';
+  static const String libraryDashboard = '/library/dashboard';
+  static const String libraryCatalog = '/library/catalog';
+  static const String libraryIssues = '/library/issues';
+  static const String libraryReturns = '/library/returns';
+  static const String libraryMembers = '/library/members';
+  static const String libraryFines = '/library/fines';
+  static const String libraryResources = '/library/resources';
+  static const String libraryReports = '/library/reports';
+
+  /// All library module routes (LB-01 → LB-08).
+  static const List<String> libraryModuleRoutes = [
+    libraryDashboard,
+    libraryCatalog,
+    libraryIssues,
+    libraryReturns,
+    libraryMembers,
+    libraryFines,
+    libraryResources,
+    libraryReports,
+  ];
+  static const String inventory = '/inventory';
+  static const String inventoryDashboard = '/inventory/dashboard';
+  static const String inventoryAssets = '/inventory/assets';
+  static const String inventoryCategories = '/inventory/categories';
+  static const String inventoryAllocation = '/inventory/allocation';
+  static const String inventoryMaintenance = '/inventory/maintenance';
+  static const String inventoryProcurement = '/inventory/procurement';
+  static const String inventoryVendors = '/inventory/vendors';
+  static const String inventoryReports = '/inventory/reports';
+
+  /// All inventory module routes (INV-01 → INV-08).
+  static const List<String> inventoryModuleRoutes = [
+    inventoryDashboard,
+    inventoryAssets,
+    inventoryCategories,
+    inventoryAllocation,
+    inventoryMaintenance,
+    inventoryProcurement,
+    inventoryVendors,
+    inventoryReports,
+  ];
+  static const String alumni = '/alumni';
+  static const String alumniDashboard = '/alumni/dashboard';
+  static const String alumniRegistry = '/alumni/registry';
+  static const String alumniProfile = '/alumni/profile';
+  static const String alumniEvents = '/alumni/events';
+  static const String alumniDonations = '/alumni/donations';
+  static const String alumniCampaigns = '/alumni/campaigns';
+  static const String alumniMentorship = '/alumni/mentorship';
+  static const String alumniReports = '/alumni/reports';
+  static const String alumniSettings = '/alumni/settings';
+
+  static String alumniProfileDetail(String alumniId) =>
+      '$alumniProfile/$alumniId';
+
+  /// All alumni module routes (AL-01 → AL-09; AL-03 is a child route).
+  static const List<String> alumniModuleRoutes = [
+    alumniDashboard,
+    alumniRegistry,
+    alumniEvents,
+    alumniDonations,
+    alumniCampaigns,
+    alumniMentorship,
+    alumniReports,
+    alumniSettings,
+  ];
+
+  static const String controlCenter = '/control-center';
+  static const String controlCenterDashboard = '/control-center/dashboard';
+  static const String controlCenterSchools = '/control-center/schools';
+  static const String controlCenterSubscriptions =
+      '/control-center/subscriptions';
+  static const String controlCenterBilling = '/control-center/billing';
+  static const String controlCenterCrm = '/control-center/crm';
+  static const String controlCenterSupport = '/control-center/support';
+  static const String controlCenterSuccess = '/control-center/success';
+  static const String controlCenterWhiteLabel = '/control-center/white-label';
+  static const String controlCenterAnalytics = '/control-center/analytics';
+  static const String controlCenterMonitoring = '/control-center/monitoring';
+  static const String controlCenterRoles = '/control-center/roles';
+  static const String controlCenterSettings = '/control-center/settings';
+
+  /// All control center module routes (ACC-01 → ACC-12).
+  static const List<String> controlCenterModuleRoutes = [
+    controlCenterDashboard,
+    controlCenterSchools,
+    controlCenterSubscriptions,
+    controlCenterBilling,
+    controlCenterCrm,
+    controlCenterSupport,
+    controlCenterSuccess,
+    controlCenterWhiteLabel,
+    controlCenterAnalytics,
+    controlCenterMonitoring,
+    controlCenterRoles,
+    controlCenterSettings,
+  ];
 
   /// All module groups wrapped by [AdminShell].
   static const List<String> adminErpRoutes = [
@@ -137,5 +322,9 @@ abstract final class RouteNames {
     management,
     transport,
     hostel,
+    library,
+    inventory,
+    alumni,
+    controlCenter,
   ];
 }

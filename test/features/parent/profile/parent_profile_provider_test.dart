@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentProfileProvider', () {
-    test('returns mock parent profile', () {
+    test('returns mock parent profile', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -15,7 +15,7 @@ void main() {
       expect(data.children.length, 2);
     });
 
-    test('parentProfileActiveChildProvider updates active child', () {
+    test('parentProfileActiveChildProvider updates active child', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_kpi_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
+import '../admissions_workflow_actions.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_module_scaffold.dart';
 import '../widgets/admissions_responsive_grid.dart';
@@ -29,23 +28,11 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(admissionsDocumentsLoadingProvider);
-    final isError = ref.watch(admissionsDocumentsErrorProvider);
-    final isEmpty = ref.watch(admissionsDocumentsEmptyProvider);
-    final documents = ref.watch(admissionsDocumentsProvider);
+    final viewState = ref.watch(admissionsDocumentsViewStateProvider);
     final summary = ref.watch(admissionsDocumentSummaryProvider);
     final selectedId = ref.watch(admissionsSelectedDocumentIdProvider);
     final filterIndex = ref.watch(admissionsDocumentsFilterProvider);
     final isMobile = AdminLayout.isMobile(context);
-
-    final selected = documents.cast<StudentDocumentRecord?>().firstWhere(
-          (doc) => doc?.id == selectedId,
-          orElse: () => documents.isEmpty ? null : documents.first,
-        );
-
-    final checklist = ref.watch(
-      admissionsDocumentChecklistProvider(selected?.leadId),
-    );
 
     return AdmissionsModuleScaffold(
       screen: AdmissionsScreen.documents,
@@ -67,23 +54,27 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
               semanticLabel: '${summary.missing} documents missing',
             ),
           if (summary.missing > 0) const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading document verification',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load document verification.',
-            )
-          else if (isEmpty || documents.isEmpty)
-            const AksharaEmptyState(
-              message: 'No documents to verify.',
-              icon: Icons.folder_off_outlined,
-            )
-          else ...[
+          AdmissionsAsyncBody<List<StudentDocumentRecord>>(
+            state: viewState,
+            loadingLabel: 'Loading document verification',
+            emptyMessage: 'No documents to verify.',
+            emptyIcon: Icons.folder_off_outlined,
+            onRetry: () => retryAdmissionsFuture(
+              ref,
+              admissionsDocumentsFutureProvider,
+            ),
+            builder: (documents) {
+              final selected = documents.cast<StudentDocumentRecord?>().firstWhere(
+                    (doc) => doc?.id == selectedId,
+                    orElse: () => documents.isEmpty ? null : documents.first,
+                  );
+              final selectedDocumentId = selected?.id;
+              final checklist = ref.watch(
+                admissionsDocumentChecklistProvider(selected?.leadId),
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             AdmissionsResponsiveGrid(
               desktopColumns: 4,
               tabletColumns: 2,
@@ -145,8 +136,20 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
               if (checklist.isNotEmpty)
                 AdmissionsDocumentChecklist(
                   items: checklist,
-                  onApprove: () {},
-                  onReject: () {},
+                  onApprove: selectedDocumentId == null
+                      ? null
+                      : () => runApproveDocument(
+                            context,
+                            ref,
+                            selectedDocumentId,
+                          ),
+                  onReject: selectedDocumentId == null
+                      ? null
+                      : () => runRejectDocument(
+                            context,
+                            ref,
+                            selectedDocumentId,
+                          ),
                 ),
             ] else
               Row(
@@ -170,13 +173,28 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
                         ? const SizedBox.shrink()
                         : AdmissionsDocumentChecklist(
                             items: checklist,
-                            onApprove: () {},
-                            onReject: () {},
+                            onApprove: selectedDocumentId == null
+                                ? null
+                                : () => runApproveDocument(
+                                      context,
+                                      ref,
+                                      selectedDocumentId,
+                                    ),
+                            onReject: selectedDocumentId == null
+                                ? null
+                                : () => runRejectDocument(
+                                      context,
+                                      ref,
+                                      selectedDocumentId,
+                                    ),
                           ),
                   ),
                 ],
               ),
-          ],
+                ],
+              );
+            },
+          ),
         ],
       ),
     );

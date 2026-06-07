@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../auth/auth_models.dart';
-import '../auth/auth_provider.dart';
+import '../../core/security/permissions.dart';
+import '../../core/security/rbac_service.dart';
 import 'models/admin_nav_models.dart';
 import '../../router/route_names.dart';
 
-/// Demo persona for staff users until dedicated admin auth lands.
-final adminPersonaProvider = Provider<AdminPersona>((ref) {
-  final role = ref.watch(authProvider).role;
-  return switch (role) {
-    UserRole.staff => AdminPersona.superAdmin,
-    _ => AdminPersona.superAdmin,
-  };
-});
-
-/// All ERP module destinations before persona filtering.
+/// All ERP module destinations before permission filtering.
 const List<AdminNavDestination> kAllAdminNavDestinations = [
   AdminNavDestination(
     module: AdminModule.admin,
@@ -23,17 +14,7 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     label: 'Admin Hub',
     icon: Icons.dashboard_outlined,
     selectedIcon: Icons.dashboard,
-    allowedPersonas: {
-      AdminPersona.superAdmin,
-      AdminPersona.counselor,
-      AdminPersona.marketingExecutive,
-      AdminPersona.principal,
-      AdminPersona.management,
-      AdminPersona.financeAdmin,
-      AdminPersona.hrAdmin,
-      AdminPersona.transportAdmin,
-      AdminPersona.hostelAdmin,
-    },
+    requiredPermission: Permission.viewAdminHub,
   ),
   AdminNavDestination(
     module: AdminModule.admissions,
@@ -41,13 +22,7 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     label: 'Admissions',
     icon: Icons.school_outlined,
     selectedIcon: Icons.school,
-    allowedPersonas: {
-      AdminPersona.superAdmin,
-      AdminPersona.counselor,
-      AdminPersona.marketingExecutive,
-      AdminPersona.principal,
-      AdminPersona.management,
-    },
+    requiredPermission: Permission.viewAdmissions,
   ),
   AdminNavDestination(
     module: AdminModule.finance,
@@ -55,11 +30,7 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     label: 'Finance',
     icon: Icons.account_balance_wallet_outlined,
     selectedIcon: Icons.account_balance_wallet,
-    allowedPersonas: {
-      AdminPersona.superAdmin,
-      AdminPersona.financeAdmin,
-      AdminPersona.management,
-    },
+    requiredPermission: Permission.viewFinance,
   ),
   AdminNavDestination(
     module: AdminModule.sis,
@@ -67,68 +38,82 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     label: 'Student SIS',
     icon: Icons.badge_outlined,
     selectedIcon: Icons.badge,
-    allowedPersonas: {
-      AdminPersona.superAdmin,
-      AdminPersona.counselor,
-      AdminPersona.principal,
-      AdminPersona.management,
-    },
+    requiredPermission: Permission.viewSis,
   ),
   AdminNavDestination(
     module: AdminModule.hr,
-    route: RouteNames.hr,
+    route: RouteNames.hrDashboard,
     label: 'HR',
     icon: Icons.groups_outlined,
     selectedIcon: Icons.groups,
-    allowedPersonas: {
-      AdminPersona.superAdmin,
-      AdminPersona.hrAdmin,
-      AdminPersona.management,
-    },
+    requiredPermission: Permission.viewHr,
   ),
   AdminNavDestination(
     module: AdminModule.management,
-    route: RouteNames.management,
+    route: RouteNames.managementDashboard,
     label: 'Management',
     icon: Icons.business_center_outlined,
     selectedIcon: Icons.business_center,
-    allowedPersonas: {
-      AdminPersona.superAdmin,
-      AdminPersona.management,
-      AdminPersona.principal,
-    },
+    requiredPermission: Permission.viewManagement,
   ),
   AdminNavDestination(
     module: AdminModule.transport,
-    route: RouteNames.transport,
+    route: RouteNames.transportDashboard,
     label: 'Transport',
     icon: Icons.directions_bus_outlined,
     selectedIcon: Icons.directions_bus,
-    allowedPersonas: {
-      AdminPersona.superAdmin,
-      AdminPersona.transportAdmin,
-      AdminPersona.management,
-    },
+    requiredPermission: Permission.viewTransport,
   ),
   AdminNavDestination(
     module: AdminModule.hostel,
-    route: RouteNames.hostel,
+    route: RouteNames.hostelDashboard,
     label: 'Hostel',
     icon: Icons.hotel_outlined,
     selectedIcon: Icons.hotel,
-    allowedPersonas: {
-      AdminPersona.superAdmin,
-      AdminPersona.hostelAdmin,
-      AdminPersona.management,
-    },
+    requiredPermission: Permission.viewHostel,
+  ),
+  AdminNavDestination(
+    module: AdminModule.library,
+    route: RouteNames.libraryDashboard,
+    label: 'Library',
+    icon: Icons.menu_book_outlined,
+    selectedIcon: Icons.menu_book,
+    requiredPermission: Permission.viewLibrary,
+  ),
+  AdminNavDestination(
+    module: AdminModule.inventory,
+    route: RouteNames.inventoryDashboard,
+    label: 'Inventory',
+    icon: Icons.inventory_2_outlined,
+    selectedIcon: Icons.inventory_2,
+    requiredPermission: Permission.viewInventory,
+  ),
+  AdminNavDestination(
+    module: AdminModule.alumni,
+    route: RouteNames.alumniDashboard,
+    label: 'Alumni',
+    icon: Icons.school_outlined,
+    selectedIcon: Icons.school,
+    requiredPermission: Permission.viewAlumni,
+  ),
+  AdminNavDestination(
+    module: AdminModule.controlCenter,
+    route: RouteNames.controlCenterDashboard,
+    label: 'Control Center',
+    icon: Icons.hub_outlined,
+    selectedIcon: Icons.hub,
+    requiredPermission: Permission.viewControlCenter,
   ),
 ];
 
-/// Role-filtered navigation destinations for the current session.
+/// Permission-filtered navigation destinations for the current session.
 final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
-  final persona = ref.watch(adminPersonaProvider);
+  final rbac = ref.watch(rbacServiceProvider);
   return kAllAdminNavDestinations
-      .where((destination) => destination.isVisibleFor(persona))
+      .where(
+        (destination) =>
+            rbac.hasPermission(destination.requiredPermission),
+      )
       .toList(growable: false);
 });
 
@@ -164,26 +149,58 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
   AdminModule.hr: AdminModuleInfo(
     module: AdminModule.hr,
     title: 'HR',
-    description: 'Human resources module screens will appear here in a future release.',
-    route: RouteNames.hr,
+    description:
+        'Employee registry, attendance, leave, payroll, recruitment, and performance (HR-01 → HR-09).',
+    route: RouteNames.hrDashboard,
   ),
   AdminModule.management: AdminModuleInfo(
     module: AdminModule.management,
     title: 'Management',
-    description: 'Management dashboards will appear here in a future release.',
-    route: RouteNames.management,
+    description:
+        'Executive dashboards, analytics, approvals, and school performance (MG-01 → MG-08).',
+    route: RouteNames.managementDashboard,
   ),
   AdminModule.transport: AdminModuleInfo(
     module: AdminModule.transport,
     title: 'Transport',
-    description: 'Transport operations will appear here in a future release.',
-    route: RouteNames.transport,
+    description:
+        'Fleet operations, routes, allocation, attendance, and GPS tracking (TR-01 → TR-09).',
+    route: RouteNames.transportDashboard,
   ),
   AdminModule.hostel: AdminModuleInfo(
     module: AdminModule.hostel,
     title: 'Hostel',
-    description: 'Hostel management will appear here in a future release.',
-    route: RouteNames.hostel,
+    description:
+        'Residential operations — rooms, students, attendance, leave, mess, and visitors (HO-01 → HO-08).',
+    route: RouteNames.hostelDashboard,
+  ),
+  AdminModule.library: AdminModuleInfo(
+    module: AdminModule.library,
+    title: 'Library',
+    description:
+        'Book catalog, issue/return, members, fines, digital resources, and reports (LB-01 → LB-08).',
+    route: RouteNames.libraryDashboard,
+  ),
+  AdminModule.inventory: AdminModuleInfo(
+    module: AdminModule.inventory,
+    title: 'Inventory',
+    description:
+        'Asset registry, categories, allocation, maintenance, procurement, vendors, and reports (INV-01 → INV-08).',
+    route: RouteNames.inventoryDashboard,
+  ),
+  AdminModule.alumni: AdminModuleInfo(
+    module: AdminModule.alumni,
+    title: 'Alumni',
+    description:
+        'Alumni registry, events, donations, campaigns, mentorship, and mobile companion (AL-01 → AL-10).',
+    route: RouteNames.alumniDashboard,
+  ),
+  AdminModule.controlCenter: AdminModuleInfo(
+    module: AdminModule.controlCenter,
+    title: 'Control Center',
+    description:
+        'Platform operations — schools, subscriptions, billing, CRM, support, analytics, and white label (ACC-01 → ACC-12). Super Admin only.',
+    route: RouteNames.controlCenterDashboard,
   ),
 };
 

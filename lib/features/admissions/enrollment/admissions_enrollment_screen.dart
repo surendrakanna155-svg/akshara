@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/spacing.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_module_scaffold.dart';
@@ -17,36 +16,32 @@ class AdmissionsEnrollmentScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(admissionsEnrollmentLoadingProvider);
-    final isError = ref.watch(admissionsEnrollmentErrorProvider);
+    final viewState = ref.watch(admissionsEnrollmentViewStateProvider);
     final form = ref.watch(admissionsEnrollmentProvider);
     final notifier = ref.read(admissionsEnrollmentProvider.notifier);
 
     return AdmissionsModuleScaffold(
       screen: AdmissionsScreen.enrollment,
       showFilterBar: false,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading enrollment wizard',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load enrollment wizard.',
-            )
-          else ...[
+      body: AdmissionsAsyncBody<EnrollmentFormState>(
+        state: viewState,
+        loadingLabel: 'Loading enrollment wizard',
+        emptyMessage: 'Unable to initialize enrollment form.',
+        emptyIcon: Icons.edit_note_outlined,
+        onRetry: () => retryAdmissionsFuture(
+          ref,
+          admissionsEnrollmentPrefillFutureProvider,
+        ),
+        builder: (_) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             AdmissionsEnrollmentStepIndicator(currentStep: form.currentStep),
             const SizedBox(height: AksharaSpacing.s6),
             _buildStepContent(form, notifier),
             const SizedBox(height: AksharaSpacing.s6),
             _buildActions(context, form, notifier),
           ],
-        ],
+        ),
       ),
     );
   }

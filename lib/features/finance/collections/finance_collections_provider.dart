@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 
 final financeCollectionsLoadingProvider = StateProvider<bool>((ref) => false);
@@ -9,25 +12,58 @@ final financeCollectionsEmptyProvider = StateProvider<bool>((ref) => false);
 final financeCollectionFilterProvider = StateProvider<int>((ref) => 0);
 final financeReceiptSearchProvider = StateProvider<String>((ref) => '');
 
+final financeCollectionsFutureProvider =
+    FutureProvider<List<CollectionPayment>>((ref) async {
+  return ref
+      .read(financeRepositoryProvider)
+      .getCollections(query: ref.watch(repositoryQueryProvider));
+});
+
 final financeCollectionsProvider = Provider<List<CollectionPayment>>((ref) {
-  if (ref.watch(financeCollectionsLoadingProvider)) return const [];
-  if (ref.watch(financeCollectionsErrorProvider)) return const [];
-  if (ref.watch(financeCollectionsEmptyProvider)) return const [];
-  return ref.read(financeRepositoryProvider).getCollections();
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(financeCollectionsFutureProvider),
+    manualLoading: ref.watch(financeCollectionsLoadingProvider),
+    manualError: ref.watch(financeCollectionsErrorProvider),
+    manualEmpty: ref.watch(financeCollectionsEmptyProvider),
+  ) ??
+      const [];
+});
+
+final financeCollectionsViewStateProvider =
+    Provider<FinanceViewState<List<CollectionPayment>>>((ref) {
+  return resolveFinanceAsync(
+    ref.watch(financeCollectionsFutureProvider),
+    forceLoading: ref.watch(financeCollectionsLoadingProvider),
+    forceError: ref.watch(financeCollectionsErrorProvider),
+    forceEmpty: ref.watch(financeCollectionsEmptyProvider),
+    isDataEmpty: (payments) => payments.isEmpty,
+  );
+});
+
+final financeDailySummaryFutureProvider =
+    FutureProvider<DailyCollectionSummary>((ref) async {
+  return ref
+      .read(financeRepositoryProvider)
+      .getDailySummary(query: ref.watch(repositoryQueryProvider));
 });
 
 final financeDailySummaryProvider = Provider<DailyCollectionSummary>((ref) {
-  if (ref.watch(financeCollectionsLoadingProvider)) {
-    return const DailyCollectionSummary(
-      dateLabel: '—',
-      totalCollected: '—',
-      transactionCount: 0,
-      cashAmount: '—',
-      upiAmount: '—',
-      pendingReconciliation: 0,
-    );
-  }
-  return ref.read(financeRepositoryProvider).getDailySummary();
+  return watchRepositoryFuture(
+        ref,
+        ref.watch(financeDailySummaryFutureProvider),
+        manualLoading: false,
+        manualError: false,
+        manualEmpty: false,
+      ) ??
+      const DailyCollectionSummary(
+        dateLabel: '—',
+        totalCollected: '—',
+        transactionCount: 0,
+        cashAmount: '—',
+        upiAmount: '—',
+        pendingReconciliation: 0,
+      );
 });
 
 final financeFilteredCollectionsProvider = Provider<List<CollectionPayment>>(

@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../../admissions/admissions_models.dart';
 import '../fee_structures/finance_fee_structures_provider.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_workflow_actions.dart';
 import '../integration/finance_admissions_handoff_provider.dart';
 import '../widgets/finance_handoff_queue.dart';
 import '../widgets/finance_module_scaffold.dart';
@@ -22,8 +22,7 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeFeeAssignmentLoadingProvider);
-    final isError = ref.watch(financeFeeAssignmentErrorProvider);
+    final plansViewState = ref.watch(financeInstallmentPlansViewStateProvider);
     final handoffQueue = ref.watch(financePendingHandoffsProvider);
     final allHandoffs = ref.watch(financeHandoffQueueProvider);
     final selectedId = ref.watch(financeSelectedHandoffIdProvider);
@@ -54,99 +53,129 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AksharaSpacing.s2),
           const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading fee assignment queue',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load fee assignment data.',
-            )
-          else if (handoffQueue.isEmpty && generated.isEmpty)
+          if (handoffQueue.isEmpty && generated.isEmpty)
             const AksharaEmptyState(
               message: 'No students awaiting fee assignment.',
               icon: Icons.assignment_outlined,
             )
-          else if (isMobile)
-            Column(
-              children: [
-                FinanceHandoffQueue(
-                  items: allHandoffs,
-                  onAssign: (item) => ref
-                      .read(financeSelectedHandoffIdProvider.notifier)
-                      .state = item.handoff.id,
-                ),
-                if (selected != null) ...[
-                  const SizedBox(height: AksharaSpacing.s4),
-                  _AssignmentPanel(
-                    item: selected,
-                    structures: structures,
-                    plans: plans,
-                    preview: generated[selected.handoff.id],
-                    onComplete: (preview) {
-                      completeFinanceHandoffAssignment(
-                        ref,
-                        handoffId: selected!.handoff.id,
-                        preview: preview,
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Fee account ${preview.accountId} created for ${preview.studentName}',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ],
-            )
           else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: FinanceHandoffQueue(
-                    items: allHandoffs,
-                    onAssign: (item) => ref
-                        .read(financeSelectedHandoffIdProvider.notifier)
-                        .state = item.handoff.id,
-                  ),
-                ),
-                const SizedBox(width: AksharaSpacing.s6),
-                Expanded(
-                  flex: 3,
-                  child: selected == null
-                      ? const AksharaEmptyState(
-                          message: 'Select a student from the handoff queue.',
-                          icon: Icons.person_search_outlined,
-                        )
-                      : _AssignmentPanel(
+            FinanceAsyncBody<List<InstallmentPlan>>(
+              state: plansViewState,
+              loadingLabel: 'Loading fee structures and installment plans',
+              emptyMessage: 'No installment plans configured.',
+              emptyIcon: Icons.calendar_month_outlined,
+              onRetry: () => retryFinanceFuture(
+                ref,
+                financeInstallmentPlansFutureProvider,
+              ),
+              builder: (_) {
+                if (structures.isEmpty || plans.isEmpty) {
+                  return const AksharaEmptyState(
+                    message: 'Fee structures or installment plans unavailable.',
+                    icon: Icons.receipt_long_outlined,
+                  );
+                }
+                if (isMobile) {
+                  return Column(
+                    children: [
+                      FinanceHandoffQueue(
+                        items: allHandoffs,
+                        onAssign: (item) => ref
+                            .read(financeSelectedHandoffIdProvider.notifier)
+                            .state = item.handoff.id,
+                      ),
+                      if (selected != null) ...[
+                        const SizedBox(height: AksharaSpacing.s4),
+                        _AssignmentPanel(
                           item: selected,
                           structures: structures,
                           plans: plans,
                           preview: generated[selected.handoff.id],
-                          onComplete: (preview) {
-                            completeFinanceHandoffAssignment(
-                              ref,
-                              handoffId: selected!.handoff.id,
-                              preview: preview,
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Fee account ${preview.accountId} created',
+                          onComplete: (structure, plan, transport, hostel) async {
+                            try {
+                              await executeAssignFeePlan(
+                                ref,
+                                item: selected!,
+                                structure: structure,
+                                plan: plan,
+                                includeTransport: transport,
+                                includeHostel: hostel,
+                              );
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Fee account created for ${selected.handoff.studentName}',
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                            } catch (error) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('$error'),
+                                ),
+                              );
+                            }
                           },
                         ),
-                ),
-              ],
+                      ],
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: FinanceHandoffQueue(
+                        items: allHandoffs,
+                        onAssign: (item) => ref
+                            .read(financeSelectedHandoffIdProvider.notifier)
+                            .state = item.handoff.id,
+                      ),
+                    ),
+                    const SizedBox(width: AksharaSpacing.s6),
+                    Expanded(
+                      flex: 3,
+                      child: selected == null
+                          ? const AksharaEmptyState(
+                              message: 'Select a student from the handoff queue.',
+                              icon: Icons.person_search_outlined,
+                            )
+                          : _AssignmentPanel(
+                              item: selected,
+                              structures: structures,
+                              plans: plans,
+                              preview: generated[selected.handoff.id],
+                              onComplete: (structure, plan, transport, hostel) async {
+                                try {
+                                  await executeAssignFeePlan(
+                                    ref,
+                                    item: selected!,
+                                    structure: structure,
+                                    plan: plan,
+                                    includeTransport: transport,
+                                    includeHostel: hostel,
+                                  );
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Fee account created'),
+                                    ),
+                                  );
+                                } catch (error) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('$error')),
+                                  );
+                                }
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
             ),
         ],
       ),
@@ -167,7 +196,12 @@ class _AssignmentPanel extends ConsumerStatefulWidget {
   final List<FinanceFeeStructure> structures;
   final List<InstallmentPlan> plans;
   final GeneratedFeeAccountPreview? preview;
-  final void Function(GeneratedFeeAccountPreview preview) onComplete;
+  final void Function(
+    FinanceFeeStructure structure,
+    InstallmentPlan plan,
+    bool includeTransport,
+    bool includeHostel,
+  ) onComplete;
 
   @override
   ConsumerState<_AssignmentPanel> createState() => _AssignmentPanelState();
@@ -182,9 +216,11 @@ class _AssignmentPanelState extends ConsumerState<_AssignmentPanel> {
   @override
   void initState() {
     super.initState();
-    _structureId =
-        widget.item.handoff.selectedFeeStructureId ?? widget.structures.first.id;
-    _planId = widget.plans.first.id;
+    _structureId = widget.structures.isNotEmpty
+        ? (widget.item.handoff.selectedFeeStructureId ??
+            widget.structures.first.id)
+        : '';
+    _planId = widget.plans.isNotEmpty ? widget.plans.first.id : '';
     _includeTransport = widget.item.handoff.needsTransport;
     _includeHostel = widget.item.handoff.needsHostel;
   }
@@ -193,8 +229,10 @@ class _AssignmentPanelState extends ConsumerState<_AssignmentPanel> {
   void didUpdateWidget(covariant _AssignmentPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.item.handoff.id != widget.item.handoff.id) {
-      _structureId = widget.item.handoff.selectedFeeStructureId ??
-          widget.structures.first.id;
+      if (widget.structures.isNotEmpty) {
+        _structureId = widget.item.handoff.selectedFeeStructureId ??
+            widget.structures.first.id;
+      }
       _includeTransport = widget.item.handoff.needsTransport;
       _includeHostel = widget.item.handoff.needsHostel;
     }
@@ -205,6 +243,9 @@ class _AssignmentPanelState extends ConsumerState<_AssignmentPanel> {
     final handoff = widget.item.handoff;
     final isCompleted =
         widget.item.effectiveStatus == FeeHandoffStatus.completed;
+    if (widget.structures.isEmpty || widget.plans.isEmpty) {
+      return const SizedBox.shrink();
+    }
     final structure = widget.structures.firstWhere(
       (s) => s.id == _structureId,
       orElse: () => widget.structures.first,
@@ -283,16 +324,12 @@ class _AssignmentPanelState extends ConsumerState<_AssignmentPanel> {
               const SizedBox(height: AksharaSpacing.s4),
               FilledButton.icon(
                 onPressed: () {
-                  final generated = buildFeeAccountPreview(
-                    handoffId: handoff.id,
-                    studentName: handoff.studentName,
-                    admissionNumber: handoff.admissionNumber,
-                    structure: structure,
-                    plan: plan,
-                    includeTransport: _includeTransport,
-                    includeHostel: _includeHostel,
+                  widget.onComplete(
+                    structure,
+                    plan,
+                    _includeTransport,
+                    _includeHostel,
                   );
-                  widget.onComplete(generated);
                 },
                 icon: const Icon(Icons.account_balance_wallet),
                 label: const Text('Generate student fee account'),

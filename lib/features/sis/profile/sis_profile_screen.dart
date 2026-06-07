@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../sis_async_state.dart';
 import '../sis_models.dart';
 import '../sis_navigation.dart';
 import '../widgets/sis_kpi_row.dart';
@@ -26,9 +24,8 @@ class SisStudentProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(sisProfileLoadingProvider);
-    final isError = ref.watch(sisProfileErrorProvider);
-    final profile = ref.watch(sisStudentProfileProvider(studentId));
+    final viewState = ref.watch(sisStudentProfileViewStateProvider(studentId));
+    final profile = viewState.data ?? ref.watch(sisStudentProfileProvider(studentId));
 
     return SisModuleScaffold(
       screen: SisScreen.registry,
@@ -38,41 +35,29 @@ class SisStudentProfileScreen extends ConsumerWidget {
               studentName: profile.student.studentName,
             ),
       showFilterBar: false,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        profile: profile,
+      body: SisAsyncBody<SisStudentProfile>(
+        state: viewState.data == null && profile != null
+            ? SisViewState(data: profile)
+            : viewState,
+        loadingLabel: 'Loading student profile',
+        emptyMessage: 'Student profile not found.',
+        emptyIcon: Icons.person_outline,
+        onRetry: () => retrySisFuture(
+          ref,
+          sisStudentProfileFutureProvider(studentId),
+        ),
+        builder: (loadedProfile) => _buildProfileContent(
+          context,
+          profile: loadedProfile,
+        ),
       ),
     );
   }
 
-  Widget _buildBody(
+  Widget _buildProfileContent(
     BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required SisStudentProfile? profile,
+    required SisStudentProfile profile,
   }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(semanticLabel: 'Loading student profile'),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load student profile.',
-      );
-    }
-
-    if (profile == null) {
-      return const AksharaEmptyState(
-        message: 'Student profile not found.',
-        icon: Icons.person_outline,
-      );
-    }
-
     final student = profile.student;
     final isMobile = AdminLayout.isMobile(context);
 

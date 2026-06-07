@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
 import '../../../shared/widgets/akshara_kpi_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
@@ -30,10 +29,7 @@ class FinanceDefaultersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeDefaultersLoadingProvider);
-    final isError = ref.watch(financeDefaultersErrorProvider);
-    final isEmpty = ref.watch(financeDefaultersEmptyProvider);
-    final data = ref.watch(financeDefaultersProvider);
+    final viewState = ref.watch(financeDefaultersViewStateProvider);
     final defaulters = ref.watch(financeFilteredDefaultersProvider);
     final filterIndex = ref.watch(financeDefaultersFilterProvider);
 
@@ -43,47 +39,22 @@ class FinanceDefaultersScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(financeDefaultersFilterProvider.notifier).state = index,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
-        defaulters: defaulters,
+      body: FinanceAsyncBody<DefaultersDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading defaulters',
+        emptyMessage: 'No defaulter records for the selected filters.',
+        emptyIcon: Icons.warning_amber_outlined,
+        onRetry: () => retryFinanceFuture(ref, financeDefaultersFutureProvider),
+        builder: (data) => _buildContent(context, data: data, defaulters: defaulters),
       ),
     );
   }
 
-  Widget _buildBody(
+  Widget _buildContent(
     BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required DefaultersDashboardData? data,
+    required DefaultersDashboardData data,
     required List<DefaulterRecord> defaulters,
   }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading defaulters',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load defaulters.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No defaulter records for the selected filters.',
-        icon: Icons.warning_amber_outlined,
-      );
-    }
-
     final isMobile = AdminLayout.isMobile(context);
 
     return Column(

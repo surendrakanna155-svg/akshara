@@ -1,14 +1,17 @@
 import 'package:akshara_erp/features/admissions/documents/admissions_documents_provider.dart';
 import 'package:akshara_erp/features/admissions/enrollment/admissions_enrollment_provider.dart';
 import 'package:akshara_erp/features/admissions/leads/admissions_lead_detail_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:akshara_erp/features/admissions/leads/admissions_leads_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('admissionsLeadDetailProvider', () {
-    test('loads full profile for known lead', () {
-      final container = ProviderContainer();
+    test('loads full profile for known lead', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsLeadsFutureProvider.future);
 
       final profile = container.read(admissionsLeadDetailProvider('LD-1042'));
       expect(profile, isNotNull);
@@ -18,8 +21,8 @@ void main() {
       expect(profile.statusSteps, hasLength(7));
     });
 
-    test('returns null for unknown lead', () {
-      final container = ProviderContainer();
+    test('returns null for unknown lead', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
 
       expect(
@@ -28,8 +31,8 @@ void main() {
       );
     });
 
-    test('returns null when loading', () {
-      final container = ProviderContainer(
+    test('returns null when loading', () async {
+      final container = createProviderTestContainer(
         overrides: [
           admissionsLeadDetailLoadingProvider('LD-1042')
               .overrideWith((ref) => true),
@@ -45,9 +48,10 @@ void main() {
   });
 
   group('admissionsEnrollmentProvider', () {
-    test('starts on student profile with mock prefill', () {
-      final container = ProviderContainer();
+    test('starts on student profile with mock prefill', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsEnrollmentPrefillFutureProvider.future);
 
       final form = container.read(admissionsEnrollmentProvider);
       expect(form.student.fullName, 'Ananya Reddy');
@@ -55,8 +59,8 @@ void main() {
       expect(form.academic.seekingClass, '5');
     });
 
-    test('advances wizard steps', () {
-      final container = ProviderContainer();
+    test('advances wizard steps', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(admissionsEnrollmentProvider.notifier).nextStep();
@@ -66,9 +70,10 @@ void main() {
   });
 
   group('admissionsDocumentsProvider', () {
-    test('exposes documents and summary KPIs', () {
-      final container = ProviderContainer();
+    test('exposes documents and summary KPIs', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsDocumentsFutureProvider.future);
 
       final docs = container.read(admissionsDocumentsProvider);
       final summary = container.read(admissionsDocumentSummaryProvider);
@@ -78,9 +83,10 @@ void main() {
       expect(summary.verified, greaterThanOrEqualTo(1));
     });
 
-    test('builds checklist for lead', () {
-      final container = ProviderContainer();
+    test('builds checklist for lead', () async {
+      final container = createProviderTestContainer();
       addTearDown(container.dispose);
+      await container.read(admissionsDocumentsFutureProvider.future);
 
       final checklist =
           container.read(admissionsDocumentChecklistProvider('LD-1042'));

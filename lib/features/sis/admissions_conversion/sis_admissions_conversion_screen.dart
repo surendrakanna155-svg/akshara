@@ -2,18 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../../admissions/admissions_models.dart';
 import '../integration/sis_admissions_integration_provider.dart';
+import '../sis_async_state.dart';
 import '../sis_models.dart';
 import '../widgets/sis_enrollment_queue.dart';
 import '../widgets/sis_module_scaffold.dart';
-import 'sis_admissions_conversion_provider.dart';
 
 /// SIS-05 — Admissions Conversion.
 class SisAdmissionsConversionScreen extends ConsumerStatefulWidget {
@@ -31,8 +29,7 @@ class _SisAdmissionsConversionScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(sisAdmissionsConversionLoadingProvider);
-    final isError = ref.watch(sisAdmissionsConversionErrorProvider);
+    final viewState = ref.watch(sisAdmissionsConversionViewStateProvider);
     final queue = ref.watch(sisEnrollmentQueueProvider);
     final pending = ref.watch(sisPendingEnrollmentsProvider);
     final selectedId = ref.watch(sisSelectedEnrollmentIdProvider);
@@ -64,98 +61,95 @@ class _SisAdmissionsConversionScreenState
             style: context.aksharaText.bodyMedium,
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading admissions conversion queue',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load admissions conversion data.',
-            )
-          else if (queue.isEmpty)
-            const AksharaEmptyState(
-              message: 'No enrollment records available for conversion.',
-              icon: Icons.swap_horiz_outlined,
-            )
-          else if (isMobile)
-            Column(
-              children: [
-                SisEnrollmentQueue(
-                  items: queue,
-                  onConvert: (item) {
-                    ref
-                        .read(sisSelectedEnrollmentIdProvider.notifier)
-                        .state = item.enrollment.id;
-                    setState(() {
-                      _previewClass = item.enrollment.seekingClass;
-                      _previewSection = item.enrollment.section;
-                    });
-                  },
-                ),
-                if (selected != null) ...[
-                  const SizedBox(height: AksharaSpacing.s4),
-                  _ConversionPanel(
-                    item: selected,
-                    previewClass: _previewClass ?? selected.enrollment.seekingClass,
-                    previewSection: _previewSection ?? selected.enrollment.section,
-                    onClassChanged: (v) => setState(() => _previewClass = v),
-                    onSectionChanged: (v) => setState(() => _previewSection = v),
-                    onConvert: () => _completeConversion(selected!),
+          SisAsyncBody<SisAdmissionsConversionData>(
+            state: viewState,
+            loadingLabel: 'Loading admissions conversion queue',
+            emptyMessage: 'No enrollment records available for conversion.',
+            emptyIcon: Icons.swap_horiz_outlined,
+            onRetry: () =>
+                retrySisFuture(ref, sisAdmissionsConversionFutureProvider),
+            builder: (_) {
+              if (isMobile) {
+                return Column(
+                  children: [
+                    SisEnrollmentQueue(
+                      items: queue,
+                      onConvert: (item) {
+                        ref
+                            .read(sisSelectedEnrollmentIdProvider.notifier)
+                            .state = item.enrollment.id;
+                        setState(() {
+                          _previewClass = item.enrollment.seekingClass;
+                          _previewSection = item.enrollment.section;
+                        });
+                      },
+                    ),
+                    if (selected != null) ...[
+                      const SizedBox(height: AksharaSpacing.s4),
+                      _ConversionPanel(
+                        item: selected,
+                        previewClass:
+                            _previewClass ?? selected.enrollment.seekingClass,
+                        previewSection:
+                            _previewSection ?? selected.enrollment.section,
+                        onClassChanged: (v) => setState(() => _previewClass = v),
+                        onSectionChanged: (v) =>
+                            setState(() => _previewSection = v),
+                        onConvert: () => _completeConversion(selected!),
+                      ),
+                    ],
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: SisEnrollmentQueue(
+                      items: queue,
+                      onConvert: (item) {
+                        ref
+                            .read(sisSelectedEnrollmentIdProvider.notifier)
+                            .state = item.enrollment.id;
+                        setState(() {
+                          _previewClass = item.enrollment.seekingClass;
+                          _previewSection = item.enrollment.section;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: AksharaSpacing.s6),
+                  Expanded(
+                    flex: 3,
+                    child: selected == null
+                        ? const AksharaEmptyState(
+                            message: 'Select an enrollment to convert.',
+                            icon: Icons.person_add_outlined,
+                          )
+                        : _ConversionPanel(
+                            item: selected,
+                            previewClass:
+                                _previewClass ?? selected.enrollment.seekingClass,
+                            previewSection:
+                                _previewSection ?? selected.enrollment.section,
+                            onClassChanged: (v) =>
+                                setState(() => _previewClass = v),
+                            onSectionChanged: (v) =>
+                                setState(() => _previewSection = v),
+                            onConvert: () => _completeConversion(selected!),
+                          ),
                   ),
                 ],
-              ],
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: SisEnrollmentQueue(
-                    items: queue,
-                    onConvert: (item) {
-                      ref
-                          .read(sisSelectedEnrollmentIdProvider.notifier)
-                          .state = item.enrollment.id;
-                      setState(() {
-                        _previewClass = item.enrollment.seekingClass;
-                        _previewSection = item.enrollment.section;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: AksharaSpacing.s6),
-                Expanded(
-                  flex: 3,
-                  child: selected == null
-                      ? const AksharaEmptyState(
-                          message: 'Select an enrollment to convert.',
-                          icon: Icons.person_add_outlined,
-                        )
-                      : _ConversionPanel(
-                          item: selected,
-                          previewClass:
-                              _previewClass ?? selected.enrollment.seekingClass,
-                          previewSection:
-                              _previewSection ?? selected.enrollment.section,
-                          onClassChanged: (v) =>
-                              setState(() => _previewClass = v),
-                          onSectionChanged: (v) =>
-                              setState(() => _previewSection = v),
-                          onConvert: () => _completeConversion(selected!),
-                        ),
-                ),
-              ],
-            ),
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  void _completeConversion(SisEnrollmentQueueItem item) {
+  void _completeConversion(SisEnrollmentQueueItem item) async {
     if (item.effectiveStatus == EnrollmentConversionStatus.converted) return;
 
     final admissionNumber = generateAdmissionNumber(item.enrollment.id);
@@ -169,16 +163,18 @@ class _SisAdmissionsConversionScreenState
       academicYear: item.enrollment.academicYear,
     );
 
-    completeSisEnrollmentConversion(
+    final result = await completeSisEnrollmentConversion(
       ref,
       enrollmentId: item.enrollment.id,
       preview: preview,
     );
 
+    if (!mounted || result == null) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Created SIS profile $studentId ($admissionNumber)',
+          'Created SIS profile ${result.studentId} (${result.admissionNumber})',
         ),
       ),
     );

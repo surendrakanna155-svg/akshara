@@ -8,6 +8,7 @@ import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../test_helpers.dart';
 
 void useDesktopViewport(WidgetTester tester) {
   tester.view.physicalSize = const Size(1440, 900);
@@ -22,12 +23,14 @@ Future<void> pumpScreen(WidgetTester tester, Widget screen) async {
   useDesktopViewport(tester);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: erpWidgetTestOverrides(),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: screen,
       ),
     ),
   );
+  await settleRiverpodFutures(tester);
   await tester.pumpAndSettle();
 }
 
@@ -53,10 +56,10 @@ void main() {
       useDesktopViewport(tester);
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             admissionsLeadDetailLoadingProvider('LD-1042')
                 .overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const AdmissionsLeadDetailScreen(leadId: 'LD-1042'),
@@ -105,9 +108,9 @@ void main() {
       useDesktopViewport(tester);
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             admissionsDocumentsErrorProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const AdmissionsDocumentsScreen(),

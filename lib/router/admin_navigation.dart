@@ -3,8 +3,15 @@ import 'package:go_router/go_router.dart';
 
 import '../features/admin/models/admin_nav_models.dart';
 import '../features/admin/screens/admin_module_placeholder_screen.dart';
+import 'alumni_navigation.dart';
 import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
+import 'hostel_navigation.dart';
+import 'inventory_navigation.dart';
+import 'hr_navigation.dart';
+import 'library_navigation.dart';
+import 'transport_navigation.dart';
+import 'control_center_navigation.dart';
 import 'route_names.dart';
 
 /// Whether [location] belongs to the web ERP admin shell.
@@ -28,7 +35,7 @@ Widget financeRouteBuilder(BuildContext context, GoRouterState state) {
 }
 
 Widget hrRouteBuilder(BuildContext context, GoRouterState state) {
-  return const AdminModulePlaceholderScreen(module: AdminModule.hr);
+  return hrDashboardRouteBuilder(context, state);
 }
 
 Widget managementRouteBuilder(BuildContext context, GoRouterState state) {
@@ -36,9 +43,25 @@ Widget managementRouteBuilder(BuildContext context, GoRouterState state) {
 }
 
 Widget transportRouteBuilder(BuildContext context, GoRouterState state) {
-  return const AdminModulePlaceholderScreen(module: AdminModule.transport);
+  return transportDashboardRouteBuilder(context, state);
 }
 
 Widget hostelRouteBuilder(BuildContext context, GoRouterState state) {
-  return const AdminModulePlaceholderScreen(module: AdminModule.hostel);
+  return hostelDashboardRouteBuilder(context, state);
+}
+
+Widget inventoryRouteBuilder(BuildContext context, GoRouterState state) {
+  return inventoryDashboardRouteBuilder(context, state);
+}
+
+Widget libraryRouteBuilder(BuildContext context, GoRouterState state) {
+  return libraryDashboardRouteBuilder(context, state);
+}
+
+Widget controlCenterRouteBuilder(BuildContext context, GoRouterState state) {
+  return controlCenterDashboardRouteBuilder(context, state);
+}
+
+Widget alumniRouteBuilder(BuildContext context, GoRouterState state) {
+  return alumniDashboardRouteBuilder(context, state);
 }

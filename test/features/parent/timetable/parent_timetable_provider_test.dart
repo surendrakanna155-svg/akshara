@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentTimetableProvider', () {
-    test('returns mock week data for Ravi Kumar', () {
+    test('returns mock week data for Ravi Kumar', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(data.totalPeriodsThisWeek, greaterThan(0));
     });
 
-    test('reflects selected day from parentTimetableSelectedDayProvider', () {
+    test('reflects selected day from parentTimetableSelectedDayProvider', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -29,7 +29,7 @@ void main() {
       expect(monday.periods, isNotEmpty);
     });
 
-    test('returns empty payload when parentTimetableEmptyProvider is true', () {
+    test('returns empty payload when parentTimetableEmptyProvider is true', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/providers/repository_future.dart';
+
 import '../../../core/repositories/repository_providers.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 
 final admissionsDocumentsLoadingProvider = StateProvider<bool>((ref) => false);
@@ -13,11 +17,27 @@ final admissionsSelectedDocumentIdProvider = StateProvider<String?>(
   (ref) => null,
 );
 
+final admissionsDocumentsFutureProvider = FutureProvider<List<StudentDocumentRecord>>((ref) async {
+return ref.read(admissionsRepositoryProvider).getDocuments(query: ref.watch(repositoryQueryProvider));
+});
+
 final admissionsDocumentsProvider = Provider<List<StudentDocumentRecord>>((ref) {
-  if (ref.watch(admissionsDocumentsLoadingProvider)) return const [];
-  if (ref.watch(admissionsDocumentsErrorProvider)) return const [];
-  if (ref.watch(admissionsDocumentsEmptyProvider)) return const [];
-  return ref.read(admissionsRepositoryProvider).getDocuments();
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(admissionsDocumentsFutureProvider),
+    manualLoading: ref.watch(admissionsDocumentsLoadingProvider), manualError: ref.watch(admissionsDocumentsErrorProvider), manualEmpty: ref.watch(admissionsDocumentsEmptyProvider),
+  ) ?? const [];
+});
+
+final admissionsDocumentsViewStateProvider =
+    Provider<AdmissionsViewState<List<StudentDocumentRecord>>>((ref) {
+  return resolveAdmissionsAsync(
+    ref.watch(admissionsDocumentsFutureProvider),
+    forceLoading: ref.watch(admissionsDocumentsLoadingProvider),
+    forceError: ref.watch(admissionsDocumentsErrorProvider),
+    forceEmpty: ref.watch(admissionsDocumentsEmptyProvider),
+    isDataEmpty: (docs) => docs.isEmpty,
+  );
 });
 
 final admissionsDocumentSummaryProvider =

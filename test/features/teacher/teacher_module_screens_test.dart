@@ -20,12 +20,14 @@ Future<void> pumpTeacherScreen(WidgetTester tester, Widget screen) async {
   useMobileViewport(tester);
   await tester.pumpWidget(
     ProviderScope(
+      overrides: erpWidgetTestOverrides(),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
         home: screen,
       ),
     ),
   );
+  await settleRiverpodFutures(tester);
   await tester.pumpAndSettle();
 }
 
@@ -45,9 +47,9 @@ void main() {
     testWidgets('TeacherAttendanceScreen shows loading state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             teacherAttendanceLoadingProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const TeacherAttendanceScreen(),
@@ -80,9 +82,9 @@ void main() {
     testWidgets('TeacherHomeworkScreen shows empty state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             teacherHomeworkEmptyProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const TeacherHomeworkScreen(),
@@ -136,9 +138,9 @@ void main() {
     testWidgets('TeacherLeaveScreen shows error state', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: erpWidgetTestOverrides([
             teacherLeaveErrorProvider.overrideWith((ref) => true),
-          ],
+          ]),
           child: MaterialApp(
             theme: AksharaAppTheme.light(),
             home: const TeacherLeaveScreen(),

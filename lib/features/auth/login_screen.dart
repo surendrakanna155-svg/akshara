@@ -217,6 +217,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        TextButton.icon(
+                          onPressed: () => context.go(RouteNames.staffLogin),
+                          icon: const Icon(Icons.badge_outlined),
+                          label: const Text('Staff ERP portal'),
+                        ),
                       ],
                     ),
                   ),

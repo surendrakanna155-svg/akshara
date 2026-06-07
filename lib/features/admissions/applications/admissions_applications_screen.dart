@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/spacing.dart';
+import '../admissions_async_state.dart';
+import '../admissions_models.dart';
+import '../admissions_mutations_provider.dart';
 import '../admissions_navigation.dart';
+import '../admissions_requests.dart';
 import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_applications_provider.dart';
 import 'widgets/admissions_application_workflow.dart';
@@ -22,10 +23,7 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(admissionsApplicationsLoadingProvider);
-    final isError = ref.watch(admissionsApplicationsErrorProvider);
-    final isEmpty = ref.watch(admissionsApplicationsEmptyProvider);
-    final applications = ref.watch(admissionsApplicationsProvider);
+    final viewState = ref.watch(admissionsApplicationsViewStateProvider);
     final workflow = ref.watch(admissionsApplicationWorkflowProvider);
     final filterIndex = ref.watch(admissionsApplicationsFilterProvider);
 
@@ -37,39 +35,83 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
           .read(admissionsApplicationsFilterProvider.notifier)
           .state = index,
       filterTrailing: FilledButton.icon(
-        onPressed: () {},
+        onPressed: () => _createApplication(context, ref),
         icon: const Icon(Icons.add, size: 18),
         label: const Text('New Application'),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading applications',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(message: 'Unable to load applications.')
-          else ...[
-            AdmissionsApplicationWorkflow(summary: workflow),
-            const SizedBox(height: AksharaSpacing.s6),
-            if (isEmpty || applications.isEmpty)
-              const AksharaEmptyState(
-                message: 'No applications match the selected filters.',
-                icon: Icons.description_outlined,
-                actionLabel: 'Create application',
-              )
-            else
-              AdmissionsApplicationsTable(
-                applications: applications,
-                onView: (_) {},
-              ),
-          ],
+          AdmissionsAsyncBody<List<AdmissionsApplication>>(
+            state: viewState,
+            loadingLabel: 'Loading applications',
+            emptyMessage: 'No applications match the selected filters.',
+            emptyIcon: Icons.description_outlined,
+            emptyActionLabel: 'Create application',
+            onRetry: () => retryAdmissionsFuture(
+              ref,
+              admissionsApplicationsFutureProvider,
+            ),
+            builder: (applications) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AdmissionsApplicationWorkflow(summary: workflow),
+                const SizedBox(height: AksharaSpacing.s6),
+                AdmissionsApplicationsTable(
+                  applications: applications,
+                  onView: (app) => _handleApplicationAction(context, ref, app),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _createApplication(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(createApplicationProvider.notifier).execute(
+            const CreateApplicationRequest(
+              studentName: 'New Student',
+              classLabel: '5',
+              parentName: 'New Parent',
+            ),
+          );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Draft application created')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
+  }
+
+  Future<void> _handleApplicationAction(
+    BuildContext context,
+    WidgetRef ref,
+    AdmissionsApplication app,
+  ) async {
+    if (app.status == ApplicationStatus.draft) {
+      try {
+        await ref.read(submitApplicationProvider.notifier).execute(app.id);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Application submitted')),
+        );
+      } catch (error) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$error')),
+        );
+      }
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Application ${app.id} · ${app.status.label}')),
     );
   }
 }

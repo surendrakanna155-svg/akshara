@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../router/route_guards.dart';
 import '../../theme/breakpoints.dart';
 import 'admin_navigation_rail.dart';
 
@@ -46,7 +47,7 @@ class _AdminShellState extends State<AdminShell> {
               ),
               body: _AdminShellBody(
                 onMenuTap: _openDrawer,
-                child: widget.child,
+                child: ErpRouteGuard(child: widget.child),
               ),
             ),
           LayoutBreakpoint.tablet => Row(
@@ -56,7 +57,7 @@ class _AdminShellState extends State<AdminShell> {
                   currentLocation: location,
                   expanded: false,
                 ),
-                Expanded(child: widget.child),
+                Expanded(child: ErpRouteGuard(child: widget.child)),
               ],
             ),
           LayoutBreakpoint.desktop => Row(
@@ -66,7 +67,7 @@ class _AdminShellState extends State<AdminShell> {
                   currentLocation: location,
                   expanded: true,
                 ),
-                Expanded(child: widget.child),
+                Expanded(child: ErpRouteGuard(child: widget.child)),
               ],
             ),
         };

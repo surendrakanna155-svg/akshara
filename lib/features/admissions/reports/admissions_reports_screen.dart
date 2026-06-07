@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../theme/spacing.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_chart_panel.dart';
@@ -25,10 +22,7 @@ class AdmissionsReportsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(admissionsReportsLoadingProvider);
-    final isError = ref.watch(admissionsReportsErrorProvider);
-    final isEmpty = ref.watch(admissionsReportsEmptyProvider);
-    final data = ref.watch(admissionsReportsProvider);
+    final viewState = ref.watch(admissionsReportsViewStateProvider);
     final tab = ref.watch(admissionsReportsTabProvider);
 
     return AdmissionsModuleScaffold(
@@ -46,20 +40,15 @@ class AdmissionsReportsScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(semanticLabel: 'Loading reports'),
-            )
-          else if (isError)
-            const AksharaErrorState(message: 'Unable to load reports.')
-          else if (isEmpty || data == null)
-            const AksharaEmptyState(
-              message: 'No report data for the selected period.',
-              icon: Icons.analytics_outlined,
-            )
-          else
-            _buildTabContent(data, tab),
+          AdmissionsAsyncBody<AdmissionsReportsData>(
+            state: viewState,
+            loadingLabel: 'Loading reports',
+            emptyMessage: 'No report data for the selected period.',
+            emptyIcon: Icons.analytics_outlined,
+            onRetry: () =>
+                retryAdmissionsFuture(ref, admissionsReportsFutureProvider),
+            builder: (data) => _buildTabContent(data, tab),
+          ),
         ],
       ),
     );

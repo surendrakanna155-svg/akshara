@@ -7,13 +7,13 @@ import 'router_refresh_notifier.dart';
 
 /// Application-wide [GoRouter] instance.
 ///
-/// Rebuilds redirects when [authProvider] changes via [routerRefreshNotifierProvider].
+/// Redirects refresh when [authProvider] changes via
+/// [routerRefreshNotifierProvider] without recreating the router.
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final refresh = ref.watch(routerRefreshNotifierProvider);
-  final auth = ref.watch(authProvider);
+  ref.watch(routerRefreshNotifierProvider);
 
   return createAppRouter(
-    refreshListenable: refresh,
-    auth: auth,
+    refreshListenable: ref.read(routerRefreshNotifierProvider),
+    readAuth: () => ref.read(authProvider),
   );
 });

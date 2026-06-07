@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('teacherExams providers', () {
-    test('teacherExamsProvider exposes upcoming exams and marks', () {
+    test('teacherExamsProvider exposes upcoming exams and marks', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(data.classAveragePercent, greaterThan(0));
     });
 
-    test('teacherExamSectionProvider switches active section', () {
+    test('teacherExamSectionProvider switches active section', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -27,7 +27,7 @@ void main() {
       expect(section, TeacherExamSection.results);
     });
 
-    test('teacherExamsEmptyProvider clears exam data', () {
+    test('teacherExamsEmptyProvider clears exam data', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -39,7 +39,7 @@ void main() {
       expect(data.classAveragePercent, 0);
     });
 
-    test('mark entries include pending marks for entry', () {
+    test('mark entries include pending marks for entry', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

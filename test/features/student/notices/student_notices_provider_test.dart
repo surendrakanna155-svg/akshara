@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('studentNotices providers', () {
-    test('studentNoticesProvider exposes school and class notices', () {
+    test('studentNoticesProvider exposes school and class notices', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -15,7 +15,7 @@ void main() {
       expect(data.urgentCount, greaterThan(0));
     });
 
-    test('studentNoticeScopeProvider filters school notices', () {
+    test('studentNoticeScopeProvider filters school notices', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -30,7 +30,7 @@ void main() {
       );
     });
 
-    test('studentNoticesEmptyProvider clears notices', () {
+    test('studentNoticesEmptyProvider clears notices', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
+import '../sis_async_state.dart';
 import '../sis_models.dart';
 
 final sisRegistryLoadingProvider = StateProvider<bool>((ref) => false);
@@ -9,11 +12,32 @@ final sisRegistryEmptyProvider = StateProvider<bool>((ref) => false);
 final sisRegistrySearchProvider = StateProvider<String>((ref) => '');
 final sisRegistryFilterProvider = StateProvider<int>((ref) => 0);
 
+final sisStudentsFutureProvider = FutureProvider<List<SisStudent>>((ref) async {
+  return ref
+      .read(sisRepositoryProvider)
+      .getStudents(query: ref.watch(repositoryQueryProvider));
+});
+
 final sisStudentsProvider = Provider<List<SisStudent>>((ref) {
-  if (ref.watch(sisRegistryLoadingProvider)) return const [];
-  if (ref.watch(sisRegistryErrorProvider)) return const [];
-  if (ref.watch(sisRegistryEmptyProvider)) return const [];
-  return ref.read(sisRepositoryProvider).getStudents();
+  return watchRepositoryFuture(
+        ref,
+        ref.watch(sisStudentsFutureProvider),
+        manualLoading: false,
+        manualError: false,
+        manualEmpty: false,
+      ) ??
+      const [];
+});
+
+final sisRegistryViewStateProvider =
+    Provider<SisViewState<List<SisStudent>>>((ref) {
+  return resolveSisAsync(
+    ref.watch(sisStudentsFutureProvider),
+    forceLoading: ref.watch(sisRegistryLoadingProvider),
+    forceError: ref.watch(sisRegistryErrorProvider),
+    forceEmpty: ref.watch(sisRegistryEmptyProvider),
+    isDataEmpty: (students) => students.isEmpty,
+  );
 });
 
 final sisFilteredStudentsProvider = Provider<List<SisStudent>>((ref) {

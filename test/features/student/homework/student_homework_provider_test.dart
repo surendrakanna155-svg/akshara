@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('studentHomework providers', () {
-    test('studentHomeworkProvider exposes mock items', () {
+    test('studentHomeworkProvider exposes mock items', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(data.pendingCount, greaterThan(0));
     });
 
-    test('studentHomeworkFilterProvider filters pending homework', () {
+    test('studentHomeworkFilterProvider filters pending homework', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -35,7 +35,7 @@ void main() {
       );
     });
 
-    test('studentHomeworkEmptyProvider clears list', () {
+    test('studentHomeworkEmptyProvider clears list', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

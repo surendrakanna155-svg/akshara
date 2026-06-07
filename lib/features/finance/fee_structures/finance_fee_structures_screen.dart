@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_workflow_actions.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_fee_structures_provider.dart';
 
@@ -19,10 +18,7 @@ class FinanceFeeStructuresScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(financeFeeStructuresLoadingProvider);
-    final isError = ref.watch(financeFeeStructuresErrorProvider);
-    final isEmpty = ref.watch(financeFeeStructuresEmptyProvider);
-    final structures = ref.watch(financeFeeStructuresProvider);
+    final viewState = ref.watch(financeFeeStructuresViewStateProvider);
     final academicYear = ref.watch(financeAcademicYearProvider);
     final years = ref.watch(financeAcademicYearsProvider);
 
@@ -40,7 +36,11 @@ class FinanceFeeStructuresScreen extends ConsumerWidget {
                 ),
               ),
               FilledButton.icon(
-                onPressed: () {},
+                onPressed: () => showCreateFeeStructureDialog(
+                  context,
+                  ref,
+                  academicYear: academicYear,
+                ),
                 icon: const Icon(Icons.add),
                 label: const Text('Create structure'),
               ),
@@ -57,33 +57,27 @@ class FinanceFeeStructuresScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading fee structures',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load fee structures.',
-            )
-          else if (isEmpty || structures.isEmpty)
-            const AksharaEmptyState(
-              message: 'No fee structures for the selected academic year.',
-              icon: Icons.receipt_long_outlined,
-            )
-          else if (AdminLayout.isMobile(context))
-            Column(
-              children: [
-                for (final structure in structures) ...[
-                  _FeeStructureCard(structure: structure),
-                  const SizedBox(height: AksharaSpacing.s3),
-                ],
-              ],
-            )
-          else
-            _FeeStructuresTable(structures: structures),
+          FinanceAsyncBody<List<FinanceFeeStructure>>(
+            state: viewState,
+            loadingLabel: 'Loading fee structures',
+            emptyMessage: 'No fee structures for the selected academic year.',
+            emptyIcon: Icons.receipt_long_outlined,
+            onRetry: () =>
+                retryFinanceFuture(ref, financeFeeStructuresFutureProvider),
+            builder: (structures) {
+              if (AdminLayout.isMobile(context)) {
+                return Column(
+                  children: [
+                    for (final structure in structures) ...[
+                      _FeeStructureCard(structure: structure, ref: ref),
+                      const SizedBox(height: AksharaSpacing.s3),
+                    ],
+                  ],
+                );
+              }
+              return _FeeStructuresTable(structures: structures, ref: ref);
+            },
+          ),
         ],
       ),
     );
@@ -124,9 +118,10 @@ class _AcademicYearSelector extends StatelessWidget {
 }
 
 class _FeeStructuresTable extends StatelessWidget {
-  const _FeeStructuresTable({required this.structures});
+  const _FeeStructuresTable({required this.structures, required this.ref});
 
   final List<FinanceFeeStructure> structures;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +155,11 @@ class _FeeStructuresTable extends StatelessWidget {
                   DataCell(_StructureStatusChip(status: structure.status)),
                   DataCell(
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () => showEditFeeStructureDialog(
+                        context,
+                        ref,
+                        structure: structure,
+                      ),
                       child: const Text('Edit'),
                     ),
                   ),
@@ -178,9 +177,10 @@ class _FeeStructuresTable extends StatelessWidget {
 }
 
 class _FeeStructureCard extends StatelessWidget {
-  const _FeeStructureCard({required this.structure});
+  const _FeeStructureCard({required this.structure, required this.ref});
 
   final FinanceFeeStructure structure;
+  final WidgetRef ref;
 
   @override
   Widget build(BuildContext context) {
@@ -219,7 +219,11 @@ class _FeeStructureCard extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () {},
+                onPressed: () => showEditFeeStructureDialog(
+                  context,
+                  ref,
+                  structure: structure,
+                ),
                 child: const Text('Edit'),
               ),
             ),

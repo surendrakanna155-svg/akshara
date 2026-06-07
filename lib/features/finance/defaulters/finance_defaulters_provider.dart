@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/providers/repository_future.dart';
+
 import '../../../core/repositories/repository_providers.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 
 final financeDefaultersLoadingProvider = StateProvider<bool>((ref) => false);
@@ -9,11 +13,27 @@ final financeDefaultersEmptyProvider = StateProvider<bool>((ref) => false);
 final financeDefaultersFilterProvider = StateProvider<int>((ref) => 0);
 final financeSelectedDefaulterIdProvider = StateProvider<String?>((ref) => null);
 
+final financeDefaultersFutureProvider = FutureProvider<DefaultersDashboardData>((ref) async {
+return await ref.read(financeRepositoryProvider).getDefaultersDashboard(query: ref.watch(repositoryQueryProvider));
+});
+
 final financeDefaultersProvider = Provider<DefaultersDashboardData?>((ref) {
-  if (ref.watch(financeDefaultersLoadingProvider)) return null;
-  if (ref.watch(financeDefaultersErrorProvider)) return null;
-  if (ref.watch(financeDefaultersEmptyProvider)) return null;
-  return ref.read(financeRepositoryProvider).getDefaultersDashboard();
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(financeDefaultersFutureProvider),
+    manualLoading: ref.watch(financeDefaultersLoadingProvider), manualError: ref.watch(financeDefaultersErrorProvider), manualEmpty: ref.watch(financeDefaultersEmptyProvider),
+  );
+});
+
+final financeDefaultersViewStateProvider =
+    Provider<FinanceViewState<DefaultersDashboardData>>((ref) {
+  return resolveFinanceAsync(
+    ref.watch(financeDefaultersFutureProvider),
+    forceLoading: ref.watch(financeDefaultersLoadingProvider),
+    forceError: ref.watch(financeDefaultersErrorProvider),
+    forceEmpty: ref.watch(financeDefaultersEmptyProvider),
+    isDataEmpty: (data) => data.defaulters.isEmpty,
+  );
 });
 
 final financeFilteredDefaultersProvider = Provider<List<DefaulterRecord>>((ref) {

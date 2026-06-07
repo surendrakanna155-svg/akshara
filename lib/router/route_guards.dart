@@ -1,0 +1,255 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../core/security/denied_access_audit.dart';
+import '../core/security/erp_role.dart';
+import '../core/security/permissions.dart';
+import '../core/security/rbac_service.dart';
+import '../features/auth/auth_models.dart';
+import '../features/auth/auth_provider.dart';
+import '../shared/widgets/akshara_error_state.dart';
+import 'admin_navigation.dart';
+import 'route_names.dart';
+
+/// Required [Permission] for each admin ERP route prefix.
+const Map<String, Permission> kErpRouteViewPermissions = {
+  RouteNames.admin: Permission.viewAdminHub,
+  RouteNames.admissions: Permission.viewAdmissions,
+  RouteNames.finance: Permission.viewFinance,
+  RouteNames.sis: Permission.viewSis,
+  RouteNames.management: Permission.viewManagement,
+  RouteNames.transport: Permission.viewTransport,
+  RouteNames.hr: Permission.viewHr,
+  RouteNames.hostel: Permission.viewHostel,
+  RouteNames.library: Permission.viewLibrary,
+  RouteNames.inventory: Permission.viewInventory,
+  RouteNames.alumni: Permission.viewAlumni,
+  RouteNames.controlCenter: Permission.viewControlCenter,
+};
+
+/// Resolves the view permission required for [location].
+Permission? erpRoutePermissionFor(String location) {
+  for (final entry in kErpRouteViewPermissions.entries) {
+    if (location == entry.key || location.startsWith('${entry.key}/')) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
+/// Whether [location] is allowed for the given [RbacService].
+bool canAccessErpRoute(RbacService rbac, String location) {
+  if (!isAdminErpRoute(location)) return true;
+
+  final permission = erpRoutePermissionFor(location);
+  if (permission == null) return true;
+
+  return rbac.hasPermission(permission);
+}
+
+/// Whether [auth] may enter the admin ERP shell at all.
+bool canAccessAdminErpShell(AuthState auth) {
+  return auth.isAuthenticated && auth.role == UserRole.staff;
+}
+
+/// Access denied placeholder for unauthorized ERP routes.
+class AccessDeniedScreen extends StatelessWidget {
+  const AccessDeniedScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: AksharaErrorState(
+        message: 'Access Denied',
+        icon: Icons.lock_outline,
+      ),
+    );
+  }
+}
+
+/// Requires an authenticated session.
+class AuthenticatedGuard extends ConsumerWidget {
+  const AuthenticatedGuard({
+    super.key,
+    required this.child,
+    this.fallback = const AccessDeniedScreen(),
+  });
+
+  final Widget child;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authProvider);
+    if (!auth.isAuthenticated) {
+      return fallback;
+    }
+    return child;
+  }
+}
+
+/// Requires a specific [ErpRole].
+class RoleGuard extends ConsumerWidget {
+  const RoleGuard({
+    super.key,
+    required this.allowedRoles,
+    required this.child,
+    this.fallback = const AccessDeniedScreen(),
+  });
+
+  final Set<ErpRole> allowedRoles;
+  final Widget child;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final role = ref.watch(rbacServiceProvider).role;
+    if (role == null || !allowedRoles.contains(role)) {
+      return fallback;
+    }
+    return child;
+  }
+}
+
+/// Requires a single [Permission].
+class PermissionGuard extends ConsumerWidget {
+  const PermissionGuard({
+    super.key,
+    required this.permission,
+    required this.child,
+    this.fallback = const AccessDeniedScreen(),
+  });
+
+  final Permission permission;
+  final Widget child;
+  final Widget fallback;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(rbacServiceProvider).hasPermission(permission)) {
+      return fallback;
+    }
+    return child;
+  }
+}
+
+/// Requires a manage [Permission] (e.g. [Permission.manageFinance]).
+class ManagePermissionGuard extends ConsumerWidget {
+  const ManagePermissionGuard({
+    super.key,
+    required this.permission,
+    required this.child,
+    this.fallback = const AccessDeniedScreen(),
+    this.auditRoute,
+  });
+
+  final Permission permission;
+  final Widget child;
+  final Widget fallback;
+  final String? auditRoute;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rbac = ref.watch(rbacServiceProvider);
+    if (!rbac.hasManagePermission(permission)) {
+      final route = auditRoute ?? GoRouterState.of(context).uri.path;
+      unawaited(
+        recordDeniedAccess(
+          ref,
+          route: route,
+          permission: permission,
+        ),
+      );
+      return fallback;
+    }
+    return child;
+  }
+}
+
+/// Requires an approve [Permission] (e.g. [Permission.approveAdmissions]).
+class ApprovePermissionGuard extends ConsumerWidget {
+  const ApprovePermissionGuard({
+    super.key,
+    required this.permission,
+    required this.child,
+    this.fallback = const AccessDeniedScreen(),
+    this.auditRoute,
+  });
+
+  final Permission permission;
+  final Widget child;
+  final Widget fallback;
+  final String? auditRoute;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rbac = ref.watch(rbacServiceProvider);
+    if (!rbac.hasApprovePermission(permission)) {
+      final route = auditRoute ?? GoRouterState.of(context).uri.path;
+      unawaited(
+        recordDeniedAccess(
+          ref,
+          route: route,
+          permission: permission,
+        ),
+      );
+      return fallback;
+    }
+    return child;
+  }
+}
+
+/// Guards admin ERP child routes based on the current location.
+class ErpRouteGuard extends ConsumerWidget {
+  const ErpRouteGuard({
+    super.key,
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final location = GoRouterState.of(context).uri.path;
+    final rbac = ref.watch(rbacServiceProvider);
+
+    if (!canAccessErpRoute(rbac, location)) {
+      final permission = erpRoutePermissionFor(location);
+      if (permission != null) {
+        unawaited(
+          recordDeniedAccess(
+            ref,
+            route: location,
+            permission: permission,
+          ),
+        );
+      }
+      return const AccessDeniedScreen();
+    }
+
+    return child;
+  }
+}
+
+/// Control Center is restricted to Super Admin only.
+class ControlCenterGuard extends ConsumerWidget {
+  const ControlCenterGuard({
+    super.key,
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rbac = ref.watch(rbacServiceProvider);
+    if (rbac.role != ErpRole.superAdmin ||
+        !rbac.hasPermission(Permission.viewControlCenter)) {
+      return const AccessDeniedScreen();
+    }
+    return child;
+  }
+}

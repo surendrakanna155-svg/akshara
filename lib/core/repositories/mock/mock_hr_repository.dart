@@ -1,0 +1,778 @@
+import 'package:flutter/material.dart';
+
+import '../../../features/auth/auth_provider.dart';
+import '../../../features/hr/hr_models.dart';
+import '../../../router/route_names.dart';
+import '../interfaces/hr_repository.dart';
+import '../repository_query.dart';
+
+class MockHrRepository implements HrRepository {
+  static const _employees = [
+    HrEmployee(
+      id: 'HR-EMP-101',
+      name: kMockTeacherName,
+      employeeCode: 'EMP-101',
+      department: HrDepartment.academics,
+      role: HrEmployeeRole.teacher,
+      designation: 'Mathematics Teacher',
+      email: 'priya.sharma@akshara.edu',
+      phone: '+91 98765 43210',
+      joinDate: '2019-06-01',
+      status: HrEmployeeStatus.active,
+      teacherAppLinked: true,
+      classLabel: '8-B',
+    ),
+    HrEmployee(
+      id: 'HR-EMP-102',
+      name: 'Mrs. Rao',
+      employeeCode: 'EMP-102',
+      department: HrDepartment.academics,
+      role: HrEmployeeRole.teacher,
+      designation: 'English Teacher',
+      email: 'mrs.rao@akshara.edu',
+      phone: '+91 98765 43211',
+      joinDate: '2018-04-15',
+      status: HrEmployeeStatus.active,
+      teacherAppLinked: true,
+      classLabel: '7-A',
+    ),
+    HrEmployee(
+      id: 'HR-EMP-103',
+      name: 'Mr. Patel',
+      employeeCode: 'EMP-103',
+      department: HrDepartment.academics,
+      role: HrEmployeeRole.teacher,
+      designation: 'Science Teacher',
+      email: 'mr.patel@akshara.edu',
+      phone: '+91 98765 43212',
+      joinDate: '2020-01-10',
+      status: HrEmployeeStatus.active,
+      teacherAppLinked: true,
+      classLabel: '10-A',
+    ),
+    HrEmployee(
+      id: 'HR-EMP-104',
+      name: 'Ramesh Kumar',
+      employeeCode: 'EMP-104',
+      department: HrDepartment.transport,
+      role: HrEmployeeRole.driver,
+      designation: 'Bus Driver',
+      email: 'ramesh.kumar@akshara.edu',
+      phone: '+91 98765 43213',
+      joinDate: '2017-08-20',
+      status: HrEmployeeStatus.active,
+      teacherAppLinked: false,
+    ),
+    HrEmployee(
+      id: 'HR-EMP-105',
+      name: 'Kavitha Menon',
+      employeeCode: 'EMP-105',
+      department: HrDepartment.hr,
+      role: HrEmployeeRole.admin,
+      designation: 'HR Manager',
+      email: 'kavitha.menon@akshara.edu',
+      phone: '+91 98765 43214',
+      joinDate: '2016-03-01',
+      status: HrEmployeeStatus.active,
+      teacherAppLinked: false,
+    ),
+    HrEmployee(
+      id: 'HR-EMP-106',
+      name: 'Rajesh Iyer',
+      employeeCode: 'EMP-106',
+      department: HrDepartment.administration,
+      role: HrEmployeeRole.principal,
+      designation: 'Principal',
+      email: 'rajesh.iyer@akshara.edu',
+      phone: '+91 98765 43215',
+      joinDate: '2015-01-01',
+      status: HrEmployeeStatus.active,
+      teacherAppLinked: false,
+    ),
+    HrEmployee(
+      id: 'HR-EMP-107',
+      name: 'Anil Verma',
+      employeeCode: 'EMP-107',
+      department: HrDepartment.finance,
+      role: HrEmployeeRole.staff,
+      designation: 'Accounts Officer',
+      email: 'anil.verma@akshara.edu',
+      phone: '+91 98765 43216',
+      joinDate: '2021-07-01',
+      status: HrEmployeeStatus.active,
+      teacherAppLinked: false,
+    ),
+    HrEmployee(
+      id: 'HR-EMP-108',
+      name: 'Sunita Nair',
+      employeeCode: 'EMP-108',
+      department: HrDepartment.academics,
+      role: HrEmployeeRole.teacher,
+      designation: 'Hindi Teacher',
+      email: 'sunita.nair@akshara.edu',
+      phone: '+91 98765 43217',
+      joinDate: '2022-06-15',
+      status: HrEmployeeStatus.onLeave,
+      teacherAppLinked: true,
+      classLabel: '6-C',
+    ),
+  ];
+
+  static const _attendanceRecords = [
+    HrAttendanceRecord(
+      id: 'att_1',
+      employeeId: 'HR-EMP-101',
+      employeeName: kMockTeacherName,
+      department: HrDepartment.academics,
+      date: '2026-06-06',
+      checkIn: '8:02 AM',
+      checkOut: '3:45 PM',
+      status: HrAttendanceStatus.present,
+      geoVerified: true,
+      faceVerified: true,
+    ),
+    HrAttendanceRecord(
+      id: 'att_2',
+      employeeId: 'HR-EMP-102',
+      employeeName: 'Mrs. Rao',
+      department: HrDepartment.academics,
+      date: '2026-06-06',
+      checkIn: '8:15 AM',
+      checkOut: '3:50 PM',
+      status: HrAttendanceStatus.late,
+      geoVerified: true,
+      faceVerified: true,
+    ),
+    HrAttendanceRecord(
+      id: 'att_3',
+      employeeId: 'HR-EMP-103',
+      employeeName: 'Mr. Patel',
+      department: HrDepartment.academics,
+      date: '2026-06-06',
+      checkIn: '7:55 AM',
+      checkOut: '3:40 PM',
+      status: HrAttendanceStatus.present,
+      geoVerified: true,
+      faceVerified: true,
+    ),
+    HrAttendanceRecord(
+      id: 'att_4',
+      employeeId: 'HR-EMP-104',
+      employeeName: 'Ramesh Kumar',
+      department: HrDepartment.transport,
+      date: '2026-06-06',
+      checkIn: '6:30 AM',
+      checkOut: '4:15 PM',
+      status: HrAttendanceStatus.present,
+      geoVerified: true,
+      faceVerified: false,
+    ),
+    HrAttendanceRecord(
+      id: 'att_5',
+      employeeId: 'HR-EMP-108',
+      employeeName: 'Sunita Nair',
+      department: HrDepartment.academics,
+      date: '2026-06-06',
+      checkIn: '—',
+      checkOut: '—',
+      status: HrAttendanceStatus.onLeave,
+      geoVerified: false,
+      faceVerified: false,
+    ),
+    HrAttendanceRecord(
+      id: 'att_6',
+      employeeId: 'HR-EMP-107',
+      employeeName: 'Anil Verma',
+      department: HrDepartment.finance,
+      date: '2026-06-06',
+      checkIn: '9:05 AM',
+      checkOut: '5:30 PM',
+      status: HrAttendanceStatus.present,
+      geoVerified: true,
+      faceVerified: true,
+    ),
+  ];
+
+  @override
+  Future<HrDashboardData> getDashboard({required RepositoryQuery query}) async {
+    return const HrDashboardData(
+      kpis: [
+        HrKpi(
+          id: 'total_employees',
+          value: '148',
+          label: 'Total Employees',
+          icon: Icons.groups_outlined,
+          accentName: 'primary',
+        ),
+        HrKpi(
+          id: 'present_today',
+          value: '142',
+          label: 'Present Today',
+          icon: Icons.fact_check_outlined,
+          accentName: 'success',
+        ),
+        HrKpi(
+          id: 'on_leave',
+          value: '6',
+          label: 'On Leave',
+          icon: Icons.event_busy_outlined,
+          accentName: 'warning',
+        ),
+        HrKpi(
+          id: 'open_positions',
+          value: '4',
+          label: 'Open Positions',
+          icon: Icons.person_search_outlined,
+          accentName: 'primary',
+        ),
+        HrKpi(
+          id: 'avg_attendance',
+          value: '96%',
+          label: 'Avg Attendance (MTD)',
+          icon: Icons.trending_up_outlined,
+          accentName: 'success',
+          detail: 'Feeds Management MG-06 teacher attendance KPI',
+        ),
+        HrKpi(
+          id: 'reviews_due',
+          value: '12',
+          label: 'Reviews Due',
+          icon: Icons.star_outline,
+          accentName: 'warning',
+        ),
+      ],
+      headcountTrend: [
+        HrTrendPoint(label: 'Jan', amountLakhs: 14.2, targetLakhs: 14.0),
+        HrTrendPoint(label: 'Feb', amountLakhs: 14.4, targetLakhs: 14.0),
+        HrTrendPoint(label: 'Mar', amountLakhs: 14.6, targetLakhs: 14.5),
+        HrTrendPoint(label: 'Apr', amountLakhs: 14.8, targetLakhs: 14.5),
+        HrTrendPoint(label: 'May', amountLakhs: 14.8, targetLakhs: 15.0),
+        HrTrendPoint(label: 'Jun', amountLakhs: 14.8, targetLakhs: 15.0),
+      ],
+      attendanceTrend: [
+        HrTrendPoint(label: 'W1', amountLakhs: 94.0, targetLakhs: 95.0),
+        HrTrendPoint(label: 'W2', amountLakhs: 95.5, targetLakhs: 95.0),
+        HrTrendPoint(label: 'W3', amountLakhs: 96.2, targetLakhs: 95.0),
+        HrTrendPoint(label: 'W4', amountLakhs: 96.0, targetLakhs: 95.0),
+      ],
+      pendingLeave: [
+        HrPendingLeaveItem(
+          id: 'lv_1',
+          employeeName: 'Sunita Nair',
+          leaveType: HrLeaveType.sick,
+          days: 3,
+          submittedOn: '2026-06-04',
+        ),
+        HrPendingLeaveItem(
+          id: 'lv_2',
+          employeeName: 'Mrs. Rao',
+          leaveType: HrLeaveType.casual,
+          days: 1,
+          submittedOn: '2026-06-05',
+        ),
+        HrPendingLeaveItem(
+          id: 'lv_3',
+          employeeName: 'Anil Verma',
+          leaveType: HrLeaveType.earned,
+          days: 2,
+          submittedOn: '2026-06-05',
+        ),
+      ],
+      recruitmentSnapshot: [
+        HrCandidate(
+          id: 'cand_1',
+          name: 'Deepa Krishnan',
+          role: 'Physics Teacher',
+          department: HrDepartment.academics,
+          appliedOn: '2026-05-28',
+          stage: HrRecruitmentStage.interview,
+          experience: '6 years',
+          source: 'Referral',
+        ),
+        HrCandidate(
+          id: 'cand_2',
+          name: 'Vikram Singh',
+          role: 'Lab Assistant',
+          department: HrDepartment.academics,
+          appliedOn: '2026-06-01',
+          stage: HrRecruitmentStage.screening,
+          experience: '2 years',
+          source: 'Job portal',
+        ),
+      ],
+      aiInsight:
+          'Teacher attrition risk elevated in Mathematics — review workload for Priya Sharma (Class 8-B) and cross-check Management performance KPIs.',
+      managementKpiNote:
+          'Teacher attendance 96% MTD feeds Management dashboard (MG-01 teacher_avg KPI).',
+    );
+  }
+
+  @override
+  Future<List<HrEmployee>> getEmployees({required RepositoryQuery query}) async => List.unmodifiable(_employees);
+
+  @override
+  Future<HrEmployeeDetail?> getEmployeeDetail({required RepositoryQuery query, required String employeeId}) async {
+    final matches = _employees.where((e) => e.id == employeeId);
+    if (matches.isEmpty) return null;
+    final employee = matches.first;
+
+    return HrEmployeeDetail(
+      employee: employee,
+      reportingManager: employee.role == HrEmployeeRole.principal
+          ? 'Board of Trustees'
+          : 'Rajesh Iyer (Principal)',
+      address: 'Hyderabad, Telangana',
+      emergencyContact: '+91 90000 12345',
+      leaveBalances: const [
+        HrEmployeeLeaveBalance(
+          leaveType: HrLeaveType.casual,
+          available: 8,
+          used: 4,
+        ),
+        HrEmployeeLeaveBalance(
+          leaveType: HrLeaveType.sick,
+          available: 10,
+          used: 2,
+        ),
+        HrEmployeeLeaveBalance(
+          leaveType: HrLeaveType.earned,
+          available: 15,
+          used: 5,
+        ),
+      ],
+      documents: const [
+        HrEmployeeDocument(
+          id: 'doc_1',
+          title: 'Offer letter',
+          uploadedOn: '2019-05-20',
+          status: 'Verified',
+        ),
+        HrEmployeeDocument(
+          id: 'doc_2',
+          title: 'ID proof',
+          uploadedOn: '2019-05-22',
+          status: 'Verified',
+        ),
+      ],
+      recentAttendance: _attendanceRecords
+          .where((r) => r.employeeId == employeeId)
+          .toList(growable: false),
+      integrationNotes: [
+        if (employee.teacherAppLinked == true)
+          'Linked to Teacher app — ${employee.name} uses TA-01 attendance and TA-07 leave.',
+        if (employee.department == HrDepartment.finance)
+          'Payroll entries post to Finance module (FN-05 salary disbursement placeholder).',
+        if (employee.department == HrDepartment.transport)
+          'Also listed in Transport driver roster (TR-04 Ramesh Kumar).',
+      ],
+    );
+  }
+
+  @override
+  Future<HrAttendanceData> getAttendance({required RepositoryQuery query}) async {
+    return HrAttendanceData(
+      records: List.unmodifiable(_attendanceRecords),
+      attendanceTrend: const [
+        HrTrendPoint(label: 'Mon', amountLakhs: 95.0, targetLakhs: 95.0),
+        HrTrendPoint(label: 'Tue', amountLakhs: 96.5, targetLakhs: 95.0),
+        HrTrendPoint(label: 'Wed', amountLakhs: 97.0, targetLakhs: 95.0),
+        HrTrendPoint(label: 'Thu', amountLakhs: 96.0, targetLakhs: 95.0),
+        HrTrendPoint(label: 'Fri', amountLakhs: 94.5, targetLakhs: 95.0),
+      ],
+      departmentBreakdown: const [
+        HrSegment(label: 'Academics', value: 82, percent: 96),
+        HrSegment(label: 'Transport', value: 12, percent: 92),
+        HrSegment(label: 'Administration', value: 18, percent: 98),
+        HrSegment(label: 'Finance', value: 8, percent: 97),
+      ],
+      summaryNote:
+          'Geo + face verification enabled for teachers — aligns with Teacher app TA-01 attendance flow.',
+    );
+  }
+
+  @override
+  Future<HrLeaveData> getLeave({required RepositoryQuery query}) async {
+    return const HrLeaveData(
+      requests: [
+        HrLeaveRequest(
+          id: 'lv_req_1',
+          employeeId: 'HR-EMP-108',
+          employeeName: 'Sunita Nair',
+          department: HrDepartment.academics,
+          leaveType: HrLeaveType.sick,
+          fromDate: '2026-06-06',
+          toDate: '2026-06-08',
+          days: 3,
+          status: HrLeaveStatus.pending,
+          approver: 'Rajesh Iyer',
+          reason: 'Medical leave',
+        ),
+        HrLeaveRequest(
+          id: 'lv_req_2',
+          employeeId: 'HR-EMP-102',
+          employeeName: 'Mrs. Rao',
+          department: HrDepartment.academics,
+          leaveType: HrLeaveType.casual,
+          fromDate: '2026-06-10',
+          toDate: '2026-06-10',
+          days: 1,
+          status: HrLeaveStatus.pending,
+          approver: 'Rajesh Iyer',
+          reason: 'Personal errand',
+        ),
+        HrLeaveRequest(
+          id: 'lv_req_3',
+          employeeId: 'HR-EMP-101',
+          employeeName: kMockTeacherName,
+          department: HrDepartment.academics,
+          leaveType: HrLeaveType.earned,
+          fromDate: '2026-05-20',
+          toDate: '2026-05-22',
+          days: 3,
+          status: HrLeaveStatus.approved,
+          approver: 'Rajesh Iyer',
+          reason: 'Family function',
+        ),
+        HrLeaveRequest(
+          id: 'lv_req_4',
+          employeeId: 'HR-EMP-107',
+          employeeName: 'Anil Verma',
+          department: HrDepartment.finance,
+          leaveType: HrLeaveType.earned,
+          fromDate: '2026-06-12',
+          toDate: '2026-06-13',
+          days: 2,
+          status: HrLeaveStatus.pending,
+          approver: 'Kavitha Menon',
+          reason: 'Travel',
+        ),
+        HrLeaveRequest(
+          id: 'lv_req_5',
+          employeeId: 'HR-EMP-104',
+          employeeName: 'Ramesh Kumar',
+          department: HrDepartment.transport,
+          leaveType: HrLeaveType.casual,
+          fromDate: '2026-05-15',
+          toDate: '2026-05-15',
+          days: 1,
+          status: HrLeaveStatus.approved,
+          approver: 'Kavitha Menon',
+          reason: 'Driver leave',
+        ),
+      ],
+      pendingCount: 3,
+      leaveByType: [
+        HrSegment(label: 'Casual', value: 12, percent: 35),
+        HrSegment(label: 'Sick', value: 8, percent: 24),
+        HrSegment(label: 'Earned', value: 14, percent: 41),
+      ],
+      integrationNote:
+          'Staff leave approvals sync with Teacher app TA-07 and Principal approval workflow.',
+    );
+  }
+
+  @override
+  Future<HrPayrollData> getPayroll({required RepositoryQuery query}) async {
+    return const HrPayrollData(
+      runs: [
+        HrPayrollRun(
+          id: 'pay_run_1',
+          period: 'May 2026',
+          employeeCount: 148,
+          grossAmount: '₹1.24 Cr',
+          netAmount: '₹1.08 Cr',
+          status: HrPayrollStatus.paid,
+          processedOn: '2026-05-31',
+        ),
+        HrPayrollRun(
+          id: 'pay_run_2',
+          period: 'June 2026',
+          employeeCount: 148,
+          grossAmount: '₹1.24 Cr',
+          netAmount: '₹1.08 Cr',
+          status: HrPayrollStatus.draft,
+          processedOn: '—',
+        ),
+      ],
+      entries: [
+        HrPayrollEntry(
+          id: 'pay_1',
+          employeeId: 'HR-EMP-101',
+          employeeName: kMockTeacherName,
+          department: HrDepartment.academics,
+          basicPay: '₹45,000',
+          allowances: '₹8,500',
+          deductions: '₹4,200',
+          netPay: '₹49,300',
+          status: HrPayrollStatus.paid,
+        ),
+        HrPayrollEntry(
+          id: 'pay_2',
+          employeeId: 'HR-EMP-102',
+          employeeName: 'Mrs. Rao',
+          department: HrDepartment.academics,
+          basicPay: '₹42,000',
+          allowances: '₹7,800',
+          deductions: '₹3,900',
+          netPay: '₹45,900',
+          status: HrPayrollStatus.paid,
+        ),
+        HrPayrollEntry(
+          id: 'pay_3',
+          employeeId: 'HR-EMP-104',
+          employeeName: 'Ramesh Kumar',
+          department: HrDepartment.transport,
+          basicPay: '₹28,000',
+          allowances: '₹4,500',
+          deductions: '₹2,100',
+          netPay: '₹30,400',
+          status: HrPayrollStatus.paid,
+        ),
+        HrPayrollEntry(
+          id: 'pay_4',
+          employeeId: 'HR-EMP-107',
+          employeeName: 'Anil Verma',
+          department: HrDepartment.finance,
+          basicPay: '₹38,000',
+          allowances: '₹6,200',
+          deductions: '₹3,500',
+          netPay: '₹40,700',
+          status: HrPayrollStatus.processed,
+        ),
+      ],
+      salaryTrend: [
+        HrTrendPoint(label: 'Jan', amountLakhs: 1.05, targetLakhs: 1.0),
+        HrTrendPoint(label: 'Feb', amountLakhs: 1.06, targetLakhs: 1.0),
+        HrTrendPoint(label: 'Mar', amountLakhs: 1.07, targetLakhs: 1.05),
+        HrTrendPoint(label: 'Apr', amountLakhs: 1.08, targetLakhs: 1.05),
+        HrTrendPoint(label: 'May', amountLakhs: 1.08, targetLakhs: 1.08),
+      ],
+      financeIntegrationNote:
+          'Salary disbursement posts to Finance collections ledger (FN-05 placeholder). Review in Finance module before bank transfer.',
+      financeRoute: RouteNames.financeCollections,
+    );
+  }
+
+  @override
+  Future<HrRecruitmentData> getRecruitment({required RepositoryQuery query}) async {
+    return const HrRecruitmentData(
+      candidates: [
+        HrCandidate(
+          id: 'cand_1',
+          name: 'Deepa Krishnan',
+          role: 'Physics Teacher',
+          department: HrDepartment.academics,
+          appliedOn: '2026-05-28',
+          stage: HrRecruitmentStage.interview,
+          experience: '6 years',
+          source: 'Referral',
+        ),
+        HrCandidate(
+          id: 'cand_2',
+          name: 'Vikram Singh',
+          role: 'Lab Assistant',
+          department: HrDepartment.academics,
+          appliedOn: '2026-06-01',
+          stage: HrRecruitmentStage.screening,
+          experience: '2 years',
+          source: 'Job portal',
+        ),
+        HrCandidate(
+          id: 'cand_3',
+          name: 'Meera Joshi',
+          role: 'Counselor',
+          department: HrDepartment.administration,
+          appliedOn: '2026-05-20',
+          stage: HrRecruitmentStage.selected,
+          experience: '4 years',
+          source: 'Campus drive',
+        ),
+        HrCandidate(
+          id: 'cand_4',
+          name: 'Arun Das',
+          role: 'Bus Driver',
+          department: HrDepartment.transport,
+          appliedOn: '2026-06-03',
+          stage: HrRecruitmentStage.applied,
+          experience: '8 years',
+          source: 'Walk-in',
+        ),
+        HrCandidate(
+          id: 'cand_5',
+          name: 'Lakshmi Reddy',
+          role: 'Accounts Assistant',
+          department: HrDepartment.finance,
+          appliedOn: '2026-04-15',
+          stage: HrRecruitmentStage.joined,
+          experience: '3 years',
+          source: 'Referral',
+        ),
+      ],
+      openPositions: 4,
+      pipelineCounts: [
+        HrSegment(label: 'Applied', value: 8, percent: 32),
+        HrSegment(label: 'Screening', value: 5, percent: 20),
+        HrSegment(label: 'Interview', value: 4, percent: 16),
+        HrSegment(label: 'Selected', value: 3, percent: 12),
+        HrSegment(label: 'Joined', value: 5, percent: 20),
+      ],
+      hiringTrend: [
+        HrTrendPoint(label: 'Q1', amountLakhs: 3, targetLakhs: 4),
+        HrTrendPoint(label: 'Q2', amountLakhs: 5, targetLakhs: 4),
+      ],
+    );
+  }
+
+  @override
+  Future<HrPerformanceData> getPerformance({required RepositoryQuery query}) async {
+    return const HrPerformanceData(
+      reviews: [
+        HrPerformanceReview(
+          id: 'rev_1',
+          employeeId: 'HR-EMP-101',
+          employeeName: kMockTeacherName,
+          department: HrDepartment.academics,
+          cycle: HrReviewCycle.q2,
+          rating: '4.6 / 5',
+          status: HrReviewStatus.inProgress,
+          reviewer: 'Rajesh Iyer',
+          dueDate: '2026-06-30',
+        ),
+        HrPerformanceReview(
+          id: 'rev_2',
+          employeeId: 'HR-EMP-102',
+          employeeName: 'Mrs. Rao',
+          department: HrDepartment.academics,
+          cycle: HrReviewCycle.q2,
+          rating: '4.2 / 5',
+          status: HrReviewStatus.completed,
+          reviewer: 'Rajesh Iyer',
+          dueDate: '2026-06-15',
+        ),
+        HrPerformanceReview(
+          id: 'rev_3',
+          employeeId: 'HR-EMP-103',
+          employeeName: 'Mr. Patel',
+          department: HrDepartment.academics,
+          cycle: HrReviewCycle.q2,
+          rating: '—',
+          status: HrReviewStatus.overdue,
+          reviewer: 'Rajesh Iyer',
+          dueDate: '2026-06-01',
+        ),
+        HrPerformanceReview(
+          id: 'rev_4',
+          employeeId: 'HR-EMP-105',
+          employeeName: 'Kavitha Menon',
+          department: HrDepartment.hr,
+          cycle: HrReviewCycle.annual,
+          rating: '4.8 / 5',
+          status: HrReviewStatus.completed,
+          reviewer: 'Rajesh Iyer',
+          dueDate: '2026-05-31',
+        ),
+      ],
+      ratingDistribution: [
+        HrSegment(label: 'Outstanding (4.5+)', value: 28, percent: 35),
+        HrSegment(label: 'Meets (3.5–4.4)', value: 42, percent: 52),
+        HrSegment(label: 'Needs improvement', value: 10, percent: 13),
+      ],
+      completionTrend: [
+        HrTrendPoint(label: 'Q1', amountLakhs: 88, targetLakhs: 90),
+        HrTrendPoint(label: 'Q2', amountLakhs: 72, targetLakhs: 90),
+      ],
+      managementInsight:
+          'Teacher performance scores feed Management MG-06 school performance dashboard.',
+    );
+  }
+
+  @override
+  Future<HrSettingsData> getSettings({required RepositoryQuery query}) async {
+    return const HrSettingsData(
+      defaultDepartment: HrDepartment.academics,
+      sections: [
+        HrSettingsSection(
+          id: 'attendance',
+          title: 'Attendance & verification',
+          items: [
+            HrSettingItem(
+              id: 'geo_fence',
+              label: 'Geo-fence radius',
+              value: '200 m',
+              description: 'Staff check-in boundary around campus',
+              editable: true,
+            ),
+            HrSettingItem(
+              id: 'face_verify',
+              label: 'Face verification',
+              value: 'Enabled for teachers',
+              description: 'Syncs with Teacher app TA-01 attendance',
+              editable: true,
+            ),
+          ],
+        ),
+        HrSettingsSection(
+          id: 'leave',
+          title: 'Leave policy',
+          items: [
+            HrSettingItem(
+              id: 'casual_days',
+              label: 'Casual leave quota',
+              value: '12 days / year',
+              description: 'Applies to teaching and non-teaching staff',
+              editable: true,
+            ),
+            HrSettingItem(
+              id: 'principal_approval',
+              label: 'Principal approval',
+              value: 'Required > 3 days',
+              description: 'Long leave routes to Principal workflow',
+              editable: false,
+            ),
+          ],
+        ),
+        HrSettingsSection(
+          id: 'payroll',
+          title: 'Payroll & Finance',
+          items: [
+            HrSettingItem(
+              id: 'pay_cycle',
+              label: 'Pay cycle',
+              value: 'Monthly (last working day)',
+              description: 'Posts to Finance FN-05 salary ledger placeholder',
+              editable: true,
+            ),
+            HrSettingItem(
+              id: 'bank_file',
+              label: 'Bank transfer file',
+              value: 'HDFC NEFT batch',
+              description: 'Export after Finance approval',
+              editable: false,
+            ),
+          ],
+        ),
+        HrSettingsSection(
+          id: 'integrations',
+          title: 'Module integrations',
+          items: [
+            HrSettingItem(
+              id: 'teacher_sync',
+              label: 'Teacher app sync',
+              value: 'Enabled',
+              description:
+                  'Priya Sharma, Mrs. Rao, Mr. Patel linked to Teacher profiles',
+              editable: true,
+            ),
+            HrSettingItem(
+              id: 'mgmt_kpi',
+              label: 'Management KPI feed',
+              value: 'Active',
+              description: 'Attendance and performance metrics to MG-01 / MG-06',
+              editable: false,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}

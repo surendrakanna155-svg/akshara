@@ -1,3 +1,6 @@
+import 'package:akshara_erp/core/security/erp_role.dart';
+import 'package:akshara_erp/core/security/rbac_service.dart';
+import 'package:akshara_erp/core/security/user_permissions.dart';
 import 'package:akshara_erp/features/admin/admin_navigation_provider.dart';
 import 'package:akshara_erp/features/admin/models/admin_nav_models.dart';
 import 'package:akshara_erp/router/route_names.dart';
@@ -9,13 +12,15 @@ void main() {
     test('superAdmin sees all ERP module groups', () {
       final container = ProviderContainer(
         overrides: [
-          adminPersonaProvider.overrideWithValue(AdminPersona.superAdmin),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
         ],
       );
       addTearDown(container.dispose);
 
       final destinations = container.read(adminNavDestinationsProvider);
-      expect(destinations, hasLength(8));
+      expect(destinations, hasLength(12));
       expect(
         destinations.map((d) => d.route).toList(),
         [
@@ -23,10 +28,14 @@ void main() {
           RouteNames.admissionsDashboard,
           RouteNames.financeDashboard,
           RouteNames.sisDashboard,
-          RouteNames.hr,
-          RouteNames.management,
-          RouteNames.transport,
-          RouteNames.hostel,
+          RouteNames.hrDashboard,
+          RouteNames.managementDashboard,
+          RouteNames.transportDashboard,
+          RouteNames.hostelDashboard,
+          RouteNames.libraryDashboard,
+          RouteNames.inventoryDashboard,
+          RouteNames.alumniDashboard,
+          RouteNames.controlCenterDashboard,
         ],
       );
     });
@@ -34,7 +43,9 @@ void main() {
     test('financeAdmin sees finance and admin hub only', () {
       final container = ProviderContainer(
         overrides: [
-          adminPersonaProvider.overrideWithValue(AdminPersona.financeAdmin),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -45,12 +56,15 @@ void main() {
       expect(routes, contains(RouteNames.financeDashboard));
       expect(routes, isNot(contains(RouteNames.admissionsDashboard)));
       expect(routes, isNot(contains(RouteNames.hr)));
+      expect(routes, isNot(contains(RouteNames.controlCenterDashboard)));
     });
 
-    test('counselor sees admissions modules', () {
+    test('admissionsCounselor sees admissions and SIS modules', () {
       final container = ProviderContainer(
         overrides: [
-          adminPersonaProvider.overrideWithValue(AdminPersona.counselor),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -60,6 +74,26 @@ void main() {
       expect(routes, contains(RouteNames.admissionsDashboard));
       expect(routes, contains(RouteNames.sisDashboard));
       expect(routes, isNot(contains(RouteNames.financeDashboard)));
+      expect(routes, isNot(contains(RouteNames.controlCenterDashboard)));
+    });
+
+    test('principal sees admissions, finance, SIS, and management', () {
+      final container = ProviderContainer(
+        overrides: [
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final routes =
+          container.read(adminNavDestinationsProvider).map((d) => d.route);
+      expect(routes, contains(RouteNames.admissionsDashboard));
+      expect(routes, contains(RouteNames.financeDashboard));
+      expect(routes, contains(RouteNames.sisDashboard));
+      expect(routes, contains(RouteNames.managementDashboard));
+      expect(routes, isNot(contains(RouteNames.controlCenterDashboard)));
     });
   });
 
@@ -79,5 +113,4 @@ void main() {
       expect(crumbs.last.label, 'Admissions');
     });
   });
-
 }

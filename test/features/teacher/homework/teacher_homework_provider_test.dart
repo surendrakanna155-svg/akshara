@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('teacherHomework providers', () {
-    test('teacherHomeworkAssignmentsProvider exposes mock assignments', () {
+    test('teacherHomeworkAssignmentsProvider exposes mock assignments', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(assignments.first.pendingCount, greaterThan(0));
     });
 
-    test('teacherHomeworkProvider tracks selected assignment', () {
+    test('teacherHomeworkProvider tracks selected assignment', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -28,7 +28,7 @@ void main() {
       expect(selected?.classLabel, '9-B');
     });
 
-    test('teacherHomeworkEmptyProvider clears assignments', () {
+    test('teacherHomeworkEmptyProvider clears assignments', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -39,7 +39,7 @@ void main() {
       expect(container.read(teacherHomeworkProvider), isNull);
     });
 
-    test('assignments include pending and reviewed submissions', () {
+    test('assignments include pending and reviewed submissions', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

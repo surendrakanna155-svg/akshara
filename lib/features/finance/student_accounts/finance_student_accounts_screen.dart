@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
@@ -41,9 +40,7 @@ class _FinanceStudentAccountsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(financeStudentAccountsLoadingProvider);
-    final isError = ref.watch(financeStudentAccountsErrorProvider);
-    final isEmpty = ref.watch(financeStudentAccountsEmptyProvider);
+    final viewState = ref.watch(financeStudentAccountsViewStateProvider);
     final accounts = ref.watch(financeFilteredStudentAccountsProvider);
     final selected = ref.watch(financeSelectedStudentAccountProvider);
     final isMobile = AdminLayout.isMobile(context);
@@ -71,67 +68,67 @@ class _FinanceStudentAccountsScreenState
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-              child: AksharaLoadingState(
-                semanticLabel: 'Loading student fee accounts',
-              ),
-            )
-          else if (isError)
-            const AksharaErrorState(
-              message: 'Unable to load student fee accounts.',
-            )
-          else if (isEmpty || accounts.isEmpty)
-            const AksharaEmptyState(
-              message: 'No student fee accounts match your search.',
-              icon: Icons.account_circle_outlined,
-            )
-          else if (isMobile)
-            Column(
-              children: [
-                for (final account in accounts) ...[
-                  _AccountListTile(
-                    account: account,
-                    selected: account.id == selected?.id,
-                    onTap: () => ref
-                        .read(financeSelectedAccountIdProvider.notifier)
-                        .state = account.id,
+          FinanceAsyncBody<List<StudentFeeAccount>>(
+            state: viewState,
+            loadingLabel: 'Loading student fee accounts',
+            emptyMessage: 'No student fee accounts match your search.',
+            emptyIcon: Icons.account_circle_outlined,
+            onRetry: () =>
+                retryFinanceFuture(ref, financeStudentAccountsFutureProvider),
+            builder: (_) {
+              if (accounts.isEmpty) {
+                return const AksharaEmptyState(
+                  message: 'No student fee accounts match your search.',
+                  icon: Icons.account_circle_outlined,
+                );
+              }
+              if (isMobile) {
+                return Column(
+                  children: [
+                    for (final account in accounts) ...[
+                      _AccountListTile(
+                        account: account,
+                        selected: account.id == selected?.id,
+                        onTap: () => ref
+                            .read(financeSelectedAccountIdProvider.notifier)
+                            .state = account.id,
+                      ),
+                      const SizedBox(height: AksharaSpacing.s2),
+                    ],
+                    if (selected != null) ...[
+                      const SizedBox(height: AksharaSpacing.s4),
+                      _AccountSummaryPanel(account: selected),
+                    ],
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: _AccountsList(
+                      accounts: accounts,
+                      selectedId: selected?.id,
+                      onSelect: (id) => ref
+                          .read(financeSelectedAccountIdProvider.notifier)
+                          .state = id,
+                    ),
                   ),
-                  const SizedBox(height: AksharaSpacing.s2),
-                ],
-                if (selected != null) ...[
-                  const SizedBox(height: AksharaSpacing.s4),
-                  _AccountSummaryPanel(account: selected),
-                ],
-              ],
-            )
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _AccountsList(
-                    accounts: accounts,
-                    selectedId: selected?.id,
-                    onSelect: (id) => ref
-                        .read(financeSelectedAccountIdProvider.notifier)
-                        .state = id,
+                  const SizedBox(width: AksharaSpacing.s6),
+                  Expanded(
+                    flex: 3,
+                    child: selected == null
+                        ? const AksharaEmptyState(
+                            message: 'Select a student fee account.',
+                            icon: Icons.account_balance_outlined,
+                          )
+                        : _AccountSummaryPanel(account: selected),
                   ),
-                ),
-                const SizedBox(width: AksharaSpacing.s6),
-                Expanded(
-                  flex: 3,
-                  child: selected == null
-                      ? const AksharaEmptyState(
-                          message: 'Select a student fee account.',
-                          icon: Icons.account_balance_outlined,
-                        )
-                      : _AccountSummaryPanel(account: selected),
-                ),
-              ],
-            ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );

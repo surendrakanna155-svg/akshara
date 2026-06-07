@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('parentNoticesProvider', () {
-    test('returns mock notices for active child', () {
+    test('returns mock notices for active child', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(data.notices, isNotEmpty);
     });
 
-    test('filters urgent notices', () {
+    test('filters urgent notices', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -28,7 +28,7 @@ void main() {
       expect(items.every((item) => item.isUrgent), isTrue);
     });
 
-    test('parentNoticesEmptyProvider clears list', () {
+    test('parentNoticesEmptyProvider clears list', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

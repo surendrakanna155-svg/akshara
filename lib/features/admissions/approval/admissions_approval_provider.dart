@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/providers/repository_future.dart';
+
 import '../../../core/repositories/repository_providers.dart';
+import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 
 final admissionsApprovalLoadingProvider = StateProvider<bool>((ref) => false);
@@ -11,11 +15,29 @@ final admissionsSelectedApprovalIdProvider = StateProvider<String?>(
   (ref) => null,
 );
 
+final admissionsApprovalQueueFutureProvider = FutureProvider<List<ApprovalQueueItem>>((ref) async {
+return ref.read(admissionsRepositoryProvider).getApprovalQueue(query: ref.watch(repositoryQueryProvider));
+});
+
 final admissionsApprovalQueueProvider = Provider<List<ApprovalQueueItem>>((ref) {
-  if (ref.watch(admissionsApprovalLoadingProvider)) return const [];
-  if (ref.watch(admissionsApprovalErrorProvider)) return const [];
-  if (ref.watch(admissionsApprovalEmptyProvider)) return const [];
-  return ref.read(admissionsRepositoryProvider).getApprovalQueue();
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(admissionsApprovalQueueFutureProvider),
+    manualLoading: ref.watch(admissionsApprovalLoadingProvider),
+    manualError: ref.watch(admissionsApprovalErrorProvider),
+    manualEmpty: ref.watch(admissionsApprovalEmptyProvider),
+  ) ?? const [];
+});
+
+final admissionsApprovalViewStateProvider =
+    Provider<AdmissionsViewState<List<ApprovalQueueItem>>>((ref) {
+  return resolveAdmissionsAsync(
+    ref.watch(admissionsApprovalQueueFutureProvider),
+    forceLoading: ref.watch(admissionsApprovalLoadingProvider),
+    forceError: ref.watch(admissionsApprovalErrorProvider),
+    forceEmpty: ref.watch(admissionsApprovalEmptyProvider),
+    isDataEmpty: (queue) => queue.isEmpty,
+  );
 });
 
 final admissionsApprovalReviewProvider =

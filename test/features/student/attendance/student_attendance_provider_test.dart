@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('studentAttendance providers', () {
-    test('studentAttendanceProvider exposes monthly data for Ravi Kumar', () {
+    test('studentAttendanceProvider exposes monthly data for Ravi Kumar', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(data.kpi.attendancePercent, greaterThan(0));
     });
 
-    test('studentAttendanceMonthProvider changes visible month', () {
+    test('studentAttendanceMonthProvider changes visible month', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -27,7 +27,7 @@ void main() {
       expect(data.month.month, 5);
     });
 
-    test('studentAttendanceInsightProvider derives AI message', () {
+    test('studentAttendanceInsightProvider derives AI message', () async {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 

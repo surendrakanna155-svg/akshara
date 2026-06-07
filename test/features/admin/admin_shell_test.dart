@@ -1,4 +1,7 @@
 import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
+import 'package:akshara_erp/core/security/erp_role.dart';
+import 'package:akshara_erp/features/auth/auth_claims.dart';
+import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/admin/admin_navigation_rail.dart';
 import 'package:akshara_erp/features/admin/admin_shell.dart';
 import 'package:akshara_erp/features/admin/models/admin_nav_models.dart';
@@ -10,6 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/auth_test_overrides.dart';
 
 void useViewport(WidgetTester tester, Size size) {
   tester.view.physicalSize = size;
@@ -57,6 +62,15 @@ Future<void> pumpAdminShell(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(prefs),
+        authStateOverride(
+          AuthState(
+            status: AuthStatus.authenticated,
+            phoneNumber: '9876543210',
+            displayName: 'ERP Staff',
+            role: UserRole.staff,
+            claims: AuthClaims.demoForRole(erpRole: ErpRole.superAdmin),
+          ),
+        ),
       ],
       child: MaterialApp.router(
         theme: AksharaAppTheme.light(),

@@ -220,8 +220,9 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                             : const Text('Verify & continue'),
                       ),
                       const SizedBox(height: AksharaSpacing.s4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Text(
                             "Didn't receive the code?",
