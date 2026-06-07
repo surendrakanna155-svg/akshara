@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'receipt_models.dart';
 
 /// Search query for receipt list.
@@ -11,18 +14,24 @@ final parentReceiptFilterProvider = StateProvider<ReceiptFilter>(
   (ref) => ReceiptFilter.all,
 );
 
-/// Loading flag for API integration.
 final parentReceiptsLoadingProvider = StateProvider<bool>((ref) => false);
-
-/// Error flag for API integration.
 final parentReceiptsErrorProvider = StateProvider<bool>((ref) => false);
-
-/// Empty-state toggle.
 final parentReceiptsEmptyProvider = StateProvider<bool>((ref) => false);
 
-final _parentReceiptsBaseProvider = Provider<List<FeeReceipt>>(
-  (ref) => _mockReceipts(),
-);
+final parentReceiptsFutureProvider = FutureProvider<List<FeeReceipt>>((ref) async {
+  return ref.read(parentRepositoryProvider).getReceipts(query: ref.watch(repositoryQueryProvider));
+});
+
+final _parentReceiptsBaseProvider = Provider<List<FeeReceipt>>((ref) {
+  final items = watchRepositoryFuture(
+    ref,
+    ref.watch(parentReceiptsFutureProvider),
+    manualLoading: ref.watch(parentReceiptsLoadingProvider),
+    manualError: ref.watch(parentReceiptsErrorProvider),
+    manualEmpty: ref.watch(parentReceiptsEmptyProvider),
+  );
+  return items ?? ref.watch(parentReceiptsFutureProvider).value ?? const [];
+});
 
 /// Filtered and searched receipts.
 final parentReceiptsListProvider = Provider<List<FeeReceipt>>((ref) {
@@ -98,74 +107,4 @@ class ParentReceiptsData {
   final String childClass;
   final List<FeeReceipt> receipts;
   final int unreadNotifications;
-}
-
-List<FeeReceipt> _mockReceipts() {
-  return const [
-    FeeReceipt(
-      id: 'rcpt_term_1',
-      receiptNumber: 'APS-2026-TERM_1',
-      title: 'Term 1 — Full payment',
-      dateLabel: '15 Apr 2026',
-      amount: 8000,
-      paymentMethod: 'UPI',
-      statusLabel: 'Paid',
-      childName: 'Ravi Kumar',
-      childClass: '8-A',
-      category: 'term',
-      lineItems: [
-        ReceiptLineItem(label: 'Tuition', amount: 6500),
-        ReceiptLineItem(label: 'Transport', amount: 1000),
-        ReceiptLineItem(label: 'Activity', amount: 500),
-      ],
-    ),
-    FeeReceipt(
-      id: 'rcpt_ph_2',
-      receiptNumber: 'APS-2026-ADM-001',
-      title: 'Admission fee',
-      dateLabel: '2 Mar 2026',
-      amount: 5000,
-      paymentMethod: 'Net Banking',
-      statusLabel: 'Paid',
-      childName: 'Ravi Kumar',
-      childClass: '8-A',
-      category: 'admission',
-      lineItems: [
-        ReceiptLineItem(label: 'Admission fee', amount: 4500),
-        ReceiptLineItem(label: 'Registration', amount: 500),
-      ],
-    ),
-    FeeReceipt(
-      id: 'rcpt_ph_3',
-      receiptNumber: 'APS-2026-TRN-Q1',
-      title: 'Transport — Q1',
-      dateLabel: '10 Jan 2026',
-      amount: 1500,
-      paymentMethod: 'Card',
-      statusLabel: 'Paid',
-      childName: 'Ravi Kumar',
-      childClass: '8-A',
-      category: 'transport',
-      lineItems: [
-        ReceiptLineItem(label: 'Bus route A', amount: 1200),
-        ReceiptLineItem(label: 'Fuel surcharge', amount: 300),
-      ],
-    ),
-    FeeReceipt(
-      id: 'rcpt_ph_4',
-      receiptNumber: 'APS-2025-ACT-014',
-      title: 'Activity kit',
-      dateLabel: '5 Dec 2025',
-      amount: 800,
-      paymentMethod: 'UPI',
-      statusLabel: 'Paid',
-      childName: 'Ravi Kumar',
-      childClass: '8-A',
-      category: 'term',
-      lineItems: [
-        ReceiptLineItem(label: 'Sports kit', amount: 500),
-        ReceiptLineItem(label: 'Lab apron', amount: 300),
-      ],
-    ),
-  ];
 }

@@ -57,13 +57,13 @@ void main() {
       final mapped = const FinanceMapper().toCollections(
         FinanceCollectionsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final payment in mockData) _fixtures.collectionItem(payment),
+            for (final payment in mockData.items) _fixtures.collectionItem(payment),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.receiptNumber, mockData.first.receiptNumber);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.receiptNumber, mockData.items.first.receiptNumber);
     });
 
     test('getDailySummary DTO mapping matches mock output', () async {
@@ -212,7 +212,7 @@ void main() {
 
     test('mock repository exposes all FinanceRepository methods', () async {
       expect(await mockRepo.getDashboard(query: kQuery), isNotNull);
-      expect(await mockRepo.getCollections(query: kQuery), isNotEmpty);
+      expect((await mockRepo.getCollections(query: kQuery)).items, isNotEmpty);
       expect(await mockRepo.getDailySummary(query: kQuery), isNotNull);
       expect(
         await mockRepo.getFeeStructures(
@@ -248,7 +248,7 @@ void main() {
         }
         if (options.path.endsWith('/collections')) {
           return _fixtures.listEnvelope([
-            for (final payment in mockCollections)
+            for (final payment in mockCollections.items)
               _fixtures.collectionItem(payment),
           ]);
         }
@@ -263,8 +263,8 @@ void main() {
       final collections = await api.getCollections(query: kQuery);
 
       expect(dashboard.kpis.length, mockDashboard.kpis.length);
-      expect(collections.length, mockCollections.length);
-      expect(collections.first.id, mockCollections.first.id);
+      expect(collections.items.length, mockCollections.items.length);
+      expect(collections.items.first.id, mockCollections.items.first.id);
     });
   });
 }

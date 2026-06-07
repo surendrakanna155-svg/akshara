@@ -23,6 +23,9 @@ import 'library/api_library_repository.dart';
 import 'library/remote/library_remote_datasource.dart';
 import 'control_center/api_control_center_repository.dart';
 import 'control_center/remote/control_center_remote_datasource.dart';
+import 'parent/api_parent_repository.dart';
+import 'teacher/api_teacher_repository.dart';
+import 'student/api_student_repository.dart';
 
 final admissionsRemoteDataSourceProvider = Provider<AdmissionsRemoteDataSource>(
   (ref) => AdmissionsRemoteDataSource(ref.watch(dioProvider)),
@@ -132,4 +135,16 @@ final apiControlCenterRepositoryProvider =
   (ref) => ApiControlCenterRepository(
     remote: ref.watch(controlCenterRemoteDataSourceProvider),
   ),
+);
+
+final apiParentRepositoryProvider = Provider<ApiParentRepository>(
+  (ref) => ApiParentRepository(),
+);
+
+final apiTeacherRepositoryProvider = Provider<ApiTeacherRepository>(
+  (ref) => ApiTeacherRepository(),
+);
+
+final apiStudentRepositoryProvider = Provider<ApiStudentRepository>(
+  (ref) => ApiStudentRepository(),
 );

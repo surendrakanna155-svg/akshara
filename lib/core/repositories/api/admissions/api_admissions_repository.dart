@@ -1,4 +1,5 @@
 import '../../interfaces/admissions_repository.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/admissions/admissions_models.dart';
 import '../../../../features/admissions/admissions_requests.dart';
@@ -25,9 +26,16 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<List<AdmissionsLead>> getLeads({required RepositoryQuery query}) async {
+  Future<PaginatedResult<AdmissionsLead>> getLeads({
+    required RepositoryQuery query,
+  }) async {
     final dto = await _remote.fetchLeads(query: query);
-    return _mapper.toLeads(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toLeads(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

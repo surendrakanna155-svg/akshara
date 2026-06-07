@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
+
 /// Installment payment state (PA-03 §8).
 enum FeeInstallmentStatus { paid, due, upcoming }
 
@@ -274,13 +278,27 @@ String formatInr(int amount) {
   return buffer.toString();
 }
 
-/// Mock fees payload for [ParentFeesScreen].
-final parentFeesProvider = Provider<ParentFeesData>(
-  (ref) => ParentFeesData.mock(),
-);
+final parentFeesLoadingProvider = StateProvider<bool>((ref) => false);
+final parentFeesErrorProvider = StateProvider<bool>((ref) => false);
+final parentFeesEmptyProvider = StateProvider<bool>((ref) => false);
+
+final parentFeesFutureProvider = FutureProvider<ParentFeesData>((ref) async {
+  return ref.read(parentRepositoryProvider).getFees(query: ref.watch(repositoryQueryProvider));
+});
+
+/// Fees payload for [ParentFeesScreen].
+final parentFeesProvider = Provider<ParentFeesData>((ref) {
+  final data = watchRepositoryFuture(
+    ref,
+    ref.watch(parentFeesFutureProvider),
+    manualLoading: ref.watch(parentFeesLoadingProvider),
+    manualError: ref.watch(parentFeesErrorProvider),
+    manualEmpty: ref.watch(parentFeesEmptyProvider),
+  );
+  return data ??
+      ref.watch(parentFeesFutureProvider).value ??
+      ParentFeesData.mock();
+});
 
 /// Index of expanded accordion panel (PA-03 expanded index 0).
 final feesAccordionExpandedProvider = StateProvider<int?>((ref) => 0);
-
-/// Reserved for API loading state.
-final parentFeesLoadingProvider = StateProvider<bool>((ref) => false);

@@ -1,14 +1,16 @@
 import 'package:akshara_erp/features/parent/events/events_models.dart';
 import 'package:akshara_erp/features/parent/events/parent_events_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('parentEventsProvider', () {
     test('returns upcoming and past events', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentEventsFutureProvider.future);
       final data = container.read(parentEventsProvider);
 
       expect(data.childName, 'Ravi Kumar');
@@ -17,7 +19,7 @@ void main() {
     });
 
     test('parentEventSectionProvider defaults to upcoming', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       expect(
@@ -27,7 +29,7 @@ void main() {
     });
 
     test('parentEventsEmptyProvider clears both sections', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(parentEventsEmptyProvider.notifier).state = true;

@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'homework_models.dart';
 
 final studentHomeworkFilterProvider = StateProvider<StudentHomeworkFilter>(
@@ -10,9 +13,22 @@ final studentHomeworkLoadingProvider = StateProvider<bool>((ref) => false);
 final studentHomeworkErrorProvider = StateProvider<bool>((ref) => false);
 final studentHomeworkEmptyProvider = StateProvider<bool>((ref) => false);
 
-final _studentHomeworkItemsProvider = Provider<List<StudentHomeworkItem>>(
-  (ref) => _mockItems(),
-);
+final studentHomeworkFutureProvider = FutureProvider<List<StudentHomeworkItem>>((ref) async {
+  return ref.read(studentRepositoryProvider).getHomeworkItems(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+final _studentHomeworkItemsProvider = Provider<List<StudentHomeworkItem>>((ref) {
+  final items = watchRepositoryFuture(
+    ref,
+    ref.watch(studentHomeworkFutureProvider),
+    manualLoading: ref.watch(studentHomeworkLoadingProvider),
+    manualError: ref.watch(studentHomeworkErrorProvider),
+    manualEmpty: ref.watch(studentHomeworkEmptyProvider),
+  );
+  return items ?? ref.watch(studentHomeworkFutureProvider).value ?? const [];
+});
 
 final studentHomeworkItemsProvider = Provider<List<StudentHomeworkItem>>((ref) {
   if (ref.watch(studentHomeworkEmptyProvider)) return const [];
@@ -43,41 +59,3 @@ final studentHomeworkProvider = Provider<StudentHomeworkData>((ref) {
     items: ref.watch(studentHomeworkItemsProvider),
   );
 });
-
-List<StudentHomeworkItem> _mockItems() {
-  return const [
-    StudentHomeworkItem(
-      id: 'hw-1',
-      subject: 'Mathematics',
-      title: 'Algebra worksheet — Exercise 5.2',
-      dueLabel: 'Due tomorrow · 8 Jun',
-      status: StudentHomeworkStatus.pending,
-      attachmentLabel: 'worksheet_5_2.pdf',
-    ),
-    StudentHomeworkItem(
-      id: 'hw-2',
-      subject: 'Science',
-      title: 'Photosynthesis lab report',
-      dueLabel: 'Due today · Overdue',
-      status: StudentHomeworkStatus.overdue,
-      attachmentLabel: 'lab_template.docx',
-    ),
-    StudentHomeworkItem(
-      id: 'hw-3',
-      subject: 'English',
-      title: 'Essay — My favourite book',
-      dueLabel: 'Submitted 4 Jun',
-      status: StudentHomeworkStatus.submitted,
-      submittedLabel: 'Submitted 4 Jun · 7:20 PM',
-      attachmentLabel: 'essay_draft.pdf',
-    ),
-    StudentHomeworkItem(
-      id: 'hw-4',
-      subject: 'Hindi',
-      title: 'Poem memorisation recording',
-      dueLabel: 'Submitted 2 Jun',
-      status: StudentHomeworkStatus.submitted,
-      submittedLabel: 'Submitted 2 Jun · 6:10 PM',
-    ),
-  ];
-}

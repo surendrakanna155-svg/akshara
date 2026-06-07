@@ -53,13 +53,13 @@ void main() {
       final mapped = _mapper.toStudents(
         SisStudentsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final student in mockData) _fixtures.studentItem(student),
+            for (final student in mockData.items) _fixtures.studentItem(student),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.admissionNumber, mockData.first.admissionNumber);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.admissionNumber, mockData.items.first.admissionNumber);
     });
 
     test('getStudentProfile DTO mapping matches mock output', () async {
@@ -108,7 +108,7 @@ void main() {
 
     test('mock repository exposes all five methods', () async {
       expect(await mockRepo.getDashboard(query: kQuery), isNotNull);
-      expect(await mockRepo.getStudents(query: kQuery), isNotEmpty);
+      expect((await mockRepo.getStudents(query: kQuery)).items, isNotEmpty);
       expect(
         await mockRepo.getStudentProfile(
           query: kQuery,

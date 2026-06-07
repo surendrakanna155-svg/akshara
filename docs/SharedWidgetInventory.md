@@ -23,6 +23,8 @@
 | `AksharaContextChip` | 3 | Teacher, Student app bars | Context labels |
 | `AksharaPeriodPill` | 2 | Timetable rows | Period indicators |
 | `AksharaChildSelectorChip` | 1 | Parent app bar | Child switcher |
+| `AksharaVirtualizedDataTable` | 3 | Admissions, Finance, SIS | Paginated virtualized tables (v3.1) |
+| `AksharaPaginationBar` | 3 | Admissions, Finance, SIS | Page controls for paginated lists (v3.1) |
 
 ---
 

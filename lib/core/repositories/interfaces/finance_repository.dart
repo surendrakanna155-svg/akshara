@@ -1,11 +1,12 @@
 import '../../../features/finance/finance_models.dart';
 import '../../../features/finance/finance_requests.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
 
 /// Contract for finance data access (mock or API).
 abstract class FinanceRepository {
   Future<FinanceDashboardData> getDashboard({required RepositoryQuery query});
-  Future<List<CollectionPayment>> getCollections({required RepositoryQuery query});
+  Future<PaginatedResult<CollectionPayment>> getCollections({required RepositoryQuery query});
   Future<DailyCollectionSummary> getDailySummary({required RepositoryQuery query});
   Future<List<FinanceFeeStructure>> getFeeStructures({required RepositoryQuery query, required String academicYear});
   Future<List<String>> getAcademicYears({required RepositoryQuery query});

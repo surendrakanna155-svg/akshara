@@ -1,8 +1,9 @@
 # Akshara ERP — Cursor Autonomous Workflow
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Last updated:** June 2026  
-**Purpose:** Step-by-step procedure for every Cursor Agent session. Follow this document at the start of every run — no ad-hoc prompts required.
+**Purpose:** Step-by-step procedure for every Cursor Agent session. Follow this document at the start of every run — no ad-hoc prompts required.  
+**Default execution depth:** 3 milestones per autonomous session (see §11).
 
 ---
 
@@ -316,3 +317,85 @@ Before ending any Cursor session:
 | Tag a release | `docs/ReleaseGovernance.md` | G |
 | Understand architecture rules | `docs/ProjectCharter.md` | All |
 | Run the release process | This document | G |
+| Run multi-milestone autonomous session | This document §11 | Lead + G |
+
+---
+
+## 11. Autonomous Multi-Milestone Execution
+
+**Default execution depth = 3 milestones.**
+
+An autonomous session must attempt to complete up to three consecutive roadmap milestones before stopping. Do not request a new prompt between milestones within the execution depth.
+
+### After Each Milestone
+
+When a milestone is complete, run this loop **before** stopping or continuing:
+
+1. Update `docs/Roadmap.md` (milestone status → ✅ Complete)
+2. Update `docs/TechnicalDebtRegister.md` (resolve/add debt items)
+3. Update `docs/ProductionReadinessChecklist.md` (check applicable items)
+4. Generate `docs/Releases/v{X.Y}-{Name}.md`
+5. Generate `docs/ArchitectureReview/v{X.Y}-{Area}-Audit.md` (≥1)
+6. Run `flutter analyze` — **must be 0 issues**
+7. Run `flutter test` — **must be all passing**
+
+Fix all analyzer and test failures before proceeding.
+
+### Continue Automatically
+
+If validation succeeds:
+
+1. Re-read `docs/Roadmap.md`
+2. Determine the next highest-priority unfinished milestone
+3. Assign agents per §2
+4. Execute the next milestone
+5. Repeat until execution depth is reached or a stop condition applies
+
+**Do not stop after a single milestone** unless a stop condition is met.
+
+### Stop Conditions
+
+Cursor may stop only when **one** of the following is true:
+
+| ID | Condition | Example |
+|----|-----------|---------|
+| **A** | Execution depth reached | Three milestones completed in the session |
+| **B** | Blocking dependency prevents progress | Backend endpoint unavailable; required spec missing |
+| **C** | Production-risk issue requires human review | Security regression, tenant isolation breach, data-loss risk, missing credentials |
+
+**Production-risk examples (Condition C):**
+
+- Security regression (auth bypass, token leak, RBAC bypass)
+- Tenant isolation issue (cross-tenant data in mock or API path)
+- Data-loss risk (audit queue drop, destructive migration)
+- Missing specification (OpenAPI/backend contract undefined for required endpoint)
+- Missing credentials (staging gate requires secrets not available)
+- Backend dependency unavailable (live API required but not deployed)
+
+When stopping under **B** or **C**, mark the milestone **PARTIAL** or **BLOCKED** in Roadmap.md and document the blocker in the completion report.
+
+### Multi-Agent Execution Rules
+
+Execute agents **in parallel** whenever file ownership allows (no overlapping writes):
+
+| Agent | Ownership |
+|-------|-----------|
+| **A** | APIs, repositories, DTOs, mappers, remote datasources, OpenAPI |
+| **B** | ERP modules (Admissions, Finance, SIS, HR, Transport, etc.) |
+| **C** | Mobile applications (Parent, Teacher, Student) |
+| **D** | Security, RBAC, tenant, audit, permissions |
+| **E** | Tests, coverage, validation, contract tests |
+| **F** | Documentation, release notes, audits, inventories |
+| **G** | Release management, analyze/test gates, completion reports |
+
+Parallel rules:
+
+- Spawn sub-agents only when directories do not overlap
+- After parallel work → Agent G integrates and runs full gates
+- Orchestrator fixes compile/test conflicts only
+
+### Completion Requirement
+
+- Deliver a **per-milestone completion report** (see §6) after each milestone
+- Deliver a **combined summary** after the full execution depth
+- Never continue to the next milestone with failing `flutter analyze` or `flutter test`

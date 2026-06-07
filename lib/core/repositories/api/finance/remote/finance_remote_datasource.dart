@@ -326,6 +326,7 @@ class FinanceRemoteDataSource {
       'tenantId': query.tenantId,
       if (query.schoolId != null) 'schoolId': query.schoolId,
       if (query.organizationId != null) 'organizationId': query.organizationId,
+      ...query.paginationQueryParams(),
     };
   }
 

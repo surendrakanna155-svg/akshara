@@ -1,14 +1,16 @@
 import 'package:akshara_erp/features/parent/receipts/parent_receipts_provider.dart';
 import 'package:akshara_erp/features/parent/receipts/receipt_models.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('parentReceiptsProvider', () {
     test('returns mock receipts list', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentReceiptsFutureProvider.future);
       final data = container.read(parentReceiptsDataProvider);
 
       expect(data.receipts, isNotEmpty);
@@ -16,9 +18,10 @@ void main() {
     });
 
     test('filters receipts by category', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentReceiptsFutureProvider.future);
       container.read(parentReceiptFilterProvider.notifier).state =
           ReceiptFilter.transport;
       final items = container.read(parentReceiptsListProvider);
@@ -28,9 +31,10 @@ void main() {
     });
 
     test('search filters by receipt number', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentReceiptsFutureProvider.future);
       container.read(parentReceiptSearchProvider.notifier).state = 'ADM';
       final items = container.read(parentReceiptsListProvider);
 
@@ -39,9 +43,10 @@ void main() {
     });
 
     test('parentReceiptDetailProvider resolves receipt by id', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentReceiptsFutureProvider.future);
       final receipt = container.read(parentReceiptDetailProvider('rcpt_term_1'));
 
       expect(receipt, isNotNull);

@@ -4,6 +4,7 @@ import '../../../features/finance/finance_models.dart';
 import '../../../features/finance/finance_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/finance_repository.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
 
 /// In-memory finance data for MVP and Phase 2 screens.
@@ -126,7 +127,14 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<List<CollectionPayment>> getCollections({required RepositoryQuery query}) async => _payments;
+  Future<PaginatedResult<CollectionPayment>> getCollections({
+    required RepositoryQuery query,
+  }) async =>
+      PaginatedResult.fromItems(
+        _payments,
+        page: query.page,
+        pageSize: query.pageSize,
+      );
 
   @override
   Future<DailyCollectionSummary> getDailySummary({required RepositoryQuery query}) async {

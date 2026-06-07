@@ -1,13 +1,15 @@
 import 'package:akshara_erp/features/teacher/timetable/teacher_timetable_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('teacherTimetable providers', () {
     test('teacherTimetableProvider exposes weekly schedule', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(teacherTimetableFutureProvider.future);
       final data = container.read(teacherTimetableProvider);
 
       expect(data.teacherName, 'Priya Sharma');
@@ -16,9 +18,10 @@ void main() {
     });
 
     test('teacherTimetableDayProvider changes selected day', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(teacherTimetableFutureProvider.future);
       container.read(teacherTimetableDayProvider.notifier).state = 'mon';
       final data = container.read(teacherTimetableProvider);
 
@@ -27,7 +30,7 @@ void main() {
     });
 
     test('teacherTimetableEmptyProvider clears schedule days', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(teacherTimetableEmptyProvider.notifier).state = true;

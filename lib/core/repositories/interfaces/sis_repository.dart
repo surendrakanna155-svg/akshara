@@ -1,12 +1,13 @@
 import '../../../features/sis/sis_models.dart';
 import '../../../features/sis/sis_requests.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
 
 /// Contract for student SIS data access (mock or API).
 abstract class SisRepository {
   Future<SisDashboardData> getDashboard({required RepositoryQuery query});
 
-  Future<List<SisStudent>> getStudents({required RepositoryQuery query});
+  Future<PaginatedResult<SisStudent>> getStudents({required RepositoryQuery query});
 
   Future<SisStudentProfile> getStudentProfile({
     required RepositoryQuery query,

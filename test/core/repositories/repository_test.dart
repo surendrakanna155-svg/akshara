@@ -26,7 +26,7 @@ void main() {
       const query = RepositoryQuery.demo;
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
-      expect((await repo.getCollections(query: query)), hasLength(6));
+      expect((await repo.getCollections(query: query)).total, 6);
       expect((await repo.getFeeStructures(query: query, academicYear: '2026-27')), isNotEmpty);
       expect((await repo.getStudentAccounts(query: query)), hasLength(4));
       expect((await repo.getInstallmentPlans(query: query)), hasLength(4));
@@ -43,7 +43,7 @@ void main() {
       const query = RepositoryQuery.demo;
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
-      expect((await repo.getLeads(query: query)), hasLength(7));
+      expect((await repo.getLeads(query: query)).total, 7);
       expect((await repo.getApplications(query: query)), hasLength(6));
       expect((await repo.getDocuments(query: query)), hasLength(6));
       expect((await repo.getPendingEnrollments(query: query)), hasLength(3));
@@ -56,7 +56,7 @@ void main() {
       const query = RepositoryQuery.demo;
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
-      expect((await repo.getStudents(query: query)), hasLength(5));
+      expect((await repo.getStudents(query: query)).total, 5);
       expect(
         (await repo.getAcademicAssignment(query: query)).classOptions,
         isNotEmpty,

@@ -96,7 +96,7 @@ void main() {
         ),
       );
       final students = await repo.getStudents(query: kQuery);
-      expect(students.any((student) => student.id == created.id), isTrue);
+      expect(students.items.any((student) => student.id == created.id), isTrue);
     });
 
     test('assignAcademicAssignment updates class and section', () async {

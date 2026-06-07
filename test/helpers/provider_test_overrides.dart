@@ -7,9 +7,19 @@ import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
 import 'package:akshara_erp/core/repositories/api/api_repository_providers.dart';
 import 'package:akshara_erp/core/auth/auth_repository_providers.dart';
 import 'package:akshara_erp/core/repositories/api/admissions/remote/admissions_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/audit/audit_upload_providers.dart';
+import 'package:akshara_erp/core/repositories/api/audit/remote/audit_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/auth/remote/auth_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/finance/remote/finance_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/alumni/remote/alumni_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/control_center/remote/control_center_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/hostel/remote/hostel_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/hr/remote/hr_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/inventory/remote/inventory_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/library/remote/library_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/management/remote/management_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/sis/remote/sis_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/transport/remote/transport_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/repository_config.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
@@ -58,6 +68,24 @@ ProviderContainer createProviderTestContainer({
   bool sisApiEnabled = false,
   Dio? apiAuthDio,
   bool authApiEnabled = false,
+  Dio? apiAuditDio,
+  bool auditApiEnabled = false,
+  Dio? apiHrDio,
+  bool hrApiEnabled = false,
+  Dio? apiTransportDio,
+  bool transportApiEnabled = false,
+  Dio? apiHostelDio,
+  bool hostelApiEnabled = false,
+  Dio? apiLibraryDio,
+  bool libraryApiEnabled = false,
+  Dio? apiInventoryDio,
+  bool inventoryApiEnabled = false,
+  Dio? apiAlumniDio,
+  bool alumniApiEnabled = false,
+  Dio? apiManagementDio,
+  bool managementApiEnabled = false,
+  Dio? apiControlCenterDio,
+  bool controlCenterApiEnabled = false,
 }) {
   final apiOverrides = <Override>[];
   if (apiAdmissionsDio != null) {
@@ -88,7 +116,82 @@ ProviderContainer createProviderTestContainer({
       ),
     );
   }
-  if (admissionsApiEnabled || financeApiEnabled || authApiEnabled || sisApiEnabled) {
+  if (apiAuditDio != null) {
+    apiOverrides.add(
+      auditRemoteDataSourceProvider.overrideWith(
+        (ref) => AuditRemoteDataSource(apiAuditDio),
+      ),
+    );
+  }
+  if (apiHrDio != null) {
+    apiOverrides.add(
+      hrRemoteDataSourceProvider.overrideWith(
+        (ref) => HrRemoteDataSource(apiHrDio),
+      ),
+    );
+  }
+  if (apiTransportDio != null) {
+    apiOverrides.add(
+      transportRemoteDataSourceProvider.overrideWith(
+        (ref) => TransportRemoteDataSource(apiTransportDio),
+      ),
+    );
+  }
+  if (apiHostelDio != null) {
+    apiOverrides.add(
+      hostelRemoteDataSourceProvider.overrideWith(
+        (ref) => HostelRemoteDataSource(apiHostelDio),
+      ),
+    );
+  }
+  if (apiLibraryDio != null) {
+    apiOverrides.add(
+      libraryRemoteDataSourceProvider.overrideWith(
+        (ref) => LibraryRemoteDataSource(apiLibraryDio),
+      ),
+    );
+  }
+  if (apiInventoryDio != null) {
+    apiOverrides.add(
+      inventoryRemoteDataSourceProvider.overrideWith(
+        (ref) => InventoryRemoteDataSource(apiInventoryDio),
+      ),
+    );
+  }
+  if (apiAlumniDio != null) {
+    apiOverrides.add(
+      alumniRemoteDataSourceProvider.overrideWith(
+        (ref) => AlumniRemoteDataSource(apiAlumniDio),
+      ),
+    );
+  }
+  if (apiManagementDio != null) {
+    apiOverrides.add(
+      managementRemoteDataSourceProvider.overrideWith(
+        (ref) => ManagementRemoteDataSource(apiManagementDio),
+      ),
+    );
+  }
+  if (apiControlCenterDio != null) {
+    apiOverrides.add(
+      controlCenterRemoteDataSourceProvider.overrideWith(
+        (ref) => ControlCenterRemoteDataSource(apiControlCenterDio),
+      ),
+    );
+  }
+  if (admissionsApiEnabled ||
+      financeApiEnabled ||
+      authApiEnabled ||
+      sisApiEnabled ||
+      auditApiEnabled ||
+      hrApiEnabled ||
+      transportApiEnabled ||
+      hostelApiEnabled ||
+      libraryApiEnabled ||
+      inventoryApiEnabled ||
+      alumniApiEnabled ||
+      managementApiEnabled ||
+      controlCenterApiEnabled) {
     apiOverrides.add(
       environmentProvider.overrideWith(
         (ref) => Environment.development.copyWith(enableApiMode: true),
@@ -115,7 +218,61 @@ ProviderContainer createProviderTestContainer({
       authApiEnabledProvider.overrideWith((ref) => true),
     );
   }
+  if (auditApiEnabled) {
+    apiOverrides.add(
+      auditApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (hrApiEnabled) {
+    apiOverrides.add(
+      hrApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (transportApiEnabled) {
+    apiOverrides.add(
+      transportApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (hostelApiEnabled) {
+    apiOverrides.add(
+      hostelApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (libraryApiEnabled) {
+    apiOverrides.add(
+      libraryApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (inventoryApiEnabled) {
+    apiOverrides.add(
+      inventoryApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (alumniApiEnabled) {
+    apiOverrides.add(
+      alumniApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (managementApiEnabled) {
+    apiOverrides.add(
+      managementApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (controlCenterApiEnabled) {
+    apiOverrides.add(
+      controlCenterApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
   return ProviderContainer(
     overrides: providerTestOverrides([...apiOverrides, ...overrides]),
+  );
+}
+
+/// Container for mobile feature provider tests (repository + tenant query wired).
+ProviderContainer createMobileProviderTestContainer({
+  List<Override> overrides = const [],
+}) {
+  return ProviderContainer(
+    overrides: providerTestOverrides(overrides),
   );
 }

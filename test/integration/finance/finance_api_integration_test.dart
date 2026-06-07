@@ -57,7 +57,7 @@ void main() {
             FinanceApiPaths.dashboard =>
               _fixtures.dashboardEnvelope(dashboard),
             FinanceApiPaths.collections => _fixtures.listEnvelope([
-                for (final payment in collections)
+                for (final payment in collections.items)
                   _fixtures.collectionItem(payment),
               ]),
             FinanceApiPaths.dailySummary =>
@@ -155,10 +155,10 @@ void main() {
       final mockCollections = await mockRepo.getCollections(query: kQuery);
       final apiCollections = await apiRepo.getCollections(query: kQuery);
 
-      expect(apiCollections.length, mockCollections.length);
+      expect(apiCollections.items.length, mockCollections.items.length);
       expect(
-        apiCollections.map((p) => p.id).toList(),
-        mockCollections.map((p) => p.id).toList(),
+        apiCollections.items.map((p) => p.id).toList(),
+        mockCollections.items.map((p) => p.id).toList(),
       );
     });
 
@@ -196,8 +196,8 @@ void main() {
         financeCollectionsFutureProvider.future,
       );
 
-      expect(collections, isNotEmpty);
-      expect(collections.first.receiptNumber, isNotEmpty);
+      expect(collections.items, isNotEmpty);
+      expect(collections.items.first.receiptNumber, isNotEmpty);
     });
 
     test('remote datasource posts fee structure create', () async {

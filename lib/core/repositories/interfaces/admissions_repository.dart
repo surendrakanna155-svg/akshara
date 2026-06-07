@@ -1,11 +1,12 @@
 import '../../../features/admissions/admissions_models.dart';
 import '../../../features/admissions/admissions_requests.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
 
 /// Contract for admissions data access (mock or API).
 abstract class AdmissionsRepository {
   Future<AdmissionsDashboardData> getDashboard({required RepositoryQuery query});
-  Future<List<AdmissionsLead>> getLeads({required RepositoryQuery query});
+  Future<PaginatedResult<AdmissionsLead>> getLeads({required RepositoryQuery query});
   Future<List<AdmissionsApplication>> getApplications({required RepositoryQuery query});
   Future<List<StudentDocumentRecord>> getDocuments({required RepositoryQuery query});
   Future<List<PendingEnrollmentRecord>> getPendingEnrollments({required RepositoryQuery query});

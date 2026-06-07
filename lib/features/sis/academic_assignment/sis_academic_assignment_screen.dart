@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/paginated_result.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
@@ -65,7 +66,7 @@ class _SisAcademicAssignmentScreenState
             style: context.aksharaText.bodyMedium,
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          SisAsyncBody<List<SisStudent>>(
+          SisAsyncBody<PaginatedResult<SisStudent>>(
             state: viewState,
             loadingLabel: 'Loading academic assignment',
             emptyMessage: 'No students available for assignment.',

@@ -58,14 +58,14 @@ void main() {
       final mockData = await mockRepo.getLeads(query: kQuery);
       final dto = AdmissionsLeadsResponseDto.fromJson(
         _fixtures.listEnvelope([
-          for (final lead in mockData) _fixtures.leadItem(lead),
+          for (final lead in mockData.items) _fixtures.leadItem(lead),
         ]),
       );
       final mapped = const AdmissionsMapper().toLeads(dto);
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.id, mockData.first.id);
-      expect(mapped.first.studentName, mockData.first.studentName);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.id, mockData.items.first.id);
+      expect(mapped.first.studentName, mockData.items.first.studentName);
     });
 
     test('getApplications DTO mapping matches mock output', () async {
@@ -195,7 +195,7 @@ void main() {
         }
         if (options.path.endsWith('/leads')) {
           return _fixtures.listEnvelope([
-            for (final lead in mockLeads) _fixtures.leadItem(lead),
+            for (final lead in mockLeads.items) _fixtures.leadItem(lead),
           ]);
         }
         return {'data': {}};
@@ -209,8 +209,8 @@ void main() {
       final leads = await api.getLeads(query: kQuery);
 
       expect(dashboard.kpis.length, mockDashboard.kpis.length);
-      expect(leads.length, mockLeads.length);
-      expect(leads.first.id, mockLeads.first.id);
+      expect(leads.items.length, mockLeads.items.length);
+      expect(leads.items.first.id, mockLeads.items.first.id);
     });
   });
 }

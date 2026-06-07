@@ -1,14 +1,16 @@
 import 'package:akshara_erp/features/parent/notices/notices_models.dart';
 import 'package:akshara_erp/features/parent/notices/parent_notices_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('parentNoticesProvider', () {
     test('returns mock notices for active child', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentNoticesFutureProvider.future);
       final data = container.read(parentNoticesProvider);
 
       expect(data.childName, 'Ravi Kumar');
@@ -17,9 +19,10 @@ void main() {
     });
 
     test('filters urgent notices', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentNoticesFutureProvider.future);
       container.read(parentNoticeCategoryProvider.notifier).state =
           NoticeCategory.urgent;
       final items = container.read(parentNoticesItemsProvider);
@@ -29,7 +32,7 @@ void main() {
     });
 
     test('parentNoticesEmptyProvider clears list', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(parentNoticesEmptyProvider.notifier).state = true;

@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'payment_models.dart';
 
 /// Selected installment id (from route query).
@@ -22,16 +25,21 @@ final parentPaymentSimulateFailureProvider = StateProvider<bool>(
   (ref) => false,
 );
 
-/// Loading while preparing payment summary.
 final parentPaymentLoadingProvider = StateProvider<bool>((ref) => false);
-
-/// Recoverable summary load error.
 final parentPaymentErrorProvider = StateProvider<bool>((ref) => false);
+final parentPaymentEmptyProvider = StateProvider<bool>((ref) => false);
 
 /// Last successful payment result.
 final parentPaymentSuccessResultProvider = StateProvider<PaymentSuccessResult?>(
   (ref) => null,
 );
+
+final parentPaymentSummaryFutureProvider = FutureProvider.family<PaymentSummary, String>((ref, installmentId) async {
+  return ref.read(parentRepositoryProvider).getPaymentSummary(
+        query: ref.watch(repositoryQueryProvider),
+        installmentId: installmentId,
+      );
+});
 
 /// Payment summary derived from installment id.
 final parentPaymentSummaryProvider = Provider<PaymentSummary>((ref) {
@@ -42,10 +50,18 @@ final parentPaymentSummaryProvider = Provider<PaymentSummary>((ref) {
     throw StateError('Payment summary unavailable');
   }
 
-  return _summaryForInstallment(installmentId);
+  final async = ref.watch(parentPaymentSummaryFutureProvider(installmentId));
+  final data = watchRepositoryFuture(
+    ref,
+    async,
+    manualLoading: ref.watch(parentPaymentLoadingProvider),
+    manualError: ref.watch(parentPaymentErrorProvider),
+    manualEmpty: ref.watch(parentPaymentEmptyProvider),
+  );
+  return data ?? async.value ?? _fallbackSummary(installmentId);
 });
 
-PaymentSummary _summaryForInstallment(String installmentId) {
+PaymentSummary _fallbackSummary(String installmentId) {
   return switch (installmentId) {
     'term_1' => const PaymentSummary(
         installmentId: 'term_1',

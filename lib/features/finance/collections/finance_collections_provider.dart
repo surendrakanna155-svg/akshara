@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/repositories/repository_query.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
 
@@ -11,33 +13,44 @@ final financeCollectionsErrorProvider = StateProvider<bool>((ref) => false);
 final financeCollectionsEmptyProvider = StateProvider<bool>((ref) => false);
 final financeCollectionFilterProvider = StateProvider<int>((ref) => 0);
 final financeReceiptSearchProvider = StateProvider<String>((ref) => '');
+final financeCollectionsPageProvider = StateProvider<int>((ref) => 1);
 
-final financeCollectionsFutureProvider =
-    FutureProvider<List<CollectionPayment>>((ref) async {
-  return ref
-      .read(financeRepositoryProvider)
-      .getCollections(query: ref.watch(repositoryQueryProvider));
+final financeCollectionsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(financeCollectionsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final financeCollectionsProvider = Provider<List<CollectionPayment>>((ref) {
+final financeCollectionsFutureProvider =
+    FutureProvider<PaginatedResult<CollectionPayment>>((ref) async {
+  return ref.read(financeRepositoryProvider).getCollections(
+        query: ref.watch(financeCollectionsQueryProvider),
+      );
+});
+
+final financeCollectionsPageResultProvider =
+    Provider<PaginatedResult<CollectionPayment>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(financeCollectionsFutureProvider),
     manualLoading: ref.watch(financeCollectionsLoadingProvider),
     manualError: ref.watch(financeCollectionsErrorProvider),
     manualEmpty: ref.watch(financeCollectionsEmptyProvider),
-  ) ??
-      const [];
+  );
+});
+
+final financeCollectionsProvider = Provider<List<CollectionPayment>>((ref) {
+  return ref.watch(financeCollectionsPageResultProvider)?.items ?? const [];
 });
 
 final financeCollectionsViewStateProvider =
-    Provider<FinanceViewState<List<CollectionPayment>>>((ref) {
+    Provider<FinanceViewState<PaginatedResult<CollectionPayment>>>((ref) {
   return resolveFinanceAsync(
     ref.watch(financeCollectionsFutureProvider),
     forceLoading: ref.watch(financeCollectionsLoadingProvider),
     forceError: ref.watch(financeCollectionsErrorProvider),
     forceEmpty: ref.watch(financeCollectionsEmptyProvider),
-    isDataEmpty: (payments) => payments.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });
 

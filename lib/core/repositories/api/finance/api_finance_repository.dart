@@ -1,4 +1,5 @@
 import '../../interfaces/finance_repository.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/finance/finance_models.dart';
 import '../../../../features/finance/finance_requests.dart';
@@ -25,11 +26,16 @@ class ApiFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<List<CollectionPayment>> getCollections({
+  Future<PaginatedResult<CollectionPayment>> getCollections({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchCollections(query: query);
-    return _mapper.toCollections(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toCollections(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

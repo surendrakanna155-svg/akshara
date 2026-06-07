@@ -1,12 +1,10 @@
-// ignore_for_file: unused_field
-import '../api_exception.dart';
-import '../../repository_query.dart';
 import '../../interfaces/management_repository.dart';
-import 'mapper/management_mapper.dart';
+import '../../repository_query.dart';
 import '../../../../features/management/management_models.dart';
+import 'mapper/management_mapper.dart';
 import 'remote/management_remote_datasource.dart';
 
-/// API implementation of [ManagementRepository] — swap via [useApiRepositoriesProvider].
+/// API implementation of [ManagementRepository] — enabled via [managementApiEnabledProvider].
 class ApiManagementRepository implements ManagementRepository {
   ApiManagementRepository({
     required ManagementRemoteDataSource remote,
@@ -17,32 +15,61 @@ class ApiManagementRepository implements ManagementRepository {
   final ManagementRemoteDataSource _remote;
   final ManagementMapper _mapper;
 
-  Never _notConnected(String method) {
-    throw ApiNotConnectedException('ApiManagementRepository', method);
+  @override
+  Future<ManagementDashboardData> getDashboard({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchDashboard(query: query);
+    return _mapper.toDashboard(dto);
   }
 
   @override
-  Future<ManagementDashboardData> getDashboard({required RepositoryQuery query}) async => _notConnected('getDashboard');
+  Future<ManagementAnalyticsData> getAnalytics({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchAnalytics(query: query);
+    return _mapper.toAnalytics(dto);
+  }
 
   @override
-  Future<ManagementAnalyticsData> getAnalytics({required RepositoryQuery query}) async => _notConnected('getAnalytics');
+  Future<ManagementAdmissionsFunnelData> getAdmissionsFunnel({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchAdmissionsFunnel(query: query);
+    return _mapper.toAdmissionsFunnel(dto);
+  }
 
   @override
-  Future<ManagementAdmissionsFunnelData> getAdmissionsFunnel({required RepositoryQuery query}) async => _notConnected('getAdmissionsFunnel');
+  Future<ManagementFinancialHealthData> getFinancialHealth({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchFinancialHealth(query: query);
+    return _mapper.toFinancialHealth(dto);
+  }
 
   @override
-  Future<ManagementFinancialHealthData> getFinancialHealth({required RepositoryQuery query}) async => _notConnected('getFinancialHealth');
+  Future<ManagementAcademicHealthData> getAcademicHealth({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchAcademicHealth(query: query);
+    return _mapper.toAcademicHealth(dto);
+  }
 
   @override
-  Future<ManagementAcademicHealthData> getAcademicHealth({required RepositoryQuery query}) async => _notConnected('getAcademicHealth');
+  Future<ManagementPerformanceData> getSchoolPerformance({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchSchoolPerformance(query: query);
+    return _mapper.toSchoolPerformance(dto);
+  }
 
   @override
-  Future<ManagementPerformanceData> getSchoolPerformance({required RepositoryQuery query}) async => _notConnected('getSchoolPerformance');
+  Future<ManagementTasksData> getTasksAndApprovals({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchTasksAndApprovals(query: query);
+    return _mapper.toTasksAndApprovals(dto);
+  }
 
   @override
-  Future<ManagementTasksData> getTasksAndApprovals({required RepositoryQuery query}) async => _notConnected('getTasksAndApprovals');
-
-  @override
-  Future<ManagementSettingsData> getSettings({required RepositoryQuery query}) async => _notConnected('getSettings');
-
+  Future<ManagementSettingsData> getSettings({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchSettings(query: query);
+    return _mapper.toSettings(dto);
+  }
 }

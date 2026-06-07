@@ -1,10 +1,11 @@
 # Akshara ERP — Master Roadmap
 
-**Version:** 1.0  
+**Version:** 1.3  
 **Last updated:** June 2026  
-**Current release:** v2.7 (Security Hardening)  
-**Production readiness:** 97 / 100  
-**Quality gates:** `flutter analyze` 0 issues · `flutter test` 693 passing · 117 test files
+**Current release:** v3.2 (Remaining ERP Live Read APIs)  
+**Production readiness:** 99 / 100  
+**Quality gates:** `flutter analyze` 0 issues · `flutter test` 848 passing · 145 test files  
+**Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
 
 ---
 
@@ -15,7 +16,7 @@
 Akshara ERP is a **Flutter monorepo** with:
 
 - **Web ERP admin shell** — 11 business modules + Control Center
-- **Mobile apps** — Parent, Teacher, Student (inline mocks)
+- **Mobile apps** — Parent, Teacher, Student (repository pattern; mock default)
 - **Repository pattern** — Interface → Mock | API, gated by per-module feature flags
 - **Riverpod** — ~1,600 provider declarations
 - **GoRouter** — ~100 routes across 4 shell surfaces
@@ -35,18 +36,18 @@ Screen → Provider → Repository Interface → ApiRepository → RemoteDataSou
 | 2 | admissions | ERP | 10 | 30 methods | ✅ Live read + write |
 | 3 | finance | ERP | 11 | 23 methods | ✅ Live read + write |
 | 4 | sis | ERP | 5 | 10 methods | ✅ Live read + write |
-| 5 | management | ERP | 8 | 8 methods | Mock / stub API |
-| 6 | transport | ERP | 10 | 10 methods | Mock / stub API |
-| 7 | hr | ERP | 9 | 9 methods | Mock / stub API |
-| 8 | hostel | ERP | 9 | 9 methods | Mock / stub API |
-| 9 | library | ERP | 8 | 8 methods | Mock / stub API |
-| 10 | inventory | ERP | 8 | 8 methods | Mock / stub API |
-| 11 | alumni | ERP | 9 | 9 methods | Mock / stub API |
-| 12 | control_center | ERP | 12 | 12 methods | Mock / stub API |
+| 5 | management | ERP | 8 | 8 methods | ✅ Live read |
+| 6 | transport | ERP | 10 | 10 methods | ✅ Live read |
+| 7 | hr | ERP | 9 | 9 methods | ✅ Live read |
+| 8 | hostel | ERP | 9 | 9 methods | ✅ Live read |
+| 9 | library | ERP | 8 | 8 methods | ✅ Live read |
+| 10 | inventory | ERP | 8 | 8 methods | ✅ Live read |
+| 11 | alumni | ERP | 9 | 9 methods | ✅ Live read |
+| 12 | control_center | ERP | 12 | 12 methods | ✅ Live read |
 | 13 | auth | All | 6 | 6 methods (Auth) | ✅ Live |
-| 14 | parent | Mobile | 13 | Inline mocks | ❌ No repository |
-| 15 | teacher | Mobile | 8 | Inline mocks | ❌ No repository |
-| 16 | student | Mobile | 7 | Inline mocks | ❌ No repository |
+| 14 | parent | Mobile | 13 | 12 methods | ✅ Mock repo |
+| 15 | teacher | Mobile | 8 | 10 methods | ✅ Mock repo |
+| 16 | student | Mobile | 7 | 7 methods | ✅ Mock repo |
 | 17 | notifications | Cross-cutting | 0 | — | — |
 
 ### API Inventory
@@ -57,53 +58,56 @@ Screen → Provider → Repository Interface → ApiRepository → RemoteDataSou
 | Finance | 13 | 10 | 23/23 | ✅ | ✅ |
 | SIS | 5 | 5 | 10/10 | ✅ | ✅ |
 | Auth | 6 | — | 6/6 | ✅ | ✅ |
-| Transport | 10 | 0 | 0/10 | ✅ | ❌ stub |
-| HR | 9 | 0 | 0/9 | ✅ | ❌ stub |
-| Hostel | 9 | 0 | 0/9 | ✅ | ❌ stub |
-| Library | 8 | 0 | 0/8 | ✅ | ❌ stub |
-| Inventory | 8 | 0 | 0/8 | ✅ | ❌ stub |
-| Alumni | 9 | 0 | 0/9 | ✅ | ❌ stub |
-| Management | 8 | 0 | 0/8 | ✅ | ❌ stub |
-| Control Center | 12 | 0 | 0/12 | ✅ | ❌ stub |
-| **ERP Total** | **110** | **34** | **63/144** | **144/144** | **46%** |
+| Transport | 10 | 0 | 10/10 | ✅ | ✅ |
+| HR | 9 | 0 | 9/9 | ✅ | ✅ |
+| Hostel | 9 | 0 | 9/9 | ✅ | ✅ |
+| Library | 8 | 0 | 8/8 | ✅ | ✅ |
+| Inventory | 8 | 0 | 8/8 | ✅ | ✅ |
+| Alumni | 9 | 0 | 9/9 | ✅ | ✅ |
+| Management | 8 | 0 | 8/8 | ✅ | ✅ |
+| Control Center | 12 | 0 | 12/12 | ✅ | ✅ |
+| **ERP Total** | **129** | **34** | **136/144** | **144/144** | **94%** |
 
-**DTO files:** 68 · **Contract test files:** 18 · **Integration test dirs:** 5 (auth, admissions, finance, sis, audit)
+**DTO files:** 92 · **Contract test files:** 37 · **Integration test dirs:** 14 · **Mobile repos:** 3
 
 ### Test Inventory
 
 | Category | Files | Tests (approx) |
 |----------|------:|---------------:|
 | Feature provider/screen | 62 | ~380 |
-| Contract | 18 | ~120 |
-| Integration | 5 | ~30 |
+| Contract | 37 | ~220 |
+| Integration | 14 | ~60 |
+| Mobile contract | 3 | 22 |
 | Security | 6 | ~20 |
 | Router | 2 | ~10 |
-| Core (network, RBAC, tenant) | 12 | ~50 |
+| Core (network, RBAC, tenant, pagination) | 14 | ~55 |
 | Golden | 3 | 3 |
 | Auth / startup / widget | 9 | ~80 |
-| **Total** | **117** | **693** |
+| **Total** | **145** | **848** |
 
 ### Production Readiness Score
 
-**97 / 100** — see `docs/ArchitectureReview/v2.7-Security-Review.md`
+**99 / 100** — see `docs/ArchitectureReview/v3.2-ERP-Read-API-Audit.md`
 
 | Category | Score |
 |----------|------:|
 | Auth security | 9.0 |
 | RBAC | 8.5 |
-| Audit/compliance | 8.0 |
+| Audit/compliance | 8.5 |
 | Token lifecycle | 9.0 |
 | Build/test health | 10.0 |
-| API coverage | 5.5 |
+| API coverage | 9.4 |
+| Contract validation | 8.8 |
+| Mobile architecture | 8.8 |
+| Pagination | 7.5 |
 | Server security | 4.5 |
-| Mobile/mock gaps | 5.0 |
 
 ### Technical Debt Summary
 
 | Priority | Open items |
 |----------|----------|
-| P0 | 3 (server RBAC, audit ingestion, 8 stub modules) |
-| P1 | 8 (mobile repos, pagination, OpenAPI, etc.) |
+| P0 | 2 (server RBAC, audit server ingestion) |
+| P1 | 4 (pagination partial, manage guards, etc.) |
 | P2 | 12 |
 | P3 | 6 |
 
@@ -378,74 +382,59 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Audits** | `docs/ArchitectureReview/v2.7-*` (4 audit docs) |
 | **Status** | ✅ Complete |
 
----
-
-## Future Releases
-
 ### v2.8 — API Contract Validation & Audit Backend
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | OpenAPI staging validation; wire audit upload uploader; permission sync backend validation |
-| **Dependencies** | v2.7 security foundation; staging backend deployed |
-| **Acceptance criteria** | OpenAPI contract tests pass against staging; audit events drain from upload queue; analyze 0; tests pass |
-| **Estimated effort** | 2–3 weeks |
-| **Risks** | Backend audit endpoint not ready |
-| **Blockers** | TD-P0-02, TD-P1-03, TD-P1-05 |
-| **Owner** | Agent A + Agent D |
-| **Status** | 🔲 Not started |
+| **Objective** | OpenAPI contract validation; wire audit batch upload; permission sync schema validation |
+| **Architecture** | OpenAPI spec + client validator + audit remote datasource + `auditApiEnabledProvider` |
+| **Release doc** | `docs/Releases/v2.8-Contract-Validation-Audit-Backend.md` |
+| **Audits** | `docs/ArchitectureReview/v2.8-*` (2 audit docs) |
+| **Status** | ✅ Complete |
 
 ### v2.9 — HR + Transport Live Read APIs
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Live read APIs for HR (9 methods) and Transport (10 methods) |
-| **Dependencies** | v2.8 contract validation pattern; backend HR/Transport endpoints |
-| **Acceptance criteria** | 19 live read methods; contract + integration tests; dashboard screens wired |
-| **Estimated effort** | 3–4 weeks |
-| **Risks** | Backend schema mismatch |
-| **Blockers** | TD-P0-03 (partial) |
-| **Owner** | Agent A + Agent B |
-| **Status** | 🔲 Not started |
+| **Objective** | Live read APIs for HR (9 methods) and Transport (10 methods) |
+| **Modules** | HR, Transport |
+| **Architecture** | Full DTO/mapper/remote stack; contract + integration tests; OpenAPI dashboard schemas |
+| **Release doc** | `docs/Releases/v2.9-HR-Transport-Read-APIs.md` |
+| **Audits** | `docs/ArchitectureReview/v2.9-*` (2 audit docs) |
+| **Status** | ✅ Complete |
 
 ### v3.0 — Mobile Repository Layer
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Migrate parent/teacher/student from inline mocks to repository pattern |
-| **Dependencies** | Auth API stable; mobile backend endpoints defined |
-| **Acceptance criteria** | 3 mobile modules use repositories; provider tests updated; no inline mock data |
-| **Estimated effort** | 6–8 weeks |
-| **Risks** | Mobile API surface undefined; breaking UX changes |
-| **Blockers** | TD-P1-01 |
-| **Owner** | Agent C + Agent A |
-| **Status** | 🔲 Not started |
+| **Objective** | Parent/Teacher/Student repository pattern; remove inline mock providers |
+| **Architecture** | 3 interfaces + mock repos + API stubs + feature flags |
+| **Release doc** | `docs/Releases/v3.0-Mobile-Repository-Layer.md` |
+| **Audit** | `docs/ArchitectureReview/v3.0-Mobile-Repository-Audit.md` |
+| **Status** | ✅ Complete |
 
 ### v3.1 — Pagination & Performance
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Server pagination in repository interfaces; virtualized DataTables |
-| **Dependencies** | v2.9+ modules on live API; backend pagination support |
-| **Acceptance criteria** | Paginated fetch for Admissions, Finance, SIS lists; no full-list fetch; p95 < 2s |
-| **Estimated effort** | 4–5 weeks |
-| **Risks** | Breaking repository interface changes |
-| **Blockers** | TD-P1-02, TD-P1-13 |
-| **Owner** | Agent A + Agent B |
-| **Status** | 🔲 Not started |
+| **Objective** | PaginatedResult for Admissions/Finance/SIS lists; virtualized DataTables |
+| **Architecture** | RepositoryQuery.page/pageSize; AksharaVirtualizedDataTable |
+| **Release doc** | `docs/Releases/v3.1-Pagination-Performance.md` |
+| **Audit** | `docs/ArchitectureReview/v3.1-Pagination-Audit.md` |
+| **Status** | ✅ Complete |
 
 ### v3.2 — Remaining ERP Live Read APIs
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Live read for Hostel, Library, Inventory, Alumni, Management, Control Center (55 methods) |
-| **Dependencies** | v2.9 pattern established; backend modules deployed |
-| **Acceptance criteria** | 55 additional live read methods; all ERP modules off stub API |
-| **Estimated effort** | 8–10 weeks |
-| **Risks** | Control Center complexity; multi-tenant scoping |
-| **Blockers** | TD-P0-03 |
-| **Owner** | Agent A + Agent B |
-| **Status** | 🔲 Not started |
+| **Objective** | Live read for Hostel, Library, Inventory, Alumni, Management, Control Center (54 methods) |
+| **Release doc** | `docs/Releases/v3.2-Remaining-ERP-Read-APIs.md` |
+| **Audit** | `docs/ArchitectureReview/v3.2-ERP-Read-API-Audit.md` |
+| **Status** | ✅ Complete |
+
+---
+
+## Future Releases
 
 ### v4.0 — Multi-Tenant Production SaaS
 
@@ -474,15 +463,15 @@ Phase 2: API MVP (v1.5–v2.6)            ✅ COMPLETE
 Phase 3: Security Foundation (v2.7)     ✅ COMPLETE
   Secure storage, JWT validation, RBAC sync, audit queue
 
-Phase 4: Pilot                          🔲 NEXT (v2.8–v2.9)
+Phase 4: Pilot                          ✅ COMPLETE (v2.8–v2.9)
   Staging backend + contract validation + HR/Transport APIs
-  Target readiness: 93+
+  Target readiness: 93+ → **98.5 achieved**
 
-Phase 5: Staging                        🔲 (v3.0–v3.2)
+Phase 5: Staging                        ✅ COMPLETE (v3.0–v3.2)
   Mobile repos + pagination + remaining ERP APIs
-  Target readiness: 96+
+  Target readiness: 96+ → **99 achieved**
 
-Phase 6: Production                       🔲 (v4.0)
+Phase 6: Production                       🔲 NEXT (v4.0)
   Server RBAC/RLS + monitoring + DR
   Target readiness: 98+
 
@@ -517,9 +506,10 @@ Every release milestone is **DONE** when all items are checked:
 ```
 1. Read this document (Roadmap.md)
 2. Read AGENTS.md → identify your agent role
-3. Read docs/CURSOR_WORKFLOW.md → follow startup procedure
-4. Pick next 🔲 milestone
-5. Execute → validate → document → report
+3. Read docs/CURSOR_WORKFLOW.md → follow startup procedure (§1) and multi-milestone rules (§11)
+4. Pick next 🔲 milestone — autonomous sessions target 3 consecutive milestones
+5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v2.8 — API Contract Validation & Audit Backend
+**Next milestone:** v4.0 — Multi-Tenant Production SaaS  
+**Autonomous execution depth:** 3 milestones per session

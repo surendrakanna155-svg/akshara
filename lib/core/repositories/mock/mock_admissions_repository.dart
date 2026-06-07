@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../features/admissions/admissions_models.dart';
 import '../../../features/admissions/admissions_requests.dart';
 import '../interfaces/admissions_repository.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
 import 'mock_admissions_write_store.dart';
 
@@ -178,7 +179,18 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<List<AdmissionsLead>> getLeads({required RepositoryQuery query}) async {
+  Future<PaginatedResult<AdmissionsLead>> getLeads({
+    required RepositoryQuery query,
+  }) async {
+    final leads = await _loadAllLeads(query);
+    return PaginatedResult.fromItems(
+      leads,
+      page: query.page,
+      pageSize: query.pageSize,
+    );
+  }
+
+  Future<List<AdmissionsLead>> _loadAllLeads(RepositoryQuery query) async {
     if (_store.leads != null) {
       return List.from(_store.leads!);
     }
@@ -832,7 +844,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   MockAdmissionsWriteStore get _store => MockAdmissionsWriteStore.instance;
 
   Future<void> _ensureLeads(RepositoryQuery query) async {
-    _store.leads ??= List.from(await getLeads(query: query));
+    _store.leads ??= List.from(await _loadAllLeads(query));
   }
 
   Future<void> _ensureApplications(RepositoryQuery query) async {

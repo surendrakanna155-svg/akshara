@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/repositories/paginated_result.dart';
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -46,6 +46,7 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
   @override
   Widget build(BuildContext context) {
     final viewState = ref.watch(sisRegistryViewStateProvider);
+    final pageResult = ref.watch(sisStudentsPageResultProvider);
     final students = ref.watch(sisFilteredStudentsProvider);
     final filterIndex = ref.watch(sisRegistryFilterProvider);
 
@@ -83,35 +84,47 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          SisAsyncBody<List<SisStudent>>(
+          SisAsyncBody<PaginatedResult<SisStudent>>(
             state: viewState,
             loadingLabel: 'Loading student registry',
             emptyMessage: 'No students match your search or filters.',
             emptyIcon: Icons.people_outline,
             onRetry: () => retrySisFuture(ref, sisStudentsFutureProvider),
-            builder: (_) {
+            builder: (result) {
               if (students.isEmpty) {
                 return const AksharaEmptyState(
                   message: 'No students match your search or filters.',
                   icon: Icons.people_outline,
                 );
               }
-              if (AdminLayout.isMobile(context)) {
-                return Column(
-                  children: [
-                    for (final student in students) ...[
-                      _StudentMobileCard(
-                        student: student,
-                        onTap: () => context.go(
-                          RouteNames.sisStudentDetail(student.id),
-                        ),
-                      ),
-                      const SizedBox(height: AksharaSpacing.s3),
-                    ],
-                  ],
-                );
-              }
-              return _StudentRegistryTable(students: students);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (AdminLayout.isMobile(context))
+                    Column(
+                      children: [
+                        for (final student in students) ...[
+                          _StudentMobileCard(
+                            student: student,
+                            onTap: () => context.go(
+                              RouteNames.sisStudentDetail(student.id),
+                            ),
+                          ),
+                          const SizedBox(height: AksharaSpacing.s3),
+                        ],
+                      ],
+                    )
+                  else
+                    _StudentRegistryTable(students: students),
+                  if (pageResult != null)
+                    AksharaPaginationBar<SisStudent>(
+                      result: pageResult,
+                      onPageChanged: (page) =>
+                          ref.read(sisRegistryPageProvider.notifier).state =
+                              page,
+                    ),
+                ],
+              );
             },
           ),
         ],
@@ -125,47 +138,41 @@ class _StudentRegistryTable extends StatelessWidget {
 
   final List<SisStudent> students;
 
+  static const _columns = [
+    DataColumn(label: Text('Student')),
+    DataColumn(label: Text('Admission No.')),
+    DataColumn(label: Text('Class')),
+    DataColumn(label: Text('Section')),
+    DataColumn(label: Text('Status')),
+    DataColumn(label: Text('Actions')),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Student registry, ${students.length} students',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowHeight: 48,
-          dataRowMinHeight: 52,
-          dataRowMaxHeight: 64,
-          columns: const [
-            DataColumn(label: Text('Student')),
-            DataColumn(label: Text('Admission No.')),
-            DataColumn(label: Text('Class')),
-            DataColumn(label: Text('Section')),
-            DataColumn(label: Text('Status')),
-            DataColumn(label: Text('Actions')),
-          ],
-          rows: [
-            for (final student in students)
-              DataRow(
-                cells: [
-                  DataCell(Text(student.studentName)),
-                  DataCell(Text(student.admissionNumber)),
-                  DataCell(Text(student.classLabel)),
-                  DataCell(Text(student.section)),
-                  DataCell(_StudentStatusChip(status: student.status)),
-                  DataCell(
-                    TextButton(
-                      onPressed: () => context.go(
-                        RouteNames.sisStudentDetail(student.id),
-                      ),
-                      child: const Text('View'),
-                    ),
-                  ),
-                ],
+    return AksharaVirtualizedDataTable(
+      columns: _columns,
+      rowCount: students.length,
+      semanticLabel: 'Student registry, ${students.length} students',
+      rowBuilder: (index) {
+        final student = students[index];
+        return DataRow(
+          cells: [
+            DataCell(Text(student.studentName)),
+            DataCell(Text(student.admissionNumber)),
+            DataCell(Text(student.classLabel)),
+            DataCell(Text(student.section)),
+            DataCell(_StudentStatusChip(status: student.status)),
+            DataCell(
+              TextButton(
+                onPressed: () => context.go(
+                  RouteNames.sisStudentDetail(student.id),
+                ),
+                child: const Text('View'),
               ),
+            ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }

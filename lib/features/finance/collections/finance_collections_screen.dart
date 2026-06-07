@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/repositories/paginated_result.dart';
 import '../../../router/route_names.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -30,6 +29,7 @@ class FinanceCollectionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewState = ref.watch(financeCollectionsViewStateProvider);
+    final pageResult = ref.watch(financeCollectionsPageResultProvider);
     final payments = ref.watch(financeFilteredCollectionsProvider);
     final summary = ref.watch(financeDailySummaryProvider);
     final filterIndex = ref.watch(financeCollectionFilterProvider);
@@ -95,7 +95,7 @@ class FinanceCollectionsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          FinanceAsyncBody<List<CollectionPayment>>(
+          FinanceAsyncBody<PaginatedResult<CollectionPayment>>(
             state: viewState,
             loadingLabel: 'Loading collections',
             emptyMessage: receiptQuery.isEmpty
@@ -104,7 +104,7 @@ class FinanceCollectionsScreen extends ConsumerWidget {
             emptyIcon: Icons.receipt_long_outlined,
             onRetry: () =>
                 retryFinanceFuture(ref, financeCollectionsFutureProvider),
-            builder: (_) {
+            builder: (result) {
               if (payments.isEmpty) {
                 return AksharaEmptyState(
                   message: receiptQuery.isEmpty
@@ -129,6 +129,13 @@ class FinanceCollectionsScreen extends ConsumerWidget {
                     )
                   else
                     _CollectionsTable(payments: payments),
+                  if (pageResult != null)
+                    AksharaPaginationBar<CollectionPayment>(
+                      result: pageResult,
+                      onPageChanged: (page) => ref
+                          .read(financeCollectionsPageProvider.notifier)
+                          .state = page,
+                    ),
                   const SizedBox(height: AksharaSpacing.s6),
                   OutlinedButton.icon(
                     onPressed: () {},
@@ -152,51 +159,43 @@ class _CollectionsTable extends StatelessWidget {
 
   final List<CollectionPayment> payments;
 
+  static const _columns = [
+    DataColumn(label: Text('Receipt')),
+    DataColumn(label: Text('Student')),
+    DataColumn(label: Text('Admission No.')),
+    DataColumn(label: Text('Class')),
+    DataColumn(label: Text('Amount')),
+    DataColumn(label: Text('Mode')),
+    DataColumn(label: Text('Collected')),
+    DataColumn(label: Text('By')),
+    DataColumn(label: Text('Status')),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Collections payment list, ${payments.length} items',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Material(
-          child: DataTable(
-          headingRowHeight: 48,
-          dataRowMinHeight: 52,
-          dataRowMaxHeight: 64,
-          columns: const [
-            DataColumn(label: Text('Receipt')),
-            DataColumn(label: Text('Student')),
-            DataColumn(label: Text('Admission No.')),
-            DataColumn(label: Text('Class')),
-            DataColumn(label: Text('Amount')),
-            DataColumn(label: Text('Mode')),
-            DataColumn(label: Text('Collected')),
-            DataColumn(label: Text('By')),
-            DataColumn(label: Text('Status')),
-          ],
-          rows: [
-            for (final payment in payments)
-              DataRow(
-                onSelectChanged: (_) => context.go(
-                  RouteNames.financeCollectionDetail(payment.id),
-                ),
-                cells: [
-                  DataCell(Text(payment.receiptNumber)),
-                  DataCell(Text(payment.studentName)),
-                  DataCell(Text(payment.admissionNumber)),
-                  DataCell(Text(payment.classLabel)),
-                  DataCell(Text(payment.amount)),
-                  DataCell(Text(payment.mode)),
-                  DataCell(Text(payment.collectedAt)),
-                  DataCell(Text(payment.collectedBy)),
-                  DataCell(_CollectionStatusChip(status: payment.status)),
-                ],
-              ),
-          ],
+    return AksharaVirtualizedDataTable(
+      columns: _columns,
+      rowCount: payments.length,
+      semanticLabel: 'Collections payment list, ${payments.length} items',
+      rowBuilder: (index) {
+        final payment = payments[index];
+        return DataRow(
+          onSelectChanged: (_) => context.go(
+            RouteNames.financeCollectionDetail(payment.id),
           ),
-        ),
-      ),
+          cells: [
+            DataCell(Text(payment.receiptNumber)),
+            DataCell(Text(payment.studentName)),
+            DataCell(Text(payment.admissionNumber)),
+            DataCell(Text(payment.classLabel)),
+            DataCell(Text(payment.amount)),
+            DataCell(Text(payment.mode)),
+            DataCell(Text(payment.collectedAt)),
+            DataCell(Text(payment.collectedBy)),
+            DataCell(_CollectionStatusChip(status: payment.status)),
+          ],
+        );
+      },
     );
   }
 }

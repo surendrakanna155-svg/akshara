@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'attendance_models.dart';
 
 /// Visible month (always normalized to the first day).
@@ -17,14 +20,30 @@ final attendanceHighlightAbsentProvider = StateProvider<bool>(
   (ref) => false,
 );
 
-/// Mock attendance payload for the active month.
-final parentAttendanceProvider = Provider<AttendanceMonthData>((ref) {
-  final month = ref.watch(attendanceMonthProvider);
-  final selected = ref.watch(attendanceSelectedDayProvider);
-  final base = AttendanceMonthData.mock(month: month);
+final parentAttendanceLoadingProvider = StateProvider<bool>((ref) => false);
+final parentAttendanceErrorProvider = StateProvider<bool>((ref) => false);
+final parentAttendanceEmptyProvider = StateProvider<bool>((ref) => false);
 
-  return base.withSelectedDay(selected);
+final parentAttendanceFutureProvider = FutureProvider<AttendanceMonthData>((ref) async {
+  final month = ref.watch(attendanceMonthProvider);
+  return ref.read(parentRepositoryProvider).getAttendance(
+        query: ref.watch(repositoryQueryProvider),
+        month: month,
+      );
 });
 
-/// Loading flag reserved for future API integration.
-final parentAttendanceLoadingProvider = StateProvider<bool>((ref) => false);
+final parentAttendanceProvider = Provider<AttendanceMonthData>((ref) {
+  final selected = ref.watch(attendanceSelectedDayProvider);
+  final base = watchRepositoryFuture(
+    ref,
+    ref.watch(parentAttendanceFutureProvider),
+    manualLoading: ref.watch(parentAttendanceLoadingProvider),
+    manualError: ref.watch(parentAttendanceErrorProvider),
+    manualEmpty: ref.watch(parentAttendanceEmptyProvider),
+  );
+  final month = ref.watch(attendanceMonthProvider);
+  final resolved = base ??
+      ref.watch(parentAttendanceFutureProvider).value ??
+      AttendanceMonthData.mock(month: month);
+  return resolved.withSelectedDay(selected);
+});

@@ -36,7 +36,7 @@ void main() {
             AdmissionsApiPaths.dashboard =>
               _fixtures.dashboardEnvelope(dashboard),
             AdmissionsApiPaths.leads => _fixtures.listEnvelope([
-                for (final lead in leads) _fixtures.leadItem(lead),
+                for (final lead in leads.items) _fixtures.leadItem(lead),
               ]),
             AdmissionsApiPaths.applications => _fixtures.listEnvelope([
                 for (final app in applications) _fixtures.applicationItem(app),
@@ -120,10 +120,10 @@ void main() {
       final mockLeads = await mockRepo.getLeads(query: kQuery);
       final apiLeads = await apiRepo.getLeads(query: kQuery);
 
-      expect(apiLeads.length, mockLeads.length);
+      expect(apiLeads.items.length, mockLeads.items.length);
       expect(
-        apiLeads.map((l) => l.id).toList(),
-        mockLeads.map((l) => l.id).toList(),
+        apiLeads.items.map((l) => l.id).toList(),
+        mockLeads.items.map((l) => l.id).toList(),
       );
     });
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import '../../../shared/semantic_status.dart';
 
 /// Homework submission status for due list rows.
@@ -222,8 +225,23 @@ class StudentDashboardData {
   }
 }
 
-final studentDashboardProvider = Provider<StudentDashboardData>(
-  (ref) => StudentDashboardData.mock(),
-);
-
 final studentDashboardLoadingProvider = StateProvider<bool>((ref) => false);
+final studentDashboardErrorProvider = StateProvider<bool>((ref) => false);
+final studentDashboardEmptyProvider = StateProvider<bool>((ref) => false);
+
+final studentDashboardFutureProvider = FutureProvider<StudentDashboardData>((ref) async {
+  return ref.read(studentRepositoryProvider).getDashboard(query: ref.watch(repositoryQueryProvider));
+});
+
+final studentDashboardProvider = Provider<StudentDashboardData>((ref) {
+  final data = watchRepositoryFuture(
+    ref,
+    ref.watch(studentDashboardFutureProvider),
+    manualLoading: ref.watch(studentDashboardLoadingProvider),
+    manualError: ref.watch(studentDashboardErrorProvider),
+    manualEmpty: ref.watch(studentDashboardEmptyProvider),
+  );
+  return data ??
+      ref.watch(studentDashboardFutureProvider).value ??
+      StudentDashboardData.mock();
+});

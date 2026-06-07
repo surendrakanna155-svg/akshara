@@ -105,7 +105,7 @@ void main() {
         ),
       );
       final leads = await repo.getLeads(query: kQuery);
-      expect(leads.any((lead) => lead.id == created.id), isTrue);
+      expect(leads.items.any((lead) => lead.id == created.id), isTrue);
     });
 
     test('submitApplication moves application to submitted status', () async {

@@ -27,7 +27,7 @@ void main() {
       final students = await mockRepo.getStudents(query: kQuery);
       final profile = await mockRepo.getStudentProfile(
         query: kQuery,
-        studentId: students.first.id,
+        studentId: students.items.first.id,
       );
       final assignment = await mockRepo.getAcademicAssignment(query: kQuery);
       final conversion = await mockRepo.getAdmissionsConversion(query: kQuery);
@@ -38,7 +38,7 @@ void main() {
         }
         if (path == SisApiPaths.students) {
           return _fixtures.listEnvelope([
-            for (final student in students) _fixtures.studentItem(student),
+            for (final student in students.items) _fixtures.studentItem(student),
           ]);
         }
         if (path.startsWith('${SisApiPaths.students}/')) {

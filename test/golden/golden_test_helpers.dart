@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/provider_test_overrides.dart';
+import '../test_helpers.dart';
+
 /// Suppresses layout overflow noise during golden capture (test-only).
 void suppressGoldenOverflowErrors() {
   final previous = FlutterError.onError;
@@ -51,6 +54,7 @@ Future<void> pumpGoldenDashboard(
 }) async {
   suppressGoldenOverflowErrors();
   useGoldenViewport(tester, viewport);
+  await initProviderTestPrefs();
 
   await tester.pumpWidget(
     ProviderScope(
@@ -58,7 +62,7 @@ Future<void> pumpGoldenDashboard(
         parentDashboardLoadingProvider.overrideWith((ref) => false),
         teacherDashboardLoadingProvider.overrideWith((ref) => false),
         studentDashboardLoadingProvider.overrideWith((ref) => false),
-        ...extraOverrides,
+        ...providerTestOverrides(extraOverrides),
       ],
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
@@ -68,7 +72,7 @@ Future<void> pumpGoldenDashboard(
     ),
   );
 
-  // Single frame — avoids animation settle loops.
+  await settleRiverpodFutures(tester);
   await tester.pump();
 }
 

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
+
 /// Mock dashboard payload for [ParentDashboardScreen] (PA-01).
 @immutable
 class ParentDashboardData {
@@ -235,10 +239,23 @@ class DashboardAiInsight {
   final String actionLabel;
 }
 
-/// Supplies [ParentDashboardData]. Swap implementation for API-backed provider later.
-final parentDashboardProvider = Provider<ParentDashboardData>(
-  (ref) => ParentDashboardData.mock(),
-);
-
-/// Loading/error states can extend this notifier when wired to a repository.
 final parentDashboardLoadingProvider = StateProvider<bool>((ref) => false);
+final parentDashboardErrorProvider = StateProvider<bool>((ref) => false);
+final parentDashboardEmptyProvider = StateProvider<bool>((ref) => false);
+
+final parentDashboardFutureProvider = FutureProvider<ParentDashboardData>((ref) async {
+  return ref.read(parentRepositoryProvider).getDashboard(query: ref.watch(repositoryQueryProvider));
+});
+
+final parentDashboardProvider = Provider<ParentDashboardData>((ref) {
+  final data = watchRepositoryFuture(
+    ref,
+    ref.watch(parentDashboardFutureProvider),
+    manualLoading: ref.watch(parentDashboardLoadingProvider),
+    manualError: ref.watch(parentDashboardErrorProvider),
+    manualEmpty: ref.watch(parentDashboardEmptyProvider),
+  );
+  return data ??
+      ref.watch(parentDashboardFutureProvider).value ??
+      ParentDashboardData.mock();
+});

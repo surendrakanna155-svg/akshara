@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'leave_models.dart';
 
 final teacherLeaveSectionProvider = StateProvider<TeacherLeaveSection>(
@@ -14,77 +17,54 @@ final teacherLeaveLoadingProvider = StateProvider<bool>((ref) => false);
 final teacherLeaveErrorProvider = StateProvider<bool>((ref) => false);
 final teacherLeaveEmptyProvider = StateProvider<bool>((ref) => false);
 
-final _teacherLeaveHistoryProvider = StateProvider<List<TeacherLeaveRequest>>(
-  (ref) => _mockHistory(),
+final teacherLeaveHistoryFutureProvider =
+    FutureProvider<List<TeacherLeaveRequest>>((ref) async {
+  return ref.read(teacherRepositoryProvider).getLeaveHistory(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+final _teacherLeaveLocalSubmissionsProvider = StateProvider<List<TeacherLeaveRequest>>(
+  (ref) => const [],
 );
 
-final teacherLeaveBalanceProvider = Provider<LeaveBalance>(
-  (ref) => const LeaveBalance(
-    casualRemaining: 6,
-    sickRemaining: 4,
-    earnedRemaining: 12,
-  ),
-);
+final teacherLeaveBalanceFutureProvider = FutureProvider<LeaveBalance>((ref) async {
+  return ref.read(teacherRepositoryProvider).getLeaveBalance(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+final teacherLeaveBalanceProvider = Provider<LeaveBalance>((ref) {
+  final data = watchRepositoryFuture(
+    ref,
+    ref.watch(teacherLeaveBalanceFutureProvider),
+    manualLoading: ref.watch(teacherLeaveLoadingProvider),
+    manualError: ref.watch(teacherLeaveErrorProvider),
+    manualEmpty: ref.watch(teacherLeaveEmptyProvider),
+  );
+  return data ??
+      ref.watch(teacherLeaveBalanceFutureProvider).value ??
+      const LeaveBalance(
+        casualRemaining: 6,
+        sickRemaining: 4,
+        earnedRemaining: 12,
+      );
+});
 
 final teacherLeaveHistoryProvider = Provider<List<TeacherLeaveRequest>>((ref) {
   if (ref.watch(teacherLeaveEmptyProvider)) return const [];
-  return ref.watch(_teacherLeaveHistoryProvider);
+  final local = ref.watch(_teacherLeaveLocalSubmissionsProvider);
+  final base = watchRepositoryFuture(
+    ref,
+    ref.watch(teacherLeaveHistoryFutureProvider),
+    manualLoading: ref.watch(teacherLeaveLoadingProvider),
+    manualError: ref.watch(teacherLeaveErrorProvider),
+    manualEmpty: ref.watch(teacherLeaveEmptyProvider),
+  ) ??
+      ref.watch(teacherLeaveHistoryFutureProvider).value ??
+      const <TeacherLeaveRequest>[];
+  return [...local, ...base];
 });
-
-List<TeacherLeaveRequest> _mockHistory() {
-  return const [
-    TeacherLeaveRequest(
-      id: 'tlv_1',
-      typeLabel: 'Casual leave',
-      fromDateLabel: '18 Jun 2026',
-      toDateLabel: '18 Jun 2026',
-      reason: 'Personal appointment in the afternoon.',
-      status: TeacherLeaveStatus.pending,
-      timeline: [
-        LeaveTimelineStep(
-          label: 'Submitted',
-          dateLabel: '5 Jun 2026',
-          isComplete: true,
-        ),
-        LeaveTimelineStep(
-          label: 'HOD approval',
-          dateLabel: 'Pending',
-          isComplete: false,
-        ),
-        LeaveTimelineStep(
-          label: 'HR confirmation',
-          dateLabel: 'Pending',
-          isComplete: false,
-        ),
-      ],
-    ),
-    TeacherLeaveRequest(
-      id: 'tlv_2',
-      typeLabel: 'Sick leave',
-      fromDateLabel: '2 May 2026',
-      toDateLabel: '3 May 2026',
-      reason: 'Fever and medical rest.',
-      status: TeacherLeaveStatus.approved,
-      timeline: [
-        LeaveTimelineStep(
-          label: 'Submitted',
-          dateLabel: '1 May 2026',
-          isComplete: true,
-        ),
-        LeaveTimelineStep(
-          label: 'HOD approval',
-          dateLabel: '1 May 2026',
-          isComplete: true,
-        ),
-        LeaveTimelineStep(
-          label: 'HR confirmation',
-          dateLabel: '2 May 2026',
-          isComplete: true,
-        ),
-      ],
-    ),
-  ];
-}
 
 bool submitTeacherLeave(WidgetRef ref) {
   final draft = ref.read(teacherLeaveApplyDraftProvider);
@@ -116,9 +96,9 @@ bool submitTeacherLeave(WidgetRef ref) {
     ],
   );
 
-  ref.read(_teacherLeaveHistoryProvider.notifier).state = [
+  ref.read(_teacherLeaveLocalSubmissionsProvider.notifier).state = [
     request,
-    ...ref.read(_teacherLeaveHistoryProvider),
+    ...ref.read(_teacherLeaveLocalSubmissionsProvider),
   ];
   ref.read(teacherLeaveApplyDraftProvider.notifier).state =
       const TeacherLeaveApplyDraft();

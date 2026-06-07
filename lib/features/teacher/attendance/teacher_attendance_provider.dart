@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'attendance_models.dart';
 
 final teacherAttendanceClassProvider = StateProvider<String>(
@@ -12,10 +15,28 @@ final teacherAttendanceEmptyProvider = StateProvider<bool>((ref) => false);
 final teacherAttendanceDraftSavedProvider = StateProvider<String?>((ref) => null);
 final teacherAttendanceSubmittedProvider = StateProvider<bool>((ref) => false);
 
+final teacherAttendanceClassesFutureProvider =
+    FutureProvider<List<TeacherAttendanceClass>>((ref) async {
+  return ref.read(teacherRepositoryProvider).getAttendanceClasses(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+final teacherAttendanceStudentsFutureProvider =
+    FutureProvider<Map<String, List<TeacherAttendanceStudent>>>((ref) async {
+  return ref.read(teacherRepositoryProvider).getAttendanceStudentsByClass(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
 final _teacherAttendanceStudentsProvider =
-    StateProvider<Map<String, List<TeacherAttendanceStudent>>>(
-  (ref) => _mockStudentsByClass(),
-);
+    StateProvider<Map<String, List<TeacherAttendanceStudent>>?>((ref) => null);
+
+Map<String, List<TeacherAttendanceStudent>> _studentsMap(Ref ref) {
+  final override = ref.watch(_teacherAttendanceStudentsProvider);
+  if (override != null) return override;
+  return ref.watch(teacherAttendanceStudentsFutureProvider).value ?? {};
+}
 
 final teacherAttendanceProvider = Provider<TeacherAttendanceData>((ref) {
   if (ref.watch(teacherAttendanceEmptyProvider)) {
@@ -28,11 +49,20 @@ final teacherAttendanceProvider = Provider<TeacherAttendanceData>((ref) {
   }
 
   final classId = ref.watch(teacherAttendanceClassProvider);
-  final studentsMap = ref.watch(_teacherAttendanceStudentsProvider);
+  final studentsMap = _studentsMap(ref);
   final students = studentsMap[classId] ?? const <TeacherAttendanceStudent>[];
+  final classes = watchRepositoryFuture(
+    ref,
+    ref.watch(teacherAttendanceClassesFutureProvider),
+    manualLoading: ref.watch(teacherAttendanceLoadingProvider),
+    manualError: ref.watch(teacherAttendanceErrorProvider),
+    manualEmpty: ref.watch(teacherAttendanceEmptyProvider),
+  ) ??
+      ref.watch(teacherAttendanceClassesFutureProvider).value ??
+      const <TeacherAttendanceClass>[];
 
   return TeacherAttendanceData(
-    classes: _mockClasses(),
+    classes: classes,
     students: students,
     selectedClassId: classId,
     unreadNotifications: 1,
@@ -41,51 +71,6 @@ final teacherAttendanceProvider = Provider<TeacherAttendanceData>((ref) {
   );
 });
 
-List<TeacherAttendanceClass> _mockClasses() {
-  return const [
-    TeacherAttendanceClass(
-      id: 'class-8a-p1',
-      label: '8-A',
-      subject: 'Mathematics',
-      periodLabel: 'Period 1',
-      studentCount: 38,
-      isPending: true,
-    ),
-    TeacherAttendanceClass(
-      id: 'class-9b-p3',
-      label: '9-B',
-      subject: 'Mathematics',
-      periodLabel: 'Period 3',
-      studentCount: 36,
-      isPending: false,
-    ),
-    TeacherAttendanceClass(
-      id: 'class-8a-p5',
-      label: '8-A',
-      subject: 'Mathematics',
-      periodLabel: 'Period 5',
-      studentCount: 38,
-      isPending: true,
-    ),
-  ];
-}
-
-Map<String, List<TeacherAttendanceStudent>> _mockStudentsByClass() {
-  const students8a = [
-    TeacherAttendanceStudent(id: 's1', name: 'Ravi Kumar', rollNo: '01', mark: StudentAttendanceMark.present),
-    TeacherAttendanceStudent(id: 's2', name: 'Ananya Rao', rollNo: '02', mark: StudentAttendanceMark.present),
-    TeacherAttendanceStudent(id: 's3', name: 'Karthik Menon', rollNo: '03', mark: StudentAttendanceMark.late),
-    TeacherAttendanceStudent(id: 's4', name: 'Priya Nair', rollNo: '04', mark: StudentAttendanceMark.absent),
-    TeacherAttendanceStudent(id: 's5', name: 'Arjun Das', rollNo: '05', mark: StudentAttendanceMark.unmarked),
-    TeacherAttendanceStudent(id: 's6', name: 'Meera Iyer', rollNo: '06', mark: StudentAttendanceMark.unmarked),
-  ];
-  return {
-    'class-8a-p1': students8a,
-    'class-9b-p3': students8a,
-    'class-8a-p5': students8a,
-  };
-}
-
 void updateStudentMark(
   WidgetRef ref, {
   required String studentId,
@@ -93,7 +78,9 @@ void updateStudentMark(
 }) {
   final classId = ref.read(teacherAttendanceClassProvider);
   final map = Map<String, List<TeacherAttendanceStudent>>.from(
-    ref.read(_teacherAttendanceStudentsProvider),
+    ref.read(_teacherAttendanceStudentsProvider) ??
+        ref.read(teacherAttendanceStudentsFutureProvider).value ??
+        {},
   );
   final students = map[classId];
   if (students == null) return;
@@ -107,7 +94,9 @@ void updateStudentMark(
 void applyBulkMark(WidgetRef ref, StudentAttendanceMark mark) {
   final classId = ref.read(teacherAttendanceClassProvider);
   final map = Map<String, List<TeacherAttendanceStudent>>.from(
-    ref.read(_teacherAttendanceStudentsProvider),
+    ref.read(_teacherAttendanceStudentsProvider) ??
+        ref.read(teacherAttendanceStudentsFutureProvider).value ??
+        {},
   );
   final students = map[classId];
   if (students == null) return;

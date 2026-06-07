@@ -1,13 +1,15 @@
 import 'package:akshara_erp/features/parent/timetable/parent_timetable_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('parentTimetableProvider', () {
     test('returns mock week data for Ravi Kumar', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentTimetableFutureProvider.future);
       final data = container.read(parentTimetableProvider);
 
       expect(data.childName, 'Ravi Kumar');
@@ -17,9 +19,10 @@ void main() {
     });
 
     test('reflects selected day from parentTimetableSelectedDayProvider', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentTimetableFutureProvider.future);
       container.read(parentTimetableSelectedDayProvider.notifier).state = 'mon';
       final monday = container.read(parentTimetableProvider).selectedDay;
 
@@ -30,7 +33,7 @@ void main() {
     });
 
     test('returns empty payload when parentTimetableEmptyProvider is true', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(parentTimetableEmptyProvider.notifier).state = true;

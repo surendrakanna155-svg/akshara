@@ -1,13 +1,15 @@
 import 'package:akshara_erp/features/parent/profile/parent_profile_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('parentProfileProvider', () {
     test('returns mock parent profile', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentProfileFutureProvider.future);
       final data = container.read(parentProfileProvider);
 
       expect(data.parentName, 'Suresh Kumar');
@@ -16,11 +18,13 @@ void main() {
     });
 
     test('parentProfileActiveChildProvider updates active child', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentProfileFutureProvider.future);
       container.read(parentProfileActiveChildProvider.notifier).state =
           'child_ananya';
+      await container.read(parentProfileFutureProvider.future);
       final data = container.read(parentProfileProvider);
 
       expect(

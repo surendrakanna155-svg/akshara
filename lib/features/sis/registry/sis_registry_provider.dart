@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/repositories/repository_query.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../sis_async_state.dart';
@@ -11,32 +13,44 @@ final sisRegistryErrorProvider = StateProvider<bool>((ref) => false);
 final sisRegistryEmptyProvider = StateProvider<bool>((ref) => false);
 final sisRegistrySearchProvider = StateProvider<String>((ref) => '');
 final sisRegistryFilterProvider = StateProvider<int>((ref) => 0);
+final sisRegistryPageProvider = StateProvider<int>((ref) => 1);
 
-final sisStudentsFutureProvider = FutureProvider<List<SisStudent>>((ref) async {
-  return ref
-      .read(sisRepositoryProvider)
-      .getStudents(query: ref.watch(repositoryQueryProvider));
+final sisStudentsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(sisRegistryPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final sisStudentsProvider = Provider<List<SisStudent>>((ref) {
+final sisStudentsFutureProvider =
+    FutureProvider<PaginatedResult<SisStudent>>((ref) async {
+  return ref.read(sisRepositoryProvider).getStudents(
+        query: ref.watch(sisStudentsQueryProvider),
+      );
+});
+
+final sisStudentsPageResultProvider =
+    Provider<PaginatedResult<SisStudent>?>((ref) {
   return watchRepositoryFuture(
         ref,
         ref.watch(sisStudentsFutureProvider),
         manualLoading: false,
         manualError: false,
         manualEmpty: false,
-      ) ??
-      const [];
+      );
+});
+
+final sisStudentsProvider = Provider<List<SisStudent>>((ref) {
+  return ref.watch(sisStudentsPageResultProvider)?.items ?? const [];
 });
 
 final sisRegistryViewStateProvider =
-    Provider<SisViewState<List<SisStudent>>>((ref) {
+    Provider<SisViewState<PaginatedResult<SisStudent>>>((ref) {
   return resolveSisAsync(
     ref.watch(sisStudentsFutureProvider),
     forceLoading: ref.watch(sisRegistryLoadingProvider),
     forceError: ref.watch(sisRegistryErrorProvider),
     forceEmpty: ref.watch(sisRegistryEmptyProvider),
-    isDataEmpty: (students) => students.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });
 

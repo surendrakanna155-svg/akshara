@@ -1,4 +1,5 @@
 import '../../interfaces/sis_repository.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/sis/sis_models.dart';
 import '../../../../features/sis/sis_requests.dart';
@@ -23,9 +24,16 @@ class ApiSisRepository implements SisRepository {
   }
 
   @override
-  Future<List<SisStudent>> getStudents({required RepositoryQuery query}) async {
+  Future<PaginatedResult<SisStudent>> getStudents({
+    required RepositoryQuery query,
+  }) async {
     final dto = await _remote.fetchStudents(query: query);
-    return _mapper.toStudents(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toStudents(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

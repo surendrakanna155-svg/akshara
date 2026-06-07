@@ -3,12 +3,20 @@ import 'package:akshara_erp/features/teacher/exams/teacher_exams_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../helpers/provider_test_overrides.dart';
+
+Future<void> _awaitTeacherExams(ProviderContainer container) async {
+  await container.read(teacherUpcomingExamsFutureProvider.future);
+  await container.read(teacherExamMarksFutureProvider.future);
+}
+
 void main() {
   group('teacherExams providers', () {
     test('teacherExamsProvider exposes upcoming exams and marks', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await _awaitTeacherExams(container);
       final data = container.read(teacherExamsProvider);
 
       expect(data.upcomingExams, hasLength(2));
@@ -17,7 +25,7 @@ void main() {
     });
 
     test('teacherExamSectionProvider switches active section', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(teacherExamSectionProvider.notifier).state =
@@ -28,7 +36,7 @@ void main() {
     });
 
     test('teacherExamsEmptyProvider clears exam data', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(teacherExamsEmptyProvider.notifier).state = true;
@@ -40,9 +48,10 @@ void main() {
     });
 
     test('mark entries include pending marks for entry', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await _awaitTeacherExams(container);
       final pending = container
           .read(teacherExamsProvider)
           .markEntries

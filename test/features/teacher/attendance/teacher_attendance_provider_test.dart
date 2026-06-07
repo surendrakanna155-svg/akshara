@@ -3,12 +3,20 @@ import 'package:akshara_erp/features/teacher/attendance/teacher_attendance_provi
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../helpers/provider_test_overrides.dart';
+
+Future<void> _awaitTeacherAttendance(ProviderContainer container) async {
+  await container.read(teacherAttendanceClassesFutureProvider.future);
+  await container.read(teacherAttendanceStudentsFutureProvider.future);
+}
+
 void main() {
   group('teacherAttendance providers', () {
     test('teacherAttendanceProvider exposes mock roster for Priya Sharma', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await _awaitTeacherAttendance(container);
       final data = container.read(teacherAttendanceProvider);
 
       expect(data.classes, isNotEmpty);
@@ -18,9 +26,10 @@ void main() {
     });
 
     test('teacherAttendanceClassProvider switches class roster', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await _awaitTeacherAttendance(container);
       container.read(teacherAttendanceClassProvider.notifier).state =
           'class-9b-p3';
       final data = container.read(teacherAttendanceProvider);
@@ -30,7 +39,7 @@ void main() {
     });
 
     test('teacherAttendanceEmptyProvider clears classes and students', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(teacherAttendanceEmptyProvider.notifier).state = true;
@@ -41,9 +50,10 @@ void main() {
     });
 
     test('draft and submit flags update attendance payload', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await _awaitTeacherAttendance(container);
       container.read(teacherAttendanceDraftSavedProvider.notifier).state =
           'Saved 10:30';
       container.read(teacherAttendanceSubmittedProvider.notifier).state =
@@ -56,9 +66,10 @@ void main() {
     });
 
     test('attendance KPI counts derive from student marks', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await _awaitTeacherAttendance(container);
       final data = container.read(teacherAttendanceProvider);
 
       expect(data.presentCount + data.absentCount + data.lateCount, lessThanOrEqualTo(data.students.length));

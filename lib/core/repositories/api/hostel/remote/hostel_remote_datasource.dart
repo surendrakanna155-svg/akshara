@@ -1,18 +1,114 @@
-// ignore_for_file: unused_field
 import 'package:dio/dio.dart';
 
-import '../dto/hostel_dashboard_dto.dart';
+import '../../../repository_query.dart';
+import '../dto/hostel_responses_dto.dart';
+import 'hostel_api_paths.dart';
 
-/// Dio-backed remote data source for Hostel (scaffolding only).
+/// Dio-backed remote data source for Hostel.
 class HostelRemoteDataSource {
   HostelRemoteDataSource(this._dio);
 
   final Dio _dio;
 
-  Future<HostelDashboardDto> fetchDashboard() async {
-    throw UnimplementedError('HostelRemoteDataSource.fetchDashboard not connected');
-    // ignore: dead_code
-    // final response = await _dio.get('/hostel/dashboard');
-    // return HostelDashboardDto.fromJson(response.data['data'] as Map<String, dynamic>);
+  Future<HostelDashboardDto> fetchDashboard({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.dashboard,
+      queryParameters: _queryParams(query),
+    );
+    return HostelDashboardDto.fromJson(_responseMap(response));
+  }
+
+  Future<HostelStudentsResponseDto> fetchStudents({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.students,
+      queryParameters: _queryParams(query),
+    );
+    return HostelStudentsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<HostelRoomsResponseDto> fetchRooms({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.rooms,
+      queryParameters: _queryParams(query),
+    );
+    return HostelRoomsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<HostelAttendanceResponseDto> fetchAttendanceRecords({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.attendance,
+      queryParameters: _queryParams(query),
+    );
+    return HostelAttendanceResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<HostelLeaveResponseDto> fetchLeaveRequests({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.leave,
+      queryParameters: _queryParams(query),
+    );
+    return HostelLeaveResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<HostelMessResponseDto> fetchMessData({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.mess,
+      queryParameters: _queryParams(query),
+    );
+    return HostelMessResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<HostelVisitorsResponseDto> fetchVisitors({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.visitors,
+      queryParameters: _queryParams(query),
+    );
+    return HostelVisitorsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<HostelReportsResponseDto> fetchReports({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.reports,
+      queryParameters: _queryParams(query),
+    );
+    return HostelReportsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<HostelOccupancyMetricsDto> fetchOccupancyMetrics({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HostelApiPaths.occupancyMetrics,
+      queryParameters: _queryParams(query),
+    );
+    return HostelOccupancyMetricsDto.fromJson(_responseMap(response));
+  }
+
+  Map<String, dynamic> _queryParams(RepositoryQuery query) {
+    return {
+      'tenantId': query.tenantId,
+      if (query.schoolId != null) 'schoolId': query.schoolId,
+      if (query.organizationId != null) 'organizationId': query.organizationId,
+    };
+  }
+
+  Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
+    return response.data ?? const {};
   }
 }

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/repositories/paginated_result.dart';
 import '../../../router/route_names.dart';
 
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
-import '../../../shared/widgets/akshara_warning_banner.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_navigation.dart';
 import '../admissions_workflow_actions.dart';
@@ -27,6 +28,7 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewState = ref.watch(admissionsLeadsViewStateProvider);
+    final pageResult = ref.watch(admissionsLeadsPageResultProvider);
     final filterIndex = ref.watch(admissionsLeadsFilterProvider);
 
     return AdmissionsModuleScaffold(
@@ -51,7 +53,7 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
             semanticLabel: 'Marketing acquisition data is read-only',
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          AdmissionsAsyncBody<List<AdmissionsLead>>(
+          AdmissionsAsyncBody<PaginatedResult<AdmissionsLead>>(
             state: viewState,
             loadingLabel: 'Loading leads',
             emptyMessage: 'No leads match the selected filters.',
@@ -60,11 +62,24 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
             onEmptyAction: () => showCreateLeadDialog(context, ref),
             onRetry: () =>
                 retryAdmissionsFuture(ref, admissionsLeadsFutureProvider),
-            builder: (leads) => AdmissionsLeadsTable(
-              leads: leads,
-              onView: (lead) =>
-                  context.push(RouteNames.admissionsLeadDetail(lead.id)),
-              onAssign: (lead) => showAssignCounselorDialog(context, ref, lead),
+            builder: (result) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AdmissionsLeadsTable(
+                  leads: result.items,
+                  onView: (lead) =>
+                      context.push(RouteNames.admissionsLeadDetail(lead.id)),
+                  onAssign: (lead) =>
+                      showAssignCounselorDialog(context, ref, lead),
+                ),
+                if (pageResult != null)
+                  AksharaPaginationBar<AdmissionsLead>(
+                    result: pageResult,
+                    onPageChanged: (page) => ref
+                        .read(admissionsLeadsPageProvider.notifier)
+                        .state = page,
+                  ),
+              ],
             ),
           ),
         ],

@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'homework_models.dart';
 
 final teacherHomeworkAssignmentProvider = StateProvider<String>(
@@ -10,31 +13,44 @@ final teacherHomeworkLoadingProvider = StateProvider<bool>((ref) => false);
 final teacherHomeworkErrorProvider = StateProvider<bool>((ref) => false);
 final teacherHomeworkEmptyProvider = StateProvider<bool>((ref) => false);
 
+final teacherHomeworkFutureProvider =
+    FutureProvider<List<TeacherHomeworkAssignment>>((ref) async {
+  return ref.read(teacherRepositoryProvider).getHomeworkAssignments(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
 final _teacherHomeworkSubmissionsProvider =
-    StateProvider<Map<String, List<HomeworkSubmission>>>(
-  (ref) => _mockSubmissions(),
-);
+    StateProvider<Map<String, List<HomeworkSubmission>>?>((ref) => null);
+
+List<TeacherHomeworkAssignment> _assignments(Ref ref) {
+  final override = ref.watch(_teacherHomeworkSubmissionsProvider);
+  final base = watchRepositoryFuture(
+    ref,
+    ref.watch(teacherHomeworkFutureProvider),
+    manualLoading: ref.watch(teacherHomeworkLoadingProvider),
+    manualError: ref.watch(teacherHomeworkErrorProvider),
+    manualEmpty: ref.watch(teacherHomeworkEmptyProvider),
+  ) ??
+      ref.watch(teacherHomeworkFutureProvider).value ??
+      const <TeacherHomeworkAssignment>[];
+
+  if (override == null) return base;
+  return [
+    for (final assignment in base)
+      TeacherHomeworkAssignment(
+        id: assignment.id,
+        title: assignment.title,
+        classLabel: assignment.classLabel,
+        dueLabel: assignment.dueLabel,
+        submissions: override[assignment.id] ?? assignment.submissions,
+      ),
+  ];
+}
 
 final teacherHomeworkAssignmentsProvider = Provider<List<TeacherHomeworkAssignment>>((ref) {
-  final map = ref.watch(_teacherHomeworkSubmissionsProvider);
   if (ref.watch(teacherHomeworkEmptyProvider)) return const [];
-
-  return [
-    TeacherHomeworkAssignment(
-      id: 'hw_8a_1',
-      title: 'Exercise 5.2 — Linear equations',
-      classLabel: '8-A',
-      dueLabel: 'Due 8 Jun 2026',
-      submissions: map['hw_8a_1'] ?? const [],
-    ),
-    TeacherHomeworkAssignment(
-      id: 'hw_9b_1',
-      title: 'Chapter 4 problem set',
-      classLabel: '9-B',
-      dueLabel: 'Due 10 Jun 2026',
-      submissions: map['hw_9b_1'] ?? const [],
-    ),
-  ];
+  return _assignments(ref);
 });
 
 final teacherHomeworkProvider = Provider<TeacherHomeworkAssignment?>((ref) {
@@ -46,49 +62,6 @@ final teacherHomeworkProvider = Provider<TeacherHomeworkAssignment?>((ref) {
   return assignments.isEmpty ? null : assignments.first;
 });
 
-Map<String, List<HomeworkSubmission>> _mockSubmissions() {
-  return {
-    'hw_8a_1': const [
-      HomeworkSubmission(
-        id: 'sub_1',
-        studentName: 'Ravi Kumar',
-        classLabel: '8-A',
-        title: 'Exercise 5.2',
-        submittedLabel: 'Submitted 5 Jun · 6:40 PM',
-        status: HomeworkReviewStatus.pending,
-      ),
-      HomeworkSubmission(
-        id: 'sub_2',
-        studentName: 'Ananya Rao',
-        classLabel: '8-A',
-        title: 'Exercise 5.2',
-        submittedLabel: 'Submitted 5 Jun · 7:10 PM',
-        status: HomeworkReviewStatus.pending,
-      ),
-      HomeworkSubmission(
-        id: 'sub_3',
-        studentName: 'Karthik Menon',
-        classLabel: '8-A',
-        title: 'Exercise 5.2',
-        submittedLabel: 'Submitted 4 Jun',
-        status: HomeworkReviewStatus.reviewed,
-        grade: 'A',
-        comment: 'Excellent steps shown.',
-      ),
-    ],
-    'hw_9b_1': const [
-      HomeworkSubmission(
-        id: 'sub_4',
-        studentName: 'Dev Patel',
-        classLabel: '9-B',
-        title: 'Chapter 4 problem set',
-        submittedLabel: 'Submitted 5 Jun',
-        status: HomeworkReviewStatus.pending,
-      ),
-    ],
-  };
-}
-
 void reviewSubmission(
   WidgetRef ref, {
   required String assignmentId,
@@ -96,9 +69,25 @@ void reviewSubmission(
   required String grade,
   required String comment,
 }) {
-  final map = Map<String, List<HomeworkSubmission>>.from(
-    ref.read(_teacherHomeworkSubmissionsProvider),
-  );
+  final override = ref.read(_teacherHomeworkSubmissionsProvider);
+  final base = ref.read(teacherHomeworkFutureProvider).value ??
+      const <TeacherHomeworkAssignment>[];
+  final assignments = override == null
+      ? base
+      : [
+          for (final assignment in base)
+            TeacherHomeworkAssignment(
+              id: assignment.id,
+              title: assignment.title,
+              classLabel: assignment.classLabel,
+              dueLabel: assignment.dueLabel,
+              submissions: override[assignment.id] ?? assignment.submissions,
+            ),
+        ];
+  final map = <String, List<HomeworkSubmission>>{};
+  for (final assignment in assignments) {
+    map[assignment.id] = assignment.submissions;
+  }
   final list = map[assignmentId];
   if (list == null) return;
   map[assignmentId] = [

@@ -1,14 +1,16 @@
 import 'package:akshara_erp/features/teacher/leave/leave_models.dart';
 import 'package:akshara_erp/features/teacher/leave/teacher_leave_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('teacherLeave providers', () {
     test('teacherLeaveBalanceProvider exposes leave balance', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(teacherLeaveBalanceFutureProvider.future);
       final balance = container.read(teacherLeaveBalanceProvider);
 
       expect(balance.casualRemaining, 6);
@@ -17,9 +19,10 @@ void main() {
     });
 
     test('teacherLeaveHistoryProvider exposes approval timeline', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(teacherLeaveHistoryFutureProvider.future);
       final history = container.read(teacherLeaveHistoryProvider);
 
       expect(history, hasLength(2));
@@ -28,7 +31,7 @@ void main() {
     });
 
     test('teacherLeaveApplyDraftProvider validates apply form', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       expect(container.read(teacherLeaveApplyDraftProvider).isValid, isFalse);
@@ -44,7 +47,7 @@ void main() {
     });
 
     test('teacherLeaveEmptyProvider clears history', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(teacherLeaveEmptyProvider.notifier).state = true;

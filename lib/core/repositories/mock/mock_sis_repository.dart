@@ -4,6 +4,7 @@ import '../../../features/admissions/admissions_models.dart';
 import '../../../features/sis/sis_models.dart';
 import '../../../features/sis/sis_requests.dart';
 import '../interfaces/sis_repository.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
 import 'mock_sis_write_store.dart';
 
@@ -254,9 +255,15 @@ class MockSisRepository implements SisRepository {
   }
 
   @override
-  Future<List<SisStudent>> getStudents({required RepositoryQuery query}) async {
+  Future<PaginatedResult<SisStudent>> getStudents({
+    required RepositoryQuery query,
+  }) async {
     await _ensureStudents(query);
-    return List.unmodifiable(_store.students!);
+    return PaginatedResult.fromItems(
+      List.unmodifiable(_store.students!),
+      page: query.page,
+      pageSize: query.pageSize,
+    );
   }
 
   @override
@@ -264,7 +271,7 @@ class MockSisRepository implements SisRepository {
     required RepositoryQuery query,
     required String studentId,
   }) async {
-    final students = await getStudents(query: query);
+    final students = (await getStudents(query: query)).items;
     final student = students.firstWhere(
       (item) => item.id == studentId,
       orElse: () => students.first,

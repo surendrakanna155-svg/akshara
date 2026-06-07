@@ -1,14 +1,16 @@
 import 'package:akshara_erp/features/parent/leave/leave_models.dart';
 import 'package:akshara_erp/features/parent/leave/parent_leave_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('parentLeaveProvider', () {
     test('returns mock leave history', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      await container.read(parentLeaveHistoryFutureProvider.future);
       final data = container.read(parentLeaveDataProvider);
 
       expect(data.history, isNotEmpty);
@@ -16,7 +18,7 @@ void main() {
     });
 
     test('leaveApplyDraft is invalid until required fields are set', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       expect(container.read(leaveApplyDraftProvider).isValid, isFalse);
@@ -31,7 +33,7 @@ void main() {
     });
 
     test('parentLeaveEmptyProvider clears history', () async {
-      final container = ProviderContainer();
+      final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
       container.read(parentLeaveEmptyProvider.notifier).state = true;

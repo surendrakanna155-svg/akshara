@@ -1,12 +1,10 @@
-// ignore_for_file: unused_field
-import '../../../../features/hostel/hostel_models.dart';
-import '../api_exception.dart';
-import '../../repository_query.dart';
 import '../../interfaces/hostel_repository.dart';
+import '../../repository_query.dart';
+import '../../../../features/hostel/hostel_models.dart';
 import 'mapper/hostel_mapper.dart';
 import 'remote/hostel_remote_datasource.dart';
 
-/// API implementation of [HostelRepository] — swap via [useApiRepositoriesProvider].
+/// API implementation of [HostelRepository] — enabled via [hostelApiEnabledProvider].
 class ApiHostelRepository implements HostelRepository {
   ApiHostelRepository({
     required HostelRemoteDataSource remote,
@@ -17,34 +15,63 @@ class ApiHostelRepository implements HostelRepository {
   final HostelRemoteDataSource _remote;
   final HostelMapper _mapper;
 
-  Never _notConnected(String method) {
-    throw ApiNotConnectedException('ApiHostelRepository', method);
+  @override
+  Future<HostelDashboardData> getDashboard({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchDashboard(query: query);
+    return _mapper.toDashboard(dto);
   }
 
   @override
-  Future<HostelDashboardData> getDashboard({required RepositoryQuery query}) async => _notConnected('getDashboard');
+  Future<List<HostelStudent>> getStudents({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchStudents(query: query);
+    return _mapper.toStudents(dto);
+  }
 
   @override
-  Future<List<HostelStudent>> getStudents({required RepositoryQuery query}) async => _notConnected('getStudents');
+  Future<List<HostelRoom>> getRooms({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchRooms(query: query);
+    return _mapper.toRooms(dto);
+  }
 
   @override
-  Future<List<HostelRoom>> getRooms({required RepositoryQuery query}) async => _notConnected('getRooms');
+  Future<List<HostelAttendanceRecord>> getAttendanceRecords({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchAttendanceRecords(query: query);
+    return _mapper.toAttendanceRecords(dto);
+  }
 
   @override
-  Future<List<HostelAttendanceRecord>> getAttendanceRecords({required RepositoryQuery query}) async => _notConnected('getAttendanceRecords');
+  Future<List<HostelLeaveRequest>> getLeaveRequests({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchLeaveRequests(query: query);
+    return _mapper.toLeaveRequests(dto);
+  }
 
   @override
-  Future<List<HostelLeaveRequest>> getLeaveRequests({required RepositoryQuery query}) async => _notConnected('getLeaveRequests');
+  Future<HostelMessData> getMessData({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchMessData(query: query);
+    return _mapper.toMessData(dto);
+  }
 
   @override
-  Future<HostelMessData> getMessData({required RepositoryQuery query}) async => _notConnected('getMessData');
+  Future<HostelVisitorsData> getVisitors({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchVisitors(query: query);
+    return _mapper.toVisitors(dto);
+  }
 
   @override
-  Future<HostelVisitorsData> getVisitors({required RepositoryQuery query}) async => _notConnected('getVisitors');
+  Future<HostelReportsData> getReports({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchReports(query: query);
+    return _mapper.toReports(dto);
+  }
 
   @override
-  Future<HostelReportsData> getReports({required RepositoryQuery query}) async => _notConnected('getReports');
-
-  @override
-  Future<HostelOccupancyMetrics> getOccupancyMetrics({required RepositoryQuery query}) async => _notConnected('getOccupancyMetrics');
+  Future<HostelOccupancyMetrics> getOccupancyMetrics({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchOccupancyMetrics(query: query);
+    return _mapper.toOccupancyMetrics(dto);
+  }
 }

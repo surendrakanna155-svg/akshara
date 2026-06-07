@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../../../admin/admin_layout.dart';
@@ -20,6 +21,20 @@ class AdmissionsLeadsTable extends StatelessWidget {
   final void Function(AdmissionsLead lead)? onView;
   final void Function(AdmissionsLead lead)? onAssign;
 
+  static const _columns = [
+    DataColumn(label: Text('ID')),
+    DataColumn(label: Text('Parent / Student')),
+    DataColumn(label: Text('Class')),
+    DataColumn(label: Text('Phone')),
+    DataColumn(label: Text('Source')),
+    DataColumn(label: Text('Campaign')),
+    DataColumn(label: Text('Stage')),
+    DataColumn(label: Text('Counselor')),
+    DataColumn(label: Text('Score')),
+    DataColumn(label: Text('Next F/U')),
+    DataColumn(label: Text('Actions')),
+  ];
+
   @override
   Widget build(BuildContext context) {
     if (AdminLayout.isMobile(context)) {
@@ -37,82 +52,61 @@ class AdmissionsLeadsTable extends StatelessWidget {
       );
     }
 
-    return Semantics(
-      container: true,
-      label: 'Leads table, ${leads.length} records',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowHeight: 48,
-          dataRowMinHeight: 52,
-          dataRowMaxHeight: 72,
-          showCheckboxColumn: true,
-          columns: const [
-            DataColumn(label: Text('ID')),
-            DataColumn(label: Text('Parent / Student')),
-            DataColumn(label: Text('Class')),
-            DataColumn(label: Text('Phone')),
-            DataColumn(label: Text('Source')),
-            DataColumn(label: Text('Campaign')),
-            DataColumn(label: Text('Stage')),
-            DataColumn(label: Text('Counselor')),
-            DataColumn(label: Text('Score')),
-            DataColumn(label: Text('Next F/U')),
-            DataColumn(label: Text('Actions')),
-          ],
-          rows: [
-            for (final lead in leads)
-              DataRow(
-                cells: [
-                  DataCell(Text(lead.id)),
-                  DataCell(
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(lead.parentName),
-                        Text(
-                          lead.studentName,
-                          style: context.aksharaText.bodySmall.copyWith(
-                            color: context.colors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  DataCell(Text(lead.classLabel)),
-                  DataCell(Text(lead.phone)),
-                  DataCell(Text(lead.source.label)),
-                  DataCell(Text(lead.campaign)),
-                  DataCell(AdmissionsStageBadge(stage: lead.stage)),
-                  DataCell(Text(lead.counselor)),
-                  DataCell(AdmissionsLeadScoreChip(score: lead.score)),
-                  DataCell(Text(lead.nextFollowUpLabel)),
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.visibility_outlined, size: 20),
-                          tooltip: 'View',
-                          onPressed:
-                              onView == null ? null : () => onView!(lead),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.person_add_alt_1_outlined,
-                              size: 20),
-                          tooltip: 'Assign',
-                          onPressed:
-                              onAssign == null ? null : () => onAssign!(lead),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+    return AksharaVirtualizedDataTable(
+      columns: _columns,
+      rowCount: leads.length,
+      showCheckboxColumn: true,
+      dataRowMinHeight: 56,
+      semanticLabel: 'Leads table, ${leads.length} records',
+      rowBuilder: (index) => _buildRow(context, leads[index]),
+    );
+  }
+
+  DataRow _buildRow(BuildContext context, AdmissionsLead lead) {
+    return DataRow(
+      cells: [
+        DataCell(Text(lead.id)),
+        DataCell(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(lead.parentName),
+              Text(
+                lead.studentName,
+                style: context.aksharaText.bodySmall.copyWith(
+                  color: context.colors.onSurfaceVariant,
+                ),
               ),
-          ],
+            ],
+          ),
         ),
-      ),
+        DataCell(Text(lead.classLabel)),
+        DataCell(Text(lead.phone)),
+        DataCell(Text(lead.source.label)),
+        DataCell(Text(lead.campaign)),
+        DataCell(AdmissionsStageBadge(stage: lead.stage)),
+        DataCell(Text(lead.counselor)),
+        DataCell(AdmissionsLeadScoreChip(score: lead.score)),
+        DataCell(Text(lead.nextFollowUpLabel)),
+        DataCell(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.visibility_outlined, size: 20),
+                tooltip: 'View',
+                onPressed: onView == null ? null : () => onView!(lead),
+              ),
+              IconButton(
+                icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
+                tooltip: 'Assign',
+                onPressed: onAssign == null ? null : () => onAssign!(lead),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

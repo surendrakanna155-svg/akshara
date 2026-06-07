@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'exam_models.dart';
 
 final teacherExamSectionProvider = StateProvider<TeacherExamSection>(
@@ -10,9 +13,34 @@ final teacherExamsLoadingProvider = StateProvider<bool>((ref) => false);
 final teacherExamsErrorProvider = StateProvider<bool>((ref) => false);
 final teacherExamsEmptyProvider = StateProvider<bool>((ref) => false);
 
-final _teacherExamMarksProvider = StateProvider<List<ExamMarkEntry>>(
-  (ref) => _mockMarks(),
-);
+final teacherUpcomingExamsFutureProvider =
+    FutureProvider<List<TeacherUpcomingExam>>((ref) async {
+  return ref.read(teacherRepositoryProvider).getUpcomingExams(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+final teacherExamMarksFutureProvider = FutureProvider<List<ExamMarkEntry>>((ref) async {
+  return ref.read(teacherRepositoryProvider).getExamMarks(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+final _teacherExamMarksProvider = StateProvider<List<ExamMarkEntry>?>((ref) => null);
+
+List<ExamMarkEntry> _marks(Ref ref) {
+  final override = ref.watch(_teacherExamMarksProvider);
+  if (override != null) return override;
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(teacherExamMarksFutureProvider),
+    manualLoading: ref.watch(teacherExamsLoadingProvider),
+    manualError: ref.watch(teacherExamsErrorProvider),
+    manualEmpty: ref.watch(teacherExamsEmptyProvider),
+  ) ??
+      ref.watch(teacherExamMarksFutureProvider).value ??
+      const <ExamMarkEntry>[];
+}
 
 final teacherExamsProvider = Provider<TeacherExamsData>((ref) {
   if (ref.watch(teacherExamsEmptyProvider)) {
@@ -24,7 +52,7 @@ final teacherExamsProvider = Provider<TeacherExamsData>((ref) {
     );
   }
 
-  final marks = ref.watch(_teacherExamMarksProvider);
+  final marks = _marks(ref);
   final scored = marks.where((m) => m.marksObtained != null).toList();
   final avg = scored.isEmpty
       ? 0
@@ -34,41 +62,30 @@ final teacherExamsProvider = Provider<TeacherExamsData>((ref) {
           scored.length)
           .round();
 
+  final upcoming = watchRepositoryFuture(
+    ref,
+    ref.watch(teacherUpcomingExamsFutureProvider),
+    manualLoading: ref.watch(teacherExamsLoadingProvider),
+    manualError: ref.watch(teacherExamsErrorProvider),
+    manualEmpty: ref.watch(teacherExamsEmptyProvider),
+  ) ??
+      ref.watch(teacherUpcomingExamsFutureProvider).value ??
+      const <TeacherUpcomingExam>[];
+
   return TeacherExamsData(
-    upcomingExams: const [
-      TeacherUpcomingExam(
-        id: 'ex_1',
-        title: 'Unit Test — Mathematics',
-        classLabel: '8-A',
-        dateLabel: '12 Jun 2026',
-        maxMarks: 50,
-      ),
-      TeacherUpcomingExam(
-        id: 'ex_2',
-        title: 'Term 2 Assessment',
-        classLabel: '9-B',
-        dateLabel: '20 Jun 2026',
-        maxMarks: 80,
-      ),
-    ],
+    upcomingExams: upcoming,
     markEntries: marks,
     classAveragePercent: avg,
     unreadNotifications: 1,
   );
 });
 
-List<ExamMarkEntry> _mockMarks() {
-  return const [
-    ExamMarkEntry(id: 'm1', studentName: 'Ravi Kumar', rollNo: '01', marksObtained: 42, maxMarks: 50),
-    ExamMarkEntry(id: 'm2', studentName: 'Ananya Rao', rollNo: '02', marksObtained: 45, maxMarks: 50),
-    ExamMarkEntry(id: 'm3', studentName: 'Karthik Menon', rollNo: '03', marksObtained: null, maxMarks: 50),
-    ExamMarkEntry(id: 'm4', studentName: 'Priya Nair', rollNo: '04', marksObtained: 38, maxMarks: 50),
-  ];
-}
-
 void updateExamMark(WidgetRef ref, String entryId, int marks) {
+  final current = ref.read(_teacherExamMarksProvider) ??
+      ref.read(teacherExamMarksFutureProvider).value ??
+      const <ExamMarkEntry>[];
   ref.read(_teacherExamMarksProvider.notifier).state = [
-    for (final entry in ref.read(_teacherExamMarksProvider))
+    for (final entry in current)
       entry.id == entryId ? entry.copyWith(marksObtained: marks) : entry,
   ];
 }

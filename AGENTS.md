@@ -15,6 +15,7 @@
 5. **Create docs:** Every release needs `docs/Releases/` + `docs/ArchitectureReview/` entries
 6. **No business features** unless assigned by Roadmap milestone
 7. **Completion report required** — see `docs/CURSOR_WORKFLOW.md`
+8. **Multi-milestone sessions:** default depth = 3 milestones — see `docs/CURSOR_WORKFLOW.md` §11; do not stop after one milestone unless a stop condition applies
 
 ---
 

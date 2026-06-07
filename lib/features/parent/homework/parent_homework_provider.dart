@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import 'homework_models.dart';
 
 /// Active homework filter selected in PA-05.
@@ -7,19 +10,26 @@ final homeworkFilterProvider = StateProvider<HomeworkFilter>(
   (ref) => HomeworkFilter.all,
 );
 
-/// Reserved for API loading state.
 final parentHomeworkLoadingProvider = StateProvider<bool>((ref) => false);
-
-/// Reserved for API error state.
 final parentHomeworkErrorProvider = StateProvider<bool>((ref) => false);
-
-/// Toggle used to emulate empty payload state.
 final parentHomeworkEmptyProvider = StateProvider<bool>((ref) => false);
 
-/// Base homework payload.
-final _parentHomeworkBaseDataProvider = Provider<ParentHomeworkData>(
-  (ref) => ParentHomeworkData.mock(),
-);
+final parentHomeworkFutureProvider = FutureProvider<ParentHomeworkData>((ref) async {
+  return ref.read(parentRepositoryProvider).getHomework(query: ref.watch(repositoryQueryProvider));
+});
+
+final _parentHomeworkBaseDataProvider = Provider<ParentHomeworkData>((ref) {
+  final data = watchRepositoryFuture(
+    ref,
+    ref.watch(parentHomeworkFutureProvider),
+    manualLoading: ref.watch(parentHomeworkLoadingProvider),
+    manualError: ref.watch(parentHomeworkErrorProvider),
+    manualEmpty: ref.watch(parentHomeworkEmptyProvider),
+  );
+  return data ??
+      ref.watch(parentHomeworkFutureProvider).value ??
+      ParentHomeworkData.mock();
+});
 
 /// Filtered homework rows based on [homeworkFilterProvider].
 final parentHomeworkItemsProvider = Provider<List<ParentHomeworkItem>>((ref) {

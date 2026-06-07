@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../registry/sis_registry_provider.dart';
 import '../sis_async_state.dart';
 import '../sis_models.dart';
@@ -104,7 +105,7 @@ final sisSelectedAssignmentStudentProvider = Provider<SisStudent?>((ref) {
 });
 
 final sisAcademicAssignmentScreenViewStateProvider =
-    Provider<SisViewState<List<SisStudent>>>((ref) {
+    Provider<SisViewState<PaginatedResult<SisStudent>>>((ref) {
   return resolveSisAsync(
     ref.watch(sisStudentsFutureProvider),
     forceLoading: ref.watch(sisAcademicAssignmentLoadingProvider) ||
@@ -112,6 +113,6 @@ final sisAcademicAssignmentScreenViewStateProvider =
     forceError: ref.watch(sisAcademicAssignmentErrorProvider) ||
         ref.watch(sisAcademicAssignmentViewStateProvider).hasError ||
         ref.watch(sisRegistryViewStateProvider).hasError,
-    isDataEmpty: (students) => students.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });

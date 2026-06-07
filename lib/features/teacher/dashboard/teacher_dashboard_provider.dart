@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import '../../../shared/semantic_status.dart';
 
 /// Staff check-in state for the attendance summary area.
@@ -249,8 +252,23 @@ class TeacherDashboardData {
   }
 }
 
-final teacherDashboardProvider = Provider<TeacherDashboardData>(
-  (ref) => TeacherDashboardData.mock(),
-);
-
 final teacherDashboardLoadingProvider = StateProvider<bool>((ref) => false);
+final teacherDashboardErrorProvider = StateProvider<bool>((ref) => false);
+final teacherDashboardEmptyProvider = StateProvider<bool>((ref) => false);
+
+final teacherDashboardFutureProvider = FutureProvider<TeacherDashboardData>((ref) async {
+  return ref.read(teacherRepositoryProvider).getDashboard(query: ref.watch(repositoryQueryProvider));
+});
+
+final teacherDashboardProvider = Provider<TeacherDashboardData>((ref) {
+  final data = watchRepositoryFuture(
+    ref,
+    ref.watch(teacherDashboardFutureProvider),
+    manualLoading: ref.watch(teacherDashboardLoadingProvider),
+    manualError: ref.watch(teacherDashboardErrorProvider),
+    manualEmpty: ref.watch(teacherDashboardEmptyProvider),
+  );
+  return data ??
+      ref.watch(teacherDashboardFutureProvider).value ??
+      TeacherDashboardData.mock();
+});

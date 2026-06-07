@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/shared_preferences_provider.dart';
+import '../repositories/api/audit/audit_upload_providers.dart';
 import 'audit_retention_policy.dart';
 import 'audit_upload_queue.dart';
 import 'audit_upload_service.dart';
@@ -15,10 +16,7 @@ final auditUploadQueueProvider = Provider<AuditUploadQueue>((ref) {
 });
 
 final auditBatchUploaderProvider = Provider<AuditBatchUploader>((ref) {
-  return (batch) async {
-    // Server ingestion endpoint will be wired when the audit API ships.
-    throw UnimplementedError('Audit batch upload is not configured');
-  };
+  return resolveAuditBatchUploader(ref);
 });
 
 final auditUploadServiceProvider = Provider<AuditUploadService>((ref) {

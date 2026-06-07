@@ -12,6 +12,9 @@ import 'interfaces/alumni_repository.dart';
 import 'interfaces/control_center_repository.dart';
 import 'interfaces/inventory_repository.dart';
 import 'interfaces/transport_repository.dart';
+import 'interfaces/parent_repository.dart';
+import 'interfaces/teacher_repository.dart';
+import 'interfaces/student_repository.dart';
 import 'mock/mock_admissions_repository.dart';
 import 'mock/mock_alumni_repository.dart';
 import 'mock/mock_finance_repository.dart';
@@ -23,6 +26,9 @@ import 'mock/mock_management_repository.dart';
 import 'mock/mock_sis_repository.dart';
 import 'mock/mock_control_center_repository.dart';
 import 'mock/mock_transport_repository.dart';
+import 'mock/mock_parent_repository.dart';
+import 'mock/mock_teacher_repository.dart';
+import 'mock/mock_student_repository.dart';
 import 'repository_config.dart';
 
 final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
@@ -100,4 +106,25 @@ final controlCenterRepositoryProvider = Provider<ControlCenterRepository>((ref) 
     return ref.read(apiControlCenterRepositoryProvider);
   }
   return MockControlCenterRepository();
+});
+
+final parentRepositoryProvider = Provider<ParentRepository>((ref) {
+  if (isModuleApiEnabled(ref, parentApiEnabledProvider)) {
+    return ref.read(apiParentRepositoryProvider);
+  }
+  return MockParentRepository();
+});
+
+final teacherRepositoryProvider = Provider<TeacherRepository>((ref) {
+  if (isModuleApiEnabled(ref, teacherApiEnabledProvider)) {
+    return ref.read(apiTeacherRepositoryProvider);
+  }
+  return MockTeacherRepository();
+});
+
+final studentRepositoryProvider = Provider<StudentRepository>((ref) {
+  if (isModuleApiEnabled(ref, studentApiEnabledProvider)) {
+    return ref.read(apiStudentRepositoryProvider);
+  }
+  return MockStudentRepository();
 });

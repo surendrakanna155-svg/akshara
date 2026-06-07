@@ -15,6 +15,10 @@ final libraryApiEnabledProvider = Provider<bool>((ref) => false);
 final inventoryApiEnabledProvider = Provider<bool>((ref) => false);
 final alumniApiEnabledProvider = Provider<bool>((ref) => false);
 final controlCenterApiEnabledProvider = Provider<bool>((ref) => false);
+final auditApiEnabledProvider = Provider<bool>((ref) => false);
+final parentApiEnabledProvider = Provider<bool>((ref) => false);
+final teacherApiEnabledProvider = Provider<bool>((ref) => false);
+final studentApiEnabledProvider = Provider<bool>((ref) => false);
 
 /// Returns true when the global API mode and module flag are both enabled.
 bool isModuleApiEnabled(Ref ref, Provider<bool> moduleFlagProvider) {
@@ -35,5 +39,8 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(libraryApiEnabledProvider) ||
       ref.watch(inventoryApiEnabledProvider) ||
       ref.watch(alumniApiEnabledProvider) ||
-      ref.watch(controlCenterApiEnabledProvider);
+      ref.watch(controlCenterApiEnabledProvider) ||
+      ref.watch(parentApiEnabledProvider) ||
+      ref.watch(teacherApiEnabledProvider) ||
+      ref.watch(studentApiEnabledProvider);
 });
