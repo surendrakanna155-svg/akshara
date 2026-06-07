@@ -261,7 +261,7 @@ class ApproveRefundNotifier extends AsyncNotifier<RefundRequest?> {
     state = await AsyncValue.guard(() async {
       return _runMutation(
         ref,
-        assertPermission: () => assertManageFinance(ref),
+        assertPermission: () => assertApproveRefunds(ref),
         auditAction: 'approveRefund',
         entityId: refundId,
         invalidateRefunds: true,

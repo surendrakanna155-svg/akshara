@@ -124,7 +124,7 @@ void main() {
         query: kQuery,
         academicYear: '2026-27',
       );
-      expect(structures.any((structure) => structure.id == created.id), isTrue);
+      expect(structures.items.any((structure) => structure.id == created.id), isTrue);
     });
 
     test('assignFeePlan creates student account', () async {

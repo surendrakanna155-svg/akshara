@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -255,15 +256,18 @@ class _RefundDetailPanel extends StatelessWidget {
               ),
               const SizedBox(width: AksharaSpacing.s3),
               Expanded(
-                child: FilledButton(
-                  onPressed: refund.status == RefundStatus.pending
-                      ? () => approveSelectedRefund(
-                            context,
-                            widgetRef,
-                            refund: refund,
-                          )
-                      : null,
-                  child: const Text('Approve'),
+                child: AksharaApproveAction(
+                  permission: Permission.approveRefunds,
+                  child: FilledButton(
+                    onPressed: refund.status == RefundStatus.pending
+                        ? () => approveSelectedRefund(
+                              context,
+                              widgetRef,
+                              refund: refund,
+                            )
+                        : null,
+                    child: const Text('Approve'),
+                  ),
                 ),
               ),
             ],

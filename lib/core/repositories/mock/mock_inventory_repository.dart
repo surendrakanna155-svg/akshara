@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../features/inventory/inventory_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/inventory_repository.dart';
+import '../paginated_result.dart';
+import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockInventoryRepository implements InventoryRepository {
@@ -437,22 +439,40 @@ class MockInventoryRepository implements InventoryRepository {
   }
 
   @override
-  Future<List<InventoryAsset>> getAssets({required RepositoryQuery query}) async => _assets;
+  Future<PaginatedResult<InventoryAsset>> getAssets({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_assets, query);
 
   @override
-  Future<List<InventoryCategory>> getCategories({required RepositoryQuery query}) async => _categories;
+  Future<PaginatedResult<InventoryCategory>> getCategories({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_categories, query);
 
   @override
-  Future<List<InventoryAllocation>> getAllocations({required RepositoryQuery query}) async => _allocations;
+  Future<PaginatedResult<InventoryAllocation>> getAllocations({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_allocations, query);
 
   @override
-  Future<List<InventoryMaintenanceRecord>> getMaintenanceRecords({required RepositoryQuery query}) async => _maintenance;
+  Future<PaginatedResult<InventoryMaintenanceRecord>> getMaintenanceRecords({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_maintenance, query);
 
   @override
-  Future<List<InventoryProcurementOrder>> getProcurementOrders({required RepositoryQuery query}) async => _procurement;
+  Future<PaginatedResult<InventoryProcurementOrder>> getProcurementOrders({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_procurement, query);
 
   @override
-  Future<List<InventoryVendor>> getVendors({required RepositoryQuery query}) async => _vendors;
+  Future<PaginatedResult<InventoryVendor>> getVendors({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_vendors, query);
 
   @override
   Future<InventoryReportsData> getReports({required RepositoryQuery query}) async {

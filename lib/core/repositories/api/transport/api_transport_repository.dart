@@ -1,4 +1,5 @@
 import '../../interfaces/transport_repository.dart';
+import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/transport/transport_models.dart';
@@ -38,35 +39,35 @@ class ApiTransportRepository implements TransportRepository {
   }
 
   @override
-  Future<List<TransportVehicle>> getVehicles({
+  Future<PaginatedResult<TransportVehicle>> getVehicles({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchVehicles(query: query);
-    return _mapper.toVehicles(dto);
+    return paginateList(_mapper.toVehicles(dto), query);
   }
 
   @override
-  Future<List<TransportDriver>> getDrivers({
+  Future<PaginatedResult<TransportDriver>> getDrivers({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchDrivers(query: query);
-    return _mapper.toDrivers(dto);
+    return paginateList(_mapper.toDrivers(dto), query);
   }
 
   @override
-  Future<List<StudentTransportAllocation>> getAllocations({
+  Future<PaginatedResult<StudentTransportAllocation>> getAllocations({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchAllocations(query: query);
-    return _mapper.toAllocations(dto);
+    return paginateList(_mapper.toAllocations(dto), query);
   }
 
   @override
-  Future<List<TransportAttendanceRecord>> getAttendanceRecords({
+  Future<PaginatedResult<TransportAttendanceRecord>> getAttendanceRecords({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchAttendanceRecords(query: query);
-    return _mapper.toAttendanceRecords(dto);
+    return paginateList(_mapper.toAttendanceRecords(dto), query);
   }
 
   @override

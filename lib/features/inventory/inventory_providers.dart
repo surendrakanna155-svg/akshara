@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
+import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
 import 'inventory_models.dart';
 
@@ -30,7 +31,7 @@ final inventoryAssetsErrorProvider = StateProvider<bool>((ref) => false);
 final inventoryAssetsEmptyProvider = StateProvider<bool>((ref) => false);
 final inventoryAssetsFilterProvider = StateProvider<int>((ref) => 0);
 
-final inventoryAssetsFutureProvider = FutureProvider<List<InventoryAsset>>((ref) async {
+final inventoryAssetsFutureProvider = FutureProvider<PaginatedResult<InventoryAsset>>((ref) async {
 return ref.read(inventoryRepositoryProvider).getAssets(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -39,7 +40,7 @@ final inventoryAssetsProvider = Provider<List<InventoryAsset>?>((ref) {
     ref,
     ref.watch(inventoryAssetsFutureProvider),
     manualLoading: ref.watch(inventoryAssetsLoadingProvider), manualError: ref.watch(inventoryAssetsErrorProvider), manualEmpty: ref.watch(inventoryAssetsEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final inventoryFilteredAssetsProvider = Provider<List<InventoryAsset>>((ref) {
@@ -69,7 +70,7 @@ final inventoryCategoriesErrorProvider = StateProvider<bool>((ref) => false);
 final inventoryCategoriesEmptyProvider = StateProvider<bool>((ref) => false);
 final inventoryCategoriesFilterProvider = StateProvider<int>((ref) => 0);
 
-final inventoryCategoriesFutureProvider = FutureProvider<List<InventoryCategory>>((ref) async {
+final inventoryCategoriesFutureProvider = FutureProvider<PaginatedResult<InventoryCategory>>((ref) async {
 return ref.read(inventoryRepositoryProvider).getCategories(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -78,7 +79,7 @@ final inventoryCategoriesProvider = Provider<List<InventoryCategory>?>((ref) {
     ref,
     ref.watch(inventoryCategoriesFutureProvider),
     manualLoading: ref.watch(inventoryCategoriesLoadingProvider), manualError: ref.watch(inventoryCategoriesErrorProvider), manualEmpty: ref.watch(inventoryCategoriesEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final inventoryFilteredCategoriesProvider = Provider<List<InventoryCategory>>(
@@ -111,7 +112,7 @@ final inventoryAllocationEmptyProvider = StateProvider<bool>((ref) => false);
 final inventoryAllocationFilterProvider = StateProvider<int>((ref) => 0);
 
 final inventoryAllocationsFutureProvider =
-    FutureProvider<List<InventoryAllocation>>((ref) async {
+    FutureProvider<PaginatedResult<InventoryAllocation>>((ref) async {
   return ref.read(inventoryRepositoryProvider).getAllocations(
         query: ref.watch(repositoryQueryProvider),
       );
@@ -125,7 +126,7 @@ final inventoryAllocationsProvider =
     manualLoading: ref.watch(inventoryAllocationLoadingProvider),
     manualError: ref.watch(inventoryAllocationErrorProvider),
     manualEmpty: ref.watch(inventoryAllocationEmptyProvider),
-  );
+  )?.items;
 });
 
 final inventoryFilteredAllocationsProvider =
@@ -154,7 +155,7 @@ final inventoryMaintenanceEmptyProvider = StateProvider<bool>((ref) => false);
 final inventoryMaintenanceFilterProvider = StateProvider<int>((ref) => 0);
 
 final inventoryMaintenanceFutureProvider =
-    FutureProvider<List<InventoryMaintenanceRecord>>((ref) async {
+    FutureProvider<PaginatedResult<InventoryMaintenanceRecord>>((ref) async {
   return ref.read(inventoryRepositoryProvider).getMaintenanceRecords(
         query: ref.watch(repositoryQueryProvider),
       );
@@ -168,7 +169,7 @@ final inventoryMaintenanceProvider =
     manualLoading: ref.watch(inventoryMaintenanceLoadingProvider),
     manualError: ref.watch(inventoryMaintenanceErrorProvider),
     manualEmpty: ref.watch(inventoryMaintenanceEmptyProvider),
-  );
+  )?.items;
 });
 
 final inventoryFilteredMaintenanceProvider =
@@ -197,7 +198,7 @@ final inventoryProcurementEmptyProvider = StateProvider<bool>((ref) => false);
 final inventoryProcurementFilterProvider = StateProvider<int>((ref) => 0);
 
 final inventoryProcurementFutureProvider =
-    FutureProvider<List<InventoryProcurementOrder>>((ref) async {
+    FutureProvider<PaginatedResult<InventoryProcurementOrder>>((ref) async {
   return ref.read(inventoryRepositoryProvider).getProcurementOrders(
         query: ref.watch(repositoryQueryProvider),
       );
@@ -211,7 +212,7 @@ final inventoryProcurementProvider =
     manualLoading: ref.watch(inventoryProcurementLoadingProvider),
     manualError: ref.watch(inventoryProcurementErrorProvider),
     manualEmpty: ref.watch(inventoryProcurementEmptyProvider),
-  );
+  )?.items;
 });
 
 final inventoryFilteredProcurementProvider =
@@ -239,7 +240,7 @@ final inventoryVendorsErrorProvider = StateProvider<bool>((ref) => false);
 final inventoryVendorsEmptyProvider = StateProvider<bool>((ref) => false);
 final inventoryVendorsFilterProvider = StateProvider<int>((ref) => 0);
 
-final inventoryVendorsFutureProvider = FutureProvider<List<InventoryVendor>>((ref) async {
+final inventoryVendorsFutureProvider = FutureProvider<PaginatedResult<InventoryVendor>>((ref) async {
 return ref.read(inventoryRepositoryProvider).getVendors(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -248,7 +249,7 @@ final inventoryVendorsProvider = Provider<List<InventoryVendor>?>((ref) {
     ref,
     ref.watch(inventoryVendorsFutureProvider),
     manualLoading: ref.watch(inventoryVendorsLoadingProvider), manualError: ref.watch(inventoryVendorsErrorProvider), manualEmpty: ref.watch(inventoryVendorsEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final inventoryFilteredVendorsProvider = Provider<List<InventoryVendor>>(

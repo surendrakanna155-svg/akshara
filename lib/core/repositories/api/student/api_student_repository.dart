@@ -5,6 +5,7 @@ import '../../../../features/student/exams/exam_models.dart';
 import '../../../../features/student/homework/homework_models.dart';
 import '../../../../features/student/notices/notices_models.dart';
 import '../../../../features/student/profile/profile_models.dart';
+import '../../../../features/student/student_requests.dart';
 import '../../interfaces/student_repository.dart';
 import '../../repository_query.dart';
 import 'mapper/student_mapper.dart';
@@ -66,5 +67,14 @@ class ApiStudentRepository implements StudentRepository {
   Future<StudentProfileData> getProfile({required RepositoryQuery query}) async {
     final dto = await _remote.fetchProfile(query: query);
     return _mapper.toProfile(dto);
+  }
+
+  @override
+  Future<StudentHomeworkItem> submitHomework({
+    required RepositoryQuery query,
+    required StudentHomeworkSubmitRequest request,
+  }) async {
+    final dto = await _remote.submitHomework(query: query, request: request);
+    return _mapper.toHomeworkSubmitResult(dto);
   }
 }

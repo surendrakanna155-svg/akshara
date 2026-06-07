@@ -48,12 +48,12 @@ void main() {
       final mapped = _mapper.toSchools(
         PlatformSchoolsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final school in mockData) _fixtures.schoolItem(school),
+            for (final school in mockData.items) _fixtures.schoolItem(school),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.name, mockData.first.name);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.name, mockData.items.first.name);
     });
 
     test('getSubscriptions DTO mapping matches mock output', () async {
@@ -89,11 +89,11 @@ void main() {
       final mapped = _mapper.toSupportTickets(
         SupportTicketsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final ticket in mockData) _fixtures.supportTicketItem(ticket),
+            for (final ticket in mockData.items) _fixtures.supportTicketItem(ticket),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getCustomerSuccess DTO mapping matches mock output', () async {
@@ -111,11 +111,11 @@ void main() {
       final mapped = _mapper.toWhiteLabelConfigs(
         WhiteLabelConfigsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final config in mockData) _fixtures.whiteLabelItem(config),
+            for (final config in mockData.items) _fixtures.whiteLabelItem(config),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getAnalytics DTO mapping matches mock output', () async {

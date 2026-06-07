@@ -59,11 +59,11 @@ void main() {
       final mapped = [
         for (final item
             in TransportVehiclesResponseDto.fromJson(
-              _fixtures.vehiclesEnvelope(mockData),
+              _fixtures.vehiclesEnvelope(mockData.items),
             ).items)
           _mapper.toVehicle(item),
       ];
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getDrivers DTO mapping matches mock output', () async {
@@ -71,11 +71,11 @@ void main() {
       final mapped = [
         for (final item
             in TransportDriversResponseDto.fromJson(
-              _fixtures.driversEnvelope(mockData),
+              _fixtures.driversEnvelope(mockData.items),
             ).items)
           _mapper.toDriver(item),
       ];
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getAllocations DTO mapping matches mock output', () async {
@@ -83,11 +83,11 @@ void main() {
       final mapped = [
         for (final item
             in TransportAllocationsResponseDto.fromJson(
-              _fixtures.allocationsEnvelope(mockData),
+              _fixtures.allocationsEnvelope(mockData.items),
             ).items)
           _mapper.toAllocation(item),
       ];
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getAttendanceRecords DTO mapping matches mock output', () async {
@@ -95,11 +95,11 @@ void main() {
       final mapped = [
         for (final item
             in TransportAttendanceResponseDto.fromJson(
-              _fixtures.attendanceEnvelope(mockData),
+              _fixtures.attendanceEnvelope(mockData.items),
             ).items)
           _mapper.toAttendanceRecord(item),
       ];
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getTrackingPlaceholder DTO mapping matches mock output', () async {

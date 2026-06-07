@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../teacher_mutations_provider.dart';
+import '../teacher_requests.dart';
 import 'leave_models.dart';
 
 final teacherLeaveSectionProvider = StateProvider<TeacherLeaveSection>(
@@ -23,10 +25,6 @@ final teacherLeaveHistoryFutureProvider =
         query: ref.watch(repositoryQueryProvider),
       );
 });
-
-final _teacherLeaveLocalSubmissionsProvider = StateProvider<List<TeacherLeaveRequest>>(
-  (ref) => const [],
-);
 
 final teacherLeaveBalanceFutureProvider = FutureProvider<LeaveBalance>((ref) async {
   return ref.read(teacherRepositoryProvider).getLeaveBalance(
@@ -53,7 +51,6 @@ final teacherLeaveBalanceProvider = Provider<LeaveBalance>((ref) {
 
 final teacherLeaveHistoryProvider = Provider<List<TeacherLeaveRequest>>((ref) {
   if (ref.watch(teacherLeaveEmptyProvider)) return const [];
-  final local = ref.watch(_teacherLeaveLocalSubmissionsProvider);
   final base = watchRepositoryFuture(
     ref,
     ref.watch(teacherLeaveHistoryFutureProvider),
@@ -63,43 +60,24 @@ final teacherLeaveHistoryProvider = Provider<List<TeacherLeaveRequest>>((ref) {
   ) ??
       ref.watch(teacherLeaveHistoryFutureProvider).value ??
       const <TeacherLeaveRequest>[];
-  return [...local, ...base];
+  return base;
 });
 
-bool submitTeacherLeave(WidgetRef ref) {
+Future<bool> submitTeacherLeave(WidgetRef ref) async {
   final draft = ref.read(teacherLeaveApplyDraftProvider);
   if (!draft.isValid) return false;
 
-  final request = TeacherLeaveRequest(
-    id: 'tlv_${DateTime.now().millisecondsSinceEpoch}',
-    typeLabel: draft.typeLabel,
-    fromDateLabel: draft.fromDateLabel,
-    toDateLabel: draft.toDateLabel,
-    reason: draft.reason.trim(),
-    status: TeacherLeaveStatus.pending,
-    timeline: const [
-      LeaveTimelineStep(
-        label: 'Submitted',
-        dateLabel: 'Just now',
-        isComplete: true,
-      ),
-      LeaveTimelineStep(
-        label: 'HOD approval',
-        dateLabel: 'Pending',
-        isComplete: false,
-      ),
-      LeaveTimelineStep(
-        label: 'HR confirmation',
-        dateLabel: 'Pending',
-        isComplete: false,
-      ),
-    ],
-  );
+  final result = await ref.read(submitTeacherLeaveProvider.notifier).execute(
+        TeacherLeaveSubmitRequest(
+          typeLabel: draft.typeLabel,
+          fromDateLabel: draft.fromDateLabel,
+          toDateLabel: draft.toDateLabel,
+          reason: draft.reason.trim(),
+        ),
+      );
 
-  ref.read(_teacherLeaveLocalSubmissionsProvider.notifier).state = [
-    request,
-    ...ref.read(_teacherLeaveLocalSubmissionsProvider),
-  ];
+  if (result == null) return false;
+
   ref.read(teacherLeaveApplyDraftProvider.notifier).state =
       const TeacherLeaveApplyDraft();
   ref.read(teacherLeaveSectionProvider.notifier).state =

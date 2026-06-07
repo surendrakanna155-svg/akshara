@@ -63,17 +63,17 @@ void main() {
             FinanceApiPaths.dailySummary =>
               _fixtures.dailySummaryEnvelope(dailySummary),
             FinanceApiPaths.feeStructures => _fixtures.listEnvelope([
-                for (final structure in feeStructures)
+                for (final structure in feeStructures.items)
                   _fixtures.feeStructureItem(structure),
               ]),
             FinanceApiPaths.academicYears =>
-              _fixtures.academicYearsEnvelope(academicYears),
+              _fixtures.academicYearsEnvelope(academicYears.items),
             FinanceApiPaths.studentAccounts => _fixtures.listEnvelope([
                 for (final account in studentAccounts.items)
                   _fixtures.studentAccountItem(account),
               ]),
             FinanceApiPaths.feeAssignment => _fixtures.listEnvelope([
-                for (final plan in installmentPlans)
+                for (final plan in installmentPlans.items)
                   _fixtures.installmentPlanItem(plan),
               ]),
             '/finance/collections/col_1' => collectionDetail == null
@@ -249,7 +249,7 @@ void main() {
       );
 
       expect(result.id, 'fee_new');
-      expect(mockStructures, isNotEmpty);
+      expect(mockStructures.items, isNotEmpty);
     });
 
     test('approve refund mutation refreshes refunds provider', () async {

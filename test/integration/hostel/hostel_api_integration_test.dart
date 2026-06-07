@@ -32,11 +32,11 @@ void main() {
 
       responseForPath = (path) => switch (path) {
             HostelApiPaths.dashboard => _fixtures.dashboardEnvelope(dashboard),
-            HostelApiPaths.students => _fixtures.studentsEnvelope(students),
-            HostelApiPaths.rooms => _fixtures.roomsEnvelope(rooms),
+            HostelApiPaths.students => _fixtures.studentsEnvelope(students.items),
+            HostelApiPaths.rooms => _fixtures.roomsEnvelope(rooms.items),
             HostelApiPaths.attendance =>
-              _fixtures.attendanceEnvelope(attendance),
-            HostelApiPaths.leave => _fixtures.leaveEnvelope(leave),
+              _fixtures.attendanceEnvelope(attendance.items),
+            HostelApiPaths.leave => _fixtures.leaveEnvelope(leave.items),
             HostelApiPaths.mess => _fixtures.messEnvelope(mess),
             HostelApiPaths.visitors => _fixtures.visitorsEnvelope(visitors),
             HostelApiPaths.reports => _fixtures.reportsEnvelope(reports),

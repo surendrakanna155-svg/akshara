@@ -4,6 +4,9 @@ import 'package:akshara_erp/core/repositories/api/student/remote/student_remote_
 import 'package:akshara_erp/core/repositories/mock/mock_student_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/features/student/dashboard/student_dashboard_provider.dart';
+import 'package:akshara_erp/features/student/homework/homework_models.dart';
+import 'package:akshara_erp/features/student/student_requests.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../contracts/mobile/student_fixture_builder.dart';
@@ -16,10 +19,18 @@ const _fixtures = StudentFixtureBuilder();
 void main() {
   group('Student API integration', () {
     late MockStudentRepository mockRepo;
-    late Map<String, dynamic> Function(String path) responseForPath;
+    late StudentHomeworkItem submittedHomework;
+    late Map<String, dynamic> Function(RequestOptions options) responseForRequest;
 
     setUp(() async {
       mockRepo = MockStudentRepository();
+      submittedHomework = await mockRepo.submitHomework(
+        query: kQuery,
+        request: const StudentHomeworkSubmitRequest(
+          homeworkId: 'hw-1',
+          attachmentLabel: 'worksheet.pdf',
+        ),
+      );
       final dashboard = await mockRepo.getDashboard(query: kQuery);
       final attendance = await mockRepo.getAttendance(
         query: kQuery,
@@ -31,7 +42,12 @@ void main() {
       final notices = await mockRepo.getNotices(query: kQuery);
       final profile = await mockRepo.getProfile(query: kQuery);
 
-      responseForPath = (path) => switch (path) {
+      responseForRequest = (options) {
+        final path = options.path;
+        if (options.method == 'POST' && path == StudentApiPaths.homeworkSubmit) {
+          return _fixtures.envelope(_fixtures.homeworkItem(submittedHomework));
+        }
+        return switch (path) {
             StudentApiPaths.dashboard => _fixtures.dashboardEnvelope(dashboard),
             StudentApiPaths.attendance => _fixtures.attendanceEnvelope(attendance),
             StudentApiPaths.homework => _fixtures.listEnvelope([
@@ -45,12 +61,11 @@ void main() {
             StudentApiPaths.profile => _fixtures.profileEnvelope(profile),
             _ => const {'data': {}},
           };
+      };
     });
 
     test('remote datasource fetches all Student read endpoints', () async {
-      final remote = StudentRemoteDataSource(
-        createFakeDio((options) => responseForPath(options.path)),
-      );
+      final remote = StudentRemoteDataSource(createFakeDio(responseForRequest));
 
       expect((await remote.fetchDashboard(query: kQuery)).raw['studentName'], isNotNull);
       expect((await remote.fetchAttendance(
@@ -64,11 +79,22 @@ void main() {
       expect((await remote.fetchProfile(query: kQuery)).raw['studentName'], isNotNull);
     });
 
+    test('remote datasource posts student homework submit endpoint', () async {
+      final remote = StudentRemoteDataSource(createFakeDio(responseForRequest));
+      final dto = await remote.submitHomework(
+        query: kQuery,
+        request: const StudentHomeworkSubmitRequest(
+          homeworkId: 'hw-1',
+          attachmentLabel: 'worksheet.pdf',
+        ),
+      );
+      expect(dto.raw['id'], submittedHomework.id);
+      expect(dto.raw['status'], 'submitted');
+    });
+
     test('api repository matches mock dashboard data', () async {
       final repository = ApiStudentRepository(
-        remote: StudentRemoteDataSource(
-          createFakeDio((options) => responseForPath(options.path)),
-        ),
+        remote: StudentRemoteDataSource(createFakeDio(responseForRequest)),
       );
 
       final mockData = await mockRepo.getDashboard(query: kQuery);
@@ -81,7 +107,7 @@ void main() {
     test('provider chain loads dashboard in api mode', () async {
       await initProviderTestPrefs();
       final container = createProviderTestContainer(
-        apiStudentDio: createFakeDio((options) => responseForPath(options.path)),
+        apiStudentDio: createFakeDio(responseForRequest),
         studentApiEnabled: true,
       );
       addTearDown(container.dispose);

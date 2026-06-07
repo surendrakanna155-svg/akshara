@@ -31,10 +31,10 @@ void main() {
 
       responseForPath = (path) => switch (path) {
             LibraryApiPaths.dashboard => _fixtures.dashboardEnvelope(dashboard),
-            LibraryApiPaths.catalog => _fixtures.catalogEnvelope(catalog),
-            LibraryApiPaths.issues => _fixtures.issuesEnvelope(issues),
-            LibraryApiPaths.returns => _fixtures.returnsEnvelope(returns),
-            LibraryApiPaths.members => _fixtures.membersEnvelope(members),
+            LibraryApiPaths.catalog => _fixtures.catalogEnvelope(catalog.items),
+            LibraryApiPaths.issues => _fixtures.issuesEnvelope(issues.items),
+            LibraryApiPaths.returns => _fixtures.returnsEnvelope(returns.items),
+            LibraryApiPaths.members => _fixtures.membersEnvelope(members.items),
             LibraryApiPaths.fines => _fixtures.finesEnvelope(fines),
             LibraryApiPaths.digitalResources =>
               _fixtures.digitalResourcesEnvelope(resources),

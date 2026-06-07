@@ -5,6 +5,7 @@ import '../../../features/student/exams/exam_models.dart';
 import '../../../features/student/homework/homework_models.dart';
 import '../../../features/student/notices/notices_models.dart';
 import '../../../features/student/profile/profile_models.dart';
+import '../../../features/student/student_requests.dart';
 import '../repository_query.dart';
 
 /// Contract for student mobile app data access (mock or API).
@@ -21,4 +22,9 @@ abstract class StudentRepository {
   Future<ParentTimetableData> getTimetable({required RepositoryQuery query});
   Future<List<StudentNotice>> getNotices({required RepositoryQuery query});
   Future<StudentProfileData> getProfile({required RepositoryQuery query});
+
+  Future<StudentHomeworkItem> submitHomework({
+    required RepositoryQuery query,
+    required StudentHomeworkSubmitRequest request,
+  });
 }

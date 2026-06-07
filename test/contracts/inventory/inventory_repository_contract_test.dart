@@ -44,58 +44,58 @@ void main() {
     test('getAssets DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getAssets(query: kQuery);
       final mapped = _mapper.toAssets(
-        InventoryAssetsResponseDto.fromJson(_fixtures.assetsEnvelope(mockData)),
+        InventoryAssetsResponseDto.fromJson(_fixtures.assetsEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.assetTag, mockData.first.assetTag);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.assetTag, mockData.items.first.assetTag);
     });
 
     test('getCategories DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getCategories(query: kQuery);
       final mapped = _mapper.toCategories(
         InventoryCategoriesResponseDto.fromJson(
-          _fixtures.categoriesEnvelope(mockData),
+          _fixtures.categoriesEnvelope(mockData.items),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getAllocations DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getAllocations(query: kQuery);
       final mapped = _mapper.toAllocations(
         InventoryAllocationsResponseDto.fromJson(
-          _fixtures.allocationsEnvelope(mockData),
+          _fixtures.allocationsEnvelope(mockData.items),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getMaintenanceRecords DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getMaintenanceRecords(query: kQuery);
       final mapped = _mapper.toMaintenanceRecords(
         InventoryMaintenanceResponseDto.fromJson(
-          _fixtures.maintenanceEnvelope(mockData),
+          _fixtures.maintenanceEnvelope(mockData.items),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getProcurementOrders DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getProcurementOrders(query: kQuery);
       final mapped = _mapper.toProcurementOrders(
         InventoryProcurementResponseDto.fromJson(
-          _fixtures.procurementEnvelope(mockData),
+          _fixtures.procurementEnvelope(mockData.items),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getVendors DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getVendors(query: kQuery);
       final mapped = _mapper.toVendors(
-        InventoryVendorsResponseDto.fromJson(_fixtures.vendorsEnvelope(mockData)),
+        InventoryVendorsResponseDto.fromJson(_fixtures.vendorsEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getReports DTO mapping matches mock output', () async {

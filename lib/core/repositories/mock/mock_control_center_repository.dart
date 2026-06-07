@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../features/control_center/control_center_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/control_center_repository.dart';
+import '../paginated_result.dart';
+import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockControlCenterRepository implements ControlCenterRepository {
@@ -225,7 +227,10 @@ class MockControlCenterRepository implements ControlCenterRepository {
   }
 
   @override
-  Future<List<PlatformSchool>> getSchools({required RepositoryQuery query}) async => _schools;
+  Future<PaginatedResult<PlatformSchool>> getSchools({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_schools, query);
 
   @override
   Future<ControlCenterSubscriptionsData> getSubscriptions({required RepositoryQuery query}) async {
@@ -357,8 +362,10 @@ class MockControlCenterRepository implements ControlCenterRepository {
   }
 
   @override
-  Future<List<SupportTicket>> getSupportTickets({required RepositoryQuery query}) async {
-    return const [
+  Future<PaginatedResult<SupportTicket>> getSupportTickets({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(const [
       SupportTicket(
         id: 'TKT-8801',
         subject: 'Finance module sync delay',
@@ -389,7 +396,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
         assignee: 'Support Team A',
         createdDate: '2026-06-02',
       ),
-    ];
+    ], query);
   }
 
   @override
@@ -432,8 +439,10 @@ class MockControlCenterRepository implements ControlCenterRepository {
   }
 
   @override
-  Future<List<WhiteLabelConfig>> getWhiteLabelConfigs({required RepositoryQuery query}) async {
-    return const [
+  Future<PaginatedResult<WhiteLabelConfig>> getWhiteLabelConfigs({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(const [
       WhiteLabelConfig(
         schoolId: 'SCH-1003',
         schoolName: 'Sunrise Academy — Bengaluru',
@@ -461,7 +470,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
         loginBackgroundUrl: '—',
         isPublished: false,
       ),
-    ];
+    ], query);
   }
 
   @override

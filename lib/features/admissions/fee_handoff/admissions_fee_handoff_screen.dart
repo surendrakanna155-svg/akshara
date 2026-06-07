@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_workflow_actions.dart';
@@ -26,7 +27,7 @@ class AdmissionsFeeHandoffScreen extends ConsumerWidget {
     return AdmissionsModuleScaffold(
       screen: AdmissionsScreen.feeHandoff,
       showFilterBar: false,
-      body: AdmissionsAsyncBody<List<ApprovedStudentHandoff>>(
+      body: AdmissionsAsyncBody<PaginatedResult<ApprovedStudentHandoff>>(
         state: viewState,
         loadingLabel: 'Loading fee handoff queue',
         emptyMessage: 'No approved students ready for fee handoff.',
@@ -35,7 +36,8 @@ class AdmissionsFeeHandoffScreen extends ConsumerWidget {
           ref,
           admissionsApprovedHandoffsFutureProvider,
         ),
-        builder: (handoffs) {
+        builder: (result) {
+          final handoffs = result.items;
           ApprovedStudentHandoff? selected;
           for (final item in handoffs) {
             if (item.id == selectedId) {

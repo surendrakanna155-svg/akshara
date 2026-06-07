@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
+import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
 import 'library_models.dart';
 
@@ -30,7 +31,7 @@ final libraryCatalogErrorProvider = StateProvider<bool>((ref) => false);
 final libraryCatalogEmptyProvider = StateProvider<bool>((ref) => false);
 final libraryCatalogFilterProvider = StateProvider<int>((ref) => 0);
 
-final libraryCatalogFutureProvider = FutureProvider<List<LibraryBook>>((ref) async {
+final libraryCatalogFutureProvider = FutureProvider<PaginatedResult<LibraryBook>>((ref) async {
 return ref.read(libraryRepositoryProvider).getCatalog(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -39,7 +40,7 @@ final libraryCatalogProvider = Provider<List<LibraryBook>?>((ref) {
     ref,
     ref.watch(libraryCatalogFutureProvider),
     manualLoading: ref.watch(libraryCatalogLoadingProvider), manualError: ref.watch(libraryCatalogErrorProvider), manualEmpty: ref.watch(libraryCatalogEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final libraryFilteredCatalogProvider = Provider<List<LibraryBook>>((ref) {
@@ -66,7 +67,7 @@ final libraryIssuesErrorProvider = StateProvider<bool>((ref) => false);
 final libraryIssuesEmptyProvider = StateProvider<bool>((ref) => false);
 final libraryIssuesFilterProvider = StateProvider<int>((ref) => 0);
 
-final libraryIssuesFutureProvider = FutureProvider<List<LibraryIssueRecord>>((ref) async {
+final libraryIssuesFutureProvider = FutureProvider<PaginatedResult<LibraryIssueRecord>>((ref) async {
 return ref.read(libraryRepositoryProvider).getIssues(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -75,7 +76,7 @@ final libraryIssuesProvider = Provider<List<LibraryIssueRecord>?>((ref) {
     ref,
     ref.watch(libraryIssuesFutureProvider),
     manualLoading: ref.watch(libraryIssuesLoadingProvider), manualError: ref.watch(libraryIssuesErrorProvider), manualEmpty: ref.watch(libraryIssuesEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final libraryFilteredIssuesProvider = Provider<List<LibraryIssueRecord>>(
@@ -104,7 +105,7 @@ final libraryReturnsErrorProvider = StateProvider<bool>((ref) => false);
 final libraryReturnsEmptyProvider = StateProvider<bool>((ref) => false);
 final libraryReturnsFilterProvider = StateProvider<int>((ref) => 0);
 
-final libraryReturnsFutureProvider = FutureProvider<List<LibraryReturnRecord>>((ref) async {
+final libraryReturnsFutureProvider = FutureProvider<PaginatedResult<LibraryReturnRecord>>((ref) async {
 return ref.read(libraryRepositoryProvider).getReturns(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -113,7 +114,7 @@ final libraryReturnsProvider = Provider<List<LibraryReturnRecord>?>((ref) {
     ref,
     ref.watch(libraryReturnsFutureProvider),
     manualLoading: ref.watch(libraryReturnsLoadingProvider), manualError: ref.watch(libraryReturnsErrorProvider), manualEmpty: ref.watch(libraryReturnsEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final libraryFilteredReturnsProvider = Provider<List<LibraryReturnRecord>>(
@@ -139,7 +140,7 @@ final libraryMembersErrorProvider = StateProvider<bool>((ref) => false);
 final libraryMembersEmptyProvider = StateProvider<bool>((ref) => false);
 final libraryMembersFilterProvider = StateProvider<int>((ref) => 0);
 
-final libraryMembersFutureProvider = FutureProvider<List<LibraryMember>>((ref) async {
+final libraryMembersFutureProvider = FutureProvider<PaginatedResult<LibraryMember>>((ref) async {
 return ref.read(libraryRepositoryProvider).getMembers(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -148,7 +149,7 @@ final libraryMembersProvider = Provider<List<LibraryMember>?>((ref) {
     ref,
     ref.watch(libraryMembersFutureProvider),
     manualLoading: ref.watch(libraryMembersLoadingProvider), manualError: ref.watch(libraryMembersErrorProvider), manualEmpty: ref.watch(libraryMembersEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final libraryFilteredMembersProvider = Provider<List<LibraryMember>>((ref) {

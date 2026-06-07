@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/security/permissions.dart';
 import '../../../../shared/widgets/akshara_status_chip.dart';
+import '../../../../shared/widgets/akshara_manage_action.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../../admissions_models.dart';
 
 /// Fee handoff configuration panel for an approved student (AD-08).
-class AdmissionsFeeHandoffPanel extends StatelessWidget {
+class AdmissionsFeeHandoffPanel extends ConsumerWidget {
   const AdmissionsFeeHandoffPanel({
     super.key,
     required this.handoff,
@@ -21,7 +24,7 @@ class AdmissionsFeeHandoffPanel extends StatelessWidget {
   final VoidCallback? onSendToFinance;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = context.aksharaText;
     final statusTone = switch (handoff.handoffStatus) {
@@ -99,9 +102,12 @@ class AdmissionsFeeHandoffPanel extends StatelessWidget {
                 onChanged: null,
               ),
               const SizedBox(height: AksharaSpacing.s3),
-              FilledButton(
-                onPressed: onSendToFinance,
-                child: const Text('Send to Finance'),
+              AksharaManageAction(
+                permission: Permission.manageAdmissions,
+                child: FilledButton(
+                  onPressed: onSendToFinance,
+                  child: const Text('Send to Finance'),
+                ),
               ),
             ],
           ),

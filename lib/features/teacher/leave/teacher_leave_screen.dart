@@ -222,8 +222,9 @@ class _ApplyForm extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s4),
         FilledButton(
           onPressed: draft.isValid
-              ? () {
-                  final ok = submitTeacherLeave(ref);
+              ? () async {
+                  final ok = await submitTeacherLeave(ref);
+                  if (!context.mounted) return;
                   if (ok) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

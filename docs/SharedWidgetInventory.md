@@ -26,6 +26,7 @@
 | `AksharaVirtualizedDataTable` | 3 | Admissions, Finance, SIS | Paginated virtualized tables (v3.1) |
 | `AksharaPaginationBar` | 6 | Admissions, Finance, SIS, HR, Transport | Page controls for paginated lists (v3.1–v4.1) |
 | `AksharaManageAction` | 0 | — | Mutation button RBAC wrapper (v4.0) |
+| `AksharaApproveAction` | 5 | Admissions, Finance, SIS | Approve/mutation RBAC wrapper (v4.5) |
 
 ---
 

@@ -1,4 +1,6 @@
 import '../../interfaces/hostel_repository.dart';
+import '../../pagination_helpers.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/hostel/hostel_models.dart';
 import 'mapper/hostel_mapper.dart';
@@ -22,31 +24,31 @@ class ApiHostelRepository implements HostelRepository {
   }
 
   @override
-  Future<List<HostelStudent>> getStudents({required RepositoryQuery query}) async {
+  Future<PaginatedResult<HostelStudent>> getStudents({required RepositoryQuery query}) async {
     final dto = await _remote.fetchStudents(query: query);
-    return _mapper.toStudents(dto);
+    return paginateList(_mapper.toStudents(dto), query);
   }
 
   @override
-  Future<List<HostelRoom>> getRooms({required RepositoryQuery query}) async {
+  Future<PaginatedResult<HostelRoom>> getRooms({required RepositoryQuery query}) async {
     final dto = await _remote.fetchRooms(query: query);
-    return _mapper.toRooms(dto);
+    return paginateList(_mapper.toRooms(dto), query);
   }
 
   @override
-  Future<List<HostelAttendanceRecord>> getAttendanceRecords({
+  Future<PaginatedResult<HostelAttendanceRecord>> getAttendanceRecords({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchAttendanceRecords(query: query);
-    return _mapper.toAttendanceRecords(dto);
+    return paginateList(_mapper.toAttendanceRecords(dto), query);
   }
 
   @override
-  Future<List<HostelLeaveRequest>> getLeaveRequests({
+  Future<PaginatedResult<HostelLeaveRequest>> getLeaveRequests({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchLeaveRequests(query: query);
-    return _mapper.toLeaveRequests(dto);
+    return paginateList(_mapper.toLeaveRequests(dto), query);
   }
 
   @override

@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
+import '../../../../../features/student/student_requests.dart';
+import '../dto/student_homework_submit_request_dto.dart';
 import '../dto/student_responses_dto.dart';
 import 'student_api_paths.dart';
 
@@ -84,6 +87,18 @@ class StudentRemoteDataSource {
     return StudentProfileResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<StudentHomeworkSubmitResponseDto> submitHomework({
+    required RepositoryQuery query,
+    required StudentHomeworkSubmitRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      StudentApiPaths.homeworkSubmit,
+      queryParameters: _queryParams(query),
+      data: StudentHomeworkSubmitRequestDto.fromDomain(request).toJson(),
+    );
+    return StudentHomeworkSubmitResponseDto.fromJson(_requireData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
@@ -99,5 +114,9 @@ class StudentRemoteDataSource {
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
     return response.data ?? const {};
+  }
+
+  Map<String, dynamic> _requireData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 }

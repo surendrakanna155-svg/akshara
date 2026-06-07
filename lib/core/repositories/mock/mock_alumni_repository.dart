@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../features/alumni/alumni_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/alumni_repository.dart';
+import '../paginated_result.dart';
+import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockAlumniRepository implements AlumniRepository {
@@ -171,7 +173,10 @@ class MockAlumniRepository implements AlumniRepository {
   }
 
   @override
-  Future<List<AlumniRecord>> getAlumniRegistry({required RepositoryQuery query}) async => _alumniRegistry;
+  Future<PaginatedResult<AlumniRecord>> getAlumniRegistry({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_alumniRegistry, query);
 
   @override
   Future<AlumniDetail?> getAlumniDetail({required RepositoryQuery query, required String alumniId}) async {
@@ -256,7 +261,10 @@ class MockAlumniRepository implements AlumniRepository {
   }
 
   @override
-  Future<List<AlumniEvent>> getEvents({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<AlumniEvent>> getEvents({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         AlumniEvent(
           id: 'evt_1',
           title: 'Annual Alumni Reunion 2026',
@@ -297,10 +305,13 @@ class MockAlumniRepository implements AlumniRepository {
           status: AlumniEventStatus.ongoing,
           organizer: 'Alumni Mentorship Program',
         ),
-      ];
+      ], query);
 
   @override
-  Future<List<AlumniDonation>> getDonations({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<AlumniDonation>> getDonations({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         AlumniDonation(
           id: 'don_1',
           alumniName: 'Arjun Patel',
@@ -345,10 +356,13 @@ class MockAlumniRepository implements AlumniRepository {
           financeReceiptId: '—',
           paymentMode: 'Cheque',
         ),
-      ];
+      ], query);
 
   @override
-  Future<List<AlumniCampaign>> getCampaigns({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<AlumniCampaign>> getCampaigns({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         AlumniCampaign(
           id: 'camp_1',
           name: 'Library Fund 2026',
@@ -389,10 +403,13 @@ class MockAlumniRepository implements AlumniRepository {
           status: AlumniCampaignStatus.completed,
           financeAccountCode: 'FN-ALM-MEM-2025',
         ),
-      ];
+      ], query);
 
   @override
-  Future<List<MentorshipPair>> getMentorshipPairs({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<MentorshipPair>> getMentorshipPairs({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         MentorshipPair(
           id: 'mnt_1',
           mentorName: 'Arjun Patel',
@@ -433,7 +450,7 @@ class MockAlumniRepository implements AlumniRepository {
           status: MentorshipStatus.completed,
           sessionsCompleted: 8,
         ),
-      ];
+      ], query);
 
   @override
   Future<AlumniReportsData> getReports({required RepositoryQuery query}) async {

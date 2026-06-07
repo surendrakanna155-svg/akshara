@@ -32,16 +32,16 @@ void main() {
       responseForPath = (path) => switch (path) {
             InventoryApiPaths.dashboard =>
               _fixtures.dashboardEnvelope(dashboard),
-            InventoryApiPaths.assets => _fixtures.assetsEnvelope(assets),
+            InventoryApiPaths.assets => _fixtures.assetsEnvelope(assets.items),
             InventoryApiPaths.categories =>
-              _fixtures.categoriesEnvelope(categories),
+              _fixtures.categoriesEnvelope(categories.items),
             InventoryApiPaths.allocations =>
-              _fixtures.allocationsEnvelope(allocations),
+              _fixtures.allocationsEnvelope(allocations.items),
             InventoryApiPaths.maintenance =>
-              _fixtures.maintenanceEnvelope(maintenance),
+              _fixtures.maintenanceEnvelope(maintenance.items),
             InventoryApiPaths.procurement =>
-              _fixtures.procurementEnvelope(procurement),
-            InventoryApiPaths.vendors => _fixtures.vendorsEnvelope(vendors),
+              _fixtures.procurementEnvelope(procurement.items),
+            InventoryApiPaths.vendors => _fixtures.vendorsEnvelope(vendors.items),
             InventoryApiPaths.reports => _fixtures.reportsEnvelope(reports),
             _ => const {'data': {}},
           };

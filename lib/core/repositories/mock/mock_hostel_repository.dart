@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../features/hostel/hostel_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/hostel_repository.dart';
+import '../paginated_result.dart';
+import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockHostelRepository implements HostelRepository {
@@ -230,14 +232,22 @@ class MockHostelRepository implements HostelRepository {
   }
 
   @override
-  Future<List<HostelStudent>> getStudents({required RepositoryQuery query}) async => _students;
+  Future<PaginatedResult<HostelStudent>> getStudents({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_students, query);
 
   @override
-  Future<List<HostelRoom>> getRooms({required RepositoryQuery query}) async => _rooms;
+  Future<PaginatedResult<HostelRoom>> getRooms({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_rooms, query);
 
   @override
-  Future<List<HostelAttendanceRecord>> getAttendanceRecords({required RepositoryQuery query}) async {
-    return const [
+  Future<PaginatedResult<HostelAttendanceRecord>> getAttendanceRecords({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(const [
       HostelAttendanceRecord(
         id: 'att_1',
         studentName: 'Arjun Patel',
@@ -290,12 +300,14 @@ class MockHostelRepository implements HostelRepository {
         parentNotified: true,
         sisStudentId: 'SIS-STU-10415',
       ),
-    ];
+    ], query);
   }
 
   @override
-  Future<List<HostelLeaveRequest>> getLeaveRequests({required RepositoryQuery query}) async {
-    return const [
+  Future<PaginatedResult<HostelLeaveRequest>> getLeaveRequests({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(const [
       HostelLeaveRequest(
         id: 'leave_1',
         studentName: 'Ananya Reddy',
@@ -352,7 +364,7 @@ class MockHostelRepository implements HostelRepository {
         sisStudentId: 'SIS-STU-10415',
         parentAppRoute: RouteNames.parentLeave,
       ),
-    ];
+    ], query);
   }
 
   @override

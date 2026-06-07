@@ -1,6 +1,10 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
+import '../../../../../features/parent/parent_requests.dart';
+import '../dto/parent_leave_submit_request_dto.dart';
+import '../dto/parent_payment_request_dto.dart';
 import '../dto/parent_responses_dto.dart';
 import 'parent_api_paths.dart';
 
@@ -139,6 +143,42 @@ class ParentRemoteDataSource {
     return ParentPaymentSummaryResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<ParentLeaveRequestDto> submitLeaveRequest({
+    required RepositoryQuery query,
+    required ParentLeaveSubmitRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ParentApiPaths.leave,
+      queryParameters: _queryParams(query),
+      data: ParentLeaveSubmitRequestDto.fromDomain(request).toJson(),
+    );
+    return ParentLeaveRequestDto.fromJson(_requireData(response));
+  }
+
+  Future<ParentPaymentInitiationResponseDto> initiatePayment({
+    required RepositoryQuery query,
+    required ParentPaymentInitiateRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ParentApiPaths.paymentsInitiate,
+      queryParameters: _queryParams(query),
+      data: ParentPaymentInitiateRequestDto.fromDomain(request).toJson(),
+    );
+    return ParentPaymentInitiationResponseDto.fromJson(_requireData(response));
+  }
+
+  Future<ParentPaymentConfirmationResponseDto> confirmPayment({
+    required RepositoryQuery query,
+    required ParentPaymentConfirmRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ParentApiPaths.paymentsConfirm,
+      queryParameters: _queryParams(query),
+      data: ParentPaymentConfirmRequestDto.fromDomain(request).toJson(),
+    );
+    return ParentPaymentConfirmationResponseDto.fromJson(_requireData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
@@ -154,5 +194,9 @@ class ParentRemoteDataSource {
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
     return response.data ?? const {};
+  }
+
+  Map<String, dynamic> _requireData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 }

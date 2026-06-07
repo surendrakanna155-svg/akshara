@@ -87,6 +87,12 @@ final canManageFinanceProvider = Provider<bool>((ref) {
   return ref.watch(rbacServiceProvider).hasPermission(Permission.manageFinance);
 });
 
+final canApproveRefundsProvider = Provider<bool>((ref) {
+  return ref
+      .watch(rbacServiceProvider)
+      .hasPermission(Permission.approveRefunds);
+});
+
 final canViewAdmissionsProvider = Provider<bool>((ref) {
   return ref
       .watch(rbacServiceProvider)

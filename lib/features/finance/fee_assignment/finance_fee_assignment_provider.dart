@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
@@ -11,7 +12,7 @@ final financeFeeAssignmentErrorProvider = StateProvider<bool>((ref) => false);
 final financeSelectedHandoffIdProvider = StateProvider<String?>((ref) => null);
 
 final financeInstallmentPlansFutureProvider =
-    FutureProvider<List<InstallmentPlan>>((ref) async {
+    FutureProvider<PaginatedResult<InstallmentPlan>>((ref) async {
   return ref
       .read(financeRepositoryProvider)
       .getInstallmentPlans(query: ref.watch(repositoryQueryProvider));
@@ -25,17 +26,17 @@ final financeInstallmentPlansProvider = Provider<List<InstallmentPlan>>(
         manualLoading: false,
         manualError: false,
         manualEmpty: false,
-      ) ??
+      )?.items ??
       const [],
 );
 
 final financeInstallmentPlansViewStateProvider =
-    Provider<FinanceViewState<List<InstallmentPlan>>>((ref) {
+    Provider<FinanceViewState<PaginatedResult<InstallmentPlan>>>((ref) {
   return resolveFinanceAsync(
     ref.watch(financeInstallmentPlansFutureProvider),
     forceLoading: ref.watch(financeFeeAssignmentLoadingProvider),
     forceError: ref.watch(financeFeeAssignmentErrorProvider),
-    isDataEmpty: (plans) => plans.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });
 

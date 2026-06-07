@@ -90,7 +90,7 @@ void main() {
     test('includes admissions handoff mock data', () async {
       final container = createProviderTestContainer();
       addTearDown(container.dispose);
-      await container.read(admissionsApprovedHandoffsFutureProvider.future);
+      await container.read(admissionsApprovedHandoffsRawFutureProvider.future);
 
       final queue = container.read(financeHandoffQueueProvider);
       expect(queue, hasLength(3));
@@ -100,7 +100,7 @@ void main() {
     test('pending handoffs excludes completed', () async {
       final container = createProviderTestContainer();
       addTearDown(container.dispose);
-      await container.read(admissionsApprovedHandoffsFutureProvider.future);
+      await container.read(admissionsApprovedHandoffsRawFutureProvider.future);
 
       final pending = container.read(financePendingHandoffsProvider);
       expect(pending.length, lessThan(3));

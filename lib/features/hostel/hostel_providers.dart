@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
+import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
 import 'hostel_models.dart';
 
@@ -30,7 +31,7 @@ final hostelStudentsErrorProvider = StateProvider<bool>((ref) => false);
 final hostelStudentsEmptyProvider = StateProvider<bool>((ref) => false);
 final hostelStudentsFilterProvider = StateProvider<int>((ref) => 0);
 
-final hostelStudentsFutureProvider = FutureProvider<List<HostelStudent>>((ref) async {
+final hostelStudentsFutureProvider = FutureProvider<PaginatedResult<HostelStudent>>((ref) async {
 return ref.read(hostelRepositoryProvider).getStudents(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -39,7 +40,7 @@ final hostelStudentsProvider = Provider<List<HostelStudent>?>((ref) {
     ref,
     ref.watch(hostelStudentsFutureProvider),
     manualLoading: ref.watch(hostelStudentsLoadingProvider), manualError: ref.watch(hostelStudentsErrorProvider), manualEmpty: ref.watch(hostelStudentsEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final hostelFilteredStudentsProvider = Provider<List<HostelStudent>>((ref) {
@@ -66,7 +67,7 @@ final hostelRoomsErrorProvider = StateProvider<bool>((ref) => false);
 final hostelRoomsEmptyProvider = StateProvider<bool>((ref) => false);
 final hostelRoomsFilterProvider = StateProvider<int>((ref) => 0);
 
-final hostelRoomsFutureProvider = FutureProvider<List<HostelRoom>>((ref) async {
+final hostelRoomsFutureProvider = FutureProvider<PaginatedResult<HostelRoom>>((ref) async {
 return ref.read(hostelRepositoryProvider).getRooms(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -75,7 +76,7 @@ final hostelRoomsProvider = Provider<List<HostelRoom>?>((ref) {
     ref,
     ref.watch(hostelRoomsFutureProvider),
     manualLoading: ref.watch(hostelRoomsLoadingProvider), manualError: ref.watch(hostelRoomsErrorProvider), manualEmpty: ref.watch(hostelRoomsEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final hostelFilteredRoomsProvider = Provider<List<HostelRoom>>((ref) {
@@ -103,7 +104,7 @@ final hostelAttendanceEmptyProvider = StateProvider<bool>((ref) => false);
 final hostelAttendanceFilterProvider = StateProvider<int>((ref) => 0);
 
 final hostelAttendanceFutureProvider =
-    FutureProvider<List<HostelAttendanceRecord>>((ref) async {
+    FutureProvider<PaginatedResult<HostelAttendanceRecord>>((ref) async {
   return ref.read(hostelRepositoryProvider).getAttendanceRecords(
         query: ref.watch(repositoryQueryProvider),
       );
@@ -117,7 +118,7 @@ final hostelAttendanceProvider =
     manualLoading: ref.watch(hostelAttendanceLoadingProvider),
     manualError: ref.watch(hostelAttendanceErrorProvider),
     manualEmpty: ref.watch(hostelAttendanceEmptyProvider),
-  );
+  )?.items;
 });
 
 final hostelFilteredAttendanceProvider =
@@ -145,7 +146,7 @@ final hostelLeaveErrorProvider = StateProvider<bool>((ref) => false);
 final hostelLeaveEmptyProvider = StateProvider<bool>((ref) => false);
 final hostelLeaveFilterProvider = StateProvider<int>((ref) => 0);
 
-final hostelLeaveFutureProvider = FutureProvider<List<HostelLeaveRequest>>((ref) async {
+final hostelLeaveFutureProvider = FutureProvider<PaginatedResult<HostelLeaveRequest>>((ref) async {
 return ref.read(hostelRepositoryProvider).getLeaveRequests(query: ref.watch(repositoryQueryProvider));
 });
 
@@ -154,7 +155,7 @@ final hostelLeaveProvider = Provider<List<HostelLeaveRequest>?>((ref) {
     ref,
     ref.watch(hostelLeaveFutureProvider),
     manualLoading: ref.watch(hostelLeaveLoadingProvider), manualError: ref.watch(hostelLeaveErrorProvider), manualEmpty: ref.watch(hostelLeaveEmptyProvider),
-  ) ?? const [];
+  )?.items ?? const [];
 });
 
 final hostelFilteredLeaveProvider = Provider<List<HostelLeaveRequest>>((ref) {

@@ -6,6 +6,7 @@ import '../../../../../features/student/homework/homework_models.dart';
 import '../../../../../features/student/notices/notices_models.dart';
 import '../../../../../features/student/profile/profile_models.dart';
 import '../dto/student_enum_codec.dart';
+import '../dto/student_homework_submit_request_dto.dart';
 import '../dto/student_responses_dto.dart';
 
 /// Maps Student mobile API DTOs to domain models.
@@ -64,6 +65,10 @@ class StudentMapper {
       attachmentLabel: raw['attachmentLabel'] as String?,
       submittedLabel: raw['submittedLabel'] as String?,
     );
+  }
+
+  StudentHomeworkItem toHomeworkSubmitResult(StudentHomeworkSubmitResponseDto dto) {
+    return toHomeworkItem(StudentHomeworkItemDto(raw: dto.raw));
   }
 
   StudentExamsData toExams(StudentExamsResponseDto dto) {

@@ -52,35 +52,55 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<List<StudentDocumentRecord>> getDocuments({
+  Future<PaginatedResult<StudentDocumentRecord>> getDocuments({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchDocuments(query: query);
-    return _mapper.toDocuments(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toDocuments(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
-  Future<List<PendingEnrollmentRecord>> getPendingEnrollments({
+  Future<PaginatedResult<PendingEnrollmentRecord>> getPendingEnrollments({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchPendingEnrollments(query: query);
-    return _mapper.toPendingEnrollments(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toPendingEnrollments(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
-  Future<List<ApprovedStudentHandoff>> getApprovedHandoffs({
+  Future<PaginatedResult<ApprovedStudentHandoff>> getApprovedHandoffs({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchApprovedHandoffs(query: query);
-    return _mapper.toApprovedHandoffs(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toApprovedHandoffs(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
-  Future<List<FeeStructureOption>> getFeeStructureOptions({
+  Future<PaginatedResult<FeeStructureOption>> getFeeStructureOptions({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchFeeStructureOptions(query: query);
-    return _mapper.toFeeStructureOptions(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toFeeStructureOptions(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

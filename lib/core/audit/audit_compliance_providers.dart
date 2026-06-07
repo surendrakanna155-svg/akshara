@@ -5,6 +5,8 @@ import '../repositories/api/audit/audit_upload_providers.dart';
 import 'audit_retention_policy.dart';
 import 'audit_upload_queue.dart';
 import 'audit_upload_service.dart';
+import 'audit_health_monitor.dart';
+import 'audit_readiness.dart';
 import 'audit_upload_status.dart';
 
 final auditRetentionPolicyProvider = Provider<AuditRetentionPolicy>((ref) {
@@ -24,6 +26,18 @@ final auditUploadServiceProvider = Provider<AuditUploadService>((ref) {
     queue: ref.watch(auditUploadQueueProvider),
     uploader: ref.watch(auditBatchUploaderProvider),
   );
+});
+
+final auditHealthMonitorProvider = Provider<AuditHealthMonitor>((ref) {
+  return AuditHealthMonitor(queue: ref.watch(auditUploadQueueProvider));
+});
+
+final auditReadinessVerifierProvider = Provider<AuditReadinessVerifier>((ref) {
+  return const AuditReadinessVerifier();
+});
+
+final auditHealthSnapshotProvider = FutureProvider<AuditHealthSnapshot>((ref) async {
+  return ref.watch(auditHealthMonitorProvider).snapshot();
 });
 
 final auditPendingUploadsProvider =

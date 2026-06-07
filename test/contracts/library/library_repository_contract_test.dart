@@ -44,34 +44,34 @@ void main() {
     test('getCatalog DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getCatalog(query: kQuery);
       final mapped = _mapper.toCatalog(
-        LibraryCatalogResponseDto.fromJson(_fixtures.catalogEnvelope(mockData)),
+        LibraryCatalogResponseDto.fromJson(_fixtures.catalogEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.isbn, mockData.first.isbn);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.isbn, mockData.items.first.isbn);
     });
 
     test('getIssues DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getIssues(query: kQuery);
       final mapped = _mapper.toIssues(
-        LibraryIssuesResponseDto.fromJson(_fixtures.issuesEnvelope(mockData)),
+        LibraryIssuesResponseDto.fromJson(_fixtures.issuesEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getReturns DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getReturns(query: kQuery);
       final mapped = _mapper.toReturns(
-        LibraryReturnsResponseDto.fromJson(_fixtures.returnsEnvelope(mockData)),
+        LibraryReturnsResponseDto.fromJson(_fixtures.returnsEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getMembers DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getMembers(query: kQuery);
       final mapped = _mapper.toMembers(
-        LibraryMembersResponseDto.fromJson(_fixtures.membersEnvelope(mockData)),
+        LibraryMembersResponseDto.fromJson(_fixtures.membersEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getFines DTO mapping matches mock output', () async {

@@ -1,20 +1,20 @@
 # Akshara ERP — Technical Debt Register
 
-**Version:** 1.4  
+**Version:** 1.6  
 **Last updated:** June 2026  
-**Source audits:** v1.5–v4.2 ArchitectureReview documents
+**Source audits:** v1.5–v4.8 ArchitectureReview documents
 
 ---
 
 ## Summary
 
-| Priority | Open | In Progress | Resolved (v4.2) |
+| Priority | Open | In Progress | Resolved (v4.8) |
 |----------|-----:|------------:|----------------:|
 | P0 | 2 | 0 | 3 |
-| P1 | 3 | 1 | 9 |
+| P1 | 1 | 1 | 11 |
 | P2 | 11 | 0 | 4 |
 | P3 | 6 | 0 | 0 |
-| **Total** | **22** | **1** | **16** |
+| **Total** | **20** | **1** | **18** |
 
 ---
 
@@ -22,8 +22,8 @@
 
 | ID | Issue | Impact | Effort | Owner | Status |
 |----|-------|--------|--------|-------|--------|
-| TD-P0-01 | No server-side RBAC / tenant RLS | Authorization bypass via direct API | 4–6 wks (backend) | Agent D + Backend | Open |
-| TD-P0-02 | Audit events not ingested server-side | Compliance gap; no tamper-evident trail | 2–3 wks | Agent D + Agent A | **Partial v2.8** (client upload wired) |
+| TD-P0-01 | No server-side RBAC / tenant RLS | Authorization bypass via direct API | 4–6 wks (backend) | Agent D + Backend | **Partial v4.3** (client validation) |
+| TD-P0-02 | Audit events not ingested server-side | Compliance gap; no tamper-evident trail | 2–3 wks | Agent D + Agent A | **Partial v4.4** (health + readiness) |
 | TD-P0-03 | ~~8 ERP modules throw `ApiNotConnectedException` when API flags enabled~~ | Cannot enable stub modules in staging | — | Agent A | **Resolved v3.2** (all read APIs) |
 | TD-P0-04 | ~~Plaintext token storage~~ | Credential theft on rooted devices | — | Agent D | **Resolved v2.7** |
 | TD-P0-05 | ~~No JWT claim validation client-side~~ | Invalid tokens attached to requests | — | Agent D | **Resolved v2.7** |
@@ -35,18 +35,18 @@
 | ID | Issue | Impact | Effort | Owner | Status |
 |----|-------|--------|--------|-------|--------|
 | TD-P1-01 | ~~Parent/teacher/student apps use inline mocks — no repository layer~~ | Mobile cannot connect to live API | — | Agent C | **Resolved v3.0** |
-| TD-P1-02 | No pagination in repository interfaces | Performance collapse at 5k+ rows | 3–4 wks | Agent A | **Partial v4.1** (9 list endpoints) |
+| TD-P1-02 | ~~No pagination in repository interfaces~~ | Performance collapse at 5k+ rows | — | Agent A | **Resolved v4.6** (42/42 endpoints) |
 | TD-P1-03 | ~~No OpenAPI contract validation against staging~~ | DTO drift from backend | 2 wks | Agent A + Agent E | **Resolved v2.8** |
-| TD-P1-04 | manage* permissions not wired on all mutation routes | UX-only RBAC on some screens | 1–2 wks | Agent D | **Partial v4.0** (`AksharaManageAction` scaffold) |
+| TD-P1-04 | manage* permissions not wired on all mutation routes | UX-only RBAC on some screens | 1–2 wks | Agent D | **Partial v4.5** (providers + 5 screens) |
 | TD-P1-05 | ~~Audit upload uploader throws `UnimplementedError` until backend wired~~ | Queue grows without drain | 1 wk | Agent D | **Resolved v2.8** |
 | TD-P1-06 | Cross-module handoff (Adm→Fin→SIS) partially untested under dual-API | Integration regressions | 1 wk | Agent E | Open |
 | TD-P1-07 | Demo auth paths remain for parent/teacher/student personas | Mock OTP bypass in non-API mode | 2 wks | Agent D | Open |
-| TD-P1-08 | ~1,600 Riverpod providers — broad rebuild fan-out | UI jank on low-end devices | 3–4 wks | Agent B | Open |
+| TD-P1-08 | ~1,600 Riverpod providers — broad rebuild fan-out | UI jank on low-end devices | 3–4 wks | Agent B | **Partial v4.7** (7 clusters optimized) |
 | TD-P1-09 | ~~No refresh token reuse detection~~ | Token theft undetected | — | Agent D | **Resolved v2.7** |
 | TD-P1-10 | ~~Permission sync service missing~~ | Stale permissions after role change | — | Agent D | **Resolved v2.7** |
 | TD-P1-11 | ~~Audit local-only ring buffer~~ | Events lost at cap | — | Agent D | **Partial v2.8** (queue + remote drain) |
 | TD-P1-12 | ~~Client-only permission cache without version tracking~~ | Downgrade attacks | — | Agent D | **Resolved v2.7** |
-| TD-P1-13 | Non-virtualized DataTables (~40 instances) | Scroll jank on large lists | 2–3 wks | Agent B | **Partial v4.1** (6 tables virtualized) |
+| TD-P1-13 | Non-virtualized DataTables (~40 instances) | Scroll jank on large lists | 2–3 wks | Agent B | **Partial v4.6** (7 tables; pagination layer complete) |
 
 ---
 
@@ -87,10 +87,9 @@
 
 ## Debt Paydown Priority (Recommended Order)
 
-1. **v4.3** — Server RBAC/RLS validation (TD-P0-01)
-2. **v4.4** — Complete pagination rollout (TD-P1-02, TD-P1-13)
-3. **v4.5** — Wire manage* on all mutation routes (TD-P1-04)
-4. **v4.6** — Extend tenant scoping to all mocks (TD-P2-02)
+1. **v4.9** — Wire remaining mobile write UI + legacy dashboard migration (TD-P1-04, TD-P1-08)
+2. **v4.10** — Extend tenant scoping to all mocks (TD-P2-02)
+3. **v5.0** — Server RBAC/RLS + audit ingestion validation (TD-P0-01, TD-P0-02)
 
 ---
 

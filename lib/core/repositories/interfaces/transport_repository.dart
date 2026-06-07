@@ -6,10 +6,10 @@ import '../repository_query.dart';
 abstract class TransportRepository {
   Future<TransportDashboardData> getDashboard({required RepositoryQuery query});
   Future<PaginatedResult<TransportRoute>> getRoutes({required RepositoryQuery query});
-  Future<List<TransportVehicle>> getVehicles({required RepositoryQuery query});
-  Future<List<TransportDriver>> getDrivers({required RepositoryQuery query});
-  Future<List<StudentTransportAllocation>> getAllocations({required RepositoryQuery query});
-  Future<List<TransportAttendanceRecord>> getAttendanceRecords({required RepositoryQuery query});
+  Future<PaginatedResult<TransportVehicle>> getVehicles({required RepositoryQuery query});
+  Future<PaginatedResult<TransportDriver>> getDrivers({required RepositoryQuery query});
+  Future<PaginatedResult<StudentTransportAllocation>> getAllocations({required RepositoryQuery query});
+  Future<PaginatedResult<TransportAttendanceRecord>> getAttendanceRecords({required RepositoryQuery query});
   Future<TransportTrackingPlaceholderData> getTrackingPlaceholder({required RepositoryQuery query});
   Future<TransportReportsData> getReports({required RepositoryQuery query});
   Future<TransportSettingsData> getSettings({required RepositoryQuery query});

@@ -7,6 +7,7 @@ import '../../../router/route_names.dart';
 
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
+import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_navigation.dart';
@@ -37,10 +38,13 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(admissionsLeadsFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () => showCreateLeadDialog(context, ref),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('New Lead'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageAdmissions,
+        child: FilledButton.icon(
+          onPressed: () => showCreateLeadDialog(context, ref),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('New Lead'),
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

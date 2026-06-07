@@ -24,7 +24,7 @@ void main() {
       final registry = await mockRepo.getAlumniRegistry(query: kQuery);
       final detail = await mockRepo.getAlumniDetail(
         query: kQuery,
-        alumniId: registry.first.id,
+        alumniId: registry.items.first.id,
       );
       final events = await mockRepo.getEvents(query: kQuery);
       final donations = await mockRepo.getDonations(query: kQuery);
@@ -36,21 +36,21 @@ void main() {
       responseForPath = (path) => switch (path) {
             AlumniApiPaths.dashboard => _fixtures.dashboardEnvelope(dashboard),
             AlumniApiPaths.registry => _fixtures.listEnvelope([
-                for (final record in registry) _fixtures.recordItem(record),
+                for (final record in registry.items) _fixtures.recordItem(record),
               ]),
             AlumniApiPaths.events => _fixtures.listEnvelope([
-                for (final event in events) _fixtures.eventItem(event),
+                for (final event in events.items) _fixtures.eventItem(event),
               ]),
             AlumniApiPaths.donations => _fixtures.listEnvelope([
-                for (final donation in donations)
+                for (final donation in donations.items)
                   _fixtures.donationItem(donation),
               ]),
             AlumniApiPaths.campaigns => _fixtures.listEnvelope([
-                for (final campaign in campaigns)
+                for (final campaign in campaigns.items)
                   _fixtures.campaignItem(campaign),
               ]),
             AlumniApiPaths.mentorship => _fixtures.listEnvelope([
-                for (final pair in mentorship)
+                for (final pair in mentorship.items)
                   _fixtures.mentorshipPairItem(pair),
               ]),
             AlumniApiPaths.reports => _fixtures.reportsEnvelope(reports),

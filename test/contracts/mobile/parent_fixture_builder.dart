@@ -370,4 +370,28 @@ class ParentFixtureBuilder {
       ],
     });
   }
+
+  Map<String, dynamic> paymentInitiationEnvelope(PaymentInitiationResult data) {
+    return envelope({
+      'paymentIntentId': data.paymentIntentId,
+      'installmentId': data.installmentId,
+      'amount': data.amount,
+      'status': data.status,
+      if (data.expiresAtLabel != null) 'expiresAtLabel': data.expiresAtLabel,
+    });
+  }
+
+  Map<String, dynamic> paymentConfirmationEnvelope(PaymentConfirmationResult data) {
+    return envelope({
+      'receiptId': data.receiptId,
+      'receiptNumber': data.receiptNumber,
+      'paidAmount': data.paidAmount,
+      'paymentMethod': switch (data.paymentMethod) {
+        PaymentMethod.card => 'card',
+        PaymentMethod.netBanking => 'net_banking',
+        PaymentMethod.upi => 'upi',
+      },
+      'paidAtLabel': data.paidAtLabel,
+    });
+  }
 }

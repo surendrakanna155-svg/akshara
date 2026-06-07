@@ -8,10 +8,10 @@ abstract class AdmissionsRepository {
   Future<AdmissionsDashboardData> getDashboard({required RepositoryQuery query});
   Future<PaginatedResult<AdmissionsLead>> getLeads({required RepositoryQuery query});
   Future<PaginatedResult<AdmissionsApplication>> getApplications({required RepositoryQuery query});
-  Future<List<StudentDocumentRecord>> getDocuments({required RepositoryQuery query});
-  Future<List<PendingEnrollmentRecord>> getPendingEnrollments({required RepositoryQuery query});
-  Future<List<ApprovedStudentHandoff>> getApprovedHandoffs({required RepositoryQuery query});
-  Future<List<FeeStructureOption>> getFeeStructureOptions({required RepositoryQuery query});
+  Future<PaginatedResult<StudentDocumentRecord>> getDocuments({required RepositoryQuery query});
+  Future<PaginatedResult<PendingEnrollmentRecord>> getPendingEnrollments({required RepositoryQuery query});
+  Future<PaginatedResult<ApprovedStudentHandoff>> getApprovedHandoffs({required RepositoryQuery query});
+  Future<PaginatedResult<FeeStructureOption>> getFeeStructureOptions({required RepositoryQuery query});
   Future<PaginatedResult<ApprovalQueueItem>> getApprovalQueue({required RepositoryQuery query});
   Future<AdmissionsReportsData> getReports({required RepositoryQuery query});
   Future<AdmissionsSettingsData> getSettings({required RepositoryQuery query});

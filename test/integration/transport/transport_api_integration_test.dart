@@ -35,12 +35,12 @@ void main() {
             TransportApiPaths.dashboard =>
               _fixtures.dashboardEnvelope(dashboard),
             TransportApiPaths.routes => _fixtures.routesEnvelope(routes.items),
-            TransportApiPaths.vehicles => _fixtures.vehiclesEnvelope(vehicles),
-            TransportApiPaths.drivers => _fixtures.driversEnvelope(drivers),
+            TransportApiPaths.vehicles => _fixtures.vehiclesEnvelope(vehicles.items),
+            TransportApiPaths.drivers => _fixtures.driversEnvelope(drivers.items),
             TransportApiPaths.allocations =>
-              _fixtures.allocationsEnvelope(allocations),
+              _fixtures.allocationsEnvelope(allocations.items),
             TransportApiPaths.attendance =>
-              _fixtures.attendanceEnvelope(attendance),
+              _fixtures.attendanceEnvelope(attendance.items),
             TransportApiPaths.tracking => _fixtures.trackingEnvelope(tracking),
             TransportApiPaths.reports => _fixtures.reportsEnvelope(reports),
             TransportApiPaths.settings => _fixtures.settingsEnvelope(settings),

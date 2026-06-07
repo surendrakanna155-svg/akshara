@@ -5,10 +5,13 @@ import '../../../features/student/exams/exam_models.dart';
 import '../../../features/student/homework/homework_models.dart';
 import '../../../features/student/notices/notices_models.dart';
 import '../../../features/student/profile/profile_models.dart';
+import '../../../features/student/student_requests.dart';
 import '../interfaces/student_repository.dart';
 import '../repository_query.dart';
+import 'mock_student_write_store.dart';
 
 class MockStudentRepository implements StudentRepository {
+  MockStudentWriteStore get _store => MockStudentWriteStore.instance;
   @override
   Future<StudentDashboardData> getDashboard({required RepositoryQuery query}) async =>
       StudentDashboardData.mock();
@@ -23,8 +26,12 @@ class MockStudentRepository implements StudentRepository {
   @override
   Future<List<StudentHomeworkItem>> getHomeworkItems({
     required RepositoryQuery query,
-  }) async =>
-      _mockItems();
+  }) async {
+    final base = _mockItems();
+    return [
+      for (final item in base) _store.submittedHomework[item.id] ?? item,
+    ];
+  }
 
   @override
   Future<StudentExamsData> getExams({required RepositoryQuery query}) async =>
@@ -119,6 +126,28 @@ class MockStudentRepository implements StudentRepository {
           AcademicSummaryItem(label: 'Overall grade', value: 'A'),
         ],
       );
+
+  @override
+  Future<StudentHomeworkItem> submitHomework({
+    required RepositoryQuery query,
+    required StudentHomeworkSubmitRequest request,
+  }) async {
+    final existing = _mockItems().firstWhere(
+      (item) => item.id == request.homeworkId,
+      orElse: () => throw StateError('Homework not found: ${request.homeworkId}'),
+    );
+    final submitted = StudentHomeworkItem(
+      id: existing.id,
+      subject: existing.subject,
+      title: existing.title,
+      dueLabel: existing.dueLabel,
+      status: StudentHomeworkStatus.submitted,
+      attachmentLabel: request.attachmentLabel ?? existing.attachmentLabel,
+      submittedLabel: 'Submitted just now',
+    );
+    _store.submittedHomework[request.homeworkId] = submitted;
+    return submitted;
+  }
 }
 
 

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
@@ -12,7 +13,7 @@ final financeFeeStructuresEmptyProvider = StateProvider<bool>((ref) => false);
 final financeAcademicYearProvider = StateProvider<String>((ref) => '2026-27');
 
 final financeFeeStructuresFutureProvider =
-    FutureProvider<List<FinanceFeeStructure>>((ref) async {
+    FutureProvider<PaginatedResult<FinanceFeeStructure>>((ref) async {
   final year = ref.watch(financeAcademicYearProvider);
   return ref.read(financeRepositoryProvider).getFeeStructures(
         query: ref.watch(repositoryQueryProvider),
@@ -27,12 +28,12 @@ final financeFeeStructuresProvider = Provider<List<FinanceFeeStructure>>((ref) {
         manualLoading: ref.watch(financeFeeStructuresLoadingProvider),
         manualError: ref.watch(financeFeeStructuresErrorProvider),
         manualEmpty: ref.watch(financeFeeStructuresEmptyProvider),
-      ) ??
+      )?.items ??
       const [];
 });
 
 final financeAcademicYearsFutureProvider =
-    FutureProvider<List<String>>((ref) async {
+    FutureProvider<PaginatedResult<String>>((ref) async {
   return ref
       .read(financeRepositoryProvider)
       .getAcademicYears(query: ref.watch(repositoryQueryProvider));
@@ -46,17 +47,17 @@ final financeAcademicYearsProvider = Provider<List<String>>(
         manualLoading: false,
         manualError: false,
         manualEmpty: false,
-      ) ??
+      )?.items ??
       const [],
 );
 
 final financeFeeStructuresViewStateProvider =
-    Provider<FinanceViewState<List<FinanceFeeStructure>>>((ref) {
+    Provider<FinanceViewState<PaginatedResult<FinanceFeeStructure>>>((ref) {
   return resolveFinanceAsync(
     ref.watch(financeFeeStructuresFutureProvider),
     forceLoading: ref.watch(financeFeeStructuresLoadingProvider),
     forceError: ref.watch(financeFeeStructuresErrorProvider),
     forceEmpty: ref.watch(financeFeeStructuresEmptyProvider),
-    isDataEmpty: (structures) => structures.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });

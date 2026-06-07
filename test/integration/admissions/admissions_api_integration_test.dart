@@ -42,18 +42,18 @@ void main() {
                 for (final app in applications.items) _fixtures.applicationItem(app),
               ]),
             AdmissionsApiPaths.documents => _fixtures.listEnvelope([
-                for (final doc in documents) _fixtures.documentItem(doc),
+                for (final doc in documents.items) _fixtures.documentItem(doc),
               ]),
             AdmissionsApiPaths.enrollmentsPending => _fixtures.listEnvelope([
-                for (final record in enrollments)
+                for (final record in enrollments.items)
                   _fixtures.enrollmentItem(record),
               ]),
             AdmissionsApiPaths.handoffsApproved => _fixtures.listEnvelope([
-                for (final handoff in handoffs)
+                for (final handoff in handoffs.items)
                   _fixtures.handoffItem(handoff),
               ]),
             AdmissionsApiPaths.feeStructures => _fixtures.listEnvelope([
-                for (final option in feeStructures)
+                for (final option in feeStructures.items)
                   _fixtures.feeStructureItem(option),
               ]),
             AdmissionsApiPaths.approvalQueue => _fixtures.listEnvelope([

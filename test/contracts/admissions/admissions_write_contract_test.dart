@@ -120,7 +120,7 @@ void main() {
 
     test('approveDocument marks document verified', () async {
       final docs = await repo.getDocuments(query: kQuery);
-      final pending = docs.firstWhere(
+      final pending = docs.items.firstWhere(
         (doc) => doc.status == DocumentVerificationStatus.uploaded,
       );
       final approved = await repo.approveDocument(

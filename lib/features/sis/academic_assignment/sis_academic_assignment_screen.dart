@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -251,7 +253,7 @@ class _StudentPicker extends StatelessWidget {
   }
 }
 
-class _AssignmentForm extends StatelessWidget {
+class _AssignmentForm extends ConsumerWidget {
   const _AssignmentForm({
     required this.student,
     required this.classes,
@@ -283,7 +285,7 @@ class _AssignmentForm extends StatelessWidget {
   final VoidCallback onTransfer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       elevation: 0,
       child: Padding(
@@ -353,9 +355,12 @@ class _AssignmentForm extends StatelessWidget {
                   onPressed: onTransfer,
                   child: const Text('Transfer'),
                 ),
-                FilledButton(
-                  onPressed: onSaveAssignment,
-                  child: const Text('Save assignment'),
+                AksharaManageAction(
+                  permission: Permission.manageSis,
+                  child: FilledButton(
+                    onPressed: onSaveAssignment,
+                    child: const Text('Save assignment'),
+                  ),
                 ),
               ],
             ),

@@ -41,3 +41,15 @@ void assertManageFinance(Ref ref) {
     );
   }
 }
+
+void assertApproveRefunds(Ref ref) {
+  if (!ref.read(canApproveRefundsProvider)) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to approve refunds.',
+        code: 'RBAC_APPROVE_REFUNDS',
+      ),
+    );
+  }
+}

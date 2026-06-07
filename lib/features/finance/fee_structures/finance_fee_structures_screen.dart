@@ -6,6 +6,7 @@ import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../finance_workflow_actions.dart';
@@ -57,14 +58,15 @@ class FinanceFeeStructuresScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          FinanceAsyncBody<List<FinanceFeeStructure>>(
+          FinanceAsyncBody<PaginatedResult<FinanceFeeStructure>>(
             state: viewState,
             loadingLabel: 'Loading fee structures',
             emptyMessage: 'No fee structures for the selected academic year.',
             emptyIcon: Icons.receipt_long_outlined,
             onRetry: () =>
                 retryFinanceFuture(ref, financeFeeStructuresFutureProvider),
-            builder: (structures) {
+            builder: (result) {
+              final structures = result.items;
               if (AdminLayout.isMobile(context)) {
                 return Column(
                   children: [

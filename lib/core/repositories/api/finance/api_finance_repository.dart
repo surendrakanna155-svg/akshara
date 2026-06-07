@@ -1,4 +1,5 @@
 import '../../interfaces/finance_repository.dart';
+import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/finance/finance_models.dart';
@@ -47,7 +48,7 @@ class ApiFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<List<FinanceFeeStructure>> getFeeStructures({
+  Future<PaginatedResult<FinanceFeeStructure>> getFeeStructures({
     required RepositoryQuery query,
     required String academicYear,
   }) async {
@@ -55,15 +56,15 @@ class ApiFinanceRepository implements FinanceRepository {
       query: query,
       academicYear: academicYear,
     );
-    return _mapper.toFeeStructures(dto);
+    return paginateList(_mapper.toFeeStructures(dto), query);
   }
 
   @override
-  Future<List<String>> getAcademicYears({
+  Future<PaginatedResult<String>> getAcademicYears({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchAcademicYears(query: query);
-    return _mapper.toAcademicYears(dto);
+    return paginateList(_mapper.toAcademicYears(dto), query);
   }
 
   @override
@@ -80,11 +81,11 @@ class ApiFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<List<InstallmentPlan>> getInstallmentPlans({
+  Future<PaginatedResult<InstallmentPlan>> getInstallmentPlans({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchFeeAssignment(query: query);
-    return _mapper.toInstallmentPlans(dto);
+    return paginateList(_mapper.toInstallmentPlans(dto), query);
   }
 
   @override

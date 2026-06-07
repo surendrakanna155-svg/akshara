@@ -1,5 +1,7 @@
 import 'package:akshara_erp/core/auth/auth_security_providers.dart';
 import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
+import 'package:akshara_erp/core/security/erp_role.dart';
+import 'package:akshara_erp/features/auth/auth_claims.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/auth/auth_provider.dart';
 import 'package:akshara_erp/features/auth/auth_token_provider.dart';
@@ -25,6 +27,17 @@ class TestAuthNotifier extends AuthNotifier {
 
   @override
   AuthState build() => _state;
+}
+
+/// Staff super-admin session for ERP widget tests (manage/approve actions visible).
+AuthState erpWidgetTestStaffAuth() {
+  return AuthState(
+    status: AuthStatus.authenticated,
+    phoneNumber: '9999999999',
+    displayName: 'ERP Test Admin',
+    role: UserRole.staff,
+    claims: AuthClaims.demoForRole(erpRole: ErpRole.superAdmin),
+  );
 }
 
 /// Override for [authProvider] with a static session snapshot.

@@ -92,7 +92,7 @@ void main() {
       final repo = MockAdmissionsRepository();
       const query = RepositoryQuery.demo;
       final handoffs = await repo.getApprovedHandoffs(query: query);
-      final target = handoffs.first;
+      final target = handoffs.items.first;
       final updated = await repo.sendToFinance(
         query: query,
         request: FinanceHandoffRequest(

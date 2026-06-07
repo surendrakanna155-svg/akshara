@@ -4,6 +4,7 @@ import '../../../features/admissions/admissions_models.dart';
 import '../../../features/admissions/admissions_requests.dart';
 import '../interfaces/admissions_repository.dart';
 import '../paginated_result.dart';
+import '../pagination_helpers.dart';
 import '../repository_query.dart';
 import '../../tenant/tenant_mock_scope.dart';
 import 'mock_admissions_write_store.dart';
@@ -386,9 +387,11 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<List<StudentDocumentRecord>> getDocuments({required RepositoryQuery query}) async {
+  Future<PaginatedResult<StudentDocumentRecord>> getDocuments({
+    required RepositoryQuery query,
+  }) async {
     if (_store.documents != null) {
-      return List.from(_store.documents!);
+      return paginateList(List.from(_store.documents!), query);
     }
     final documents = [
       const StudentDocumentRecord(
@@ -459,12 +462,14 @@ class MockAdmissionsRepository implements AdmissionsRepository {
       ),
     ];
     _store.documents = List.from(documents);
-    return documents;
+    return paginateList(documents, query);
   }
 
   @override
-  Future<List<PendingEnrollmentRecord>> getPendingEnrollments({required RepositoryQuery query}) async {
-    return const [
+  Future<PaginatedResult<PendingEnrollmentRecord>> getPendingEnrollments({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(const [
       PendingEnrollmentRecord(
         id: 'enr_1',
         studentName: 'Ananya Reddy',
@@ -509,12 +514,14 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         gender: 'Female',
         dateOfBirth: '22 Jan 2014',
       ),
-    ];
+    ], query);
   }
 
   @override
-  Future<List<ApprovedStudentHandoff>> getApprovedHandoffs({required RepositoryQuery query}) async {
-    return const [
+  Future<PaginatedResult<ApprovedStudentHandoff>> getApprovedHandoffs({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(const [
       ApprovedStudentHandoff(
         id: 'handoff_1',
         studentName: 'Arjun Patel',
@@ -554,12 +561,14 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         previewStudentId: 'SIS-STU-10418',
         sisHandoffLabel: 'Active in Student SIS',
       ),
-    ];
+    ], query);
   }
 
   @override
-  Future<List<FeeStructureOption>> getFeeStructureOptions({required RepositoryQuery query}) async {
-    return const [
+  Future<PaginatedResult<FeeStructureOption>> getFeeStructureOptions({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(const [
       FeeStructureOption(
         id: 'fee_std',
         label: 'Standard CBSE',
@@ -578,7 +587,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         annualAmount: '₹3,40,000',
         installments: 4,
       ),
-    ];
+    ], query);
   }
 
   @override
@@ -887,15 +896,18 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   Future<void> _ensureDocuments(RepositoryQuery query) async {
-    _store.documents ??= List.from(await getDocuments(query: query));
+    _store.documents ??=
+        List.from((await getDocuments(query: query)).items);
   }
 
   Future<void> _ensureEnrollments(RepositoryQuery query) async {
-    _store.enrollments ??= List.from(await getPendingEnrollments(query: query));
+    _store.enrollments ??=
+        List.from((await getPendingEnrollments(query: query)).items);
   }
 
   Future<void> _ensureHandoffs(RepositoryQuery query) async {
-    _store.handoffs ??= List.from(await getApprovedHandoffs(query: query));
+    _store.handoffs ??=
+        List.from((await getApprovedHandoffs(query: query)).items);
   }
 
   Future<void> _ensureApprovalQueue(RepositoryQuery query) async {

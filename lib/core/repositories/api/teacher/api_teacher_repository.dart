@@ -4,6 +4,7 @@ import '../../../../features/teacher/exams/exam_models.dart';
 import '../../../../features/teacher/homework/homework_models.dart';
 import '../../../../features/teacher/leave/leave_models.dart';
 import '../../../../features/teacher/messages/message_models.dart';
+import '../../../../features/teacher/teacher_requests.dart';
 import '../../../../features/teacher/timetable/timetable_models.dart';
 import '../../interfaces/teacher_repository.dart';
 import '../../repository_query.dart';
@@ -88,5 +89,59 @@ class ApiTeacherRepository implements TeacherRepository {
   Future<List<MessageThread>> getMessageThreads({required RepositoryQuery query}) async {
     final dto = await _remote.fetchMessageThreads(query: query);
     return _mapper.toMessageThreads(dto);
+  }
+
+  @override
+  Future<TeacherAttendanceDraftResult> saveAttendanceDraft({
+    required RepositoryQuery query,
+    required TeacherAttendanceDraftRequest request,
+  }) async {
+    final dto = await _remote.saveAttendanceDraft(query: query, request: request);
+    return _mapper.toAttendanceDraftResult(dto);
+  }
+
+  @override
+  Future<TeacherAttendanceSubmitResult> submitClassAttendance({
+    required RepositoryQuery query,
+    required TeacherAttendanceSubmitRequest request,
+  }) async {
+    final dto = await _remote.submitClassAttendance(query: query, request: request);
+    return _mapper.toAttendanceSubmitResult(dto);
+  }
+
+  @override
+  Future<TeacherHomeworkReviewResult> reviewHomeworkSubmission({
+    required RepositoryQuery query,
+    required TeacherHomeworkReviewRequest request,
+  }) async {
+    final dto = await _remote.reviewHomeworkSubmission(query: query, request: request);
+    return _mapper.toHomeworkReviewResult(dto);
+  }
+
+  @override
+  Future<ExamMarkEntry> updateExamMark({
+    required RepositoryQuery query,
+    required TeacherExamMarkUpdateRequest request,
+  }) async {
+    final dto = await _remote.updateExamMark(query: query, request: request);
+    return _mapper.toExamMark(dto);
+  }
+
+  @override
+  Future<TeacherLeaveRequest> submitLeaveRequest({
+    required RepositoryQuery query,
+    required TeacherLeaveSubmitRequest request,
+  }) async {
+    final dto = await _remote.submitLeaveRequest(query: query, request: request);
+    return _mapper.toLeaveRequest(dto);
+  }
+
+  @override
+  Future<MessageThread> sendMessage({
+    required RepositoryQuery query,
+    required TeacherMessageSendRequest request,
+  }) async {
+    final dto = await _remote.sendMessage(query: query, request: request);
+    return _mapper.toMessageThread(dto);
   }
 }

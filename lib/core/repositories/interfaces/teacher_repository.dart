@@ -4,6 +4,7 @@ import '../../../features/teacher/exams/exam_models.dart';
 import '../../../features/teacher/homework/homework_models.dart';
 import '../../../features/teacher/leave/leave_models.dart';
 import '../../../features/teacher/messages/message_models.dart';
+import '../../../features/teacher/teacher_requests.dart';
 import '../../../features/teacher/timetable/timetable_models.dart';
 import '../repository_query.dart';
 
@@ -28,4 +29,34 @@ abstract class TeacherRepository {
   });
   Future<LeaveBalance> getLeaveBalance({required RepositoryQuery query});
   Future<List<MessageThread>> getMessageThreads({required RepositoryQuery query});
+
+  Future<TeacherAttendanceDraftResult> saveAttendanceDraft({
+    required RepositoryQuery query,
+    required TeacherAttendanceDraftRequest request,
+  });
+
+  Future<TeacherAttendanceSubmitResult> submitClassAttendance({
+    required RepositoryQuery query,
+    required TeacherAttendanceSubmitRequest request,
+  });
+
+  Future<TeacherHomeworkReviewResult> reviewHomeworkSubmission({
+    required RepositoryQuery query,
+    required TeacherHomeworkReviewRequest request,
+  });
+
+  Future<ExamMarkEntry> updateExamMark({
+    required RepositoryQuery query,
+    required TeacherExamMarkUpdateRequest request,
+  });
+
+  Future<TeacherLeaveRequest> submitLeaveRequest({
+    required RepositoryQuery query,
+    required TeacherLeaveSubmitRequest request,
+  });
+
+  Future<MessageThread> sendMessage({
+    required RepositoryQuery query,
+    required TeacherMessageSendRequest request,
+  });
 }

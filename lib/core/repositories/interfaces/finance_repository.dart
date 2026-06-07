@@ -8,10 +8,10 @@ abstract class FinanceRepository {
   Future<FinanceDashboardData> getDashboard({required RepositoryQuery query});
   Future<PaginatedResult<CollectionPayment>> getCollections({required RepositoryQuery query});
   Future<DailyCollectionSummary> getDailySummary({required RepositoryQuery query});
-  Future<List<FinanceFeeStructure>> getFeeStructures({required RepositoryQuery query, required String academicYear});
-  Future<List<String>> getAcademicYears({required RepositoryQuery query});
+  Future<PaginatedResult<FinanceFeeStructure>> getFeeStructures({required RepositoryQuery query, required String academicYear});
+  Future<PaginatedResult<String>> getAcademicYears({required RepositoryQuery query});
   Future<PaginatedResult<StudentFeeAccount>> getStudentAccounts({required RepositoryQuery query});
-  Future<List<InstallmentPlan>> getInstallmentPlans({required RepositoryQuery query});
+  Future<PaginatedResult<InstallmentPlan>> getInstallmentPlans({required RepositoryQuery query});
 
   Future<CollectionDetail?> getCollectionDetail({required RepositoryQuery query, required String collectionId});
   Future<DefaultersDashboardData> getDefaultersDashboard({required RepositoryQuery query});

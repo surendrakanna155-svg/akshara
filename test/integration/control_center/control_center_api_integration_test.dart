@@ -37,20 +37,20 @@ void main() {
             ControlCenterApiPaths.dashboard =>
               _fixtures.dashboardEnvelope(dashboard),
             ControlCenterApiPaths.schools => _fixtures.listEnvelope([
-                for (final school in schools) _fixtures.schoolItem(school),
+                for (final school in schools.items) _fixtures.schoolItem(school),
               ]),
             ControlCenterApiPaths.subscriptions =>
               _fixtures.subscriptionsEnvelope(subscriptions),
             ControlCenterApiPaths.billing => _fixtures.billingEnvelope(billing),
             ControlCenterApiPaths.crmPipeline => _fixtures.crmEnvelope(crm),
             ControlCenterApiPaths.supportTickets => _fixtures.listEnvelope([
-                for (final ticket in supportTickets)
+                for (final ticket in supportTickets.items)
                   _fixtures.supportTicketItem(ticket),
               ]),
             ControlCenterApiPaths.customerSuccess =>
               _fixtures.customerSuccessEnvelope(customerSuccess),
             ControlCenterApiPaths.whiteLabel => _fixtures.listEnvelope([
-                for (final config in whiteLabel)
+                for (final config in whiteLabel.items)
                   _fixtures.whiteLabelItem(config),
               ]),
             ControlCenterApiPaths.analytics =>

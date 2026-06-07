@@ -1,4 +1,5 @@
 import '../../interfaces/alumni_repository.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/alumni/alumni_models.dart';
 import 'mapper/alumni_mapper.dart';
@@ -22,9 +23,14 @@ class ApiAlumniRepository implements AlumniRepository {
   }
 
   @override
-  Future<List<AlumniRecord>> getAlumniRegistry({required RepositoryQuery query}) async {
+  Future<PaginatedResult<AlumniRecord>> getAlumniRegistry({required RepositoryQuery query}) async {
     final dto = await _remote.fetchRegistry(query: query);
-    return _mapper.toRegistry(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toRegistry(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
@@ -40,27 +46,47 @@ class ApiAlumniRepository implements AlumniRepository {
   }
 
   @override
-  Future<List<AlumniEvent>> getEvents({required RepositoryQuery query}) async {
+  Future<PaginatedResult<AlumniEvent>> getEvents({required RepositoryQuery query}) async {
     final dto = await _remote.fetchEvents(query: query);
-    return _mapper.toEvents(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toEvents(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
-  Future<List<AlumniDonation>> getDonations({required RepositoryQuery query}) async {
+  Future<PaginatedResult<AlumniDonation>> getDonations({required RepositoryQuery query}) async {
     final dto = await _remote.fetchDonations(query: query);
-    return _mapper.toDonations(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toDonations(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
-  Future<List<AlumniCampaign>> getCampaigns({required RepositoryQuery query}) async {
+  Future<PaginatedResult<AlumniCampaign>> getCampaigns({required RepositoryQuery query}) async {
     final dto = await _remote.fetchCampaigns(query: query);
-    return _mapper.toCampaigns(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toCampaigns(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
-  Future<List<MentorshipPair>> getMentorshipPairs({required RepositoryQuery query}) async {
+  Future<PaginatedResult<MentorshipPair>> getMentorshipPairs({required RepositoryQuery query}) async {
     final dto = await _remote.fetchMentorshipPairs(query: query);
-    return _mapper.toMentorshipPairs(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toMentorshipPairs(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

@@ -11,6 +11,7 @@ import '../../../../../features/parent/profile/profile_models.dart';
 import '../../../../../features/parent/receipts/receipt_models.dart';
 import '../../../../../features/parent/timetable/timetable_models.dart';
 import '../dto/parent_enum_codec.dart';
+import '../dto/parent_payment_request_dto.dart';
 import '../dto/parent_responses_dto.dart';
 
 /// Maps Parent mobile API DTOs to domain models.
@@ -207,6 +208,40 @@ class ParentMapper {
       breakdown: _mapPaymentBreakdown(raw['breakdown'] as List<dynamic>? ?? const []),
       unreadNotifications: raw['unreadNotifications'] as int? ?? 0,
     );
+  }
+
+  PaymentInitiationResult toPaymentInitiation(
+    ParentPaymentInitiationResponseDto dto,
+  ) {
+    final raw = dto.raw;
+    return PaymentInitiationResult(
+      paymentIntentId: raw['paymentIntentId'] as String? ?? '',
+      installmentId: raw['installmentId'] as String? ?? '',
+      amount: raw['amount'] as int? ?? 0,
+      status: raw['status'] as String? ?? 'pending',
+      expiresAtLabel: raw['expiresAtLabel'] as String?,
+    );
+  }
+
+  PaymentConfirmationResult toPaymentConfirmation(
+    ParentPaymentConfirmationResponseDto dto,
+  ) {
+    final raw = dto.raw;
+    return PaymentConfirmationResult(
+      receiptId: raw['receiptId'] as String? ?? '',
+      receiptNumber: raw['receiptNumber'] as String? ?? '',
+      paidAmount: raw['paidAmount'] as int? ?? 0,
+      paymentMethod: _parsePaymentMethod(raw['paymentMethod'] as String?),
+      paidAtLabel: raw['paidAtLabel'] as String? ?? '',
+    );
+  }
+
+  PaymentMethod _parsePaymentMethod(String? value) {
+    return switch (value) {
+      'card' => PaymentMethod.card,
+      'net_banking' => PaymentMethod.netBanking,
+      _ => PaymentMethod.upi,
+    };
   }
 
   List<DashboardStatusChip> _mapStatusChips(List<dynamic> items) {

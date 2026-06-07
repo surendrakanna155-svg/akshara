@@ -37,7 +37,7 @@ void main() {
     test('exposes approved students and fee structures', () async {
       final container = createProviderTestContainer();
       addTearDown(container.dispose);
-      await container.read(admissionsApprovedHandoffsFutureProvider.future);
+      await container.read(admissionsApprovedHandoffsRawFutureProvider.future);
       await container.read(admissionsFeeStructuresFutureProvider.future);
 
       final handoffs = container.read(admissionsApprovedHandoffsProvider);

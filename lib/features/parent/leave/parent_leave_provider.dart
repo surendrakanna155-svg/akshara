@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../parent_mutations_provider.dart';
+import '../parent_requests.dart';
 import 'leave_models.dart';
 
 /// Active section tab on PA-12.
@@ -24,16 +26,11 @@ final parentLeaveHistoryFutureProvider = FutureProvider<List<LeaveRequest>>((ref
   return ref.read(parentRepositoryProvider).getLeaveHistory(query: ref.watch(repositoryQueryProvider));
 });
 
-final _parentLeaveLocalSubmissionsProvider = StateProvider<List<LeaveRequest>>(
-  (ref) => const [],
-);
-
 /// Leave history list.
 final parentLeaveHistoryProvider = Provider<List<LeaveRequest>>((ref) {
   if (ref.watch(parentLeaveEmptyProvider)) {
     return const [];
   }
-  final local = ref.watch(_parentLeaveLocalSubmissionsProvider);
   final base = watchRepositoryFuture(
     ref,
     ref.watch(parentLeaveHistoryFutureProvider),
@@ -41,8 +38,7 @@ final parentLeaveHistoryProvider = Provider<List<LeaveRequest>>((ref) {
     manualError: ref.watch(parentLeaveErrorProvider),
     manualEmpty: ref.watch(parentLeaveEmptyProvider),
   );
-  final resolved = base ?? ref.watch(parentLeaveHistoryFutureProvider).value ?? const [];
-  return [...local, ...resolved];
+  return base ?? ref.watch(parentLeaveHistoryFutureProvider).value ?? const [];
 });
 
 /// Screen payload.
@@ -82,46 +78,27 @@ Future<bool> submitLeaveApplication(WidgetRef ref) async {
   }
 
   ref.read(parentLeaveSubmittingProvider.notifier).state = true;
-  await Future<void>.delayed(const Duration(milliseconds: 900));
 
-  final newRequest = LeaveRequest(
-    id: 'lv_new_${DateTime.now().millisecondsSinceEpoch}',
-    childName: 'Ravi Kumar',
-    childClass: '8-A',
-    fromDateLabel: draft.fromDateLabel,
-    toDateLabel: draft.toDateLabel,
-    reason: draft.reason.trim(),
-    type: draft.type,
-    status: LeaveStatus.pending,
-    submittedLabel: 'Submitted just now',
-    hasAttachment: draft.hasAttachment,
-    attachmentName: draft.attachmentName,
-    timeline: const [
-      LeaveTimelineStep(
-        label: 'Submitted',
-        dateLabel: 'Just now',
-        isComplete: true,
-      ),
-      LeaveTimelineStep(
-        label: 'Class teacher review',
-        dateLabel: 'Pending',
-        isComplete: false,
-      ),
-      LeaveTimelineStep(
-        label: 'School approval',
-        dateLabel: 'Pending',
-        isComplete: false,
-      ),
-    ],
-  );
+  final result = await ref.read(submitParentLeaveProvider.notifier).execute(
+        ParentLeaveSubmitRequest(
+          childId: 'child_ravi',
+          fromDateLabel: draft.fromDateLabel,
+          toDateLabel: draft.toDateLabel,
+          reason: draft.reason.trim(),
+          type: draft.type,
+          hasAttachment: draft.hasAttachment,
+          attachmentName: draft.attachmentName,
+        ),
+      );
 
-  ref.read(_parentLeaveLocalSubmissionsProvider.notifier).state = [
-    newRequest,
-    ...ref.read(_parentLeaveLocalSubmissionsProvider),
-  ];
+  ref.read(parentLeaveSubmittingProvider.notifier).state = false;
+
+  if (result == null) {
+    return false;
+  }
+
   ref.read(leaveApplyDraftProvider.notifier).state = const LeaveApplyDraft();
   ref.read(parentLeaveSectionProvider.notifier).state =
       LeaveScreenSection.history;
-  ref.read(parentLeaveSubmittingProvider.notifier).state = false;
   return true;
 }

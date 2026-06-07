@@ -1,4 +1,6 @@
 import '../../interfaces/library_repository.dart';
+import '../../pagination_helpers.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/library/library_models.dart';
 import 'mapper/library_mapper.dart';
@@ -22,27 +24,27 @@ class ApiLibraryRepository implements LibraryRepository {
   }
 
   @override
-  Future<List<LibraryBook>> getCatalog({required RepositoryQuery query}) async {
+  Future<PaginatedResult<LibraryBook>> getCatalog({required RepositoryQuery query}) async {
     final dto = await _remote.fetchCatalog(query: query);
-    return _mapper.toCatalog(dto);
+    return paginateList(_mapper.toCatalog(dto), query);
   }
 
   @override
-  Future<List<LibraryIssueRecord>> getIssues({required RepositoryQuery query}) async {
+  Future<PaginatedResult<LibraryIssueRecord>> getIssues({required RepositoryQuery query}) async {
     final dto = await _remote.fetchIssues(query: query);
-    return _mapper.toIssues(dto);
+    return paginateList(_mapper.toIssues(dto), query);
   }
 
   @override
-  Future<List<LibraryReturnRecord>> getReturns({required RepositoryQuery query}) async {
+  Future<PaginatedResult<LibraryReturnRecord>> getReturns({required RepositoryQuery query}) async {
     final dto = await _remote.fetchReturns(query: query);
-    return _mapper.toReturns(dto);
+    return paginateList(_mapper.toReturns(dto), query);
   }
 
   @override
-  Future<List<LibraryMember>> getMembers({required RepositoryQuery query}) async {
+  Future<PaginatedResult<LibraryMember>> getMembers({required RepositoryQuery query}) async {
     final dto = await _remote.fetchMembers(query: query);
-    return _mapper.toMembers(dto);
+    return paginateList(_mapper.toMembers(dto), query);
   }
 
   @override

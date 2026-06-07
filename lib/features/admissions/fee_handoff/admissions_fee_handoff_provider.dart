@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
@@ -19,7 +20,7 @@ final feeHandoffStatusOverridesProvider =
     StateProvider<Map<String, FeeHandoffStatus>>((ref) => {});
 
 final admissionsFeeStructuresFutureProvider =
-    FutureProvider<List<FeeStructureOption>>((ref) async {
+    FutureProvider<PaginatedResult<FeeStructureOption>>((ref) async {
   return ref
       .read(admissionsRepositoryProvider)
       .getFeeStructureOptions(query: ref.watch(repositoryQueryProvider));
@@ -33,45 +34,57 @@ final admissionsFeeStructuresProvider = Provider<List<FeeStructureOption>>(
         manualLoading: false,
         manualError: false,
         manualEmpty: false,
-      ) ??
+      )?.items ??
       const [],
 );
 
-final admissionsApprovedHandoffsFutureProvider =
-    FutureProvider<List<ApprovedStudentHandoff>>((ref) async {
-  final overrides = ref.watch(feeHandoffStatusOverridesProvider);
-  final handoffs = await ref
+final admissionsApprovedHandoffsRawFutureProvider =
+    FutureProvider<PaginatedResult<ApprovedStudentHandoff>>((ref) async {
+  return ref
       .read(admissionsRepositoryProvider)
       .getApprovedHandoffs(query: ref.watch(repositoryQueryProvider));
-  return handoffs
-      .map(
-        (handoff) => overrides.containsKey(handoff.id)
-            ? _withHandoffStatus(handoff, overrides[handoff.id]!)
-            : handoff,
-      )
-      .toList(growable: false);
+});
+
+/// Applies fee-handoff status overrides without refetching the async source.
+final admissionsApprovedHandoffsFutureProvider =
+    Provider<AsyncValue<PaginatedResult<ApprovedStudentHandoff>>>((ref) {
+  final raw = ref.watch(admissionsApprovedHandoffsRawFutureProvider);
+  final overrides = ref.watch(feeHandoffStatusOverridesProvider);
+  return raw.whenData(
+    (page) => PaginatedResult(
+      items: page.items
+          .map(
+            (handoff) => overrides.containsKey(handoff.id)
+                ? _withHandoffStatus(handoff, overrides[handoff.id]!)
+                : handoff,
+          )
+          .toList(growable: false),
+      page: page.page,
+      pageSize: page.pageSize,
+      total: page.total,
+      hasMore: page.hasMore,
+    ),
+  );
 });
 
 final admissionsApprovedHandoffsProvider =
     Provider<List<ApprovedStudentHandoff>>((ref) {
-  return watchRepositoryFuture(
-        ref,
-        ref.watch(admissionsApprovedHandoffsFutureProvider),
-        manualLoading: ref.watch(admissionsFeeHandoffLoadingProvider),
-        manualError: ref.watch(admissionsFeeHandoffErrorProvider),
-        manualEmpty: ref.watch(admissionsFeeHandoffEmptyProvider),
-      ) ??
-      const [];
+  final asyncPage = ref.watch(admissionsApprovedHandoffsFutureProvider);
+  if (ref.watch(admissionsFeeHandoffLoadingProvider)) return const [];
+  if (ref.watch(admissionsFeeHandoffErrorProvider)) return const [];
+  if (ref.watch(admissionsFeeHandoffEmptyProvider)) return const [];
+  return asyncPage.valueOrNull?.items ?? const [];
 });
 
 final admissionsFeeHandoffViewStateProvider =
-    Provider<AdmissionsViewState<List<ApprovedStudentHandoff>>>((ref) {
+    Provider<AdmissionsViewState<PaginatedResult<ApprovedStudentHandoff>>>(
+        (ref) {
   return resolveAdmissionsAsync(
     ref.watch(admissionsApprovedHandoffsFutureProvider),
     forceLoading: ref.watch(admissionsFeeHandoffLoadingProvider),
     forceError: ref.watch(admissionsFeeHandoffErrorProvider),
     forceEmpty: ref.watch(admissionsFeeHandoffEmptyProvider),
-    isDataEmpty: (handoffs) => handoffs.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });
 

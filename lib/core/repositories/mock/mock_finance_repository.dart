@@ -5,6 +5,7 @@ import '../../../features/finance/finance_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/finance_repository.dart';
 import '../paginated_result.dart';
+import '../pagination_helpers.dart';
 import '../repository_query.dart';
 import '../../tenant/tenant_mock_scope.dart';
 
@@ -150,15 +151,18 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<List<FinanceFeeStructure>> getFeeStructures({
+  Future<PaginatedResult<FinanceFeeStructure>> getFeeStructures({
     required RepositoryQuery query,
     required String academicYear,
   }) async {
-    return _store.feeStructuresForYear(academicYear);
+    return paginateList(_store.feeStructuresForYear(academicYear), query);
   }
 
   @override
-  Future<List<String>> getAcademicYears({required RepositoryQuery query}) async => const ['2026-27', '2025-26', '2024-25'];
+  Future<PaginatedResult<String>> getAcademicYears({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const ['2026-27', '2025-26', '2024-25'], query);
 
   @override
   Future<PaginatedResult<StudentFeeAccount>> getStudentAccounts({
@@ -174,7 +178,10 @@ class MockFinanceRepository implements FinanceRepository {
       );
 
   @override
-  Future<List<InstallmentPlan>> getInstallmentPlans({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<InstallmentPlan>> getInstallmentPlans({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         InstallmentPlan(
           id: 'plan_quarterly',
           label: '3-term quarterly',
@@ -199,7 +206,7 @@ class MockFinanceRepository implements FinanceRepository {
           installmentCount: 1,
           type: InstallmentPlanType.annual,
         ),
-      ];
+      ], query);
 
   @override
   Future<CollectionDetail?> getCollectionDetail({required RepositoryQuery query, required String collectionId}) async {

@@ -6,6 +6,7 @@ import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_workflow_actions.dart';
@@ -54,7 +55,7 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
               semanticLabel: '${summary.missing} documents missing',
             ),
           if (summary.missing > 0) const SizedBox(height: AksharaSpacing.s4),
-          AdmissionsAsyncBody<List<StudentDocumentRecord>>(
+          AdmissionsAsyncBody<PaginatedResult<StudentDocumentRecord>>(
             state: viewState,
             loadingLabel: 'Loading document verification',
             emptyMessage: 'No documents to verify.',
@@ -63,7 +64,8 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
               ref,
               admissionsDocumentsFutureProvider,
             ),
-            builder: (documents) {
+            builder: (result) {
+              final documents = result.items;
               final selected = documents.cast<StudentDocumentRecord?>().firstWhere(
                     (doc) => doc?.id == selectedId,
                     orElse: () => documents.isEmpty ? null : documents.first,

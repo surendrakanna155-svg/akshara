@@ -1,4 +1,5 @@
 import '../../interfaces/control_center_repository.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/control_center/control_center_models.dart';
 import 'mapper/control_center_mapper.dart';
@@ -22,9 +23,14 @@ class ApiControlCenterRepository implements ControlCenterRepository {
   }
 
   @override
-  Future<List<PlatformSchool>> getSchools({required RepositoryQuery query}) async {
+  Future<PaginatedResult<PlatformSchool>> getSchools({required RepositoryQuery query}) async {
     final dto = await _remote.fetchSchools(query: query);
-    return _mapper.toSchools(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toSchools(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
@@ -48,9 +54,14 @@ class ApiControlCenterRepository implements ControlCenterRepository {
   }
 
   @override
-  Future<List<SupportTicket>> getSupportTickets({required RepositoryQuery query}) async {
+  Future<PaginatedResult<SupportTicket>> getSupportTickets({required RepositoryQuery query}) async {
     final dto = await _remote.fetchSupportTickets(query: query);
-    return _mapper.toSupportTickets(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toSupportTickets(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
@@ -62,11 +73,16 @@ class ApiControlCenterRepository implements ControlCenterRepository {
   }
 
   @override
-  Future<List<WhiteLabelConfig>> getWhiteLabelConfigs({
+  Future<PaginatedResult<WhiteLabelConfig>> getWhiteLabelConfigs({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchWhiteLabelConfigs(query: query);
-    return _mapper.toWhiteLabelConfigs(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toWhiteLabelConfigs(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

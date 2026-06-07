@@ -1,8 +1,8 @@
 # Akshara ERP — Production Readiness Checklist
 
-**Version:** 1.4  
+**Version:** 1.6  
 **Last updated:** June 2026  
-**Current score:** 99 / 100 (`docs/ArchitectureReview/v4.2-Mobile-API-Audit.md`)
+**Current score:** 87 / 100 (updated v4.6–v4.8)
 
 Use this checklist before pilot, staging, and production deployments. Mark `[x]` when verified.
 
@@ -30,13 +30,15 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 |---|------|:----:|:-----:|:-------:|:----------:|
 | R1 | 22 permissions defined (view/manage/approve) | [x] | [x] | [x] | [ ] |
 | R2 | ErpRouteGuard on all 12 ERP prefixes | [x] | [x] | [x] | [ ] |
-| R3 | ManagePermissionGuard available | [x] | [x] | [ ] | [ ] |
-| R4 | ApprovePermissionGuard available | [x] | [x] | [ ] | [ ] |
+| R3 | ManagePermissionGuard available | [x] | [x] | [x] | [ ] |
+| R4 | ApprovePermissionGuard available | [x] | [x] | [x] | [ ] |
 | R5 | Server permission sync on login/refresh | [x] | [ ] | [ ] | [ ] |
 | R6 | Permission cache version tracking | [x] | [x] | [ ] | [ ] |
 | R7 | Denied-access audit events | [x] | [x] | [ ] | [ ] |
 | R8 | **Server-side RBAC / RLS enforced** | [ ] | [ ] | [ ] | [ ] |
-| R9 | manage* wired on all mutation routes | [ ] | [ ] | [ ] | [ ] |
+| R9 | manage* wired on all mutation routes | [x] | [ ] | [ ] | [ ] |
+| R9a | RBAC validation suite passing | [x] | [x] | [ ] | [ ] |
+| R9b | Tenant isolation validation suite | [x] | [x] | [ ] | [ ] |
 
 ---
 
@@ -83,6 +85,8 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | U2 | Audit event categorization (security/auth/workflow) | [x] | [x] | [ ] | [ ] |
 | U3 | Correlation ID on audit events | [x] | [x] | [ ] | [ ] |
 | U4 | Upload queue with batching + retry | [x] | [x] | [ ] | [ ] |
+| U4a | Audit health monitor | [x] | [x] | [ ] | [ ] |
+| U4b | Audit readiness verifier | [x] | [x] | [ ] | [ ] |
 | U5 | **Audit ingestion endpoint live** | [ ] | [ ] | [ ] | [ ] |
 | U5a | Client audit batch upload wired (`auditApiEnabledProvider`) | [x] | [x] | [ ] | [ ] |
 | U6 | Tamper-evident / signed audit trail | [ ] | [ ] | [ ] | [ ] |
@@ -121,12 +125,23 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
-| T1 | flutter test — all passing (871+) | [x] | [x] | [x] | [ ] |
+| T1 | flutter test — all passing (918+) | [x] | [x] | [x] | [ ] |
 | T2 | Contract tests for live API modules | [x] | [x] | [x] | [ ] |
 | T2a | OpenAPI schema validation tests | [x] | [x] | [ ] | [ ] |
 | T2b | Mobile repository contract tests | [x] | [x] | [ ] | [ ] |
 | T2c | Pagination unit tests | [x] | [x] | [ ] | [ ] |
 | T2d | Mobile API integration tests | [x] | [x] | [ ] | [ ] |
+| T2e | RBAC + tenant validation suites | [x] | [x] | [ ] | [ ] |
+| T2g | Pagination endpoint registry test | [x] | [x] | [ ] | [ ] |
+| T2h | Mobile write contract tests | [x] | [x] | [ ] | [ ] |
+| T2i | Performance registry tests | [x] | [x] | [ ] | [ ] |
+| P1 | PaginatedResult on all ERP list endpoints | [x] | [x] | [ ] | [ ] |
+| P2 | Pagination endpoint registry | [x] | [x] | [ ] | [ ] |
+| F6 | Provider rebuild registry | [x] | [x] | [ ] | [ ] |
+| F7 | Fee handoff override decouple | [x] | [x] | [ ] | [ ] |
+| M1 | Parent write APIs (3 methods) | [x] | [x] | [ ] | [ ] |
+| M2 | Teacher write APIs (6 methods) | [x] | [x] | [ ] | [ ] |
+| M3 | Student write APIs (1 method) | [x] | [x] | [ ] | [ ] |
 | T3 | Integration tests with fake Dio | [x] | [x] | [ ] | [ ] |
 | T4 | Security tests (RBAC, token, session) | [x] | [x] | [ ] | [ ] |
 | T5 | Route protection inventory test | [x] | [x] | [ ] | [ ] |

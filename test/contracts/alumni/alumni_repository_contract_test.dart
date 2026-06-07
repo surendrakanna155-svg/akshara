@@ -46,12 +46,12 @@ void main() {
       final mapped = _mapper.toRegistry(
         AlumniRegistryResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final record in mockData) _fixtures.recordItem(record),
+            for (final record in mockData.items) _fixtures.recordItem(record),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.id, mockData.first.id);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.id, mockData.items.first.id);
     });
 
     test('getAlumniDetail DTO mapping matches mock output', () async {
@@ -75,11 +75,11 @@ void main() {
       final mapped = _mapper.toEvents(
         AlumniEventsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final event in mockData) _fixtures.eventItem(event),
+            for (final event in mockData.items) _fixtures.eventItem(event),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getDonations DTO mapping matches mock output', () async {
@@ -87,11 +87,11 @@ void main() {
       final mapped = _mapper.toDonations(
         AlumniDonationsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final donation in mockData) _fixtures.donationItem(donation),
+            for (final donation in mockData.items) _fixtures.donationItem(donation),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getCampaigns DTO mapping matches mock output', () async {
@@ -99,11 +99,11 @@ void main() {
       final mapped = _mapper.toCampaigns(
         AlumniCampaignsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final campaign in mockData) _fixtures.campaignItem(campaign),
+            for (final campaign in mockData.items) _fixtures.campaignItem(campaign),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getMentorshipPairs DTO mapping matches mock output', () async {
@@ -111,11 +111,11 @@ void main() {
       final mapped = _mapper.toMentorshipPairs(
         MentorshipPairsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final pair in mockData) _fixtures.mentorshipPairItem(pair),
+            for (final pair in mockData.items) _fixtures.mentorshipPairItem(pair),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getReports DTO mapping matches mock output', () async {

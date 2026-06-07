@@ -1,10 +1,10 @@
 # Akshara ERP — Master Roadmap
 
-**Version:** 1.4  
+**Version:** 1.6  
 **Last updated:** June 2026  
-**Current release:** v4.2 (Mobile Live Read APIs)  
-**Production readiness:** 99 / 100  
-**Quality gates:** `flutter analyze` 0 issues · `flutter test` 871 passing · 150 test files  
+**Current release:** v4.8 (Mobile Write APIs)  
+**Production readiness:** 87 / 100 (SaaS deployment-weighted)  
+**Quality gates:** `flutter analyze` 0 issues · `flutter test` 918 passing · 159 test files  
 **Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
 
 ---
@@ -459,17 +459,71 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Audit** | `docs/ArchitectureReview/v4.2-Mobile-API-Audit.md` |
 | **Status** | ✅ Complete |
 
+### v4.3 — Server RBAC & Tenant Isolation Validation
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | Tenant/RBAC validation suites; staging checklist; Control Center isolation |
+| **Release doc** | `docs/Releases/v4.3-Server-RBAC-Validation.md` |
+| **Audits** | `docs/ArchitectureReview/v4.3-*` (2 audit docs) |
+| **Status** | ✅ Complete (client); server RLS pending |
+
+### v4.4 — Audit Backend Completion
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | Audit health monitor, readiness verifier, lifecycle validation |
+| **Release doc** | `docs/Releases/v4.4-Audit-Backend-Completion.md` |
+| **Audits** | `docs/ArchitectureReview/v4.4-*` (2 audit docs) |
+| **Status** | ✅ Complete (client); server ingestion pending |
+
+### v4.5 — Manage Permission Enforcement
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | UI + provider manage/approve enforcement; permission coverage inventory |
+| **Release doc** | `docs/Releases/v4.5-Manage-Permission-Enforcement.md` |
+| **Audits** | `docs/ArchitectureReview/v4.5-*` (2 audit docs) |
+| **Status** | ✅ Complete (partial UI coverage) |
+
+### v4.6 — Complete Pagination Rollout
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | PaginatedResult on all 42 ERP list endpoints |
+| **Release doc** | `docs/Releases/v4.6-Pagination-Rollout.md` |
+| **Audit** | `docs/ArchitectureReview/v4.6-Pagination-Audit.md` |
+| **Status** | ✅ Complete |
+
+### v4.7 — Performance Optimization
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | Provider rebuild reduction; handoff decouple; performance registry |
+| **Release doc** | `docs/Releases/v4.7-Performance-Optimization.md` |
+| **Audit** | `docs/ArchitectureReview/v4.7-Performance-Audit.md` |
+| **Status** | ✅ Complete (partial — 7/10 clusters) |
+
+### v4.8 — Mobile Write APIs
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | Parent/Teacher/Student write APIs (10 methods) |
+| **Release doc** | `docs/Releases/v4.8-Mobile-Write-APIs.md` |
+| **Audit** | `docs/ArchitectureReview/v4.8-Mobile-Write-API-Audit.md` |
+| **Status** | ✅ Complete (leave wired; other UI pending) |
+
 ---
 
 ## Future Releases
 
-### v4.3 — Server RBAC/RLS Validation
+### v4.9 — UI Completion & Legacy Dashboard Migration
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Prove server-side authorization; complete manage* mutation guards; extend tenant scoping |
-| **Dependencies** | Backend RBAC/RLS deployment |
-| **Blockers** | TD-P0-01, TD-P0-02 |
+| **Goals** | Wire remaining mobile write UI; migrate 8 legacy triad dashboards; pagination bars on inventory/library/hostel |
+| **Dependencies** | v4.8 complete |
+| **Blockers** | None (client-only) |
 | **Status** | 🔲 Not started |
 
 ---
@@ -502,9 +556,17 @@ Phase 7: Multi-Tenant SaaS              ✅ PARTIAL (v4.0–v4.2)
   Pagination rollout + mobile live APIs
   Target readiness: 99+ → **99 achieved**
 
-Phase 8: Server Security                🔲 NEXT (v4.3)
-  Server RBAC/RLS + audit ingestion + mutation guards
-  Target readiness: 99+
+Phase 8: Server Security                ✅ PARTIAL (v4.3–v4.5 client validation)
+  RBAC/tenant validation + audit health + manage guards
+  Target readiness: 78+ → **80 achieved**
+
+Phase 9: Scale & Completion              ✅ PARTIAL (v4.6–v4.8)
+  Pagination rollout + performance + mobile writes
+  Target readiness: 85+ → **87 achieved**
+
+Phase 10: UI Completion & Server         🔲 NEXT (v4.9+)
+  Mobile write UI wiring + server RBAC/audit backend
+  Target readiness: 90+
 ```
 
 ---
@@ -538,5 +600,5 @@ Every release milestone is **DONE** when all items are checked:
 5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v4.3 — Server RBAC/RLS Validation  
+**Next milestone:** v4.9 — UI Completion & Legacy Dashboard Migration  
 **Autonomous execution depth:** 3 milestones per session

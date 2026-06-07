@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/security/permissions.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
@@ -39,7 +41,7 @@ class AdmissionsEnrollmentScreen extends ConsumerWidget {
             const SizedBox(height: AksharaSpacing.s6),
             _buildStepContent(form, notifier),
             const SizedBox(height: AksharaSpacing.s6),
-            _buildActions(context, form, notifier),
+            _buildActions(context, ref, form, notifier),
           ],
         ),
       ),
@@ -69,6 +71,7 @@ class AdmissionsEnrollmentScreen extends ConsumerWidget {
 
   Widget _buildActions(
     BuildContext context,
+    WidgetRef ref,
     EnrollmentFormState form,
     EnrollmentFormNotifier notifier,
   ) {
@@ -89,17 +92,20 @@ class AdmissionsEnrollmentScreen extends ConsumerWidget {
             child: const Text('Continue'),
           )
         else
-          FilledButton(
-            onPressed: form.isSubmitting || form.isSubmitted
-                ? null
-                : notifier.submit,
-            child: form.isSubmitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(form.isSubmitted ? 'Submitted' : 'Submit enrollment'),
+          AksharaManageAction(
+            permission: Permission.manageAdmissions,
+            child: FilledButton(
+              onPressed: form.isSubmitting || form.isSubmitted
+                  ? null
+                  : notifier.submit,
+              child: form.isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(form.isSubmitted ? 'Submitted' : 'Submit enrollment'),
+            ),
           ),
       ],
     );

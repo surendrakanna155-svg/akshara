@@ -44,36 +44,36 @@ void main() {
     test('getStudents DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getStudents(query: kQuery);
       final mapped = _mapper.toStudents(
-        HostelStudentsResponseDto.fromJson(_fixtures.studentsEnvelope(mockData)),
+        HostelStudentsResponseDto.fromJson(_fixtures.studentsEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.admissionNumber, mockData.first.admissionNumber);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.admissionNumber, mockData.items.first.admissionNumber);
     });
 
     test('getRooms DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getRooms(query: kQuery);
       final mapped = _mapper.toRooms(
-        HostelRoomsResponseDto.fromJson(_fixtures.roomsEnvelope(mockData)),
+        HostelRoomsResponseDto.fromJson(_fixtures.roomsEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getAttendanceRecords DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getAttendanceRecords(query: kQuery);
       final mapped = _mapper.toAttendanceRecords(
         HostelAttendanceResponseDto.fromJson(
-          _fixtures.attendanceEnvelope(mockData),
+          _fixtures.attendanceEnvelope(mockData.items),
         ),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getLeaveRequests DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getLeaveRequests(query: kQuery);
       final mapped = _mapper.toLeaveRequests(
-        HostelLeaveResponseDto.fromJson(_fixtures.leaveEnvelope(mockData)),
+        HostelLeaveResponseDto.fromJson(_fixtures.leaveEnvelope(mockData.items)),
       );
-      expect(mapped.length, mockData.length);
+      expect(mapped.length, mockData.items.length);
     });
 
     test('getMessData DTO mapping matches mock output', () async {

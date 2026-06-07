@@ -86,25 +86,25 @@ void main() {
       final mapped = const FinanceMapper().toFeeStructures(
         FinanceFeeStructuresResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final structure in mockData)
+            for (final structure in mockData.items)
               _fixtures.feeStructureItem(structure),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.name, mockData.first.name);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.name, mockData.items.first.name);
     });
 
     test('getAcademicYears DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getAcademicYears(query: kQuery);
       final mapped = const FinanceMapper().toAcademicYears(
         FinanceAcademicYearsResponseDto.fromJson(
-          _fixtures.academicYearsEnvelope(mockData),
+          _fixtures.academicYearsEnvelope(mockData.items),
         ),
       );
 
-      expect(mapped, mockData);
+      expect(mapped, mockData.items);
     });
 
     test('getStudentAccounts DTO mapping matches mock output', () async {
@@ -127,13 +127,13 @@ void main() {
       final mapped = const FinanceMapper().toInstallmentPlans(
         InstallmentPlansResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final plan in mockData) _fixtures.installmentPlanItem(plan),
+            for (final plan in mockData.items) _fixtures.installmentPlanItem(plan),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.label, mockData.first.label);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.label, mockData.items.first.label);
     });
 
     test('getCollectionDetail DTO mapping matches mock output', () async {
@@ -215,15 +215,15 @@ void main() {
       expect((await mockRepo.getCollections(query: kQuery)).items, isNotEmpty);
       expect(await mockRepo.getDailySummary(query: kQuery), isNotNull);
       expect(
-        await mockRepo.getFeeStructures(
+        (await mockRepo.getFeeStructures(
           query: kQuery,
           academicYear: '2026-27',
-        ),
+        )).items,
         isNotEmpty,
       );
-      expect(await mockRepo.getAcademicYears(query: kQuery), isNotEmpty);
+      expect((await mockRepo.getAcademicYears(query: kQuery)).items, isNotEmpty);
       expect((await mockRepo.getStudentAccounts(query: kQuery)).items, isNotEmpty);
-      expect(await mockRepo.getInstallmentPlans(query: kQuery), isNotEmpty);
+      expect((await mockRepo.getInstallmentPlans(query: kQuery)).items, isNotEmpty);
       expect(
         await mockRepo.getCollectionDetail(
           query: kQuery,

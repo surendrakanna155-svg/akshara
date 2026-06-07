@@ -59,7 +59,10 @@ Future<void> pumpAksharaRouter(
 
 /// Default Riverpod overrides for ERP module widget tests.
 List<Override> erpWidgetTestOverrides([List<Override> extra = const []]) =>
-    providerTestOverrides(extra);
+    providerTestOverrides([
+      authStateOverride(erpWidgetTestStaffAuth()),
+      ...extra,
+    ]);
 
 /// Allows Riverpod [FutureProvider] microtasks to complete in widget tests.
 Future<void> settleRiverpodFutures(WidgetTester tester) async {

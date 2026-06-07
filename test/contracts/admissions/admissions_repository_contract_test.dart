@@ -87,13 +87,13 @@ void main() {
       final mapped = const AdmissionsMapper().toDocuments(
         AdmissionsDocumentsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final doc in mockData) _fixtures.documentItem(doc),
+            for (final doc in mockData.items) _fixtures.documentItem(doc),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.documentType, mockData.first.documentType);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.documentType, mockData.items.first.documentType);
     });
 
     test('getPendingEnrollments DTO mapping matches mock output', () async {
@@ -101,13 +101,13 @@ void main() {
       final mapped = const AdmissionsMapper().toPendingEnrollments(
         AdmissionsEnrollmentsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final record in mockData) _fixtures.enrollmentItem(record),
+            for (final record in mockData.items) _fixtures.enrollmentItem(record),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.last.previewStudentId, mockData.last.previewStudentId);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.last.previewStudentId, mockData.items.last.previewStudentId);
     });
 
     test('getApprovedHandoffs DTO mapping matches mock output', () async {
@@ -115,13 +115,13 @@ void main() {
       final mapped = const AdmissionsMapper().toApprovedHandoffs(
         AdmissionsHandoffsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final handoff in mockData) _fixtures.handoffItem(handoff),
+            for (final handoff in mockData.items) _fixtures.handoffItem(handoff),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.handoffStatus, mockData.first.handoffStatus);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.handoffStatus, mockData.items.first.handoffStatus);
     });
 
     test('getFeeStructureOptions DTO mapping matches mock output', () async {
@@ -129,13 +129,13 @@ void main() {
       final mapped = const AdmissionsMapper().toFeeStructureOptions(
         AdmissionsFeeStructuresResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final option in mockData) _fixtures.feeStructureItem(option),
+            for (final option in mockData.items) _fixtures.feeStructureItem(option),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.label, mockData.first.label);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.label, mockData.items.first.label);
     });
 
     test('getApprovalQueue DTO mapping matches mock output', () async {

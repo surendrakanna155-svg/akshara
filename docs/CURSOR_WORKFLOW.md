@@ -360,10 +360,14 @@ Cursor may stop only when **one** of the following is true:
 | ID | Condition | Example |
 |----|-----------|---------|
 | **A** | Execution depth reached | Three milestones completed in the session |
-| **B** | Blocking dependency prevents progress | Backend endpoint unavailable; required spec missing |
-| **C** | Production-risk issue requires human review | Security regression, tenant isolation breach, data-loss risk, missing credentials |
+| **B** | P0 blocker encountered | TD-P0-01 server RBAC cannot be validated without backend deployment |
+| **C** | Backend dependency required | Live staging endpoint unavailable; audit ingestion not deployed |
+| **D** | Human decision required | Security regression, tenant isolation breach, data-loss risk, missing credentials, ambiguous spec |
+| **E** | Blocking dependency prevents progress | Required OpenAPI spec undefined; migration needs approval |
 
-**Production-risk examples (Condition C):**
+**Alias mapping (legacy):** Condition B/C in prior docs map to **B + C + D** above.
+
+**Production-risk examples (Condition D):**
 
 - Security regression (auth bypass, token leak, RBAC bypass)
 - Tenant isolation issue (cross-tenant data in mock or API path)
@@ -372,7 +376,7 @@ Cursor may stop only when **one** of the following is true:
 - Missing credentials (staging gate requires secrets not available)
 - Backend dependency unavailable (live API required but not deployed)
 
-When stopping under **B** or **C**, mark the milestone **PARTIAL** or **BLOCKED** in Roadmap.md and document the blocker in the completion report.
+When stopping under **B**, **C**, **D**, or **E**, mark the milestone **PARTIAL** or **BLOCKED** in Roadmap.md and document the blocker in the completion report.
 
 ### Multi-Agent Execution Rules
 

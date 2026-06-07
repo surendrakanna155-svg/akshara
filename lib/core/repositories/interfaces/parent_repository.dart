@@ -6,6 +6,7 @@ import '../../../features/parent/fees/fees_provider.dart';
 import '../../../features/parent/homework/homework_models.dart';
 import '../../../features/parent/leave/leave_models.dart';
 import '../../../features/parent/notices/notices_models.dart';
+import '../../../features/parent/parent_requests.dart';
 import '../../../features/parent/payment/payment_models.dart';
 import '../../../features/parent/profile/profile_models.dart';
 import '../../../features/parent/receipts/receipt_models.dart';
@@ -34,5 +35,20 @@ abstract class ParentRepository {
   Future<PaymentSummary> getPaymentSummary({
     required RepositoryQuery query,
     required String installmentId,
+  });
+
+  Future<LeaveRequest> submitLeaveRequest({
+    required RepositoryQuery query,
+    required ParentLeaveSubmitRequest request,
+  });
+
+  Future<PaymentInitiationResult> initiatePayment({
+    required RepositoryQuery query,
+    required ParentPaymentInitiateRequest request,
+  });
+
+  Future<PaymentConfirmationResult> confirmPayment({
+    required RepositoryQuery query,
+    required ParentPaymentConfirmRequest request,
   });
 }

@@ -66,6 +66,42 @@ class PaymentSummary {
   int get totalAmount => baseAmount + lateFee + convenienceFee;
 }
 
+/// Result returned when a payment intent is created.
+@immutable
+class PaymentInitiationResult {
+  const PaymentInitiationResult({
+    required this.paymentIntentId,
+    required this.installmentId,
+    required this.amount,
+    required this.status,
+    this.expiresAtLabel,
+  });
+
+  final String paymentIntentId;
+  final String installmentId;
+  final int amount;
+  final String status;
+  final String? expiresAtLabel;
+}
+
+/// Result returned after payment gateway confirmation.
+@immutable
+class PaymentConfirmationResult {
+  const PaymentConfirmationResult({
+    required this.receiptId,
+    required this.receiptNumber,
+    required this.paidAmount,
+    required this.paymentMethod,
+    required this.paidAtLabel,
+  });
+
+  final String receiptId;
+  final String receiptNumber;
+  final int paidAmount;
+  final PaymentMethod paymentMethod;
+  final String paidAtLabel;
+}
+
 /// Result shown after a successful mock payment.
 @immutable
 class PaymentSuccessResult {

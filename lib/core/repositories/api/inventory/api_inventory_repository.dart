@@ -1,4 +1,6 @@
 import '../../interfaces/inventory_repository.dart';
+import '../../pagination_helpers.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/inventory/inventory_models.dart';
 import 'mapper/inventory_mapper.dart';
@@ -22,45 +24,45 @@ class ApiInventoryRepository implements InventoryRepository {
   }
 
   @override
-  Future<List<InventoryAsset>> getAssets({required RepositoryQuery query}) async {
+  Future<PaginatedResult<InventoryAsset>> getAssets({required RepositoryQuery query}) async {
     final dto = await _remote.fetchAssets(query: query);
-    return _mapper.toAssets(dto);
+    return paginateList(_mapper.toAssets(dto), query);
   }
 
   @override
-  Future<List<InventoryCategory>> getCategories({required RepositoryQuery query}) async {
+  Future<PaginatedResult<InventoryCategory>> getCategories({required RepositoryQuery query}) async {
     final dto = await _remote.fetchCategories(query: query);
-    return _mapper.toCategories(dto);
+    return paginateList(_mapper.toCategories(dto), query);
   }
 
   @override
-  Future<List<InventoryAllocation>> getAllocations({
+  Future<PaginatedResult<InventoryAllocation>> getAllocations({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchAllocations(query: query);
-    return _mapper.toAllocations(dto);
+    return paginateList(_mapper.toAllocations(dto), query);
   }
 
   @override
-  Future<List<InventoryMaintenanceRecord>> getMaintenanceRecords({
+  Future<PaginatedResult<InventoryMaintenanceRecord>> getMaintenanceRecords({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchMaintenanceRecords(query: query);
-    return _mapper.toMaintenanceRecords(dto);
+    return paginateList(_mapper.toMaintenanceRecords(dto), query);
   }
 
   @override
-  Future<List<InventoryProcurementOrder>> getProcurementOrders({
+  Future<PaginatedResult<InventoryProcurementOrder>> getProcurementOrders({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchProcurementOrders(query: query);
-    return _mapper.toProcurementOrders(dto);
+    return paginateList(_mapper.toProcurementOrders(dto), query);
   }
 
   @override
-  Future<List<InventoryVendor>> getVendors({required RepositoryQuery query}) async {
+  Future<PaginatedResult<InventoryVendor>> getVendors({required RepositoryQuery query}) async {
     final dto = await _remote.fetchVendors(query: query);
-    return _mapper.toVendors(dto);
+    return paginateList(_mapper.toVendors(dto), query);
   }
 
   @override

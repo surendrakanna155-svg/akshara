@@ -6,6 +6,7 @@ import '../../../../features/parent/fees/fees_provider.dart';
 import '../../../../features/parent/homework/homework_models.dart';
 import '../../../../features/parent/leave/leave_models.dart';
 import '../../../../features/parent/notices/notices_models.dart';
+import '../../../../features/parent/parent_requests.dart';
 import '../../../../features/parent/payment/payment_models.dart';
 import '../../../../features/parent/profile/profile_models.dart';
 import '../../../../features/parent/receipts/receipt_models.dart';
@@ -111,5 +112,32 @@ class ApiParentRepository implements ParentRepository {
       installmentId: installmentId,
     );
     return _mapper.toPaymentSummary(dto);
+  }
+
+  @override
+  Future<LeaveRequest> submitLeaveRequest({
+    required RepositoryQuery query,
+    required ParentLeaveSubmitRequest request,
+  }) async {
+    final dto = await _remote.submitLeaveRequest(query: query, request: request);
+    return _mapper.toLeaveRequest(dto);
+  }
+
+  @override
+  Future<PaymentInitiationResult> initiatePayment({
+    required RepositoryQuery query,
+    required ParentPaymentInitiateRequest request,
+  }) async {
+    final dto = await _remote.initiatePayment(query: query, request: request);
+    return _mapper.toPaymentInitiation(dto);
+  }
+
+  @override
+  Future<PaymentConfirmationResult> confirmPayment({
+    required RepositoryQuery query,
+    required ParentPaymentConfirmRequest request,
+  }) async {
+    final dto = await _remote.confirmPayment(query: query, request: request);
+    return _mapper.toPaymentConfirmation(dto);
   }
 }

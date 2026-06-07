@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
+import '../../../../../features/teacher/teacher_requests.dart';
 import '../dto/teacher_responses_dto.dart';
+import '../dto/teacher_write_request_dto.dart';
 import 'teacher_api_paths.dart';
 
 /// Dio-backed remote data source for Teacher mobile APIs.
@@ -110,6 +113,78 @@ class TeacherRemoteDataSource {
     return TeacherMessagesResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<TeacherAttendanceDraftResponseDto> saveAttendanceDraft({
+    required RepositoryQuery query,
+    required TeacherAttendanceDraftRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.attendanceDraft,
+      queryParameters: _queryParams(query),
+      data: TeacherAttendanceDraftRequestDto.fromDomain(request).toJson(),
+    );
+    return TeacherAttendanceDraftResponseDto.fromJson(_requireData(response));
+  }
+
+  Future<TeacherAttendanceSubmitResponseDto> submitClassAttendance({
+    required RepositoryQuery query,
+    required TeacherAttendanceSubmitRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.attendanceSubmit,
+      queryParameters: _queryParams(query),
+      data: TeacherAttendanceSubmitRequestDto.fromDomain(request).toJson(),
+    );
+    return TeacherAttendanceSubmitResponseDto.fromJson(_requireData(response));
+  }
+
+  Future<TeacherHomeworkReviewResponseDto> reviewHomeworkSubmission({
+    required RepositoryQuery query,
+    required TeacherHomeworkReviewRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.homeworkReview(request.submissionId),
+      queryParameters: _queryParams(query),
+      data: TeacherHomeworkReviewRequestDto.fromDomain(request).toJson(),
+    );
+    return TeacherHomeworkReviewResponseDto.fromJson(_requireData(response));
+  }
+
+  Future<ExamMarkEntryDto> updateExamMark({
+    required RepositoryQuery query,
+    required TeacherExamMarkUpdateRequest request,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      TeacherApiPaths.examMark(request.markEntryId),
+      queryParameters: _queryParams(query),
+      data: TeacherExamMarkUpdateRequestDto.fromDomain(request).toJson(),
+    );
+    return ExamMarkEntryDto.fromJson(_requireData(response));
+  }
+
+  Future<TeacherLeaveRequestDto> submitLeaveRequest({
+    required RepositoryQuery query,
+    required TeacherLeaveSubmitRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.leave,
+      queryParameters: _queryParams(query),
+      data: TeacherLeaveSubmitRequestDto.fromDomain(request).toJson(),
+    );
+    return TeacherLeaveRequestDto.fromJson(_requireData(response));
+  }
+
+  Future<MessageThreadDto> sendMessage({
+    required RepositoryQuery query,
+    required TeacherMessageSendRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.messages,
+      queryParameters: _queryParams(query),
+      data: TeacherMessageSendRequestDto.fromDomain(request).toJson(),
+    );
+    return MessageThreadDto.fromJson(_requireData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
@@ -120,5 +195,9 @@ class TeacherRemoteDataSource {
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
     return response.data ?? const {};
+  }
+
+  Map<String, dynamic> _requireData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 }

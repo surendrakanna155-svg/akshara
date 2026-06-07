@@ -6,14 +6,17 @@ import '../../../features/parent/fees/fees_provider.dart';
 import '../../../features/parent/homework/homework_models.dart';
 import '../../../features/parent/leave/leave_models.dart';
 import '../../../features/parent/notices/notices_models.dart';
+import '../../../features/parent/parent_requests.dart';
 import '../../../features/parent/payment/payment_models.dart';
 import '../../../features/parent/profile/profile_models.dart';
 import '../../../features/parent/receipts/receipt_models.dart';
 import '../../../features/parent/timetable/timetable_models.dart';
 import '../interfaces/parent_repository.dart';
 import '../repository_query.dart';
+import 'mock_parent_write_store.dart';
 
 class MockParentRepository implements ParentRepository {
+  MockParentWriteStore get _store => MockParentWriteStore.instance;
   @override
   Future<ParentDashboardData> getDashboard({required RepositoryQuery query}) async =>
       ParentDashboardData.mock();
@@ -54,8 +57,10 @@ class MockParentRepository implements ParentRepository {
       _mockEvents();
 
   @override
-  Future<List<LeaveRequest>> getLeaveHistory({required RepositoryQuery query}) async =>
-      _mockLeaveHistory();
+  Future<List<LeaveRequest>> getLeaveHistory({required RepositoryQuery query}) async {
+    await _ensureLeaveHistory();
+    return List.from(_store.leaveRequests!);
+  }
 
   @override
   Future<ParentProfileData> getProfile({
@@ -91,6 +96,102 @@ class MockParentRepository implements ParentRepository {
     required String installmentId,
   }) async =>
       _summaryForInstallment(installmentId);
+
+  @override
+  Future<LeaveRequest> submitLeaveRequest({
+    required RepositoryQuery query,
+    required ParentLeaveSubmitRequest request,
+  }) async {
+    await _ensureLeaveHistory();
+    final child = _childProfileFor(request.childId);
+    final leave = LeaveRequest(
+      id: _store.nextLeaveId(),
+      childName: child.name,
+      childClass: child.classLabel,
+      fromDateLabel: request.fromDateLabel,
+      toDateLabel: request.toDateLabel,
+      reason: request.reason.trim(),
+      type: request.type,
+      status: LeaveStatus.pending,
+      submittedLabel: 'Submitted just now',
+      hasAttachment: request.hasAttachment,
+      attachmentName: request.attachmentName,
+      timeline: const [
+        LeaveTimelineStep(
+          label: 'Submitted',
+          dateLabel: 'Just now',
+          isComplete: true,
+        ),
+        LeaveTimelineStep(
+          label: 'Class teacher review',
+          dateLabel: 'Pending',
+          isComplete: false,
+        ),
+        LeaveTimelineStep(
+          label: 'School approval',
+          dateLabel: 'Pending',
+          isComplete: false,
+        ),
+      ],
+    );
+    _store.leaveRequests!.insert(0, leave);
+    return leave;
+  }
+
+  @override
+  Future<PaymentInitiationResult> initiatePayment({
+    required RepositoryQuery query,
+    required ParentPaymentInitiateRequest request,
+  }) async {
+    final intentId = _store.nextPaymentIntentId();
+    _store.paymentIntents[intentId] = request;
+    return PaymentInitiationResult(
+      paymentIntentId: intentId,
+      installmentId: request.installmentId,
+      amount: request.amount,
+      status: 'pending',
+      expiresAtLabel: 'Expires in 15 minutes',
+    );
+  }
+
+  @override
+  Future<PaymentConfirmationResult> confirmPayment({
+    required RepositoryQuery query,
+    required ParentPaymentConfirmRequest request,
+  }) async {
+    final intent = _store.paymentIntents[request.paymentIntentId];
+    if (intent == null) {
+      throw StateError('Payment intent not found: ${request.paymentIntentId}');
+    }
+    return PaymentConfirmationResult(
+      receiptId: 'rcpt_${intent.installmentId}',
+      receiptNumber: 'APS-2026-${intent.installmentId.toUpperCase()}',
+      paidAmount: intent.amount,
+      paymentMethod: intent.paymentMethod,
+      paidAtLabel: 'Just now',
+    );
+  }
+
+  Future<void> _ensureLeaveHistory() async {
+    _store.leaveRequests ??= List<LeaveRequest>.from(_mockLeaveHistory());
+  }
+
+  ParentChildProfile _childProfileFor(String childId) {
+    return switch (childId) {
+      'child_ananya' => const ParentChildProfile(
+          id: 'child_ananya',
+          name: 'Ananya Kumar',
+          classLabel: '5-B',
+          isActive: false,
+        ),
+      _ => const ParentChildProfile(
+          id: 'child_ravi',
+          name: 'Ravi Kumar',
+          classLabel: '8-A',
+          isActive: true,
+        ),
+    };
+  }
 }
 
 

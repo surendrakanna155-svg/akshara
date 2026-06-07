@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
@@ -15,34 +16,40 @@ final enrollmentConvertedStudentIdsProvider =
     StateProvider<Map<String, String>>((ref) => {});
 
 final admissionsPendingEnrollmentsFutureProvider =
-    FutureProvider<List<PendingEnrollmentRecord>>((ref) async {
+    FutureProvider<PaginatedResult<PendingEnrollmentRecord>>((ref) async {
   final overrides = ref.watch(enrollmentConversionOverridesProvider);
   final studentIds = ref.watch(enrollmentConvertedStudentIdsProvider);
-  final enrollments = await ref
+  final page = await ref
       .read(admissionsRepositoryProvider)
       .getPendingEnrollments(query: ref.watch(repositoryQueryProvider));
-  return enrollments
-      .map((record) {
-        final status = overrides[record.id] ?? record.conversionStatus;
-        final previewId = studentIds[record.id] ?? record.previewStudentId;
-        return PendingEnrollmentRecord(
-          id: record.id,
-          studentName: record.studentName,
-          applicationId: record.applicationId,
-          seekingClass: record.seekingClass,
-          section: record.section,
-          academicYear: record.academicYear,
-          guardianName: record.guardianName,
-          phone: record.phone,
-          submittedAt: record.submittedAt,
-          conversionStatus: status,
-          generatedAdmissionNumber: record.generatedAdmissionNumber,
-          previewStudentId: previewId,
-          gender: record.gender,
-          dateOfBirth: record.dateOfBirth,
-        );
-      })
-      .toList(growable: false);
+  return PaginatedResult(
+    items: page.items
+        .map((record) {
+          final status = overrides[record.id] ?? record.conversionStatus;
+          final previewId = studentIds[record.id] ?? record.previewStudentId;
+          return PendingEnrollmentRecord(
+            id: record.id,
+            studentName: record.studentName,
+            applicationId: record.applicationId,
+            seekingClass: record.seekingClass,
+            section: record.section,
+            academicYear: record.academicYear,
+            guardianName: record.guardianName,
+            phone: record.phone,
+            submittedAt: record.submittedAt,
+            conversionStatus: status,
+            generatedAdmissionNumber: record.generatedAdmissionNumber,
+            previewStudentId: previewId,
+            gender: record.gender,
+            dateOfBirth: record.dateOfBirth,
+          );
+        })
+        .toList(growable: false),
+    page: page.page,
+    pageSize: page.pageSize,
+    total: page.total,
+    hasMore: page.hasMore,
+  );
 });
 
 final admissionsPendingEnrollmentsProvider =
@@ -53,14 +60,15 @@ final admissionsPendingEnrollmentsProvider =
         manualLoading: false,
         manualError: false,
         manualEmpty: false,
-      ) ??
+      )?.items ??
       const [];
 });
 
 final admissionsPendingEnrollmentsViewStateProvider =
-    Provider<AdmissionsViewState<List<PendingEnrollmentRecord>>>((ref) {
+    Provider<AdmissionsViewState<PaginatedResult<PendingEnrollmentRecord>>>(
+        (ref) {
   return resolveAdmissionsAsync(
     ref.watch(admissionsPendingEnrollmentsFutureProvider),
-    isDataEmpty: (records) => records.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });

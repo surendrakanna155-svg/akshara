@@ -4,6 +4,7 @@ import '../../../features/transport/transport_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/transport_repository.dart';
 import '../paginated_result.dart';
+import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockTransportRepository implements TransportRepository {
@@ -274,7 +275,10 @@ class MockTransportRepository implements TransportRepository {
       );
 
   @override
-  Future<List<TransportVehicle>> getVehicles({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<TransportVehicle>> getVehicles({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         TransportVehicle(
           id: 'veh_7',
           busNumber: 'BUS-07',
@@ -323,10 +327,13 @@ class MockTransportRepository implements TransportRepository {
           status: TransportVehicleStatus.maintenance,
           occupancyPercent: 0,
         ),
-      ];
+      ], query);
 
   @override
-  Future<List<TransportDriver>> getDrivers({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<TransportDriver>> getDrivers({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         TransportDriver(
           id: 'drv_1',
           name: 'Ramesh Kumar',
@@ -371,13 +378,19 @@ class MockTransportRepository implements TransportRepository {
           rating: '4.2',
           status: TransportDriverStatus.onLeave,
         ),
-      ];
+      ], query);
 
   @override
-  Future<List<StudentTransportAllocation>> getAllocations({required RepositoryQuery query}) async => _allocations;
+  Future<PaginatedResult<StudentTransportAllocation>> getAllocations({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_allocations, query);
 
   @override
-  Future<List<TransportAttendanceRecord>> getAttendanceRecords({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<TransportAttendanceRecord>> getAttendanceRecords({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         TransportAttendanceRecord(
           id: 'att_1',
           studentName: 'Arjun Patel',
@@ -422,7 +435,7 @@ class MockTransportRepository implements TransportRepository {
           parentNotified: true,
           shift: TransportShift.am,
         ),
-      ];
+      ], query);
 
   @override
   Future<TransportTrackingPlaceholderData> getTrackingPlaceholder({required RepositoryQuery query}) async {

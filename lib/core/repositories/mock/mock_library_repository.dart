@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../features/library/library_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/library_repository.dart';
+import '../paginated_result.dart';
+import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockLibraryRepository implements LibraryRepository {
@@ -239,10 +241,16 @@ class MockLibraryRepository implements LibraryRepository {
   }
 
   @override
-  Future<List<LibraryBook>> getCatalog({required RepositoryQuery query}) async => _books;
+  Future<PaginatedResult<LibraryBook>> getCatalog({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_books, query);
 
   @override
-  Future<List<LibraryIssueRecord>> getIssues({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<LibraryIssueRecord>> getIssues({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         LibraryIssueRecord(
           id: 'iss_1',
           memberName: 'Arjun Patel',
@@ -286,10 +294,13 @@ class MockLibraryRepository implements LibraryRepository {
           status: LibraryLoanStatus.overdue,
           sisStudentId: 'SIS-STU-10415',
         ),
-      ];
+      ], query);
 
   @override
-  Future<List<LibraryReturnRecord>> getReturns({required RepositoryQuery query}) async => const [
+  Future<PaginatedResult<LibraryReturnRecord>> getReturns({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(const [
         LibraryReturnRecord(
           id: 'ret_1',
           memberName: 'Ananya Reddy',
@@ -330,10 +341,13 @@ class MockLibraryRepository implements LibraryRepository {
           fineAmount: '₹0',
           daysOverdue: 0,
         ),
-      ];
+      ], query);
 
   @override
-  Future<List<LibraryMember>> getMembers({required RepositoryQuery query}) async => _members;
+  Future<PaginatedResult<LibraryMember>> getMembers({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_members, query);
 
   @override
   Future<LibraryFinesData> getFines({required RepositoryQuery query}) async {

@@ -12,4 +12,11 @@ abstract final class TeacherApiPaths {
   static const String leave = '$base/leave';
   static const String leaveBalance = '$base/leave/balance';
   static const String messages = '$base/messages';
+  static const String attendanceDraft = '$base/attendance/draft';
+  static const String attendanceSubmit = '$base/attendance/submit';
+
+  static String homeworkReview(String submissionId) =>
+      '$base/homework/submissions/$submissionId/review';
+
+  static String examMark(String markEntryId) => '$base/exams/marks/$markEntryId';
 }

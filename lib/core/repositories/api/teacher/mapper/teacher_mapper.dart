@@ -5,8 +5,10 @@ import '../../../../../features/teacher/homework/homework_models.dart';
 import '../../../../../features/teacher/leave/leave_models.dart';
 import '../../../../../features/teacher/messages/message_models.dart';
 import '../../../../../features/teacher/timetable/timetable_models.dart';
+import '../../../../../features/teacher/teacher_requests.dart';
 import '../dto/teacher_enum_codec.dart';
 import '../dto/teacher_responses_dto.dart';
+import '../dto/teacher_write_request_dto.dart';
 
 /// Maps Teacher mobile API DTOs to domain models.
 class TeacherMapper {
@@ -166,6 +168,53 @@ class TeacherMapper {
     );
   }
 
+  TeacherAttendanceDraftResult toAttendanceDraftResult(
+    TeacherAttendanceDraftResponseDto dto,
+  ) {
+    final raw = dto.raw;
+    return TeacherAttendanceDraftResult(
+      classId: raw['classId'] as String? ?? '',
+      savedAtLabel: raw['savedAtLabel'] as String? ?? '',
+      markedCount: raw['markedCount'] as int? ?? 0,
+    );
+  }
+
+  TeacherAttendanceSubmitResult toAttendanceSubmitResult(
+    TeacherAttendanceSubmitResponseDto dto,
+  ) {
+    final raw = dto.raw;
+    return TeacherAttendanceSubmitResult(
+      classId: raw['classId'] as String? ?? '',
+      submittedAtLabel: raw['submittedAtLabel'] as String? ?? '',
+      presentCount: raw['presentCount'] as int? ?? 0,
+      absentCount: raw['absentCount'] as int? ?? 0,
+      lateCount: raw['lateCount'] as int? ?? 0,
+    );
+  }
+
+  TeacherHomeworkReviewResult toHomeworkReviewResult(
+    TeacherHomeworkReviewResponseDto dto,
+  ) {
+    final raw = dto.raw;
+    final submissionRaw = raw['submission'] as Map<String, dynamic>? ?? raw;
+    return TeacherHomeworkReviewResult(
+      submission: _mapHomeworkSubmission(submissionRaw),
+    );
+  }
+
+  HomeworkSubmission _mapHomeworkSubmission(Map<String, dynamic> item) {
+    return HomeworkSubmission(
+      id: item['id'] as String? ?? '',
+      studentName: item['studentName'] as String? ?? '',
+      classLabel: item['classLabel'] as String? ?? '',
+      title: item['title'] as String? ?? '',
+      submittedLabel: item['submittedLabel'] as String? ?? '',
+      status: TeacherEnumCodec.parseHomeworkReviewStatus(item['status'] as String?),
+      grade: item['grade'] as String?,
+      comment: item['comment'] as String?,
+    );
+  }
+
   StaffCheckInInfo _mapCheckIn(Map<String, dynamic> raw) {
     return StaffCheckInInfo(
       status: TeacherEnumCodec.parseStaffCheckInStatus(raw['status'] as String?),
@@ -255,17 +304,7 @@ class TeacherMapper {
   List<HomeworkSubmission> _mapSubmissions(List<dynamic> items) {
     return [
       for (final item in items)
-        if (item is Map<String, dynamic>)
-          HomeworkSubmission(
-            id: item['id'] as String? ?? '',
-            studentName: item['studentName'] as String? ?? '',
-            classLabel: item['classLabel'] as String? ?? '',
-            title: item['title'] as String? ?? '',
-            submittedLabel: item['submittedLabel'] as String? ?? '',
-            status: TeacherEnumCodec.parseHomeworkReviewStatus(item['status'] as String?),
-            grade: item['grade'] as String?,
-            comment: item['comment'] as String?,
-          ),
+        if (item is Map<String, dynamic>) _mapHomeworkSubmission(item),
     ];
   }
 

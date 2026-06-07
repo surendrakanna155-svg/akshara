@@ -8,6 +8,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../../admissions/admissions_models.dart';
 import '../fee_structures/finance_fee_structures_provider.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../finance_workflow_actions.dart';
@@ -59,7 +60,7 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
               icon: Icons.assignment_outlined,
             )
           else
-            FinanceAsyncBody<List<InstallmentPlan>>(
+            FinanceAsyncBody<PaginatedResult<InstallmentPlan>>(
               state: plansViewState,
               loadingLabel: 'Loading fee structures and installment plans',
               emptyMessage: 'No installment plans configured.',
