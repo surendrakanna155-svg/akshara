@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
-import '../../../core/repositories/paginated_result.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../finance_workflow_actions.dart';
@@ -36,14 +36,17 @@ class FinanceFeeStructuresScreen extends ConsumerWidget {
                   title: 'Fee structure catalog',
                 ),
               ),
-              FilledButton.icon(
-                onPressed: () => showCreateFeeStructureDialog(
-                  context,
-                  ref,
-                  academicYear: academicYear,
+              AksharaManageAction(
+                permission: Permission.manageFinance,
+                child: FilledButton.icon(
+                  onPressed: () => showCreateFeeStructureDialog(
+                    context,
+                    ref,
+                    academicYear: academicYear,
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create structure'),
                 ),
-                icon: const Icon(Icons.add),
-                label: const Text('Create structure'),
               ),
             ],
           ),

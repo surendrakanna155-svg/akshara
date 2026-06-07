@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -34,6 +32,7 @@ class LibraryIssuesScreen extends ConsumerWidget {
     final isEmpty = ref.watch(libraryIssuesEmptyProvider);
     final issues = ref.watch(libraryFilteredIssuesProvider);
     final filterIndex = ref.watch(libraryIssuesFilterProvider);
+    final pageResult = ref.watch(libraryIssuesPageResultProvider);
 
     return LibraryModuleScaffold(
       screen: LibraryScreen.issues,
@@ -41,10 +40,13 @@ class LibraryIssuesScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(libraryIssuesFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
-        label: const Text('Scan ISBN'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageLibrary,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
+          label: const Text('Scan ISBN'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -52,6 +54,7 @@ class LibraryIssuesScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         issues: issues,
+        pageResult: pageResult,
       ),
     );
   }
@@ -62,6 +65,7 @@ class LibraryIssuesScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<LibraryIssueRecord> issues,
+    required PaginatedResult<LibraryIssueRecord>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -89,6 +93,10 @@ class LibraryIssuesScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Issue books'),
         const SizedBox(height: AksharaSpacing.s3),
         _IssuesTable(issues: issues),
+        AksharaPaginatedListFooter<LibraryIssueRecord>(
+          result: pageResult,
+          pageProvider: libraryIssuesPageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

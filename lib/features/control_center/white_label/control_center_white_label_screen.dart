@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../control_center_models.dart';
@@ -20,6 +19,7 @@ class ControlCenterWhiteLabelScreen extends ConsumerWidget {
     final isLoading = ref.watch(controlCenterWhiteLabelLoadingProvider);
     final isError = ref.watch(controlCenterWhiteLabelErrorProvider);
     final configs = ref.watch(controlCenterWhiteLabelProvider);
+    final pageResult = ref.watch(controlCenterWhiteLabelPageResultProvider);
 
     return ControlCenterModuleScaffold(
       screen: ControlCenterScreen.whiteLabel,
@@ -29,6 +29,7 @@ class ControlCenterWhiteLabelScreen extends ConsumerWidget {
         isLoading: isLoading,
         isError: isError,
         configs: configs,
+        pageResult: pageResult,
       ),
     );
   }
@@ -38,6 +39,7 @@ class ControlCenterWhiteLabelScreen extends ConsumerWidget {
     required bool isLoading,
     required bool isError,
     required List<WhiteLabelConfig>? configs,
+    required PaginatedResult<WhiteLabelConfig>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -69,6 +71,10 @@ class ControlCenterWhiteLabelScreen extends ConsumerWidget {
           _WhiteLabelCard(config: config),
           const SizedBox(height: AksharaSpacing.s4),
         ],
+        AksharaPaginatedListFooter<WhiteLabelConfig>(
+          result: pageResult,
+          pageProvider: controlCenterWhiteLabelPageProvider,
+        ),
       ],
     );
   }

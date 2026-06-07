@@ -1,20 +1,20 @@
 # Akshara ERP — Technical Debt Register
 
-**Version:** 1.7  
+**Version:** 1.8  
 **Last updated:** June 2026  
-**Source audits:** v1.5–v5.1 ArchitectureReview documents
+**Source audits:** v1.5–v5.4 ArchitectureReview documents
 
 ---
 
 ## Summary
 
-| Priority | Open | In Progress | Resolved (v5.1) |
+| Priority | Open | In Progress | Resolved (v5.4) |
 |----------|-----:|------------:|----------------:|
 | P0 | 2 | 0 | 3 |
-| P1 | 0 | 1 | 12 |
-| P2 | 11 | 0 | 4 |
+| P1 | 0 | 0 | 14 |
+| P2 | 10 | 0 | 5 |
 | P3 | 5 | 0 | 1 |
-| **Total** | **18** | **1** | **20** |
+| **Total** | **17** | **0** | **23** |
 
 ---
 
@@ -37,7 +37,7 @@
 | TD-P1-01 | ~~Parent/teacher/student apps use inline mocks — no repository layer~~ | Mobile cannot connect to live API | — | Agent C | **Resolved v3.0** |
 | TD-P1-02 | ~~No pagination in repository interfaces~~ | Performance collapse at 5k+ rows | — | Agent A | **Resolved v4.6** (42/42 endpoints) |
 | TD-P1-03 | ~~No OpenAPI contract validation against staging~~ | DTO drift from backend | 2 wks | Agent A + Agent E | **Resolved v2.8** |
-| TD-P1-04 | manage* permissions not wired on all mutation routes | UX-only RBAC on some screens | 1–2 wks | Agent D | **Partial v4.5** (providers + 5 screens) |
+| TD-P1-04 | ~~manage* permissions not wired on all mutation routes~~ | UX-only RBAC on some screens | — | Agent D | **Resolved v5.3** (49 UI guards) |
 | TD-P1-05 | ~~Audit upload uploader throws `UnimplementedError` until backend wired~~ | Queue grows without drain | 1 wk | Agent D | **Resolved v2.8** |
 | TD-P1-06 | Cross-module handoff (Adm→Fin→SIS) partially untested under dual-API | Integration regressions | 1 wk | Agent E | **Partial v5.0** (mock certification) |
 | TD-P1-07 | Demo auth paths remain for parent/teacher/student personas | Mock OTP bypass in non-API mode | 2 wks | Agent D | Open |
@@ -46,7 +46,7 @@
 | TD-P1-10 | ~~Permission sync service missing~~ | Stale permissions after role change | — | Agent D | **Resolved v2.7** |
 | TD-P1-11 | ~~Audit local-only ring buffer~~ | Events lost at cap | — | Agent D | **Partial v2.8** (queue + remote drain) |
 | TD-P1-12 | ~~Client-only permission cache without version tracking~~ | Downgrade attacks | — | Agent D | **Resolved v2.7** |
-| TD-P1-13 | Non-virtualized DataTables (~40 instances) | Scroll jank on large lists | 2–3 wks | Agent B | **Partial v4.6** (7 tables; pagination layer complete) |
+| TD-P1-13 | ~~Non-virtualized DataTables (~40 instances)~~ | Scroll jank on large lists | — | Agent B | **Resolved v5.2** (11 virtualized; low-volume deferred) |
 
 ---
 
@@ -64,7 +64,7 @@
 | TD-P2-08 | Finance refund reject workflow missing | Incomplete refund lifecycle | 1 wk | Agent B | Open |
 | TD-P2-09 | Refund evidence multipart upload deferred | No receipt attachment | 1 wk | Agent A | Open |
 | TD-P2-10 | SIS audit event types deferred | Incomplete SIS audit trail | 0.5 wk | Agent D | Open |
-| TD-P2-11 | PaginationDto parsed but unused in UI | Wasted API payload | 1 wk | Agent B | **Partial v4.9** (9 screens with bars) |
+| TD-P2-11 | ~~PaginationDto parsed but unused in UI~~ | Wasted API payload | — | Agent B | **Resolved v5.2** (all paginated screens) |
 | TD-P2-12 | `allowAnonymous: true` on Dio for demo tenant headers | Unauthenticated API calls | 0.5 wk | Agent D | Open |
 | TD-P2-13 | ~~No denied-access audit on manage guards~~ | Missing security telemetry | — | Agent D | **Resolved v2.7** |
 | TD-P2-14 | ~~No audit event categorization~~ | Poor compliance filtering | — | Agent D | **Resolved v2.7** |
@@ -87,9 +87,9 @@
 
 ## Debt Paydown Priority (Recommended Order)
 
-1. **v5.2** — Pagination UX + virtualization completion (TD-P1-13, TD-P2-11)
-2. **v5.3** — Vendor monitoring adapters + global error handler (OB51-06)
-3. **v5.0** — Server RBAC/RLS + audit ingestion validation (TD-P0-01, TD-P0-02)
+1. **v5.5** — Vendor monitoring adapters (Sentry/Datadog)
+2. **v5.6** — Server RBAC/RLS validation (TD-P0-01)
+3. **v5.7** — Audit ingestion validation (TD-P0-02)
 
 ---
 

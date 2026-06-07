@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_async_state.dart';
@@ -37,10 +38,13 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
       onFilterSelected: (index) => ref
           .read(admissionsApplicationsFilterProvider.notifier)
           .state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () => _createApplication(context, ref),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('New Application'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageAdmissions,
+        child: FilledButton.icon(
+          onPressed: () => _createApplication(context, ref),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('New Application'),
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

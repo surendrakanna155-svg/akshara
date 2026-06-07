@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -32,6 +31,7 @@ class LibraryCatalogScreen extends ConsumerWidget {
     final isEmpty = ref.watch(libraryCatalogEmptyProvider);
     final books = ref.watch(libraryFilteredCatalogProvider);
     final filterIndex = ref.watch(libraryCatalogFilterProvider);
+    final pageResult = ref.watch(libraryCatalogPageResultProvider);
 
     return LibraryModuleScaffold(
       screen: LibraryScreen.catalog,
@@ -39,10 +39,13 @@ class LibraryCatalogScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(libraryCatalogFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Add book'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageLibrary,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Add book'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -50,6 +53,7 @@ class LibraryCatalogScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         books: books,
+        pageResult: pageResult,
       ),
     );
   }
@@ -60,6 +64,7 @@ class LibraryCatalogScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<LibraryBook> books,
+    required PaginatedResult<LibraryBook>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -117,6 +122,10 @@ class LibraryCatalogScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Book catalog'),
         const SizedBox(height: AksharaSpacing.s3),
         _CatalogTable(books: books),
+        AksharaPaginatedListFooter<LibraryBook>(
+          result: pageResult,
+          pageProvider: libraryCatalogPageProvider,
+        ),
       ],
     );
   }

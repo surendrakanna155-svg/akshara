@@ -94,22 +94,34 @@ final transportVehiclesLoadingProvider = StateProvider<bool>((ref) => false);
 final transportVehiclesErrorProvider = StateProvider<bool>((ref) => false);
 final transportVehiclesEmptyProvider = StateProvider<bool>((ref) => false);
 final transportVehiclesFilterProvider = StateProvider<int>((ref) => 0);
+final transportVehiclesPageProvider = StateProvider<int>((ref) => 1);
+
+final transportVehiclesQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(transportVehiclesPageProvider);
+  return baseQuery.withPage(page);
+});
 
 final transportVehiclesFutureProvider =
     FutureProvider<PaginatedResult<TransportVehicle>>((ref) async {
   return ref.read(transportRepositoryProvider).getVehicles(
-        query: ref.watch(repositoryQueryProvider),
+        query: ref.watch(transportVehiclesQueryProvider),
       );
 });
 
-final transportVehiclesProvider = Provider<List<TransportVehicle>?>((ref) {
+final transportVehiclesPageResultProvider =
+    Provider<PaginatedResult<TransportVehicle>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(transportVehiclesFutureProvider),
     manualLoading: ref.watch(transportVehiclesLoadingProvider),
     manualError: ref.watch(transportVehiclesErrorProvider),
     manualEmpty: ref.watch(transportVehiclesEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final transportVehiclesProvider = Provider<List<TransportVehicle>?>((ref) {
+  return ref.watch(transportVehiclesPageResultProvider)?.items ?? const [];
 });
 
 final transportFilteredVehiclesProvider = Provider<List<TransportVehicle>>(
@@ -137,22 +149,34 @@ final transportDriversLoadingProvider = StateProvider<bool>((ref) => false);
 final transportDriversErrorProvider = StateProvider<bool>((ref) => false);
 final transportDriversEmptyProvider = StateProvider<bool>((ref) => false);
 final transportDriversFilterProvider = StateProvider<int>((ref) => 0);
+final transportDriversPageProvider = StateProvider<int>((ref) => 1);
+
+final transportDriversQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(transportDriversPageProvider);
+  return baseQuery.withPage(page);
+});
 
 final transportDriversFutureProvider =
     FutureProvider<PaginatedResult<TransportDriver>>((ref) async {
   return ref.read(transportRepositoryProvider).getDrivers(
-        query: ref.watch(repositoryQueryProvider),
+        query: ref.watch(transportDriversQueryProvider),
       );
 });
 
-final transportDriversProvider = Provider<List<TransportDriver>?>((ref) {
+final transportDriversPageResultProvider =
+    Provider<PaginatedResult<TransportDriver>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(transportDriversFutureProvider),
     manualLoading: ref.watch(transportDriversLoadingProvider),
     manualError: ref.watch(transportDriversErrorProvider),
     manualEmpty: ref.watch(transportDriversEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final transportDriversProvider = Provider<List<TransportDriver>?>((ref) {
+  return ref.watch(transportDriversPageResultProvider)?.items ?? const [];
 });
 
 final transportFilteredDriversProvider = Provider<List<TransportDriver>>(
@@ -180,23 +204,35 @@ final transportAllocationLoadingProvider = StateProvider<bool>((ref) => false);
 final transportAllocationErrorProvider = StateProvider<bool>((ref) => false);
 final transportAllocationEmptyProvider = StateProvider<bool>((ref) => false);
 final transportAllocationFilterProvider = StateProvider<int>((ref) => 0);
+final transportAllocationsPageProvider = StateProvider<int>((ref) => 1);
+
+final transportAllocationsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(transportAllocationsPageProvider);
+  return baseQuery.withPage(page);
+});
 
 final transportAllocationsFutureProvider =
     FutureProvider<PaginatedResult<StudentTransportAllocation>>((ref) async {
   return ref.read(transportRepositoryProvider).getAllocations(
-        query: ref.watch(repositoryQueryProvider),
+        query: ref.watch(transportAllocationsQueryProvider),
       );
 });
 
-final transportAllocationsProvider =
-    Provider<List<StudentTransportAllocation>?>((ref) {
+final transportAllocationsPageResultProvider =
+    Provider<PaginatedResult<StudentTransportAllocation>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(transportAllocationsFutureProvider),
     manualLoading: ref.watch(transportAllocationLoadingProvider),
     manualError: ref.watch(transportAllocationErrorProvider),
     manualEmpty: ref.watch(transportAllocationEmptyProvider),
-  )?.items;
+  );
+});
+
+final transportAllocationsProvider =
+    Provider<List<StudentTransportAllocation>?>((ref) {
+  return ref.watch(transportAllocationsPageResultProvider)?.items;
 });
 
 // TR-06 Attendance
@@ -204,23 +240,35 @@ final transportAttendanceLoadingProvider = StateProvider<bool>((ref) => false);
 final transportAttendanceErrorProvider = StateProvider<bool>((ref) => false);
 final transportAttendanceEmptyProvider = StateProvider<bool>((ref) => false);
 final transportAttendanceFilterProvider = StateProvider<int>((ref) => 0);
+final transportAttendancePageProvider = StateProvider<int>((ref) => 1);
+
+final transportAttendanceQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(transportAttendancePageProvider);
+  return baseQuery.withPage(page);
+});
 
 final transportAttendanceFutureProvider =
     FutureProvider<PaginatedResult<TransportAttendanceRecord>>((ref) async {
   return ref.read(transportRepositoryProvider).getAttendanceRecords(
-        query: ref.watch(repositoryQueryProvider),
+        query: ref.watch(transportAttendanceQueryProvider),
       );
 });
 
-final transportAttendanceProvider =
-    Provider<List<TransportAttendanceRecord>?>((ref) {
+final transportAttendancePageResultProvider =
+    Provider<PaginatedResult<TransportAttendanceRecord>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(transportAttendanceFutureProvider),
     manualLoading: ref.watch(transportAttendanceLoadingProvider),
     manualError: ref.watch(transportAttendanceErrorProvider),
     manualEmpty: ref.watch(transportAttendanceEmptyProvider),
-  )?.items;
+  );
+});
+
+final transportAttendanceProvider =
+    Provider<List<TransportAttendanceRecord>?>((ref) {
+  return ref.watch(transportAttendancePageResultProvider)?.items;
 });
 
 final transportFilteredAttendanceProvider =

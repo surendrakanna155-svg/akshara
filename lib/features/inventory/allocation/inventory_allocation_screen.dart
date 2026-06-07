@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -34,6 +32,7 @@ class InventoryAllocationScreen extends ConsumerWidget {
     final isEmpty = ref.watch(inventoryAllocationEmptyProvider);
     final allocations = ref.watch(inventoryFilteredAllocationsProvider);
     final filterIndex = ref.watch(inventoryAllocationFilterProvider);
+    final pageResult = ref.watch(inventoryAllocationsPageResultProvider);
 
     return InventoryModuleScaffold(
       screen: InventoryScreen.allocation,
@@ -41,10 +40,13 @@ class InventoryAllocationScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(inventoryAllocationFilterProvider.notifier).state = index,
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () => context.go(RouteNames.hrEmployees),
-        icon: const Icon(Icons.groups_outlined, size: 18),
-        label: const Text('HR directory'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageInventory,
+        child: OutlinedButton.icon(
+          onPressed: () => context.go(RouteNames.hrEmployees),
+          icon: const Icon(Icons.groups_outlined, size: 18),
+          label: const Text('HR directory'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -52,6 +54,7 @@ class InventoryAllocationScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         allocations: allocations,
+        pageResult: pageResult,
       ),
     );
   }
@@ -62,6 +65,7 @@ class InventoryAllocationScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<InventoryAllocation> allocations,
+    required PaginatedResult<InventoryAllocation>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -91,6 +95,10 @@ class InventoryAllocationScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Asset allocation'),
         const SizedBox(height: AksharaSpacing.s3),
         _AllocationTable(allocations: allocations),
+        AksharaPaginatedListFooter<InventoryAllocation>(
+          result: pageResult,
+          pageProvider: inventoryAllocationsPageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

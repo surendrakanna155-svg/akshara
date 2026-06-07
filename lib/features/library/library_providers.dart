@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
+import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/async/erp_async_state.dart';
@@ -41,17 +42,28 @@ final libraryCatalogLoadingProvider = StateProvider<bool>((ref) => false);
 final libraryCatalogErrorProvider = StateProvider<bool>((ref) => false);
 final libraryCatalogEmptyProvider = StateProvider<bool>((ref) => false);
 final libraryCatalogFilterProvider = StateProvider<int>((ref) => 0);
+final libraryCatalogPageProvider = StateProvider<int>((ref) => 1);
 
-final libraryCatalogFutureProvider = FutureProvider<PaginatedResult<LibraryBook>>((ref) async {
-return ref.read(libraryRepositoryProvider).getCatalog(query: ref.watch(repositoryQueryProvider));
+final libraryCatalogQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(libraryCatalogPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final libraryCatalogProvider = Provider<List<LibraryBook>?>((ref) {
+final libraryCatalogFutureProvider = FutureProvider<PaginatedResult<LibraryBook>>((ref) async {
+return ref.read(libraryRepositoryProvider).getCatalog(query: ref.watch(libraryCatalogQueryProvider));
+});
+
+final libraryCatalogPageResultProvider = Provider<PaginatedResult<LibraryBook>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(libraryCatalogFutureProvider),
     manualLoading: ref.watch(libraryCatalogLoadingProvider), manualError: ref.watch(libraryCatalogErrorProvider), manualEmpty: ref.watch(libraryCatalogEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final libraryCatalogProvider = Provider<List<LibraryBook>?>((ref) {
+  return ref.watch(libraryCatalogPageResultProvider)?.items ?? const [];
 });
 
 final libraryFilteredCatalogProvider = Provider<List<LibraryBook>>((ref) {
@@ -77,17 +89,28 @@ final libraryIssuesLoadingProvider = StateProvider<bool>((ref) => false);
 final libraryIssuesErrorProvider = StateProvider<bool>((ref) => false);
 final libraryIssuesEmptyProvider = StateProvider<bool>((ref) => false);
 final libraryIssuesFilterProvider = StateProvider<int>((ref) => 0);
+final libraryIssuesPageProvider = StateProvider<int>((ref) => 1);
 
-final libraryIssuesFutureProvider = FutureProvider<PaginatedResult<LibraryIssueRecord>>((ref) async {
-return ref.read(libraryRepositoryProvider).getIssues(query: ref.watch(repositoryQueryProvider));
+final libraryIssuesQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(libraryIssuesPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final libraryIssuesProvider = Provider<List<LibraryIssueRecord>?>((ref) {
+final libraryIssuesFutureProvider = FutureProvider<PaginatedResult<LibraryIssueRecord>>((ref) async {
+return ref.read(libraryRepositoryProvider).getIssues(query: ref.watch(libraryIssuesQueryProvider));
+});
+
+final libraryIssuesPageResultProvider = Provider<PaginatedResult<LibraryIssueRecord>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(libraryIssuesFutureProvider),
     manualLoading: ref.watch(libraryIssuesLoadingProvider), manualError: ref.watch(libraryIssuesErrorProvider), manualEmpty: ref.watch(libraryIssuesEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final libraryIssuesProvider = Provider<List<LibraryIssueRecord>?>((ref) {
+  return ref.watch(libraryIssuesPageResultProvider)?.items ?? const [];
 });
 
 final libraryFilteredIssuesProvider = Provider<List<LibraryIssueRecord>>(
@@ -115,17 +138,28 @@ final libraryReturnsLoadingProvider = StateProvider<bool>((ref) => false);
 final libraryReturnsErrorProvider = StateProvider<bool>((ref) => false);
 final libraryReturnsEmptyProvider = StateProvider<bool>((ref) => false);
 final libraryReturnsFilterProvider = StateProvider<int>((ref) => 0);
+final libraryReturnsPageProvider = StateProvider<int>((ref) => 1);
 
-final libraryReturnsFutureProvider = FutureProvider<PaginatedResult<LibraryReturnRecord>>((ref) async {
-return ref.read(libraryRepositoryProvider).getReturns(query: ref.watch(repositoryQueryProvider));
+final libraryReturnsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(libraryReturnsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final libraryReturnsProvider = Provider<List<LibraryReturnRecord>?>((ref) {
+final libraryReturnsFutureProvider = FutureProvider<PaginatedResult<LibraryReturnRecord>>((ref) async {
+return ref.read(libraryRepositoryProvider).getReturns(query: ref.watch(libraryReturnsQueryProvider));
+});
+
+final libraryReturnsPageResultProvider = Provider<PaginatedResult<LibraryReturnRecord>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(libraryReturnsFutureProvider),
     manualLoading: ref.watch(libraryReturnsLoadingProvider), manualError: ref.watch(libraryReturnsErrorProvider), manualEmpty: ref.watch(libraryReturnsEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final libraryReturnsProvider = Provider<List<LibraryReturnRecord>?>((ref) {
+  return ref.watch(libraryReturnsPageResultProvider)?.items ?? const [];
 });
 
 final libraryFilteredReturnsProvider = Provider<List<LibraryReturnRecord>>(
@@ -150,17 +184,28 @@ final libraryMembersLoadingProvider = StateProvider<bool>((ref) => false);
 final libraryMembersErrorProvider = StateProvider<bool>((ref) => false);
 final libraryMembersEmptyProvider = StateProvider<bool>((ref) => false);
 final libraryMembersFilterProvider = StateProvider<int>((ref) => 0);
+final libraryMembersPageProvider = StateProvider<int>((ref) => 1);
 
-final libraryMembersFutureProvider = FutureProvider<PaginatedResult<LibraryMember>>((ref) async {
-return ref.read(libraryRepositoryProvider).getMembers(query: ref.watch(repositoryQueryProvider));
+final libraryMembersQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(libraryMembersPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final libraryMembersProvider = Provider<List<LibraryMember>?>((ref) {
+final libraryMembersFutureProvider = FutureProvider<PaginatedResult<LibraryMember>>((ref) async {
+return ref.read(libraryRepositoryProvider).getMembers(query: ref.watch(libraryMembersQueryProvider));
+});
+
+final libraryMembersPageResultProvider = Provider<PaginatedResult<LibraryMember>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(libraryMembersFutureProvider),
     manualLoading: ref.watch(libraryMembersLoadingProvider), manualError: ref.watch(libraryMembersErrorProvider), manualEmpty: ref.watch(libraryMembersEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final libraryMembersProvider = Provider<List<LibraryMember>?>((ref) {
+  return ref.watch(libraryMembersPageResultProvider)?.items ?? const [];
 });
 
 final libraryFilteredMembersProvider = Provider<List<LibraryMember>>((ref) {

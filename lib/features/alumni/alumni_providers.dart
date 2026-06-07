@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
+import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/async/erp_async_state.dart';
@@ -41,17 +42,28 @@ final alumniRegistryLoadingProvider = StateProvider<bool>((ref) => false);
 final alumniRegistryErrorProvider = StateProvider<bool>((ref) => false);
 final alumniRegistryEmptyProvider = StateProvider<bool>((ref) => false);
 final alumniRegistryFilterProvider = StateProvider<int>((ref) => 0);
+final alumniRegistryPageProvider = StateProvider<int>((ref) => 1);
 
-final alumniRegistryFutureProvider = FutureProvider<PaginatedResult<AlumniRecord>>((ref) async {
-return ref.read(alumniRepositoryProvider).getAlumniRegistry(query: ref.watch(repositoryQueryProvider));
+final alumniRegistryQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(alumniRegistryPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final alumniRegistryProvider = Provider<List<AlumniRecord>?>((ref) {
+final alumniRegistryFutureProvider = FutureProvider<PaginatedResult<AlumniRecord>>((ref) async {
+return ref.read(alumniRepositoryProvider).getAlumniRegistry(query: ref.watch(alumniRegistryQueryProvider));
+});
+
+final alumniRegistryPageResultProvider = Provider<PaginatedResult<AlumniRecord>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(alumniRegistryFutureProvider),
     manualLoading: ref.watch(alumniRegistryLoadingProvider), manualError: ref.watch(alumniRegistryErrorProvider), manualEmpty: ref.watch(alumniRegistryEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final alumniRegistryProvider = Provider<List<AlumniRecord>?>((ref) {
+  return ref.watch(alumniRegistryPageResultProvider)?.items ?? const [];
 });
 
 final alumniFilteredRegistryProvider = Provider<List<AlumniRecord>>((ref) {
@@ -102,17 +114,28 @@ final alumniEventsLoadingProvider = StateProvider<bool>((ref) => false);
 final alumniEventsErrorProvider = StateProvider<bool>((ref) => false);
 final alumniEventsEmptyProvider = StateProvider<bool>((ref) => false);
 final alumniEventsFilterProvider = StateProvider<int>((ref) => 0);
+final alumniEventsPageProvider = StateProvider<int>((ref) => 1);
 
-final alumniEventsFutureProvider = FutureProvider<PaginatedResult<AlumniEvent>>((ref) async {
-return ref.read(alumniRepositoryProvider).getEvents(query: ref.watch(repositoryQueryProvider));
+final alumniEventsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(alumniEventsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final alumniEventsProvider = Provider<List<AlumniEvent>?>((ref) {
+final alumniEventsFutureProvider = FutureProvider<PaginatedResult<AlumniEvent>>((ref) async {
+return ref.read(alumniRepositoryProvider).getEvents(query: ref.watch(alumniEventsQueryProvider));
+});
+
+final alumniEventsPageResultProvider = Provider<PaginatedResult<AlumniEvent>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(alumniEventsFutureProvider),
     manualLoading: ref.watch(alumniEventsLoadingProvider), manualError: ref.watch(alumniEventsErrorProvider), manualEmpty: ref.watch(alumniEventsEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final alumniEventsProvider = Provider<List<AlumniEvent>?>((ref) {
+  return ref.watch(alumniEventsPageResultProvider)?.items ?? const [];
 });
 
 final alumniFilteredEventsProvider = Provider<List<AlumniEvent>>((ref) {
@@ -138,17 +161,28 @@ final alumniDonationsLoadingProvider = StateProvider<bool>((ref) => false);
 final alumniDonationsErrorProvider = StateProvider<bool>((ref) => false);
 final alumniDonationsEmptyProvider = StateProvider<bool>((ref) => false);
 final alumniDonationsFilterProvider = StateProvider<int>((ref) => 0);
+final alumniDonationsPageProvider = StateProvider<int>((ref) => 1);
 
-final alumniDonationsFutureProvider = FutureProvider<PaginatedResult<AlumniDonation>>((ref) async {
-return ref.read(alumniRepositoryProvider).getDonations(query: ref.watch(repositoryQueryProvider));
+final alumniDonationsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(alumniDonationsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final alumniDonationsProvider = Provider<List<AlumniDonation>?>((ref) {
+final alumniDonationsFutureProvider = FutureProvider<PaginatedResult<AlumniDonation>>((ref) async {
+return ref.read(alumniRepositoryProvider).getDonations(query: ref.watch(alumniDonationsQueryProvider));
+});
+
+final alumniDonationsPageResultProvider = Provider<PaginatedResult<AlumniDonation>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(alumniDonationsFutureProvider),
     manualLoading: ref.watch(alumniDonationsLoadingProvider), manualError: ref.watch(alumniDonationsErrorProvider), manualEmpty: ref.watch(alumniDonationsEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final alumniDonationsProvider = Provider<List<AlumniDonation>?>((ref) {
+  return ref.watch(alumniDonationsPageResultProvider)?.items ?? const [];
 });
 
 final alumniFilteredDonationsProvider = Provider<List<AlumniDonation>>((ref) {
@@ -174,17 +208,28 @@ final alumniCampaignsLoadingProvider = StateProvider<bool>((ref) => false);
 final alumniCampaignsErrorProvider = StateProvider<bool>((ref) => false);
 final alumniCampaignsEmptyProvider = StateProvider<bool>((ref) => false);
 final alumniCampaignsFilterProvider = StateProvider<int>((ref) => 0);
+final alumniCampaignsPageProvider = StateProvider<int>((ref) => 1);
 
-final alumniCampaignsFutureProvider = FutureProvider<PaginatedResult<AlumniCampaign>>((ref) async {
-return ref.read(alumniRepositoryProvider).getCampaigns(query: ref.watch(repositoryQueryProvider));
+final alumniCampaignsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(alumniCampaignsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final alumniCampaignsProvider = Provider<List<AlumniCampaign>?>((ref) {
+final alumniCampaignsFutureProvider = FutureProvider<PaginatedResult<AlumniCampaign>>((ref) async {
+return ref.read(alumniRepositoryProvider).getCampaigns(query: ref.watch(alumniCampaignsQueryProvider));
+});
+
+final alumniCampaignsPageResultProvider = Provider<PaginatedResult<AlumniCampaign>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(alumniCampaignsFutureProvider),
     manualLoading: ref.watch(alumniCampaignsLoadingProvider), manualError: ref.watch(alumniCampaignsErrorProvider), manualEmpty: ref.watch(alumniCampaignsEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final alumniCampaignsProvider = Provider<List<AlumniCampaign>?>((ref) {
+  return ref.watch(alumniCampaignsPageResultProvider)?.items ?? const [];
 });
 
 final alumniFilteredCampaignsProvider = Provider<List<AlumniCampaign>>((ref) {
@@ -210,17 +255,28 @@ final alumniMentorshipLoadingProvider = StateProvider<bool>((ref) => false);
 final alumniMentorshipErrorProvider = StateProvider<bool>((ref) => false);
 final alumniMentorshipEmptyProvider = StateProvider<bool>((ref) => false);
 final alumniMentorshipFilterProvider = StateProvider<int>((ref) => 0);
+final alumniMentorshipPageProvider = StateProvider<int>((ref) => 1);
 
-final alumniMentorshipFutureProvider = FutureProvider<PaginatedResult<MentorshipPair>>((ref) async {
-return ref.read(alumniRepositoryProvider).getMentorshipPairs(query: ref.watch(repositoryQueryProvider));
+final alumniMentorshipQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(alumniMentorshipPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final alumniMentorshipProvider = Provider<List<MentorshipPair>?>((ref) {
+final alumniMentorshipFutureProvider = FutureProvider<PaginatedResult<MentorshipPair>>((ref) async {
+return ref.read(alumniRepositoryProvider).getMentorshipPairs(query: ref.watch(alumniMentorshipQueryProvider));
+});
+
+final alumniMentorshipPageResultProvider = Provider<PaginatedResult<MentorshipPair>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(alumniMentorshipFutureProvider),
     manualLoading: ref.watch(alumniMentorshipLoadingProvider), manualError: ref.watch(alumniMentorshipErrorProvider), manualEmpty: ref.watch(alumniMentorshipEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final alumniMentorshipProvider = Provider<List<MentorshipPair>?>((ref) {
+  return ref.watch(alumniMentorshipPageResultProvider)?.items ?? const [];
 });
 
 final alumniFilteredMentorshipProvider = Provider<List<MentorshipPair>>((ref) {

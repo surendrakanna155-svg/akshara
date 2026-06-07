@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/security/permissions.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/async/erp_async_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_warning_banner.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -39,10 +38,13 @@ class ControlCenterDashboardScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(controlCenterDashboardFilterProvider.notifier).state = index,
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.download_outlined, size: 18),
-        label: const Text('Export'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageControlCenter,
+        child: OutlinedButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.download_outlined, size: 18),
+          label: const Text('Export'),
+        ),
       ),
       body: ErpAsyncBody<ControlCenterDashboardData>(
         state: viewState,

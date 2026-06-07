@@ -249,9 +249,12 @@ class _RefundDetailPanel extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  child: const Text('Reject'),
+                child: AksharaApproveAction(
+                  permission: Permission.approveRefunds,
+                  child: OutlinedButton(
+                    onPressed: () {},
+                    child: const Text('Reject'),
+                  ),
                 ),
               ),
               const SizedBox(width: AksharaSpacing.s3),

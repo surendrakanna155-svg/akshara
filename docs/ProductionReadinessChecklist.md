@@ -1,8 +1,8 @@
 # Akshara ERP — Production Readiness Checklist
 
-**Version:** 1.7  
+**Version:** 1.8  
 **Last updated:** June 2026  
-**Current score:** 93 / 100 (updated v4.9–v5.1)
+**Current score:** 96 / 100 (updated v5.2–v5.4)
 
 Use this checklist before pilot, staging, and production deployments. Mark `[x]` when verified.
 
@@ -36,7 +36,7 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | R6 | Permission cache version tracking | [x] | [x] | [ ] | [ ] |
 | R7 | Denied-access audit events | [x] | [x] | [ ] | [ ] |
 | R8 | **Server-side RBAC / RLS enforced** | [ ] | [ ] | [ ] | [ ] |
-| R9 | manage* wired on all mutation routes | [x] | [ ] | [ ] | [ ] |
+| R9 | manage* wired on all mutation routes | [x] | [x] | [ ] | [ ] |
 | R9a | RBAC validation suite passing | [x] | [x] | [ ] | [ ] |
 | R9b | Tenant isolation validation suite | [x] | [x] | [ ] | [ ] |
 
@@ -70,7 +70,7 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
 | M1 | Correlation ID on all API requests | [x] | [ ] | [ ] | [ ] |
-| M2 | Client error reporting (crash analytics) | [ ] | [ ] | [ ] | [ ] |
+| M2 | Client error reporting (crash analytics) | [x] | [ ] | [ ] | [ ] |
 | M3 | API latency dashboards | [ ] | [ ] | [ ] | [ ] |
 | M4 | Auth failure rate alerting | [ ] | [ ] | [ ] | [ ] |
 | M5 | Permission sync failure alerting | [ ] | [ ] | [ ] | [ ] |

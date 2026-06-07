@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_providers.dart';
 import '../config/environment_provider.dart';
+import '../network/interceptors/error_reporting_interceptor.dart';
 import '../tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../features/auth/auth_token_provider.dart';
@@ -12,7 +13,7 @@ import 'dio_client.dart';
 final dioProvider = Provider<Dio>((ref) {
   final environment = ref.watch(environmentProvider);
 
-  return createDioClient(
+  final dio = createDioClient(
     dependencies: DioClientDependencies(
       environment: environment,
       tokenAccessor: () => ref.read(authTokensProvider),
@@ -25,4 +26,8 @@ final dioProvider = Provider<Dio>((ref) {
       allowAnonymous: !environment.requireAuthentication,
     ),
   );
+
+  dio.interceptors.add(ErrorReportingInterceptor.fromRef(ref));
+
+  return dio;
 });

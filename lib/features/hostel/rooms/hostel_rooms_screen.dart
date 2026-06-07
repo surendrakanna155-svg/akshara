@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -32,6 +31,7 @@ class HostelRoomsScreen extends ConsumerWidget {
     final isEmpty = ref.watch(hostelRoomsEmptyProvider);
     final rooms = ref.watch(hostelFilteredRoomsProvider);
     final filterIndex = ref.watch(hostelRoomsFilterProvider);
+    final pageResult = ref.watch(hostelRoomsPageResultProvider);
 
     return HostelModuleScaffold(
       screen: HostelScreen.rooms,
@@ -39,10 +39,13 @@ class HostelRoomsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(hostelRoomsFilterProvider.notifier).state = index,
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Add room'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageHostel,
+        child: OutlinedButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Add room'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -50,6 +53,7 @@ class HostelRoomsScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         rooms: rooms,
+        pageResult: pageResult,
       ),
     );
   }
@@ -60,6 +64,7 @@ class HostelRoomsScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<HostelRoom> rooms,
+    required PaginatedResult<HostelRoom>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -122,6 +127,10 @@ class HostelRoomsScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Room catalog'),
         const SizedBox(height: AksharaSpacing.s3),
         _RoomsTable(rooms: rooms),
+        AksharaPaginatedListFooter<HostelRoom>(
+          result: pageResult,
+          pageProvider: hostelRoomsPageProvider,
+        ),
       ],
     );
   }

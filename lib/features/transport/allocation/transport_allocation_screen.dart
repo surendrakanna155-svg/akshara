@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -33,6 +32,7 @@ class TransportAllocationScreen extends ConsumerWidget {
     final isEmpty = ref.watch(transportAllocationEmptyProvider);
     final allocations = ref.watch(transportAllocationsProvider);
     final filterIndex = ref.watch(transportAllocationFilterProvider);
+    final pageResult = ref.watch(transportAllocationsPageResultProvider);
 
     return TransportModuleScaffold(
       screen: TransportScreen.allocation,
@@ -40,10 +40,13 @@ class TransportAllocationScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(transportAllocationFilterProvider.notifier).state = index,
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () => context.go(RouteNames.sisStudents),
-        icon: const Icon(Icons.badge_outlined, size: 18),
-        label: const Text('SIS registry'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageTransport,
+        child: OutlinedButton.icon(
+          onPressed: () => context.go(RouteNames.sisStudents),
+          icon: const Icon(Icons.badge_outlined, size: 18),
+          label: const Text('SIS registry'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -51,6 +54,7 @@ class TransportAllocationScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         allocations: allocations ?? const [],
+        pageResult: pageResult,
       ),
     );
   }
@@ -61,6 +65,7 @@ class TransportAllocationScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<StudentTransportAllocation> allocations,
+    required PaginatedResult<StudentTransportAllocation>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -90,6 +95,10 @@ class TransportAllocationScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Student transport allocation'),
         const SizedBox(height: AksharaSpacing.s3),
         _AllocationTable(allocations: allocations),
+        AksharaPaginatedListFooter<StudentTransportAllocation>(
+          result: pageResult,
+          pageProvider: transportAllocationsPageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

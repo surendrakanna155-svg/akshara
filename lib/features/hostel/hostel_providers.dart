@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
+import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/async/erp_async_state.dart';
@@ -41,17 +42,28 @@ final hostelStudentsLoadingProvider = StateProvider<bool>((ref) => false);
 final hostelStudentsErrorProvider = StateProvider<bool>((ref) => false);
 final hostelStudentsEmptyProvider = StateProvider<bool>((ref) => false);
 final hostelStudentsFilterProvider = StateProvider<int>((ref) => 0);
+final hostelStudentsPageProvider = StateProvider<int>((ref) => 1);
 
-final hostelStudentsFutureProvider = FutureProvider<PaginatedResult<HostelStudent>>((ref) async {
-return ref.read(hostelRepositoryProvider).getStudents(query: ref.watch(repositoryQueryProvider));
+final hostelStudentsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(hostelStudentsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final hostelStudentsProvider = Provider<List<HostelStudent>?>((ref) {
+final hostelStudentsFutureProvider = FutureProvider<PaginatedResult<HostelStudent>>((ref) async {
+return ref.read(hostelRepositoryProvider).getStudents(query: ref.watch(hostelStudentsQueryProvider));
+});
+
+final hostelStudentsPageResultProvider = Provider<PaginatedResult<HostelStudent>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(hostelStudentsFutureProvider),
     manualLoading: ref.watch(hostelStudentsLoadingProvider), manualError: ref.watch(hostelStudentsErrorProvider), manualEmpty: ref.watch(hostelStudentsEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final hostelStudentsProvider = Provider<List<HostelStudent>?>((ref) {
+  return ref.watch(hostelStudentsPageResultProvider)?.items ?? const [];
 });
 
 final hostelFilteredStudentsProvider = Provider<List<HostelStudent>>((ref) {
@@ -77,17 +89,28 @@ final hostelRoomsLoadingProvider = StateProvider<bool>((ref) => false);
 final hostelRoomsErrorProvider = StateProvider<bool>((ref) => false);
 final hostelRoomsEmptyProvider = StateProvider<bool>((ref) => false);
 final hostelRoomsFilterProvider = StateProvider<int>((ref) => 0);
+final hostelRoomsPageProvider = StateProvider<int>((ref) => 1);
 
-final hostelRoomsFutureProvider = FutureProvider<PaginatedResult<HostelRoom>>((ref) async {
-return ref.read(hostelRepositoryProvider).getRooms(query: ref.watch(repositoryQueryProvider));
+final hostelRoomsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(hostelRoomsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final hostelRoomsProvider = Provider<List<HostelRoom>?>((ref) {
+final hostelRoomsFutureProvider = FutureProvider<PaginatedResult<HostelRoom>>((ref) async {
+return ref.read(hostelRepositoryProvider).getRooms(query: ref.watch(hostelRoomsQueryProvider));
+});
+
+final hostelRoomsPageResultProvider = Provider<PaginatedResult<HostelRoom>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(hostelRoomsFutureProvider),
     manualLoading: ref.watch(hostelRoomsLoadingProvider), manualError: ref.watch(hostelRoomsErrorProvider), manualEmpty: ref.watch(hostelRoomsEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final hostelRoomsProvider = Provider<List<HostelRoom>?>((ref) {
+  return ref.watch(hostelRoomsPageResultProvider)?.items ?? const [];
 });
 
 final hostelFilteredRoomsProvider = Provider<List<HostelRoom>>((ref) {
@@ -113,23 +136,35 @@ final hostelAttendanceLoadingProvider = StateProvider<bool>((ref) => false);
 final hostelAttendanceErrorProvider = StateProvider<bool>((ref) => false);
 final hostelAttendanceEmptyProvider = StateProvider<bool>((ref) => false);
 final hostelAttendanceFilterProvider = StateProvider<int>((ref) => 0);
+final hostelAttendancePageProvider = StateProvider<int>((ref) => 1);
+
+final hostelAttendanceQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(hostelAttendancePageProvider);
+  return baseQuery.withPage(page);
+});
 
 final hostelAttendanceFutureProvider =
     FutureProvider<PaginatedResult<HostelAttendanceRecord>>((ref) async {
   return ref.read(hostelRepositoryProvider).getAttendanceRecords(
-        query: ref.watch(repositoryQueryProvider),
+        query: ref.watch(hostelAttendanceQueryProvider),
       );
 });
 
-final hostelAttendanceProvider =
-    Provider<List<HostelAttendanceRecord>?>((ref) {
+final hostelAttendancePageResultProvider =
+    Provider<PaginatedResult<HostelAttendanceRecord>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(hostelAttendanceFutureProvider),
     manualLoading: ref.watch(hostelAttendanceLoadingProvider),
     manualError: ref.watch(hostelAttendanceErrorProvider),
     manualEmpty: ref.watch(hostelAttendanceEmptyProvider),
-  )?.items;
+  );
+});
+
+final hostelAttendanceProvider =
+    Provider<List<HostelAttendanceRecord>?>((ref) {
+  return ref.watch(hostelAttendancePageResultProvider)?.items;
 });
 
 final hostelFilteredAttendanceProvider =
@@ -156,17 +191,28 @@ final hostelLeaveLoadingProvider = StateProvider<bool>((ref) => false);
 final hostelLeaveErrorProvider = StateProvider<bool>((ref) => false);
 final hostelLeaveEmptyProvider = StateProvider<bool>((ref) => false);
 final hostelLeaveFilterProvider = StateProvider<int>((ref) => 0);
+final hostelLeavePageProvider = StateProvider<int>((ref) => 1);
 
-final hostelLeaveFutureProvider = FutureProvider<PaginatedResult<HostelLeaveRequest>>((ref) async {
-return ref.read(hostelRepositoryProvider).getLeaveRequests(query: ref.watch(repositoryQueryProvider));
+final hostelLeaveQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(hostelLeavePageProvider);
+  return baseQuery.withPage(page);
 });
 
-final hostelLeaveProvider = Provider<List<HostelLeaveRequest>?>((ref) {
+final hostelLeaveFutureProvider = FutureProvider<PaginatedResult<HostelLeaveRequest>>((ref) async {
+return ref.read(hostelRepositoryProvider).getLeaveRequests(query: ref.watch(hostelLeaveQueryProvider));
+});
+
+final hostelLeavePageResultProvider = Provider<PaginatedResult<HostelLeaveRequest>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(hostelLeaveFutureProvider),
     manualLoading: ref.watch(hostelLeaveLoadingProvider), manualError: ref.watch(hostelLeaveErrorProvider), manualEmpty: ref.watch(hostelLeaveEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final hostelLeaveProvider = Provider<List<HostelLeaveRequest>?>((ref) {
+  return ref.watch(hostelLeavePageResultProvider)?.items ?? const [];
 });
 
 final hostelFilteredLeaveProvider = Provider<List<HostelLeaveRequest>>((ref) {

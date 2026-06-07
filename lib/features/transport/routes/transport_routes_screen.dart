@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -36,10 +37,13 @@ class TransportRoutesScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(transportRoutesFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('New route'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageTransport,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('New route'),
+        ),
       ),
       body: _buildBody(
         context,

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/security/permissions.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -57,10 +56,13 @@ class FinanceDiscountsScreen extends ConsumerWidget {
             const Expanded(
               child: AksharaSectionHeader(title: 'Scholarship catalog'),
             ),
-            FilledButton.icon(
-              onPressed: () => showCreateScholarshipDialog(context, ref),
-              icon: const Icon(Icons.add),
-              label: const Text('Add scholarship'),
+            AksharaManageAction(
+              permission: Permission.manageFinance,
+              child: FilledButton.icon(
+                onPressed: () => showCreateScholarshipDialog(context, ref),
+                icon: const Icon(Icons.add),
+                label: const Text('Add scholarship'),
+              ),
             ),
           ],
         ),

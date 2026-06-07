@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -33,6 +32,7 @@ class ControlCenterSchoolsScreen extends ConsumerWidget {
     final isEmpty = ref.watch(controlCenterSchoolsEmptyProvider);
     final schools = ref.watch(controlCenterFilteredSchoolsProvider);
     final filterIndex = ref.watch(controlCenterSchoolsFilterProvider);
+    final pageResult = ref.watch(controlCenterSchoolsPageResultProvider);
 
     return ControlCenterModuleScaffold(
       screen: ControlCenterScreen.schools,
@@ -40,10 +40,13 @@ class ControlCenterSchoolsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(controlCenterSchoolsFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Create school'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageControlCenter,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Create school'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -51,6 +54,7 @@ class ControlCenterSchoolsScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         schools: schools,
+        pageResult: pageResult,
       ),
     );
   }
@@ -61,6 +65,7 @@ class ControlCenterSchoolsScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<PlatformSchool> schools,
+    required PaginatedResult<PlatformSchool>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -98,6 +103,10 @@ class ControlCenterSchoolsScreen extends ConsumerWidget {
           )
         else
           _SchoolsTable(schools: schools),
+        AksharaPaginatedListFooter<PlatformSchool>(
+          result: pageResult,
+          pageProvider: controlCenterSchoolsPageProvider,
+        ),
       ],
     );
   }
@@ -110,43 +119,34 @@ class _SchoolsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Schools table, ${schools.length} schools',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Material(
-          child: DataTable(
-            headingRowHeight: 48,
-            dataRowMinHeight: 52,
-            columns: const [
-              DataColumn(label: Text('School ID')),
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Plan')),
-              DataColumn(label: Text('Students')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('MRR')),
-              DataColumn(label: Text('Health')),
-            ],
-            rows: [
-              for (final school in schools)
-                DataRow(
-                  onSelectChanged: (_) =>
-                      context.go(RouteNames.managementDashboard),
-                  cells: [
-                    DataCell(Text(school.id)),
-                    DataCell(Text(school.name)),
-                    DataCell(Text(school.plan.name)),
-                    DataCell(Text('${school.studentCount}')),
-                    DataCell(_SchoolStatusChip(status: school.status)),
-                    DataCell(Text('₹${school.mrrLakhs}L')),
-                    DataCell(Text('${school.healthScore}')),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ),
+    return AksharaVirtualizedDataTable(
+      columns: const [
+        DataColumn(label: Text('School ID')),
+        DataColumn(label: Text('Name')),
+        DataColumn(label: Text('Plan')),
+        DataColumn(label: Text('Students')),
+        DataColumn(label: Text('Status')),
+        DataColumn(label: Text('MRR')),
+        DataColumn(label: Text('Health')),
+      ],
+      rowCount: schools.length,
+      dataRowMinHeight: 52,
+      semanticLabel: 'Schools table, ${schools.length} schools',
+      rowBuilder: (index) {
+        final school = schools[index];
+        return DataRow(
+          onSelectChanged: (_) => context.go(RouteNames.managementDashboard),
+          cells: [
+            DataCell(Text(school.id)),
+            DataCell(Text(school.name)),
+            DataCell(Text(school.plan.name)),
+            DataCell(Text('${school.studentCount}')),
+            DataCell(_SchoolStatusChip(status: school.status)),
+            DataCell(Text('₹${school.mrrLakhs}L')),
+            DataCell(Text('${school.healthScore}')),
+          ],
+        );
+      },
     );
   }
 }

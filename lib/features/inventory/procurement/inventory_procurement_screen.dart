@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -34,6 +32,7 @@ class InventoryProcurementScreen extends ConsumerWidget {
     final isEmpty = ref.watch(inventoryProcurementEmptyProvider);
     final orders = ref.watch(inventoryFilteredProcurementProvider);
     final filterIndex = ref.watch(inventoryProcurementFilterProvider);
+    final pageResult = ref.watch(inventoryProcurementPageResultProvider);
 
     return InventoryModuleScaffold(
       screen: InventoryScreen.procurement,
@@ -41,10 +40,13 @@ class InventoryProcurementScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(inventoryProcurementFilterProvider.notifier).state = index,
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () => context.go(RouteNames.financeDashboard),
-        icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
-        label: const Text('Finance POs'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageInventory,
+        child: OutlinedButton.icon(
+          onPressed: () => context.go(RouteNames.financeDashboard),
+          icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
+          label: const Text('Finance POs'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -52,6 +54,7 @@ class InventoryProcurementScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         orders: orders,
+        pageResult: pageResult,
       ),
     );
   }
@@ -62,6 +65,7 @@ class InventoryProcurementScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<InventoryProcurementOrder> orders,
+    required PaginatedResult<InventoryProcurementOrder>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -91,6 +95,10 @@ class InventoryProcurementScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Purchase orders'),
         const SizedBox(height: AksharaSpacing.s3),
         _ProcurementTable(orders: orders),
+        AksharaPaginatedListFooter<InventoryProcurementOrder>(
+          result: pageResult,
+          pageProvider: inventoryProcurementPageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

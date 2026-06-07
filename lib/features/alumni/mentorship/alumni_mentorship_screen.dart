@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -33,6 +32,7 @@ class AlumniMentorshipScreen extends ConsumerWidget {
     final isEmpty = ref.watch(alumniMentorshipEmptyProvider);
     final pairs = ref.watch(alumniFilteredMentorshipProvider);
     final filterIndex = ref.watch(alumniMentorshipFilterProvider);
+    final pageResult = ref.watch(alumniMentorshipPageResultProvider);
 
     return AlumniModuleScaffold(
       screen: AlumniScreen.mentorship,
@@ -40,10 +40,13 @@ class AlumniMentorshipScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(alumniMentorshipFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.handshake_outlined, size: 18),
-        label: const Text('Match pair'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageAlumni,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.handshake_outlined, size: 18),
+          label: const Text('Match pair'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -51,6 +54,7 @@ class AlumniMentorshipScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         pairs: pairs,
+        pageResult: pageResult,
       ),
     );
   }
@@ -61,6 +65,7 @@ class AlumniMentorshipScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<MentorshipPair> pairs,
+    required PaginatedResult<MentorshipPair>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -88,6 +93,10 @@ class AlumniMentorshipScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Mentorship pairs'),
         const SizedBox(height: AksharaSpacing.s3),
         _MentorshipTable(pairs: pairs),
+        AksharaPaginatedListFooter<MentorshipPair>(
+          result: pageResult,
+          pageProvider: alumniMentorshipPageProvider,
+        ),
       ],
     );
   }

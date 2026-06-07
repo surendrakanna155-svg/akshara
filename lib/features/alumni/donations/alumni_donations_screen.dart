@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -34,6 +32,7 @@ class AlumniDonationsScreen extends ConsumerWidget {
     final isEmpty = ref.watch(alumniDonationsEmptyProvider);
     final donations = ref.watch(alumniFilteredDonationsProvider);
     final filterIndex = ref.watch(alumniDonationsFilterProvider);
+    final pageResult = ref.watch(alumniDonationsPageResultProvider);
 
     return AlumniModuleScaffold(
       screen: AlumniScreen.donations,
@@ -41,10 +40,13 @@ class AlumniDonationsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(alumniDonationsFilterProvider.notifier).state = index,
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () => context.go(RouteNames.financeCollections),
-        icon: const Icon(Icons.account_balance_outlined, size: 18),
-        label: const Text('Finance ledger'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageAlumni,
+        child: OutlinedButton.icon(
+          onPressed: () => context.go(RouteNames.financeCollections),
+          icon: const Icon(Icons.account_balance_outlined, size: 18),
+          label: const Text('Finance ledger'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -52,6 +54,7 @@ class AlumniDonationsScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         donations: donations,
+        pageResult: pageResult,
       ),
     );
   }
@@ -62,6 +65,7 @@ class AlumniDonationsScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<AlumniDonation> donations,
+    required PaginatedResult<AlumniDonation>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -89,6 +93,10 @@ class AlumniDonationsScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Donation ledger'),
         const SizedBox(height: AksharaSpacing.s3),
         _DonationsTable(donations: donations),
+        AksharaPaginatedListFooter<AlumniDonation>(
+          result: pageResult,
+          pageProvider: alumniDonationsPageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

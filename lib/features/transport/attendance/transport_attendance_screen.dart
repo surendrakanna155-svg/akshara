@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -31,6 +29,7 @@ class TransportAttendanceScreen extends ConsumerWidget {
     final isEmpty = ref.watch(transportAttendanceEmptyProvider);
     final records = ref.watch(transportFilteredAttendanceProvider);
     final filterIndex = ref.watch(transportAttendanceFilterProvider);
+    final pageResult = ref.watch(transportAttendancePageResultProvider);
 
     return TransportModuleScaffold(
       screen: TransportScreen.attendance,
@@ -44,6 +43,7 @@ class TransportAttendanceScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         records: records,
+        pageResult: pageResult,
       ),
     );
   }
@@ -54,6 +54,7 @@ class TransportAttendanceScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<TransportAttendanceRecord> records,
+    required PaginatedResult<TransportAttendanceRecord>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -83,6 +84,10 @@ class TransportAttendanceScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'AM pickup attendance'),
         const SizedBox(height: AksharaSpacing.s3),
         _AttendanceTable(records: records),
+        AksharaPaginatedListFooter<TransportAttendanceRecord>(
+          result: pageResult,
+          pageProvider: transportAttendancePageProvider,
+        ),
       ],
     );
   }

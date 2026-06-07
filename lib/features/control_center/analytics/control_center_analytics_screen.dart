@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../core/security/permissions.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
 import '../control_center_models.dart';
@@ -25,10 +24,13 @@ class ControlCenterAnalyticsScreen extends ConsumerWidget {
     return ControlCenterModuleScaffold(
       screen: ControlCenterScreen.analytics,
       showFilterBar: false,
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.download_outlined, size: 18),
-        label: const Text('Export'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageControlCenter,
+        child: OutlinedButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.download_outlined, size: 18),
+          label: const Text('Export'),
+        ),
       ),
       body: _buildBody(
         context,

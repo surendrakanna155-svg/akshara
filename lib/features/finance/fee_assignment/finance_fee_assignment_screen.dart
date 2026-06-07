@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../../admissions/admissions_models.dart';
 import '../fee_structures/finance_fee_structures_provider.dart';
-import '../../../core/repositories/paginated_result.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../finance_workflow_actions.dart';
@@ -323,17 +323,20 @@ class _AssignmentPanelState extends ConsumerState<_AssignmentPanel> {
                 onChanged: (v) => setState(() => _includeHostel = v),
               ),
               const SizedBox(height: AksharaSpacing.s4),
-              FilledButton.icon(
-                onPressed: () {
-                  widget.onComplete(
-                    structure,
-                    plan,
-                    _includeTransport,
-                    _includeHostel,
-                  );
-                },
-                icon: const Icon(Icons.account_balance_wallet),
-                label: const Text('Generate student fee account'),
+              AksharaManageAction(
+                permission: Permission.manageFinance,
+                child: FilledButton.icon(
+                  onPressed: () {
+                    widget.onComplete(
+                      structure,
+                      plan,
+                      _includeTransport,
+                      _includeHostel,
+                    );
+                  },
+                  icon: const Icon(Icons.account_balance_wallet),
+                  label: const Text('Generate student fee account'),
+                ),
               ),
             ],
           ],

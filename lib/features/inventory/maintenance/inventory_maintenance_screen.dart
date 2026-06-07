@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -34,6 +31,7 @@ class InventoryMaintenanceScreen extends ConsumerWidget {
     final isEmpty = ref.watch(inventoryMaintenanceEmptyProvider);
     final records = ref.watch(inventoryFilteredMaintenanceProvider);
     final filterIndex = ref.watch(inventoryMaintenanceFilterProvider);
+    final pageResult = ref.watch(inventoryMaintenancePageResultProvider);
 
     return InventoryModuleScaffold(
       screen: InventoryScreen.maintenance,
@@ -47,6 +45,7 @@ class InventoryMaintenanceScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         records: records,
+        pageResult: pageResult,
       ),
     );
   }
@@ -57,6 +56,7 @@ class InventoryMaintenanceScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<InventoryMaintenanceRecord> records,
+    required PaginatedResult<InventoryMaintenanceRecord>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -86,6 +86,10 @@ class InventoryMaintenanceScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Maintenance schedule'),
         const SizedBox(height: AksharaSpacing.s3),
         _MaintenanceTable(records: records),
+        AksharaPaginatedListFooter<InventoryMaintenanceRecord>(
+          result: pageResult,
+          pageProvider: inventoryMaintenancePageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

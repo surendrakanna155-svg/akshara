@@ -32,6 +32,9 @@ abstract final class AuditSecurityCategorizer {
       case AuditEventType.admissionRejected:
       case AuditEventType.financeHandoffSent:
         return AuditEventCategory.workflow;
+
+      case AuditEventType.errorReported:
+        return AuditEventCategory.system;
     }
   }
 }

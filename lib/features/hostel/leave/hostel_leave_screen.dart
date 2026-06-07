@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -34,6 +31,7 @@ class HostelLeaveScreen extends ConsumerWidget {
     final isEmpty = ref.watch(hostelLeaveEmptyProvider);
     final requests = ref.watch(hostelFilteredLeaveProvider);
     final filterIndex = ref.watch(hostelLeaveFilterProvider);
+    final pageResult = ref.watch(hostelLeavePageResultProvider);
 
     return HostelModuleScaffold(
       screen: HostelScreen.leave,
@@ -47,6 +45,7 @@ class HostelLeaveScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         requests: requests,
+        pageResult: pageResult,
       ),
     );
   }
@@ -57,6 +56,7 @@ class HostelLeaveScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<HostelLeaveRequest> requests,
+    required PaginatedResult<HostelLeaveRequest>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -88,6 +88,10 @@ class HostelLeaveScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Leave requests'),
         const SizedBox(height: AksharaSpacing.s3),
         _LeaveTable(requests: requests),
+        AksharaPaginatedListFooter<HostelLeaveRequest>(
+          result: pageResult,
+          pageProvider: hostelLeavePageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

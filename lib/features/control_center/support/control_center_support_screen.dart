@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -31,6 +29,7 @@ class ControlCenterSupportScreen extends ConsumerWidget {
     final isEmpty = ref.watch(controlCenterSupportEmptyProvider);
     final tickets = ref.watch(controlCenterFilteredSupportProvider);
     final filterIndex = ref.watch(controlCenterSupportFilterProvider);
+    final pageResult = ref.watch(controlCenterSupportPageResultProvider);
 
     return ControlCenterModuleScaffold(
       screen: ControlCenterScreen.support,
@@ -44,6 +43,7 @@ class ControlCenterSupportScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         tickets: tickets,
+        pageResult: pageResult,
       ),
     );
   }
@@ -54,6 +54,7 @@ class ControlCenterSupportScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<SupportTicket> tickets,
+    required PaginatedResult<SupportTicket>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -91,6 +92,10 @@ class ControlCenterSupportScreen extends ConsumerWidget {
           )
         else
           _TicketsTable(tickets: tickets),
+        AksharaPaginatedListFooter<SupportTicket>(
+          result: pageResult,
+          pageProvider: controlCenterSupportPageProvider,
+        ),
       ],
     );
   }

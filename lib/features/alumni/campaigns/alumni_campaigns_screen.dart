@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -31,6 +30,7 @@ class AlumniCampaignsScreen extends ConsumerWidget {
     final isEmpty = ref.watch(alumniCampaignsEmptyProvider);
     final campaigns = ref.watch(alumniFilteredCampaignsProvider);
     final filterIndex = ref.watch(alumniCampaignsFilterProvider);
+    final pageResult = ref.watch(alumniCampaignsPageResultProvider);
 
     return AlumniModuleScaffold(
       screen: AlumniScreen.campaigns,
@@ -38,10 +38,13 @@ class AlumniCampaignsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(alumniCampaignsFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('New campaign'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageAlumni,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('New campaign'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -49,6 +52,7 @@ class AlumniCampaignsScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         campaigns: campaigns,
+        pageResult: pageResult,
       ),
     );
   }
@@ -59,6 +63,7 @@ class AlumniCampaignsScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<AlumniCampaign> campaigns,
+    required PaginatedResult<AlumniCampaign>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -86,6 +91,10 @@ class AlumniCampaignsScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Fundraising campaigns'),
         const SizedBox(height: AksharaSpacing.s3),
         _CampaignsTable(campaigns: campaigns),
+        AksharaPaginatedListFooter<AlumniCampaign>(
+          result: pageResult,
+          pageProvider: alumniCampaignsPageProvider,
+        ),
       ],
     );
   }

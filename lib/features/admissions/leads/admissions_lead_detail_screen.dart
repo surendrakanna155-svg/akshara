@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_failure.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../core/security/permissions.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../admissions_async_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
@@ -127,26 +124,35 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
               spacing: AksharaSpacing.s2,
               runSpacing: AksharaSpacing.s2,
               children: [
-                OutlinedButton.icon(
-                  onPressed: () =>
-                      showAddLeadNoteDialog(context, ref, leadId),
-                  icon: const Icon(Icons.note_add_outlined),
-                  label: const Text('Add note'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () =>
-                      showAddFollowUpDialog(context, ref, leadId),
-                  icon: const Icon(Icons.event_outlined),
-                  label: const Text('Add follow-up'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => showChangeLeadStageDialog(
-                    context,
-                    ref,
-                    profile.lead,
+                AksharaManageAction(
+                  permission: Permission.manageAdmissions,
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        showAddLeadNoteDialog(context, ref, leadId),
+                    icon: const Icon(Icons.note_add_outlined),
+                    label: const Text('Add note'),
                   ),
-                  icon: const Icon(Icons.swap_horiz),
-                  label: const Text('Change stage'),
+                ),
+                AksharaManageAction(
+                  permission: Permission.manageAdmissions,
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        showAddFollowUpDialog(context, ref, leadId),
+                    icon: const Icon(Icons.event_outlined),
+                    label: const Text('Add follow-up'),
+                  ),
+                ),
+                AksharaManageAction(
+                  permission: Permission.manageAdmissions,
+                  child: OutlinedButton.icon(
+                    onPressed: () => showChangeLeadStageDialog(
+                      context,
+                      ref,
+                      profile.lead,
+                    ),
+                    icon: const Icon(Icons.swap_horiz),
+                    label: const Text('Change stage'),
+                  ),
                 ),
               ],
             ),

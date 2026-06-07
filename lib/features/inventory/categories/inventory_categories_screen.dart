@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../core/repositories/paginated_result.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -31,6 +30,7 @@ class InventoryCategoriesScreen extends ConsumerWidget {
     final isEmpty = ref.watch(inventoryCategoriesEmptyProvider);
     final categories = ref.watch(inventoryFilteredCategoriesProvider);
     final filterIndex = ref.watch(inventoryCategoriesFilterProvider);
+    final pageResult = ref.watch(inventoryCategoriesPageResultProvider);
 
     return InventoryModuleScaffold(
       screen: InventoryScreen.categories,
@@ -44,6 +44,7 @@ class InventoryCategoriesScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         categories: categories,
+        pageResult: pageResult,
       ),
     );
   }
@@ -54,6 +55,7 @@ class InventoryCategoriesScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<InventoryCategory> categories,
+    required PaginatedResult<InventoryCategory>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -79,6 +81,10 @@ class InventoryCategoriesScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Category catalog'),
         const SizedBox(height: AksharaSpacing.s3),
         _CategoryTable(categories: categories),
+        AksharaPaginatedListFooter<InventoryCategory>(
+          result: pageResult,
+          pageProvider: inventoryCategoriesPageProvider,
+        ),
       ],
     );
   }

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/widgets/akshara_section_header.dart';
+import '../../../../core/security/permissions.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../../admissions_models.dart';
 
 /// Application review panel with notes, workflow, and actions (AD-07).
-class AdmissionsApprovalReviewPanel extends StatelessWidget {
+class AdmissionsApprovalReviewPanel extends ConsumerWidget {
   const AdmissionsApprovalReviewPanel({
     super.key,
     required this.review,
@@ -19,7 +21,7 @@ class AdmissionsApprovalReviewPanel extends StatelessWidget {
   final VoidCallback? onReject;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = context.aksharaText;
     final item = review.queueItem;
@@ -99,14 +101,20 @@ class AdmissionsApprovalReviewPanel extends StatelessWidget {
               const SizedBox(height: AksharaSpacing.s4),
               Row(
                 children: [
-                  FilledButton(
-                    onPressed: onApprove,
-                    child: const Text('Approve'),
+                  AksharaApproveAction(
+                    permission: Permission.approveAdmissions,
+                    child: FilledButton(
+                      onPressed: onApprove,
+                      child: const Text('Approve'),
+                    ),
                   ),
                   const SizedBox(width: AksharaSpacing.s2),
-                  OutlinedButton(
-                    onPressed: onReject,
-                    child: const Text('Reject'),
+                  AksharaApproveAction(
+                    permission: Permission.approveAdmissions,
+                    child: OutlinedButton(
+                      onPressed: onReject,
+                      child: const Text('Reject'),
+                    ),
                   ),
                 ],
               ),

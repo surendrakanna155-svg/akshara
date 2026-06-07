@@ -2,12 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/security/permissions.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -29,10 +25,13 @@ class HostelVisitorsScreen extends ConsumerWidget {
     return HostelModuleScaffold(
       screen: HostelScreen.visitors,
       filters: const ['Today'],
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.person_add_outlined, size: 18),
-        label: const Text('Register visitor'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageHostel,
+        child: OutlinedButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.person_add_outlined, size: 18),
+          label: const Text('Register visitor'),
+        ),
       ),
       body: _buildBody(
         context,

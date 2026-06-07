@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -34,6 +32,7 @@ class AlumniRegistryScreen extends ConsumerWidget {
     final isEmpty = ref.watch(alumniRegistryEmptyProvider);
     final alumni = ref.watch(alumniFilteredRegistryProvider);
     final filterIndex = ref.watch(alumniRegistryFilterProvider);
+    final pageResult = ref.watch(alumniRegistryPageResultProvider);
 
     return AlumniModuleScaffold(
       screen: AlumniScreen.registry,
@@ -41,10 +40,13 @@ class AlumniRegistryScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(alumniRegistryFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.person_add_outlined, size: 18),
-        label: const Text('Add alumni'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageAlumni,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.person_add_outlined, size: 18),
+          label: const Text('Add alumni'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -52,6 +54,7 @@ class AlumniRegistryScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         alumni: alumni,
+        pageResult: pageResult,
       ),
     );
   }
@@ -62,6 +65,7 @@ class AlumniRegistryScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<AlumniRecord> alumni,
+    required PaginatedResult<AlumniRecord>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -89,6 +93,10 @@ class AlumniRegistryScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Alumni registry'),
         const SizedBox(height: AksharaSpacing.s3),
         _RegistryTable(alumni: alumni),
+        AksharaPaginatedListFooter<AlumniRecord>(
+          result: pageResult,
+          pageProvider: alumniRegistryPageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:
@@ -121,44 +129,36 @@ class _RegistryTable extends StatelessWidget {
       );
     }
 
-    return Semantics(
-      container: true,
-      label: 'Alumni registry table, ${alumni.length} records',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Material(
-          child: DataTable(
-            headingRowHeight: 48,
-            dataRowMinHeight: 56,
-            columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Batch')),
-              DataColumn(label: Text('Program')),
-              DataColumn(label: Text('City')),
-              DataColumn(label: Text('SIS ID')),
-              DataColumn(label: Text('Donated')),
-              DataColumn(label: Text('Status')),
-            ],
-            rows: [
-              for (final record in alumni)
-                DataRow(
-                  onSelectChanged: (_) => context.go(
-                    RouteNames.alumniProfileDetail(record.id),
-                  ),
-                  cells: [
-                    DataCell(Text(record.name)),
-                    DataCell(Text(record.batchYear)),
-                    DataCell(Text(record.program)),
-                    DataCell(Text(record.city)),
-                    DataCell(Text(record.sisStudentId)),
-                    DataCell(Text(record.totalDonated)),
-                    DataCell(_EngagementChip(status: record.engagementStatus)),
-                  ],
-                ),
-            ],
+    return AksharaVirtualizedDataTable(
+      columns: const [
+        DataColumn(label: Text('Name')),
+        DataColumn(label: Text('Batch')),
+        DataColumn(label: Text('Program')),
+        DataColumn(label: Text('City')),
+        DataColumn(label: Text('SIS ID')),
+        DataColumn(label: Text('Donated')),
+        DataColumn(label: Text('Status')),
+      ],
+      rowCount: alumni.length,
+      dataRowMinHeight: 56,
+      semanticLabel: 'Alumni registry table, ${alumni.length} records',
+      rowBuilder: (index) {
+        final record = alumni[index];
+        return DataRow(
+          onSelectChanged: (_) => context.go(
+            RouteNames.alumniProfileDetail(record.id),
           ),
-        ),
-      ),
+          cells: [
+            DataCell(Text(record.name)),
+            DataCell(Text(record.batchYear)),
+            DataCell(Text(record.program)),
+            DataCell(Text(record.city)),
+            DataCell(Text(record.sisStudentId)),
+            DataCell(Text(record.totalDonated)),
+            DataCell(_EngagementChip(status: record.engagementStatus)),
+          ],
+        );
+      },
     );
   }
 }

@@ -36,6 +36,7 @@ enum AuditEventType {
   admissionApproved,
   admissionRejected,
   financeHandoffSent,
+  errorReported,
 }
 
 /// Immutable audit record stored locally until server ingestion is available.

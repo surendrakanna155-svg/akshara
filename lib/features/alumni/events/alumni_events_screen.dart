@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -31,6 +30,7 @@ class AlumniEventsScreen extends ConsumerWidget {
     final isEmpty = ref.watch(alumniEventsEmptyProvider);
     final events = ref.watch(alumniFilteredEventsProvider);
     final filterIndex = ref.watch(alumniEventsFilterProvider);
+    final pageResult = ref.watch(alumniEventsPageResultProvider);
 
     return AlumniModuleScaffold(
       screen: AlumniScreen.events,
@@ -38,10 +38,13 @@ class AlumniEventsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(alumniEventsFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('New event'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageAlumni,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('New event'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -49,6 +52,7 @@ class AlumniEventsScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         events: events,
+        pageResult: pageResult,
       ),
     );
   }
@@ -59,6 +63,7 @@ class AlumniEventsScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<AlumniEvent> events,
+    required PaginatedResult<AlumniEvent>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -84,6 +89,10 @@ class AlumniEventsScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Event calendar'),
         const SizedBox(height: AksharaSpacing.s3),
         _EventsTable(events: events),
+        AksharaPaginatedListFooter<AlumniEvent>(
+          result: pageResult,
+          pageProvider: alumniEventsPageProvider,
+        ),
       ],
     );
   }

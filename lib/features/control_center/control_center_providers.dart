@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
+import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/async/erp_async_state.dart';
@@ -41,17 +42,28 @@ final controlCenterSchoolsLoadingProvider = StateProvider<bool>((ref) => false);
 final controlCenterSchoolsErrorProvider = StateProvider<bool>((ref) => false);
 final controlCenterSchoolsEmptyProvider = StateProvider<bool>((ref) => false);
 final controlCenterSchoolsFilterProvider = StateProvider<int>((ref) => 0);
+final controlCenterSchoolsPageProvider = StateProvider<int>((ref) => 1);
 
-final controlCenterSchoolsFutureProvider = FutureProvider<PaginatedResult<PlatformSchool>>((ref) async {
-return ref.read(controlCenterRepositoryProvider).getSchools(query: ref.watch(repositoryQueryProvider));
+final controlCenterSchoolsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(controlCenterSchoolsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final controlCenterSchoolsProvider = Provider<List<PlatformSchool>?>((ref) {
+final controlCenterSchoolsFutureProvider = FutureProvider<PaginatedResult<PlatformSchool>>((ref) async {
+return ref.read(controlCenterRepositoryProvider).getSchools(query: ref.watch(controlCenterSchoolsQueryProvider));
+});
+
+final controlCenterSchoolsPageResultProvider = Provider<PaginatedResult<PlatformSchool>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(controlCenterSchoolsFutureProvider),
     manualLoading: ref.watch(controlCenterSchoolsLoadingProvider), manualError: ref.watch(controlCenterSchoolsErrorProvider), manualEmpty: ref.watch(controlCenterSchoolsEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final controlCenterSchoolsProvider = Provider<List<PlatformSchool>?>((ref) {
+  return ref.watch(controlCenterSchoolsPageResultProvider)?.items ?? const [];
 });
 
 final controlCenterFilteredSchoolsProvider = Provider<List<PlatformSchool>>(
@@ -136,17 +148,28 @@ final controlCenterSupportLoadingProvider = StateProvider<bool>((ref) => false);
 final controlCenterSupportErrorProvider = StateProvider<bool>((ref) => false);
 final controlCenterSupportEmptyProvider = StateProvider<bool>((ref) => false);
 final controlCenterSupportFilterProvider = StateProvider<int>((ref) => 0);
+final controlCenterSupportPageProvider = StateProvider<int>((ref) => 1);
 
-final controlCenterSupportFutureProvider = FutureProvider<PaginatedResult<SupportTicket>>((ref) async {
-return ref.read(controlCenterRepositoryProvider).getSupportTickets(query: ref.watch(repositoryQueryProvider));
+final controlCenterSupportQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(controlCenterSupportPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final controlCenterSupportProvider = Provider<List<SupportTicket>?>((ref) {
+final controlCenterSupportFutureProvider = FutureProvider<PaginatedResult<SupportTicket>>((ref) async {
+return ref.read(controlCenterRepositoryProvider).getSupportTickets(query: ref.watch(controlCenterSupportQueryProvider));
+});
+
+final controlCenterSupportPageResultProvider = Provider<PaginatedResult<SupportTicket>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(controlCenterSupportFutureProvider),
     manualLoading: ref.watch(controlCenterSupportLoadingProvider), manualError: ref.watch(controlCenterSupportErrorProvider), manualEmpty: ref.watch(controlCenterSupportEmptyProvider),
-  )?.items ?? const [];
+  );
+});
+
+final controlCenterSupportProvider = Provider<List<SupportTicket>?>((ref) {
+  return ref.watch(controlCenterSupportPageResultProvider)?.items ?? const [];
 });
 
 final controlCenterFilteredSupportProvider = Provider<List<SupportTicket>>(
@@ -190,22 +213,34 @@ final controlCenterWhiteLabelLoadingProvider =
     StateProvider<bool>((ref) => false);
 final controlCenterWhiteLabelErrorProvider =
     StateProvider<bool>((ref) => false);
+final controlCenterWhiteLabelPageProvider = StateProvider<int>((ref) => 1);
+
+final controlCenterWhiteLabelQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(controlCenterWhiteLabelPageProvider);
+  return baseQuery.withPage(page);
+});
 
 final controlCenterWhiteLabelFutureProvider =
     FutureProvider<PaginatedResult<WhiteLabelConfig>>((ref) async {
   return ref.read(controlCenterRepositoryProvider).getWhiteLabelConfigs(
-        query: ref.watch(repositoryQueryProvider),
+        query: ref.watch(controlCenterWhiteLabelQueryProvider),
       );
 });
 
-final controlCenterWhiteLabelProvider = Provider<List<WhiteLabelConfig>?>((ref) {
+final controlCenterWhiteLabelPageResultProvider =
+    Provider<PaginatedResult<WhiteLabelConfig>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(controlCenterWhiteLabelFutureProvider),
     manualLoading: ref.watch(controlCenterWhiteLabelLoadingProvider),
     manualError: ref.watch(controlCenterWhiteLabelErrorProvider),
     manualEmpty: false,
-  )?.items ?? const [];
+  );
+});
+
+final controlCenterWhiteLabelProvider = Provider<List<WhiteLabelConfig>?>((ref) {
+  return ref.watch(controlCenterWhiteLabelPageResultProvider)?.items ?? const [];
 });
 
 // ACC-09 Analytics

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../core/security/permissions.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -261,10 +261,13 @@ class _ConversionPanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AksharaSpacing.s6),
-              FilledButton.icon(
-                onPressed: onConvert,
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('Convert to SIS student'),
+              AksharaManageAction(
+                permission: Permission.manageSis,
+                child: FilledButton.icon(
+                  onPressed: onConvert,
+                  icon: const Icon(Icons.person_add_alt_1),
+                  label: const Text('Convert to SIS student'),
+                ),
               ),
             ],
           ],

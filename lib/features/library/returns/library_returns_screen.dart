@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -33,6 +31,7 @@ class LibraryReturnsScreen extends ConsumerWidget {
     final isEmpty = ref.watch(libraryReturnsEmptyProvider);
     final returns = ref.watch(libraryFilteredReturnsProvider);
     final filterIndex = ref.watch(libraryReturnsFilterProvider);
+    final pageResult = ref.watch(libraryReturnsPageResultProvider);
 
     return LibraryModuleScaffold(
       screen: LibraryScreen.returns,
@@ -40,10 +39,13 @@ class LibraryReturnsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(libraryReturnsFilterProvider.notifier).state = index,
-      filterTrailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
-        label: const Text('Scan return'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageLibrary,
+        child: FilledButton.icon(
+          onPressed: () {},
+          icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
+          label: const Text('Scan return'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -51,6 +53,7 @@ class LibraryReturnsScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         returns: returns,
+        pageResult: pageResult,
       ),
     );
   }
@@ -61,6 +64,7 @@ class LibraryReturnsScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<LibraryReturnRecord> returns,
+    required PaginatedResult<LibraryReturnRecord>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -88,6 +92,10 @@ class LibraryReturnsScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Return books'),
         const SizedBox(height: AksharaSpacing.s3),
         _ReturnsTable(returns: returns),
+        AksharaPaginatedListFooter<LibraryReturnRecord>(
+          result: pageResult,
+          pageProvider: libraryReturnsPageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

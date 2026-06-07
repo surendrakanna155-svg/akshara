@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/security/permissions.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../../admissions_models.dart';
 import '../../widgets/admissions_document_status_chip.dart';
 
 /// Per-student document verification checklist for AD-06.
-class AdmissionsDocumentChecklist extends StatelessWidget {
+class AdmissionsDocumentChecklist extends ConsumerWidget {
   const AdmissionsDocumentChecklist({
     super.key,
     required this.items,
@@ -19,7 +22,7 @@ class AdmissionsDocumentChecklist extends StatelessWidget {
   final VoidCallback? onReject;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = context.aksharaText;
 
@@ -77,15 +80,21 @@ class AdmissionsDocumentChecklist extends StatelessWidget {
                 Row(
                   children: [
                     if (onApprove != null)
-                      FilledButton(
-                        onPressed: onApprove,
-                        child: const Text('Approve'),
+                      AksharaApproveAction(
+                        permission: Permission.approveAdmissions,
+                        child: FilledButton(
+                          onPressed: onApprove,
+                          child: const Text('Approve'),
+                        ),
                       ),
                     const SizedBox(width: AksharaSpacing.s2),
                     if (onReject != null)
-                      OutlinedButton(
-                        onPressed: onReject,
-                        child: const Text('Reject'),
+                      AksharaApproveAction(
+                        permission: Permission.approveAdmissions,
+                        child: OutlinedButton(
+                          onPressed: onReject,
+                          child: const Text('Reject'),
+                        ),
                       ),
                   ],
                 ),

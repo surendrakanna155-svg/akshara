@@ -39,8 +39,8 @@ const List<PaginationEndpointDescriptor> kPaginatedErpListEndpoints = [
   PaginationEndpointDescriptor(module: 'hr', method: 'getEmployees', virtualized: true),
   // Transport (5)
   PaginationEndpointDescriptor(module: 'transport', method: 'getRoutes', virtualized: true),
-  PaginationEndpointDescriptor(module: 'transport', method: 'getVehicles', virtualized: false),
-  PaginationEndpointDescriptor(module: 'transport', method: 'getDrivers', virtualized: false),
+  PaginationEndpointDescriptor(module: 'transport', method: 'getVehicles', virtualized: true),
+  PaginationEndpointDescriptor(module: 'transport', method: 'getDrivers', virtualized: true),
   PaginationEndpointDescriptor(module: 'transport', method: 'getAllocations', virtualized: false),
   PaginationEndpointDescriptor(module: 'transport', method: 'getAttendanceRecords', virtualized: false),
   // Inventory (6)
@@ -61,13 +61,13 @@ const List<PaginationEndpointDescriptor> kPaginatedErpListEndpoints = [
   PaginationEndpointDescriptor(module: 'hostel', method: 'getAttendanceRecords', virtualized: false),
   PaginationEndpointDescriptor(module: 'hostel', method: 'getLeaveRequests', virtualized: false),
   // Alumni (5)
-  PaginationEndpointDescriptor(module: 'alumni', method: 'getAlumniRegistry', virtualized: false),
+  PaginationEndpointDescriptor(module: 'alumni', method: 'getAlumniRegistry', virtualized: true),
   PaginationEndpointDescriptor(module: 'alumni', method: 'getEvents', virtualized: false),
   PaginationEndpointDescriptor(module: 'alumni', method: 'getDonations', virtualized: false),
   PaginationEndpointDescriptor(module: 'alumni', method: 'getCampaigns', virtualized: false),
   PaginationEndpointDescriptor(module: 'alumni', method: 'getMentorshipPairs', virtualized: false),
   // Control Center (3)
-  PaginationEndpointDescriptor(module: 'control_center', method: 'getSchools', virtualized: false),
+  PaginationEndpointDescriptor(module: 'control_center', method: 'getSchools', virtualized: true),
   PaginationEndpointDescriptor(module: 'control_center', method: 'getSupportTickets', virtualized: false),
   PaginationEndpointDescriptor(module: 'control_center', method: 'getWhiteLabelConfigs', virtualized: false),
 ];

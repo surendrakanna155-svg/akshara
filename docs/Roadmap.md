@@ -548,14 +548,67 @@ Full register: `docs/TechnicalDebtRegister.md`
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Pagination bars on remaining 13 list screens; virtualize transport/alumni tables |
-| **Dependencies** | v5.1 complete |
-| **Blockers** | None (client-only) |
+| **Goals** | Pagination bars on remaining list screens; virtualize transport/alumni tables |
+| **Release doc** | `docs/Releases/v5.2-Pagination-UX-Completion.md` |
+| **Audit** | `docs/ArchitectureReview/v5.2-Pagination-UX-Audit.md` |
+| **Status** | ✅ Complete |
+
+### v5.3 — Manage Permission Completion
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Wire manage/approve guards on all mutation UI buttons |
+| **Release doc** | `docs/Releases/v5.3-Manage-Permission-Completion.md` |
+| **Audit** | `docs/ArchitectureReview/v5.3-Authorization-Audit.md` |
+| **Status** | ✅ Complete |
+
+### v5.4 — Global Error Handling & Resilience
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Global error handler, Riverpod observer, API/repository failure reporting |
+| **Release doc** | `docs/Releases/v5.4-Global-Error-Handling.md` |
+| **Audit** | `docs/ArchitectureReview/v5.4-Resilience-Audit.md` |
+| **Status** | ✅ Complete |
+
+### v5.5 — Vendor Monitoring Adapters
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Sentry/Datadog adapter implementations; production crash reporting |
+| **Dependencies** | v5.4 complete |
+| **Blockers** | Vendor account provisioning |
 | **Status** | 🔲 Not started |
 
 ---
 
-## Production Path
+## Future Releases
+
+### v5.6 — Server RBAC Validation
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Validate server-side RBAC/RLS against staging (TD-P0-01) |
+| **Dependencies** | Backend deployment |
+| **Status** | 🔲 Blocked (backend) |
+
+### v5.7 — Audit Ingestion Validation
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | End-to-end audit event ingestion (TD-P0-02) |
+| **Dependencies** | Backend audit API |
+| **Status** | 🔲 Blocked (backend) |
+
+---
+
+## Production Path (updated)
+
+Phase 11: Production Backend              🔲 IN PROGRESS (v5.2–v5.4 client complete)
+  Pagination UX + manage guards + global error handling
+  Target readiness: 98+ → **96 achieved (client)**
+
+**Next milestone:** v5.5 — Vendor Monitoring Adapters
 
 ```
 Phase 1: Mock MVP (v0.1–v1.4)           ✅ COMPLETE
@@ -595,9 +648,9 @@ Phase 10: Pilot Readiness                 ✅ PARTIAL (v4.9–v5.1)
   UI completion + pilot certification + observability foundation
   Target readiness: 90+ → **93 achieved**
 
-Phase 11: Production Backend              🔲 NEXT (v5.2+)
-  Server RBAC/audit + live pilot + vendor monitoring adapters
-  Target readiness: 98+
+Phase 11: Production Backend              🔲 IN PROGRESS (v5.2–v5.4 client complete)
+  Pagination UX + manage guards + global error handling
+  Target readiness: 98+ → **96 achieved (client)**
 ```
 
 ---
@@ -631,6 +684,6 @@ Every release milestone is **DONE** when all items are checked:
 5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v5.2 — Pagination UX & Virtualization Completion  
+**Next milestone:** v5.5 — Vendor Monitoring Adapters  
 **Recommended tag:** `v5.1-pilot-readiness`  
 **Autonomous execution depth:** 3 milestones per session

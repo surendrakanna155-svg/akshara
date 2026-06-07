@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -34,6 +32,7 @@ class HostelStudentsScreen extends ConsumerWidget {
     final isEmpty = ref.watch(hostelStudentsEmptyProvider);
     final students = ref.watch(hostelFilteredStudentsProvider);
     final filterIndex = ref.watch(hostelStudentsFilterProvider);
+    final pageResult = ref.watch(hostelStudentsPageResultProvider);
 
     return HostelModuleScaffold(
       screen: HostelScreen.students,
@@ -41,10 +40,13 @@ class HostelStudentsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(hostelStudentsFilterProvider.notifier).state = index,
-      filterTrailing: OutlinedButton.icon(
-        onPressed: () => context.go(RouteNames.sisStudents),
-        icon: const Icon(Icons.badge_outlined, size: 18),
-        label: const Text('SIS registry'),
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageHostel,
+        child: OutlinedButton.icon(
+          onPressed: () => context.go(RouteNames.sisStudents),
+          icon: const Icon(Icons.badge_outlined, size: 18),
+          label: const Text('SIS registry'),
+        ),
       ),
       body: _buildBody(
         context,
@@ -52,6 +54,7 @@ class HostelStudentsScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         students: students,
+        pageResult: pageResult,
       ),
     );
   }
@@ -62,6 +65,7 @@ class HostelStudentsScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<HostelStudent> students,
+    required PaginatedResult<HostelStudent>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -91,6 +95,10 @@ class HostelStudentsScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Hostel residents'),
         const SizedBox(height: AksharaSpacing.s3),
         _StudentsTable(students: students),
+        AksharaPaginatedListFooter<HostelStudent>(
+          result: pageResult,
+          pageProvider: hostelStudentsPageProvider,
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:

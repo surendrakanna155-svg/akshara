@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -32,6 +30,7 @@ class TransportVehiclesScreen extends ConsumerWidget {
     final isEmpty = ref.watch(transportVehiclesEmptyProvider);
     final vehicles = ref.watch(transportFilteredVehiclesProvider);
     final filterIndex = ref.watch(transportVehiclesFilterProvider);
+    final pageResult = ref.watch(transportVehiclesPageResultProvider);
 
     return TransportModuleScaffold(
       screen: TransportScreen.vehicles,
@@ -45,6 +44,7 @@ class TransportVehiclesScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         vehicles: vehicles,
+        pageResult: pageResult,
       ),
     );
   }
@@ -55,6 +55,7 @@ class TransportVehiclesScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<TransportVehicle> vehicles,
+    required PaginatedResult<TransportVehicle>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -111,6 +112,10 @@ class TransportVehiclesScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Vehicle registry'),
         const SizedBox(height: AksharaSpacing.s3),
         _VehiclesTable(vehicles: vehicles),
+        AksharaPaginatedListFooter<TransportVehicle>(
+          result: pageResult,
+          pageProvider: transportVehiclesPageProvider,
+        ),
       ],
     );
   }
@@ -134,42 +139,34 @@ class _VehiclesTable extends StatelessWidget {
       );
     }
 
-    return Semantics(
-      container: true,
-      label: 'Vehicles table, ${vehicles.length} buses',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Material(
-          child: DataTable(
-            headingRowHeight: 48,
-            dataRowMinHeight: 56,
-            columns: const [
-              DataColumn(label: Text('Bus')),
-              DataColumn(label: Text('Registration')),
-              DataColumn(label: Text('Capacity')),
-              DataColumn(label: Text('Route')),
-              DataColumn(label: Text('GPS')),
-              DataColumn(label: Text('Occupancy')),
-              DataColumn(label: Text('Status')),
-            ],
-            rows: [
-              for (final vehicle in vehicles)
-                DataRow(
-                  onSelectChanged: (_) {},
-                  cells: [
-                    DataCell(Text(vehicle.busNumber)),
-                    DataCell(Text(vehicle.registration)),
-                    DataCell(Text('${vehicle.capacity}')),
-                    DataCell(Text(vehicle.routeName)),
-                    DataCell(Text(vehicle.gpsDeviceId)),
-                    DataCell(Text('${vehicle.occupancyPercent}%')),
-                    DataCell(_VehicleStatusChip(status: vehicle.status)),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ),
+    return AksharaVirtualizedDataTable(
+      columns: const [
+        DataColumn(label: Text('Bus')),
+        DataColumn(label: Text('Registration')),
+        DataColumn(label: Text('Capacity')),
+        DataColumn(label: Text('Route')),
+        DataColumn(label: Text('GPS')),
+        DataColumn(label: Text('Occupancy')),
+        DataColumn(label: Text('Status')),
+      ],
+      rowCount: vehicles.length,
+      dataRowMinHeight: 56,
+      semanticLabel: 'Vehicles table, ${vehicles.length} buses',
+      rowBuilder: (index) {
+        final vehicle = vehicles[index];
+        return DataRow(
+          onSelectChanged: (_) {},
+          cells: [
+            DataCell(Text(vehicle.busNumber)),
+            DataCell(Text(vehicle.registration)),
+            DataCell(Text('${vehicle.capacity}')),
+            DataCell(Text(vehicle.routeName)),
+            DataCell(Text(vehicle.gpsDeviceId)),
+            DataCell(Text('${vehicle.occupancyPercent}%')),
+            DataCell(_VehicleStatusChip(status: vehicle.status)),
+          ],
+        );
+      },
     );
   }
 }

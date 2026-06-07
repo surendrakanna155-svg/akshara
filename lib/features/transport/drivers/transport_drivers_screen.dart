@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -31,6 +29,7 @@ class TransportDriversScreen extends ConsumerWidget {
     final isEmpty = ref.watch(transportDriversEmptyProvider);
     final drivers = ref.watch(transportFilteredDriversProvider);
     final filterIndex = ref.watch(transportDriversFilterProvider);
+    final pageResult = ref.watch(transportDriversPageResultProvider);
 
     return TransportModuleScaffold(
       screen: TransportScreen.drivers,
@@ -44,6 +43,7 @@ class TransportDriversScreen extends ConsumerWidget {
         isError: isError,
         isEmpty: isEmpty,
         drivers: drivers,
+        pageResult: pageResult,
       ),
     );
   }
@@ -54,6 +54,7 @@ class TransportDriversScreen extends ConsumerWidget {
     required bool isError,
     required bool isEmpty,
     required List<TransportDriver> drivers,
+    required PaginatedResult<TransportDriver>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -79,6 +80,10 @@ class TransportDriversScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Driver roster'),
         const SizedBox(height: AksharaSpacing.s3),
         _DriversTable(drivers: drivers),
+        AksharaPaginatedListFooter<TransportDriver>(
+          result: pageResult,
+          pageProvider: transportDriversPageProvider,
+        ),
       ],
     );
   }
@@ -102,44 +107,36 @@ class _DriversTable extends StatelessWidget {
       );
     }
 
-    return Semantics(
-      container: true,
-      label: 'Drivers table, ${drivers.length} drivers',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Material(
-          child: DataTable(
-            headingRowHeight: 48,
-            dataRowMinHeight: 56,
-            columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('License')),
-              DataColumn(label: Text('Expiry')),
-              DataColumn(label: Text('Phone')),
-              DataColumn(label: Text('Bus')),
-              DataColumn(label: Text('Attendance')),
-              DataColumn(label: Text('Rating')),
-              DataColumn(label: Text('Status')),
-            ],
-            rows: [
-              for (final driver in drivers)
-                DataRow(
-                  onSelectChanged: (_) {},
-                  cells: [
-                    DataCell(Text(driver.name)),
-                    DataCell(Text(driver.licenseNumber)),
-                    DataCell(Text(driver.licenseExpiry)),
-                    DataCell(Text(driver.phone)),
-                    DataCell(Text(driver.assignedBus)),
-                    DataCell(Text(driver.attendancePercent)),
-                    DataCell(Text(driver.rating)),
-                    DataCell(_DriverStatusChip(status: driver.status)),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ),
+    return AksharaVirtualizedDataTable(
+      columns: const [
+        DataColumn(label: Text('Name')),
+        DataColumn(label: Text('License')),
+        DataColumn(label: Text('Expiry')),
+        DataColumn(label: Text('Phone')),
+        DataColumn(label: Text('Bus')),
+        DataColumn(label: Text('Attendance')),
+        DataColumn(label: Text('Rating')),
+        DataColumn(label: Text('Status')),
+      ],
+      rowCount: drivers.length,
+      dataRowMinHeight: 56,
+      semanticLabel: 'Drivers table, ${drivers.length} drivers',
+      rowBuilder: (index) {
+        final driver = drivers[index];
+        return DataRow(
+          onSelectChanged: (_) {},
+          cells: [
+            DataCell(Text(driver.name)),
+            DataCell(Text(driver.licenseNumber)),
+            DataCell(Text(driver.licenseExpiry)),
+            DataCell(Text(driver.phone)),
+            DataCell(Text(driver.assignedBus)),
+            DataCell(Text(driver.attendancePercent)),
+            DataCell(Text(driver.rating)),
+            DataCell(_DriverStatusChip(status: driver.status)),
+          ],
+        );
+      },
     );
   }
 }
