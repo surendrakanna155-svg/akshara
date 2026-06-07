@@ -161,8 +161,9 @@ class _AttendanceBody extends ConsumerWidget {
                   canSubmit: data.unmarkedCount == 0 && !data.isSubmitted,
                   unmarkedCount: data.unmarkedCount,
                   onSaveDraft: () => saveAttendanceDraft(ref),
-                  onSubmit: () {
-                    final ok = submitAttendance(ref);
+                  onSubmit: () async {
+                    final ok = await submitAttendance(ref);
+                    if (!context.mounted) return;
                     if (!ok) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(

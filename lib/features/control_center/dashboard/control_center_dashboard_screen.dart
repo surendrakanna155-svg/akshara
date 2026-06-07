@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
@@ -32,10 +30,7 @@ class ControlCenterDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(controlCenterDashboardLoadingProvider);
-    final isError = ref.watch(controlCenterDashboardErrorProvider);
-    final isEmpty = ref.watch(controlCenterDashboardEmptyProvider);
-    final data = ref.watch(controlCenterDashboardProvider);
+    final viewState = ref.watch(controlCenterDashboardViewStateProvider);
     final filterIndex = ref.watch(controlCenterDashboardFilterProvider);
 
     return ControlCenterModuleScaffold(
@@ -49,45 +44,22 @@ class ControlCenterDashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.download_outlined, size: 18),
         label: const Text('Export'),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: ErpAsyncBody<ControlCenterDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading control center dashboard',
+        emptyMessage: 'No platform data for the selected filters.',
+        emptyIcon: Icons.hub_outlined,
+        onRetry: () =>
+            retryErpFuture(ref, controlCenterDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required ControlCenterDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading control center dashboard',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load platform dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No platform data for the selected filters.',
-        icon: Icons.hub_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(
+    BuildContext context,
+    ControlCenterDashboardData data,
+  ) {
     final isMobile = AdminLayout.isMobile(context);
 
     return Column(

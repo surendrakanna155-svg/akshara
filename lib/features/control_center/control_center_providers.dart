@@ -5,6 +5,7 @@ import '../../core/providers/repository_future.dart';
 
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'control_center_models.dart';
 
 // ACC-01 Dashboard
@@ -22,6 +23,16 @@ final controlCenterDashboardProvider = Provider<ControlCenterDashboardData?>((re
     ref,
     ref.watch(controlCenterDashboardFutureProvider),
     manualLoading: ref.watch(controlCenterDashboardLoadingProvider), manualError: ref.watch(controlCenterDashboardErrorProvider), manualEmpty: ref.watch(controlCenterDashboardEmptyProvider),
+  );
+});
+
+final controlCenterDashboardViewStateProvider =
+    Provider<ErpViewState<ControlCenterDashboardData>>((ref) {
+  return resolveErpAsync(
+    ref.watch(controlCenterDashboardFutureProvider),
+    forceLoading: ref.watch(controlCenterDashboardLoadingProvider),
+    forceError: ref.watch(controlCenterDashboardErrorProvider),
+    forceEmpty: ref.watch(controlCenterDashboardEmptyProvider),
   );
 });
 

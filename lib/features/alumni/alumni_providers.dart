@@ -5,6 +5,7 @@ import '../../core/providers/repository_future.dart';
 
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'alumni_models.dart';
 
 // AL-01 Dashboard
@@ -22,6 +23,16 @@ final alumniDashboardProvider = Provider<AlumniDashboardData?>((ref) {
     ref,
     ref.watch(alumniDashboardFutureProvider),
     manualLoading: ref.watch(alumniDashboardLoadingProvider), manualError: ref.watch(alumniDashboardErrorProvider), manualEmpty: ref.watch(alumniDashboardEmptyProvider),
+  );
+});
+
+final alumniDashboardViewStateProvider =
+    Provider<ErpViewState<AlumniDashboardData>>((ref) {
+  return resolveErpAsync(
+    ref.watch(alumniDashboardFutureProvider),
+    forceLoading: ref.watch(alumniDashboardLoadingProvider),
+    forceError: ref.watch(alumniDashboardErrorProvider),
+    forceEmpty: ref.watch(alumniDashboardEmptyProvider),
   );
 });
 

@@ -5,6 +5,7 @@ import '../../core/providers/repository_future.dart';
 
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'library_models.dart';
 
 // LB-01 Dashboard
@@ -22,6 +23,16 @@ final libraryDashboardProvider = Provider<LibraryDashboardData?>((ref) {
     ref,
     ref.watch(libraryDashboardFutureProvider),
     manualLoading: ref.watch(libraryDashboardLoadingProvider), manualError: ref.watch(libraryDashboardErrorProvider), manualEmpty: ref.watch(libraryDashboardEmptyProvider),
+  );
+});
+
+final libraryDashboardViewStateProvider =
+    Provider<ErpViewState<LibraryDashboardData>>((ref) {
+  return resolveErpAsync(
+    ref.watch(libraryDashboardFutureProvider),
+    forceLoading: ref.watch(libraryDashboardLoadingProvider),
+    forceError: ref.watch(libraryDashboardErrorProvider),
+    forceEmpty: ref.watch(libraryDashboardEmptyProvider),
   );
 });
 

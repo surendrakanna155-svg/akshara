@@ -1,10 +1,10 @@
 # Akshara ERP — Master Roadmap
 
-**Version:** 1.6  
+**Version:** 1.7  
 **Last updated:** June 2026  
-**Current release:** v4.8 (Mobile Write APIs)  
-**Production readiness:** 87 / 100 (SaaS deployment-weighted)  
-**Quality gates:** `flutter analyze` 0 issues · `flutter test` 918 passing · 159 test files  
+**Current release:** v5.1 (Monitoring & Observability Foundation)  
+**Production readiness:** 93 / 100 (SaaS deployment-weighted)  
+**Quality gates:** `flutter analyze` 0 issues · `flutter test` 930+ passing  
 **Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
 
 ---
@@ -511,18 +511,45 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Objective** | Parent/Teacher/Student write APIs (10 methods) |
 | **Release doc** | `docs/Releases/v4.8-Mobile-Write-APIs.md` |
 | **Audit** | `docs/ArchitectureReview/v4.8-Mobile-Write-API-Audit.md` |
-| **Status** | ✅ Complete (leave wired; other UI pending) |
-
----
-
-## Future Releases
+| **Status** | ✅ Complete |
 
 ### v4.9 — UI Completion & Legacy Dashboard Migration
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Wire remaining mobile write UI; migrate 8 legacy triad dashboards; pagination bars on inventory/library/hostel |
-| **Dependencies** | v4.8 complete |
+| **Objective** | ViewState migration (8 dashboards); mobile write UI; pagination UX |
+| **Release doc** | `docs/Releases/v4.9-UI-Completion.md` |
+| **Audit** | `docs/ArchitectureReview/v4.9-UI-Audit.md` |
+| **Status** | ✅ Complete (partial pagination/virtualization) |
+
+### v5.0 — Pilot School Readiness
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | Cross-module workflow certification; pilot checklists |
+| **Release doc** | `docs/Releases/v5.0-Pilot-Readiness.md` |
+| **Audit** | `docs/ArchitectureReview/v5.0-Pilot-Audit.md` |
+| **Status** | ✅ Complete (mock pilot); live pilot blocked by P0 |
+
+### v5.1 — Monitoring & Observability Foundation
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | Monitoring/analytics abstractions; operational metrics; health integration |
+| **Release doc** | `docs/Releases/v5.1-Monitoring-Observability.md` |
+| **Audit** | `docs/ArchitectureReview/v5.1-Observability-Audit.md` |
+| **Status** | ✅ Complete (architecture only) |
+
+---
+
+## Future Releases
+
+### v5.2 — Pagination UX & Virtualization Completion
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Pagination bars on remaining 13 list screens; virtualize transport/alumni tables |
+| **Dependencies** | v5.1 complete |
 | **Blockers** | None (client-only) |
 | **Status** | 🔲 Not started |
 
@@ -564,9 +591,13 @@ Phase 9: Scale & Completion              ✅ PARTIAL (v4.6–v4.8)
   Pagination rollout + performance + mobile writes
   Target readiness: 85+ → **87 achieved**
 
-Phase 10: UI Completion & Server         🔲 NEXT (v4.9+)
-  Mobile write UI wiring + server RBAC/audit backend
-  Target readiness: 90+
+Phase 10: Pilot Readiness                 ✅ PARTIAL (v4.9–v5.1)
+  UI completion + pilot certification + observability foundation
+  Target readiness: 90+ → **93 achieved**
+
+Phase 11: Production Backend              🔲 NEXT (v5.2+)
+  Server RBAC/audit + live pilot + vendor monitoring adapters
+  Target readiness: 98+
 ```
 
 ---
@@ -600,5 +631,6 @@ Every release milestone is **DONE** when all items are checked:
 5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v4.9 — UI Completion & Legacy Dashboard Migration  
+**Next milestone:** v5.2 — Pagination UX & Virtualization Completion  
+**Recommended tag:** `v5.1-pilot-readiness`  
 **Autonomous execution depth:** 3 milestones per session

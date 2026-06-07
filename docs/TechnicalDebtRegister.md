@@ -1,20 +1,20 @@
 # Akshara ERP — Technical Debt Register
 
-**Version:** 1.6  
+**Version:** 1.7  
 **Last updated:** June 2026  
-**Source audits:** v1.5–v4.8 ArchitectureReview documents
+**Source audits:** v1.5–v5.1 ArchitectureReview documents
 
 ---
 
 ## Summary
 
-| Priority | Open | In Progress | Resolved (v4.8) |
+| Priority | Open | In Progress | Resolved (v5.1) |
 |----------|-----:|------------:|----------------:|
 | P0 | 2 | 0 | 3 |
-| P1 | 1 | 1 | 11 |
+| P1 | 0 | 1 | 12 |
 | P2 | 11 | 0 | 4 |
-| P3 | 6 | 0 | 0 |
-| **Total** | **20** | **1** | **18** |
+| P3 | 5 | 0 | 1 |
+| **Total** | **18** | **1** | **20** |
 
 ---
 
@@ -39,9 +39,9 @@
 | TD-P1-03 | ~~No OpenAPI contract validation against staging~~ | DTO drift from backend | 2 wks | Agent A + Agent E | **Resolved v2.8** |
 | TD-P1-04 | manage* permissions not wired on all mutation routes | UX-only RBAC on some screens | 1–2 wks | Agent D | **Partial v4.5** (providers + 5 screens) |
 | TD-P1-05 | ~~Audit upload uploader throws `UnimplementedError` until backend wired~~ | Queue grows without drain | 1 wk | Agent D | **Resolved v2.8** |
-| TD-P1-06 | Cross-module handoff (Adm→Fin→SIS) partially untested under dual-API | Integration regressions | 1 wk | Agent E | Open |
+| TD-P1-06 | Cross-module handoff (Adm→Fin→SIS) partially untested under dual-API | Integration regressions | 1 wk | Agent E | **Partial v5.0** (mock certification) |
 | TD-P1-07 | Demo auth paths remain for parent/teacher/student personas | Mock OTP bypass in non-API mode | 2 wks | Agent D | Open |
-| TD-P1-08 | ~1,600 Riverpod providers — broad rebuild fan-out | UI jank on low-end devices | 3–4 wks | Agent B | **Partial v4.7** (7 clusters optimized) |
+| TD-P1-08 | ~1,600 Riverpod providers — broad rebuild fan-out | UI jank on low-end devices | 3–4 wks | Agent B | **Partial v4.9** (8 dashboards migrated) |
 | TD-P1-09 | ~~No refresh token reuse detection~~ | Token theft undetected | — | Agent D | **Resolved v2.7** |
 | TD-P1-10 | ~~Permission sync service missing~~ | Stale permissions after role change | — | Agent D | **Resolved v2.7** |
 | TD-P1-11 | ~~Audit local-only ring buffer~~ | Events lost at cap | — | Agent D | **Partial v2.8** (queue + remote drain) |
@@ -64,7 +64,7 @@
 | TD-P2-08 | Finance refund reject workflow missing | Incomplete refund lifecycle | 1 wk | Agent B | Open |
 | TD-P2-09 | Refund evidence multipart upload deferred | No receipt attachment | 1 wk | Agent A | Open |
 | TD-P2-10 | SIS audit event types deferred | Incomplete SIS audit trail | 0.5 wk | Agent D | Open |
-| TD-P2-11 | PaginationDto parsed but unused in UI | Wasted API payload | 1 wk | Agent B | Open |
+| TD-P2-11 | PaginationDto parsed but unused in UI | Wasted API payload | 1 wk | Agent B | **Partial v4.9** (9 screens with bars) |
 | TD-P2-12 | `allowAnonymous: true` on Dio for demo tenant headers | Unauthenticated API calls | 0.5 wk | Agent D | Open |
 | TD-P2-13 | ~~No denied-access audit on manage guards~~ | Missing security telemetry | — | Agent D | **Resolved v2.7** |
 | TD-P2-14 | ~~No audit event categorization~~ | Poor compliance filtering | — | Agent D | **Resolved v2.7** |
@@ -81,14 +81,14 @@
 | TD-P3-03 | Scripts in `scripts/` are one-off migration tools | Clutter | 0.5 d | Agent G | Open |
 | TD-P3-04 | `flutter_secure_storage` iOS Keychain accessibility not audited | Edge-case credential access | 0.5 d | Agent D | Open |
 | TD-P3-05 | Provider graph not documented per module | Onboarding friction | 1 wk | Agent F | Open |
-| TD-P3-06 | No performance benchmarks in CI | Regressions undetected | 2 wks | Agent E | Open |
+| TD-P3-06 | No performance benchmarks in CI | Regressions undetected | 2 wks | Agent E | **Partial v5.1** (metrics registry) |
 
 ---
 
 ## Debt Paydown Priority (Recommended Order)
 
-1. **v4.9** — Wire remaining mobile write UI + legacy dashboard migration (TD-P1-04, TD-P1-08)
-2. **v4.10** — Extend tenant scoping to all mocks (TD-P2-02)
+1. **v5.2** — Pagination UX + virtualization completion (TD-P1-13, TD-P2-11)
+2. **v5.3** — Vendor monitoring adapters + global error handler (OB51-06)
 3. **v5.0** — Server RBAC/RLS + audit ingestion validation (TD-P0-01, TD-P0-02)
 
 ---

@@ -5,6 +5,7 @@ import '../../core/providers/repository_future.dart';
 
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'hostel_models.dart';
 
 // HO-01 Dashboard
@@ -22,6 +23,16 @@ final hostelDashboardProvider = Provider<HostelDashboardData?>((ref) {
     ref,
     ref.watch(hostelDashboardFutureProvider),
     manualLoading: ref.watch(hostelDashboardLoadingProvider), manualError: ref.watch(hostelDashboardErrorProvider), manualEmpty: ref.watch(hostelDashboardEmptyProvider),
+  );
+});
+
+final hostelDashboardViewStateProvider =
+    Provider<ErpViewState<HostelDashboardData>>((ref) {
+  return resolveErpAsync(
+    ref.watch(hostelDashboardFutureProvider),
+    forceLoading: ref.watch(hostelDashboardLoadingProvider),
+    forceError: ref.watch(hostelDashboardErrorProvider),
+    forceEmpty: ref.watch(hostelDashboardEmptyProvider),
   );
 });
 

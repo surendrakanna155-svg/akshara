@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
@@ -29,10 +27,7 @@ class HostelDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(hostelDashboardLoadingProvider);
-    final isError = ref.watch(hostelDashboardErrorProvider);
-    final isEmpty = ref.watch(hostelDashboardEmptyProvider);
-    final data = ref.watch(hostelDashboardProvider);
+    final viewState = ref.watch(hostelDashboardViewStateProvider);
     final filterIndex = ref.watch(hostelDashboardFilterProvider);
 
     return HostelModuleScaffold(
@@ -46,45 +41,18 @@ class HostelDashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.download_outlined, size: 18),
         label: const Text('Export'),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: ErpAsyncBody<HostelDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading hostel dashboard',
+        emptyMessage: 'No hostel data for the selected block.',
+        emptyIcon: Icons.hotel_outlined,
+        onRetry: () => retryErpFuture(ref, hostelDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required HostelDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading hostel dashboard',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load hostel dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No hostel data for the selected block.',
-        icon: Icons.hotel_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(BuildContext context, HostelDashboardData data) {
     final isMobile = AdminLayout.isMobile(context);
 
     return Column(

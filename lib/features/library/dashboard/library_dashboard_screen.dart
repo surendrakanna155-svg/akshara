@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
@@ -32,10 +30,7 @@ class LibraryDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(libraryDashboardLoadingProvider);
-    final isError = ref.watch(libraryDashboardErrorProvider);
-    final isEmpty = ref.watch(libraryDashboardEmptyProvider);
-    final data = ref.watch(libraryDashboardProvider);
+    final viewState = ref.watch(libraryDashboardViewStateProvider);
     final filterIndex = ref.watch(libraryDashboardFilterProvider);
 
     return LibraryModuleScaffold(
@@ -49,45 +44,21 @@ class LibraryDashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
         label: const Text('Scan issue'),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: ErpAsyncBody<LibraryDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading library dashboard',
+        emptyMessage: 'No library data for the selected period.',
+        emptyIcon: Icons.menu_book_outlined,
+        onRetry: () => retryErpFuture(ref, libraryDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required LibraryDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading library dashboard',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load library dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No library data for the selected period.',
-        icon: Icons.menu_book_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(
+    BuildContext context,
+    LibraryDashboardData data,
+  ) {
     final isMobile = AdminLayout.isMobile(context);
     final chartHeight = isMobile ? 240.0 : 300.0;
 

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../student_mutations_provider.dart';
+import '../student_requests.dart';
 import 'homework_models.dart';
 
 final studentHomeworkFilterProvider = StateProvider<StudentHomeworkFilter>(
@@ -59,3 +61,14 @@ final studentHomeworkProvider = Provider<StudentHomeworkData>((ref) {
     items: ref.watch(studentHomeworkItemsProvider),
   );
 });
+
+Future<bool> submitStudentHomework(WidgetRef ref, String homeworkId) async {
+  final result = await ref.read(submitStudentHomeworkProvider.notifier).execute(
+        StudentHomeworkSubmitRequest(homeworkId: homeworkId),
+      );
+  if (result != null) {
+    ref.invalidate(studentHomeworkFutureProvider);
+    return true;
+  }
+  return false;
+}

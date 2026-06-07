@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -28,10 +26,7 @@ class AlumniDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(alumniDashboardLoadingProvider);
-    final isError = ref.watch(alumniDashboardErrorProvider);
-    final isEmpty = ref.watch(alumniDashboardEmptyProvider);
-    final data = ref.watch(alumniDashboardProvider);
+    final viewState = ref.watch(alumniDashboardViewStateProvider);
     final filterIndex = ref.watch(alumniDashboardFilterProvider);
 
     return AlumniModuleScaffold(
@@ -45,43 +40,21 @@ class AlumniDashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.download_outlined, size: 18),
         label: const Text('Export'),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: ErpAsyncBody<AlumniDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading alumni dashboard',
+        emptyMessage: 'No alumni data for the selected batch.',
+        emptyIcon: Icons.school_outlined,
+        onRetry: () => retryErpFuture(ref, alumniDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required AlumniDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(semanticLabel: 'Loading alumni dashboard'),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load alumni dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No alumni data for the selected batch.',
-        icon: Icons.school_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(
+    BuildContext context,
+    AlumniDashboardData data,
+  ) {
     final isMobile = AdminLayout.isMobile(context);
 
     return Column(

@@ -5,6 +5,7 @@ import '../../core/providers/repository_future.dart';
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'transport_models.dart';
 
 // TR-01 Dashboard
@@ -22,6 +23,16 @@ final transportDashboardProvider = Provider<TransportDashboardData?>((ref) {
     ref,
     ref.watch(transportDashboardFutureProvider),
     manualLoading: ref.watch(transportDashboardLoadingProvider), manualError: ref.watch(transportDashboardErrorProvider), manualEmpty: ref.watch(transportDashboardEmptyProvider),
+  );
+});
+
+final transportDashboardViewStateProvider =
+    Provider<ErpViewState<TransportDashboardData>>((ref) {
+  return resolveErpAsync(
+    ref.watch(transportDashboardFutureProvider),
+    forceLoading: ref.watch(transportDashboardLoadingProvider),
+    forceError: ref.watch(transportDashboardErrorProvider),
+    forceEmpty: ref.watch(transportDashboardEmptyProvider),
   );
 });
 

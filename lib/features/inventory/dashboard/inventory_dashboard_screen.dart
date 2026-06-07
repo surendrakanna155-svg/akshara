@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
@@ -30,10 +28,7 @@ class InventoryDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(inventoryDashboardLoadingProvider);
-    final isError = ref.watch(inventoryDashboardErrorProvider);
-    final isEmpty = ref.watch(inventoryDashboardEmptyProvider);
-    final data = ref.watch(inventoryDashboardProvider);
+    final viewState = ref.watch(inventoryDashboardViewStateProvider);
     final filterIndex = ref.watch(inventoryDashboardFilterProvider);
 
     return InventoryModuleScaffold(
@@ -47,45 +42,21 @@ class InventoryDashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.download_outlined, size: 18),
         label: const Text('Export'),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: ErpAsyncBody<InventoryDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading inventory dashboard',
+        emptyMessage: 'No inventory data for the selected department.',
+        emptyIcon: Icons.inventory_2_outlined,
+        onRetry: () => retryErpFuture(ref, inventoryDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required InventoryDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading inventory dashboard',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load inventory dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No inventory data for the selected department.',
-        icon: Icons.inventory_2_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(
+    BuildContext context,
+    InventoryDashboardData data,
+  ) {
     final isMobile = AdminLayout.isMobile(context);
 
     return Column(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import 'homework_models.dart';
 import 'student_homework_provider.dart';
 import 'widgets/homework_filter_bar.dart';
 import 'widgets/homework_list_row.dart';
@@ -121,7 +122,18 @@ class StudentHomeworkScreen extends ConsumerWidget {
                                 Column(
                                   children: [
                                     for (var i = 0; i < data.items.length; i++) ...[
-                                      HomeworkListRow(item: data.items[i]),
+                                      HomeworkListRow(
+                                        item: data.items[i],
+                                        onSubmit: data.items[i].status ==
+                                                StudentHomeworkStatus.pending
+                                            ? () async {
+                                                await submitStudentHomework(
+                                                  ref,
+                                                  data.items[i].id,
+                                                );
+                                              }
+                                            : null,
+                                      ),
                                       if (i < data.items.length - 1)
                                         const SizedBox(
                                           height: AksharaSpacing.s2,

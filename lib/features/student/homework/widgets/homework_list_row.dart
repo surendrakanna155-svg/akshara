@@ -6,11 +6,16 @@ import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../homework_models.dart';
 
-/// Homework list row with submission status and attachment placeholder.
+/// Homework list row with submission status and optional submit action.
 class HomeworkListRow extends StatelessWidget {
-  const HomeworkListRow({super.key, required this.item});
+  const HomeworkListRow({
+    super.key,
+    required this.item,
+    this.onSubmit,
+  });
 
   final StudentHomeworkItem item;
+  final VoidCallback? onSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +86,17 @@ class HomeworkListRow extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ],
+              if (onSubmit != null &&
+                  item.status == StudentHomeworkStatus.pending) ...[
+                const SizedBox(height: AksharaSpacing.s3),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton(
+                    onPressed: onSubmit,
+                    child: const Text('Submit'),
+                  ),
                 ),
               ],
             ],

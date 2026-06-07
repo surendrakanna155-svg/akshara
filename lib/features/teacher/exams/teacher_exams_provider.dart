@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../teacher_mutations_provider.dart';
+import '../teacher_requests.dart';
 import 'exam_models.dart';
 
 final teacherExamSectionProvider = StateProvider<TeacherExamSection>(
@@ -80,7 +82,17 @@ final teacherExamsProvider = Provider<TeacherExamsData>((ref) {
   );
 });
 
-void updateExamMark(WidgetRef ref, String entryId, int marks) {
+Future<void> updateExamMark(WidgetRef ref, String entryId, int marks) async {
+  final updated = await ref
+      .read(updateTeacherExamMarkProvider.notifier)
+      .execute(
+        TeacherExamMarkUpdateRequest(
+          markEntryId: entryId,
+          marksObtained: marks,
+        ),
+      );
+  if (updated == null) return;
+
   final current = ref.read(_teacherExamMarksProvider) ??
       ref.read(teacherExamMarksFutureProvider).value ??
       const <ExamMarkEntry>[];

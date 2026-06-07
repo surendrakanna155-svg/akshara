@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
@@ -32,10 +30,7 @@ class ManagementDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(managementDashboardLoadingProvider);
-    final isError = ref.watch(managementDashboardErrorProvider);
-    final isEmpty = ref.watch(managementDashboardEmptyProvider);
-    final data = ref.watch(managementDashboardProvider);
+    final viewState = ref.watch(managementDashboardViewStateProvider);
     final filterIndex = ref.watch(managementDashboardFilterProvider);
 
     return ManagementModuleScaffold(
@@ -49,45 +44,21 @@ class ManagementDashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.download_outlined, size: 18),
         label: const Text('Export'),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: ErpAsyncBody<ManagementDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading management dashboard',
+        emptyMessage: 'No management data for the selected filters.',
+        emptyIcon: Icons.dashboard_outlined,
+        onRetry: () => retryErpFuture(ref, managementDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required ManagementDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading management dashboard',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load management dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No management data for the selected filters.',
-        icon: Icons.dashboard_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(
+    BuildContext context,
+    ManagementDashboardData data,
+  ) {
     final isMobile = AdminLayout.isMobile(context);
     final chartHeight = isMobile ? 240.0 : 300.0;
     final queuePreview = data.approvalQueue.take(5).toList();

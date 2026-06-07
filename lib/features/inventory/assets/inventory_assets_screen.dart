@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../shared/widgets/akshara_pagination_bar.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../../core/repositories/paginated_result.dart';
 import '../inventory_models.dart';
 import '../inventory_providers.dart';
 import '../widgets/inventory_kpi_row.dart';
@@ -33,6 +35,7 @@ class InventoryAssetsScreen extends ConsumerWidget {
     final isEmpty = ref.watch(inventoryAssetsEmptyProvider);
     final assets = ref.watch(inventoryFilteredAssetsProvider);
     final filterIndex = ref.watch(inventoryAssetsFilterProvider);
+    final pageResult = ref.watch(inventoryAssetsPageResultProvider);
 
     return InventoryModuleScaffold(
       screen: InventoryScreen.assets,
@@ -42,20 +45,24 @@ class InventoryAssetsScreen extends ConsumerWidget {
           ref.read(inventoryAssetsFilterProvider.notifier).state = index,
       body: _buildBody(
         context,
+        ref: ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
         assets: assets,
+        pageResult: pageResult,
       ),
     );
   }
 
   Widget _buildBody(
     BuildContext context, {
+    required WidgetRef ref,
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
     required List<InventoryAsset> assets,
+    required PaginatedResult<InventoryAsset>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -113,6 +120,14 @@ class InventoryAssetsScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Asset registry'),
         const SizedBox(height: AksharaSpacing.s3),
         _AssetTable(assets: assets),
+        if (pageResult != null) ...[
+          const SizedBox(height: AksharaSpacing.s4),
+          AksharaPaginationBar<InventoryAsset>(
+            result: pageResult,
+            onPageChanged: (page) =>
+                ref.read(inventoryAssetsPageProvider.notifier).state = page,
+          ),
+        ],
       ],
     );
   }

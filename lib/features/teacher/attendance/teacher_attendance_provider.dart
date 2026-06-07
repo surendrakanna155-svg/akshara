@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../teacher_mutations_provider.dart';
+import '../teacher_requests.dart';
 import 'attendance_models.dart';
 
 final teacherAttendanceClassProvider = StateProvider<String>(
@@ -106,14 +108,49 @@ void applyBulkMark(WidgetRef ref, StudentAttendanceMark mark) {
   ref.read(_teacherAttendanceStudentsProvider.notifier).state = map;
 }
 
-void saveAttendanceDraft(WidgetRef ref) {
-  ref.read(teacherAttendanceDraftSavedProvider.notifier).state =
-      'Saved ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+Future<void> saveAttendanceDraft(WidgetRef ref) async {
+  final classId = ref.read(teacherAttendanceClassProvider);
+  final students = ref.read(teacherAttendanceProvider).students;
+  final result = await ref
+      .read(saveTeacherAttendanceDraftProvider.notifier)
+      .execute(
+        TeacherAttendanceDraftRequest(
+          classId: classId,
+          entries: [
+            for (final student in students)
+              TeacherAttendanceMarkEntry(
+                studentId: student.id,
+                mark: student.mark,
+              ),
+          ],
+        ),
+      );
+  if (result != null) {
+    ref.read(teacherAttendanceDraftSavedProvider.notifier).state =
+        result.savedAtLabel;
+  }
 }
 
-bool submitAttendance(WidgetRef ref) {
+Future<bool> submitAttendance(WidgetRef ref) async {
   final data = ref.read(teacherAttendanceProvider);
   if (data.unmarkedCount > 0) return false;
+
+  final result = await ref
+      .read(submitTeacherClassAttendanceProvider.notifier)
+      .execute(
+        TeacherAttendanceSubmitRequest(
+          classId: data.selectedClassId,
+          entries: [
+            for (final student in data.students)
+              TeacherAttendanceMarkEntry(
+                studentId: student.id,
+                mark: student.mark,
+              ),
+          ],
+        ),
+      );
+
+  if (result == null) return false;
   ref.read(teacherAttendanceSubmittedProvider.notifier).state = true;
   ref.read(teacherAttendanceDraftSavedProvider.notifier).state = null;
   return true;

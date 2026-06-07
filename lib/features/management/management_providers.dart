@@ -4,6 +4,7 @@ import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'management_models.dart';
 
 // MG-01 Dashboard
@@ -21,6 +22,16 @@ final managementDashboardProvider = Provider<ManagementDashboardData?>((ref) {
     ref,
     ref.watch(managementDashboardFutureProvider),
     manualLoading: ref.watch(managementDashboardLoadingProvider), manualError: ref.watch(managementDashboardErrorProvider), manualEmpty: ref.watch(managementDashboardEmptyProvider),
+  );
+});
+
+final managementDashboardViewStateProvider =
+    Provider<ErpViewState<ManagementDashboardData>>((ref) {
+  return resolveErpAsync(
+    ref.watch(managementDashboardFutureProvider),
+    forceLoading: ref.watch(managementDashboardLoadingProvider),
+    forceError: ref.watch(managementDashboardErrorProvider),
+    forceEmpty: ref.watch(managementDashboardEmptyProvider),
   );
 });
 

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../teacher_mutations_provider.dart';
+import '../teacher_requests.dart';
 import 'homework_models.dart';
 
 final teacherHomeworkAssignmentProvider = StateProvider<String>(
@@ -62,13 +64,22 @@ final teacherHomeworkProvider = Provider<TeacherHomeworkAssignment?>((ref) {
   return assignments.isEmpty ? null : assignments.first;
 });
 
-void reviewSubmission(
+Future<void> reviewSubmission(
   WidgetRef ref, {
   required String assignmentId,
   required String submissionId,
   required String grade,
   required String comment,
-}) {
+}) async {
+  final result = await ref.read(reviewTeacherHomeworkProvider.notifier).execute(
+        TeacherHomeworkReviewRequest(
+          submissionId: submissionId,
+          grade: grade,
+          comment: comment,
+        ),
+      );
+  if (result == null) return;
+
   final override = ref.read(_teacherHomeworkSubmissionsProvider);
   final base = ref.read(teacherHomeworkFutureProvider).value ??
       const <TeacherHomeworkAssignment>[];

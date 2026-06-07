@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../parent_mutations_provider.dart';
+import '../parent_requests.dart';
 import 'payment_models.dart';
 
 /// Selected installment id (from route query).
@@ -98,12 +100,10 @@ PaymentSummary _fallbackSummary(String installmentId) {
   };
 }
 
-/// Resets flow and kicks off mock payment processing.
+/// Initiates and confirms payment via repository mutation providers.
 Future<void> submitMockPayment(WidgetRef ref) async {
   ref.read(parentPaymentPhaseProvider.notifier).state =
       PaymentFlowPhase.processing;
-
-  await Future<void>.delayed(const Duration(milliseconds: 1200));
 
   if (ref.read(parentPaymentSimulateFailureProvider)) {
     ref.read(parentPaymentPhaseProvider.notifier).state =
@@ -111,18 +111,55 @@ Future<void> submitMockPayment(WidgetRef ref) async {
     return;
   }
 
-  final summary = ref.read(parentPaymentSummaryProvider);
-  final method = ref.read(parentPaymentMethodProvider);
+  try {
+    final summary = ref.read(parentPaymentSummaryProvider);
+    final method = ref.read(parentPaymentMethodProvider);
 
-  ref.read(parentPaymentSuccessResultProvider.notifier).state =
-      PaymentSuccessResult(
-    receiptId: 'rcpt_${summary.installmentId}',
-    receiptNumber: 'APS-2026-${summary.installmentId.toUpperCase()}',
-    paidAmount: summary.totalAmount,
-    paymentMethod: method,
-    paidAtLabel: '5 Jun 2026 · 10:42 AM',
-  );
-  ref.read(parentPaymentPhaseProvider.notifier).state = PaymentFlowPhase.success;
+    final initiation = await ref
+        .read(initiateParentPaymentProvider.notifier)
+        .execute(
+          ParentPaymentInitiateRequest(
+            installmentId: summary.installmentId,
+            paymentMethod: method,
+            amount: summary.totalAmount,
+          ),
+        );
+
+    if (initiation == null) {
+      ref.read(parentPaymentPhaseProvider.notifier).state =
+          PaymentFlowPhase.failure;
+      return;
+    }
+
+    final confirmation = await ref
+        .read(confirmParentPaymentProvider.notifier)
+        .execute(
+          ParentPaymentConfirmRequest(
+            paymentIntentId: initiation.paymentIntentId,
+            transactionRef: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+          ),
+        );
+
+    if (confirmation == null) {
+      ref.read(parentPaymentPhaseProvider.notifier).state =
+          PaymentFlowPhase.failure;
+      return;
+    }
+
+    ref.read(parentPaymentSuccessResultProvider.notifier).state =
+        PaymentSuccessResult(
+      receiptId: confirmation.receiptId,
+      receiptNumber: confirmation.receiptNumber,
+      paidAmount: confirmation.paidAmount,
+      paymentMethod: method,
+      paidAtLabel: confirmation.paidAtLabel,
+    );
+    ref.read(parentPaymentPhaseProvider.notifier).state =
+        PaymentFlowPhase.success;
+  } catch (_) {
+    ref.read(parentPaymentPhaseProvider.notifier).state =
+        PaymentFlowPhase.failure;
+  }
 }
 
 void resetPaymentFlow(WidgetRef ref) {

@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
@@ -30,10 +28,7 @@ class TransportDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(transportDashboardLoadingProvider);
-    final isError = ref.watch(transportDashboardErrorProvider);
-    final isEmpty = ref.watch(transportDashboardEmptyProvider);
-    final data = ref.watch(transportDashboardProvider);
+    final viewState = ref.watch(transportDashboardViewStateProvider);
     final filterIndex = ref.watch(transportDashboardFilterProvider);
 
     return TransportModuleScaffold(
@@ -47,45 +42,21 @@ class TransportDashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.download_outlined, size: 18),
         label: const Text('Export'),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: ErpAsyncBody<TransportDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading transport dashboard',
+        emptyMessage: 'No transport data for the selected shift.',
+        emptyIcon: Icons.directions_bus_outlined,
+        onRetry: () => retryErpFuture(ref, transportDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required TransportDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(
-          semanticLabel: 'Loading transport dashboard',
-        ),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(
-        message: 'Unable to load transport dashboard.',
-      );
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No transport data for the selected shift.',
-        icon: Icons.directions_bus_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(
+    BuildContext context,
+    TransportDashboardData data,
+  ) {
     final isMobile = AdminLayout.isMobile(context);
 
     return Column(

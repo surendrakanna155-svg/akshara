@@ -3,10 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
@@ -30,10 +28,7 @@ class HrDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(hrDashboardLoadingProvider);
-    final isError = ref.watch(hrDashboardErrorProvider);
-    final isEmpty = ref.watch(hrDashboardEmptyProvider);
-    final data = ref.watch(hrDashboardProvider);
+    final viewState = ref.watch(hrDashboardViewStateProvider);
     final filterIndex = ref.watch(hrDashboardFilterProvider);
 
     return HrModuleScaffold(
@@ -47,41 +42,18 @@ class HrDashboardScreen extends ConsumerWidget {
         icon: const Icon(Icons.download_outlined, size: 18),
         label: const Text('Export'),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
+      body: ErpAsyncBody<HrDashboardData>(
+        state: viewState,
+        loadingLabel: 'Loading HR dashboard',
+        emptyMessage: 'No HR data for the selected department.',
+        emptyIcon: Icons.groups_outlined,
+        onRetry: () => retryErpFuture(ref, hrDashboardFutureProvider),
+        builder: (data) => _buildDashboardContent(context, data),
       ),
     );
   }
 
-  Widget _buildBody(
-    BuildContext context, {
-    required bool isLoading,
-    required bool isError,
-    required bool isEmpty,
-    required HrDashboardData? data,
-  }) {
-    if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
-        child: AksharaLoadingState(semanticLabel: 'Loading HR dashboard'),
-      );
-    }
-
-    if (isError) {
-      return const AksharaErrorState(message: 'Unable to load HR dashboard.');
-    }
-
-    if (isEmpty || data == null) {
-      return const AksharaEmptyState(
-        message: 'No HR data for the selected department.',
-        icon: Icons.groups_outlined,
-      );
-    }
-
+  Widget _buildDashboardContent(BuildContext context, HrDashboardData data) {
     final isMobile = AdminLayout.isMobile(context);
     final chartHeight = isMobile ? 240.0 : 280.0;
 

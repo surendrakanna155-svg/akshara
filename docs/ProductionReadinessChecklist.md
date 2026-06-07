@@ -1,8 +1,8 @@
 # Akshara ERP — Production Readiness Checklist
 
-**Version:** 1.6  
+**Version:** 1.7  
 **Last updated:** June 2026  
-**Current score:** 87 / 100 (updated v4.6–v4.8)
+**Current score:** 93 / 100 (updated v4.9–v5.1)
 
 Use this checklist before pilot, staging, and production deployments. Mark `[x]` when verified.
 
@@ -125,7 +125,15 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
-| T1 | flutter test — all passing (918+) | [x] | [x] | [x] | [ ] |
+| T1 | flutter test — all passing (930+) | [x] | [x] | [x] | [ ] |
+| T2j | Pilot workflow certification tests | [x] | [x] | [ ] | [ ] |
+| T2k | Observability abstraction tests | [x] | [x] | [ ] | [ ] |
+| M4 | MonitoringService abstraction | [x] | [x] | [ ] | [ ] |
+| M5 | AnalyticsService abstraction | [x] | [x] | [ ] | [ ] |
+| M6 | Observability health snapshot | [x] | [x] | [ ] | [ ] |
+| PI1 | Pilot school checklist | [x] | [ ] | [ ] | [ ] |
+| UI1 | ERP dashboards on ViewState (11/11) | [x] | [x] | [ ] | [ ] |
+| UI2 | Mobile write UI fully wired | [x] | [x] | [ ] | [ ] |
 | T2 | Contract tests for live API modules | [x] | [x] | [x] | [ ] |
 | T2a | OpenAPI schema validation tests | [x] | [x] | [ ] | [ ] |
 | T2b | Mobile repository contract tests | [x] | [x] | [ ] | [ ] |

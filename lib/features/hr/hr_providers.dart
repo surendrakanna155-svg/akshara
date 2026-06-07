@@ -5,6 +5,7 @@ import '../../core/providers/repository_future.dart';
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'hr_models.dart';
 
 // HR-01 Dashboard
@@ -22,6 +23,16 @@ final hrDashboardProvider = Provider<HrDashboardData?>((ref) {
     ref,
     ref.watch(hrDashboardFutureProvider),
     manualLoading: ref.watch(hrDashboardLoadingProvider), manualError: ref.watch(hrDashboardErrorProvider), manualEmpty: ref.watch(hrDashboardEmptyProvider),
+  );
+});
+
+final hrDashboardViewStateProvider =
+    Provider<ErpViewState<HrDashboardData>>((ref) {
+  return resolveErpAsync(
+    ref.watch(hrDashboardFutureProvider),
+    forceLoading: ref.watch(hrDashboardLoadingProvider),
+    forceError: ref.watch(hrDashboardErrorProvider),
+    forceEmpty: ref.watch(hrDashboardEmptyProvider),
   );
 });
 

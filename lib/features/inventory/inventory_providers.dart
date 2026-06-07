@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/repositories/repository_query.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
 
 import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/async/erp_async_state.dart';
 import 'inventory_models.dart';
 
 // INV-01 Dashboard
@@ -25,22 +27,45 @@ final inventoryDashboardProvider = Provider<InventoryDashboardData?>((ref) {
   );
 });
 
+final inventoryDashboardViewStateProvider =
+    Provider<ErpViewState<InventoryDashboardData>>((ref) {
+  return resolveErpAsync(
+    ref.watch(inventoryDashboardFutureProvider),
+    forceLoading: ref.watch(inventoryDashboardLoadingProvider),
+    forceError: ref.watch(inventoryDashboardErrorProvider),
+    forceEmpty: ref.watch(inventoryDashboardEmptyProvider),
+  );
+});
+
 // INV-02 Assets
 final inventoryAssetsLoadingProvider = StateProvider<bool>((ref) => false);
 final inventoryAssetsErrorProvider = StateProvider<bool>((ref) => false);
 final inventoryAssetsEmptyProvider = StateProvider<bool>((ref) => false);
 final inventoryAssetsFilterProvider = StateProvider<int>((ref) => 0);
+final inventoryAssetsPageProvider = StateProvider<int>((ref) => 1);
 
-final inventoryAssetsFutureProvider = FutureProvider<PaginatedResult<InventoryAsset>>((ref) async {
-return ref.read(inventoryRepositoryProvider).getAssets(query: ref.watch(repositoryQueryProvider));
+final inventoryAssetsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(inventoryAssetsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final inventoryAssetsProvider = Provider<List<InventoryAsset>?>((ref) {
+final inventoryAssetsFutureProvider = FutureProvider<PaginatedResult<InventoryAsset>>((ref) async {
+return ref.read(inventoryRepositoryProvider).getAssets(query: ref.watch(inventoryAssetsQueryProvider));
+});
+
+final inventoryAssetsPageResultProvider = Provider<PaginatedResult<InventoryAsset>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(inventoryAssetsFutureProvider),
-    manualLoading: ref.watch(inventoryAssetsLoadingProvider), manualError: ref.watch(inventoryAssetsErrorProvider), manualEmpty: ref.watch(inventoryAssetsEmptyProvider),
-  )?.items ?? const [];
+    manualLoading: ref.watch(inventoryAssetsLoadingProvider),
+    manualError: ref.watch(inventoryAssetsErrorProvider),
+    manualEmpty: ref.watch(inventoryAssetsEmptyProvider),
+  );
+});
+
+final inventoryAssetsProvider = Provider<List<InventoryAsset>?>((ref) {
+  return ref.watch(inventoryAssetsPageResultProvider)?.items ?? const [];
 });
 
 final inventoryFilteredAssetsProvider = Provider<List<InventoryAsset>>((ref) {
