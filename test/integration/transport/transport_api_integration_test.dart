@@ -34,7 +34,7 @@ void main() {
       responseForPath = (path) => switch (path) {
             TransportApiPaths.dashboard =>
               _fixtures.dashboardEnvelope(dashboard),
-            TransportApiPaths.routes => _fixtures.routesEnvelope(routes),
+            TransportApiPaths.routes => _fixtures.routesEnvelope(routes.items),
             TransportApiPaths.vehicles => _fixtures.vehiclesEnvelope(vehicles),
             TransportApiPaths.drivers => _fixtures.driversEnvelope(drivers),
             TransportApiPaths.allocations =>

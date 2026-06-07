@@ -5,6 +5,7 @@ import '../../../features/admissions/admissions_requests.dart';
 import '../interfaces/admissions_repository.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
+import '../../tenant/tenant_mock_scope.dart';
 import 'mock_admissions_write_store.dart';
 
 /// In-memory admissions data for MVP screens.
@@ -192,7 +193,10 @@ class MockAdmissionsRepository implements AdmissionsRepository {
 
   Future<List<AdmissionsLead>> _loadAllLeads(RepositoryQuery query) async {
     if (_store.leads != null) {
-      return List.from(_store.leads!);
+      return TenantMockScope.filter(
+        query: query,
+        items: List.from(_store.leads!),
+      );
     }
     final leads = [
       const AdmissionsLead(
@@ -288,11 +292,24 @@ class MockAdmissionsRepository implements AdmissionsRepository {
       ),
     ];
     _store.leads = List.from(leads);
-    return leads;
+    return TenantMockScope.filter(query: query, items: leads);
   }
 
   @override
-  Future<List<AdmissionsApplication>> getApplications({required RepositoryQuery query}) async {
+  Future<PaginatedResult<AdmissionsApplication>> getApplications({
+    required RepositoryQuery query,
+  }) async {
+    final applications = await _loadAllApplications(query);
+    return PaginatedResult.fromItems(
+      applications,
+      page: query.page,
+      pageSize: query.pageSize,
+    );
+  }
+
+  Future<List<AdmissionsApplication>> _loadAllApplications(
+    RepositoryQuery query,
+  ) async {
     if (_store.applications != null) {
       return List.from(_store.applications!);
     }
@@ -565,8 +582,24 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<List<ApprovalQueueItem>> getApprovalQueue({required RepositoryQuery query}) async {
-    return const [
+  Future<PaginatedResult<ApprovalQueueItem>> getApprovalQueue({
+    required RepositoryQuery query,
+  }) async {
+    final queue = await _loadAllApprovalQueue(query);
+    return PaginatedResult.fromItems(
+      queue,
+      page: query.page,
+      pageSize: query.pageSize,
+    );
+  }
+
+  Future<List<ApprovalQueueItem>> _loadAllApprovalQueue(
+    RepositoryQuery query,
+  ) async {
+    if (_store.approvalQueue != null) {
+      return List.from(_store.approvalQueue!);
+    }
+    const queue = [
       ApprovalQueueItem(
         id: 'appr_1',
         applicationId: 'APP-2208',
@@ -607,6 +640,8 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         aiScore: 91,
       ),
     ];
+    _store.approvalQueue = List.from(queue);
+    return queue;
   }
 
   @override
@@ -848,7 +883,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   Future<void> _ensureApplications(RepositoryQuery query) async {
-    _store.applications ??= List.from(await getApplications(query: query));
+    _store.applications ??= List.from(await _loadAllApplications(query));
   }
 
   Future<void> _ensureDocuments(RepositoryQuery query) async {
@@ -864,7 +899,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   Future<void> _ensureApprovalQueue(RepositoryQuery query) async {
-    _store.approvalQueue ??= List.from(await getApprovalQueue(query: query));
+    _store.approvalQueue ??= List.from(await _loadAllApprovalQueue(query));
   }
 
   @override

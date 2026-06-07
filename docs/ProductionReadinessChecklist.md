@@ -1,8 +1,8 @@
 # Akshara ERP — Production Readiness Checklist
 
-**Version:** 1.3  
+**Version:** 1.4  
 **Last updated:** June 2026  
-**Current score:** 99 / 100 (`docs/ArchitectureReview/v3.2-ERP-Read-API-Audit.md`)
+**Current score:** 99 / 100 (`docs/ArchitectureReview/v4.2-Mobile-API-Audit.md`)
 
 Use this checklist before pilot, staging, and production deployments. Mark `[x]` when verified.
 
@@ -19,7 +19,7 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | A5 | Session revocation + logout-all | [x] | [ ] | [ ] | [ ] |
 | A6 | JWT claim validation (client) | [x] | [x] | [x] | [ ] |
 | A7 | Auth API deployed and contract-tested | [x] | [ ] | [ ] | [ ] |
-| A8 | Failed 401 forces logout on all paths | [ ] | [ ] | [ ] | [ ] |
+| A8 | Failed 401 forces logout on all paths | [x] | [ ] | [ ] | [ ] |
 | A9 | Demo/mock auth disabled in production | [x] | [ ] | [ ] | [ ] |
 
 ---
@@ -55,7 +55,8 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | P7b | Transport API — read (10 methods) | [x] | [x] | [ ] | [ ] |
 | P7c | All 11 ERP modules — read APIs | [x] | [x] | [ ] | [ ] |
 | P7d | Mobile repository layer (3 apps) | [x] | [x] | [ ] | [ ] |
-| P7e | Paginated list fetch (Adm/Fin/SIS) | [x] | [x] | [ ] | [ ] |
+| P7e | Paginated list fetch (9 endpoints) | [x] | [x] | [ ] | [ ] |
+| P7f | Mobile live read APIs (29 methods) | [x] | [x] | [ ] | [ ] |
 | P8 | OpenAPI contract validation against staging | [x] | [ ] | [ ] | [ ] |
 | P9 | Per-module feature flags tested | [x] | [ ] | [ ] | [ ] |
 | P10 | ApiFailure mapping — no raw Dio in UI | [x] | [x] | [x] | [ ] |
@@ -110,8 +111,8 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 |---|------|:----:|:-----:|:-------:|:----------:|
 | F1 | Cold start < 3s (splash → dashboard) | [ ] | [ ] | [ ] | [ ] |
 | F2 | API list fetch < 2s (p95) | [ ] | [ ] | [ ] | [ ] |
-| F3 | Pagination implemented for large lists | [ ] | [ ] | [ ] | [ ] |
-| F4 | Virtualized lists for DataTables | [ ] | [ ] | [ ] | [ ] |
+| F3 | Pagination implemented for large lists | [x] | [ ] | [ ] | [ ] |
+| F4 | Virtualized lists for DataTables | [x] | [ ] | [ ] | [ ] |
 | F5 | Provider rebuild profiling done | [ ] | [ ] | [ ] | [ ] |
 
 ---
@@ -120,11 +121,12 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
-| T1 | flutter test — all passing (848+) | [x] | [x] | [x] | [ ] |
+| T1 | flutter test — all passing (871+) | [x] | [x] | [x] | [ ] |
 | T2 | Contract tests for live API modules | [x] | [x] | [x] | [ ] |
 | T2a | OpenAPI schema validation tests | [x] | [x] | [ ] | [ ] |
 | T2b | Mobile repository contract tests | [x] | [x] | [ ] | [ ] |
 | T2c | Pagination unit tests | [x] | [x] | [ ] | [ ] |
+| T2d | Mobile API integration tests | [x] | [x] | [ ] | [ ] |
 | T3 | Integration tests with fake Dio | [x] | [x] | [ ] | [ ] |
 | T4 | Security tests (RBAC, token, session) | [x] | [x] | [ ] | [ ] |
 | T5 | Route protection inventory test | [x] | [x] | [ ] | [ ] |

@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
-
+import '../../core/repositories/paginated_result.dart';
+import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/repository_providers.dart';
 import 'hr_models.dart';
 
@@ -29,22 +30,38 @@ final hrEmployeesLoadingProvider = StateProvider<bool>((ref) => false);
 final hrEmployeesErrorProvider = StateProvider<bool>((ref) => false);
 final hrEmployeesEmptyProvider = StateProvider<bool>((ref) => false);
 final hrEmployeesFilterProvider = StateProvider<int>((ref) => 0);
+final hrEmployeesPageProvider = StateProvider<int>((ref) => 1);
 
-final hrEmployeesFutureProvider = FutureProvider<List<HrEmployee>>((ref) async {
-return ref.read(hrRepositoryProvider).getEmployees(query: ref.watch(repositoryQueryProvider));
+final hrEmployeesQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(hrEmployeesPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final hrEmployeesProvider = Provider<List<HrEmployee>?>((ref) {
+final hrEmployeesFutureProvider =
+    FutureProvider<PaginatedResult<HrEmployee>>((ref) async {
+  return ref.read(hrRepositoryProvider).getEmployees(
+        query: ref.watch(hrEmployeesQueryProvider),
+      );
+});
+
+final hrEmployeesPageResultProvider =
+    Provider<PaginatedResult<HrEmployee>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(hrEmployeesFutureProvider),
-    manualLoading: ref.watch(hrEmployeesLoadingProvider), manualError: ref.watch(hrEmployeesErrorProvider), manualEmpty: ref.watch(hrEmployeesEmptyProvider),
-  ) ?? const [];
+    manualLoading: ref.watch(hrEmployeesLoadingProvider),
+    manualError: ref.watch(hrEmployeesErrorProvider),
+    manualEmpty: ref.watch(hrEmployeesEmptyProvider),
+  );
+});
+
+final hrEmployeesProvider = Provider<List<HrEmployee>>((ref) {
+  return ref.watch(hrEmployeesPageResultProvider)?.items ?? const [];
 });
 
 final hrFilteredEmployeesProvider = Provider<List<HrEmployee>>((ref) {
   final employees = ref.watch(hrEmployeesProvider);
-  if (employees == null) return const [];
   final filterIndex = ref.watch(hrEmployeesFilterProvider);
   return switch (filterIndex) {
     1 => employees

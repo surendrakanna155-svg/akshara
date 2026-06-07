@@ -17,6 +17,7 @@ class DioClientDependencies {
     this.tenantAccessor,
     this.refreshCallback,
     this.onTokensRefreshed,
+    this.onSessionExpired,
     this.allowAnonymous = true,
   });
 
@@ -25,6 +26,7 @@ class DioClientDependencies {
   final TenantContext? Function()? tenantAccessor;
   final TokenRefreshCallback? refreshCallback;
   final void Function(AuthTokens tokens)? onTokensRefreshed;
+  final void Function()? onSessionExpired;
   final bool allowAnonymous;
 }
 
@@ -54,6 +56,7 @@ Dio createDioClient({DioClientDependencies? dependencies}) {
       refreshCallback: deps.refreshCallback,
       allowAnonymous: deps.allowAnonymous,
       onTokensRefreshed: deps.onTokensRefreshed,
+      onSessionExpired: deps.onSessionExpired,
     ),
     ApiErrorInterceptor(),
     if (deps.environment.enableLogging)

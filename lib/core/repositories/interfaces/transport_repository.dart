@@ -1,10 +1,11 @@
 import '../../../features/transport/transport_models.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
 
 /// Contract for transport data access (mock or API).
 abstract class TransportRepository {
   Future<TransportDashboardData> getDashboard({required RepositoryQuery query});
-  Future<List<TransportRoute>> getRoutes({required RepositoryQuery query});
+  Future<PaginatedResult<TransportRoute>> getRoutes({required RepositoryQuery query});
   Future<List<TransportVehicle>> getVehicles({required RepositoryQuery query});
   Future<List<TransportDriver>> getDrivers({required RepositoryQuery query});
   Future<List<StudentTransportAllocation>> getAllocations({required RepositoryQuery query});

@@ -69,7 +69,7 @@ void main() {
             FinanceApiPaths.academicYears =>
               _fixtures.academicYearsEnvelope(academicYears),
             FinanceApiPaths.studentAccounts => _fixtures.listEnvelope([
-                for (final account in studentAccounts)
+                for (final account in studentAccounts.items)
                   _fixtures.studentAccountItem(account),
               ]),
             FinanceApiPaths.feeAssignment => _fixtures.listEnvelope([
@@ -82,7 +82,7 @@ void main() {
             FinanceApiPaths.defaulters =>
               _fixtures.defaultersEnvelope(defaulters),
             FinanceApiPaths.refunds => _fixtures.listEnvelope([
-                for (final refund in refunds) _fixtures.refundItem(refund),
+                for (final refund in refunds.items) _fixtures.refundItem(refund),
               ]),
             FinanceApiPaths.discounts =>
               _fixtures.discountsEnvelope(discounts),
@@ -254,7 +254,7 @@ void main() {
 
     test('approve refund mutation refreshes refunds provider', () async {
       final refunds = await mockRepo.getRefundRequests(query: kQuery);
-      final pending = refunds.firstWhere(
+      final pending = refunds.items.firstWhere(
         (refund) => refund.status == RefundStatus.pending,
       );
       final approved = RefundRequest(
@@ -313,7 +313,8 @@ void main() {
         financeStudentAccountsFutureProvider.future,
       );
 
-      expect(accounts, hasLength(4));
+      expect(accounts.items, hasLength(4));
+      expect(accounts.total, 4);
     });
   });
 }

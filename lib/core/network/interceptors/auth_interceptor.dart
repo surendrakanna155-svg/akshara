@@ -15,6 +15,7 @@ class AuthInterceptor extends QueuedInterceptor {
     this.refreshCallback,
     this.allowAnonymous = true,
     this.onTokensRefreshed,
+    this.onSessionExpired,
     this.jwtValidator,
     this.revocationService,
     this.expectedTenantId,
@@ -24,6 +25,7 @@ class AuthInterceptor extends QueuedInterceptor {
   final TokenRefreshCallback? refreshCallback;
   final bool allowAnonymous;
   final void Function(AuthTokens tokens)? onTokensRefreshed;
+  final void Function()? onSessionExpired;
   final JwtValidator? jwtValidator;
   final TokenRevocationService? revocationService;
   final String? expectedTenantId;
@@ -84,6 +86,7 @@ class AuthInterceptor extends QueuedInterceptor {
           }
         }
       }
+      onSessionExpired?.call();
     }
     handler.next(err);
   }

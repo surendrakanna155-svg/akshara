@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -29,6 +26,7 @@ class TransportRoutesScreen extends ConsumerWidget {
     final isLoading = ref.watch(transportRoutesLoadingProvider);
     final isError = ref.watch(transportRoutesErrorProvider);
     final isEmpty = ref.watch(transportRoutesEmptyProvider);
+    final pageResult = ref.watch(transportRoutesPageResultProvider);
     final routes = ref.watch(transportFilteredRoutesProvider);
     final filterIndex = ref.watch(transportRoutesFilterProvider);
 
@@ -45,20 +43,24 @@ class TransportRoutesScreen extends ConsumerWidget {
       ),
       body: _buildBody(
         context,
+        ref: ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
         routes: routes,
+        pageResult: pageResult,
       ),
     );
   }
 
   Widget _buildBody(
     BuildContext context, {
+    required WidgetRef ref,
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
     required List<TransportRoute> routes,
+    required PaginatedResult<TransportRoute>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -86,6 +88,12 @@ class TransportRoutesScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Route catalog'),
         const SizedBox(height: AksharaSpacing.s3),
         _RoutesTable(routes: routes),
+        if (pageResult != null)
+          AksharaPaginationBar<TransportRoute>(
+            result: pageResult,
+            onPageChanged: (page) =>
+                ref.read(transportRoutesPageProvider.notifier).state = page,
+          ),
       ],
     );
   }
@@ -109,44 +117,36 @@ class _RoutesTable extends StatelessWidget {
       );
     }
 
-    return Semantics(
-      container: true,
-      label: 'Routes table, ${routes.length} routes',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Material(
-          child: DataTable(
-            headingRowHeight: 48,
-            dataRowMinHeight: 56,
-            columns: const [
-              DataColumn(label: Text('Route')),
-              DataColumn(label: Text('Stops')),
-              DataColumn(label: Text('Distance')),
-              DataColumn(label: Text('AM')),
-              DataColumn(label: Text('PM')),
-              DataColumn(label: Text('Bus')),
-              DataColumn(label: Text('Students')),
-              DataColumn(label: Text('Status')),
-            ],
-            rows: [
-              for (final route in routes)
-                DataRow(
-                  onSelectChanged: (_) {},
-                  cells: [
-                    DataCell(Text(route.name)),
-                    DataCell(Text('${route.stopCount}')),
-                    DataCell(Text(route.distanceKm)),
-                    DataCell(Text(route.amDeparture)),
-                    DataCell(Text(route.pmDeparture)),
-                    DataCell(Text(route.assignedBus)),
-                    DataCell(Text('${route.studentCount}')),
-                    DataCell(_RouteStatusChip(status: route.status)),
-                  ],
-                ),
-            ],
-          ),
-        ),
-      ),
+    return AksharaVirtualizedDataTable(
+      columns: const [
+        DataColumn(label: Text('Route')),
+        DataColumn(label: Text('Stops')),
+        DataColumn(label: Text('Distance')),
+        DataColumn(label: Text('AM')),
+        DataColumn(label: Text('PM')),
+        DataColumn(label: Text('Bus')),
+        DataColumn(label: Text('Students')),
+        DataColumn(label: Text('Status')),
+      ],
+      rowCount: routes.length,
+      dataRowMinHeight: 56,
+      semanticLabel: 'Routes table, ${routes.length} routes',
+      rowBuilder: (index) {
+        final route = routes[index];
+        return DataRow(
+          onSelectChanged: (_) {},
+          cells: [
+            DataCell(Text(route.name)),
+            DataCell(Text('${route.stopCount}')),
+            DataCell(Text(route.distanceKm)),
+            DataCell(Text(route.amDeparture)),
+            DataCell(Text(route.pmDeparture)),
+            DataCell(Text(route.assignedBus)),
+            DataCell(Text('${route.studentCount}')),
+            DataCell(_RouteStatusChip(status: route.status)),
+          ],
+        );
+      },
     );
   }
 }

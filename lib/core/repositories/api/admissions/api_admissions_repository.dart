@@ -39,11 +39,16 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<List<AdmissionsApplication>> getApplications({
+  Future<PaginatedResult<AdmissionsApplication>> getApplications({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchApplications(query: query);
-    return _mapper.toApplications(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toApplications(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
@@ -79,11 +84,16 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<List<ApprovalQueueItem>> getApprovalQueue({
+  Future<PaginatedResult<ApprovalQueueItem>> getApprovalQueue({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchApprovalQueue(query: query);
-    return _mapper.toApprovalQueue(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toApprovalQueue(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

@@ -1,20 +1,20 @@
 # Akshara ERP — Technical Debt Register
 
-**Version:** 1.3  
+**Version:** 1.4  
 **Last updated:** June 2026  
-**Source audits:** v1.5–v3.2 ArchitectureReview documents
+**Source audits:** v1.5–v4.2 ArchitectureReview documents
 
 ---
 
 ## Summary
 
-| Priority | Open | In Progress | Resolved (v3.2) |
+| Priority | Open | In Progress | Resolved (v4.2) |
 |----------|-----:|------------:|----------------:|
 | P0 | 2 | 0 | 3 |
-| P1 | 4 | 0 | 9 |
-| P2 | 12 | 0 | 3 |
+| P1 | 3 | 1 | 9 |
+| P2 | 11 | 0 | 4 |
 | P3 | 6 | 0 | 0 |
-| **Total** | **24** | **0** | **15** |
+| **Total** | **22** | **1** | **16** |
 
 ---
 
@@ -35,9 +35,9 @@
 | ID | Issue | Impact | Effort | Owner | Status |
 |----|-------|--------|--------|-------|--------|
 | TD-P1-01 | ~~Parent/teacher/student apps use inline mocks — no repository layer~~ | Mobile cannot connect to live API | — | Agent C | **Resolved v3.0** |
-| TD-P1-02 | No pagination in repository interfaces | Performance collapse at 5k+ rows | 3–4 wks | Agent A | **Partial v3.1** (3 list endpoints) |
+| TD-P1-02 | No pagination in repository interfaces | Performance collapse at 5k+ rows | 3–4 wks | Agent A | **Partial v4.1** (9 list endpoints) |
 | TD-P1-03 | ~~No OpenAPI contract validation against staging~~ | DTO drift from backend | 2 wks | Agent A + Agent E | **Resolved v2.8** |
-| TD-P1-04 | manage* permissions not wired on all mutation routes | UX-only RBAC on some screens | 1–2 wks | Agent D | Open |
+| TD-P1-04 | manage* permissions not wired on all mutation routes | UX-only RBAC on some screens | 1–2 wks | Agent D | **Partial v4.0** (`AksharaManageAction` scaffold) |
 | TD-P1-05 | ~~Audit upload uploader throws `UnimplementedError` until backend wired~~ | Queue grows without drain | 1 wk | Agent D | **Resolved v2.8** |
 | TD-P1-06 | Cross-module handoff (Adm→Fin→SIS) partially untested under dual-API | Integration regressions | 1 wk | Agent E | Open |
 | TD-P1-07 | Demo auth paths remain for parent/teacher/student personas | Mock OTP bypass in non-API mode | 2 wks | Agent D | Open |
@@ -46,7 +46,7 @@
 | TD-P1-10 | ~~Permission sync service missing~~ | Stale permissions after role change | — | Agent D | **Resolved v2.7** |
 | TD-P1-11 | ~~Audit local-only ring buffer~~ | Events lost at cap | — | Agent D | **Partial v2.8** (queue + remote drain) |
 | TD-P1-12 | ~~Client-only permission cache without version tracking~~ | Downgrade attacks | — | Agent D | **Resolved v2.7** |
-| TD-P1-13 | Non-virtualized DataTables (~40 instances) | Scroll jank on large lists | 2–3 wks | Agent B | **Partial v3.1** (3 tables virtualized) |
+| TD-P1-13 | Non-virtualized DataTables (~40 instances) | Scroll jank on large lists | 2–3 wks | Agent B | **Partial v4.1** (6 tables virtualized) |
 
 ---
 
@@ -55,9 +55,9 @@
 | ID | Issue | Impact | Effort | Owner | Status |
 |----|-------|--------|--------|-------|--------|
 | TD-P2-01 | 11 duplicate `*ModuleScaffold` widgets (~2,200 LOC) | Maintenance burden | 2 wks | Agent B | Open |
-| TD-P2-02 | Mock repositories ignore tenant scoping | Wrong data in multi-tenant demo | 1 wk | Agent A | Open |
+| TD-P2-02 | Mock repositories ignore tenant scoping | Wrong data in multi-tenant demo | 1 wk | Agent A | **Partial v4.0** (4 core mocks) |
 | TD-P2-03 | `ControlCenterGuard` defined but unused | Dead code | 0.5 d | Agent D | Open |
-| TD-P2-04 | Failed refresh / 401 may not force logout in all paths | Stale sessions | 1 wk | Agent D | Open |
+| TD-P2-04 | Failed refresh / 401 may not force logout in all paths | Stale sessions | 1 wk | Agent D | **Resolved v4.0** |
 | TD-P2-05 | No E2E / Patrol tests | No full-path automation | 3–4 wks | Agent E | Open |
 | TD-P2-06 | Large mock seed data (admissions mock 1,250+ LOC) | Slow hot reload | 1 wk | Agent A | Open |
 | TD-P2-07 | SIS bulk assignment upload placeholder | Incomplete workflow | 1 wk | Agent B | Open |
@@ -87,10 +87,10 @@
 
 ## Debt Paydown Priority (Recommended Order)
 
-1. **v4.0** — Multi-tenant SaaS production (TD-P0-01, TD-P0-02)
-2. **v4.1** — Complete pagination rollout (TD-P1-02, TD-P1-13)
-3. **v4.2** — Mobile live APIs (parent/teacher/student backend)
-4. **v4.3** — Server RBAC/RLS validation (TD-P0-01)
+1. **v4.3** — Server RBAC/RLS validation (TD-P0-01)
+2. **v4.4** — Complete pagination rollout (TD-P1-02, TD-P1-13)
+3. **v4.5** — Wire manage* on all mutation routes (TD-P1-04)
+4. **v4.6** — Extend tenant scoping to all mocks (TD-P2-02)
 
 ---
 

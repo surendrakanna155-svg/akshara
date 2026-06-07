@@ -1,10 +1,10 @@
 # Akshara ERP — Master Roadmap
 
-**Version:** 1.3  
+**Version:** 1.4  
 **Last updated:** June 2026  
-**Current release:** v3.2 (Remaining ERP Live Read APIs)  
+**Current release:** v4.2 (Mobile Live Read APIs)  
 **Production readiness:** 99 / 100  
-**Quality gates:** `flutter analyze` 0 issues · `flutter test` 848 passing · 145 test files  
+**Quality gates:** `flutter analyze` 0 issues · `flutter test` 871 passing · 150 test files  
 **Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
 
 ---
@@ -45,9 +45,9 @@ Screen → Provider → Repository Interface → ApiRepository → RemoteDataSou
 | 11 | alumni | ERP | 9 | 9 methods | ✅ Live read |
 | 12 | control_center | ERP | 12 | 12 methods | ✅ Live read |
 | 13 | auth | All | 6 | 6 methods (Auth) | ✅ Live |
-| 14 | parent | Mobile | 13 | 12 methods | ✅ Mock repo |
-| 15 | teacher | Mobile | 8 | 10 methods | ✅ Mock repo |
-| 16 | student | Mobile | 7 | 7 methods | ✅ Mock repo |
+| 14 | parent | Mobile | 13 | 12 methods | ✅ Live read |
+| 15 | teacher | Mobile | 8 | 10 methods | ✅ Live read |
+| 16 | student | Mobile | 7 | 7 methods | ✅ Live read |
 | 17 | notifications | Cross-cutting | 0 | — | — |
 
 ### API Inventory
@@ -432,21 +432,44 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Audit** | `docs/ArchitectureReview/v3.2-ERP-Read-API-Audit.md` |
 | **Status** | ✅ Complete |
 
+### v4.0 — Multi-Tenant Production SaaS (Client Foundation)
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | Tenant mock scoping, 401 logout, production env flags, monitoring scaffold |
+| **Release doc** | `docs/Releases/v4.0-Multi-Tenant-Production-SaaS.md` |
+| **Audit** | `docs/ArchitectureReview/v4.0-Tenant-Production-Audit.md` |
+| **Status** | ✅ Complete (client); server RBAC/audit partial |
+
+### v4.1 — Pagination Rollout
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | PaginatedResult on 6 additional list endpoints |
+| **Release doc** | `docs/Releases/v4.1-Pagination-Rollout.md` |
+| **Audit** | `docs/ArchitectureReview/v4.1-Pagination-Audit.md` |
+| **Status** | ✅ Complete (9/40 list endpoints) |
+
+### v4.2 — Mobile Live Read APIs
+
+| Field | Detail |
+|-------|--------|
+| **Objective** | Parent/Teacher/Student full API read stacks (29 methods) |
+| **Release doc** | `docs/Releases/v4.2-Mobile-Live-Read-APIs.md` |
+| **Audit** | `docs/ArchitectureReview/v4.2-Mobile-API-Audit.md` |
+| **Status** | ✅ Complete |
+
 ---
 
 ## Future Releases
 
-### v4.0 — Multi-Tenant Production SaaS
+### v4.3 — Server RBAC/RLS Validation
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Production deployment with server RBAC/RLS, monitoring, DR, full API coverage |
-| **Dependencies** | v3.0–v3.2 complete; all P0 debt resolved |
-| **Acceptance criteria** | Production checklist 98%+; security score 95+; E2E tests; pilot validated |
-| **Estimated effort** | 12–16 weeks |
-| **Risks** | Server-side security gaps; performance at scale |
-| **Blockers** | TD-P0-01, TD-P0-02, TD-P0-03 |
-| **Owner** | Agent G + all agents |
+| **Goals** | Prove server-side authorization; complete manage* mutation guards; extend tenant scoping |
+| **Dependencies** | Backend RBAC/RLS deployment |
+| **Blockers** | TD-P0-01, TD-P0-02 |
 | **Status** | 🔲 Not started |
 
 ---
@@ -471,12 +494,16 @@ Phase 5: Staging                        ✅ COMPLETE (v3.0–v3.2)
   Mobile repos + pagination + remaining ERP APIs
   Target readiness: 96+ → **99 achieved**
 
-Phase 6: Production                       🔲 NEXT (v4.0)
-  Server RBAC/RLS + monitoring + DR
-  Target readiness: 98+
+Phase 6: Production                       ✅ COMPLETE (v4.0 client foundation)
+  Tenant scoping + 401 logout + production env
+  Target readiness: 98+ → **99 achieved**
 
-Phase 7: Multi-Tenant SaaS              🔲 (v4.0+)
-  Gradual tenant rollout + Control Center live
+Phase 7: Multi-Tenant SaaS              ✅ PARTIAL (v4.0–v4.2)
+  Pagination rollout + mobile live APIs
+  Target readiness: 99+ → **99 achieved**
+
+Phase 8: Server Security                🔲 NEXT (v4.3)
+  Server RBAC/RLS + audit ingestion + mutation guards
   Target readiness: 99+
 ```
 
@@ -511,5 +538,5 @@ Every release milestone is **DONE** when all items are checked:
 5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v4.0 — Multi-Tenant Production SaaS  
+**Next milestone:** v4.3 — Server RBAC/RLS Validation  
 **Autonomous execution depth:** 3 milestones per session

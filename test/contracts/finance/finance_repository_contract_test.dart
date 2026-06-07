@@ -112,14 +112,14 @@ void main() {
       final mapped = const FinanceMapper().toStudentAccounts(
         StudentFeeAccountsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final account in mockData)
+            for (final account in mockData.items)
               _fixtures.studentAccountItem(account),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.admissionNumber, mockData.first.admissionNumber);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.admissionNumber, mockData.items.first.admissionNumber);
     });
 
     test('getInstallmentPlans DTO mapping matches mock output', () async {
@@ -169,13 +169,13 @@ void main() {
       final mapped = const FinanceMapper().toRefundRequests(
         RefundRequestsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final refund in mockData) _fixtures.refundItem(refund),
+            for (final refund in mockData.items) _fixtures.refundItem(refund),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.status, mockData.first.status);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.status, mockData.items.first.status);
     });
 
     test('getDiscountsDashboard DTO mapping matches mock output', () async {
@@ -222,7 +222,7 @@ void main() {
         isNotEmpty,
       );
       expect(await mockRepo.getAcademicYears(query: kQuery), isNotEmpty);
-      expect(await mockRepo.getStudentAccounts(query: kQuery), isNotEmpty);
+      expect((await mockRepo.getStudentAccounts(query: kQuery)).items, isNotEmpty);
       expect(await mockRepo.getInstallmentPlans(query: kQuery), isNotEmpty);
       expect(
         await mockRepo.getCollectionDetail(
@@ -232,7 +232,7 @@ void main() {
         isNotNull,
       );
       expect(await mockRepo.getDefaultersDashboard(query: kQuery), isNotNull);
-      expect(await mockRepo.getRefundRequests(query: kQuery), isNotEmpty);
+      expect((await mockRepo.getRefundRequests(query: kQuery)).items, isNotEmpty);
       expect(await mockRepo.getDiscountsDashboard(query: kQuery), isNotNull);
       expect(await mockRepo.getReportsData(query: kQuery), isNotNull);
       expect(await mockRepo.getSettings(query: kQuery), isNotNull);

@@ -1,4 +1,5 @@
 import '../../interfaces/transport_repository.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/transport/transport_models.dart';
 import 'mapper/transport_mapper.dart';
@@ -24,11 +25,16 @@ class ApiTransportRepository implements TransportRepository {
   }
 
   @override
-  Future<List<TransportRoute>> getRoutes({
+  Future<PaginatedResult<TransportRoute>> getRoutes({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchRoutes(query: query);
-    return _mapper.toRoutes(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toRoutes(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

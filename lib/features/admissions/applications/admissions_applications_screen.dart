@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/paginated_result.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
@@ -24,6 +26,7 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewState = ref.watch(admissionsApplicationsViewStateProvider);
+    final pageResult = ref.watch(admissionsApplicationsPageResultProvider);
     final workflow = ref.watch(admissionsApplicationWorkflowProvider);
     final filterIndex = ref.watch(admissionsApplicationsFilterProvider);
 
@@ -42,7 +45,7 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AdmissionsAsyncBody<List<AdmissionsApplication>>(
+          AdmissionsAsyncBody<PaginatedResult<AdmissionsApplication>>(
             state: viewState,
             loadingLabel: 'Loading applications',
             emptyMessage: 'No applications match the selected filters.',
@@ -52,15 +55,22 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
               ref,
               admissionsApplicationsFutureProvider,
             ),
-            builder: (applications) => Column(
+            builder: (result) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 AdmissionsApplicationWorkflow(summary: workflow),
                 const SizedBox(height: AksharaSpacing.s6),
                 AdmissionsApplicationsTable(
-                  applications: applications,
+                  applications: result.items,
                   onView: (app) => _handleApplicationAction(context, ref, app),
                 ),
+                if (pageResult != null)
+                  AksharaPaginationBar<AdmissionsApplication>(
+                    result: pageResult,
+                    onPageChanged: (page) => ref
+                        .read(admissionsApplicationsPageProvider.notifier)
+                        .state = page,
+                  ),
               ],
             ),
           ),

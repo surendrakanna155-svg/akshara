@@ -1,4 +1,5 @@
 import '../../admissions/dto/api_envelope_dto.dart';
+import '../../admissions/dto/pagination_dto.dart';
 
 class TransportDashboardDto {
   const TransportDashboardDto({required this.raw});
@@ -22,7 +23,10 @@ class TransportRouteDto {
 }
 
 class TransportRoutesResponseDto {
-  const TransportRoutesResponseDto({required this.items});
+  const TransportRoutesResponseDto({
+    required this.items,
+    this.pagination,
+  });
 
   factory TransportRoutesResponseDto.fromJson(Map<String, dynamic> json) {
     final envelope = ApiEnvelopeDto.fromJson(json);
@@ -31,10 +35,12 @@ class TransportRoutesResponseDto {
         for (final item in envelope.requireListItems())
           TransportRouteDto.fromJson(item),
       ],
+      pagination: envelope.pagination,
     );
   }
 
   final List<TransportRouteDto> items;
+  final PaginationDto? pagination;
 }
 
 class TransportVehicleDto {

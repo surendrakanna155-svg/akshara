@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -27,6 +26,7 @@ class FinanceRefundsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewState = ref.watch(financeRefundsViewStateProvider);
+    final pageResult = ref.watch(financeRefundsPageResultProvider);
     final refunds = ref.watch(financeFilteredRefundsProvider);
     final selected = ref.watch(financeSelectedRefundProvider);
     final filterIndex = ref.watch(financeRefundsFilterProvider);
@@ -38,20 +38,31 @@ class FinanceRefundsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(financeRefundsFilterProvider.notifier).state = index,
-      body: FinanceAsyncBody<List<RefundRequest>>(
+      body: FinanceAsyncBody<PaginatedResult<RefundRequest>>(
         state: viewState,
         loadingLabel: 'Loading refund requests',
         emptyMessage: 'No refund requests for the selected filters.',
         emptyIcon: Icons.currency_exchange_outlined,
         onRetry: () => retryFinanceFuture(ref, financeRefundsFutureProvider),
-        builder: (_) => _buildContent(
-          context,
-          widgetRef: ref,
-          refunds: refunds,
-          selected: selected,
-          isMobile: isMobile,
-          onSelect: (id) =>
-              ref.read(financeSelectedRefundIdProvider.notifier).state = id,
+        builder: (result) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildContent(
+              context,
+              widgetRef: ref,
+              refunds: refunds,
+              selected: selected,
+              isMobile: isMobile,
+              onSelect: (id) =>
+                  ref.read(financeSelectedRefundIdProvider.notifier).state = id,
+            ),
+            if (pageResult != null)
+              AksharaPaginationBar<RefundRequest>(
+                result: pageResult,
+                onPageChanged: (page) =>
+                    ref.read(financeRefundsPageProvider.notifier).state = page,
+              ),
+          ],
         ),
       ),
     );

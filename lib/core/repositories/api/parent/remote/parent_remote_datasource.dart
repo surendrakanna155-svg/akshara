@@ -1,0 +1,158 @@
+import 'package:dio/dio.dart';
+
+import '../../../repository_query.dart';
+import '../dto/parent_responses_dto.dart';
+import 'parent_api_paths.dart';
+
+/// Dio-backed remote data source for Parent mobile APIs.
+class ParentRemoteDataSource {
+  ParentRemoteDataSource(this._dio);
+
+  final Dio _dio;
+
+  Future<ParentDashboardDto> fetchDashboard({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.dashboard,
+      queryParameters: _queryParams(query),
+    );
+    return ParentDashboardDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentAttendanceResponseDto> fetchAttendance({
+    required RepositoryQuery query,
+    required DateTime month,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.attendance,
+      queryParameters: {
+        ..._queryParams(query),
+        'month': _monthParam(month),
+      },
+    );
+    return ParentAttendanceResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentHomeworkResponseDto> fetchHomework({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.homework,
+      queryParameters: _queryParams(query),
+    );
+    return ParentHomeworkResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentExamsResponseDto> fetchExams({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.exams,
+      queryParameters: _queryParams(query),
+    );
+    return ParentExamsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentTimetableResponseDto> fetchTimetable({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.timetable,
+      queryParameters: _queryParams(query),
+    );
+    return ParentTimetableResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentFeesResponseDto> fetchFees({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.fees,
+      queryParameters: _queryParams(query),
+    );
+    return ParentFeesResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentReceiptsResponseDto> fetchReceipts({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.receipts,
+      queryParameters: _queryParams(query),
+    );
+    return ParentReceiptsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentNoticesResponseDto> fetchNotices({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.notices,
+      queryParameters: _queryParams(query),
+    );
+    return ParentNoticesResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentEventsResponseDto> fetchEvents({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.events,
+      queryParameters: _queryParams(query),
+    );
+    return ParentEventsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentLeaveResponseDto> fetchLeaveHistory({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.leave,
+      queryParameters: _queryParams(query),
+    );
+    return ParentLeaveResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentProfileResponseDto> fetchProfile({
+    required RepositoryQuery query,
+    required String activeChildId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.profile,
+      queryParameters: {
+        ..._queryParams(query),
+        'activeChildId': activeChildId,
+      },
+    );
+    return ParentProfileResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentPaymentSummaryResponseDto> fetchPaymentSummary({
+    required RepositoryQuery query,
+    required String installmentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.paymentSummary(installmentId),
+      queryParameters: _queryParams(query),
+    );
+    return ParentPaymentSummaryResponseDto.fromJson(_responseMap(response));
+  }
+
+  Map<String, dynamic> _queryParams(RepositoryQuery query) {
+    return {
+      'tenantId': query.tenantId,
+      if (query.schoolId != null) 'schoolId': query.schoolId,
+      if (query.organizationId != null) 'organizationId': query.organizationId,
+    };
+  }
+
+  String _monthParam(DateTime month) {
+    final m = month.month.toString().padLeft(2, '0');
+    return '${month.year}-$m';
+  }
+
+  Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
+    return response.data ?? const {};
+  }
+}

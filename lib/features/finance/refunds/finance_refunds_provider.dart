@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
-
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/repositories/repository_query.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
@@ -12,27 +13,44 @@ final financeRefundsErrorProvider = StateProvider<bool>((ref) => false);
 final financeRefundsEmptyProvider = StateProvider<bool>((ref) => false);
 final financeRefundsFilterProvider = StateProvider<int>((ref) => 0);
 final financeSelectedRefundIdProvider = StateProvider<String?>((ref) => null);
+final financeRefundsPageProvider = StateProvider<int>((ref) => 1);
 
-final financeRefundsFutureProvider = FutureProvider<List<RefundRequest>>((ref) async {
-return ref.read(financeRepositoryProvider).getRefundRequests(query: ref.watch(repositoryQueryProvider));
+final financeRefundsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(financeRefundsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final financeRefundsProvider = Provider<List<RefundRequest>>((ref) {
+final financeRefundsFutureProvider =
+    FutureProvider<PaginatedResult<RefundRequest>>((ref) async {
+  return ref.read(financeRepositoryProvider).getRefundRequests(
+        query: ref.watch(financeRefundsQueryProvider),
+      );
+});
+
+final financeRefundsPageResultProvider =
+    Provider<PaginatedResult<RefundRequest>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(financeRefundsFutureProvider),
-    manualLoading: ref.watch(financeRefundsLoadingProvider), manualError: ref.watch(financeRefundsErrorProvider), manualEmpty: ref.watch(financeRefundsEmptyProvider),
-  ) ?? const [];
+    manualLoading: ref.watch(financeRefundsLoadingProvider),
+    manualError: ref.watch(financeRefundsErrorProvider),
+    manualEmpty: ref.watch(financeRefundsEmptyProvider),
+  );
+});
+
+final financeRefundsProvider = Provider<List<RefundRequest>>((ref) {
+  return ref.watch(financeRefundsPageResultProvider)?.items ?? const [];
 });
 
 final financeRefundsViewStateProvider =
-    Provider<FinanceViewState<List<RefundRequest>>>((ref) {
+    Provider<FinanceViewState<PaginatedResult<RefundRequest>>>((ref) {
   return resolveFinanceAsync(
     ref.watch(financeRefundsFutureProvider),
     forceLoading: ref.watch(financeRefundsLoadingProvider),
     forceError: ref.watch(financeRefundsErrorProvider),
     forceEmpty: ref.watch(financeRefundsEmptyProvider),
-    isDataEmpty: (refunds) => refunds.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });
 

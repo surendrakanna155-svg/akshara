@@ -39,7 +39,7 @@ void main() {
                 for (final lead in leads.items) _fixtures.leadItem(lead),
               ]),
             AdmissionsApiPaths.applications => _fixtures.listEnvelope([
-                for (final app in applications) _fixtures.applicationItem(app),
+                for (final app in applications.items) _fixtures.applicationItem(app),
               ]),
             AdmissionsApiPaths.documents => _fixtures.listEnvelope([
                 for (final doc in documents) _fixtures.documentItem(doc),
@@ -57,7 +57,7 @@ void main() {
                   _fixtures.feeStructureItem(option),
               ]),
             AdmissionsApiPaths.approvalQueue => _fixtures.listEnvelope([
-                for (final item in approvalQueue) _fixtures.approvalItem(item),
+                for (final item in approvalQueue.items) _fixtures.approvalItem(item),
               ]),
             AdmissionsApiPaths.reports =>
               _fixtures.reportsEnvelope(reports),

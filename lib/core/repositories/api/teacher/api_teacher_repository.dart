@@ -7,60 +7,86 @@ import '../../../../features/teacher/messages/message_models.dart';
 import '../../../../features/teacher/timetable/timetable_models.dart';
 import '../../interfaces/teacher_repository.dart';
 import '../../repository_query.dart';
-import '../api_exception.dart';
+import 'mapper/teacher_mapper.dart';
+import 'remote/teacher_remote_datasource.dart';
 
 /// API implementation of [TeacherRepository] — enabled via [teacherApiEnabledProvider].
 class ApiTeacherRepository implements TeacherRepository {
-  Never _notConnected(String method) {
-    throw ApiNotConnectedException('ApiTeacherRepository', method);
-  }
+  ApiTeacherRepository({
+    required TeacherRemoteDataSource remote,
+    TeacherMapper mapper = const TeacherMapper(),
+  })  : _remote = remote,
+        _mapper = mapper;
+
+  final TeacherRemoteDataSource _remote;
+  final TeacherMapper _mapper;
 
   @override
-  Future<TeacherDashboardData> getDashboard({required RepositoryQuery query}) async =>
-      _notConnected('getDashboard');
+  Future<TeacherDashboardData> getDashboard({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchDashboard(query: query);
+    return _mapper.toDashboard(dto);
+  }
 
   @override
   Future<List<TeacherAttendanceClass>> getAttendanceClasses({
     required RepositoryQuery query,
-  }) async =>
-      _notConnected('getAttendanceClasses');
+  }) async {
+    final dto = await _remote.fetchAttendanceClasses(query: query);
+    return _mapper.toAttendanceClasses(dto);
+  }
 
   @override
   Future<Map<String, List<TeacherAttendanceStudent>>>
-      getAttendanceStudentsByClass({required RepositoryQuery query}) async =>
-      _notConnected('getAttendanceStudentsByClass');
+      getAttendanceStudentsByClass({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchAttendanceStudentsByClass(query: query);
+    return _mapper.toAttendanceStudentsByClass(dto);
+  }
 
   @override
   Future<List<TeacherHomeworkAssignment>> getHomeworkAssignments({
     required RepositoryQuery query,
-  }) async =>
-      _notConnected('getHomeworkAssignments');
+  }) async {
+    final dto = await _remote.fetchHomeworkAssignments(query: query);
+    return _mapper.toHomeworkAssignments(dto);
+  }
 
   @override
   Future<List<TeacherUpcomingExam>> getUpcomingExams({
     required RepositoryQuery query,
-  }) async =>
-      _notConnected('getUpcomingExams');
+  }) async {
+    final dto = await _remote.fetchUpcomingExams(query: query);
+    return _mapper.toUpcomingExams(dto);
+  }
 
   @override
-  Future<List<ExamMarkEntry>> getExamMarks({required RepositoryQuery query}) async =>
-      _notConnected('getExamMarks');
+  Future<List<ExamMarkEntry>> getExamMarks({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchExamMarks(query: query);
+    return _mapper.toExamMarks(dto);
+  }
 
   @override
-  Future<TeacherTimetableData> getTimetable({required RepositoryQuery query}) async =>
-      _notConnected('getTimetable');
+  Future<TeacherTimetableData> getTimetable({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchTimetable(query: query);
+    return _mapper.toTimetable(dto);
+  }
 
   @override
   Future<List<TeacherLeaveRequest>> getLeaveHistory({
     required RepositoryQuery query,
-  }) async =>
-      _notConnected('getLeaveHistory');
+  }) async {
+    final dto = await _remote.fetchLeaveHistory(query: query);
+    return _mapper.toLeaveHistory(dto);
+  }
 
   @override
-  Future<LeaveBalance> getLeaveBalance({required RepositoryQuery query}) async =>
-      _notConnected('getLeaveBalance');
+  Future<LeaveBalance> getLeaveBalance({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchLeaveBalance(query: query);
+    return _mapper.toLeaveBalance(dto);
+  }
 
   @override
-  Future<List<MessageThread>> getMessageThreads({required RepositoryQuery query}) async =>
-      _notConnected('getMessageThreads');
+  Future<List<MessageThread>> getMessageThreads({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchMessageThreads(query: query);
+    return _mapper.toMessageThreads(dto);
+  }
 }

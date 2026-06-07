@@ -24,7 +24,7 @@ void main() {
       final employees = await mockRepo.getEmployees(query: kQuery);
       final detail = await mockRepo.getEmployeeDetail(
         query: kQuery,
-        employeeId: employees.first.id,
+        employeeId: employees.items.first.id,
       );
       final attendance = await mockRepo.getAttendance(query: kQuery);
       final leave = await mockRepo.getLeave(query: kQuery);
@@ -36,7 +36,7 @@ void main() {
       responseForPath = (path) => switch (path) {
             HrApiPaths.dashboard => _fixtures.dashboardEnvelope(dashboard),
             HrApiPaths.employees => _fixtures.listEnvelope([
-                for (final employee in employees)
+                for (final employee in employees.items)
                   _fixtures.employeeItem(employee),
               ]),
             HrApiPaths.attendance => _fixtures.attendanceEnvelope(attendance),

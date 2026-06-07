@@ -110,7 +110,7 @@ void main() {
 
     test('submitApplication moves application to submitted status', () async {
       final apps = await repo.getApplications(query: kQuery);
-      final draft = apps.firstWhere((a) => a.status == ApplicationStatus.draft);
+      final draft = apps.items.firstWhere((a) => a.status == ApplicationStatus.draft);
       final submitted = await repo.submitApplication(
         query: kQuery,
         applicationId: draft.id,

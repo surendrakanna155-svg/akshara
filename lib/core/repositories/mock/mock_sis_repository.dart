@@ -6,6 +6,7 @@ import '../../../features/sis/sis_requests.dart';
 import '../interfaces/sis_repository.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
+import '../../tenant/tenant_mock_scope.dart';
 import 'mock_sis_write_store.dart';
 
 class MockSisRepository implements SisRepository {
@@ -260,7 +261,10 @@ class MockSisRepository implements SisRepository {
   }) async {
     await _ensureStudents(query);
     return PaginatedResult.fromItems(
-      List.unmodifiable(_store.students!),
+      TenantMockScope.filter(
+        query: query,
+        items: List.unmodifiable(_store.students!),
+      ),
       page: query.page,
       pageSize: query.pageSize,
     );

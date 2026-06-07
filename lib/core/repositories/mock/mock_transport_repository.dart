@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../features/transport/transport_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/transport_repository.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
 
 class MockTransportRepository implements TransportRepository {
@@ -207,8 +208,7 @@ class MockTransportRepository implements TransportRepository {
     );
   }
 
-  @override
-  Future<List<TransportRoute>> getRoutes({required RepositoryQuery query}) async => const [
+  static const _routes = [
         TransportRoute(
           id: 'route_12',
           name: 'Route 12 — North',
@@ -262,6 +262,16 @@ class MockTransportRepository implements TransportRepository {
           shift: TransportShift.am,
         ),
       ];
+
+  @override
+  Future<PaginatedResult<TransportRoute>> getRoutes({
+    required RepositoryQuery query,
+  }) async =>
+      PaginatedResult.fromItems(
+        _routes,
+        page: query.page,
+        pageSize: query.pageSize,
+      );
 
   @override
   Future<List<TransportVehicle>> getVehicles({required RepositoryQuery query}) async => const [

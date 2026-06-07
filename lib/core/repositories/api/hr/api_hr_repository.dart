@@ -1,4 +1,5 @@
 import '../../interfaces/hr_repository.dart';
+import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/hr/hr_models.dart';
 import 'mapper/hr_mapper.dart';
@@ -22,9 +23,16 @@ class ApiHrRepository implements HrRepository {
   }
 
   @override
-  Future<List<HrEmployee>> getEmployees({required RepositoryQuery query}) async {
+  Future<PaginatedResult<HrEmployee>> getEmployees({
+    required RepositoryQuery query,
+  }) async {
     final dto = await _remote.fetchEmployees(query: query);
-    return _mapper.toEmployees(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toEmployees(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

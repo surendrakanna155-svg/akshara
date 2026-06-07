@@ -46,12 +46,12 @@ void main() {
       final mapped = [
         for (final item
             in TransportRoutesResponseDto.fromJson(
-              _fixtures.routesEnvelope(mockData),
+              _fixtures.routesEnvelope(mockData.items),
             ).items)
           _mapper.toRoute(item),
       ];
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.name, mockData.first.name);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.name, mockData.items.first.name);
     });
 
     test('getVehicles DTO mapping matches mock output', () async {

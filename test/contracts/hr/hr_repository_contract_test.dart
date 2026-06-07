@@ -46,12 +46,12 @@ void main() {
       final mapped = _mapper.toEmployees(
         HrEmployeesResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final employee in mockData) _fixtures.employeeItem(employee),
+            for (final employee in mockData.items) _fixtures.employeeItem(employee),
           ]),
         ),
       );
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.employeeCode, mockData.first.employeeCode);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.employeeCode, mockData.items.first.employeeCode);
     });
 
     test('getEmployeeDetail DTO mapping matches mock output', () async {

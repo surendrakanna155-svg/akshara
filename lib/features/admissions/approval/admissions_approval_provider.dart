@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
-
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/repositories/repository_query.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
@@ -10,33 +11,50 @@ import '../admissions_models.dart';
 final admissionsApprovalLoadingProvider = StateProvider<bool>((ref) => false);
 final admissionsApprovalErrorProvider = StateProvider<bool>((ref) => false);
 final admissionsApprovalEmptyProvider = StateProvider<bool>((ref) => false);
+final admissionsApprovalPageProvider = StateProvider<int>((ref) => 1);
 
 final admissionsSelectedApprovalIdProvider = StateProvider<String?>(
   (ref) => null,
 );
 
-final admissionsApprovalQueueFutureProvider = FutureProvider<List<ApprovalQueueItem>>((ref) async {
-return ref.read(admissionsRepositoryProvider).getApprovalQueue(query: ref.watch(repositoryQueryProvider));
+final admissionsApprovalQueueQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(admissionsApprovalPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final admissionsApprovalQueueProvider = Provider<List<ApprovalQueueItem>>((ref) {
+final admissionsApprovalQueueFutureProvider =
+    FutureProvider<PaginatedResult<ApprovalQueueItem>>((ref) async {
+  return ref.read(admissionsRepositoryProvider).getApprovalQueue(
+        query: ref.watch(admissionsApprovalQueueQueryProvider),
+      );
+});
+
+final admissionsApprovalQueuePageResultProvider =
+    Provider<PaginatedResult<ApprovalQueueItem>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(admissionsApprovalQueueFutureProvider),
     manualLoading: ref.watch(admissionsApprovalLoadingProvider),
     manualError: ref.watch(admissionsApprovalErrorProvider),
     manualEmpty: ref.watch(admissionsApprovalEmptyProvider),
-  ) ?? const [];
+  );
+});
+
+final admissionsApprovalQueueProvider =
+    Provider<List<ApprovalQueueItem>>((ref) {
+  return ref.watch(admissionsApprovalQueuePageResultProvider)?.items ??
+      const [];
 });
 
 final admissionsApprovalViewStateProvider =
-    Provider<AdmissionsViewState<List<ApprovalQueueItem>>>((ref) {
+    Provider<AdmissionsViewState<PaginatedResult<ApprovalQueueItem>>>((ref) {
   return resolveAdmissionsAsync(
     ref.watch(admissionsApprovalQueueFutureProvider),
     forceLoading: ref.watch(admissionsApprovalLoadingProvider),
     forceError: ref.watch(admissionsApprovalErrorProvider),
     forceEmpty: ref.watch(admissionsApprovalEmptyProvider),
-    isDataEmpty: (queue) => queue.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });
 

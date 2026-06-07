@@ -1,4 +1,5 @@
 import '../../admissions/dto/api_envelope_dto.dart';
+import '../../admissions/dto/pagination_dto.dart';
 
 class RefundRequestDto {
   const RefundRequestDto({required this.raw});
@@ -11,7 +12,10 @@ class RefundRequestDto {
 }
 
 class RefundRequestsResponseDto {
-  const RefundRequestsResponseDto({required this.items});
+  const RefundRequestsResponseDto({
+    required this.items,
+    this.pagination,
+  });
 
   factory RefundRequestsResponseDto.fromJson(Map<String, dynamic> json) {
     final envelope = ApiEnvelopeDto.fromJson(json);
@@ -20,8 +24,10 @@ class RefundRequestsResponseDto {
         for (final item in envelope.requireListItems())
           RefundRequestDto.fromJson(item),
       ],
+      pagination: envelope.pagination,
     );
   }
 
   final List<RefundRequestDto> items;
+  final PaginationDto? pagination;
 }

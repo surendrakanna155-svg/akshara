@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_providers.dart';
 import '../config/environment_provider.dart';
 import '../tenant/tenant_provider.dart';
+import '../../features/auth/auth_provider.dart';
 import '../../features/auth/auth_token_provider.dart';
 import 'dio_client.dart';
 
@@ -18,7 +19,10 @@ final dioProvider = Provider<Dio>((ref) {
       tenantAccessor: () => ref.read(tenantContextProvider),
       refreshCallback: ref.read(tokenRefreshCallbackProvider),
       onTokensRefreshed: ref.read(onTokensRefreshedProvider),
-      allowAnonymous: true,
+      onSessionExpired: () {
+        ref.read(authProvider.notifier).logout();
+      },
+      allowAnonymous: !environment.requireAuthentication,
     ),
   );
 });

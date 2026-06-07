@@ -18,12 +18,24 @@ class Environment {
     required this.apiBaseUrl,
     required this.enableApiMode,
     required this.enableLogging,
+    this.requireTls = false,
+    this.requireAuthentication = false,
+    this.disableDemoAuth = false,
   });
 
   final EnvironmentName name;
   final String apiBaseUrl;
   final bool enableApiMode;
   final bool enableLogging;
+
+  /// When true, API base URL must use HTTPS.
+  final bool requireTls;
+
+  /// When true, Dio rejects requests without a valid access token.
+  final bool requireAuthentication;
+
+  /// When true, mock OTP / demo persona shortcuts are disabled.
+  final bool disableDemoAuth;
 
   static const development = Environment(
     name: EnvironmentName.development,
@@ -44,6 +56,9 @@ class Environment {
     apiBaseUrl: 'https://api.aksharaerp.com/v1',
     enableApiMode: false,
     enableLogging: false,
+    requireTls: true,
+    requireAuthentication: true,
+    disableDemoAuth: true,
   );
 
   /// Resolves environment from `--dart-define=APP_ENV=development|staging|production`.
@@ -61,12 +76,18 @@ class Environment {
     String? apiBaseUrl,
     bool? enableApiMode,
     bool? enableLogging,
+    bool? requireTls,
+    bool? requireAuthentication,
+    bool? disableDemoAuth,
   }) {
     return Environment(
       name: name ?? this.name,
       apiBaseUrl: apiBaseUrl ?? this.apiBaseUrl,
       enableApiMode: enableApiMode ?? this.enableApiMode,
       enableLogging: enableLogging ?? this.enableLogging,
+      requireTls: requireTls ?? this.requireTls,
+      requireAuthentication: requireAuthentication ?? this.requireAuthentication,
+      disableDemoAuth: disableDemoAuth ?? this.disableDemoAuth,
     );
   }
 }

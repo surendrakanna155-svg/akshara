@@ -24,7 +24,8 @@
 | `AksharaPeriodPill` | 2 | Timetable rows | Period indicators |
 | `AksharaChildSelectorChip` | 1 | Parent app bar | Child switcher |
 | `AksharaVirtualizedDataTable` | 3 | Admissions, Finance, SIS | Paginated virtualized tables (v3.1) |
-| `AksharaPaginationBar` | 3 | Admissions, Finance, SIS | Page controls for paginated lists (v3.1) |
+| `AksharaPaginationBar` | 6 | Admissions, Finance, SIS, HR, Transport | Page controls for paginated lists (v3.1–v4.1) |
+| `AksharaManageAction` | 0 | — | Mutation button RBAC wrapper (v4.0) |
 
 ---
 

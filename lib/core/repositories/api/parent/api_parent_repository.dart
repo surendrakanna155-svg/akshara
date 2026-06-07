@@ -12,68 +12,104 @@ import '../../../../features/parent/receipts/receipt_models.dart';
 import '../../../../features/parent/timetable/timetable_models.dart';
 import '../../interfaces/parent_repository.dart';
 import '../../repository_query.dart';
-import '../api_exception.dart';
+import 'mapper/parent_mapper.dart';
+import 'remote/parent_remote_datasource.dart';
 
 /// API implementation of [ParentRepository] — enabled via [parentApiEnabledProvider].
 class ApiParentRepository implements ParentRepository {
-  Never _notConnected(String method) {
-    throw ApiNotConnectedException('ApiParentRepository', method);
-  }
+  ApiParentRepository({
+    required ParentRemoteDataSource remote,
+    ParentMapper mapper = const ParentMapper(),
+  })  : _remote = remote,
+        _mapper = mapper;
+
+  final ParentRemoteDataSource _remote;
+  final ParentMapper _mapper;
 
   @override
-  Future<ParentDashboardData> getDashboard({required RepositoryQuery query}) async =>
-      _notConnected('getDashboard');
+  Future<ParentDashboardData> getDashboard({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchDashboard(query: query);
+    return _mapper.toDashboard(dto);
+  }
 
   @override
   Future<AttendanceMonthData> getAttendance({
     required RepositoryQuery query,
     required DateTime month,
-  }) async =>
-      _notConnected('getAttendance');
+  }) async {
+    final dto = await _remote.fetchAttendance(query: query, month: month);
+    return _mapper.toAttendance(dto);
+  }
 
   @override
-  Future<ParentHomeworkData> getHomework({required RepositoryQuery query}) async =>
-      _notConnected('getHomework');
+  Future<ParentHomeworkData> getHomework({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchHomework(query: query);
+    return _mapper.toHomework(dto);
+  }
 
   @override
-  Future<ParentExamsData> getExams({required RepositoryQuery query}) async =>
-      _notConnected('getExams');
+  Future<ParentExamsData> getExams({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchExams(query: query);
+    return _mapper.toExams(dto);
+  }
 
   @override
-  Future<ParentTimetableData> getTimetable({required RepositoryQuery query}) async =>
-      _notConnected('getTimetable');
+  Future<ParentTimetableData> getTimetable({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchTimetable(query: query);
+    return _mapper.toTimetable(dto);
+  }
 
   @override
-  Future<ParentFeesData> getFees({required RepositoryQuery query}) async =>
-      _notConnected('getFees');
+  Future<ParentFeesData> getFees({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchFees(query: query);
+    return _mapper.toFees(dto);
+  }
 
   @override
-  Future<List<FeeReceipt>> getReceipts({required RepositoryQuery query}) async =>
-      _notConnected('getReceipts');
+  Future<List<FeeReceipt>> getReceipts({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchReceipts(query: query);
+    return _mapper.toReceipts(dto);
+  }
 
   @override
-  Future<List<ParentNotice>> getNotices({required RepositoryQuery query}) async =>
-      _notConnected('getNotices');
+  Future<List<ParentNotice>> getNotices({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchNotices(query: query);
+    return _mapper.toNotices(dto);
+  }
 
   @override
-  Future<ParentEventsData> getEvents({required RepositoryQuery query}) async =>
-      _notConnected('getEvents');
+  Future<ParentEventsData> getEvents({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchEvents(query: query);
+    return _mapper.toEvents(dto);
+  }
 
   @override
-  Future<List<LeaveRequest>> getLeaveHistory({required RepositoryQuery query}) async =>
-      _notConnected('getLeaveHistory');
+  Future<List<LeaveRequest>> getLeaveHistory({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchLeaveHistory(query: query);
+    return _mapper.toLeaveHistory(dto);
+  }
 
   @override
   Future<ParentProfileData> getProfile({
     required RepositoryQuery query,
     required String activeChildId,
-  }) async =>
-      _notConnected('getProfile');
+  }) async {
+    final dto = await _remote.fetchProfile(
+      query: query,
+      activeChildId: activeChildId,
+    );
+    return _mapper.toProfile(dto);
+  }
 
   @override
   Future<PaymentSummary> getPaymentSummary({
     required RepositoryQuery query,
     required String installmentId,
-  }) async =>
-      _notConnected('getPaymentSummary');
+  }) async {
+    final dto = await _remote.fetchPaymentSummary(
+      query: query,
+      installmentId: installmentId,
+    );
+    return _mapper.toPaymentSummary(dto);
+  }
 }

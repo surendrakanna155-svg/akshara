@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
-
+import '../../../core/repositories/paginated_result.dart';
+import '../../../core/repositories/repository_query.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
@@ -12,27 +13,44 @@ final financeStudentAccountsErrorProvider = StateProvider<bool>((ref) => false);
 final financeStudentAccountsEmptyProvider = StateProvider<bool>((ref) => false);
 final financeStudentSearchQueryProvider = StateProvider<String>((ref) => '');
 final financeSelectedAccountIdProvider = StateProvider<String?>((ref) => null);
+final financeStudentAccountsPageProvider = StateProvider<int>((ref) => 1);
 
-final financeStudentAccountsFutureProvider = FutureProvider<List<StudentFeeAccount>>((ref) async {
-return ref.read(financeRepositoryProvider).getStudentAccounts(query: ref.watch(repositoryQueryProvider));
+final financeStudentAccountsQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(financeStudentAccountsPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final financeStudentAccountsProvider = Provider<List<StudentFeeAccount>>((ref) {
+final financeStudentAccountsFutureProvider =
+    FutureProvider<PaginatedResult<StudentFeeAccount>>((ref) async {
+  return ref.read(financeRepositoryProvider).getStudentAccounts(
+        query: ref.watch(financeStudentAccountsQueryProvider),
+      );
+});
+
+final financeStudentAccountsPageResultProvider =
+    Provider<PaginatedResult<StudentFeeAccount>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(financeStudentAccountsFutureProvider),
-    manualLoading: ref.watch(financeStudentAccountsLoadingProvider), manualError: ref.watch(financeStudentAccountsErrorProvider), manualEmpty: ref.watch(financeStudentAccountsEmptyProvider),
-  ) ?? const [];
+    manualLoading: ref.watch(financeStudentAccountsLoadingProvider),
+    manualError: ref.watch(financeStudentAccountsErrorProvider),
+    manualEmpty: ref.watch(financeStudentAccountsEmptyProvider),
+  );
+});
+
+final financeStudentAccountsProvider = Provider<List<StudentFeeAccount>>((ref) {
+  return ref.watch(financeStudentAccountsPageResultProvider)?.items ?? const [];
 });
 
 final financeStudentAccountsViewStateProvider =
-    Provider<FinanceViewState<List<StudentFeeAccount>>>((ref) {
+    Provider<FinanceViewState<PaginatedResult<StudentFeeAccount>>>((ref) {
   return resolveFinanceAsync(
     ref.watch(financeStudentAccountsFutureProvider),
     forceLoading: ref.watch(financeStudentAccountsLoadingProvider),
     forceError: ref.watch(financeStudentAccountsErrorProvider),
     forceEmpty: ref.watch(financeStudentAccountsEmptyProvider),
-    isDataEmpty: (accounts) => accounts.isEmpty,
+    isDataEmpty: (result) => result.items.isEmpty,
   );
 });
 

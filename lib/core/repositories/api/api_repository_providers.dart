@@ -24,8 +24,11 @@ import 'library/remote/library_remote_datasource.dart';
 import 'control_center/api_control_center_repository.dart';
 import 'control_center/remote/control_center_remote_datasource.dart';
 import 'parent/api_parent_repository.dart';
+import 'parent/remote/parent_remote_datasource.dart';
 import 'teacher/api_teacher_repository.dart';
+import 'teacher/remote/teacher_remote_datasource.dart';
 import 'student/api_student_repository.dart';
+import 'student/remote/student_remote_datasource.dart';
 
 final admissionsRemoteDataSourceProvider = Provider<AdmissionsRemoteDataSource>(
   (ref) => AdmissionsRemoteDataSource(ref.watch(dioProvider)),
@@ -137,14 +140,32 @@ final apiControlCenterRepositoryProvider =
   ),
 );
 
+final parentRemoteDataSourceProvider = Provider<ParentRemoteDataSource>(
+  (ref) => ParentRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final teacherRemoteDataSourceProvider = Provider<TeacherRemoteDataSource>(
+  (ref) => TeacherRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final studentRemoteDataSourceProvider = Provider<StudentRemoteDataSource>(
+  (ref) => StudentRemoteDataSource(ref.watch(dioProvider)),
+);
+
 final apiParentRepositoryProvider = Provider<ApiParentRepository>(
-  (ref) => ApiParentRepository(),
+  (ref) => ApiParentRepository(
+    remote: ref.watch(parentRemoteDataSourceProvider),
+  ),
 );
 
 final apiTeacherRepositoryProvider = Provider<ApiTeacherRepository>(
-  (ref) => ApiTeacherRepository(),
+  (ref) => ApiTeacherRepository(
+    remote: ref.watch(teacherRemoteDataSourceProvider),
+  ),
 );
 
 final apiStudentRepositoryProvider = Provider<ApiStudentRepository>(
-  (ref) => ApiStudentRepository(),
+  (ref) => ApiStudentRepository(
+    remote: ref.watch(studentRemoteDataSourceProvider),
+  ),
 );

@@ -140,7 +140,7 @@ void main() {
         ),
       );
       final accounts = await repo.getStudentAccounts(query: kQuery);
-      expect(accounts.any((item) => item.id == account.id), isTrue);
+      expect(accounts.items.any((item) => item.id == account.id), isTrue);
     });
 
     test('approveRefund marks refund as approved', () async {

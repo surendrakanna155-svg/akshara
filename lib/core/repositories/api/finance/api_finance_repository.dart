@@ -67,11 +67,16 @@ class ApiFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<List<StudentFeeAccount>> getStudentAccounts({
+  Future<PaginatedResult<StudentFeeAccount>> getStudentAccounts({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchStudentAccounts(query: query);
-    return _mapper.toStudentAccounts(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toStudentAccounts(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override
@@ -103,11 +108,16 @@ class ApiFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<List<RefundRequest>> getRefundRequests({
+  Future<PaginatedResult<RefundRequest>> getRefundRequests({
     required RepositoryQuery query,
   }) async {
     final dto = await _remote.fetchRefundRequests(query: query);
-    return _mapper.toRefundRequests(dto);
+    return PaginatedResult.fromDto(
+      items: _mapper.toRefundRequests(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
   }
 
   @override

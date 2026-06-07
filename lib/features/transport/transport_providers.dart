@@ -2,7 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
-
+import '../../core/repositories/paginated_result.dart';
+import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/repository_providers.dart';
 import 'transport_models.dart';
 
@@ -30,22 +31,38 @@ final transportRoutesErrorProvider = StateProvider<bool>((ref) => false);
 final transportRoutesEmptyProvider = StateProvider<bool>((ref) => false);
 final transportRoutesFilterProvider = StateProvider<int>((ref) => 0);
 final transportSelectedRouteIdProvider = StateProvider<String?>((ref) => null);
+final transportRoutesPageProvider = StateProvider<int>((ref) => 1);
 
-final transportRoutesFutureProvider = FutureProvider<List<TransportRoute>>((ref) async {
-return ref.read(transportRepositoryProvider).getRoutes(query: ref.watch(repositoryQueryProvider));
+final transportRoutesQueryProvider = Provider<RepositoryQuery>((ref) {
+  final baseQuery = ref.watch(repositoryQueryProvider);
+  final page = ref.watch(transportRoutesPageProvider);
+  return baseQuery.withPage(page);
 });
 
-final transportRoutesProvider = Provider<List<TransportRoute>?>((ref) {
+final transportRoutesFutureProvider =
+    FutureProvider<PaginatedResult<TransportRoute>>((ref) async {
+  return ref.read(transportRepositoryProvider).getRoutes(
+        query: ref.watch(transportRoutesQueryProvider),
+      );
+});
+
+final transportRoutesPageResultProvider =
+    Provider<PaginatedResult<TransportRoute>?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(transportRoutesFutureProvider),
-    manualLoading: ref.watch(transportRoutesLoadingProvider), manualError: ref.watch(transportRoutesErrorProvider), manualEmpty: ref.watch(transportRoutesEmptyProvider),
-  ) ?? const [];
+    manualLoading: ref.watch(transportRoutesLoadingProvider),
+    manualError: ref.watch(transportRoutesErrorProvider),
+    manualEmpty: ref.watch(transportRoutesEmptyProvider),
+  );
+});
+
+final transportRoutesProvider = Provider<List<TransportRoute>>((ref) {
+  return ref.watch(transportRoutesPageResultProvider)?.items ?? const [];
 });
 
 final transportFilteredRoutesProvider = Provider<List<TransportRoute>>((ref) {
   final routes = ref.watch(transportRoutesProvider);
-  if (routes == null) return const [];
   final filterIndex = ref.watch(transportRoutesFilterProvider);
   return switch (filterIndex) {
     1 => routes

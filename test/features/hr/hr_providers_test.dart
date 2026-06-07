@@ -41,8 +41,7 @@ void main() {
       await container.read(hrEmployeesFutureProvider.future);
       final employees = container.read(hrEmployeesProvider);
 
-      expect(employees, isNotNull);
-      expect(employees!, hasLength(8));
+      expect(employees, hasLength(8));
     });
 
     test('hrFilteredEmployeesProvider filters teachers', () async {

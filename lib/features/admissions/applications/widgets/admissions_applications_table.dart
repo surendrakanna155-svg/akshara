@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../../../admin/admin_layout.dart';
@@ -17,6 +18,18 @@ class AdmissionsApplicationsTable extends StatelessWidget {
   final List<AdmissionsApplication> applications;
   final void Function(AdmissionsApplication app)? onView;
 
+  static const _columns = [
+    DataColumn(label: Text('App ID')),
+    DataColumn(label: Text('Student')),
+    DataColumn(label: Text('Class')),
+    DataColumn(label: Text('Parent')),
+    DataColumn(label: Text('Submitted')),
+    DataColumn(label: Text('Status')),
+    DataColumn(label: Text('Docs')),
+    DataColumn(label: Text('Counselor')),
+    DataColumn(label: Text('Actions')),
+  ];
+
   @override
   Widget build(BuildContext context) {
     if (AdminLayout.isMobile(context)) {
@@ -30,50 +43,35 @@ class AdmissionsApplicationsTable extends StatelessWidget {
       );
     }
 
-    return Semantics(
-      container: true,
-      label: 'Applications table, ${applications.length} records',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowHeight: 48,
-          dataRowMinHeight: 52,
-          dataRowMaxHeight: 72,
-          columns: const [
-            DataColumn(label: Text('App ID')),
-            DataColumn(label: Text('Student')),
-            DataColumn(label: Text('Class')),
-            DataColumn(label: Text('Parent')),
-            DataColumn(label: Text('Submitted')),
-            DataColumn(label: Text('Status')),
-            DataColumn(label: Text('Docs')),
-            DataColumn(label: Text('Counselor')),
-            DataColumn(label: Text('Actions')),
-          ],
-          rows: [
-            for (final app in applications)
-              DataRow(
-                cells: [
-                  DataCell(Text(app.id)),
-                  DataCell(Text(app.studentName)),
-                  DataCell(Text(app.classLabel)),
-                  DataCell(Text(app.parentName)),
-                  DataCell(Text(app.submittedLabel)),
-                  DataCell(AdmissionsApplicationStatusChip(status: app.status)),
-                  DataCell(Text('${app.documentsComplete}/${app.documentsTotal}')),
-                  DataCell(Text(app.counselor)),
-                  DataCell(
-                    IconButton(
-                      icon: const Icon(Icons.visibility_outlined, size: 20),
-                      tooltip: 'View application',
-                      onPressed: onView == null ? null : () => onView!(app),
-                    ),
-                  ),
-                ],
-              ),
-          ],
+    return AksharaVirtualizedDataTable(
+      columns: _columns,
+      rowCount: applications.length,
+      dataRowMinHeight: 52,
+      dataRowMaxHeight: 72,
+      semanticLabel: 'Applications table, ${applications.length} records',
+      rowBuilder: (index) => _buildRow(context, applications[index]),
+    );
+  }
+
+  DataRow _buildRow(BuildContext context, AdmissionsApplication app) {
+    return DataRow(
+      cells: [
+        DataCell(Text(app.id)),
+        DataCell(Text(app.studentName)),
+        DataCell(Text(app.classLabel)),
+        DataCell(Text(app.parentName)),
+        DataCell(Text(app.submittedLabel)),
+        DataCell(AdmissionsApplicationStatusChip(status: app.status)),
+        DataCell(Text('${app.documentsComplete}/${app.documentsTotal}')),
+        DataCell(Text(app.counselor)),
+        DataCell(
+          IconButton(
+            icon: const Icon(Icons.visibility_outlined, size: 20),
+            tooltip: 'View application',
+            onPressed: onView == null ? null : () => onView!(app),
+          ),
         ),
-      ),
+      ],
     );
   }
 }

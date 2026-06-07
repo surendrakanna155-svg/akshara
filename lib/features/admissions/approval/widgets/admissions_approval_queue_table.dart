@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../../../admin/admin_layout.dart';
@@ -19,6 +20,16 @@ class AdmissionsApprovalQueueTable extends StatelessWidget {
   final String? selectedId;
   final ValueChanged<ApprovalQueueItem>? onSelect;
 
+  static const _columns = [
+    DataColumn(label: Text('Student')),
+    DataColumn(label: Text('Class')),
+    DataColumn(label: Text('Counselor')),
+    DataColumn(label: Text('Docs')),
+    DataColumn(label: Text('AI Score')),
+    DataColumn(label: Text('Status')),
+    DataColumn(label: Text('Submitted')),
+  ];
+
   @override
   Widget build(BuildContext context) {
     if (AdminLayout.isMobile(context)) {
@@ -36,60 +47,42 @@ class AdmissionsApprovalQueueTable extends StatelessWidget {
       );
     }
 
-    return Semantics(
-      container: true,
-      label: 'Approval queue, ${items.length} applications',
-      child: Material(
-        type: MaterialType.transparency,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            headingRowHeight: 48,
-            columns: const [
-              DataColumn(label: Text('Student')),
-              DataColumn(label: Text('Class')),
-              DataColumn(label: Text('Counselor')),
-              DataColumn(label: Text('Docs')),
-              DataColumn(label: Text('AI Score')),
-              DataColumn(label: Text('Status')),
-              DataColumn(label: Text('Submitted')),
-            ],
-            rows: [
-              for (final item in items)
-                DataRow(
-                  selected: item.id == selectedId,
-                  onSelectChanged:
-                      onSelect == null ? null : (_) => onSelect!(item),
-                  cells: [
-                    DataCell(
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(item.studentName),
-                          Text(
-                            item.applicationId,
-                            style: context.aksharaText.bodySmall.copyWith(
-                              color: context.colors.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    DataCell(Text(item.classLabel)),
-                    DataCell(Text(item.counselor)),
-                    DataCell(
-                      Text('${item.documentsComplete}/${item.documentsTotal}'),
-                    ),
-                    DataCell(Text('${item.aiScore}')),
-                    DataCell(_DecisionChip(decision: item.decision)),
-                    DataCell(Text(item.submittedLabel)),
-                  ],
+    return AksharaVirtualizedDataTable(
+      columns: _columns,
+      rowCount: items.length,
+      dataRowMinHeight: 56,
+      semanticLabel: 'Approval queue, ${items.length} applications',
+      rowBuilder: (index) => _buildRow(context, items[index]),
+    );
+  }
+
+  DataRow _buildRow(BuildContext context, ApprovalQueueItem item) {
+    return DataRow(
+      selected: item.id == selectedId,
+      onSelectChanged: onSelect == null ? null : (_) => onSelect!(item),
+      cells: [
+        DataCell(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(item.studentName),
+              Text(
+                item.applicationId,
+                style: context.aksharaText.bodySmall.copyWith(
+                  color: context.colors.onSurfaceVariant,
                 ),
+              ),
             ],
           ),
         ),
-      ),
+        DataCell(Text(item.classLabel)),
+        DataCell(Text(item.counselor)),
+        DataCell(Text('${item.documentsComplete}/${item.documentsTotal}')),
+        DataCell(Text('${item.aiScore}')),
+        DataCell(_DecisionChip(decision: item.decision)),
+        DataCell(Text(item.submittedLabel)),
+      ],
     );
   }
 }

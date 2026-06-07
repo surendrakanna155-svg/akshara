@@ -104,6 +104,399 @@ paths:
               schema:
                 $ref: '#/components/schemas/DashboardEnvelope'
 
+  /parent/dashboard:
+    get:
+      operationId: getParentDashboard
+      tags: [Parent]
+      summary: Parent mobile dashboard
+      responses:
+        '200':
+          description: Dashboard envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /parent/attendance:
+    get:
+      operationId: getParentAttendance
+      tags: [Parent]
+      summary: Parent child attendance month view
+      parameters:
+        - $ref: '#/components/parameters/MonthQuery'
+      responses:
+        '200':
+          description: Attendance envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /parent/homework:
+    get:
+      operationId: getParentHomework
+      tags: [Parent]
+      summary: Parent homework list
+      responses:
+        '200':
+          description: Homework envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /parent/exams:
+    get:
+      operationId: getParentExams
+      tags: [Parent]
+      summary: Parent exams schedule and results
+      responses:
+        '200':
+          description: Exams envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /parent/timetable:
+    get:
+      operationId: getParentTimetable
+      tags: [Parent]
+      summary: Parent child weekly timetable
+      responses:
+        '200':
+          description: Timetable envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /parent/fees:
+    get:
+      operationId: getParentFees
+      tags: [Parent]
+      summary: Parent fees summary
+      responses:
+        '200':
+          description: Fees envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /parent/receipts:
+    get:
+      operationId: getParentReceipts
+      tags: [Parent]
+      summary: Parent fee receipts
+      responses:
+        '200':
+          description: Receipt list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /parent/notices:
+    get:
+      operationId: getParentNotices
+      tags: [Parent]
+      summary: Parent school notices
+      responses:
+        '200':
+          description: Notice list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /parent/events:
+    get:
+      operationId: getParentEvents
+      tags: [Parent]
+      summary: Parent school events
+      responses:
+        '200':
+          description: Events envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /parent/leave:
+    get:
+      operationId: getParentLeaveHistory
+      tags: [Parent]
+      summary: Parent leave request history
+      responses:
+        '200':
+          description: Leave list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /parent/profile:
+    get:
+      operationId: getParentProfile
+      tags: [Parent]
+      summary: Parent profile and linked children
+      parameters:
+        - name: activeChildId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Profile envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /parent/payments/{installmentId}:
+    get:
+      operationId: getParentPaymentSummary
+      tags: [Parent]
+      summary: Parent payment summary for installment
+      parameters:
+        - name: installmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payment summary envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /teacher/dashboard:
+    get:
+      operationId: getTeacherDashboard
+      tags: [Teacher]
+      summary: Teacher mobile dashboard
+      responses:
+        '200':
+          description: Dashboard envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /teacher/attendance/classes:
+    get:
+      operationId: getTeacherAttendanceClasses
+      tags: [Teacher]
+      summary: Teacher attendance classes for today
+      responses:
+        '200':
+          description: Class list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /teacher/attendance/students:
+    get:
+      operationId: getTeacherAttendanceStudents
+      tags: [Teacher]
+      summary: Teacher attendance students grouped by class
+      responses:
+        '200':
+          description: Students by class envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /teacher/homework:
+    get:
+      operationId: getTeacherHomework
+      tags: [Teacher]
+      summary: Teacher homework assignments and submissions
+      responses:
+        '200':
+          description: Homework list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /teacher/exams/upcoming:
+    get:
+      operationId: getTeacherUpcomingExams
+      tags: [Teacher]
+      summary: Teacher upcoming exams
+      responses:
+        '200':
+          description: Exam list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /teacher/exams/marks:
+    get:
+      operationId: getTeacherExamMarks
+      tags: [Teacher]
+      summary: Teacher exam mark entry rows
+      responses:
+        '200':
+          description: Marks list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /teacher/timetable:
+    get:
+      operationId: getTeacherTimetable
+      tags: [Teacher]
+      summary: Teacher weekly timetable
+      responses:
+        '200':
+          description: Timetable envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /teacher/leave:
+    get:
+      operationId: getTeacherLeaveHistory
+      tags: [Teacher]
+      summary: Teacher leave request history
+      responses:
+        '200':
+          description: Leave list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /teacher/leave/balance:
+    get:
+      operationId: getTeacherLeaveBalance
+      tags: [Teacher]
+      summary: Teacher leave balance
+      responses:
+        '200':
+          description: Leave balance envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /teacher/messages:
+    get:
+      operationId: getTeacherMessages
+      tags: [Teacher]
+      summary: Teacher parent message threads
+      responses:
+        '200':
+          description: Message list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /student/dashboard:
+    get:
+      operationId: getStudentDashboard
+      tags: [Student]
+      summary: Student mobile dashboard
+      responses:
+        '200':
+          description: Dashboard envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /student/attendance:
+    get:
+      operationId: getStudentAttendance
+      tags: [Student]
+      summary: Student attendance month view
+      parameters:
+        - $ref: '#/components/parameters/MonthQuery'
+      responses:
+        '200':
+          description: Attendance envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /student/homework:
+    get:
+      operationId: getStudentHomework
+      tags: [Student]
+      summary: Student homework items
+      responses:
+        '200':
+          description: Homework list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /student/exams:
+    get:
+      operationId: getStudentExams
+      tags: [Student]
+      summary: Student exams schedule and results
+      responses:
+        '200':
+          description: Exams envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /student/timetable:
+    get:
+      operationId: getStudentTimetable
+      tags: [Student]
+      summary: Student weekly timetable
+      responses:
+        '200':
+          description: Timetable envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
+  /student/notices:
+    get:
+      operationId: getStudentNotices
+      tags: [Student]
+      summary: Student school notices
+      responses:
+        '200':
+          description: Notice list envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvelope'
+
+  /student/profile:
+    get:
+      operationId: getStudentProfile
+      tags: [Student]
+      summary: Student profile
+      responses:
+        '200':
+          description: Profile envelope
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardEnvelope'
+
   /audit/events/batch:
     post:
       operationId: uploadAuditBatch
@@ -124,6 +517,16 @@ paths:
                 $ref: '#/components/schemas/AuditBatchUploadResponse'
 
 components:
+  parameters:
+    MonthQuery:
+      name: month
+      in: query
+      required: true
+      description: Attendance month in YYYY-MM format
+      schema:
+        type: string
+        pattern: '^[0-9]{4}-[0-9]{2}$'
+
   schemas:
     ApiEnvelope:
       type: object
@@ -170,6 +573,20 @@ components:
                   type: array
                   items:
                     $ref: '#/components/schemas/KpiItem'
+
+    ListEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
 
     KpiItem:
       type: object

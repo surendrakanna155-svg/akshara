@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/paginated_result.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
 import '../admissions_async_state.dart';
@@ -21,20 +23,22 @@ class AdmissionsApprovalScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewState = ref.watch(admissionsApprovalViewStateProvider);
+    final pageResult = ref.watch(admissionsApprovalQueuePageResultProvider);
     final selectedId = ref.watch(admissionsSelectedApprovalIdProvider);
     final isMobile = AdminLayout.isMobile(context);
 
     return AdmissionsModuleScaffold(
       screen: AdmissionsScreen.approval,
       filters: filterLabels,
-      body: AdmissionsAsyncBody<List<ApprovalQueueItem>>(
+      body: AdmissionsAsyncBody<PaginatedResult<ApprovalQueueItem>>(
         state: viewState,
         loadingLabel: 'Loading approval queue',
         emptyMessage: 'No applications awaiting approval.',
         emptyIcon: Icons.verified_user_outlined,
         onRetry: () =>
             retryAdmissionsFuture(ref, admissionsApprovalQueueFutureProvider),
-        builder: (queue) {
+        builder: (result) {
+          final queue = result.items;
           final selected = queue.cast<ApprovalQueueItem?>().firstWhere(
                 (item) => item?.id == selectedId,
                 orElse: () => queue.isEmpty ? null : queue.first,
@@ -43,57 +47,78 @@ class AdmissionsApprovalScreen extends ConsumerWidget {
               ? null
               : ref.watch(admissionsApprovalReviewProvider(selected.id));
 
-          if (isMobile) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AdmissionsApprovalQueueTable(
-                  items: queue,
-                  selectedId: selectedId ?? selected?.id,
-                  onSelect: (item) => ref
-                      .read(admissionsSelectedApprovalIdProvider.notifier)
-                      .state = item.id,
-                ),
-                if (review != null) ...[
-                  const SizedBox(height: AksharaSpacing.s4),
-                  AdmissionsApprovalReviewPanel(
-                    review: review,
-                    onApprove: () => runApproveAdmission(context, ref, review.queueItem.id),
-                    onReject: () => runRejectAdmission(context, ref, review.queueItem.id),
-                  ),
-                ],
-              ],
-            );
-          }
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          final queueTable = Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                flex: 3,
-                child: AdmissionsApprovalQueueTable(
-                  items: queue,
-                  selectedId: selectedId ?? selected?.id,
-                  onSelect: (item) => ref
-                      .read(admissionsSelectedApprovalIdProvider.notifier)
-                      .state = item.id,
-                ),
-              ),
-              const SizedBox(width: AksharaSpacing.s4),
-              Expanded(
-                flex: 2,
-                child: review == null
-                    ? const SizedBox.shrink()
-                    : AdmissionsApprovalReviewPanel(
+              if (isMobile)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AdmissionsApprovalQueueTable(
+                      items: queue,
+                      selectedId: selectedId ?? selected?.id,
+                      onSelect: (item) => ref
+                          .read(admissionsSelectedApprovalIdProvider.notifier)
+                          .state = item.id,
+                    ),
+                    if (review != null) ...[
+                      const SizedBox(height: AksharaSpacing.s4),
+                      AdmissionsApprovalReviewPanel(
                         review: review,
                         onApprove: () =>
                             runApproveAdmission(context, ref, review.queueItem.id),
                         onReject: () =>
                             runRejectAdmission(context, ref, review.queueItem.id),
                       ),
-              ),
+                    ],
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: AdmissionsApprovalQueueTable(
+                        items: queue,
+                        selectedId: selectedId ?? selected?.id,
+                        onSelect: (item) => ref
+                            .read(admissionsSelectedApprovalIdProvider.notifier)
+                            .state = item.id,
+                      ),
+                    ),
+                    const SizedBox(width: AksharaSpacing.s4),
+                    Expanded(
+                      flex: 2,
+                      child: review == null
+                          ? const SizedBox.shrink()
+                          : AdmissionsApprovalReviewPanel(
+                              review: review,
+                              onApprove: () => runApproveAdmission(
+                                context,
+                                ref,
+                                review.queueItem.id,
+                              ),
+                              onReject: () => runRejectAdmission(
+                                context,
+                                ref,
+                                review.queueItem.id,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              if (pageResult != null)
+                AksharaPaginationBar<ApprovalQueueItem>(
+                  result: pageResult,
+                  onPageChanged: (page) => ref
+                      .read(admissionsApprovalPageProvider.notifier)
+                      .state = page,
+                ),
             ],
           );
+
+          return queueTable;
         },
       ),
     );

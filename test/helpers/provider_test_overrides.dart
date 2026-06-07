@@ -20,6 +20,9 @@ import 'package:akshara_erp/core/repositories/api/library/remote/library_remote_
 import 'package:akshara_erp/core/repositories/api/management/remote/management_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/sis/remote/sis_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/transport/remote/transport_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/parent/remote/parent_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/teacher/remote/teacher_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/student/remote/student_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/repository_config.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
@@ -86,6 +89,12 @@ ProviderContainer createProviderTestContainer({
   bool managementApiEnabled = false,
   Dio? apiControlCenterDio,
   bool controlCenterApiEnabled = false,
+  Dio? apiParentDio,
+  bool parentApiEnabled = false,
+  Dio? apiTeacherDio,
+  bool teacherApiEnabled = false,
+  Dio? apiStudentDio,
+  bool studentApiEnabled = false,
 }) {
   final apiOverrides = <Override>[];
   if (apiAdmissionsDio != null) {
@@ -179,6 +188,27 @@ ProviderContainer createProviderTestContainer({
       ),
     );
   }
+  if (apiParentDio != null) {
+    apiOverrides.add(
+      parentRemoteDataSourceProvider.overrideWith(
+        (ref) => ParentRemoteDataSource(apiParentDio),
+      ),
+    );
+  }
+  if (apiTeacherDio != null) {
+    apiOverrides.add(
+      teacherRemoteDataSourceProvider.overrideWith(
+        (ref) => TeacherRemoteDataSource(apiTeacherDio),
+      ),
+    );
+  }
+  if (apiStudentDio != null) {
+    apiOverrides.add(
+      studentRemoteDataSourceProvider.overrideWith(
+        (ref) => StudentRemoteDataSource(apiStudentDio),
+      ),
+    );
+  }
   if (admissionsApiEnabled ||
       financeApiEnabled ||
       authApiEnabled ||
@@ -191,7 +221,10 @@ ProviderContainer createProviderTestContainer({
       inventoryApiEnabled ||
       alumniApiEnabled ||
       managementApiEnabled ||
-      controlCenterApiEnabled) {
+      controlCenterApiEnabled ||
+      parentApiEnabled ||
+      teacherApiEnabled ||
+      studentApiEnabled) {
     apiOverrides.add(
       environmentProvider.overrideWith(
         (ref) => Environment.development.copyWith(enableApiMode: true),
@@ -261,6 +294,21 @@ ProviderContainer createProviderTestContainer({
   if (controlCenterApiEnabled) {
     apiOverrides.add(
       controlCenterApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (parentApiEnabled) {
+    apiOverrides.add(
+      parentApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (teacherApiEnabled) {
+    apiOverrides.add(
+      teacherApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (studentApiEnabled) {
+    apiOverrides.add(
+      studentApiEnabledProvider.overrideWith((ref) => true),
     );
   }
   return ProviderContainer(

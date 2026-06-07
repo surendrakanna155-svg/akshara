@@ -6,6 +6,7 @@ import '../../../router/route_names.dart';
 import '../interfaces/finance_repository.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
+import '../../tenant/tenant_mock_scope.dart';
 
 /// In-memory finance data for MVP and Phase 2 screens.
 class MockFinanceRepository implements FinanceRepository {
@@ -131,7 +132,7 @@ class MockFinanceRepository implements FinanceRepository {
     required RepositoryQuery query,
   }) async =>
       PaginatedResult.fromItems(
-        _payments,
+        TenantMockScope.filter(query: query, items: _payments),
         page: query.page,
         pageSize: query.pageSize,
       );
@@ -160,11 +161,17 @@ class MockFinanceRepository implements FinanceRepository {
   Future<List<String>> getAcademicYears({required RepositoryQuery query}) async => const ['2026-27', '2025-26', '2024-25'];
 
   @override
-  Future<List<StudentFeeAccount>> getStudentAccounts({
+  Future<PaginatedResult<StudentFeeAccount>> getStudentAccounts({
     required RepositoryQuery query,
-  }) async {
-    return List.unmodifiable(_store.studentAccounts);
-  }
+  }) async =>
+      PaginatedResult.fromItems(
+        TenantMockScope.filter(
+          query: query,
+          items: List.unmodifiable(_store.studentAccounts),
+        ),
+        page: query.page,
+        pageSize: query.pageSize,
+      );
 
   @override
   Future<List<InstallmentPlan>> getInstallmentPlans({required RepositoryQuery query}) async => const [
@@ -451,11 +458,14 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<List<RefundRequest>> getRefundRequests({
+  Future<PaginatedResult<RefundRequest>> getRefundRequests({
     required RepositoryQuery query,
-  }) async {
-    return List.unmodifiable(_store.refundRequests);
-  }
+  }) async =>
+      PaginatedResult.fromItems(
+        List.unmodifiable(_store.refundRequests),
+        page: query.page,
+        pageSize: query.pageSize,
+      );
 
   @override
   Future<DiscountsDashboardData> getDiscountsDashboard({

@@ -36,12 +36,12 @@ void main() {
       expect(container.read(transportDashboardProvider), isNull);
     });
 
-    test('transportRoutesProvider returns routes', () async {      await container.read(transportRoutesFutureProvider.future);
+    test('transportRoutesProvider returns routes', () async {
+      await container.read(transportRoutesFutureProvider.future);
 
       final routes = container.read(transportRoutesProvider);
 
-      expect(routes, isNotNull);
-      expect(routes!, hasLength(4));
+      expect(routes, hasLength(4));
     });
 
     test('transportFilteredRoutesProvider filters active routes', () async {

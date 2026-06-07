@@ -4,7 +4,9 @@ import '../../../features/auth/auth_provider.dart';
 import '../../../features/hr/hr_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/hr_repository.dart';
+import '../paginated_result.dart';
 import '../repository_query.dart';
+import '../../tenant/tenant_mock_scope.dart';
 
 class MockHrRepository implements HrRepository {
   static const _employees = [
@@ -308,7 +310,17 @@ class MockHrRepository implements HrRepository {
   }
 
   @override
-  Future<List<HrEmployee>> getEmployees({required RepositoryQuery query}) async => List.unmodifiable(_employees);
+  Future<PaginatedResult<HrEmployee>> getEmployees({
+    required RepositoryQuery query,
+  }) async =>
+      PaginatedResult.fromItems(
+        TenantMockScope.filter(
+          query: query,
+          items: List.unmodifiable(_employees),
+        ),
+        page: query.page,
+        pageSize: query.pageSize,
+      );
 
   @override
   Future<HrEmployeeDetail?> getEmployeeDetail({required RepositoryQuery query, required String employeeId}) async {

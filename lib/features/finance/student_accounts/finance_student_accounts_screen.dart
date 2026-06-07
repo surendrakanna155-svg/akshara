@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -41,6 +40,7 @@ class _FinanceStudentAccountsScreenState
   @override
   Widget build(BuildContext context) {
     final viewState = ref.watch(financeStudentAccountsViewStateProvider);
+    final pageResult = ref.watch(financeStudentAccountsPageResultProvider);
     final accounts = ref.watch(financeFilteredStudentAccountsProvider);
     final selected = ref.watch(financeSelectedStudentAccountProvider);
     final isMobile = AdminLayout.isMobile(context);
@@ -68,63 +68,75 @@ class _FinanceStudentAccountsScreenState
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          FinanceAsyncBody<List<StudentFeeAccount>>(
+          FinanceAsyncBody<PaginatedResult<StudentFeeAccount>>(
             state: viewState,
             loadingLabel: 'Loading student fee accounts',
             emptyMessage: 'No student fee accounts match your search.',
             emptyIcon: Icons.account_circle_outlined,
             onRetry: () =>
                 retryFinanceFuture(ref, financeStudentAccountsFutureProvider),
-            builder: (_) {
+            builder: (result) {
               if (accounts.isEmpty) {
                 return const AksharaEmptyState(
                   message: 'No student fee accounts match your search.',
                   icon: Icons.account_circle_outlined,
                 );
               }
-              if (isMobile) {
-                return Column(
-                  children: [
-                    for (final account in accounts) ...[
-                      _AccountListTile(
-                        account: account,
-                        selected: account.id == selected?.id,
-                        onTap: () => ref
-                            .read(financeSelectedAccountIdProvider.notifier)
-                            .state = account.id,
-                      ),
-                      const SizedBox(height: AksharaSpacing.s2),
-                    ],
-                    if (selected != null) ...[
-                      const SizedBox(height: AksharaSpacing.s4),
-                      _AccountSummaryPanel(account: selected),
-                    ],
-                  ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: _AccountsList(
-                      accounts: accounts,
-                      selectedId: selected?.id,
-                      onSelect: (id) => ref
-                          .read(financeSelectedAccountIdProvider.notifier)
-                          .state = id,
+                  if (isMobile)
+                    Column(
+                      children: [
+                        for (final account in accounts) ...[
+                          _AccountListTile(
+                            account: account,
+                            selected: account.id == selected?.id,
+                            onTap: () => ref
+                                .read(financeSelectedAccountIdProvider.notifier)
+                                .state = account.id,
+                          ),
+                          const SizedBox(height: AksharaSpacing.s2),
+                        ],
+                        if (selected != null) ...[
+                          const SizedBox(height: AksharaSpacing.s4),
+                          _AccountSummaryPanel(account: selected),
+                        ],
+                      ],
+                    )
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _AccountsList(
+                            accounts: accounts,
+                            selectedId: selected?.id,
+                            onSelect: (id) => ref
+                                .read(financeSelectedAccountIdProvider.notifier)
+                                .state = id,
+                          ),
+                        ),
+                        const SizedBox(width: AksharaSpacing.s6),
+                        Expanded(
+                          flex: 3,
+                          child: selected == null
+                              ? const AksharaEmptyState(
+                                  message: 'Select a student fee account.',
+                                  icon: Icons.account_balance_outlined,
+                                )
+                              : _AccountSummaryPanel(account: selected),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: AksharaSpacing.s6),
-                  Expanded(
-                    flex: 3,
-                    child: selected == null
-                        ? const AksharaEmptyState(
-                            message: 'Select a student fee account.',
-                            icon: Icons.account_balance_outlined,
-                          )
-                        : _AccountSummaryPanel(account: selected),
-                  ),
+                  if (pageResult != null)
+                    AksharaPaginationBar<StudentFeeAccount>(
+                      result: pageResult,
+                      onPageChanged: (page) => ref
+                          .read(financeStudentAccountsPageProvider.notifier)
+                          .state = page,
+                    ),
                 ],
               );
             },

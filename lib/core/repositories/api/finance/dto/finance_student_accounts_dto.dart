@@ -1,4 +1,5 @@
 import '../../admissions/dto/api_envelope_dto.dart';
+import '../../admissions/dto/pagination_dto.dart';
 
 class StudentFeeAccountDto {
   const StudentFeeAccountDto({required this.raw});
@@ -11,7 +12,10 @@ class StudentFeeAccountDto {
 }
 
 class StudentFeeAccountsResponseDto {
-  const StudentFeeAccountsResponseDto({required this.items});
+  const StudentFeeAccountsResponseDto({
+    required this.items,
+    this.pagination,
+  });
 
   factory StudentFeeAccountsResponseDto.fromJson(Map<String, dynamic> json) {
     final envelope = ApiEnvelopeDto.fromJson(json);
@@ -20,8 +24,10 @@ class StudentFeeAccountsResponseDto {
         for (final item in envelope.requireListItems())
           StudentFeeAccountDto.fromJson(item),
       ],
+      pagination: envelope.pagination,
     );
   }
 
   final List<StudentFeeAccountDto> items;
+  final PaginationDto? pagination;
 }

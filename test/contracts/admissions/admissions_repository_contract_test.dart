@@ -73,13 +73,13 @@ void main() {
       final mapped = const AdmissionsMapper().toApplications(
         AdmissionsApplicationsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final app in mockData) _fixtures.applicationItem(app),
+            for (final app in mockData.items) _fixtures.applicationItem(app),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.status, mockData.first.status);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.status, mockData.items.first.status);
     });
 
     test('getDocuments DTO mapping matches mock output', () async {
@@ -143,13 +143,13 @@ void main() {
       final mapped = const AdmissionsMapper().toApprovalQueue(
         AdmissionsApprovalQueueResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final item in mockData) _fixtures.approvalItem(item),
+            for (final item in mockData.items) _fixtures.approvalItem(item),
           ]),
         ),
       );
 
-      expect(mapped.length, mockData.length);
-      expect(mapped.first.aiScore, mockData.first.aiScore);
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.aiScore, mockData.items.first.aiScore);
     });
 
     test('getReports DTO mapping matches mock output', () async {

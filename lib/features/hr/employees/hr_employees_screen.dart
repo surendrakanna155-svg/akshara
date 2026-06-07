@@ -3,12 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/repositories/paginated_result.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -32,6 +28,7 @@ class HrEmployeesScreen extends ConsumerWidget {
     final isLoading = ref.watch(hrEmployeesLoadingProvider);
     final isError = ref.watch(hrEmployeesErrorProvider);
     final isEmpty = ref.watch(hrEmployeesEmptyProvider);
+    final pageResult = ref.watch(hrEmployeesPageResultProvider);
     final employees = ref.watch(hrFilteredEmployeesProvider);
     final filterIndex = ref.watch(hrEmployeesFilterProvider);
 
@@ -43,20 +40,24 @@ class HrEmployeesScreen extends ConsumerWidget {
           ref.read(hrEmployeesFilterProvider.notifier).state = index,
       body: _buildBody(
         context,
+        ref: ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
         employees: employees,
+        pageResult: pageResult,
       ),
     );
   }
 
   Widget _buildBody(
     BuildContext context, {
+    required WidgetRef ref,
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
     required List<HrEmployee> employees,
+    required PaginatedResult<HrEmployee>? pageResult,
   }) {
     if (isLoading) {
       return const Padding(
@@ -82,6 +83,12 @@ class HrEmployeesScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Employee directory'),
         const SizedBox(height: AksharaSpacing.s3),
         _EmployeesTable(employees: employees),
+        if (pageResult != null)
+          AksharaPaginationBar<HrEmployee>(
+            result: pageResult,
+            onPageChanged: (page) =>
+                ref.read(hrEmployeesPageProvider.notifier).state = page,
+          ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:
@@ -114,42 +121,34 @@ class _EmployeesTable extends StatelessWidget {
       );
     }
 
-    return Semantics(
-      container: true,
-      label: 'Employees table, ${employees.length} staff',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Material(
-          child: DataTable(
-            headingRowHeight: 48,
-            dataRowMinHeight: 56,
-            columns: const [
-              DataColumn(label: Text('Name')),
-              DataColumn(label: Text('Code')),
-              DataColumn(label: Text('Department')),
-              DataColumn(label: Text('Designation')),
-              DataColumn(label: Text('Phone')),
-              DataColumn(label: Text('Status')),
-            ],
-            rows: [
-              for (final employee in employees)
-                DataRow(
-                  onSelectChanged: (_) => context.go(
-                    RouteNames.hrEmployeeDetail(employee.id),
-                  ),
-                  cells: [
-                    DataCell(Text(employee.name)),
-                    DataCell(Text(employee.employeeCode)),
-                    DataCell(Text(employee.department.name)),
-                    DataCell(Text(employee.designation)),
-                    DataCell(Text(employee.phone)),
-                    DataCell(_EmployeeStatusChip(status: employee.status)),
-                  ],
-                ),
-            ],
+    return AksharaVirtualizedDataTable(
+      columns: const [
+        DataColumn(label: Text('Name')),
+        DataColumn(label: Text('Code')),
+        DataColumn(label: Text('Department')),
+        DataColumn(label: Text('Designation')),
+        DataColumn(label: Text('Phone')),
+        DataColumn(label: Text('Status')),
+      ],
+      rowCount: employees.length,
+      dataRowMinHeight: 56,
+      semanticLabel: 'Employees table, ${employees.length} staff',
+      rowBuilder: (index) {
+        final employee = employees[index];
+        return DataRow(
+          onSelectChanged: (_) => context.go(
+            RouteNames.hrEmployeeDetail(employee.id),
           ),
-        ),
-      ),
+          cells: [
+            DataCell(Text(employee.name)),
+            DataCell(Text(employee.employeeCode)),
+            DataCell(Text(employee.department.name)),
+            DataCell(Text(employee.designation)),
+            DataCell(Text(employee.phone)),
+            DataCell(_EmployeeStatusChip(status: employee.status)),
+          ],
+        );
+      },
     );
   }
 }

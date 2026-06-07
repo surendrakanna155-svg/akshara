@@ -28,11 +28,11 @@ void main() {
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
       expect((await repo.getCollections(query: query)).total, 6);
       expect((await repo.getFeeStructures(query: query, academicYear: '2026-27')), isNotEmpty);
-      expect((await repo.getStudentAccounts(query: query)), hasLength(4));
+      expect((await repo.getStudentAccounts(query: query)).total, 4);
       expect((await repo.getInstallmentPlans(query: query)), hasLength(4));
       expect((await repo.getCollectionDetail(query: query, collectionId: 'col_1')), isNotNull);
       expect((await repo.getDefaultersDashboard(query: query)).defaulters, isNotEmpty);
-      expect((await repo.getRefundRequests(query: query)), hasLength(3));
+      expect((await repo.getRefundRequests(query: query)).total, 3);
       expect((await repo.getDiscountsDashboard(query: query)).scholarships, hasLength(3));
       expect((await repo.getReportsData(query: query)).catalog, hasLength(4));
       expect((await repo.getSettings(query: query)).sections, isNotEmpty);
@@ -44,11 +44,11 @@ void main() {
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
       expect((await repo.getLeads(query: query)).total, 7);
-      expect((await repo.getApplications(query: query)), hasLength(6));
+      expect((await repo.getApplications(query: query)).total, 6);
       expect((await repo.getDocuments(query: query)), hasLength(6));
       expect((await repo.getPendingEnrollments(query: query)), hasLength(3));
       expect((await repo.getApprovedHandoffs(query: query)), hasLength(3));
-      expect((await repo.getApprovalQueue(query: query)), hasLength(3));
+      expect((await repo.getApprovalQueue(query: query)).total, 3);
     });
 
     test('MockSisRepository returns SIS data', () async {
@@ -86,7 +86,7 @@ void main() {
       const query = RepositoryQuery.demo;
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
-      expect((await repo.getRoutes(query: query)), hasLength(4));
+      expect((await repo.getRoutes(query: query)).total, 4);
       expect((await repo.getVehicles(query: query)), hasLength(4));
       expect((await repo.getDrivers(query: query)), hasLength(4));
       expect((await repo.getAllocations(query: query)), hasLength(4));
@@ -178,7 +178,7 @@ void main() {
       const query = RepositoryQuery.demo;
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
-      expect((await repo.getEmployees(query: query)), hasLength(8));
+      expect((await repo.getEmployees(query: query)).total, 8);
       expect((await repo.getEmployeeDetail(query: query, employeeId: 'HR-EMP-101')), isNotNull);
       expect((await repo.getAttendance(query: query)).records, hasLength(6));
       expect((await repo.getLeave(query: query)).requests, hasLength(5));
