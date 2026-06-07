@@ -1,8 +1,8 @@
 # Akshara ERP — Production Readiness Checklist
 
-**Version:** 1.8  
+**Version:** 1.9  
 **Last updated:** June 2026  
-**Current score:** 96 / 100 (updated v5.2–v5.4)
+**Current score:** 97 / 100 (updated v5.2–v5.5)
 
 Use this checklist before pilot, staging, and production deployments. Mark `[x]` when verified.
 
@@ -70,7 +70,8 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
 | M1 | Correlation ID on all API requests | [x] | [ ] | [ ] | [ ] |
-| M2 | Client error reporting (crash analytics) | [x] | [ ] | [ ] | [ ] |
+| M2 | Client error reporting (crash analytics) | [x] | [x] | [x] | [ ] |
+| M2a | Sentry/Datadog vendor adapters selectable by environment | [x] | [x] | [x] | [ ] |
 | M3 | API latency dashboards | [ ] | [ ] | [ ] | [ ] |
 | M4 | Auth failure rate alerting | [ ] | [ ] | [ ] | [ ] |
 | M5 | Permission sync failure alerting | [ ] | [ ] | [ ] | [ ] |
@@ -125,9 +126,10 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
-| T1 | flutter test — all passing (930+) | [x] | [x] | [x] | [ ] |
+| T1 | flutter test — all passing (950+) | [x] | [x] | [x] | [ ] |
 | T2j | Pilot workflow certification tests | [x] | [x] | [ ] | [ ] |
 | T2k | Observability abstraction tests | [x] | [x] | [ ] | [ ] |
+| T2l | Vendor monitoring adapter tests | [x] | [x] | [x] | [ ] |
 | M4 | MonitoringService abstraction | [x] | [x] | [ ] | [ ] |
 | M5 | AnalyticsService abstraction | [x] | [x] | [ ] | [ ] |
 | M6 | Observability health snapshot | [x] | [x] | [ ] | [ ] |

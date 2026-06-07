@@ -2,9 +2,9 @@
 
 **Version:** 1.7  
 **Last updated:** June 2026  
-**Current release:** v5.1 (Monitoring & Observability Foundation)  
-**Production readiness:** 93 / 100 (SaaS deployment-weighted)  
-**Quality gates:** `flutter analyze` 0 issues · `flutter test` 930+ passing  
+**Current release:** v5.5 (Vendor Monitoring Adapters)  
+**Production readiness:** 97 / 100 (SaaS deployment-weighted)  
+**Quality gates:** `flutter analyze` 0 issues · `flutter test` 950+ passing  
 **Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
 
 ---
@@ -87,7 +87,7 @@ Screen → Provider → Repository Interface → ApiRepository → RemoteDataSou
 
 ### Production Readiness Score
 
-**99 / 100** — see `docs/ArchitectureReview/v3.2-ERP-Read-API-Audit.md`
+**97 / 100** — see `docs/ArchitectureReview/v5.5-Monitoring-Adapters-Audit.md`
 
 | Category | Score |
 |----------|------:|
@@ -100,6 +100,7 @@ Screen → Provider → Repository Interface → ApiRepository → RemoteDataSou
 | Contract validation | 8.8 |
 | Mobile architecture | 8.8 |
 | Pagination | 7.5 |
+| Monitoring/observability | 9.1 |
 | Server security | 4.5 |
 
 ### Technical Debt Summary
@@ -107,9 +108,9 @@ Screen → Provider → Repository Interface → ApiRepository → RemoteDataSou
 | Priority | Open items |
 |----------|----------|
 | P0 | 2 (server RBAC, audit server ingestion) |
-| P1 | 4 (pagination partial, manage guards, etc.) |
-| P2 | 12 |
-| P3 | 6 |
+| P1 | 0 |
+| P2 | 10 |
+| P3 | 5 |
 
 Full register: `docs/TechnicalDebtRegister.md`
 
@@ -577,8 +578,10 @@ Full register: `docs/TechnicalDebtRegister.md`
 |-------|--------|
 | **Goals** | Sentry/Datadog adapter implementations; production crash reporting |
 | **Dependencies** | v5.4 complete |
-| **Blockers** | Vendor account provisioning |
-| **Status** | 🔲 Not started |
+| **Release doc** | `docs/Releases/v5.5-Vendor-Monitoring-Adapters.md` |
+| **Audit** | `docs/ArchitectureReview/v5.5-Monitoring-Adapters-Audit.md` |
+| **Blockers** | Vendor account provisioning for SDK-backed transports |
+| **Status** | ✅ Complete |
 
 ---
 
@@ -604,11 +607,11 @@ Full register: `docs/TechnicalDebtRegister.md`
 
 ## Production Path (updated)
 
-Phase 11: Production Backend              🔲 IN PROGRESS (v5.2–v5.4 client complete)
-  Pagination UX + manage guards + global error handling
-  Target readiness: 98+ → **96 achieved (client)**
+Phase 11: Production Backend              🔲 IN PROGRESS (v5.2–v5.5 client complete)
+  Pagination UX + manage guards + global error handling + vendor monitoring adapters
+  Target readiness: 98+ → **97 achieved (client)**
 
-**Next milestone:** v5.5 — Vendor Monitoring Adapters
+**Next milestone:** v5.6 — Server RBAC Validation (blocked on backend)
 
 ```
 Phase 1: Mock MVP (v0.1–v1.4)           ✅ COMPLETE
@@ -648,9 +651,9 @@ Phase 10: Pilot Readiness                 ✅ PARTIAL (v4.9–v5.1)
   UI completion + pilot certification + observability foundation
   Target readiness: 90+ → **93 achieved**
 
-Phase 11: Production Backend              🔲 IN PROGRESS (v5.2–v5.4 client complete)
-  Pagination UX + manage guards + global error handling
-  Target readiness: 98+ → **96 achieved (client)**
+Phase 11: Production Backend              🔲 IN PROGRESS (v5.2–v5.5 client complete)
+  Pagination UX + manage guards + global error handling + vendor monitoring adapters
+  Target readiness: 98+ → **97 achieved (client)**
 ```
 
 ---
@@ -684,6 +687,6 @@ Every release milestone is **DONE** when all items are checked:
 5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v5.5 — Vendor Monitoring Adapters  
-**Recommended tag:** `v5.1-pilot-readiness`  
+**Next milestone:** v5.6 — Server RBAC Validation (blocked on backend)  
+**Recommended tag:** `v5.5-vendor-monitoring-adapters`  
 **Autonomous execution depth:** 3 milestones per session

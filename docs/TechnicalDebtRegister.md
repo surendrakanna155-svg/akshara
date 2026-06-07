@@ -1,20 +1,20 @@
 # Akshara ERP — Technical Debt Register
 
-**Version:** 1.8  
+**Version:** 1.9  
 **Last updated:** June 2026  
-**Source audits:** v1.5–v5.4 ArchitectureReview documents
+**Source audits:** v1.5–v5.5 ArchitectureReview documents
 
 ---
 
 ## Summary
 
-| Priority | Open | In Progress | Resolved (v5.4) |
+| Priority | Open | In Progress | Resolved |
 |----------|-----:|------------:|----------------:|
 | P0 | 2 | 0 | 3 |
 | P1 | 0 | 0 | 14 |
 | P2 | 10 | 0 | 5 |
-| P3 | 5 | 0 | 1 |
-| **Total** | **17** | **0** | **23** |
+| P3 | 5 | 0 | 2 |
+| **Total** | **17** | **0** | **24** |
 
 ---
 
@@ -82,14 +82,15 @@
 | TD-P3-04 | `flutter_secure_storage` iOS Keychain accessibility not audited | Edge-case credential access | 0.5 d | Agent D | Open |
 | TD-P3-05 | Provider graph not documented per module | Onboarding friction | 1 wk | Agent F | Open |
 | TD-P3-06 | No performance benchmarks in CI | Regressions undetected | 2 wks | Agent E | **Partial v5.1** (metrics registry) |
+| TD-P3-07 | ~~Vendor monitoring adapters not wired~~ | Production crash reporting cannot leave debug/no-op layer | — | Agent D/G | **Resolved v5.5** |
 
 ---
 
 ## Debt Paydown Priority (Recommended Order)
 
-1. **v5.5** — Vendor monitoring adapters (Sentry/Datadog)
-2. **v5.6** — Server RBAC/RLS validation (TD-P0-01)
-3. **v5.7** — Audit ingestion validation (TD-P0-02)
+1. **v5.6** — Server RBAC/RLS validation (TD-P0-01)
+2. **v5.7** — Audit ingestion validation (TD-P0-02)
+3. SDK-backed vendor monitoring transports after account provisioning
 
 ---
 
