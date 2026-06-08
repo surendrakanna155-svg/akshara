@@ -1,8 +1,8 @@
 # Akshara ERP — Technical Debt Register
 
-**Version:** 1.9  
+**Version:** 2.0  
 **Last updated:** June 2026  
-**Source audits:** v1.5–v5.5 ArchitectureReview documents
+**Source audits:** v1.5–v5.6 ArchitectureReview documents
 
 ---
 
@@ -22,8 +22,8 @@
 
 | ID | Issue | Impact | Effort | Owner | Status |
 |----|-------|--------|--------|-------|--------|
-| TD-P0-01 | No server-side RBAC / tenant RLS | Authorization bypass via direct API | 4–6 wks (backend) | Agent D + Backend | **Partial v4.3** (client validation) |
-| TD-P0-02 | Audit events not ingested server-side | Compliance gap; no tamper-evident trail | 2–3 wks | Agent D + Agent A | **Partial v4.4** (health + readiness) |
+| TD-P0-01 | No server-side RBAC / tenant RLS | Authorization bypass via direct API | 4–6 wks (backend) | Agent D + Backend | **Architecture v5.6** · implementation Sprint 3 |
+| TD-P0-02 | Audit events not ingested server-side | Compliance gap; no tamper-evident trail | 2–3 wks | Agent D + Agent A | **Architecture v5.6** · implementation Sprint 5 |
 | TD-P0-03 | ~~8 ERP modules throw `ApiNotConnectedException` when API flags enabled~~ | Cannot enable stub modules in staging | — | Agent A | **Resolved v3.2** (all read APIs) |
 | TD-P0-04 | ~~Plaintext token storage~~ | Credential theft on rooted devices | — | Agent D | **Resolved v2.7** |
 | TD-P0-05 | ~~No JWT claim validation client-side~~ | Invalid tokens attached to requests | — | Agent D | **Resolved v2.7** |
@@ -88,9 +88,9 @@
 
 ## Debt Paydown Priority (Recommended Order)
 
-1. **v5.6** — Server RBAC/RLS validation (TD-P0-01)
-2. **v5.7** — Audit ingestion validation (TD-P0-02)
-3. SDK-backed vendor monitoring transports after account provisioning
+1. **v6.0** — Backend Sprint 2: core platform + auth (see `docs/BackendRoadmap.md`)
+2. **v6.1** — RBAC + RLS + core module APIs (TD-P0-01 partial)
+3. **v6.3** — Audit ingestion (TD-P0-02)
 
 ---
 

@@ -1,8 +1,8 @@
 # Akshara ERP — Master Roadmap
 
-**Version:** 1.7  
+**Version:** 1.8  
 **Last updated:** June 2026  
-**Current release:** v5.5 (Vendor Monitoring Adapters)  
+**Current release:** v5.6 (Backend Architecture Foundation)  
 **Production readiness:** 97 / 100 (SaaS deployment-weighted)  
 **Quality gates:** `flutter analyze` 0 issues · `flutter test` 950+ passing  
 **Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
@@ -583,35 +583,53 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Blockers** | Vendor account provisioning for SDK-backed transports |
 | **Status** | ✅ Complete |
 
+### v5.6 — Backend Architecture Foundation
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Backend platform architecture docs; database, auth, RBAC, tenant, audit, deployment |
+| **Release doc** | `docs/Releases/v5.6-Backend-Architecture.md` |
+| **Audit** | `docs/ArchitectureReview/v5.6-Backend-Architecture-Audit.md` |
+| **Scope** | Architecture and planning only — no backend code |
+| **Status** | ✅ Complete |
+
 ---
 
 ## Future Releases
 
-### v5.6 — Server RBAC Validation
+### v6.0 — Backend Core Platform (Sprint 2)
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Supabase staging, core schema, OTP auth, JWT refresh |
+| **Dependencies** | v5.6 architecture complete |
+| **Status** | 🔲 Not started |
+
+### v5.6 — Server RBAC Validation (renamed → v6.4)
 
 | Field | Detail |
 |-------|--------|
 | **Goals** | Validate server-side RBAC/RLS against staging (TD-P0-01) |
-| **Dependencies** | Backend deployment |
-| **Status** | 🔲 Blocked (backend) |
+| **Dependencies** | Backend Sprint 3 (v6.1) |
+| **Status** | 🔲 Blocked (backend implementation) |
 
-### v5.7 — Audit Ingestion Validation
+### v5.7 — Audit Ingestion Validation (renamed → v6.4)
 
 | Field | Detail |
 |-------|--------|
 | **Goals** | End-to-end audit event ingestion (TD-P0-02) |
-| **Dependencies** | Backend audit API |
-| **Status** | 🔲 Blocked (backend) |
+| **Dependencies** | Backend Sprint 5 (v6.3) |
+| **Status** | 🔲 Blocked (backend implementation) |
 
 ---
 
 ## Production Path (updated)
 
-Phase 11: Production Backend              🔲 IN PROGRESS (v5.2–v5.5 client complete)
-  Pagination UX + manage guards + global error handling + vendor monitoring adapters
-  Target readiness: 98+ → **97 achieved (client)**
+Phase 11: Production Backend              🔲 IN PROGRESS (v5.6 architecture complete)
+  Backend architecture foundation + Sprint 2–6 implementation roadmap
+  Target readiness: 98+ → **97 achieved (client + architecture)**
 
-**Next milestone:** v5.6 — Server RBAC Validation (blocked on backend)
+**Next milestone:** v6.0 — Backend Core Platform (Sprint 2)
 
 ```
 Phase 1: Mock MVP (v0.1–v1.4)           ✅ COMPLETE
@@ -687,6 +705,6 @@ Every release milestone is **DONE** when all items are checked:
 5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v5.6 — Server RBAC Validation (blocked on backend)  
+**Next milestone:** v6.0 — Backend Core Platform (Sprint 2)  
 **Recommended tag:** `v5.5-vendor-monitoring-adapters`  
 **Autonomous execution depth:** 3 milestones per session
