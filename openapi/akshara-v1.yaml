@@ -1,0 +1,206 @@
+openapi: 3.1.0
+info:
+  title: Akshara ERP API
+  version: "1.0.0"
+  description: |
+    v6.0 Sprint 2 — health and authentication endpoints only.
+    Base URL pattern: `{host}/functions/v1/api` (Supabase Edge Function router).
+servers:
+  - url: https://{stagingHost}/functions/v1/api
+    variables:
+      stagingHost:
+        default: staging.example.invalid
+        description: Supabase staging project host — set via environment
+  - url: http://127.0.0.1:54321/functions/v1/api
+    description: Local Supabase stack
+tags:
+  - name: Health
+  - name: Auth
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeHealth"
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe (database connectivity)
+      responses:
+        "200":
+          description: Ready
+        "503":
+          description: Degraded
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Send OTP to phone identifier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OTP dispatched
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLogin"
+  /auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify OTP and issue tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpRequest"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeVerifyOtp"
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: New tokens issued
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout current session
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session revoked
+  /auth/sessions/logout-all:
+    post:
+      tags: [Auth]
+      summary: Logout all sessions for user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All sessions revoked
+  /auth/sessions/revoke:
+    post:
+      tags: [Auth]
+      summary: Revoke a specific session
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId]
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Session revoked
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+  /auth/permissions:
+    get:
+      tags: [Auth]
+      summary: Current user permissions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Permission list
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiEnvelope:
+      type: object
+      properties:
+        data:
+          nullable: true
+        error:
+          nullable: true
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    EnvelopeHealth:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                status:
+                  type: string
+                service:
+                  type: string
+    LoginRequest:
+      type: object
+      required: [identifier]
+      properties:
+        identifier:
+          type: string
+          description: E.164 phone or local 10-digit mobile
+        type:
+          type: string
+          enum: [phone, mobile, email]
+          default: phone
+    VerifyOtpRequest:
+      type: object
+      required: [identifier, otp]
+      properties:
+        identifier:
+          type: string
+        otp:
+          type: string
+        type:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+    EnvelopeLogin:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"
+    EnvelopeVerifyOtp:
+      allOf:
+        - $ref: "#/components/schemas/ApiEnvelope"

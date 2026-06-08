@@ -64,11 +64,19 @@ class Environment {
   /// Resolves environment from `--dart-define=APP_ENV=development|staging|production`.
   static Environment fromDartDefine() {
     const raw = String.fromEnvironment('APP_ENV', defaultValue: 'development');
-    return switch (raw.toLowerCase()) {
+    const apiBaseUrl = String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: '',
+    );
+    final base = switch (raw.toLowerCase()) {
       'staging' => staging,
       'production' => production,
       _ => development,
     };
+    if (apiBaseUrl.isNotEmpty) {
+      return base.copyWith(apiBaseUrl: apiBaseUrl);
+    }
+    return base;
   }
 
   Environment copyWith({

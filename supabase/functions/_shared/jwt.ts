@@ -1,0 +1,85 @@
+import { SignJWT, jwtVerify } from "npm:jose";
+
+export interface AccessTokenClaims {
+  sub: string;
+  tenant_id: string;
+  organization_id: string;
+  school_id: string | null;
+  role: string;
+  permissions: string[];
+  permissions_version: number;
+  scope: "school" | "organization" | "school_group";
+  school_group_id: string | null;
+  session_id: string;
+}
+
+export async function signAccessToken(
+  secret: string,
+  claims: AccessTokenClaims,
+  ttlSeconds: number,
+): Promise<string> {
+  const key = new TextEncoder().encode(secret);
+  return await new SignJWT({
+    tenant_id: claims.tenant_id,
+    organization_id: claims.organization_id,
+    school_id: claims.school_id,
+    role: claims.role,
+    permissions: claims.permissions,
+    permissions_version: claims.permissions_version,
+    scope: claims.scope,
+    school_group_id: claims.school_group_id,
+    session_id: claims.session_id,
+  })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setSubject(claims.sub)
+    .setIssuedAt()
+    .setExpirationTime(Math.floor(Date.now() / 1000) + ttlSeconds)
+    .sign(key);
+}
+
+export async function verifyAccessToken(
+  secret: string,
+  token: string,
+): Promise<AccessTokenClaims | null> {
+  try {
+    const key = new TextEncoder().encode(secret);
+    const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
+    return {
+      sub: payload.sub as string,
+      tenant_id: payload.tenant_id as string,
+      organization_id: payload.organization_id as string,
+      school_id: (payload.school_id as string | null) ?? null,
+      role: payload.role as string,
+      permissions: (payload.permissions as string[]) ?? [],
+      permissions_version: (payload.permissions_version as number) ?? 1,
+      scope: (payload.scope as AccessTokenClaims["scope"]) ?? "school",
+      school_group_id: (payload.school_group_id as string | null) ?? null,
+      session_id: payload.session_id as string,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function bearerToken(req: Request): string | null {
+  const header = req.headers.get("Authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+  return header.slice("Bearer ".length).trim();
+}
+
+export async function hashToken(value: string): Promise<string> {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+export function randomToken(): string {
+  return crypto.randomUUID().replace(/-/g, "") +
+    crypto.randomUUID().replace(/-/g, "");
+}
+
+export function expiresAtIso(seconds: number): string {
+  return new Date(Date.now() + seconds * 1000).toISOString();
+}
