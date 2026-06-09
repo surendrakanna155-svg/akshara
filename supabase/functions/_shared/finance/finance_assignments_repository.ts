@@ -1,5 +1,7 @@
 import { getFeeHandoffById } from "../admissions/admissions_handoffs_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { createAnnualInvoice, getInvoiceByAssignmentId } from "./finance_invoices_repository.ts";
+import type { FinanceInvoiceRow } from "./finance_invoices_repository.ts";
 import type { PaginationParams, PaginationResult } from "./finance_structures_repository.ts";
 
 export interface FinanceFeeAssignmentRow {
@@ -34,6 +36,7 @@ export interface FinanceStudentAccountRow {
 export interface AssignmentWithAccount {
   assignment: FinanceFeeAssignmentRow;
   account: FinanceStudentAccountRow;
+  invoice: FinanceInvoiceRow;
   feeStructureName?: string;
   studentName?: string;
   admissionNumber?: string;
@@ -186,12 +189,23 @@ async function createAssignmentAndAccount(
     ],
   );
 
+  const account = accountRows[0]!;
+
+  const invoice = await createAnnualInvoice(db, organizationId, schoolId, {
+    studentId: input.studentId,
+    feeAssignmentId: assignment.id,
+    academicYear: input.academicYear,
+    totalAmount: totalFee,
+    createdBy: input.assignedBy,
+  });
+
   return await enrichAssignmentWithAccount(
     db,
     organizationId,
     schoolId,
     assignment,
-    accountRows[0]!,
+    account,
+    invoice,
   );
 }
 
@@ -277,10 +291,13 @@ export async function cancelAssignment(
     [assignmentId, organizationId, schoolId],
   );
 
-  return {
+  return await enrichAssignmentWithAccount(
+    db,
+    organizationId,
+    schoolId,
     assignment,
-    account: accountRows[0]!,
-  };
+    accountRows[0]!,
+  );
 }
 
 export async function getStudentAccount(
@@ -331,6 +348,7 @@ async function enrichAssignmentWithAccount(
   schoolId: string,
   assignment: FinanceFeeAssignmentRow,
   account: FinanceStudentAccountRow,
+  invoice?: FinanceInvoiceRow,
 ): Promise<AssignmentWithAccount> {
   const structureRows = await db.queryObject<{ name: string }>(
     `SELECT name FROM finance_fee_structures WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
@@ -352,9 +370,20 @@ async function enrichAssignmentWithAccount(
   );
   const handoff = handoffRows[0];
 
+  const resolvedInvoice = invoice ?? await getInvoiceByAssignmentId(
+    db,
+    organizationId,
+    schoolId,
+    assignment.id,
+  );
+  if (!resolvedInvoice) {
+    throw new Error(`Invoice not found for assignment: ${assignment.id}`);
+  }
+
   return {
     assignment,
     account,
+    invoice: resolvedInvoice,
     feeStructureName: structureRows[0]?.name,
     studentName: handoff?.student_name ?? studentRows[0]?.display_name,
     admissionNumber: handoff?.admission_number,

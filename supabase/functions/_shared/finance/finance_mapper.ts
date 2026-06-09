@@ -2,6 +2,7 @@ import type {
   AssignmentWithAccount,
   FinanceFeeAssignmentRow,
 } from "./finance_assignments_repository.ts";
+import type { FinanceInvoiceRow } from "./finance_invoices_repository.ts";
 
 export interface FinanceFeeStructureRow {
   id: string;
@@ -188,5 +189,34 @@ export function studentAccountToApi(
     status: mapAccountStatus(account.status),
     lastPaymentDate: "",
     installmentPlan: "",
+  };
+}
+
+function paidAmount(total: string, outstanding: string): string {
+  const totalNum = parseFloat(total);
+  const outstandingNum = parseFloat(outstanding);
+  if (!Number.isFinite(totalNum) || !Number.isFinite(outstandingNum)) return "0";
+  return formatAmount(Math.max(0, totalNum - outstandingNum));
+}
+
+export function invoiceToApi(row: FinanceInvoiceRow): Record<string, unknown> {
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    feeAssignmentId: row.fee_assignment_id,
+    academicYear: row.academic_year,
+    invoiceNumber: row.invoice_number,
+    invoiceDate: row.invoice_date,
+    dueDate: row.due_date,
+    subtotalAmount: formatAmount(row.subtotal_amount),
+    discountAmount: formatAmount(row.discount_amount),
+    totalAmount: formatAmount(row.total_amount),
+    outstandingAmount: formatAmount(row.outstanding_amount),
+    paidAmount: paidAmount(row.total_amount, row.outstanding_amount),
+    invoiceStatus: row.invoice_status,
+    termLabel: "Annual",
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }

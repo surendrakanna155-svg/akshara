@@ -15,6 +15,12 @@ import {
   handleListFeeStructures,
   handleUpdateFeeStructure,
 } from "./finance_handlers.ts";
+import {
+  handleCancelInvoice,
+  handleGetInvoice,
+  handleIssueInvoice,
+  handleListInvoices,
+} from "./finance_invoices_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -69,6 +75,25 @@ function matchFinanceRoute(
   const studentAccountMatch = path.match(/^\/finance\/student-accounts\/([^/]+)$/);
   if (studentAccountMatch && method === "GET") {
     return { handler: handleGetStudentAccount, args: [studentAccountMatch[1]!] };
+  }
+
+  if (path === "/finance/invoices" && method === "GET") {
+    return { handler: handleListInvoices, args: [] };
+  }
+
+  const issueInvoiceMatch = path.match(/^\/finance\/invoices\/([^/]+)\/issue$/);
+  if (issueInvoiceMatch && method === "POST") {
+    return { handler: handleIssueInvoice, args: [issueInvoiceMatch[1]!] };
+  }
+
+  const cancelInvoiceMatch = path.match(/^\/finance\/invoices\/([^/]+)\/cancel$/);
+  if (cancelInvoiceMatch && method === "POST") {
+    return { handler: handleCancelInvoice, args: [cancelInvoiceMatch[1]!] };
+  }
+
+  const invoiceMatch = path.match(/^\/finance\/invoices\/([^/]+)$/);
+  if (invoiceMatch && method === "GET") {
+    return { handler: handleGetInvoice, args: [invoiceMatch[1]!] };
   }
 
   return null;

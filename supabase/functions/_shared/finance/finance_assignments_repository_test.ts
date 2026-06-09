@@ -30,6 +30,8 @@ class MockAssignmentsDb {
   items = [{ fee_structure_id: STRUCTURE, amount: "50000", organization_id: ORG, school_id: SCHOOL_A }];
   assignments: Row[] = [];
   accounts: Row[] = [];
+  invoices: Row[] = [];
+  failOnInvoiceInsert = false;
   handoffs = [{
     id: HANDOFF,
     organization_id: ORG,
@@ -96,6 +98,40 @@ class MockAssignmentsDb {
       };
       this.accounts.push(row);
       return [row as T];
+    }
+    if (sql.includes("INSERT INTO finance_invoices")) {
+      if (this.failOnInvoiceInsert) {
+        throw new Error("simulated invoice insert failure");
+      }
+      const row = {
+        id: crypto.randomUUID(),
+        organization_id: args[0],
+        school_id: args[1],
+        student_id: args[2],
+        fee_assignment_id: args[3],
+        academic_year: args[4],
+        invoice_number: args[5],
+        invoice_date: args[6],
+        due_date: args[7],
+        subtotal_amount: String(args[8]),
+        discount_amount: "0",
+        total_amount: String(args[8]),
+        outstanding_amount: String(args[8]),
+        invoice_status: "issued",
+        created_by: args[9],
+        created_at: "2026-06-12T00:00:00.000Z",
+        updated_at: "2026-06-12T00:00:00.000Z",
+      };
+      this.invoices.push(row);
+      return [row as T];
+    }
+    if (sql.includes("FROM finance_invoices") && sql.includes("fee_assignment_id = $1")) {
+      const found = this.invoices.find((i) => i.fee_assignment_id === args[0]);
+      return (found ? [found] : []) as T[];
+    }
+    if (sql.includes("SELECT id FROM finance_invoices") && sql.includes("fee_assignment_id = $1")) {
+      const found = this.invoices.find((i) => i.fee_assignment_id === args[0]);
+      return (found ? [{ id: found.id }] : []) as T[];
     }
     if (sql.includes("SELECT id FROM finance_fee_assignments") && sql.includes("student_id = $1")) {
       const found = this.assignments.find((a) =>
@@ -180,6 +216,10 @@ Deno.test("assignFeeStructure creates assignment and student account", async () 
   assertEquals(result.account.amount_paid, "0");
   assertEquals(db.assignments.length, 1);
   assertEquals(db.accounts.length, 1);
+  assertEquals(db.invoices.length, 1);
+  assertEquals(result.invoice.invoice_status, "issued");
+  assertEquals(result.invoice.total_amount, "50000");
+  assertEquals(result.invoice.outstanding_amount, "50000");
 });
 
 Deno.test("assignFeeStructure prevents duplicate assignment", async () => {
@@ -321,4 +361,20 @@ Deno.test("non-school scopes denied for finance assignments", () => {
     primary_role: "organizationAdmin",
   };
   assertEquals(requireSchoolOperationalScope(orgClaims)?.status, 403);
+});
+
+Deno.test("assignFeeStructure propagates invoice insert failure", async () => {
+  const db = new MockAssignmentsDb();
+  db.failOnInvoiceInsert = true;
+  await assertRejects(
+    () => assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+      studentId: STUDENT,
+      feeStructureId: STRUCTURE,
+      academicYear: "2026-27",
+      assignedBy: STAFF,
+    }),
+    Error,
+    "simulated invoice insert failure",
+  );
+  assertEquals(db.invoices.length, 0);
 });
