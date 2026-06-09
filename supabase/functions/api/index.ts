@@ -12,6 +12,7 @@ import {
   handleRevokeSession,
   handleVerifyOtp,
 } from "../_shared/auth_handlers.ts";
+import { handleTenantAccessHealth } from "../_shared/tenant_handlers.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 
 const corsHeaders = {
@@ -47,6 +48,8 @@ Deno.serve(async (req) => {
       response = handleHealth();
     } else if (method === "GET" && path === "/health/ready") {
       response = await handleReady(config);
+    } else if (method === "GET" && path === "/health/tenant-access") {
+      response = await handleTenantAccessHealth(config);
     } else if (method === "POST" && path === "/auth/login") {
       response = await handleLogin(req, config);
     } else if (method === "POST" && path === "/auth/verify-otp") {

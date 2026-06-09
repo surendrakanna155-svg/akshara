@@ -68,12 +68,14 @@ flutter run --dart-define=APP_ENV=staging --dart-define=API_BASE_URL=http://127.
 | POST | `/auth/sessions/revoke` | Revoke session |
 | GET | `/auth/me` | Current user |
 | GET | `/auth/permissions` | Permissions |
+| GET | `/health/tenant-access` | RLS-enforced isolation probe (Phase 3A) |
 
 ## Configuration rules
 
 - No project IDs, URLs, API keys, or SMS credentials in source code.
 - All secrets via environment variables / CI secrets.
 - `JWT_SECRET` minimum 32 characters.
+- `ERP_TENANT_DATABASE_URL` — non-bypass `erp_tenant` Postgres URL for module queries (TD-P0-01).
 - Production requires SMS provider env vars; staging uses `AUTH_OTP_DEV_MODE`.
 
 ## Tests

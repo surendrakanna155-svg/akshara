@@ -8,6 +8,8 @@ export interface AppConfig {
   otpDevMode: boolean;
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
+  /** Non-bypass Postgres URL for `erp_tenant` role (TD-P0-01). */
+  erpTenantDatabaseUrl: string | null;
 }
 
 export function loadConfig(): AppConfig {
@@ -42,5 +44,6 @@ export function loadConfig(): AppConfig {
       "true",
     supabaseUrl,
     supabaseServiceRoleKey,
+    erpTenantDatabaseUrl: Deno.env.get("ERP_TENANT_DATABASE_URL") ?? null,
   };
 }

@@ -79,5 +79,6 @@ jobs:
           supabase secrets set \
             APP_ENV=staging \
             AUTH_OTP_DEV_MODE=true \
-            JWT_SECRET="$JWT_SECRET"
+            JWT_SECRET="$JWT_SECRET" \
+            ERP_TENANT_DATABASE_URL="${{ secrets.ERP_TENANT_DATABASE_URL }}"
           supabase functions deploy api --no-verify-jwt

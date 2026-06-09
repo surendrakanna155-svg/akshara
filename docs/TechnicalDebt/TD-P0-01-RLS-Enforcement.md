@@ -2,7 +2,7 @@
 
 **ID:** `TD-P0-01`  
 **Priority:** P0 (blocking for tenant-data API exposure)  
-**Status:** Open — infrastructure ready, not authoritative  
+**Status:** Partially closed (Phase 3A) — tenant helper operational; module APIs pending  
 **Opened:** June 2026 (Sprint 3 Phase 2 closure)  
 **Baseline:** `v6.1-phase1-rbac-foundation` → Phase 2 auth scope expansion
 
@@ -25,9 +25,12 @@ Edge Functions currently use **Supabase `service_role`**, which **bypasses Postg
 | `org_school_summary` aggregate view | ✅ Defined |
 | `tenant_isolation.run_self_test()` | ✅ Defined |
 | Edge Function calls `set_request_context` | ✅ On token issue / `/auth/me` |
-| Edge Function DB client | ❌ `service_role` (bypasses RLS) |
-| User-scoped / non-bypass DB role | ❌ Not implemented |
-| `FORCE ROW LEVEL SECURITY` on tenant tables | ❌ Not applied |
+| Edge Function auth client | ✅ `service_role` (auth only — by design) |
+| `erp_tenant` + `withTenantContext` helper | ✅ Phase 3A |
+| `ERP_TENANT_DATABASE_URL` secret | ✅ Required on staging |
+| `FORCE ROW LEVEL SECURITY` on core tables | ✅ Phase 3A |
+| `run_tenant_isolation_enforced_test()` | ✅ Passes under `erp_tenant` |
+| Module API handlers use tenant helper | ❌ Phase 3B+ |
 | Module APIs (Admissions, Finance, SIS, …) | ❌ Not exposed (Phase 3+) |
 
 ---
@@ -91,3 +94,4 @@ Auth-only endpoints (OTP, token issue, refresh, context switch, `/auth/me`, `/au
 | Date | Event |
 |------|-------|
 | 2026-06 | Opened at Phase 2 approval; accepted technical debt for auth scope expansion deploy |
+| 2026-06 | Phase 3A: `erp_tenant` role, `withTenantContext`, FORCE RLS, enforced isolation tests |
