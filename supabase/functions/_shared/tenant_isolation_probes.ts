@@ -1,5 +1,20 @@
 import type { AccessTokenClaims } from "./jwt.ts";
 import type { TenantQueryClient } from "./tenant_db.ts";
+import {
+  SIS_CONVERSION_CONVERTED_PROBE_SQL,
+  SIS_CONVERSION_PROBE_SQL,
+  SIS_CONVERSION_TARGET_PROBE_SQL,
+} from "./sis/sis_conversion_repository.ts";
+import {
+  SIS_ENROLLMENTS_API_PROBE_SQL,
+  SIS_ENROLLMENT_UPDATE_PROBE_SQL,
+} from "./sis/sis_enrollments_repository.ts";
+import {
+  SIS_DIRECTORY_PROBE_SQL,
+  SIS_STUDENT_CREATE_PROBE_SQL,
+  SIS_STUDENT_DETAIL_PROBE_SQL,
+  SIS_STUDENT_UPDATE_PROBE_SQL,
+} from "./sis/sis_students_repository.ts";
 
 export interface IsolationProbeResult {
   name: string;
@@ -36,6 +51,12 @@ const FINANCE_COLLECTION_SCHOOL_B = "ba000000-0000-4000-8000-000000000002";
 const FINANCE_RECEIPT_SCHOOL_A = "ba100000-0000-4000-8000-000000000001";
 const FINANCE_REFUND_SCHOOL_B = "bb000000-0000-4000-8000-000000000002";
 const FINANCE_REFUND_SCHOOL_A_PROCESSED = "bb000000-0000-4000-8000-000000000001";
+const STUDENT_PROFILE_SCHOOL_A = "bc000000-0000-4000-8000-000000000001";
+const STUDENT_PROFILE_SCHOOL_B = "bc000000-0000-4000-8000-000000000002";
+const SIS_ENROLLMENT_SCHOOL_A = "bc100000-0000-4000-8000-000000000001";
+const SIS_ENROLLMENT_SCHOOL_B = "bc100000-0000-4000-8000-000000000002";
+const ADMISSIONS_ENROLLMENT_SCHOOL_A = "bd000000-0000-4000-8000-000000000001";
+const ADMISSIONS_ENROLLMENT_SCHOOL_B = "bd000000-0000-4000-8000-000000000002";
 
 function schoolClaims(schoolId: string): AccessTokenClaims {
   return {
@@ -164,6 +185,19 @@ export async function runEnforcedIsolationProbes(
   tests.push(await runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM students");
     return { name: "student_sees_self_only", pass: n === 1, detail: `visible_students=${n}` };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM students WHERE id = $1",
+      [STUDENT_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_students",
+      pass: n === 0,
+      detail: `visible_cross_school_students=${n}`,
+    };
   }));
 
   tests.push(await runWithClaims(orgClaims(), async (db) => {
@@ -559,6 +593,58 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(
+      db,
+      `SELECT count(*)::text AS count FROM finance_student_accounts WHERE status = 'open'`,
+    );
+    return {
+      name: "organization_denied_finance_dashboard",
+      pass: n === 0,
+      detail: `visible_open_accounts=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      `SELECT count(*)::text AS count FROM finance_fee_assignments
+       WHERE assignment_status = 'active'`,
+    );
+    return {
+      name: "parent_denied_finance_dashboard",
+      pass: n === 0,
+      detail: `visible_active_assignments=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(
+      db,
+      `SELECT count(*)::text AS count FROM finance_invoices
+       WHERE invoice_status != 'cancelled'`,
+    );
+    return {
+      name: "student_denied_finance_dashboard",
+      pass: n === 0,
+      detail: `visible_invoices=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      `SELECT count(DISTINCT student_id)::text AS count FROM finance_student_accounts
+       WHERE school_id = $1 AND status = 'open'`,
+      [SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_finance_dashboard",
+      pass: n >= 1,
+      detail: `visible_open_accounts=${n}`,
+    };
+  }));
+
   tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
@@ -633,6 +719,269 @@ export async function runEnforcedIsolationProbes(
       detail: row
         ? `invoice_outstanding=${row.outstanding}, account_outstanding=${row.account_outstanding}`
         : "processed_refund_fixture_missing",
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM student_profiles");
+    return {
+      name: "organization_denied_student_profiles",
+      pass: n === 0,
+      detail: `visible_profiles=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM student_profiles");
+    return {
+      name: "parent_denied_student_profiles",
+      pass: n === 0,
+      detail: `visible_profiles=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM student_profiles");
+    return {
+      name: "student_denied_student_profiles",
+      pass: n === 0,
+      detail: `visible_profiles=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM student_profiles WHERE id = $1",
+      [STUDENT_PROFILE_SCHOOL_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_student_profiles",
+      pass: n === 0,
+      detail: `visible_cross_school_profiles=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM student_profiles WHERE id = $1",
+      [STUDENT_PROFILE_SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_student_profiles",
+      pass: n === 1,
+      detail: `visible_probe_profile=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
+    return {
+      name: "organization_denied_sis_enrollments",
+      pass: n === 0,
+      detail: `visible_enrollments=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
+    return {
+      name: "parent_denied_sis_enrollments",
+      pass: n === 0,
+      detail: `visible_enrollments=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
+    return {
+      name: "student_denied_sis_enrollments",
+      pass: n === 0,
+      detail: `visible_enrollments=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM sis_student_enrollments WHERE id = $1",
+      [SIS_ENROLLMENT_SCHOOL_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_sis_enrollments",
+      pass: n === 0,
+      detail: `visible_cross_school_enrollments=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM sis_student_enrollments WHERE id = $1",
+      [SIS_ENROLLMENT_SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_sis_enrollments",
+      pass: n === 1,
+      detail: `visible_probe_enrollment=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
+    return {
+      name: "organization_denied_sis_students_api",
+      pass: n === 0,
+      detail: `visible_directory_rows=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
+    return {
+      name: "parent_denied_sis_students_api",
+      pass: n === 0,
+      detail: `visible_directory_rows=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
+    return {
+      name: "student_denied_sis_students_api",
+      pass: n === 0,
+      detail: `visible_directory_rows=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SIS_STUDENT_DETAIL_PROBE_SQL, [STUDENT_B]);
+    return {
+      name: "school_a_cannot_fetch_school_b_student_detail",
+      pass: n === 0,
+      detail: `visible_cross_school_detail=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, SIS_STUDENT_CREATE_PROBE_SQL);
+    return {
+      name: "organization_denied_sis_student_create",
+      pass: n === 0,
+      detail: `visible_profiles_for_create=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SIS_STUDENT_CREATE_PROBE_SQL);
+    return {
+      name: "parent_denied_sis_student_create",
+      pass: n === 0,
+      detail: `visible_profiles_for_create=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, SIS_STUDENT_CREATE_PROBE_SQL);
+    return {
+      name: "student_denied_sis_student_create",
+      pass: n === 0,
+      detail: `visible_profiles_for_create=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SIS_STUDENT_UPDATE_PROBE_SQL, [STUDENT_B]);
+    return {
+      name: "school_a_cannot_update_school_b_student",
+      pass: n === 0,
+      detail: `visible_cross_school_update_target=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
+    return {
+      name: "organization_denied_sis_enrollments_api",
+      pass: n === 0,
+      detail: `visible_enrollment_api_rows=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
+    return {
+      name: "parent_denied_sis_enrollments_api",
+      pass: n === 0,
+      detail: `visible_enrollment_api_rows=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
+    return {
+      name: "student_denied_sis_enrollments_api",
+      pass: n === 0,
+      detail: `visible_enrollment_api_rows=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SIS_ENROLLMENT_UPDATE_PROBE_SQL, [SIS_ENROLLMENT_SCHOOL_B]);
+    return {
+      name: "school_a_cannot_update_school_b_enrollment",
+      pass: n === 0,
+      detail: `visible_cross_school_enrollment_update=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, SIS_CONVERSION_PROBE_SQL);
+    return {
+      name: "organization_denied_admissions_conversion",
+      pass: n === 0,
+      detail: `visible_pending_conversions=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SIS_CONVERSION_PROBE_SQL);
+    return {
+      name: "parent_denied_admissions_conversion",
+      pass: n === 0,
+      detail: `visible_pending_conversions=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, SIS_CONVERSION_PROBE_SQL);
+    return {
+      name: "student_denied_admissions_conversion",
+      pass: n === 0,
+      detail: `visible_pending_conversions=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SIS_CONVERSION_TARGET_PROBE_SQL, [ADMISSIONS_ENROLLMENT_SCHOOL_B]);
+    return {
+      name: "school_a_cannot_convert_school_b_enrollment",
+      pass: n === 0,
+      detail: `visible_cross_school_conversion_target=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      SIS_CONVERSION_CONVERTED_PROBE_SQL,
+      [ADMISSIONS_ENROLLMENT_SCHOOL_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_converted_enrollment",
+      pass: n === 0,
+      detail: `visible_cross_school_converted=${n}`,
     };
   }));
 
