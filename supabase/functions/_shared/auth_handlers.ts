@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { AppConfig } from "./config.ts";
 import {
+  type AuthScope,
   bearerToken,
   expiresAtIso,
   hashToken,
@@ -9,14 +10,14 @@ import {
   verifyAccessToken,
 } from "./jwt.ts";
 import {
-  permissionsPayloadFromList,
-  resolveSchoolMembershipPermissions,
-} from "./permission_resolver.ts";
-import {
-  createServiceClient,
-  type SchoolMembershipRow,
-  type UserRow,
-} from "./db.ts";
+  type AuthSessionContext,
+  resolveAuthSessionContext,
+  resolveAuthSessionContextFromSession,
+  type ScopeLoginRequest,
+} from "./auth_context.ts";
+import { permissionsPayloadFromList } from "./permission_resolver.ts";
+import { setRequestContext } from "./request_context.ts";
+import { createServiceClient, type UserRow } from "./db.ts";
 import { envelope, errorEnvelope, jsonResponse, readJson } from "./http.ts";
 
 interface LoginBody {
@@ -24,7 +25,7 @@ interface LoginBody {
   type?: string;
 }
 
-interface VerifyOtpBody {
+interface VerifyOtpBody extends ScopeLoginRequest {
   identifier?: string;
   otp?: string;
   type?: string;
@@ -36,6 +37,10 @@ interface RefreshBody {
 
 interface RevokeSessionBody {
   sessionId?: string;
+}
+
+interface ContextSwitchBody extends ScopeLoginRequest {
+  scope?: AuthScope;
 }
 
 function normalizePhone(identifier: string, type?: string): string {
@@ -52,38 +57,56 @@ function generateOtp(): string {
   return `${Math.floor(100000 + Math.random() * 900000)}`;
 }
 
-async function resolvePrimaryMembership(
-  client: SupabaseClient,
-  userId: string,
-): Promise<SchoolMembershipRow | null> {
-  const { data, error } = await client
-    .from("school_memberships")
-    .select(
-      "id,user_id,school_id,role,permissions_version,schools(id,organization_id,name,code),school_membership_roles(role_slug,is_primary,status)",
-    )
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .limit(1)
-    .maybeSingle();
+function buildUserPayload(
+  user: UserRow,
+  ctx: AuthSessionContext,
+) {
+  return {
+    id: user.id,
+    displayName: user.display_name,
+    role: ctx.resolved.primaryRole,
+    scope: ctx.scope,
+    tenantId: ctx.tenantId,
+    schoolId: ctx.schoolId,
+    organizationId: ctx.organizationId,
+    studentId: ctx.studentId,
+    childIds: ctx.childIds,
+    email: user.email,
+    mobile: user.phone,
+  };
+}
 
-  if (error || !data) return null;
-  return data as unknown as SchoolMembershipRow;
+function buildAccessClaims(
+  userId: string,
+  sessionId: string,
+  ctx: AuthSessionContext,
+) {
+  return {
+    sub: userId,
+    tenant_id: ctx.tenantId,
+    organization_id: ctx.organizationId,
+    school_id: ctx.schoolId,
+    role: ctx.resolved.primaryRole,
+    role_slugs: ctx.resolved.roleSlugs,
+    primary_role: ctx.resolved.primaryRole,
+    permissions: ctx.resolved.permissions,
+    permissions_version: ctx.resolved.permissionsVersion,
+    scope: ctx.scope,
+    school_group_id: ctx.schoolGroupId,
+    student_id: ctx.studentId,
+    child_ids: ctx.childIds,
+    session_id: sessionId,
+  };
 }
 
 async function issueSessionTokens(
   client: SupabaseClient,
   config: AppConfig,
   user: UserRow,
-  membership: SchoolMembershipRow,
+  ctx: AuthSessionContext,
   req: Request,
+  options: { includeUser?: boolean } = {},
 ) {
-  const organizationId = membership.schools.organization_id;
-  const resolved = await resolveSchoolMembershipPermissions(
-    client,
-    membership.id,
-    membership.role,
-    membership.permissions_version,
-  );
   const sessionId = crypto.randomUUID();
   const refreshToken = randomToken();
   const refreshHash = await hashToken(refreshToken);
@@ -92,7 +115,12 @@ async function issueSessionTokens(
   const { error: sessionError } = await client.from("sessions").insert({
     id: sessionId,
     user_id: user.id,
-    tenant_id: organizationId,
+    tenant_id: ctx.tenantId,
+    scope: ctx.scope,
+    context_school_id: ctx.schoolId,
+    context_school_group_id: ctx.schoolGroupId,
+    context_student_id: ctx.studentId,
+    context_child_ids: ctx.childIds,
     device_type: req.headers.get("X-Device-Type"),
     device_name: req.headers.get("X-Device-Name"),
     user_agent: req.headers.get("User-Agent"),
@@ -108,41 +136,30 @@ async function issueSessionTokens(
   });
   if (refreshError) throw refreshError;
 
+  const claims = buildAccessClaims(user.id, sessionId, ctx);
   const accessToken = await signAccessToken(
     config.jwtSecret,
-    {
-      sub: user.id,
-      tenant_id: organizationId,
-      organization_id: organizationId,
-      school_id: membership.school_id,
-      role: resolved.primaryRole,
-      role_slugs: resolved.roleSlugs,
-      primary_role: resolved.primaryRole,
-      permissions: resolved.permissions,
-      permissions_version: resolved.permissionsVersion,
-      scope: "school",
-      school_group_id: null,
-      session_id: sessionId,
-    },
+    claims,
     config.accessTokenTtlSeconds,
   );
 
-  return {
+  // Apply RLS context for subsequent queries in this request (v6.1 §6.5)
+  await setRequestContext(client, claims);
+
+  const base = {
     accessToken,
     refreshToken,
     expiresAt: expiresAtIso(config.accessTokenTtlSeconds),
     sessionId,
-    permissions: permissionsPayloadFromList(resolved.permissions),
-    user: {
-      id: user.id,
-      displayName: user.display_name,
-      role: resolved.primaryRole,
-      tenantId: organizationId,
-      schoolId: membership.school_id,
-      organizationId,
-      email: user.email,
-      mobile: user.phone,
-    },
+    scope: ctx.scope,
+    permissions: permissionsPayloadFromList(ctx.resolved.permissions),
+  };
+
+  if (options.includeUser === false) return base;
+
+  return {
+    ...base,
+    user: buildUserPayload(user, ctx),
   };
 }
 
@@ -174,7 +191,6 @@ export async function handleLogin(req: Request, config: AppConfig): Promise<Resp
     return errorEnvelope("SERVER_ERROR", error.message, 500);
   }
 
-  // SMS dispatch via external provider — credentials from environment (not implemented in Sprint 2).
   if (!config.otpDevMode && config.environment === "production") {
     const smsConfigured = Boolean(Deno.env.get("SMS_PROVIDER_API_KEY"));
     if (!smsConfigured) {
@@ -253,9 +269,15 @@ export async function handleVerifyOtp(
     return errorEnvelope("USER_NOT_FOUND", "No user registered for this phone", 404);
   }
 
-  const membership = await resolvePrimaryMembership(client, user.id);
-  if (!membership) {
-    return errorEnvelope("MEMBERSHIP_NOT_FOUND", "No active school membership", 403);
+  const ctx = await resolveAuthSessionContext(client, user.id, {
+    scope: body.scope,
+    schoolId: body.schoolId,
+    organizationId: body.organizationId,
+    studentId: body.studentId,
+  });
+
+  if (!ctx) {
+    return errorEnvelope("MEMBERSHIP_NOT_FOUND", "No active membership for requested scope", 403);
   }
 
   try {
@@ -263,7 +285,7 @@ export async function handleVerifyOtp(
       client,
       config,
       user as UserRow,
-      membership,
+      ctx,
       req,
     );
     return jsonResponse(envelope(tokens));
@@ -313,9 +335,33 @@ export async function handleRefresh(req: Request, config: AppConfig): Promise<Re
     return errorEnvelope("USER_NOT_FOUND", "User not found", 404);
   }
 
-  const membership = await resolvePrimaryMembership(client, user.id);
-  if (!membership) {
-    return errorEnvelope("MEMBERSHIP_NOT_FOUND", "No active school membership", 403);
+  const { data: session } = await client
+    .from("sessions")
+    .select(
+      "scope,context_school_id,context_school_group_id,context_student_id,context_child_ids,tenant_id",
+    )
+    .eq("id", stored.session_id)
+    .maybeSingle();
+
+  if (!session) {
+    return errorEnvelope("SESSION_NOT_FOUND", "Session not found", 401);
+  }
+
+  const ctx = await resolveAuthSessionContextFromSession(
+    client,
+    user.id,
+    session as {
+      scope: AuthScope;
+      context_school_id: string | null;
+      context_school_group_id: string | null;
+      context_student_id: string | null;
+      context_child_ids: string[] | null;
+      tenant_id: string;
+    },
+  );
+
+  if (!ctx) {
+    return errorEnvelope("MEMBERSHIP_NOT_FOUND", "No active membership for session scope", 403);
   }
 
   await client.from("refresh_tokens").update({ used_at: new Date().toISOString() })
@@ -326,19 +372,81 @@ export async function handleRefresh(req: Request, config: AppConfig): Promise<Re
       client,
       config,
       user as UserRow,
-      membership,
+      ctx,
       req,
+      { includeUser: false },
     );
     return jsonResponse(envelope({
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
       expiresAt: tokens.expiresAt,
       sessionId: tokens.sessionId,
+      scope: tokens.scope,
     }));
   } catch (issueError) {
     return errorEnvelope(
       "SERVER_ERROR",
       issueError instanceof Error ? issueError.message : "Refresh failed",
+      500,
+    );
+  }
+}
+
+export async function handleContextSwitch(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const token = bearerToken(req);
+  if (!token) return errorEnvelope("UNAUTHORIZED", "Missing bearer token", 401);
+
+  const currentClaims = await verifyAccessToken(config.jwtSecret, token);
+  if (!currentClaims) return errorEnvelope("UNAUTHORIZED", "Invalid access token", 401);
+
+  const body = await readJson<ContextSwitchBody>(req);
+  if (!body?.scope) {
+    return errorEnvelope("VALIDATION_ERROR", "scope is required", 422);
+  }
+
+  const client = createServiceClient(config);
+  const { data: user } = await client.from("users").select("id,phone,email,display_name")
+    .eq("id", currentClaims.sub).maybeSingle();
+  if (!user) {
+    return errorEnvelope("USER_NOT_FOUND", "User not found", 404);
+  }
+
+  const ctx = await resolveAuthSessionContext(client, user.id, {
+    scope: body.scope,
+    schoolId: body.schoolId,
+    organizationId: body.organizationId ?? currentClaims.tenant_id,
+    studentId: body.studentId,
+  });
+
+  if (!ctx) {
+    return errorEnvelope("CONTEXT_FORBIDDEN", "No membership for requested context", 403);
+  }
+
+  // Revoke prior session tokens before issuing new context (AuthArchitecture §2 context switch)
+  await client.from("sessions").update({ revoked_at: new Date().toISOString() })
+    .eq("id", currentClaims.session_id);
+  await client.from("refresh_tokens").update({ revoked_at: new Date().toISOString() })
+    .eq("session_id", currentClaims.session_id);
+
+  try {
+    const tokens = await issueSessionTokens(
+      client,
+      config,
+      user as UserRow,
+      ctx,
+      req,
+    );
+    return jsonResponse(envelope({
+      ...tokens,
+      previousScope: currentClaims.scope,
+    }));
+  } catch (error) {
+    return errorEnvelope(
+      "SERVER_ERROR",
+      error instanceof Error ? error.message : "Context switch failed",
       500,
     );
   }
@@ -412,6 +520,8 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
   if (!claims) return errorEnvelope("UNAUTHORIZED", "Invalid access token", 401);
 
   const client = createServiceClient(config);
+  await setRequestContext(client, claims);
+
   const { data: user } = await client.from("users").select("id,phone,email,display_name")
     .eq("id", claims.sub).maybeSingle();
 
@@ -419,9 +529,12 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
     id: claims.sub,
     displayName: user?.display_name ?? "User",
     role: claims.role,
+    scope: claims.scope,
     tenantId: claims.tenant_id,
     schoolId: claims.school_id,
     organizationId: claims.organization_id,
+    studentId: claims.student_id,
+    childIds: claims.child_ids,
     email: user?.email,
     mobile: user?.phone,
   }));
@@ -440,6 +553,7 @@ export async function handlePermissions(
   return jsonResponse(envelope({
     permissions: permissionsPayloadFromList(claims.permissions),
     permissionsVersion: claims.permissions_version,
+    scope: claims.scope,
   }));
 }
 

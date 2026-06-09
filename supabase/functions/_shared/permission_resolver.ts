@@ -130,3 +130,44 @@ export async function resolveSchoolMembershipPermissions(
     permissionsVersion,
   };
 }
+
+export async function resolveOrganizationMembershipPermissions(
+  client: SupabaseClient,
+  organizationMembershipId: string,
+  legacyRole?: string | null,
+  permissionsVersion = 1,
+): Promise<ResolvedPermissions> {
+  const { data: roleRows, error: rolesError } = await client
+    .from("organization_membership_roles")
+    .select("role_slug, is_primary, status")
+    .eq("organization_membership_id", organizationMembershipId)
+    .eq("status", "active");
+
+  if (rolesError) throw rolesError;
+
+  const roles = (roleRows ?? []) as MembershipRoleRow[];
+  const roleSlugs = roles.map((r) => r.role_slug);
+  if (roleSlugs.length === 0 && legacyRole) roleSlugs.push(legacyRole);
+
+  const rolePermissionMap = await loadRolePermissionMap(client, roleSlugs);
+  const aggregated = aggregateRolePermissions(roleSlugs, rolePermissionMap);
+
+  const { data: overrideRows, error: overridesError } = await client
+    .from("membership_permission_overrides")
+    .select("permission_slug, effect")
+    .eq("organization_membership_id", organizationMembershipId);
+
+  if (overridesError) throw overridesError;
+
+  const permissions = applyPermissionOverrides(
+    aggregated,
+    (overrideRows ?? []) as PermissionOverrideRow[],
+  );
+
+  return {
+    permissions,
+    roleSlugs,
+    primaryRole: resolvePrimaryRoleSlug(roles, legacyRole),
+    permissionsVersion,
+  };
+}

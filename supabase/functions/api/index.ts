@@ -1,6 +1,7 @@
 import { loadConfig } from "../_shared/config.ts";
 import {
   handleHealth,
+  handleContextSwitch,
   handleLogin,
   handleLogout,
   handleLogoutAll,
@@ -62,6 +63,8 @@ Deno.serve(async (req) => {
       response = await handleMe(req, config);
     } else if (method === "GET" && path === "/auth/permissions") {
       response = await handlePermissions(req, config);
+    } else if (method === "POST" && path === "/auth/context/switch") {
+      response = await handleContextSwitch(req, config);
     } else {
       response = errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
     }

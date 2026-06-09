@@ -1,5 +1,13 @@
 import { SignJWT, jwtVerify } from "npm:jose";
 
+export type AuthScope =
+  | "school"
+  | "organization"
+  | "school_group"
+  | "parent"
+  | "student"
+  | "platform";
+
 export interface AccessTokenClaims {
   sub: string;
   tenant_id: string;
@@ -11,8 +19,10 @@ export interface AccessTokenClaims {
   primary_role: string;
   permissions: string[];
   permissions_version: number;
-  scope: "school" | "organization" | "school_group";
+  scope: AuthScope;
   school_group_id: string | null;
+  student_id: string | null;
+  child_ids: string[];
   session_id: string;
 }
 
@@ -33,6 +43,8 @@ export async function signAccessToken(
     permissions_version: claims.permissions_version,
     scope: claims.scope,
     school_group_id: claims.school_group_id,
+    student_id: claims.student_id,
+    child_ids: claims.child_ids,
     session_id: claims.session_id,
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
@@ -53,6 +65,7 @@ export async function verifyAccessToken(
       (payload.role as string);
     const roleSlugs = (payload.role_slugs as string[] | undefined) ??
       (primaryRole ? [primaryRole] : []);
+    const childIds = (payload.child_ids as string[] | undefined) ?? [];
     return {
       sub: payload.sub as string,
       tenant_id: payload.tenant_id as string,
@@ -63,8 +76,10 @@ export async function verifyAccessToken(
       primary_role: primaryRole,
       permissions: (payload.permissions as string[]) ?? [],
       permissions_version: (payload.permissions_version as number) ?? 1,
-      scope: (payload.scope as AccessTokenClaims["scope"]) ?? "school",
+      scope: (payload.scope as AuthScope) ?? "school",
       school_group_id: (payload.school_group_id as string | null) ?? null,
+      student_id: (payload.student_id as string | null) ?? null,
+      child_ids: childIds,
       session_id: payload.session_id as string,
     };
   } catch {
