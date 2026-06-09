@@ -22,6 +22,8 @@ const PARENT = "a3000000-0000-4000-8000-000000000003";
 const STUDENT_USER = "a3000000-0000-4000-8000-000000000004";
 const STUDENT_A = "a4000000-0000-4000-8000-000000000001";
 const STUDENT_B = "a4000000-0000-4000-8000-000000000002";
+const LEAD_SCHOOL_A = "b5000000-0000-4000-8000-000000000001";
+const LEAD_SCHOOL_B = "b5000000-0000-4000-8000-000000000002";
 
 function schoolClaims(schoolId: string): AccessTokenClaims {
   return {
@@ -150,6 +152,54 @@ export async function runEnforcedIsolationProbes(
   tests.push(await runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM students");
     return { name: "student_sees_self_only", pass: n === 1, detail: `visible_students=${n}` };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM admissions_leads");
+    return {
+      name: "org_scope_denied_raw_admissions_leads",
+      pass: n === 0,
+      detail: `visible_leads=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM admissions_leads WHERE school_id = $1",
+      [SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_leads",
+      pass: n >= 1,
+      detail: `visible_leads=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM admissions_leads WHERE id = $1",
+      [LEAD_SCHOOL_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_leads",
+      pass: n === 0,
+      detail: `visible_cross_school_leads=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM admissions_leads WHERE id = $1",
+      [LEAD_SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_probe_lead",
+      pass: n === 1,
+      detail: `visible_probe_lead=${n}`,
+    };
   }));
 
   const pass = tests.every((t) => t.pass);

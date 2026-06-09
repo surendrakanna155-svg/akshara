@@ -13,13 +13,14 @@ import {
   handleVerifyOtp,
 } from "../_shared/auth_handlers.ts";
 import { handleTenantAccessHealth } from "../_shared/tenant_handlers.ts";
+import { routeAdmissions } from "../_shared/admissions/admissions_router.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-api-version, x-correlation-id, x-tenant-id, x-school-id, x-organization-id",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, OPTIONS",
 };
 
 Deno.serve(async (req) => {
@@ -69,7 +70,12 @@ Deno.serve(async (req) => {
     } else if (method === "POST" && path === "/auth/context/switch") {
       response = await handleContextSwitch(req, config);
     } else {
-      response = errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+      const admissionsResponse = await routeAdmissions(req, config, method, path);
+      if (admissionsResponse) {
+        response = admissionsResponse;
+      } else {
+        response = errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+      }
     }
 
     const headers = new Headers(response.headers);
