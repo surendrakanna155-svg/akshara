@@ -159,6 +159,13 @@ BEGIN
 END;
 $$;
 
+-- Migration role must SET ROLE to transfer function ownership on hosted Postgres.
+DO $$
+BEGIN
+  EXECUTE format('GRANT erp_tenant TO %I', current_user);
+END
+$$;
+
 ALTER FUNCTION tenant_access.run_enforced_isolation_test() OWNER TO erp_tenant;
 
 REVOKE ALL ON FUNCTION tenant_access.run_enforced_isolation_test() FROM PUBLIC;
