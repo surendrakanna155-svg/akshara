@@ -49,9 +49,7 @@ ALTER TABLE student_guardians FORCE ROW LEVEL SECURITY;
 
 -- ─── Enforced isolation test (runs as erp_tenant via SECURITY DEFINER) ────
 
-CREATE SCHEMA IF NOT EXISTS tenant_access;
-
-CREATE OR REPLACE FUNCTION tenant_access.run_enforced_isolation_test()
+CREATE OR REPLACE FUNCTION run_enforced_isolation_test_internal()
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -166,19 +164,18 @@ BEGIN
 END
 $$;
 
-ALTER FUNCTION tenant_access.run_enforced_isolation_test() OWNER TO erp_tenant;
+ALTER FUNCTION run_enforced_isolation_test_internal() OWNER TO erp_tenant;
 
-REVOKE ALL ON FUNCTION tenant_access.run_enforced_isolation_test() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION tenant_access.run_enforced_isolation_test() TO service_role;
+REVOKE ALL ON FUNCTION run_enforced_isolation_test_internal() FROM PUBLIC;
 
--- PostgREST RPC wrapper
+-- PostgREST RPC wrapper (callable by service_role; executes as erp_tenant owner)
 CREATE OR REPLACE FUNCTION run_tenant_isolation_enforced_test()
 RETURNS JSONB
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT tenant_access.run_enforced_isolation_test();
+  SELECT run_enforced_isolation_test_internal();
 $$;
 
 ALTER FUNCTION run_tenant_isolation_enforced_test() OWNER TO erp_tenant;
