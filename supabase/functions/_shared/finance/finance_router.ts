@@ -29,6 +29,13 @@ import {
   handleIssueInvoice,
   handleListInvoices,
 } from "./finance_invoices_handlers.ts";
+import {
+  handleApproveRefund,
+  handleCreateRefund,
+  handleGetRefund,
+  handleListRefunds,
+  handleRejectRefund,
+} from "./finance_refunds_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -128,6 +135,28 @@ function matchFinanceRoute(
   const invoiceMatch = path.match(/^\/finance\/invoices\/([^/]+)$/);
   if (invoiceMatch && method === "GET") {
     return { handler: handleGetInvoice, args: [invoiceMatch[1]!] };
+  }
+
+  if (path === "/finance/refunds" && method === "GET") {
+    return { handler: handleListRefunds, args: [] };
+  }
+  if (path === "/finance/refunds" && method === "POST") {
+    return { handler: handleCreateRefund, args: [] };
+  }
+
+  const approveRefundMatch = path.match(/^\/finance\/refunds\/([^/]+)\/approve$/);
+  if (approveRefundMatch && method === "POST") {
+    return { handler: handleApproveRefund, args: [approveRefundMatch[1]!] };
+  }
+
+  const rejectRefundMatch = path.match(/^\/finance\/refunds\/([^/]+)\/reject$/);
+  if (rejectRefundMatch && method === "POST") {
+    return { handler: handleRejectRefund, args: [rejectRefundMatch[1]!] };
+  }
+
+  const refundMatch = path.match(/^\/finance\/refunds\/([^/]+)$/);
+  if (refundMatch && method === "GET") {
+    return { handler: handleGetRefund, args: [refundMatch[1]!] };
   }
 
   return null;

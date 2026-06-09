@@ -8,6 +8,10 @@ export function collectionStatusToApi(status: string): string {
       return "pending";
     case "cancelled":
       return "failed";
+    case "partially_refunded":
+      return "completed";
+    case "refunded":
+      return "refunded";
     default:
       return "completed";
   }

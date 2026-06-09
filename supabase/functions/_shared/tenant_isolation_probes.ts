@@ -34,6 +34,8 @@ const FINANCE_INVOICE_SCHOOL_A = "b9000000-0000-4000-8000-000000000001";
 const FINANCE_INVOICE_SCHOOL_B = "b9000000-0000-4000-8000-000000000002";
 const FINANCE_COLLECTION_SCHOOL_B = "ba000000-0000-4000-8000-000000000002";
 const FINANCE_RECEIPT_SCHOOL_A = "ba100000-0000-4000-8000-000000000001";
+const FINANCE_REFUND_SCHOOL_B = "bb000000-0000-4000-8000-000000000002";
+const FINANCE_REFUND_SCHOOL_A_PROCESSED = "bb000000-0000-4000-8000-000000000001";
 
 function schoolClaims(schoolId: string): AccessTokenClaims {
   return {
@@ -546,13 +548,91 @@ export async function runEnforcedIsolationProbes(
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_collections
-       WHERE school_id = $1 AND collection_status = 'completed'`,
+       WHERE school_id = $1
+         AND collection_status IN ('completed', 'partially_refunded')`,
       [SCHOOL_A],
     );
     return {
       name: "school_a_sees_own_daily_summary",
       pass: n >= 1,
       detail: `visible_school_a_completed_collections=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_refunds WHERE id = $1",
+      [FINANCE_REFUND_SCHOOL_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_refunds",
+      pass: n === 0,
+      detail: `visible_cross_school_refunds=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_refunds");
+    return {
+      name: "organization_denied_refunds",
+      pass: n === 0,
+      detail: `visible_refunds=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_refunds");
+    return {
+      name: "parent_denied_refunds",
+      pass: n === 0,
+      detail: `visible_refunds=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_refunds");
+    return {
+      name: "student_denied_refunds",
+      pass: n === 0,
+      detail: `visible_refunds=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_refunds WHERE school_id = $1",
+      [SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_refunds",
+      pass: n >= 1,
+      detail: `visible_school_a_refunds=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const rows = await db.queryObject<{ outstanding: string; account_outstanding: string }>(
+      `SELECT
+         fi.outstanding_amount::text AS outstanding,
+         fsa.outstanding_amount::text AS account_outstanding
+       FROM finance_refunds fr
+       JOIN finance_invoices fi ON fi.id = fr.invoice_id
+       JOIN finance_student_accounts fsa ON fsa.id = fr.student_account_id
+       WHERE fr.id = $1 AND fr.refund_status = 'processed'`,
+      [FINANCE_REFUND_SCHOOL_A_PROCESSED],
+    );
+    const row = rows[0];
+    const pass = row != null &&
+      parseFloat(row.outstanding) === 47000 &&
+      parseFloat(row.account_outstanding) === 47000;
+    return {
+      name: "approved_refund_updates_balances",
+      pass,
+      detail: row
+        ? `invoice_outstanding=${row.outstanding}, account_outstanding=${row.account_outstanding}`
+        : "processed_refund_fixture_missing",
     };
   }));
 

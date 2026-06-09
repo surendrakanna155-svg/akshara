@@ -14,6 +14,7 @@ import {
   installmentStatusFromInvoice,
 } from "./finance_status_codec.ts";
 import type { DailySummaryData, StudentAccountSnapshot } from "./finance_collections_repository.ts";
+import type { RefundListRow } from "./finance_refunds_repository.ts";
 
 export interface FinanceFeeStructureRow {
   id: string;
@@ -366,5 +367,23 @@ export function collectionDetailToApi(
       dateLabel: receipt.receipt_date,
       parentReceiptRoute: `/parent/receipts/${receipt.receipt_number}`,
     })),
+  };
+}
+
+export function refundRequestToApi(row: RefundListRow): Record<string, unknown> {
+  return {
+    id: row.id,
+    studentName: row.student_name ?? "",
+    admissionNumber: row.admission_number ?? "",
+    classLabel: row.class_label ?? "",
+    amount: formatAmount(row.refund_amount),
+    reason: row.refund_reason,
+    requestedAt: row.created_at,
+    status: row.refund_status,
+    approver: row.approved_by ?? "",
+    feeAccountId: row.student_account_id,
+    originalReceipt: row.receipt_number ?? "",
+    collectionId: row.collection_id,
+    invoiceId: row.invoice_id,
   };
 }

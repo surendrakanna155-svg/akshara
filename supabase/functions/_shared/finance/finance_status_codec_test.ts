@@ -8,6 +8,8 @@ Deno.test("collectionStatusToApi maps backend to client statuses", () => {
   assertEquals(collectionStatusToApi("draft"), "pending");
   assertEquals(collectionStatusToApi("completed"), "completed");
   assertEquals(collectionStatusToApi("cancelled"), "failed");
+  assertEquals(collectionStatusToApi("partially_refunded"), "completed");
+  assertEquals(collectionStatusToApi("refunded"), "refunded");
 });
 
 Deno.test("installmentStatusFromInvoice maps invoice lifecycle", () => {

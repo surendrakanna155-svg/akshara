@@ -2,7 +2,12 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import type { FinanceInvoiceRow } from "./finance_invoices_repository.ts";
 import type { PaginationParams, PaginationResult } from "./finance_structures_repository.ts";
 
-export type CollectionStatus = "draft" | "completed" | "cancelled";
+export type CollectionStatus =
+  | "draft"
+  | "completed"
+  | "cancelled"
+  | "partially_refunded"
+  | "refunded";
 
 export interface FinanceCollectionRow {
   id: string;
