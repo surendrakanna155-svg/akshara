@@ -1,6 +1,14 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleAssignFeePlan,
+  handleCancelFeeAssignment,
+  handleCreateFeeAssignment,
+  handleGetFeeAssignment,
+  handleGetStudentAccount,
+  handleListFeeAssignments,
+} from "./finance_assignments_handlers.ts";
+import {
   handleArchiveFeeStructure,
   handleCreateFeeStructure,
   handleGetFeeStructure,
@@ -36,6 +44,31 @@ function matchFinanceRoute(
     if (method === "PUT") {
       return { handler: handleUpdateFeeStructure, args: [structureId] };
     }
+  }
+
+  if (path === "/finance/fee-assignments" && method === "GET") {
+    return { handler: handleListFeeAssignments, args: [] };
+  }
+  if (path === "/finance/fee-assignments" && method === "POST") {
+    return { handler: handleCreateFeeAssignment, args: [] };
+  }
+  if (path === "/finance/fee-assignment/assign" && method === "POST") {
+    return { handler: handleAssignFeePlan, args: [] };
+  }
+
+  const cancelAssignmentMatch = path.match(/^\/finance\/fee-assignments\/([^/]+)\/cancel$/);
+  if (cancelAssignmentMatch && method === "PATCH") {
+    return { handler: handleCancelFeeAssignment, args: [cancelAssignmentMatch[1]!] };
+  }
+
+  const assignmentMatch = path.match(/^\/finance\/fee-assignments\/([^/]+)$/);
+  if (assignmentMatch && method === "GET") {
+    return { handler: handleGetFeeAssignment, args: [assignmentMatch[1]!] };
+  }
+
+  const studentAccountMatch = path.match(/^\/finance\/student-accounts\/([^/]+)$/);
+  if (studentAccountMatch && method === "GET") {
+    return { handler: handleGetStudentAccount, args: [studentAccountMatch[1]!] };
   }
 
   return null;

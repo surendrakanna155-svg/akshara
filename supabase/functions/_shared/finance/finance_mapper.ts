@@ -1,3 +1,8 @@
+import type {
+  AssignmentWithAccount,
+  FinanceFeeAssignmentRow,
+} from "./finance_assignments_repository.ts";
+
 export interface FinanceFeeStructureRow {
   id: string;
   organization_id: string;
@@ -141,4 +146,47 @@ export function parseItemInputsFromBody(
   }
 
   return [];
+}
+
+function mapAccountStatus(status: string): string {
+  return status === "closed" ? "closed" : "active";
+}
+
+export function assignmentToApi(
+  row: FinanceFeeAssignmentRow,
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    studentId: row.student_id,
+    feeStructureId: row.fee_structure_id,
+    academicYear: row.academic_year,
+    assignmentStatus: row.assignment_status,
+    assignedBy: row.assigned_by,
+    assignedAt: row.assigned_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function studentAccountToApi(
+  data: AssignmentWithAccount,
+): Record<string, unknown> {
+  const { assignment, account } = data;
+  return {
+    id: account.id,
+    studentId: account.student_id,
+    studentName: data.studentName ?? "",
+    admissionNumber: data.admissionNumber ?? "",
+    classLabel: data.classLabel ?? "",
+    feeStructureName: data.feeStructureName ?? "",
+    feeStructureId: assignment.fee_structure_id,
+    feeAssignmentId: assignment.id,
+    academicYear: account.academic_year,
+    totalDue: formatAmount(account.total_fee),
+    totalPaid: formatAmount(account.amount_paid),
+    balance: formatAmount(account.outstanding_amount),
+    status: mapAccountStatus(account.status),
+    lastPaymentDate: "",
+    installmentPlan: "",
+  };
 }
