@@ -55,6 +55,8 @@ BEGIN
 END
 $$;
 
+GRANT CREATE ON SCHEMA public TO erp_tenant;
+
 SET ROLE erp_tenant;
 
 CREATE OR REPLACE FUNCTION run_tenant_isolation_enforced_test()
