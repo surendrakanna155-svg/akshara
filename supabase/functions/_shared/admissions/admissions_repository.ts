@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { normalizePhone } from "./admissions_format.ts";
 import type {
   AdmissionsApplicationRow,
   AdmissionsApprovalRow,
@@ -573,7 +574,7 @@ export async function submitEnrollment(
 ): Promise<AdmissionsEnrollmentRow> {
   const guardianRows = await db.queryObject<{ guardian_user_id: string | null }>(
     `SELECT app.lookup_guardian_user_for_enrollment($1) AS guardian_user_id`,
-    [input.phone],
+    [normalizePhone(input.phone)],
   );
   const guardianUserId = guardianRows[0]?.guardian_user_id ?? null;
 

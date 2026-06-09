@@ -2,7 +2,7 @@
 
 **ID:** `TD-P0-01`  
 **Priority:** P0 (blocking for tenant-data API exposure)  
-**Status:** Partially closed (Phase 3A + 3B Admissions) — Admissions handlers on `withTenantContext`; other modules pending  
+**Status:** Partially closed — **Admissions verified on staging (2026-06-09)**; Finance/SIS+ pending  
 **Opened:** June 2026 (Sprint 3 Phase 2 closure)  
 **Baseline:** `v6.1-phase1-rbac-foundation` → Phase 2 auth scope expansion
 
@@ -30,9 +30,10 @@ Edge Functions currently use **Supabase `service_role`**, which **bypasses Postg
 | `ERP_TENANT_DATABASE_URL` secret | ✅ Required on staging |
 | `FORCE ROW LEVEL SECURITY` on core tables | ✅ Phase 3A |
 | `run_tenant_isolation_enforced_test()` | ✅ Passes under `erp_tenant` |
-| Module API handlers use tenant helper | ✅ Admissions (Phase 3B); ❌ Finance/SIS+ |
-| Admissions APIs | ✅ Phase 3B (leads → enrollment slices) |
-| Module APIs (Finance, SIS, …) | ❌ Not exposed (Phase 3+) |
+| Module API handlers use tenant helper | ✅ Admissions (staging verified); ❌ Finance/SIS+ |
+| Admissions APIs | ✅ Live on staging — 18/18 smoke tests pass |
+| Module APIs (Finance, SIS, …) | ❌ Not started (gated) |
+| Staging isolation probes | ✅ 12/12 pass incl. admissions tables |
 
 ---
 

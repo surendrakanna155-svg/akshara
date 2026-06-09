@@ -1,3 +1,11 @@
+/** Normalize Indian mobile numbers to E.164 (+91…) for guardian lookup. */
+export function normalizePhone(phone: string): string {
+  const trimmed = phone.trim();
+  if (trimmed.startsWith("+")) return trimmed;
+  if (/^\d{10}$/.test(trimmed)) return `+91${trimmed}`;
+  return trimmed;
+}
+
 /** Human-readable date label matching Flutter mock conventions. */
 export function formatDisplayDate(iso: string | Date | null): string {
   if (!iso) return "—";
