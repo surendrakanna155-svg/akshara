@@ -5,7 +5,10 @@ export interface AccessTokenClaims {
   tenant_id: string;
   organization_id: string;
   school_id: string | null;
+  /** Primary role slug (backward-compatible with v6.0 `role` claim). */
   role: string;
+  role_slugs: string[];
+  primary_role: string;
   permissions: string[];
   permissions_version: number;
   scope: "school" | "organization" | "school_group";
@@ -24,6 +27,8 @@ export async function signAccessToken(
     organization_id: claims.organization_id,
     school_id: claims.school_id,
     role: claims.role,
+    role_slugs: claims.role_slugs,
+    primary_role: claims.primary_role,
     permissions: claims.permissions,
     permissions_version: claims.permissions_version,
     scope: claims.scope,
@@ -44,12 +49,18 @@ export async function verifyAccessToken(
   try {
     const key = new TextEncoder().encode(secret);
     const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
+    const primaryRole = (payload.primary_role as string | undefined) ??
+      (payload.role as string);
+    const roleSlugs = (payload.role_slugs as string[] | undefined) ??
+      (primaryRole ? [primaryRole] : []);
     return {
       sub: payload.sub as string,
       tenant_id: payload.tenant_id as string,
       organization_id: payload.organization_id as string,
       school_id: (payload.school_id as string | null) ?? null,
-      role: payload.role as string,
+      role: primaryRole,
+      role_slugs: roleSlugs,
+      primary_role: primaryRole,
       permissions: (payload.permissions as string[]) ?? [],
       permissions_version: (payload.permissions_version as number) ?? 1,
       scope: (payload.scope as AccessTokenClaims["scope"]) ?? "school",

@@ -8,7 +8,10 @@ import {
   signAccessToken,
   verifyAccessToken,
 } from "./jwt.ts";
-import { permissionsForRole, permissionsPayload } from "./permissions.ts";
+import {
+  permissionsPayloadFromList,
+  resolveSchoolMembershipPermissions,
+} from "./permission_resolver.ts";
 import {
   createServiceClient,
   type SchoolMembershipRow,
@@ -55,7 +58,9 @@ async function resolvePrimaryMembership(
 ): Promise<SchoolMembershipRow | null> {
   const { data, error } = await client
     .from("school_memberships")
-    .select("id,user_id,school_id,role,permissions_version,schools(id,organization_id,name,code)")
+    .select(
+      "id,user_id,school_id,role,permissions_version,schools(id,organization_id,name,code),school_membership_roles(role_slug,is_primary,status)",
+    )
     .eq("user_id", userId)
     .eq("status", "active")
     .limit(1)
@@ -73,7 +78,12 @@ async function issueSessionTokens(
   req: Request,
 ) {
   const organizationId = membership.schools.organization_id;
-  const permissions = permissionsForRole(membership.role);
+  const resolved = await resolveSchoolMembershipPermissions(
+    client,
+    membership.id,
+    membership.role,
+    membership.permissions_version,
+  );
   const sessionId = crypto.randomUUID();
   const refreshToken = randomToken();
   const refreshHash = await hashToken(refreshToken);
@@ -105,9 +115,11 @@ async function issueSessionTokens(
       tenant_id: organizationId,
       organization_id: organizationId,
       school_id: membership.school_id,
-      role: membership.role,
-      permissions,
-      permissions_version: membership.permissions_version,
+      role: resolved.primaryRole,
+      role_slugs: resolved.roleSlugs,
+      primary_role: resolved.primaryRole,
+      permissions: resolved.permissions,
+      permissions_version: resolved.permissionsVersion,
       scope: "school",
       school_group_id: null,
       session_id: sessionId,
@@ -120,11 +132,11 @@ async function issueSessionTokens(
     refreshToken,
     expiresAt: expiresAtIso(config.accessTokenTtlSeconds),
     sessionId,
-    permissions: permissionsPayload(membership.role),
+    permissions: permissionsPayloadFromList(resolved.permissions),
     user: {
       id: user.id,
       displayName: user.display_name,
-      role: membership.role,
+      role: resolved.primaryRole,
       tenantId: organizationId,
       schoolId: membership.school_id,
       organizationId,
@@ -426,7 +438,7 @@ export async function handlePermissions(
   if (!claims) return errorEnvelope("UNAUTHORIZED", "Invalid access token", 401);
 
   return jsonResponse(envelope({
-    permissions: permissionsPayload(claims.role),
+    permissions: permissionsPayloadFromList(claims.permissions),
     permissionsVersion: claims.permissions_version,
   }));
 }

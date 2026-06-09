@@ -1,58 +1,26 @@
-const ROLE_PERMISSIONS: Record<string, string[]> = {
-  superAdmin: [
-    "viewAdminHub", "viewAdmissions", "manageAdmissions", "approveAdmissions",
-    "viewFinance", "manageFinance", "approveRefunds", "viewSis", "manageSis",
-    "viewManagement", "manageManagement", "viewTransport", "manageTransport",
-    "viewHr", "manageHr", "viewHostel", "manageHostel", "viewLibrary",
-    "manageLibrary", "viewInventory", "manageInventory", "viewAlumni",
-    "manageAlumni", "viewControlCenter", "manageControlCenter",
-  ],
-  schoolAdmin: [
-    "viewAdminHub", "viewAdmissions", "manageAdmissions", "approveAdmissions",
-    "viewFinance", "manageFinance", "approveRefunds", "viewSis", "manageSis",
-    "viewManagement", "manageManagement", "viewTransport", "manageTransport",
-    "viewHr", "manageHr", "viewHostel", "manageHostel", "viewLibrary",
-    "manageLibrary", "viewInventory", "manageInventory", "viewAlumni",
-    "manageAlumni",
-  ],
-  principal: [
-    "viewAdminHub", "viewAdmissions", "manageAdmissions", "approveAdmissions",
-    "viewFinance", "viewSis", "manageSis", "viewManagement", "manageManagement",
-    "viewLibrary", "viewHr", "viewAlumni",
-  ],
-  financeAdmin: [
-    "viewAdminHub", "viewFinance", "manageFinance", "approveRefunds",
-  ],
+/**
+ * @deprecated Use permission_resolver.ts (DB-backed). Re-exports for backward compatibility.
+ */
+export {
+  aggregateRolePermissions,
+  applyPermissionOverrides,
+  permissionsPayloadFromList as permissionsPayload,
+  resolveSchoolMembershipPermissions,
+} from "./permission_resolver.ts";
+
+import { aggregateRolePermissions } from "./permission_resolver.ts";
+
+/** Fallback map for unit tests only — production uses DB via resolveSchoolMembershipPermissions. */
+const TEST_ROLE_PERMISSIONS: Record<string, string[]> = {
+  schoolAdmin: ["viewAdminHub", "manageFinance", "viewAdmissions", "manageAdmissions"],
   teacher: ["viewAdminHub"],
-  parent: [],
-  student: [],
-  management: [
-    "viewAdminHub", "viewManagement", "manageManagement", "viewFinance",
-    "viewSis", "viewAdmissions", "viewHr",
-  ],
-  admissionsCounselor: [
-    "viewAdminHub", "viewAdmissions", "manageAdmissions",
-  ],
-  transportManager: ["viewAdminHub", "viewTransport", "manageTransport"],
-  hostelManager: ["viewAdminHub", "viewHostel", "manageHostel"],
-  librarian: ["viewAdminHub", "viewLibrary", "manageLibrary"],
-  inventoryManager: ["viewAdminHub", "viewInventory", "manageInventory"],
-  organizationAdmin: [
-    "viewOrganization", "manageOrganization", "viewSchoolGroups",
-    "manageSchoolGroups", "viewControlCenter", "manageControlCenter",
-    "viewManagement", "viewAdminHub", "viewAdmissions", "viewFinance",
-    "viewSis", "viewTransport", "viewHr", "viewHostel", "viewLibrary",
-    "viewInventory", "viewAlumni",
-  ],
+  coordinator: ["viewAdminHub", "viewSis", "viewAdmissions", "manageAdmissions"],
 };
 
+/** @deprecated Use resolveSchoolMembershipPermissions in auth handlers. */
 export function permissionsForRole(role: string): string[] {
-  return ROLE_PERMISSIONS[role] ?? ["viewAdminHub"];
-}
-
-export function permissionsPayload(role: string) {
-  return permissionsForRole(role).map((permission) => ({
-    permission,
-    source: "server",
-  }));
+  return aggregateRolePermissions(
+    [role],
+    new Map(Object.entries(TEST_ROLE_PERMISSIONS)),
+  );
 }

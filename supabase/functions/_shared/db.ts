@@ -28,6 +28,12 @@ export interface UserRow {
   display_name: string;
 }
 
+export interface SchoolMembershipRoleRow {
+  role_slug: string;
+  is_primary: boolean;
+  status: string;
+}
+
 export interface SchoolMembershipRow {
   id: string;
   user_id: string;
@@ -35,6 +41,7 @@ export interface SchoolMembershipRow {
   role: string;
   permissions_version: number;
   schools: SchoolRow;
+  school_membership_roles?: SchoolMembershipRoleRow[];
 }
 
 export interface SessionRow {
