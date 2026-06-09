@@ -503,6 +503,59 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(
+      db,
+      `SELECT count(*)::text AS count FROM finance_collections
+       WHERE collection_date = CURRENT_DATE AND collection_status = 'completed'`,
+    );
+    return {
+      name: "organization_denied_daily_summary",
+      pass: n === 0,
+      detail: `visible_today_collections=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      `SELECT count(*)::text AS count FROM finance_invoices
+       WHERE invoice_status IN ('issued', 'partially_paid', 'paid')`,
+    );
+    return {
+      name: "parent_denied_daily_summary",
+      pass: n === 0,
+      detail: `visible_invoice_summary=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(
+      db,
+      `SELECT count(*)::text AS count FROM finance_invoices
+       WHERE invoice_status IN ('issued', 'partially_paid', 'paid')`,
+    );
+    return {
+      name: "student_denied_daily_summary",
+      pass: n === 0,
+      detail: `visible_invoice_summary=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      `SELECT count(*)::text AS count FROM finance_collections
+       WHERE school_id = $1 AND collection_status = 'completed'`,
+      [SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_daily_summary",
+      pass: n >= 1,
+      detail: `visible_school_a_completed_collections=${n}`,
+    };
+  }));
+
   const pass = tests.every((t) => t.pass);
   return { pass, enforced: true, role: "erp_tenant", tests };
 }

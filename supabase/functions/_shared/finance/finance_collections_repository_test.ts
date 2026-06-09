@@ -13,9 +13,14 @@ import {
   cancelCollection,
   computeInvoiceStatus,
   createCollection,
+  getDailySummary,
   getReceipt,
 } from "./finance_collections_repository.ts";
-import { collectionPaymentToApi } from "./finance_mapper.ts";
+import {
+  collectionDetailToApi,
+  collectionPaymentToApi,
+  dailySummaryToApi,
+} from "./finance_mapper.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
@@ -165,6 +170,44 @@ class MockCollectionsDb {
 
   async queryCount(): Promise<number> {
     return this.collections.length;
+  }
+
+  async queryObjectDailySummary(sql: string): Promise<unknown[]> {
+    if (sql.includes("FROM finance_collections") && sql.includes("collection_date = CURRENT_DATE")) {
+      const completed = this.collections.filter((c) => c.collection_status === "completed");
+      const cash = completed.filter((c) => String(c.payment_method).toLowerCase() === "cash");
+      const upi = completed.filter((c) => String(c.payment_method).toLowerCase() === "upi");
+      const sum = (rows: Row[]) => rows.reduce((t, r) => t + parseFloat(String(r.amount_collected)), 0);
+      return [{
+        total: String(sum(completed)),
+        count: String(completed.length),
+        cash: String(sum(cash)),
+        upi: String(sum(upi)),
+        drafts: "0",
+      }];
+    }
+    if (sql.includes("FROM finance_invoices") && sql.includes("invoice_status")) {
+      const active = this.invoices.filter((i) => !["cancelled", "draft"].includes(String(i.invoice_status)));
+      return [{
+        pending: String(active.filter((i) => i.invoice_status === "issued").length),
+        paid: String(active.filter((i) => i.invoice_status === "paid").length),
+        partial: String(active.filter((i) => i.invoice_status === "partially_paid").length),
+        outstanding: String(active.reduce((t, i) =>
+          ["issued", "partially_paid"].includes(String(i.invoice_status))
+            ? t + parseFloat(String(i.outstanding_amount))
+            : t, 0)),
+      }];
+    }
+    return [];
+  }
+}
+
+class MockDailySummaryDb extends MockCollectionsDb {
+  override async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("collection_date = CURRENT_DATE") || (sql.includes("FROM finance_invoices") && sql.includes("invoice_status"))) {
+      return await this.queryObjectDailySummary(sql) as T[];
+    }
+    return await super.queryObject(sql, args);
   }
 }
 
@@ -366,4 +409,97 @@ Deno.test("non-school scopes denied for finance collections", () => {
     primary_role: "organizationAdmin",
   };
   assertEquals(requireSchoolOperationalScope(orgClaims)?.status, 403);
+});
+
+Deno.test("getDailySummary aggregates collections and invoices", async () => {
+  const db = new MockDailySummaryDb();
+  await createCollection(asDb(db), ORG, SCHOOL_A, {
+    invoiceId: INVOICE,
+    amountCollected: 10000,
+    paymentMethod: "cash",
+    collectedBy: STAFF,
+  });
+  const summary = await getDailySummary(asDb(db), ORG, SCHOOL_A);
+  assertEquals(summary.todayCollectionCount, 1);
+  assertEquals(summary.todayCollections, 10000);
+  assertEquals(summary.partiallyPaidInvoices, 1);
+  const api = dailySummaryToApi(summary);
+  assertEquals(api.totalCollected, "10000");
+  assertEquals(api.transactionCount, 1);
+});
+
+Deno.test("collectionDetailToApi builds timeline and receipt links from db rows", () => {
+  const collection = {
+    id: "c1",
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT,
+    invoice_id: INVOICE,
+    student_account_id: ACCOUNT,
+    receipt_number: "RCPT-1",
+    collection_date: "2026-06-09",
+    payment_method: "cash",
+    reference_number: null,
+    amount_collected: "5000",
+    notes: null,
+    collection_status: "completed",
+    collected_by: STAFF,
+    created_at: "2026-06-09T00:00:00.000Z",
+    updated_at: "2026-06-09T00:00:00.000Z",
+    student_name: "Probe",
+    admission_number: "ADM-1",
+    class_label: "5",
+  };
+  const invoice = {
+    id: INVOICE,
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_id: STUDENT,
+    fee_assignment_id: "asg-1",
+    academic_year: "2026-27",
+    invoice_number: "INV-1",
+    invoice_date: "2026-06-01",
+    due_date: "2026-07-01",
+    subtotal_amount: "50000",
+    discount_amount: "0",
+    total_amount: "50000",
+    outstanding_amount: "45000",
+    invoice_status: "partially_paid",
+    created_by: STAFF,
+    created_at: "2026-06-01T00:00:00.000Z",
+    updated_at: "2026-06-09T00:00:00.000Z",
+  };
+  const account = {
+    id: ACCOUNT,
+    total_fee: "50000",
+    amount_paid: "5000",
+    outstanding_amount: "45000",
+    status: "open",
+  };
+  const detail = collectionDetailToApi(
+    collection as import("./finance_collections_repository.ts").CollectionListRow,
+    invoice as import("./finance_invoices_repository.ts").FinanceInvoiceRow,
+    account,
+    [collection as import("./finance_collections_repository.ts").FinanceCollectionRow],
+    [{
+      id: "r1",
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      collection_id: "c1",
+      receipt_number: "RCPT-1",
+      receipt_date: "2026-06-09",
+      amount: "5000",
+      generated_by: STAFF,
+      created_at: "2026-06-09T00:00:00.000Z",
+    }],
+  );
+  const timeline = detail.paymentTimeline as Array<Record<string, unknown>>;
+  const links = detail.receiptLinks as Array<Record<string, unknown>>;
+  const history = detail.installmentHistory as Array<Record<string, unknown>>;
+  assertEquals(timeline.length, 1);
+  assertEquals(timeline[0]!.status, "completed");
+  assertEquals(links.length, 1);
+  assertEquals(links[0]!.receiptNumber, "RCPT-1");
+  assertEquals(history[0]!.paidAmount, "5000");
+  assertEquals((detail.summaryKpis as Array<Record<string, unknown>>).length, 5);
 });

@@ -9,6 +9,11 @@ import type {
   FinanceReceiptRow,
 } from "./finance_collections_repository.ts";
 import type { FinanceInvoiceRow } from "./finance_invoices_repository.ts";
+import {
+  collectionStatusToApi,
+  installmentStatusFromInvoice,
+} from "./finance_status_codec.ts";
+import type { DailySummaryData, StudentAccountSnapshot } from "./finance_collections_repository.ts";
 
 export interface FinanceFeeStructureRow {
   id: string;
@@ -227,30 +232,21 @@ export function invoiceToApi(row: FinanceInvoiceRow): Record<string, unknown> {
   };
 }
 
-function collectionStatusToApi(status: string): string {
-  switch (status) {
-    case "completed":
-      return "completed";
-    case "draft":
-      return "pending";
-    case "cancelled":
-      return "failed";
-    default:
-      return "completed";
-  }
-}
-
-function installmentStatusFromInvoice(invoiceStatus: string): string {
-  switch (invoiceStatus) {
-    case "paid":
-      return "completed";
-    case "partially_paid":
-      return "pending";
-    case "cancelled":
-      return "failed";
-    default:
-      return "pending";
-  }
+export function dailySummaryToApi(data: DailySummaryData): Record<string, unknown> {
+  return {
+    todayCollections: formatAmount(data.todayCollections),
+    todayCollectionCount: data.todayCollectionCount,
+    pendingInvoices: data.pendingInvoices,
+    paidInvoices: data.paidInvoices,
+    partiallyPaidInvoices: data.partiallyPaidInvoices,
+    outstandingAmount: formatAmount(data.outstandingAmount),
+    dateLabel: data.dateLabel,
+    totalCollected: formatAmount(data.todayCollections),
+    transactionCount: data.todayCollectionCount,
+    cashAmount: formatAmount(data.cashAmount),
+    upiAmount: formatAmount(data.upiAmount),
+    pendingReconciliation: data.draftCollectionsToday,
+  };
 }
 
 export function collectionPaymentToApi(row: CollectionListRow): Record<string, unknown> {
@@ -300,6 +296,7 @@ export function receiptToApi(row: FinanceReceiptRow): Record<string, unknown> {
 export function collectionDetailToApi(
   row: CollectionListRow,
   invoice: FinanceInvoiceRow,
+  account: StudentAccountSnapshot,
   accountCollections: FinanceCollectionRow[],
   accountReceipts: FinanceReceiptRow[],
 ): Record<string, unknown> {
@@ -318,10 +315,31 @@ export function collectionDetailToApi(
       },
       {
         id: "balance",
-        value: formatAmount(invoice.outstanding_amount),
+        value: formatAmount(account.outstanding_amount),
         label: "Remaining balance",
         icon: "account_balance_wallet_outlined",
         accentName: "warning",
+      },
+      {
+        id: "totalDue",
+        value: formatAmount(account.total_fee),
+        label: "Total fee",
+        icon: "account_balance_outlined",
+        accentName: "primary",
+      },
+      {
+        id: "totalPaid",
+        value: formatAmount(account.amount_paid),
+        label: "Total paid",
+        icon: "payments_outlined",
+        accentName: "success",
+      },
+      {
+        id: "mode",
+        value: row.payment_method,
+        label: "Payment mode",
+        icon: "credit_card_outlined",
+        accentName: "neutral",
       },
     ],
     paymentTimeline: accountCollections.map((entry) => ({

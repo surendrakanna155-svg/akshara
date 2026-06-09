@@ -458,13 +458,133 @@ export async function listCollectionsForAccount(
   schoolId: string,
   studentAccountId: string,
 ): Promise<FinanceCollectionRow[]> {
+  return await listAllCollectionsForAccount(db, organizationId, schoolId, studentAccountId, "completed");
+}
+
+export async function listAllCollectionsForAccount(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentAccountId: string,
+  statusFilter?: CollectionStatus,
+): Promise<FinanceCollectionRow[]> {
+  if (statusFilter) {
+    return await db.queryObject<FinanceCollectionRow>(
+      `SELECT * FROM finance_collections
+       WHERE student_account_id = $1 AND organization_id = $2 AND school_id = $3
+         AND collection_status = $4
+       ORDER BY collection_date DESC, created_at DESC`,
+      [studentAccountId, organizationId, schoolId, statusFilter],
+    );
+  }
   return await db.queryObject<FinanceCollectionRow>(
     `SELECT * FROM finance_collections
      WHERE student_account_id = $1 AND organization_id = $2 AND school_id = $3
-       AND collection_status = 'completed'
      ORDER BY collection_date DESC, created_at DESC`,
     [studentAccountId, organizationId, schoolId],
   );
+}
+
+export interface StudentAccountSnapshot {
+  id: string;
+  total_fee: string;
+  amount_paid: string;
+  outstanding_amount: string;
+  status: string;
+}
+
+export async function getStudentAccountById(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentAccountId: string,
+): Promise<StudentAccountSnapshot | null> {
+  const rows = await db.queryObject<StudentAccountSnapshot>(
+    `SELECT id, total_fee, amount_paid, outstanding_amount, status
+     FROM finance_student_accounts
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+    [studentAccountId, organizationId, schoolId],
+  );
+  return rows[0] ?? null;
+}
+
+export interface DailySummaryData {
+  dateLabel: string;
+  todayCollections: number;
+  todayCollectionCount: number;
+  cashAmount: number;
+  upiAmount: number;
+  draftCollectionsToday: number;
+  pendingInvoices: number;
+  paidInvoices: number;
+  partiallyPaidInvoices: number;
+  outstandingAmount: number;
+}
+
+export async function getDailySummary(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<DailySummaryData> {
+  const todayRows = await db.queryObject<{
+    total: string;
+    count: string;
+    cash: string;
+    upi: string;
+    drafts: string;
+  }>(
+    `SELECT
+       COALESCE(SUM(amount_collected) FILTER (WHERE collection_status = 'completed'), 0)::text AS total,
+       COUNT(*) FILTER (WHERE collection_status = 'completed')::text AS count,
+       COALESCE(SUM(amount_collected) FILTER (
+         WHERE collection_status = 'completed' AND LOWER(payment_method) = 'cash'
+       ), 0)::text AS cash,
+       COALESCE(SUM(amount_collected) FILTER (
+         WHERE collection_status = 'completed' AND LOWER(payment_method) = 'upi'
+       ), 0)::text AS upi,
+       COUNT(*) FILTER (WHERE collection_status = 'draft')::text AS drafts
+     FROM finance_collections
+     WHERE organization_id = $1 AND school_id = $2
+       AND collection_date = CURRENT_DATE`,
+    [organizationId, schoolId],
+  );
+
+  const invoiceRows = await db.queryObject<{
+    pending: string;
+    paid: string;
+    partial: string;
+    outstanding: string;
+  }>(
+    `SELECT
+       COUNT(*) FILTER (WHERE invoice_status = 'issued')::text AS pending,
+       COUNT(*) FILTER (WHERE invoice_status = 'paid')::text AS paid,
+       COUNT(*) FILTER (WHERE invoice_status = 'partially_paid')::text AS partial,
+       COALESCE(SUM(outstanding_amount) FILTER (
+         WHERE invoice_status IN ('issued', 'partially_paid')
+       ), 0)::text AS outstanding
+     FROM finance_invoices
+     WHERE organization_id = $1 AND school_id = $2
+       AND invoice_status NOT IN ('cancelled', 'draft')`,
+    [organizationId, schoolId],
+  );
+
+  const today = todayRows[0]!;
+  const inv = invoiceRows[0]!;
+  const now = new Date();
+  const dateLabel = now.toISOString().slice(0, 10);
+
+  return {
+    dateLabel,
+    todayCollections: parseFloat(today.total),
+    todayCollectionCount: parseInt(today.count, 10),
+    cashAmount: parseFloat(today.cash),
+    upiAmount: parseFloat(today.upi),
+    draftCollectionsToday: parseInt(today.drafts, 10),
+    pendingInvoices: parseInt(inv.pending, 10),
+    paidInvoices: parseInt(inv.paid, 10),
+    partiallyPaidInvoices: parseInt(inv.partial, 10),
+    outstandingAmount: parseFloat(inv.outstanding),
+  };
 }
 
 export async function listReceiptsForAccount(
@@ -478,7 +598,6 @@ export async function listReceiptsForAccount(
      JOIN finance_collections fc ON fc.id = fr.collection_id
      WHERE fc.student_account_id = $1
        AND fc.organization_id = $2 AND fc.school_id = $3
-       AND fc.collection_status = 'completed'
      ORDER BY fr.receipt_date DESC, fr.created_at DESC`,
     [studentAccountId, organizationId, schoolId],
   );

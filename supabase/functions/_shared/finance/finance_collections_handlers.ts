@@ -19,9 +19,11 @@ import {
   cancelCollection,
   createCollection,
   getCollection,
+  getDailySummary,
   getReceipt,
+  getStudentAccountById,
+  listAllCollectionsForAccount,
   listCollections,
-  listCollectionsForAccount,
   listReceiptsForAccount,
 } from "./finance_collections_repository.ts";
 import { getInvoice } from "./finance_invoices_repository.ts";
@@ -29,6 +31,7 @@ import {
   collectionCreateToApi,
   collectionDetailToApi,
   collectionPaymentToApi,
+  dailySummaryToApi,
   listEnvelope,
   receiptToApi,
 } from "./finance_mapper.ts";
@@ -142,7 +145,14 @@ export async function handleGetCollection(
       if (!collection) return null;
       const invoice = await getInvoice(db, orgId, schoolId, collection.invoice_id);
       if (!invoice) return null;
-      const accountCollections = await listCollectionsForAccount(
+      const account = await getStudentAccountById(
+        db,
+        orgId,
+        schoolId,
+        collection.student_account_id,
+      );
+      if (!account) return null;
+      const accountCollections = await listAllCollectionsForAccount(
         db,
         orgId,
         schoolId,
@@ -154,7 +164,13 @@ export async function handleGetCollection(
         schoolId,
         collection.student_account_id,
       );
-      return collectionDetailToApi(collection, invoice, accountCollections, accountReceipts);
+      return collectionDetailToApi(
+        collection,
+        invoice,
+        account,
+        accountCollections,
+        accountReceipts,
+      );
     });
     if (!detail) {
       return errorEnvelope("NOT_FOUND", `Collection not found: ${collectionId}`, 404);
@@ -216,6 +232,32 @@ export async function handleCreateCollection(
     }
     const mapped = mapCollectionError(error);
     if (mapped) return mapped;
+    throw error;
+  }
+}
+
+export async function handleDailySummary(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireFinanceRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const summary = await runTenant(config, auth.claims, async (db) =>
+      await getDailySummary(db, orgId, schoolId)
+    );
+    return jsonResponse(envelope(dailySummaryToApi(summary)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
     throw error;
   }
 }

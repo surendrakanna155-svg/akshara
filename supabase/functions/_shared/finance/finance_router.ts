@@ -3,6 +3,7 @@ import { errorEnvelope } from "../http.ts";
 import {
   handleCancelCollection,
   handleCreateCollection,
+  handleDailySummary,
   handleGetCollection,
   handleGetReceipt,
   handleListCollections,
@@ -89,6 +90,10 @@ function matchFinanceRoute(
   }
   if (path === "/finance/collections" && method === "POST") {
     return { handler: handleCreateCollection, args: [] };
+  }
+
+  if (path === "/finance/collections/daily-summary" && method === "GET") {
+    return { handler: handleDailySummary, args: [] };
   }
 
   const cancelCollectionMatch = path.match(/^\/finance\/collections\/([^/]+)\/cancel$/);
