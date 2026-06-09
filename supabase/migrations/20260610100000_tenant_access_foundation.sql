@@ -8,12 +8,17 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = 'erp_tenant') THEN
-    CREATE ROLE erp_tenant LOGIN PASSWORD 'akshara_erp_tenant_staging_v1';
+    CREATE ROLE erp_tenant
+      LOGIN
+      PASSWORD 'akshara_erp_tenant_staging_v1'
+      NOSUPERUSER
+      NOBYPASSRLS
+      NOCREATEDB
+      NOCREATEROLE
+      NOREPLICATION;
   END IF;
 END
 $$;
-
-ALTER ROLE erp_tenant NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
 
 GRANT CONNECT ON DATABASE postgres TO erp_tenant;
 GRANT USAGE ON SCHEMA public, app, tenant_isolation TO erp_tenant;
