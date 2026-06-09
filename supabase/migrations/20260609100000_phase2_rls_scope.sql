@@ -77,10 +77,11 @@ WHERE s.deleted_at IS NULL
 GROUP BY s.organization_id, s.id, s.name, s.code;
 
 -- ─── Request context RPC (v6.1 §6.3) ────────────────────────────────────────
+-- Note: Supabase reserves `auth` schema (GoTrue). Use `app` schema for ERP context.
 
-CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS app;
 
-CREATE OR REPLACE FUNCTION auth.set_request_context(
+CREATE OR REPLACE FUNCTION app.set_request_context(
   p_tenant_id UUID,
   p_scope TEXT,
   p_user_id UUID,
@@ -121,7 +122,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  PERFORM auth.set_request_context(
+  PERFORM app.set_request_context(
     p_tenant_id, p_scope, p_user_id,
     p_school_id, p_school_group_id, p_student_id, p_parent_user_id
   );
@@ -315,7 +316,7 @@ DECLARE
   v_all_pass BOOLEAN := true;
 BEGIN
   -- School A cannot read School B
-  PERFORM auth.set_request_context(v_org, 'school', v_staff_a, v_school_a, NULL, NULL, NULL);
+  PERFORM app.set_request_context(v_org, 'school', v_staff_a, v_school_a, NULL, NULL, NULL);
   SELECT count(*) INTO v_count FROM schools WHERE id = v_school_b;
   v_tests := v_tests || jsonb_build_object(
     'name', 'school_a_cannot_see_school_b',
@@ -325,7 +326,7 @@ BEGIN
   IF v_count <> 0 THEN v_all_pass := false; END IF;
 
   -- Org scope can see both schools (aggregate listing, not operational PII)
-  PERFORM auth.set_request_context(v_org, 'organization', v_staff_a, NULL, NULL, NULL, NULL);
+  PERFORM app.set_request_context(v_org, 'organization', v_staff_a, NULL, NULL, NULL, NULL);
   SELECT count(*) INTO v_count FROM schools WHERE organization_id = v_org;
   v_tests := v_tests || jsonb_build_object(
     'name', 'org_scope_sees_all_schools_in_tenant',
@@ -335,7 +336,7 @@ BEGIN
   IF v_count < 2 THEN v_all_pass := false; END IF;
 
   -- Org scope denied raw cross-school staff memberships
-  PERFORM auth.set_request_context(v_org, 'organization', v_staff_a, NULL, NULL, NULL, NULL);
+  PERFORM app.set_request_context(v_org, 'organization', v_staff_a, NULL, NULL, NULL, NULL);
   SELECT count(*) INTO v_count FROM school_memberships;
   v_tests := v_tests || jsonb_build_object(
     'name', 'org_scope_denied_raw_school_memberships',
@@ -345,7 +346,7 @@ BEGIN
   IF v_count <> 0 THEN v_all_pass := false; END IF;
 
   -- Parent sees only linked child at School A
-  PERFORM auth.set_request_context(v_org, 'parent', v_parent, v_school_a, NULL, NULL, v_parent);
+  PERFORM app.set_request_context(v_org, 'parent', v_parent, v_school_a, NULL, NULL, v_parent);
   SELECT count(*) INTO v_count FROM students WHERE id = v_student_a;
   v_tests := v_tests || jsonb_build_object(
     'name', 'parent_sees_linked_child',
@@ -355,7 +356,7 @@ BEGIN
   IF v_count <> 1 THEN v_all_pass := false; END IF;
 
   -- Parent cannot see student at School B
-  PERFORM auth.set_request_context(v_org, 'parent', v_parent, v_school_b, NULL, NULL, v_parent);
+  PERFORM app.set_request_context(v_org, 'parent', v_parent, v_school_b, NULL, NULL, v_parent);
   SELECT count(*) INTO v_count FROM students WHERE id = v_student_b;
   v_tests := v_tests || jsonb_build_object(
     'name', 'parent_cannot_see_unlinked_school_b_student',
@@ -365,7 +366,7 @@ BEGIN
   IF v_count <> 0 THEN v_all_pass := false; END IF;
 
   -- Student sees only self
-  PERFORM auth.set_request_context(v_org, 'student', v_student_user, v_school_a, NULL, v_student_a, NULL);
+  PERFORM app.set_request_context(v_org, 'student', v_student_user, v_school_a, NULL, v_student_a, NULL);
   SELECT count(*) INTO v_count FROM students;
   v_tests := v_tests || jsonb_build_object(
     'name', 'student_sees_self_only',
@@ -375,7 +376,7 @@ BEGIN
   IF v_count <> 1 THEN v_all_pass := false; END IF;
 
   -- Org aggregate view accessible at org scope
-  PERFORM auth.set_request_context(v_org, 'organization', v_staff_a, NULL, NULL, NULL, NULL);
+  PERFORM app.set_request_context(v_org, 'organization', v_staff_a, NULL, NULL, NULL, NULL);
   SELECT count(*) INTO v_count FROM org_school_summary WHERE tenant_id = v_org;
   v_tests := v_tests || jsonb_build_object(
     'name', 'org_scope_reads_aggregate_view',

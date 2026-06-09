@@ -20,7 +20,7 @@ Edge Functions currently use **Supabase `service_role`**, which **bypasses Postg
 
 | Component | Status |
 |-----------|--------|
-| `auth.set_request_context` RPC | ✅ Deployed |
+| `app.set_request_context` RPC (public wrapper: `set_request_context`) | ✅ Deployed |
 | RLS policies on core tables | ✅ Defined |
 | `org_school_summary` aggregate view | ✅ Defined |
 | `tenant_isolation.run_self_test()` | ✅ Defined |
