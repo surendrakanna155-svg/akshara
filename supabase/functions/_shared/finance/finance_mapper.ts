@@ -2,6 +2,12 @@ import type {
   AssignmentWithAccount,
   FinanceFeeAssignmentRow,
 } from "./finance_assignments_repository.ts";
+import type {
+  CollectionListRow,
+  CollectionWithReceipt,
+  FinanceCollectionRow,
+  FinanceReceiptRow,
+} from "./finance_collections_repository.ts";
 import type { FinanceInvoiceRow } from "./finance_invoices_repository.ts";
 
 export interface FinanceFeeStructureRow {
@@ -218,5 +224,129 @@ export function invoiceToApi(row: FinanceInvoiceRow): Record<string, unknown> {
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function collectionStatusToApi(status: string): string {
+  switch (status) {
+    case "completed":
+      return "completed";
+    case "draft":
+      return "pending";
+    case "cancelled":
+      return "failed";
+    default:
+      return "completed";
+  }
+}
+
+function installmentStatusFromInvoice(invoiceStatus: string): string {
+  switch (invoiceStatus) {
+    case "paid":
+      return "completed";
+    case "partially_paid":
+      return "pending";
+    case "cancelled":
+      return "failed";
+    default:
+      return "pending";
+  }
+}
+
+export function collectionPaymentToApi(row: CollectionListRow): Record<string, unknown> {
+  return {
+    id: row.id,
+    receiptNumber: row.receipt_number,
+    studentName: row.student_name ?? "",
+    admissionNumber: row.admission_number ?? "",
+    amount: formatAmount(row.amount_collected),
+    mode: row.payment_method,
+    collectedAt: row.collection_date,
+    collectedBy: row.collected_by,
+    status: collectionStatusToApi(row.collection_status),
+    classLabel: row.class_label ?? "",
+  };
+}
+
+export function collectionCreateToApi(result: CollectionWithReceipt): Record<string, unknown> {
+  return {
+    collection: {
+      id: result.collection.id,
+      invoiceId: result.collection.invoice_id,
+      studentAccountId: result.collection.student_account_id,
+      receiptNumber: result.collection.receipt_number,
+      amountCollected: formatAmount(result.collection.amount_collected),
+      paymentMethod: result.collection.payment_method,
+      collectionStatus: result.collection.collection_status,
+      collectionDate: result.collection.collection_date,
+    },
+    receipt: receiptToApi(result.receipt),
+    invoice: invoiceToApi(result.invoice),
+  };
+}
+
+export function receiptToApi(row: FinanceReceiptRow): Record<string, unknown> {
+  return {
+    id: row.id,
+    collectionId: row.collection_id,
+    receiptNumber: row.receipt_number,
+    receiptDate: row.receipt_date,
+    amount: formatAmount(row.amount),
+    generatedBy: row.generated_by,
+    createdAt: row.created_at,
+  };
+}
+
+export function collectionDetailToApi(
+  row: CollectionListRow,
+  invoice: FinanceInvoiceRow,
+  accountCollections: FinanceCollectionRow[],
+  accountReceipts: FinanceReceiptRow[],
+): Record<string, unknown> {
+  const paidAmount = parseFloat(invoice.total_amount) - parseFloat(invoice.outstanding_amount);
+  return {
+    payment: collectionPaymentToApi(row),
+    feeAccountId: row.student_account_id,
+    aiInsight: "",
+    summaryKpis: [
+      {
+        id: "amount",
+        value: formatAmount(row.amount_collected),
+        label: "Payment amount",
+        icon: "payments_outlined",
+        accentName: "success",
+      },
+      {
+        id: "balance",
+        value: formatAmount(invoice.outstanding_amount),
+        label: "Remaining balance",
+        icon: "account_balance_wallet_outlined",
+        accentName: "warning",
+      },
+    ],
+    paymentTimeline: accountCollections.map((entry) => ({
+      id: entry.id,
+      label: entry.receipt_number,
+      amount: formatAmount(entry.amount_collected),
+      timestamp: entry.collection_date,
+      status: collectionStatusToApi(entry.collection_status),
+      mode: entry.payment_method,
+    })),
+    installmentHistory: [
+      {
+        id: invoice.id,
+        termLabel: "Annual",
+        dueDate: invoice.due_date,
+        amount: formatAmount(invoice.total_amount),
+        paidAmount: formatAmount(Math.max(0, paidAmount)),
+        status: installmentStatusFromInvoice(invoice.invoice_status),
+      },
+    ],
+    receiptLinks: accountReceipts.map((receipt) => ({
+      receiptNumber: receipt.receipt_number,
+      amount: formatAmount(receipt.amount),
+      dateLabel: receipt.receipt_date,
+      parentReceiptRoute: `/parent/receipts/${receipt.receipt_number}`,
+    })),
   };
 }

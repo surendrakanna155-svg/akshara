@@ -1,6 +1,13 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleCancelCollection,
+  handleCreateCollection,
+  handleGetCollection,
+  handleGetReceipt,
+  handleListCollections,
+} from "./finance_collections_handlers.ts";
+import {
   handleAssignFeePlan,
   handleCancelFeeAssignment,
   handleCreateFeeAssignment,
@@ -75,6 +82,28 @@ function matchFinanceRoute(
   const studentAccountMatch = path.match(/^\/finance\/student-accounts\/([^/]+)$/);
   if (studentAccountMatch && method === "GET") {
     return { handler: handleGetStudentAccount, args: [studentAccountMatch[1]!] };
+  }
+
+  if (path === "/finance/collections" && method === "GET") {
+    return { handler: handleListCollections, args: [] };
+  }
+  if (path === "/finance/collections" && method === "POST") {
+    return { handler: handleCreateCollection, args: [] };
+  }
+
+  const cancelCollectionMatch = path.match(/^\/finance\/collections\/([^/]+)\/cancel$/);
+  if (cancelCollectionMatch && method === "POST") {
+    return { handler: handleCancelCollection, args: [cancelCollectionMatch[1]!] };
+  }
+
+  const collectionMatch = path.match(/^\/finance\/collections\/([^/]+)$/);
+  if (collectionMatch && method === "GET") {
+    return { handler: handleGetCollection, args: [collectionMatch[1]!] };
+  }
+
+  const receiptMatch = path.match(/^\/finance\/receipts\/([^/]+)$/);
+  if (receiptMatch && method === "GET") {
+    return { handler: handleGetReceipt, args: [receiptMatch[1]!] };
   }
 
   if (path === "/finance/invoices" && method === "GET") {

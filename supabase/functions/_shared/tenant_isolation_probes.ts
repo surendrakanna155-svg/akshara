@@ -32,6 +32,8 @@ const FEE_ASSIGNMENT_SCHOOL_B = "b8000000-0000-4000-8000-000000000002";
 const STUDENT_ACCOUNT_SCHOOL_B = "b8100000-0000-4000-8000-000000000002";
 const FINANCE_INVOICE_SCHOOL_A = "b9000000-0000-4000-8000-000000000001";
 const FINANCE_INVOICE_SCHOOL_B = "b9000000-0000-4000-8000-000000000002";
+const FINANCE_COLLECTION_SCHOOL_B = "ba000000-0000-4000-8000-000000000002";
+const FINANCE_RECEIPT_SCHOOL_A = "ba100000-0000-4000-8000-000000000001";
 
 function schoolClaims(schoolId: string): AccessTokenClaims {
   return {
@@ -432,6 +434,72 @@ export async function runEnforcedIsolationProbes(
       name: "school_a_sees_own_finance_invoices",
       pass: n >= 1,
       detail: `visible_school_a_invoices=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_collections WHERE id = $1",
+      [FINANCE_COLLECTION_SCHOOL_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_collections",
+      pass: n === 0,
+      detail: `visible_cross_school_collections=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
+    return {
+      name: "organization_denied_collections",
+      pass: n === 0,
+      detail: `visible_collections=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
+    return {
+      name: "parent_denied_collections",
+      pass: n === 0,
+      detail: `visible_collections=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
+    return {
+      name: "student_denied_collections",
+      pass: n === 0,
+      detail: `visible_collections=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_collections WHERE school_id = $1",
+      [SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_collections",
+      pass: n >= 1,
+      detail: `visible_school_a_collections=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_receipts WHERE id = $1",
+      [FINANCE_RECEIPT_SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_receipts",
+      pass: n === 1,
+      detail: `visible_probe_receipt=${n}`,
     };
   }));
 
