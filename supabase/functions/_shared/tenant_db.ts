@@ -92,8 +92,17 @@ export async function withTenantContext<T>(
   const params = claimsToTenantParams(claims);
 
   try {
-    await applyRequestContext(client, params);
-    return await operation(new TenantQueryClient(client));
+    // set_request_context uses transaction-local config (is_local=true); keep one transaction.
+    await client.queryObject`BEGIN`;
+    try {
+      await applyRequestContext(client, params);
+      const result = await operation(new TenantQueryClient(client));
+      await client.queryObject`COMMIT`;
+      return result;
+    } catch (error) {
+      await client.queryObject`ROLLBACK`;
+      throw error;
+    }
   } finally {
     await client.end();
   }
