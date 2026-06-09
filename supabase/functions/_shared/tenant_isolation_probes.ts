@@ -24,6 +24,8 @@ const STUDENT_A = "a4000000-0000-4000-8000-000000000001";
 const STUDENT_B = "a4000000-0000-4000-8000-000000000002";
 const LEAD_SCHOOL_A = "b5000000-0000-4000-8000-000000000001";
 const LEAD_SCHOOL_B = "b5000000-0000-4000-8000-000000000002";
+const HANDOFF_SCHOOL_A = "b6000000-0000-4000-8000-000000000001";
+const HANDOFF_SCHOOL_B = "b6000000-0000-4000-8000-000000000002";
 
 function schoolClaims(schoolId: string): AccessTokenClaims {
   return {
@@ -199,6 +201,63 @@ export async function runEnforcedIsolationProbes(
       name: "school_a_sees_probe_lead",
       pass: n === 1,
       detail: `visible_probe_lead=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM admissions_fee_handoffs");
+    return {
+      name: "org_scope_denied_raw_admissions_fee_handoffs",
+      pass: n === 0,
+      detail: `visible_handoffs=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM admissions_fee_handoffs");
+    return {
+      name: "parent_scope_denied_admissions_fee_handoffs",
+      pass: n === 0,
+      detail: `visible_handoffs=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM admissions_fee_handoffs WHERE school_id = $1",
+      [SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_own_fee_handoffs",
+      pass: n >= 1,
+      detail: `visible_handoffs=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM admissions_fee_handoffs WHERE id = $1",
+      [HANDOFF_SCHOOL_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_fee_handoffs",
+      pass: n === 0,
+      detail: `visible_cross_school_handoffs=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM admissions_fee_handoffs WHERE id = $1",
+      [HANDOFF_SCHOOL_A],
+    );
+    return {
+      name: "school_a_sees_probe_fee_handoff",
+      pass: n === 1,
+      detail: `visible_probe_handoff=${n}`,
     };
   }));
 

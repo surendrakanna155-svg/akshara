@@ -2,7 +2,7 @@
 
 **ID:** `TD-P0-01`  
 **Priority:** P0 (blocking for tenant-data API exposure)  
-**Status:** Partially closed — **Admissions verified on staging (2026-06-09)**; Finance/SIS+ pending  
+**Status:** Partially closed — **Admissions + handoff table verified on staging (2026-06-12)**; Finance/SIS+ pending  
 **Opened:** June 2026 (Sprint 3 Phase 2 closure)  
 **Baseline:** `v6.1-phase1-rbac-foundation` → Phase 2 auth scope expansion
 
@@ -31,9 +31,10 @@ Edge Functions currently use **Supabase `service_role`**, which **bypasses Postg
 | `FORCE ROW LEVEL SECURITY` on core tables | ✅ Phase 3A |
 | `run_tenant_isolation_enforced_test()` | ✅ Passes under `erp_tenant` |
 | Module API handlers use tenant helper | ✅ Admissions (staging verified); ❌ Finance/SIS+ |
-| Admissions APIs | ✅ Live on staging — 18/18 smoke tests pass |
+| Admissions APIs | ✅ Live on staging — 23/23 smoke tests pass (incl. handoff E2E) |
+| `admissions_fee_handoffs` RLS | ✅ FORCE RLS, school scope only — Phase 4B0 |
 | Module APIs (Finance, SIS, …) | ❌ Not started (gated) |
-| Staging isolation probes | ✅ 12/12 pass incl. admissions tables |
+| Staging isolation probes | ✅ 17/17 pass incl. admissions + handoff tables |
 
 ---
 
@@ -97,3 +98,4 @@ Auth-only endpoints (OTP, token issue, refresh, context switch, `/auth/me`, `/au
 |------|-------|
 | 2026-06 | Opened at Phase 2 approval; accepted technical debt for auth scope expansion deploy |
 | 2026-06 | Phase 3A: `erp_tenant` role, `withTenantContext`, FORCE RLS, enforced isolation tests |
+| 2026-06-12 | Phase 4B0: `admissions_fee_handoffs` — school-only RLS, 5 new isolation probes, handoff APIs |

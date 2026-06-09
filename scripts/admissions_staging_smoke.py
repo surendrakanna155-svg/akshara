@@ -106,7 +106,7 @@ def main() -> int:
     # Health probes
     _, health = request("GET", "/health/tenant-access")
     tests = health.get("data", {}).get("isolation", {}).get("tests", [])
-    if health.get("data", {}).get("isolation", {}).get("pass") and len(tests) >= 11:
+    if health.get("data", {}).get("isolation", {}).get("pass") and len(tests) >= 17:
         ok(f"tenant-access {len(tests)} probes passing")
     else:
         bad("tenant-access probes", json.dumps(health.get("data", {})))
@@ -237,6 +237,44 @@ def main() -> int:
     )
     ok("parent link via guardian phone") if guardian_link == "1" else bad("parent link", f"count={guardian_link}")
 
+    # Fee handoff (Phase 4B0)
+    log("E2E: Fee handoff queue → send → status")
+    code, handoffs = request("GET", "/admissions/handoffs/approved", token=admin)
+    items = handoffs.get("data", {}).get("items", [])
+    handoff_id = None
+    for item in items:
+        if item.get("previewStudentId") == student_id or item.get("applicationId") == app_id:
+            handoff_id = item.get("id")
+            break
+    if not handoff_id and items:
+        handoff_id = items[0].get("id")
+    ok(f"list approved handoffs ({handoff_id})") if code == 200 and handoff_id else bad(
+        "list approved handoffs", json.dumps(handoffs)
+    )
+
+    code, sent = request(
+        "POST",
+        "/admissions/handoffs/send",
+        token=admin,
+        body={"handoff_id": handoff_id, "fee_structure_id": "fee_std_5"},
+    )
+    ok("send to finance") if code == 200 and sent.get("data", {}).get("handoffStatus") == "sent_to_finance" else bad(
+        "send to finance", json.dumps(sent)
+    )
+
+    code, completed = request(
+        "PATCH",
+        f"/admissions/handoffs/{handoff_id}/status",
+        token=admin,
+        body={"status": "completed"},
+    )
+    ok("update handoff status") if code == 200 and completed.get("data", {}).get("handoffStatus") == "completed" else bad(
+        "update handoff status", json.dumps(completed)
+    )
+
+    code, _ = request("GET", "/admissions/handoffs/approved", token=parent)
+    ok("parent scope denied handoffs (403)") if code == 403 else bad("parent handoffs", str(code))
+
     # Security
     code, _ = request("GET", f"/admissions/leads/{LEAD_SCHOOL_B}", token=admin)
     ok("School A cannot read School B lead (404)") if code == 404 else bad("cross-school lead", str(code))
@@ -250,6 +288,9 @@ def main() -> int:
     org_token = switch.get("data", {}).get("accessToken")
     code, _ = request("GET", "/admissions/leads", token=org_token)
     ok("org scope denied admissions (403)") if code == 403 else bad("org scope admissions", str(code))
+
+    code, _ = request("GET", "/admissions/handoffs/approved", token=org_token)
+    ok("org scope denied handoffs (403)") if code == 403 else bad("org handoffs", str(code))
 
     code, _ = request("GET", "/admissions/leads", token=parent)
     ok("parent scope denied admissions (403)") if code == 403 else bad("parent admissions", str(code))

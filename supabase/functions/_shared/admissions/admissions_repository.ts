@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { createHandoffFromEnrollment } from "./admissions_handoffs_repository.ts";
 import { normalizePhone } from "./admissions_format.ts";
 import type {
   AdmissionsApplicationRow,
@@ -644,5 +645,19 @@ export async function submitEnrollment(
     );
   }
 
-  return enrollRows[0]!;
+  const enrollment = enrollRows[0]!;
+
+  await createHandoffFromEnrollment(db, organizationId, schoolId, {
+    studentId,
+    applicationId: input.applicationId,
+    enrollmentId: enrollment.id,
+    academicYear: input.academicYear,
+    studentName: input.studentFullName,
+    classLabel: input.seekingClass,
+    admissionNumber,
+    needsTransport: input.needsTransport,
+    needsHostel: input.needsHostel,
+  });
+
+  return enrollment;
 }

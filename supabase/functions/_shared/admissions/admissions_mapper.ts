@@ -174,6 +174,47 @@ export function approvalToApi(
   };
 }
 
+export interface AdmissionsFeeHandoffRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  student_id: string;
+  application_id: string | null;
+  enrollment_id: string | null;
+  academic_year: string;
+  recommended_fee_plan_id: string | null;
+  handoff_status: string;
+  student_name: string;
+  class_label: string;
+  admission_number: string;
+  needs_transport: boolean;
+  needs_hostel: boolean;
+  sis_handoff_label: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function handoffToApi(
+  row: AdmissionsFeeHandoffRow,
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    studentName: row.student_name,
+    classLabel: row.class_label,
+    applicationId: row.application_id ?? "",
+    admissionNumber: row.admission_number,
+    needsTransport: row.needs_transport,
+    needsHostel: row.needs_hostel,
+    selectedFeeStructureId: row.recommended_fee_plan_id,
+    handoffStatus: row.handoff_status,
+    previewStudentId: row.student_id,
+    sisHandoffLabel: row.sis_handoff_label,
+    academicYear: row.academic_year,
+    enrollmentId: row.enrollment_id,
+    recommendedFeePlanId: row.recommended_fee_plan_id,
+  };
+}
+
 export function enrollmentToApi(
   row: AdmissionsEnrollmentRow,
 ): Record<string, unknown> {

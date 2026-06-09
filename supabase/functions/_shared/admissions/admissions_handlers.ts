@@ -14,9 +14,15 @@ import {
   approvalToApi,
   documentToApi,
   enrollmentToApi,
+  handoffToApi,
   leadToApi,
   listEnvelope,
 } from "./admissions_mapper.ts";
+import {
+  listFeeHandoffs,
+  sendHandoffToFinance,
+  updateHandoffStatus,
+} from "./admissions_handoffs_repository.ts";
 import {
   createApplication,
   createLead,
@@ -760,6 +766,146 @@ export async function handleSubmitEnrollment(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+// ─── Fee handoffs (Phase 4B0) ────────────────────────────────────────────────
+
+export async function handleListApprovedHandoffs(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "viewAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const pagination = parsePagination(url);
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, (db) =>
+      listFeeHandoffs(db, orgId, schoolId, pagination)
+    );
+    return jsonResponse(
+      envelope(
+        listEnvelope(
+          result.items.map(handoffToApi),
+          {
+            page: result.page,
+            pageSize: result.pageSize,
+            total: result.total,
+            hasMore: result.hasMore,
+          },
+        ),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+export async function handleSendToFinance(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  const handoffId = snakeStr(body, "handoff_id");
+  const feeStructureId = snakeStr(body, "fee_structure_id");
+  if (!handoffId || !feeStructureId) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "handoff_id and fee_structure_id are required",
+      422,
+    );
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const handoff = await runTenant(config, auth.claims, (db) =>
+      sendHandoffToFinance(db, orgId, schoolId, handoffId, feeStructureId)
+    );
+    if (!handoff) {
+      return errorEnvelope("NOT_FOUND", `Handoff not found: ${handoffId}`, 404);
+    }
+    return jsonResponse(envelope(handoffToApi(handoff)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+function normalizeHandoffStatus(raw: string): string {
+  const key = raw.trim();
+  if (key === "sentToFinance" || key === "sent_to_finance") return "sent_to_finance";
+  if (key === "pending" || key === "completed" || key === "failed") return key;
+  return key.replace(/([A-Z])/g, "_$1").toLowerCase().replace(/^_/, "");
+}
+
+export async function handleUpdateHandoffStatus(
+  req: Request,
+  config: AppConfig,
+  handoffId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  const statusRaw = snakeStr(body, "status");
+  if (!statusRaw) {
+    return errorEnvelope("VALIDATION_ERROR", "status is required", 422);
+  }
+
+  const status = normalizeHandoffStatus(statusRaw);
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const handoff = await runTenant(config, auth.claims, (db) =>
+      updateHandoffStatus(db, orgId, schoolId, handoffId, status)
+    );
+    if (!handoff) {
+      return errorEnvelope("NOT_FOUND", `Handoff not found: ${handoffId}`, 404);
+    }
+    return jsonResponse(envelope(handoffToApi(handoff)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof Error && error.message.startsWith("Invalid handoff")) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
     }
     throw error;
   }

@@ -13,8 +13,11 @@ import {
   handleRejectAdmission,
   handleRejectDocument,
   handleSubmitApplication,
+  handleListApprovedHandoffs,
+  handleSendToFinance,
   handleSubmitEnrollment,
   handleUpdateApplication,
+  handleUpdateHandoffStatus,
   handleUpdateLead,
   handleUploadDocument,
 } from "./admissions_handlers.ts";
@@ -92,6 +95,18 @@ function matchAdmissionsRoute(
 
   if (path === "/admissions/enrollments" && method === "POST") {
     return { handler: handleSubmitEnrollment, args: [] };
+  }
+
+  if (path === "/admissions/handoffs/approved" && method === "GET") {
+    return { handler: handleListApprovedHandoffs, args: [] };
+  }
+  if (path === "/admissions/handoffs/send" && method === "POST") {
+    return { handler: handleSendToFinance, args: [] };
+  }
+
+  const handoffStatusMatch = path.match(/^\/admissions\/handoffs\/([^/]+)\/status$/);
+  if (handoffStatusMatch && method === "PATCH") {
+    return { handler: handleUpdateHandoffStatus, args: [handoffStatusMatch[1]!] };
   }
 
   return null;
