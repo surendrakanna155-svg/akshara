@@ -47,9 +47,17 @@ ALTER TABLE school_memberships FORCE ROW LEVEL SECURITY;
 ALTER TABLE students FORCE ROW LEVEL SECURITY;
 ALTER TABLE student_guardians FORCE ROW LEVEL SECURITY;
 
--- ─── Enforced isolation test (runs as erp_tenant via SECURITY DEFINER) ────
+-- ─── Enforced isolation test (created as erp_tenant — hosted Postgres blocks ALTER OWNER) ─
 
-CREATE OR REPLACE FUNCTION run_enforced_isolation_test_internal()
+DO $$
+BEGIN
+  EXECUTE format('GRANT erp_tenant TO %I', current_user);
+END
+$$;
+
+SET ROLE erp_tenant;
+
+CREATE OR REPLACE FUNCTION run_tenant_isolation_enforced_test()
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -157,27 +165,7 @@ BEGIN
 END;
 $$;
 
--- Migration role must SET ROLE to transfer function ownership on hosted Postgres.
-DO $$
-BEGIN
-  EXECUTE format('GRANT erp_tenant TO %I', current_user);
-END
-$$;
+RESET ROLE;
 
-ALTER FUNCTION run_enforced_isolation_test_internal() OWNER TO erp_tenant;
-
-REVOKE ALL ON FUNCTION run_enforced_isolation_test_internal() FROM PUBLIC;
-
--- PostgREST RPC wrapper (callable by service_role; executes as erp_tenant owner)
-CREATE OR REPLACE FUNCTION run_tenant_isolation_enforced_test()
-RETURNS JSONB
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT run_enforced_isolation_test_internal();
-$$;
-
-ALTER FUNCTION run_tenant_isolation_enforced_test() OWNER TO erp_tenant;
 REVOKE ALL ON FUNCTION run_tenant_isolation_enforced_test() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION run_tenant_isolation_enforced_test() TO service_role;
