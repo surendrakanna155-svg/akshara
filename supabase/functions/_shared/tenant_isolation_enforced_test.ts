@@ -2,28 +2,26 @@ import {
   assert,
   assertEquals,
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { loadConfig } from "./config.ts";
+import { withTenantContext } from "./tenant_db.ts";
+import { runEnforcedIsolationProbes } from "./tenant_isolation_probes.ts";
+import type { AccessTokenClaims } from "./jwt.ts";
+import type { TenantQueryClient } from "./tenant_db.ts";
+import type { IsolationProbeResult } from "./tenant_isolation_probes.ts";
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL");
-const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const hasTenantUrl = Boolean(Deno.env.get("ERP_TENANT_DATABASE_URL"));
 
 Deno.test({
-  name: "enforced tenant isolation RPC passes on staging database",
-  ignore: !supabaseUrl || !serviceKey,
+  name: "enforced tenant isolation passes via erp_tenant direct connection",
+  ignore: !hasTenantUrl,
   async fn() {
-    const client = createClient(supabaseUrl!, serviceKey!, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const config = loadConfig();
+    const runWithClaims = async (
+      claims: AccessTokenClaims,
+      fn: (db: TenantQueryClient) => Promise<IsolationProbeResult>,
+    ) => await withTenantContext(config, claims, fn);
 
-    const { data, error } = await client.rpc("run_tenant_isolation_enforced_test");
-    if (error) throw error;
-
-    const result = data as {
-      pass: boolean;
-      enforced: boolean;
-      role: string;
-      tests: Array<{ name: string; pass: boolean }>;
-    };
+    const result = await runEnforcedIsolationProbes(runWithClaims);
 
     assertEquals(result.enforced, true);
     assertEquals(result.role, "erp_tenant");

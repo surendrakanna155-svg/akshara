@@ -1,46 +1,65 @@
 import type { AppConfig } from "./config.ts";
-import { createServiceClient } from "./db.ts";
+import type { AccessTokenClaims } from "./jwt.ts";
 import { envelope, errorEnvelope, jsonResponse } from "./http.ts";
-import { probeTenantConnection, TenantDbNotConfiguredError } from "./tenant_db.ts";
+import {
+  probeTenantConnection,
+  TenantDbNotConfiguredError,
+  withTenantContext,
+  type TenantQueryClient,
+} from "./tenant_db.ts";
+import {
+  runEnforcedIsolationProbes,
+  type IsolationProbeResult,
+} from "./tenant_isolation_probes.ts";
 
-interface EnforcedTestResult {
-  pass: boolean;
-  enforced?: boolean;
-  role?: string;
-  tests?: Array<{ name: string; pass: boolean; detail?: string }>;
-}
-
-/** Runs RLS-enforced isolation probes via `erp_tenant` SECURITY DEFINER RPC. */
+/** Runs RLS-enforced isolation probes via direct `erp_tenant` connection. */
 export async function handleTenantAccessHealth(
   config: AppConfig,
 ): Promise<Response> {
   const connection = await probeTenantConnection(config);
 
-  const client = createServiceClient(config);
-  const { data, error } = await client.rpc("run_tenant_isolation_enforced_test");
-
-  if (error) {
+  if (!connection.ok) {
     return jsonResponse(
       envelope({
         status: "degraded",
         connection,
-        isolation: { pass: false, error: error.message },
+        isolation: { pass: false, error: connection.error ?? "Tenant DB unavailable" },
       }),
       { status: 503 },
     );
   }
 
-  const result = data as EnforcedTestResult;
-  const pass = result?.pass === true;
+  try {
+    const runWithClaims = async (
+      claims: AccessTokenClaims,
+      fn: (db: TenantQueryClient) => Promise<IsolationProbeResult>,
+    ): Promise<IsolationProbeResult> => {
+      return await withTenantContext(config, claims, fn);
+    };
 
-  return jsonResponse(
-    envelope({
-      status: pass ? "ok" : "degraded",
-      connection,
-      isolation: result,
-    }),
-    { status: pass ? 200 : 503 },
-  );
+    const isolation = await runEnforcedIsolationProbes(runWithClaims);
+
+    return jsonResponse(
+      envelope({
+        status: isolation.pass ? "ok" : "degraded",
+        connection,
+        isolation,
+      }),
+      { status: isolation.pass ? 200 : 503 },
+    );
+  } catch (error) {
+    return jsonResponse(
+      envelope({
+        status: "degraded",
+        connection,
+        isolation: {
+          pass: false,
+          error: error instanceof Error ? error.message : "Isolation probe failed",
+        },
+      }),
+      { status: 503 },
+    );
+  }
 }
 
 export function tenantDbNotConfiguredResponse(error: TenantDbNotConfiguredError): Response {
