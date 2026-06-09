@@ -14,6 +14,7 @@ import {
 } from "../_shared/auth_handlers.ts";
 import { handleTenantAccessHealth } from "../_shared/tenant_handlers.ts";
 import { routeAdmissions } from "../_shared/admissions/admissions_router.ts";
+import { routeFinance } from "../_shared/finance/finance_router.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 
 const corsHeaders = {
@@ -74,7 +75,12 @@ Deno.serve(async (req) => {
       if (admissionsResponse) {
         response = admissionsResponse;
       } else {
-        response = errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+        const financeResponse = await routeFinance(req, config, method, path);
+        if (financeResponse) {
+          response = financeResponse;
+        } else {
+          response = errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+        }
       }
     }
 

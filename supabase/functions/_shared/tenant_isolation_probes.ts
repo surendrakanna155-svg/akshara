@@ -26,6 +26,8 @@ const LEAD_SCHOOL_A = "b5000000-0000-4000-8000-000000000001";
 const LEAD_SCHOOL_B = "b5000000-0000-4000-8000-000000000002";
 const HANDOFF_SCHOOL_A = "b6000000-0000-4000-8000-000000000001";
 const HANDOFF_SCHOOL_B = "b6000000-0000-4000-8000-000000000002";
+const FEE_STRUCTURE_SCHOOL_A = "b7000000-0000-4000-8000-000000000001";
+const FEE_STRUCTURE_SCHOOL_B = "b7000000-0000-4000-8000-000000000002";
 
 function schoolClaims(schoolId: string): AccessTokenClaims {
   return {
@@ -258,6 +260,46 @@ export async function runEnforcedIsolationProbes(
       name: "school_a_sees_probe_fee_handoff",
       pass: n === 1,
       detail: `visible_probe_handoff=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_fee_structures WHERE id = $1",
+      [FEE_STRUCTURE_SCHOOL_B],
+    );
+    return {
+      name: "school_a_cannot_see_school_b_fee_structures",
+      pass: n === 0,
+      detail: `visible_cross_school_structures=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_structures");
+    return {
+      name: "organization_denied_fee_structures",
+      pass: n === 0,
+      detail: `visible_structures=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_structures");
+    return {
+      name: "parent_denied_fee_structures",
+      pass: n === 0,
+      detail: `visible_structures=${n}`,
+    };
+  }));
+
+  tests.push(await runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_structures");
+    return {
+      name: "student_denied_fee_structures",
+      pass: n === 0,
+      detail: `visible_structures=${n}`,
     };
   }));
 
