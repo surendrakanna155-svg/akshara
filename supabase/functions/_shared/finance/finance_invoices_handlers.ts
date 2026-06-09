@@ -46,6 +46,16 @@ function mapInvoiceError(error: unknown): Response | null {
   return null;
 }
 
+function requireFinanceRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
+  return requirePermission(claims, "viewFinance") ??
+    requireSchoolOperationalScope(claims);
+}
+
+function requireFinanceWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
+  return requirePermission(claims, "manageFinance") ??
+    requireSchoolOperationalScope(claims);
+}
+
 export async function handleListInvoices(
   req: Request,
   config: AppConfig,
@@ -53,11 +63,8 @@ export async function handleListInvoices(
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
 
-  const scope = requireSchoolOperationalScope(auth.claims);
-  if (!scope.ok) return scope.response;
-
-  const view = requirePermission(auth.claims, "viewFinance");
-  if (!view.ok) return view.response;
+  const denied = requireFinanceRead(auth.claims);
+  if (denied) return denied;
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
@@ -86,11 +93,8 @@ export async function handleGetInvoice(
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
 
-  const scope = requireSchoolOperationalScope(auth.claims);
-  if (!scope.ok) return scope.response;
-
-  const view = requirePermission(auth.claims, "viewFinance");
-  if (!view.ok) return view.response;
+  const denied = requireFinanceRead(auth.claims);
+  if (denied) return denied;
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
@@ -119,11 +123,8 @@ export async function handleIssueInvoice(
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
 
-  const scope = requireSchoolOperationalScope(auth.claims);
-  if (!scope.ok) return scope.response;
-
-  const manage = requirePermission(auth.claims, "manageFinance");
-  if (!manage.ok) return manage.response;
+  const denied = requireFinanceWrite(auth.claims);
+  if (denied) return denied;
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
@@ -151,11 +152,8 @@ export async function handleCancelInvoice(
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
 
-  const scope = requireSchoolOperationalScope(auth.claims);
-  if (!scope.ok) return scope.response;
-
-  const manage = requirePermission(auth.claims, "manageFinance");
-  if (!manage.ok) return manage.response;
+  const denied = requireFinanceWrite(auth.claims);
+  if (denied) return denied;
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
