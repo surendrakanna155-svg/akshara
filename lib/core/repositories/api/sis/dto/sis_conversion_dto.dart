@@ -43,3 +43,13 @@ class SisConversionResponseDto {
   final List<SisConversionItemDto> items;
   final PaginationDto? pagination;
 }
+
+class SisConversionPreviewDto {
+  const SisConversionPreviewDto({required this.raw});
+
+  factory SisConversionPreviewDto.fromJson(Map<String, dynamic> json) {
+    return SisConversionPreviewDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}

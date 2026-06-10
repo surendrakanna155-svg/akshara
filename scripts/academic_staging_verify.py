@@ -108,7 +108,7 @@ def verify_probes() -> None:
     tests = iso.get("tests", [])
     names = [t["name"] for t in tests]
     dupes = {n for n in names if names.count(n) > 1}
-    report.log(section, f"probe count {len(tests)}/121", len(tests) == 121)
+    report.log(section, f"probe count {len(tests)}/180", len(tests) == 180)
     report.log(section, f"all probes pass={iso.get('pass')}", iso.get("pass") is True)
     report.log(section, f"no duplicate probe names (dupes={len(dupes)})", len(dupes) == 0)
     failed = [t for t in tests if not t.get("pass")]

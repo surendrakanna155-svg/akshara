@@ -9,12 +9,14 @@ import '../dto/assign_fee_plan_request_dto.dart';
 import '../dto/create_fee_structure_request_dto.dart';
 import '../dto/create_refund_request_dto.dart';
 import '../dto/create_scholarship_request_dto.dart';
-import '../dto/create_student_account_request_dto.dart';
+import '../dto/create_collection_request_dto.dart';
 import '../dto/finance_collections_dto.dart';
 import '../dto/finance_dashboard_dto.dart';
 import '../dto/finance_defaulters_dto.dart';
 import '../dto/finance_discounts_dto.dart';
 import '../dto/finance_fee_structures_dto.dart';
+import '../dto/finance_invoices_dto.dart';
+import '../dto/finance_receipt_dto.dart';
 import '../dto/finance_refunds_dto.dart';
 import '../dto/finance_reports_dto.dart';
 import '../dto/finance_settings_dto.dart';
@@ -81,40 +83,42 @@ class FinanceRemoteDataSource {
     return FinanceFeeStructuresResponseDto.fromJson(_responseMap(response));
   }
 
-  Future<FinanceAcademicYearsResponseDto> fetchAcademicYears({
+  Future<FinanceFeeAssignmentsResponseDto> fetchFeeAssignments({
     required RepositoryQuery query,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      FinanceApiPaths.academicYears,
+      FinanceApiPaths.feeAssignments,
       queryParameters: _queryParams(query),
     );
-    return FinanceAcademicYearsResponseDto.fromJson(_responseMap(response));
+    return FinanceFeeAssignmentsResponseDto.fromJson(_responseMap(response));
   }
 
-  Future<StudentFeeAccountsResponseDto> fetchStudentAccounts({
+  Future<StudentFeeAccountDto> fetchStudentAccount({
     required RepositoryQuery query,
+    required String studentId,
+    String? academicYear,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      FinanceApiPaths.studentAccounts,
-      queryParameters: _queryParams(query),
+      FinanceApiPaths.studentAccount(studentId),
+      queryParameters: {
+        ..._queryParams(query),
+        if (academicYear != null && academicYear.isNotEmpty)
+          'academicYear': academicYear,
+      },
     );
-    return StudentFeeAccountsResponseDto.fromJson(_responseMap(response));
+    return StudentFeeAccountDto.fromJson(_requireData(response));
   }
 
-  Future<FinanceFeeAssignmentResponseDto> fetchFeeAssignment({
+  Future<FinanceReceiptResponseDto> fetchReceipt({
     required RepositoryQuery query,
+    required String receiptId,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      FinanceApiPaths.feeAssignment,
+      FinanceApiPaths.receipt(receiptId),
       queryParameters: _queryParams(query),
     );
-    return FinanceFeeAssignmentResponseDto.fromJson(_responseMap(response));
+    return FinanceReceiptResponseDto.fromJson(_responseMap(response));
   }
-
-  /// @deprecated Use [fetchFeeAssignment].
-  Future<InstallmentPlansResponseDto> fetchInstallmentPlans({
-    required RepositoryQuery query,
-  }) => fetchFeeAssignment(query: query);
 
   Future<CollectionDetailDto> fetchCollectionDetail({
     required RepositoryQuery query,
@@ -125,6 +129,29 @@ class FinanceRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return CollectionDetailDto.fromJson(_responseMap(response));
+  }
+
+  Future<FinanceCollectionResultDto> createCollection({
+    required RepositoryQuery query,
+    required CreateCollectionRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.collections,
+      queryParameters: _queryParams(query),
+      data: CreateCollectionRequestDto.fromDomain(request).toJson(),
+    );
+    return FinanceCollectionResultDto.fromJson(_requireData(response));
+  }
+
+  Future<FinanceCollectionResultDto> cancelCollection({
+    required RepositoryQuery query,
+    required String collectionId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.collectionCancel(collectionId),
+      queryParameters: _queryParams(query),
+    );
+    return FinanceCollectionResultDto.fromJson(_requireData(response));
   }
 
   Future<DefaultersDashboardDto> fetchDefaultersDashboard({
@@ -145,6 +172,17 @@ class FinanceRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return RefundRequestsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<RefundRequestDto> fetchRefund({
+    required RepositoryQuery query,
+    required String refundId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.refund(refundId),
+      queryParameters: _queryParams(query),
+    );
+    return RefundRequestDto.fromJson(_requireData(response));
   }
 
   Future<DiscountsDashboardDto> fetchDiscountsDashboard({
@@ -210,13 +248,8 @@ class FinanceRemoteDataSource {
     required RepositoryQuery query,
     required CreateStudentAccountRequest request,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      FinanceApiPaths.studentAccounts,
-      queryParameters: _queryParams(query),
-      data: CreateStudentAccountRequestDto.fromDomain(request).toJson(),
-    );
-    return _mapper.toStudentAccount(
-      StudentFeeAccountDto.fromJson(_requireData(response)),
+    throw UnsupportedError(
+      'createStudentAccount is not available in API mode; use assignFeePlan',
     );
   }
 
@@ -268,10 +301,23 @@ class FinanceRemoteDataSource {
     required String refundId,
     ApproveRefundRequest request = const ApproveRefundRequest(),
   }) async {
-    final response = await _dio.patch<Map<String, dynamic>>(
+    final response = await _dio.post<Map<String, dynamic>>(
       FinanceApiPaths.refundApprove(refundId),
       queryParameters: _queryParams(query),
       data: ApproveRefundRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toRefundRequest(
+      RefundRequestDto.fromJson(_requireData(response)),
+    );
+  }
+
+  Future<RefundRequest> rejectRefund({
+    required RepositoryQuery query,
+    required String refundId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.refundReject(refundId),
+      queryParameters: _queryParams(query),
     );
     return _mapper.toRefundRequest(
       RefundRequestDto.fromJson(_requireData(response)),
@@ -319,6 +365,49 @@ class FinanceRemoteDataSource {
     return _mapper.toSettings(
       FinanceSettingsDto.fromJson(_responseMap(response)),
     );
+  }
+
+  Future<FinanceInvoicesResponseDto> fetchInvoices({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.invoices,
+      queryParameters: _queryParams(query),
+    );
+    return FinanceInvoicesResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<FinanceInvoiceDto> fetchInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.invoice(invoiceId),
+      queryParameters: _queryParams(query),
+    );
+    return FinanceInvoiceDto.fromJson(_requireData(response));
+  }
+
+  Future<FinanceInvoiceDto> issueInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.invoiceIssue(invoiceId),
+      queryParameters: _queryParams(query),
+    );
+    return FinanceInvoiceDto.fromJson(_requireData(response));
+  }
+
+  Future<FinanceInvoiceDto> cancelInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.invoiceCancel(invoiceId),
+      queryParameters: _queryParams(query),
+    );
+    return FinanceInvoiceDto.fromJson(_requireData(response));
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {

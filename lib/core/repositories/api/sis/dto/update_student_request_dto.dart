@@ -6,17 +6,21 @@ class UpdateStudentRequestDto {
   factory UpdateStudentRequestDto.fromDomain(UpdateStudentRequest request) {
     return UpdateStudentRequestDto(
       raw: {
-        if (request.studentName != null) 'student_name': request.studentName,
-        if (request.admissionNumber != null)
+        if (request.studentName != null) ...{
+          'displayName': request.studentName,
+          'display_name': request.studentName,
+          'studentName': request.studentName,
+          'student_name': request.studentName,
+        },
+        if (request.admissionNumber != null) ...{
+          'admissionNumber': request.admissionNumber,
           'admission_number': request.admissionNumber,
-        if (request.classLabel != null) 'class_label': request.classLabel,
-        if (request.section != null) 'section': request.section,
-        if (request.academicYear != null) 'academic_year': request.academicYear,
+        },
         if (request.gender != null) 'gender': request.gender,
-        if (request.dateOfBirth != null) 'date_of_birth': request.dateOfBirth,
-        if (request.guardianName != null) 'guardian_name': request.guardianName,
-        if (request.phone != null) 'phone': request.phone,
-        if (request.email != null) 'email': request.email,
+        if (request.dateOfBirth != null) ...{
+          'dateOfBirth': request.dateOfBirth,
+          'date_of_birth': request.dateOfBirth,
+        },
       },
     );
   }

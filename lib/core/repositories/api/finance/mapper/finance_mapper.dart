@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../dto/create_collection_request_dto.dart';
 import '../dto/finance_collections_dto.dart';
 import '../dto/finance_dashboard_dto.dart';
 import '../dto/finance_defaulters_dto.dart';
 import '../dto/finance_discounts_dto.dart';
 import '../dto/finance_enum_codec.dart';
 import '../dto/finance_fee_structures_dto.dart';
+import '../dto/finance_invoices_dto.dart';
+import '../dto/finance_receipt_dto.dart';
 import '../dto/finance_refunds_dto.dart';
 import '../dto/finance_reports_dto.dart';
 import '../dto/finance_settings_dto.dart';
@@ -19,6 +22,9 @@ class FinanceMapper {
 
   FinanceDashboardData toDashboard(FinanceDashboardDto dto) {
     final raw = dto.raw;
+    if (raw.containsKey('totalCollected') || raw.containsKey('totalStudents')) {
+      return _toDashboardFromApi(raw);
+    }
     return FinanceDashboardData(
       outstandingAmount: raw['outstandingAmount'] as String? ?? '',
       defaultersCount: raw['defaultersCount'] as int? ?? 0,
@@ -31,6 +37,121 @@ class FinanceMapper {
         raw['recentPayments'] as List<dynamic>? ?? const [],
       ),
     );
+  }
+
+  FinanceDashboardData _toDashboardFromApi(Map<String, dynamic> raw) {
+    final totalOutstanding = _readAmount(raw['totalOutstanding']);
+    final totalCollected = _readAmount(raw['totalCollected']);
+    final totalInvoiced = _readAmount(raw['totalInvoiced']);
+    final todayCollections = _readAmount(raw['todayCollections']);
+    final collectionRate = (raw['collectionRate'] as num?)?.toDouble() ?? 0;
+    final pendingRefunds = raw['pendingRefunds'] as int? ?? 0;
+
+    return FinanceDashboardData(
+      outstandingAmount: _formatDashboardAmount(totalOutstanding),
+      defaultersCount: 0,
+      aiInsight: pendingRefunds > 0
+          ? '$pendingRefunds refund requests awaiting review.'
+          : '',
+      kpis: [
+        FinanceKpi(
+          id: 'collected_total',
+          value: _formatDashboardAmount(totalCollected),
+          label: 'Total Collected',
+          icon: Icons.payments_outlined,
+          accentName: 'success',
+        ),
+        FinanceKpi(
+          id: 'outstanding',
+          value: _formatDashboardAmount(totalOutstanding),
+          label: 'Outstanding',
+          icon: Icons.pending_actions_outlined,
+          accentName: 'warning',
+        ),
+        FinanceKpi(
+          id: 'collection_rate',
+          value: '${collectionRate.toStringAsFixed(collectionRate % 1 == 0 ? 0 : 1)}%',
+          label: 'Collection Rate',
+          icon: Icons.trending_up,
+          accentName: 'primary',
+          detail: totalInvoiced > 0
+              ? 'of ${_formatDashboardAmount(totalInvoiced)} invoiced'
+              : null,
+        ),
+        FinanceKpi(
+          id: 'today',
+          value: _formatDashboardAmount(todayCollections),
+          label: 'Collected Today',
+          icon: Icons.today_outlined,
+          accentName: 'success',
+          detail: '${raw['todayCollectionCount'] ?? 0} transactions',
+        ),
+        FinanceKpi(
+          id: 'active_students',
+          value: '${raw['totalStudents'] ?? 0}',
+          label: 'Open Fee Accounts',
+          icon: Icons.groups_outlined,
+          accentName: 'neutral',
+        ),
+        FinanceKpi(
+          id: 'active_assignments',
+          value: '${raw['activeFeeAssignments'] ?? 0}',
+          label: 'Active Assignments',
+          icon: Icons.assignment_outlined,
+          accentName: 'neutral',
+        ),
+      ],
+      collectionTrend: const [],
+      recentPayments: _mapRecentCollections(
+        raw['recentCollections'] as List<dynamic>? ?? const [],
+      ),
+    );
+  }
+
+  double _readAmount(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  String _formatDashboardAmount(double amount) {
+    if (amount >= 100000) {
+      final lakhs = amount / 100000;
+      final formatted = lakhs % 1 == 0
+          ? lakhs.toStringAsFixed(0)
+          : lakhs.toStringAsFixed(1);
+      return '₹${formatted}L';
+    }
+    if (amount >= 1000) {
+      final thousands = amount / 1000;
+      final formatted = thousands % 1 == 0
+          ? thousands.toStringAsFixed(0)
+          : thousands.toStringAsFixed(1);
+      return '₹${formatted}K';
+    }
+    return '₹${amount.toStringAsFixed(amount % 1 == 0 ? 0 : 0)}';
+  }
+
+  List<RecentPayment> _mapRecentCollections(List<dynamic> items) {
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>)
+          RecentPayment(
+            id: item['id'] as String? ?? '',
+            studentName: item['studentName'] as String? ?? '',
+            admissionNumber: '',
+            amount: _formatDashboardAmount(_readAmount(item['amount'])),
+            mode: _formatPaymentMethod(item['paymentMethod'] as String?),
+            receiptNumber: item['receiptNumber'] as String? ?? '',
+            collectedAt: item['collectionDate'] as String? ?? '',
+            status: CollectionStatus.completed,
+          ),
+    ];
+  }
+
+  String _formatPaymentMethod(String? method) {
+    if (method == null || method.isEmpty) return '';
+    return method[0].toUpperCase() + method.substring(1).toLowerCase();
   }
 
   List<CollectionPayment> toCollections(FinanceCollectionsResponseDto dto) {
@@ -87,6 +208,34 @@ class FinanceMapper {
     );
   }
 
+  FinanceCollectionResult toCollectionResult(FinanceCollectionResultDto dto) {
+    final raw = dto.raw;
+    final collectionRaw = raw['collection'] as Map<String, dynamic>? ?? const {};
+    final receiptRaw = raw['receipt'] as Map<String, dynamic>? ?? const {};
+    final invoiceRaw = raw['invoice'] as Map<String, dynamic>? ?? const {};
+    return FinanceCollectionResult(
+      collectionId: collectionRaw['id'] as String? ?? '',
+      invoiceId: collectionRaw['invoiceId'] as String? ?? '',
+      studentAccountId: collectionRaw['studentAccountId'] as String? ?? '',
+      receiptNumber: collectionRaw['receiptNumber'] as String? ?? '',
+      amountCollected: collectionRaw['amountCollected'] as String? ?? '',
+      paymentMethod: collectionRaw['paymentMethod'] as String? ?? '',
+      collectionDate: collectionRaw['collectionDate'] as String? ?? '',
+      receipt: FinanceReceiptDetail(
+        id: receiptRaw['id'] as String? ?? '',
+        receiptNumber: receiptRaw['receiptNumber'] as String? ?? '',
+        amount: receiptRaw['amount'] as String? ?? '',
+        receiptDate: receiptRaw['receiptDate'] as String? ?? '',
+        collectionId: receiptRaw['collectionId'] as String? ??
+            collectionRaw['id'] as String? ??
+            '',
+        invoiceId: collectionRaw['invoiceId'] as String? ?? '',
+        studentAccountId: collectionRaw['studentAccountId'] as String? ?? '',
+      ),
+      invoice: toFinanceInvoice(FinanceInvoiceDto.fromJson(invoiceRaw)),
+    );
+  }
+
   List<FinanceFeeStructure> toFeeStructures(
     FinanceFeeStructuresResponseDto dto,
   ) {
@@ -99,6 +248,8 @@ class FinanceMapper {
       id: raw['id'] as String? ?? '',
       name: raw['name'] as String? ?? '',
       academicYear: raw['academicYear'] as String? ?? '',
+      academicYearId: raw['academicYearId'] as String? ??
+          raw['academic_year_id'] as String?,
       totalAnnual: raw['totalAnnual'] as String? ?? '',
       classRange: raw['classRange'] as String? ?? '',
       status: FinanceEnumCodec.parseFeeStructureStatus(
@@ -189,6 +340,70 @@ class FinanceMapper {
       approver: raw['approver'] as String? ?? '',
       feeAccountId: raw['feeAccountId'] as String? ?? '',
       originalReceipt: raw['originalReceipt'] as String? ?? '',
+      collectionId: raw['collectionId'] as String? ?? '',
+      invoiceId: raw['invoiceId'] as String? ?? '',
+    );
+  }
+
+  FinanceReceiptDetail? toReceiptDetail(FinanceReceiptResponseDto dto) {
+    final raw = dto.raw;
+    final receiptRaw = raw['receipt'] as Map<String, dynamic>? ?? raw;
+    final receiptNumber = receiptRaw['receiptNumber'] as String? ?? '';
+    if (receiptNumber.isEmpty && (receiptRaw['id'] as String? ?? '').isEmpty) {
+      return null;
+    }
+    return FinanceReceiptDetail(
+      id: receiptRaw['id'] as String? ?? '',
+      receiptNumber: receiptNumber,
+      amount: receiptRaw['amount'] as String? ?? '',
+      receiptDate: receiptRaw['receiptDate'] as String? ?? '',
+      collectionId: raw['collectionId'] as String? ??
+          receiptRaw['collectionId'] as String? ??
+          '',
+      invoiceId: raw['invoiceId'] as String? ?? '',
+      studentAccountId: raw['studentAccountId'] as String? ?? '',
+    );
+  }
+
+  List<FinanceInvoice> toInvoices(FinanceInvoicesResponseDto dto) {
+    return [for (final item in dto.items) toFinanceInvoice(item)];
+  }
+
+  FinanceInvoice toFinanceInvoice(FinanceInvoiceDto dto) {
+    final raw = dto.raw;
+    return FinanceInvoice(
+      id: raw['id'] as String? ?? '',
+      studentId: raw['studentId'] as String? ?? '',
+      feeAssignmentId: raw['feeAssignmentId'] as String? ?? '',
+      academicYear: raw['academicYear'] as String? ?? '',
+      invoiceNumber: raw['invoiceNumber'] as String? ?? '',
+      invoiceDate: raw['invoiceDate'] as String? ?? '',
+      dueDate: raw['dueDate'] as String? ?? '',
+      subtotalAmount: raw['subtotalAmount'] as String? ?? '0',
+      discountAmount: raw['discountAmount'] as String? ?? '0',
+      totalAmount: raw['totalAmount'] as String? ?? '0',
+      outstandingAmount: raw['outstandingAmount'] as String? ?? '0',
+      paidAmount: raw['paidAmount'] as String? ?? '0',
+      invoiceStatus: FinanceEnumCodec.parseInvoiceStatus(
+        raw['invoiceStatus'] as String?,
+      ),
+      termLabel: raw['termLabel'] as String? ?? 'Annual',
+      createdBy: raw['createdBy'] as String? ?? '',
+      createdAt: raw['createdAt'] as String? ?? '',
+      updatedAt: raw['updatedAt'] as String? ?? '',
+    );
+  }
+
+  InstallmentHistoryEntry toInstallmentHistory(FinanceInvoice invoice) {
+    return InstallmentHistoryEntry(
+      id: invoice.id,
+      termLabel: invoice.termLabel,
+      dueDate: invoice.dueDate,
+      amount: invoice.totalAmount,
+      paidAmount: invoice.paidAmount,
+      status: FinanceEnumCodec.invoiceStatusToCollectionStatus(
+        invoice.invoiceStatus,
+      ),
     );
   }
 

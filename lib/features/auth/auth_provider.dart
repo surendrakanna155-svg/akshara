@@ -6,6 +6,7 @@ import '../../core/auth/auth_providers.dart';
 import '../../core/auth/auth_security_providers.dart';
 import '../../core/auth/auth_session_manager.dart';
 import '../../core/auth/token_refresh_service.dart';
+import '../../core/config/environment_provider.dart';
 import '../../core/providers/shared_preferences_provider.dart';
 import '../../core/security/server_permission_models.dart';
 import '../../core/security/server_permission_provider.dart';
@@ -168,6 +169,10 @@ class AuthNotifier extends Notifier<AuthState> {
 
   /// Sends a mock OTP to [phoneNumber] for the selected demo [role].
   Future<bool> sendOtp(String phoneNumber, UserRole role) async {
+    if (ref.read(environmentProvider).disableDemoAuth) {
+      return false;
+    }
+
     final normalized = _normalizePhone(phoneNumber);
     if (normalized.length != 10) {
       return false;
@@ -191,6 +196,10 @@ class AuthNotifier extends Notifier<AuthState> {
 
   /// Verifies OTP. Accepts [kMockValidOtp] or any 6-digit code in mock mode.
   Future<bool> verifyOtp(String otp) async {
+    if (ref.read(environmentProvider).disableDemoAuth) {
+      return false;
+    }
+
     if (state.status != AuthStatus.otpPending) {
       return false;
     }
@@ -264,6 +273,10 @@ class AuthNotifier extends Notifier<AuthState> {
     required String displayName,
     ErpRole? erpRole,
   }) async {
+    if (ref.read(environmentProvider).disableDemoAuth) {
+      throw StateError('Mock staff sign-in is disabled in production builds');
+    }
+
     final ErpRole resolvedErpRole =
         erpRole ?? ref.read(staffErpRoleProvider);
     await _storage.writeStaffErpRolePreference(resolvedErpRole);

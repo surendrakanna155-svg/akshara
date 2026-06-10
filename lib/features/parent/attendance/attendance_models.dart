@@ -151,6 +151,7 @@ class AttendanceMonthData {
     required this.recentLogs,
     this.warningBannerMessage,
     this.unreadNotifications = 0,
+    this.classTeacherPhone,
   });
 
   final DateTime month;
@@ -161,6 +162,7 @@ class AttendanceMonthData {
   final List<AttendanceDayLog> recentLogs;
   final String? warningBannerMessage;
   final int unreadNotifications;
+  final String? classTeacherPhone;
 
   String get monthLabel {
     const months = [

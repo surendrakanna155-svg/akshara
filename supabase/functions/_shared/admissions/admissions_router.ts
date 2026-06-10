@@ -21,6 +21,7 @@ import {
   handleUpdateLead,
   handleUploadDocument,
 } from "./admissions_handlers.ts";
+import { handleDashboard } from "./admissions_dashboard_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,6 +32,9 @@ function matchAdmissionsRoute(
 ): { handler: (req: Request, config: AppConfig, ...args: string[]) => Promise<Response>; args: string[] } | null {
   if (path === "/admissions/leads" && method === "GET") {
     return { handler: handleListLeads, args: [] };
+  }
+  if (path === "/admissions/dashboard" && method === "GET") {
+    return { handler: handleDashboard, args: [] };
   }
   if (path === "/admissions/leads" && method === "POST") {
     return { handler: handleCreateLead, args: [] };

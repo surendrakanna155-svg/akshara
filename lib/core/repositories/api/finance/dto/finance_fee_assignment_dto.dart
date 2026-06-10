@@ -1,4 +1,37 @@
 import '../../admissions/dto/api_envelope_dto.dart';
+import '../../admissions/dto/pagination_dto.dart';
+
+/// FN-04 Fee assignment row from GET /finance/fee-assignments.
+class FeeAssignmentRowDto {
+  const FeeAssignmentRowDto({required this.raw});
+
+  factory FeeAssignmentRowDto.fromJson(Map<String, dynamic> json) {
+    return FeeAssignmentRowDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class FinanceFeeAssignmentsResponseDto {
+  const FinanceFeeAssignmentsResponseDto({
+    required this.items,
+    this.pagination,
+  });
+
+  factory FinanceFeeAssignmentsResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return FinanceFeeAssignmentsResponseDto(
+      items: [
+        for (final item in envelope.requireListItems())
+          FeeAssignmentRowDto.fromJson(item),
+      ],
+      pagination: envelope.pagination,
+    );
+  }
+
+  final List<FeeAssignmentRowDto> items;
+  final PaginationDto? pagination;
+}
 
 /// FN-04 Fee assignment plan item.
 class FeeAssignmentPlanDto {

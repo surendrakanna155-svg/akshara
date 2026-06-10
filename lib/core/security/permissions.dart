@@ -50,6 +50,23 @@ enum Permission {
 
   // Admin hub
   viewAdminHub,
+
+  // Onboarding / data migration
+  viewOnboarding,
+  manageOnboarding,
+
+  // AI Copilot
+  viewAiCopilot,
+  runAiCopilot,
+
+  // Academic timetable (v7.5)
+  viewAcademicTimetable,
+  manageAcademicTimetable,
+  publishAcademicTimetable,
+
+  // Analytics & Intelligence (v7.6)
+  viewAnalytics,
+  viewSchoolHealth,
 }
 
 /// Immutable set of [Permission] values for a session.

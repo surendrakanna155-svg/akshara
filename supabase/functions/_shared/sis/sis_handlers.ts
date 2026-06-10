@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { emitMutationAudit, sisAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   InvalidStudentStatusError,
   InvalidStudentStatusTransitionError,
@@ -258,9 +259,29 @@ export async function handleCreateStudent(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const detail = await runTenant(config, auth.claims, (db) =>
-      createStudent(db, orgId, schoolId, input)
-    );
+    const detail = await runTenant(config, auth.claims, async (db) => {
+      const created = await createStudent(db, orgId, schoolId, input);
+      const { recordMutationAudit } = await import("../audit/audit_repository.ts");
+      await recordMutationAudit(
+        db,
+        auth.claims,
+        {
+          eventType: "studentCreated",
+          category: "workflow",
+          entityType: "student",
+          entityId: created.student.id,
+          metadata: { admissionNumber: input.admissionNumber },
+        },
+        {
+          eventType: "sis.student.created",
+          payload: { studentId: created.student.id },
+          sourceModule: "sis",
+          idempotencyKey: `sis.student:${created.student.id}`,
+        },
+        req,
+      );
+      return created;
+    });
     return jsonResponse(envelope(studentDetailToApi(detail)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -295,9 +316,11 @@ export async function handleUpdateStudent(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const detail = await runTenant(config, auth.claims, (db) =>
-      updateStudent(db, orgId, schoolId, studentId, parseUpdateStudentInput(body))
-    );
+    const detail = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateStudent(db, orgId, schoolId, studentId, parseUpdateStudentInput(body));
+      await emitMutationAudit(db, auth.claims, sisAudit.studentUpdated(studentId), req);
+      return updated;
+    });
     return jsonResponse(envelope(studentDetailToApi(detail)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -337,9 +360,11 @@ export async function handleUpdateStudentStatus(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const detail = await runTenant(config, auth.claims, (db) =>
-      updateStudentStatus(db, orgId, schoolId, studentId, { status })
-    );
+    const detail = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateStudentStatus(db, orgId, schoolId, studentId, { status });
+      await emitMutationAudit(db, auth.claims, sisAudit.studentStatusUpdated(studentId, status), req);
+      return updated;
+    });
     return jsonResponse(envelope(studentDetailToApi(detail)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {

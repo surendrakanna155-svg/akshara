@@ -10,6 +10,8 @@ export interface AppConfig {
   supabaseServiceRoleKey: string;
   /** Non-bypass Postgres URL for `erp_tenant` role (TD-P0-01). */
   erpTenantDatabaseUrl: string | null;
+  /** Token for `/health/tenant-access` and `/health/operations` (v7.7). */
+  internalHealthToken: string | null;
 }
 
 export function loadConfig(): AppConfig {
@@ -45,5 +47,6 @@ export function loadConfig(): AppConfig {
     supabaseUrl,
     supabaseServiceRoleKey,
     erpTenantDatabaseUrl: Deno.env.get("ERP_TENANT_DATABASE_URL") ?? null,
+    internalHealthToken: Deno.env.get("INTERNAL_HEALTH_TOKEN") ?? null,
   };
 }

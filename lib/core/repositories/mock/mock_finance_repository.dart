@@ -9,6 +9,11 @@ import '../pagination_helpers.dart';
 import '../repository_query.dart';
 import '../../tenant/tenant_mock_scope.dart';
 
+double _parseFinanceAmount(String value) =>
+    double.tryParse(value.replaceAll(RegExp(r'[₹,\s]'), '')) ?? 0;
+
+String _formatFinanceAmount(double value) => '₹${value.round()}';
+
 /// In-memory finance data for MVP and Phase 2 screens.
 class MockFinanceRepository implements FinanceRepository {
   final _FinanceMutableStore _store = _FinanceMutableStore();
@@ -133,7 +138,7 @@ class MockFinanceRepository implements FinanceRepository {
     required RepositoryQuery query,
   }) async =>
       PaginatedResult.fromItems(
-        TenantMockScope.filter(query: query, items: _payments),
+        TenantMockScope.filter(query: query, items: _store.payments),
         page: query.page,
         pageSize: query.pageSize,
       );
@@ -210,7 +215,7 @@ class MockFinanceRepository implements FinanceRepository {
 
   @override
   Future<CollectionDetail?> getCollectionDetail({required RepositoryQuery query, required String collectionId}) async {
-    for (final payment in _payments) {
+    for (final payment in _store.payments) {
       if (payment.id == collectionId) {
         return CollectionDetail(
           payment: payment,
@@ -319,6 +324,131 @@ class MockFinanceRepository implements FinanceRepository {
       }
     }
     return null;
+  }
+
+  @override
+  Future<FinanceCollectionResult> createCollection({
+    required RepositoryQuery query,
+    required CreateCollectionRequest request,
+  }) async {
+    final invoiceIndex = _store.invoices.indexWhere(
+      (item) => item.id == request.invoiceId,
+    );
+    if (invoiceIndex < 0) {
+      throw StateError('Invoice not found: ${request.invoiceId}');
+    }
+    final invoice = _store.invoices[invoiceIndex];
+    if (invoice.invoiceStatus == InvoiceStatus.draft ||
+        invoice.invoiceStatus == InvoiceStatus.cancelled) {
+      throw StateError('Invoice is not collectible');
+    }
+
+    final amount = double.tryParse(
+          request.amountCollected.replaceAll(RegExp(r'[₹,\s]'), ''),
+        ) ??
+        0;
+    final outstanding = double.tryParse(invoice.outstandingAmount) ?? 0;
+    if (amount <= 0 || amount > outstanding) {
+      throw StateError('Invalid collection amount');
+    }
+
+    final newOutstanding = outstanding - amount;
+    final paid = (double.tryParse(invoice.paidAmount) ?? 0) + amount;
+    final newStatus = newOutstanding <= 0
+        ? InvoiceStatus.paid
+        : (paid > 0 ? InvoiceStatus.partiallyPaid : InvoiceStatus.issued);
+
+    final collectionId = _store.nextId('col_');
+    final receiptNumber = 'RCP-${DateTime.now().year}-${collectionId.split('_').last}';
+    final payment = CollectionPayment(
+      id: collectionId,
+      receiptNumber: receiptNumber,
+      studentName: 'Student',
+      admissionNumber: 'ADM-MOCK',
+      amount: request.amountCollected,
+      mode: request.paymentMethod,
+      collectedAt: request.collectionDate ?? 'Today',
+      collectedBy: 'Finance Staff',
+      status: CollectionStatus.completed,
+      classLabel: '10',
+    );
+    _store.payments.insert(0, payment);
+
+    final updatedInvoice = invoice.copyWith(
+      outstandingAmount: newOutstanding.toStringAsFixed(0),
+      paidAmount: paid.toStringAsFixed(0),
+      invoiceStatus: newStatus,
+    );
+    _store.invoices[invoiceIndex] = updatedInvoice;
+
+    final receipt = FinanceReceiptDetail(
+      id: _store.nextId('rcpt_'),
+      receiptNumber: receiptNumber,
+      amount: request.amountCollected,
+      receiptDate: request.collectionDate ?? '2026-06-10',
+      collectionId: collectionId,
+      invoiceId: invoice.id,
+      studentAccountId: 'acct_mock',
+    );
+
+    return FinanceCollectionResult(
+      collectionId: collectionId,
+      invoiceId: invoice.id,
+      studentAccountId: 'acct_mock',
+      receiptNumber: receiptNumber,
+      amountCollected: request.amountCollected,
+      paymentMethod: request.paymentMethod,
+      collectionDate: request.collectionDate ?? '2026-06-10',
+      receipt: receipt,
+      invoice: updatedInvoice,
+    );
+  }
+
+  @override
+  Future<FinanceCollectionResult> cancelCollection({
+    required RepositoryQuery query,
+    required String collectionId,
+  }) async {
+    final paymentIndex = _store.payments.indexWhere((item) => item.id == collectionId);
+    if (paymentIndex < 0) {
+      throw StateError('Collection not found: $collectionId');
+    }
+    final payment = _store.payments[paymentIndex];
+    if (payment.status == CollectionStatus.refunded) {
+      throw StateError('Collection already cancelled');
+    }
+    _store.payments[paymentIndex] = CollectionPayment(
+      id: payment.id,
+      receiptNumber: payment.receiptNumber,
+      studentName: payment.studentName,
+      admissionNumber: payment.admissionNumber,
+      amount: payment.amount,
+      mode: payment.mode,
+      collectedAt: payment.collectedAt,
+      collectedBy: payment.collectedBy,
+      status: CollectionStatus.refunded,
+      classLabel: payment.classLabel,
+    );
+
+    return FinanceCollectionResult(
+      collectionId: payment.id,
+      invoiceId: '',
+      studentAccountId: '',
+      receiptNumber: payment.receiptNumber,
+      amountCollected: payment.amount,
+      paymentMethod: payment.mode,
+      collectionDate: payment.collectedAt,
+      receipt: FinanceReceiptDetail(
+        id: payment.id,
+        receiptNumber: payment.receiptNumber,
+        amount: payment.amount,
+        receiptDate: payment.collectedAt,
+        collectionId: payment.id,
+        invoiceId: '',
+        studentAccountId: '',
+      ),
+      invoice: _store.invoices.first,
+    );
   }
 
   @override
@@ -473,6 +603,17 @@ class MockFinanceRepository implements FinanceRepository {
         page: query.page,
         pageSize: query.pageSize,
       );
+
+  @override
+  Future<RefundRequest?> getRefund({
+    required RepositoryQuery query,
+    required String refundId,
+  }) async {
+    for (final refund in _store.refundRequests) {
+      if (refund.id == refundId) return refund;
+    }
+    return null;
+  }
 
   @override
   Future<DiscountsDashboardData> getDiscountsDashboard({
@@ -688,6 +829,8 @@ class MockFinanceRepository implements FinanceRepository {
       approver: 'Finance Manager',
       feeAccountId: request.feeAccountId,
       originalReceipt: request.originalReceipt,
+      collectionId: request.collectionId,
+      invoiceId: '',
     );
     _store.refundRequests.insert(0, refund);
     return refund;
@@ -703,6 +846,13 @@ class MockFinanceRepository implements FinanceRepository {
         _store.refundRequests.indexWhere((item) => item.id == refundId);
     if (index < 0) throw StateError('Refund not found: $refundId');
     final current = _store.refundRequests[index];
+    if (current.status != RefundStatus.pending) {
+      throw StateError('Cannot approve refund in status: ${current.status.name}');
+    }
+
+    final refundAmount = _parseFinanceAmount(current.amount);
+    _applyRefundReversal(current, refundAmount);
+
     final updated = RefundRequest(
       id: current.id,
       studentName: current.studentName,
@@ -711,12 +861,195 @@ class MockFinanceRepository implements FinanceRepository {
       amount: current.amount,
       reason: current.reason,
       requestedAt: current.requestedAt,
-      status: RefundStatus.approved,
+      status: RefundStatus.processed,
       approver: request.approver,
       feeAccountId: current.feeAccountId,
       originalReceipt: current.originalReceipt,
+      collectionId: current.collectionId,
+      invoiceId: current.invoiceId,
     );
     _store.refundRequests[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<RefundRequest> rejectRefund({
+    required RepositoryQuery query,
+    required String refundId,
+  }) async {
+    final index =
+        _store.refundRequests.indexWhere((item) => item.id == refundId);
+    if (index < 0) throw StateError('Refund not found: $refundId');
+    final current = _store.refundRequests[index];
+    final updated = RefundRequest(
+      id: current.id,
+      studentName: current.studentName,
+      admissionNumber: current.admissionNumber,
+      classLabel: current.classLabel,
+      amount: current.amount,
+      reason: current.reason,
+      requestedAt: current.requestedAt,
+      status: RefundStatus.rejected,
+      approver: current.approver,
+      feeAccountId: current.feeAccountId,
+      originalReceipt: current.originalReceipt,
+      collectionId: current.collectionId,
+      invoiceId: current.invoiceId,
+    );
+    _store.refundRequests[index] = updated;
+    return updated;
+  }
+
+  void _applyRefundReversal(RefundRequest refund, double refundAmount) {
+    if (refundAmount <= 0) return;
+
+    final collectionIndex = refund.collectionId.isNotEmpty
+        ? _store.payments.indexWhere((item) => item.id == refund.collectionId)
+        : _store.payments.indexWhere(
+            (item) => item.receiptNumber == refund.originalReceipt,
+          );
+    if (collectionIndex >= 0) {
+      final payment = _store.payments[collectionIndex];
+      if (payment.status != CollectionStatus.refunded) {
+        final collectionAmount = _parseFinanceAmount(payment.amount);
+        _store.payments[collectionIndex] = CollectionPayment(
+          id: payment.id,
+          receiptNumber: payment.receiptNumber,
+          studentName: payment.studentName,
+          admissionNumber: payment.admissionNumber,
+          amount: payment.amount,
+          mode: payment.mode,
+          collectedAt: payment.collectedAt,
+          collectedBy: payment.collectedBy,
+          status: refundAmount >= collectionAmount
+              ? CollectionStatus.refunded
+              : payment.status,
+          classLabel: payment.classLabel,
+        );
+      }
+    }
+
+    if (refund.invoiceId.isNotEmpty) {
+      final invoiceIndex =
+          _store.invoices.indexWhere((item) => item.id == refund.invoiceId);
+      if (invoiceIndex >= 0) {
+        final invoice = _store.invoices[invoiceIndex];
+        final outstanding =
+            _parseFinanceAmount(invoice.outstandingAmount) + refundAmount;
+        final total = _parseFinanceAmount(invoice.totalAmount);
+        final newStatus = outstanding <= 0
+            ? InvoiceStatus.paid
+            : (outstanding < total
+                ? InvoiceStatus.partiallyPaid
+                : InvoiceStatus.issued);
+        _store.invoices[invoiceIndex] = invoice.copyWith(
+          outstandingAmount: outstanding.toStringAsFixed(0),
+          invoiceStatus: newStatus,
+        );
+      }
+    }
+
+    final accountIndex = _store.studentAccounts.indexWhere(
+      (item) => item.id == refund.feeAccountId,
+    );
+    if (accountIndex >= 0) {
+      final account = _store.studentAccounts[accountIndex];
+      final paid = _parseFinanceAmount(account.totalPaid) - refundAmount;
+      final balance = _parseFinanceAmount(account.balance) + refundAmount;
+      _store.studentAccounts[accountIndex] = StudentFeeAccount(
+        id: account.id,
+        studentName: account.studentName,
+        admissionNumber: account.admissionNumber,
+        classLabel: account.classLabel,
+        feeStructureName: account.feeStructureName,
+        totalDue: account.totalDue,
+        totalPaid: _formatFinanceAmount(paid),
+        balance: _formatFinanceAmount(balance),
+        status: account.status,
+        lastPaymentDate: account.lastPaymentDate,
+        installmentPlan: account.installmentPlan,
+      );
+    }
+  }
+
+  @override
+  Future<FinanceReceiptDetail?> getReceipt({
+    required RepositoryQuery query,
+    required String receiptId,
+  }) async {
+    for (final payment in _store.payments) {
+      if (payment.id == receiptId || payment.receiptNumber == receiptId) {
+        return FinanceReceiptDetail(
+          id: payment.id,
+          receiptNumber: payment.receiptNumber,
+          amount: payment.amount,
+          receiptDate: payment.collectedAt,
+          collectionId: payment.id,
+          invoiceId: '',
+          studentAccountId: _accountIdForAdmission(payment.admissionNumber),
+        );
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<PaginatedResult<FinanceInvoice>> getInvoices({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(_store.invoices, query);
+  }
+
+  @override
+  Future<FinanceInvoice?> getInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    for (final invoice in _store.invoices) {
+      if (invoice.id == invoiceId) return invoice;
+    }
+    return null;
+  }
+
+  @override
+  Future<FinanceInvoice> issueInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final index = _store.invoices.indexWhere((item) => item.id == invoiceId);
+    if (index < 0) throw StateError('Invoice not found: $invoiceId');
+    final current = _store.invoices[index];
+    if (current.invoiceStatus != InvoiceStatus.draft) {
+      throw StateError('Cannot issue invoice in status: ${current.invoiceStatus.name}');
+    }
+    final updated = current.copyWith(
+      invoiceStatus: InvoiceStatus.issued,
+      invoiceDate: '2026-06-10',
+      dueDate: '2026-07-10',
+      updatedAt: '2026-06-10T00:00:00.000Z',
+    );
+    _store.invoices[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<FinanceInvoice> cancelInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final index = _store.invoices.indexWhere((item) => item.id == invoiceId);
+    if (index < 0) throw StateError('Invoice not found: $invoiceId');
+    final current = _store.invoices[index];
+    if (current.invoiceStatus == InvoiceStatus.paid ||
+        current.invoiceStatus == InvoiceStatus.cancelled) {
+      throw StateError('Cannot cancel invoice in status: ${current.invoiceStatus.name}');
+    }
+    final updated = current.copyWith(
+      invoiceStatus: InvoiceStatus.cancelled,
+      outstandingAmount: '0',
+      updatedAt: '2026-06-10T00:00:00.000Z',
+    );
+    _store.invoices[index] = updated;
     return updated;
   }
 
@@ -788,80 +1121,6 @@ class MockFinanceRepository implements FinanceRepository {
         _ => '—',
       };
 
-  static const List<CollectionPayment> _payments = [
-    CollectionPayment(
-      id: 'col_1',
-      receiptNumber: 'RCP-2026-8841',
-      studentName: 'Arjun Patel',
-      admissionNumber: 'ADM-2026-0138',
-      amount: '₹62,000',
-      mode: 'UPI',
-      collectedAt: 'Today, 10:42',
-      collectedBy: 'R. Kumar',
-      status: CollectionStatus.completed,
-      classLabel: '10',
-    ),
-    CollectionPayment(
-      id: 'col_2',
-      receiptNumber: 'RCP-2026-8840',
-      studentName: 'Priya Sharma',
-      admissionNumber: 'ADM-2025-0092',
-      amount: '₹45,000',
-      mode: 'Cash',
-      collectedAt: 'Today, 09:15',
-      collectedBy: 'S. Nair',
-      status: CollectionStatus.completed,
-      classLabel: '8',
-    ),
-    CollectionPayment(
-      id: 'col_3',
-      receiptNumber: 'RCP-2026-8839',
-      studentName: 'Rohan Mehta',
-      admissionNumber: 'ADM-2025-0114',
-      amount: '₹38,500',
-      mode: 'Card',
-      collectedAt: 'Today, 08:30',
-      collectedBy: 'R. Kumar',
-      status: CollectionStatus.completed,
-      classLabel: '9',
-    ),
-    CollectionPayment(
-      id: 'col_4',
-      receiptNumber: 'RCP-2026-8838',
-      studentName: 'Ananya Reddy',
-      admissionNumber: 'ADM-2026-0142',
-      amount: '₹71,500',
-      mode: 'UPI',
-      collectedAt: 'Yesterday',
-      collectedBy: 'R. Kumar',
-      status: CollectionStatus.pending,
-      classLabel: '5',
-    ),
-    CollectionPayment(
-      id: 'col_5',
-      receiptNumber: 'RCP-2026-8837',
-      studentName: 'Emma Thomas',
-      admissionNumber: 'ADM-2026-0135',
-      amount: '₹85,000',
-      mode: 'Bank Transfer',
-      collectedAt: 'Yesterday',
-      collectedBy: 'S. Nair',
-      status: CollectionStatus.completed,
-      classLabel: '7',
-    ),
-    CollectionPayment(
-      id: 'col_6',
-      receiptNumber: 'RCP-2026-8836',
-      studentName: 'Kavya Iyer',
-      admissionNumber: 'ADM-2025-0101',
-      amount: '₹52,000',
-      mode: 'UPI',
-      collectedAt: '2 days ago',
-      collectedBy: 'R. Kumar',
-      status: CollectionStatus.refunded,
-      classLabel: '6',
-    ),
-  ];
 }
 
 class _FinanceMutableStore {
@@ -870,12 +1129,16 @@ class _FinanceMutableStore {
         studentAccounts = List.of(_seedStudentAccounts),
         refundRequests = List.of(_seedRefundRequests),
         scholarships = List.of(_seedScholarships),
+        invoices = List.of(_seedInvoices),
+        payments = List.of(_seedPayments),
         settings = _seedSettings;
 
   List<FinanceFeeStructure> feeStructures;
   List<StudentFeeAccount> studentAccounts;
   List<RefundRequest> refundRequests;
   List<ScholarshipCatalogItem> scholarships;
+  List<FinanceInvoice> invoices;
+  List<CollectionPayment> payments;
   FinanceSettingsData settings;
   int _counter = 100;
 
@@ -1226,6 +1489,8 @@ class _FinanceMutableStore {
       approver: 'Principal Sharma',
       feeAccountId: 'acct_6',
       originalReceipt: 'RCP-2026-8820',
+      collectionId: '',
+      invoiceId: '',
     ),
     const RefundRequest(
       id: 'ref_3',
@@ -1239,6 +1504,23 @@ class _FinanceMutableStore {
       approver: 'Finance Manager',
       feeAccountId: 'acct_7',
       originalReceipt: 'RCP-2026-8795',
+      collectionId: 'col_6',
+      invoiceId: 'inv_2',
+    ),
+    const RefundRequest(
+      id: 'ref_4',
+      studentName: 'Rohan Mehta',
+      admissionNumber: 'ADM-2025-0114',
+      classLabel: '9',
+      amount: '₹38,500',
+      reason: 'Transport fee overcharge',
+      requestedAt: '3 Jun 2026',
+      status: RefundStatus.pending,
+      approver: 'Finance Manager',
+      feeAccountId: 'acct_1',
+      originalReceipt: 'RCP-2026-8839',
+      collectionId: 'col_3',
+      invoiceId: 'inv_1',
     ),
   ];
 
@@ -1266,6 +1548,141 @@ class _FinanceMutableStore {
       maxDiscount: '15%',
       eligibility: 'State-level sports achievement',
       activeAssignments: 4,
+    ),
+  ];
+
+  static const List<FinanceInvoice> _seedInvoices = [
+    FinanceInvoice(
+      id: 'inv_1',
+      studentId: 'stu_1',
+      feeAssignmentId: 'assign_1',
+      academicYear: '2026-27',
+      invoiceNumber: 'INV-2026-A1B2C3D4',
+      invoiceDate: '2026-06-01',
+      dueDate: '2026-07-01',
+      subtotalAmount: '185000',
+      discountAmount: '0',
+      totalAmount: '185000',
+      outstandingAmount: '50000',
+      paidAmount: '135000',
+      invoiceStatus: InvoiceStatus.issued,
+      termLabel: 'Annual',
+      createdBy: 'staff_1',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      updatedAt: '2026-06-01T00:00:00.000Z',
+    ),
+    FinanceInvoice(
+      id: 'inv_2',
+      studentId: 'stu_2',
+      feeAssignmentId: 'assign_2',
+      academicYear: '2026-27',
+      invoiceNumber: 'INV-2026-E5F6G7H8',
+      invoiceDate: '2026-06-01',
+      dueDate: '2026-06-15',
+      subtotalAmount: '150000',
+      discountAmount: '0',
+      totalAmount: '150000',
+      outstandingAmount: '0',
+      paidAmount: '150000',
+      invoiceStatus: InvoiceStatus.paid,
+      termLabel: 'Annual',
+      createdBy: 'staff_1',
+      createdAt: '2026-06-01T00:00:00.000Z',
+      updatedAt: '2026-06-05T00:00:00.000Z',
+    ),
+    FinanceInvoice(
+      id: 'inv_3',
+      studentId: 'stu_3',
+      feeAssignmentId: 'assign_3',
+      academicYear: '2026-27',
+      invoiceNumber: 'INV-2026-I9J0K1L2',
+      invoiceDate: '2026-06-10',
+      dueDate: '2026-07-10',
+      subtotalAmount: '120000',
+      discountAmount: '0',
+      totalAmount: '120000',
+      outstandingAmount: '120000',
+      paidAmount: '0',
+      invoiceStatus: InvoiceStatus.draft,
+      termLabel: 'Annual',
+      createdBy: 'staff_1',
+      createdAt: '2026-06-10T00:00:00.000Z',
+      updatedAt: '2026-06-10T00:00:00.000Z',
+    ),
+  ];
+
+  static const List<CollectionPayment> _seedPayments = [
+    CollectionPayment(
+      id: 'col_1',
+      receiptNumber: 'RCP-2026-8841',
+      studentName: 'Arjun Patel',
+      admissionNumber: 'ADM-2026-0138',
+      amount: '₹62,000',
+      mode: 'UPI',
+      collectedAt: 'Today, 10:42',
+      collectedBy: 'R. Kumar',
+      status: CollectionStatus.completed,
+      classLabel: '10',
+    ),
+    CollectionPayment(
+      id: 'col_2',
+      receiptNumber: 'RCP-2026-8840',
+      studentName: 'Priya Sharma',
+      admissionNumber: 'ADM-2025-0092',
+      amount: '₹45,000',
+      mode: 'Cash',
+      collectedAt: 'Today, 09:15',
+      collectedBy: 'S. Nair',
+      status: CollectionStatus.completed,
+      classLabel: '8',
+    ),
+    CollectionPayment(
+      id: 'col_3',
+      receiptNumber: 'RCP-2026-8839',
+      studentName: 'Rohan Mehta',
+      admissionNumber: 'ADM-2025-0114',
+      amount: '₹38,500',
+      mode: 'Card',
+      collectedAt: 'Today, 08:30',
+      collectedBy: 'R. Kumar',
+      status: CollectionStatus.completed,
+      classLabel: '9',
+    ),
+    CollectionPayment(
+      id: 'col_4',
+      receiptNumber: 'RCP-2026-8838',
+      studentName: 'Ananya Reddy',
+      admissionNumber: 'ADM-2026-0142',
+      amount: '₹71,500',
+      mode: 'UPI',
+      collectedAt: 'Yesterday',
+      collectedBy: 'R. Kumar',
+      status: CollectionStatus.pending,
+      classLabel: '5',
+    ),
+    CollectionPayment(
+      id: 'col_5',
+      receiptNumber: 'RCP-2026-8837',
+      studentName: 'Emma Thomas',
+      admissionNumber: 'ADM-2026-0135',
+      amount: '₹85,000',
+      mode: 'Bank Transfer',
+      collectedAt: 'Yesterday',
+      collectedBy: 'S. Nair',
+      status: CollectionStatus.completed,
+      classLabel: '7',
+    ),
+    CollectionPayment(
+      id: 'col_6',
+      receiptNumber: 'RCP-2026-8836',
+      studentName: 'Kavya Iyer',
+      admissionNumber: 'ADM-2025-0101',
+      amount: '₹52,000',
+      mode: 'UPI',
+      collectedAt: '2 days ago',
+      collectedBy: 'R. Kumar',
+      status: CollectionStatus.refunded,
+      classLabel: '6',
     ),
   ];
 

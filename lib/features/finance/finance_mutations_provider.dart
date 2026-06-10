@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/repositories/academic/academic_catalog_mutation.dart';
+import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
 import 'discounts/finance_discounts_provider.dart';
@@ -75,6 +77,10 @@ class CreateFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
   Future<FinanceFeeStructure?> execute(CreateFeeStructureRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      final catalog = ref.read(academicCatalogProvider);
+      final enriched = catalog == null
+          ? request
+          : enrichCreateFeeStructureRequest(request, catalog);
       return _runMutation(
         ref,
         assertPermission: () => assertManageFinance(ref),
@@ -84,7 +90,7 @@ class CreateFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
         invalidateFeeStructures: true,
         action: () => ref.read(financeRepositoryProvider).createFeeStructure(
               query: ref.read(repositoryQueryProvider),
-              request: request,
+              request: enriched,
             ),
       );
     });
@@ -107,6 +113,10 @@ class UpdateFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      final catalog = ref.read(academicCatalogProvider);
+      final enriched = catalog == null
+          ? request
+          : enrichUpdateFeeStructureRequest(request, catalog);
       return _runMutation(
         ref,
         assertPermission: () => assertManageFinance(ref),
@@ -116,7 +126,7 @@ class UpdateFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
         action: () => ref.read(financeRepositoryProvider).updateFeeStructure(
               query: ref.read(repositoryQueryProvider),
               feeStructureId: feeStructureId,
-              request: request,
+              request: enriched,
             ),
       );
     });
@@ -279,6 +289,34 @@ class ApproveRefundNotifier extends AsyncNotifier<RefundRequest?> {
 final approveRefundProvider =
     AsyncNotifierProvider<ApproveRefundNotifier, RefundRequest?>(
   ApproveRefundNotifier.new,
+);
+
+class RejectRefundNotifier extends AsyncNotifier<RefundRequest?> {
+  @override
+  FutureOr<RefundRequest?> build() => null;
+
+  Future<RefundRequest?> execute({required String refundId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertApproveRefunds(ref),
+        auditAction: 'rejectRefund',
+        entityId: refundId,
+        invalidateRefunds: true,
+        action: () => ref.read(financeRepositoryProvider).rejectRefund(
+              query: ref.read(repositoryQueryProvider),
+              refundId: refundId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final rejectRefundProvider =
+    AsyncNotifierProvider<RejectRefundNotifier, RefundRequest?>(
+  RejectRefundNotifier.new,
 );
 
 class CreateScholarshipNotifier extends AsyncNotifier<ScholarshipCatalogItem?> {

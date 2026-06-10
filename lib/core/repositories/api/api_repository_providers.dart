@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../network/dio_provider.dart';
+import '../academic/api/academic_remote_data_source.dart';
+import '../academic/api/api_academic_repository.dart';
 import 'admissions/api_admissions_repository.dart';
 import 'admissions/remote/admissions_remote_datasource.dart';
 import 'finance/api_finance_repository.dart';
@@ -19,6 +21,8 @@ import 'transport/api_transport_repository.dart';
 import 'transport/remote/transport_remote_datasource.dart';
 import 'inventory/api_inventory_repository.dart';
 import 'inventory/remote/inventory_remote_datasource.dart';
+import 'inventory_finance/api_inventory_finance_repository.dart';
+import 'inventory_finance/remote/inventory_finance_remote_datasource.dart';
 import 'library/api_library_repository.dart';
 import 'library/remote/library_remote_datasource.dart';
 import 'control_center/api_control_center_repository.dart';
@@ -29,6 +33,16 @@ import 'teacher/api_teacher_repository.dart';
 import 'teacher/remote/teacher_remote_datasource.dart';
 import 'student/api_student_repository.dart';
 import 'student/remote/student_remote_datasource.dart';
+import 'copilot/api_copilot_repository.dart';
+import 'copilot/remote/copilot_remote_datasource.dart';
+import 'timetable/api_timetable_repository.dart';
+import 'timetable/remote/timetable_remote_datasource.dart';
+import 'analytics/api_analytics_intelligence_repository.dart';
+import 'analytics/remote/analytics_intelligence_remote_datasource.dart';
+import 'communication/api_communication_repository.dart';
+import 'communication/remote/communication_remote_datasource.dart';
+import 'onboarding/api_onboarding_repository.dart';
+import 'onboarding/remote/onboarding_remote_datasource.dart';
 
 final admissionsRemoteDataSourceProvider = Provider<AdmissionsRemoteDataSource>(
   (ref) => AdmissionsRemoteDataSource(ref.watch(dioProvider)),
@@ -40,6 +54,10 @@ final financeRemoteDataSourceProvider = Provider<FinanceRemoteDataSource>(
 
 final sisRemoteDataSourceProvider = Provider<SisRemoteDataSource>(
   (ref) => SisRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final academicRemoteDataSourceProvider = Provider<AcademicRemoteDataSource>(
+  (ref) => AcademicRemoteDataSource(ref.watch(dioProvider)),
 );
 
 final managementRemoteDataSourceProvider = Provider<ManagementRemoteDataSource>(
@@ -76,6 +94,12 @@ final apiFinanceRepositoryProvider = Provider<ApiFinanceRepository>(
 
 final apiSisRepositoryProvider = Provider<ApiSisRepository>(
   (ref) => ApiSisRepository(remote: ref.watch(sisRemoteDataSourceProvider)),
+);
+
+final apiAcademicRepositoryProvider = Provider<ApiAcademicRepository>(
+  (ref) => ApiAcademicRepository(
+    remote: ref.watch(academicRemoteDataSourceProvider),
+  ),
 );
 
 final apiManagementRepositoryProvider = Provider<ApiManagementRepository>(
@@ -115,6 +139,49 @@ final inventoryRemoteDataSourceProvider = Provider<InventoryRemoteDataSource>(
 final apiInventoryRepositoryProvider = Provider<ApiInventoryRepository>(
   (ref) => ApiInventoryRepository(
     remote: ref.watch(inventoryRemoteDataSourceProvider),
+  ),
+);
+
+final inventoryFinanceRemoteDataSourceProvider =
+    Provider<InventoryFinanceRemoteDataSource>(
+  (ref) => InventoryFinanceRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiInventoryFinanceRepositoryProvider =
+    Provider<ApiInventoryFinanceRepository>(
+  (ref) => ApiInventoryFinanceRepository(
+    remote: ref.watch(inventoryFinanceRemoteDataSourceProvider),
+  ),
+);
+
+final copilotRemoteDataSourceProvider = Provider<CopilotRemoteDataSource>(
+  (ref) => CopilotRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiCopilotRepositoryProvider = Provider<ApiCopilotRepository>(
+  (ref) => ApiCopilotRepository(
+    remote: ref.watch(copilotRemoteDataSourceProvider),
+  ),
+);
+
+final timetableRemoteDataSourceProvider = Provider<TimetableRemoteDataSource>(
+  (ref) => TimetableRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiTimetableRepositoryProvider = Provider<ApiTimetableRepository>(
+  (ref) => ApiTimetableRepository(
+    remote: ref.watch(timetableRemoteDataSourceProvider),
+  ),
+);
+
+final analyticsIntelligenceRemoteDataSourceProvider =
+    Provider<AnalyticsIntelligenceRemoteDataSource>(
+  (ref) => AnalyticsIntelligenceRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiAnalyticsIntelligenceRepositoryProvider = Provider<ApiAnalyticsIntelligenceRepository>(
+  (ref) => ApiAnalyticsIntelligenceRepository(
+    remote: ref.watch(analyticsIntelligenceRemoteDataSourceProvider),
   ),
 );
 
@@ -167,5 +234,26 @@ final apiTeacherRepositoryProvider = Provider<ApiTeacherRepository>(
 final apiStudentRepositoryProvider = Provider<ApiStudentRepository>(
   (ref) => ApiStudentRepository(
     remote: ref.watch(studentRemoteDataSourceProvider),
+  ),
+);
+
+final communicationRemoteDataSourceProvider =
+    Provider<CommunicationRemoteDataSource>(
+  (ref) => CommunicationRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiCommunicationRepositoryProvider = Provider<ApiCommunicationRepository>(
+  (ref) => ApiCommunicationRepository(
+    remote: ref.watch(communicationRemoteDataSourceProvider),
+  ),
+);
+
+final onboardingRemoteDataSourceProvider = Provider<OnboardingRemoteDataSource>(
+  (ref) => OnboardingRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiOnboardingRepositoryProvider = Provider<ApiOnboardingRepository>(
+  (ref) => ApiOnboardingRepository(
+    remote: ref.watch(onboardingRemoteDataSourceProvider),
   ),
 );

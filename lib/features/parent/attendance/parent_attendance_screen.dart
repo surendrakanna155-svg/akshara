@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -212,19 +213,27 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
   }
 
   void _showDayDetailSheet(BuildContext context, AttendanceDayLog log) {
+    final teacherPhone = ref.read(parentAttendanceProvider).classTeacherPhone;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (context) => _DayDetailSheet(log: log),
+      builder: (context) => _DayDetailSheet(
+        log: log,
+        classTeacherPhone: teacherPhone,
+      ),
     );
   }
 }
 
 class _DayDetailSheet extends StatelessWidget {
-  const _DayDetailSheet({required this.log});
+  const _DayDetailSheet({
+    required this.log,
+    this.classTeacherPhone,
+  });
 
   final AttendanceDayLog log;
+  final String? classTeacherPhone;
 
   @override
   Widget build(BuildContext context) {
@@ -273,9 +282,36 @@ class _DayDetailSheet extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () async {
+                  final phoneDigits = WhatsAppLauncher.resolvePhoneDigits(
+                    classTeacherPhone ?? '',
+                  );
+                  if (phoneDigits == null) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Class teacher contact is unavailable.'),
+                      ),
+                    );
+                    return;
+                  }
+                  final message =
+                      'Hello, I would like to discuss attendance for ${log.detailTitle}.';
+                  final opened = await WhatsAppLauncher.openChat(
+                    phoneE164: phoneDigits,
+                    message: message,
+                  );
+                  if (!context.mounted) return;
+                  if (!opened) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not open WhatsApp on this device.'),
+                      ),
+                    );
+                  }
+                },
                 child: Text(
-                  'Contact class teacher if incorrect',
+                  'Contact class teacher via WhatsApp',
                   style: text.labelLarge.copyWith(color: colors.primary),
                 ),
               ),

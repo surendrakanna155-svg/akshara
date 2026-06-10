@@ -14,6 +14,7 @@ enum FinanceScreen {
   refunds,
   discounts,
   reports,
+  reconciliation,
   settings;
 
   String get label => switch (this) {
@@ -27,6 +28,7 @@ enum FinanceScreen {
         FinanceScreen.refunds => 'Refunds',
         FinanceScreen.discounts => 'Discounts',
         FinanceScreen.reports => 'Reports',
+        FinanceScreen.reconciliation => 'Reconciliation',
         FinanceScreen.settings => 'Settings',
       };
 }
@@ -139,6 +141,7 @@ class FinanceFeeStructure {
     required this.status,
     required this.installmentOptions,
     required this.classRange,
+    this.academicYearId,
   });
 
   final String id;
@@ -149,6 +152,7 @@ class FinanceFeeStructure {
   final FeeStructureStatus status;
   final List<int> installmentOptions;
   final String classRange;
+  final String? academicYearId;
 }
 
 @immutable
@@ -261,6 +265,31 @@ class CollectionPayment {
 }
 
 @immutable
+class FinanceCollectionResult {
+  const FinanceCollectionResult({
+    required this.collectionId,
+    required this.invoiceId,
+    required this.studentAccountId,
+    required this.receiptNumber,
+    required this.amountCollected,
+    required this.paymentMethod,
+    required this.collectionDate,
+    required this.receipt,
+    required this.invoice,
+  });
+
+  final String collectionId;
+  final String invoiceId;
+  final String studentAccountId;
+  final String receiptNumber;
+  final String amountCollected;
+  final String paymentMethod;
+  final String collectionDate;
+  final FinanceReceiptDetail receipt;
+  final FinanceInvoice invoice;
+}
+
+@immutable
 class DailyCollectionSummary {
   const DailyCollectionSummary({
     required this.dateLabel,
@@ -295,6 +324,78 @@ class FinanceHandoffQueueItem {
 enum DefaulterAgingBucket { current, days1to30, days31to60, days61to90, over90 }
 
 enum RefundStatus { pending, approved, rejected, processed }
+
+enum InvoiceStatus { draft, issued, partiallyPaid, paid, cancelled }
+
+@immutable
+class FinanceInvoice {
+  const FinanceInvoice({
+    required this.id,
+    required this.studentId,
+    required this.feeAssignmentId,
+    required this.academicYear,
+    required this.invoiceNumber,
+    required this.invoiceDate,
+    required this.dueDate,
+    required this.subtotalAmount,
+    required this.discountAmount,
+    required this.totalAmount,
+    required this.outstandingAmount,
+    required this.paidAmount,
+    required this.invoiceStatus,
+    required this.termLabel,
+    required this.createdBy,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String studentId;
+  final String feeAssignmentId;
+  final String academicYear;
+  final String invoiceNumber;
+  final String invoiceDate;
+  final String dueDate;
+  final String subtotalAmount;
+  final String discountAmount;
+  final String totalAmount;
+  final String outstandingAmount;
+  final String paidAmount;
+  final InvoiceStatus invoiceStatus;
+  final String termLabel;
+  final String createdBy;
+  final String createdAt;
+  final String updatedAt;
+
+  FinanceInvoice copyWith({
+    InvoiceStatus? invoiceStatus,
+    String? invoiceDate,
+    String? dueDate,
+    String? outstandingAmount,
+    String? paidAmount,
+    String? updatedAt,
+  }) {
+    return FinanceInvoice(
+      id: id,
+      studentId: studentId,
+      feeAssignmentId: feeAssignmentId,
+      academicYear: academicYear,
+      invoiceNumber: invoiceNumber,
+      invoiceDate: invoiceDate ?? this.invoiceDate,
+      dueDate: dueDate ?? this.dueDate,
+      subtotalAmount: subtotalAmount,
+      discountAmount: discountAmount,
+      totalAmount: totalAmount,
+      outstandingAmount: outstandingAmount ?? this.outstandingAmount,
+      paidAmount: paidAmount ?? this.paidAmount,
+      invoiceStatus: invoiceStatus ?? this.invoiceStatus,
+      termLabel: termLabel,
+      createdBy: createdBy,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
 
 enum DiscountApprovalStatus { pending, approved, rejected, active }
 
@@ -351,6 +452,27 @@ class ReceiptLink {
   final String amount;
   final String dateLabel;
   final String parentReceiptRoute;
+}
+
+@immutable
+class FinanceReceiptDetail {
+  const FinanceReceiptDetail({
+    required this.id,
+    required this.receiptNumber,
+    required this.amount,
+    required this.receiptDate,
+    required this.collectionId,
+    required this.invoiceId,
+    required this.studentAccountId,
+  });
+
+  final String id;
+  final String receiptNumber;
+  final String amount;
+  final String receiptDate;
+  final String collectionId;
+  final String invoiceId;
+  final String studentAccountId;
 }
 
 @immutable
@@ -466,6 +588,8 @@ class RefundRequest {
     required this.approver,
     required this.feeAccountId,
     required this.originalReceipt,
+    this.collectionId = '',
+    this.invoiceId = '',
   });
 
   final String id;
@@ -479,6 +603,8 @@ class RefundRequest {
   final String approver;
   final String feeAccountId;
   final String originalReceipt;
+  final String collectionId;
+  final String invoiceId;
 }
 
 @immutable

@@ -1,6 +1,5 @@
 import '../../../../../features/admissions/admissions_models.dart';
 import '../../../../../features/sis/sis_models.dart';
-import '../dto/admissions_conversion_request_dto.dart';
 import '../dto/sis_academic_assignment_dto.dart';
 import '../dto/sis_conversion_dto.dart';
 import '../dto/sis_dashboard_dto.dart';
@@ -14,8 +13,96 @@ class SisMapper {
 
   SisDashboardData toDashboard(SisDashboardDto dto) {
     final raw = dto.raw;
+    if (raw.containsKey('totalStudents')) {
+      return _toDashboardFromApi(raw);
+    }
     return SisDashboardData(
       kpis: _mapKpis(raw['kpis'] as List<dynamic>? ?? const []),
+      classDistribution: _mapDistribution(
+        raw['classDistribution'] as List<dynamic>? ?? const [],
+      ),
+      genderDistribution: _mapDistribution(
+        raw['genderDistribution'] as List<dynamic>? ?? const [],
+      ),
+      recentEnrollments: _mapRecentEnrollments(
+        raw['recentEnrollments'] as List<dynamic>? ?? const [],
+      ),
+      aiInsight: raw['aiInsight'] as String? ?? '',
+    );
+  }
+
+  SisDashboardData _toDashboardFromApi(Map<String, dynamic> raw) {
+    final kpis = raw['kpis'] as List<dynamic>?;
+    if (kpis != null && kpis.isNotEmpty) {
+      return SisDashboardData(
+        kpis: _mapKpis(kpis),
+        classDistribution: _mapDistribution(
+          raw['classDistribution'] as List<dynamic>? ?? const [],
+        ),
+        genderDistribution: _mapDistribution(
+          raw['genderDistribution'] as List<dynamic>? ?? const [],
+        ),
+        recentEnrollments: _mapRecentEnrollments(
+          raw['recentEnrollments'] as List<dynamic>? ?? const [],
+        ),
+        aiInsight: raw['aiInsight'] as String? ?? '',
+      );
+    }
+
+    String formatCount(dynamic value) => '${value ?? 0}';
+
+    return SisDashboardData(
+      kpis: [
+        SisKpi(
+          id: 'total_students',
+          value: formatCount(raw['totalStudents']),
+          label: 'Total Students',
+          icon: SisEnumCodec.iconForKpi(null, 'primary'),
+          accentName: 'primary',
+        ),
+        SisKpi(
+          id: 'recent_admissions',
+          value: formatCount(raw['recentAdmissions']),
+          label: 'Recent Admissions (30d)',
+          icon: SisEnumCodec.iconForKpi(null, 'success'),
+          accentName: 'success',
+        ),
+        SisKpi(
+          id: 'active_students',
+          value: formatCount(raw['activeStudents']),
+          label: 'Active Students',
+          icon: SisEnumCodec.iconForKpi(null, 'success'),
+          accentName: 'success',
+        ),
+        SisKpi(
+          id: 'pending_conversion',
+          value: formatCount(raw['pendingConversions']),
+          label: 'Pending Conversion',
+          icon: SisEnumCodec.iconForKpi(null, 'warning'),
+          accentName: 'warning',
+        ),
+        SisKpi(
+          id: 'current_enrollments',
+          value: formatCount(raw['currentEnrollments']),
+          label: 'Current Enrollments',
+          icon: SisEnumCodec.iconForKpi(null, 'neutral'),
+          accentName: 'neutral',
+        ),
+        SisKpi(
+          id: 'classes',
+          value: formatCount(raw['distinctClasses']),
+          label: 'Classes',
+          icon: SisEnumCodec.iconForKpi(null, 'neutral'),
+          accentName: 'neutral',
+        ),
+        SisKpi(
+          id: 'sections',
+          value: formatCount(raw['distinctSections']),
+          label: 'Sections',
+          icon: SisEnumCodec.iconForKpi(null, 'neutral'),
+          accentName: 'neutral',
+        ),
+      ],
       classDistribution: _mapDistribution(
         raw['classDistribution'] as List<dynamic>? ?? const [],
       ),
@@ -35,6 +122,118 @@ class SisMapper {
 
   SisStudent toStudent(SisStudentDto dto) {
     final raw = dto.raw;
+    if (raw.containsKey('studentId') || raw.containsKey('student_id')) {
+      return toStudentFromDirectory(raw);
+    }
+    if (raw.containsKey('student') && raw['student'] is Map<String, dynamic>) {
+      return toStudentFromDetail(raw);
+    }
+    return toStudentFromLegacy(raw);
+  }
+
+  SisStudent toStudentFromDirectory(Map<String, dynamic> raw) {
+    return SisStudent(
+      id: raw['studentId'] as String? ?? raw['student_id'] as String? ?? '',
+      studentName: raw['displayName'] as String? ??
+          raw['display_name'] as String? ??
+          raw['studentName'] as String? ??
+          '',
+      admissionNumber: raw['admissionNumber'] as String? ??
+          raw['admission_number'] as String? ??
+          '',
+      classLabel: raw['className'] as String? ??
+          raw['class_name'] as String? ??
+          raw['classLabel'] as String? ??
+          '',
+      section: raw['sectionName'] as String? ??
+          raw['section_name'] as String? ??
+          raw['section'] as String? ??
+          '',
+      academicYear: raw['academicYear'] as String? ??
+          raw['academic_year'] as String? ??
+          '',
+      status: SisEnumCodec.parseStudentStatus(raw['status'] as String?),
+      gender: raw['gender'] as String? ?? '',
+      dateOfBirth: raw['dateOfBirth'] as String? ??
+          raw['date_of_birth'] as String? ??
+          '',
+      guardianName: raw['guardianName'] as String? ?? '',
+      phone: raw['phone'] as String? ?? '',
+      email: raw['email'] as String? ?? '',
+      enrolledAt: raw['createdAt'] as String? ??
+          raw['created_at'] as String? ??
+          raw['enrolledAt'] as String? ??
+          '',
+      feeAccountId: raw['feeAccountId'] as String?,
+    );
+  }
+
+  SisStudent toStudentFromDetail(Map<String, dynamic> raw) {
+    final studentRaw = raw['student'] as Map<String, dynamic>? ?? raw;
+    final profileRaw = raw['profile'] as Map<String, dynamic>?;
+    final enrollmentRaw = raw['currentEnrollment'] as Map<String, dynamic>?;
+    final guardians = raw['guardians'] as List<dynamic>? ?? const [];
+    final primaryGuardian = guardians.isNotEmpty && guardians.first is Map
+        ? guardians.first as Map<String, dynamic>
+        : null;
+
+    return SisStudent(
+      id: studentRaw['id'] as String? ?? '',
+      studentName: studentRaw['displayName'] as String? ??
+          studentRaw['display_name'] as String? ??
+          '',
+      admissionNumber: profileRaw?['admissionNumber'] as String? ??
+          profileRaw?['admission_number'] as String? ??
+          '',
+      classLabel: enrollmentRaw?['className'] as String? ??
+          enrollmentRaw?['class_name'] as String? ??
+          '',
+      section: enrollmentRaw?['sectionName'] as String? ??
+          enrollmentRaw?['section_name'] as String? ??
+          '',
+      academicYear: enrollmentRaw?['academicYear'] as String? ??
+          enrollmentRaw?['academic_year'] as String? ??
+          '',
+      status: SisEnumCodec.parseStudentStatus(studentRaw['status'] as String?),
+      gender: profileRaw?['gender'] as String? ?? '',
+      dateOfBirth: profileRaw?['dateOfBirth'] as String? ??
+          profileRaw?['date_of_birth'] as String? ??
+          '',
+      guardianName: primaryGuardian?['displayName'] as String? ?? '',
+      phone: primaryGuardian?['phone'] as String? ?? '',
+      email: primaryGuardian?['email'] as String? ?? '',
+      enrolledAt: studentRaw['createdAt'] as String? ??
+          studentRaw['created_at'] as String? ??
+          '',
+      feeAccountId: null,
+    );
+  }
+
+  SisStudent toStudentFromEnrollment(Map<String, dynamic> raw) {
+    return SisStudent(
+      id: raw['studentId'] as String? ?? raw['student_id'] as String? ?? '',
+      studentName: raw['studentName'] as String? ??
+          raw['student_name'] as String? ??
+          '',
+      admissionNumber: '',
+      classLabel: raw['className'] as String? ?? raw['class_name'] as String? ?? '',
+      section: raw['sectionName'] as String? ??
+          raw['section_name'] as String? ??
+          '',
+      academicYear: raw['academicYear'] as String? ??
+          raw['academic_year'] as String? ??
+          '',
+      status: SisStudentStatus.active,
+      gender: '',
+      dateOfBirth: '',
+      guardianName: '',
+      phone: '',
+      email: '',
+      enrolledAt: raw['createdAt'] as String? ?? raw['created_at'] as String? ?? '',
+    );
+  }
+
+  SisStudent toStudentFromLegacy(Map<String, dynamic> raw) {
     return SisStudent(
       id: raw['id'] as String? ?? '',
       studentName: raw['studentName'] as String? ?? '',
@@ -53,9 +252,77 @@ class SisMapper {
     );
   }
 
+  SisStudent toStudentFromWriteResponse(Map<String, dynamic> raw) {
+    if (raw.containsKey('parent') || raw.containsKey('academicHistory')) {
+      return toStudentProfile(SisStudentProfileDto(raw: raw)).student;
+    }
+    return toStudentFromDetail(raw);
+  }
+
   SisStudentProfile toStudentProfile(SisStudentProfileDto dto) {
     final raw = dto.raw;
+    if (raw.containsKey('student') && raw['student'] is Map<String, dynamic>) {
+      if (raw.containsKey('parent') || raw.containsKey('academicHistory')) {
+        return _toStudentProfileFromLegacyEnvelope(raw);
+      }
+
+      final student = toStudentFromDetail(raw);
+      final profileRaw = raw['profile'] as Map<String, dynamic>?;
+      final enrollmentRaw = raw['currentEnrollment'] as Map<String, dynamic>?;
+      final guardians = raw['guardians'] as List<dynamic>? ?? const [];
+      final primaryGuardian = guardians.isNotEmpty && guardians.first is Map
+          ? guardians.first as Map<String, dynamic>
+          : null;
+
+      return SisStudentProfile(
+        student: student,
+        parent: SisParentDetails(
+          guardianName: primaryGuardian?['displayName'] as String? ?? '',
+          relationship: primaryGuardian?['relationship'] as String? ?? 'Guardian',
+          phone: primaryGuardian?['phone'] as String? ?? '',
+          email: primaryGuardian?['email'] as String? ?? '',
+          address: profileRaw?['address'] as String? ?? '',
+        ),
+        academicHistory: enrollmentRaw == null
+            ? const []
+            : [
+                SisAcademicHistoryEntry(
+                  academicYear: enrollmentRaw['academicYear'] as String? ?? '',
+                  classLabel: enrollmentRaw['className'] as String? ?? '',
+                  section: enrollmentRaw['sectionName'] as String? ?? '',
+                  result: enrollmentRaw['isCurrent'] == true ? 'Current' : 'Historical',
+                ),
+              ],
+        feeAccount: null,
+        attendance: const SisAttendanceSummary(
+          presentPercent: '—',
+          absentDays: 0,
+          lateDays: 0,
+          periodLabel: '',
+        ),
+        documents: const [],
+        timeline: [
+          if (student.enrolledAt.isNotEmpty)
+            SisTimelineEvent(
+              dateLabel: student.enrolledAt,
+              title: 'Student record',
+              detail: '${student.classLabel}-${student.section}',
+            ),
+        ],
+      );
+    }
+
     final studentRaw = raw['student'] as Map<String, dynamic>? ?? raw;
+    return _toStudentProfileFromLegacyEnvelope({
+      ...raw,
+      'student': studentRaw,
+    });
+  }
+
+  SisStudentProfile _toStudentProfileFromLegacyEnvelope(
+    Map<String, dynamic> raw,
+  ) {
+    final studentRaw = raw['student'] as Map<String, dynamic>;
     final parentRaw = raw['parent'] as Map<String, dynamic>? ?? const {};
     final feeRaw = raw['feeAccount'] as Map<String, dynamic>?;
     final attendanceRaw =
@@ -116,8 +383,11 @@ class SisMapper {
           '',
       classLabel: raw['classLabel'] as String? ??
           raw['class_label'] as String? ??
+          raw['className'] as String? ??
           '',
-      section: raw['section'] as String? ?? '',
+      section: raw['section'] as String? ??
+          raw['sectionName'] as String? ??
+          '',
       academicYear: raw['academicYear'] as String? ??
           raw['academic_year'] as String? ??
           '',

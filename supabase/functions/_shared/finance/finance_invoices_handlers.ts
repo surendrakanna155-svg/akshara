@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   InvalidInvoiceTransitionError,
   InvoiceNotFoundError,
@@ -130,9 +131,11 @@ export async function handleIssueInvoice(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const invoice = await runTenant(config, auth.claims, async (db) =>
-      await issueInvoice(db, orgId, schoolId, invoiceId)
-    );
+    const invoice = await runTenant(config, auth.claims, async (db) => {
+      const issued = await issueInvoice(db, orgId, schoolId, invoiceId);
+      await emitMutationAudit(db, auth.claims, financeAudit.invoiceIssued(invoiceId), req);
+      return issued;
+    });
     return jsonResponse(envelope(invoiceToApi(invoice)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -159,9 +162,11 @@ export async function handleCancelInvoice(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const invoice = await runTenant(config, auth.claims, async (db) =>
-      await cancelInvoice(db, orgId, schoolId, invoiceId)
-    );
+    const invoice = await runTenant(config, auth.claims, async (db) => {
+      const cancelled = await cancelInvoice(db, orgId, schoolId, invoiceId);
+      await emitMutationAudit(db, auth.claims, financeAudit.invoiceCancelled(invoiceId), req);
+      return cancelled;
+    });
     return jsonResponse(envelope(invoiceToApi(invoice)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {

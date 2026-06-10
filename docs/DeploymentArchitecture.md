@@ -47,8 +47,10 @@ Flutter client environments map via `Environment.development | staging | product
 - `flutter analyze` = 0
 - `flutter test` = all passing
 - Contract tests vs staging OpenAPI
-- RBAC + tenant isolation integration tests (v5.6)
+- RBAC + tenant isolation integration tests (v5.6) — **213 probes**
 - Audit ingestion smoke test (v5.7)
+- `./scripts/production_launch_verify.sh` (v7.7)
+- Internal health token on `/health/tenant-access` and `/health/operations` (v7.7)
 
 ---
 
@@ -79,8 +81,8 @@ Flutter client environments map via `Environment.development | staging | product
 │  External services                                       │
 │    ├── FCM (push notifications)                         │
 │    ├── MSG91/Twilio (OTP SMS)                           │
-│    ├── Razorpay (payments — future)                     │
-│    └── OpenAI (copilot — future)                        │
+│    ├── Razorpay (payments — v7.0; live via env secrets)     │
+│    └── OpenAI (copilot — v7.4; stub fallback documented)  │
 └─────────────────────────────────────────────────────────┘
 ```
 

@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/repositories/repository_config.dart';
+import '../../core/repositories/repository_providers.dart';
+import '../../core/tenant/tenant_provider.dart';
 import 'notifications_models.dart';
 
 /// Active inbox filter for [NotificationsScreen].
@@ -13,24 +16,58 @@ final unreadNotificationsCountProvider = Provider<int>((ref) {
   return items.where((n) => !n.isRead && !n.isArchived).length;
 });
 
-/// Mock notification inbox (NT-01 mobile reference).
+/// Notification inbox — loads from Communication Hub when API is enabled.
 class NotificationsNotifier extends Notifier<List<AppNotification>> {
   @override
-  List<AppNotification> build() => _mockInbox;
-
-  Future<void> refresh() async {
-    await Future<void>.delayed(const Duration(milliseconds: 800));
-    state = List<AppNotification>.from(_mockInbox);
+  List<AppNotification> build() {
+    Future.microtask(refresh);
+    return List<AppNotification>.from(_fallbackInbox);
   }
 
-  void markRead(String id) {
+  bool get _useApi => ref.read(communicationApiEnabledProvider);
+
+  Future<void> refresh() async {
+    if (!_useApi) {
+      state = List<AppNotification>.from(_fallbackInbox);
+      return;
+    }
+    try {
+      final items = await ref.read(communicationRepositoryProvider).getNotifications(
+            query: ref.read(repositoryQueryProvider),
+          );
+      state = items.isEmpty ? List<AppNotification>.from(_fallbackInbox) : items;
+    } catch (_) {
+      state = List<AppNotification>.from(_fallbackInbox);
+    }
+  }
+
+  Future<void> markRead(String id) async {
+    if (_useApi) {
+      try {
+        await ref.read(communicationRepositoryProvider).markNotificationRead(
+              query: ref.read(repositoryQueryProvider),
+              notificationId: id,
+            );
+      } catch (_) {
+        // Keep optimistic local update on API failure.
+      }
+    }
     state = [
       for (final item in state)
         if (item.id == id) item.copyWith(isRead: true) else item,
     ];
   }
 
-  void markAllRead() {
+  Future<void> markAllRead() async {
+    if (_useApi) {
+      try {
+        await ref.read(communicationRepositoryProvider).markAllNotificationsRead(
+              query: ref.read(repositoryQueryProvider),
+            );
+      } catch (_) {
+        // Keep optimistic local update on API failure.
+      }
+    }
     state = [for (final item in state) item.copyWith(isRead: true)];
   }
 
@@ -63,7 +100,7 @@ final notificationsProvider =
   NotificationsNotifier.new,
 );
 
-final _mockInbox = <AppNotification>[
+final _fallbackInbox = <AppNotification>[
   AppNotification(
     id: 'nt-001',
     title: 'Fee reminder — Term 2',

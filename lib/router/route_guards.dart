@@ -28,10 +28,19 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.inventory: Permission.viewInventory,
   RouteNames.alumni: Permission.viewAlumni,
   RouteNames.controlCenter: Permission.viewControlCenter,
+  RouteNames.copilot: Permission.viewAiCopilot,
 };
 
 /// Resolves the view permission required for [location].
 Permission? erpRoutePermissionFor(String location) {
+  if (location == RouteNames.managementTimetable ||
+      location.startsWith('${RouteNames.managementTimetable}/')) {
+    return Permission.viewAcademicTimetable;
+  }
+  if (location == RouteNames.managementIntelligence ||
+      location.startsWith('${RouteNames.managementIntelligence}/')) {
+    return Permission.viewAnalytics;
+  }
   for (final entry in kErpRouteViewPermissions.entries) {
     if (location == entry.key || location.startsWith('${entry.key}/')) {
       return entry.value;

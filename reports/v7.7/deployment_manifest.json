@@ -1,0 +1,52 @@
+{
+  "milestone": "v7.7-production-saas-launch-hardening",
+  "generatedAt": "2026-06-10",
+  "expectedTenantProbes": 213,
+  "migrationsRequired": [
+    "20260614950000_ai_copilot.sql",
+    "20260615050000_academic_timetable_engine.sql",
+    "20260615100000_analytics_intelligence.sql"
+  ],
+  "edgeFunction": "api",
+  "deploymentRoutes": {
+    "v7.4_copilot": [
+      "GET /copilot/assistants",
+      "GET /copilot/suggestions",
+      "GET /copilot/sessions",
+      "POST /copilot/sessions"
+    ],
+    "v7.5_timetable": [
+      "GET /academic/timetables/summary",
+      "GET /academic/timetables/workload",
+      "GET /academic/timetables/conflicts",
+      "GET /academic/timetables",
+      "POST /academic/timetables/generate",
+      "POST /academic/timetables/validate",
+      "POST /academic/timetables/:id/publish"
+    ],
+    "v7.6_analytics": [
+      "GET /analytics/dashboard",
+      "GET /analytics/trends",
+      "GET /analytics/risks",
+      "GET /analytics/health",
+      "GET /analytics/recommendations",
+      "GET /analytics/principal-summary",
+      "GET /analytics/weekly-briefing"
+    ]
+  },
+  "secretsRequired": [
+    "JWT_SECRET",
+    "ERP_TENANT_DATABASE_URL",
+    "INTERNAL_HEALTH_TOKEN",
+    "RAZORPAY_KEY_ID",
+    "RAZORPAY_KEY_SECRET",
+    "RAZORPAY_WEBHOOK_SECRET",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "SENDGRID_API_KEY",
+    "FCM_SERVER_KEY",
+    "OPENAI_API_KEY"
+  ],
+  "verifyScript": "scripts/production_launch_verify.sh",
+  "probeValidation": "GET /health/tenant-access with x-internal-health-token"
+}

@@ -57,43 +57,52 @@ void main() {
     Dio createTestDio() {
       return createFakeDio((options) {
         if (options.method == 'POST' && options.path == SisApiPaths.students) {
-          return _fixtures.studentEnvelope(
-            const SisStudent(
-              id: 'SIS-STU-NEW',
-              studentName: 'Created Via API',
-              admissionNumber: 'ADM-2026-NEW',
-              classLabel: '5',
-              section: 'A',
-              academicYear: '2026–27',
-              status: SisStudentStatus.prospect,
-              gender: 'Female',
-              dateOfBirth: '01 Jan 2016',
-              guardianName: 'Parent',
-              phone: '+91 90000 00000',
-              email: 'parent@email.com',
-              enrolledAt: 'Today',
+          return _fixtures.profileEnvelope(
+            const SisStudentProfile(
+              student: SisStudent(
+                id: 'SIS-STU-NEW',
+                studentName: 'Created Via API',
+                admissionNumber: 'ADM-2026-NEW',
+                classLabel: '5',
+                section: 'A',
+                academicYear: '2026–27',
+                status: SisStudentStatus.prospect,
+                gender: 'Female',
+                dateOfBirth: '01 Jan 2016',
+                guardianName: 'Parent',
+                phone: '+91 90000 00000',
+                email: 'parent@email.com',
+                enrolledAt: 'Today',
+              ),
+              parent: SisParentDetails(
+                guardianName: 'Parent',
+                relationship: 'Guardian',
+                phone: '+91 90000 00000',
+                email: 'parent@email.com',
+                address: '',
+              ),
+              academicHistory: [],
+              attendance: SisAttendanceSummary(
+                presentPercent: '—',
+                absentDays: 0,
+                lateDays: 0,
+                periodLabel: '',
+              ),
+              documents: [],
+              timeline: [],
+              feeAccount: null,
             ),
           );
         }
         if (options.method == 'POST' &&
-            options.path == SisApiPaths.academicAssignment) {
-          return _fixtures.studentEnvelope(
-            const SisStudent(
-              id: 'SIS-STU-10421',
-              studentName: 'Arjun Patel',
-              admissionNumber: 'ADM-2026-0138',
-              classLabel: '11',
-              section: 'C',
-              academicYear: '2026–27',
-              status: SisStudentStatus.active,
-              gender: 'Male',
-              dateOfBirth: '14 Jun 2011',
-              guardianName: 'Kiran Patel',
-              phone: '+91 98765 11111',
-              email: 'kiran.patel@email.com',
-              enrolledAt: 'Jan 2026',
-            ),
-          );
+            options.path == SisApiPaths.enrollments) {
+          return _fixtures.envelope({
+            'studentId': 'SIS-STU-10421',
+            'studentName': 'Arjun Patel',
+            'className': '11',
+            'sectionName': 'C',
+            'academicYear': '2026–27',
+          });
         }
         if (options.method == 'POST' &&
             options.path == SisApiPaths.admissionsConversion) {

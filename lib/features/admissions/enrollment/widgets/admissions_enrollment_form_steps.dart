@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/repositories/academic/academic_catalog_provider.dart';
+import '../../../../core/repositories/academic/academic_catalog_selection.dart';
+import '../../../../core/repositories/academic/academic_year_label.dart';
 import '../../../../theme/spacing.dart';
 import '../../admissions_models.dart';
 
@@ -109,7 +113,7 @@ class AdmissionsEnrollmentParentStep extends StatelessWidget {
   }
 }
 
-class AdmissionsEnrollmentAcademicStep extends StatelessWidget {
+class AdmissionsEnrollmentAcademicStep extends ConsumerWidget {
   const AdmissionsEnrollmentAcademicStep({
     super.key,
     required this.academic,
@@ -120,7 +124,26 @@ class AdmissionsEnrollmentAcademicStep extends StatelessWidget {
   final ValueChanged<EnrollmentAcademicInfo> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final classes = ref.watch(classOptionsForYearProvider(academic.academicYear));
+    final sections = ref.watch(
+      sectionOptionsForYearClassProvider(
+        YearClassSelection(
+          yearLabel: academic.academicYear,
+          className: academic.seekingClass,
+        ),
+      ),
+    );
+    final years = ref.watch(yearOptionsProvider);
+
+    ref.listen<List<String>>(yearOptionsProvider, (_, next) {
+      if (next.isEmpty) return;
+      final resolved = resolveAcademicYearSelection(academic.academicYear, next);
+      if (!academicYearLabelsEqual(resolved, academic.academicYear)) {
+        onChanged(academic.copyWith(academicYear: resolved));
+      }
+    });
+
     return Semantics(
       container: true,
       label: 'Academic information step',
@@ -128,22 +151,55 @@ class AdmissionsEnrollmentAcademicStep extends StatelessWidget {
         type: MaterialType.transparency,
         child: Column(
         children: [
-          TextFormField(
-            initialValue: academic.seekingClass,
-            decoration: const InputDecoration(labelText: 'Seeking class *'),
-            onChanged: (v) => onChanged(academic.copyWith(seekingClass: v)),
+          _CatalogDropdown(
+            label: 'Seeking class *',
+            value: academic.seekingClass,
+            options: classes,
+            onChanged: (value) {
+              final filtered = ref.read(
+                sectionOptionsForYearClassProvider(
+                  YearClassSelection(
+                    yearLabel: academic.academicYear,
+                    className: value,
+                  ),
+                ),
+              );
+              onChanged(
+                academic.copyWith(
+                  seekingClass: value,
+                  section: filtered.contains(academic.section)
+                      ? academic.section
+                      : (filtered.isNotEmpty ? filtered.first : academic.section),
+                ),
+              );
+            },
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          TextFormField(
-            initialValue: academic.section,
-            decoration: const InputDecoration(labelText: 'Section'),
-            onChanged: (v) => onChanged(academic.copyWith(section: v)),
+          _CatalogDropdown(
+            label: 'Section',
+            value: academic.section,
+            options: sections,
+            onChanged: (value) => onChanged(academic.copyWith(section: value)),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          TextFormField(
-            initialValue: academic.academicYear,
-            decoration: const InputDecoration(labelText: 'Academic year *'),
-            onChanged: (v) => onChanged(academic.copyWith(academicYear: v)),
+          _CatalogDropdown(
+            label: 'Academic year *',
+            value: academic.academicYear,
+            options: years,
+            resolveSelection: resolveAcademicYearSelection,
+            onChanged: (value) {
+              final filteredClasses = ref.read(classOptionsForYearProvider(value));
+              onChanged(
+                academic.copyWith(
+                  academicYear: value,
+                  seekingClass: filteredClasses.contains(academic.seekingClass)
+                      ? academic.seekingClass
+                      : (filteredClasses.isNotEmpty
+                          ? filteredClasses.first
+                          : academic.seekingClass),
+                ),
+              );
+            },
           ),
           const SizedBox(height: AksharaSpacing.s4),
           TextFormField(
@@ -224,6 +280,46 @@ class AdmissionsEnrollmentReviewStep extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _CatalogDropdown extends StatelessWidget {
+  const _CatalogDropdown({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+    this.resolveSelection,
+  });
+
+  final String label;
+  final String value;
+  final List<String> options;
+  final ValueChanged<String> onChanged;
+  final String Function(String selected, List<String> options)? resolveSelection;
+
+  @override
+  Widget build(BuildContext context) {
+    final selection = resolveSelection != null
+        ? resolveSelection!(value, options)
+        : options.contains(value)
+            ? value
+            : (options.isNotEmpty ? options.first : value);
+    return Material(
+      child: DropdownMenu<String>(
+        key: ValueKey('$label-$selection'),
+        initialSelection: selection,
+        label: Text(label),
+        expandedInsets: EdgeInsets.zero,
+        dropdownMenuEntries: [
+          for (final option in options)
+            DropdownMenuEntry(value: option, label: option),
+        ],
+        onSelected: (selected) {
+          if (selected != null) onChanged(selected);
+        },
       ),
     );
   }

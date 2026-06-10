@@ -15,7 +15,7 @@ const kQuery = RepositoryQuery.demo;
 
 void main() {
   group('SIS write DTO serialization', () {
-    test('create student request uses snake_case keys', () {
+    test('create student request uses backend field aliases', () {
       const request = CreateStudentRequest(
         studentName: 'Ananya Reddy',
         admissionNumber: 'ADM-2026-0142',
@@ -25,16 +25,16 @@ void main() {
         status: SisStudentStatus.prospect,
       );
       final json = CreateStudentRequestDto.fromDomain(request).toJson();
-      expect(json['student_name'], 'Ananya Reddy');
-      expect(json['admission_number'], 'ADM-2026-0142');
-      expect(json['status'], 'prospect');
+      expect(json['displayName'], 'Ananya Reddy');
+      expect(json['admissionNumber'], 'ADM-2026-0142');
+      expect(json['status'], 'active');
     });
 
     test('update student request omits null fields', () {
       final json = UpdateStudentRequestDto.fromDomain(
         const UpdateStudentRequest(classLabel: '6', section: 'B'),
       ).toJson();
-      expect(json['class_label'], '6');
+      expect(json.containsKey('displayName'), isFalse);
       expect(json.containsKey('student_name'), isFalse);
     });
 
@@ -45,7 +45,7 @@ void main() {
       expect(json['status'], 'transferred');
     });
 
-    test('academic assignment payload includes student id', () {
+    test('academic assignment payload targets enrollment create body', () {
       final json = AcademicAssignmentRequestDto.fromDomain(
         const AcademicAssignmentRequest(
           studentId: 'SIS-STU-10421',
@@ -54,8 +54,8 @@ void main() {
           academicYear: '2026–27',
         ),
       ).toJson();
-      expect(json['student_id'], 'SIS-STU-10421');
-      expect(json['class_label'], '10');
+      expect(json['studentId'], 'SIS-STU-10421');
+      expect(json['className'], '10');
     });
 
     test('admissions conversion payload includes enrollment id', () {
@@ -67,7 +67,7 @@ void main() {
           academicYear: '2026–27',
         ),
       ).toJson();
-      expect(json['enrollment_id'], 'enr_1');
+      expect(json['enrollmentId'], 'enr_1');
       expect(json['section'], 'A');
     });
   });

@@ -53,6 +53,7 @@ class ParentMapper {
       recentLogs: _mapRecentLogs(raw['recentLogs'] as List<dynamic>? ?? const []),
       warningBannerMessage: raw['warningBannerMessage'] as String?,
       unreadNotifications: raw['unreadNotifications'] as int? ?? 0,
+      classTeacherPhone: raw['classTeacherPhone'] as String?,
     );
   }
 

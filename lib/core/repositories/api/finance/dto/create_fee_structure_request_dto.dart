@@ -1,5 +1,6 @@
 import '../../../../../features/finance/finance_models.dart';
 import '../../../../../features/finance/finance_requests.dart';
+import '../../../academic/academic_catalog_placement.dart';
 import 'finance_enum_codec.dart';
 
 class CreateFeeStructureRequestDto {
@@ -22,6 +23,9 @@ class CreateFeeStructureRequestDto {
               'amount': line.amount,
             },
         ],
+        ...catalogPlacementJson(
+          AcademicCatalogPlacement(academicYearId: request.academicYearId),
+        ),
       },
     );
   }

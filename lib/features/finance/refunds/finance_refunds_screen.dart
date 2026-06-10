@@ -252,7 +252,13 @@ class _RefundDetailPanel extends StatelessWidget {
                 child: AksharaApproveAction(
                   permission: Permission.approveRefunds,
                   child: OutlinedButton(
-                    onPressed: () {},
+                    onPressed: refund.status == RefundStatus.pending
+                        ? () => rejectSelectedRefund(
+                              context,
+                              widgetRef,
+                              refund: refund,
+                            )
+                        : null,
                     child: const Text('Reject'),
                   ),
                 ),

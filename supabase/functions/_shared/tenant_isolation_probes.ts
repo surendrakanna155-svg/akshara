@@ -43,6 +43,142 @@ import {
   ACADEMIC_YEAR_SCHOOL_A,
   ACADEMIC_YEAR_SCHOOL_B,
 } from "./academic/academic_years_repository.ts";
+import {
+  TRANSPORT_ROUTE_DETAIL_PROBE_SQL,
+  TRANSPORT_ROUTE_SCHOOL_A,
+  TRANSPORT_ROUTE_SCHOOL_B,
+  TRANSPORT_ROUTES_API_PROBE_SQL,
+} from "./transport/transport_read_repository.ts";
+import {
+  HR_EMPLOYEE_DETAIL_PROBE_SQL,
+  HR_EMPLOYEE_SCHOOL_A,
+  HR_EMPLOYEE_SCHOOL_B,
+  HR_EMPLOYEES_API_PROBE_SQL,
+} from "./hr/hr_read_repository.ts";
+import {
+  HOSTEL_STUDENT_DETAIL_PROBE_SQL,
+  HOSTEL_STUDENT_SCHOOL_A,
+  HOSTEL_STUDENT_SCHOOL_B,
+  HOSTEL_STUDENTS_API_PROBE_SQL,
+} from "./hostel/hostel_read_repository.ts";
+import {
+  LIBRARY_CATALOG_DETAIL_PROBE_SQL,
+  LIBRARY_BOOK_SCHOOL_A,
+  LIBRARY_BOOK_SCHOOL_B,
+  LIBRARY_CATALOG_API_PROBE_SQL,
+} from "./library/library_read_repository.ts";
+import {
+  INVENTORY_ASSET_DETAIL_PROBE_SQL,
+  INVENTORY_ASSET_SCHOOL_A,
+  INVENTORY_ASSET_SCHOOL_B,
+  INVENTORY_ASSETS_API_PROBE_SQL,
+} from "./inventory/inventory_read_repository.ts";
+import {
+  ALUMNI_REGISTRY_DETAIL_PROBE_SQL,
+  ALUMNI_RECORD_SCHOOL_A,
+  ALUMNI_RECORD_SCHOOL_B,
+  ALUMNI_REGISTRY_API_PROBE_SQL,
+} from "./alumni/alumni_read_repository.ts";
+import {
+  MANAGEMENT_PROBE_DETAIL_SQL,
+  MANAGEMENT_PROBE_SCHOOL_A,
+  MANAGEMENT_PROBE_SCHOOL_B,
+} from "./management/management_read_repository.ts";
+import {
+  CONTROL_CENTER_SCHOOL_DETAIL_PROBE_SQL,
+  CONTROL_CENTER_SCHOOL_A,
+  CONTROL_CENTER_SCHOOLS_API_PROBE_SQL,
+} from "./control_center/control_center_read_repository.ts";
+import {
+  PARENT_PROBE_DETAIL_SQL,
+  PARENT_PROBE_SCHOOL_A,
+  PARENT_PROBE_SCHOOL_B,
+} from "./parent/parent_read_repository.ts";
+import {
+  TEACHER_PROBE_DETAIL_SQL,
+  TEACHER_PROBE_SCHOOL_A,
+  TEACHER_PROBE_SCHOOL_B,
+} from "./teacher/teacher_read_repository.ts";
+import {
+  STUDENT_PROBE_DETAIL_SQL,
+  STUDENT_PROBE_SCHOOL_A,
+  STUDENT_PROBE_SCHOOL_B,
+} from "./student/student_read_repository.ts";
+import {
+  AUDIT_PROBE_DETAIL_SQL,
+  AUDIT_PROBE_SCHOOL_A,
+  AUDIT_PROBE_SCHOOL_B,
+  DOMAIN_EVENT_PROBE_DETAIL_SQL,
+  DOMAIN_EVENT_PROBE_SCHOOL_A,
+  DOMAIN_EVENT_PROBE_SCHOOL_B,
+} from "./audit/audit_repository.ts";
+import {
+  PAYMENT_INTENT_PROBE_DETAIL_SQL,
+  PAYMENT_INTENT_PROBE_SCHOOL_A,
+  PAYMENT_INTENT_PROBE_SCHOOL_B,
+  PAYMENT_WEBHOOK_PROBE_DETAIL_SQL,
+  PAYMENT_WEBHOOK_PROBE_SCHOOL_A,
+  PAYMENT_WEBHOOK_PROBE_SCHOOL_B,
+} from "./payment/payment_repository.ts";
+import {
+  COMM_THREAD_PROBE_DETAIL_SQL,
+  COMM_THREAD_PROBE_SCHOOL_A,
+  COMM_THREAD_PROBE_SCHOOL_B,
+  NOTIFICATION_DELIVERY_PROBE_DETAIL_SQL,
+  NOTIFICATION_DELIVERY_PROBE_SCHOOL_A,
+  NOTIFICATION_DELIVERY_PROBE_SCHOOL_B,
+} from "./communication/communication_repository.ts";
+import {
+  ATTENDANCE_SESSION_PROBE_DETAIL_SQL,
+  ATTENDANCE_SESSION_PROBE_SCHOOL_A,
+  ATTENDANCE_SESSION_PROBE_SCHOOL_B,
+  EXAM_MARK_PROBE_DETAIL_SQL,
+  EXAM_MARK_PROBE_SCHOOL_A,
+  EXAM_MARK_PROBE_SCHOOL_B,
+  HOMEWORK_SUBMISSION_PROBE_DETAIL_SQL,
+  HOMEWORK_SUBMISSION_PROBE_SCHOOL_A,
+  HOMEWORK_SUBMISSION_PROBE_SCHOOL_B,
+  MOBILE_LEAVE_PROBE_DETAIL_SQL,
+  MOBILE_LEAVE_PROBE_SCHOOL_A,
+  MOBILE_LEAVE_PROBE_SCHOOL_B,
+  TIMETABLE_SLOT_PROBE_DETAIL_SQL,
+  TIMETABLE_SLOT_PROBE_SCHOOL_A,
+  TIMETABLE_SLOT_PROBE_SCHOOL_B,
+} from "./pilot/pilot_operations_repository.ts";
+import {
+  ONBOARDING_IMPORT_JOB_PROBE_SCHOOL_A,
+  ONBOARDING_IMPORT_JOB_PROBE_SCHOOL_B,
+  ONBOARDING_IMPORT_JOB_PROBE_SQL,
+  ONBOARDING_INVITE_PROBE_SCHOOL_A,
+  ONBOARDING_INVITE_PROBE_SCHOOL_B,
+  ONBOARDING_INVITE_PROBE_SQL,
+} from "./onboarding/onboarding_repository.ts";
+import {
+  AP_COMMITMENT_PROBE_SCHOOL_A,
+  AP_COMMITMENT_PROBE_SCHOOL_B,
+  AP_COMMITMENT_PROBE_SQL,
+  INVENTORY_VENDOR_PROBE_SCHOOL_A,
+  INVENTORY_VENDOR_PROBE_SCHOOL_B,
+  INVENTORY_VENDOR_PROBE_SQL,
+  PURCHASE_ORDER_PROBE_SCHOOL_A,
+  PURCHASE_ORDER_PROBE_SCHOOL_B,
+  PURCHASE_ORDER_PROBE_SQL,
+} from "./inventory_finance/inventory_finance_repository.ts";
+import {
+  AI_COPILOT_SESSION_PROBE_SCHOOL_A,
+  AI_COPILOT_SESSION_PROBE_SCHOOL_B,
+  AI_COPILOT_SESSION_PROBE_SQL,
+} from "./copilot/copilot_repository.ts";
+import {
+  ACADEMIC_TIMETABLE_PROBE_SCHOOL_A,
+  ACADEMIC_TIMETABLE_PROBE_SCHOOL_B,
+  ACADEMIC_TIMETABLE_PROBE_SQL,
+} from "./timetable/timetable_repository.ts";
+import {
+  ANALYTICS_SNAPSHOT_PROBE_SCHOOL_A,
+  ANALYTICS_SNAPSHOT_PROBE_SCHOOL_B,
+  ANALYTICS_SNAPSHOT_PROBE_SQL,
+} from "./analytics/analytics_repository.ts";
 
 export interface IsolationProbeResult {
   name: string;
@@ -162,8 +298,47 @@ function studentClaims(): AccessTokenClaims {
   };
 }
 
+function teacherClaims(schoolId: string): AccessTokenClaims {
+  return {
+    sub: STAFF_A,
+    tenant_id: ORG,
+    organization_id: ORG,
+    school_id: schoolId,
+    role: "teacher",
+    role_slugs: ["teacher"],
+    primary_role: "teacher",
+    permissions: ["viewAdminHub"],
+    permissions_version: 1,
+    scope: "school",
+    school_group_id: null,
+    student_id: null,
+    child_ids: [],
+    session_id: "probe",
+  };
+}
+
 async function count(db: TenantQueryClient, sql: string, args: unknown[] = []): Promise<number> {
   return await db.queryCount(sql, args);
+}
+
+const PROBE_CONCURRENCY = 16;
+
+async function runProbeTasks(
+  tasks: (() => Promise<IsolationProbeResult>)[],
+): Promise<IsolationProbeResult[]> {
+  const results: IsolationProbeResult[] = new Array(tasks.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const index = next++;
+      if (index >= tasks.length) break;
+      results[index] = await tasks[index]!();
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(PROBE_CONCURRENCY, tasks.length) }, () => worker()),
+  );
+  return results;
 }
 
 /** Runs enforced RLS probes on an active erp_tenant connection (context already set per probe). */
@@ -173,49 +348,49 @@ export async function runEnforcedIsolationProbes(
     fn: (db: TenantQueryClient) => Promise<IsolationProbeResult>,
   ) => Promise<IsolationProbeResult>,
 ): Promise<IsolationProbeReport> {
-  const tests: IsolationProbeResult[] = [];
+  const tasks: (() => Promise<IsolationProbeResult>)[] = [];
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM schools WHERE id = $1", [SCHOOL_B]);
     return { name: "school_a_cannot_see_school_b", pass: n === 0, detail: `visible_schools=${n}` };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM schools WHERE organization_id = $1", [ORG]);
     return { name: "org_scope_sees_school_metadata", pass: n >= 2, detail: `visible_schools=${n}` };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM school_memberships");
     return { name: "org_scope_denied_raw_school_memberships", pass: n === 0, detail: `visible_memberships=${n}` };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM students");
     return { name: "org_scope_denied_raw_students", pass: n === 0, detail: `visible_students=${n}` };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM org_school_summary WHERE tenant_id = $1", [ORG]);
     return { name: "org_scope_reads_aggregate_view", pass: n >= 2, detail: `summary_rows=${n}` };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM students WHERE id = $1", [STUDENT_A]);
     return { name: "parent_sees_linked_child", pass: n === 1, detail: `visible_students=${n}` };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_B), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_B), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM students WHERE id = $1", [STUDENT_B]);
     return { name: "parent_cannot_see_unlinked_student", pass: n === 0, detail: `visible_students=${n}` };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM students");
     return { name: "student_sees_self_only", pass: n === 1, detail: `visible_students=${n}` };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM students WHERE id = $1",
@@ -228,7 +403,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM admissions_leads");
     return {
       name: "org_scope_denied_raw_admissions_leads",
@@ -237,7 +412,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM admissions_leads WHERE school_id = $1",
@@ -250,7 +425,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM admissions_leads WHERE id = $1",
@@ -263,7 +438,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM admissions_leads WHERE id = $1",
@@ -276,7 +451,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM admissions_fee_handoffs");
     return {
       name: "org_scope_denied_raw_admissions_fee_handoffs",
@@ -285,7 +460,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM admissions_fee_handoffs");
     return {
       name: "parent_scope_denied_admissions_fee_handoffs",
@@ -294,7 +469,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM admissions_fee_handoffs WHERE school_id = $1",
@@ -307,7 +482,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM admissions_fee_handoffs WHERE id = $1",
@@ -320,7 +495,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM admissions_fee_handoffs WHERE id = $1",
@@ -333,7 +508,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_fee_structures WHERE id = $1",
@@ -346,7 +521,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_structures");
     return {
       name: "organization_denied_fee_structures",
@@ -355,7 +530,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_structures");
     return {
       name: "parent_denied_fee_structures",
@@ -364,7 +539,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_structures");
     return {
       name: "student_denied_fee_structures",
@@ -373,7 +548,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_fee_assignments WHERE id = $1",
@@ -386,7 +561,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_assignments");
     return {
       name: "organization_denied_fee_assignments",
@@ -395,7 +570,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_assignments");
     return {
       name: "parent_denied_fee_assignments",
@@ -404,7 +579,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_fee_assignments");
     return {
       name: "student_denied_fee_assignments",
@@ -413,7 +588,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_student_accounts WHERE id = $1",
@@ -426,7 +601,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_student_accounts");
     return {
       name: "organization_denied_student_accounts",
@@ -435,7 +610,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_invoices WHERE id = $1",
@@ -448,7 +623,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_invoices");
     return {
       name: "organization_denied_finance_invoices",
@@ -457,7 +632,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_invoices");
     return {
       name: "parent_denied_finance_invoices",
@@ -466,7 +641,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_invoices");
     return {
       name: "student_denied_finance_invoices",
@@ -475,7 +650,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_invoices WHERE id = $1",
@@ -488,7 +663,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_invoices WHERE school_id = $1",
@@ -501,7 +676,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_collections WHERE id = $1",
@@ -514,7 +689,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
     return {
       name: "organization_denied_collections",
@@ -523,7 +698,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
     return {
       name: "parent_denied_collections",
@@ -532,7 +707,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
     return {
       name: "student_denied_collections",
@@ -541,7 +716,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_collections WHERE school_id = $1",
@@ -554,7 +729,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_receipts WHERE id = $1",
@@ -567,7 +742,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_collections
@@ -580,7 +755,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_invoices
@@ -593,7 +768,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_invoices
@@ -606,7 +781,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_collections
@@ -621,7 +796,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_student_accounts WHERE status = 'open'`,
@@ -633,7 +808,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_fee_assignments
@@ -646,7 +821,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_invoices
@@ -659,7 +834,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       `SELECT count(DISTINCT student_id)::text AS count FROM finance_student_accounts
@@ -673,7 +848,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_refunds WHERE id = $1",
@@ -686,7 +861,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_refunds");
     return {
       name: "organization_denied_refunds",
@@ -695,7 +870,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_refunds");
     return {
       name: "parent_denied_refunds",
@@ -704,7 +879,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM finance_refunds");
     return {
       name: "student_denied_refunds",
@@ -713,7 +888,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM finance_refunds WHERE school_id = $1",
@@ -726,7 +901,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const rows = await db.queryObject<{ outstanding: string; account_outstanding: string }>(
       `SELECT
          fi.outstanding_amount::text AS outstanding,
@@ -750,7 +925,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM student_profiles");
     return {
       name: "organization_denied_student_profiles",
@@ -759,7 +934,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM student_profiles");
     return {
       name: "parent_denied_student_profiles",
@@ -768,7 +943,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM student_profiles");
     return {
       name: "student_denied_student_profiles",
@@ -777,7 +952,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM student_profiles WHERE id = $1",
@@ -790,7 +965,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM student_profiles WHERE id = $1",
@@ -803,7 +978,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
     return {
       name: "organization_denied_sis_enrollments",
@@ -812,7 +987,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
     return {
       name: "parent_denied_sis_enrollments",
@@ -821,7 +996,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
     return {
       name: "student_denied_sis_enrollments",
@@ -830,7 +1005,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM sis_student_enrollments WHERE id = $1",
@@ -843,7 +1018,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM sis_student_enrollments WHERE id = $1",
@@ -856,7 +1031,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
     return {
       name: "organization_denied_sis_students_api",
@@ -865,7 +1040,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
     return {
       name: "parent_denied_sis_students_api",
@@ -874,7 +1049,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
     return {
       name: "student_denied_sis_students_api",
@@ -883,7 +1058,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_STUDENT_DETAIL_PROBE_SQL, [STUDENT_B]);
     return {
       name: "school_a_cannot_fetch_school_b_student_detail",
@@ -892,7 +1067,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, SIS_STUDENT_CREATE_PROBE_SQL);
     return {
       name: "organization_denied_sis_student_create",
@@ -901,7 +1076,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_STUDENT_CREATE_PROBE_SQL);
     return {
       name: "parent_denied_sis_student_create",
@@ -910,7 +1085,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, SIS_STUDENT_CREATE_PROBE_SQL);
     return {
       name: "student_denied_sis_student_create",
@@ -919,7 +1094,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_STUDENT_UPDATE_PROBE_SQL, [STUDENT_B]);
     return {
       name: "school_a_cannot_update_school_b_student",
@@ -928,7 +1103,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
     return {
       name: "organization_denied_sis_enrollments_api",
@@ -937,7 +1112,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
     return {
       name: "parent_denied_sis_enrollments_api",
@@ -946,7 +1121,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
     return {
       name: "student_denied_sis_enrollments_api",
@@ -955,7 +1130,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_ENROLLMENT_UPDATE_PROBE_SQL, [SIS_ENROLLMENT_SCHOOL_B]);
     return {
       name: "school_a_cannot_update_school_b_enrollment",
@@ -964,7 +1139,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, SIS_CONVERSION_PROBE_SQL);
     return {
       name: "organization_denied_admissions_conversion",
@@ -973,7 +1148,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_CONVERSION_PROBE_SQL);
     return {
       name: "parent_denied_admissions_conversion",
@@ -982,7 +1157,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, SIS_CONVERSION_PROBE_SQL);
     return {
       name: "student_denied_admissions_conversion",
@@ -991,7 +1166,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_CONVERSION_TARGET_PROBE_SQL, [ADMISSIONS_ENROLLMENT_SCHOOL_B]);
     return {
       name: "school_a_cannot_convert_school_b_enrollment",
@@ -1000,7 +1175,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       SIS_CONVERSION_CONVERTED_PROBE_SQL,
@@ -1013,7 +1188,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
     return {
       name: "organization_denied_sis_dashboard",
@@ -1022,7 +1197,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
     return {
       name: "parent_denied_sis_dashboard",
@@ -1031,7 +1206,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, SIS_DIRECTORY_PROBE_SQL);
     return {
       name: "student_denied_sis_dashboard",
@@ -1040,7 +1215,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM students WHERE school_id = $1",
@@ -1053,7 +1228,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ACADEMIC_YEARS_PROBE_SQL);
     return {
       name: "organization_denied_academic_years",
@@ -1062,7 +1237,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_YEARS_PROBE_SQL);
     return {
       name: "parent_denied_academic_years",
@@ -1071,7 +1246,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, ACADEMIC_YEARS_PROBE_SQL);
     return {
       name: "student_denied_academic_years",
@@ -1080,7 +1255,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM academic_years WHERE id = $1",
@@ -1093,7 +1268,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM academic_years WHERE id = $1",
@@ -1106,7 +1281,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ACADEMIC_CLASSES_PROBE_SQL);
     return {
       name: "organization_denied_academic_classes",
@@ -1115,7 +1290,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_CLASSES_PROBE_SQL);
     return {
       name: "parent_denied_academic_classes",
@@ -1124,7 +1299,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, ACADEMIC_CLASSES_PROBE_SQL);
     return {
       name: "student_denied_academic_classes",
@@ -1133,7 +1308,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM classes WHERE id = $1",
@@ -1146,7 +1321,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM classes WHERE id = $1",
@@ -1159,7 +1334,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ACADEMIC_SECTIONS_PROBE_SQL);
     return {
       name: "organization_denied_academic_sections",
@@ -1168,7 +1343,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_SECTIONS_PROBE_SQL);
     return {
       name: "parent_denied_academic_sections",
@@ -1177,7 +1352,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, ACADEMIC_SECTIONS_PROBE_SQL);
     return {
       name: "student_denied_academic_sections",
@@ -1186,7 +1361,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM sections WHERE id = $1",
@@ -1199,7 +1374,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM sections WHERE id = $1",
@@ -1212,7 +1387,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ACADEMIC_TEACHER_ASSIGNMENTS_PROBE_SQL);
     return {
       name: "organization_denied_academic_teacher_assignments",
@@ -1221,7 +1396,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_TEACHER_ASSIGNMENTS_PROBE_SQL);
     return {
       name: "parent_denied_academic_teacher_assignments",
@@ -1230,7 +1405,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, ACADEMIC_TEACHER_ASSIGNMENTS_PROBE_SQL);
     return {
       name: "student_denied_academic_teacher_assignments",
@@ -1239,7 +1414,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM teacher_assignments WHERE id = $1",
@@ -1252,7 +1427,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       "SELECT count(*)::text AS count FROM teacher_assignments WHERE id = $1",
@@ -1265,7 +1440,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ACADEMIC_YEARS_API_PROBE_SQL);
     return {
       name: "organization_denied_academic_years_api",
@@ -1274,7 +1449,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_YEARS_API_PROBE_SQL);
     return {
       name: "parent_denied_academic_years_api",
@@ -1283,7 +1458,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, ACADEMIC_YEARS_API_PROBE_SQL);
     return {
       name: "student_denied_academic_years_api",
@@ -1292,7 +1467,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_YEAR_DETAIL_PROBE_SQL, [ACADEMIC_YEAR_SCHOOL_B]);
     return {
       name: "school_a_cannot_fetch_school_b_academic_year",
@@ -1301,7 +1476,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ACADEMIC_CLASSES_API_PROBE_SQL);
     return {
       name: "organization_denied_academic_classes_api",
@@ -1310,7 +1485,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_CLASSES_API_PROBE_SQL);
     return {
       name: "parent_denied_academic_classes_api",
@@ -1319,7 +1494,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, ACADEMIC_CLASSES_API_PROBE_SQL);
     return {
       name: "student_denied_academic_classes_api",
@@ -1328,7 +1503,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_CLASS_DETAIL_PROBE_SQL, [ACADEMIC_CLASS_SCHOOL_B]);
     return {
       name: "school_a_cannot_fetch_school_b_class",
@@ -1337,7 +1512,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ACADEMIC_SECTIONS_API_PROBE_SQL);
     return {
       name: "organization_denied_academic_sections_api",
@@ -1346,7 +1521,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_SECTIONS_API_PROBE_SQL);
     return {
       name: "parent_denied_academic_sections_api",
@@ -1355,7 +1530,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, ACADEMIC_SECTIONS_API_PROBE_SQL);
     return {
       name: "student_denied_academic_sections_api",
@@ -1364,7 +1539,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_SECTION_DETAIL_PROBE_SQL, [ACADEMIC_SECTION_SCHOOL_B]);
     return {
       name: "school_a_cannot_fetch_school_b_section",
@@ -1373,7 +1548,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(orgClaims(), async (db) => {
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ACADEMIC_TEACHER_ASSIGNMENTS_API_PROBE_SQL);
     return {
       name: "organization_denied_academic_teacher_assignments_api",
@@ -1382,7 +1557,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ACADEMIC_TEACHER_ASSIGNMENTS_API_PROBE_SQL);
     return {
       name: "parent_denied_academic_teacher_assignments_api",
@@ -1391,7 +1566,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(studentClaims(), async (db) => {
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
     const n = await count(db, ACADEMIC_TEACHER_ASSIGNMENTS_API_PROBE_SQL);
     return {
       name: "student_denied_academic_teacher_assignments_api",
@@ -1400,7 +1575,7 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
-  tests.push(await runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(
       db,
       ACADEMIC_TEACHER_ASSIGNMENT_DETAIL_PROBE_SQL,
@@ -1413,6 +1588,438 @@ export async function runEnforcedIsolationProbes(
     };
   }));
 
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, TRANSPORT_ROUTES_API_PROBE_SQL);
+    return {
+      name: "organization_denied_transport_routes_api",
+      pass: n === 0,
+      detail: `visible_transport_routes=${n}`,
+    };
+  }));
+
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, TRANSPORT_ROUTES_API_PROBE_SQL);
+    return {
+      name: "parent_denied_transport_routes_api",
+      pass: n === 0,
+      detail: `visible_transport_routes=${n}`,
+    };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, TRANSPORT_ROUTE_DETAIL_PROBE_SQL, [TRANSPORT_ROUTE_SCHOOL_B]);
+    return {
+      name: "school_a_cannot_see_school_b_transport_route",
+      pass: n === 0,
+      detail: `visible_cross_school_route=${n}`,
+    };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, TRANSPORT_ROUTE_DETAIL_PROBE_SQL, [TRANSPORT_ROUTE_SCHOOL_A]);
+    return {
+      name: "school_a_sees_own_transport_route",
+      pass: n === 1,
+      detail: `visible_probe_route=${n}`,
+    };
+  }));
+
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, HR_EMPLOYEES_API_PROBE_SQL);
+    return {
+      name: "organization_denied_hr_employees_api",
+      pass: n === 0,
+      detail: `visible_hr_employees=${n}`,
+    };
+  }));
+
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, HR_EMPLOYEES_API_PROBE_SQL);
+    return {
+      name: "parent_denied_hr_employees_api",
+      pass: n === 0,
+      detail: `visible_hr_employees=${n}`,
+    };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, HR_EMPLOYEE_DETAIL_PROBE_SQL, [HR_EMPLOYEE_SCHOOL_B]);
+    return {
+      name: "school_a_cannot_see_school_b_hr_employee",
+      pass: n === 0,
+      detail: `visible_cross_school_employee=${n}`,
+    };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, HR_EMPLOYEE_DETAIL_PROBE_SQL, [HR_EMPLOYEE_SCHOOL_A]);
+    return {
+      name: "school_a_sees_own_hr_employee",
+      pass: n === 1,
+      detail: `visible_probe_employee=${n}`,
+    };
+  }));
+
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, HOSTEL_STUDENTS_API_PROBE_SQL);
+    return { name: "organization_denied_hostel_students_api", pass: n === 0, detail: `visible_hostel_students=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, HOSTEL_STUDENTS_API_PROBE_SQL);
+    return { name: "parent_denied_hostel_students_api", pass: n === 0, detail: `visible_hostel_students=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, HOSTEL_STUDENT_DETAIL_PROBE_SQL, [HOSTEL_STUDENT_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_hostel_student", pass: n === 0, detail: `visible_cross_school_hostel_student=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, HOSTEL_STUDENT_DETAIL_PROBE_SQL, [HOSTEL_STUDENT_SCHOOL_A]);
+    return { name: "school_a_sees_own_hostel_student", pass: n === 1, detail: `visible_probe_hostel_student=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, LIBRARY_CATALOG_API_PROBE_SQL);
+    return { name: "organization_denied_library_catalog_api", pass: n === 0, detail: `visible_library_catalog=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, LIBRARY_CATALOG_API_PROBE_SQL);
+    return { name: "parent_denied_library_catalog_api", pass: n === 0, detail: `visible_library_catalog=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, LIBRARY_CATALOG_DETAIL_PROBE_SQL, [LIBRARY_BOOK_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_library_book", pass: n === 0, detail: `visible_cross_school_book=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, LIBRARY_CATALOG_DETAIL_PROBE_SQL, [LIBRARY_BOOK_SCHOOL_A]);
+    return { name: "school_a_sees_own_library_book", pass: n === 1, detail: `visible_probe_book=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, INVENTORY_ASSETS_API_PROBE_SQL);
+    return { name: "organization_denied_inventory_assets_api", pass: n === 0, detail: `visible_inventory_assets=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, INVENTORY_ASSETS_API_PROBE_SQL);
+    return { name: "parent_denied_inventory_assets_api", pass: n === 0, detail: `visible_inventory_assets=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, INVENTORY_ASSET_DETAIL_PROBE_SQL, [INVENTORY_ASSET_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_inventory_asset", pass: n === 0, detail: `visible_cross_school_asset=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, INVENTORY_ASSET_DETAIL_PROBE_SQL, [INVENTORY_ASSET_SCHOOL_A]);
+    return { name: "school_a_sees_own_inventory_asset", pass: n === 1, detail: `visible_probe_asset=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, ALUMNI_REGISTRY_API_PROBE_SQL);
+    return { name: "organization_denied_alumni_registry_api", pass: n === 0, detail: `visible_alumni_registry=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ALUMNI_REGISTRY_API_PROBE_SQL);
+    return { name: "parent_denied_alumni_registry_api", pass: n === 0, detail: `visible_alumni_registry=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ALUMNI_REGISTRY_DETAIL_PROBE_SQL, [ALUMNI_RECORD_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_alumni_record", pass: n === 0, detail: `visible_cross_school_alumni=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ALUMNI_REGISTRY_DETAIL_PROBE_SQL, [ALUMNI_RECORD_SCHOOL_A]);
+    return { name: "school_a_sees_own_alumni_record", pass: n === 1, detail: `visible_probe_alumni=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, MANAGEMENT_PROBE_DETAIL_SQL, [MANAGEMENT_PROBE_SCHOOL_A]);
+    return { name: "organization_denied_management_probe", pass: n === 0, detail: `visible_management_probe=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, MANAGEMENT_PROBE_DETAIL_SQL, [MANAGEMENT_PROBE_SCHOOL_A]);
+    return { name: "parent_denied_management_probe", pass: n === 0, detail: `visible_management_probe=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, MANAGEMENT_PROBE_DETAIL_SQL, [MANAGEMENT_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_management_probe", pass: n === 0, detail: `visible_cross_school_mgmt=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, MANAGEMENT_PROBE_DETAIL_SQL, [MANAGEMENT_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_management_probe", pass: n === 1, detail: `visible_probe_mgmt=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, CONTROL_CENTER_SCHOOLS_API_PROBE_SQL);
+    return { name: "school_scope_denied_control_center_schools", pass: n === 0, detail: `visible_cc_schools=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, CONTROL_CENTER_SCHOOLS_API_PROBE_SQL);
+    return { name: "parent_denied_control_center_schools", pass: n === 0, detail: `visible_cc_schools=${n}` };
+  }));
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, CONTROL_CENTER_SCHOOL_DETAIL_PROBE_SQL, [CONTROL_CENTER_SCHOOL_A]);
+    return { name: "org_sees_control_center_platform_school", pass: n === 1, detail: `visible_cc_school=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, CONTROL_CENTER_SCHOOL_DETAIL_PROBE_SQL, [CONTROL_CENTER_SCHOOL_A]);
+    return { name: "school_scope_denied_control_center_school_detail", pass: n === 0, detail: `visible_cc_detail=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PARENT_PROBE_DETAIL_SQL, [PARENT_PROBE_SCHOOL_A]);
+    return { name: "school_scope_denied_parent_probe", pass: n === 0, detail: `visible_parent_probe=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PARENT_PROBE_DETAIL_SQL, [PARENT_PROBE_SCHOOL_B]);
+    return { name: "parent_a_cannot_see_school_b_parent_probe", pass: n === 0, detail: `visible_cross_school_parent=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PARENT_PROBE_DETAIL_SQL, [PARENT_PROBE_SCHOOL_A]);
+    return { name: "parent_a_sees_own_parent_probe", pass: n === 1, detail: `visible_parent_probe=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, STUDENT_PROBE_DETAIL_SQL, [STUDENT_PROBE_SCHOOL_A]);
+    return { name: "school_scope_denied_student_probe", pass: n === 0, detail: `visible_student_probe=${n}` };
+  }));
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, STUDENT_PROBE_DETAIL_SQL, [STUDENT_PROBE_SCHOOL_B]);
+    return { name: "student_a_cannot_see_school_b_student_probe", pass: n === 0, detail: `visible_cross_school_student=${n}` };
+  }));
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, STUDENT_PROBE_DETAIL_SQL, [STUDENT_PROBE_SCHOOL_A]);
+    return { name: "student_a_sees_own_student_probe", pass: n === 1, detail: `visible_student_probe=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, TEACHER_PROBE_DETAIL_SQL, [TEACHER_PROBE_SCHOOL_A]);
+    return { name: "parent_denied_teacher_probe", pass: n === 0, detail: `visible_teacher_probe=${n}` };
+  }));
+  tasks.push(() => runWithClaims(teacherClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, TEACHER_PROBE_DETAIL_SQL, [TEACHER_PROBE_SCHOOL_B]);
+    return { name: "teacher_a_cannot_see_school_b_teacher_probe", pass: n === 0, detail: `visible_cross_school_teacher=${n}` };
+  }));
+  tasks.push(() => runWithClaims(teacherClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, TEACHER_PROBE_DETAIL_SQL, [TEACHER_PROBE_SCHOOL_A]);
+    return { name: "teacher_a_sees_own_teacher_probe", pass: n === 1, detail: `visible_teacher_probe=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, AUDIT_PROBE_DETAIL_SQL, [AUDIT_PROBE_SCHOOL_A]);
+    return { name: "parent_denied_audit_probe", pass: n === 0, detail: `visible_audit_probe=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, AUDIT_PROBE_DETAIL_SQL, [AUDIT_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_audit_probe", pass: n === 0, detail: `visible_cross_school_audit=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, AUDIT_PROBE_DETAIL_SQL, [AUDIT_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_audit_probe", pass: n === 1, detail: `visible_audit_probe=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, DOMAIN_EVENT_PROBE_DETAIL_SQL, [DOMAIN_EVENT_PROBE_SCHOOL_A]);
+    return { name: "parent_denied_domain_event_probe", pass: n === 0, detail: `visible_domain_event=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, DOMAIN_EVENT_PROBE_DETAIL_SQL, [DOMAIN_EVENT_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_domain_event", pass: n === 0, detail: `visible_cross_school_domain=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, DOMAIN_EVENT_PROBE_DETAIL_SQL, [DOMAIN_EVENT_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_domain_event_probe", pass: n === 1, detail: `visible_domain_event=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PAYMENT_INTENT_PROBE_DETAIL_SQL, [PAYMENT_INTENT_PROBE_SCHOOL_B]);
+    return { name: "parent_a_cannot_see_school_b_payment_intent", pass: n === 0, detail: `visible_cross_school_payment=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PAYMENT_INTENT_PROBE_DETAIL_SQL, [PAYMENT_INTENT_PROBE_SCHOOL_A]);
+    return { name: "parent_a_sees_own_payment_intent", pass: n === 1, detail: `visible_payment_intent=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PAYMENT_INTENT_PROBE_DETAIL_SQL, [PAYMENT_INTENT_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_payment_intent", pass: n === 0, detail: `visible_cross_school_payment=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PAYMENT_INTENT_PROBE_DETAIL_SQL, [PAYMENT_INTENT_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_payment_intent", pass: n === 1, detail: `visible_payment_intent=${n}` };
+  }));
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, PAYMENT_INTENT_PROBE_DETAIL_SQL, [PAYMENT_INTENT_PROBE_SCHOOL_A]);
+    return { name: "organization_denied_payment_intent_probe", pass: n === 0, detail: `visible_payment_intent=${n}` };
+  }));
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, PAYMENT_INTENT_PROBE_DETAIL_SQL, [PAYMENT_INTENT_PROBE_SCHOOL_A]);
+    return { name: "student_denied_payment_intent_probe", pass: n === 0, detail: `visible_payment_intent=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, NOTIFICATION_DELIVERY_PROBE_DETAIL_SQL, [NOTIFICATION_DELIVERY_PROBE_SCHOOL_B]);
+    return { name: "parent_a_cannot_see_school_b_notification", pass: n === 0, detail: `visible_cross_school_notification=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, NOTIFICATION_DELIVERY_PROBE_DETAIL_SQL, [NOTIFICATION_DELIVERY_PROBE_SCHOOL_A]);
+    return { name: "parent_a_sees_own_notification", pass: n === 1, detail: `visible_notification=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, COMM_THREAD_PROBE_DETAIL_SQL, [COMM_THREAD_PROBE_SCHOOL_B]);
+    return { name: "parent_a_cannot_see_school_b_comm_thread", pass: n === 0, detail: `visible_cross_school_thread=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, COMM_THREAD_PROBE_DETAIL_SQL, [COMM_THREAD_PROBE_SCHOOL_A]);
+    return { name: "parent_a_sees_own_comm_thread", pass: n === 1, detail: `visible_comm_thread=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, COMM_THREAD_PROBE_DETAIL_SQL, [COMM_THREAD_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_comm_thread", pass: n === 0, detail: `visible_cross_school_thread=${n}` };
+  }));
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, NOTIFICATION_DELIVERY_PROBE_DETAIL_SQL, [NOTIFICATION_DELIVERY_PROBE_SCHOOL_A]);
+    return { name: "student_denied_parent_notification_probe", pass: n === 0, detail: `visible_notification=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ATTENDANCE_SESSION_PROBE_DETAIL_SQL, [ATTENDANCE_SESSION_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_attendance_session_probe", pass: n === 1, detail: `visible_attendance_session=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ATTENDANCE_SESSION_PROBE_DETAIL_SQL, [ATTENDANCE_SESSION_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_attendance_session", pass: n === 0, detail: `visible_cross_school_attendance=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ATTENDANCE_SESSION_PROBE_DETAIL_SQL, [ATTENDANCE_SESSION_PROBE_SCHOOL_B]);
+    return { name: "parent_denied_attendance_session_probe", pass: n === 0, detail: `visible_attendance_session=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, TIMETABLE_SLOT_PROBE_DETAIL_SQL, [TIMETABLE_SLOT_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_timetable_slot_probe", pass: n === 1, detail: `visible_timetable_slot=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, TIMETABLE_SLOT_PROBE_DETAIL_SQL, [TIMETABLE_SLOT_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_timetable_slot", pass: n === 0, detail: `visible_cross_school_timetable=${n}` };
+  }));
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, TIMETABLE_SLOT_PROBE_DETAIL_SQL, [TIMETABLE_SLOT_PROBE_SCHOOL_A]);
+    return { name: "organization_denied_timetable_slot_probe", pass: n === 0, detail: `visible_timetable_slot=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, MOBILE_LEAVE_PROBE_DETAIL_SQL, [MOBILE_LEAVE_PROBE_SCHOOL_A]);
+    return { name: "parent_a_sees_own_mobile_leave_probe", pass: n === 1, detail: `visible_mobile_leave=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, MOBILE_LEAVE_PROBE_DETAIL_SQL, [MOBILE_LEAVE_PROBE_SCHOOL_B]);
+    return { name: "parent_a_cannot_see_school_b_mobile_leave", pass: n === 0, detail: `visible_cross_school_leave=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_B), async (db) => {
+    const n = await count(db, MOBILE_LEAVE_PROBE_DETAIL_SQL, [MOBILE_LEAVE_PROBE_SCHOOL_A]);
+    return { name: "school_b_cannot_see_school_a_mobile_leave", pass: n === 0, detail: `visible_cross_school_leave=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, HOMEWORK_SUBMISSION_PROBE_DETAIL_SQL, [HOMEWORK_SUBMISSION_PROBE_SCHOOL_A]);
+    return { name: "student_a_sees_own_homework_submission_probe", pass: n === 1, detail: `visible_homework_submission=${n}` };
+  }));
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, HOMEWORK_SUBMISSION_PROBE_DETAIL_SQL, [HOMEWORK_SUBMISSION_PROBE_SCHOOL_B]);
+    return { name: "student_a_cannot_see_school_b_homework_submission", pass: n === 0, detail: `visible_cross_school_homework=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, HOMEWORK_SUBMISSION_PROBE_DETAIL_SQL, [HOMEWORK_SUBMISSION_PROBE_SCHOOL_B]);
+    return { name: "parent_denied_homework_submission_probe", pass: n === 0, detail: `visible_homework_submission=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, EXAM_MARK_PROBE_DETAIL_SQL, [EXAM_MARK_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_exam_mark_probe", pass: n === 1, detail: `visible_exam_mark=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, EXAM_MARK_PROBE_DETAIL_SQL, [EXAM_MARK_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_exam_mark", pass: n === 0, detail: `visible_cross_school_exam_mark=${n}` };
+  }));
+  tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    const n = await count(db, EXAM_MARK_PROBE_DETAIL_SQL, [EXAM_MARK_PROBE_SCHOOL_A]);
+    return { name: "student_denied_exam_mark_probe", pass: n === 0, detail: `visible_exam_mark=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ONBOARDING_IMPORT_JOB_PROBE_SQL, [ONBOARDING_IMPORT_JOB_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_onboarding_import_probe", pass: n === 1, detail: `visible_import_job=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ONBOARDING_IMPORT_JOB_PROBE_SQL, [ONBOARDING_IMPORT_JOB_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_onboarding_import", pass: n === 0, detail: `visible_cross_import_job=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ONBOARDING_INVITE_PROBE_SQL, [ONBOARDING_INVITE_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_onboarding_invite_probe", pass: n === 1, detail: `visible_invite=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ONBOARDING_INVITE_PROBE_SQL, [ONBOARDING_INVITE_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_onboarding_invite", pass: n === 0, detail: `visible_cross_invite=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, INVENTORY_VENDOR_PROBE_SQL, [INVENTORY_VENDOR_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_inventory_vendor_probe", pass: n === 1, detail: `visible_vendor=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, INVENTORY_VENDOR_PROBE_SQL, [INVENTORY_VENDOR_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_inventory_vendor", pass: n === 0, detail: `visible_cross_vendor=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PURCHASE_ORDER_PROBE_SQL, [PURCHASE_ORDER_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_purchase_order_probe", pass: n === 1, detail: `visible_po=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PURCHASE_ORDER_PROBE_SQL, [PURCHASE_ORDER_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_purchase_order", pass: n === 0, detail: `visible_cross_po=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, AP_COMMITMENT_PROBE_SQL, [AP_COMMITMENT_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_ap_commitment_probe", pass: n === 1, detail: `visible_ap=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, AP_COMMITMENT_PROBE_SQL, [AP_COMMITMENT_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_ap_commitment", pass: n === 0, detail: `visible_cross_ap=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PAYMENT_WEBHOOK_PROBE_DETAIL_SQL, [PAYMENT_WEBHOOK_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_payment_webhook_probe", pass: n === 1, detail: `visible_webhook=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, PAYMENT_WEBHOOK_PROBE_DETAIL_SQL, [PAYMENT_WEBHOOK_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_payment_webhook", pass: n === 0, detail: `visible_cross_webhook=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, AI_COPILOT_SESSION_PROBE_SQL, [AI_COPILOT_SESSION_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_ai_copilot_session_probe", pass: n === 1, detail: `visible_copilot_session=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, AI_COPILOT_SESSION_PROBE_SQL, [AI_COPILOT_SESSION_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_ai_copilot_session", pass: n === 0, detail: `visible_cross_copilot_session=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ACADEMIC_TIMETABLE_PROBE_SQL, [ACADEMIC_TIMETABLE_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_academic_timetable_probe", pass: n === 1, detail: `visible_timetable=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ACADEMIC_TIMETABLE_PROBE_SQL, [ACADEMIC_TIMETABLE_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_academic_timetable", pass: n === 0, detail: `visible_cross_timetable=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ANALYTICS_SNAPSHOT_PROBE_SQL, [ANALYTICS_SNAPSHOT_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_analytics_snapshot_probe", pass: n === 1, detail: `visible_analytics_snapshot=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ANALYTICS_SNAPSHOT_PROBE_SQL, [ANALYTICS_SNAPSHOT_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_analytics_snapshot", pass: n === 0, detail: `visible_cross_analytics_snapshot=${n}` };
+  }));
+
+  const tests = await runProbeTasks(tasks);
   const pass = tests.every((t) => t.pass);
   return { pass, enforced: true, role: "erp_tenant", tests };
 }

@@ -4,6 +4,7 @@ import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/finance/finance_models.dart';
 import '../../../../features/finance/finance_requests.dart';
+import 'finance_installment_plan_catalog.dart';
 import 'mapper/finance_mapper.dart';
 import 'remote/finance_remote_datasource.dart';
 
@@ -63,18 +64,46 @@ class ApiFinanceRepository implements FinanceRepository {
   Future<PaginatedResult<String>> getAcademicYears({
     required RepositoryQuery query,
   }) async {
-    final dto = await _remote.fetchAcademicYears(query: query);
-    return paginateList(_mapper.toAcademicYears(dto), query);
+    final structures = await _remote.fetchFeeStructures(
+      query: query,
+      academicYear: '',
+    );
+    final years = _mapper
+        .toFeeStructures(structures)
+        .map((structure) => structure.academicYear)
+        .where((year) => year.isNotEmpty)
+        .toSet()
+        .toList(growable: false)
+      ..sort((a, b) => b.compareTo(a));
+    return paginateList(years, query);
   }
 
   @override
   Future<PaginatedResult<StudentFeeAccount>> getStudentAccounts({
     required RepositoryQuery query,
   }) async {
-    final dto = await _remote.fetchStudentAccounts(query: query);
+    final assignments = await _remote.fetchFeeAssignments(query: query);
+    final accounts = <StudentFeeAccount>[];
+    for (final assignment in assignments.items) {
+      final raw = assignment.raw;
+      final studentId = raw['studentId'] as String? ?? '';
+      final academicYear = raw['academicYear'] as String? ?? '';
+      if (studentId.isEmpty) continue;
+      if (raw['assignmentStatus'] == 'cancelled') continue;
+      try {
+        final accountDto = await _remote.fetchStudentAccount(
+          query: query,
+          studentId: studentId,
+          academicYear: academicYear,
+        );
+        accounts.add(_mapper.toStudentAccount(accountDto));
+      } on Object {
+        continue;
+      }
+    }
     return PaginatedResult.fromDto(
-      items: _mapper.toStudentAccounts(dto),
-      pagination: dto.pagination,
+      items: accounts,
+      pagination: assignments.pagination,
       fallbackPage: query.page,
       fallbackPageSize: query.pageSize,
     );
@@ -84,8 +113,7 @@ class ApiFinanceRepository implements FinanceRepository {
   Future<PaginatedResult<InstallmentPlan>> getInstallmentPlans({
     required RepositoryQuery query,
   }) async {
-    final dto = await _remote.fetchFeeAssignment(query: query);
-    return paginateList(_mapper.toInstallmentPlans(dto), query);
+    return paginateList(kFinanceInstallmentPlanCatalog, query);
   }
 
   @override
@@ -98,6 +126,27 @@ class ApiFinanceRepository implements FinanceRepository {
       collectionId: collectionId,
     );
     return _mapper.toCollectionDetail(dto);
+  }
+
+  @override
+  Future<FinanceCollectionResult> createCollection({
+    required RepositoryQuery query,
+    required CreateCollectionRequest request,
+  }) async {
+    final dto = await _remote.createCollection(query: query, request: request);
+    return _mapper.toCollectionResult(dto);
+  }
+
+  @override
+  Future<FinanceCollectionResult> cancelCollection({
+    required RepositoryQuery query,
+    required String collectionId,
+  }) async {
+    final dto = await _remote.cancelCollection(
+      query: query,
+      collectionId: collectionId,
+    );
+    return _mapper.toCollectionResult(dto);
   }
 
   @override
@@ -119,6 +168,18 @@ class ApiFinanceRepository implements FinanceRepository {
       fallbackPage: query.page,
       fallbackPageSize: query.pageSize,
     );
+  }
+
+  @override
+  Future<RefundRequest?> getRefund({
+    required RepositoryQuery query,
+    required String refundId,
+  }) async {
+    final dto = await _remote.fetchRefund(
+      query: query,
+      refundId: refundId,
+    );
+    return _mapper.toRefundRequest(dto);
   }
 
   @override
@@ -208,6 +269,74 @@ class ApiFinanceRepository implements FinanceRepository {
         refundId: refundId,
         request: request,
       );
+
+  @override
+  Future<RefundRequest> rejectRefund({
+    required RepositoryQuery query,
+    required String refundId,
+  }) =>
+      _remote.rejectRefund(query: query, refundId: refundId);
+
+  @override
+  Future<FinanceReceiptDetail?> getReceipt({
+    required RepositoryQuery query,
+    required String receiptId,
+  }) async {
+    final dto = await _remote.fetchReceipt(
+      query: query,
+      receiptId: receiptId,
+    );
+    return _mapper.toReceiptDetail(dto);
+  }
+
+  @override
+  Future<PaginatedResult<FinanceInvoice>> getInvoices({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchInvoices(query: query);
+    return PaginatedResult.fromDto(
+      items: _mapper.toInvoices(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
+  }
+
+  @override
+  Future<FinanceInvoice?> getInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final dto = await _remote.fetchInvoice(
+      query: query,
+      invoiceId: invoiceId,
+    );
+    return _mapper.toFinanceInvoice(dto);
+  }
+
+  @override
+  Future<FinanceInvoice> issueInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final dto = await _remote.issueInvoice(
+      query: query,
+      invoiceId: invoiceId,
+    );
+    return _mapper.toFinanceInvoice(dto);
+  }
+
+  @override
+  Future<FinanceInvoice> cancelInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final dto = await _remote.cancelInvoice(
+      query: query,
+      invoiceId: invoiceId,
+    );
+    return _mapper.toFinanceInvoice(dto);
+  }
 
   @override
   Future<ScholarshipCatalogItem> createScholarship({

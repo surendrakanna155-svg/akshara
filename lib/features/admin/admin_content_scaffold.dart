@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../router/route_names.dart';
 import '../../theme/spacing.dart';
 import 'admin_app_bar.dart';
 import 'admin_filter_bar.dart';
@@ -69,10 +71,7 @@ class AdminContentScaffold extends StatelessWidget {
                       'Notifications coming soon.',
                     ),
             onAiCopilotTap: onAiCopilotTap ??
-                () => _showPlaceholderSnackBar(
-                      context,
-                      'AI Copilot coming soon.',
-                    ),
+                () => context.go(RouteNames.copilot),
             onProfileTap: onProfileTap ??
                 () => _showPlaceholderSnackBar(
                       context,

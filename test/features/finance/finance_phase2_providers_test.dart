@@ -67,7 +67,7 @@ void main() {
 
     test('financeRefundsProvider returns refund queue', () async {      await container.read(financeRefundsFutureProvider.future);
 
-      expect(container.read(financeRefundsProvider), hasLength(3));
+      expect(container.read(financeRefundsProvider), hasLength(4));
     });
 
     test('financeRefundsProvider returns empty when empty flag set', () async {

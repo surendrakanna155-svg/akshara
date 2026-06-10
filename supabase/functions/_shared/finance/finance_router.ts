@@ -29,6 +29,15 @@ import {
   handleIssueInvoice,
   handleListInvoices,
 } from "./finance_invoices_handlers.ts";
+import { handleDashboard } from "./finance_dashboard_handlers.ts";
+import {
+  handleGetGoodsReceipt,
+  handleInventoryFinanceTimeline,
+  handleListGoodsReceipts,
+  handleListInventoryFinancePostings,
+  handleReconciliationDashboard,
+  handleVendorTransactions,
+} from "../inventory_finance/inventory_finance_reconciliation_handlers.ts";
 import {
   handleApproveRefund,
   handleCreateRefund,
@@ -40,10 +49,41 @@ import {
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function matchFinanceRoute(
+export function matchFinanceRoute(
   method: string,
   path: string,
 ): { handler: (req: Request, config: AppConfig, ...args: string[]) => Promise<Response>; args: string[] } | null {
+  if (path === "/finance/dashboard" && method === "GET") {
+    return { handler: handleDashboard, args: [] };
+  }
+
+  if (path === "/finance/inventory-reconciliation/dashboard" && method === "GET") {
+    return { handler: handleReconciliationDashboard, args: [] };
+  }
+  if (path === "/finance/inventory-reconciliation/timeline" && method === "GET") {
+    return { handler: handleInventoryFinanceTimeline, args: [] };
+  }
+  if (path === "/finance/inventory-reconciliation/goods-receipts" && method === "GET") {
+    return { handler: handleListGoodsReceipts, args: [] };
+  }
+  if (path === "/finance/inventory-reconciliation/postings" && method === "GET") {
+    return { handler: handleListInventoryFinancePostings, args: [] };
+  }
+
+  const goodsReceiptMatch = path.match(
+    /^\/finance\/inventory-reconciliation\/goods-receipts\/([^/]+)$/,
+  );
+  if (goodsReceiptMatch && method === "GET") {
+    return { handler: handleGetGoodsReceipt, args: [goodsReceiptMatch[1]!] };
+  }
+
+  const vendorTxMatch = path.match(
+    /^\/finance\/inventory-reconciliation\/vendors\/([^/]+)\/transactions$/,
+  );
+  if (vendorTxMatch && method === "GET") {
+    return { handler: handleVendorTransactions, args: [vendorTxMatch[1]!] };
+  }
+
   if (path === "/finance/fee-structures" && method === "GET") {
     return { handler: handleListFeeStructures, args: [] };
   }

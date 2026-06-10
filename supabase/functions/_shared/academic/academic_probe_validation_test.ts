@@ -45,7 +45,7 @@ const ACADEMIC_PHASE_5C0B_PROBES = [
   "school_a_cannot_fetch_school_b_teacher_assignment",
 ] as const;
 
-const EXPECTED_PROBE_COUNT = 121;
+const EXPECTED_PROBE_COUNT = 213;
 
 function extractProbeNames(source: string): string[] {
   const names: string[] = [];
@@ -101,7 +101,7 @@ Deno.test("Academic probes import operational and API SQL constants", () => {
   assert(probesSource.includes("ACADEMIC_TEACHER_ASSIGNMENT_DETAIL_PROBE_SQL"));
 });
 
-Deno.test("tenant isolation probe count reaches 5C.0b target (121)", () => {
+Deno.test("tenant isolation probe count reaches v7.6 target (213)", () => {
   const names = extractProbeNames(probesSource);
   const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
   assertEquals(duplicates.length, 0, `duplicate probes: ${duplicates.join(", ")}`);

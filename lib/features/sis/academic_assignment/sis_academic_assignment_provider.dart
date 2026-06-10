@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/repository_future.dart';
-import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/repositories/academic/academic_catalog_provider.dart';
+import '../../../core/repositories/academic/academic_models.dart';
 import '../../../core/repositories/paginated_result.dart';
 import '../registry/sis_registry_provider.dart';
 import '../sis_async_state.dart';
@@ -15,80 +14,22 @@ final sisSelectedAssignmentStudentIdProvider = StateProvider<String?>(
   (ref) => null,
 );
 
-final sisAcademicAssignmentFutureProvider =
-    FutureProvider<SisAcademicAssignmentData>((ref) async {
-  return ref.read(sisRepositoryProvider).getAcademicAssignment(
-        query: ref.watch(repositoryQueryProvider),
-      );
-});
-
 final sisAcademicAssignmentViewStateProvider =
-    Provider<SisViewState<SisAcademicAssignmentData>>((ref) {
+    Provider<SisViewState<AcademicCatalogData>>((ref) {
   return resolveSisAsync(
-    ref.watch(sisAcademicAssignmentFutureProvider),
-    forceLoading: ref.watch(sisAcademicAssignmentLoadingProvider),
-    forceError: ref.watch(sisAcademicAssignmentErrorProvider),
+    ref.watch(academicCatalogFutureProvider),
+    forceLoading: ref.watch(sisAcademicAssignmentLoadingProvider) ||
+        ref.watch(academicCatalogLoadingProvider),
+    forceError: ref.watch(sisAcademicAssignmentErrorProvider) ||
+        ref.watch(academicCatalogErrorProvider),
   );
 });
 
-final sisClassOptionsFutureProvider = FutureProvider<List<String>>((ref) async {
-  final data = await ref.watch(sisAcademicAssignmentFutureProvider.future);
-  return data.classOptions;
-});
+final sisClassOptionsProvider = classOptionsProvider;
 
-final sisClassOptionsProvider = Provider<List<String>>(
-  (ref) =>
-      watchRepositoryFuture(
-        ref,
-        ref.watch(sisClassOptionsFutureProvider),
-        manualLoading: false,
-        manualError: false,
-        manualEmpty: false,
-      ) ??
-      ref.watch(sisAcademicAssignmentViewStateProvider).data?.classOptions ??
-      const [],
-);
+final sisSectionOptionsProvider = sectionOptionsProvider;
 
-final sisSectionOptionsFutureProvider =
-    FutureProvider<List<String>>((ref) async {
-  final data = await ref.watch(sisAcademicAssignmentFutureProvider.future);
-  return data.sectionOptions;
-});
-
-final sisSectionOptionsProvider = Provider<List<String>>(
-  (ref) =>
-      watchRepositoryFuture(
-        ref,
-        ref.watch(sisSectionOptionsFutureProvider),
-        manualLoading: false,
-        manualError: false,
-        manualEmpty: false,
-      ) ??
-      ref.watch(sisAcademicAssignmentViewStateProvider).data?.sectionOptions ??
-      const [],
-);
-
-final sisAcademicYearOptionsFutureProvider =
-    FutureProvider<List<String>>((ref) async {
-  final data = await ref.watch(sisAcademicAssignmentFutureProvider.future);
-  return data.academicYearOptions;
-});
-
-final sisAcademicYearOptionsProvider = Provider<List<String>>(
-  (ref) =>
-      watchRepositoryFuture(
-        ref,
-        ref.watch(sisAcademicYearOptionsFutureProvider),
-        manualLoading: false,
-        manualError: false,
-        manualEmpty: false,
-      ) ??
-      ref
-          .watch(sisAcademicAssignmentViewStateProvider)
-          .data
-          ?.academicYearOptions ??
-      const [],
-);
+final sisAcademicYearOptionsProvider = yearOptionsProvider;
 
 final sisAssignmentDraftProvider = StateProvider<SisAcademicAssignmentDraft?>(
   (ref) => null,
@@ -109,9 +50,9 @@ final sisAcademicAssignmentScreenViewStateProvider =
   return resolveSisAsync(
     ref.watch(sisStudentsFutureProvider),
     forceLoading: ref.watch(sisAcademicAssignmentLoadingProvider) ||
-        ref.watch(sisAcademicAssignmentViewStateProvider).isLoading,
+        ref.watch(academicCatalogViewStateProvider).isLoading,
     forceError: ref.watch(sisAcademicAssignmentErrorProvider) ||
-        ref.watch(sisAcademicAssignmentViewStateProvider).hasError ||
+        ref.watch(academicCatalogViewStateProvider).hasError ||
         ref.watch(sisRegistryViewStateProvider).hasError,
     isDataEmpty: (result) => result.items.isEmpty,
   );

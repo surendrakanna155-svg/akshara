@@ -18,11 +18,13 @@ import {
 import { permissionsPayloadFromList } from "./permission_resolver.ts";
 import { setRequestContext } from "./request_context.ts";
 import { createServiceClient, type UserRow } from "./db.ts";
+import { resolveStudentLoginTargetWithClient } from "./auth_login_helpers.ts";
 import { envelope, errorEnvelope, jsonResponse, readJson } from "./http.ts";
 
 interface LoginBody {
   identifier?: string;
   type?: string;
+  schoolId?: string;
 }
 
 interface VerifyOtpBody extends ScopeLoginRequest {
@@ -169,14 +171,45 @@ export async function handleLogin(req: Request, config: AppConfig): Promise<Resp
     return errorEnvelope("VALIDATION_ERROR", "identifier is required", 422);
   }
 
+  const client = createServiceClient(config);
   let phone: string;
-  try {
-    phone = normalizePhone(body.identifier, body.type);
-  } catch {
-    return errorEnvelope("VALIDATION_ERROR", "Only phone OTP is supported in v6.0", 422);
+  let otpMeta: Record<string, unknown> = {
+    identifier_type: "phone",
+    identifier_value: body.identifier,
+  };
+
+  if (body.type === "student_id") {
+    if (!body.schoolId) {
+      return errorEnvelope("VALIDATION_ERROR", "schoolId is required for student_id login", 422);
+    }
+    const target = await resolveStudentLoginTargetWithClient(
+      client,
+      body.schoolId,
+      body.identifier.trim(),
+    );
+    if (!target) {
+      return errorEnvelope(
+        "STUDENT_LOGIN_NOT_FOUND",
+        "Student account not provisioned for OTP login",
+        404,
+      );
+    }
+    phone = target.phone;
+    otpMeta = {
+      identifier_type: "student_id",
+      identifier_value: body.identifier.trim(),
+      context_school_id: body.schoolId,
+      context_student_id: target.studentId,
+    };
+  } else {
+    try {
+      phone = normalizePhone(body.identifier, body.type);
+      otpMeta.identifier_value = phone;
+    } catch {
+      return errorEnvelope("VALIDATION_ERROR", "Only phone or student_id OTP is supported", 422);
+    }
   }
 
-  const client = createServiceClient(config);
   const otp = generateOtp();
   const otpHash = await hashToken(otp);
   const expiresAt = expiresAtIso(config.otpTtlSeconds);
@@ -186,6 +219,7 @@ export async function handleLogin(req: Request, config: AppConfig): Promise<Resp
     otp_hash: otpHash,
     organization_slug: null,
     expires_at: expiresAt,
+    ...otpMeta,
   });
   if (error) {
     return errorEnvelope("SERVER_ERROR", error.message, 500);
@@ -220,14 +254,37 @@ export async function handleVerifyOtp(
     return errorEnvelope("VALIDATION_ERROR", "identifier and otp are required", 422);
   }
 
+  const client = createServiceClient(config);
+
   let phone: string;
-  try {
-    phone = normalizePhone(body.identifier, body.type);
-  } catch {
-    return errorEnvelope("VALIDATION_ERROR", "Only phone OTP is supported in v6.0", 422);
+  let loginScope: AuthScope | undefined = body.scope;
+  let loginSchoolId = body.schoolId;
+  let loginStudentId = body.studentId;
+
+  if (body.type === "student_id") {
+    if (!body.schoolId) {
+      return errorEnvelope("VALIDATION_ERROR", "schoolId is required for student_id login", 422);
+    }
+    const target = await resolveStudentLoginTargetWithClient(
+      client,
+      body.schoolId,
+      body.identifier.trim(),
+    );
+    if (!target) {
+      return errorEnvelope("STUDENT_LOGIN_NOT_FOUND", "Student account not provisioned", 404);
+    }
+    phone = target.phone;
+    loginScope = "student";
+    loginSchoolId = body.schoolId;
+    loginStudentId = target.studentId;
+  } else {
+    try {
+      phone = normalizePhone(body.identifier, body.type);
+    } catch {
+      return errorEnvelope("VALIDATION_ERROR", "Only phone or student_id OTP is supported", 422);
+    }
   }
 
-  const client = createServiceClient(config);
   const { data: otpRows, error: otpError } = await client
     .from("otp_requests")
     .select("*")
@@ -270,10 +327,10 @@ export async function handleVerifyOtp(
   }
 
   const ctx = await resolveAuthSessionContext(client, user.id, {
-    scope: body.scope,
-    schoolId: body.schoolId,
+    scope: loginScope ?? body.scope,
+    schoolId: loginSchoolId,
     organizationId: body.organizationId,
-    studentId: body.studentId,
+    studentId: loginStudentId,
   });
 
   if (!ctx) {

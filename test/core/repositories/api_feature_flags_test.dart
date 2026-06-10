@@ -1,6 +1,6 @@
 import 'package:akshara_erp/core/config/environment.dart';
 import 'package:akshara_erp/core/config/environment_provider.dart';
-import 'package:akshara_erp/core/repositories/api/finance/api_finance_repository.dart';
+import 'package:akshara_erp/core/repositories/api/finance/hybrid_finance_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_finance_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_config.dart';
 import 'package:akshara_erp/core/repositories/repository_providers.dart';
@@ -36,7 +36,7 @@ void main() {
 
       expect(
         container.read(financeRepositoryProvider),
-        isA<ApiFinanceRepository>(),
+        isA<HybridFinanceRepository>(),
       );
     });
 

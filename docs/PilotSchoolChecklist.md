@@ -18,6 +18,7 @@
 | P6 | `flutter analyze` = 0 issues | CI | [x] |
 | P7 | `flutter test` all passing | CI | [x] |
 | P8 | Pilot workflow certification tests pass | QA | [x] |
+| P9 | Sprint 6 validation scripts available | QA | [x] |
 
 ## Week 1 — Read Workflows
 

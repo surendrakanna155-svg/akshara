@@ -57,8 +57,8 @@ PROBE_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; d=json.load(sys.stdi
 PROBE_PASS=$(echo "$HEALTH" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['isolation']['pass'])")
 PROBE_FAILS=$(echo "$HEALTH" | python3 -c "import sys,json; d=json.load(sys.stdin); print([t['name'] for t in d['data']['isolation']['tests'] if not t['pass']])")
 
-if [ "$PROBE_PASS" = "True" ] && [ "$PROBE_COUNT" = "81" ]; then
-  pass "tenant-access 81/81 probes"
+if [ "$PROBE_PASS" = "True" ] && [ "$PROBE_COUNT" = "85" ]; then
+  pass "tenant-access 85/85 probes"
 else
   fail "tenant-access probes count=$PROBE_COUNT pass=$PROBE_PASS fails=$PROBE_FAILS"
 fi
@@ -85,6 +85,7 @@ check_route() {
   fi
 }
 
+check_route "GET dashboard" GET "/sis/dashboard"
 check_route "GET students" GET "/sis/students"
 check_route "GET student detail" GET "/sis/students/${STUDENT_A}"
 check_route "GET enrollments" GET "/sis/enrollments"
@@ -200,8 +201,21 @@ STUDENTS_AFTER=$(export SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:?Set SUPA
 CONV_ROW=$(export SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:?Set SUPABASE_ACCESS_TOKEN}" && cd "$(dirname "$0")/.." && supabase db query --linked "SELECT conversion_status, (converted_at IS NOT NULL) AS has_at, (converted_by IS NOT NULL) AS has_by FROM admissions_enrollments WHERE id = '${ADM_ENROLLMENT_A}'" 2>/dev/null | python3 -c "import sys,json; r=json.load(sys.stdin)['rows'][0]; print(r['conversion_status'], r['has_at'], r['has_by'])" 2>/dev/null || echo "missing")
 echo "$CONV_ROW" | grep -q "converted True True" && pass "conversion_status=converted with audit columns" || fail "conversion audit: $CONV_ROW"
 
+# Dashboard payload shape
+DASH_RESP=$(api GET /sis/dashboard -H "$(auth_header "$ADMIN_TOKEN")")
+echo "$DASH_RESP" | python3 -c "
+import sys, json
+d = json.load(sys.stdin).get('data', {})
+required = ['totalStudents', 'kpis', 'classDistribution', 'genderDistribution', 'recentEnrollments', 'aiInsight']
+missing = [k for k in required if k not in d]
+if missing:
+    raise SystemExit('missing keys: ' + ', '.join(missing))
+print('ok')
+" >/dev/null 2>&1 && pass "GET /sis/dashboard payload shape" || fail "dashboard payload: $DASH_RESP"
+
 # Scope denials 403 for all SIS routes
 SIS_ROUTES=(
+  "GET /sis/dashboard"
   "GET /sis/students"
   "GET /sis/students/${STUDENT_A}"
   "POST /sis/students"

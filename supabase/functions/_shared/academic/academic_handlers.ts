@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { academicAudit, emitMutationAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   academicYearToApi,
   classToApi,
@@ -301,16 +302,18 @@ export async function handleCreateAcademicYear(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const created = await runTenant(config, auth.claims, (db) =>
-      createAcademicYear(db, orgId, schoolId, {
+    const created = await runTenant(config, auth.claims, async (db) => {
+      const year = await createAcademicYear(db, orgId, schoolId, {
         yearLabel,
         startDate,
         endDate,
         isCurrent: optionalBodyBool(body, "isCurrent", "is_current"),
         status: optionalBodyStr(body, "status"),
         createdBy: auth.claims.sub,
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, academicAudit.yearCreated(year.id), req);
+      return year;
+    });
     return jsonResponse(envelope(academicYearToApi(created)), { status: 201 });
   } catch (error) {
     const mapped = mapAcademicYearWriteError(error);
@@ -341,15 +344,17 @@ export async function handleUpdateAcademicYear(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const updated = await runTenant(config, auth.claims, (db) =>
-      updateAcademicYear(db, orgId, schoolId, yearId, {
+    const updated = await runTenant(config, auth.claims, async (db) => {
+      const year = await updateAcademicYear(db, orgId, schoolId, yearId, {
         yearLabel: optionalBodyStr(body, "yearLabel", "year_label"),
         startDate: optionalBodyStr(body, "startDate", "start_date"),
         endDate: optionalBodyStr(body, "endDate", "end_date"),
         isCurrent: optionalBodyBool(body, "isCurrent", "is_current"),
         status: optionalBodyStr(body, "status"),
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, academicAudit.yearUpdated(yearId), req);
+      return year;
+    });
     return jsonResponse(envelope(academicYearToApi(updated)));
   } catch (error) {
     const mapped = mapAcademicYearWriteError(error);
@@ -419,15 +424,17 @@ export async function handleCreateClass(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const created = await runTenant(config, auth.claims, (db) =>
-      createClass(db, orgId, schoolId, {
+    const created = await runTenant(config, auth.claims, async (db) => {
+      const row = await createClass(db, orgId, schoolId, {
         academicYearId,
         className,
         displayOrder: optionalBodyInt(body, "displayOrder", "display_order"),
         status: optionalBodyStr(body, "status"),
         createdBy: auth.claims.sub,
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, academicAudit.classCreated(row.id), req);
+      return row;
+    });
     return jsonResponse(envelope(classToApi(created)), { status: 201 });
   } catch (error) {
     const mapped = mapClassWriteError(error);
@@ -458,13 +465,15 @@ export async function handleUpdateClass(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const updated = await runTenant(config, auth.claims, (db) =>
-      updateClass(db, orgId, schoolId, classId, {
+    const updated = await runTenant(config, auth.claims, async (db) => {
+      const row = await updateClass(db, orgId, schoolId, classId, {
         className: optionalBodyStr(body, "className", "class_name"),
         displayOrder: optionalBodyInt(body, "displayOrder", "display_order"),
         status: optionalBodyStr(body, "status"),
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, academicAudit.classUpdated(classId), req);
+      return row;
+    });
     return jsonResponse(envelope(classToApi(updated)));
   } catch (error) {
     const mapped = mapClassWriteError(error);
@@ -544,6 +553,7 @@ export async function handleCreateSection(
         status: optionalBodyStr(body, "status"),
         createdBy: auth.claims.sub,
       });
+      await emitMutationAudit(db, auth.claims, academicAudit.sectionCreated(row.id), req);
       return await getSectionWithClass(db, orgId, schoolId, row.id) ?? row;
     });
     return jsonResponse(envelope(sectionToApi(created)), { status: 201 });
@@ -584,6 +594,7 @@ export async function handleUpdateSection(
       });
       const row = await getSectionWithClass(db, orgId, schoolId, sectionId);
       if (!row) throw new SectionNotFoundError(sectionId);
+      await emitMutationAudit(db, auth.claims, academicAudit.sectionUpdated(sectionId), req);
       return row;
     });
     return jsonResponse(envelope(sectionToApi(updated)));
@@ -669,6 +680,7 @@ export async function handleCreateTeacherAssignment(
         isPrimary: optionalBodyBool(body, "isPrimary", "is_primary"),
         createdBy: auth.claims.sub,
       });
+      await emitMutationAudit(db, auth.claims, academicAudit.teacherAssignmentCreated(row.id), req);
       const detail = await getTeacherAssignmentWithDetails(db, orgId, schoolId, row.id);
       if (!detail) throw new TeacherAssignmentNotFoundError(row.id);
       return detail;
@@ -722,6 +734,7 @@ export async function handleUpdateTeacherAssignment(
       });
       const row = await getTeacherAssignmentWithDetails(db, orgId, schoolId, assignmentId);
       if (!row) throw new TeacherAssignmentNotFoundError(assignmentId);
+      await emitMutationAudit(db, auth.claims, academicAudit.teacherAssignmentUpdated(assignmentId), req);
       return row;
     });
     return jsonResponse(envelope(teacherAssignmentToApi(updated)));

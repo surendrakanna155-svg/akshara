@@ -1,8 +1,9 @@
 # Akshara ERP — Production Readiness Checklist
 
-**Version:** 1.9  
-**Last updated:** June 2026  
-**Current score:** 97 / 100 (updated v5.2–v5.5)
+**Version:** 2.0  
+**Last updated:** June 2026 (v7.7 governance sync)  
+**Current score:** 94 / 100 (production-weighted; external integrations env-dependent)  
+**Operations runbooks:** `docs/Operations/` (v7.7)
 
 Use this checklist before pilot, staging, and production deployments. Mark `[x]` when verified.
 
@@ -28,17 +29,17 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
-| R1 | 22 permissions defined (view/manage/approve) | [x] | [x] | [x] | [ ] |
+| R1 | 33 permissions defined (view/manage/approve + copilot/timetable/analytics) | [x] | [x] | [x] | [ ] |
 | R2 | ErpRouteGuard on all 12 ERP prefixes | [x] | [x] | [x] | [ ] |
 | R3 | ManagePermissionGuard available | [x] | [x] | [x] | [ ] |
 | R4 | ApprovePermissionGuard available | [x] | [x] | [x] | [ ] |
 | R5 | Server permission sync on login/refresh | [x] | [ ] | [ ] | [ ] |
 | R6 | Permission cache version tracking | [x] | [x] | [ ] | [ ] |
 | R7 | Denied-access audit events | [x] | [x] | [ ] | [ ] |
-| R8 | **Server-side RBAC / RLS enforced** | [ ] | [ ] | [ ] | [ ] |
+| R8 | **Server-side RBAC / RLS enforced** | [x] | [x] | [x] | [ ] |
 | R9 | manage* wired on all mutation routes | [x] | [x] | [ ] | [ ] |
 | R9a | RBAC validation suite passing | [x] | [x] | [ ] | [ ] |
-| R9b | Tenant isolation validation suite | [x] | [x] | [ ] | [ ] |
+| R9b | Tenant isolation validation suite (**213 probes**) | [x] | [x] | [x] | [ ] |
 
 ---
 
@@ -88,7 +89,7 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | U4 | Upload queue with batching + retry | [x] | [x] | [ ] | [ ] |
 | U4a | Audit health monitor | [x] | [x] | [ ] | [ ] |
 | U4b | Audit readiness verifier | [x] | [x] | [ ] | [ ] |
-| U5 | **Audit ingestion endpoint live** | [ ] | [ ] | [ ] | [ ] |
+| U5 | **Audit ingestion endpoint live** | [x] | [x] | [x] | [ ] |
 | U5a | Client audit batch upload wired (`auditApiEnabledProvider`) | [x] | [x] | [ ] | [ ] |
 | U6 | Tamper-evident / signed audit trail | [ ] | [ ] | [ ] | [ ] |
 | U7 | Admissions workflow events (12 types) | [x] | [x] | [ ] | [ ] |
@@ -126,7 +127,7 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
-| T1 | flutter test — all passing (950+) | [x] | [x] | [x] | [ ] |
+| T1 | flutter test — all passing (1087+) | [x] | [x] | [x] | [ ] |
 | T2j | Pilot workflow certification tests | [x] | [x] | [ ] | [ ] |
 | T2k | Observability abstraction tests | [x] | [x] | [ ] | [ ] |
 | T2l | Vendor monitoring adapter tests | [x] | [x] | [x] | [ ] |
@@ -166,7 +167,7 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
 | D1 | Environment config (dev/staging/prod) | [x] | [x] | [ ] | [ ] |
-| D2 | CI pipeline runs analyze + test | [ ] | [ ] | [ ] | [ ] |
+| D2 | CI pipeline runs analyze + test | [x] | [x] | [x] | [ ] |
 | D3 | Web build deployable | [ ] | [ ] | [ ] | [ ] |
 | D4 | Android/iOS build pipeline | [ ] | [ ] | [ ] | [ ] |
 | D5 | Feature flag rollout per tenant | [ ] | [ ] | [ ] | [ ] |
@@ -178,9 +179,9 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
-| B1 | Database backup schedule | [ ] | [ ] | [ ] | [ ] |
+| B1 | Database backup schedule | [ ] | [x] | [x] | [ ] |
 | B2 | Backup restore tested | [ ] | [ ] | [ ] | [ ] |
-| B3 | RPO / RTO defined | [ ] | [ ] | [ ] | [ ] |
+| B3 | RPO / RTO defined | [x] | [x] | [x] | [ ] |
 | B4 | Multi-region failover plan | [ ] | [ ] | [ ] | [ ] |
 | B5 | Client offline mode documented | [x] | [x] | [ ] | [ ] |
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -26,6 +27,7 @@ class _SisAdmissionsConversionScreenState
     extends ConsumerState<SisAdmissionsConversionScreen> {
   String? _previewClass;
   String? _previewSection;
+  String? _previewYear;
 
   @override
   Widget build(BuildContext context) {
@@ -47,6 +49,7 @@ class _SisAdmissionsConversionScreenState
     if (selected != null && _previewClass == null) {
       _previewClass = selected.enrollment.seekingClass;
       _previewSection = selected.enrollment.section;
+      _previewYear = selected.enrollment.academicYear;
     }
 
     return SisModuleScaffold(
@@ -81,6 +84,7 @@ class _SisAdmissionsConversionScreenState
                         setState(() {
                           _previewClass = item.enrollment.seekingClass;
                           _previewSection = item.enrollment.section;
+                          _previewYear = item.enrollment.academicYear;
                         });
                       },
                     ),
@@ -92,9 +96,21 @@ class _SisAdmissionsConversionScreenState
                             _previewClass ?? selected.enrollment.seekingClass,
                         previewSection:
                             _previewSection ?? selected.enrollment.section,
-                        onClassChanged: (v) => setState(() => _previewClass = v),
+                        previewYear:
+                            _previewYear ?? selected.enrollment.academicYear,
+                        onClassChanged: (v) => setState(() {
+                          _previewClass = v;
+                          final filtered = ref.read(
+                            sectionOptionsForClassProvider(v),
+                          );
+                          if (filtered.isNotEmpty &&
+                              !filtered.contains(_previewSection)) {
+                            _previewSection = filtered.first;
+                          }
+                        }),
                         onSectionChanged: (v) =>
                             setState(() => _previewSection = v),
+                        onYearChanged: (v) => setState(() => _previewYear = v),
                         onConvert: () => _completeConversion(selected!),
                       ),
                     ],
@@ -115,6 +131,7 @@ class _SisAdmissionsConversionScreenState
                         setState(() {
                           _previewClass = item.enrollment.seekingClass;
                           _previewSection = item.enrollment.section;
+                          _previewYear = item.enrollment.academicYear;
                         });
                       },
                     ),
@@ -133,10 +150,22 @@ class _SisAdmissionsConversionScreenState
                                 _previewClass ?? selected.enrollment.seekingClass,
                             previewSection:
                                 _previewSection ?? selected.enrollment.section,
-                            onClassChanged: (v) =>
-                                setState(() => _previewClass = v),
+                            previewYear:
+                                _previewYear ?? selected.enrollment.academicYear,
+                            onClassChanged: (v) => setState(() {
+                              _previewClass = v;
+                              final filtered = ref.read(
+                                sectionOptionsForClassProvider(v),
+                              );
+                              if (filtered.isNotEmpty &&
+                                  !filtered.contains(_previewSection)) {
+                                _previewSection = filtered.first;
+                              }
+                            }),
                             onSectionChanged: (v) =>
                                 setState(() => _previewSection = v),
+                            onYearChanged: (v) =>
+                                setState(() => _previewYear = v),
                             onConvert: () => _completeConversion(selected!),
                           ),
                   ),
@@ -160,7 +189,7 @@ class _SisAdmissionsConversionScreenState
       studentName: item.enrollment.studentName,
       classLabel: _previewClass ?? item.enrollment.seekingClass,
       section: _previewSection ?? item.enrollment.section,
-      academicYear: item.enrollment.academicYear,
+      academicYear: _previewYear ?? item.enrollment.academicYear,
     );
 
     final result = await completeSisEnrollmentConversion(
@@ -181,25 +210,33 @@ class _SisAdmissionsConversionScreenState
   }
 }
 
-class _ConversionPanel extends StatelessWidget {
+class _ConversionPanel extends ConsumerWidget {
   const _ConversionPanel({
     required this.item,
     required this.previewClass,
     required this.previewSection,
+    required this.previewYear,
     required this.onClassChanged,
     required this.onSectionChanged,
+    required this.onYearChanged,
     required this.onConvert,
   });
 
   final SisEnrollmentQueueItem item;
   final String previewClass;
   final String previewSection;
+  final String previewYear;
   final ValueChanged<String> onClassChanged;
   final ValueChanged<String> onSectionChanged;
+  final ValueChanged<String> onYearChanged;
   final VoidCallback onConvert;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final classes = ref.watch(classOptionsProvider);
+    final sections =
+        ref.watch(sectionOptionsForClassProvider(previewClass));
+    final years = ref.watch(yearOptionsProvider);
     final enrollment = item.enrollment;
     final isConverted =
         item.effectiveStatus == EnrollmentConversionStatus.converted;
@@ -235,7 +272,7 @@ class _ConversionPanel extends StatelessWidget {
                   label: const Text('Preview class'),
                   expandedInsets: EdgeInsets.zero,
                   dropdownMenuEntries: [
-                    for (final c in ['Nursery', '1', '5', '7', '8', '10', '12'])
+                    for (final c in classes)
                       DropdownMenuEntry(value: c, label: c),
                   ],
                   onSelected: (v) {
@@ -250,13 +287,28 @@ class _ConversionPanel extends StatelessWidget {
                   initialSelection: previewSection,
                   label: const Text('Preview section'),
                   expandedInsets: EdgeInsets.zero,
-                  dropdownMenuEntries: const [
-                    DropdownMenuEntry(value: 'A', label: 'A'),
-                    DropdownMenuEntry(value: 'B', label: 'B'),
-                    DropdownMenuEntry(value: 'C', label: 'C'),
+                  dropdownMenuEntries: [
+                    for (final s in sections)
+                      DropdownMenuEntry(value: s, label: s),
                   ],
                   onSelected: (v) {
                     if (v != null) onSectionChanged(v);
+                  },
+                ),
+              ),
+              const SizedBox(height: AksharaSpacing.s4),
+              Material(
+                child: DropdownMenu<String>(
+                  key: ValueKey(previewYear),
+                  initialSelection: previewYear,
+                  label: const Text('Academic year'),
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: [
+                    for (final y in years)
+                      DropdownMenuEntry(value: y, label: y),
+                  ],
+                  onSelected: (v) {
+                    if (v != null) onYearChanged(v);
                   },
                 ),
               ),

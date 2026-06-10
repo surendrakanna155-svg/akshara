@@ -34,5 +34,9 @@ Deno.test({
     assert(names.has("org_scope_reads_aggregate_view"));
     assert(names.has("parent_cannot_see_unlinked_student"));
     assert(names.has("student_sees_self_only"));
+    assert(names.has("school_a_sees_own_audit_probe"));
+    assert(names.has("parent_denied_audit_probe"));
+    assert(names.has("parent_a_sees_own_parent_probe"));
+    assert(names.has("teacher_a_sees_own_teacher_probe"));
   },
 });

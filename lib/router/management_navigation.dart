@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/academic/timetable/timetable_hub_screen.dart';
+import '../features/management/intelligence/intelligence_hub_screen.dart';
 import '../features/management/academics/management_academics_screen.dart';
 import '../features/management/admissions/management_admissions_screen.dart';
 import '../features/management/analytics/management_analytics_screen.dart';
@@ -51,6 +53,20 @@ Widget managementAcademicsRouteBuilder(
   GoRouterState state,
 ) {
   return const ManagementAcademicsScreen();
+}
+
+Widget managementTimetableRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const TimetableHubScreen();
+}
+
+Widget managementIntelligenceRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const IntelligenceHubScreen();
 }
 
 Widget managementPerformanceRouteBuilder(

@@ -4,9 +4,9 @@ import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../../../features/sis/sis_models.dart';
 import '../../../../../features/sis/sis_requests.dart';
-import '../dto/academic_assignment_request_dto.dart';
 import '../dto/admissions_conversion_request_dto.dart';
 import '../dto/create_student_request_dto.dart';
+import '../dto/enrollment_request_dto.dart';
 import '../dto/sis_academic_assignment_dto.dart';
 import '../dto/sis_conversion_dto.dart';
 import '../dto/sis_dashboard_dto.dart';
@@ -85,9 +85,7 @@ class SisRemoteDataSource {
       queryParameters: _queryParams(query),
       data: CreateStudentRequestDto.fromDomain(request).toJson(),
     );
-    return _mapper.toStudent(
-      SisStudentDto.fromJson(_requireData(response)),
-    );
+    return _mapper.toStudentFromWriteResponse(_requireData(response));
   }
 
   Future<SisStudent> updateStudent({
@@ -100,9 +98,7 @@ class SisRemoteDataSource {
       queryParameters: _queryParams(query),
       data: UpdateStudentRequestDto.fromDomain(request).toJson(),
     );
-    return _mapper.toStudent(
-      SisStudentDto.fromJson(_requireData(response)),
-    );
+    return _mapper.toStudentFromWriteResponse(_requireData(response));
   }
 
   Future<SisStudent> updateStudentStatus({
@@ -115,9 +111,7 @@ class SisRemoteDataSource {
       queryParameters: _queryParams(query),
       data: UpdateStudentStatusRequestDto.fromDomain(request).toJson(),
     );
-    return _mapper.toStudent(
-      SisStudentDto.fromJson(_requireData(response)),
-    );
+    return _mapper.toStudentFromWriteResponse(_requireData(response));
   }
 
   Future<SisStudent> assignAcademicAssignment({
@@ -125,13 +119,11 @@ class SisRemoteDataSource {
     required AcademicAssignmentRequest request,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
-      SisApiPaths.academicAssignment,
+      SisApiPaths.enrollments,
       queryParameters: _queryParams(query),
-      data: AcademicAssignmentRequestDto.fromDomain(request).toJson(),
+      data: EnrollmentCreateRequestDto.fromAcademicAssignment(request).toJson(),
     );
-    return _mapper.toStudent(
-      SisStudentDto.fromJson(_requireData(response)),
-    );
+    return _mapper.toStudentFromEnrollment(_requireData(response));
   }
 
   Future<SisConversionPreview> convertAdmissionsEnrollment({

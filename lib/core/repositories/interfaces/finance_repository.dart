@@ -14,8 +14,23 @@ abstract class FinanceRepository {
   Future<PaginatedResult<InstallmentPlan>> getInstallmentPlans({required RepositoryQuery query});
 
   Future<CollectionDetail?> getCollectionDetail({required RepositoryQuery query, required String collectionId});
+
+  Future<FinanceCollectionResult> createCollection({
+    required RepositoryQuery query,
+    required CreateCollectionRequest request,
+  });
+
+  Future<FinanceCollectionResult> cancelCollection({
+    required RepositoryQuery query,
+    required String collectionId,
+  });
+
   Future<DefaultersDashboardData> getDefaultersDashboard({required RepositoryQuery query});
   Future<PaginatedResult<RefundRequest>> getRefundRequests({required RepositoryQuery query});
+  Future<RefundRequest?> getRefund({
+    required RepositoryQuery query,
+    required String refundId,
+  });
   Future<DiscountsDashboardData> getDiscountsDashboard({required RepositoryQuery query});
   Future<FinanceReportsData> getReportsData({required RepositoryQuery query});
   Future<FinanceSettingsData> getSettings({required RepositoryQuery query});
@@ -56,6 +71,35 @@ abstract class FinanceRepository {
     required RepositoryQuery query,
     required String refundId,
     ApproveRefundRequest request = const ApproveRefundRequest(),
+  });
+
+  Future<RefundRequest> rejectRefund({
+    required RepositoryQuery query,
+    required String refundId,
+  });
+
+  Future<FinanceReceiptDetail?> getReceipt({
+    required RepositoryQuery query,
+    required String receiptId,
+  });
+
+  Future<PaginatedResult<FinanceInvoice>> getInvoices({
+    required RepositoryQuery query,
+  });
+
+  Future<FinanceInvoice?> getInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  });
+
+  Future<FinanceInvoice> issueInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
+  });
+
+  Future<FinanceInvoice> cancelInvoice({
+    required RepositoryQuery query,
+    required String invoiceId,
   });
 
   Future<ScholarshipCatalogItem> createScholarship({

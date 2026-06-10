@@ -11,6 +11,57 @@ class FinanceFixtureBuilder {
         'data': {'items': items},
       };
 
+  Map<String, dynamic> apiDashboardEnvelope({
+    int totalStudents = 2,
+    int activeFeeAssignments = 2,
+    double totalInvoiced = 150000,
+    double totalCollected = 60000,
+    double totalOutstanding = 30000,
+    double collectionRate = 40,
+    int pendingInvoices = 1,
+    int partiallyPaidInvoices = 0,
+    int paidInvoices = 1,
+    int pendingRefunds = 1,
+    int processedRefunds = 1,
+    double todayCollections = 40000,
+    int todayCollectionCount = 1,
+  }) {
+    return envelope({
+      'totalStudents': totalStudents,
+      'activeFeeAssignments': activeFeeAssignments,
+      'totalInvoiced': totalInvoiced,
+      'totalCollected': totalCollected,
+      'totalOutstanding': totalOutstanding,
+      'collectionRate': collectionRate,
+      'pendingInvoices': pendingInvoices,
+      'partiallyPaidInvoices': partiallyPaidInvoices,
+      'paidInvoices': paidInvoices,
+      'pendingRefunds': pendingRefunds,
+      'processedRefunds': processedRefunds,
+      'todayCollections': todayCollections,
+      'todayCollectionCount': todayCollectionCount,
+      'recentCollections': [
+        {
+          'id': 'col-1',
+          'receiptNumber': 'RCP-001',
+          'studentName': 'Probe Student',
+          'amount': 40000,
+          'paymentMethod': 'cash',
+          'collectionDate': '2026-06-09',
+        },
+      ],
+      'recentRefunds': [
+        {
+          'id': 'ref-1',
+          'studentName': 'Probe Student',
+          'amount': 1000,
+          'status': 'pending',
+          'requestedAt': '2026-06-09T09:00:00.000Z',
+        },
+      ],
+    });
+  }
+
   Map<String, dynamic> dashboardEnvelope(FinanceDashboardData data) {
     return envelope({
       'outstandingAmount': data.outstandingAmount,
@@ -118,6 +169,50 @@ class FinanceFixtureBuilder {
         'installmentCount': plan.installmentCount,
         'type': plan.type.name,
       };
+
+  Map<String, dynamic> invoiceItem(FinanceInvoice invoice) => {
+        'id': invoice.id,
+        'studentId': invoice.studentId,
+        'feeAssignmentId': invoice.feeAssignmentId,
+        'academicYear': invoice.academicYear,
+        'invoiceNumber': invoice.invoiceNumber,
+        'invoiceDate': invoice.invoiceDate,
+        'dueDate': invoice.dueDate,
+        'subtotalAmount': invoice.subtotalAmount,
+        'discountAmount': invoice.discountAmount,
+        'totalAmount': invoice.totalAmount,
+        'outstandingAmount': invoice.outstandingAmount,
+        'paidAmount': invoice.paidAmount,
+        'invoiceStatus': FinanceEnumCodec.invoiceStatusToApi(invoice.invoiceStatus),
+        'termLabel': invoice.termLabel,
+        'createdBy': invoice.createdBy,
+        'createdAt': invoice.createdAt,
+        'updatedAt': invoice.updatedAt,
+      };
+
+  Map<String, dynamic> collectionResultEnvelope(FinanceCollectionResult result) =>
+      envelope({
+        'collection': {
+          'id': result.collectionId,
+          'invoiceId': result.invoiceId,
+          'studentAccountId': result.studentAccountId,
+          'receiptNumber': result.receiptNumber,
+          'amountCollected': result.amountCollected,
+          'paymentMethod': result.paymentMethod,
+          'collectionStatus': 'completed',
+          'collectionDate': result.collectionDate,
+        },
+        'receipt': {
+          'id': result.receipt.id,
+          'collectionId': result.receipt.collectionId,
+          'receiptNumber': result.receipt.receiptNumber,
+          'receiptDate': result.receipt.receiptDate,
+          'amount': result.receipt.amount,
+          'generatedBy': 'staff',
+          'createdAt': '2026-06-10T00:00:00.000Z',
+        },
+        'invoice': invoiceItem(result.invoice),
+      });
 
   Map<String, dynamic> collectionDetailEnvelope(CollectionDetail detail) {
     return envelope({
@@ -238,6 +333,8 @@ class FinanceFixtureBuilder {
         'approver': refund.approver,
         'feeAccountId': refund.feeAccountId,
         'originalReceipt': refund.originalReceipt,
+        'collectionId': refund.collectionId,
+        'invoiceId': refund.invoiceId,
       };
 
   Map<String, dynamic> discountsEnvelope(DiscountsDashboardData data) {

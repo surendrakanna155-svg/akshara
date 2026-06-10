@@ -1,10 +1,10 @@
 # Akshara ERP — Master Roadmap
 
-**Version:** 1.8  
+**Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v5.6 (Backend Architecture Foundation)  
-**Production readiness:** 97 / 100 (SaaS deployment-weighted)  
-**Quality gates:** `flutter analyze` 0 issues · `flutter test` 950+ passing  
+**Current release:** v7.7 (Production SaaS Launch Hardening)  
+**Production readiness:** 94 / 100 (launch-weighted; live integrations env-dependent)  
+**Quality gates:** `flutter analyze` 0 issues · `flutter test` all passing  
 **Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
 
 ---
@@ -83,7 +83,7 @@ Screen → Provider → Repository Interface → ApiRepository → RemoteDataSou
 | Core (network, RBAC, tenant, pagination) | 14 | ~55 |
 | Golden | 3 | 3 |
 | Auth / startup / widget | 9 | ~80 |
-| **Total** | **145** | **848** |
+| **Total** | **145** | **1011** |
 
 ### Production Readiness Score
 
@@ -593,43 +593,233 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Scope** | Architecture and planning only — no backend code |
 | **Status** | ✅ Complete |
 
----
-
-## Future Releases
-
 ### v6.0 — Backend Core Platform (Sprint 2)
 
 | Field | Detail |
 |-------|--------|
 | **Goals** | Supabase staging, core schema, OTP auth, JWT refresh |
-| **Dependencies** | v5.6 architecture complete |
-| **Status** | 🔲 Not started |
+| **Release doc** | `docs/Releases/v6.0-Core-Platform-Foundation.md` |
+| **Status** | ✅ Complete |
 
-### v5.6 — Server RBAC Validation (renamed → v6.4)
+### v6.1 Phase 5C — Academic Catalog + Soft FK
+
+| Phase | Goal | Status |
+|-------|------|--------|
+| 5C.0 | Academic schema + GET APIs | ✅ Complete |
+| 5C.1 | Flutter catalog read layer | ✅ Complete |
+| 5C.2 | Backend soft FK + resolver | ✅ Complete |
+| 5C.3 | Client soft FK dual-write | ✅ Complete |
+
+**Release docs:** `docs/Releases/v6.1-Phase5C3-Client-Soft-FK.md`
+
+### v6.1 Phase 5B — SIS Dashboard Aggregates
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | Validate server-side RBAC/RLS against staging (TD-P0-01) |
-| **Dependencies** | Backend Sprint 3 (v6.1) |
-| **Status** | 🔲 Blocked (backend implementation) |
+| **Goals** | Live SIS dashboard KPIs, class/gender distribution, recent enrollments |
+| **Dependencies** | Phase 5A SIS foundation, Phase 5C academic catalog |
+| **Release doc** | `docs/Releases/v6.1-Phase5B-SIS-Dashboard-Aggregates.md` |
+| **Status** | ✅ Complete |
 
-### v5.7 — Audit Ingestion Validation (renamed → v6.4)
+**Next:** Sprint 3 completion gate — Finance slice (4B3–4B5) complete
+
+### v6.1 Phase 4B5 — Finance Refunds
 
 | Field | Detail |
 |-------|--------|
-| **Goals** | End-to-end audit event ingestion (TD-P0-02) |
-| **Dependencies** | Backend Sprint 5 (v6.3) |
-| **Status** | 🔲 Blocked (backend implementation) |
+| **Goals** | Refund workflow API parity, collection reversal sync, client detail read |
+| **Release doc** | `docs/Releases/v6.1-Phase4B5-Finance-Refunds.md` |
+| **Status** | ✅ Complete |
+
+---
+
+## Upcoming Backend Work
+
+### v6.2 Sprint 4 Phase 1 — Transport + HR Read APIs
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Live backend for Transport (10) + HR (9) read methods |
+| **Release doc** | `docs/Releases/v6.2-Sprint4-Transport-HR-Read-APIs.md` |
+| **Status** | ✅ Complete |
+
+---
+
+## Upcoming Backend Work
+
+### v6.2 Sprint 4 Phase 2 — Operational Modules Read APIs
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Hostel + Library + Inventory + Alumni live read APIs (34 methods) |
+| **Release doc** | `docs/Releases/v6.2-Sprint4-Operational-Modules-Read-APIs.md` |
+| **Status** | ✅ Complete |
+
+---
+
+## Upcoming Backend Work
+
+### v6.2 Sprint 4 Phase 3 — Management + Control Center Read APIs
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Management (8) + Control Center (12) live read APIs |
+| **Release doc** | `docs/Releases/v6.2-Sprint4-Management-ControlCenter-Read-APIs.md` |
+| **Status** | ✅ Complete |
+
+---
+
+## Upcoming Backend Work
+
+### v6.3 Sprint 5 — Audit Ingestion + Hardening
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Audit ingestion, domain_events outbox, mutation middleware |
+| **Release doc** | `docs/Releases/v6.3-Sprint5-Audit-Ingestion.md` |
+| **Status** | ✅ Complete (core pipeline) |
+
+### v6.4 Sprint 6 — Validation + Pilot Backend
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Server RBAC validation, audit E2E, cross-module tests, pilot verify scripts |
+| **Release doc** | `docs/Releases/v6.4-Sprint6-Validation-Pilot-Backend.md` |
+| **Status** | ✅ Complete |
+
+### v7.0 — Universal Payment Engine
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Razorpay integration, payment intent lifecycle, invoice/collection linkage |
+| **Release doc** | `docs/Releases/v7.0-Universal-Payment-Engine.md` |
+| **Status** | ✅ Complete (stub mode) |
+
+### v7.1 — Communication Hub
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Notifications, templates, messaging, broadcasts, stub SMS/Email/Push |
+| **Release doc** | `docs/Releases/v7.1-Communication-Hub.md` |
+| **Status** | ✅ Complete (stub providers) |
+
+### v7.1-Pilot — Pilot Operations Sprint
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Attendance/timetable ops, mobile write parity, comms inbox, device tokens, audit hardening |
+| **Release doc** | `docs/Releases/v7.1-Pilot-Operations-Sprint.md` |
+| **Audit doc** | `docs/ArchitectureReview/v7.1-Pilot-Operations-Audit.md` |
+| **Status** | ✅ Complete |
+
+### v7.1-Pilot-Closure — Pilot Closure Sprint
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Timetable read integration, seed data fix, probe validation |
+| **Release doc** | `docs/Releases/v7.1-Pilot-Closure-Sprint.md` |
+| **Status** | ✅ Complete — pilot blockers closed |
+
+### v7.15 — School Data Migration & Onboarding (Phase A)
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Student/teacher import, parent provisioning, OTP student-ID login, invites, audit, probes |
+| **Release doc** | `docs/Releases/v7.15-School-Onboarding-PhaseA.md` |
+| **Audit doc** | `docs/ArchitectureReview/v7.15-School-Onboarding-PhaseA.md` |
+| **Status** | ✅ Complete |
+
+### v7.2 — Inventory-Finance Integration
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Shared vendor master, procurement → AP posting |
+| **Release doc** | `docs/Releases/v7.2-Inventory-Finance-Integration.md` |
+| **Status** | ✅ Complete |
+
+### v7.3 — Production Hardening
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Webhook tenant resolution, event retries, ops monitoring, runbook |
+| **Release doc** | `docs/Releases/v7.3-Production-Hardening.md` |
+| **Status** | ✅ Complete |
+
+### v7.3.1 — Audit Remediation
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Close Priority A findings from comprehensive audit (RBAC, RLS, hybrid routing, probes) |
+| **Release doc** | `docs/Releases/v7.3.1-Audit-Remediation.md` |
+| **Audit doc** | `docs/ArchitectureReview/v7.3-Comprehensive-Audit-5C2-v7.3.md` |
+| **Status** | ✅ Complete |
+
+### v7.3.2 — Mutation Audit Completion
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Close A10–A14: audit + domain events on all core ERP writes; webhook collection |
+| **Release doc** | `docs/Releases/v7.3.2-Mutation-Audit-Completion.md` |
+| **Audit doc** | `docs/ArchitectureReview/v7.3.2-Mutation-Audit-Completion.md` |
+| **Status** | ✅ Complete |
+
+### v7.2c — Finance Reconciliation UI
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Reconciliation dashboard, timeline, GRN/posting review, vendor history, write repos |
+| **Release doc** | `docs/Releases/v7.2c-Finance-Reconciliation-UI.md` |
+| **Audit doc** | `docs/ArchitectureReview/v7.2c-Finance-Reconciliation-UI.md` |
+| **Status** | ✅ Complete |
+
+**Next milestone:** v7.5 Smart Timetable + Workload Engine
+
+---
+
+### v7.4 — AI Copilot
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Read-only copilot foundation, five ERP assistants, context engine, chat UI |
+| **Release doc** | `docs/Releases/v7.4-AI-Copilot.md` |
+| **Audit doc** | `docs/ArchitectureReview/v7.4-AI-Copilot.md` |
+| **Status** | ✅ Complete |
+
+**Next milestone:** v7.8 Live Integrations Sign-off
+
+---
+
+### v7.5 — Smart Timetable + Workload Engine
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Timetable engine, workload, clash detection, publish workflow, Copilot scheduling assistance |
+| **Release doc** | `docs/Releases/v7.5-Smart-Timetable-Workload-Engine.md` |
+| **Audit doc** | `docs/ArchitectureReview/v7.5-Smart-Timetable-Workload-Engine.md` |
+| **Status** | ✅ Complete |
+
+**Next milestone:** v7.8 — Live Integrations Sign-off (pilot production cutover)
+
+---
+
+### v7.7 — Production SaaS Launch Hardening
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Close Final Production Readiness Audit Priority A — deploy verify, integrations docs, DR runbooks, health auth, governance sync |
+| **Release doc** | `docs/Releases/v7.7-Production-SaaS-Launch-Hardening.md` |
+| **Audit doc** | `docs/ArchitectureReview/v7.7-Production-SaaS-Launch-Hardening.md` |
+| **Status** | ✅ Complete |
+
+**Next milestone:** v7.8 — Live Integrations Sign-off
 
 ---
 
 ## Production Path (updated)
 
-Phase 11: Production Backend              🔲 IN PROGRESS (v5.6 architecture complete)
-  Backend architecture foundation + Sprint 2–6 implementation roadmap
-  Target readiness: 98+ → **97 achieved (client + architecture)**
+Phase 11: Production Backend              ✅ COMPLETE (v7.2–v7.3 deployed to staging)
 
-**Next milestone:** v6.0 — Backend Core Platform (Sprint 2)
+**Next milestone:** v7.8 — Live Integrations Sign-off (pilot production cutover)
 
 ```
 Phase 1: Mock MVP (v0.1–v1.4)           ✅ COMPLETE
@@ -669,9 +859,7 @@ Phase 10: Pilot Readiness                 ✅ PARTIAL (v4.9–v5.1)
   UI completion + pilot certification + observability foundation
   Target readiness: 90+ → **93 achieved**
 
-Phase 11: Production Backend              🔲 IN PROGRESS (v5.2–v5.5 client complete)
-  Pagination UX + manage guards + global error handling + vendor monitoring adapters
-  Target readiness: 98+ → **97 achieved (client)**
+Phase 11: Production Backend              ✅ COMPLETE (v7.2–v7.3 + audit remediation)
 ```
 
 ---
@@ -705,6 +893,6 @@ Every release milestone is **DONE** when all items are checked:
 5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v6.0 — Backend Core Platform (Sprint 2)  
-**Recommended tag:** `v5.5-vendor-monitoring-adapters`  
+**Next milestone:** v7.8 — Live Integrations Sign-off  
+**Recommended tag:** `v7.7-production-launch-hardening`  
 **Autonomous execution depth:** 3 milestones per session

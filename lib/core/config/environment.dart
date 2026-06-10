@@ -61,22 +61,33 @@ class Environment {
     disableDemoAuth: true,
   );
 
-  /// Resolves environment from `--dart-define=APP_ENV=development|staging|production`.
+  /// Resolves environment from dart-defines:
+  /// - `APP_ENV=development|staging|production`
+  /// - `API_BASE_URL` (optional override)
+  /// - `ENABLE_API_MODE=true` (master API switch)
   static Environment fromDartDefine() {
     const raw = String.fromEnvironment('APP_ENV', defaultValue: 'development');
     const apiBaseUrl = String.fromEnvironment(
       'API_BASE_URL',
       defaultValue: '',
     );
+    const enableApiMode = bool.fromEnvironment(
+      'ENABLE_API_MODE',
+      defaultValue: false,
+    );
     final base = switch (raw.toLowerCase()) {
       'staging' => staging,
       'production' => production,
       _ => development,
     };
+    var resolved = base;
     if (apiBaseUrl.isNotEmpty) {
-      return base.copyWith(apiBaseUrl: apiBaseUrl);
+      resolved = resolved.copyWith(apiBaseUrl: apiBaseUrl);
     }
-    return base;
+    if (enableApiMode) {
+      resolved = resolved.copyWith(enableApiMode: true);
+    }
+    return resolved;
   }
 
   Environment copyWith({

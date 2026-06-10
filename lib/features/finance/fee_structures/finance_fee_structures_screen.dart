@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/academic/academic_catalog_provider.dart';
+import '../../../core/repositories/academic/academic_year_label.dart';
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -22,6 +24,15 @@ class FinanceFeeStructuresScreen extends ConsumerWidget {
     final viewState = ref.watch(financeFeeStructuresViewStateProvider);
     final academicYear = ref.watch(financeAcademicYearProvider);
     final years = ref.watch(financeAcademicYearsProvider);
+
+    ref.listen<List<String>>(yearOptionsProvider, (_, next) {
+      if (next.isEmpty) return;
+      final current = ref.read(financeAcademicYearProvider);
+      final resolved = resolveAcademicYearSelection(current, next);
+      if (!academicYearLabelsEqual(resolved, current)) {
+        ref.read(financeAcademicYearProvider.notifier).state = resolved;
+      }
+    });
 
     return FinanceModuleScaffold(
       screen: FinanceScreen.feeStructures,
@@ -102,12 +113,15 @@ class _AcademicYearSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveSelection = years.isEmpty
+        ? normalizeAcademicYearLabel(selected)
+        : resolveAcademicYearSelection(selected, years);
     return Semantics(
       label: 'Academic year selector',
       child: Material(
         child: DropdownMenu<String>(
-          key: ValueKey(selected),
-          initialSelection: selected,
+          key: ValueKey('$effectiveSelection-${years.length}'),
+          initialSelection: years.isEmpty ? null : effectiveSelection,
           label: const Text('Academic year'),
           dropdownMenuEntries: [
             for (final year in years)

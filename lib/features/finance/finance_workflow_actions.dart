@@ -205,6 +205,23 @@ Future<void> approveSelectedRefund(
   }
 }
 
+Future<void> rejectSelectedRefund(
+  BuildContext context,
+  WidgetRef ref, {
+  required RefundRequest refund,
+}) async {
+  try {
+    await ref.read(rejectRefundProvider.notifier).execute(refundId: refund.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Refund rejected for ${refund.studentName}')),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
 Future<void> showCreateScholarshipDialog(
   BuildContext context,
   WidgetRef ref,

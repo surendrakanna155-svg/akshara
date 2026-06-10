@@ -15,6 +15,8 @@ class CreateRefundRequestDto {
         if (request.classLabel.isNotEmpty) 'class_label': request.classLabel,
         if (request.originalReceipt.isNotEmpty)
           'original_receipt': request.originalReceipt,
+        if (request.collectionId.isNotEmpty)
+          'collection_id': request.collectionId,
       },
     );
   }

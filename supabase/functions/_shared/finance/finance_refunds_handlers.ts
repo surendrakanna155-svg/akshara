@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   InvalidRefundTransitionError,
   RefundAmountError,
@@ -170,8 +171,8 @@ export async function handleCreateRefund(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const refund = await runTenant(config, auth.claims, async (db) =>
-      await createRefund(db, orgId, schoolId, {
+    const refund = await runTenant(config, auth.claims, async (db) => {
+      const created = await createRefund(db, orgId, schoolId, {
         collectionId: optionalStr(body, "collection_id", "collectionId"),
         studentAccountId: optionalStr(body, "student_account_id", "feeAccountId") ??
           optionalStr(body, "fee_account_id", "feeAccountId"),
@@ -179,8 +180,28 @@ export async function handleCreateRefund(
         refundAmount: amount,
         refundReason: reason,
         requestedBy: auth.claims.sub,
-      })
-    );
+      });
+      const { recordMutationAudit } = await import("../audit/audit_repository.ts");
+      await recordMutationAudit(
+        db,
+        auth.claims,
+        {
+          eventType: "refundRequested",
+          category: "workflow",
+          entityType: "finance_refund",
+          entityId: created.id,
+          metadata: { refundAmount: amount, reason },
+        },
+        {
+          eventType: "finance.refund.requested",
+          payload: { refundId: created.id, amount },
+          sourceModule: "finance",
+          idempotencyKey: `finance.refund:${created.id}`,
+        },
+        req,
+      );
+      return created;
+    });
     return jsonResponse(envelope(refundRequestToApi(refund)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -207,9 +228,11 @@ export async function handleApproveRefund(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const refund = await runTenant(config, auth.claims, async (db) =>
-      await approveRefund(db, orgId, schoolId, refundId, auth.claims.sub)
-    );
+    const refund = await runTenant(config, auth.claims, async (db) => {
+      const approved = await approveRefund(db, orgId, schoolId, refundId, auth.claims.sub);
+      await emitMutationAudit(db, auth.claims, financeAudit.refundApproved(refundId), req);
+      return approved;
+    });
     return jsonResponse(envelope(refundRequestToApi(refund)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -236,9 +259,11 @@ export async function handleRejectRefund(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const refund = await runTenant(config, auth.claims, async (db) =>
-      await rejectRefund(db, orgId, schoolId, refundId)
-    );
+    const refund = await runTenant(config, auth.claims, async (db) => {
+      const rejected = await rejectRefund(db, orgId, schoolId, refundId);
+      await emitMutationAudit(db, auth.claims, financeAudit.refundRejected(refundId), req);
+      return rejected;
+    });
     return jsonResponse(envelope(refundRequestToApi(refund)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {

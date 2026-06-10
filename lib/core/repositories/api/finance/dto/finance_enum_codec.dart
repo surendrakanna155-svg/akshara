@@ -71,6 +71,32 @@ class FinanceEnumCodec {
         _ => RefundStatus.pending,
       };
 
+  static InvoiceStatus parseInvoiceStatus(String? raw) => switch (raw) {
+        'draft' => InvoiceStatus.draft,
+        'issued' => InvoiceStatus.issued,
+        'partially_paid' || 'partiallyPaid' => InvoiceStatus.partiallyPaid,
+        'paid' => InvoiceStatus.paid,
+        'cancelled' || 'canceled' || 'void' => InvoiceStatus.cancelled,
+        _ => InvoiceStatus.issued,
+      };
+
+  static String invoiceStatusToApi(InvoiceStatus status) => switch (status) {
+        InvoiceStatus.draft => 'draft',
+        InvoiceStatus.issued => 'issued',
+        InvoiceStatus.partiallyPaid => 'partially_paid',
+        InvoiceStatus.paid => 'paid',
+        InvoiceStatus.cancelled => 'cancelled',
+      };
+
+  static CollectionStatus invoiceStatusToCollectionStatus(InvoiceStatus status) =>
+      switch (status) {
+        InvoiceStatus.paid => CollectionStatus.completed,
+        InvoiceStatus.cancelled => CollectionStatus.refunded,
+        InvoiceStatus.partiallyPaid => CollectionStatus.pending,
+        InvoiceStatus.draft => CollectionStatus.pending,
+        InvoiceStatus.issued => CollectionStatus.pending,
+      };
+
   static DiscountApprovalStatus parseDiscountApprovalStatus(String? raw) =>
       switch (raw) {
         'pending' => DiscountApprovalStatus.pending,

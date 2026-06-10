@@ -14,6 +14,10 @@ import {
   CatalogNotFoundError,
 } from "../academic/academic_catalog_resolver.ts";
 import {
+  admissionsAudit,
+  emitMutationAudit,
+} from "../audit/mutation_audit_catalog.ts";
+import {
   applicationToApi,
   approvalToApi,
   documentToApi,
@@ -192,8 +196,8 @@ export async function handleCreateLead(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const lead = await runTenant(config, auth.claims, (db) =>
-      createLead(db, orgId, schoolId, {
+    const lead = await runTenant(config, auth.claims, async (db) => {
+      const created = await createLead(db, orgId, schoolId, {
         parentName,
         studentName,
         classLabel,
@@ -204,8 +208,15 @@ export async function handleCreateLead(
         email: snakeStr(body, "email"),
         address: snakeStr(body, "address"),
         notes: snakeStr(body, "notes"),
-      })
-    );
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.leadCreated(created.id, created.source),
+        req,
+      );
+      return created;
+    });
     return jsonResponse(envelope(leadToApi(lead)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -236,8 +247,8 @@ export async function handleUpdateLead(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const lead = await runTenant(config, auth.claims, (db) =>
-      updateLead(db, orgId, schoolId, leadId, {
+    const lead = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateLead(db, orgId, schoolId, leadId, {
         parentName: optionalSnakeStr(body, "parent_name"),
         studentName: optionalSnakeStr(body, "student_name"),
         classLabel: optionalSnakeStr(body, "class_label"),
@@ -247,8 +258,11 @@ export async function handleUpdateLead(
         email: optionalSnakeStr(body, "email"),
         address: optionalSnakeStr(body, "address"),
         notes: optionalSnakeStr(body, "notes"),
-      })
-    );
+      });
+      if (!updated) return null;
+      await emitMutationAudit(db, auth.claims, admissionsAudit.leadUpdated(leadId), req);
+      return updated;
+    });
     if (!lead) {
       return errorEnvelope("NOT_FOUND", `Lead not found: ${leadId}`, 404);
     }
@@ -367,15 +381,17 @@ export async function handleCreateApplication(
   const leadId = optionalSnakeStr(body, "lead_id") ?? null;
 
   try {
-    const app = await runTenant(config, auth.claims, (db) =>
-      createApplication(db, orgId, schoolId, {
+    const app = await runTenant(config, auth.claims, async (db) => {
+      const created = await createApplication(db, orgId, schoolId, {
         studentName,
         classLabel,
         parentName,
         leadId,
         counselor: snakeStr(body, "counselor"),
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, admissionsAudit.applicationCreated(created.id), req);
+      return created;
+    });
     return jsonResponse(envelope(applicationToApi(app)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -406,15 +422,18 @@ export async function handleUpdateApplication(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const app = await runTenant(config, auth.claims, (db) =>
-      updateApplication(db, orgId, schoolId, applicationId, {
+    const app = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateApplication(db, orgId, schoolId, applicationId, {
         studentName: optionalSnakeStr(body, "student_name"),
         classLabel: optionalSnakeStr(body, "class_label"),
         parentName: optionalSnakeStr(body, "parent_name"),
         counselor: optionalSnakeStr(body, "counselor"),
         status: optionalSnakeStr(body, "status"),
-      })
-    );
+      });
+      if (!updated) return null;
+      await emitMutationAudit(db, auth.claims, admissionsAudit.applicationUpdated(applicationId), req);
+      return updated;
+    });
     if (!app) {
       return errorEnvelope("NOT_FOUND", `Application not found: ${applicationId}`, 404);
     }
@@ -452,7 +471,11 @@ export async function handleSubmitApplication(
       );
       if (!submitted) return null;
       await ensureApprovalForApplication(db, orgId, schoolId, applicationId);
-      return await getApplicationById(db, orgId, schoolId, applicationId);
+      const app = await getApplicationById(db, orgId, schoolId, applicationId);
+      if (app) {
+        await emitMutationAudit(db, auth.claims, admissionsAudit.applicationSubmitted(applicationId), req);
+      }
+      return app;
     });
     if (!app) {
       return errorEnvelope(
@@ -544,15 +567,17 @@ export async function handleUploadDocument(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const doc = await runTenant(config, auth.claims, (db) =>
-      uploadDocument(db, orgId, schoolId, {
+    const doc = await runTenant(config, auth.claims, async (db) => {
+      const created = await uploadDocument(db, orgId, schoolId, {
         leadId,
         documentType,
         fileName,
         studentName: snakeStr(body, "student_name"),
         classLabel: snakeStr(body, "class_label"),
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, admissionsAudit.documentUploaded(created.id, leadId), req);
+      return created;
+    });
     return jsonResponse(envelope(documentToApi(doc)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -581,8 +606,8 @@ export async function handleApproveDocument(
   const note = snakeStr(body, "note");
 
   try {
-    const doc = await runTenant(config, claims, (db) =>
-      reviewDocument(
+    const doc = await runTenant(config, claims, async (db) => {
+      const reviewed = await reviewDocument(
         db,
         orgId,
         schoolId,
@@ -590,8 +615,11 @@ export async function handleApproveDocument(
         "verified",
         claims.sub,
         note,
-      )
-    );
+      );
+      if (!reviewed) return null;
+      await emitMutationAudit(db, claims, admissionsAudit.documentApproved(documentId), req);
+      return reviewed;
+    });
     if (!doc) {
       return errorEnvelope("NOT_FOUND", `Document not found: ${documentId}`, 404);
     }
@@ -623,8 +651,8 @@ export async function handleRejectDocument(
   const note = snakeStr(body, "note");
 
   try {
-    const doc = await runTenant(config, claims, (db) =>
-      reviewDocument(
+    const doc = await runTenant(config, claims, async (db) => {
+      const reviewed = await reviewDocument(
         db,
         orgId,
         schoolId,
@@ -632,8 +660,11 @@ export async function handleRejectDocument(
         "rejected",
         claims.sub,
         note,
-      )
-    );
+      );
+      if (!reviewed) return null;
+      await emitMutationAudit(db, claims, admissionsAudit.documentRejected(documentId), req);
+      return reviewed;
+    });
     if (!doc) {
       return errorEnvelope("NOT_FOUND", `Document not found: ${documentId}`, 404);
     }
@@ -664,9 +695,12 @@ export async function handleApproveAdmission(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const approval = await runTenant(config, auth.claims, (db) =>
-      setApprovalDecision(db, orgId, schoolId, approvalId, "approved")
-    );
+    const approval = await runTenant(config, auth.claims, async (db) => {
+      const updated = await setApprovalDecision(db, orgId, schoolId, approvalId, "approved");
+      if (!updated) return null;
+      await emitMutationAudit(db, auth.claims, admissionsAudit.admissionApproved(approvalId), req);
+      return updated;
+    });
     if (!approval) {
       return errorEnvelope("NOT_FOUND", `Approval not found: ${approvalId}`, 404);
     }
@@ -695,9 +729,12 @@ export async function handleRejectAdmission(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const approval = await runTenant(config, auth.claims, (db) =>
-      setApprovalDecision(db, orgId, schoolId, approvalId, "rejected")
-    );
+    const approval = await runTenant(config, auth.claims, async (db) => {
+      const updated = await setApprovalDecision(db, orgId, schoolId, approvalId, "rejected");
+      if (!updated) return null;
+      await emitMutationAudit(db, auth.claims, admissionsAudit.admissionRejected(approvalId), req);
+      return updated;
+    });
     if (!approval) {
       return errorEnvelope("NOT_FOUND", `Approval not found: ${approvalId}`, 404);
     }
@@ -746,8 +783,8 @@ export async function handleSubmitEnrollment(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const enrollment = await runTenant(config, auth.claims, (db) =>
-      submitEnrollment(db, orgId, schoolId, {
+    const enrollment = await runTenant(config, auth.claims, async (db) => {
+      const created = await submitEnrollment(db, orgId, schoolId, {
         applicationId: optionalSnakeStr(body, "application_id") ?? null,
         studentFullName,
         dateOfBirth: String(student.date_of_birth ?? ""),
@@ -770,8 +807,10 @@ export async function handleSubmitEnrollment(
         previousSchool: String(academic.previous_school ?? ""),
         needsTransport: Boolean(academic.needs_transport),
         needsHostel: Boolean(academic.needs_hostel),
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, admissionsAudit.enrollmentSubmitted(created.id), req);
+      return created;
+    });
     return jsonResponse(envelope(enrollmentToApi(enrollment)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -860,9 +899,12 @@ export async function handleSendToFinance(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const handoff = await runTenant(config, auth.claims, (db) =>
-      sendHandoffToFinance(db, orgId, schoolId, handoffId, feeStructureId)
-    );
+    const handoff = await runTenant(config, auth.claims, async (db) => {
+      const sent = await sendHandoffToFinance(db, orgId, schoolId, handoffId, feeStructureId);
+      if (!sent) return null;
+      await emitMutationAudit(db, auth.claims, admissionsAudit.financeHandoffSent(handoffId), req);
+      return sent;
+    });
     if (!handoff) {
       return errorEnvelope("NOT_FOUND", `Handoff not found: ${handoffId}`, 404);
     }
@@ -909,9 +951,12 @@ export async function handleUpdateHandoffStatus(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const handoff = await runTenant(config, auth.claims, (db) =>
-      updateHandoffStatus(db, orgId, schoolId, handoffId, status)
-    );
+    const handoff = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateHandoffStatus(db, orgId, schoolId, handoffId, status);
+      if (!updated) return null;
+      await emitMutationAudit(db, auth.claims, admissionsAudit.handoffStatusUpdated(handoffId, status), req);
+      return updated;
+    });
     if (!handoff) {
       return errorEnvelope("NOT_FOUND", `Handoff not found: ${handoffId}`, 404);
     }

@@ -1,4 +1,5 @@
 import 'package:akshara_erp/core/repositories/api/finance/dto/assign_fee_plan_request_dto.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/create_collection_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/create_fee_structure_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/create_refund_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/create_scholarship_request_dto.dart';
@@ -34,6 +35,20 @@ void main() {
       expect(json['total_annual'], '₹1,85,000');
     });
 
+    test('create collection request serializes invoice and amount', () {
+      final json = CreateCollectionRequestDto.fromDomain(
+        const CreateCollectionRequest(
+          invoiceId: 'inv-1',
+          amountCollected: '25000',
+          paymentMethod: 'upi',
+          referenceNumber: 'UPI123',
+        ),
+      ).toJson();
+      expect(json['invoice_id'], 'inv-1');
+      expect(json['payment_method'], 'upi');
+      expect(json['amount_collected'], 25000);
+    });
+
     test('assign fee plan request serializes handoff and structure ids', () {
       final json = AssignFeePlanRequestDto.fromDomain(
         const AssignFeePlanRequest(
@@ -55,10 +70,12 @@ void main() {
           feeAccountId: 'acct_1',
           amount: '₹12,000',
           reason: 'Overpayment',
+          collectionId: 'col_3',
         ),
       ).toJson();
       expect(json['fee_account_id'], 'acct_1');
       expect(json['amount'], '₹12,000');
+      expect(json['collection_id'], 'col_3');
     });
 
     test('create scholarship request serializes type', () {
@@ -143,12 +160,36 @@ void main() {
       expect(accounts.items.any((item) => item.id == account.id), isTrue);
     });
 
-    test('approveRefund marks refund as approved', () async {
+    test('approveRefund marks refund as processed', () async {
       final approved = await repo.approveRefund(
         query: kQuery,
-        refundId: 'ref_1',
+        refundId: 'ref_4',
       );
-      expect(approved.status, RefundStatus.approved);
+      expect(approved.status, RefundStatus.processed);
+    });
+
+    test('approveRefund reverses invoice outstanding and collection status', () async {
+      final invoiceBefore = await repo.getInvoice(
+        query: kQuery,
+        invoiceId: 'inv_1',
+      );
+
+      await repo.approveRefund(query: kQuery, refundId: 'ref_4');
+
+      final invoiceAfter = await repo.getInvoice(
+        query: kQuery,
+        invoiceId: 'inv_1',
+      );
+      final collectionAfter = await repo.getCollectionDetail(
+        query: kQuery,
+        collectionId: 'col_3',
+      );
+
+      final outstandingBefore =
+          double.parse(invoiceBefore!.outstandingAmount);
+      final outstandingAfter = double.parse(invoiceAfter!.outstandingAmount);
+      expect(outstandingAfter, outstandingBefore + 38500);
+      expect(collectionAfter?.payment.status, CollectionStatus.refunded);
     });
 
     test('createScholarship appears in discounts dashboard', () async {

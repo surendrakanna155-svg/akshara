@@ -31,6 +31,44 @@ abstract final class AuditSecurityCategorizer {
       case AuditEventType.admissionApproved:
       case AuditEventType.admissionRejected:
       case AuditEventType.financeHandoffSent:
+      case AuditEventType.vendorCreated:
+      case AuditEventType.purchaseOrderCreated:
+      case AuditEventType.procurementFinancePosted:
+      case AuditEventType.goodsReceived:
+      case AuditEventType.onboardingImportPreviewed:
+      case AuditEventType.onboardingImportCommitted:
+      case AuditEventType.onboardingImportRolledBack:
+      case AuditEventType.onboardingInviteSent:
+      case AuditEventType.paymentInitiated:
+      case AuditEventType.paymentCaptured:
+      case AuditEventType.studentUpdated:
+      case AuditEventType.refundApproved:
+      case AuditEventType.refundRejected:
+      case AuditEventType.collectionCreated:
+      case AuditEventType.collectionCancelled:
+      case AuditEventType.invoiceIssued:
+      case AuditEventType.invoiceCancelled:
+      case AuditEventType.feeStructureCreated:
+      case AuditEventType.feeStructureUpdated:
+      case AuditEventType.feeStructureArchived:
+      case AuditEventType.feeAssignmentCreated:
+      case AuditEventType.feeAssignmentCancelled:
+      case AuditEventType.sisEnrollmentCreated:
+      case AuditEventType.sisEnrollmentUpdated:
+      case AuditEventType.admissionsConversionCompleted:
+      case AuditEventType.academicYearCreated:
+      case AuditEventType.academicYearUpdated:
+      case AuditEventType.academicClassCreated:
+      case AuditEventType.academicClassUpdated:
+      case AuditEventType.academicSectionCreated:
+      case AuditEventType.academicSectionUpdated:
+      case AuditEventType.academicTeacherAssignmentCreated:
+      case AuditEventType.academicTeacherAssignmentUpdated:
+      case AuditEventType.aiCopilotSessionCreated:
+      case AuditEventType.aiCopilotQuery:
+      case AuditEventType.aiCopilotResponse:
+      case AuditEventType.academicTimetableGenerated:
+      case AuditEventType.academicTimetablePublished:
         return AuditEventCategory.workflow;
 
       case AuditEventType.errorReported:

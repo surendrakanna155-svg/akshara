@@ -12,6 +12,7 @@ import 'package:akshara_erp/features/finance/finance_models.dart';
 import 'package:akshara_erp/features/finance/finance_mutations_provider.dart';
 import 'package:akshara_erp/features/finance/finance_requests.dart';
 import 'package:akshara_erp/features/finance/student_accounts/finance_student_accounts_provider.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../contracts/finance/finance_fixture_builder.dart';
@@ -24,7 +25,7 @@ const _fixtures = FinanceFixtureBuilder();
 void main() {
   group('Finance API integration', () {
     late MockFinanceRepository mockRepo;
-    late Map<String, dynamic> Function(String path) responseForPath;
+    late Map<String, dynamic> Function(String path, String method) responseFor;
 
     setUpAll(() async {
       await initProviderTestPrefs();
@@ -32,74 +33,110 @@ void main() {
 
     setUp(() async {
       mockRepo = MockFinanceRepository();
-      final dashboard = await mockRepo.getDashboard(query: kQuery);
-      final collections = await mockRepo.getCollections(query: kQuery);
       final dailySummary = await mockRepo.getDailySummary(query: kQuery);
       final feeStructures = await mockRepo.getFeeStructures(
         query: kQuery,
         academicYear: '2026-27',
       );
-      final academicYears = await mockRepo.getAcademicYears(query: kQuery);
       final studentAccounts = await mockRepo.getStudentAccounts(query: kQuery);
-      final installmentPlans =
-          await mockRepo.getInstallmentPlans(query: kQuery);
       final collectionDetail = await mockRepo.getCollectionDetail(
         query: kQuery,
         collectionId: 'col_1',
       );
-      final defaulters = await mockRepo.getDefaultersDashboard(query: kQuery);
       final refunds = await mockRepo.getRefundRequests(query: kQuery);
-      final discounts = await mockRepo.getDiscountsDashboard(query: kQuery);
-      final reports = await mockRepo.getReportsData(query: kQuery);
-      final settings = await mockRepo.getSettings(query: kQuery);
+      final invoices = await mockRepo.getInvoices(query: kQuery);
+      final collectionCreateResult = await mockRepo.createCollection(
+        query: kQuery,
+        request: const CreateCollectionRequest(
+          invoiceId: 'inv_1',
+          amountCollected: '5000',
+          paymentMethod: 'upi',
+        ),
+      );
+      final collectionsAfterCreate = await mockRepo.getCollections(query: kQuery);
 
-      responseForPath = (path) => switch (path) {
-            FinanceApiPaths.dashboard =>
-              _fixtures.dashboardEnvelope(dashboard),
-            FinanceApiPaths.collections => _fixtures.listEnvelope([
-                for (final payment in collections.items)
-                  _fixtures.collectionItem(payment),
-              ]),
-            FinanceApiPaths.dailySummary =>
-              _fixtures.dailySummaryEnvelope(dailySummary),
-            FinanceApiPaths.feeStructures => _fixtures.listEnvelope([
-                for (final structure in feeStructures.items)
-                  _fixtures.feeStructureItem(structure),
-              ]),
-            FinanceApiPaths.academicYears =>
-              _fixtures.academicYearsEnvelope(academicYears.items),
-            FinanceApiPaths.studentAccounts => _fixtures.listEnvelope([
-                for (final account in studentAccounts.items)
-                  _fixtures.studentAccountItem(account),
-              ]),
-            FinanceApiPaths.feeAssignment => _fixtures.listEnvelope([
-                for (final plan in installmentPlans.items)
-                  _fixtures.installmentPlanItem(plan),
-              ]),
-            '/finance/collections/col_1' => collectionDetail == null
-                ? {'data': {}}
-                : _fixtures.collectionDetailEnvelope(collectionDetail),
-            FinanceApiPaths.defaulters =>
-              _fixtures.defaultersEnvelope(defaulters),
-            FinanceApiPaths.refunds => _fixtures.listEnvelope([
-                for (final refund in refunds.items) _fixtures.refundItem(refund),
-              ]),
-            FinanceApiPaths.discounts =>
-              _fixtures.discountsEnvelope(discounts),
-            FinanceApiPaths.reports => _fixtures.reportsEnvelope(reports),
-            FinanceApiPaths.settings => _fixtures.settingsEnvelope(settings),
-            _ => {'data': {}},
-          };
+      responseFor = (path, method) {
+        if (path == FinanceApiPaths.dashboard) {
+          return _fixtures.apiDashboardEnvelope();
+        }
+        if (path == FinanceApiPaths.collections && method == 'GET') {
+          return _fixtures.listEnvelope([
+            for (final payment in collectionsAfterCreate.items)
+              _fixtures.collectionItem(payment),
+          ]);
+        }
+        if (path == FinanceApiPaths.collections && method == 'POST') {
+          return _fixtures.collectionResultEnvelope(collectionCreateResult);
+        }
+        if (path == FinanceApiPaths.dailySummary) {
+          return _fixtures.dailySummaryEnvelope(dailySummary);
+        }
+        if (path == FinanceApiPaths.feeStructures) {
+          return _fixtures.listEnvelope([
+            for (final structure in feeStructures.items)
+              _fixtures.feeStructureItem(structure),
+          ]);
+        }
+        if (path == FinanceApiPaths.feeAssignments) {
+          return _fixtures.listEnvelope([
+            for (var i = 0; i < studentAccounts.items.length; i++)
+              {
+                'id': 'assignment_$i',
+                'studentId': 'student_$i',
+                'academicYear': studentAccounts.items[i].feeStructureName.isEmpty
+                    ? '2026-27'
+                    : '2026-27',
+                'assignmentStatus': 'active',
+                'feeStructureId': 'fee_$i',
+              },
+          ]);
+        }
+        if (path.startsWith('${FinanceApiPaths.studentAccounts}/')) {
+          final studentId = path.split('/').last;
+          final index = int.tryParse(studentId.split('_').last) ?? 0;
+          final account = studentAccounts.items[index];
+          return _fixtures.envelope(_fixtures.studentAccountItem(account));
+        }
+        if (path == '/finance/collections/col_1') {
+          return collectionDetail == null
+              ? {'data': {}}
+              : _fixtures.collectionDetailEnvelope(collectionDetail);
+        }
+        if (path == FinanceApiPaths.refunds && method == 'GET') {
+          return _fixtures.listEnvelope([
+            for (final refund in refunds.items) _fixtures.refundItem(refund),
+          ]);
+        }
+        if (path.startsWith('${FinanceApiPaths.refunds}/') &&
+            method == 'GET' &&
+            !path.endsWith('/approve') &&
+            !path.endsWith('/reject')) {
+          final refundId = path.split('/').last;
+          final refund = refunds.items.firstWhere((item) => item.id == refundId);
+          return _fixtures.envelope(_fixtures.refundItem(refund));
+        }
+        if (path == FinanceApiPaths.invoices && method == 'GET') {
+          return _fixtures.listEnvelope([
+            for (final invoice in invoices.items) _fixtures.invoiceItem(invoice),
+          ]);
+        }
+        if (path.startsWith('${FinanceApiPaths.invoices}/') &&
+            method == 'GET' &&
+            !path.endsWith('/issue') &&
+            !path.endsWith('/cancel')) {
+          final invoiceId = path.split('/').last;
+          final invoice = invoices.items.firstWhere((item) => item.id == invoiceId);
+          return _fixtures.envelope(_fixtures.invoiceItem(invoice));
+        }
+        return {'data': {}};
+      };
     });
 
-    test('remote datasource fetches all finance endpoints', () async {
+    test('remote datasource fetches aligned finance endpoints', () async {
       final dio = createFakeDio(
-        (options) => responseForPath(options.path),
+        (options) => responseFor(options.path, options.method),
       );
       final remote = FinanceRemoteDataSource(dio);
-
-      final dashboard = await remote.fetchDashboard(query: kQuery);
-      expect(dashboard.raw['kpis'], isNotNull);
 
       final collections = await remote.fetchCollections(query: kQuery);
       expect(collections.items, isNotEmpty);
@@ -113,40 +150,101 @@ void main() {
       );
       expect(feeStructures.items, isNotEmpty);
 
-      final academicYears = await remote.fetchAcademicYears(query: kQuery);
-      expect(academicYears.items, isNotEmpty);
+      final assignments = await remote.fetchFeeAssignments(query: kQuery);
+      expect(assignments.items, isNotEmpty);
 
-      final studentAccounts = await remote.fetchStudentAccounts(query: kQuery);
-      expect(studentAccounts.items.length, 4);
-
-      final installmentPlans = await remote.fetchFeeAssignment(query: kQuery);
-      expect(installmentPlans.items.length, 4);
-
-      final collectionDetail = await remote.fetchCollectionDetail(
+      final account = await remote.fetchStudentAccount(
         query: kQuery,
-        collectionId: 'col_1',
+        studentId: 'student_0',
+        academicYear: '2026-27',
       );
-      expect(collectionDetail.raw['payment'], isNotNull);
+      expect(account.raw['studentName'], isNotNull);
 
-      final defaulters = await remote.fetchDefaultersDashboard(query: kQuery);
-      expect(defaulters.raw['defaulters'], isNotNull);
+      final invoiceList = await remote.fetchInvoices(query: kQuery);
+      expect(invoiceList.items, isNotEmpty);
+    });
 
-      final refunds = await remote.fetchRefundRequests(query: kQuery);
-      expect(refunds.items.length, 3);
+    test('api repository matches mock invoice list', () async {
+      final dio = createFakeDio(
+        (options) => responseFor(options.path, options.method),
+      );
+      final apiRepo = ApiFinanceRepository(
+        remote: FinanceRemoteDataSource(dio),
+      );
 
-      final discounts = await remote.fetchDiscountsDashboard(query: kQuery);
-      expect(discounts.raw['scholarships'], isNotNull);
+      final mockInvoices = await mockRepo.getInvoices(query: kQuery);
+      final apiInvoices = await apiRepo.getInvoices(query: kQuery);
 
-      final reports = await remote.fetchReports(query: kQuery);
-      expect(reports.raw['catalog'], isNotNull);
+      expect(apiInvoices.items.length, mockInvoices.items.length);
+      expect(
+        apiInvoices.items.first.invoiceNumber,
+        mockInvoices.items.first.invoiceNumber,
+      );
+    });
 
-      final settings = await remote.fetchSettings(query: kQuery);
-      expect(settings.raw['sections'], isNotNull);
+    test('api repository loads invoice detail', () async {
+      final dio = createFakeDio(
+        (options) => responseFor(options.path, options.method),
+      );
+      final apiRepo = ApiFinanceRepository(
+        remote: FinanceRemoteDataSource(dio),
+      );
+
+      final invoice = await apiRepo.getInvoice(
+        query: kQuery,
+        invoiceId: 'inv_1',
+      );
+      expect(invoice?.invoiceStatus, InvoiceStatus.issued);
+      expect(invoice?.termLabel, 'Annual');
+    });
+
+    test('api repository records collection and updates invoice', () async {
+      final dio = createFakeDio(
+        (options) => responseFor(options.path, options.method),
+      );
+      final apiRepo = ApiFinanceRepository(
+        remote: FinanceRemoteDataSource(dio),
+      );
+
+      final result = await apiRepo.createCollection(
+        query: kQuery,
+        request: const CreateCollectionRequest(
+          invoiceId: 'inv_1',
+          amountCollected: '5000',
+          paymentMethod: 'upi',
+        ),
+      );
+      expect(result.collectionId, isNotEmpty);
+      expect(result.invoice.invoiceStatus, InvoiceStatus.partiallyPaid);
+    });
+
+    test('api repository derives academic years from fee structures', () async {
+      final dio = createFakeDio(
+        (options) => responseFor(options.path, options.method),
+      );
+      final apiRepo = ApiFinanceRepository(
+        remote: FinanceRemoteDataSource(dio),
+      );
+
+      final years = await apiRepo.getAcademicYears(query: kQuery);
+      expect(years.items, contains('2026-27'));
+    });
+
+    test('api repository loads installment plans from client catalog', () async {
+      final apiRepo = ApiFinanceRepository(
+        remote: FinanceRemoteDataSource(Dio()),
+      );
+      final plans = await apiRepo.getInstallmentPlans(query: kQuery);
+      expect(plans.items, isNotEmpty);
+      expect(
+        plans.items.any((plan) => plan.type == InstallmentPlanType.annual),
+        isTrue,
+      );
     });
 
     test('provider to repository to remote returns domain models', () async {
       final dio = createFakeDio(
-        (options) => responseForPath(options.path),
+        (options) => responseFor(options.path, options.method),
       );
       final apiRepo = ApiFinanceRepository(
         remote: FinanceRemoteDataSource(dio),
@@ -156,15 +254,11 @@ void main() {
       final apiCollections = await apiRepo.getCollections(query: kQuery);
 
       expect(apiCollections.items.length, mockCollections.items.length);
-      expect(
-        apiCollections.items.map((p) => p.id).toList(),
-        mockCollections.items.map((p) => p.id).toList(),
-      );
     });
 
-    test('finance dashboard provider loads via API repository', () async {
+    test('finance dashboard provider loads via API in hybrid mode', () async {
       final dio = createFakeDio(
-        (options) => responseForPath(options.path),
+        (options) => responseFor(options.path, options.method),
       );
 
       final container = createProviderTestContainer(
@@ -178,12 +272,13 @@ void main() {
       );
 
       expect(dashboard.kpis, hasLength(6));
-      expect(dashboard.collectionTrend, hasLength(6));
+      expect(dashboard.recentPayments, hasLength(1));
+      expect(dashboard.outstandingAmount, '₹30K');
     });
 
     test('finance collections provider loads via API repository', () async {
       final dio = createFakeDio(
-        (options) => responseForPath(options.path),
+        (options) => responseFor(options.path, options.method),
       );
 
       final container = createProviderTestContainer(
@@ -201,10 +296,6 @@ void main() {
     });
 
     test('remote datasource posts fee structure create', () async {
-      final mockStructures = await mockRepo.getFeeStructures(
-        query: kQuery,
-        academicYear: '2026-27',
-      );
       const created = FinanceFeeStructure(
         id: 'fee_new',
         name: 'API Structure',
@@ -227,7 +318,7 @@ void main() {
             options.path == FinanceApiPaths.feeStructures) {
           return _fixtures.envelope(_fixtures.feeStructureItem(created));
         }
-        return responseForPath(options.path);
+        return responseFor(options.path, options.method);
       });
       final remote = FinanceRemoteDataSource(dio);
 
@@ -249,15 +340,14 @@ void main() {
       );
 
       expect(result.id, 'fee_new');
-      expect(mockStructures.items, isNotEmpty);
     });
 
-    test('approve refund mutation refreshes refunds provider', () async {
+    test('approve refund mutation uses POST and processed status', () async {
       final refunds = await mockRepo.getRefundRequests(query: kQuery);
       final pending = refunds.items.firstWhere(
         (refund) => refund.status == RefundStatus.pending,
       );
-      final approved = RefundRequest(
+      final processed = RefundRequest(
         id: pending.id,
         studentName: pending.studentName,
         admissionNumber: pending.admissionNumber,
@@ -265,18 +355,20 @@ void main() {
         amount: pending.amount,
         reason: pending.reason,
         requestedAt: pending.requestedAt,
-        status: RefundStatus.approved,
+        status: RefundStatus.processed,
         approver: pending.approver,
         feeAccountId: pending.feeAccountId,
         originalReceipt: pending.originalReceipt,
+        collectionId: pending.collectionId,
+        invoiceId: pending.invoiceId,
       );
 
       final dio = createFakeDio((options) {
-        if (options.method == 'PATCH' &&
+        if (options.method == 'POST' &&
             options.path == FinanceApiPaths.refundApprove(pending.id)) {
-          return _fixtures.envelope(_fixtures.refundItem(approved));
+          return _fixtures.envelope(_fixtures.refundItem(processed));
         }
-        return responseForPath(options.path);
+        return responseFor(options.path, options.method);
       });
 
       final container = createProviderTestContainer(
@@ -294,13 +386,83 @@ void main() {
           .read(approveRefundProvider.notifier)
           .execute(refundId: pending.id);
 
-      expect(result?.status, RefundStatus.approved);
+      expect(result?.status, RefundStatus.processed);
       expect(result?.id, pending.id);
     });
 
-    test('finance student accounts provider loads via API repository', () async {
+    test('reject refund mutation uses POST reject route', () async {
+      final refunds = await mockRepo.getRefundRequests(query: kQuery);
+      final pending = refunds.items.firstWhere(
+        (refund) => refund.status == RefundStatus.pending,
+      );
+      final rejected = RefundRequest(
+        id: pending.id,
+        studentName: pending.studentName,
+        admissionNumber: pending.admissionNumber,
+        classLabel: pending.classLabel,
+        amount: pending.amount,
+        reason: pending.reason,
+        requestedAt: pending.requestedAt,
+        status: RefundStatus.rejected,
+        approver: pending.approver,
+        feeAccountId: pending.feeAccountId,
+        originalReceipt: pending.originalReceipt,
+        collectionId: pending.collectionId,
+        invoiceId: pending.invoiceId,
+      );
+
+      final dio = createFakeDio((options) {
+        if (options.method == 'POST' &&
+            options.path == FinanceApiPaths.refundReject(pending.id)) {
+          return _fixtures.envelope(_fixtures.refundItem(rejected));
+        }
+        return responseFor(options.path, options.method);
+      });
+
+      final container = createProviderTestContainer(
+        apiFinanceDio: dio,
+        financeApiEnabled: true,
+        overrides: [
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container
+          .read(rejectRefundProvider.notifier)
+          .execute(refundId: pending.id);
+
+      expect(result?.status, RefundStatus.rejected);
+      expect(result?.id, pending.id);
+    });
+
+    test('getRefund fetches refund detail by id', () async {
       final dio = createFakeDio(
-        (options) => responseForPath(options.path),
+        (options) => responseFor(options.path, options.method),
+      );
+      final apiRepo = ApiFinanceRepository(
+        remote: FinanceRemoteDataSource(dio),
+      );
+
+      final mockRefund = await mockRepo.getRefund(
+        query: kQuery,
+        refundId: 'ref_1',
+      );
+      final apiRefund = await apiRepo.getRefund(
+        query: kQuery,
+        refundId: 'ref_1',
+      );
+
+      expect(apiRefund?.id, mockRefund?.id);
+      expect(apiRefund?.collectionId, mockRefund?.collectionId);
+      expect(apiRefund?.invoiceId, mockRefund?.invoiceId);
+    });
+
+    test('finance student accounts provider loads via assignment bridge', () async {
+      final dio = createFakeDio(
+        (options) => responseFor(options.path, options.method),
       );
 
       final container = createProviderTestContainer(

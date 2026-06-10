@@ -1,6 +1,12 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import { matchSisRoute } from "./sis_router.ts";
 
+Deno.test("sis router matches GET /sis/dashboard", () => {
+  const match = matchSisRoute("GET", "/sis/dashboard");
+  assertEquals(match?.args, []);
+  assertEquals(match?.handler.name, "handleDashboard");
+});
+
 Deno.test("sis router matches GET /sis/students", () => {
   const match = matchSisRoute("GET", "/sis/students");
   assertEquals(match?.args, []);

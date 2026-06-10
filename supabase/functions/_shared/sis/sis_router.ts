@@ -1,5 +1,6 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
+import { handleDashboard } from "./sis_dashboard_handlers.ts";
 import { handleAdmissionsConversion } from "./sis_conversion_handlers.ts";
 import {
   handleCreateEnrollment,
@@ -21,6 +22,10 @@ export function matchSisRoute(
   method: string,
   path: string,
 ): { handler: (req: Request, config: AppConfig, ...args: string[]) => Promise<Response>; args: string[] } | null {
+  if (path === "/sis/dashboard" && method === "GET") {
+    return { handler: handleDashboard, args: [] };
+  }
+
   if (path === "/sis/students" && method === "GET") {
     return { handler: handleListStudents, args: [] };
   }

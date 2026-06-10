@@ -1,0 +1,132 @@
+{
+  "sis_label": {
+    "code": 201,
+    "data": {
+      "enrollmentId": "c0185dbd-1301-4e9f-821e-4614d367762a",
+      "studentId": "947e1950-d606-43d7-b699-69d1eb56992b",
+      "studentCode": "STU-2026-00008",
+      "studentName": "SoftFK Student 1781089674",
+      "academicYear": "Verify-Updated-1781027648",
+      "academicYearId": "ce100000-0000-4000-8000-000000000001",
+      "className": "VerifyClass-Updated-1781027648",
+      "classId": "cf100000-0000-4000-8000-000000000001",
+      "sectionName": "A",
+      "sectionId": "d0100000-0000-4000-8000-000000000001",
+      "rollNumber": "R-1781089674",
+      "isCurrent": false,
+      "createdAt": "2026-06-10T11:07:56.572Z",
+      "updatedAt": "2026-06-10T11:07:56.572Z"
+    }
+  },
+  "sis_id_only": {
+    "code": 201,
+    "data": {
+      "enrollmentId": "0af17e77-a13d-46de-9277-b83f7738d3a7",
+      "studentId": "74733654-4d67-4e20-9941-57688a4dd230",
+      "studentCode": "STU-2026-00009",
+      "studentName": "SoftFK Student 1781089674-id",
+      "academicYear": "Verify-Updated-1781027648",
+      "academicYearId": "ce100000-0000-4000-8000-000000000001",
+      "className": "VerifyClass-Updated-1781027648",
+      "classId": "cf100000-0000-4000-8000-000000000001",
+      "sectionName": "A",
+      "sectionId": "d0100000-0000-4000-8000-000000000001",
+      "rollNumber": "ID-1781089674",
+      "isCurrent": false,
+      "createdAt": "2026-06-10T11:08:00.052Z",
+      "updatedAt": "2026-06-10T11:08:00.052Z"
+    }
+  },
+  "admissions_label": {
+    "code": 201,
+    "data": {
+      "id": "90917d7a-5db0-45d3-886d-0faf5ac53803",
+      "studentName": "SoftFK Verify 1781089674",
+      "applicationId": "",
+      "seekingClass": "VerifyClass-Updated-1781027648",
+      "section": "A",
+      "academicYear": "Verify-Updated-1781027648",
+      "academicYearId": "ce100000-0000-4000-8000-000000000001",
+      "classId": "cf100000-0000-4000-8000-000000000001",
+      "sectionId": "d0100000-0000-4000-8000-000000000001",
+      "guardianName": "Verify Parent",
+      "phone": "99991089674",
+      "submittedAt": "10 Jun \u00b7 11:08 am",
+      "conversionStatus": "pending",
+      "generatedAdmissionNumber": "ADM-2026-3A52044F",
+      "previewStudentId": "708d273b-1d7d-42e6-ab2a-ae1c0ca46e7a",
+      "gender": "female",
+      "dateOfBirth": "2015-05-05"
+    }
+  },
+  "admissions_id_only": {
+    "code": 201,
+    "data": {
+      "id": "ff18ae1f-6e5e-452a-bfb8-3b3a429630b7",
+      "studentName": "SoftFK ID 1781089674",
+      "applicationId": "",
+      "seekingClass": "VerifyClass-Updated-1781027648",
+      "section": "A",
+      "academicYear": "Verify-Updated-1781027648",
+      "academicYearId": "ce100000-0000-4000-8000-000000000001",
+      "classId": "cf100000-0000-4000-8000-000000000001",
+      "sectionId": "d0100000-0000-4000-8000-000000000001",
+      "guardianName": "Verify Parent ID",
+      "phone": "99981089674",
+      "submittedAt": "10 Jun \u00b7 11:08 am",
+      "conversionStatus": "pending",
+      "generatedAdmissionNumber": "ADM-2026-8066E300",
+      "previewStudentId": "a974e7b5-13d9-42de-b0e5-2b07a8a8aa43",
+      "gender": "male",
+      "dateOfBirth": "2015-06-06"
+    }
+  },
+  "finance_label": {
+    "code": 201,
+    "data": {
+      "id": "786505f1-100e-4a62-a7d6-63a51fbe4e97",
+      "name": "SoftFK Fee 1781089674",
+      "academicYear": "Verify-Updated-1781027648",
+      "academicYearId": "ce100000-0000-4000-8000-000000000001",
+      "description": null,
+      "status": "active",
+      "classRange": "",
+      "totalAnnual": "1000",
+      "installmentOptions": [],
+      "categories": [
+        {
+          "category": "tuition",
+          "label": "Tuition",
+          "amount": "1000"
+        }
+      ],
+      "createdBy": "a3000000-0000-4000-8000-000000000001",
+      "createdAt": "2026-06-10T11:08:19.283Z",
+      "updatedAt": "2026-06-10T11:08:19.283Z"
+    }
+  },
+  "finance_id_only": {
+    "code": 201,
+    "data": {
+      "id": "fa5a3798-3d99-46a2-a672-a2786a7f5eaf",
+      "name": "SoftFK Fee ID 1781089674",
+      "academicYear": "Verify-Updated-1781027648",
+      "academicYearId": "ce100000-0000-4000-8000-000000000001",
+      "description": null,
+      "status": "active",
+      "classRange": "",
+      "totalAnnual": "1200",
+      "installmentOptions": [],
+      "categories": [
+        {
+          "category": "tuition",
+          "label": "Tuition",
+          "amount": "1200"
+        }
+      ],
+      "createdBy": "a3000000-0000-4000-8000-000000000001",
+      "createdAt": "2026-06-10T11:08:20.850Z",
+      "updatedAt": "2026-06-10T11:08:20.850Z"
+    }
+  }
+}

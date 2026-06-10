@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/repositories/academic/academic_catalog_mutation.dart';
+import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
 import 'dashboard/sis_dashboard_provider.dart';
@@ -151,6 +153,10 @@ class AssignAcademicAssignmentNotifier extends AsyncNotifier<SisStudent?> {
   Future<SisStudent?> execute(AcademicAssignmentRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      final catalog = ref.read(academicCatalogProvider);
+      final enriched = catalog == null
+          ? request
+          : enrichAcademicAssignmentRequest(request, catalog);
       return _runMutation(
         ref,
         assertPermission: () => assertManageSis(ref),
@@ -158,7 +164,7 @@ class AssignAcademicAssignmentNotifier extends AsyncNotifier<SisStudent?> {
         invalidateStudentId: request.studentId,
         action: () => ref.read(sisRepositoryProvider).assignAcademicAssignment(
               query: ref.read(repositoryQueryProvider),
-              request: request,
+              request: enriched,
             ),
       );
     });
@@ -181,6 +187,10 @@ class ConvertAdmissionsEnrollmentNotifier
   ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      final catalog = ref.read(academicCatalogProvider);
+      final enriched = catalog == null
+          ? request
+          : enrichAdmissionsConversionRequest(request, catalog);
       return _runMutation(
         ref,
         assertPermission: () => assertManageSis(ref),
@@ -190,7 +200,7 @@ class ConvertAdmissionsEnrollmentNotifier
         action: () =>
             ref.read(sisRepositoryProvider).convertAdmissionsEnrollment(
                   query: ref.read(repositoryQueryProvider),
-                  request: request,
+                  request: enriched,
                 ),
       );
     });

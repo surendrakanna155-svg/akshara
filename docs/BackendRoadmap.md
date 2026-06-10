@@ -1,9 +1,9 @@
 # Akshara ERP — Backend Roadmap
 
-**Document ID:** `AKS-BE-ROADMAP-v1.1`  
-**Status:** Implementation planning (no code)  
+**Document ID:** `AKS-BE-ROADMAP-v1.2`  
+**Status:** Sprint 3 implementation in progress  
 **Prerequisite:** v5.6 Backend Architecture Foundation  
-**Last updated:** June 2026 (v5.6 gap closure)
+**Last updated:** June 2026 (Sprint 6 complete)
 
 ---
 
@@ -14,7 +14,7 @@ Backend implementation proceeds in **6 sprints** after architecture foundation. 
 ```
 Sprint 1 (v5.6)  Architecture docs + gap closure  ← COMPLETE
 Sprint 2 (v6.0)  Core platform + auth
-Sprint 3 (v6.1)  RBAC + RLS + core modules
+Sprint 3 (v6.1)  RBAC + RLS + core modules  ← IN PROGRESS (Phase 4B4 complete)
 Sprint 4 (v6.2)  Full ERP API surface
 Sprint 5 (v6.3)  Audit ingestion + hardening
 Sprint 6 (v6.4)  Validation + pilot backend
@@ -96,6 +96,24 @@ Sprint 6 (v6.4)  Validation + pilot backend
 **Risk:** RLS complexity; cross-module handoff edge cases  
 **Resolves:** TD-P0-01 (partial — core modules)
 
+**Sprint 3 progress (June 2026):**
+
+| Phase | Status |
+|-------|--------|
+| 5A SIS foundation | ✅ |
+| 5C Academic catalog + soft FK | ✅ (5C.0–5C.3) |
+| 5B SIS dashboard aggregates | ✅ |
+| Finance invoices (Phase 4B3) | ✅ |
+| Finance collections (Phase 4B4) | ✅ |
+| Finance refunds (Phase 4B5) | ✅ |
+| Sprint 3 gate | ✅ Complete |
+| Transport + HR read APIs (Sprint 4 Phase 1) | ✅ |
+| Hostel + Library + Inventory + Alumni (Sprint 4 Phase 2) | ✅ |
+| Management + Control Center (Sprint 4 Phase 3) | ✅ |
+| Mobile read APIs (Sprint 4 Phase 4) | ✅ |
+| Audit ingestion + domain_events outbox (Sprint 5) | ✅ |
+| Validation + pilot backend (Sprint 6) | ✅ |
+
 ---
 
 ## 5. Sprint 4 — Full ERP API Surface (v6.2)
@@ -162,18 +180,25 @@ Sprint 6 (v6.4)  Validation + pilot backend
 
 | Phase | Focus | Dependencies |
 |-------|-------|--------------|
-| v7.0 | Universal Payment Engine (Razorpay) | Sprint 4 Finance API + Sprint 5 event bus |
-| v7.1 | Communication Hub | Sprint 5 notification + event bus |
-| v7.2 | Inventory-Finance integration | Sprint 4 Inventory + Finance + event bus |
-| v7.2a | Shared vendor master + sync | v7.2 prerequisite |
-| v7.2b | Procurement → AP posting | v7.2a |
-| v7.2c | Finance reconciliation UI | v7.2b |
-| v7.3 | AI Copilot services | OpenAI integration |
-| v7.4 | Smart Timetable + Workload Engine | SIS + HR |
-| v7.5 | Student Risk Engine + School Health Score | Analytics schema |
-| v7.6 | Akshara Business Suite (CRM, renewals) | Control Center |
-| v7.7 | Document & Report Engine | R2 + PDF service |
-| v7.8 | School Memories + Akshara Growth | Media service |
+| v7.0 | Universal Payment Engine (Razorpay) | ✅ Complete (stub mode) |
+| v7.1 | Communication Hub | ✅ Complete (stub providers) |
+| v7.1-Pilot | Pilot Operations Sprint | ✅ Complete |
+| v7.1-Pilot-Closure | Timetable integration + seed fix | ✅ Complete |
+| v7.15 | School onboarding & data migration (Phase A) | ✅ Complete |
+| v7.2 | Inventory-Finance integration | ✅ Complete |
+| v7.3 | Production hardening | ✅ Complete |
+| v7.3.1 | Audit remediation (RBAC/RLS/hybrid routing) | ✅ Complete |
+| v7.3.2 | Mutation audit completion (A10–A14) | ✅ Complete |
+| v7.2a | Shared vendor master + sync | ✅ (v7.2) |
+| v7.2b | Procurement → AP posting | ✅ (v7.2) |
+| v7.2c | Finance reconciliation UI | ✅ Complete |
+| v7.4 | AI Copilot services | ✅ Complete |
+| v7.5 | Smart Timetable + Workload Engine | ✅ Complete |
+| v7.6 | Analytics & Intelligence (risk + school health) | ✅ Complete |
+| v7.7 | Production SaaS Launch Hardening | ✅ Complete |
+| v7.8 | Live integrations sign-off + pen test | Pilot cutover |
+| v7.8 | Document & Report Engine | R2 + PDF service |
+| v7.9 | School Memories + Akshara Growth | Media service |
 
 ### v7.2 Inventory-Finance roadmap detail
 
@@ -181,7 +206,7 @@ Sprint 6 (v6.4)  Validation + pilot backend
 |------|-------------|------|
 | 1 | Shared `vendors` table; `vendor.created/updated` events | Contract tests |
 | 2 | `procurement.approved` consumer → AP commitment | Integration test |
-| 3 | Ledger posting + `inventory_finance_postings` link | Finance reconciliation |
+| 3 | Ledger posting + `inventory_finance_postings` link | ✅ Finance reconciliation (v7.2c) |
 | 4 | Client audit enum sync | Flutter tests |
 
 ---

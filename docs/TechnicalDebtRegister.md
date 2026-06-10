@@ -1,8 +1,8 @@
 # Akshara ERP — Technical Debt Register
 
-**Version:** 2.0  
-**Last updated:** June 2026  
-**Source audits:** v1.5–v5.6 ArchitectureReview documents
+**Version:** 2.1  
+**Last updated:** June 2026 (v7.7 governance sync)  
+**Source audits:** v1.5–v7.7 ArchitectureReview documents
 
 ---
 
@@ -10,11 +10,11 @@
 
 | Priority | Open | In Progress | Resolved |
 |----------|-----:|------------:|----------------:|
-| P0 | 2 | 0 | 3 |
-| P1 | 0 | 0 | 14 |
+| P0 | 0 | 0 | 5 |
+| P1 | 1 | 0 | 14 |
 | P2 | 10 | 0 | 5 |
 | P3 | 5 | 0 | 2 |
-| **Total** | **17** | **0** | **24** |
+| **Total** | **16** | **0** | **26** |
 
 ---
 
@@ -22,8 +22,8 @@
 
 | ID | Issue | Impact | Effort | Owner | Status |
 |----|-------|--------|--------|-------|--------|
-| TD-P0-01 | No server-side RBAC / tenant RLS | Authorization bypass via direct API | 4–6 wks (backend) | Agent D + Backend | **Architecture v5.6** · implementation Sprint 3 |
-| TD-P0-02 | Audit events not ingested server-side | Compliance gap; no tamper-evident trail | 2–3 wks | Agent D + Agent A | **Architecture v5.6** · implementation Sprint 5 |
+| TD-P0-01 | ~~No server-side RBAC / tenant RLS~~ | Authorization bypass via direct API | — | Agent D + Backend | **Resolved v6.1/v7.3** — `erp_tenant` NOBYPASSRLS + 213 probes |
+| TD-P0-02 | ~~Audit events not ingested server-side~~ | Compliance gap; no tamper-evident trail | — | Agent D + Agent A | **Resolved v6.3/v7.3.2** — batch ingestion + mutation audit |
 | TD-P0-03 | ~~8 ERP modules throw `ApiNotConnectedException` when API flags enabled~~ | Cannot enable stub modules in staging | — | Agent A | **Resolved v3.2** (all read APIs) |
 | TD-P0-04 | ~~Plaintext token storage~~ | Credential theft on rooted devices | — | Agent D | **Resolved v2.7** |
 | TD-P0-05 | ~~No JWT claim validation client-side~~ | Invalid tokens attached to requests | — | Agent D | **Resolved v2.7** |
@@ -40,7 +40,7 @@
 | TD-P1-04 | ~~manage* permissions not wired on all mutation routes~~ | UX-only RBAC on some screens | — | Agent D | **Resolved v5.3** (49 UI guards) |
 | TD-P1-05 | ~~Audit upload uploader throws `UnimplementedError` until backend wired~~ | Queue grows without drain | 1 wk | Agent D | **Resolved v2.8** |
 | TD-P1-06 | Cross-module handoff (Adm→Fin→SIS) partially untested under dual-API | Integration regressions | 1 wk | Agent E | **Partial v5.0** (mock certification) |
-| TD-P1-07 | Demo auth paths remain for parent/teacher/student personas | Mock OTP bypass in non-API mode | 2 wks | Agent D | Open |
+| TD-P1-07 | Demo auth paths remain for parent/teacher/student personas | Mock OTP bypass in non-API mode | 2 wks | Agent D | **Partial v7.7** — blocked when `APP_ENV=production` / `disableDemoAuth` |
 | TD-P1-08 | ~1,600 Riverpod providers — broad rebuild fan-out | UI jank on low-end devices | 3–4 wks | Agent B | **Partial v4.9** (8 dashboards migrated) |
 | TD-P1-09 | ~~No refresh token reuse detection~~ | Token theft undetected | — | Agent D | **Resolved v2.7** |
 | TD-P1-10 | ~~Permission sync service missing~~ | Stale permissions after role change | — | Agent D | **Resolved v2.7** |
@@ -88,9 +88,8 @@
 
 ## Debt Paydown Priority (Recommended Order)
 
-1. **v6.0** — Backend Sprint 2: core platform + auth (see `docs/BackendRoadmap.md`)
-2. **v6.1** — RBAC + RLS + core module APIs (TD-P0-01 partial)
-3. **v6.3** — Audit ingestion (TD-P0-02)
+1. **v7.7** — Production SaaS launch hardening (integrations, DR runbooks, health auth) ✅
+2. **v7.8+** — Live external integrations sign-off + pen test + DR drill execution
 
 ---
 

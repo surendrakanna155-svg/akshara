@@ -41,7 +41,8 @@ void main() {
     test('maps resource ids to REST endpoints', () {
       expect(SisApiPaths.studentProfile('SIS-1'), '/sis/students/SIS-1');
       expect(SisApiPaths.studentStatus('SIS-1'), '/sis/students/SIS-1/status');
-      expect(SisApiPaths.academicAssignment, '/sis/academic-assignment');
+      expect(SisApiPaths.enrollments, '/sis/enrollments');
+      expect(SisApiPaths.enrollment('SIS-1'), '/sis/enrollments/SIS-1');
       expect(SisApiPaths.admissionsConversion, '/sis/admissions-conversion');
     });
   });

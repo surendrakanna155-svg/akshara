@@ -1,0 +1,48 @@
+API base: https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api
+
+=== SPRINT 5C.2c STAGING VALIDATION ===
+
+## Task 1 — Migration Review
+  PASS: nullable FK columns (no NOT NULL on new cols)
+  PASS: ON DELETE SET NULL
+  PASS: sis_student_enrollments FKs
+  PASS: admissions_enrollments FKs
+  PASS: finance_fee_structures academic_year_id
+  PASS: school-scoped indexes
+  PASS: rollback safety (no DROP COLUMN)
+  PASS: TEXT columns untouched
+
+## Task 2 — Staging Migration Validation
+  FAIL: DATABASE_URL not set — schema validation skipped
+
+## Task 7 — Tenant Isolation Verification
+  PASS: skipped (--skip-probes); prior run 121/121 PASS
+
+## Tasks 5–6 — Dual-Write & Resolver Validation
+  FAIL: SIS list exposes additive FK fields
+  FAIL: SIS label-only create → 201 with FKs (code=409, err={'code': 'CONFLICT', 'message': 'Enrollment already exists for student a4000000-0000-4000-8000-000000000001 in 2026-27'})
+  FAIL: SIS ID-only create → 201 with labels (code=422)
+  FAIL: SIS ID+label match → 201 (code=409)
+  FAIL: SIS ID+label mismatch → 422 CATALOG_MISMATCH (code=409, err=CONFLICT)
+  FAIL: wrong-school UUID → 422 CATALOG_NOT_FOUND (code=422, err=VALIDATION_ERROR)
+  FAIL: Admissions label-only → FK populated (code=201)
+  PASS: Admissions empty year → success NULL FKs (code=201)
+  FAIL: Finance label-only fee structure → year + yearId (code=201)
+
+## Task 8 — API Contract Verification
+  PASS: /sis/enrollments HTTP 200
+  PASS: /sis/enrollments retains academicYear
+  PASS: /sis/enrollments retains className
+  PASS: /sis/enrollments retains sectionName
+  FAIL: /sis/enrollments adds nullable academicYearId
+  FAIL: /sis/enrollments adds nullable classId
+  FAIL: /sis/enrollments adds nullable sectionId
+  FAIL: /admissions/enrollments HTTP 404
+  FAIL: /admissions/enrollments has list items
+  PASS: /finance/fee-structures HTTP 200
+  PASS: /finance/fee-structures retains academicYear
+  PASS: /finance/fee-structures retains name
+  FAIL: /finance/fee-structures adds nullable academicYearId
+
+FINAL VERDICT: NOT READY
+

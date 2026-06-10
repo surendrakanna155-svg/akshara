@@ -36,19 +36,13 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
     super.dispose();
   }
 
-  static const List<String> filterLabels = [
-    'All',
-    'Active',
-    'Prospect',
-    'Class 10',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final viewState = ref.watch(sisRegistryViewStateProvider);
     final pageResult = ref.watch(sisStudentsPageResultProvider);
     final students = ref.watch(sisFilteredStudentsProvider);
-    final filterIndex = ref.watch(sisRegistryFilterProvider);
+    final filterIndex = ref.watch(sisRegistryEffectiveFilterIndexProvider);
+    final filterLabels = ref.watch(sisRegistryFilterLabelsProvider);
 
     return SisModuleScaffold(
       screen: SisScreen.registry,

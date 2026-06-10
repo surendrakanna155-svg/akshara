@@ -10,6 +10,7 @@ class CreateFeeStructureRequest {
     required this.categories,
     this.installmentOptions = const [3, 4],
     this.status = FeeStructureStatus.active,
+    this.academicYearId,
   });
 
   final String name;
@@ -19,6 +20,7 @@ class CreateFeeStructureRequest {
   final List<FeeCategoryLine> categories;
   final List<int> installmentOptions;
   final FeeStructureStatus status;
+  final String? academicYearId;
 }
 
 /// Domain request to update an existing fee structure.
@@ -31,6 +33,7 @@ class UpdateFeeStructureRequest {
     this.categories,
     this.installmentOptions,
     this.status,
+    this.academicYearId,
   });
 
   final String? name;
@@ -40,6 +43,7 @@ class UpdateFeeStructureRequest {
   final List<FeeCategoryLine>? categories;
   final List<int>? installmentOptions;
   final FeeStructureStatus? status;
+  final String? academicYearId;
 }
 
 /// Domain request to create a student fee account.
@@ -107,6 +111,25 @@ class AssignFeePlanRequest {
   final String classLabel;
 }
 
+/// Domain request to record a fee collection against an invoice.
+class CreateCollectionRequest {
+  const CreateCollectionRequest({
+    required this.invoiceId,
+    required this.amountCollected,
+    required this.paymentMethod,
+    this.referenceNumber,
+    this.notes,
+    this.collectionDate,
+  });
+
+  final String invoiceId;
+  final String amountCollected;
+  final String paymentMethod;
+  final String? referenceNumber;
+  final String? notes;
+  final String? collectionDate;
+}
+
 /// Domain request to create a refund.
 class CreateRefundRequest {
   const CreateRefundRequest({
@@ -117,6 +140,7 @@ class CreateRefundRequest {
     this.admissionNumber = '',
     this.classLabel = '',
     this.originalReceipt = '',
+    this.collectionId = '',
   });
 
   final String feeAccountId;
@@ -126,6 +150,7 @@ class CreateRefundRequest {
   final String admissionNumber;
   final String classLabel;
   final String originalReceipt;
+  final String collectionId;
 }
 
 /// Approves a pending refund request.

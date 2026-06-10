@@ -1,0 +1,104 @@
+API base: https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api
+
+=== SPRINT 5C.2c STAGING VALIDATION ===
+
+## Task 1 — Migration Review
+  PASS: nullable FK columns (no NOT NULL on new cols)
+  PASS: ON DELETE SET NULL
+  PASS: sis_student_enrollments FKs
+  PASS: admissions_enrollments FKs
+  PASS: finance_fee_structures academic_year_id
+  PASS: school-scoped indexes
+  PASS: rollback safety (no DROP COLUMN)
+  PASS: TEXT columns untouched
+
+## Task 2 — Staging Migration Validation
+  PASS: migration columns present on all 3 tables
+  PASS: sis_student_enrollments.academic_year_id nullable=True type=uuid
+  PASS: sis_student_enrollments.class_id nullable=True type=uuid
+  PASS: sis_student_enrollments.section_id nullable=True type=uuid
+  PASS: admissions_enrollments.academic_year_id nullable=True type=uuid
+  PASS: admissions_enrollments.class_id nullable=True type=uuid
+  PASS: admissions_enrollments.section_id nullable=True type=uuid
+  PASS: finance_fee_structures.academic_year_id nullable=True type=uuid
+  PASS: FK admissions_enrollments.academic_year_id ON DELETE SET NULL
+  PASS: FK admissions_enrollments.class_id ON DELETE SET NULL
+  PASS: FK admissions_enrollments.section_id ON DELETE SET NULL
+  PASS: FK finance_fee_structures.academic_year_id ON DELETE SET NULL
+  PASS: FK sis_student_enrollments.academic_year_id ON DELETE SET NULL
+  PASS: FK sis_student_enrollments.class_id ON DELETE SET NULL
+  PASS: FK sis_student_enrollments.section_id ON DELETE SET NULL
+  PASS: FK indexes found: 7
+
+## Task 3 — Backfill Dry Run Audit
+  PASS: updated sis=0
+  PASS: updated admissions=0
+  PASS: updated finance=0
+  PASS: total mismatches: 0
+
+## Task 4 — Backfill Execution Audit
+  PASS: updated sis=0
+  PASS: updated admissions=0
+  PASS: updated finance=0
+  PASS: total mismatches: 0
+
+## Task 3 — Backfill Dry Run Audit
+  PASS: updated sis=0
+  PASS: updated admissions=0
+  PASS: updated finance=0
+  PASS: total mismatches: 0
+
+## Task 4 — FK Population Statistics
+  PASS: sis_student_enrollments: total=0 year=0 class=0 section=0
+  PASS: admissions_enrollments: total=0 year=0 class=0 section=0
+  PASS: finance_fee_structures: total=0 year_fk=0
+  PASS: SIS TEXT columns remain populated when FK set
+
+## Task 9 — Data Integrity Validation
+  PASS: SIS class.year mismatch: 0 violations
+  PASS: SIS section.class mismatch: 0 violations
+  PASS: Admissions class.year mismatch: 0 violations
+  PASS: Finance year label/FK mismatch: 0 violations
+
+## Task 7 — Tenant Isolation Verification
+  PASS: GET /health/tenant-access HTTP 200
+  PASS: probe count 121/121
+  PASS: all probes pass=True
+
+## Tasks 5–6 — Dual-Write & Resolver Validation
+  PASS: SIS list exposes additive FK fields
+  FAIL: SIS label-only create → 201 with FKs (code=422, err={'code': 'CATALOG_NOT_FOUND', 'message': 'Catalog not found: class 5'})
+  FAIL: SIS ID-only create → 201 with labels (code=422)
+  FAIL: SIS ID+label match → 201 (code=422)
+  PASS: SIS ID+label mismatch → 422 CATALOG_MISMATCH (code=422, err=CATALOG_MISMATCH)
+  FAIL: SIS wrong-school UUID → 422 CATALOG_NOT_FOUND (code=422, err=VALIDATION_ERROR)
+  FAIL: Admissions label-only → FK populated (code=422)
+  FAIL: Admissions ID-only → canonical labels + FKs (code=422)
+  PASS: Admissions mismatch → 422 CATALOG_MISMATCH (code=422, err=CATALOG_MISMATCH)
+  PASS: Admissions wrong-school UUID → 422 CATALOG_NOT_FOUND (code=422, err=CATALOG_NOT_FOUND)
+  PASS: Admissions empty year → success NULL FKs (code=201)
+  PASS: Finance label-only → year + yearId (code=201)
+  FAIL: Finance ID-only → canonical year + yearId (code=422)
+  PASS: Finance mismatch → 422 CATALOG_MISMATCH (code=422, err=CATALOG_MISMATCH)
+  PASS: Finance wrong-school UUID → 422 CATALOG_NOT_FOUND (code=422, err=CATALOG_NOT_FOUND)
+
+## Task 8 — API Contract Verification
+  PASS: /sis/enrollments HTTP 200
+  PASS: /sis/enrollments retains academicYear
+  PASS: /sis/enrollments retains className
+  PASS: /sis/enrollments retains sectionName
+  PASS: /sis/enrollments adds nullable academicYearId
+  PASS: /sis/enrollments adds nullable classId
+  PASS: /sis/enrollments adds nullable sectionId
+  PASS: /finance/fee-structures HTTP 200
+  PASS: /finance/fee-structures retains academicYear
+  PASS: /finance/fee-structures retains name
+  PASS: /finance/fee-structures adds nullable academicYearId
+  FAIL: Admissions POST retains seekingClass
+  FAIL: Admissions POST retains academicYear
+  FAIL: Admissions POST adds academicYearId
+  FAIL: Admissions POST adds classId
+  FAIL: Admissions POST adds sectionId
+
+FINAL VERDICT: NOT READY
+

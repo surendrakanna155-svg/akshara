@@ -21,6 +21,10 @@ void main() {
         erpRoutePermissionFor(RouteNames.controlCenterSchools),
         Permission.viewControlCenter,
       );
+      expect(
+        erpRoutePermissionFor(RouteNames.copilot),
+        Permission.viewAiCopilot,
+      );
       expect(erpRoutePermissionFor(RouteNames.parentDashboard), isNull);
     });
   });

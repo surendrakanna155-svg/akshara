@@ -53,6 +53,7 @@ abstract final class RouteNames {
 
   // Web ERP admin shell (desktop / tablet / mobile drawer)
   static const String admin = '/admin';
+  static const String copilot = '/copilot';
   static const String admissions = '/admissions';
   static const String admissionsDashboard = '/admissions/dashboard';
   static const String admissionsLeads = '/admissions/leads';
@@ -89,6 +90,7 @@ abstract final class RouteNames {
   static const String financeRefunds = '/finance/refunds';
   static const String financeDiscounts = '/finance/discounts';
   static const String financeReports = '/finance/reports';
+  static const String financeReconciliation = '/finance/reconciliation';
   static const String financeSettings = '/finance/settings';
 
   static String financeCollectionDetail(String collectionId) =>
@@ -105,6 +107,7 @@ abstract final class RouteNames {
     financeRefunds,
     financeDiscounts,
     financeReports,
+    financeReconciliation,
     financeSettings,
   ];
   static const String sis = '/sis';
@@ -112,6 +115,7 @@ abstract final class RouteNames {
   static const String sisStudents = '/sis/students';
   static const String sisAcademicAssignment = '/sis/academic-assignment';
   static const String sisAdmissionsConversion = '/sis/admissions-conversion';
+  static const String onboardingHub = '/sis/onboarding';
 
   static String sisStudentDetail(String studentId) =>
       '$sisStudents/$studentId';
@@ -122,6 +126,7 @@ abstract final class RouteNames {
     sisStudents,
     sisAcademicAssignment,
     sisAdmissionsConversion,
+    onboardingHub,
   ];
 
   static const String hr = '/hr';
@@ -154,6 +159,8 @@ abstract final class RouteNames {
   static const String managementAdmissions = '/management/admissions';
   static const String managementFinance = '/management/finance';
   static const String managementAcademics = '/management/academics';
+  static const String managementTimetable = '/management/timetable';
+  static const String managementIntelligence = '/management/intelligence';
   static const String managementPerformance = '/management/performance';
   static const String managementTasks = '/management/tasks';
   static const String managementSettings = '/management/settings';
@@ -165,6 +172,8 @@ abstract final class RouteNames {
     managementAdmissions,
     managementFinance,
     managementAcademics,
+    managementTimetable,
+    managementIntelligence,
     managementPerformance,
     managementTasks,
     managementSettings,
@@ -315,6 +324,7 @@ abstract final class RouteNames {
   /// All module groups wrapped by [AdminShell].
   static const List<String> adminErpRoutes = [
     admin,
+    copilot,
     admissions,
     finance,
     sis,

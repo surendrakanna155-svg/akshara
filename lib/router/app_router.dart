@@ -45,6 +45,7 @@ import 'admin_navigation.dart';
 import 'route_guards.dart';
 import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
+import 'copilot_navigation.dart';
 import 'management_navigation.dart';
 import 'hostel_navigation.dart';
 import 'hr_navigation.dart';
@@ -312,6 +313,13 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.copilot,
+            name: 'copilot',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: copilotRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.admissions,
             name: 'admissions',
             redirect: admissionsRootRedirect,
@@ -468,6 +476,13 @@ GoRouter createAppRouter({
                 ),
               ),
               GoRoute(
+                path: 'reconciliation',
+                name: 'financeReconciliation',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeReconciliationRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: 'settings',
                 name: 'financeSettings',
                 pageBuilder: (context, state) => NoTransitionPage(
@@ -516,6 +531,13 @@ GoRouter createAppRouter({
                 name: 'sisAdmissionsConversion',
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: sisAdmissionsConversionRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'onboarding',
+                name: 'sisOnboarding',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisOnboardingRouteBuilder(context, state),
                 ),
               ),
             ],
@@ -630,6 +652,20 @@ GoRouter createAppRouter({
                 name: 'managementAcademics',
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: managementAcademicsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'timetable',
+                name: 'managementTimetable',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: managementTimetableRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'intelligence',
+                name: 'managementIntelligence',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: managementIntelligenceRouteBuilder(context, state),
                 ),
               ),
               GoRoute(

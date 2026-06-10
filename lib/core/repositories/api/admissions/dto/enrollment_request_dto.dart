@@ -1,9 +1,11 @@
 import '../../../../../features/admissions/admissions_requests.dart';
+import '../../../academic/academic_catalog_placement.dart';
 
 class EnrollmentRequestDto {
   const EnrollmentRequestDto({required this.raw});
 
   factory EnrollmentRequestDto.submit(EnrollmentSubmitRequest request) {
+    final academic = request.academic;
     return EnrollmentRequestDto(
       raw: {
         if (request.applicationId != null)
@@ -22,12 +24,19 @@ class EnrollmentRequestDto {
           'address': request.parent.address,
         },
         'academic': {
-          'seeking_class': request.academic.seekingClass,
-          'section': request.academic.section,
-          'academic_year': request.academic.academicYear,
-          'previous_school': request.academic.previousSchool,
-          'needs_transport': request.academic.needsTransport,
-          'needs_hostel': request.academic.needsHostel,
+          'seeking_class': academic.seekingClass,
+          'section': academic.section,
+          'academic_year': academic.academicYear,
+          'previous_school': academic.previousSchool,
+          'needs_transport': academic.needsTransport,
+          'needs_hostel': academic.needsHostel,
+          ...catalogPlacementJson(
+            AcademicCatalogPlacement(
+              academicYearId: academic.academicYearId,
+              classId: academic.classId,
+              sectionId: academic.sectionId,
+            ),
+          ),
         },
       },
     );

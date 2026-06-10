@@ -479,6 +479,9 @@ class EnrollmentAcademicInfo {
     this.previousSchool = '',
     this.needsTransport = false,
     this.needsHostel = false,
+    this.academicYearId,
+    this.classId,
+    this.sectionId,
   });
 
   final String seekingClass;
@@ -487,6 +490,9 @@ class EnrollmentAcademicInfo {
   final String previousSchool;
   final bool needsTransport;
   final bool needsHostel;
+  final String? academicYearId;
+  final String? classId;
+  final String? sectionId;
 
   EnrollmentAcademicInfo copyWith({
     String? seekingClass,
@@ -495,6 +501,9 @@ class EnrollmentAcademicInfo {
     String? previousSchool,
     bool? needsTransport,
     bool? needsHostel,
+    String? academicYearId,
+    String? classId,
+    String? sectionId,
   }) {
     return EnrollmentAcademicInfo(
       seekingClass: seekingClass ?? this.seekingClass,
@@ -503,6 +512,9 @@ class EnrollmentAcademicInfo {
       previousSchool: previousSchool ?? this.previousSchool,
       needsTransport: needsTransport ?? this.needsTransport,
       needsHostel: needsHostel ?? this.needsHostel,
+      academicYearId: academicYearId ?? this.academicYearId,
+      classId: classId ?? this.classId,
+      sectionId: sectionId ?? this.sectionId,
     );
   }
 }

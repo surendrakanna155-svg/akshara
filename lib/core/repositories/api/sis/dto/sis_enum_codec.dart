@@ -6,13 +6,32 @@ import '../../../../../features/sis/sis_models.dart';
 /// Parses SIS API enum strings and presentation helpers.
 abstract final class SisEnumCodec {
   static SisStudentStatus parseStudentStatus(String? value) {
-    return SisStudentStatus.values.firstWhere(
-      (status) => status.name == value,
-      orElse: () => SisStudentStatus.active,
-    );
+    switch (value?.toLowerCase()) {
+      case 'graduated':
+      case 'alumni':
+        return SisStudentStatus.alumni;
+      case 'inactive':
+      case 'exited':
+        return SisStudentStatus.exited;
+      case 'prospect':
+        return SisStudentStatus.prospect;
+      case 'transferred':
+        return SisStudentStatus.transferred;
+      case 'active':
+        return SisStudentStatus.active;
+      default:
+        return SisStudentStatus.active;
+    }
   }
 
-  static String studentStatusToApi(SisStudentStatus status) => status.name;
+  static String studentStatusToApi(SisStudentStatus status) {
+    return switch (status) {
+      SisStudentStatus.alumni => 'graduated',
+      SisStudentStatus.exited => 'inactive',
+      SisStudentStatus.prospect => 'active',
+      _ => status.name,
+    };
+  }
 
   static EnrollmentConversionStatus parseConversionStatus(String? value) {
     return EnrollmentConversionStatus.values.firstWhere(

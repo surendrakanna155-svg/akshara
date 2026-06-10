@@ -8,6 +8,7 @@ import '../features/finance/defaulters/finance_defaulters_screen.dart';
 import '../features/finance/discounts/finance_discounts_screen.dart';
 import '../features/finance/fee_assignment/finance_fee_assignment_screen.dart';
 import '../features/finance/fee_structures/finance_fee_structures_screen.dart';
+import '../features/finance/reconciliation/finance_reconciliation_screen.dart';
 import '../features/finance/refunds/finance_refunds_screen.dart';
 import '../features/finance/reports/finance_reports_screen.dart';
 import '../features/finance/settings/finance_settings_screen.dart';
@@ -91,6 +92,13 @@ Widget financeReportsRouteBuilder(
   GoRouterState state,
 ) {
   return const FinanceReportsScreen();
+}
+
+Widget financeReconciliationRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const FinanceReconciliationScreen();
 }
 
 Widget financeSettingsRouteBuilder(

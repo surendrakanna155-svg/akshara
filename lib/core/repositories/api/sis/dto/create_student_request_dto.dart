@@ -7,17 +7,19 @@ class CreateStudentRequestDto {
   factory CreateStudentRequestDto.fromDomain(CreateStudentRequest request) {
     return CreateStudentRequestDto(
       raw: {
+        'displayName': request.studentName,
+        'display_name': request.studentName,
+        'studentName': request.studentName,
         'student_name': request.studentName,
+        'admissionNumber': request.admissionNumber,
         'admission_number': request.admissionNumber,
-        'class_label': request.classLabel,
-        'section': request.section,
-        'academic_year': request.academicYear,
-        'status': SisEnumCodec.studentStatusToApi(request.status),
-        'gender': request.gender,
+        'dateOfBirth': request.dateOfBirth,
         'date_of_birth': request.dateOfBirth,
-        'guardian_name': request.guardianName,
-        'phone': request.phone,
-        'email': request.email,
+        'gender': request.gender,
+        'status': SisEnumCodec.studentStatusToApi(request.status),
+        if (request.guardianName.isNotEmpty) 'guardianName': request.guardianName,
+        if (request.phone.isNotEmpty) 'phone': request.phone,
+        if (request.email.isNotEmpty) 'email': request.email,
       },
     );
   }

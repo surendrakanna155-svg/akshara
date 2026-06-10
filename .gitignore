@@ -22,6 +22,13 @@ Thumbs.db
 *.pem
 credentials.json
 
+# Supabase CLI local state
+supabase/.temp/
+
+# Python
+__pycache__/
+*.pyc
+
 # Coverage
 coverage/
 lcov.info

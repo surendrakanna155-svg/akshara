@@ -1,9 +1,11 @@
 import 'package:akshara_erp/core/repositories/api/finance/api_finance_repository.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/create_collection_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_collections_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_dashboard_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_defaulters_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_discounts_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_fee_structures_dto.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/finance_invoices_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_refunds_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_reports_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_settings_dto.dart';
@@ -13,6 +15,8 @@ import 'package:akshara_erp/core/repositories/api/finance/remote/finance_remote_
 import 'package:akshara_erp/core/repositories/interfaces/finance_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_finance_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/finance/finance_models.dart';
+import 'package:akshara_erp/features/finance/finance_requests.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -52,6 +56,17 @@ void main() {
       expect(mapped.recentPayments.length, mockData.recentPayments.length);
     });
 
+    test('getDashboard API envelope maps to domain KPIs', () {
+      final mapped = const FinanceMapper().toDashboard(
+        FinanceDashboardDto.fromJson(_fixtures.apiDashboardEnvelope()),
+      );
+
+      expect(mapped.kpis, hasLength(6));
+      expect(mapped.outstandingAmount, '₹30K');
+      expect(mapped.recentPayments.single.studentName, 'Probe Student');
+      expect(mapped.collectionTrend, isEmpty);
+    });
+
     test('getCollections DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getCollections(query: kQuery);
       final mapped = const FinanceMapper().toCollections(
@@ -64,6 +79,25 @@ void main() {
 
       expect(mapped.length, mockData.items.length);
       expect(mapped.first.receiptNumber, mockData.items.first.receiptNumber);
+    });
+
+    test('createCollection result maps invoice status transitions', () async {
+      final mockResult = await mockRepo.createCollection(
+        query: kQuery,
+        request: const CreateCollectionRequest(
+          invoiceId: 'inv_1',
+          amountCollected: '10000',
+          paymentMethod: 'cash',
+        ),
+      );
+      final mapped = const FinanceMapper().toCollectionResult(
+        FinanceCollectionResultDto.fromJson(
+          _fixtures.collectionResultEnvelope(mockResult)['data']
+              as Map<String, dynamic>,
+        ),
+      );
+      expect(mapped.invoice.invoiceStatus, InvoiceStatus.partiallyPaid);
+      expect(mapped.receipt.receiptNumber, isNotEmpty);
     });
 
     test('getDailySummary DTO mapping matches mock output', () async {
@@ -176,6 +210,53 @@ void main() {
 
       expect(mapped.length, mockData.items.length);
       expect(mapped.first.status, mockData.items.first.status);
+      expect(mapped.first.collectionId, mockData.items.first.collectionId);
+      expect(mapped.first.invoiceId, mockData.items.first.invoiceId);
+    });
+
+    test('getRefund returns refund detail by id', () async {
+      final mockData = await mockRepo.getRefund(
+        query: kQuery,
+        refundId: 'ref_4',
+      );
+      expect(mockData, isNotNull);
+      expect(mockData!.collectionId, 'col_3');
+
+      final mapped = const FinanceMapper().toRefundRequest(
+        RefundRequestDto.fromJson(_fixtures.refundItem(mockData)),
+      );
+      expect(mapped.id, mockData.id);
+      expect(mapped.invoiceId, mockData.invoiceId);
+    });
+
+    test('getInvoices DTO mapping matches mock output', () async {
+      final mockData = await mockRepo.getInvoices(query: kQuery);
+      final mapped = const FinanceMapper().toInvoices(
+        FinanceInvoicesResponseDto.fromJson(
+          _fixtures.listEnvelope([
+            for (final invoice in mockData.items) _fixtures.invoiceItem(invoice),
+          ]),
+        ),
+      );
+
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.invoiceNumber, mockData.items.first.invoiceNumber);
+      expect(mapped.first.invoiceStatus, mockData.items.first.invoiceStatus);
+    });
+
+    test('getInvoice maps to installment history entry', () async {
+      final mockData = await mockRepo.getInvoice(
+        query: kQuery,
+        invoiceId: 'inv_1',
+      );
+      expect(mockData, isNotNull);
+      const mapper = FinanceMapper();
+      final mapped = mapper.toFinanceInvoice(
+        FinanceInvoiceDto.fromJson(_fixtures.invoiceItem(mockData!)),
+      );
+      final history = mapper.toInstallmentHistory(mapped);
+      expect(history.termLabel, 'Annual');
+      expect(history.amount, mapped.totalAmount);
     });
 
     test('getDiscountsDashboard DTO mapping matches mock output', () async {

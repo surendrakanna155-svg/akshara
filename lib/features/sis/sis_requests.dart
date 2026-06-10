@@ -70,12 +70,18 @@ class AcademicAssignmentRequest {
     required this.classLabel,
     required this.section,
     required this.academicYear,
+    this.academicYearId,
+    this.classId,
+    this.sectionId,
   });
 
   final String studentId;
   final String classLabel;
   final String section;
   final String academicYear;
+  final String? academicYearId;
+  final String? classId;
+  final String? sectionId;
 }
 
 /// Domain request to convert an admissions enrollment into a SIS student.
@@ -85,10 +91,16 @@ class AdmissionsConversionRequest {
     required this.classLabel,
     required this.section,
     required this.academicYear,
+    this.academicYearId,
+    this.classId,
+    this.sectionId,
   });
 
   final String enrollmentId;
   final String classLabel;
   final String section;
   final String academicYear;
+  final String? academicYearId;
+  final String? classId;
+  final String? sectionId;
 }

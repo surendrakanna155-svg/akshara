@@ -39,11 +39,6 @@ final sisAdmissionsConversionViewStateProvider =
 
 final sisEnrollmentQueueProvider = Provider<List<SisEnrollmentQueueItem>>(
   (ref) {
-    if (isModuleApiEnabled(ref, sisApiEnabledProvider)) {
-      return ref.watch(sisAdmissionsConversionViewStateProvider).data?.queue ??
-          const [];
-    }
-
     final enrollments = ref.watch(admissionsPendingEnrollmentsProvider);
     return [
       for (final enrollment in enrollments)

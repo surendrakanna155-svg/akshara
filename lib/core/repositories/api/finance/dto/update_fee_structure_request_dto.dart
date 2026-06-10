@@ -1,3 +1,4 @@
+import '../../../academic/academic_catalog_placement.dart';
 import '../../../../../features/finance/finance_models.dart';
 import '../../../../../features/finance/finance_requests.dart';
 import 'finance_enum_codec.dart';
@@ -17,6 +18,11 @@ class UpdateFeeStructureRequestDto {
     if (request.installmentOptions != null) {
       raw['installment_options'] = request.installmentOptions;
     }
+    raw.addAll(
+      catalogPlacementJson(
+        AcademicCatalogPlacement(academicYearId: request.academicYearId),
+      ),
+    );
     if (request.categories != null) {
       raw['categories'] = [
         for (final line in request.categories!)

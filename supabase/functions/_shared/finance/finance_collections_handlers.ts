@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   CollectionAmountError,
   CollectionNotFoundError,
@@ -214,8 +215,8 @@ export async function handleCreateCollection(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const result = await runTenant(config, auth.claims, async (db) =>
-      await createCollection(db, orgId, schoolId, {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const created = await createCollection(db, orgId, schoolId, {
         invoiceId,
         amountCollected: amount,
         paymentMethod,
@@ -223,8 +224,28 @@ export async function handleCreateCollection(
         notes: optionalStr(body, "notes", "notes"),
         collectionDate: optionalStr(body, "collection_date", "collectionDate"),
         collectedBy: auth.claims.sub,
-      })
-    );
+      });
+      const { recordMutationAudit } = await import("../audit/audit_repository.ts");
+      await recordMutationAudit(
+        db,
+        auth.claims,
+        {
+          eventType: "collectionCreated",
+          category: "workflow",
+          entityType: "finance_collection",
+          entityId: created.collection.id,
+          metadata: { invoiceId, amount, paymentMethod },
+        },
+        {
+          eventType: "finance.collection.created",
+          payload: { collectionId: created.collection.id, invoiceId, amount },
+          sourceModule: "finance",
+          idempotencyKey: `finance.collection:${created.collection.id}`,
+        },
+        req,
+      );
+      return created;
+    });
     return jsonResponse(envelope(collectionCreateToApi(result)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -277,9 +298,11 @@ export async function handleCancelCollection(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const result = await runTenant(config, auth.claims, async (db) =>
-      await cancelCollection(db, orgId, schoolId, collectionId)
-    );
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const cancelled = await cancelCollection(db, orgId, schoolId, collectionId);
+      await emitMutationAudit(db, auth.claims, financeAudit.collectionCancelled(collectionId), req);
+      return cancelled;
+    });
     return jsonResponse(envelope(collectionCreateToApi(result)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {

@@ -184,6 +184,7 @@ void main() {
         (RouteNames.financeRefunds, 'Kavya Iyer'),
         (RouteNames.financeDiscounts, 'Scholarship catalog'),
         (RouteNames.financeReports, 'Report catalog'),
+        (RouteNames.financeReconciliation, 'Open AP commitments'),
         (RouteNames.financeSettings, 'Finance settings'),
         (RouteNames.sisDashboard, 'Total Students'),
         (RouteNames.sisStudents, 'Arjun Patel'),

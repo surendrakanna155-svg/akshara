@@ -13,6 +13,7 @@ const List<FinanceScreen> kFinanceNavScreens = [
   FinanceScreen.refunds,
   FinanceScreen.discounts,
   FinanceScreen.reports,
+  FinanceScreen.reconciliation,
   FinanceScreen.settings,
 ];
 
@@ -28,6 +29,7 @@ extension FinanceScreenRoutes on FinanceScreen {
         FinanceScreen.refunds => RouteNames.financeRefunds,
         FinanceScreen.discounts => RouteNames.financeDiscounts,
         FinanceScreen.reports => RouteNames.financeReports,
+        FinanceScreen.reconciliation => RouteNames.financeReconciliation,
         FinanceScreen.settings => RouteNames.financeSettings,
       };
 }

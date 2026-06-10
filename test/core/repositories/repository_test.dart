@@ -1,5 +1,5 @@
 import 'package:akshara_erp/core/repositories/api/admissions/api_admissions_repository.dart';
-import 'package:akshara_erp/core/repositories/api/finance/api_finance_repository.dart';
+import 'package:akshara_erp/core/repositories/api/finance/hybrid_finance_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_admissions_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_alumni_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_finance_repository.dart';
@@ -32,7 +32,7 @@ void main() {
       expect((await repo.getInstallmentPlans(query: query)).total, 4);
       expect((await repo.getCollectionDetail(query: query, collectionId: 'col_1')), isNotNull);
       expect((await repo.getDefaultersDashboard(query: query)).defaulters, isNotEmpty);
-      expect((await repo.getRefundRequests(query: query)).total, 3);
+      expect((await repo.getRefundRequests(query: query)).total, 4);
       expect((await repo.getDiscountsDashboard(query: query)).scholarships, hasLength(3));
       expect((await repo.getReportsData(query: query)).catalog, hasLength(4));
       expect((await repo.getSettings(query: query)).sections, isNotEmpty);
@@ -245,7 +245,7 @@ void main() {
 
       expect(
         container.read(financeRepositoryProvider),
-        isA<ApiFinanceRepository>(),
+        isA<HybridFinanceRepository>(),
       );
       expect(
         container.read(admissionsRepositoryProvider),

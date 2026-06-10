@@ -13,6 +13,7 @@ import {
   CatalogMismatchError,
   CatalogNotFoundError,
 } from "../academic/academic_catalog_resolver.ts";
+import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   feeStructureToApi,
   listEnvelope,
@@ -24,6 +25,7 @@ import {
   getFeeStructure,
   listFeeStructures,
   updateFeeStructure,
+  type UpdateFeeStructureInput,
 } from "./finance_structures_repository.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
@@ -161,10 +163,11 @@ export async function handleCreateFeeStructure(
   const name = snakeStr(body, "name").trim() ||
     String(body.name ?? "").trim();
   const academicYear = optionalStr(body, "academic_year", "academicYear")?.trim() ?? "";
-  if (!name || !academicYear) {
+  const academicYearId = optionalStr(body, "academic_year_id", "academicYearId")?.trim() ?? "";
+  if (!name || (!academicYear && !academicYearId)) {
     return errorEnvelope(
       "VALIDATION_ERROR",
-      "name and academic_year are required",
+      "name and (academic_year or academic_year_id) are required",
       422,
     );
   }
@@ -178,17 +181,19 @@ export async function handleCreateFeeStructure(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const result = await runTenant(config, auth.claims, (db) =>
-      createFeeStructure(db, orgId, schoolId, {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const created = await createFeeStructure(db, orgId, schoolId, {
         name,
         academicYear,
-        academicYearId: optionalStr(body, "academic_year_id", "academicYearId") ?? null,
+        academicYearId: academicYearId || null,
         description,
         status,
         createdBy: auth.claims.sub,
         items,
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, financeAudit.feeStructureCreated(created.structure.id), req);
+      return created;
+    });
     return jsonResponse(
       envelope(feeStructureToApi(result.structure, result.items)),
       { status: 201 },
@@ -227,7 +232,7 @@ export async function handleUpdateFeeStructure(
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
 
-  const updateInput: Parameters<typeof updateFeeStructure>[3] = {};
+  const updateInput: UpdateFeeStructureInput = {};
   const name = optionalStr(body, "name", "name");
   if (name !== undefined) updateInput.name = name.trim();
   const academicYear = optionalStr(body, "academic_year", "academicYear");
@@ -248,9 +253,12 @@ export async function handleUpdateFeeStructure(
   }
 
   try {
-    const result = await runTenant(config, auth.claims, (db) =>
-      updateFeeStructure(db, orgId, schoolId, structureId, updateInput)
-    );
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateFeeStructure(db, orgId, schoolId, structureId, updateInput);
+      if (!updated) return null;
+      await emitMutationAudit(db, auth.claims, financeAudit.feeStructureUpdated(structureId), req);
+      return updated;
+    });
     if (!result) {
       return errorEnvelope("NOT_FOUND", `Fee structure not found: ${structureId}`, 404);
     }
@@ -285,9 +293,12 @@ export async function handleArchiveFeeStructure(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const result = await runTenant(config, auth.claims, (db) =>
-      archiveFeeStructure(db, orgId, schoolId, structureId)
-    );
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const archived = await archiveFeeStructure(db, orgId, schoolId, structureId);
+      if (!archived) return null;
+      await emitMutationAudit(db, auth.claims, financeAudit.feeStructureArchived(structureId), req);
+      return archived;
+    });
     if (!result) {
       return errorEnvelope("NOT_FOUND", `Fee structure not found: ${structureId}`, 404);
     }

@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { emitMutationAudit, sisAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   createEnrollment,
   DuplicateEnrollmentError,
@@ -198,10 +199,16 @@ export async function handleCreateEnrollment(
   const studentId = optionalBodyStr(body, "studentId", "student_id");
   const academicYear = optionalBodyStr(body, "academicYear", "academic_year");
   const className = optionalBodyStr(body, "className", "class_name");
-  if (!studentId || !academicYear || !className) {
+  const academicYearId = optionalNullableStr(body, "academicYearId", "academic_year_id");
+  const classId = optionalNullableStr(body, "classId", "class_id");
+  if (
+    !studentId ||
+    (!academicYear && !academicYearId) ||
+    (!className && !classId)
+  ) {
     return errorEnvelope(
       "VALIDATION_ERROR",
-      "studentId, academicYear, and className are required",
+      "studentId and (academicYear or academicYearId) and (className or classId) are required",
       422,
     );
   }
@@ -210,20 +217,22 @@ export async function handleCreateEnrollment(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const row = await runTenant(config, auth.claims, (db) =>
-      createEnrollment(db, orgId, schoolId, {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const created = await createEnrollment(db, orgId, schoolId, {
         studentId,
-        academicYear,
-        academicYearId: optionalNullableStr(body, "academicYearId", "academic_year_id"),
-        className,
-        classId: optionalNullableStr(body, "classId", "class_id"),
+        academicYear: academicYear ?? "",
+        academicYearId,
+        className: className ?? "",
+        classId,
         sectionName: optionalNullableStr(body, "sectionName", "section_name"),
         sectionId: optionalNullableStr(body, "sectionId", "section_id"),
         rollNumber: optionalNullableStr(body, "rollNumber", "roll_number"),
         isCurrent: optionalBodyBool(body, "isCurrent", "is_current"),
         createdBy: auth.claims.sub,
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, sisAudit.enrollmentCreated(created.enrollment_id), req);
+      return created;
+    });
     return jsonResponse(envelope(enrollmentListItemToApi(row)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -258,18 +267,19 @@ export async function handleUpdateEnrollment(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const row = await runTenant(config, auth.claims, (db) =>
-      updateEnrollment(db, orgId, schoolId, enrollmentId, {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateEnrollment(db, orgId, schoolId, enrollmentId, {
         academicYear: optionalBodyStr(body, "academicYear", "academic_year"),
         academicYearId: optionalNullableStr(body, "academicYearId", "academic_year_id"),
         className: optionalBodyStr(body, "className", "class_name"),
-        classId: optionalNullableStr(body, "classId", "class_id"),
         sectionName: optionalNullableStr(body, "sectionName", "section_name"),
         sectionId: optionalNullableStr(body, "sectionId", "section_id"),
         rollNumber: optionalNullableStr(body, "rollNumber", "roll_number"),
         isCurrent: optionalBodyBool(body, "isCurrent", "is_current"),
-      })
-    );
+      });
+      await emitMutationAudit(db, auth.claims, sisAudit.enrollmentUpdated(enrollmentId), req);
+      return updated;
+    });
     return jsonResponse(envelope(enrollmentListItemToApi(row)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audit/audit_event.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/repositories/academic/academic_catalog_mutation.dart';
+import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
 import 'applications/admissions_applications_provider.dart';
 import 'approval/admissions_approval_provider.dart';
@@ -335,6 +337,10 @@ class SubmitEnrollmentNotifier extends AsyncNotifier<PendingEnrollmentRecord?> {
   ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      final catalog = ref.read(academicCatalogProvider);
+      final enriched = catalog == null
+          ? request
+          : enrichEnrollmentSubmitRequest(request, catalog);
       final record = await _runMutation(
         ref,
         assertPermission: () => assertManageAdmissions(ref),
@@ -344,7 +350,7 @@ class SubmitEnrollmentNotifier extends AsyncNotifier<PendingEnrollmentRecord?> {
         invalidateEnrollments: true,
         action: () => ref.read(admissionsRepositoryProvider).submitEnrollment(
               query: ref.read(repositoryQueryProvider),
-              request: request,
+              request: enriched,
             ),
       );
       return record!;

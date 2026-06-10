@@ -1,5 +1,7 @@
 import '../../../../../features/sis/sis_requests.dart';
+import 'enrollment_request_dto.dart';
 
+/// @deprecated Prefer [EnrollmentCreateRequestDto] for deployed `/sis/enrollments`.
 class AcademicAssignmentRequestDto {
   const AcademicAssignmentRequestDto({required this.raw});
 
@@ -7,12 +9,7 @@ class AcademicAssignmentRequestDto {
     AcademicAssignmentRequest request,
   ) {
     return AcademicAssignmentRequestDto(
-      raw: {
-        'student_id': request.studentId,
-        'class_label': request.classLabel,
-        'section': request.section,
-        'academic_year': request.academicYear,
-      },
+      raw: EnrollmentCreateRequestDto.fromAcademicAssignment(request).raw,
     );
   }
 

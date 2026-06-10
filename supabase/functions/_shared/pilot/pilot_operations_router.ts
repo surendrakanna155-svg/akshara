@@ -1,0 +1,75 @@
+import type { AppConfig } from "../config.ts";
+import { errorEnvelope } from "../http.ts";
+import {
+  handleParentLeaveSubmit,
+  handleStudentHomeworkSubmit,
+  handleTeacherAttendanceDraft,
+  handleTeacherAttendanceSubmit,
+  handleTeacherExamMarkUpdate,
+  handleTeacherHomeworkReview,
+  handleTeacherLeaveSubmit,
+} from "./pilot_operations_handlers.ts";
+
+function matchPilotRoute(
+  method: string,
+  path: string,
+): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
+  if (method === "POST" && path === "/teacher/attendance/draft") {
+    return { handler: handleTeacherAttendanceDraft };
+  }
+  if (method === "POST" && path === "/teacher/attendance/submit") {
+    return { handler: handleTeacherAttendanceSubmit };
+  }
+  if (method === "POST" && path === "/teacher/leave") {
+    return { handler: handleTeacherLeaveSubmit };
+  }
+  if (method === "POST" && path === "/parent/leave") {
+    return { handler: handleParentLeaveSubmit };
+  }
+  if (method === "POST" && path === "/student/homework/submit") {
+    return { handler: handleStudentHomeworkSubmit };
+  }
+
+  const reviewMatch = path.match(/^\/teacher\/homework\/submissions\/([^/]+)\/review$/);
+  if (method === "POST" && reviewMatch) {
+    const submissionId = decodeURIComponent(reviewMatch[1]!);
+    return {
+      handler: (req, config) => handleTeacherHomeworkReview(req, config, submissionId),
+    };
+  }
+
+  const markMatch = path.match(/^\/teacher\/exams\/marks\/([^/]+)$/);
+  if (method === "PUT" && markMatch) {
+    const markEntryId = decodeURIComponent(markMatch[1]!);
+    return {
+      handler: (req, config) => handleTeacherExamMarkUpdate(req, config, markEntryId),
+    };
+  }
+
+  return null;
+}
+
+export async function routePilotOperations(
+  req: Request,
+  config: AppConfig,
+  method: string,
+  path: string,
+): Promise<Response | null> {
+  const prefixes = [
+    "/teacher/attendance/",
+    "/teacher/leave",
+    "/teacher/homework/submissions/",
+    "/teacher/exams/marks/",
+    "/parent/leave",
+    "/student/homework/submit",
+  ];
+  if (!prefixes.some((p) => path === p || path.startsWith(p))) {
+    return null;
+  }
+
+  const match = matchPilotRoute(method, path);
+  if (!match) {
+    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  }
+  return await match.handler(req, config);
+}

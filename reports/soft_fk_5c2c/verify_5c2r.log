@@ -1,0 +1,74 @@
+API base: https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api
+
+=== SPRINT 5C.2c STAGING VALIDATION ===
+
+## Task 1 — Migration Review
+  PASS: nullable FK columns (no NOT NULL on new cols)
+  PASS: ON DELETE SET NULL
+  PASS: sis_student_enrollments FKs
+  PASS: admissions_enrollments FKs
+  PASS: finance_fee_structures academic_year_id
+  PASS: school-scoped indexes
+  PASS: rollback safety (no DROP COLUMN)
+  PASS: TEXT columns untouched
+
+## Task 2 — Staging Migration Validation
+  PASS: migration columns present on all 3 tables
+  PASS: sis_student_enrollments.academic_year_id nullable=True type=uuid
+  PASS: sis_student_enrollments.class_id nullable=True type=uuid
+  PASS: sis_student_enrollments.section_id nullable=True type=uuid
+  PASS: admissions_enrollments.academic_year_id nullable=True type=uuid
+  PASS: admissions_enrollments.class_id nullable=True type=uuid
+  PASS: admissions_enrollments.section_id nullable=True type=uuid
+  PASS: finance_fee_structures.academic_year_id nullable=True type=uuid
+  PASS: FK admissions_enrollments.academic_year_id ON DELETE SET NULL
+  PASS: FK admissions_enrollments.class_id ON DELETE SET NULL
+  PASS: FK admissions_enrollments.section_id ON DELETE SET NULL
+  PASS: FK finance_fee_structures.academic_year_id ON DELETE SET NULL
+  PASS: FK sis_student_enrollments.academic_year_id ON DELETE SET NULL
+  PASS: FK sis_student_enrollments.class_id ON DELETE SET NULL
+  PASS: FK sis_student_enrollments.section_id ON DELETE SET NULL
+  PASS: FK indexes found: 7
+
+## Task 7 — Tenant Isolation Verification
+  PASS: GET /health/tenant-access HTTP 200
+  PASS: probe count 121/121
+  PASS: all probes pass=True
+
+## Tasks 5–6 — Dual-Write & Resolver Validation
+  PASS: SIS list exposes additive FK fields
+  PASS: SIS label-only create → 201 with FKs (code=201, err=None)
+  PASS: SIS ID-only create → 201 with labels (code=201)
+  PASS: SIS ID+label match → 201 (code=201)
+  PASS: SIS ID+label mismatch → 422 CATALOG_MISMATCH (code=422, err=CATALOG_MISMATCH)
+  PASS: SIS wrong-school UUID → 422 CATALOG_NOT_FOUND (code=422, err=CATALOG_NOT_FOUND)
+  PASS: Admissions label-only → FK populated (code=201)
+  PASS: Admissions ID-only → canonical labels + FKs (code=201)
+  PASS: Admissions mismatch → 422 CATALOG_MISMATCH (code=422, err=CATALOG_MISMATCH)
+  PASS: Admissions wrong-school UUID → 422 CATALOG_NOT_FOUND (code=422, err=CATALOG_NOT_FOUND)
+  PASS: Admissions empty year → success NULL FKs (code=201)
+  PASS: Finance label-only → year + yearId (code=201)
+  PASS: Finance ID-only → canonical year + yearId (code=201)
+  PASS: Finance mismatch → 422 CATALOG_MISMATCH (code=422, err=CATALOG_MISMATCH)
+  PASS: Finance wrong-school UUID → 422 CATALOG_NOT_FOUND (code=422, err=CATALOG_NOT_FOUND)
+
+## Task 8 — API Contract Verification
+  PASS: /sis/enrollments HTTP 200
+  PASS: /sis/enrollments retains academicYear
+  PASS: /sis/enrollments retains className
+  PASS: /sis/enrollments retains sectionName
+  PASS: /sis/enrollments adds nullable academicYearId
+  PASS: /sis/enrollments adds nullable classId
+  PASS: /sis/enrollments adds nullable sectionId
+  PASS: /finance/fee-structures HTTP 200
+  PASS: /finance/fee-structures retains academicYear
+  PASS: /finance/fee-structures retains name
+  PASS: /finance/fee-structures adds nullable academicYearId
+  PASS: Admissions POST retains seekingClass
+  PASS: Admissions POST retains academicYear
+  PASS: Admissions POST adds academicYearId
+  PASS: Admissions POST adds classId
+  PASS: Admissions POST adds sectionId
+
+FINAL VERDICT: READY FOR 5C.3
+

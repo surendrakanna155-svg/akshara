@@ -1,0 +1,44 @@
+import '../../../features/academic/timetable/timetable_models.dart';
+import '../repository_query.dart';
+
+abstract class TimetableRepository {
+  Future<TimetableSummary> getSummary({
+    required RepositoryQuery query,
+    required String academicYearId,
+  });
+
+  Future<List<TimetableEntry>> getTimetables({
+    required RepositoryQuery query,
+    String? academicYearId,
+  });
+
+  Future<TimetableDetail> getTimetable({
+    required RepositoryQuery query,
+    required String timetableId,
+  });
+
+  Future<List<TeacherWorkloadEntry>> getWorkload({
+    required RepositoryQuery query,
+    required String academicYearId,
+  });
+
+  Future<TimetableConflictsBundle> getConflicts({
+    required RepositoryQuery query,
+    required String academicYearId,
+  });
+
+  Future<List<TimetableEntry>> generate({
+    required RepositoryQuery query,
+    required GenerateTimetableRequest request,
+  });
+
+  Future<TimetableValidationResult> validate({
+    required RepositoryQuery query,
+    required String timetableId,
+  });
+
+  Future<TimetableEntry> publish({
+    required RepositoryQuery query,
+    required String timetableId,
+  });
+}

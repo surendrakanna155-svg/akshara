@@ -1,6 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'academic/academic_repository.dart';
+import 'academic/hybrid_academic_repository.dart';
 import 'api/api_repository_providers.dart';
+import 'api/finance/hybrid_finance_repository.dart';
+import 'api/sis/hybrid_sis_repository.dart';
 import 'interfaces/admissions_repository.dart';
 import 'interfaces/finance_repository.dart';
 import 'interfaces/hostel_repository.dart';
@@ -10,15 +14,32 @@ import 'interfaces/management_repository.dart';
 import 'interfaces/sis_repository.dart';
 import 'interfaces/alumni_repository.dart';
 import 'interfaces/control_center_repository.dart';
+import 'interfaces/inventory_finance_repository.dart';
 import 'interfaces/inventory_repository.dart';
+import 'interfaces/onboarding_repository.dart';
 import 'interfaces/transport_repository.dart';
 import 'interfaces/parent_repository.dart';
 import 'interfaces/teacher_repository.dart';
 import 'interfaces/student_repository.dart';
+import 'interfaces/copilot_repository.dart';
+import 'interfaces/communication_repository.dart';
+import 'api/copilot/hybrid_copilot_repository.dart';
+import 'mock/mock_copilot_repository.dart';
+import 'interfaces/timetable_repository.dart';
+import 'interfaces/analytics_intelligence_repository.dart';
+import 'api/timetable/hybrid_timetable_repository.dart';
+import 'api/analytics/hybrid_analytics_intelligence_repository.dart';
+import 'mock/mock_timetable_repository.dart';
+import 'mock/mock_analytics_intelligence_repository.dart';
+import 'mock/mock_communication_repository.dart';
+import 'api/communication/hybrid_communication_repository.dart';
+import 'mock/mock_academic_repository.dart';
 import 'mock/mock_admissions_repository.dart';
 import 'mock/mock_alumni_repository.dart';
 import 'mock/mock_finance_repository.dart';
 import 'mock/mock_hostel_repository.dart';
+import 'api/inventory_finance/hybrid_inventory_finance_repository.dart';
+import 'mock/mock_inventory_finance_repository.dart';
 import 'mock/mock_inventory_repository.dart';
 import 'mock/mock_hr_repository.dart';
 import 'mock/mock_library_repository.dart';
@@ -26,6 +47,7 @@ import 'mock/mock_management_repository.dart';
 import 'mock/mock_sis_repository.dart';
 import 'mock/mock_control_center_repository.dart';
 import 'mock/mock_transport_repository.dart';
+import 'mock/mock_onboarding_repository.dart';
 import 'mock/mock_parent_repository.dart';
 import 'mock/mock_teacher_repository.dart';
 import 'mock/mock_student_repository.dart';
@@ -33,7 +55,9 @@ import 'repository_config.dart';
 
 final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
   if (isModuleApiEnabled(ref, financeApiEnabledProvider)) {
-    return ref.read(apiFinanceRepositoryProvider);
+    return HybridFinanceRepository(
+      api: ref.read(apiFinanceRepositoryProvider),
+    );
   }
   return MockFinanceRepository();
 });
@@ -47,9 +71,20 @@ final admissionsRepositoryProvider = Provider<AdmissionsRepository>((ref) {
 
 final sisRepositoryProvider = Provider<SisRepository>((ref) {
   if (isModuleApiEnabled(ref, sisApiEnabledProvider)) {
-    return ref.read(apiSisRepositoryProvider);
+    return HybridSisRepository(
+      api: ref.read(apiSisRepositoryProvider),
+    );
   }
   return MockSisRepository();
+});
+
+final academicRepositoryProvider = Provider<AcademicRepository>((ref) {
+  if (isModuleApiEnabled(ref, academicApiEnabledProvider)) {
+    return HybridAcademicRepository(
+      api: ref.read(apiAcademicRepositoryProvider),
+    );
+  }
+  return MockAcademicRepository();
 });
 
 final managementRepositoryProvider = Provider<ManagementRepository>((ref) {
@@ -85,6 +120,42 @@ final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
     return ref.read(apiInventoryRepositoryProvider);
   }
   return MockInventoryRepository();
+});
+
+final inventoryFinanceRepositoryProvider = Provider<InventoryFinanceRepository>((ref) {
+  if (isModuleApiEnabled(ref, inventoryFinanceApiEnabledProvider)) {
+    return HybridInventoryFinanceRepository(
+      api: ref.read(apiInventoryFinanceRepositoryProvider),
+    );
+  }
+  return MockInventoryFinanceRepository();
+});
+
+final copilotRepositoryProvider = Provider<CopilotRepository>((ref) {
+  if (isModuleApiEnabled(ref, aiCopilotApiEnabledProvider)) {
+    return HybridCopilotRepository(
+      api: ref.read(apiCopilotRepositoryProvider),
+    );
+  }
+  return MockCopilotRepository();
+});
+
+final timetableRepositoryProvider = Provider<TimetableRepository>((ref) {
+  if (isModuleApiEnabled(ref, academicTimetableApiEnabledProvider)) {
+    return HybridTimetableRepository(
+      api: ref.read(apiTimetableRepositoryProvider),
+    );
+  }
+  return MockTimetableRepository();
+});
+
+final analyticsIntelligenceRepositoryProvider = Provider<AnalyticsIntelligenceRepository>((ref) {
+  if (isModuleApiEnabled(ref, analyticsIntelligenceApiEnabledProvider)) {
+    return HybridAnalyticsIntelligenceRepository(
+      api: ref.read(apiAnalyticsIntelligenceRepositoryProvider),
+    );
+  }
+  return MockAnalyticsIntelligenceRepository();
 });
 
 final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
@@ -127,4 +198,22 @@ final studentRepositoryProvider = Provider<StudentRepository>((ref) {
     return ref.read(apiStudentRepositoryProvider);
   }
   return MockStudentRepository();
+});
+
+final communicationRepositoryProvider = Provider<CommunicationRepository>((ref) {
+  if (isModuleApiEnabled(ref, communicationApiEnabledProvider)) {
+    return HybridCommunicationRepository(
+      api: ref.read(apiCommunicationRepositoryProvider),
+      mock: MockCommunicationRepository(),
+      useApi: true,
+    );
+  }
+  return MockCommunicationRepository();
+});
+
+final onboardingRepositoryProvider = Provider<OnboardingRepository>((ref) {
+  if (isModuleApiEnabled(ref, onboardingApiEnabledProvider)) {
+    return ref.read(apiOnboardingRepositoryProvider);
+  }
+  return MockOnboardingRepository();
 });

@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { emitMutationAudit, sisAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   AdmissionsEnrollmentNotFoundError,
   convertAdmissionsEnrollment,
@@ -114,8 +115,8 @@ export async function handleAdmissionsConversion(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const result = await runTenant(config, auth.claims, (db) =>
-      convertAdmissionsEnrollment(db, orgId, schoolId, {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const converted = await convertAdmissionsEnrollment(db, orgId, schoolId, {
         enrollmentId,
         academicYear,
         academicYearId: optionalNullableStr(body, "academicYearId", "academic_year_id"),
@@ -125,8 +126,17 @@ export async function handleAdmissionsConversion(
         sectionId: optionalNullableStr(body, "sectionId", "section_id"),
         rollNumber,
         convertedBy: auth.claims.sub,
-      })
-    );
+      });
+      if (!converted.idempotent) {
+        await emitMutationAudit(
+          db,
+          auth.claims,
+          sisAudit.admissionsConverted(converted.studentId, enrollmentId),
+          req,
+        );
+      }
+      return converted;
+    });
     const status = result.idempotent ? 200 : 201;
     return jsonResponse(envelope(admissionsConversionToApi(result)), { status });
   } catch (error) {

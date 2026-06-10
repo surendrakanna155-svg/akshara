@@ -9,6 +9,7 @@ import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../../core/repositories/academic/academic_catalog_provider.dart';
 import '../registry/sis_registry_provider.dart';
 import '../sis_async_state.dart';
 import '../sis_mutations_provider.dart';
@@ -46,7 +47,7 @@ class _SisAcademicAssignmentScreenState
     final students = ref.watch(sisStudentsProvider);
     final selected = ref.watch(sisSelectedAssignmentStudentProvider);
     final classes = ref.watch(sisClassOptionsProvider);
-    final sections = ref.watch(sisSectionOptionsProvider);
+    final sections = ref.watch(sectionOptionsForClassProvider(_classLabel));
     final years = ref.watch(sisAcademicYearOptionsProvider);
     final isMobile = AdminLayout.isMobile(context);
 
@@ -75,7 +76,7 @@ class _SisAcademicAssignmentScreenState
             emptyIcon: Icons.class_outlined,
             onRetry: () {
               retrySisFuture(ref, sisStudentsFutureProvider);
-              retrySisFuture(ref, sisAcademicAssignmentFutureProvider);
+              retryAcademicCatalog(ref);
             },
             builder: (_) {
               if (selected != null) {
@@ -103,7 +104,15 @@ class _SisAcademicAssignmentScreenState
                         classLabel: _classLabel,
                         section: _section,
                         academicYear: _academicYear,
-                        onClassChanged: (v) => setState(() => _classLabel = v),
+                        onClassChanged: (v) => setState(() {
+                          _classLabel = v;
+                          final filtered =
+                              ref.read(sectionOptionsForClassProvider(v));
+                          if (filtered.isNotEmpty &&
+                              !filtered.contains(_section)) {
+                            _section = filtered.first;
+                          }
+                        }),
                         onSectionChanged: (v) => setState(() => _section = v),
                         onYearChanged: (v) => setState(() => _academicYear = v),
                         onSaveAssignment: () => _saveAssignment(selected),
@@ -151,8 +160,15 @@ class _SisAcademicAssignmentScreenState
                             classLabel: _classLabel,
                             section: _section,
                             academicYear: _academicYear,
-                            onClassChanged: (v) =>
-                                setState(() => _classLabel = v),
+                            onClassChanged: (v) => setState(() {
+                              _classLabel = v;
+                              final filtered =
+                                  ref.read(sectionOptionsForClassProvider(v));
+                              if (filtered.isNotEmpty &&
+                                  !filtered.contains(_section)) {
+                                _section = filtered.first;
+                              }
+                            }),
                             onSectionChanged: (v) =>
                                 setState(() => _section = v),
                             onYearChanged: (v) =>

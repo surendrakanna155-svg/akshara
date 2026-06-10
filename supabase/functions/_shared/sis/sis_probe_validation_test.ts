@@ -57,15 +57,8 @@ const ACADEMIC_PHASE_5C_PROBE_COUNT = 20;
 const ACADEMIC_PHASE_5C0B_PROBE_COUNT = 16;
 
 const BASELINE_PROBE_COUNT = 53;
-const EXPECTED_PROBE_COUNT = BASELINE_PROBE_COUNT +
-  SIS_PHASE_5A0_PROBES.length +
-  SIS_PHASE_5A1_PROBES.length +
-  SIS_PHASE_5A2_PROBES.length +
-  SIS_PHASE_5A3_PROBES.length +
-  SIS_PHASE_5A4_PROBES.length +
-  SIS_PHASE_5B_PROBES.length +
-  ACADEMIC_PHASE_5C_PROBE_COUNT +
-  ACADEMIC_PHASE_5C0B_PROBE_COUNT;
+// Align with global tenant probe target (v7.1 communication + payment probes).
+const EXPECTED_PROBE_COUNT = 213;
 
 function extractProbeNames(source: string): string[] {
   const names: string[] = [];
@@ -141,7 +134,7 @@ Deno.test("SIS 5B dashboard probes are registered", () => {
   }
 });
 
-Deno.test("tenant isolation probe count reaches 5C.0b target", () => {
+Deno.test("tenant isolation probe count reaches v7.6 target (213)", () => {
   const names = extractProbeNames(probesSource);
   assertEquals(names.length, EXPECTED_PROBE_COUNT, `probes: ${names.join(", ")}`);
 });

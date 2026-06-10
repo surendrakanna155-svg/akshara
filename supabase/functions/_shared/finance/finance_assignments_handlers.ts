@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   DuplicateAssignmentError,
   DuplicateStudentAccountError,
@@ -175,9 +176,10 @@ export async function handleCreateFeeAssignment(
 
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
+      let assignmentResult;
       if (handoffId) {
         const feeStructureId = optionalStr(body, "fee_structure_id", "feeStructureId") ?? null;
-        return await assignFromHandoff(
+        assignmentResult = await assignFromHandoff(
           db,
           orgId,
           schoolId,
@@ -185,21 +187,28 @@ export async function handleCreateFeeAssignment(
           feeStructureId,
           auth.claims.sub,
         );
-      }
+      } else {
+        const studentId = optionalStr(body, "student_id", "studentId");
+        const feeStructureId = optionalStr(body, "fee_structure_id", "feeStructureId");
+        const academicYear = optionalStr(body, "academic_year", "academicYear");
+        if (!studentId || !feeStructureId || !academicYear) {
+          throw new Error("VALIDATION:student_id, fee_structure_id, and academic_year are required");
+        }
 
-      const studentId = optionalStr(body, "student_id", "studentId");
-      const feeStructureId = optionalStr(body, "fee_structure_id", "feeStructureId");
-      const academicYear = optionalStr(body, "academic_year", "academicYear");
-      if (!studentId || !feeStructureId || !academicYear) {
-        throw new Error("VALIDATION:student_id, fee_structure_id, and academic_year are required");
+        assignmentResult = await assignFeeStructure(db, orgId, schoolId, {
+          studentId,
+          feeStructureId,
+          academicYear,
+          assignedBy: auth.claims.sub,
+        });
       }
-
-      return await assignFeeStructure(db, orgId, schoolId, {
-        studentId,
-        feeStructureId,
-        academicYear,
-        assignedBy: auth.claims.sub,
-      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        financeAudit.feeAssignmentCreated(assignmentResult.assignment.id),
+        req,
+      );
+      return assignmentResult;
     });
 
     return jsonResponse(
@@ -246,9 +255,11 @@ export async function handleAssignFeePlan(
   const feeStructureId = optionalStr(body, "fee_structure_id", "feeStructureId") ?? null;
 
   try {
-    const result = await runTenant(config, auth.claims, (db) =>
-      assignFromHandoff(db, orgId, schoolId, handoffId, feeStructureId, auth.claims.sub)
-    );
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const assigned = await assignFromHandoff(db, orgId, schoolId, handoffId, feeStructureId, auth.claims.sub);
+      await emitMutationAudit(db, auth.claims, financeAudit.feeAssignmentCreated(assigned.assignment.id), req);
+      return assigned;
+    });
     return jsonResponse(envelope(studentAccountToApi(result)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -276,9 +287,12 @@ export async function handleCancelFeeAssignment(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const result = await runTenant(config, auth.claims, (db) =>
-      cancelAssignment(db, orgId, schoolId, assignmentId)
-    );
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const cancelled = await cancelAssignment(db, orgId, schoolId, assignmentId);
+      if (!cancelled) return null;
+      await emitMutationAudit(db, auth.claims, financeAudit.feeAssignmentCancelled(assignmentId), req);
+      return cancelled;
+    });
     if (!result) {
       return errorEnvelope("NOT_FOUND", `Assignment not found: ${assignmentId}`, 404);
     }
