@@ -1,9 +1,9 @@
 # Akshara ERP — Backend Roadmap
 
 **Document ID:** `AKS-BE-ROADMAP-v1.2`  
-**Status:** Sprint 3 implementation in progress  
+**Status:** Sprints 1–6 complete · v7.7 hardened · v1.0-rc1 validated  
 **Prerequisite:** v5.6 Backend Architecture Foundation  
-**Last updated:** June 2026 (Sprint 6 complete)
+**Last updated:** June 2026 (v1.0 Release Candidate)
 
 ---
 
@@ -196,6 +196,7 @@ Sprint 6 (v6.4)  Validation + pilot backend
 | v7.5 | Smart Timetable + Workload Engine | ✅ Complete |
 | v7.6 | Analytics & Intelligence (risk + school health) | ✅ Complete |
 | v7.7 | Production SaaS Launch Hardening | ✅ Complete |
+| **v1.0-rc1** | Release Candidate (pilot validation + ops docs) | ✅ Validated on staging |
 | v7.8 | Live integrations sign-off + pen test | Pilot cutover |
 | v7.8 | Document & Report Engine | R2 + PDF service |
 | v7.9 | School Memories + Akshara Growth | Media service |

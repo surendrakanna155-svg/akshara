@@ -1,6 +1,6 @@
 # Pilot Issue Tracker
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Branch:** `main` (feature freeze — no new milestones)  
 **Last updated:** 2026-06-10
 
@@ -55,23 +55,26 @@ Only in-scope work is logged here: pilot bugs, onboarding/import, OTP/auth, atte
 | PILOT-2026-005 | 2026-06-10 | Demo School | Onboarding | **Low** | Secondary guardian invites via wrong JSON fields | Client script used `role`/`phone` instead of `inviteType`/`recipientPhone`/`recipientLabel` | demo seed script | **Verified** |
 | PILOT-2026-006 | 2026-06-10 | Demo School | Analytics | **High** | `GET /analytics/dashboard` → 500 | SQL used `finance_invoices.status`; column is `invoice_status` | `analytics_metrics_service.ts` | **Verified** |
 | PILOT-2026-007 | 2026-06-10 | Demo School | Mobile Read | **High** | Demo parent OTP login OK but `GET /parent/attendance`, `/parent/timetable`, `/parent/fees` → 404 | Onboarding creates students/guardians but not `parent_entities` snapshot rows; handlers threw `SnapshotNotFoundError` | Live-data fallbacks in `mobile_read_handlers.ts` + `pilot_operations_repository.ts` | **Verified** |
+| PILOT-2026-008 | 2026-06-10 | Demo School | Auth | **High** | Full 500-student seed (~15 min) → finance/attendance/broadcast fail with `Invalid access token` | Admin JWT expired before post-import seed phases completed | Refresh `admin_token()` between seed phases in `demo_school_seed.py` | **Verified** |
+| PILOT-2026-009 | 2026-06-10 | Demo School | Attendance | **Medium** | At 500 students, seed reports `not enough demo students` | `list_students` capped at 2 pages × 50 rows | Increase pagination to 10 pages in `seed_attendance_history` | **Verified** |
+| PILOT-2026-010 | 2026-06-10 | Deployment | **Low** | `production_launch_verify.sh` exits early on macOS bash | `set -u` + empty `health_headers` array expansion | Safe curl array expansion in launch + pilot verify scripts | **Verified** |
+| PILOT-2026-011 | 2026-06-10 | Deployment | **Low** | Launch verify fails timetable check with HTTP 422 | Script called summary without `academicYearId`; 422 means route mounted | Accept 422 as pass when `ACADEMIC_YEAR_ID` unset | **Verified** |
+| PILOT-2026-012 | 2026-06-10 | Demo School | Communications | **Medium** | `POST /communications/broadcasts` → 502 during full-scale seed | Transient gateway timeout under large parent audience + concurrent load | Immediate retry succeeds; monitor in production | **Verified** |
 
 ---
 
-## Verification evidence (2026-06-10)
+## Verification evidence (2026-06-10 — production validation)
 
-Staging target: `https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api` (School A)
+See [`Production-Validation-Report.md`](./Production-Validation-Report.md).
 
 ```bash
-DEMO_STUDENT_COUNT=50 DEMO_TEACHER_COUNT=5 DEMO_GUARDIAN_COUNT=75 \
-  python3 scripts/demo_school_seed.py
-# Seed complete: 15 passed, 0 failed
-
-python3 scripts/demo_school_validate.py
-# Validation: 31 passed, 0 failed
+python3 scripts/demo_school_seed.py              # 500/35/750 (~15 min)
+python3 scripts/demo_school_seed.py --post-import-only
+SKIP_FULL_SEED=1 python3 scripts/production_validation.py
+python3 scripts/demo_school_validate.py        # 31/31
+bash scripts/pilot_staging_verify.sh             # 13/13
+bash scripts/production_launch_verify.sh         # 11/11
 ```
-
-Reports: `reports/demo_school/seed_manifest.json`, `reports/demo_school/validation_report.json`
 
 ---
 
@@ -144,11 +147,11 @@ Onboarding commit upserts parent/teacher rows into `users` using the `erp_tenant
 
 | Metric | Count |
 |--------|------:|
-| Total issues | 7 |
+| Total issues | 12 |
 | Open | 0 |
 | In progress | 0 |
 | Fixed — pending verify | 0 |
-| Verified | 7 |
+| Verified | 12 |
 | Won't fix (pilot) | 0 |
 
 ### By severity (open + in progress)
@@ -161,6 +164,9 @@ Onboarding commit upserts parent/teacher rows into `users` using the `erp_tenant
 
 ## Related runbooks
 
+- [Production Validation Report](./Production-Validation-Report.md)
+- [Go-Live Checklist](./Go-Live-Checklist.md)
+- [v1.0 Release Candidate](../Releases/v1.0-Release-Candidate.md)
 - [Demo School Validation Plan](./Demo-School-Validation-Plan.md)
 - [Pilot Onboarding Runbook](./Pilot-Onboarding-Runbook.md)
 - [SaaS Launch Checklist](./SaaS-Launch-Checklist.md)

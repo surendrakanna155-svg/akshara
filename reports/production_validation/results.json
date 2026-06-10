@@ -1,0 +1,223 @@
+{
+  "title": "Akshara ERP Production Validation",
+  "startedAt": "2026-06-10T18:38:06.443721+00:00",
+  "apiBaseUrl": "https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api",
+  "organizationId": "a1000000-0000-4000-8000-000000000001",
+  "demoSchoolA": "a2000000-0000-4000-8000-000000000001",
+  "demoSchoolB": "a2000000-0000-4000-8000-000000000002",
+  "phases": {
+    "fullSeed": {
+      "skipped": true,
+      "reason": "SKIP_FULL_SEED set"
+    },
+    "demoValidate": {
+      "label": "demo_school_validate.py",
+      "command": "/opt/homebrew/opt/python@3.14/bin/python3.14 scripts/demo_school_validate.py",
+      "exitCode": 0,
+      "durationSeconds": 71.3,
+      "stdoutTail": "Validation: 31 passed, 0 failed\n",
+      "stderrTail": "",
+      "ok": true
+    },
+    "pilotStagingVerify": {
+      "label": "pilot_staging_verify.sh",
+      "command": "bash scripts/pilot_staging_verify.sh",
+      "exitCode": 0,
+      "durationSeconds": 30.9,
+      "stdoutTail": "[pilot-verify] === Pilot Staging Validation ===\n[pilot-verify] PASS: health/ready (200)\n[pilot-verify] PASS: tenant-access 213/213 probes pass\n[pilot-verify] PASS: admissions dashboard (200)\n[pilot-verify] PASS: finance dashboard (200)\n[pilot-verify] PASS: sis dashboard (200)\n[pilot-verify] PASS: transport dashboard (200)\n[pilot-verify] PASS: management dashboard (200)\n[pilot-verify] PASS: parent dashboard (200)\n[pilot-verify] PASS: student dashboard (200)\n[pilot-verify] PASS: teacher dashboard (200)\n[pilot-verify] PASS: parent denied admissions (403)\n[pilot-verify] PASS: audit batch upload accepted\n[pilot-verify] PASS: audit idempotent replay\n[pilot-verify] === Summary: 13 passed, 0 failed ===\n",
+      "stderrTail": "",
+      "ok": true
+    },
+    "productionLaunchVerify": {
+      "label": "production_launch_verify.sh",
+      "command": "bash scripts/production_launch_verify.sh",
+      "exitCode": 0,
+      "durationSeconds": 36.8,
+      "stdoutTail": "[launch-verify] === Akshara ERP Production Launch Verification (v7.7) ===\n[launch-verify] API base: https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api\n[launch-verify] PASS: health/ready (200)\n[launch-verify] WARN: INTERNAL_HEALTH_TOKEN not set \u2014 skipping public lockdown check\n[launch-verify] PASS: tenant-access 213/213 probes pass\n[launch-verify] PASS: health/operations snapshot ok\n[launch-verify] PASS: admissions dashboard (200)\n[launch-verify] PASS: finance dashboard (200)\n[launch-verify] PASS: sis dashboard (200)\n[launch-verify] PASS: copilot assistants (v7.4) (200)\n[launch-verify] PASS: timetable route mounted (v7.5) (422)\n[launch-verify] PASS: analytics dashboard (v7.6) (200)\n[launch-verify] PASS: analytics health (v7.6) (200)\n[launch-verify] PASS: audit batch upload accepted\n[launch-verify] === Summary: 11 passed, 0 failed, 1 warnings ===\n",
+      "stderrTail": "",
+      "ok": true
+    }
+  },
+  "academicYear": {
+    "id": "c897c6bd-6002-4309-b1ea-6e41d8c96bf5",
+    "label": "2026-27"
+  },
+  "dataset": {
+    "demoStudentsListed": 500,
+    "totalStudentsListed": 529,
+    "studentImportCommittedRows": 500,
+    "teacherImportCommittedRows": 55,
+    "financeInvoiceTotalHint": 1,
+    "targets": {
+      "students": 500,
+      "teachers": 35,
+      "guardians": 750
+    }
+  },
+  "multiSchool": {
+    "schoolA": "a2000000-0000-4000-8000-000000000001",
+    "schoolB": "a2000000-0000-4000-8000-000000000002",
+    "checks": [
+      {
+        "name": "tenant isolation probes",
+        "ok": true,
+        "detail": "pass=True count=213",
+        "latencyMs": 11153.9
+      },
+      {
+        "name": "School A admin cannot read School B student",
+        "ok": true,
+        "detail": "http=404",
+        "latencyMs": 1032.9
+      },
+      {
+        "name": "School A admin cannot read School B lead",
+        "ok": true,
+        "detail": "http=404",
+        "latencyMs": 1068.1
+      },
+      {
+        "name": "analytics scoped to School A demo dataset",
+        "ok": true,
+        "detail": "demoStudents=500 analyticsKeys=['studentRiskScore', 'attendanceRiskScore', 'academicPerformanceRisk', 'feeCollectionRisk', 'admissionConversionRate', 'teacherWorkloadIndex']"
+      },
+      {
+        "name": "copilot assistants (School A scope)",
+        "ok": true,
+        "detail": "assistants=5"
+      },
+      {
+        "name": "copilot session readable in same school scope",
+        "ok": true,
+        "detail": "http=200"
+      },
+      {
+        "name": "School A parent notifications accessible",
+        "ok": true,
+        "detail": "http=200"
+      },
+      {
+        "name": "School A parent cannot read School B student",
+        "ok": true,
+        "detail": "http=403"
+      },
+      {
+        "name": "School A broadcast accepted",
+        "ok": true,
+        "detail": "http=201"
+      },
+      {
+        "name": "Demo School B admin provisioning",
+        "ok": true,
+        "detail": "expected MEMBERSHIP_NOT_FOUND \u2014 School B uses probe tenant; full demo seed requires separate admin"
+      }
+    ],
+    "passed": 10,
+    "failed": 0,
+    "capturedAt": "2026-06-10T18:40:02.220603+00:00"
+  },
+  "performance": {
+    "benchmarks": [
+      {
+        "name": "finance dashboard",
+        "method": "GET",
+        "path": "/finance/dashboard",
+        "latencyMs": 1354.9,
+        "httpCode": 200,
+        "ok": true,
+        "error": null
+      },
+      {
+        "name": "sis dashboard",
+        "method": "GET",
+        "path": "/sis/dashboard",
+        "latencyMs": 1497.6,
+        "httpCode": 200,
+        "ok": true,
+        "error": null
+      },
+      {
+        "name": "admissions dashboard",
+        "method": "GET",
+        "path": "/admissions/dashboard",
+        "latencyMs": 1370.5,
+        "httpCode": 200,
+        "ok": true,
+        "error": null
+      },
+      {
+        "name": "analytics dashboard",
+        "method": "GET",
+        "path": "/analytics/dashboard",
+        "latencyMs": 1967.3,
+        "httpCode": 200,
+        "ok": true,
+        "error": null
+      },
+      {
+        "name": "analytics health",
+        "method": "GET",
+        "path": "/analytics/health",
+        "latencyMs": 1966.4,
+        "httpCode": 200,
+        "ok": true,
+        "error": null
+      },
+      {
+        "name": "copilot assistants",
+        "method": "GET",
+        "path": "/copilot/assistants",
+        "latencyMs": 320.8,
+        "httpCode": 200,
+        "ok": true,
+        "error": null
+      },
+      {
+        "name": "timetable summary",
+        "method": "GET",
+        "path": "/academic/timetables/summary?academicYearId=c897c6bd-6002-4309-b1ea-6e41d8c96bf5",
+        "latencyMs": 1743.7,
+        "httpCode": 200,
+        "ok": true,
+        "error": null
+      },
+      {
+        "name": "finance inventory reconciliation",
+        "method": "GET",
+        "path": "/finance/inventory-reconciliation/dashboard",
+        "latencyMs": 1045.1,
+        "httpCode": 200,
+        "ok": true,
+        "error": null
+      },
+      {
+        "name": "broadcast send",
+        "method": "POST",
+        "path": "/communications/broadcasts",
+        "latencyMs": 12868.4,
+        "httpCode": 201,
+        "ok": true
+      },
+      {
+        "name": "copilot session create",
+        "method": "POST",
+        "path": "/copilot/sessions",
+        "latencyMs": 1213.6,
+        "httpCode": 201,
+        "ok": true
+      },
+      {
+        "name": "copilot message query",
+        "method": "POST",
+        "path": "/copilot/sessions/28b44ec7-9ca5-4fad-8ea7-506a46638f9e/messages",
+        "latencyMs": 1879.5,
+        "httpCode": 200,
+        "ok": true
+      }
+    ],
+    "capturedAt": "2026-06-10T18:40:29.448794+00:00"
+  },
+  "finishedAt": "2026-06-10T18:42:48.419830+00:00",
+  "overallPass": true,
+  "failures": []
+}

@@ -69,7 +69,7 @@ else
   warn "INTERNAL_HEALTH_TOKEN not set — skipping public lockdown check"
 fi
 
-HEALTH=$(curl -sS "${BASE}/health/tenant-access" "${health_headers[@]}")
+HEALTH=$(curl -sS "${BASE}/health/tenant-access" ${health_headers[@]+"${health_headers[@]}"})
 PROBE_PASS=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['isolation']['pass'])")
 PROBE_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['data']['isolation']['tests']))")
 if [ "$PROBE_PASS" = "True" ] && [ "$PROBE_COUNT" -eq "$EXPECTED_PROBES" ]; then
@@ -78,7 +78,7 @@ else
   fail "tenant-access count=${PROBE_COUNT} expected=${EXPECTED_PROBES} pass=${PROBE_PASS}"
 fi
 
-OPS=$(curl -sS "${BASE}/health/operations" "${health_headers[@]}")
+OPS=$(curl -sS "${BASE}/health/operations" ${health_headers[@]+"${health_headers[@]}"})
 OPS_STATUS=$(echo "$OPS" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'].get('status',''))" 2>/dev/null || echo "")
 [ "$OPS_STATUS" = "ok" ] && pass "health/operations snapshot ok" || fail "health/operations status=${OPS_STATUS}"
 
@@ -96,7 +96,7 @@ if [ -n "$YEAR_ID" ]; then
   check_get "timetable summary (v7.5)" "$ADMIN_TOKEN" "/academic/timetables/summary?academicYearId=${YEAR_ID}"
 else
   TT_CODE=$(http_code -H "$(auth_header "$ADMIN_TOKEN")" "${BASE}/academic/timetables/summary")
-  if [ "$TT_CODE" = "200" ] || [ "$TT_CODE" = "400" ]; then
+  if [ "$TT_CODE" = "200" ] || [ "$TT_CODE" = "400" ] || [ "$TT_CODE" = "422" ]; then
     pass "timetable route mounted (v7.5) ($TT_CODE)"
   else
     fail "timetable route (v7.5) ($TT_CODE)"

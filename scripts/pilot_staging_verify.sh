@@ -49,7 +49,7 @@ health_headers=()
 if [ -n "$INTERNAL_TOKEN" ]; then
   health_headers=(-H "x-internal-health-token: ${INTERNAL_TOKEN}")
 fi
-HEALTH=$(curl -sS "${BASE}/health/tenant-access" "${health_headers[@]}")
+HEALTH=$(curl -sS "${BASE}/health/tenant-access" ${health_headers[@]+"${health_headers[@]}"})
 PROBE_PASS=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['isolation']['pass'])")
 PROBE_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['data']['isolation']['tests']))")
 if [ "$PROBE_PASS" = "True" ] && [ "$PROBE_COUNT" -eq "$EXPECTED_PROBES" ]; then

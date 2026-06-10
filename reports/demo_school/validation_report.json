@@ -44,19 +44,19 @@
     {
       "name": "student import committed",
       "ok": true,
-      "detail": "jobs=8",
+      "detail": "jobs=18",
       "data": {}
     },
     {
       "name": "teacher import committed",
       "ok": true,
-      "detail": "jobs=8",
+      "detail": "jobs=9",
       "data": {}
     },
     {
       "name": "demo student count",
       "ok": true,
-      "detail": "found=50 target=500",
+      "detail": "found=500 target=500",
       "data": {}
     },
     {
@@ -220,7 +220,7 @@
     {
       "name": "AI Copilot session create",
       "ok": true,
-      "detail": "84879f0c-3d26-426c-9b8d-93f69e2c33e0",
+      "detail": "b60b8714-f821-46c1-a7dc-a558490f94ee",
       "data": {}
     },
     {

@@ -274,8 +274,8 @@ def seed_finance(token: str, year_id: str, year_label: str, report: RunReport) -
 
     students = [
         s
-        for s in list_students(token, page_size=100, pages=20)
-        if str(s.get("admissionNumber", "")).startswith("DEMO-2026")
+        for s in list_students(token, page_size=100, pages=10)
+        if str(s.get("admissionNumber", "")).startswith(ADMISSION_PREFIX)
     ][:FINANCE_SAMPLE_SIZE]
 
     invoice_ids: list[str] = []
@@ -371,8 +371,8 @@ def seed_finance(token: str, year_id: str, year_label: str, report: RunReport) -
 def seed_attendance_history(token: str, report: RunReport) -> None:
     students = [
         s
-        for s in list_students(token, page_size=50, pages=2)
-        if str(s.get("admissionNumber", "")).startswith("DEMO-2026")
+        for s in list_students(token, page_size=100, pages=10)
+        if str(s.get("admissionNumber", "")).startswith(ADMISSION_PREFIX)
     ]
     if len(students) < 3:
         report.add("attendance history", False, "not enough demo students")
@@ -423,6 +423,16 @@ def seed_communications(token: str, report: RunReport) -> None:
 
 
 def main() -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Seed Demo School pilot data")
+    parser.add_argument(
+        "--post-import-only",
+        action="store_true",
+        help="Skip imports; refresh token and run timetable/finance/attendance/comms only",
+    )
+    args = parser.parse_args()
+
     report = RunReport(title="Demo School Seed")
     print(f"Seeding Demo School: students={STUDENT_COUNT} teachers={TEACHER_COUNT} guardians={GUARDIAN_COUNT}")
     try:
@@ -436,13 +446,23 @@ def main() -> int:
     report.add("admin login", True, ADMIN_PHONE)
     year_id, year_label = resolve_academic_year(token)
     report.add("academic year", True, f"{year_label} ({year_id})")
-    ensure_academic_catalog(token, year_id, report)
-    seed_teachers(token, report)
-    seed_students(token, report)
-    seed_secondary_guardian_invites(token, report)
+
+    if not args.post_import_only:
+        ensure_academic_catalog(token, year_id, report)
+        seed_teachers(token, report)
+        seed_students(token, report)
+        seed_secondary_guardian_invites(token, report)
+
+    token = admin_token()
     seed_timetables(token, year_id, report)
+
+    token = admin_token()
     finance_manifest = seed_finance(token, year_id, year_label, report)
+
+    token = admin_token()
     seed_attendance_history(token, report)
+
+    token = admin_token()
     seed_communications(token, report)
 
     manifest = report.to_dict()

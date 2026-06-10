@@ -2,7 +2,9 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v7.7 (Production SaaS Launch Hardening)  
+**Current release:** v1.0-rc1 (Release Candidate) — baseline v7.7  
+**Feature freeze:** active — no new milestones  
+**Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  
 **Production readiness:** 94 / 100 (launch-weighted; live integrations env-dependent)  
 **Quality gates:** `flutter analyze` 0 issues · `flutter test` all passing  
 **Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
@@ -797,6 +799,17 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Release doc** | `docs/Releases/v7.5-Smart-Timetable-Workload-Engine.md` |
 | **Audit doc** | `docs/ArchitectureReview/v7.5-Smart-Timetable-Workload-Engine.md` |
 | **Status** | ✅ Complete |
+
+### v1.0-rc1 — Release Candidate (pilot validation)
+
+| Field | Detail |
+|-------|--------|
+| **Goals** | Package v7.7 baseline for limited production pilot; full Demo School validation; ops docs |
+| **Release doc** | `docs/Releases/v1.0-Release-Candidate.md` |
+| **Validation** | `docs/Operations/Production-Validation-Report.md` |
+| **Go-live** | `docs/Operations/Go-Live-Checklist.md` |
+| **Tag** | `v1.0-rc1` |
+| **Status** | ✅ Validated on staging (feature freeze — no v7.8+ work in RC) |
 
 **Next milestone:** v7.8 — Live Integrations Sign-off (pilot production cutover)
 

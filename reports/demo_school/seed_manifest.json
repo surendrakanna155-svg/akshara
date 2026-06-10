@@ -1,7 +1,7 @@
 {
   "title": "Demo School Seed",
-  "passed": 15,
-  "failed": 0,
+  "passed": 10,
+  "failed": 1,
   "steps": [
     {
       "name": "admin login",
@@ -16,30 +16,6 @@
       "data": {}
     },
     {
-      "name": "teacher import",
-      "ok": true,
-      "detail": "committed=5 valid=5",
-      "data": {}
-    },
-    {
-      "name": "student import batch 1",
-      "ok": true,
-      "detail": "committed=0 invalid=0",
-      "data": {}
-    },
-    {
-      "name": "student import total",
-      "ok": true,
-      "detail": "existing=50 committed=0",
-      "data": {}
-    },
-    {
-      "name": "secondary guardian invites",
-      "ok": true,
-      "detail": "created=25 target=25",
-      "data": {}
-    },
-    {
       "name": "timetable generate",
       "ok": true,
       "detail": "generated=26 published=0",
@@ -48,13 +24,13 @@
     {
       "name": "fee structure",
       "ok": true,
-      "detail": "69132adb-3c07-4fa3-abc1-cdc3dea98e09",
+      "detail": "fd653018-cbaa-4e79-8f7d-25fa65941cf0",
       "data": {}
     },
     {
       "name": "fee assignments",
       "ok": true,
-      "detail": "assignments=0 invoices=50",
+      "detail": "assignments=50 invoices=50",
       "data": {}
     },
     {
@@ -72,7 +48,7 @@
     {
       "name": "refund flow",
       "ok": true,
-      "detail": "fe133160-d699-4728-998d-d3a6ef5819d4",
+      "detail": "6d65fa6a-0e53-43ec-83a2-49d4f4c5988a",
       "data": {}
     },
     {
@@ -83,14 +59,14 @@
     },
     {
       "name": "broadcast messaging",
-      "ok": true,
-      "detail": "sent",
+      "ok": false,
+      "detail": "{'raw': 'error code: 502'}",
       "data": {}
     },
     {
       "name": "notification delivery queue",
       "ok": true,
-      "detail": "{'processed': 1, 'sent': 1, 'failed': 0}",
+      "detail": "{'processed': 50, 'sent': 50, 'failed': 0}",
       "data": {}
     }
   ],
@@ -100,14 +76,14 @@
     "label": "2026-27"
   },
   "targets": {
-    "students": 50,
-    "teachers": 5,
-    "guardians": 75
+    "students": 500,
+    "teachers": 35,
+    "guardians": 750
   },
   "finance": {
-    "feeStructureId": "69132adb-3c07-4fa3-abc1-cdc3dea98e09",
-    "sampleCollectionId": "0df3c8c2-8add-4abe-8057-6d36b4ea604f",
-    "sampleRefundId": "fe133160-d699-4728-998d-d3a6ef5819d4"
+    "feeStructureId": "fd653018-cbaa-4e79-8f7d-25fa65941cf0",
+    "sampleCollectionId": "c0b27f20-1a34-4da7-88a0-18bf6f2c7265",
+    "sampleRefundId": "6d65fa6a-0e53-43ec-83a2-49d4f4c5988a"
   },
   "samplePhones": {
     "admin": "9876543210",
