@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { resolveAcademicPlacement } from "../academic/academic_catalog_resolver.ts";
 import { clearCurrentEnrollmentsForStudent } from "./sis_enrollments_repository.ts";
 import { StudentNotFoundError } from "./sis_students_repository.ts";
 
@@ -22,8 +23,11 @@ export interface AdmissionsEnrollmentSourceRow {
 export interface AdmissionsConversionInput {
   enrollmentId: string;
   academicYear: string;
+  academicYearId?: string | null;
   className: string;
+  classId?: string | null;
   sectionName?: string | null;
+  sectionId?: string | null;
   rollNumber?: string | null;
   convertedBy: string;
 }
@@ -201,12 +205,25 @@ async function ensureSisEnrollment(
   section_name: string | null;
   roll_number: string | null;
 }> {
+  const placement = await resolveAcademicPlacement(
+    { db, organizationId, schoolId },
+    {
+      academicYear: input.academicYear,
+      academicYearId: input.academicYearId,
+      className: input.className,
+      classId: input.classId,
+      sectionName: input.sectionName,
+      sectionId: input.sectionId,
+    },
+    { mode: "full" },
+  );
+
   const existing = await getSisEnrollmentByYear(
     db,
     organizationId,
     schoolId,
     studentId,
-    input.academicYear,
+    placement.academicYear,
   );
   if (existing) return existing;
 
@@ -219,18 +236,22 @@ async function ensureSisEnrollment(
     roll_number: string | null;
   }>(
     `INSERT INTO sis_student_enrollments (
-      organization_id, school_id, student_id, academic_year,
-      class_name, section_name, roll_number, is_current, created_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8)
+      organization_id, school_id, student_id, academic_year, academic_year_id,
+      class_name, class_id, section_name, section_id,
+      roll_number, is_current, created_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11)
     ON CONFLICT (student_id, academic_year) DO NOTHING
     RETURNING id, class_name, section_name, roll_number`,
     [
       organizationId,
       schoolId,
       studentId,
-      input.academicYear,
-      input.className,
-      input.sectionName ?? null,
+      placement.academicYear,
+      placement.academicYearId,
+      placement.className,
+      placement.classId,
+      placement.sectionName,
+      placement.sectionId,
       input.rollNumber ?? null,
       input.convertedBy,
     ],
@@ -242,7 +263,7 @@ async function ensureSisEnrollment(
     organizationId,
     schoolId,
     studentId,
-    input.academicYear,
+    placement.academicYear,
   );
   if (!enrollment) {
     throw new ValidationError(

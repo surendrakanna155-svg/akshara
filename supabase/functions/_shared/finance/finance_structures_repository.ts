@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { resolveAcademicPlacement } from "../academic/academic_catalog_resolver.ts";
 import type {
   FeeStructureItemInput,
   FinanceFeeStructureItemRow,
@@ -26,6 +27,7 @@ export interface FeeStructureWithItems {
 export interface CreateFeeStructureInput {
   name: string;
   academicYear: string;
+  academicYearId?: string | null;
   description: string | null;
   status: string;
   createdBy: string;
@@ -35,6 +37,7 @@ export interface CreateFeeStructureInput {
 export interface UpdateFeeStructureInput {
   name?: string;
   academicYear?: string;
+  academicYearId?: string | null;
   description?: string | null;
   status?: string;
   items?: FeeStructureItemInput[];
@@ -164,16 +167,27 @@ export async function createFeeStructure(
   schoolId: string,
   input: CreateFeeStructureInput,
 ): Promise<FeeStructureWithItems> {
+  const placement = await resolveAcademicPlacement(
+    { db, organizationId, schoolId },
+    {
+      academicYear: input.academicYear,
+      academicYearId: input.academicYearId,
+    },
+    { mode: "year_only" },
+  );
+
   const rows = await db.queryObject<FinanceFeeStructureRow>(
     `INSERT INTO finance_fee_structures (
-      organization_id, school_id, name, academic_year, description, status, created_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      organization_id, school_id, name, academic_year, academic_year_id,
+      description, status, created_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *`,
     [
       organizationId,
       schoolId,
       input.name,
-      input.academicYear,
+      placement.academicYear,
+      placement.academicYearId,
       input.description,
       input.status,
       input.createdBy,
@@ -205,7 +219,18 @@ export async function updateFeeStructure(
   if (!existing) return null;
 
   const name = input.name ?? existing.structure.name;
-  const academicYear = input.academicYear ?? existing.structure.academic_year;
+  const academicYearInput = input.academicYear ?? existing.structure.academic_year;
+  const academicYearIdInput = input.academicYearId !== undefined
+    ? input.academicYearId
+    : existing.structure.academic_year_id;
+  const placement = await resolveAcademicPlacement(
+    { db, organizationId, schoolId },
+    {
+      academicYear: academicYearInput,
+      academicYearId: academicYearIdInput,
+    },
+    { mode: "year_only" },
+  );
   const description = input.description !== undefined
     ? input.description
     : existing.structure.description;
@@ -215,12 +240,22 @@ export async function updateFeeStructure(
     `UPDATE finance_fee_structures SET
       name = $4,
       academic_year = $5,
-      description = $6,
-      status = $7,
+      academic_year_id = $6,
+      description = $7,
+      status = $8,
       updated_at = timezone('utc', now())
     WHERE id = $1 AND organization_id = $2 AND school_id = $3
     RETURNING *`,
-    [structureId, organizationId, schoolId, name, academicYear, description, status],
+    [
+      structureId,
+      organizationId,
+      schoolId,
+      name,
+      placement.academicYear,
+      placement.academicYearId,
+      description,
+      status,
+    ],
   );
   const structure = rows[0]!;
 

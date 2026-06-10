@@ -1,4 +1,9 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import {
+  normalizeAcademicYearLabel,
+  resolveAcademicPlacement,
+  type PlacementInput,
+} from "../academic/academic_catalog_resolver.ts";
 import type {
   PaginationParams,
   PaginationResult,
@@ -19,8 +24,11 @@ export interface EnrollmentListRow {
   student_code: string;
   student_name: string;
   academic_year: string;
+  academic_year_id: string | null;
   class_name: string;
+  class_id: string | null;
   section_name: string | null;
+  section_id: string | null;
   roll_number: string | null;
   is_current: boolean;
   created_at: string;
@@ -33,8 +41,11 @@ export interface EnrollmentRow {
   school_id: string;
   student_id: string;
   academic_year: string;
+  academic_year_id: string | null;
   class_name: string;
+  class_id: string | null;
   section_name: string | null;
+  section_id: string | null;
   roll_number: string | null;
   is_current: boolean;
   created_by: string | null;
@@ -45,8 +56,11 @@ export interface EnrollmentRow {
 export interface CreateEnrollmentInput {
   studentId: string;
   academicYear: string;
+  academicYearId?: string | null;
   className: string;
+  classId?: string | null;
   sectionName?: string | null;
+  sectionId?: string | null;
   rollNumber?: string | null;
   isCurrent?: boolean;
   createdBy: string;
@@ -54,8 +68,11 @@ export interface CreateEnrollmentInput {
 
 export interface UpdateEnrollmentInput {
   academicYear?: string;
+  academicYearId?: string | null;
   className?: string;
+  classId?: string | null;
   sectionName?: string | null;
+  sectionId?: string | null;
   rollNumber?: string | null;
   isCurrent?: boolean;
 }
@@ -100,8 +117,11 @@ function listFromSql(): string {
     s.student_code,
     s.display_name AS student_name,
     se.academic_year,
+    se.academic_year_id,
     se.class_name,
+    se.class_id,
     se.section_name,
+    se.section_id,
     se.roll_number,
     se.is_current,
     se.created_at,
@@ -133,6 +153,24 @@ function filterArgs(
     filters.studentId ?? null,
     filters.isCurrent ?? null,
   ];
+}
+
+function toPlacementInput(input: {
+  academicYear?: string;
+  academicYearId?: string | null;
+  className?: string;
+  classId?: string | null;
+  sectionName?: string | null;
+  sectionId?: string | null;
+}): PlacementInput {
+  return {
+    academicYear: input.academicYear,
+    academicYearId: input.academicYearId,
+    className: input.className,
+    classId: input.classId,
+    sectionName: input.sectionName,
+    sectionId: input.sectionId,
+  };
 }
 
 async function studentExists(
@@ -256,15 +294,22 @@ export async function createEnrollment(
   input: CreateEnrollmentInput,
 ): Promise<EnrollmentListRow> {
   const studentId = input.studentId.trim();
-  const academicYear = input.academicYear.trim();
-  const className = input.className.trim();
   if (!studentId) throw new ValidationError("studentId is required");
-  if (!academicYear) throw new ValidationError("academicYear is required");
-  if (!className) throw new ValidationError("className is required");
 
   if (!await studentExists(db, organizationId, schoolId, studentId)) {
     throw new StudentNotFoundError(studentId);
   }
+
+  const placement = await resolveAcademicPlacement(
+    { db, organizationId, schoolId },
+    toPlacementInput(input),
+    { mode: "full" },
+  );
+
+  const academicYear = placement.academicYear;
+  const className = placement.className;
+  if (!academicYear) throw new ValidationError("academicYear is required");
+  if (!className) throw new ValidationError("className is required");
 
   if (await enrollmentExistsForYear(db, organizationId, schoolId, studentId, academicYear)) {
     throw new DuplicateEnrollmentError(studentId, academicYear);
@@ -277,17 +322,21 @@ export async function createEnrollment(
 
   const insertRows = await db.queryObject<{ id: string }>(
     `INSERT INTO sis_student_enrollments (
-      organization_id, school_id, student_id, academic_year,
-      class_name, section_name, roll_number, is_current, created_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      organization_id, school_id, student_id, academic_year, academic_year_id,
+      class_name, class_id, section_name, section_id,
+      roll_number, is_current, created_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING id`,
     [
       organizationId,
       schoolId,
       studentId,
       academicYear,
+      placement.academicYearId,
       className,
-      input.sectionName ?? null,
+      placement.classId,
+      placement.sectionName,
+      placement.sectionId,
       input.rollNumber ?? null,
       isCurrent,
       input.createdBy,
@@ -310,11 +359,36 @@ export async function updateEnrollment(
   const existing = await getEnrollmentRow(db, organizationId, schoolId, enrollmentId);
   if (!existing) throw new EnrollmentNotFoundError(enrollmentId);
 
-  const academicYear = input.academicYear?.trim() ?? existing.academic_year;
-  const className = input.className?.trim() ?? existing.class_name;
-  const sectionName = input.sectionName !== undefined
-    ? input.sectionName
-    : existing.section_name;
+  const yearLabelProvided = input.academicYear !== undefined;
+  const classLabelProvided = input.className !== undefined;
+  const sectionLabelProvided = input.sectionName !== undefined;
+
+  const mergedInput: PlacementInput = {
+    academicYearId: input.academicYearId !== undefined
+      ? input.academicYearId
+      : (yearLabelProvided ? null : existing.academic_year_id),
+    academicYear: yearLabelProvided ? input.academicYear : existing.academic_year,
+    classId: input.classId !== undefined
+      ? input.classId
+      : (classLabelProvided || yearLabelProvided ? null : existing.class_id),
+    className: classLabelProvided ? input.className : existing.class_name,
+    sectionId: input.sectionId !== undefined
+      ? input.sectionId
+      : (sectionLabelProvided || classLabelProvided || yearLabelProvided
+        ? null
+        : existing.section_id),
+    sectionName: sectionLabelProvided ? input.sectionName : existing.section_name,
+  };
+
+  const placement = await resolveAcademicPlacement(
+    { db, organizationId, schoolId },
+    mergedInput,
+    { mode: "full" },
+  );
+
+  const academicYear = placement.academicYear;
+  const className = placement.className;
+  const sectionName = placement.sectionName;
   const rollNumber = input.rollNumber !== undefined
     ? input.rollNumber
     : existing.roll_number;
@@ -348,16 +422,22 @@ export async function updateEnrollment(
   await db.queryObject(
     `UPDATE sis_student_enrollments SET
       academic_year = $1,
-      class_name = $2,
-      section_name = $3,
-      roll_number = $4,
-      is_current = $5,
+      academic_year_id = $2,
+      class_name = $3,
+      class_id = $4,
+      section_name = $5,
+      section_id = $6,
+      roll_number = $7,
+      is_current = $8,
       updated_at = timezone('utc', now())
-     WHERE id = $6 AND organization_id = $7 AND school_id = $8`,
+     WHERE id = $9 AND organization_id = $10 AND school_id = $11`,
     [
       academicYear,
+      placement.academicYearId,
       className,
+      placement.classId,
       sectionName,
+      placement.sectionId,
       rollNumber,
       isCurrent,
       enrollmentId,
@@ -370,6 +450,9 @@ export async function updateEnrollment(
   if (!row) throw new EnrollmentNotFoundError(enrollmentId);
   return row;
 }
+
+/** Normalize year label for duplicate checks (matches Flutter). */
+export { normalizeAcademicYearLabel };
 
 /** Probe: non-school scopes denied enrollment API reads. */
 export const SIS_ENROLLMENTS_API_PROBE_SQL = `

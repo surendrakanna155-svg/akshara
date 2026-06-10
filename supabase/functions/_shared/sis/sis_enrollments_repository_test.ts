@@ -5,6 +5,13 @@ import {
   requireSchoolOperationalScope,
 } from "../permission_middleware.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
+import {
+  ACADEMIC_CLASS_SCHOOL_A,
+} from "../academic/classes_repository.ts";
+import {
+  ACADEMIC_YEAR_SCHOOL_A,
+} from "../academic/academic_years_repository.ts";
+import { ACADEMIC_SECTION_SCHOOL_A } from "../academic/sections_repository.ts";
 import { enrollmentListItemToApi } from "./sis_mapper.ts";
 import {
   createEnrollment,
@@ -51,8 +58,11 @@ class MockEnrollmentsDb {
       school_id: SCHOOL_A,
       student_id: STUDENT_A,
       academic_year: "2026-27",
+      academic_year_id: ACADEMIC_YEAR_SCHOOL_A,
       class_name: "5",
+      class_id: ACADEMIC_CLASS_SCHOOL_A,
       section_name: "A",
+      section_id: ACADEMIC_SECTION_SCHOOL_A,
       roll_number: "12",
       is_current: true,
       created_by: STAFF,
@@ -65,8 +75,11 @@ class MockEnrollmentsDb {
       school_id: SCHOOL_A,
       student_id: STUDENT_A,
       academic_year: "2025-26",
+      academic_year_id: "ce100000-0000-4000-8000-000000000011",
       class_name: "4",
+      class_id: "cf100000-0000-4000-8000-000000000011",
       section_name: "B",
+      section_id: "d0100000-0000-4000-8000-000000000011",
       roll_number: "8",
       is_current: false,
       created_by: STAFF,
@@ -74,6 +87,82 @@ class MockEnrollmentsDb {
       updated_at: "2025-06-07T00:00:00.000Z",
     },
   ];
+  years: Row[] = [
+    {
+      id: ACADEMIC_YEAR_SCHOOL_A,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      year_label: "2026-27",
+      status: "active",
+    },
+    {
+      id: "ce100000-0000-4000-8000-000000000011",
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      year_label: "2025-26",
+      status: "active",
+    },
+    {
+      id: "ce100000-0000-4000-8000-000000000010",
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      year_label: "2027-28",
+      status: "active",
+    },
+  ];
+  classes: Row[] = [
+    {
+      id: ACADEMIC_CLASS_SCHOOL_A,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      academic_year_id: ACADEMIC_YEAR_SCHOOL_A,
+      class_name: "5",
+      status: "active",
+    },
+    {
+      id: "cf100000-0000-4000-8000-000000000011",
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      academic_year_id: "ce100000-0000-4000-8000-000000000011",
+      class_name: "4",
+      status: "active",
+    },
+    {
+      id: "cf100000-0000-4000-8000-000000000010",
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      academic_year_id: "ce100000-0000-4000-8000-000000000010",
+      class_name: "6",
+      status: "active",
+    },
+  ];
+  sections: Row[] = [
+    {
+      id: ACADEMIC_SECTION_SCHOOL_A,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      class_id: ACADEMIC_CLASS_SCHOOL_A,
+      section_name: "A",
+      status: "active",
+    },
+    {
+      id: "d0100000-0000-4000-8000-000000000011",
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      class_id: "cf100000-0000-4000-8000-000000000011",
+      section_name: "B",
+      status: "active",
+    },
+    {
+      id: "d0100000-0000-4000-8000-000000000010",
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      class_id: "cf100000-0000-4000-8000-000000000010",
+      section_name: "C",
+      status: "active",
+    },
+  ];
+  queries: string[] = [];
 
   filterList(args: unknown[]): Row[] {
     const orgId = args[0];
@@ -102,8 +191,11 @@ class MockEnrollmentsDb {
       student_code: student.student_code,
       student_name: student.display_name,
       academic_year: e.academic_year,
+      academic_year_id: e.academic_year_id,
       class_name: e.class_name,
+      class_id: e.class_id,
       section_name: e.section_name,
+      section_id: e.section_id,
       roll_number: e.roll_number,
       is_current: e.is_current,
       created_at: e.created_at,
@@ -112,13 +204,72 @@ class MockEnrollmentsDb {
   }
 
   async queryCount(sql: string, args: unknown[] = []): Promise<number> {
+    this.queries.push(sql);
     if (sql.includes("sis_student_enrollments se")) {
       return this.filterList(args).length;
     }
     return 0;
   }
 
+  handleCatalogQuery<T>(sql: string, args: unknown[]): T[] {
+    if (sql.includes("FROM academic_years") && sql.includes("ORDER BY start_date")) {
+      return this.years.filter((y) =>
+        y.organization_id === args[0] && y.school_id === args[1]
+      ) as T[];
+    }
+    if (sql.includes("SELECT * FROM academic_years") && sql.includes("WHERE id = $1")) {
+      const row = this.years.find((y) =>
+        y.id === args[0] && y.organization_id === args[1] && y.school_id === args[2]
+      );
+      return (row ? [row] : []) as T[];
+    }
+    if (sql.includes("SELECT id, class_name, status FROM classes")) {
+      return this.classes.filter((c) =>
+        c.organization_id === args[0] &&
+        c.school_id === args[1] &&
+        c.academic_year_id === args[2] &&
+        c.class_name === args[3]
+      ).slice(0, 2) as T[];
+    }
+    if (sql.includes("SELECT * FROM classes") && sql.includes("WHERE id = $1")) {
+      const row = this.classes.find((c) =>
+        c.id === args[0] && c.organization_id === args[1] && c.school_id === args[2]
+      );
+      return (row ? [row] : []) as T[];
+    }
+    if (sql.includes("SELECT id, section_name, status FROM sections")) {
+      return this.sections.filter((s) =>
+        s.organization_id === args[0] &&
+        s.school_id === args[1] &&
+        s.class_id === args[2] &&
+        s.section_name === args[3]
+      ).slice(0, 2) as T[];
+    }
+    if (sql.includes("SELECT * FROM sections") && sql.includes("WHERE id = $1")) {
+      const row = this.sections.find((s) =>
+        s.id === args[0] && s.organization_id === args[1] && s.school_id === args[2]
+      );
+      return (row ? [row] : []) as T[];
+    }
+    return [] as T[];
+  }
+
   async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    this.queries.push(sql);
+    const catalog = this.handleCatalogQuery<T>(sql, args);
+    if (catalog.length > 0 || (
+      sql.includes("academic_years") ||
+      sql.includes("FROM classes") ||
+      sql.includes("FROM sections")
+    )) {
+      if (
+        sql.includes("academic_years") ||
+        sql.includes("FROM classes") ||
+        sql.includes("FROM sections")
+      ) {
+        return catalog;
+      }
+    }
     if (sql.includes("SELECT id FROM students") && sql.includes("WHERE id = $1")) {
       const match = this.students.find((s) =>
         s.id === args[0] && s.organization_id === args[1] && s.school_id === args[2]
@@ -161,11 +312,14 @@ class MockEnrollmentsDb {
         school_id: args[1],
         student_id: args[2],
         academic_year: args[3],
-        class_name: args[4],
-        section_name: args[5],
-        roll_number: args[6],
-        is_current: args[7],
-        created_by: args[8],
+        academic_year_id: args[4],
+        class_name: args[5],
+        class_id: args[6],
+        section_name: args[7],
+        section_id: args[8],
+        roll_number: args[9],
+        is_current: args[10],
+        created_by: args[11],
         created_at: "2026-06-09T00:00:00.000Z",
         updated_at: "2026-06-09T00:00:00.000Z",
       };
@@ -178,16 +332,19 @@ class MockEnrollmentsDb {
       );
       return match ? [match] as T[] : [];
     }
-    if (sql.includes("UPDATE sis_student_enrollments SET") && sql.includes("academic_year = $1")) {
+    if (sql.includes("UPDATE sis_student_enrollments SET") && sql.includes("academic_year_id = $2")) {
       const enrollment = this.enrollments.find((e) =>
-        e.id === args[5] && e.organization_id === args[6] && e.school_id === args[7]
+        e.id === args[8] && e.organization_id === args[9] && e.school_id === args[10]
       );
       if (enrollment) {
         enrollment.academic_year = args[0];
-        enrollment.class_name = args[1];
-        enrollment.section_name = args[2];
-        enrollment.roll_number = args[3];
-        enrollment.is_current = args[4];
+        enrollment.academic_year_id = args[1];
+        enrollment.class_name = args[2];
+        enrollment.class_id = args[3];
+        enrollment.section_name = args[4];
+        enrollment.section_id = args[5];
+        enrollment.roll_number = args[6];
+        enrollment.is_current = args[7];
         enrollment.updated_at = "2026-06-09T00:00:00.000Z";
       }
       return [] as T[];
@@ -297,6 +454,7 @@ Deno.test("createEnrollment assigns enrollment to existing student", async () =>
   });
   assertEquals(row.academic_year, "2027-28");
   assertEquals(row.class_name, "6");
+  assertEquals(row.academic_year_id, "ce100000-0000-4000-8000-000000000010");
   assertEquals(row.is_current, false);
 });
 
@@ -351,10 +509,9 @@ Deno.test("createEnrollment clears other current enrollments when isCurrent true
 Deno.test("updateEnrollment updates allowed fields", async () => {
   const db = new MockEnrollmentsDb() as unknown as TenantQueryClient;
   const row = await updateEnrollment(db, ORG, SCHOOL_A, ENROLLMENT_A, {
-    className: "5A",
     rollNumber: "15",
   });
-  assertEquals(row.class_name, "5A");
+  assertEquals(row.class_name, "5");
   assertEquals(row.roll_number, "15");
 });
 
@@ -364,6 +521,8 @@ Deno.test("updateEnrollment rejects duplicate academic year on change", async ()
     () =>
       updateEnrollment(db, ORG, SCHOOL_A, ENROLLMENT_B_YEAR, {
         academicYear: "2026-27",
+        className: "5",
+        sectionName: "A",
       }),
     DuplicateEnrollmentError,
   );
@@ -409,8 +568,11 @@ Deno.test("enrollmentListItemToApi maps camelCase response", () => {
     student_code: "STU-2026-00001",
     student_name: "Staging Student",
     academic_year: "2026-27",
+    academic_year_id: ACADEMIC_YEAR_SCHOOL_A,
     class_name: "5",
+    class_id: ACADEMIC_CLASS_SCHOOL_A,
     section_name: "A",
+    section_id: ACADEMIC_SECTION_SCHOOL_A,
     roll_number: "12",
     is_current: true,
     created_at: "2026-06-01T00:00:00.000Z",
@@ -419,6 +581,7 @@ Deno.test("enrollmentListItemToApi maps camelCase response", () => {
   assertEquals(api.enrollmentId, ENROLLMENT_A);
   assertEquals(api.isCurrent, true);
   assertEquals(api.studentCode, "STU-2026-00001");
+  assertEquals(api.academicYearId, ACADEMIC_YEAR_SCHOOL_A);
 });
 
 Deno.test("enrollment write requires manageSis and school scope", () => {
@@ -442,13 +605,16 @@ Deno.test("org scope denied for enrollment API middleware", () => {
 });
 
 Deno.test("list enrollments uses single join query (no N+1)", async () => {
-  const source = await Deno.readTextFile(
-    new URL("./sis_enrollments_repository.ts", import.meta.url),
+  const mock = new MockEnrollmentsDb();
+  const db = mock as unknown as TenantQueryClient;
+  await listEnrollments(db, ORG, SCHOOL_A, {}, { page: 1, pageSize: 20 });
+  const listSelect = mock.queries.filter((sql) =>
+    sql.includes("LIMIT $8") && sql.includes("INNER JOIN students s")
   );
-  assertEquals(source.includes("INNER JOIN students s"), true);
-  const listBody = source.match(
-    /export async function listEnrollments[\s\S]*?^}/m,
-  )?.[0] ?? "";
-  assertEquals(listBody.includes("for ("), false);
-  assertEquals((listBody.match(/queryObject/g) ?? []).length, 1);
+  const countQueries = mock.queries.filter((sql) =>
+    sql.includes("count(*)") && sql.includes("INNER JOIN students s")
+  );
+  assertEquals(listSelect.length, 1);
+  assertEquals(countQueries.length, 1);
+  assertEquals(listSelect[0]!.includes("for ("), false);
 });

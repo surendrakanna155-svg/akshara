@@ -10,6 +10,10 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import {
+  CatalogMismatchError,
+  CatalogNotFoundError,
+} from "../academic/academic_catalog_resolver.ts";
+import {
   feeStructureToApi,
   listEnvelope,
   parseItemInputsFromBody,
@@ -178,6 +182,7 @@ export async function handleCreateFeeStructure(
       createFeeStructure(db, orgId, schoolId, {
         name,
         academicYear,
+        academicYearId: optionalStr(body, "academic_year_id", "academicYearId") ?? null,
         description,
         status,
         createdBy: auth.claims.sub,
@@ -191,6 +196,12 @@ export async function handleCreateFeeStructure(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CatalogNotFoundError) {
+      return errorEnvelope("CATALOG_NOT_FOUND", error.message, 422);
+    }
+    if (error instanceof CatalogMismatchError) {
+      return errorEnvelope("CATALOG_MISMATCH", error.message, 422);
     }
     throw error;
   }
@@ -221,6 +232,10 @@ export async function handleUpdateFeeStructure(
   if (name !== undefined) updateInput.name = name.trim();
   const academicYear = optionalStr(body, "academic_year", "academicYear");
   if (academicYear !== undefined) updateInput.academicYear = academicYear.trim();
+  const academicYearId = optionalStr(body, "academic_year_id", "academicYearId");
+  if (academicYearId !== undefined) {
+    updateInput.academicYearId = academicYearId.trim() || null;
+  }
   if ("description" in body || "class_range" in body || "classRange" in body) {
     updateInput.description = optionalStr(body, "description", "description") ??
       optionalStr(body, "class_range", "classRange") ??
@@ -243,6 +258,12 @@ export async function handleUpdateFeeStructure(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CatalogNotFoundError) {
+      return errorEnvelope("CATALOG_NOT_FOUND", error.message, 422);
+    }
+    if (error instanceof CatalogMismatchError) {
+      return errorEnvelope("CATALOG_MISMATCH", error.message, 422);
     }
     throw error;
   }

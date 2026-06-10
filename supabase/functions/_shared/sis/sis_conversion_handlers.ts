@@ -14,6 +14,10 @@ import {
   convertAdmissionsEnrollment,
   ValidationError,
 } from "./sis_conversion_repository.ts";
+import {
+  CatalogMismatchError,
+  CatalogNotFoundError,
+} from "../academic/academic_catalog_resolver.ts";
 import { admissionsConversionToApi } from "./sis_mapper.ts";
 import { StudentNotFoundError } from "./sis_students_repository.ts";
 
@@ -64,6 +68,12 @@ function mapConversionError(error: unknown): Response | null {
   if (error instanceof ValidationError) {
     return errorEnvelope("VALIDATION_ERROR", error.message, 422);
   }
+  if (error instanceof CatalogNotFoundError) {
+    return errorEnvelope("CATALOG_NOT_FOUND", error.message, 422);
+  }
+  if (error instanceof CatalogMismatchError) {
+    return errorEnvelope("CATALOG_MISMATCH", error.message, 422);
+  }
   return null;
 }
 
@@ -108,8 +118,11 @@ export async function handleAdmissionsConversion(
       convertAdmissionsEnrollment(db, orgId, schoolId, {
         enrollmentId,
         academicYear,
+        academicYearId: optionalNullableStr(body, "academicYearId", "academic_year_id"),
         className,
+        classId: optionalNullableStr(body, "classId", "class_id"),
         sectionName,
+        sectionId: optionalNullableStr(body, "sectionId", "section_id"),
         rollNumber,
         convertedBy: auth.claims.sub,
       })

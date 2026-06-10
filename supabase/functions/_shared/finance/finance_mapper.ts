@@ -14,6 +14,7 @@ import {
   installmentStatusFromInvoice,
 } from "./finance_status_codec.ts";
 import type { DailySummaryData, StudentAccountSnapshot } from "./finance_collections_repository.ts";
+import type { FinanceDashboardSnapshot } from "./finance_dashboard_repository.ts";
 import type { RefundListRow } from "./finance_refunds_repository.ts";
 
 export interface FinanceFeeStructureRow {
@@ -22,6 +23,7 @@ export interface FinanceFeeStructureRow {
   school_id: string;
   name: string;
   academic_year: string;
+  academic_year_id: string | null;
   description: string | null;
   status: string;
   created_by: string;
@@ -94,6 +96,7 @@ export function feeStructureToApi(
     id: structure.id,
     name: structure.name,
     academicYear: structure.academic_year,
+    academicYearId: structure.academic_year_id,
     description: structure.description,
     status: structure.status,
     classRange: structure.description ?? "",
@@ -366,6 +369,39 @@ export function collectionDetailToApi(
       amount: formatAmount(receipt.amount),
       dateLabel: receipt.receipt_date,
       parentReceiptRoute: `/parent/receipts/${receipt.receipt_number}`,
+    })),
+  };
+}
+
+export function dashboardToApi(data: FinanceDashboardSnapshot): Record<string, unknown> {
+  return {
+    totalStudents: data.totalStudents,
+    activeFeeAssignments: data.activeFeeAssignments,
+    totalInvoiced: data.totalInvoiced,
+    totalCollected: data.totalCollected,
+    totalOutstanding: data.totalOutstanding,
+    collectionRate: data.collectionRate,
+    pendingInvoices: data.pendingInvoices,
+    partiallyPaidInvoices: data.partiallyPaidInvoices,
+    paidInvoices: data.paidInvoices,
+    pendingRefunds: data.pendingRefunds,
+    processedRefunds: data.processedRefunds,
+    todayCollections: data.todayCollections,
+    todayCollectionCount: data.todayCollectionCount,
+    recentCollections: data.recentCollections.map((row) => ({
+      id: row.id,
+      receiptNumber: row.receipt_number,
+      studentName: row.student_name,
+      amount: row.amount,
+      paymentMethod: row.payment_method,
+      collectionDate: row.collection_date,
+    })),
+    recentRefunds: data.recentRefunds.map((row) => ({
+      id: row.id,
+      studentName: row.student_name,
+      amount: row.amount,
+      status: row.status,
+      requestedAt: row.requested_at,
     })),
   };
 }

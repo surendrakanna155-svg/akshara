@@ -11,6 +11,9 @@ import {
   parseItemInputsFromBody,
 } from "./finance_mapper.ts";
 import {
+  ACADEMIC_YEAR_SCHOOL_A,
+} from "../academic/academic_years_repository.ts";
+import {
   archiveFeeStructure,
   createFeeStructure,
   getFeeStructure,
@@ -59,6 +62,30 @@ class MockTenantDb {
   structures: Row[] = [];
   items: Row[] = [];
   queries: string[] = [];
+  years: Row[] = [
+    {
+      id: ACADEMIC_YEAR_SCHOOL_A,
+      organization_id: ORG,
+      school_id: SCHOOL_A,
+      year_label: "2026-27",
+      status: "active",
+    },
+  ];
+
+  handleCatalogQuery<T>(sql: string, args: unknown[]): T[] {
+    if (sql.includes("FROM academic_years") && sql.includes("ORDER BY start_date")) {
+      return this.years.filter((y) =>
+        y.organization_id === args[0] && y.school_id === args[1]
+      ) as T[];
+    }
+    if (sql.includes("SELECT * FROM academic_years") && sql.includes("WHERE id = $1")) {
+      const row = this.years.find((y) =>
+        y.id === args[0] && y.organization_id === args[1] && y.school_id === args[2]
+      );
+      return (row ? [row] : []) as T[];
+    }
+    return [] as T[];
+  }
 
   async queryCount(sql: string, args: unknown[] = []): Promise<number> {
     this.queries.push(sql);
@@ -72,6 +99,10 @@ class MockTenantDb {
 
   async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
     this.queries.push(sql);
+    const catalogRows = this.handleCatalogQuery<T>(sql, args);
+    if (catalogRows.length > 0 || sql.includes("FROM academic_years")) {
+      return catalogRows;
+    }
     if (sql.startsWith("DELETE FROM finance_fee_structure_items")) {
       this.items = this.items.filter((row) => row.fee_structure_id !== args[0]);
       return [] as T[];
@@ -83,9 +114,10 @@ class MockTenantDb {
         school_id: args[1],
         name: args[2],
         academic_year: args[3],
-        description: args[4],
-        status: args[5],
-        created_by: args[6],
+        academic_year_id: args[4],
+        description: args[5],
+        status: args[6],
+        created_by: args[7],
         created_at: "2026-06-12T00:00:00.000Z",
         updated_at: "2026-06-12T00:00:00.000Z",
       };
@@ -129,8 +161,9 @@ class MockTenantDb {
         ...this.structures[idx],
         name: args[3],
         academic_year: args[4],
-        description: args[5],
-        status: args[6],
+        academic_year_id: args[5],
+        description: args[6],
+        status: args[7],
         updated_at: "2026-06-12T01:00:00.000Z",
       };
       return [this.structures[idx] as T];
@@ -175,6 +208,7 @@ Deno.test("feeStructureToApi maps structure and items to client contract", () =>
       school_id: SCHOOL_A,
       name: "Standard 5",
       academic_year: "2026-27",
+      academic_year_id: ACADEMIC_YEAR_SCHOOL_A,
       description: "Classes 1-5",
       status: "active",
       created_by: STAFF,
@@ -195,6 +229,7 @@ Deno.test("feeStructureToApi maps structure and items to client contract", () =>
   assertEquals(api.name, "Standard 5");
   assertEquals(api.totalAnnual, "50000");
   assertEquals(api.classRange, "Classes 1-5");
+  assertEquals(api.academicYearId, ACADEMIC_YEAR_SCHOOL_A);
   assertEquals((api.categories as Array<Record<string, string>>)[0]?.category, "tuition");
 });
 

@@ -10,6 +10,10 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import {
+  CatalogMismatchError,
+  CatalogNotFoundError,
+} from "../academic/academic_catalog_resolver.ts";
+import {
   applicationToApi,
   approvalToApi,
   documentToApi,
@@ -757,6 +761,12 @@ export async function handleSubmitEnrollment(
         seekingClass,
         section: String(academic.section ?? ""),
         academicYear: String(academic.academic_year ?? ""),
+        academicYearId: optionalSnakeStr(academic, "academic_year_id") ??
+          optionalSnakeStr(academic, "academicYearId") ?? null,
+        classId: optionalSnakeStr(academic, "class_id") ??
+          optionalSnakeStr(academic, "classId") ?? null,
+        sectionId: optionalSnakeStr(academic, "section_id") ??
+          optionalSnakeStr(academic, "sectionId") ?? null,
         previousSchool: String(academic.previous_school ?? ""),
         needsTransport: Boolean(academic.needs_transport),
         needsHostel: Boolean(academic.needs_hostel),
@@ -766,6 +776,12 @@ export async function handleSubmitEnrollment(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CatalogNotFoundError) {
+      return errorEnvelope("CATALOG_NOT_FOUND", error.message, 422);
+    }
+    if (error instanceof CatalogMismatchError) {
+      return errorEnvelope("CATALOG_MISMATCH", error.message, 422);
     }
     throw error;
   }

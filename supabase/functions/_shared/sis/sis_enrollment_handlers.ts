@@ -18,6 +18,10 @@ import {
   ValidationError,
   type EnrollmentListFilters,
 } from "./sis_enrollments_repository.ts";
+import {
+  CatalogMismatchError,
+  CatalogNotFoundError,
+} from "../academic/academic_catalog_resolver.ts";
 import { enrollmentListItemToApi, listEnvelope } from "./sis_mapper.ts";
 import { StudentNotFoundError } from "./sis_students_repository.ts";
 
@@ -116,6 +120,12 @@ function mapEnrollmentError(error: unknown): Response | null {
   if (error instanceof DuplicateEnrollmentError) {
     return errorEnvelope("CONFLICT", error.message, 409);
   }
+  if (error instanceof CatalogNotFoundError) {
+    return errorEnvelope("CATALOG_NOT_FOUND", error.message, 422);
+  }
+  if (error instanceof CatalogMismatchError) {
+    return errorEnvelope("CATALOG_MISMATCH", error.message, 422);
+  }
   if (error instanceof ValidationError) {
     return errorEnvelope("VALIDATION_ERROR", error.message, 422);
   }
@@ -204,8 +214,11 @@ export async function handleCreateEnrollment(
       createEnrollment(db, orgId, schoolId, {
         studentId,
         academicYear,
+        academicYearId: optionalNullableStr(body, "academicYearId", "academic_year_id"),
         className,
+        classId: optionalNullableStr(body, "classId", "class_id"),
         sectionName: optionalNullableStr(body, "sectionName", "section_name"),
+        sectionId: optionalNullableStr(body, "sectionId", "section_id"),
         rollNumber: optionalNullableStr(body, "rollNumber", "roll_number"),
         isCurrent: optionalBodyBool(body, "isCurrent", "is_current"),
         createdBy: auth.claims.sub,
@@ -248,8 +261,11 @@ export async function handleUpdateEnrollment(
     const row = await runTenant(config, auth.claims, (db) =>
       updateEnrollment(db, orgId, schoolId, enrollmentId, {
         academicYear: optionalBodyStr(body, "academicYear", "academic_year"),
+        academicYearId: optionalNullableStr(body, "academicYearId", "academic_year_id"),
         className: optionalBodyStr(body, "className", "class_name"),
+        classId: optionalNullableStr(body, "classId", "class_id"),
         sectionName: optionalNullableStr(body, "sectionName", "section_name"),
+        sectionId: optionalNullableStr(body, "sectionId", "section_id"),
         rollNumber: optionalNullableStr(body, "rollNumber", "roll_number"),
         isCurrent: optionalBodyBool(body, "isCurrent", "is_current"),
       })

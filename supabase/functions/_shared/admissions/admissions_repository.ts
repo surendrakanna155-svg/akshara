@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { resolveAcademicPlacement } from "../academic/academic_catalog_resolver.ts";
 import { createHandoffFromEnrollment } from "./admissions_handoffs_repository.ts";
 import { normalizePhone } from "./admissions_format.ts";
 import type {
@@ -562,6 +563,9 @@ export interface EnrollmentSubmitInput {
   seekingClass: string;
   section: string;
   academicYear: string;
+  academicYearId?: string | null;
+  classId?: string | null;
+  sectionId?: string | null;
   previousSchool: string;
   needsTransport: boolean;
   needsHostel: boolean;
@@ -608,15 +612,31 @@ export async function submitEnrollment(
     );
   }
 
+  const placement = await resolveAcademicPlacement(
+    { db, organizationId, schoolId },
+    {
+      academicYear: input.academicYear,
+      academicYearId: input.academicYearId,
+      className: input.seekingClass,
+      classId: input.classId,
+      sectionName: input.section,
+      sectionId: input.sectionId,
+    },
+    { mode: "admissions" },
+  );
+
   const enrollRows = await db.queryObject<AdmissionsEnrollmentRow>(
     `INSERT INTO admissions_enrollments (
       organization_id, school_id, application_id, student_id, guardian_user_id,
-      student_name, seeking_class, section, academic_year, guardian_name, phone,
-      gender, date_of_birth, conversion_status, admission_number, submitted_at
+      student_name, seeking_class, section, academic_year,
+      academic_year_id, class_id, section_id,
+      guardian_name, phone, gender, date_of_birth,
+      conversion_status, admission_number, submitted_at
     ) VALUES (
       $1, $2, $3, $4, $5,
-      $6, $7, $8, $9, $10, $11,
-      $12, $13, 'pending', $14, timezone('utc', now())
+      $6, $7, $8, $9, $10, $11, $12,
+      $13, $14, $15, $16,
+      'pending', $17, timezone('utc', now())
     )
     RETURNING *`,
     [
@@ -626,9 +646,12 @@ export async function submitEnrollment(
       studentId,
       guardianUserId,
       input.studentFullName,
-      input.seekingClass,
-      input.section,
-      input.academicYear,
+      placement.className,
+      placement.sectionName ?? "",
+      placement.academicYear,
+      placement.academicYearId,
+      placement.classId,
+      placement.sectionId,
       input.guardianName,
       input.phone,
       input.gender,
@@ -651,9 +674,9 @@ export async function submitEnrollment(
     studentId,
     applicationId: input.applicationId,
     enrollmentId: enrollment.id,
-    academicYear: input.academicYear,
+    academicYear: placement.academicYear,
     studentName: input.studentFullName,
-    classLabel: input.seekingClass,
+    classLabel: placement.className,
     admissionNumber,
     needsTransport: input.needsTransport,
     needsHostel: input.needsHostel,

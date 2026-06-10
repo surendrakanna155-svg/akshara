@@ -46,13 +46,26 @@ const SIS_PHASE_5A4_PROBES = [
   "school_a_cannot_see_school_b_converted_enrollment",
 ] as const;
 
+const SIS_PHASE_5B_PROBES = [
+  "organization_denied_sis_dashboard",
+  "parent_denied_sis_dashboard",
+  "student_denied_sis_dashboard",
+  "school_a_sees_own_sis_dashboard",
+] as const;
+
+const ACADEMIC_PHASE_5C_PROBE_COUNT = 20;
+const ACADEMIC_PHASE_5C0B_PROBE_COUNT = 16;
+
 const BASELINE_PROBE_COUNT = 53;
 const EXPECTED_PROBE_COUNT = BASELINE_PROBE_COUNT +
   SIS_PHASE_5A0_PROBES.length +
   SIS_PHASE_5A1_PROBES.length +
   SIS_PHASE_5A2_PROBES.length +
   SIS_PHASE_5A3_PROBES.length +
-  SIS_PHASE_5A4_PROBES.length;
+  SIS_PHASE_5A4_PROBES.length +
+  SIS_PHASE_5B_PROBES.length +
+  ACADEMIC_PHASE_5C_PROBE_COUNT +
+  ACADEMIC_PHASE_5C0B_PROBE_COUNT;
 
 function extractProbeNames(source: string): string[] {
   const names: string[] = [];
@@ -119,7 +132,16 @@ Deno.test("SIS 5A4 isolation probes are registered", () => {
   }
 });
 
-Deno.test("tenant isolation probe count reaches 5A4 target", () => {
+Deno.test("SIS 5B dashboard probes are registered", () => {
+  for (const probe of SIS_PHASE_5B_PROBES) {
+    assert(
+      probesSource.includes(`name: "${probe}"`),
+      `missing probe: ${probe}`,
+    );
+  }
+});
+
+Deno.test("tenant isolation probe count reaches 5C.0b target", () => {
   const names = extractProbeNames(probesSource);
   assertEquals(names.length, EXPECTED_PROBE_COUNT, `probes: ${names.join(", ")}`);
 });

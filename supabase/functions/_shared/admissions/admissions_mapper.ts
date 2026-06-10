@@ -86,6 +86,9 @@ export interface AdmissionsEnrollmentRow {
   seeking_class: string;
   section: string;
   academic_year: string;
+  academic_year_id: string | null;
+  class_id: string | null;
+  section_id: string | null;
   guardian_name: string;
   phone: string;
   gender: string;
@@ -225,6 +228,9 @@ export function enrollmentToApi(
     seekingClass: row.seeking_class,
     section: row.section,
     academicYear: row.academic_year,
+    academicYearId: row.academic_year_id,
+    classId: row.class_id,
+    sectionId: row.section_id,
     guardianName: row.guardian_name,
     phone: row.phone,
     submittedAt: formatDisplayDateTime(row.submitted_at),
