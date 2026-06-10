@@ -86,7 +86,8 @@ export async function routeAcademic(
 
   const match = matchAcademicRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    // Let downstream routers (e.g. timetable) handle /academic/* paths we do not own.
+    return null;
   }
 
   for (const arg of match.args) {

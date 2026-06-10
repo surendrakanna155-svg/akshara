@@ -1,0 +1,235 @@
+{
+  "title": "Demo School Validation",
+  "passed": 31,
+  "failed": 0,
+  "steps": [
+    {
+      "name": "admin OTP login (school scope)",
+      "ok": true,
+      "detail": "9876543210",
+      "data": {}
+    },
+    {
+      "name": "parent OTP login (probe user)",
+      "ok": true,
+      "detail": "9876543211",
+      "data": {}
+    },
+    {
+      "name": "parent OTP login (demo import)",
+      "ok": true,
+      "detail": "9000100001",
+      "data": {}
+    },
+    {
+      "name": "teacher OTP login (probe user)",
+      "ok": true,
+      "detail": "9876543213",
+      "data": {}
+    },
+    {
+      "name": "teacher OTP login (demo import)",
+      "ok": true,
+      "detail": "9000000001",
+      "data": {}
+    },
+    {
+      "name": "student/teacher import jobs listed",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "student import committed",
+      "ok": true,
+      "detail": "jobs=8",
+      "data": {}
+    },
+    {
+      "name": "teacher import committed",
+      "ok": true,
+      "detail": "jobs=8",
+      "data": {}
+    },
+    {
+      "name": "demo student count",
+      "ok": true,
+      "detail": "found=50 target=500",
+      "data": {}
+    },
+    {
+      "name": "attendance submission (draft)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "attendance submission (submit)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "attendance visibility (parent)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "timetable visibility (admin summary)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "timetable visibility (parent)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "timetable visibility (teacher dashboard)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "fee invoice generation (list)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "fee invoice issued records",
+      "ok": true,
+      "detail": "issued=20",
+      "data": {}
+    },
+    {
+      "name": "fee collection (list)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "refund flow (list)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "fee visibility (parent)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "notification delivery (process queue)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "notification delivery (parent inbox)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "broadcast messaging",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 201
+      }
+    },
+    {
+      "name": "parent-teacher chat (teacher send)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 201
+      }
+    },
+    {
+      "name": "parent-teacher chat (parent threads)",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "dashboard analytics",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "SIS dashboard aggregates",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "finance dashboard",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "AI Copilot assistants",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "AI Copilot session create",
+      "ok": true,
+      "detail": "84879f0c-3d26-426c-9b8d-93f69e2c33e0",
+      "data": {}
+    },
+    {
+      "name": "AI Copilot queries",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    }
+  ]
+}

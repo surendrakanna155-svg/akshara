@@ -72,6 +72,33 @@ export function createParentScopedReadHandlers(
     return requireParentScope(claims);
   }
 
+  async function resolveParentSnapshot(
+    db: Parameters<StudentScopedEntityReadStore["getSnapshot"]>[0],
+    orgId: string,
+    schoolId: string,
+    studentId: string,
+    entityType: string,
+  ): Promise<Record<string, unknown>> {
+    try {
+      return await store.getSnapshot(db, orgId, schoolId, studentId, entityType);
+    } catch (error) {
+      if (!(error instanceof store.SnapshotNotFoundError)) {
+        throw error;
+      }
+      const {
+        buildDefaultParentSnapshot,
+        loadStudentParentSnapshotContext,
+      } = await import("../pilot/pilot_operations_repository.ts");
+      const context = await loadStudentParentSnapshotContext(
+        db,
+        orgId,
+        schoolId,
+        studentId,
+      );
+      return buildDefaultParentSnapshot(entityType, context);
+    }
+  }
+
   async function handleSnapshot(
     req: Request,
     config: AppConfig,
@@ -92,9 +119,28 @@ export function createParentScopedReadHandlers(
     const schoolId = schoolIdFromClaims(auth.claims);
 
     try {
-      const snapshot = await runTenant(config, auth.claims, async (db) =>
-        await store.getSnapshot(db, orgId, schoolId, studentIdResult, entityType)
-      );
+      const snapshot = await runTenant(config, auth.claims, async (db) => {
+        const resolved = await resolveParentSnapshot(
+          db,
+          orgId,
+          schoolId,
+          studentIdResult,
+          entityType,
+        );
+        if (entityType !== "snapshot_fees") {
+          return resolved;
+        }
+        const { overlayFeesSnapshotFromFinance } = await import(
+          "../pilot/pilot_operations_repository.ts"
+        );
+        return await overlayFeesSnapshotFromFinance(
+          db,
+          orgId,
+          schoolId,
+          studentIdResult,
+          resolved,
+        );
+      });
       return jsonResponse(envelope(snapshot));
     } catch (error) {
       if (error instanceof TenantDbNotConfiguredError) {
@@ -129,7 +175,7 @@ export function createParentScopedReadHandlers(
 
     try {
       const payload = await runTenant(config, auth.claims, async (db) => {
-        const snapshot = await store.getSnapshot(
+        const snapshot = await resolveParentSnapshot(
           db,
           orgId,
           schoolId,
@@ -144,7 +190,7 @@ export function createParentScopedReadHandlers(
           orgId,
           schoolId,
           studentIdResult,
-          snapshot as Record<string, unknown>,
+          snapshot,
         );
         return month ? { ...merged, month } : merged;
       });
@@ -181,7 +227,7 @@ export function createParentScopedReadHandlers(
 
     try {
       const payload = await runTenant(config, auth.claims, async (db) => {
-        const snapshot = await store.getSnapshot(
+        const snapshot = await resolveParentSnapshot(
           db,
           orgId,
           schoolId,
@@ -195,12 +241,10 @@ export function createParentScopedReadHandlers(
           db,
           orgId,
           schoolId,
-          snapshot as Record<string, unknown>,
+          snapshot,
           {
             view: "parent",
-            classLabel: String(
-              (snapshot as Record<string, unknown>).childClass ?? "",
-            ),
+            classLabel: String(snapshot.childClass ?? ""),
           },
         );
       });

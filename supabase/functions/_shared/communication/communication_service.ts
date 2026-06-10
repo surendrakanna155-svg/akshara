@@ -30,6 +30,20 @@ function requireSchool(claims: AccessTokenClaims): string {
   return claims.school_id;
 }
 
+/** Map shorthand audience labels to comm_broadcasts CHECK constraint values. */
+export function normalizeBroadcastAudience(audience: string): string {
+  const aliases: Record<string, string> = {
+    parents: "all_parents",
+    parent: "all_parents",
+    teachers: "all_teachers",
+    teacher: "all_teachers",
+    students: "all_students",
+    student: "all_students",
+    school: "school_wide",
+  };
+  return aliases[audience] ?? audience;
+}
+
 function formatTimeLabel(iso: string): string {
   const date = new Date(iso);
   const now = new Date();
@@ -211,10 +225,11 @@ export async function sendBroadcastMessage(
     throw new CommunicationValidationError("Broadcast requires school or organization scope");
   }
   const schoolId = claims.school_id;
+  const audience = normalizeBroadcastAudience(input.audience);
   const broadcast = await createBroadcast(db, {
     organizationId: claims.tenant_id,
     schoolId,
-    audience: input.audience,
+    audience,
     title: input.title,
     body: input.body,
     createdBy: claims.sub,
@@ -224,7 +239,7 @@ export async function sendBroadcastMessage(
     db,
     claims.tenant_id,
     schoolId,
-    input.audience,
+    audience,
   );
   for (const userId of recipients) {
     await insertBroadcastRecipient(db, broadcast.id, claims.tenant_id, userId);

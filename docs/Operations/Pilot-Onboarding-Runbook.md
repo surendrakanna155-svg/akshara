@@ -49,4 +49,4 @@
 - Domain events stuck → `POST /domain-events/process-pending`
 - Health 403 → set `INTERNAL_HEALTH_TOKEN` on Edge Function + pass header in scripts
 
-See also: [Pilot Issue Tracker](./Pilot-Issue-Tracker.md), [SaaS Launch Checklist](./SaaS-Launch-Checklist.md), [Production Integrations](./Production-Integrations.md)
+See also: [Demo School Validation Plan](./Demo-School-Validation-Plan.md), [Pilot Issue Tracker](./Pilot-Issue-Tracker.md), [SaaS Launch Checklist](./SaaS-Launch-Checklist.md), [Production Integrations](./Production-Integrations.md)

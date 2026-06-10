@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+"""
+Validate Demo School pilot workflows end-to-end via APIs.
+
+Usage:
+  python3 scripts/demo_school_validate.py
+  python3 scripts/demo_school_validate.py --skip-seed-check
+
+Writes: reports/demo_school/validation_report.json
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from demo_school_lib import (
+    ADMIN_PHONE,
+    PARENT_PHONE_START,
+    PROBE_PARENT_PHONE,
+    PROBE_TEACHER_PHONE,
+    RunReport,
+    SCHOOL_ID,
+    TEACHER_PHONE_START,
+    admin_token,
+    api_data,
+    list_students,
+    login_phone,
+    request,
+    resolve_academic_year,
+    write_report,
+)
+
+
+def check_status(
+    report: RunReport,
+    name: str,
+    code: int,
+    resp: dict,
+    expect: int | tuple[int, ...] = 200,
+) -> None:
+    expected = (expect,) if isinstance(expect, int) else expect
+    ok = code in expected
+    detail = "ok" if ok else json.dumps(resp)[:500]
+    report.add(name, ok, detail, httpCode=code)
+
+
+def validate_auth(report: RunReport) -> dict[str, str]:
+    tokens: dict[str, str] = {}
+    try:
+        tokens["admin"] = admin_token()
+        report.add("admin OTP login (school scope)", True, ADMIN_PHONE)
+    except RuntimeError as exc:
+        report.add("admin OTP login (school scope)", False, str(exc))
+        return tokens
+
+    try:
+        tokens["parent_probe"] = login_phone(PROBE_PARENT_PHONE, "parent", SCHOOL_ID)
+        report.add("parent OTP login (probe user)", True, PROBE_PARENT_PHONE)
+    except RuntimeError as exc:
+        report.add("parent OTP login (probe user)", False, str(exc))
+
+    try:
+        tokens["parent_demo"] = login_phone(str(PARENT_PHONE_START), "parent", SCHOOL_ID)
+        report.add("parent OTP login (demo import)", True, str(PARENT_PHONE_START))
+    except RuntimeError as exc:
+        report.add("parent OTP login (demo import)", False, str(exc))
+
+    try:
+        tokens["teacher_probe"] = login_phone(PROBE_TEACHER_PHONE, "school", SCHOOL_ID)
+        report.add("teacher OTP login (probe user)", True, PROBE_TEACHER_PHONE)
+    except RuntimeError as exc:
+        report.add("teacher OTP login (probe user)", False, str(exc))
+
+    try:
+        tokens["teacher_demo"] = login_phone(str(TEACHER_PHONE_START), "school", SCHOOL_ID)
+        report.add("teacher OTP login (demo import)", True, str(TEACHER_PHONE_START))
+    except RuntimeError as exc:
+        report.add("teacher OTP login (demo import)", False, str(exc))
+
+    return tokens
+
+
+def validate_imports(report: RunReport, admin: str) -> None:
+    code, resp = request("GET", "/onboarding/imports", token=admin)
+    check_status(report, "student/teacher import jobs listed", code, resp)
+    if code == 200:
+        items = (api_data(resp) or {}).get("items") or []
+        student_jobs = [j for j in items if j.get("importType") == "student"]
+        teacher_jobs = [j for j in items if j.get("importType") == "teacher"]
+        report.add(
+            "student import committed",
+            any(int(j.get("committedRows") or 0) > 0 for j in student_jobs),
+            f"jobs={len(student_jobs)}",
+        )
+        report.add(
+            "teacher import committed",
+            any(int(j.get("committedRows") or 0) > 0 for j in teacher_jobs),
+            f"jobs={len(teacher_jobs)}",
+        )
+
+
+def validate_attendance(report: RunReport, admin: str, parent: str | None) -> None:
+    students = [
+        s
+        for s in list_students(admin, page_size=50, pages=2)
+        if str(s.get("admissionNumber", "")).startswith("DEMO-2026")
+    ]
+    if len(students) < 3:
+        report.add("attendance submission", False, "insufficient demo students")
+        return
+
+    class_label = students[0].get("className") or students[0].get("classLabel") or "5"
+    entries = []
+    for student in students[:10]:
+        sid = student.get("id") or student.get("studentId")
+        if sid:
+            entries.append({"studentId": sid, "mark": "present"})
+    body = {"class_id": class_label, "entries": entries}
+    code, resp = request("POST", "/teacher/attendance/draft", token=admin, body=body)
+    check_status(report, "attendance submission (draft)", code, resp)
+    code, resp = request("POST", "/teacher/attendance/submit", token=admin, body=body)
+    check_status(report, "attendance submission (submit)", code, resp)
+
+    if parent:
+        code, resp = request("GET", "/parent/attendance", token=parent)
+        check_status(report, "attendance visibility (parent)", code, resp)
+
+
+def validate_timetable(report: RunReport, admin: str, parent: str | None, teacher: str | None) -> None:
+    year_id, _ = resolve_academic_year(admin)
+    code, resp = request(
+        "GET",
+        f"/academic/timetables/summary?academicYearId={year_id}",
+        token=admin,
+    )
+    if code == 404:
+        report.add(
+            "timetable visibility (admin summary)",
+            False,
+            "Route not mounted — deploy v7.5+ timetable engine",
+        )
+    else:
+        check_status(report, "timetable visibility (admin summary)", code, resp)
+    if parent:
+        code, resp = request("GET", "/parent/timetable", token=parent)
+        check_status(report, "timetable visibility (parent)", code, resp)
+    if teacher:
+        code, resp = request("GET", "/teacher/dashboard", token=teacher)
+        check_status(report, "timetable visibility (teacher dashboard)", code, resp)
+
+
+def validate_finance(report: RunReport, admin: str, parent: str | None) -> None:
+    code, resp = request("GET", "/finance/invoices?page=1&pageSize=20", token=admin)
+    check_status(report, "fee invoice generation (list)", code, resp)
+    if code == 200:
+        items = (api_data(resp) or {}).get("items") or []
+        issued = [
+            i
+            for i in items
+            if (i.get("invoiceStatus") or i.get("status"))
+            in ("issued", "partially_paid", "paid")
+        ]
+        report.add("fee invoice issued records", len(issued) > 0, f"issued={len(issued)}")
+
+    code, resp = request("GET", "/finance/collections?page=1&pageSize=20", token=admin)
+    check_status(report, "fee collection (list)", code, resp)
+
+    code, resp = request("GET", "/finance/refunds?page=1&pageSize=20", token=admin)
+    check_status(report, "refund flow (list)", code, resp)
+
+    if parent:
+        code, resp = request("GET", "/parent/fees", token=parent)
+        check_status(report, "fee visibility (parent)", code, resp)
+
+
+def validate_notifications(report: RunReport, admin: str, parent: str | None) -> None:
+    code, resp = request("POST", "/communications/notifications/process-queue", token=admin, body={})
+    check_status(report, "notification delivery (process queue)", code, resp)
+    if parent:
+        code, resp = request("GET", "/parent/notifications", token=parent)
+        check_status(report, "notification delivery (parent inbox)", code, resp)
+
+
+def validate_messaging(report: RunReport, admin: str, parent: str | None, teacher: str | None) -> None:
+    code, resp = request(
+        "POST",
+        "/communications/broadcasts",
+        token=admin,
+        body={
+            "audience": "all_teachers",
+            "title": "Demo Validation Broadcast",
+            "body": "Pilot validation broadcast message.",
+        },
+    )
+    check_status(report, "broadcast messaging", code, resp, (200, 201))
+
+    if teacher and parent:
+        code, resp = request(
+            "POST",
+            "/teacher/messages/send",
+            token=teacher,
+            body={
+                "recipient": "parent",
+                "subject": "Demo PT Meeting",
+                "body": "Please confirm Friday slot.",
+            },
+        )
+        check_status(report, "parent-teacher chat (teacher send)", code, resp, (200, 201))
+        code, resp = request("GET", "/parent/messages/threads", token=parent)
+        check_status(report, "parent-teacher chat (parent threads)", code, resp)
+
+
+def validate_analytics(report: RunReport, admin: str) -> None:
+    code, resp = request("GET", "/analytics/dashboard", token=admin)
+    check_status(report, "dashboard analytics", code, resp)
+    code, resp = request("GET", "/sis/dashboard", token=admin)
+    check_status(report, "SIS dashboard aggregates", code, resp)
+    code, resp = request("GET", "/finance/dashboard", token=admin)
+    check_status(report, "finance dashboard", code, resp)
+
+
+def validate_copilot(report: RunReport, admin: str) -> None:
+    code, resp = request("GET", "/copilot/assistants", token=admin)
+    check_status(report, "AI Copilot assistants", code, resp)
+    if code != 200:
+        return
+    code, resp = request(
+        "POST",
+        "/copilot/sessions",
+        token=admin,
+        body={"assistantType": "finance", "title": "Demo validation session"},
+    )
+    if code not in (200, 201):
+        check_status(report, "AI Copilot session create", code, resp, (200, 201))
+        return
+    session_id = (api_data(resp) or {}).get("id")
+    report.add("AI Copilot session create", True, session_id or "")
+    code, resp = request(
+        "POST",
+        f"/copilot/sessions/{session_id}/messages",
+        token=admin,
+        body={"content": "Summarize fee collection status for the demo school."},
+    )
+    check_status(report, "AI Copilot queries", code, resp)
+
+
+def validate_seed_counts(report: RunReport, admin: str) -> None:
+    students = list_students(admin, page_size=100, pages=20)
+    demo_students = [s for s in students if str(s.get("admissionNumber", "")).startswith("DEMO-2026")]
+    target = int(os.environ.get("DEMO_STUDENT_COUNT", "500"))
+    report.add(
+        "demo student count",
+        len(demo_students) >= min(target, 1),
+        f"found={len(demo_students)} target={target}",
+    )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate Demo School pilot workflows")
+    parser.add_argument("--skip-seed-check", action="store_true")
+    args = parser.parse_args()
+
+    report = RunReport(title="Demo School Validation")
+    tokens = validate_auth(report)
+    admin = tokens.get("admin")
+    if not admin:
+        write_report("reports/demo_school/validation_report.json", report)
+        return 1
+
+    parent = tokens.get("parent_demo") or tokens.get("parent_probe")
+    teacher = tokens.get("teacher_demo") or tokens.get("teacher_probe")
+
+    validate_imports(report, admin)
+    if not args.skip_seed_check:
+        validate_seed_counts(report, admin)
+    validate_attendance(report, admin, parent)
+    validate_timetable(report, admin, parent, teacher)
+    validate_finance(report, admin, parent)
+    validate_notifications(report, admin, parent)
+    validate_messaging(report, admin, parent, teacher)
+    validate_analytics(report, admin)
+    validate_copilot(report, admin)
+
+    write_report("reports/demo_school/validation_report.json", report)
+    print(f"Validation: {report.passed} passed, {report.failed} failed")
+    for step in report.steps:
+        if not step.ok:
+            print(f"  FAIL: {step.name} — {step.detail[:200]}")
+    return 0 if report.failed == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

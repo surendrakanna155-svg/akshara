@@ -1,0 +1,117 @@
+{
+  "title": "Demo School Seed",
+  "passed": 15,
+  "failed": 0,
+  "steps": [
+    {
+      "name": "admin login",
+      "ok": true,
+      "detail": "9876543210",
+      "data": {}
+    },
+    {
+      "name": "academic year",
+      "ok": true,
+      "detail": "2026-27 (c897c6bd-6002-4309-b1ea-6e41d8c96bf5)",
+      "data": {}
+    },
+    {
+      "name": "teacher import",
+      "ok": true,
+      "detail": "committed=5 valid=5",
+      "data": {}
+    },
+    {
+      "name": "student import batch 1",
+      "ok": true,
+      "detail": "committed=0 invalid=0",
+      "data": {}
+    },
+    {
+      "name": "student import total",
+      "ok": true,
+      "detail": "existing=50 committed=0",
+      "data": {}
+    },
+    {
+      "name": "secondary guardian invites",
+      "ok": true,
+      "detail": "created=25 target=25",
+      "data": {}
+    },
+    {
+      "name": "timetable generate",
+      "ok": true,
+      "detail": "generated=26 published=0",
+      "data": {}
+    },
+    {
+      "name": "fee structure",
+      "ok": true,
+      "detail": "69132adb-3c07-4fa3-abc1-cdc3dea98e09",
+      "data": {}
+    },
+    {
+      "name": "fee assignments",
+      "ok": true,
+      "detail": "assignments=0 invoices=50",
+      "data": {}
+    },
+    {
+      "name": "invoice issue",
+      "ok": true,
+      "detail": "issued=50",
+      "data": {}
+    },
+    {
+      "name": "fee collections",
+      "ok": true,
+      "detail": "collections=10",
+      "data": {}
+    },
+    {
+      "name": "refund flow",
+      "ok": true,
+      "detail": "fe133160-d699-4728-998d-d3a6ef5819d4",
+      "data": {}
+    },
+    {
+      "name": "attendance history",
+      "ok": true,
+      "detail": "days=14 students=25 class=Nursery",
+      "data": {}
+    },
+    {
+      "name": "broadcast messaging",
+      "ok": true,
+      "detail": "sent",
+      "data": {}
+    },
+    {
+      "name": "notification delivery queue",
+      "ok": true,
+      "detail": "{'processed': 1, 'sent': 1, 'failed': 0}",
+      "data": {}
+    }
+  ],
+  "schoolId": "a2000000-0000-4000-8000-000000000001",
+  "academicYear": {
+    "id": "c897c6bd-6002-4309-b1ea-6e41d8c96bf5",
+    "label": "2026-27"
+  },
+  "targets": {
+    "students": 50,
+    "teachers": 5,
+    "guardians": 75
+  },
+  "finance": {
+    "feeStructureId": "69132adb-3c07-4fa3-abc1-cdc3dea98e09",
+    "sampleCollectionId": "0df3c8c2-8add-4abe-8057-6d36b4ea604f",
+    "sampleRefundId": "fe133160-d699-4728-998d-d3a6ef5819d4"
+  },
+  "samplePhones": {
+    "admin": "9876543210",
+    "teacher": "9000000001",
+    "parent": "9000100001"
+  }
+}

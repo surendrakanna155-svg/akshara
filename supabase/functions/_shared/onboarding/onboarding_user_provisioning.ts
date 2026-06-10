@@ -34,26 +34,15 @@ export async function upsertUserByPhone(
   displayName: string,
   email?: string | null,
 ): Promise<string> {
-  const normalized = normalizeImportPhone(phone);
-  const existing = await db.queryObject<{ id: string }>(
-    `SELECT id FROM users WHERE phone = $1 LIMIT 1`,
-    [normalized],
+  const rows = await db.queryObject<{ onboarding_upsert_user_by_phone: string }>(
+    `SELECT onboarding_upsert_user_by_phone($1, $2, $3) AS onboarding_upsert_user_by_phone`,
+    [phone, displayName, email ?? null],
   );
-  if (existing[0]) {
-    await db.queryObject(
-      `UPDATE users SET display_name = COALESCE(NULLIF($2, ''), display_name),
-         email = COALESCE($3, email), updated_at = timezone('utc', now())
-       WHERE id = $1`,
-      [existing[0].id, displayName, email ?? null],
-    );
-    return existing[0].id;
+  const userId = rows[0]?.onboarding_upsert_user_by_phone;
+  if (!userId) {
+    throw new Error("Failed to upsert user by phone");
   }
-  const inserted = await db.queryObject<{ id: string }>(
-    `INSERT INTO users (phone, display_name, email)
-     VALUES ($1, $2, $3) RETURNING id`,
-    [normalized, displayName, email ?? null],
-  );
-  return inserted[0]!.id;
+  return userId;
 }
 
 export async function ensureSchoolMembership(
@@ -63,11 +52,7 @@ export async function ensureSchoolMembership(
   role: string,
 ): Promise<void> {
   await db.queryObject(
-    `INSERT INTO school_memberships (user_id, school_id, role, status)
-     VALUES ($1, $2, $3, 'active')
-     ON CONFLICT (user_id, school_id)
-     DO UPDATE SET role = EXCLUDED.role, status = 'active',
-       updated_at = timezone('utc', now())`,
+    `SELECT onboarding_ensure_school_membership($1::uuid, $2::uuid, $3)`,
     [userId, schoolId, role],
   );
 }

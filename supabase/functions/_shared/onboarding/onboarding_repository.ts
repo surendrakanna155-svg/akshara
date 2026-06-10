@@ -246,6 +246,7 @@ export async function commitImportJob(
 
   for (const row of rows) {
     try {
+      await db.queryObject(`SAVEPOINT onboarding_import_row`);
       if (job.import_type === "student") {
         const parsed = parseStudentRow(row.payload);
         if (!parsed.row) continue;
@@ -294,7 +295,9 @@ export async function commitImportJob(
         );
       }
       committed++;
+      await db.queryObject(`RELEASE SAVEPOINT onboarding_import_row`);
     } catch (error) {
+      await db.queryObject(`ROLLBACK TO SAVEPOINT onboarding_import_row`);
       failures.push({
         rowNumber: row.row_number,
         error: error instanceof Error ? error.message : "commit failed",

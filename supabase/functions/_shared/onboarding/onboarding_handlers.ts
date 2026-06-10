@@ -209,7 +209,9 @@ export async function handleCommitImportJob(
       return errorEnvelope("VALIDATION_ERROR", error.message, 422);
     }
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
-    return errorEnvelope("INTERNAL_ERROR", "Import commit failed", 500);
+    console.error("handleCommitImportJob error:", error);
+    const detail = error instanceof Error ? error.message : "Import commit failed";
+    return errorEnvelope("INTERNAL_ERROR", detail, 500);
   }
 }
 

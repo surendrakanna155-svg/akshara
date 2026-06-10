@@ -603,3 +603,128 @@ export async function overlayTimetableSnapshotFromSlots(
 
   return merged;
 }
+
+export interface ParentSnapshotContext {
+  childName: string;
+  childClass: string;
+}
+
+export async function loadStudentParentSnapshotContext(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+): Promise<ParentSnapshotContext> {
+  const rows = await db.queryObject<{
+    display_name: string;
+    class_name: string | null;
+    section_name: string | null;
+  }>(
+    `SELECT s.display_name, e.class_name, e.section_name
+     FROM students s
+     LEFT JOIN sis_student_enrollments e
+       ON e.student_id = s.id
+      AND e.organization_id = s.organization_id
+      AND e.school_id = s.school_id
+      AND e.is_current = true
+     WHERE s.organization_id = $1 AND s.school_id = $2 AND s.id = $3
+     LIMIT 1`,
+    [orgId, schoolId, studentId],
+  );
+  const row = rows[0];
+  if (!row) {
+    return { childName: "Student", childClass: "" };
+  }
+  const className = row.class_name ?? "";
+  const sectionName = row.section_name ?? "";
+  const childClass = className
+    ? sectionName
+      ? `${className}-${sectionName}`
+      : className
+    : "";
+  return { childName: row.display_name, childClass };
+}
+
+export function buildDefaultParentSnapshot(
+  entityType: string,
+  context: ParentSnapshotContext,
+): Record<string, unknown> {
+  const base = {
+    childName: context.childName,
+    childClass: context.childClass,
+    unreadNotifications: 0,
+  };
+  switch (entityType) {
+    case "snapshot_attendance":
+      return {
+        ...base,
+        month: new Date().toISOString().slice(0, 7),
+        kpi: { attendancePercent: 0, absentDays: 0, lateDays: 0 },
+        calendarDays: [],
+        recentLogs: [],
+      };
+    case "snapshot_timetable":
+      return {
+        ...base,
+        weekRangeLabel: weekRangeLabel(),
+        totalPeriodsThisWeek: 0,
+        completedPeriodsToday: 0,
+        upcomingPeriodsToday: 0,
+        days: [],
+      };
+    case "snapshot_fees":
+      return {
+        ...base,
+        summaryLabel: "Fees",
+        totalDue: 0,
+        installments: [],
+      };
+    default:
+      return base;
+  }
+}
+
+export async function overlayFeesSnapshotFromFinance(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+  snapshot: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const rows = await db.queryObject<{
+    id: string;
+    outstanding_amount: string;
+    invoice_status: string;
+    due_date: string;
+  }>(
+    `SELECT id, outstanding_amount, invoice_status, due_date::text AS due_date
+     FROM finance_invoices
+     WHERE organization_id = $1 AND school_id = $2 AND student_id = $3
+       AND invoice_status NOT IN ('cancelled', 'draft')
+     ORDER BY due_date ASC
+     LIMIT 12`,
+    [orgId, schoolId, studentId],
+  );
+  if (rows.length === 0) {
+    return snapshot;
+  }
+
+  const installments = rows.map((row, index) => ({
+    id: row.id,
+    label: `Invoice ${index + 1}`,
+    amountDue: parseFloat(row.outstanding_amount),
+    dueDateLabel: row.due_date.slice(0, 10),
+    statusLabel: row.invoice_status,
+  }));
+  const totalDue = installments.reduce((sum, item) => sum + item.amountDue, 0);
+  const hasOutstanding = installments.some((item) =>
+    item.statusLabel === "issued" || item.statusLabel === "partially_paid"
+  );
+
+  return {
+    ...snapshot,
+    summaryLabel: hasOutstanding ? "Outstanding fees" : "Fees",
+    totalDue,
+    installments,
+  };
+}

@@ -34,7 +34,8 @@ export async function loadRawSchoolMetrics(
   );
   const [invoices] = await db.queryObject<{ count: number }>(
     `SELECT count(*)::int AS count FROM finance_invoices
-     WHERE organization_id = $1 AND school_id = $2 AND status = 'open'`,
+     WHERE organization_id = $1 AND school_id = $2
+       AND invoice_status IN ('issued', 'partially_paid')`,
     [organizationId, schoolId],
   );
   const [collections] = await db.queryObject<{ count: number }>(

@@ -45,6 +45,50 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, OPTIONS",
 };
 
+async function routeModuleRequest(
+  req: Request,
+  config: ReturnType<typeof loadConfig>,
+  method: string,
+  path: string,
+): Promise<Response> {
+  const moduleRouters = [
+    routeAdmissions,
+    routeFinance,
+    routeSis,
+    routeAcademic,
+    routeTimetable,
+    routeTransport,
+    routeHr,
+    routeHostel,
+    routeLibrary,
+    routeInventory,
+    routeAlumni,
+    routeManagement,
+    routeControlCenter,
+    routePilotOperations,
+    routeOnboarding,
+    routeAnalytics,
+    routeCopilot,
+    routeCommunication,
+    routeParent,
+    routeTeacher,
+    routeStudent,
+    routePayment,
+    routeAudit,
+  ] as const;
+
+  for (const route of moduleRouters) {
+    const matched = await route(req, config, method, path);
+    if (matched) return matched;
+  }
+
+  return errorEnvelope(
+    "NOT_FOUND",
+    `Route not found: ${method} ${path}`,
+    404,
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -94,145 +138,7 @@ Deno.serve(async (req) => {
     } else if (method === "POST" && path === "/auth/context/switch") {
       response = await handleContextSwitch(req, config);
     } else {
-      const admissionsResponse = await routeAdmissions(req, config, method, path);
-      if (admissionsResponse) {
-        response = admissionsResponse;
-      } else {
-        const financeResponse = await routeFinance(req, config, method, path);
-        if (financeResponse) {
-          response = financeResponse;
-        } else {
-          const sisResponse = await routeSis(req, config, method, path);
-          if (sisResponse) {
-            response = sisResponse;
-          } else {
-            const academicResponse = await routeAcademic(req, config, method, path);
-            if (academicResponse) {
-              response = academicResponse;
-            } else {
-              const timetableResponse = await routeTimetable(req, config, method, path);
-              if (timetableResponse) {
-                response = timetableResponse;
-              } else {
-              const transportResponse = await routeTransport(req, config, method, path);
-              if (transportResponse) {
-                response = transportResponse;
-              } else {
-                const hrResponse = await routeHr(req, config, method, path);
-                if (hrResponse) {
-                  response = hrResponse;
-                } else {
-                  const hostelResponse = await routeHostel(req, config, method, path);
-                  if (hostelResponse) {
-                    response = hostelResponse;
-                  } else {
-                    const libraryResponse = await routeLibrary(req, config, method, path);
-                    if (libraryResponse) {
-                      response = libraryResponse;
-                    } else {
-                      const inventoryResponse = await routeInventory(req, config, method, path);
-                      if (inventoryResponse) {
-                        response = inventoryResponse;
-                      } else {
-                        const alumniResponse = await routeAlumni(req, config, method, path);
-                        if (alumniResponse) {
-                          response = alumniResponse;
-                        } else {
-                          const managementResponse = await routeManagement(req, config, method, path);
-                          if (managementResponse) {
-                            response = managementResponse;
-                          } else {
-                            const controlCenterResponse = await routeControlCenter(req, config, method, path);
-                            if (controlCenterResponse) {
-                              response = controlCenterResponse;
-                            } else {
-                              const pilotResponse = await routePilotOperations(req, config, method, path);
-                              if (pilotResponse) {
-                                response = pilotResponse;
-                              } else {
-                                const onboardingResponse = await routeOnboarding(
-                                  req,
-                                  config,
-                                  method,
-                                  path,
-                                );
-                                if (onboardingResponse) {
-                                  response = onboardingResponse;
-                                } else {
-                                const analyticsResponse = await routeAnalytics(
-                                  req,
-                                  config,
-                                  method,
-                                  path,
-                                );
-                                if (analyticsResponse) {
-                                  response = analyticsResponse;
-                                } else {
-                                const copilotResponse = await routeCopilot(
-                                  req,
-                                  config,
-                                  method,
-                                  path,
-                                );
-                                if (copilotResponse) {
-                                  response = copilotResponse;
-                                } else {
-                                const communicationResponse = await routeCommunication(
-                                  req,
-                                  config,
-                                  method,
-                                  path,
-                                );
-                                if (communicationResponse) {
-                                  response = communicationResponse;
-                                } else {
-                                  const parentResponse = await routeParent(req, config, method, path);
-                                  if (parentResponse) {
-                                    response = parentResponse;
-                                  } else {
-                                    const teacherResponse = await routeTeacher(req, config, method, path);
-                                    if (teacherResponse) {
-                                      response = teacherResponse;
-                                    } else {
-                                      const studentResponse = await routeStudent(req, config, method, path);
-                                      if (studentResponse) {
-                                        response = studentResponse;
-                                      } else {
-                                        const paymentResponse = await routePayment(req, config, method, path);
-                                        if (paymentResponse) {
-                                          response = paymentResponse;
-                                        } else {
-                                          const auditResponse = await routeAudit(req, config, method, path);
-                                          if (auditResponse) {
-                                            response = auditResponse;
-                                          } else {
-                                            response = errorEnvelope(
-                                              "NOT_FOUND",
-                                              `Route not found: ${method} ${path}`,
-                                              404,
-                                            );
-                                          }
-                                        }
-                                      }
-                                    }
-                                  }
-                                }
-                                }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              }
-            }
-          }
-        }
-      }
+      response = await routeModuleRequest(req, config, method, path);
     }
 
     const headers = new Headers(response.headers);
