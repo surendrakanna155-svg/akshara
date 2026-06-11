@@ -9,6 +9,8 @@ import '../features/inventory/maintenance/inventory_maintenance_screen.dart';
 import '../features/inventory/procurement/inventory_procurement_screen.dart';
 import '../features/inventory/reports/inventory_reports_screen.dart';
 import '../features/inventory/vendors/inventory_vendors_screen.dart';
+import '../features/inventory/intelligence/inventory_copilot_screen.dart';
+import '../features/inventory/intelligence/inventory_lifecycle_screen.dart';
 import 'route_names.dart';
 
 String? inventoryRootRedirect(BuildContext context, GoRouterState state) {
@@ -72,4 +74,18 @@ Widget inventoryReportsRouteBuilder(
   GoRouterState state,
 ) {
   return const InventoryReportsScreen();
+}
+
+Widget inventoryCopilotRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const InventoryCopilotScreen();
+}
+
+Widget inventoryLifecycleRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const InventoryLifecycleScreen();
 }

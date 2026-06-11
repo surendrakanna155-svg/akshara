@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/inventory/inventory_models.dart';
+import '../../../features/inventory/intelligence/inventory_intelligence_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/inventory_repository.dart';
 import '../paginated_result.dart';
@@ -543,4 +544,119 @@ class MockInventoryRepository implements InventoryRepository {
       ],
     );
   }
+
+  @override
+  Future<InventoryCopilotData> getInventoryCopilot({required RepositoryQuery query}) async =>
+      const InventoryCopilotData(
+        stockForecastUnits: 1240,
+        forecastConfidence: 81,
+        lowStockPredictions: [
+          InventoryLowStockPrediction(
+            sku: 'LAB-MICRO-001',
+            itemName: 'Lab Microscope Set',
+            currentStock: 4,
+            predictedDaysUntilStockout: 12,
+            riskScore: 82,
+          ),
+        ],
+        reorderRecommendations: [
+          InventoryReorderRecommendation(
+            id: 'reorder_1',
+            sku: 'LAB-MICRO-001',
+            itemName: 'Lab Microscope Set',
+            recommendedQuantity: 24,
+            urgency: 'high',
+            reason: 'Stock at 4 units; projected stockout in 12 days',
+          ),
+        ],
+        stockTrend: [
+          InventoryStockTrendPoint(month: '2026-01', consumption: 180, forecast: 198),
+          InventoryStockTrendPoint(month: '2026-02', consumption: 210, forecast: 231),
+        ],
+        riskAlerts: [
+          InventoryRiskAlert(
+            id: 'alert_1',
+            severity: 'medium',
+            title: '3 SKUs below reorder threshold',
+            detail: 'Review auto-reorder recommendations',
+          ),
+        ],
+        generatedAt: '2026-06-10T00:00:00Z',
+      );
+
+  @override
+  Future<AssetLifecycleData> getAssetLifecycle({required RepositoryQuery query}) async =>
+      AssetLifecycleData(
+        recentEvents: const [
+          AssetLifecycleEvent(
+            id: 'evt_1',
+            assetId: 'asset_1',
+            assetTag: 'INV-AST-1042',
+            eventType: AssetLifecycleEventType.distribution,
+            notes: 'Assigned to IT Lab — Block C',
+            recordedAt: '2026-03-01T10:00:00Z',
+            recordedBy: 'user_1',
+          ),
+          AssetLifecycleEvent(
+            id: 'evt_2',
+            assetId: 'asset_4',
+            assetTag: 'INV-AST-1045',
+            eventType: AssetLifecycleEventType.damage,
+            notes: 'Chair leg repair required',
+            recordedAt: '2026-02-28T14:30:00Z',
+            recordedBy: 'user_2',
+          ),
+        ],
+        eventCounts: {
+          for (final type in AssetLifecycleEventType.values) type: switch (type) {
+            AssetLifecycleEventType.purchase => 12,
+            AssetLifecycleEventType.distribution => 48,
+            AssetLifecycleEventType.replacement => 3,
+            AssetLifecycleEventType.damage => 5,
+            AssetLifecycleEventType.retirement => 2,
+          },
+        },
+        assetsTracked: 70,
+        generatedAt: '2026-06-10T00:00:00Z',
+      );
+
+  @override
+  Future<ProcurementWorkflowData> getProcurementWorkflow({required RepositoryQuery query}) async =>
+      const ProcurementWorkflowData(
+        pendingApprovals: 2,
+        overdueDeliveries: 1,
+        alerts: [
+          ProcurementWorkflowAlert(
+            id: 'alert_po_1',
+            poNumber: 'PO-2026-0142',
+            severity: 'high',
+            title: '1 purchase order overdue for delivery',
+            detail: 'Follow up with vendor TechSupply India',
+          ),
+        ],
+        recommendations: [
+          ProcurementWorkflowRecommendation(
+            id: 'rec_1',
+            poNumber: 'PO-2026-0145',
+            action: 'Approve draft purchase order',
+            priority: 'medium',
+          ),
+        ],
+        generatedAt: '2026-06-10T00:00:00Z',
+      );
+
+  @override
+  Future<AssetLifecycleEvent> recordAssetLifecycleEvent({
+    required RepositoryQuery query,
+    required RecordAssetLifecycleEventRequest request,
+  }) async =>
+      AssetLifecycleEvent(
+        id: 'evt_new',
+        assetId: request.assetId,
+        assetTag: request.assetTag ?? '',
+        eventType: request.eventType,
+        notes: request.notes ?? '',
+        recordedAt: '2026-06-10T12:00:00Z',
+        recordedBy: 'mock_user',
+      );
 }

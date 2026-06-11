@@ -1,4 +1,5 @@
 import '../../../features/inventory/inventory_models.dart';
+import '../../../features/inventory/intelligence/inventory_intelligence_models.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 
@@ -12,4 +13,11 @@ abstract class InventoryRepository {
   Future<PaginatedResult<InventoryProcurementOrder>> getProcurementOrders({required RepositoryQuery query});
   Future<PaginatedResult<InventoryVendor>> getVendors({required RepositoryQuery query});
   Future<InventoryReportsData> getReports({required RepositoryQuery query});
+  Future<InventoryCopilotData> getInventoryCopilot({required RepositoryQuery query});
+  Future<AssetLifecycleData> getAssetLifecycle({required RepositoryQuery query});
+  Future<ProcurementWorkflowData> getProcurementWorkflow({required RepositoryQuery query});
+  Future<AssetLifecycleEvent> recordAssetLifecycleEvent({
+    required RepositoryQuery query,
+    required RecordAssetLifecycleEventRequest request,
+  });
 }

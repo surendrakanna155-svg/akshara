@@ -3,6 +3,8 @@ import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/inventory/inventory_models.dart';
+import '../../../../features/inventory/intelligence/inventory_intelligence_models.dart';
+import 'mapper/inventory_intelligence_mapper.dart';
 import 'mapper/inventory_mapper.dart';
 import 'remote/inventory_remote_datasource.dart';
 
@@ -11,11 +13,14 @@ class ApiInventoryRepository implements InventoryRepository {
   ApiInventoryRepository({
     required InventoryRemoteDataSource remote,
     InventoryMapper mapper = const InventoryMapper(),
+    InventoryIntelligenceMapper intelligenceMapper = const InventoryIntelligenceMapper(),
   })  : _remote = remote,
-        _mapper = mapper;
+        _mapper = mapper,
+        _intelligenceMapper = intelligenceMapper;
 
   final InventoryRemoteDataSource _remote;
   final InventoryMapper _mapper;
+  final InventoryIntelligenceMapper _intelligenceMapper;
 
   @override
   Future<InventoryDashboardData> getDashboard({required RepositoryQuery query}) async {
@@ -69,5 +74,40 @@ class ApiInventoryRepository implements InventoryRepository {
   Future<InventoryReportsData> getReports({required RepositoryQuery query}) async {
     final dto = await _remote.fetchReports(query: query);
     return _mapper.toReports(dto);
+  }
+
+  @override
+  Future<InventoryCopilotData> getInventoryCopilot({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchInventoryCopilot(query: query);
+    return _intelligenceMapper.toCopilot(dto);
+  }
+
+  @override
+  Future<AssetLifecycleData> getAssetLifecycle({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchAssetLifecycle(query: query);
+    return _intelligenceMapper.toLifecycle(dto);
+  }
+
+  @override
+  Future<ProcurementWorkflowData> getProcurementWorkflow({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchProcurementWorkflow(query: query);
+    return _intelligenceMapper.toProcurementWorkflow(dto);
+  }
+
+  @override
+  Future<AssetLifecycleEvent> recordAssetLifecycleEvent({
+    required RepositoryQuery query,
+    required RecordAssetLifecycleEventRequest request,
+  }) async {
+    final dto = await _remote.recordAssetLifecycleEvent(
+      query: query,
+      body: {
+        'assetId': request.assetId,
+        'eventType': request.eventType.name,
+        if (request.assetTag != null) 'assetTag': request.assetTag,
+        if (request.notes != null) 'notes': request.notes,
+      },
+    );
+    return _intelligenceMapper.toLifecycleEvent(dto);
   }
 }

@@ -9,7 +9,9 @@ enum InventoryScreen {
   maintenance,
   procurement,
   vendors,
-  reports;
+  reports,
+  copilot,
+  lifecycle;
 
   String get label => switch (this) {
         InventoryScreen.dashboard => 'Dashboard',
@@ -20,6 +22,8 @@ enum InventoryScreen {
         InventoryScreen.procurement => 'Procurement',
         InventoryScreen.vendors => 'Vendors',
         InventoryScreen.reports => 'Reports',
+        InventoryScreen.copilot => 'Inventory Copilot',
+        InventoryScreen.lifecycle => 'Asset Lifecycle',
       };
 }
 

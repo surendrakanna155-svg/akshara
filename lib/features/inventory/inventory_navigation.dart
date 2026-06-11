@@ -12,6 +12,8 @@ const List<InventoryScreen> kInventoryNavScreens = [
   InventoryScreen.procurement,
   InventoryScreen.vendors,
   InventoryScreen.reports,
+  InventoryScreen.copilot,
+  InventoryScreen.lifecycle,
 ];
 
 extension InventoryScreenRoutes on InventoryScreen {
@@ -24,6 +26,8 @@ extension InventoryScreenRoutes on InventoryScreen {
         InventoryScreen.procurement => RouteNames.inventoryProcurement,
         InventoryScreen.vendors => RouteNames.inventoryVendors,
         InventoryScreen.reports => RouteNames.inventoryReports,
+        InventoryScreen.copilot => RouteNames.inventoryCopilot,
+        InventoryScreen.lifecycle => RouteNames.inventoryLifecycle,
       };
 }
 

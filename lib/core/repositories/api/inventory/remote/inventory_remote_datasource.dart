@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
 import '../dto/inventory_responses_dto.dart';
 import 'inventory_api_paths.dart';
 
@@ -88,6 +89,46 @@ class InventoryRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return InventoryReportsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<Map<String, dynamic>> fetchInventoryCopilot({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryApiPaths.intelligenceCopilot,
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
+
+  Future<Map<String, dynamic>> fetchAssetLifecycle({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryApiPaths.intelligenceLifecycle,
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
+
+  Future<Map<String, dynamic>> fetchProcurementWorkflow({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryApiPaths.intelligenceProcurementWorkflow,
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
+
+  Future<Map<String, dynamic>> recordAssetLifecycleEvent({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryApiPaths.intelligenceLifecycleEvents,
+      queryParameters: _queryParams(query),
+      data: body,
+    );
+    return _requireData(response);
+  }
+
+  Map<String, dynamic> _requireData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
