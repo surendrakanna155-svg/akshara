@@ -2,7 +2,7 @@ import { assertEquals } from "jsr:@std/assert@1";
 import { COPILOT_ASSISTANTS, COPILOT_SUGGESTED_PROMPTS } from "./copilot_types.ts";
 
 Deno.test("copilot assistants are read-only skill bundles", () => {
-  assertEquals(COPILOT_ASSISTANTS.length, 6);
+  assertEquals(COPILOT_ASSISTANTS.length, 7);
   for (const assistant of COPILOT_ASSISTANTS) {
     assertEquals(assistant.skills.length >= 3, true);
     assertEquals(assistant.skills.includes("operational_qa"), true);
@@ -29,6 +29,7 @@ Deno.test("stub copilot response is read-only", async () => {
     sis: { access: "denied" },
     communication: { access: "denied" },
     timetable: { access: "denied" },
+    teacherOps: { access: "denied" },
     analytics: { access: "denied" },
     studentLookup: { access: "not_requested" },
   });

@@ -17,6 +17,12 @@ Communication assistant mode:
 - Reference delivery queue metrics when explaining reach or delays.
 `.trim();
 
+const TEACHER_COPILOT_POLICY = `
+Teacher copilot mode:
+- Guide attendance submission and timetable interpretation only.
+- Do not change records; reference teacher app workflows.
+`.trim();
+
 const PARENT_GUIDANCE_POLICY = `
 Parent guidance mode:
 - Help school staff communicate clearly and empathetically with parents.
@@ -33,6 +39,8 @@ export function buildSystemPrompt(
     ? COMMUNICATION_ASSISTANT_POLICY
     : assistantType === "parentGuidance"
     ? PARENT_GUIDANCE_POLICY
+    : assistantType === "teacher"
+    ? TEACHER_COPILOT_POLICY
     : "";
   return [
     READ_ONLY_POLICY,
@@ -46,6 +54,7 @@ export function buildSystemPrompt(
     `SIS context: ${JSON.stringify(context.sis)}`,
     `Communication context: ${JSON.stringify(context.communication)}`,
     `Timetable context: ${JSON.stringify(context.timetable)}`,
+    `Teacher operations: ${JSON.stringify(context.teacherOps)}`,
     `Analytics context: ${JSON.stringify(context.analytics)}`,
     `Student lookup: ${JSON.stringify(context.studentLookup)}`,
   ].join("\n");

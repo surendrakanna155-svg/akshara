@@ -4,7 +4,8 @@ export type CopilotAssistantType =
   | "sis"
   | "academic"
   | "communication"
-  | "parentGuidance";
+  | "parentGuidance"
+  | "teacher";
 
 export const COPILOT_ASSISTANT_TYPES: CopilotAssistantType[] = [
   "admissions",
@@ -13,6 +14,7 @@ export const COPILOT_ASSISTANT_TYPES: CopilotAssistantType[] = [
   "academic",
   "communication",
   "parentGuidance",
+  "teacher",
 ];
 
 export interface CopilotAssistantDefinition {
@@ -66,6 +68,13 @@ export const COPILOT_ASSISTANTS: CopilotAssistantDefinition[] = [
     requiredViewPermission: "viewCommunications",
     skills: ["parent_faq", "draft_guidance", "explain", "operational_qa"],
   },
+  {
+    type: "teacher",
+    label: "Teacher Copilot",
+    description: "Attendance, timetable, and class operations guidance for teachers (read-only).",
+    requiredViewPermission: "viewAdminHub",
+    skills: ["attendance", "timetable", "class_insights", "operational_qa"],
+  },
 ];
 
 export const COPILOT_SUGGESTED_PROMPTS: Record<CopilotAssistantType, string[]> = {
@@ -110,5 +119,11 @@ export const COPILOT_SUGGESTED_PROMPTS: Record<CopilotAssistantType, string[]> =
     "Draft a polite absence follow-up message for parents",
     "What should parents see in the mobile app?",
     "Suggest talking points for a parent complaint about homework load",
+  ],
+  teacher: [
+    "How do I submit attendance for my class today?",
+    "Summarize my timetable workload this week",
+    "What should I tell a parent about missed attendance?",
+    "Explain how to message parents through the app",
   ],
 };

@@ -11,6 +11,7 @@ export interface CopilotContextBundle {
   sis: Record<string, unknown>;
   communication: Record<string, unknown>;
   timetable: Record<string, unknown>;
+  teacherOps: Record<string, unknown>;
   analytics: Record<string, unknown>;
   studentLookup: Record<string, unknown>;
 }
@@ -72,8 +73,12 @@ export async function loadCopilotContext(
     : { access: "not_requested" };
 
   const timetable = claimsHasPermission(claims, "viewAcademicTimetable") &&
-      assistantType === "academic"
+      (assistantType === "academic" || assistantType === "teacher")
     ? await loadTimetableContext(db, organizationId, schoolId, yearRows[0]?.year_label)
+    : { access: "denied" };
+
+  const teacherOps = assistantType === "teacher"
+    ? await loadTeacherOpsContext(db, organizationId, schoolId)
     : { access: "denied" };
 
   const analytics = claimsHasPermission(claims, "viewAnalytics") &&
@@ -89,8 +94,33 @@ export async function loadCopilotContext(
     sis,
     communication,
     timetable,
+    teacherOps,
     analytics,
     studentLookup,
+  };
+}
+
+async function loadTeacherOpsContext(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<Record<string, unknown>> {
+  const todaySessions = await db.queryCount(
+    `SELECT count(*)::text AS count FROM attendance_sessions
+     WHERE organization_id = $1 AND school_id = $2 AND session_date = CURRENT_DATE`,
+    [organizationId, schoolId],
+  );
+  const submittedToday = await db.queryCount(
+    `SELECT count(*)::text AS count FROM attendance_sessions
+     WHERE organization_id = $1 AND school_id = $2 AND session_date = CURRENT_DATE
+       AND status = 'submitted'`,
+    [organizationId, schoolId],
+  );
+  return {
+    access: "granted",
+    todaySessions,
+    submittedToday,
+    readOnly: true,
   };
 }
 
