@@ -29,6 +29,40 @@ class MockEducationRepository implements EducationRepository {
         answerText: 'Rate of change of displacement.',
       ),
     ]);
+    _homework.addAll([
+      HomeworkAssignment(
+        id: 'hw_demo_1',
+        title: '5 — Mathematics worksheet',
+        className: '5',
+        sectionName: 'A',
+        subjectName: 'Mathematics',
+        topic: 'Fractions',
+        difficulty: EduDifficulty.medium,
+        assignmentType: EduHomeworkType.practiceWorksheet,
+        content: const [
+          {'prompt': 'Add 1/2 + 1/4', 'answerHint': '3/4'},
+        ],
+        status: 'published',
+      ),
+    ]);
+    _papers.add(
+      QuestionPaperDetail(
+        paper: const QuestionPaperSummary(
+          id: 'paper_demo_1',
+          title: '5 — Mathematics unit test',
+          className: '5',
+          sectionName: 'A',
+          subjectName: 'Mathematics',
+          examType: EduExamType.unitTest,
+          totalMarks: 50,
+          difficulty: EduDifficulty.medium,
+          status: 'published',
+        ),
+        items: const [],
+        blueprint: const {},
+        answerKey: const [],
+      ),
+    );
   }
 
   final List<QuestionBankItem> _bank = [];

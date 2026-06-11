@@ -47,6 +47,7 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
   Widget build(BuildContext context) {
     final data = ref.watch(parentAttendanceProvider);
     final isLoading = ref.watch(parentAttendanceLoadingProvider);
+    final hasError = ref.watch(parentAttendanceErrorProvider);
     final highlightAbsent = ref.watch(attendanceHighlightAbsentProvider);
 
     return Scaffold(
@@ -62,7 +63,13 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
       ),
       body: isLoading
           ? const AksharaLoadingState()
-          : LayoutBuilder(
+          : hasError
+              ? AksharaErrorState(
+                  message: 'Unable to load attendance right now.',
+                  onRetry: () =>
+                      ref.read(parentAttendanceErrorProvider.notifier).state = false,
+                )
+              : LayoutBuilder(
               builder: (context, constraints) {
                 final isTablet =
                     constraints.maxWidth >= ParentAttendanceScreen._tabletBreakpoint;

@@ -39,11 +39,40 @@ TEACHER_PHONE_START = int(os.environ.get("DEMO_TEACHER_PHONE_START", "9000000001
 PARENT_PHONE_START = int(os.environ.get("DEMO_PARENT_PHONE_START", "9000100001"))
 
 STUDENT_COUNT = int(os.environ.get("DEMO_STUDENT_COUNT", "500"))
-TEACHER_COUNT = int(os.environ.get("DEMO_TEACHER_COUNT", "35"))
-GUARDIAN_COUNT = int(os.environ.get("DEMO_GUARDIAN_COUNT", "750"))
+TEACHER_COUNT = int(os.environ.get("DEMO_TEACHER_COUNT", "20"))
+STAFF_COUNT = int(os.environ.get("DEMO_STAFF_COUNT", "10"))
+GUARDIAN_COUNT = int(os.environ.get("DEMO_GUARDIAN_COUNT", "500"))
 IMPORT_BATCH_SIZE = int(os.environ.get("DEMO_IMPORT_BATCH_SIZE", "50"))
-FINANCE_SAMPLE_SIZE = int(os.environ.get("DEMO_FINANCE_SAMPLE_SIZE", "100"))
-ATTENDANCE_HISTORY_DAYS = int(os.environ.get("DEMO_ATTENDANCE_DAYS", "14"))
+FINANCE_SAMPLE_SIZE = int(os.environ.get("DEMO_FINANCE_SAMPLE_SIZE", "150"))
+ATTENDANCE_HISTORY_DAYS = int(os.environ.get("DEMO_ATTENDANCE_DAYS", "30"))
+HOMEWORK_SAMPLE_CLASSES = int(os.environ.get("DEMO_HOMEWORK_CLASSES", "8"))
+LESSON_LOG_SAMPLE = int(os.environ.get("DEMO_LESSON_LOG_SAMPLE", "40"))
+EXAM_PAPER_SAMPLE = int(os.environ.get("DEMO_EXAM_PAPER_SAMPLE", "6"))
+BOOK_KIT_DISTRIBUTIONS = int(os.environ.get("DEMO_BOOK_KIT_DISTRIBUTIONS", "50"))
+
+SUBJECT_NAMES = [
+    "English",
+    "Mathematics",
+    "Science",
+    "Social Studies",
+    "Hindi",
+    "Computer Science",
+    "Physical Education",
+    "Art",
+]
+
+NON_TEACHING_STAFF_LABELS = [
+    "Accountant",
+    "Office Clerk",
+    "Librarian",
+    "Lab Assistant",
+    "Transport Coordinator",
+    "Store Manager",
+    "Receptionist",
+    "IT Support",
+    "Counselor",
+    "Security Supervisor",
+]
 
 REQUEST_TIMEOUT = int(os.environ.get("DEMO_API_TIMEOUT", "180"))
 
@@ -165,7 +194,7 @@ def student_rows(count: int) -> list[dict[str, str]]:
     for i in range(count):
         class_label, section = slots[i % len(slots)]
         roll = str((i // len(SECTION_LABELS)) + 1)
-        parent_phone = str(PARENT_PHONE_START + (i % GUARDIAN_COUNT))
+        parent_phone = str(PARENT_PHONE_START + i)
         rows.append(
             {
                 "studentName": f"Demo Student {i + 1:04d}",
@@ -178,6 +207,39 @@ def student_rows(count: int) -> list[dict[str, str]]:
                 "rollNumber": roll,
                 "gender": "female" if i % 2 else "male",
                 "dateOfBirth": f"201{ i % 6}-{(i % 12) + 1:02d}-15",
+            }
+        )
+    return rows
+
+
+def staff_rows() -> list[dict[str, str]]:
+    """Principal + teachers + non-teaching staff (schoolAdmin role)."""
+    rows: list[dict[str, str]] = [
+        {
+            "displayName": "Demo Principal",
+            "phone": str(TEACHER_PHONE_START),
+            "role": "principal",
+            "email": "demo.principal@akshara-pilot.local",
+        },
+    ]
+    for i in range(TEACHER_COUNT):
+        rows.append(
+            {
+                "displayName": f"Demo Teacher {i + 1:02d}",
+                "phone": str(TEACHER_PHONE_START + 1 + i),
+                "role": "teacher",
+                "email": f"demo.teacher{i + 1:02d}@akshara-pilot.local",
+            }
+        )
+    staff_phone_start = TEACHER_PHONE_START + 1 + TEACHER_COUNT
+    for i in range(STAFF_COUNT):
+        label = NON_TEACHING_STAFF_LABELS[i % len(NON_TEACHING_STAFF_LABELS)]
+        rows.append(
+            {
+                "displayName": f"Demo {label} {i + 1:02d}",
+                "phone": str(staff_phone_start + i),
+                "role": "schoolAdmin",
+                "email": f"demo.staff{i + 1:02d}@akshara-pilot.local",
             }
         )
     return rows
@@ -268,7 +330,7 @@ def import_preview_commit(
     return commit_data.get("job") or commit_data
 
 
-def list_students(token: str, page_size: int = 100, pages: int = 10) -> list[dict[str, Any]]:
+def list_students(token: str, page_size: int = 100, pages: int = 30) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for page in range(1, pages + 1):
         code, resp = request(

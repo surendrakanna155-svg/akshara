@@ -28,6 +28,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(teacherDashboardProvider);
     final isLoading = ref.watch(teacherDashboardLoadingProvider);
+    final hasError = ref.watch(teacherDashboardErrorProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
@@ -48,7 +49,13 @@ class TeacherDashboardScreen extends ConsumerWidget {
       ),
       body: isLoading
           ? const AksharaLoadingState()
-          : LayoutBuilder(
+          : hasError
+              ? AksharaErrorState(
+                  message: 'Unable to load dashboard right now.',
+                  onRetry: () =>
+                      ref.read(teacherDashboardErrorProvider.notifier).state = false,
+                )
+              : LayoutBuilder(
               builder: (context, constraints) {
                 final isTablet =
                     constraints.maxWidth >= _tabletBreakpoint;

@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v14.1 Pilot Readiness RC1 (`v14.1-pilot-rc1`)  
-**Previous release:** v14.0 Final School Intelligence Audit  
+**Current release:** v15.0 Real School Simulation (`v15.0-real-school-simulation`)  
+**Previous release:** v14.1 Pilot Readiness RC1  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

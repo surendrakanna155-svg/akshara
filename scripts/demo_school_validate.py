@@ -224,6 +224,90 @@ def validate_analytics(report: RunReport, admin: str) -> None:
     check_status(report, "finance dashboard", code, resp)
 
 
+def validate_school_processes(report: RunReport, admin: str, parent: str | None, teacher: str | None) -> None:
+    """Phase 20 — admission through principal intelligence workflows."""
+    code, resp = request("GET", "/admissions/dashboard", token=admin)
+    check_status(report, "admission pipeline dashboard", code, resp)
+
+    code, resp = request("GET", "/school/subjects", token=admin)
+    if code == 404:
+        report.add("subjects catalog", False, "Not deployed")
+    else:
+        check_status(report, "subjects catalog", code, resp)
+
+    code, resp = request("GET", "/school/lesson-logs", token=admin)
+    if code == 404:
+        report.add("lesson logs", False, "Not deployed")
+    else:
+        check_status(report, "lesson logs", code, resp)
+
+    code, resp = request("GET", "/education/homework", token=admin)
+    if code == 404:
+        report.add("homework catalog", False, "Not deployed")
+    else:
+        check_status(report, "homework catalog", code, resp)
+
+    code, resp = request("GET", "/education/question-papers", token=admin)
+    if code == 404:
+        report.add("exam papers", False, "Not deployed")
+    else:
+        check_status(report, "exam papers", code, resp)
+
+    code, resp = request("GET", "/inventory/distribution/dashboard", token=admin)
+    if code == 404:
+        report.add("book distribution dashboard", False, "Not deployed")
+    else:
+        check_status(report, "book distribution dashboard", code, resp)
+
+    if parent:
+        code, resp = request("GET", "/parent/homework", token=parent)
+        check_status(report, "parent homework visibility", code, resp)
+        code, resp = request("GET", "/parent/exams", token=parent)
+        check_status(report, "parent exams visibility", code, resp)
+
+    if teacher:
+        code, resp = request("GET", "/teacher/homework", token=teacher)
+        if code == 404:
+            report.add("teacher homework queue", False, "Not deployed")
+        else:
+            check_status(report, "teacher homework queue", code, resp)
+
+
+def validate_role_journeys(report: RunReport, admin: str, parent: str | None, teacher: str | None) -> None:
+    """Daily / weekly / monthly workflow probes per persona."""
+    journeys = [
+        ("school admin daily", admin, "/sis/dashboard"),
+        ("school admin weekly finance", admin, "/finance/collections?page=1&pageSize=20"),
+        ("school admin monthly analytics", admin, "/analytics/dashboard"),
+        ("principal intelligence", admin, "/intelligence/principal/center"),
+        ("inventory manager", admin, "/inventory/distribution/reports"),
+        ("accountant finance", admin, "/finance/refunds?page=1&pageSize=20"),
+    ]
+    for label, token, path in journeys:
+        code, resp = request("GET", path, token=token)
+        if code == 404:
+            report.add(label, False, f"Route not deployed: {path}")
+        else:
+            check_status(report, label, code, resp)
+
+    if teacher:
+        for label, path in [
+            ("teacher daily dashboard", "/teacher/dashboard"),
+            ("teacher weekly attendance", "/teacher/attendance"),
+        ]:
+            code, resp = request("GET", path, token=teacher)
+            check_status(report, label, code, resp)
+
+    if parent:
+        for label, path in [
+            ("parent daily dashboard", "/parent/dashboard"),
+            ("parent weekly fees", "/parent/fees"),
+            ("parent monthly attendance", "/parent/attendance"),
+        ]:
+            code, resp = request("GET", path, token=parent)
+            check_status(report, label, code, resp)
+
+
 def validate_v14_intelligence(report: RunReport, admin: str, parent: str | None) -> None:
     """Phase 11–16 intelligence + communication analytics (v14)."""
     v14_paths = [
@@ -314,6 +398,8 @@ def main() -> int:
     validate_notifications(report, admin, parent)
     validate_messaging(report, admin, parent, teacher)
     validate_analytics(report, admin)
+    validate_school_processes(report, admin, parent, teacher)
+    validate_role_journeys(report, admin, parent, teacher)
     validate_v14_intelligence(report, admin, parent)
     validate_copilot(report, admin)
 

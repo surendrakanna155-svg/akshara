@@ -23,15 +23,21 @@ from demo_school_lib import (
     ADMISSION_PREFIX,
     ADMIN_PHONE,
     ATTENDANCE_HISTORY_DAYS,
+    BOOK_KIT_DISTRIBUTIONS,
     CLASS_LABELS,
+    EXAM_PAPER_SAMPLE,
     FINANCE_SAMPLE_SIZE,
     GUARDIAN_COUNT,
+    HOMEWORK_SAMPLE_CLASSES,
     IMPORT_BATCH_SIZE,
+    LESSON_LOG_SAMPLE,
     PARENT_PHONE_START,
     RunReport,
     SCHOOL_ID,
     SECTION_LABELS,
+    STAFF_COUNT,
     STUDENT_COUNT,
+    SUBJECT_NAMES,
     TEACHER_COUNT,
     TEACHER_PHONE_START,
     admin_token,
@@ -41,8 +47,8 @@ from demo_school_lib import (
     request,
     resolve_academic_year,
     sleep_brief,
+    staff_rows,
     student_rows,
-    teacher_rows,
     write_report,
     _entity_id,
 )
@@ -123,16 +129,16 @@ def ensure_academic_catalog(token: str, year_id: str, report: RunReport) -> dict
 
 def seed_teachers(token: str, report: RunReport) -> None:
     fields = ["displayName", "phone", "role", "email"]
-    rows = teacher_rows(TEACHER_COUNT)
+    rows = staff_rows()
     try:
-        job = import_preview_commit(token, "teacher", "demo_teachers.csv", rows, fields)
+        job = import_preview_commit(token, "teacher", "demo_staff.csv", rows, fields)
         report.add(
-            "teacher import",
+            "staff import (principal + teachers + admin)",
             True,
             f"committed={job.get('committedRows', 0)} valid={job.get('validRows', 0)}",
         )
     except RuntimeError as exc:
-        report.add("teacher import", False, str(exc))
+        report.add("staff import (principal + teachers + admin)", False, str(exc))
 
 
 def seed_students(token: str, report: RunReport) -> None:
@@ -179,9 +185,175 @@ def seed_students(token: str, report: RunReport) -> None:
     report.add("student import total", committed_total > 0, f"committed={committed_total}")
 
 
+def seed_subjects(token: str, report: RunReport) -> dict[str, str]:
+    subject_ids: dict[str, str] = {}
+    code, resp = request("GET", "/school/subjects", token=token)
+    if code == 404:
+        report.add("subjects", False, "Route not mounted — deploy school completion bundle")
+        return subject_ids
+    existing: dict[str, str] = {}
+    if code == 200:
+        for item in (api_data(resp) or {}).get("items", []):
+            name = str(item.get("subjectName") or "")
+            sid = _entity_id(item, "id", "subjectId")
+            if name and sid:
+                existing[name] = sid
+
+    for idx, name in enumerate(SUBJECT_NAMES):
+        if name in existing:
+            subject_ids[name] = existing[name]
+            continue
+        code, resp = request(
+            "POST",
+            "/school/subjects",
+            token=token,
+            body={
+                "subjectCode": f"SUB-{idx + 1:02d}",
+                "subjectName": name,
+                "category": "core",
+            },
+        )
+        if code not in (200, 201):
+            report.add(f"subject {name}", False, str(resp)[:200])
+            continue
+        sid = _entity_id(api_data(resp) or {}, "id", "subjectId")
+        subject_ids[name] = sid
+    report.add("subjects", len(subject_ids) >= min(4, len(SUBJECT_NAMES)), f"count={len(subject_ids)}")
+    return subject_ids
+
+
+def seed_lesson_logs(token: str, report: RunReport, subject_ids: dict[str, str]) -> None:
+    created = 0
+    subject_list = list(subject_ids.values()) or [None]
+    for i in range(LESSON_LOG_SAMPLE):
+        class_label = CLASS_LABELS[i % len(CLASS_LABELS)]
+        section = SECTION_LABELS[i % len(SECTION_LABELS)]
+        subject_id = subject_list[i % len(subject_list)]
+        code, resp = request(
+            "POST",
+            "/school/lesson-logs",
+            token=token,
+            body={
+                "className": class_label,
+                "sectionName": section,
+                "subjectId": subject_id,
+                "topic": f"Demo lesson topic {i + 1}",
+                "outcome": "Students engaged with pilot curriculum",
+            },
+        )
+        if code in (200, 201):
+            created += 1
+        elif code == 404 and i == 0:
+            report.add("lesson logs", False, "Route not mounted")
+            return
+        sleep_brief(0.05)
+    report.add("lesson logs", created > 0, f"created={created}")
+
+
+def seed_homework_history(token: str, year_label: str, report: RunReport) -> None:
+    created = 0
+    for i in range(HOMEWORK_SAMPLE_CLASSES):
+        class_label = CLASS_LABELS[i % len(CLASS_LABELS)]
+        subject = SUBJECT_NAMES[i % len(SUBJECT_NAMES)]
+        code, resp = request(
+            "POST",
+            "/education/homework/generate",
+            token=token,
+            body={
+                "academicYearLabel": year_label,
+                "className": class_label,
+                "sectionName": SECTION_LABELS[i % len(SECTION_LABELS)],
+                "subjectName": subject,
+                "topic": f"Demo homework unit {i + 1}",
+                "difficulty": "medium",
+                "assignmentType": "worksheet",
+            },
+        )
+        if code in (200, 201):
+            created += 1
+        elif code == 404 and i == 0:
+            report.add("homework history", False, "Route not mounted")
+            return
+        sleep_brief(0.05)
+    report.add("homework history", created > 0, f"assignments={created}")
+
+
+def seed_exam_history(token: str, report: RunReport) -> None:
+    created = 0
+    for i in range(EXAM_PAPER_SAMPLE):
+        class_label = CLASS_LABELS[i % len(CLASS_LABELS)]
+        subject = SUBJECT_NAMES[i % len(SUBJECT_NAMES)]
+        code, resp = request(
+            "POST",
+            "/education/question-papers/generate",
+            token=token,
+            body={
+                "className": class_label,
+                "subjectName": subject,
+                "examType": "unit_test",
+                "totalMarks": 50,
+                "durationMinutes": 90,
+            },
+        )
+        if code in (200, 201):
+            created += 1
+        elif code == 404 and i == 0:
+            report.add("exam history", False, "Route not mounted")
+            return
+        sleep_brief(0.05)
+    report.add("exam history", created > 0, f"papers={created}")
+
+
+def seed_book_kits(token: str, report: RunReport) -> None:
+    code, resp = request("GET", "/inventory/distribution/catalog", token=token)
+    if code == 404:
+        report.add("book kits (catalog)", False, "Route not mounted")
+        return
+    if code != 200:
+        report.add("book kits (catalog)", False, str(resp)[:200])
+        return
+    catalog = (api_data(resp) or {}).get("items") or []
+    book_items = [c for c in catalog if "book" in str(c.get("category", "")).lower()] or catalog
+    if not book_items:
+        report.add("book kits (catalog)", False, "no catalog items")
+        return
+    catalog_id = str(book_items[0].get("id") or book_items[0].get("catalogItemId") or "")
+    students = [
+        s
+        for s in list_students(token, page_size=100, pages=10)
+        if str(s.get("admissionNumber", "")).startswith(ADMISSION_PREFIX)
+    ][:BOOK_KIT_DISTRIBUTIONS]
+    distributed = 0
+    for student in students:
+        sid = student.get("id") or student.get("studentId")
+        if not sid:
+            continue
+        code, _ = request(
+            "POST",
+            "/inventory/distribution/items",
+            token=token,
+            body={"studentId": sid, "catalogItemId": catalog_id, "quantity": 1},
+        )
+        if code in (200, 201):
+            distributed += 1
+        sleep_brief(0.05)
+    report.add("book kit distributions", distributed > 0, f"distributed={distributed}")
+
+
+def seed_inventory_dashboard(token: str, report: RunReport) -> None:
+    code, resp = request("GET", "/inventory/distribution/dashboard", token=token)
+    if code == 404:
+        report.add("inventory dashboard", False, "Route not mounted")
+        return
+    report.add("inventory dashboard", code == 200, str((api_data(resp) or {}))[:120])
+
+
 def seed_secondary_guardian_invites(token: str, report: RunReport) -> None:
-    """Create extra parent invites to reach GUARDIAN_COUNT unique guardian targets."""
+    """Create extra parent invites only when guardians exceed student count."""
     secondary = max(0, GUARDIAN_COUNT - STUDENT_COUNT)
+    if secondary == 0:
+        report.add("secondary guardian invites", True, "skipped (1:1 parent mapping)")
+        return
     created = 0
     for i in range(secondary):
         phone = str(PARENT_PHONE_START + STUDENT_COUNT + i)
@@ -434,7 +606,10 @@ def main() -> int:
     args = parser.parse_args()
 
     report = RunReport(title="Demo School Seed")
-    print(f"Seeding Demo School: students={STUDENT_COUNT} teachers={TEACHER_COUNT} guardians={GUARDIAN_COUNT}")
+    print(
+        f"Seeding Demo School: students={STUDENT_COUNT} teachers={TEACHER_COUNT} "
+        f"staff={STAFF_COUNT} guardians={GUARDIAN_COUNT}"
+    )
     try:
         token = admin_token()
     except RuntimeError as exc:
@@ -460,6 +635,24 @@ def main() -> int:
     finance_manifest = seed_finance(token, year_id, year_label, report)
 
     token = admin_token()
+    subject_ids = seed_subjects(token, report)
+
+    token = admin_token()
+    seed_lesson_logs(token, report, subject_ids)
+
+    token = admin_token()
+    seed_homework_history(token, year_label, report)
+
+    token = admin_token()
+    seed_exam_history(token, report)
+
+    token = admin_token()
+    seed_book_kits(token, report)
+
+    token = admin_token()
+    seed_inventory_dashboard(token, report)
+
+    token = admin_token()
     seed_attendance_history(token, report)
 
     token = admin_token()
@@ -471,7 +664,10 @@ def main() -> int:
     manifest["targets"] = {
         "students": STUDENT_COUNT,
         "teachers": TEACHER_COUNT,
+        "staff": STAFF_COUNT,
         "guardians": GUARDIAN_COUNT,
+        "classes": len(CLASS_LABELS) * len(SECTION_LABELS),
+        "subjects": len(SUBJECT_NAMES),
     }
     manifest["finance"] = finance_manifest
     manifest["samplePhones"] = {

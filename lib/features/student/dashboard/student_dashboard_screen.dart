@@ -29,6 +29,7 @@ class StudentDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(studentDashboardProvider);
     final isLoading = ref.watch(studentDashboardLoadingProvider);
+    final hasError = ref.watch(studentDashboardErrorProvider);
     final overdueCount =
         data.homeworkDue.where((h) => h.status == HomeworkStatus.overdue).length;
     final dueCount = data.homeworkDue.length;
@@ -54,7 +55,13 @@ class StudentDashboardScreen extends ConsumerWidget {
       ),
       body: isLoading
           ? const AksharaLoadingState()
-          : LayoutBuilder(
+          : hasError
+              ? AksharaErrorState(
+                  message: 'Unable to load your dashboard.',
+                  onRetry: () =>
+                      ref.read(studentDashboardErrorProvider.notifier).state = false,
+                )
+              : LayoutBuilder(
               builder: (context, constraints) {
                 final isTablet =
                     constraints.maxWidth >= _tabletBreakpoint;

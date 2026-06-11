@@ -30,7 +30,28 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     ),
   ];
 
-  final List<LessonLogEntry> _lessonLogs = [];
+  final List<LessonLogEntry> _lessonLogs = [
+    const LessonLogEntry(
+      id: 'log_demo_1',
+      teacherUserId: 'teacher_1',
+      className: '5',
+      sectionName: 'A',
+      subjectId: 'sub_1',
+      topic: 'Fractions introduction',
+      outcome: 'completed',
+      recordedOn: '2026-06-01',
+    ),
+    const LessonLogEntry(
+      id: 'log_demo_2',
+      teacherUserId: 'teacher_1',
+      className: '5',
+      sectionName: 'A',
+      subjectId: 'sub_2',
+      topic: 'Algebra basics',
+      outcome: 'completed',
+      recordedOn: '2026-06-02',
+    ),
+  ];
   SchoolBranding _branding = const SchoolBranding(
     displayName: 'Akshara Demo School',
     tagline: 'Learning with purpose',
