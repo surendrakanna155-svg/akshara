@@ -4,8 +4,10 @@ import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/finance/finance_models.dart';
 import '../../../../features/finance/finance_requests.dart';
+import '../../../../features/finance/intelligence/finance_intelligence_models.dart';
 import 'finance_installment_plan_catalog.dart';
 import 'mapper/finance_mapper.dart';
+import 'mapper/finance_intelligence_mapper.dart';
 import 'remote/finance_remote_datasource.dart';
 
 /// API implementation of [FinanceRepository] — enabled via [financeApiEnabledProvider].
@@ -13,11 +15,14 @@ class ApiFinanceRepository implements FinanceRepository {
   ApiFinanceRepository({
     required FinanceRemoteDataSource remote,
     FinanceMapper mapper = const FinanceMapper(),
+    FinanceIntelligenceMapper intelligenceMapper = const FinanceIntelligenceMapper(),
   })  : _remote = remote,
-        _mapper = mapper;
+        _mapper = mapper,
+        _intelligenceMapper = intelligenceMapper;
 
   final FinanceRemoteDataSource _remote;
   final FinanceMapper _mapper;
+  final FinanceIntelligenceMapper _intelligenceMapper;
 
   @override
   Future<FinanceDashboardData> getDashboard({
@@ -363,4 +368,18 @@ class ApiFinanceRepository implements FinanceRepository {
     required UpdateFinanceSettingsRequest request,
   }) =>
       _remote.updateSettings(query: query, request: request);
+
+  @override
+  Future<FinanceCopilotData> getFinanceCopilot({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchFinanceCopilot(query: query);
+    return _intelligenceMapper.toCopilot(dto);
+  }
+
+  @override
+  Future<FinanceExecutiveData> getFinanceExecutiveDashboard({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchFinanceExecutive(query: query);
+    return _intelligenceMapper.toExecutive(dto);
+  }
 }

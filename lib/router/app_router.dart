@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/auth_models.dart';
@@ -10,6 +11,7 @@ import '../features/auth/staff/staff_otp_screen.dart';
 import '../features/auth/staff/staff_login_provider.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/parent/attendance/parent_attendance_screen.dart';
+import '../features/parent/academics/parent_academic_report_screen.dart';
 import '../features/parent/dashboard/parent_dashboard_screen.dart';
 import '../features/parent/events/parent_events_screen.dart';
 import '../features/parent/exams/parent_exams_screen.dart';
@@ -46,6 +48,12 @@ import 'route_guards.dart';
 import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
 import 'copilot_navigation.dart';
+import 'education_navigation.dart';
+import 'intelligence_navigation.dart';
+import 'phase4_navigation.dart';
+import 'phase5_navigation.dart';
+import 'evolution_navigation.dart';
+import 'school_completion_navigation.dart';
 import 'management_navigation.dart';
 import 'hostel_navigation.dart';
 import 'hr_navigation.dart';
@@ -200,6 +208,27 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.parentExperience,
+            name: 'parentExperience',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentExperienceHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentAcademicReport,
+            name: 'parentAcademicReport',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentAcademicReportRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentInsights,
+            name: 'parentInsights',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentInsightsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.parentPayment,
             name: 'parentPayment',
             pageBuilder: (context, state) => NoTransitionPage(
@@ -317,6 +346,209 @@ GoRouter createAppRouter({
             name: 'copilot',
             pageBuilder: (context, state) => NoTransitionPage(
               child: copilotRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.education,
+            name: 'education',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: educationRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.intelligence,
+            name: 'intelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: intelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.homeworkIntelligence,
+            name: 'homeworkIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: homeworkIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: '${RouteNames.student360}/:studentId',
+            name: 'student360',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: student360RouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.employees,
+            name: 'employees',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: employeePlatformRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.inventoryDistribution,
+            name: 'inventoryDistribution',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: inventoryDistributionRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: '${RouteNames.employee360}/:employeeId',
+            name: 'employee360',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: employee360RouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.operationsHub,
+            name: 'operationsHub',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: operationsHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.schoolMemories,
+            name: 'schoolMemories',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: schoolMemoriesRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.achievementPromotion,
+            name: 'achievementPromotion',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: achievementPromotionRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.setupWizard,
+            name: 'setupWizard',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: setupWizardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.dynamicDashboard,
+            name: 'dynamicDashboard',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: dynamicDashboardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherAssistant,
+            name: 'teacherAssistant',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherAssistantRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.principalCommand,
+            name: 'principalCommand',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: principalCommandRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.growthPlatform,
+            name: 'growthPlatform',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: growthPlatformRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.schoolCompletionHub,
+            name: 'schoolCompletionHub',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: schoolCompletionHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.subjectsManagement,
+            name: 'subjectsManagement',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: subjectsManagementRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.lessonLogs,
+            name: 'lessonLogs',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: lessonLogsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.timetableAutomation,
+            name: 'timetableAutomation',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: timetableAutomationRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.schoolBranding,
+            name: 'schoolBranding',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: schoolBrandingRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.whatsAppProvider,
+            name: 'whatsAppProvider',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: whatsAppProviderRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.subjectAssignments,
+            name: 'subjectAssignments',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: subjectAssignmentsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.lessonAnalytics,
+            name: 'lessonAnalytics',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: lessonAnalyticsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.timetableOptimization,
+            name: 'timetableOptimization',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: timetableOptimizationRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.communicationDelivery,
+            name: 'communicationDelivery',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: communicationDeliveryRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.pilotDashboard,
+            name: 'pilotDashboard',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: pilotDashboardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.syllabusAutomation,
+            name: 'syllabusAutomation',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: syllabusAutomationRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.academicProgress,
+            name: 'academicProgress',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: academicProgressRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.timetableIntelligence,
+            name: 'timetableIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: timetableIntelligenceRouteBuilder(context, state),
             ),
           ),
           GoRoute(
@@ -487,6 +719,20 @@ GoRouter createAppRouter({
                 name: 'financeSettings',
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: financeSettingsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'intelligence',
+                name: 'financeIntelligence',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeIntelligenceRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'executive',
+                name: 'financeExecutiveDashboard',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeExecutiveDashboardRouteBuilder(context, state),
                 ),
               ),
             ],
@@ -1109,6 +1355,20 @@ GoRouter createAppRouter({
                   child: controlCenterSettingsRouteBuilder(context, state),
                 ),
               ),
+              GoRoute(
+                path: 'providers',
+                name: 'controlCenterProviders',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: controlCenterProvidersRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'features',
+                name: 'controlCenterFeatures',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: controlCenterFeaturesRouteBuilder(context, state),
+                ),
+              ),
             ],
           ),
         ],
@@ -1258,10 +1518,20 @@ String homeRouteForRole(UserRole? role) {
   };
 }
 
+/// Parent academic report (v13.2 — structured summary, no AI chat).
+Widget parentAcademicReportRouteBuilder(BuildContext context, GoRouterState state) {
+  return const ParentAcademicReportScreen();
+}
+
 /// Dashboard screen wired with router navigation.
 Widget parentDashboardRouteBuilder(BuildContext context, GoRouterState state) {
-  return ParentDashboardScreen(
-    onNavigate: (actionId) => handleParentDashboardNavigation(context, actionId),
+  return Consumer(
+    builder: (context, ref, _) {
+      return ParentDashboardScreen(
+        onNavigate: (actionId) =>
+            handleParentDashboardNavigation(context, actionId, ref: ref),
+      );
+    },
   );
 }
 

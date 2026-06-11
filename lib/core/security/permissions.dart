@@ -67,6 +67,81 @@ enum Permission {
   // Analytics & Intelligence (v7.6)
   viewAnalytics,
   viewSchoolHealth,
+
+  // Education Suite (v8.5–v8.8)
+  viewEducation,
+  manageEducation,
+
+  // Intelligence Layer (v8.9–v9.3)
+  viewStudentRisk,
+  generateIntelligence,
+
+  // Phase 4 (v9.4–v9.7)
+  viewHomeworkIntelligence,
+  manageHomeworkIntelligence,
+  viewStudent360,
+  viewEmployees,
+  manageEmployees,
+  viewInventoryDistribution,
+  manageInventoryDistribution,
+
+  // Phase 5 (v9.8–v10.3)
+  viewParentExperience,
+  viewEmployeeIntelligence,
+  viewOperationsHub,
+  viewSchoolMemories,
+  manageSchoolMemories,
+  viewAchievementPromotion,
+  manageAchievementPromotion,
+  approveAchievementPromotion,
+
+  // Evolution v10.5–v11.0
+  viewSchoolSetup,
+  manageSchoolSetup,
+  viewDynamicWidgets,
+  manageDynamicWidgets,
+  viewTeacherAssistant,
+  manageTeacherAssistant,
+  viewParentInsights,
+  viewPrincipalCommand,
+  viewGrowthPlatform,
+  manageGrowthPlatform,
+
+  // Phase 8 — School Completion
+  viewSubjects,
+  manageSubjects,
+  viewLessonLogs,
+  manageLessonLogs,
+  manageTimetableAutomation,
+  viewSchoolBranding,
+  manageSchoolBranding,
+  viewWhatsAppProvider,
+  manageWhatsAppProvider,
+  managePlatformWhatsApp,
+
+  // Phase 9 — School Platform Completion
+  viewSubjectAssignments,
+  manageSubjectAssignments,
+  viewLessonAnalytics,
+  viewTimetableOptimization,
+  viewCommunicationDelivery,
+  manageCommunicationTemplates,
+  viewPilotDashboard,
+
+  // Phase 10 — Final School Platform
+  manageSyllabus,
+  viewAcademicProgress,
+  manageAcademicProgress,
+  managePlatformProviders,
+  viewPlatformUsage,
+  managePlatformVault,
+  managePlatformFeatures,
+  manageAcademicRooms,
+  viewParentAcademicSummary,
+
+  // Phase 11 — Finance Intelligence
+  viewFinanceIntelligence,
+  viewFinanceExecutiveDashboard,
 }
 
 /// Immutable set of [Permission] values for a session.

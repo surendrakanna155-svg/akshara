@@ -29,6 +29,37 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.alumni: Permission.viewAlumni,
   RouteNames.controlCenter: Permission.viewControlCenter,
   RouteNames.copilot: Permission.viewAiCopilot,
+  RouteNames.education: Permission.viewEducation,
+  RouteNames.intelligence: Permission.viewStudentRisk,
+  RouteNames.homeworkIntelligence: Permission.viewHomeworkIntelligence,
+  RouteNames.student360: Permission.viewStudent360,
+  RouteNames.employees: Permission.viewEmployees,
+  RouteNames.inventoryDistribution: Permission.viewInventoryDistribution,
+  RouteNames.operationsHub: Permission.viewOperationsHub,
+  RouteNames.schoolMemories: Permission.viewSchoolMemories,
+  RouteNames.achievementPromotion: Permission.viewAchievementPromotion,
+  RouteNames.setupWizard: Permission.viewSchoolSetup,
+  RouteNames.dynamicDashboard: Permission.viewDynamicWidgets,
+  RouteNames.teacherAssistant: Permission.viewTeacherAssistant,
+  RouteNames.parentInsights: Permission.viewParentInsights,
+  RouteNames.principalCommand: Permission.viewPrincipalCommand,
+  RouteNames.growthPlatform: Permission.viewGrowthPlatform,
+  RouteNames.schoolCompletionHub: Permission.viewSubjects,
+  RouteNames.subjectsManagement: Permission.viewSubjects,
+  RouteNames.lessonLogs: Permission.viewLessonLogs,
+  RouteNames.timetableAutomation: Permission.manageTimetableAutomation,
+  RouteNames.schoolBranding: Permission.viewSchoolBranding,
+  RouteNames.whatsAppProvider: Permission.viewWhatsAppProvider,
+  RouteNames.subjectAssignments: Permission.viewSubjectAssignments,
+  RouteNames.lessonAnalytics: Permission.viewLessonAnalytics,
+  RouteNames.timetableOptimization: Permission.viewTimetableOptimization,
+  RouteNames.communicationDelivery: Permission.viewCommunicationDelivery,
+  RouteNames.pilotDashboard: Permission.viewPilotDashboard,
+  RouteNames.syllabusAutomation: Permission.manageSyllabus,
+  RouteNames.academicProgress: Permission.viewAcademicProgress,
+  RouteNames.timetableIntelligence: Permission.manageAcademicRooms,
+  RouteNames.financeIntelligence: Permission.viewFinanceIntelligence,
+  RouteNames.financeExecutiveDashboard: Permission.viewFinanceExecutiveDashboard,
 };
 
 /// Resolves the view permission required for [location].
@@ -40,6 +71,9 @@ Permission? erpRoutePermissionFor(String location) {
   if (location == RouteNames.managementIntelligence ||
       location.startsWith('${RouteNames.managementIntelligence}/')) {
     return Permission.viewAnalytics;
+  }
+  if (location.startsWith('${RouteNames.employee360}/')) {
+    return Permission.viewEmployeeIntelligence;
   }
   for (final entry in kErpRouteViewPermissions.entries) {
     if (location == entry.key || location.startsWith('${entry.key}/')) {

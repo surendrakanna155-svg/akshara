@@ -15,7 +15,9 @@ enum FinanceScreen {
   discounts,
   reports,
   reconciliation,
-  settings;
+  settings,
+  intelligence,
+  executiveDashboard;
 
   String get label => switch (this) {
         FinanceScreen.dashboard => 'Dashboard',
@@ -30,6 +32,8 @@ enum FinanceScreen {
         FinanceScreen.reports => 'Reports',
         FinanceScreen.reconciliation => 'Reconciliation',
         FinanceScreen.settings => 'Settings',
+        FinanceScreen.intelligence => 'Finance Copilot',
+        FinanceScreen.executiveDashboard => 'Executive Dashboard',
       };
 }
 

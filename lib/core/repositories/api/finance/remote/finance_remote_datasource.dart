@@ -426,4 +426,20 @@ class FinanceRemoteDataSource {
   Map<String, dynamic> _requireData(Response<Map<String, dynamic>> response) {
     return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
+
+  Future<Map<String, dynamic>> fetchFinanceCopilot({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.intelligenceCopilot,
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
+
+  Future<Map<String, dynamic>> fetchFinanceExecutive({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.intelligenceExecutive,
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
 }

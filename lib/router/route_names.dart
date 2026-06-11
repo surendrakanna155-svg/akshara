@@ -54,6 +54,38 @@ abstract final class RouteNames {
   // Web ERP admin shell (desktop / tablet / mobile drawer)
   static const String admin = '/admin';
   static const String copilot = '/copilot';
+  static const String education = '/education';
+  static const String intelligence = '/intelligence';
+  static const String homeworkIntelligence = '/homework-intelligence';
+  static const String student360 = '/student-360';
+  static const String employees = '/employees';
+  static const String inventoryDistribution = '/inventory/distribution';
+  static const String parentExperience = '/parent/experience';
+  static const String parentAcademicReport = '/parent/academic-report';
+  static const String employee360 = '/employees/360';
+  static const String operationsHub = '/operations/hub';
+  static const String schoolMemories = '/memories';
+  static const String achievementPromotion = '/promotions';
+  static const String setupWizard = '/setup-wizard';
+  static const String dynamicDashboard = '/dashboard/dynamic';
+  static const String teacherAssistant = '/teacher-assistant';
+  static const String parentInsights = '/parent/insights';
+  static const String principalCommand = '/principal-command';
+  static const String growthPlatform = '/growth';
+  static const String schoolCompletionHub = '/school/completion';
+  static const String subjectsManagement = '/school/subjects';
+  static const String lessonLogs = '/school/lesson-logs';
+  static const String timetableAutomation = '/school/timetables/automate';
+  static const String schoolBranding = '/school/branding';
+  static const String whatsAppProvider = '/school/whatsapp-provider';
+  static const String subjectAssignments = '/school/subject-assignments';
+  static const String lessonAnalytics = '/school/lesson-analytics';
+  static const String timetableOptimization = '/school/timetables/optimize';
+  static const String communicationDelivery = '/school/communications/delivery';
+  static const String pilotDashboard = '/school/pilot';
+  static const String syllabusAutomation = '/school/syllabus/automation';
+  static const String academicProgress = '/school/academic/progress';
+  static const String timetableIntelligence = '/school/timetables/intelligence';
   static const String admissions = '/admissions';
   static const String admissionsDashboard = '/admissions/dashboard';
   static const String admissionsLeads = '/admissions/leads';
@@ -92,6 +124,8 @@ abstract final class RouteNames {
   static const String financeReports = '/finance/reports';
   static const String financeReconciliation = '/finance/reconciliation';
   static const String financeSettings = '/finance/settings';
+  static const String financeIntelligence = '/finance/intelligence';
+  static const String financeExecutiveDashboard = '/finance/executive';
 
   static String financeCollectionDetail(String collectionId) =>
       '$financeCollections/$collectionId';
@@ -109,6 +143,8 @@ abstract final class RouteNames {
     financeReports,
     financeReconciliation,
     financeSettings,
+    financeIntelligence,
+    financeExecutiveDashboard,
   ];
   static const String sis = '/sis';
   static const String sisDashboard = '/sis/dashboard';
@@ -304,8 +340,10 @@ abstract final class RouteNames {
   static const String controlCenterMonitoring = '/control-center/monitoring';
   static const String controlCenterRoles = '/control-center/roles';
   static const String controlCenterSettings = '/control-center/settings';
+  static const String controlCenterProviders = '/control-center/providers';
+  static const String controlCenterFeatures = '/control-center/features';
 
-  /// All control center module routes (ACC-01 → ACC-12).
+  /// All control center module routes (ACC-01 → ACC-14).
   static const List<String> controlCenterModuleRoutes = [
     controlCenterDashboard,
     controlCenterSchools,
@@ -319,12 +357,23 @@ abstract final class RouteNames {
     controlCenterMonitoring,
     controlCenterRoles,
     controlCenterSettings,
+    controlCenterProviders,
+    controlCenterFeatures,
   ];
 
   /// All module groups wrapped by [AdminShell].
   static const List<String> adminErpRoutes = [
     admin,
     copilot,
+    education,
+    intelligence,
+    homeworkIntelligence,
+    student360,
+    employees,
+    inventoryDistribution,
+    operationsHub,
+    schoolMemories,
+    achievementPromotion,
     admissions,
     finance,
     sis,

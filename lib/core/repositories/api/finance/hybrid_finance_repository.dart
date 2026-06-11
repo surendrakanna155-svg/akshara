@@ -3,6 +3,7 @@ import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/finance/finance_models.dart';
 import '../../../../features/finance/finance_requests.dart';
+import '../../../../features/finance/intelligence/finance_intelligence_models.dart';
 import 'api_finance_repository.dart';
 
 /// Thin wrapper routing all finance operations to [ApiFinanceRepository].
@@ -240,4 +241,12 @@ class HybridFinanceRepository implements FinanceRepository {
     required UpdateFinanceSettingsRequest request,
   }) =>
       _api.updateSettings(query: query, request: request);
+
+  @override
+  Future<FinanceCopilotData> getFinanceCopilot({required RepositoryQuery query}) =>
+      _api.getFinanceCopilot(query: query);
+
+  @override
+  Future<FinanceExecutiveData> getFinanceExecutiveDashboard({required RepositoryQuery query}) =>
+      _api.getFinanceExecutiveDashboard(query: query);
 }

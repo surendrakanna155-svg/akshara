@@ -15,6 +15,8 @@ const List<FinanceScreen> kFinanceNavScreens = [
   FinanceScreen.reports,
   FinanceScreen.reconciliation,
   FinanceScreen.settings,
+  FinanceScreen.intelligence,
+  FinanceScreen.executiveDashboard,
 ];
 
 extension FinanceScreenRoutes on FinanceScreen {
@@ -31,6 +33,8 @@ extension FinanceScreenRoutes on FinanceScreen {
         FinanceScreen.reports => RouteNames.financeReports,
         FinanceScreen.reconciliation => RouteNames.financeReconciliation,
         FinanceScreen.settings => RouteNames.financeSettings,
+        FinanceScreen.intelligence => RouteNames.financeIntelligence,
+        FinanceScreen.executiveDashboard => RouteNames.financeExecutiveDashboard,
       };
 }
 

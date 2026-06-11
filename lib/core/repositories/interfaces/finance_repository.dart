@@ -1,5 +1,6 @@
 import '../../../features/finance/finance_models.dart';
 import '../../../features/finance/finance_requests.dart';
+import '../../../features/finance/intelligence/finance_intelligence_models.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 
@@ -117,4 +118,8 @@ abstract class FinanceRepository {
     required RepositoryQuery query,
     required UpdateFinanceSettingsRequest request,
   });
+
+  Future<FinanceCopilotData> getFinanceCopilot({required RepositoryQuery query});
+
+  Future<FinanceExecutiveData> getFinanceExecutiveDashboard({required RepositoryQuery query});
 }

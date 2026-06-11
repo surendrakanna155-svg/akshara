@@ -31,6 +31,10 @@ import {
 } from "./finance_invoices_handlers.ts";
 import { handleDashboard } from "./finance_dashboard_handlers.ts";
 import {
+  handleFinanceCopilot,
+  handleFinanceExecutiveDashboard,
+} from "./finance_intelligence_handlers.ts";
+import {
   handleGetGoodsReceipt,
   handleInventoryFinanceTimeline,
   handleListGoodsReceipts,
@@ -55,6 +59,13 @@ export function matchFinanceRoute(
 ): { handler: (req: Request, config: AppConfig, ...args: string[]) => Promise<Response>; args: string[] } | null {
   if (path === "/finance/dashboard" && method === "GET") {
     return { handler: handleDashboard, args: [] };
+  }
+
+  if (path === "/finance/intelligence/copilot" && method === "GET") {
+    return { handler: handleFinanceCopilot, args: [] };
+  }
+  if (path === "/finance/intelligence/executive" && method === "GET") {
+    return { handler: handleFinanceExecutiveDashboard, args: [] };
   }
 
   if (path === "/finance/inventory-reconciliation/dashboard" && method === "GET") {

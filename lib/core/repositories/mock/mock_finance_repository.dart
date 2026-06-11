@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../features/finance/finance_models.dart';
 import '../../../features/finance/finance_requests.dart';
+import '../../../features/finance/intelligence/finance_intelligence_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/finance_repository.dart';
 import '../paginated_result.dart';
@@ -1104,6 +1105,58 @@ class MockFinanceRepository implements FinanceRepository {
     );
     return _store.settings;
   }
+
+  @override
+  Future<FinanceCopilotData> getFinanceCopilot({required RepositoryQuery query}) async =>
+      const FinanceCopilotData(
+        feeCollectionForecast: 842000,
+        forecastConfidence: 82,
+        monthlyRevenueForecast: 810000,
+        defaulterPredictions: [
+          FinanceDefaulterPrediction(
+            studentId: 'stu_1',
+            studentName: 'Rahul Sharma',
+            className: '8-A',
+            outstandingAmount: 12500,
+            riskScore: 88,
+            daysOverdue: 45,
+          ),
+        ],
+        collectionTrend: [
+          FinanceCollectionTrendPoint(month: '2026-01', collected: 720000, expected: 756000),
+          FinanceCollectionTrendPoint(month: '2026-02', collected: 780000, expected: 819000),
+        ],
+        riskAlerts: [
+          FinanceCollectionRiskAlert(
+            id: 'alert_1',
+            severity: 'medium',
+            title: 'Term 2 pace below target',
+            detail: 'Follow up with 12 pending accounts',
+          ),
+        ],
+        generatedAt: '2026-06-10T00:00:00Z',
+      );
+
+  @override
+  Future<FinanceExecutiveData> getFinanceExecutiveDashboard({
+    required RepositoryQuery query,
+  }) async =>
+      const FinanceExecutiveData(
+        expectedCollections: 420000,
+        outstandingCollections: 185000,
+        collectionHealthScore: 78,
+        riskStudents: [
+          FinanceDefaulterPrediction(
+            studentId: 'stu_1',
+            studentName: 'Rahul Sharma',
+            className: '8-A',
+            outstandingAmount: 12500,
+            riskScore: 88,
+            daysOverdue: 45,
+          ),
+        ],
+        generatedAt: '2026-06-10T00:00:00Z',
+      );
 
   String _accountIdForAdmission(String admissionNumber) => switch (admissionNumber) {
         'ADM-2026-0138' => 'acct_1',

@@ -10,6 +10,8 @@ import '../features/finance/fee_assignment/finance_fee_assignment_screen.dart';
 import '../features/finance/fee_structures/finance_fee_structures_screen.dart';
 import '../features/finance/reconciliation/finance_reconciliation_screen.dart';
 import '../features/finance/refunds/finance_refunds_screen.dart';
+import '../features/finance/intelligence/finance_copilot_screen.dart';
+import '../features/finance/intelligence/finance_executive_dashboard_screen.dart';
 import '../features/finance/reports/finance_reports_screen.dart';
 import '../features/finance/settings/finance_settings_screen.dart';
 import '../features/finance/student_accounts/finance_student_accounts_screen.dart';
@@ -106,4 +108,18 @@ Widget financeSettingsRouteBuilder(
   GoRouterState state,
 ) {
   return const FinanceSettingsScreen();
+}
+
+Widget financeIntelligenceRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const FinanceCopilotScreen();
+}
+
+Widget financeExecutiveDashboardRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const FinanceExecutiveDashboardScreen();
 }

@@ -261,6 +261,24 @@ export const financeAudit = {
       idempotencyKey: `finance.refund.rejected:${refundId}`,
     },
   }),
+  intelligenceComputed: (): MutationAuditSpec => ({
+    ...workflow("financeIntelligenceComputed", "finance_intelligence", "copilot", {}),
+    domain: {
+      eventType: "finance.intelligence.computed",
+      payload: { snapshotType: "copilot" },
+      sourceModule: "finance",
+      idempotencyKey: `finance.intelligence:${Date.now()}`,
+    },
+  }),
+  executiveViewed: (healthScore: number): MutationAuditSpec => ({
+    ...workflow("financeExecutiveViewed", "finance_intelligence", "executive", { healthScore }),
+    domain: {
+      eventType: "finance.executive.viewed",
+      payload: { healthScore },
+      sourceModule: "finance",
+      idempotencyKey: `finance.executive:${Date.now()}`,
+    },
+  }),
 };
 
 // ─── SIS ────────────────────────────────────────────────────────────────────
@@ -402,6 +420,587 @@ export const academicAudit = {
       payload: { assignmentId },
       sourceModule: "academic",
       idempotencyKey: `academic.teacher_assignment.updated:${assignmentId}`,
+    },
+  }),
+};
+
+// ─── Education (v8.5–v8.8) ──────────────────────────────────────────────────
+
+export const educationAudit = {
+  questionBankCreated: (itemId: string): MutationAuditSpec => ({
+    ...workflow("questionBankItemCreated", "question_bank_item", itemId, { itemId }),
+    domain: {
+      eventType: "education.question_bank.created",
+      payload: { itemId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_bank:${itemId}`,
+    },
+  }),
+  questionBankArchived: (itemId: string): MutationAuditSpec => ({
+    ...workflow("questionBankItemArchived", "question_bank_item", itemId, { itemId }),
+    domain: {
+      eventType: "education.question_bank.archived",
+      payload: { itemId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_bank.archived:${itemId}`,
+    },
+  }),
+  questionPaperGenerated: (paperId: string): MutationAuditSpec => ({
+    ...workflow("questionPaperGenerated", "question_paper", paperId, { paperId }),
+    domain: {
+      eventType: "education.question_paper.generated",
+      payload: { paperId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_paper:${paperId}`,
+    },
+  }),
+  questionPaperPublished: (paperId: string): MutationAuditSpec => ({
+    ...workflow("questionPaperPublished", "question_paper", paperId, { paperId }),
+    domain: {
+      eventType: "education.question_paper.published",
+      payload: { paperId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_paper.published:${paperId}`,
+    },
+  }),
+  homeworkGenerated: (assignmentId: string): MutationAuditSpec => ({
+    ...workflow("homeworkGenerated", "homework_assignment", assignmentId, { assignmentId }),
+    domain: {
+      eventType: "education.homework.generated",
+      payload: { assignmentId },
+      sourceModule: "education",
+      idempotencyKey: `education.homework:${assignmentId}`,
+    },
+  }),
+  homeworkPublished: (assignmentId: string): MutationAuditSpec => ({
+    ...workflow("homeworkPublished", "homework_assignment", assignmentId, { assignmentId }),
+    domain: {
+      eventType: "education.homework.published",
+      payload: { assignmentId },
+      sourceModule: "education",
+      idempotencyKey: `education.homework.published:${assignmentId}`,
+    },
+  }),
+  reportRemarkGenerated: (remarkId: string): MutationAuditSpec => ({
+    ...workflow("reportRemarkGenerated", "report_card_remark", remarkId, { remarkId }),
+    domain: {
+      eventType: "education.report_remark.generated",
+      payload: { remarkId },
+      sourceModule: "education",
+      idempotencyKey: `education.report_remark:${remarkId}`,
+    },
+  }),
+  reportRemarkUpdated: (remarkId: string): MutationAuditSpec => ({
+    ...workflow("reportRemarkUpdated", "report_card_remark", remarkId, { remarkId }),
+    domain: {
+      eventType: "education.report_remark.updated",
+      payload: { remarkId },
+      sourceModule: "education",
+      idempotencyKey: `education.report_remark.updated:${remarkId}`,
+    },
+  }),
+  reportRemarkPublished: (remarkId: string): MutationAuditSpec => ({
+    ...workflow("reportRemarkPublished", "report_card_remark", remarkId, { remarkId }),
+    domain: {
+      eventType: "education.report_remark.published",
+      payload: { remarkId },
+      sourceModule: "education",
+      idempotencyKey: `education.report_remark.published:${remarkId}`,
+    },
+  }),
+};
+
+// ─── Intelligence Layer (v8.9–v9.3) ─────────────────────────────────────────
+
+export const intelligenceAudit = {
+  studentRiskComputed: (schoolId: string, count: number): MutationAuditSpec => ({
+    ...workflow("studentRiskComputed", "school", schoolId, { schoolId, count }),
+    domain: {
+      eventType: "intelligence.student_risk.computed",
+      payload: { schoolId, count },
+      sourceModule: "intelligence",
+      idempotencyKey: `intelligence.student_risk:${schoolId}:${count}`,
+    },
+  }),
+  communicationGenerated: (draftId: string): MutationAuditSpec => ({
+    ...workflow("communicationDraftGenerated", "communication_draft", draftId, { draftId }),
+    domain: {
+      eventType: "intelligence.communication.generated",
+      payload: { draftId },
+      sourceModule: "intelligence",
+      idempotencyKey: `intelligence.communication:${draftId}`,
+    },
+  }),
+  parentGuidanceGenerated: (reportId: string): MutationAuditSpec => ({
+    ...workflow("parentGuidanceGenerated", "parent_guidance_report", reportId, { reportId }),
+    domain: {
+      eventType: "intelligence.parent_guidance.generated",
+      payload: { reportId },
+      sourceModule: "intelligence",
+      idempotencyKey: `intelligence.parent_guidance:${reportId}`,
+    },
+  }),
+  homeworkIntelligenceGenerated: (runId: string, homeworkCount: number): MutationAuditSpec => ({
+    ...workflow("homeworkIntelligenceGenerated", "homework_intelligence_run", runId, {
+      runId,
+      homeworkCount,
+    }),
+    domain: {
+      eventType: "intelligence.homework.generated",
+      payload: { runId, homeworkCount },
+      sourceModule: "intelligence",
+      idempotencyKey: `intelligence.homework:${runId}`,
+    },
+  }),
+};
+
+// ─── Employee Platform (v9.6) ────────────────────────────────────────────────
+
+export const employeeAudit = {
+  roleAssigned: (employeeId: string, roleCode: string): MutationAuditSpec => ({
+    ...workflow("employeeRoleAssigned", "employee", employeeId, { employeeId, roleCode }),
+    domain: {
+      eventType: "employee.role.assigned",
+      payload: { employeeId, roleCode },
+      sourceModule: "employee",
+      idempotencyKey: `employee.role:${employeeId}:${roleCode}`,
+    },
+  }),
+};
+
+// ─── Inventory Distribution (v9.7) ─────────────────────────────────────────────
+
+export const inventoryDistributionAudit = {
+  created: (distributionId: string, studentId: string): MutationAuditSpec => ({
+    ...workflow("inventoryDistributionCreated", "inv_student_distribution", distributionId, {
+      distributionId,
+      studentId,
+    }),
+    domain: {
+      eventType: "inventory.distribution.created",
+      payload: { distributionId, studentId },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.distribution:${distributionId}`,
+    },
+  }),
+  statusChanged: (distributionId: string, status: string): MutationAuditSpec => ({
+    ...workflow("inventoryDistributionStatusChanged", "inv_student_distribution", distributionId, {
+      distributionId,
+      status,
+    }),
+    domain: {
+      eventType: "inventory.distribution.status_changed",
+      payload: { distributionId, status },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.distribution.status:${distributionId}:${status}`,
+    },
+  }),
+  replacementRequested: (distributionId: string): MutationAuditSpec => ({
+    ...workflow("inventoryReplacementRequested", "inv_student_distribution", distributionId, {
+      distributionId,
+    }),
+    domain: {
+      eventType: "inventory.distribution.replacement_requested",
+      payload: { distributionId },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.distribution.replacement:${distributionId}`,
+    },
+  }),
+};
+
+// ─── Parent Experience (v9.8) ─────────────────────────────────────────────────
+
+export const parentExperienceAudit = {
+  acknowledge: (distributionId: string, acknowledgementType: string): MutationAuditSpec => ({
+    ...workflow("parentItemAcknowledged", "parent_item_acknowledgement", distributionId, {
+      distributionId,
+      acknowledgementType,
+    }),
+    domain: {
+      eventType: "parent.inventory.acknowledged",
+      payload: { distributionId, acknowledgementType },
+      sourceModule: "parent",
+      idempotencyKey: `parent.ack:${distributionId}:${acknowledgementType}`,
+    },
+  }),
+};
+
+// ─── School Memories (v10.2) ─────────────────────────────────────────────────
+
+export const schoolMemoriesAudit = {
+  created: (eventId: string): MutationAuditSpec => ({
+    ...workflow("schoolMemoryEventCreated", "school_memory_event", eventId, { eventId }),
+    domain: {
+      eventType: "memories.event.created",
+      payload: { eventId },
+      sourceModule: "memories",
+      idempotencyKey: `memories.event:${eventId}`,
+    },
+  }),
+  published: (eventId: string): MutationAuditSpec => ({
+    ...workflow("schoolMemoryEventPublished", "school_memory_event", eventId, { eventId }),
+    domain: {
+      eventType: "memories.event.published",
+      payload: { eventId },
+      sourceModule: "memories",
+      idempotencyKey: `memories.event.published:${eventId}`,
+    },
+  }),
+  mediaUploaded: (mediaId: string): MutationAuditSpec => ({
+    ...workflow("schoolMemoryMediaUploaded", "school_memory_media", mediaId, { mediaId }),
+    domain: {
+      eventType: "memories.media.uploaded",
+      payload: { mediaId },
+      sourceModule: "memories",
+      idempotencyKey: `memories.media:${mediaId}`,
+    },
+  }),
+  mediaDownloaded: (mediaId: string): MutationAuditSpec => ({
+    ...workflow("schoolMemoryMediaDownloaded", "school_memory_media", mediaId, { mediaId }),
+    domain: {
+      eventType: "memories.media.downloaded",
+      payload: { mediaId },
+      sourceModule: "memories",
+      idempotencyKey: `memories.media.download:${mediaId}`,
+    },
+  }),
+  shareResolved: (shareToken: string, mediaId: string): MutationAuditSpec => ({
+    ...workflow("schoolMemoryShareResolved", "school_memory_media", mediaId, { shareToken, mediaId }),
+    domain: {
+      eventType: "memories.share.resolved",
+      payload: { shareToken, mediaId },
+      sourceModule: "memories",
+      idempotencyKey: `memories.share:${shareToken}`,
+    },
+  }),
+};
+
+// ─── Achievement Promotion (v10.3) ───────────────────────────────────────────
+
+export const achievementPromotionAudit = {
+  created: (promotionId: string): MutationAuditSpec => ({
+    ...workflow("achievementPromotionCreated", "achievement_promotion", promotionId, { promotionId }),
+    domain: {
+      eventType: "promotion.created",
+      payload: { promotionId },
+      sourceModule: "promotion",
+      idempotencyKey: `promotion.created:${promotionId}`,
+    },
+  }),
+  generated: (promotionId: string): MutationAuditSpec => ({
+    ...workflow("achievementPromotionGenerated", "achievement_promotion", promotionId, { promotionId }),
+    domain: {
+      eventType: "promotion.assets.generated",
+      payload: { promotionId },
+      sourceModule: "promotion",
+      idempotencyKey: `promotion.generated:${promotionId}`,
+    },
+  }),
+  approved: (promotionId: string): MutationAuditSpec => ({
+    ...workflow("achievementPromotionApproved", "achievement_promotion", promotionId, { promotionId }),
+    domain: {
+      eventType: "promotion.approved",
+      payload: { promotionId },
+      sourceModule: "promotion",
+      idempotencyKey: `promotion.approved:${promotionId}`,
+    },
+  }),
+  published: (promotionId: string): MutationAuditSpec => ({
+    ...workflow("achievementPromotionPublished", "achievement_promotion", promotionId, { promotionId }),
+    domain: {
+      eventType: "promotion.published",
+      payload: { promotionId },
+      sourceModule: "promotion",
+      idempotencyKey: `promotion.published:${promotionId}`,
+    },
+  }),
+  metricTracked: (promotionId: string, metric: string): MutationAuditSpec => ({
+    ...workflow("achievementPromotionMetricTracked", "achievement_promotion", promotionId, { promotionId, metric }),
+    domain: {
+      eventType: "promotion.metric.tracked",
+      payload: { promotionId, metric },
+      sourceModule: "promotion",
+      idempotencyKey: `promotion.metric:${promotionId}:${metric}:${Date.now()}`,
+    },
+  }),
+};
+
+// ─── Setup Wizard (v10.5) ─────────────────────────────────────────────────────
+
+export const setupWizardAudit = {
+  sessionCreated: (sessionId: string): MutationAuditSpec => ({
+    ...workflow("setupWizardSessionCreated", "setup_wizard_session", sessionId, { sessionId }),
+    domain: {
+      eventType: "setup_wizard.session.created",
+      payload: { sessionId },
+      sourceModule: "setup_wizard",
+      idempotencyKey: `setup_wizard.created:${sessionId}`,
+    },
+  }),
+  sessionCompleted: (sessionId: string): MutationAuditSpec => ({
+    ...workflow("setupWizardSessionCompleted", "setup_wizard_session", sessionId, { sessionId }),
+    domain: {
+      eventType: "setup_wizard.session.completed",
+      payload: { sessionId },
+      sourceModule: "setup_wizard",
+      idempotencyKey: `setup_wizard.completed:${sessionId}`,
+    },
+  }),
+};
+
+// ─── Widget Platform (v10.6) ─────────────────────────────────────────────────
+
+export const widgetPlatformAudit = {
+  layoutSaved: (layoutId: string): MutationAuditSpec => ({
+    ...workflow("dashboardLayoutSaved", "dashboard_layout", layoutId, { layoutId }),
+    domain: {
+      eventType: "widget_platform.layout.saved",
+      payload: { layoutId },
+      sourceModule: "widget_platform",
+      idempotencyKey: `widget_platform.layout:${layoutId}`,
+    },
+  }),
+};
+
+// ─── Teacher Assistant (v10.7) ───────────────────────────────────────────────
+
+export const teacherAssistantAudit = {
+  interventionCreated: (id: string): MutationAuditSpec => ({
+    ...workflow("teacherInterventionCreated", "teacher_intervention", id, { id }),
+    domain: {
+      eventType: "teacher_assistant.intervention.created",
+      payload: { id },
+      sourceModule: "teacher_assistant",
+      idempotencyKey: `teacher_assistant.intervention:${id}`,
+    },
+  }),
+  interventionUpdated: (id: string): MutationAuditSpec => ({
+    ...workflow("teacherInterventionUpdated", "teacher_intervention", id, { id }),
+    domain: {
+      eventType: "teacher_assistant.intervention.updated",
+      payload: { id },
+      sourceModule: "teacher_assistant",
+      idempotencyKey: `teacher_assistant.intervention.updated:${id}`,
+    },
+  }),
+};
+
+// ─── Parent Insights (v10.8) ─────────────────────────────────────────────────
+
+export const parentInsightsAudit = {
+  snapshotGenerated: (id: string, studentId: string): MutationAuditSpec => ({
+    ...workflow("parentInsightGenerated", "parent_insight_snapshot", id, { id, studentId }),
+    domain: {
+      eventType: "parent_insights.snapshot.generated",
+      payload: { id, studentId },
+      sourceModule: "parent_insights",
+      idempotencyKey: `parent_insights.snapshot:${id}`,
+    },
+  }),
+};
+
+// ─── Growth Platform (v11.0) ─────────────────────────────────────────────────
+
+export const growthPlatformAudit = {
+  campaignCreated: (id: string): MutationAuditSpec => ({
+    ...workflow("growthCampaignCreated", "growth_campaign", id, { id }),
+    domain: {
+      eventType: "growth.campaign.created",
+      payload: { id },
+      sourceModule: "growth",
+      idempotencyKey: `growth.campaign:${id}`,
+    },
+  }),
+  inquiryCreated: (id: string): MutationAuditSpec => ({
+    ...workflow("growthInquiryCreated", "growth_inquiry", id, { id }),
+    domain: {
+      eventType: "growth.inquiry.created",
+      payload: { id },
+      sourceModule: "growth",
+      idempotencyKey: `growth.inquiry:${id}`,
+    },
+  }),
+  inquiryConverted: (inquiryId: string, leadId: string): MutationAuditSpec => ({
+    ...workflow("growthInquiryConverted", "growth_inquiry", inquiryId, { inquiryId, leadId }),
+    domain: {
+      eventType: "growth.inquiry.converted",
+      payload: { inquiryId, leadId },
+      sourceModule: "growth",
+      idempotencyKey: `growth.inquiry.convert:${inquiryId}`,
+    },
+  }),
+};
+
+export const schoolCompletionAudit = {
+  subjectCreated: (id: string): MutationAuditSpec => ({
+    ...workflow("subjectCreated", "academic_subject", id, { id }),
+    domain: {
+      eventType: "school.subject.created",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.subject:${id}`,
+    },
+  }),
+  subjectUpdated: (id: string): MutationAuditSpec => ({
+    ...workflow("subjectUpdated", "academic_subject", id, { id }),
+    domain: {
+      eventType: "school.subject.updated",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.subject.update:${id}`,
+    },
+  }),
+  lessonLogCreated: (id: string): MutationAuditSpec => ({
+    ...workflow("lessonLogCreated", "teacher_lesson_log", id, { id }),
+    domain: {
+      eventType: "school.lesson_log.created",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.lesson_log:${id}`,
+    },
+  }),
+  timetableAutomated: (academicYearId: string, count: number): MutationAuditSpec => ({
+    ...workflow("timetableAutomated", "academic_timetable", academicYearId, { academicYearId, count }),
+    domain: {
+      eventType: "school.timetable.automated",
+      payload: { academicYearId, count },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.timetable.automate:${academicYearId}:${count}`,
+    },
+  }),
+  brandingUpdated: (id: string): MutationAuditSpec => ({
+    ...workflow("schoolBrandingUpdated", "school_branding", id, { id }),
+    domain: {
+      eventType: "school.branding.updated",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.branding:${id}`,
+    },
+  }),
+  whatsAppProviderUpdated: (id: string): MutationAuditSpec => ({
+    ...workflow("whatsAppProviderUpdated", "whatsapp_provider_config", id, { id }),
+    domain: {
+      eventType: "school.whatsapp_provider.updated",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.whatsapp_provider:${id}`,
+    },
+  }),
+  whatsAppTestSent: (toPhone: string): MutationAuditSpec => ({
+    ...workflow("whatsAppTestSent", "whatsapp_provider_config", toPhone, { toPhone }),
+    domain: {
+      eventType: "school.whatsapp_provider.test",
+      payload: { toPhone },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.whatsapp_test:${toPhone}`,
+    },
+  }),
+  classSubjectAssigned: (id: string): MutationAuditSpec => ({
+    ...workflow("classSubjectAssigned", "class_subject_assignment", id, { id }),
+    domain: {
+      eventType: "school.class_subject.assigned",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.class_subject:${id}`,
+    },
+  }),
+  classSubjectRemoved: (id: string): MutationAuditSpec => ({
+    ...workflow("classSubjectRemoved", "class_subject_assignment", id, { id }),
+    domain: {
+      eventType: "school.class_subject.removed",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.class_subject.remove:${id}`,
+    },
+  }),
+  teacherSubjectAssigned: (id: string): MutationAuditSpec => ({
+    ...workflow("teacherSubjectAssigned", "teacher_subject_assignment", id, { id }),
+    domain: {
+      eventType: "school.teacher_subject.assigned",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.teacher_subject:${id}`,
+    },
+  }),
+  templateMessageSent: (templateCode: string): MutationAuditSpec => ({
+    ...workflow("templateMessageSent", "communication_delivery_event", templateCode, { templateCode }),
+    domain: {
+      eventType: "school.communication.template_sent",
+      payload: { templateCode },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.template_sent:${templateCode}:${Date.now()}`,
+    },
+  }),
+  syllabusGenerated: (id: string): MutationAuditSpec => ({
+    ...workflow("syllabusGenerated", "syllabus_generation", id, { id }),
+    domain: {
+      eventType: "school.syllabus.generated",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.syllabus.generated:${id}`,
+    },
+  }),
+  syllabusCloned: (yearId: string): MutationAuditSpec => ({
+    ...workflow("syllabusCloned", "syllabus_generation", yearId, { yearId }),
+    domain: {
+      eventType: "school.syllabus.cloned",
+      payload: { yearId },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.syllabus.cloned:${yearId}`,
+    },
+  }),
+  topicCompleted: (topicId: string): MutationAuditSpec => ({
+    ...workflow("topicCompleted", "syllabus_topic", topicId, { topicId }),
+    domain: {
+      eventType: "school.topic.completed",
+      payload: { topicId },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.topic.completed:${topicId}`,
+    },
+  }),
+  roomCreated: (id: string): MutationAuditSpec => ({
+    ...workflow("roomCreated", "academic_room", id, { id }),
+    domain: {
+      eventType: "school.room.created",
+      payload: { id },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.room:${id}`,
+    },
+  }),
+  examTimetableGenerated: (className: string): MutationAuditSpec => ({
+    ...workflow("examTimetableGenerated", "exam_timetable", className, { className }),
+    domain: {
+      eventType: "school.exam_timetable.generated",
+      payload: { className },
+      sourceModule: "school_completion",
+      idempotencyKey: `school.exam_timetable:${className}`,
+    },
+  }),
+  platformProviderUpdated: (id: string): MutationAuditSpec => ({
+    ...workflow("platformProviderUpdated", "platform_provider_config", id, { id }),
+    domain: {
+      eventType: "platform.provider.updated",
+      payload: { id },
+      sourceModule: "control_center",
+      idempotencyKey: `platform.provider:${id}`,
+    },
+  }),
+  vaultSecretRotated: (secretId: string): MutationAuditSpec => ({
+    ...workflow("vaultSecretRotated", "platform_secret_vault", secretId, { secretId }),
+    domain: {
+      eventType: "platform.vault.rotated",
+      payload: { secretId },
+      sourceModule: "vault",
+      idempotencyKey: `platform.vault.rotated:${secretId}`,
+    },
+  }),
+  featureEnablementUpdated: (featureKey: string): MutationAuditSpec => ({
+    ...workflow("featureEnablementUpdated", "platform_feature_enablement", featureKey, { featureKey }),
+    domain: {
+      eventType: "platform.feature.updated",
+      payload: { featureKey },
+      sourceModule: "control_center",
+      idempotencyKey: `platform.feature:${featureKey}`,
     },
   }),
 };

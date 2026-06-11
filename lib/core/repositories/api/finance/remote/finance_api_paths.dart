@@ -15,6 +15,8 @@ abstract final class FinanceApiPaths {
   static const String discounts = '$base/discounts';
   static const String reports = '$base/reports';
   static const String settings = '$base/settings';
+  static const String intelligenceCopilot = '$base/intelligence/copilot';
+  static const String intelligenceExecutive = '$base/intelligence/executive';
   static const String scholarships = '$base/scholarships';
 
   static String collectionDetail(String id) => '$base/collections/$id';
