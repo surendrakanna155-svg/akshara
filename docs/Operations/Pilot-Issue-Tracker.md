@@ -164,6 +164,8 @@ Onboarding commit upserts parent/teacher rows into `users` using the `erp_tenant
 
 ## Related runbooks
 
+- [Customer Readiness Report](./Customer-Readiness-Report.md)
+- [Operational Readiness Report](./Operational-Readiness-Report.md)
 - [Production Validation Report](./Production-Validation-Report.md)
 - [Go-Live Checklist](./Go-Live-Checklist.md)
 - [v1.0 Release Candidate](../Releases/v1.0-Release-Candidate.md)

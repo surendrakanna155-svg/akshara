@@ -95,6 +95,7 @@ Akshara ERP is operationally ready to onboard the first real school for **manual
 | School Setup Checklist | ✅ Created | [`School-Setup-Checklist.md`](./School-Setup-Checklist.md) |
 | First-Day Go-Live Checklist | ✅ Created | [`First-Day-Go-Live-Checklist.md`](./First-Day-Go-Live-Checklist.md) |
 | XLSX variants | ⚠️ Not created | Schools may save CSV as `.xlsx`; columns identical. Optional ops task only. |
+| Quoted CSV fields | ✅ Hardened | Names with commas: wrap in `"double quotes"`; UTF-8 BOM stripped |
 
 ---
 

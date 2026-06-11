@@ -19,6 +19,8 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/sis/dashboard", permission: "viewSis", scope: "school", module: "sis" },
   { method: "POST", path: "/sis/students", permission: "manageSis", scope: "school", module: "sis" },
   { method: "GET", path: "/academic/years", permission: "viewSis", scope: "school", module: "academic" },
+  { method: "POST", path: "/academic/transitions/preview", permission: "manageSis", scope: "school", module: "academic" },
+  { method: "POST", path: "/academic/transitions/:id/execute", permission: "manageSis", scope: "school", module: "academic" },
   { method: "GET", path: "/transport/dashboard", permission: "viewTransport", scope: "school", module: "transport" },
   { method: "GET", path: "/hr/dashboard", permission: "viewHr", scope: "school", module: "hr" },
   { method: "GET", path: "/hostel/dashboard", permission: "viewHostel", scope: "school", module: "hostel" },

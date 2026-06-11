@@ -1,6 +1,12 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleExecuteTransition,
+  handleGetTransition,
+  handlePreviewTransition,
+  handleSuggestTransitionMappings,
+} from "./academic_transition_handlers.ts";
+import {
   handleCreateAcademicYear,
   handleCreateClass,
   handleCreateSection,
@@ -51,6 +57,23 @@ export function matchAcademicRoute(
   }
   if (path === "/academic/teacher-assignments" && method === "POST") {
     return { handler: handleCreateTeacherAssignment, args: [] };
+  }
+
+  if (path === "/academic/transitions/mapping-suggestions" && method === "GET") {
+    return { handler: handleSuggestTransitionMappings, args: [] };
+  }
+  if (path === "/academic/transitions/preview" && method === "POST") {
+    return { handler: handlePreviewTransition, args: [] };
+  }
+
+  const transitionExecuteMatch = path.match(/^\/academic\/transitions\/([^/]+)\/execute$/);
+  if (transitionExecuteMatch && method === "POST") {
+    return { handler: handleExecuteTransition, args: [transitionExecuteMatch[1]!] };
+  }
+
+  const transitionMatch = path.match(/^\/academic\/transitions\/([^/]+)$/);
+  if (transitionMatch && method === "GET") {
+    return { handler: handleGetTransition, args: [transitionMatch[1]!] };
   }
 
   const yearMatch = path.match(/^\/academic\/years\/([^/]+)$/);

@@ -47,7 +47,40 @@ export interface ImportPreviewRow {
   matchedEntityId: string | null;
 }
 
-function parseStudentRow(raw: Record<string, unknown>): { row?: StudentImportRow; errors: string[] } {
+const IMPORT_PHONE_PATTERN = /^\+?\d{10,15}$/;
+
+function isValidImportPhone(phone: string): boolean {
+  return IMPORT_PHONE_PATTERN.test(phone.replace(/\s+/g, ""));
+}
+
+/** Parses one CSV line respecting double-quoted fields (commas inside quotes). */
+export function parseCsvLine(line: string): string[] {
+  const values: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]!;
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === "," && !inQuotes) {
+      values.push(current.trim().replace(/^"|"$/g, ""));
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  values.push(current.trim().replace(/^"|"$/g, ""));
+  return values;
+}
+
+export function parseStudentImportRow(
+  raw: Record<string, unknown>,
+): { row?: StudentImportRow; errors: string[] } {
   const errors: string[] = [];
   const studentName = String(raw.studentName ?? raw.student_name ?? "").trim();
   const admissionNumber = String(raw.admissionNumber ?? raw.admission_number ?? "").trim();
@@ -56,6 +89,7 @@ function parseStudentRow(raw: Record<string, unknown>): { row?: StudentImportRow
   const academicYear = String(raw.academicYear ?? raw.academic_year ?? "").trim();
   const parentName = String(raw.parentName ?? raw.parent_name ?? "").trim();
   const parentPhone = String(raw.parentPhone ?? raw.parent_phone ?? "").trim();
+  const studentPhone = String(raw.studentPhone ?? raw.student_phone ?? "").trim();
 
   if (!studentName) errors.push("studentName is required");
   if (!admissionNumber) errors.push("admissionNumber is required");
@@ -64,8 +98,11 @@ function parseStudentRow(raw: Record<string, unknown>): { row?: StudentImportRow
   if (!academicYear) errors.push("academicYear is required");
   if (!parentName) errors.push("parentName is required");
   if (!parentPhone) errors.push("parentPhone is required");
-  if (parentPhone && !/^\+?\d{10,15}$/.test(parentPhone.replace(/\s+/g, ""))) {
-    errors.push("parentPhone is invalid");
+  if (parentPhone && !isValidImportPhone(parentPhone)) {
+    errors.push("parentPhone must be 10–15 digits (optional + prefix)");
+  }
+  if (studentPhone && !isValidImportPhone(studentPhone)) {
+    errors.push("studentPhone must be 10–15 digits (optional + prefix)");
   }
 
   if (errors.length) return { errors };
@@ -79,7 +116,7 @@ function parseStudentRow(raw: Record<string, unknown>): { row?: StudentImportRow
       academicYear,
       parentName,
       parentPhone,
-      studentPhone: String(raw.studentPhone ?? raw.student_phone ?? "").trim() || undefined,
+      studentPhone: studentPhone || undefined,
       gender: String(raw.gender ?? "").trim() || undefined,
       dateOfBirth: String(raw.dateOfBirth ?? raw.date_of_birth ?? "").trim() || undefined,
       rollNumber: String(raw.rollNumber ?? raw.roll_number ?? "").trim() || undefined,
@@ -88,13 +125,18 @@ function parseStudentRow(raw: Record<string, unknown>): { row?: StudentImportRow
   };
 }
 
-function parseTeacherRow(raw: Record<string, unknown>): { row?: TeacherImportRow; errors: string[] } {
+export function parseTeacherImportRow(
+  raw: Record<string, unknown>,
+): { row?: TeacherImportRow; errors: string[] } {
   const errors: string[] = [];
   const displayName = String(raw.displayName ?? raw.name ?? raw.display_name ?? "").trim();
   const phone = String(raw.phone ?? "").trim();
   const role = String(raw.role ?? "teacher").trim().toLowerCase();
   if (!displayName) errors.push("displayName is required");
   if (!phone) errors.push("phone is required");
+  if (phone && !isValidImportPhone(phone)) {
+    errors.push("phone must be 10–15 digits (optional + prefix)");
+  }
   if (!["teacher", "principal", "schooladmin"].includes(role)) {
     errors.push("role must be teacher, principal, or schoolAdmin");
   }
@@ -111,11 +153,12 @@ function parseTeacherRow(raw: Record<string, unknown>): { row?: TeacherImportRow
 }
 
 export function parseCsvText(csvText: string): Record<string, unknown>[] {
-  const lines = csvText.trim().split(/\r?\n/).filter((line) => line.trim().length > 0);
+  const normalized = csvText.replace(/^\uFEFF/, "").trim();
+  const lines = normalized.split(/\r?\n/).filter((line) => line.trim().length > 0);
   if (lines.length < 2) return [];
-  const headers = lines[0]!.split(",").map((h) => h.trim());
+  const headers = parseCsvLine(lines[0]!).map((h) => h.trim());
   return lines.slice(1).map((line) => {
-    const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+    const values = parseCsvLine(line);
     const row: Record<string, unknown> = {};
     headers.forEach((header, index) => {
       row[header] = values[index] ?? "";
@@ -152,8 +195,8 @@ export async function createImportPreview(
     const raw = rawRows[i]!;
     const rowNumber = i + 1;
     const parsed = importType === "student"
-      ? parseStudentRow(raw)
-      : parseTeacherRow(raw);
+      ? parseStudentImportRow(raw)
+      : parseTeacherImportRow(raw);
 
     let status = "valid";
     let matchedEntityId: string | null = null;
@@ -248,7 +291,7 @@ export async function commitImportJob(
     try {
       await db.queryObject(`SAVEPOINT onboarding_import_row`);
       if (job.import_type === "student") {
-        const parsed = parseStudentRow(row.payload);
+        const parsed = parseStudentImportRow(row.payload);
         if (!parsed.row) continue;
         const parentUserId = await upsertUserByPhone(
           db,
@@ -278,7 +321,7 @@ export async function commitImportJob(
           [row.id, studentId],
         );
       } else {
-        const parsed = parseTeacherRow(row.payload);
+        const parsed = parseTeacherImportRow(row.payload);
         if (!parsed.row) continue;
         const userId = await upsertUserByPhone(
           db,

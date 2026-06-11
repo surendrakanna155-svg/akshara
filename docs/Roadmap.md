@@ -3,6 +3,7 @@
 **Version:** 2.0  
 **Last updated:** June 2026  
 **Current release:** v1.0-rc1 (Release Candidate) — baseline v7.7  
+**Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  
 **Production readiness:** 94 / 100 (launch-weighted; live integrations env-dependent)  
@@ -85,7 +86,7 @@ Screen → Provider → Repository Interface → ApiRepository → RemoteDataSou
 | Core (network, RBAC, tenant, pagination) | 14 | ~55 |
 | Golden | 3 | 3 |
 | Auth / startup / widget | 9 | ~80 |
-| **Total** | **145** | **1011** |
+| **Total** | **145+** | **1087+** |
 
 ### Production Readiness Score
 
@@ -808,10 +809,13 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Release doc** | `docs/Releases/v1.0-Release-Candidate.md` |
 | **Validation** | `docs/Operations/Production-Validation-Report.md` |
 | **Go-live** | `docs/Operations/Go-Live-Checklist.md` |
-| **Tag** | `v1.0-rc1` |
-| **Status** | ✅ Validated on staging (feature freeze — no v7.8+ work in RC) |
+| **Tags** | `v1.0-rc1` · `v1.0-ops-ready` · `v1.0-customer-ready` |
+| **Ops** | `docs/Operations/Customer-Readiness-Report.md` |
+| **Status** | ✅ Validated on staging (feature freeze — no v7.8+ implementation in RC) |
 
-**Next milestone:** v7.8 — Live Integrations Sign-off (pilot production cutover)
+**Execution focus:** First real school onboarding — not v7.8 build work.
+
+**Future vision (document only):** `docs/Vision/FutureVision.md`
 
 ---
 

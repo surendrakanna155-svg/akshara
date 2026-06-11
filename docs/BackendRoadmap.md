@@ -14,7 +14,7 @@ Backend implementation proceeds in **6 sprints** after architecture foundation. 
 ```
 Sprint 1 (v5.6)  Architecture docs + gap closure  ← COMPLETE
 Sprint 2 (v6.0)  Core platform + auth
-Sprint 3 (v6.1)  RBAC + RLS + core modules  ← IN PROGRESS (Phase 4B4 complete)
+Sprint 3 (v6.1)  RBAC + RLS + core modules  ← COMPLETE
 Sprint 4 (v6.2)  Full ERP API surface
 Sprint 5 (v6.3)  Audit ingestion + hardening
 Sprint 6 (v6.4)  Validation + pilot backend

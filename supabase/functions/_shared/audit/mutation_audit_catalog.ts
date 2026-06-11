@@ -334,6 +334,18 @@ export const academicAudit = {
       idempotencyKey: `academic.year.updated:${yearId}`,
     },
   }),
+  yearTransitionExecuted: (
+    transitionId: string,
+    metadata: Record<string, unknown>,
+  ): MutationAuditSpec => ({
+    ...workflow("academicYearTransitionExecuted", "academic_year_transition", transitionId, metadata),
+    domain: {
+      eventType: "academic.year.transition.executed",
+      payload: { transitionId, ...metadata },
+      sourceModule: "academic",
+      idempotencyKey: `academic.year.transition:${transitionId}`,
+    },
+  }),
   classCreated: (classId: string): MutationAuditSpec => ({
     ...workflow("academicClassCreated", "academic_class", classId, { classId }),
     domain: {

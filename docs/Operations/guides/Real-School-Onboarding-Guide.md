@@ -112,7 +112,7 @@ Distribute to end users:
 
 | Rule | Why |
 |------|-----|
-| No commas inside name fields | Parser uses simple comma split — commas break columns |
+| Commas inside name fields | Wrap field in double quotes, e.g. `"Kumar, Ravi"` |
 | Phones: 10–15 digits, optional `+` prefix | Invalid phone → row `invalid` |
 | One admission number per student | Duplicate → skipped on commit |
 | Class/section/year match catalog | Unknown class → `invalid` |

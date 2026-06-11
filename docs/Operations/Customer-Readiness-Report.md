@@ -1,7 +1,7 @@
 # Customer Readiness Report — First Real School
 
 **Date:** 2026-06-10  
-**Release:** `v1.0-rc1` · tag `v1.0-ops-ready`  
+**Release:** `v1.0-rc1` · tags `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Mode:** Release candidate — customer onboarding execution only  
 **Baseline:** Operational Readiness COMPLETE · Production Validation PASS · Demo School 31/31 · 1087 tests · 213 probes · 0 open pilot issues · Feature freeze ACTIVE
 
@@ -32,7 +32,7 @@ Real-world risks only — no speculative product gaps.
 | Risk | Likelihood | Impact | Mitigation |
 |------|:----------:|:------:|------------|
 | **CSV column mismatch** (class/section/year ≠ catalog) | High | High | Phase 2 catalog first; always Preview before Commit; [`Real-School-Onboarding-Guide.md`](./guides/Real-School-Onboarding-Guide.md) CSV rules |
-| **Commas inside name fields** | Medium | High | Parser is simple comma-split — **no commas** in names; use UTF-8 CSV export |
+| **Commas inside name fields** | Medium | Low | Wrap names in double quotes, e.g. `"Kumar, Ravi"`; UTF-8 CSV export |
 | **Import timeout (>50 rows)** | Medium | Medium | Batch ≤50 rows/job; re-login between large runs |
 | **Wrong import order** (students before teachers) | Medium | Low | Staff import first (documented in runbook) |
 | **OTP not delivered (production)** | Medium | High | Go-Live §2 + ONB-11 before parent access; verify Twilio + `AUTH_OTP_DEV_MODE=false` |
