@@ -28,6 +28,7 @@ Deno.test("stub copilot response is read-only", async () => {
     sis: { access: "denied" },
     communication: { access: "denied" },
     timetable: { access: "denied" },
+    analytics: { access: "denied" },
     studentLookup: { access: "not_requested" },
   });
   assertEquals(reply.includes("read-only"), true);

@@ -52,10 +52,10 @@ export const COPILOT_ASSISTANTS: CopilotAssistantDefinition[] = [
   },
   {
     type: "communication",
-    label: "Communication Assistant",
-    description: "Notification templates, delivery metrics, and broadcast guidance (read-only).",
+    label: "AI Communication Assistant",
+    description: "Draft broadcast guidance, fee reminders, delivery metrics, and channel strategy (read-only).",
     requiredViewPermission: "viewCommunications",
-    skills: ["summarize", "explain", "search", "report", "operational_qa"],
+    skills: ["summarize", "explain", "draft_guidance", "channel_advice", "operational_qa"],
   },
 ];
 
@@ -90,7 +90,9 @@ export const COPILOT_SUGGESTED_PROMPTS: Record<CopilotAssistantType, string[]> =
   ],
   communication: [
     "Summarize notification templates available",
-    "Explain broadcast delivery metrics",
+    "Explain broadcast delivery metrics and pending queue",
+    "Draft a fee reminder message for parents (guidance only)",
+    "Suggest audience and channel for a school holiday notice",
     "What channels are configured?",
     "Draft a parent communication checklist (guidance only)",
   ],

@@ -10,13 +10,22 @@ Rules:
 - Prefer concise bullet summaries for operational questions.
 `.trim();
 
+const COMMUNICATION_ASSISTANT_POLICY = `
+Communication assistant mode:
+- Provide draft message text as guidance only — user must send via Communications module.
+- Recommend audience (all_parents, all_teachers, class) and channel (sms, whatsapp, email).
+- Reference delivery queue metrics when explaining reach or delays.
+`.trim();
+
 export function buildSystemPrompt(
   assistantType: CopilotAssistantType,
   context: CopilotContextBundle,
 ): string {
   const assistant = COPILOT_ASSISTANTS.find((a) => a.type === assistantType)!;
+  const extraPolicy = assistantType === "communication" ? COMMUNICATION_ASSISTANT_POLICY : "";
   return [
     READ_ONLY_POLICY,
+    extraPolicy,
     `Assistant: ${assistant.label}`,
     `Skills: ${assistant.skills.join(", ")}`,
     `School context: ${JSON.stringify(context.school)}`,
@@ -61,6 +70,15 @@ export function buildStubAssistantReply(
       "**Admissions snapshot**",
       `- Leads: ${context.admissions.leadCount}`,
       `- Applications: ${JSON.stringify(context.admissions.applicationsByStatus)}`,
+      "",
+    );
+  }
+  if (context.communication.access === "granted") {
+    lines.push(
+      "**Communication snapshot**",
+      `- Templates: ${context.communication.templateCount ?? 0}`,
+      `- Broadcasts sent: ${context.communication.broadcastCount ?? 0}`,
+      `- Pending deliveries: ${context.communication.pendingDeliveries ?? 0}`,
       "",
     );
   }

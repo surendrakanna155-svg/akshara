@@ -180,7 +180,30 @@ async function loadCommunicationContext(
      WHERE organization_id = $1`,
     [organizationId],
   );
-  return { access: "granted", templateCount };
+  const broadcastCount = await db.queryCount(
+    `SELECT count(*)::text AS count FROM comm_broadcasts
+     WHERE organization_id = $1 AND school_id = $2`,
+    [organizationId, schoolId],
+  );
+  const pendingDeliveries = await db.queryCount(
+    `SELECT count(*)::text AS count FROM notification_deliveries
+     WHERE organization_id = $1 AND status IN ('pending', 'queued')`,
+    [organizationId],
+  );
+  const sentDeliveries = await db.queryCount(
+    `SELECT count(*)::text AS count FROM notification_deliveries
+     WHERE organization_id = $1 AND status = 'sent'`,
+    [organizationId],
+  );
+  return {
+    access: "granted",
+    templateCount,
+    broadcastCount,
+    pendingDeliveries,
+    sentDeliveries,
+    channels: ["sms", "email", "push", "whatsapp"],
+    draftMode: "guidance_only",
+  };
 }
 
 async function loadTimetableContext(
