@@ -2,7 +2,9 @@
 
 **Version:** 1.0 (v1.0-rc1)  
 **When:** Before first real-school data import  
-**Prerequisite:** Environment deployed per [`Go-Live-Checklist.md`](./Go-Live-Checklist.md)
+**Prerequisite:** Environment deployed per [`Go-Live-Checklist.md`](./Go-Live-Checklist.md)  
+**Master timeline:** [`guides/Real-School-Onboarding-Guide.md`](./guides/Real-School-Onboarding-Guide.md)  
+**Customer readiness:** [`Customer-Readiness-Report.md`](./Customer-Readiness-Report.md)
 
 ---
 
@@ -80,6 +82,7 @@
 - [ ] [`UAT-Checklist-v1.0-rc1.md`](./UAT-Checklist-v1.0-rc1.md) — onboarding section (ONB-*) complete
 - [ ] Defects logged in [`Pilot-Issue-Tracker.md`](./Pilot-Issue-Tracker.md)
 - [ ] Rollback procedure understood ([`Rollback-Checklist.md`](./Rollback-Checklist.md))
+- [ ] Customer guides ready to distribute ([`guides/`](./guides/))
 
 ---
 
