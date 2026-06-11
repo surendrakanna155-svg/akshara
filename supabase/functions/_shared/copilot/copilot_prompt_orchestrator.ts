@@ -17,12 +17,23 @@ Communication assistant mode:
 - Reference delivery queue metrics when explaining reach or delays.
 `.trim();
 
+const PARENT_GUIDANCE_POLICY = `
+Parent guidance mode:
+- Help school staff communicate clearly and empathetically with parents.
+- Use SIS and finance context only when granted — never invent balances or attendance.
+- Output talking points and sample phrases, not automated sends.
+`.trim();
+
 export function buildSystemPrompt(
   assistantType: CopilotAssistantType,
   context: CopilotContextBundle,
 ): string {
   const assistant = COPILOT_ASSISTANTS.find((a) => a.type === assistantType)!;
-  const extraPolicy = assistantType === "communication" ? COMMUNICATION_ASSISTANT_POLICY : "";
+  const extraPolicy = assistantType === "communication"
+    ? COMMUNICATION_ASSISTANT_POLICY
+    : assistantType === "parentGuidance"
+    ? PARENT_GUIDANCE_POLICY
+    : "";
   return [
     READ_ONLY_POLICY,
     extraPolicy,

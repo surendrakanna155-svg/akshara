@@ -3,7 +3,8 @@ export type CopilotAssistantType =
   | "finance"
   | "sis"
   | "academic"
-  | "communication";
+  | "communication"
+  | "parentGuidance";
 
 export const COPILOT_ASSISTANT_TYPES: CopilotAssistantType[] = [
   "admissions",
@@ -11,6 +12,7 @@ export const COPILOT_ASSISTANT_TYPES: CopilotAssistantType[] = [
   "sis",
   "academic",
   "communication",
+  "parentGuidance",
 ];
 
 export interface CopilotAssistantDefinition {
@@ -57,6 +59,13 @@ export const COPILOT_ASSISTANTS: CopilotAssistantDefinition[] = [
     requiredViewPermission: "viewCommunications",
     skills: ["summarize", "explain", "draft_guidance", "channel_advice", "operational_qa"],
   },
+  {
+    type: "parentGuidance",
+    label: "Parent Guidance Assistant",
+    description: "Help staff answer parent FAQs, fee queries, and communication tone (read-only).",
+    requiredViewPermission: "viewCommunications",
+    skills: ["parent_faq", "draft_guidance", "explain", "operational_qa"],
+  },
 ];
 
 export const COPILOT_SUGGESTED_PROMPTS: Record<CopilotAssistantType, string[]> = {
@@ -95,5 +104,11 @@ export const COPILOT_SUGGESTED_PROMPTS: Record<CopilotAssistantType, string[]> =
     "Suggest audience and channel for a school holiday notice",
     "What channels are configured?",
     "Draft a parent communication checklist (guidance only)",
+  ],
+  parentGuidance: [
+    "How should I explain a fee balance to a parent?",
+    "Draft a polite absence follow-up message for parents",
+    "What should parents see in the mobile app?",
+    "Suggest talking points for a parent complaint about homework load",
   ],
 };

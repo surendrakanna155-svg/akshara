@@ -46,7 +46,8 @@ export async function loadCopilotContext(
   };
 
   const finance = claimsHasPermission(claims, "viewFinance") &&
-      (assistantType === "finance" || assistantType === "communication")
+      (assistantType === "finance" || assistantType === "communication" ||
+        assistantType === "parentGuidance")
     ? await loadFinanceContext(db, organizationId, schoolId)
     : { access: "denied" };
 
@@ -56,12 +57,12 @@ export async function loadCopilotContext(
     : { access: "denied" };
 
   const sis = claimsHasPermission(claims, "viewSis") &&
-      (assistantType === "sis" || assistantType === "academic")
+      (assistantType === "sis" || assistantType === "academic" || assistantType === "parentGuidance")
     ? await loadSisContext(db, organizationId, schoolId)
     : { access: "denied" };
 
   const communication = claimsHasPermission(claims, "viewCommunications") &&
-      assistantType === "communication"
+      (assistantType === "communication" || assistantType === "parentGuidance")
     ? await loadCommunicationContext(db, organizationId, schoolId)
     : { access: "denied" };
 
