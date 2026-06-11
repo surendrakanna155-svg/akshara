@@ -2,7 +2,7 @@
 
 **Version:** 1.0 (v1.0-rc1)  
 **Scope:** Limited production pilot cutover — no new features  
-**Prerequisite:** [`v1.0-Release-Candidate.md`](../Releases/v1.0-Release-Candidate.md) validated on staging
+**Prerequisite:** [`v1.0-Release-Candidate.md`](../Releases/v1.0-Release-Candidate.md) validated on staging · [`Deployment-Guide.md`](./Deployment-Guide.md)
 
 ---
 
@@ -150,8 +150,9 @@ export ACADEMIC_YEAR_ID=<current-year-uuid>   # optional
 ## 8. Deployment artifacts
 
 - [ ] Git tag `v1.0-rc1` deployed (or production tag after GA)
-- [ ] Migrations through `20260615110000_onboarding_user_provisioning_fix.sql` applied
-- [ ] Edge Function `api` deployed
+- [ ] `./scripts/deploy_staging.sh` green on staging; `./scripts/phase5_staging_verify.sh` exit 0
+- [ ] Migrations through `20260622700000_v104_storage_foundation.sql` applied (includes Phase 5)
+- [ ] Edge Function `api` deployed (Phase 5 routers included)
 - [ ] Flutter web/mobile build artifact version recorded in release notes
 - [ ] [`Pilot-Issue-Tracker.md`](./Pilot-Issue-Tracker.md) — 0 open issues
 

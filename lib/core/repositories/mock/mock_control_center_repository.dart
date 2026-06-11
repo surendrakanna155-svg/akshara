@@ -652,4 +652,70 @@ class MockControlCenterRepository implements ControlCenterRepository {
       ],
     );
   }
+
+  @override
+  Future<ControlCenterProvidersData> getProviders({required RepositoryQuery query}) async {
+    return const ControlCenterProvidersData(
+      providers: [
+        PlatformProviderConfig(
+          id: 'prov_ai',
+          providerCategory: 'ai',
+          providerName: 'openai',
+          hasCredential: true,
+          isActive: true,
+          isPrimary: true,
+          healthStatus: 'healthy',
+        ),
+        PlatformProviderConfig(
+          id: 'prov_wa',
+          providerCategory: 'whatsapp',
+          providerName: 'msg91',
+          hasCredential: true,
+          isActive: true,
+          isPrimary: true,
+          healthStatus: 'healthy',
+        ),
+        PlatformProviderConfig(
+          id: 'prov_sms',
+          providerCategory: 'sms',
+          providerName: 'msg91',
+          hasCredential: true,
+          isActive: true,
+          isPrimary: true,
+          healthStatus: 'healthy',
+        ),
+      ],
+      usage: PlatformUsageAnalytics(
+        totalEvents: 1250,
+        totalCostInr: 8420,
+        byCategory: {
+          'ai': PlatformUsageCategoryStats(events: 400, costInr: 6200),
+          'whatsapp': PlatformUsageCategoryStats(events: 650, costInr: 1820),
+          'sms': PlatformUsageCategoryStats(events: 200, costInr: 400),
+        },
+      ),
+      features: [
+        FeatureEnablement(schoolId: 'school_1', featureKey: 'parent_insights', enabled: true),
+        FeatureEnablement(schoolId: 'school_1', featureKey: 'teacher_assistant', enabled: true),
+      ],
+    );
+  }
+
+  @override
+  Future<void> saveProvider({
+    required RepositoryQuery query,
+    required String providerCategory,
+    required String providerName,
+    String? credential,
+    bool isActive = true,
+    bool isPrimary = false,
+  }) async {}
+
+  @override
+  Future<void> setFeatureEnablement({
+    required RepositoryQuery query,
+    required String schoolId,
+    required String featureKey,
+    required bool enabled,
+  }) async {}
 }

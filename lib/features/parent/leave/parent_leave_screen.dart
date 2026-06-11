@@ -35,7 +35,7 @@ class ParentLeaveScreen extends ConsumerWidget {
         titleText: 'Leave Requests',
         subtitle: '${data.childName} · ${data.childClass}',
         unreadNotifications: data.unreadNotifications,
-        showAi: true,
+        showAi: false,
         trailingPadding: true,
         onAiTap: () {},
         onNotificationsTap: onNotificationsTap,

@@ -1,3 +1,4 @@
+import '../../../features/parent/academics/parent_academic_models.dart';
 import '../../../features/parent/attendance/attendance_models.dart';
 import '../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../features/parent/events/events_models.dart';
@@ -50,5 +51,15 @@ abstract class ParentRepository {
   Future<PaymentConfirmationResult> confirmPayment({
     required RepositoryQuery query,
     required ParentPaymentConfirmRequest request,
+  });
+
+  Future<ParentAcademicSummary> getAcademicSummary({
+    required RepositoryQuery query,
+    required String studentId,
+  });
+
+  Future<String> getPrintableReport({
+    required RepositoryQuery query,
+    required String studentId,
   });
 }

@@ -17,7 +17,9 @@ enum ControlCenterScreen {
   analytics,
   monitoring,
   roles,
-  settings;
+  settings,
+  providers,
+  features;
 
   String get label => switch (this) {
         ControlCenterScreen.dashboard => 'Dashboard',
@@ -32,7 +34,78 @@ enum ControlCenterScreen {
         ControlCenterScreen.monitoring => 'Monitoring',
         ControlCenterScreen.roles => 'Roles',
         ControlCenterScreen.settings => 'Settings',
+        ControlCenterScreen.providers => 'Providers',
+        ControlCenterScreen.features => 'Features',
       };
+}
+
+enum PlatformProviderCategory { ai, whatsapp, sms }
+
+@immutable
+class PlatformProviderConfig {
+  const PlatformProviderConfig({
+    required this.id,
+    required this.providerCategory,
+    required this.providerName,
+    required this.hasCredential,
+    required this.isActive,
+    required this.isPrimary,
+    required this.healthStatus,
+  });
+
+  final String id;
+  final String providerCategory;
+  final String providerName;
+  final bool hasCredential;
+  final bool isActive;
+  final bool isPrimary;
+  final String healthStatus;
+}
+
+@immutable
+class PlatformUsageAnalytics {
+  const PlatformUsageAnalytics({
+    required this.totalEvents,
+    required this.totalCostInr,
+    required this.byCategory,
+  });
+
+  final int totalEvents;
+  final double totalCostInr;
+  final Map<String, PlatformUsageCategoryStats> byCategory;
+}
+
+@immutable
+class PlatformUsageCategoryStats {
+  const PlatformUsageCategoryStats({required this.events, required this.costInr});
+  final int events;
+  final double costInr;
+}
+
+@immutable
+class FeatureEnablement {
+  const FeatureEnablement({
+    required this.schoolId,
+    required this.featureKey,
+    required this.enabled,
+  });
+
+  final String schoolId;
+  final String featureKey;
+  final bool enabled;
+}
+
+@immutable
+class ControlCenterProvidersData {
+  const ControlCenterProvidersData({
+    required this.providers,
+    required this.usage,
+    required this.features,
+  });
+
+  final List<PlatformProviderConfig> providers;
+  final PlatformUsageAnalytics usage;
+  final List<FeatureEnablement> features;
 }
 
 enum PlatformSchoolStatus { active, trial, suspended, churnRisk }

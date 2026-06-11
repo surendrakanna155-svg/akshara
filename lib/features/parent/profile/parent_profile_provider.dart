@@ -9,7 +9,7 @@ final parentProfileLoadingProvider = StateProvider<bool>((ref) => false);
 final parentProfileErrorProvider = StateProvider<bool>((ref) => false);
 final parentProfileEmptyProvider = StateProvider<bool>((ref) => false);
 
-/// Active child id for profile child switcher preview.
+/// Active child id for profile API (mock profile child ids).
 final parentProfileActiveChildProvider = StateProvider<String>(
   (ref) => 'child_ravi',
 );

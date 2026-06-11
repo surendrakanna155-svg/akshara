@@ -46,10 +46,12 @@ void main() {
       expect(permissions.contains(Permission.viewControlCenter), isFalse);
     });
 
-    test('parent and student have no ERP permissions', () {
+    test('parent has parent experience permission; student has none', () {
       expect(
-        RolePermissionMatrix.permissionsFor(ErpRole.parent).values,
-        isEmpty,
+        RolePermissionMatrix.permissionsFor(ErpRole.parent).contains(
+          Permission.viewParentExperience,
+        ),
+        isTrue,
       );
       expect(
         RolePermissionMatrix.permissionsFor(ErpRole.student).values,

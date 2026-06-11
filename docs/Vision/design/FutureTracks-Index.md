@@ -8,6 +8,10 @@ Each track follows the same template: goals, architecture, permissions, data mod
 | Track | Document |
 |-------|----------|
 | Universal Organization Builder | [Universal-Organization-Builder.md](./Universal-Organization-Builder.md) |
+| Universal Organization Builder v2 | [Universal-Organization-Builder-v2.md](./Universal-Organization-Builder-v2.md) |
+| Dynamic Widget Platform | [Dynamic-Widget-Platform.md](./Dynamic-Widget-Platform.md) |
+| Universal Employee System | [Universal-Employee-System.md](./Universal-Employee-System.md) |
+| Universal Workflow Engine | [Universal-Workflow-Engine.md](./Universal-Workflow-Engine.md) |
 | Security & Pen Testing | [Security-Pen-Testing.md](./Security-Pen-Testing.md) |
 | Observability & Monitoring | [Observability-Monitoring.md](./Observability-Monitoring.md) |
 | Multi-School SaaS Operations | [Multi-School-SaaS-Operations.md](./Multi-School-SaaS-Operations.md) |

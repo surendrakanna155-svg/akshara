@@ -5,7 +5,9 @@ import '../features/control_center/analytics/control_center_analytics_screen.dar
 import '../features/control_center/billing/control_center_billing_screen.dart';
 import '../features/control_center/crm/control_center_crm_screen.dart';
 import '../features/control_center/dashboard/control_center_dashboard_screen.dart';
+import '../features/control_center/features/control_center_features_screen.dart';
 import '../features/control_center/monitoring/control_center_monitoring_screen.dart';
+import '../features/control_center/providers/control_center_providers_screen.dart';
 import '../features/control_center/roles/control_center_roles_screen.dart';
 import '../features/control_center/schools/control_center_schools_screen.dart';
 import '../features/control_center/settings/control_center_settings_screen.dart';
@@ -104,4 +106,18 @@ Widget controlCenterSettingsRouteBuilder(
   GoRouterState state,
 ) {
   return const ControlCenterSettingsScreen();
+}
+
+Widget controlCenterProvidersRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const ControlCenterProvidersScreen();
+}
+
+Widget controlCenterFeaturesRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const ControlCenterFeaturesScreen();
 }

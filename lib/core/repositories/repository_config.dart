@@ -4,6 +4,11 @@ import '../config/environment_provider.dart';
 
 /// Per-module API feature flags — enable independently when endpoints are ready.
 ///
+/// Phase 5: set `--dart-define=ENABLE_API_MODE=true` and
+/// `--dart-define=PHASE5_API_ENABLED=true` (requires Phase 4 flags for dependencies).
+///
+/// Onboarding: `--dart-define=ONBOARDING_API_ENABLED=true`
+///
 /// Finance: set `--dart-define=ENABLE_API_MODE=true` and
 /// `--dart-define=FINANCE_API_ENABLED=true` for staging API mode.
 ///
@@ -85,6 +90,46 @@ final inventoryFinanceApiEnabledProvider = Provider<bool>((ref) {
   );
 });
 
+final educationApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'EDUCATION_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final intelligenceApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'INTELLIGENCE_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final employeeApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'EMPLOYEE_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final inventoryDistributionApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'INVENTORY_DISTRIBUTION_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final phase5ApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'PHASE5_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
 final aiCopilotApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
@@ -136,6 +181,16 @@ final studentApiEnabledProvider = Provider<bool>((ref) {
   return const bool.fromEnvironment('STUDENT_API_ENABLED', defaultValue: false);
 });
 
+final evolutionApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('EVOLUTION_API_ENABLED', defaultValue: false);
+});
+
+final schoolCompletionApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('SCHOOL_COMPLETION_API_ENABLED', defaultValue: false);
+});
+
 /// Returns true when the global API mode and module flag are both enabled.
 bool isModuleApiEnabled(Ref ref, Provider<bool> moduleFlagProvider) {
   if (!ref.watch(enableApiModeProvider)) return false;
@@ -156,6 +211,11 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(libraryApiEnabledProvider) ||
       ref.watch(inventoryApiEnabledProvider) ||
       ref.watch(inventoryFinanceApiEnabledProvider) ||
+      ref.watch(educationApiEnabledProvider) ||
+      ref.watch(intelligenceApiEnabledProvider) ||
+      ref.watch(employeeApiEnabledProvider) ||
+      ref.watch(inventoryDistributionApiEnabledProvider) ||
+      ref.watch(phase5ApiEnabledProvider) ||
       ref.watch(aiCopilotApiEnabledProvider) ||
       ref.watch(alumniApiEnabledProvider) ||
       ref.watch(controlCenterApiEnabledProvider) ||
@@ -167,5 +227,7 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(teacherApiEnabledProvider) ||
       ref.watch(studentApiEnabledProvider) ||
       ref.watch(academicTimetableApiEnabledProvider) ||
-      ref.watch(analyticsIntelligenceApiEnabledProvider);
+      ref.watch(analyticsIntelligenceApiEnabledProvider) ||
+      ref.watch(evolutionApiEnabledProvider) ||
+      ref.watch(schoolCompletionApiEnabledProvider);
 });

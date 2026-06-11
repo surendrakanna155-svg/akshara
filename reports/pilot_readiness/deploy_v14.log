@@ -1,0 +1,27 @@
+[pilot-deploy-v14] BLOCKED: not authenticated to Supabase
+[pilot-deploy-v14] Running pilot_readiness_verify.sh...
+[pilot-readiness] === Pilot Readiness Verification (v14) ===
+[pilot-readiness] PASS: health/ready (200)
+[pilot-readiness] PASS: tenant isolation 213/213
+[pilot-readiness] WARN: storage health route not mounted (404)
+[pilot-readiness] PASS: school admin admissions (200)
+[pilot-readiness] PASS: school admin finance (200)
+[pilot-readiness] PASS: school admin sis (200)
+[pilot-readiness] PASS: parent dashboard (200)
+[pilot-readiness] PASS: student dashboard (200)
+[pilot-readiness] PASS: teacher dashboard (200)
+[pilot-readiness] PASS: parent denied admissions (403)
+[pilot-readiness] PASS: student denied finance (403)
+[pilot-readiness] FAIL: v14 /finance/intelligence/copilot NOT DEPLOYED (404) — run ./scripts/pilot_deploy_v14.sh
+[pilot-readiness] FAIL: v14 /finance/intelligence/executive NOT DEPLOYED (404) — run ./scripts/pilot_deploy_v14.sh
+[pilot-readiness] FAIL: v14 /inventory/intelligence/copilot NOT DEPLOYED (404) — run ./scripts/pilot_deploy_v14.sh
+[pilot-readiness] FAIL: v14 /intelligence/student-success/dashboard NOT DEPLOYED (404) — run ./scripts/pilot_deploy_v14.sh
+[pilot-readiness] FAIL: v14 /intelligence/exam/analytics NOT DEPLOYED (404) — run ./scripts/pilot_deploy_v14.sh
+[pilot-readiness] FAIL: v14 /school/communications/analytics/summary NOT DEPLOYED (404) — run ./scripts/pilot_deploy_v14.sh
+[pilot-readiness] FAIL: v14 /intelligence/teacher-effectiveness/performance NOT DEPLOYED (404) — run ./scripts/pilot_deploy_v14.sh
+[pilot-readiness] FAIL: v14 /parent/experience/summary?studentId=student_1 NOT DEPLOYED (404) — run ./scripts/pilot_deploy_v14.sh
+[pilot-readiness] FAIL: vault route not deployed (404)
+[pilot-readiness] PASS: audit ingestion
+[pilot-readiness] === Summary: 11 passed, 9 failed, 1 warnings, deploy_blocked=9 ===
+<stdin>:3: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+[pilot-deploy-v14] Deployment report: reports/pilot_readiness/deployment_report.json

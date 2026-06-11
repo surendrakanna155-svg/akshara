@@ -108,4 +108,87 @@ class ApiControlCenterRepository implements ControlCenterRepository {
     final dto = await _remote.fetchSettings(query: query);
     return _mapper.toSettings(dto);
   }
+
+  @override
+  Future<ControlCenterProvidersData> getProviders({required RepositoryQuery query}) async {
+    final results = await Future.wait([
+      _remote.fetchProvidersRaw(query: query),
+      _remote.fetchUsageRaw(query: query),
+      _remote.fetchFeaturesRaw(query: query),
+    ]);
+    final providersRaw = results[0] as Map<String, dynamic>;
+    final usageRaw = results[1] as Map<String, dynamic>;
+    final featuresRaw = results[2] as List<Map<String, dynamic>>;
+
+    final providerItems = providersRaw['items'] as List? ?? [];
+    final byCategoryRaw = usageRaw['byCategory'] as Map? ?? {};
+    final byCategory = <String, PlatformUsageCategoryStats>{};
+    for (final entry in byCategoryRaw.entries) {
+      final v = entry.value as Map;
+      byCategory[entry.key.toString()] = PlatformUsageCategoryStats(
+        events: v['events'] as int? ?? 0,
+        costInr: (v['costInr'] as num?)?.toDouble() ?? 0,
+      );
+    }
+
+    return ControlCenterProvidersData(
+      providers: [
+        for (final p in providerItems)
+          PlatformProviderConfig(
+            id: (p as Map)['id'] as String? ?? '',
+            providerCategory: p['providerCategory'] as String? ?? '',
+            providerName: p['providerName'] as String? ?? '',
+            hasCredential: p['hasCredential'] as bool? ?? false,
+            isActive: p['isActive'] as bool? ?? false,
+            isPrimary: p['isPrimary'] as bool? ?? false,
+            healthStatus: p['healthStatus'] as String? ?? 'unknown',
+          ),
+      ],
+      usage: PlatformUsageAnalytics(
+        totalEvents: usageRaw['totalEvents'] as int? ?? 0,
+        totalCostInr: (usageRaw['totalCostInr'] as num?)?.toDouble() ?? 0,
+        byCategory: byCategory,
+      ),
+      features: [
+        for (final f in featuresRaw)
+          FeatureEnablement(
+            schoolId: f['schoolId'] as String? ?? '',
+            featureKey: f['featureKey'] as String? ?? '',
+            enabled: f['enabled'] as bool? ?? false,
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> saveProvider({
+    required RepositoryQuery query,
+    required String providerCategory,
+    required String providerName,
+    String? credential,
+    bool isActive = true,
+    bool isPrimary = false,
+  }) =>
+      _remote.upsertProviderRaw(
+        query: query,
+        body: {
+          'providerCategory': providerCategory,
+          'providerName': providerName,
+          if (credential != null) 'credential': credential,
+          'isActive': isActive,
+          'isPrimary': isPrimary,
+        },
+      );
+
+  @override
+  Future<void> setFeatureEnablement({
+    required RepositoryQuery query,
+    required String schoolId,
+    required String featureKey,
+    required bool enabled,
+  }) =>
+      _remote.setFeatureRaw(
+        query: query,
+        body: {'schoolId': schoolId, 'featureKey': featureKey, 'enabled': enabled},
+      );
 }

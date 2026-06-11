@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../notifications/notifications_provider.dart';
+import '../parent_active_child_provider.dart';
+import '../widgets/parent_child_switcher_sheet.dart';
+import '../academics/parent_academic_models.dart';
+import '../academics/parent_academic_provider.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'parent_dashboard_provider.dart';
@@ -27,26 +31,34 @@ class ParentDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(parentDashboardProvider);
     final isLoading = ref.watch(parentDashboardLoadingProvider);
+    final hasError = ref.watch(parentDashboardErrorProvider);
+    final academic = ref.watch(parentAcademicSummaryProvider);
     final unreadNotifications = ref.watch(unreadNotificationsCountProvider);
+    final activeChild = ref.watch(parentActiveChildProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         title: AksharaChildSelectorChip(
-          name: data.childName,
-          classLabel: data.childClass,
-          onTap: () => _navigate('child_switch'),
+          name: activeChild?.name ?? data.childName,
+          classLabel: activeChild?.classLabel ?? data.childClass,
+          onTap: () => showParentChildSwitcherSheet(context, ref),
         ),
         unreadNotifications: unreadNotifications,
-        showAi: true,
+        showAi: false,
         showProfile: true,
-        onAiTap: () => _navigate('ai_copilot'),
         onNotificationsTap: () => _navigate('notifications'),
         onProfileTap: () => _navigate('profile'),
       ),
       body: isLoading
           ? const AksharaLoadingState()
-          : LayoutBuilder(
+          : hasError
+              ? AksharaErrorState(
+                  message: 'Unable to load dashboard right now.',
+                  onRetry: () =>
+                      ref.read(parentDashboardErrorProvider.notifier).state = false,
+                )
+              : LayoutBuilder(
               builder: (context, constraints) {
                 final isTablet = constraints.maxWidth >= _tabletBreakpoint;
                 final horizontalPadding = isTablet
@@ -74,6 +86,39 @@ class ParentDashboardScreen extends ConsumerWidget {
                             headline: data.greetingHeadline,
                             schoolName: data.schoolName,
                             statusChips: data.statusChips,
+                          ),
+                          const SizedBox(height: AksharaSpacing.s4),
+                          academic.when(
+                            loading: () => const SizedBox.shrink(),
+                            error: (_, __) => const SizedBox.shrink(),
+                            data: (summary) => _AcademicHeroCard(
+                              summary: summary,
+                              onViewReport: () => _navigate('academic_report'),
+                            ),
+                          ),
+                          const SizedBox(height: AksharaSpacing.s4),
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.school_outlined),
+                              title: const Text('Academic summary'),
+                              subtitle: const Text(
+                                'Attendance, performance, homework & teacher guidance',
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => _navigate('academic_report'),
+                            ),
+                          ),
+                          const SizedBox(height: AksharaSpacing.s4),
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(Icons.hub_outlined),
+                              title: const Text('Parent Experience Hub'),
+                              subtitle: const Text(
+                                'Homework status, exam readiness & structured insights',
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => _navigate('experience_hub'),
+                            ),
                           ),
                           const SizedBox(height: AksharaSpacing.s4),
                           AksharaQuickActionGrid(
@@ -117,12 +162,6 @@ class ParentDashboardScreen extends ConsumerWidget {
                             onEventTap: (event) =>
                                 _navigate('event_${event.id}'),
                           ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          AksharaInsightCard(
-                            message: data.aiInsight.message,
-                            actionLabel: data.aiInsight.actionLabel,
-                            onAction: () => _navigate('pay_fee'),
-                          ),
                         ],
                       ),
                     ),
@@ -135,6 +174,61 @@ class ParentDashboardScreen extends ConsumerWidget {
 
   void _navigate(String actionId) {
     onNavigate?.call(actionId);
+  }
+}
+
+class _AcademicHeroCard extends StatelessWidget {
+  const _AcademicHeroCard({
+    required this.summary,
+    required this.onViewReport,
+  });
+
+  final ParentAcademicSummary summary;
+  final VoidCallback onViewReport;
+
+  @override
+  Widget build(BuildContext context) {
+    final attendance = summary.attendanceSummary['ratePercent'] ?? '—';
+    final grade = summary.performanceSummary['overallGrade'] ?? '—';
+    final homework = summary.homeworkStatus['completionRate'] ?? '—';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('This week', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: AksharaSpacing.s3),
+            Row(
+              children: [
+                Expanded(child: _stat(context, 'Attendance', '$attendance%')),
+                Expanded(child: _stat(context, 'Grade', '$grade')),
+                Expanded(child: _stat(context, 'Homework', '$homework%')),
+              ],
+            ),
+            if (summary.strengths.isNotEmpty) ...[
+              const SizedBox(height: AksharaSpacing.s3),
+              Text('Strength: ${summary.strengths.first}',
+                  style: Theme.of(context).textTheme.bodySmall),
+            ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(onPressed: onViewReport, child: const Text('Full report')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stat(BuildContext context, String label, String value) {
+    return Column(
+      children: [
+        Text(value, style: Theme.of(context).textTheme.titleMedium),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
   }
 }
 

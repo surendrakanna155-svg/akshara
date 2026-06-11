@@ -199,4 +199,26 @@ class ParentRemoteDataSource {
   Map<String, dynamic> _requireData(Response<Map<String, dynamic>> response) {
     return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
+
+  Future<Map<String, dynamic>> fetchAcademicSummary({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.academicSummary,
+      queryParameters: {..._queryParams(query), 'studentId': studentId},
+    );
+    return _requireData(response);
+  }
+
+  Future<String> fetchPrintableReport({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.printableReport,
+      queryParameters: {..._queryParams(query), 'studentId': studentId},
+    );
+    return _requireData(response)['report'] as String? ?? '';
+  }
 }

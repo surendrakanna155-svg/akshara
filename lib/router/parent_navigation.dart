@@ -1,11 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'route_names.dart';
+import '../features/parent/parent_active_child_provider.dart';
+import '../features/parent/widgets/parent_child_switcher_sheet.dart';
 
 /// Maps PA-01 dashboard [actionId] values to GoRouter destinations.
-void handleParentDashboardNavigation(BuildContext context, String actionId) {
+void handleParentDashboardNavigation(
+  BuildContext context,
+  String actionId, {
+  WidgetRef? ref,
+}) {
   switch (actionId) {
+    case 'experience_hub':
+      final studentId = ref != null
+          ? ref.read(parentActiveStudentIdProvider)
+          : 'student_1';
+      context.push(parentExperienceHubPath(studentId));
+    case 'academic_report':
+      context.push(RouteNames.parentAcademicReport);
+    case 'child_switch':
+      if (ref != null) {
+        showParentChildSwitcherSheet(context, ref);
+      }
     case 'pay_fee':
       context.push(
         '${RouteNames.parentPayment}?installmentId=term_2',
@@ -36,7 +54,6 @@ void handleParentDashboardNavigation(BuildContext context, String actionId) {
     case 'notifications':
       context.push(RouteNames.parentNotifications);
     case 'ai_copilot':
-    case 'child_switch':
     default:
       if (actionId.startsWith('notice_')) {
         context.go(RouteNames.parentNotices);

@@ -39,6 +39,7 @@ class ParentFeesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(parentFeesProvider);
     final isLoading = ref.watch(parentFeesLoadingProvider);
+    final hasError = ref.watch(parentFeesErrorProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
@@ -58,7 +59,13 @@ class ParentFeesScreen extends ConsumerWidget {
       ),
       body: isLoading
           ? const AksharaLoadingState()
-          : LayoutBuilder(
+          : hasError
+              ? AksharaErrorState(
+                  message: 'Unable to load fees right now.',
+                  onRetry: () =>
+                      ref.read(parentFeesErrorProvider.notifier).state = false,
+                )
+              : LayoutBuilder(
               builder: (context, constraints) {
                 final isTablet =
                     constraints.maxWidth >= _tabletBreakpoint;

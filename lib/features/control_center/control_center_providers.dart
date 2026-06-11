@@ -322,3 +322,9 @@ final controlCenterSettingsProvider = Provider<ControlCenterSettingsData?>((ref)
     manualLoading: ref.watch(controlCenterSettingsLoadingProvider), manualError: ref.watch(controlCenterSettingsErrorProvider), manualEmpty: false,
   );
 });
+
+final controlCenterProvidersDataProvider = FutureProvider<ControlCenterProvidersData>((ref) async {
+  return ref.read(controlCenterRepositoryProvider).getProviders(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});

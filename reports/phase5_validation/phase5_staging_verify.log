@@ -1,0 +1,7 @@
+[phase5-verify] Phase 5 staging verification starting...
+[phase5-verify] API base: https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api
+[phase5-verify] DEPLOY REQUIRED: /parent/experience/hub returns 404 (route not on staging Edge bundle)
+[phase5-verify] DEPLOY REQUIRED: /operations/hub returns 404 (route not on staging Edge bundle)
+[phase5-verify] DEPLOY REQUIRED: /memories/events returns 404 (route not on staging Edge bundle)
+[phase5-verify] DEPLOY REQUIRED: /employees/intelligence/dashboard returns 404 (route not on staging Edge bundle)
+[phase5-verify] BLOCKED: Run ./scripts/deploy_staging.sh then re-run this script

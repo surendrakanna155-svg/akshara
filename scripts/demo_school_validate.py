@@ -224,6 +224,36 @@ def validate_analytics(report: RunReport, admin: str) -> None:
     check_status(report, "finance dashboard", code, resp)
 
 
+def validate_v14_intelligence(report: RunReport, admin: str, parent: str | None) -> None:
+    """Phase 11–16 intelligence + communication analytics (v14)."""
+    v14_paths = [
+        ("finance copilot", "/finance/intelligence/copilot"),
+        ("finance executive", "/finance/intelligence/executive"),
+        ("inventory copilot", "/inventory/intelligence/copilot"),
+        ("student success", "/intelligence/student-success/dashboard"),
+        ("exam analytics", "/intelligence/exam/analytics"),
+        ("communication analytics", "/school/communications/analytics/summary"),
+        ("teacher effectiveness", "/intelligence/teacher-effectiveness/performance"),
+    ]
+    for name, path in v14_paths:
+        code, resp = request("GET", path, token=admin)
+        if code == 404:
+            report.add(name, False, "Route not deployed — run pilot_deploy_v14.sh")
+        else:
+            check_status(report, name, code, resp)
+
+    if parent:
+        code, resp = request(
+            "GET",
+            "/parent/experience/summary?studentId=student_1",
+            token=parent,
+        )
+        if code == 404:
+            report.add("parent academic summary", False, "Not deployed")
+        else:
+            check_status(report, "parent academic summary", code, resp)
+
+
 def validate_copilot(report: RunReport, admin: str) -> None:
     code, resp = request("GET", "/copilot/assistants", token=admin)
     check_status(report, "AI Copilot assistants", code, resp)
@@ -284,6 +314,7 @@ def main() -> int:
     validate_notifications(report, admin, parent)
     validate_messaging(report, admin, parent, teacher)
     validate_analytics(report, admin)
+    validate_v14_intelligence(report, admin, parent)
     validate_copilot(report, admin)
 
     write_report("reports/demo_school/validation_report.json", report)

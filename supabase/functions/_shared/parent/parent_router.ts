@@ -5,6 +5,10 @@ import {
   handleInitiatePayment,
 } from "../payment/payment_handlers.ts";
 import {
+  handleParentAcknowledge,
+  handleParentExperienceHub,
+} from "./parent_experience_handlers.ts";
+import {
   handleAttendance,
   handleDashboard,
   handleEvents,
@@ -30,6 +34,9 @@ function matchParentRoute(
     if (path === "/parent/payments/confirm") {
       return { handler: handleConfirmPayment };
     }
+    if (path === "/parent/experience/acknowledge") {
+      return { handler: handleParentAcknowledge };
+    }
     return null;
   }
 
@@ -47,6 +54,7 @@ function matchParentRoute(
     "/parent/events": handleEvents,
     "/parent/leave": handleLeave,
     "/parent/profile": handleProfile,
+    "/parent/experience/hub": handleParentExperienceHub,
   };
 
   const staticHandler = staticRoutes[path];

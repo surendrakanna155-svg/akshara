@@ -6,6 +6,8 @@ import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../auth/auth_logout.dart';
+import '../../auth/auth_provider.dart';
+import '../parent_active_child_provider.dart';
 import 'parent_profile_provider.dart';
 import 'profile_models.dart';
 import 'widgets/profile_child_row.dart';
@@ -109,12 +111,22 @@ class ParentProfileScreen extends ConsumerWidget {
                                   for (var i = 0; i < data.children.length; i++) ...[
                                     ProfileChildRow(
                                       child: data.children[i],
-                                      onTap: () => ref
-                                          .read(
-                                            parentProfileActiveChildProvider
-                                                .notifier,
-                                          )
-                                          .state = data.children[i].id,
+                                      onTap: () async {
+                                        final profileId = data.children[i].id;
+                                        final authId =
+                                            kProfileChildToAuthId[profileId] ?? profileId;
+                                        final linked = ref
+                                            .read(authProvider)
+                                            .linkedChildren
+                                            .where((c) => c.id == authId)
+                                            .firstOrNull;
+                                        if (linked != null) {
+                                          await selectParentActiveChild(ref, linked);
+                                        }
+                                        ref.read(parentProfileActiveChildProvider.notifier).state =
+                                            profileId;
+                                        ref.invalidate(parentProfileFutureProvider);
+                                      },
                                     ),
                                     if (i < data.children.length - 1)
                                       const SizedBox(height: AksharaSpacing.s2),

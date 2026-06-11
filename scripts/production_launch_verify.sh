@@ -124,4 +124,23 @@ ACCEPTED=$(echo "$AUDIT_RESP" | python3 -c "import sys,json; print(json.load(sys
 [ "$ACCEPTED" = "1" ] && pass "audit batch upload accepted" || fail "audit batch: $AUDIT_RESP"
 
 log "=== Summary: ${PASS} passed, ${FAIL} failed, ${WARN} warnings ==="
+
+# ── Phase 5 route probes (v10.4.2 RC) ───────────────────────────────────────
+PHASE5_PATHS=(
+  "/parent/experience/hub"
+  "/operations/hub"
+  "/memories/events"
+  "/employees/intelligence/dashboard"
+)
+for p in "${PHASE5_PATHS[@]}"; do
+  code=$(http_code "${BASE}${p}")
+  if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+    pass "Phase 5 route mounted $p ($code)"
+  elif [ "$code" = "404" ]; then
+    fail "Phase 5 route missing $p — run ./scripts/deploy_staging.sh"
+  else
+    warn "Phase 5 route $p unexpected ($code)"
+  fi
+done
+
 [ "$FAIL" -eq 0 ]

@@ -55,7 +55,7 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
         titleText: 'Attendance',
         subtitle: '${data.childName} · ${data.childClass}',
         unreadNotifications: data.unreadNotifications,
-        showAi: true,
+        showAi: false,
         trailingPadding: true,
         onAiTap: () {},
         onNotificationsTap: widget.onNotificationsTap,

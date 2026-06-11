@@ -43,6 +43,18 @@ import 'communication/api_communication_repository.dart';
 import 'communication/remote/communication_remote_datasource.dart';
 import 'onboarding/api_onboarding_repository.dart';
 import 'onboarding/remote/onboarding_remote_datasource.dart';
+import 'education/api_education_repository.dart';
+import 'education/remote/education_remote_datasource.dart';
+import 'intelligence/api_intelligence_repository.dart';
+import 'intelligence/remote/intelligence_remote_datasource.dart';
+import 'phase4/api_phase4_repositories.dart';
+import 'phase4/phase4_remote_datasource.dart';
+import 'phase5/api_phase5_repositories.dart';
+import 'phase5/phase5_remote_datasource.dart';
+import 'evolution/api_evolution_repository.dart';
+import 'evolution/remote/evolution_remote_datasource.dart';
+import 'school_completion/api_school_completion_repository.dart';
+import 'school_completion/remote/school_completion_remote_datasource.dart';
 
 final admissionsRemoteDataSourceProvider = Provider<AdmissionsRemoteDataSource>(
   (ref) => AdmissionsRemoteDataSource(ref.watch(dioProvider)),
@@ -255,5 +267,87 @@ final onboardingRemoteDataSourceProvider = Provider<OnboardingRemoteDataSource>(
 final apiOnboardingRepositoryProvider = Provider<ApiOnboardingRepository>(
   (ref) => ApiOnboardingRepository(
     remote: ref.watch(onboardingRemoteDataSourceProvider),
+  ),
+);
+
+final educationRemoteDataSourceProvider = Provider<EducationRemoteDataSource>(
+  (ref) => EducationRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiEducationRepositoryProvider = Provider<ApiEducationRepository>(
+  (ref) => ApiEducationRepository(
+    remote: ref.watch(educationRemoteDataSourceProvider),
+  ),
+);
+
+final intelligenceRemoteDataSourceProvider = Provider<IntelligenceRemoteDataSource>(
+  (ref) => IntelligenceRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiIntelligenceRepositoryProvider = Provider<ApiIntelligenceRepository>(
+  (ref) => ApiIntelligenceRepository(
+    remote: ref.watch(intelligenceRemoteDataSourceProvider),
+  ),
+);
+
+final phase4RemoteDataSourceProvider = Provider<Phase4RemoteDataSource>(
+  (ref) => Phase4RemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiHomeworkIntelligenceRepositoryProvider = Provider<ApiHomeworkIntelligenceRepository>(
+  (ref) => ApiHomeworkIntelligenceRepository(remote: ref.watch(phase4RemoteDataSourceProvider)),
+);
+
+final apiStudent360RepositoryProvider = Provider<ApiStudent360Repository>(
+  (ref) => ApiStudent360Repository(remote: ref.watch(phase4RemoteDataSourceProvider)),
+);
+
+final apiEmployeeRepositoryProvider = Provider<ApiEmployeeRepository>(
+  (ref) => ApiEmployeeRepository(remote: ref.watch(phase4RemoteDataSourceProvider)),
+);
+
+final apiInventoryDistributionRepositoryProvider = Provider<ApiInventoryDistributionRepository>(
+  (ref) => ApiInventoryDistributionRepository(remote: ref.watch(phase4RemoteDataSourceProvider)),
+);
+
+final phase5RemoteDataSourceProvider = Provider<Phase5RemoteDataSource>(
+  (ref) => Phase5RemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiParentExperienceRepositoryProvider = Provider<ApiParentExperienceRepository>(
+  (ref) => ApiParentExperienceRepository(remote: ref.watch(phase5RemoteDataSourceProvider)),
+);
+
+final apiEmployeeIntelligenceRepositoryProvider = Provider<ApiEmployeeIntelligenceRepository>(
+  (ref) => ApiEmployeeIntelligenceRepository(remote: ref.watch(phase5RemoteDataSourceProvider)),
+);
+
+final apiOperationsHubRepositoryProvider = Provider<ApiOperationsHubRepository>(
+  (ref) => ApiOperationsHubRepository(remote: ref.watch(phase5RemoteDataSourceProvider)),
+);
+
+final apiSchoolMemoriesRepositoryProvider = Provider<ApiSchoolMemoriesRepository>(
+  (ref) => ApiSchoolMemoriesRepository(remote: ref.watch(phase5RemoteDataSourceProvider)),
+);
+
+final apiAchievementPromotionRepositoryProvider = Provider<ApiAchievementPromotionRepository>(
+  (ref) => ApiAchievementPromotionRepository(remote: ref.watch(phase5RemoteDataSourceProvider)),
+);
+
+final evolutionRemoteDataSourceProvider = Provider<EvolutionRemoteDataSource>(
+  (ref) => EvolutionRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiEvolutionRepositoryProvider = Provider<ApiEvolutionRepository>(
+  (ref) => ApiEvolutionRepository(remote: ref.watch(evolutionRemoteDataSourceProvider)),
+);
+
+final schoolCompletionRemoteDataSourceProvider = Provider<SchoolCompletionRemoteDataSource>(
+  (ref) => SchoolCompletionRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiSchoolCompletionRepositoryProvider = Provider<ApiSchoolCompletionRepository>(
+  (ref) => ApiSchoolCompletionRepository(
+    remote: ref.watch(schoolCompletionRemoteDataSourceProvider),
   ),
 );

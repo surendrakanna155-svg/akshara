@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
 import '../dto/control_center_responses_dto.dart';
 import 'control_center_api_paths.dart';
 
@@ -128,6 +129,52 @@ class ControlCenterRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return ControlCenterSettingsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<Map<String, dynamic>> fetchProvidersRaw({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ControlCenterApiPaths.providers,
+      queryParameters: _queryParams(query),
+    );
+    return ApiEnvelopeDto.fromJson(response.data ?? const {}).requireData();
+  }
+
+  Future<Map<String, dynamic>> fetchUsageRaw({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ControlCenterApiPaths.usage,
+      queryParameters: _queryParams(query),
+    );
+    return ApiEnvelopeDto.fromJson(response.data ?? const {}).requireData();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchFeaturesRaw({required RepositoryQuery query}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ControlCenterApiPaths.features,
+      queryParameters: _queryParams(query),
+    );
+    return ApiEnvelopeDto.fromJson(response.data ?? const {}).requireListItems();
+  }
+
+  Future<void> upsertProviderRaw({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    await _dio.post<void>(
+      ControlCenterApiPaths.providers,
+      queryParameters: _queryParams(query),
+      data: body,
+    );
+  }
+
+  Future<void> setFeatureRaw({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    await _dio.post<void>(
+      ControlCenterApiPaths.features,
+      queryParameters: _queryParams(query),
+      data: body,
+    );
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {

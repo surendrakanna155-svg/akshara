@@ -14,14 +14,21 @@ import {
   handleSupportTickets,
   handleWhiteLabel,
 } from "./control_center_handlers.ts";
+import {
+  handleCheckVaultHealth,
+  handleGetPlatformUsage,
+  handleListFeatureEnablements,
+  handleListPlatformProviders,
+  handleRotateVaultSecret,
+  handleSetFeatureEnablement,
+  handleUpsertPlatformProvider,
+} from "./platform_providers_handlers.ts";
 
 function matchControlCenterRoute(
   method: string,
   path: string,
 ): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
-  if (method !== "GET") return null;
-
-  const routes: Record<string, (req: Request, config: AppConfig) => Promise<Response>> = {
+  const getRoutes: Record<string, (req: Request, config: AppConfig) => Promise<Response>> = {
     "/control-center/dashboard": handleDashboard,
     "/control-center/schools": handleSchools,
     "/control-center/subscriptions": handleSubscriptions,
@@ -34,10 +41,27 @@ function matchControlCenterRoute(
     "/control-center/monitoring": handleMonitoring,
     "/control-center/roles": handleRoles,
     "/control-center/settings": handleSettings,
+    "/control-center/providers": handleListPlatformProviders,
+    "/control-center/usage": handleGetPlatformUsage,
+    "/control-center/features": handleListFeatureEnablements,
+    "/control-center/vault/health": handleCheckVaultHealth,
   };
 
-  const handler = routes[path];
-  return handler ? { handler } : null;
+  const postRoutes: Record<string, (req: Request, config: AppConfig) => Promise<Response>> = {
+    "/control-center/providers": handleUpsertPlatformProvider,
+    "/control-center/features": handleSetFeatureEnablement,
+    "/control-center/vault/rotate": handleRotateVaultSecret,
+  };
+
+  if (method === "GET") {
+    const handler = getRoutes[path];
+    return handler ? { handler } : null;
+  }
+  if (method === "POST" || method === "PUT") {
+    const handler = postRoutes[path];
+    return handler ? { handler } : null;
+  }
+  return null;
 }
 
 export async function routeControlCenter(

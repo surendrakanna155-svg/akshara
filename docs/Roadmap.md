@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v14.0 Final School Intelligence Audit
-**Previous release:** v13.2 Phase 10 — Final School Platform  
+**Current release:** v14.1 Pilot Readiness RC1 (`v14.1-pilot-rc1`)  
+**Previous release:** v14.0 Final School Intelligence Audit  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

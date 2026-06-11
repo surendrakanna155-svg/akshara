@@ -1,0 +1,284 @@
+import type { TenantQueryClient } from "../tenant_db.ts";
+
+export interface SubjectTemplateRow {
+  id: string;
+  board: string;
+  subject_code: string;
+  subject_name: string;
+  category: string;
+  grade_label: string;
+  chapters: Array<{ name: string; topics: string[] }>;
+}
+
+export interface SyllabusChapterRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  academic_year_id: string;
+  subject_id: string;
+  class_name: string;
+  chapter_name: string;
+  sequence_order: number;
+  status: string;
+}
+
+export interface SyllabusTopicRow {
+  id: string;
+  subject_id: string;
+  class_name: string;
+  chapter_id: string | null;
+  topic_name: string;
+  sequence_order: number;
+  status: string;
+}
+
+export async function listSubjectTemplates(
+  db: TenantQueryClient,
+  board?: string,
+  gradeLabel?: string,
+): Promise<SubjectTemplateRow[]> {
+  const conditions = ["1=1"];
+  const params: unknown[] = [];
+  if (board) {
+    params.push(board);
+    conditions.push(`board = $${params.length}`);
+  }
+  if (gradeLabel) {
+    params.push(gradeLabel);
+    conditions.push(`grade_label = $${params.length}`);
+  }
+  const rows = await db.queryObject<SubjectTemplateRow & { chapters: unknown }>(
+    `SELECT id, board, subject_code, subject_name, category, grade_label, chapters
+     FROM subject_templates WHERE ${conditions.join(" AND ")}
+     ORDER BY grade_label, subject_name`,
+    params,
+  );
+  return rows.map((r) => ({
+    ...r,
+    chapters: parseChapters(r.chapters),
+  }));
+}
+
+function parseChapters(raw: unknown): Array<{ name: string; topics: string[] }> {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((c) => {
+    const ch = c as Record<string, unknown>;
+    return {
+      name: String(ch.name ?? ""),
+      topics: Array.isArray(ch.topics) ? ch.topics.map(String) : [],
+    };
+  });
+}
+
+export async function generateSyllabusFromTemplates(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  input: {
+    academicYearId: string;
+    className: string;
+    subjectId: string;
+    subjectName: string;
+    gradeLabel: string;
+    board?: string;
+    source?: string;
+    createdBy: string;
+  },
+): Promise<{ chaptersCreated: number; topicsCreated: number; generationId: string }> {
+  const templates = await listSubjectTemplates(db, input.board ?? "CBSE", input.gradeLabel);
+  const match = templates.find(
+    (t) =>
+      t.subject_name.toLowerCase() === input.subjectName.toLowerCase() ||
+      t.subject_code.toLowerCase() === input.subjectName.slice(0, 3).toLowerCase(),
+  );
+  const chapters = match?.chapters ?? [
+    { name: "Unit 1", topics: ["Introduction", "Basics"] },
+    { name: "Unit 2", topics: ["Practice", "Review"] },
+  ];
+
+  let chaptersCreated = 0;
+  let topicsCreated = 0;
+  let chapterOrder = 0;
+
+  for (const chapter of chapters) {
+    const chapterRows = await db.queryObject<SyllabusChapterRow>(
+      `INSERT INTO syllabus_chapters (
+         organization_id, school_id, academic_year_id, subject_id, class_name,
+         chapter_name, sequence_order
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (organization_id, school_id, subject_id, class_name, chapter_name)
+       DO UPDATE SET sequence_order = EXCLUDED.sequence_order
+       RETURNING *`,
+      [
+        orgId,
+        schoolId,
+        input.academicYearId,
+        input.subjectId,
+        input.className,
+        chapter.name,
+        chapterOrder++,
+      ],
+    );
+    const chapterRow = chapterRows[0]!;
+    chaptersCreated++;
+
+    let topicOrder = 0;
+    for (const topicName of chapter.topics) {
+      await db.queryObject(
+        `INSERT INTO syllabus_topics (
+           organization_id, school_id, subject_id, class_name, chapter_id,
+           academic_year_id, topic_name, sequence_order
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (organization_id, school_id, subject_id, class_name, topic_name) DO NOTHING`,
+        [
+          orgId,
+          schoolId,
+          input.subjectId,
+          input.className,
+          chapterRow.id,
+          input.academicYearId,
+          topicName,
+          topicOrder++,
+        ],
+      );
+      topicsCreated++;
+    }
+  }
+
+  const genRows = await db.queryObject<{ id: string }>(
+    `INSERT INTO syllabus_generations (
+       organization_id, school_id, academic_year_id, source,
+       chapters_created, topics_created, created_by
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id`,
+    [
+      orgId,
+      schoolId,
+      input.academicYearId,
+      input.source ?? "template",
+      chaptersCreated,
+      topicsCreated,
+      input.createdBy,
+    ],
+  );
+
+  return {
+    chaptersCreated,
+    topicsCreated,
+    generationId: genRows[0]!.id,
+  };
+}
+
+export async function cloneSyllabusForYear(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  fromYearId: string,
+  toYearId: string,
+  createdBy: string,
+): Promise<{ chaptersCreated: number; topicsCreated: number }> {
+  const chapters = await db.queryObject<SyllabusChapterRow>(
+    `SELECT * FROM syllabus_chapters
+     WHERE organization_id = $1 AND school_id = $2 AND academic_year_id = $3`,
+    [orgId, schoolId, fromYearId],
+  );
+
+  let chaptersCreated = 0;
+  let topicsCreated = 0;
+
+  for (const ch of chapters) {
+    const newChapter = await db.queryObject<SyllabusChapterRow>(
+      `INSERT INTO syllabus_chapters (
+         organization_id, school_id, academic_year_id, subject_id, class_name,
+         chapter_name, sequence_order, status
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
+       ON CONFLICT (organization_id, school_id, subject_id, class_name, chapter_name) DO NOTHING
+       RETURNING *`,
+      [orgId, schoolId, toYearId, ch.subject_id, ch.class_name, ch.chapter_name, ch.sequence_order],
+    );
+    if (newChapter.length === 0) continue;
+    chaptersCreated++;
+
+    const topics = await db.queryObject<SyllabusTopicRow>(
+      `SELECT * FROM syllabus_topics
+       WHERE organization_id = $1 AND school_id = $2 AND chapter_id = $3`,
+      [orgId, schoolId, ch.id],
+    );
+    for (const topic of topics) {
+      await db.queryObject(
+        `INSERT INTO syllabus_topics (
+           organization_id, school_id, subject_id, class_name, chapter_id,
+           academic_year_id, topic_name, sequence_order, status
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+         ON CONFLICT (organization_id, school_id, subject_id, class_name, topic_name) DO NOTHING`,
+        [
+          orgId,
+          schoolId,
+          topic.subject_id,
+          topic.class_name,
+          newChapter[0]!.id,
+          toYearId,
+          topic.topic_name,
+          topic.sequence_order,
+        ],
+      );
+      topicsCreated++;
+    }
+  }
+
+  await db.queryObject(
+    `INSERT INTO syllabus_generations (
+       organization_id, school_id, academic_year_id, source,
+       chapters_created, topics_created, created_by
+     ) VALUES ($1, $2, $3, 'clone', $4, $5, $6)`,
+    [orgId, schoolId, toYearId, chaptersCreated, topicsCreated, createdBy],
+  );
+
+  return { chaptersCreated, topicsCreated };
+}
+
+export async function listSyllabusChapters(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  academicYearId?: string,
+): Promise<SyllabusChapterRow[]> {
+  if (academicYearId) {
+    return await db.queryObject<SyllabusChapterRow>(
+      `SELECT * FROM syllabus_chapters
+       WHERE organization_id = $1 AND school_id = $2 AND academic_year_id = $3
+       ORDER BY class_name, sequence_order`,
+      [orgId, schoolId, academicYearId],
+    );
+  }
+  return await db.queryObject<SyllabusChapterRow>(
+    `SELECT * FROM syllabus_chapters
+     WHERE organization_id = $1 AND school_id = $2
+     ORDER BY class_name, sequence_order`,
+    [orgId, schoolId],
+  );
+}
+
+export function templateToApi(t: SubjectTemplateRow) {
+  return {
+    id: t.id,
+    board: t.board,
+    subjectCode: t.subject_code,
+    subjectName: t.subject_name,
+    category: t.category,
+    gradeLabel: t.grade_label,
+    chapters: t.chapters,
+  };
+}
+
+export function chapterToApi(c: SyllabusChapterRow) {
+  return {
+    id: c.id,
+    academicYearId: c.academic_year_id,
+    subjectId: c.subject_id,
+    className: c.class_name,
+    chapterName: c.chapter_name,
+    sequenceOrder: c.sequence_order,
+    status: c.status,
+  };
+}

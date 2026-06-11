@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-06-11T16:07:10.901843Z",
+  "phase": 18,
+  "projectRef": "oeicxjpewrumkfgyqnnj",
+  "deployStatus": "blocked",
+  "migrationStatus": "unknown",
+  "edgeStatus": "unknown",
+  "blockers": [
+    "Run supabase login or set SUPABASE_ACCESS_TOKEN"
+  ],
+  "logPath": "reports/pilot_readiness/deploy_v14.log"
+}

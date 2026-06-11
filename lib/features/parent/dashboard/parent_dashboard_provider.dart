@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 
 /// Mock dashboard payload for [ParentDashboardScreen] (PA-01).
 @immutable
@@ -153,6 +154,54 @@ class ParentDashboardData {
       ),
     );
   }
+
+  /// Applies active child identity to dashboard copy (v10.4.1 child-aware refresh).
+  ParentDashboardData forActiveChild({
+    required String childName,
+    required String childClass,
+  }) {
+    final firstName = childName.split(' ').first;
+    final isPriya = childName.toLowerCase().contains('priya');
+    return ParentDashboardData(
+      childName: childName,
+      childClass: childClass,
+      greetingEyebrow: greetingEyebrow,
+      greetingHeadline: "$firstName's Day at a Glance",
+      schoolName: schoolName,
+      statusChips: isPriya
+          ? const [
+              DashboardStatusChip(label: 'Present', tone: DashboardChipTone.success),
+              DashboardStatusChip(label: 'All clear', tone: DashboardChipTone.primary),
+            ]
+          : statusChips,
+      quickActions: quickActions,
+      todaySummary: isPriya
+          ? const [
+              TodaySummaryItem(
+                id: 'attendance',
+                icon: Icons.fact_check_outlined,
+                iconTone: DashboardChipTone.success,
+                title: 'Present · Marked 9:05 AM',
+              ),
+              TodaySummaryItem(
+                id: 'homework',
+                icon: Icons.assignment_outlined,
+                iconTone: DashboardChipTone.primary,
+                title: '1 homework due today',
+              ),
+            ]
+          : todaySummary,
+      notices: notices,
+      events: events,
+      aiInsight: isPriya
+          ? const DashboardAiInsight(
+              message: 'Great attendance streak this month',
+              actionLabel: 'View hub',
+            )
+          : aiInsight,
+      unreadNotifications: unreadNotifications,
+    );
+  }
 }
 
 enum DashboardChipTone { primary, success, warning, error }
@@ -244,7 +293,12 @@ final parentDashboardErrorProvider = StateProvider<bool>((ref) => false);
 final parentDashboardEmptyProvider = StateProvider<bool>((ref) => false);
 
 final parentDashboardFutureProvider = FutureProvider<ParentDashboardData>((ref) async {
-  return ref.read(parentRepositoryProvider).getDashboard(query: ref.watch(repositoryQueryProvider));
+  final child = ref.watch(parentActiveChildProvider);
+  final base = await ref.read(parentRepositoryProvider).getDashboard(
+        query: ref.watch(repositoryQueryProvider),
+      );
+  if (child == null) return base;
+  return base.forActiveChild(childName: child.name, childClass: child.classLabel);
 });
 
 final parentDashboardProvider = Provider<ParentDashboardData>((ref) {

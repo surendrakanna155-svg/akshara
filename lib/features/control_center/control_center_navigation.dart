@@ -16,6 +16,8 @@ const List<ControlCenterScreen> kControlCenterNavScreens = [
   ControlCenterScreen.monitoring,
   ControlCenterScreen.roles,
   ControlCenterScreen.settings,
+  ControlCenterScreen.providers,
+  ControlCenterScreen.features,
 ];
 
 extension ControlCenterScreenRoutes on ControlCenterScreen {
@@ -33,6 +35,8 @@ extension ControlCenterScreenRoutes on ControlCenterScreen {
         ControlCenterScreen.monitoring => RouteNames.controlCenterMonitoring,
         ControlCenterScreen.roles => RouteNames.controlCenterRoles,
         ControlCenterScreen.settings => RouteNames.controlCenterSettings,
+        ControlCenterScreen.providers => RouteNames.controlCenterProviders,
+        ControlCenterScreen.features => RouteNames.controlCenterFeatures,
       };
 }
 

@@ -179,6 +179,18 @@ import {
   ANALYTICS_SNAPSHOT_PROBE_SCHOOL_B,
   ANALYTICS_SNAPSHOT_PROBE_SQL,
 } from "./analytics/analytics_repository.ts";
+import {
+  INTEL_RISK_API_PROBE_SQL,
+  INTEL_RISK_PROBE_SCHOOL_A,
+  INTEL_RISK_PROBE_SCHOOL_B,
+  INTEL_RISK_PROBE_SQL,
+} from "./intelligence/student_risk_repository.ts";
+import {
+  EDU_QUESTION_BANK_API_PROBE_SQL,
+  EDU_QUESTION_BANK_PROBE_SCHOOL_A,
+  EDU_QUESTION_BANK_PROBE_SCHOOL_B,
+  EDU_QUESTION_BANK_PROBE_SQL,
+} from "./education/education_repository.ts";
 
 export interface IsolationProbeResult {
   name: string;
@@ -2017,6 +2029,32 @@ export async function runEnforcedIsolationProbes(
   tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ANALYTICS_SNAPSHOT_PROBE_SQL, [ANALYTICS_SNAPSHOT_PROBE_SCHOOL_B]);
     return { name: "school_a_cannot_see_school_b_analytics_snapshot", pass: n === 0, detail: `visible_cross_analytics_snapshot=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, EDU_QUESTION_BANK_PROBE_SQL, [EDU_QUESTION_BANK_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_education_question_bank_probe", pass: n === 1, detail: `visible_edu_bank=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, EDU_QUESTION_BANK_PROBE_SQL, [EDU_QUESTION_BANK_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_education_question_bank", pass: n === 0, detail: `visible_cross_edu_bank=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, EDU_QUESTION_BANK_API_PROBE_SQL);
+    return { name: "parent_denied_education_question_bank_api", pass: n === 0, detail: `visible_edu_bank_api=${n}` };
+  }));
+
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, INTEL_RISK_PROBE_SQL, [INTEL_RISK_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_intel_risk_probe", pass: n === 1, detail: `visible_intel_risk=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, INTEL_RISK_PROBE_SQL, [INTEL_RISK_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_intel_risk", pass: n === 0, detail: `visible_cross_intel_risk=${n}` };
+  }));
+  tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, INTEL_RISK_API_PROBE_SQL);
+    return { name: "parent_denied_intel_risk_api", pass: n === 0, detail: `visible_intel_risk_api=${n}` };
   }));
 
   const tests = await runProbeTasks(tasks);

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/school_completion/school_branding_theme_provider.dart';
 import '../../router/route_names.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
@@ -62,6 +63,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final colors = context.colors;
     final text = context.aksharaText;
     final selectedRole = ref.watch(demoLoginRoleProvider);
+    final schoolName = ref.watch(schoolDisplayNameProvider);
+    final logoUrl = ref.watch(schoolLogoUrlProvider);
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -92,12 +95,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Icon(
-                          Icons.school_rounded,
-                          size: 48,
-                          color: colors.primary,
-                        ),
+                        if (logoUrl != null && logoUrl.startsWith('http'))
+                          Image.network(logoUrl, height: 56)
+                        else
+                          Icon(
+                            Icons.school_rounded,
+                            size: 48,
+                            color: colors.primary,
+                          ),
                         const SizedBox(height: AksharaSpacing.s6),
+                        if (schoolName.isNotEmpty)
+                          Text(
+                            schoolName,
+                            style: text.titleMedium.copyWith(
+                              color: colors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        const SizedBox(height: AksharaSpacing.s2),
                         Text(
                           'Welcome back',
                           style: text.headlineSmall.copyWith(

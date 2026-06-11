@@ -82,6 +82,16 @@ class RbacModuleRegistry {
       moduleId: 'admin',
       view: Permission.viewAdminHub,
     ),
+    ModulePermissionSet(
+      moduleId: 'education',
+      view: Permission.viewEducation,
+      manage: Permission.manageEducation,
+    ),
+    ModulePermissionSet(
+      moduleId: 'intelligence',
+      view: Permission.viewStudentRisk,
+      manage: Permission.generateIntelligence,
+    ),
   ];
 
   static ModulePermissionSet? forModule(String moduleId) {

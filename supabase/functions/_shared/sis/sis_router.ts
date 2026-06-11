@@ -14,6 +14,10 @@ import {
   handleUpdateStudent,
   handleUpdateStudentStatus,
 } from "./sis_handlers.ts";
+import {
+  handleGetStudent360Profile,
+  handleGetStudentTimeline,
+} from "./sis_student_360_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,6 +56,16 @@ export function matchSisRoute(
   const statusMatch = path.match(/^\/sis\/students\/([^/]+)\/status$/);
   if (statusMatch && method === "PATCH") {
     return { handler: handleUpdateStudentStatus, args: [statusMatch[1]!] };
+  }
+
+  const profile360Match = path.match(/^\/sis\/students\/([^/]+)\/360$/);
+  if (profile360Match && method === "GET" && UUID_SEGMENT.test(profile360Match[1]!)) {
+    return { handler: handleGetStudent360Profile, args: [profile360Match[1]!] };
+  }
+
+  const timelineMatch = path.match(/^\/sis\/students\/([^/]+)\/timeline$/);
+  if (timelineMatch && method === "GET" && UUID_SEGMENT.test(timelineMatch[1]!)) {
+    return { handler: handleGetStudentTimeline, args: [timelineMatch[1]!] };
   }
 
   const studentMatch = path.match(/^\/sis\/students\/([^/]+)$/);

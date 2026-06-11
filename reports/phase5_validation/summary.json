@@ -1,0 +1,8 @@
+{
+  "pass": 0,
+  "fail": 0,
+  "skip": 0,
+  "deployBlocked": true,
+  "log": "reports/phase5_validation/phase5_staging_verify.log",
+  "action": "Run scripts/deploy_staging.sh with SUPABASE_ACCESS_TOKEN"
+}

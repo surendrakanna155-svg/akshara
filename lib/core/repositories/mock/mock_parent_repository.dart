@@ -1,3 +1,4 @@
+import '../../../features/parent/academics/parent_academic_models.dart';
 import '../../../features/parent/attendance/attendance_models.dart';
 import '../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../features/parent/events/events_models.dart';
@@ -170,6 +171,40 @@ class MockParentRepository implements ParentRepository {
       paymentMethod: intent.paymentMethod,
       paidAtLabel: 'Just now',
     );
+  }
+
+  @override
+  Future<ParentAcademicSummary> getAcademicSummary({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async =>
+      ParentAcademicSummary(
+        studentId: studentId,
+        attendanceSummary: const {'ratePercent': 92, 'presentDays': 23, 'totalDays': 25},
+        performanceSummary: const {'overallGrade': 'A', 'trend': 'improving'},
+        strengths: const ['Regular attendance', 'Strong in Mathematics'],
+        weaknesses: const ['Science lab reports pending'],
+        homeworkStatus: const {'submitted': 8, 'pending': 2, 'completionRate': 80},
+        examReadiness: const {'readinessScore': 85, 'recommendation': 'On track for unit tests'},
+        teacherRecommendations: const [
+          'Review homework daily',
+          'Practice science diagrams',
+        ],
+        generatedAt: DateTime.now().toIso8601String(),
+      );
+
+  @override
+  Future<String> getPrintableReport({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    final summary = await getAcademicSummary(query: query, studentId: studentId);
+    return [
+      'AKSHARA SCHOOL — PARENT ACADEMIC REPORT',
+      'Attendance: ${summary.attendanceSummary['ratePercent']}%',
+      'Grade: ${summary.performanceSummary['overallGrade']}',
+      'Strengths: ${summary.strengths.join(', ')}',
+    ].join('\n');
   }
 
   Future<void> _ensureLeaveHistory() async {

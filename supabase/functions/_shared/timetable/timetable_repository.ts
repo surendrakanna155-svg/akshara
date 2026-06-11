@@ -194,7 +194,7 @@ export async function generateTimetablesForYear(
   schoolId: string,
   academicYearId: string,
   createdBy: string,
-  options?: { periodsPerDay?: number; daysPerWeek?: number; sectionId?: string },
+  options?: { periodsPerDay?: number; daysPerWeek?: number; sectionId?: string; subjects?: string[] },
 ): Promise<TimetableRow[]> {
   const periodsPerDay = options?.periodsPerDay ?? 6;
   const daysPerWeek = options?.daysPerWeek ?? 5;
@@ -237,7 +237,11 @@ export async function generateTimetablesForYear(
       sectionName: section.section_name,
       assignments: assignmentsBySection.get(section.id) ?? [],
     };
-    const periods = generateSectionPeriods(context, { periodsPerDay, daysPerWeek });
+    const periods = generateSectionPeriods(context, {
+      periodsPerDay,
+      daysPerWeek,
+      subjects: options?.subjects,
+    });
     await replacePeriods(db, orgId, schoolId, timetable.id, periods);
     created.push(timetable);
   }

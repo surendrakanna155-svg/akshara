@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../features/school_completion/school_branding_theme_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../theme/theme_extensions.dart';
 
 /// Parent mobile shell with bottom navigation (Home · Attendance · Fees).
-class ParentShell extends StatelessWidget {
+class ParentShell extends ConsumerWidget {
   const ParentShell({
     super.key,
     required this.child,
@@ -58,12 +60,43 @@ class ParentShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final path = GoRouterState.of(context).uri.path;
     final selectedIndex = _selectedIndex(path);
+    final schoolName = ref.watch(schoolDisplayNameProvider);
 
     return Scaffold(
-      body: child,
+      body: Column(
+        children: [
+          if (schoolName.isNotEmpty)
+            Material(
+              color: context.colors.primaryContainer,
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.school, size: 18, color: context.colors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          schoolName,
+                          style: context.aksharaText.labelLarge.copyWith(
+                            color: context.colors.onPrimaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Expanded(child: child),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         height: context.akshara.bottomNavHeight,
         selectedIndex: selectedIndex,

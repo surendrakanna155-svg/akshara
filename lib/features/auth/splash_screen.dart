@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../features/school_completion/school_branding_theme_provider.dart';
 import '../../router/app_router.dart';
 import '../../router/route_names.dart';
 import '../../theme/spacing.dart';
@@ -53,6 +54,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
+    final schoolName = ref.watch(schoolDisplayNameProvider);
+    final logoUrl = ref.watch(schoolLogoUrlProvider);
 
     return Scaffold(
       backgroundColor: colors.primary,
@@ -70,15 +73,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     color: colors.onPrimary,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: Icon(
-                    Icons.school_rounded,
-                    size: 56,
-                    color: colors.primary,
-                  ),
+                  child: logoUrl != null && logoUrl.startsWith('http')
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Image.network(logoUrl, fit: BoxFit.cover),
+                        )
+                      : Icon(
+                          Icons.school_rounded,
+                          size: 56,
+                          color: colors.primary,
+                        ),
                 ),
                 const SizedBox(height: AksharaSpacing.s6),
                 Text(
-                  AppConstants.appName,
+                  schoolName.isNotEmpty ? schoolName : AppConstants.appName,
                   style: text.headlineMedium.copyWith(
                     color: colors.onPrimary,
                     fontWeight: FontWeight.w700,
@@ -87,7 +95,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 ),
                 const SizedBox(height: AksharaSpacing.s2),
                 Text(
-                  'Akshara Public School',
+                  AppConstants.appName,
                   style: text.bodyLarge.copyWith(
                     color: colors.onPrimary.withValues(alpha: 0.88),
                   ),

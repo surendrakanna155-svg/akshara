@@ -1,0 +1,713 @@
+import type { AppConfig } from "../config.ts";
+import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
+import {
+  authenticateRequest,
+  organizationIdFromClaims,
+  requirePermission,
+  requireSchoolOperationalScope,
+  schoolIdFromClaims,
+} from "../permission_middleware.ts";
+import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
+import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { educationAudit, emitMutationAudit } from "../audit/mutation_audit_catalog.ts";
+import {
+  homeworkToApi,
+  paperExportDocument,
+  questionBankToApi,
+  questionPaperItemToApi,
+  questionPaperToApi,
+  reportRemarkToApi,
+} from "./education_mapper.ts";
+import { generateQuestionPaper } from "./education_question_paper_service.ts";
+import {
+  archiveQuestionBankItem,
+  createHomeworkAssignment,
+  createQuestionBankItem,
+  createQuestionPaper,
+  createReportRemark,
+  getHomeworkAssignment,
+  getQuestionPaperWithItems,
+  importQuestionBankItems,
+  listHomeworkAssignments,
+  listQuestionBankItems,
+  listQuestionPapers,
+  listReportRemarks,
+  publishHomeworkAssignment,
+  publishQuestionPaper,
+  publishReportRemark,
+  updateReportRemark,
+} from "./education_repository.ts";
+import {
+  generateStubHomeworkContent,
+  generateStubRemark,
+  type RemarkInputs,
+} from "./education_generator.ts";
+import type {
+  EduDifficulty,
+  EduExamType,
+  EduHomeworkType,
+  EduQuestionType,
+  EduRemarkLanguage,
+  EduRemarkType,
+  GenerateQuestionPaperInput,
+} from "./education_types.ts";
+
+function requireEducationRead(
+  claims: Parameters<typeof requirePermission>[0],
+): Response | null {
+  return requirePermission(claims, "viewEducation") ??
+    requireSchoolOperationalScope(claims);
+}
+
+function requireEducationWrite(
+  claims: Parameters<typeof requirePermission>[0],
+): Response | null {
+  return requirePermission(claims, "manageEducation") ??
+    requireSchoolOperationalScope(claims);
+}
+
+function parsePagination(url: URL): { page: number; pageSize: number } {
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+  const pageSize = Math.min(
+    100,
+    Math.max(1, parseInt(url.searchParams.get("pageSize") ?? "20", 10) || 20),
+  );
+  return { page, pageSize };
+}
+
+async function runTenant<T>(
+  config: AppConfig,
+  claims: Parameters<typeof withTenantContext>[1],
+  operation: Parameters<typeof withTenantContext<T>>[2],
+): Promise<T> {
+  return await withTenantContext(config, claims, operation);
+}
+
+function handleEducationError(error: unknown): Response {
+  if (error instanceof TenantDbNotConfiguredError) {
+    return tenantDbNotConfiguredResponse(error);
+  }
+  const message = error instanceof Error ? error.message : "Education operation failed";
+  return errorEnvelope("EDUCATION_ERROR", message, 500);
+}
+
+// ─── Question Bank ───────────────────────────────────────────────────────────
+
+export async function handleListQuestionBank(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const { page, pageSize } = parsePagination(url);
+
+  try {
+    const result = await runTenant(config, auth.claims, (client) =>
+      listQuestionBankItems(client, {
+        subjectName: url.searchParams.get("subjectName") ?? undefined,
+        chapter: url.searchParams.get("chapter") ?? undefined,
+        topic: url.searchParams.get("topic") ?? undefined,
+        difficulty: url.searchParams.get("difficulty") ?? undefined,
+        questionType: url.searchParams.get("questionType") ?? undefined,
+        search: url.searchParams.get("search") ?? undefined,
+        page,
+        pageSize,
+      })
+    );
+
+    return jsonResponse(envelope({
+      items: result.items.map(questionBankToApi),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleCreateQuestionBank(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{
+    subjectName: string;
+    chapter: string;
+    topic?: string;
+    difficulty: EduDifficulty;
+    questionType: EduQuestionType;
+    marks: number;
+    questionText: string;
+    answerText?: string;
+    options?: string[];
+  }>(req);
+  if (!body?.subjectName || !body.chapter || !body.questionText) {
+    return errorEnvelope("VALIDATION_ERROR", "subjectName, chapter, and questionText are required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const created = await createQuestionBankItem(db, orgId, schoolId, {
+        ...body,
+        createdBy: auth.claims.sub,
+      });
+      await emitMutationAudit(db, auth.claims, educationAudit.questionBankCreated(created.id), req);
+      return created;
+    });
+
+    return jsonResponse(envelope(questionBankToApi(row)), { status: 201 });
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleImportQuestionBank(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{ items: Array<{
+    subjectName: string;
+    chapter: string;
+    topic?: string;
+    difficulty: EduDifficulty;
+    questionType: EduQuestionType;
+    marks: number;
+    questionText: string;
+    answerText?: string;
+    options?: string[];
+  }> }>(req);
+  if (!body?.items?.length) {
+    return errorEnvelope("VALIDATION_ERROR", "items array is required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const rows = await runTenant(config, auth.claims, async (db) => {
+      const imported = await importQuestionBankItems(db, orgId, schoolId, {
+        items: body.items.map((item) => ({
+          ...item,
+          createdBy: auth.claims.sub,
+        })),
+        createdBy: auth.claims.sub,
+      });
+      for (const row of imported) {
+        await emitMutationAudit(db, auth.claims, educationAudit.questionBankCreated(row.id), req);
+      }
+      return imported;
+    });
+
+    return jsonResponse(envelope({
+      imported: rows.length,
+      items: rows.map(questionBankToApi),
+    }), { status: 201 });
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleExportQuestionBank(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const result = await runTenant(config, auth.claims, (client) =>
+      listQuestionBankItems(client, { page: 1, pageSize: 500, status: "active" })
+    );
+
+    return jsonResponse(envelope({
+      exportedAt: new Date().toISOString(),
+      count: result.items.length,
+      items: result.items.map(questionBankToApi),
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleArchiveQuestionBank(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const archived = await archiveQuestionBankItem(db, id);
+      if (!archived) return null;
+      await emitMutationAudit(db, auth.claims, educationAudit.questionBankArchived(id), req);
+      return archived;
+    });
+    if (!row) return errorEnvelope("NOT_FOUND", "Question bank item not found", 404);
+
+    return jsonResponse(envelope(questionBankToApi(row)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+// ─── Question Papers ─────────────────────────────────────────────────────────
+
+export async function handleListQuestionPapers(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const { page, pageSize } = parsePagination(url);
+
+  try {
+    const result = await runTenant(config, auth.claims, (client) =>
+      listQuestionPapers(client, {
+        className: url.searchParams.get("className") ?? undefined,
+        subjectName: url.searchParams.get("subjectName") ?? undefined,
+        page,
+        pageSize,
+      })
+    );
+
+    return jsonResponse(envelope({
+      items: result.items.map(questionPaperToApi),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleGenerateQuestionPaper(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<GenerateQuestionPaperInput>(req);
+  if (!body?.className || !body.subjectName || !body.academicYearLabel) {
+    return errorEnvelope("VALIDATION_ERROR", "academicYearLabel, className, and subjectName are required", 422);
+  }
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const generated = await generateQuestionPaper(db, body);
+      const saved = await createQuestionPaper(db, orgId, schoolId, {
+        academicYearId: body.academicYearId,
+        academicYearLabel: body.academicYearLabel,
+        className: body.className,
+        sectionName: body.sectionName,
+        subjectName: body.subjectName,
+        chapters: body.chapters,
+        difficulty: body.difficulty,
+        totalMarks: body.totalMarks,
+        examType: body.examType,
+        title: generated.title,
+        blueprint: generated.blueprint,
+        answerKey: generated.answerKey,
+        createdBy: auth.claims.sub,
+        items: generated.items.map((item) => ({
+          bankItemId: item.bankItemId,
+          questionType: item.questionType,
+          marks: item.marks,
+          questionText: item.questionText,
+          answerText: item.answerText,
+          options: item.options,
+          source: item.source,
+        })),
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        educationAudit.questionPaperGenerated(saved.paper.id),
+        req,
+      );
+      return { generated, saved };
+    });
+
+    return jsonResponse(envelope({
+      paper: questionPaperToApi(result.saved.paper),
+      items: result.saved.items.map((item, i) => questionPaperItemToApi(item, i)),
+      bankReuseCount: result.generated.bankReuseCount,
+      aiGeneratedCount: result.generated.aiGeneratedCount,
+    }), { status: 201 });
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleGetQuestionPaper(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const result = await runTenant(config, auth.claims, (client) =>
+      getQuestionPaperWithItems(client, id)
+    );
+    if (!result) return errorEnvelope("NOT_FOUND", "Question paper not found", 404);
+
+    return jsonResponse(envelope({
+      paper: questionPaperToApi(result.paper),
+      items: result.items.map((item, i) => questionPaperItemToApi(item, i)),
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handlePublishQuestionPaper(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const published = await publishQuestionPaper(db, id);
+      if (!published) return null;
+      await emitMutationAudit(db, auth.claims, educationAudit.questionPaperPublished(id), req);
+      return published;
+    });
+    if (!row) return errorEnvelope("NOT_FOUND", "Question paper not found", 404);
+
+    return jsonResponse(envelope(questionPaperToApi(row)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleExportQuestionPaper(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const result = await runTenant(config, auth.claims, (client) =>
+      getQuestionPaperWithItems(client, id)
+    );
+    if (!result) return errorEnvelope("NOT_FOUND", "Question paper not found", 404);
+
+    return jsonResponse(envelope(paperExportDocument(result.paper, result.items)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+// ─── Homework ──────────────────────────────────────────────────────────────────
+
+export async function handleListHomework(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const { page, pageSize } = parsePagination(url);
+
+  try {
+    const result = await runTenant(config, auth.claims, (client) =>
+      listHomeworkAssignments(client, {
+        className: url.searchParams.get("className") ?? undefined,
+        subjectName: url.searchParams.get("subjectName") ?? undefined,
+        status: url.searchParams.get("status") ?? undefined,
+        page,
+        pageSize,
+      })
+    );
+
+    return jsonResponse(envelope({
+      items: result.items.map(homeworkToApi),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleGenerateHomework(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{
+    academicYearLabel: string;
+    className: string;
+    sectionName?: string;
+    subjectName: string;
+    topic: string;
+    difficulty: EduDifficulty;
+    assignmentType: EduHomeworkType;
+    dueDate?: string;
+  }>(req);
+  if (!body?.className || !body.subjectName || !body.topic) {
+    return errorEnvelope("VALIDATION_ERROR", "className, subjectName, and topic are required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  const content = generateStubHomeworkContent(
+    body.subjectName,
+    body.topic,
+    body.difficulty,
+    body.assignmentType,
+  );
+  const title =
+    `${body.className} — ${body.subjectName} ${body.assignmentType.replaceAll("_", " ")}`;
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const created = await createHomeworkAssignment(db, orgId, schoolId, {
+        ...body,
+        title,
+        content,
+        createdBy: auth.claims.sub,
+      });
+      await emitMutationAudit(db, auth.claims, educationAudit.homeworkGenerated(created.id), req);
+      return created;
+    });
+
+    return jsonResponse(envelope(homeworkToApi(row)), { status: 201 });
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleGetHomework(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const row = await runTenant(config, auth.claims, (client) =>
+      getHomeworkAssignment(client, id)
+    );
+    if (!row) return errorEnvelope("NOT_FOUND", "Homework not found", 404);
+    return jsonResponse(envelope(homeworkToApi(row)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handlePublishHomework(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const published = await publishHomeworkAssignment(db, id);
+      if (!published) return null;
+      await emitMutationAudit(db, auth.claims, educationAudit.homeworkPublished(id), req);
+      return published;
+    });
+    if (!row) return errorEnvelope("NOT_FOUND", "Homework not found", 404);
+
+    return jsonResponse(envelope(homeworkToApi(row)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleExportHomework(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const row = await runTenant(config, auth.claims, (client) =>
+      getHomeworkAssignment(client, id)
+    );
+    if (!row) return errorEnvelope("NOT_FOUND", "Homework not found", 404);
+
+    return jsonResponse(envelope({
+      title: row.title,
+      meta: homeworkToApi(row),
+      content: row.content,
+      format: "akshara-education-pdf-v1",
+      generatedAt: new Date().toISOString(),
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+// ─── Report Card Remarks ───────────────────────────────────────────────────────
+
+export async function handleListReportRemarks(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const { page, pageSize } = parsePagination(url);
+
+  try {
+    const result = await runTenant(config, auth.claims, (client) =>
+      listReportRemarks(client, {
+        studentId: url.searchParams.get("studentId") ?? undefined,
+        academicYearLabel: url.searchParams.get("academicYearLabel") ?? undefined,
+        page,
+        pageSize,
+      })
+    );
+
+    return jsonResponse(envelope({
+      items: result.items.map(reportRemarkToApi),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleGenerateReportRemark(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{
+    studentId: string;
+    academicYearLabel: string;
+    remarkType: EduRemarkType;
+    language: EduRemarkLanguage;
+    inputs: RemarkInputs;
+  }>(req);
+  if (!body?.studentId || !body.academicYearLabel) {
+    return errorEnvelope("VALIDATION_ERROR", "studentId and academicYearLabel are required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  const generatedRemark = generateStubRemark(body.remarkType, body.language, body.inputs);
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const created = await createReportRemark(db, orgId, schoolId, {
+        studentId: body.studentId,
+        academicYearLabel: body.academicYearLabel,
+        remarkType: body.remarkType,
+        language: body.language,
+        inputs: body.inputs as Record<string, unknown>,
+        generatedRemark,
+        createdBy: auth.claims.sub,
+      });
+      await emitMutationAudit(db, auth.claims, educationAudit.reportRemarkGenerated(created.id), req);
+      return created;
+    });
+
+    return jsonResponse(envelope(reportRemarkToApi(row)), { status: 201 });
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleUpdateReportRemark(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{ editedRemark: string }>(req);
+  if (!body?.editedRemark?.trim()) {
+    return errorEnvelope("VALIDATION_ERROR", "editedRemark is required", 422);
+  }
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateReportRemark(db, id, body.editedRemark);
+      if (!updated) return null;
+      await emitMutationAudit(db, auth.claims, educationAudit.reportRemarkUpdated(id), req);
+      return updated;
+    });
+    if (!row) return errorEnvelope("NOT_FOUND", "Report remark not found", 404);
+
+    return jsonResponse(envelope(reportRemarkToApi(row)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handlePublishReportRemark(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const published = await publishReportRemark(db, id);
+      if (!published) return null;
+      await emitMutationAudit(db, auth.claims, educationAudit.reportRemarkPublished(id), req);
+      return published;
+    });
+    if (!row) return errorEnvelope("NOT_FOUND", "Report remark not found", 404);
+
+    return jsonResponse(envelope(reportRemarkToApi(row)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}

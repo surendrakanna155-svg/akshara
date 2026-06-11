@@ -3,7 +3,7 @@
 **Version:** 2.0  
 **Status:** Vision + implementation roadmap (see [`ImplementationRoadmap.md`](./ImplementationRoadmap.md))  
 **Baseline:** v1.0-rc1 · v1.0-customer-ready · production stable  
-**Last updated:** June 2026
+**Last updated:** June 2026 (v10.4 Production Hardening complete)
 
 ---
 
@@ -87,35 +87,56 @@ Design detail per track: [`design/FutureTracks-Index.md`](./design/FutureTracks-
 
 ---
 
-## A. Universal Organization Builder
+## A. AI School Setup Wizard
+
+When a new school joins, a guided interview captures **student count**, **teacher count**, **board**, **enabled modules**, and **branch count**. The wizard then auto-configures:
+
+- Classes and sections (from scale + board templates)
+- Default roles and permission matrices
+- Module dashboards and navigation shells
+- Onboarding plan (CSV import order, go-live checklist)
+
+**v1.0:** Manual school SQL provision + CSV import (`v7.15` onboarding). **v8.x:** Education Suite modules ship first; wizard consumes the same academic catalog and RBAC registry. **Future:** full declarative provisioning saga with rollback.
+
+---
+
+## B. Universal Organization Builder
 
 AI onboarding interview collects org name, branches, staff/customer scale, workflows, services, channels, payments → outputs enabled modules, permissions, dashboards, widgets, navigation, reports, workflows.
 
-**v1.0:** Manual school SQL provision + CSV import. **Future:** declarative vertical packs + provisioning saga.
+Extends the School Setup Wizard to **Salon**, **Hospital**, **Restaurant**, and **Hostel** vertical packs (#33–36) with shared kernel (auth, payments, communication, analytics).
 
 ---
 
-## B. Dynamic Widget Platform
+## C. Dynamic Widget Platform
 
-First-time setup generates dashboard, widgets, navigation, reports, permissions from interview answers. Template-driven; RBAC-bound; education pack ships first.
-
----
-
-## C. AI Education Suite
-
-Modules 23–28 under one suite: question papers, bank, homework, worksheets, report remarks, parent meeting summaries, lesson planner (future), attendance insights (links to #3).
-
-**Question Paper Generator:** Teacher selects syllabus, class, subject, chapter, difficulty, marks, types → AI generates unit/monthly/quarterly/half-yearly/annual papers with human review gate.
+First-time organization setup generates **navigation**, **widgets**, **dashboards**, and **workflows** from the onboarding interview. Template-driven; RBAC-bound; education pack ships first. Widget definitions are tenant-scoped and versioned so schools can evolve layouts without code deploys.
 
 ---
 
-## D. Universal AI Assistant
+## D. AI Education Suite (v8.5–v8.8 delivered)
+
+Modules 23–27 under one suite — **shipped in Evolution Program Phase 2:**
+
+| Module | Status | Notes |
+|--------|--------|-------|
+| 23 Question Paper Generator | ✅ v8.5 | Bank-first generation; PDF/print export |
+| 24 Question Bank | ✅ v8.6 | Search, filter, import/export, reuse |
+| 25 Homework Generator | ✅ v8.7 | Practice/revision/holiday types |
+| 26 Worksheet Generator | ✅ v8.7 | Same engine, worksheet assignment types |
+| 27 Report Card Remarks | ✅ v8.8 | English/Telugu/Hindi; editable before publish |
+
+**Remaining:** #28 Parent Meeting Summary, lesson planner, attendance insights (links to #3).
+
+---
+
+## E. Universal AI Assistant
 
 Natural-language ERP: attendance queries, fee reminders, timetable generation, question papers, collections, risk lists. Builds on v7.4 Copilot → v8.x role assistants → universal router.
 
 ---
 
-## E. Multi-Industry Platform
+## F. Multi-Industry Platform
 
 | Product | Domain |
 |---------|--------|
@@ -129,7 +150,7 @@ Natural-language ERP: attendance queries, fee reminders, timetable generation, q
 
 ---
 
-## F. Long-Term Ecosystem
+## G. Long-Term Ecosystem
 
 ```mermaid
 flowchart TB
@@ -171,22 +192,104 @@ flowchart TB
 | v8.6 | Question Bank |
 | v8.7 | Homework & Worksheet Generator |
 | v8.8 | Report Card Remarks Generator |
-| v8.9 | Student Risk Prediction |
-| v9.0 | Akshara Growth Platform |
-| v9.1 | Achievement Promotion Engine |
-| v9.2 | School Branding |
-| v9.3 | Universal AI Assistant |
-| v9.4 | Universal Organization Builder |
-| v9.5 | Dynamic Widget Platform |
-| v10.0 | Multi-Industry Foundation |
+| **v8.9** | Student Risk Prediction Engine ✅ |
+| **v9.0** | AI Communication Assistant (Full) ✅ |
+| **v9.1** | Parent Guidance Assistant (Full) ✅ |
+| **v9.2** | Teacher Success Center ✅ |
+| **v9.3** | Principal Intelligence Center ✅ |
+| **v9.4** | Homework Intelligence Bridge ✅ |
+| **v9.5** | Student 360 Profile ✅ |
+| **v9.6** | Employee Platform ✅ |
+| **v9.7** | Inventory Distribution Engine ✅ |
+| **v9.8** | Parent Experience Bridge ✅ |
+| **v9.9** | Employee Intelligence Platform ✅ |
+| **v10.0** | School Operations Hub ✅ |
+| **v10.1** | Book Distribution Platform ✅ |
+| **v10.2** | School Memories Platform ✅ |
+| **v10.3** | Achievement Promotion Engine ✅ |
+| **v10.4** | Production Hardening + platform design docs ✅ |
+| v10.5 | Multi-Industry Foundation (implementation) |
+| v10.6 | AI School Setup Wizard (design only) |
+| v10.7 | First non-education vertical pilot |
+| — | Akshara Growth Platform · School Branding · Universal AI Assistant (future tracks) |
 
 Full dependency matrix: [`ImplementationRoadmap.md`](./ImplementationRoadmap.md)
 
 ---
 
+## Phase 5 platform foundation (v9.8–v10.3) — shipped
+
+Phase 5 closes the **Akshara Growth Platform** operational loop for schools:
+
+| Module | Shipped capability | Future track enabled |
+|--------|-------------------|----------------------|
+| Parent Experience Bridge | Unified parent hub + inventory acknowledgement | Parent Growth campaigns |
+| Employee Intelligence | Workload/burnout signals for principals | Multi-role staffing optimization |
+| Operations Hub | Daily school health command center | Dynamic widget host |
+| Book Distribution | Textbook lifecycle + reporting | Inventory vertical packs |
+| School Memories | Event timeline + albums | Alumni engagement + public gallery |
+| Achievement Promotion | Shareable achievement workflow | Akshara Growth marketing |
+
+**Foundation readiness for next tracks (documented in v10.4 design specs):**
+
+### Universal Organization Builder (v10.4 design — [`design/Universal-Organization-Builder-v2.md`](./design/Universal-Organization-Builder-v2.md))
+
+Phase 5 provides the **composition patterns** required for AI-driven org setup:
+
+- **Module graph inputs:** Operations Hub already aggregates cross-module KPIs — same aggregation layer can seed dashboard defaults per enabled module.
+- **RBAC matrix:** Eight new Phase 5 permissions extend the registry; Organization Builder can emit permission bundles from interview answers using existing `permissions` + `role_permissions` tables.
+- **Tenant provisioning:** v7.15 onboarding + Phase 5 probe seeds demonstrate declarative fixture injection.
+- **Vertical packs:** Book Distribution and Achievement Promotion are template workflows reusable in Salon/Hospital/Restaurant packs (service delivery, milestone marketing).
+
+### Dynamic Widget Platform ([`design/Dynamic-Widget-Platform.md`](./design/Dynamic-Widget-Platform.md))
+
+Operations Hub `widgets` object is the **first schema-driven widget payload** — attendance, collections, communications, risk alerts, inventory alerts, fee alerts. Future platform will:
+
+- Persist widget definitions per tenant (versioned JSON schema)
+- Bind widgets to repository providers (no code deploy for layout changes)
+- Generate navigation shells from Organization Builder interview output
+
+Education pack ships first; widget registry generalizes for vertical packs.
+
+### Universal Employee System ([`design/Universal-Employee-System.md`](./design/Universal-Employee-System.md))
+
+Multi-role staff model across School, Salon, Hospital, Restaurant — extends v9.6 Employee Platform and v9.9 Employee Intelligence. Bi-directional membership sync documented for v10.5 implementation.
+
+### Universal Workflow Engine ([`design/Universal-Workflow-Engine.md`](./design/Universal-Workflow-Engine.md))
+
+Declarative lifecycle templates extracted from Achievement Promotion, Memories, and Inventory workflows — reusable across vertical packs at provision time.
+
+### Salon / Hospital / Restaurant ERP (v10.7+ implementation)
+
+Multi-industry foundation builds on Phase 5 + v1.0 kernel:
+
+| Vertical | Phase 5 foundation reused | New pack scope |
+|----------|--------------------------|----------------|
+| **Salon (Velora)** | Employee intelligence (staff workload), operations hub pattern, achievement promotion (loyalty campaigns) | Appointments, services, retail inventory |
+| **Hospital** | Operations hub (daily health), book distribution pattern → supply/issue tracking, parent experience pattern → patient portal | Patients, clinical billing, appointments |
+| **Restaurant** | Inventory distribution lifecycle, operations hub (daily ops), memories pattern → menu/event gallery | Orders, kitchen, table management |
+
+Shared kernel unchanged: auth, RBAC, payments (v7.0), communication (v7.1), analytics (v7.6), audit, tenant isolation.
+
+No vertical schema or UI implemented until Multi-Industry Foundation milestone.
+
+---
+
+## Phase 3 intelligence foundation (v8.9–v9.3) — shipped
+
+The **Akshara Intelligence Layer** unifies risk prediction, multilingual communication drafts, parent guidance, teacher success metrics, and principal executive summaries under `/intelligence`. Next evolution strengthens signal ingestion (live communication delivery linkage, scheduled risk recompute) before platform expansion tracks.
+
+**Strengthening (documented, not implemented):**
+
+- **Universal Organization Builder** — [`design/Universal-Organization-Builder-v2.md`](./design/Universal-Organization-Builder-v2.md)
+- **Dynamic Widget Platform** — [`design/Dynamic-Widget-Platform.md`](./design/Dynamic-Widget-Platform.md)
+- **Universal Employee System** — [`design/Universal-Employee-System.md`](./design/Universal-Employee-System.md)
+- **Universal Workflow Engine** — [`design/Universal-Workflow-Engine.md`](./design/Universal-Workflow-Engine.md)
+- **AI School Setup Wizard** — guided onboarding using intelligence + analytics signals
+
 ## v1.0 stability contract
 
-Evolution work must **not break**: onboarding, attendance, finance, payments, communication, analytics, copilot, timetable, tenant isolation, RBAC, audit, 213+ probes.
+Evolution work must **not break**: onboarding, attendance, finance, payments, communication, education suite, analytics, copilot, timetable, tenant isolation, RBAC, audit, 216+ probes.
 
 ---
 

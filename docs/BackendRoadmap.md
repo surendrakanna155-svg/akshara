@@ -3,7 +3,7 @@
 **Document ID:** `AKS-BE-ROADMAP-v1.2`  
 **Status:** Sprints 1–6 complete · v7.7 hardened · v1.0-rc1 validated  
 **Prerequisite:** v5.6 Backend Architecture Foundation  
-**Last updated:** June 2026 (v1.0 Release Candidate)
+**Last updated:** June 2026 (v10.5–v11.0 Evolution Program complete)
 
 ---
 
@@ -227,7 +227,97 @@ Sprint 6 (v6.4)  Validation + pilot backend
 
 ---
 
-## 10. Critical Risks
+## 10. Evolution Phase 4 — v9.4–v9.7 ✅
+
+| Milestone | API prefix | Tables | Status |
+|-----------|------------|--------|--------|
+| v9.4 Homework Intelligence | `/intelligence/homework-intelligence` | `homework_intelligence_runs`, `edu_homework_student_targets` | ✅ |
+| v9.5 Student 360 | `/sis/students/:id/360`, `/timeline` | `student_timeline_events` | ✅ |
+| v9.6 Employee Platform | `/employees` | `employees`, `employee_role_assignments` | ✅ |
+| v9.7 Inventory Distribution | `/inventory/distribution` | `inv_catalog_items`, `inv_student_distributions` | ✅ |
+
+Migrations: `20260622000000`–`20260622400001`  
+Review: `docs/ArchitectureReview/v9.4-v9.7-Phase4-Consolidated-Review.md`
+
+---
+
+## 11. Evolution Phase 5 — v9.8–v10.3 ✅
+
+| Milestone | API prefix | Tables | Status |
+|-----------|------------|--------|--------|
+| v9.8 Parent Experience | `/parent/experience` | `parent_item_acknowledgements` | ✅ |
+| v9.9 Employee Intelligence | `/employees/:id/360`, `/employees/intelligence` | `employee_intelligence_snapshots` | ✅ |
+| v10.0 Operations Hub | `/operations/hub` | — (cross-module reads) | ✅ |
+| v10.1 Book Distribution | `/inventory/distribution/reports` | status extension on `inv_student_distributions` | ✅ |
+| v10.2 School Memories | `/memories/events` | `school_memory_events`, `school_memory_albums`, `school_memory_media` | ✅ |
+| v10.3 Achievement Promotion | `/promotions` | `achievement_promotions` | ✅ |
+
+Migrations: `20260622500000`–`20260622600001`  
+Review: `docs/ArchitectureReview/v9.8-v10.3-Phase5-Consolidated-Review.md`  
+Client flag: `PHASE5_API_ENABLED`
+
+---
+
+## 12. Evolution Phase 5 Hardening — v10.4 ✅
+
+| Area | API / storage | Detail | Status |
+|------|---------------|--------|--------|
+| Parent hub extensions | `GET /parent/experience/hub` | `guidance.reports[]`, `guidance.summary`, `homeworkIntelligence` block | ✅ |
+| Memory upload presign | `POST /memories/events/:id/upload/presign` | Signed upload URL via `storage_service.ts` | ✅ |
+| Memory upload confirm | `POST /memories/events/:id/upload/confirm` | Persist `storage_path` on `school_memory_media` | ✅ |
+| Memory download | `GET /memories/media/:id/download` | Signed download URL (900s TTL) | ✅ |
+| Memory share | `GET /memories/share/:token` | Token-scoped share link | ✅ |
+| Storage bucket | `school-memories` | Private bucket, tenant path RLS, 50 MB limit | ✅ |
+| Promotion assets | `POST /promotions/:id/generate` | Structured six-format metadata bundle | ✅ |
+
+Migration: `20260622700000_v104_storage_foundation.sql`  
+Review: `docs/ArchitectureReview/v10.4-Architecture-Review.md`  
+Staging gate: `scripts/phase5_staging_verify.sh`
+
+---
+
+## 13. Real School Readiness — v10.4.2 ✅
+
+| Area | Detail | Status |
+|------|--------|--------|
+| Staging deploy script | `scripts/deploy_staging.sh` — db push + Edge `api` deploy | ✅ |
+| Staging probes | Exit code 2 when Phase 5 routes return 404 | ✅ |
+| RBAC inventory | +onboarding, +distribution/reports, +memories/analytics | ✅ |
+| Operations Hub perf | Parallel SQL via `Promise.all` | ✅ |
+| Onboarding validation | `docs/Releases/RealSchoolValidation.md` | ✅ |
+
+**Staging blocker:** Phase 5 routes not live on `akshara-staging` until deploy script runs with `SUPABASE_ACCESS_TOKEN`.  
+Review: `docs/ArchitectureReview/v10.4.2-Production-Readiness.md`
+
+---
+
+## 15. v1.0 RC Finalization ✅
+
+| Area | Detail | Status |
+|------|--------|--------|
+| Deployment guide | `docs/Operations/Deployment-Guide.md` | ✅ |
+| RC readiness review | 93% overall — `RC-Readiness-Review.md` | ✅ |
+| Student 360 perf | Parallel SQL in profile + timeline | ✅ |
+| Employee dashboard | Single snapshot JOIN (N+1 removed) | ✅ |
+| RBAC inventory | 78 routes | ✅ |
+| Feature flags | `useApiRepositoriesProvider` includes Phase 4/5 | ✅ |
+
+---
+
+## 16. Evolution Program (v10.5–v11.0) ✅
+
+| Module | API prefix | Tables |
+|--------|------------|--------|
+| Setup Wizard | `/setup-wizard` | `setup_wizard_sessions` |
+| Widget Platform | `/widgets` | `widget_registry`, `dashboard_layouts` |
+| Teacher Assistant | `/teacher-assistant` | `teacher_interventions` |
+| Parent Insights | `/parent-insights` | `parent_insight_snapshots` |
+| Principal Command | `/principal-command` | (intelligence layer) |
+| Growth Platform | `/growth` | `growth_campaigns`, `growth_inquiries` |
+
+---
+
+## 17. Critical Risks
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
@@ -240,7 +330,7 @@ Sprint 6 (v6.4)  Validation + pilot backend
 
 ---
 
-## 11. Dependencies on Client
+## 14. Dependencies on Client
 
 | Client artifact | Backend dependency |
 |---------------|-------------------|

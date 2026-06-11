@@ -36,6 +36,21 @@ import { routePilotOperations } from "../_shared/pilot/pilot_operations_router.t
 import { routeOnboarding } from "../_shared/onboarding/onboarding_router.ts";
 import { routeCopilot } from "../_shared/copilot/copilot_router.ts";
 import { routeAnalytics } from "../_shared/analytics/analytics_router.ts";
+import { routeEducation } from "../_shared/education/education_router.ts";
+import { routeIntelligence } from "../_shared/intelligence/intelligence_router.ts";
+import { routeEmployee } from "../_shared/employee/employee_router.ts";
+import { routeInventoryDistribution } from "../_shared/inventory_distribution/inventory_distribution_router.ts";
+import { routeOperations } from "../_shared/operations/operations_router.ts";
+import { routeMemories } from "../_shared/memories/school_memories_router.ts";
+import { routePromotion } from "../_shared/promotion/achievement_promotion_router.ts";
+import { routeSetupWizard } from "../_shared/setup_wizard/setup_wizard_router.ts";
+import { routeWidgetPlatform } from "../_shared/widget_platform/widget_platform_router.ts";
+import { routeTeacherAssistant } from "../_shared/teacher_assistant/teacher_assistant_router.ts";
+import { routeParentInsights } from "../_shared/parent_insights/parent_insights_router.ts";
+import { routePrincipalCommand } from "../_shared/principal_command/principal_command_router.ts";
+import { routeGrowth } from "../_shared/growth/growth_router.ts";
+import { routeSchoolCompletion } from "../_shared/school_completion/school_completion_router.ts";
+import { routeParentExperience } from "../_shared/parent_experience/parent_experience_router.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 
 const corsHeaders = {
@@ -61,13 +76,28 @@ async function routeModuleRequest(
     routeHr,
     routeHostel,
     routeLibrary,
+    routeInventoryDistribution,
     routeInventory,
+    routeEmployee,
+    routeOperations,
+    routeMemories,
+    routePromotion,
     routeAlumni,
     routeManagement,
     routeControlCenter,
     routePilotOperations,
     routeOnboarding,
+    routeSetupWizard,
+    routeWidgetPlatform,
+    routeTeacherAssistant,
+    routeParentInsights,
+    routePrincipalCommand,
+    routeGrowth,
+    routeSchoolCompletion,
+    routeParentExperience,
     routeAnalytics,
+    routeEducation,
+    routeIntelligence,
     routeCopilot,
     routeCommunication,
     routeParent,

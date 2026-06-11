@@ -16,4 +16,22 @@ abstract class ControlCenterRepository {
   Future<ControlCenterMonitoringData> getMonitoring({required RepositoryQuery query});
   Future<ControlCenterRolesData> getRoles({required RepositoryQuery query});
   Future<ControlCenterSettingsData> getSettings({required RepositoryQuery query});
+
+  Future<ControlCenterProvidersData> getProviders({required RepositoryQuery query});
+
+  Future<void> saveProvider({
+    required RepositoryQuery query,
+    required String providerCategory,
+    required String providerName,
+    String? credential,
+    bool isActive = true,
+    bool isPrimary = false,
+  });
+
+  Future<void> setFeatureEnablement({
+    required RepositoryQuery query,
+    required String schoolId,
+    required String featureKey,
+    required bool enabled,
+  });
 }

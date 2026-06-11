@@ -1,3 +1,4 @@
+import '../../../../features/parent/academics/parent_academic_models.dart';
 import '../../../../features/parent/attendance/attendance_models.dart';
 import '../../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../../features/parent/events/events_models.dart';
@@ -140,4 +141,31 @@ class ApiParentRepository implements ParentRepository {
     final dto = await _remote.confirmPayment(query: query, request: request);
     return _mapper.toPaymentConfirmation(dto);
   }
+
+  @override
+  Future<ParentAcademicSummary> getAcademicSummary({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    final dto = await _remote.fetchAcademicSummary(query: query, studentId: studentId);
+    return ParentAcademicSummary(
+      studentId: dto['studentId'] as String? ?? studentId,
+      attendanceSummary: Map<String, dynamic>.from(dto['attendanceSummary'] as Map? ?? {}),
+      performanceSummary: Map<String, dynamic>.from(dto['performanceSummary'] as Map? ?? {}),
+      strengths: (dto['strengths'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      weaknesses: (dto['weaknesses'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      homeworkStatus: Map<String, dynamic>.from(dto['homeworkStatus'] as Map? ?? {}),
+      examReadiness: Map<String, dynamic>.from(dto['examReadiness'] as Map? ?? {}),
+      teacherRecommendations:
+          (dto['teacherRecommendations'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      generatedAt: dto['generatedAt'] as String? ?? '',
+    );
+  }
+
+  @override
+  Future<String> getPrintableReport({
+    required RepositoryQuery query,
+    required String studentId,
+  }) =>
+      _remote.fetchPrintableReport(query: query, studentId: studentId);
 }

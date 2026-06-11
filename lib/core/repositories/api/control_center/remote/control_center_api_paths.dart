@@ -14,4 +14,7 @@ abstract final class ControlCenterApiPaths {
   static const String monitoring = '$base/monitoring';
   static const String roles = '$base/roles';
   static const String settings = '$base/settings';
+  static const String providers = '$base/providers';
+  static const String usage = '$base/usage';
+  static const String features = '$base/features';
 }

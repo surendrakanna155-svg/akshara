@@ -39,7 +39,7 @@ class ParentEventsScreen extends ConsumerWidget {
         titleText: 'School Events',
         subtitle: '${data.childName} · ${data.childClass}',
         unreadNotifications: data.unreadNotifications,
-        showAi: true,
+        showAi: false,
         trailingPadding: true,
         onAiTap: () {},
         onNotificationsTap: onNotificationsTap,

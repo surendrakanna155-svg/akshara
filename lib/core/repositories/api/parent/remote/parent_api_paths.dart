@@ -18,4 +18,7 @@ abstract final class ParentApiPaths {
 
   static String paymentSummary(String installmentId) =>
       '$base/payments/$installmentId';
+
+  static const String academicSummary = '/parent/experience/summary';
+  static const String printableReport = '/parent/experience/report/printable';
 }

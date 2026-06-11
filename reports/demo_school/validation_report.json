@@ -1,7 +1,7 @@
 {
   "title": "Demo School Validation",
   "passed": 31,
-  "failed": 0,
+  "failed": 8,
   "steps": [
     {
       "name": "admin OTP login (school scope)",
@@ -210,6 +210,54 @@
       }
     },
     {
+      "name": "finance copilot",
+      "ok": false,
+      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
+      "data": {}
+    },
+    {
+      "name": "finance executive",
+      "ok": false,
+      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
+      "data": {}
+    },
+    {
+      "name": "inventory copilot",
+      "ok": false,
+      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
+      "data": {}
+    },
+    {
+      "name": "student success",
+      "ok": false,
+      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
+      "data": {}
+    },
+    {
+      "name": "exam analytics",
+      "ok": false,
+      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
+      "data": {}
+    },
+    {
+      "name": "communication analytics",
+      "ok": false,
+      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
+      "data": {}
+    },
+    {
+      "name": "teacher effectiveness",
+      "ok": false,
+      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
+      "data": {}
+    },
+    {
+      "name": "parent academic summary",
+      "ok": false,
+      "detail": "Not deployed",
+      "data": {}
+    },
+    {
       "name": "AI Copilot assistants",
       "ok": true,
       "detail": "ok",
@@ -220,7 +268,7 @@
     {
       "name": "AI Copilot session create",
       "ok": true,
-      "detail": "b60b8714-f821-46c1-a7dc-a558490f94ee",
+      "detail": "aa1e418f-5c86-499b-91c9-7254c5c545a0",
       "data": {}
     },
     {
