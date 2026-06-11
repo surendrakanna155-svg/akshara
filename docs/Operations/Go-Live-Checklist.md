@@ -191,3 +191,8 @@ export ACADEMIC_YEAR_ID=<current-year-uuid>   # optional
 | Pilot gate | `./scripts/pilot_staging_verify.sh` |
 | RC release notes | `docs/Releases/v1.0-Release-Candidate.md` |
 | Validation evidence | `docs/Operations/Production-Validation-Report.md` |
+| School setup (pre-import) | `docs/Operations/School-Setup-Checklist.md` |
+| First day operations | `docs/Operations/First-Day-Go-Live-Checklist.md` |
+| Import templates | `docs/Operations/templates/` |
+| Operational readiness | `docs/Operations/Operational-Readiness-Report.md` |
+| Manual UAT | `docs/Operations/UAT-Checklist-v1.0-rc1.md` |

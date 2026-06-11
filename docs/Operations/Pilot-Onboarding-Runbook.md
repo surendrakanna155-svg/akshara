@@ -1,6 +1,6 @@
 # Pilot Onboarding Runbook
 
-**Version:** 2.0 (v7.7)
+**Version:** 2.1 (v1.0-rc1)
 
 ## Pre-flight
 
@@ -8,13 +8,24 @@
 2. Confirm tenant probes: `GET /health/tenant-access` with header `x-internal-health-token: $INTERNAL_HEALTH_TOKEN` — expect **213/213** pass
 3. Confirm ops snapshot: `GET /health/operations` (same internal token header)
 4. Optional full launch gate: `./scripts/production_launch_verify.sh`
+5. Complete [`School-Setup-Checklist.md`](./School-Setup-Checklist.md) for first real school
+
+## Import templates
+
+| Asset | Path |
+|-------|------|
+| Student CSV | [`templates/student_import_template.csv`](./templates/student_import_template.csv) |
+| Teacher CSV | [`templates/teacher_import_template.csv`](./templates/teacher_import_template.csv) |
+| Parent / secondary guardian | [`templates/parent_guardian_guide.md`](./templates/parent_guardian_guide.md) (no parent-only CSV) |
+
+**Batch size:** ≤ **50 rows** per import job to avoid Edge Function timeouts. Refresh auth token between large batch runs (`demo_school_seed.py --post-import-only` pattern).
 
 ## School data import
 
 1. Open ERP → SIS → **School Onboarding** (`/sis/onboarding`)
-2. **Student import:** upload CSV → preview → commit
-3. **Teacher import:** upload CSV → preview → commit
-4. Rollback within 24h if validation errors: `POST /onboarding/imports/:id/rollback`
+2. **Teachers first** (principal + staff): upload CSV → preview → commit
+3. **Student import:** upload CSV → preview → commit (requires academic catalog labels to match)
+4. **Rollback** (if bad commit): `POST /onboarding/imports/:id/rollback` — **student jobs only** for automated cleanup; teacher rollback marks job `rolled_back` but does **not** revoke memberships (manual ops if needed). No 24-hour API limit — ops policy may still prefer same-day rollback.
 
 ## Invitations
 
@@ -49,4 +60,4 @@
 - Domain events stuck → `POST /domain-events/process-pending`
 - Health 403 → set `INTERNAL_HEALTH_TOKEN` on Edge Function + pass header in scripts
 
-See also: [Demo School Validation Plan](./Demo-School-Validation-Plan.md), [Pilot Issue Tracker](./Pilot-Issue-Tracker.md), [SaaS Launch Checklist](./SaaS-Launch-Checklist.md), [Production Integrations](./Production-Integrations.md)
+See also: [School Setup Checklist](./School-Setup-Checklist.md), [First-Day Go-Live](./First-Day-Go-Live-Checklist.md), [Operational Readiness Report](./Operational-Readiness-Report.md), [Demo School Validation Plan](./Demo-School-Validation-Plan.md), [Pilot Issue Tracker](./Pilot-Issue-Tracker.md), [UAT Checklist](./UAT-Checklist-v1.0-rc1.md), [SaaS Launch Checklist](./SaaS-Launch-Checklist.md), [Production Integrations](./Production-Integrations.md)
