@@ -1,6 +1,6 @@
 -- Phase 10 permissions
 
-INSERT INTO permissions (code, module, action, scope, description) VALUES
+INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
   ('manageSyllabus', 'Academic', 'manage', 'school', 'Manage syllabus generation and templates'),
   ('viewAcademicProgress', 'Academic', 'view', 'school', 'View academic progress dashboards'),
   ('manageAcademicProgress', 'Academic', 'manage', 'school', 'Record topic and chapter completion'),
@@ -10,9 +10,9 @@ INSERT INTO permissions (code, module, action, scope, description) VALUES
   ('managePlatformFeatures', 'Platform', 'manage', 'organization', 'Enable/disable features per school'),
   ('manageAcademicRooms', 'Academic', 'manage', 'school', 'Manage rooms and exam timetables'),
   ('viewParentAcademicSummary', 'Parent', 'view', 'school', 'View structured parent academic summary')
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO role_permissions (role_code, permission_code) VALUES
+INSERT INTO role_permissions (role_slug, permission_slug) VALUES
   ('superAdmin', 'manageSyllabus'),
   ('superAdmin', 'viewAcademicProgress'),
   ('superAdmin', 'manageAcademicProgress'),

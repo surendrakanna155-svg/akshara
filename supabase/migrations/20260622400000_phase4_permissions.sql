@@ -1,6 +1,6 @@
 -- Phase 4 permissions (v9.4–v9.7)
 
-INSERT INTO permissions (slug, module, action, scope, description) VALUES
+INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
   ('viewHomeworkIntelligence', 'Intelligence', 'view', 'school', 'View homework intelligence recommendations'),
   ('manageHomeworkIntelligence', 'Intelligence', 'manage', 'school', 'Apply homework intelligence plans'),
   ('viewStudent360', 'SIS', 'view', 'school', 'View unified student 360 profile'),

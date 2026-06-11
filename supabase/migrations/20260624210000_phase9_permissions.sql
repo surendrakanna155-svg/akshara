@@ -1,6 +1,6 @@
 -- Phase 9 permissions
 
-INSERT INTO permissions (code, module, action, scope, description) VALUES
+INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
   ('viewSubjectAssignments', 'Academic', 'view', 'school', 'View class and teacher subject assignments'),
   ('manageSubjectAssignments', 'Academic', 'manage', 'school', 'Manage class and teacher subject assignments'),
   ('viewLessonAnalytics', 'Teacher', 'view', 'school', 'View lesson and syllabus analytics'),
@@ -9,14 +9,14 @@ INSERT INTO permissions (code, module, action, scope, description) VALUES
   ('manageCommunicationTemplates', 'Communication', 'manage', 'school', 'Manage school communication templates'),
   ('viewPilotDashboard', 'Onboarding', 'view', 'school', 'View real-school pilot dashboard'),
   ('managePlatformWhatsApp', 'Platform', 'manage', 'organization', 'Manage platform WhatsApp provider (super admin only)')
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (slug) DO NOTHING;
 
 -- Revoke school-level WhatsApp provider management from school roles (v12.5)
 DELETE FROM role_permissions
-WHERE permission_code = 'manageWhatsAppProvider'
-  AND role_code IN ('schoolAdmin', 'principal');
+WHERE permission_slug = 'manageWhatsAppProvider'
+  AND role_slug IN ('schoolAdmin', 'principal');
 
-INSERT INTO role_permissions (role_code, permission_code) VALUES
+INSERT INTO role_permissions (role_slug, permission_slug) VALUES
   ('superAdmin', 'viewSubjectAssignments'),
   ('superAdmin', 'manageSubjectAssignments'),
   ('superAdmin', 'viewLessonAnalytics'),

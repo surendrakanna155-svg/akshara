@@ -1,6 +1,6 @@
 -- Phase 8 — School Completion permissions
 
-INSERT INTO permissions (code, module, action, scope, description) VALUES
+INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
   ('viewSubjects', 'Academic', 'view', 'school', 'View academic subject catalog'),
   ('manageSubjects', 'Academic', 'manage', 'school', 'Manage academic subjects'),
   ('viewLessonLogs', 'Teacher', 'view', 'school', 'View teacher lesson logs'),
@@ -10,9 +10,9 @@ INSERT INTO permissions (code, module, action, scope, description) VALUES
   ('manageSchoolBranding', 'School', 'manage', 'school', 'Manage school branding'),
   ('viewWhatsAppProvider', 'Communication', 'view', 'school', 'View WhatsApp provider config'),
   ('manageWhatsAppProvider', 'Communication', 'manage', 'school', 'Manage WhatsApp provider config')
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO role_permissions (role_code, permission_code) VALUES
+INSERT INTO role_permissions (role_slug, permission_slug) VALUES
   ('superAdmin', 'viewSubjects'),
   ('superAdmin', 'manageSubjects'),
   ('superAdmin', 'viewLessonLogs'),

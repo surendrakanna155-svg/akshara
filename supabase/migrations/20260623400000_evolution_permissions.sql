@@ -1,6 +1,6 @@
 -- v10.5–v11.0 Evolution permissions
 
-INSERT INTO permissions (code, module, action, scope, description) VALUES
+INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
   ('viewSchoolSetup', 'Setup', 'view', 'school', 'View school setup wizard'),
   ('manageSchoolSetup', 'Setup', 'manage', 'school', 'Run school setup wizard'),
   ('viewDynamicWidgets', 'Dashboard', 'view', 'school', 'View dynamic dashboards'),
@@ -11,9 +11,9 @@ INSERT INTO permissions (code, module, action, scope, description) VALUES
   ('viewPrincipalCommand', 'Principal', 'view', 'school', 'View principal command center'),
   ('viewGrowthPlatform', 'Growth', 'view', 'school', 'View admissions growth analytics'),
   ('manageGrowthPlatform', 'Growth', 'manage', 'school', 'Manage growth campaigns and inquiries')
-ON CONFLICT (code) DO NOTHING;
+ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO role_permissions (role_code, permission_code) VALUES
+INSERT INTO role_permissions (role_slug, permission_slug) VALUES
   ('superAdmin', 'viewSchoolSetup'),
   ('superAdmin', 'manageSchoolSetup'),
   ('superAdmin', 'viewDynamicWidgets'),
