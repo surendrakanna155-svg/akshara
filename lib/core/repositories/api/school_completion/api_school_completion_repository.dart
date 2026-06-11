@@ -428,4 +428,33 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
     final dto = await _remote.getCommunicationAnalytics(query: query);
     return _phase15Mapper.toCommunicationAnalyticsSummary(dto);
   }
+
+  @override
+  Future<PilotActivationStats> getParentActivationDashboard({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.getParentActivationDashboard(query: query);
+    return PilotActivationStats(
+      total: (dto['total'] as num?)?.toInt() ?? 0,
+      active: (dto['active'] as num?)?.toInt() ?? 0,
+      pending: (dto['pending'] as num?)?.toInt() ?? 0,
+      activationRate: (dto['activationRate'] as num?)?.toInt() ?? 0,
+      adoptionRate: (dto['adoptionRate'] as num?)?.toInt() ?? 0,
+      dailyActiveParents: (dto['dailyActiveParents'] as num?)?.toInt() ?? 0,
+      monthlyActiveParents: (dto['monthlyActiveParents'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  @override
+  Future<RoomAllocationResult> allocateRooms({
+    required RepositoryQuery query,
+    required String academicYearId,
+  }) async {
+    final dto = await _remote.allocateRooms(query: query, academicYearId: academicYearId);
+    return RoomAllocationResult(
+      allocatedPeriods: (dto['allocatedPeriods'] as num?)?.toInt() ?? 0,
+      labAssignments: (dto['labAssignments'] as num?)?.toInt() ?? 0,
+      conflictsResolved: (dto['conflictsResolved'] as num?)?.toInt() ?? 0,
+    );
+  }
 }

@@ -310,4 +310,17 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
   }) =>
       _api.getCommunicationAnalytics(query: query);
+
+  @override
+  Future<PilotActivationStats> getParentActivationDashboard({
+    required RepositoryQuery query,
+  }) =>
+      _api.getParentActivationDashboard(query: query);
+
+  @override
+  Future<RoomAllocationResult> allocateRooms({
+    required RepositoryQuery query,
+    required String academicYearId,
+  }) =>
+      _api.allocateRooms(query: query, academicYearId: academicYearId);
 }

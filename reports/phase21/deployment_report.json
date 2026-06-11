@@ -1,0 +1,9 @@
+{
+  "generatedAt": "2026-06-11T16:37:06.494337Z",
+  "phase": 21,
+  "deployStatus": "blocked",
+  "blockers": [
+    "Run supabase login or set SUPABASE_ACCESS_TOKEN"
+  ],
+  "logPath": "reports/phase21/deploy.log"
+}

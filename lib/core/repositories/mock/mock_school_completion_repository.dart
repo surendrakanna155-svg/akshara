@@ -625,4 +625,29 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
           ],
         ),
       );
+
+  @override
+  Future<PilotActivationStats> getParentActivationDashboard({
+    required RepositoryQuery query,
+  }) async =>
+      const PilotActivationStats(
+        total: 500,
+        active: 412,
+        pending: 88,
+        activationRate: 82,
+        adoptionRate: 68,
+        dailyActiveParents: 156,
+        monthlyActiveParents: 389,
+      );
+
+  @override
+  Future<RoomAllocationResult> allocateRooms({
+    required RepositoryQuery query,
+    required String academicYearId,
+  }) async =>
+      const RoomAllocationResult(
+        allocatedPeriods: 120,
+        labAssignments: 24,
+        conflictsResolved: 3,
+      );
 }

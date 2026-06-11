@@ -7,7 +7,9 @@ import '../features/school_completion/communication_delivery_screen.dart';
 import '../features/school_completion/academic_progress_screen.dart';
 import '../features/school_completion/lesson_analytics_screen.dart';
 import '../features/school_completion/lesson_logs_screen.dart';
+import '../features/school_completion/parent_activation_dashboard_screen.dart';
 import '../features/school_completion/pilot_dashboard_screen.dart';
+import '../features/school_completion/room_allocation_screen.dart';
 import '../features/school_completion/school_completion_hub_screen.dart';
 import '../features/school_completion/subject_assignment_screen.dart';
 import '../features/school_completion/subjects_screen.dart';
@@ -74,4 +76,12 @@ Widget academicProgressRouteBuilder(BuildContext context, GoRouterState state) {
 
 Widget timetableIntelligenceRouteBuilder(BuildContext context, GoRouterState state) {
   return const TimetableIntelligenceScreen();
+}
+
+Widget parentActivationDashboardRouteBuilder(BuildContext context, GoRouterState state) {
+  return const ParentActivationDashboardScreen();
+}
+
+Widget roomAllocationRouteBuilder(BuildContext context, GoRouterState state) {
+  return const RoomAllocationScreen();
 }

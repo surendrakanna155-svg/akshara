@@ -182,4 +182,13 @@ abstract class SchoolCompletionRepository {
   Future<CommunicationAnalyticsSummary> getCommunicationAnalytics({
     required RepositoryQuery query,
   });
+
+  Future<PilotActivationStats> getParentActivationDashboard({
+    required RepositoryQuery query,
+  });
+
+  Future<RoomAllocationResult> allocateRooms({
+    required RepositoryQuery query,
+    required String academicYearId,
+  });
 }

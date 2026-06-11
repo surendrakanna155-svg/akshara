@@ -58,6 +58,8 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.communicationDelivery: Permission.viewCommunicationDelivery,
   RouteNames.communicationAnalytics: Permission.viewCommunicationAnalytics,
   RouteNames.pilotDashboard: Permission.viewPilotDashboard,
+  RouteNames.parentActivationDashboard: Permission.viewPilotDashboard,
+  RouteNames.roomAllocation: Permission.manageAcademicRooms,
   RouteNames.teacherEffectiveness: Permission.viewTeacherEffectiveness,
   RouteNames.syllabusAutomation: Permission.manageSyllabus,
   RouteNames.academicProgress: Permission.viewAcademicProgress,

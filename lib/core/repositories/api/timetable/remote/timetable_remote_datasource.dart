@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../../../features/academic/timetable/timetable_models.dart';
 import '../../../repository_query.dart';
 import '../dto/timetable_dto.dart';
 import 'timetable_api_paths.dart';
@@ -107,6 +108,23 @@ class TimetableRemoteDataSource {
     );
     final data = parseTimetableEnvelope(_responseMap(response));
     return TimetableEntryDto.fromJson(data['timetable'] as Map<String, dynamic>? ?? const {});
+  }
+
+  Future<TimetablePeriodDto> movePeriod({
+    required RepositoryQuery query,
+    required MoveTimetablePeriodRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TimetableApiPaths.movePeriod,
+      queryParameters: _queryParams(query),
+      data: {
+        'periodId': request.periodId,
+        'targetDayOfWeek': request.targetDayOfWeek,
+        'targetPeriodNumber': request.targetPeriodNumber,
+        if (request.roomLabel != null) 'roomLabel': request.roomLabel,
+      },
+    );
+    return TimetablePeriodDto.fromJson(parseTimetableEnvelope(_responseMap(response)));
   }
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {

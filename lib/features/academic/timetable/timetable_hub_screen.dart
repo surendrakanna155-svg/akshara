@@ -10,6 +10,7 @@ import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
 import '../../admin/admin_shell.dart';
 import '../../admin/models/admin_nav_models.dart';
+import 'timetable_editor_tab.dart';
 import 'timetable_models.dart';
 import 'timetable_provider.dart';
 
@@ -28,7 +29,7 @@ class _TimetableHubScreenState extends ConsumerState<TimetableHubScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 5, vsync: this);
+    _tabs = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -66,6 +67,7 @@ class _TimetableHubScreenState extends ConsumerState<TimetableHubScreen>
               Tab(text: 'Conflicts'),
               Tab(text: 'Workload'),
               Tab(text: 'Publish'),
+              Tab(text: 'Editor'),
             ],
           ),
           Expanded(
@@ -77,6 +79,7 @@ class _TimetableHubScreenState extends ConsumerState<TimetableHubScreen>
                 _TimetableConflictsTab(),
                 _TimetableWorkloadTab(),
                 _TimetablePublishTab(),
+                TimetableEditorTab(),
               ],
             ),
           ),

@@ -358,12 +358,30 @@ class PilotActivationStats {
     required this.active,
     required this.pending,
     required this.activationRate,
+    this.adoptionRate = 0,
+    this.dailyActiveParents = 0,
+    this.monthlyActiveParents = 0,
   });
 
   final int total;
   final int active;
   final int pending;
   final int activationRate;
+  final int adoptionRate;
+  final int dailyActiveParents;
+  final int monthlyActiveParents;
+}
+
+class RoomAllocationResult {
+  const RoomAllocationResult({
+    required this.allocatedPeriods,
+    required this.labAssignments,
+    required this.conflictsResolved,
+  });
+
+  final int allocatedPeriods;
+  final int labAssignments;
+  final int conflictsResolved;
 }
 
 class PilotOtpDelivery {

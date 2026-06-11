@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v15.0 Real School Simulation (`v15.0-real-school-simulation`)  
-**Previous release:** v14.1 Pilot Readiness RC1  
+**Current release:** v15.6 Production Validation (`v15.6-production-validation`)  
+**Previous release:** v15.0 Real School Simulation  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

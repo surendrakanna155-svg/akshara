@@ -94,9 +94,20 @@ STORAGE=$(http_code "${BASE}/health/storage" ${health_headers[@]+"${health_heade
 if [ "$STORAGE" = "200" ]; then
   pass "storage health ($STORAGE)"
 elif [ "$STORAGE" = "404" ]; then
-  warn "storage health route not mounted ($STORAGE)"
+  DEPLOY_BLOCKED=$((DEPLOY_BLOCKED + 1))
+  fail "storage health NOT DEPLOYED ($STORAGE)"
 else
   fail "storage health ($STORAGE)"
+fi
+
+PROVIDERS=$(http_code "${BASE}/health/providers" ${health_headers[@]+"${health_headers[@]}"})
+if [ "$PROVIDERS" = "200" ]; then
+  pass "provider health ($PROVIDERS)"
+elif [ "$PROVIDERS" = "404" ]; then
+  DEPLOY_BLOCKED=$((DEPLOY_BLOCKED + 1))
+  fail "provider health NOT DEPLOYED ($PROVIDERS)"
+else
+  warn "provider health ($PROVIDERS)"
 fi
 
 ADMIN_TOKEN=$(login_phone "9876543210")

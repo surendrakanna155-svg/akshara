@@ -63,4 +63,11 @@ class HybridTimetableRepository implements TimetableRepository {
     required String timetableId,
   }) =>
       _api.publish(query: query, timetableId: timetableId);
+
+  @override
+  Future<TimetablePeriod> movePeriod({
+    required RepositoryQuery query,
+    required MoveTimetablePeriodRequest request,
+  }) =>
+      _api.movePeriod(query: query, request: request);
 }

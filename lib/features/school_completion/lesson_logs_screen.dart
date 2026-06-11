@@ -15,15 +15,7 @@ class LessonLogsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Lesson Logs')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await ref.read(schoolCompletionRepositoryProvider).createLessonLog(
-                query: ref.read(schoolCompletionQueryProvider),
-                className: 'Grade 8',
-                topic: 'Fractions revision',
-                outcome: 'completed',
-              );
-          ref.invalidate(lessonLogsProvider(null));
-        },
+        onPressed: () => _createLog(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Log lesson'),
       ),
@@ -37,13 +29,43 @@ class LessonLogsScreen extends ConsumerWidget {
                   return ListTile(
                     title: Text(log.topic),
                     subtitle: Text('${log.className} · ${log.recordedOn}'),
-                    trailing: Chip(label: Text(log.outcome)),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) async {
+                        if (value == 'complete') {
+                          await ref.read(schoolCompletionRepositoryProvider).completeTopic(
+                                query: ref.read(schoolCompletionQueryProvider),
+                                topicId: 'topic_${log.id}',
+                                lessonLogId: log.id,
+                              );
+                          ref.invalidate(lessonLogsProvider(null));
+                          ref.invalidate(teacherProgressProvider);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'complete', child: Text('Mark topic complete')),
+                      ],
+                      child: Chip(label: Text(log.outcome)),
+                    ),
                   );
                 },
               ),
         loading: () => const AksharaLoadingState(semanticLabel: 'Loading lesson logs'),
-        error: (e, _) => AksharaErrorState(message: '$e', onRetry: () => ref.invalidate(lessonLogsProvider(null))),
+        error: (e, _) => AksharaErrorState(
+          message: '$e',
+          onRetry: () => ref.invalidate(lessonLogsProvider(null)),
+        ),
       ),
     );
+  }
+
+  Future<void> _createLog(BuildContext context, WidgetRef ref) async {
+    await ref.read(schoolCompletionRepositoryProvider).createLessonLog(
+          query: ref.read(schoolCompletionQueryProvider),
+          className: 'Grade 8',
+          topic: 'Fractions revision',
+          subjectId: 'sub_2',
+          outcome: 'completed',
+        );
+    ref.invalidate(lessonLogsProvider(null));
   }
 }

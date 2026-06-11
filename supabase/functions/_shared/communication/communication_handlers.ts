@@ -441,3 +441,60 @@ export async function handleDeliveryMetrics(req: Request, config: AppConfig): Pr
     return errorEnvelope("INTERNAL_ERROR", "Failed to load delivery metrics", 500);
   }
 }
+
+/** External provider webhook — confirms delivery status (v15.6). */
+export async function handleDeliveryWebhook(req: Request, config: AppConfig): Promise<Response> {
+  const body = (await readJson<{ deliveryId?: string; status?: string; externalId?: string }>(req)) ?? {};
+  if (!body.deliveryId && !body.externalId) {
+    return errorEnvelope("VALIDATION_ERROR", "deliveryId or externalId required", 422);
+  }
+
+  const status = (body.status ?? "delivered").toLowerCase();
+  if (!["delivered", "failed", "pending"].includes(status)) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid status", 422);
+  }
+
+  try {
+    const updated = await withTenantContext(
+      config,
+      {
+        sub: "system-webhook",
+        tenant_id: "a1000000-0000-4000-8000-000000000001",
+        organization_id: "a1000000-0000-4000-8000-000000000001",
+        school_id: "a2000000-0000-4000-8000-000000000001",
+        role: "system",
+        role_slugs: ["system"],
+        primary_role: "system",
+        permissions: [],
+        permissions_version: 1,
+        scope: "school",
+        school_group_id: null,
+        student_id: null,
+        child_ids: [],
+        session_id: "delivery-webhook",
+      },
+      async (db) => {
+        const rows = await db.queryObject<{ id: string }>(
+          body.deliveryId
+            ? `UPDATE notification_deliveries
+               SET status = $2, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
+                   updated_at = now()
+               WHERE id = $1::uuid
+               RETURNING id`
+            : `UPDATE notification_deliveries
+               SET status = $2, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
+                   updated_at = now()
+               WHERE external_id = $1
+               RETURNING id`,
+          [body.deliveryId ?? body.externalId, status],
+        );
+        return rows[0]?.id ?? null;
+      },
+    );
+    if (!updated) return errorEnvelope("NOT_FOUND", "Delivery record not found", 404);
+    return jsonResponse(envelope({ deliveryId: updated, status, confirmed: true }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("INTERNAL_ERROR", "Webhook processing failed", 500);
+  }
+}

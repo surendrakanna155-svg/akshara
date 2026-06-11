@@ -167,3 +167,23 @@ export async function handleGetParentAdoptionAnalytics(
     return tenantError(error);
   }
 }
+
+export async function handleGetParentActivationDashboard(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireAnalyticsRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const { getParentActivationStats } = await import("../parent_experience/parent_experience_service.ts");
+    const stats = await withTenantContext(config, auth.claims, (db) =>
+      getParentActivationStats(db, schoolIdFromClaims(auth.claims))
+    );
+    return jsonResponse(envelope(stats));
+  } catch (error) {
+    return tenantError(error);
+  }
+}

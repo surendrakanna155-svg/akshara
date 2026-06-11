@@ -323,6 +323,50 @@ export async function publishTimetableById(
   return rows[0]!;
 }
 
+export async function moveTimetablePeriod(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  input: {
+    periodId: string;
+    targetDayOfWeek: number;
+    targetPeriodNumber: number;
+    roomLabel?: string;
+  },
+): Promise<{ periodId: string; dayOfWeek: number; periodNumber: number; roomLabel: string }> {
+  const rows = await db.queryObject<{
+    id: string;
+    timetable_id: string;
+    day_of_week: number;
+    period_number: number;
+    room_label: string;
+  }>(
+    `UPDATE academic_timetable_periods
+     SET day_of_week = $4,
+         period_number = $5,
+         room_label = coalesce($6, room_label),
+         updated_at = timezone('utc', now())
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+     RETURNING id, timetable_id, day_of_week, period_number, room_label`,
+    [
+      input.periodId,
+      orgId,
+      schoolId,
+      input.targetDayOfWeek,
+      input.targetPeriodNumber,
+      input.roomLabel ?? null,
+    ],
+  );
+  if (!rows[0]) throw new Error("Period not found");
+  const row = rows[0];
+  return {
+    periodId: row.id,
+    dayOfWeek: row.day_of_week,
+    periodNumber: row.period_number,
+    roomLabel: row.room_label,
+  };
+}
+
 export async function getTimetableSummary(
   db: TenantQueryClient,
   orgId: string,

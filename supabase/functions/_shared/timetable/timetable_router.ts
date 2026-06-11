@@ -4,6 +4,7 @@ import {
   handleGenerateTimetables,
   handleGetTimetable,
   handleListTimetables,
+  handleMoveTimetablePeriod,
   handlePublishTimetable,
   handleTimetableConflicts,
   handleTimetableSummary,
@@ -35,6 +36,9 @@ export function matchTimetableRoute(
   }
   if (path === "/academic/timetables/validate" && method === "POST") {
     return { handler: handleValidateTimetable, args: [] };
+  }
+  if (path === "/academic/timetables/periods/move" && method === "POST") {
+    return { handler: handleMoveTimetablePeriod, args: [] };
   }
   if (path === "/academic/timetables" && method === "GET") {
     return { handler: handleListTimetables, args: [] };

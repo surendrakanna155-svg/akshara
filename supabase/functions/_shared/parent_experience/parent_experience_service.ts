@@ -122,7 +122,15 @@ export async function getParentAcademicSummary(
 export async function getParentActivationStats(
   db: TenantQueryClient,
   schoolId: string,
-): Promise<{ total: number; active: number; activationRate: number }> {
+): Promise<{
+  total: number;
+  active: number;
+  pending: number;
+  activationRate: number;
+  adoptionRate: number;
+  dailyActiveParents: number;
+  monthlyActiveParents: number;
+}> {
   const rows = await db.queryObject<{ total: string; active: string }>(
     `SELECT count(*)::text AS total,
             count(*) FILTER (WHERE status = 'active')::text AS active
@@ -131,10 +139,33 @@ export async function getParentActivationStats(
   );
   const total = Number(rows[0]?.total ?? 0);
   const active = Number(rows[0]?.active ?? 0);
+  const pending = Math.max(0, total - active);
+
+  const engagement = await db.queryObject<{
+    daily: string;
+    monthly: string;
+    adoption: string;
+  }>(
+    `SELECT count(*) FILTER (WHERE app_sessions_30d > 0 AND last_active_at > now() - interval '1 day')::text AS daily,
+            count(*) FILTER (WHERE app_sessions_30d > 0)::text AS monthly,
+            count(*) FILTER (WHERE engagement_score >= 50)::text AS adoption
+     FROM parent_engagement_snapshots
+     WHERE school_id = $1`,
+    [schoolId],
+  ).catch(() => [{ daily: "0", monthly: "0", adoption: "0" }]);
+
+  const dailyActive = Number(engagement[0]?.daily ?? 0);
+  const monthlyActive = Number(engagement[0]?.monthly ?? active);
+  const adoptionCount = Number(engagement[0]?.adoption ?? 0);
+
   return {
     total,
     active,
+    pending,
     activationRate: total > 0 ? Math.round((active / total) * 100) : 0,
+    adoptionRate: total > 0 ? Math.round((adoptionCount / total) * 100) : 0,
+    dailyActiveParents: dailyActive,
+    monthlyActiveParents: monthlyActive,
   };
 }
 

@@ -48,6 +48,7 @@ import {
   handleGetCommunicationAnalyticsSummary,
   handleGetCommunicationEffectiveness,
   handleGetParentAdoptionAnalytics,
+  handleGetParentActivationDashboard,
   handleGetParentEngagementAnalytics,
 } from "./phase15_handlers.ts";
 
@@ -147,6 +148,9 @@ export async function routeSchoolCompletion(
 
   if (path === "/school/pilot/dashboard" && method === "GET") {
     return handleGetPilotDashboard(req, config);
+  }
+  if (path === "/school/parent-activation/dashboard" && method === "GET") {
+    return handleGetParentActivationDashboard(req, config);
   }
 
   if (path === "/school/syllabus/templates" && method === "GET") {

@@ -73,6 +73,18 @@ class SchoolCompletionHubScreen extends StatelessWidget {
             onTap: () => context.push(RouteNames.pilotDashboard),
           ),
           ListTile(
+            leading: const Icon(Icons.family_restroom_outlined),
+            title: const Text('Parent Activation'),
+            subtitle: const Text('Activation %, DAU, MAU, adoption'),
+            onTap: () => context.push(RouteNames.parentActivationDashboard),
+          ),
+          ListTile(
+            leading: const Icon(Icons.meeting_room_outlined),
+            title: const Text('Room & Lab Allocation'),
+            subtitle: const Text('Auto-assign rooms and science labs'),
+            onTap: () => context.push(RouteNames.roomAllocation),
+          ),
+          ListTile(
             leading: const Icon(Icons.chat_outlined),
             title: const Text('WhatsApp Status'),
             subtitle: const Text('Read-only — provider managed by super admin'),

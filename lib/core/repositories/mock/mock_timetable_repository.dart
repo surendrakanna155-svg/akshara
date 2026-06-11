@@ -211,4 +211,28 @@ class MockTimetableRepository implements TimetableRepository {
     );
     return _timetables[index];
   }
+
+  @override
+  Future<TimetablePeriod> movePeriod({
+    required RepositoryQuery query,
+    required MoveTimetablePeriodRequest request,
+  }) async {
+    for (final entry in _periods.entries) {
+      final index = entry.value.indexWhere((p) => p.id == request.periodId);
+      if (index < 0) continue;
+      final current = entry.value[index];
+      final updated = TimetablePeriod(
+        id: current.id,
+        timetableId: current.timetableId,
+        dayOfWeek: request.targetDayOfWeek,
+        periodNumber: request.targetPeriodNumber,
+        subjectLabel: current.subjectLabel,
+        roomLabel: request.roomLabel ?? current.roomLabel,
+        teacherId: current.teacherId,
+      );
+      entry.value[index] = updated;
+      return updated;
+    }
+    throw StateError('Period not found');
+  }
 }

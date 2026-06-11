@@ -399,4 +399,25 @@ class SchoolCompletionRemoteDataSource {
     );
     return _data(response);
   }
+
+  Future<Map<String, dynamic>> getParentActivationDashboard({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      SchoolCompletionApiPaths.parentActivationDashboard,
+      queryParameters: _params(query),
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> allocateRooms({
+    required RepositoryQuery query,
+    required String academicYearId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      SchoolCompletionApiPaths.roomsAllocate,
+      queryParameters: {..._params(query), 'academicYearId': academicYearId},
+    );
+    return _data(response);
+  }
 }

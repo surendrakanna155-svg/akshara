@@ -24,6 +24,7 @@ abstract final class SchoolCompletionApiPaths {
   static const String communicationAnalyticsParentAdoption =
       '/school/communications/analytics/parent-adoption';
   static const String pilotDashboard = '/school/pilot/dashboard';
+  static const String parentActivationDashboard = '/school/parent-activation/dashboard';
   static const String syllabusTemplates = '/school/syllabus/templates';
   static const String syllabusGenerate = '/school/syllabus/generate';
   static const String syllabusClone = '/school/syllabus/clone';

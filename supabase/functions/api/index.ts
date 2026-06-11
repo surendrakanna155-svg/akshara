@@ -12,7 +12,7 @@ import {
   handleRevokeSession,
   handleVerifyOtp,
 } from "../_shared/auth_handlers.ts";
-import { handleTenantAccessHealth, handleOperationsHealth } from "../_shared/tenant_handlers.ts";
+import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, handleProviderHealth } from "../_shared/tenant_handlers.ts";
 import { routeAdmissions } from "../_shared/admissions/admissions_router.ts";
 import { routeFinance } from "../_shared/finance/finance_router.ts";
 import { routeSis } from "../_shared/sis/sis_router.ts";
@@ -149,6 +149,10 @@ Deno.serve(async (req) => {
       response = await handleTenantAccessHealth(req, config);
     } else if (method === "GET" && path === "/health/operations") {
       response = await handleOperationsHealth(req, config);
+    } else if (method === "GET" && path === "/health/storage") {
+      response = await handleStorageHealth(req, config);
+    } else if (method === "GET" && path === "/health/providers") {
+      response = await handleProviderHealth(req, config);
     } else if (method === "POST" && path === "/auth/login") {
       response = await handleLogin(req, config);
     } else if (method === "POST" && path === "/auth/verify-otp") {

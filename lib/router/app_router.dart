@@ -559,6 +559,20 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.parentActivationDashboard,
+            name: 'parentActivationDashboard',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentActivationDashboardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.roomAllocation,
+            name: 'roomAllocation',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: roomAllocationRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.syllabusAutomation,
             name: 'syllabusAutomation',
             pageBuilder: (context, state) => NoTransitionPage(

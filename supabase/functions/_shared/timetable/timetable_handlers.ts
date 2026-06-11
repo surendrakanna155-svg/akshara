@@ -19,6 +19,7 @@ import {
   getTimetableSummary,
   listTimetablePeriods,
   listTimetables,
+  moveTimetablePeriod,
   publishTimetableById,
   TimetableNotFoundError,
   validateTimetableById,
@@ -339,6 +340,57 @@ export async function handlePublishTimetable(
     }
     if (error instanceof Error && error.message.includes("validated")) {
       return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    throw error;
+  }
+}
+
+export async function handleMoveTimetablePeriod(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireTimetableManage(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{
+    periodId: string;
+    targetDayOfWeek: number;
+    targetPeriodNumber: number;
+    roomLabel?: string;
+  }>(req);
+  if (!body?.periodId || !body.targetDayOfWeek || !body.targetPeriodNumber) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "periodId, targetDayOfWeek, and targetPeriodNumber required",
+      422,
+    );
+  }
+
+  try {
+    const moved = await withTenantContext(config, auth.claims, async (db) => {
+      const result = await moveTimetablePeriod(
+        db,
+        organizationIdFromClaims(auth.claims),
+        schoolIdFromClaims(auth.claims),
+        body,
+      );
+      await recordServerAuditEvent(db, auth.claims, {
+        eventType: "academicTimetablePeriodMoved",
+        category: "workflow",
+        entityType: "academic_timetable_period",
+        entityId: result.periodId,
+        metadata: {
+          dayOfWeek: result.dayOfWeek,
+          periodNumber: result.periodNumber,
+          roomLabel: result.roomLabel,
+        },
+      }, req);
+      return result;
+    });
+    return jsonResponse(envelope(moved));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("not found")) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
     }
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     throw error;

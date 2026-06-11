@@ -3,6 +3,7 @@ import { errorEnvelope } from "../http.ts";
 import {
   handleCreateBroadcast,
   handleDeliveryMetrics,
+  handleDeliveryWebhook,
   handleListTemplates,
   handleMarkAllNotificationsRead,
   handleMarkNotificationRead,
@@ -32,6 +33,9 @@ function matchCommunicationRoute(
   }
   if (method === "GET" && path === "/communications/delivery/metrics") {
     return { handler: handleDeliveryMetrics };
+  }
+  if (method === "POST" && path === "/communications/delivery/webhook") {
+    return { handler: handleDeliveryWebhook };
   }
   if (method === "GET" && path === "/parent/notifications") {
     return { handler: handleParentNotifications };

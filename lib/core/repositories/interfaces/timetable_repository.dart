@@ -41,4 +41,9 @@ abstract class TimetableRepository {
     required RepositoryQuery query,
     required String timetableId,
   });
+
+  Future<TimetablePeriod> movePeriod({
+    required RepositoryQuery query,
+    required MoveTimetablePeriodRequest request,
+  });
 }

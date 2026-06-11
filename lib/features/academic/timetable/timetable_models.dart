@@ -165,3 +165,18 @@ class GenerateTimetableRequest {
   final int periodsPerDay;
   final int daysPerWeek;
 }
+
+@immutable
+class MoveTimetablePeriodRequest {
+  const MoveTimetablePeriodRequest({
+    required this.periodId,
+    required this.targetDayOfWeek,
+    required this.targetPeriodNumber,
+    this.roomLabel,
+  });
+
+  final String periodId;
+  final int targetDayOfWeek;
+  final int targetPeriodNumber;
+  final String? roomLabel;
+}

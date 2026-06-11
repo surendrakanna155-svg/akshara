@@ -134,3 +134,9 @@ final timetableIntelligenceProvider =
         academicYearId: academicYearId,
       );
 });
+
+final parentActivationDashboardProvider = FutureProvider<PilotActivationStats>((ref) async {
+  return ref.read(schoolCompletionRepositoryProvider).getParentActivationDashboard(
+        query: ref.watch(schoolCompletionQueryProvider),
+      );
+});

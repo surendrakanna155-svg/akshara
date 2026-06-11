@@ -87,6 +87,8 @@ abstract final class RouteNames {
   static const String communicationAnalytics = '/school/communications/analytics';
   static const String teacherEffectiveness = '/intelligence/teacher-effectiveness';
   static const String pilotDashboard = '/school/pilot';
+  static const String parentActivationDashboard = '/school/parent-activation';
+  static const String roomAllocation = '/school/rooms-allocation';
   static const String syllabusAutomation = '/school/syllabus/automation';
   static const String academicProgress = '/school/academic/progress';
   static const String timetableIntelligence = '/school/timetables/intelligence';
