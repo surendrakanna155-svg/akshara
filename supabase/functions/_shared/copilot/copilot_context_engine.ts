@@ -82,7 +82,7 @@ export async function loadCopilotContext(
     : { access: "denied" };
 
   const analytics = claimsHasPermission(claims, "viewAnalytics") &&
-      assistantType === "academic"
+      (assistantType === "academic" || assistantType === "principal")
     ? await loadAnalyticsContext(db, organizationId, schoolId)
     : { access: "denied" };
 

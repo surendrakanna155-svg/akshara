@@ -5,7 +5,8 @@ export type CopilotAssistantType =
   | "academic"
   | "communication"
   | "parentGuidance"
-  | "teacher";
+  | "teacher"
+  | "principal";
 
 export const COPILOT_ASSISTANT_TYPES: CopilotAssistantType[] = [
   "admissions",
@@ -15,6 +16,7 @@ export const COPILOT_ASSISTANT_TYPES: CopilotAssistantType[] = [
   "communication",
   "parentGuidance",
   "teacher",
+  "principal",
 ];
 
 export interface CopilotAssistantDefinition {
@@ -75,6 +77,13 @@ export const COPILOT_ASSISTANTS: CopilotAssistantDefinition[] = [
     requiredViewPermission: "viewAdminHub",
     skills: ["attendance", "timetable", "class_insights", "operational_qa"],
   },
+  {
+    type: "principal",
+    label: "Principal Copilot",
+    description: "Executive summaries, school health, risks, and weekly briefings (read-only).",
+    requiredViewPermission: "viewAnalytics",
+    skills: ["executive_summary", "risk_briefing", "health_score", "operational_qa"],
+  },
 ];
 
 export const COPILOT_SUGGESTED_PROMPTS: Record<CopilotAssistantType, string[]> = {
@@ -100,11 +109,7 @@ export const COPILOT_SUGGESTED_PROMPTS: Record<CopilotAssistantType, string[]> =
     "Summarize the academic catalog for this year",
     "Explain timetable conflicts for this term",
     "Which teachers are overloaded this week?",
-    "Explain the student risk score",
-    "Explain the school health score composition",
-    "Identify analytics anomalies this week",
-    "Generate a principal summary (read-only)",
-    "Generate a weekly management briefing (read-only)",
+    "How many classes and sections are configured?",
   ],
   communication: [
     "Summarize notification templates available",
@@ -125,5 +130,11 @@ export const COPILOT_SUGGESTED_PROMPTS: Record<CopilotAssistantType, string[]> =
     "Summarize my timetable workload this week",
     "What should I tell a parent about missed attendance?",
     "Explain how to message parents through the app",
+  ],
+  principal: [
+    "Generate a principal summary for this week (read-only)",
+    "Explain the school health score composition",
+    "Which analytics risks need attention?",
+    "Summarize enrollment and attendance trends",
   ],
 };

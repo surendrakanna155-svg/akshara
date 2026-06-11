@@ -813,9 +813,19 @@ Full register: `docs/TechnicalDebtRegister.md`
 | **Ops** | `docs/Operations/Customer-Readiness-Report.md` |
 | **Status** | ✅ Validated on staging (feature freeze — no v7.8+ implementation in RC) |
 
-**Execution focus:** First real school onboarding — not v7.8 build work.
+**Execution focus:** Akshara Evolution Program v8.x wave.
 
-**Future vision (document only):** `docs/Vision/FutureVision.md`
+**Vision & order:** `docs/Vision/FutureVision.md` · `docs/Vision/ImplementationRoadmap.md`
+
+### v8.0–v8.4 — Evolution wave (complete)
+
+| Tag | Capability |
+|-----|------------|
+| `v8.0-academic-year-transition` | Year rollover preview/execute |
+| `v8.1-ai-communication-assistant` | Communication Copilot expansion |
+| `v8.2-parent-guidance-assistant` | Parent guidance persona |
+| `v8.3-teacher-copilot` | Teacher persona + attendance context |
+| `v8.4-principal-copilot` | Principal analytics persona |
 
 ---
 

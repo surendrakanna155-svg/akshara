@@ -2,7 +2,7 @@ import { assertEquals } from "jsr:@std/assert@1";
 import { COPILOT_ASSISTANTS, COPILOT_SUGGESTED_PROMPTS } from "./copilot_types.ts";
 
 Deno.test("copilot assistants are read-only skill bundles", () => {
-  assertEquals(COPILOT_ASSISTANTS.length, 7);
+  assertEquals(COPILOT_ASSISTANTS.length, 8);
   for (const assistant of COPILOT_ASSISTANTS) {
     assertEquals(assistant.skills.length >= 3, true);
     assertEquals(assistant.skills.includes("operational_qa"), true);

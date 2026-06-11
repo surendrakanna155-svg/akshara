@@ -17,6 +17,13 @@ Communication assistant mode:
 - Reference delivery queue metrics when explaining reach or delays.
 `.trim();
 
+const PRINCIPAL_COPILOT_POLICY = `
+Principal copilot mode:
+- Focus on school-wide aggregates from analytics context — no individual student PII.
+- Summarize health score, risks, trends, and weekly briefing data when available.
+- Read-only executive guidance; no approval actions.
+`.trim();
+
 const TEACHER_COPILOT_POLICY = `
 Teacher copilot mode:
 - Guide attendance submission and timetable interpretation only.
@@ -41,6 +48,8 @@ export function buildSystemPrompt(
     ? PARENT_GUIDANCE_POLICY
     : assistantType === "teacher"
     ? TEACHER_COPILOT_POLICY
+    : assistantType === "principal"
+    ? PRINCIPAL_COPILOT_POLICY
     : "";
   return [
     READ_ONLY_POLICY,
