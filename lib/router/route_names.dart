@@ -56,6 +56,8 @@ abstract final class RouteNames {
   static const String copilot = '/copilot';
   static const String education = '/education';
   static const String intelligence = '/intelligence';
+  static const String studentSuccessIntelligence = '/intelligence/student-success';
+  static const String examIntelligence = '/intelligence/exam';
   static const String homeworkIntelligence = '/homework-intelligence';
   static const String student360 = '/student-360';
   static const String employees = '/employees';
@@ -82,6 +84,8 @@ abstract final class RouteNames {
   static const String lessonAnalytics = '/school/lesson-analytics';
   static const String timetableOptimization = '/school/timetables/optimize';
   static const String communicationDelivery = '/school/communications/delivery';
+  static const String communicationAnalytics = '/school/communications/analytics';
+  static const String teacherEffectiveness = '/intelligence/teacher-effectiveness';
   static const String pilotDashboard = '/school/pilot';
   static const String syllabusAutomation = '/school/syllabus/automation';
   static const String academicProgress = '/school/academic/progress';
@@ -288,8 +292,10 @@ abstract final class RouteNames {
   static const String inventoryProcurement = '/inventory/procurement';
   static const String inventoryVendors = '/inventory/vendors';
   static const String inventoryReports = '/inventory/reports';
+  static const String inventoryCopilot = '/inventory/copilot';
+  static const String inventoryLifecycle = '/inventory/lifecycle';
 
-  /// All inventory module routes (INV-01 → INV-08).
+  /// All inventory module routes (INV-01 → INV-10).
   static const List<String> inventoryModuleRoutes = [
     inventoryDashboard,
     inventoryAssets,
@@ -299,6 +305,8 @@ abstract final class RouteNames {
     inventoryProcurement,
     inventoryVendors,
     inventoryReports,
+    inventoryCopilot,
+    inventoryLifecycle,
   ];
   static const String alumni = '/alumni';
   static const String alumniDashboard = '/alumni/dashboard';
@@ -367,6 +375,8 @@ abstract final class RouteNames {
     copilot,
     education,
     intelligence,
+    studentSuccessIntelligence,
+    examIntelligence,
     homeworkIntelligence,
     student360,
     employees,

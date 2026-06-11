@@ -363,6 +363,27 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.studentSuccessIntelligence,
+            name: 'studentSuccessIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentSuccessIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.examIntelligence,
+            name: 'examIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: examIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherEffectiveness,
+            name: 'teacherEffectiveness',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherEffectivenessRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.homeworkIntelligence,
             name: 'homeworkIntelligence',
             pageBuilder: (context, state) => NoTransitionPage(
@@ -521,6 +542,13 @@ GoRouter createAppRouter({
             name: 'communicationDelivery',
             pageBuilder: (context, state) => NoTransitionPage(
               child: communicationDeliveryRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.communicationAnalytics,
+            name: 'communicationAnalytics',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: communicationAnalyticsRouteBuilder(context, state),
             ),
           ),
           GoRoute(
@@ -1192,6 +1220,20 @@ GoRouter createAppRouter({
                 name: 'inventoryReports',
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: inventoryReportsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'copilot',
+                name: 'inventoryCopilot',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: inventoryCopilotRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'lifecycle',
+                name: 'inventoryLifecycle',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: inventoryLifecycleRouteBuilder(context, state),
                 ),
               ),
             ],

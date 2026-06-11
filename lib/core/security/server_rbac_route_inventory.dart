@@ -19,6 +19,14 @@ abstract final class ServerRbacRouteInventory {
     'audit',
     'copilot',
     'analytics',
+    'education',
+    'intelligence',
+    'employee',
+    'inventory_distribution',
+    'operations',
+    'memories',
+    'promotion',
+    'onboarding',
   ];
 
   static const permissionSlugs = [
@@ -46,7 +54,35 @@ abstract final class ServerRbacRouteInventory {
     'publishAcademicTimetable',
     'viewAnalytics',
     'viewSchoolHealth',
+    'viewEducation',
+    'manageEducation',
+    'viewStudentRisk',
+    'generateIntelligence',
+    'viewHomeworkIntelligence',
+    'manageHomeworkIntelligence',
+    'viewStudentSuccessIntelligence',
+    'viewExamIntelligence',
+    'viewStudent360',
+    'viewEmployees',
+    'manageEmployees',
+    'viewInventoryDistribution',
+    'manageInventoryDistribution',
+    'viewParentExperience',
+    'viewEmployeeIntelligence',
+    'viewOperationsHub',
+    'viewSchoolMemories',
+    'manageSchoolMemories',
+    'viewAchievementPromotion',
+    'manageAchievementPromotion',
+    'approveAchievementPromotion',
+    'viewOnboarding',
+    'viewFinanceIntelligence',
+    'viewFinanceExecutiveDashboard',
+    'viewInventoryIntelligence',
+    'manageAssetLifecycle',
+    'manageProcurementWorkflow',
   ];
 
-  static const protectedRouteCount = 24;
+  /// Mirrors server RBAC inventory entry count (v13.4).
+  static const protectedRouteCount = 83;
 }

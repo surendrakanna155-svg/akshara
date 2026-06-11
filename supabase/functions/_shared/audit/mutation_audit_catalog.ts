@@ -552,6 +552,24 @@ export const intelligenceAudit = {
       idempotencyKey: `intelligence.homework:${runId}`,
     },
   }),
+  studentSuccessComputed: (schoolId: string, count: number): MutationAuditSpec => ({
+    ...workflow("studentSuccessComputed", "school", schoolId, { schoolId, count }),
+    domain: {
+      eventType: "intelligence.student_success.computed",
+      payload: { schoolId, count },
+      sourceModule: "intelligence",
+      idempotencyKey: `intelligence.student_success:${schoolId}:${count}`,
+    },
+  }),
+  parentMeetingSummaryGenerated: (studentId: string): MutationAuditSpec => ({
+    ...workflow("parentMeetingSummaryGenerated", "parent_meeting_summary", studentId, { studentId }),
+    domain: {
+      eventType: "intelligence.parent_meeting_summary.generated",
+      payload: { studentId },
+      sourceModule: "intelligence",
+      idempotencyKey: `intelligence.parent_meeting_summary:${studentId}`,
+    },
+  }),
 };
 
 // ─── Employee Platform (v9.6) ────────────────────────────────────────────────
@@ -604,6 +622,56 @@ export const inventoryDistributionAudit = {
       payload: { distributionId },
       sourceModule: "inventory",
       idempotencyKey: `inventory.distribution.replacement:${distributionId}`,
+    },
+  }),
+};
+
+// ─── Inventory Intelligence (v13.4) ──────────────────────────────────────────
+
+export const inventoryIntelligenceAudit = {
+  copilotComputed: (): MutationAuditSpec => ({
+    ...workflow("inventoryIntelligenceComputed", "inventory_intelligence", "copilot", {}),
+    domain: {
+      eventType: "inventory.intelligence.computed",
+      payload: { snapshotType: "copilot" },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.intelligence:${Date.now()}`,
+    },
+  }),
+  lifecycleViewed: (assetsTracked: number): MutationAuditSpec => ({
+    ...workflow("assetLifecycleViewed", "asset_lifecycle", "summary", { assetsTracked }),
+    domain: {
+      eventType: "inventory.lifecycle.viewed",
+      payload: { assetsTracked },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.lifecycle.viewed:${Date.now()}`,
+    },
+  }),
+  lifecycleEventRecorded: (eventId: string, eventType: string): MutationAuditSpec => ({
+    ...workflow("assetLifecycleEventRecorded", "asset_lifecycle_event", eventId, { eventType }),
+    domain: {
+      eventType: "inventory.lifecycle.event_recorded",
+      payload: { eventId, eventType },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.lifecycle.event:${eventId}`,
+    },
+  }),
+  procurementWorkflowViewed: (pendingApprovals: number): MutationAuditSpec => ({
+    ...workflow("procurementWorkflowViewed", "procurement_workflow", "summary", { pendingApprovals }),
+    domain: {
+      eventType: "inventory.procurement.workflow_viewed",
+      payload: { pendingApprovals },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.procurement.viewed:${Date.now()}`,
+    },
+  }),
+  procurementWorkflowAdvanced: (purchaseOrderId: string, status: string): MutationAuditSpec => ({
+    ...workflow("procurementWorkflowAdvanced", "purchase_order", purchaseOrderId, { status }),
+    domain: {
+      eventType: "inventory.procurement.workflow_advanced",
+      payload: { purchaseOrderId, status },
+      sourceModule: "inventory",
+      idempotencyKey: `inventory.procurement.advanced:${purchaseOrderId}:${status}`,
     },
   }),
 };

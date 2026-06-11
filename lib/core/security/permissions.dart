@@ -142,6 +142,21 @@ enum Permission {
   // Phase 11 — Finance Intelligence
   viewFinanceIntelligence,
   viewFinanceExecutiveDashboard,
+
+  // Phase 12 — Inventory Intelligence
+  viewInventoryIntelligence,
+  manageAssetLifecycle,
+  manageProcurementWorkflow,
+
+  // Phase 13–14 — Student Success & Exam Intelligence
+  viewStudentSuccessIntelligence,
+  viewExamIntelligence,
+
+  // Phase 15 — Communication Analytics
+  viewCommunicationAnalytics,
+
+  // Phase 16 — Teacher Effectiveness
+  viewTeacherEffectiveness,
 }
 
 /// Immutable set of [Permission] values for a session.
