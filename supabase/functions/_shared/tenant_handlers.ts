@@ -68,7 +68,9 @@ export async function handleTenantAccessHealth(
   }
 }
 
-export function tenantDbNotConfiguredResponse(error: TenantDbNotConfiguredError): Response {
+export function tenantDbNotConfiguredResponse(
+  error: TenantDbNotConfiguredError = new TenantDbNotConfiguredError(),
+): Response {
   return errorEnvelope("TENANT_DB_NOT_CONFIGURED", error.message, 503);
 }
 

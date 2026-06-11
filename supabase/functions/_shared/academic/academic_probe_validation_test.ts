@@ -45,7 +45,7 @@ const ACADEMIC_PHASE_5C0B_PROBES = [
   "school_a_cannot_fetch_school_b_teacher_assignment",
 ] as const;
 
-const EXPECTED_PROBE_COUNT = 213;
+const EXPECTED_PROBE_COUNT = 219;
 
 function extractProbeNames(source: string): string[] {
   const names: string[] = [];

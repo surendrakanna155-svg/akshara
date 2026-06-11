@@ -142,8 +142,8 @@ export async function sendSchoolTemplateMessage(
       templateCode: input.templateCode,
       recipientLabel: input.variables.phone ?? input.recipientUserId,
       status: result.success ? "sent" : "failed",
-      providerRef: result.providerRef,
-      errorMessage: result.error,
+      providerRef: result.providerRef ?? undefined,
+      errorMessage: result.error ?? undefined,
     });
     return { deliveryId: event.id, channel: "whatsapp", status: event.status };
   }

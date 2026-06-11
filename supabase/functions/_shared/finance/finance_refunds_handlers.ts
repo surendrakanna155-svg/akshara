@@ -155,7 +155,10 @@ export async function handleCreateRefund(
   const denied = requireFinanceWrite(auth.claims);
   if (denied) return denied;
 
-  const body = await readJson(req);
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body is required", 422);
+  }
   const amount = parseRefundAmount(body);
   const reason = optionalStr(body, "refund_reason", "reason") ??
     optionalStr(body, "refundReason", "refundReason");

@@ -58,7 +58,7 @@ const ACADEMIC_PHASE_5C0B_PROBE_COUNT = 16;
 
 const BASELINE_PROBE_COUNT = 53;
 // Align with global tenant probe target (v7.1 communication + payment probes).
-const EXPECTED_PROBE_COUNT = 213;
+const EXPECTED_PROBE_COUNT = 219;
 
 function extractProbeNames(source: string): string[] {
   const names: string[] = [];

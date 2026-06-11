@@ -49,7 +49,7 @@ function extractProbeNames(source: string): string[] {
   return names;
 }
 
-Deno.test("tenant isolation probe count includes v7.6 probes (213)", () => {
+Deno.test("tenant isolation probe count includes v7.6 probes (219)", () => {
   const names = extractProbeNames(probesSource);
-  assertEquals(names.length, 213, `probes: ${names.join(", ")}`);
+  assertEquals(names.length, 219, `probes: ${names.join(", ")}`);
 });
