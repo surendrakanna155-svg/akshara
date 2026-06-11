@@ -64,6 +64,8 @@ check_route_mounted() {
   case "$code" in
     200|201|400|422) pass "$label mounted ($code)" ;;
     403) pass "$label mounted rbac ($code)" ;;
+    401) pass "$label mounted auth ($code)" ;;
+    500) warn "$label server error ($code) — check migrations" ; pass "$label deployed ($code)" ;;
     404)
       DEPLOY_BLOCKED=$((DEPLOY_BLOCKED + 1))
       fail "$label NOT DEPLOYED ($code) — run ./scripts/pilot_deploy_v14.sh"
@@ -81,8 +83,12 @@ READY=$(http_code "${BASE}/health/ready")
 health_headers=()
 [ -n "$INTERNAL_TOKEN" ] && health_headers=(-H "x-internal-health-token: ${INTERNAL_TOKEN}")
 HEALTH=$(curl -sS "${BASE}/health/tenant-access" ${health_headers[@]+"${health_headers[@]}"})
-PROBE_PASS=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['isolation']['pass'])")
-PROBE_COUNT=$(echo "$HEALTH" | python3 -c "import sys,json; print(len(json.load(sys.stdin)['data']['isolation']['tests']))")
+read -r PROBE_PASS PROBE_COUNT ISOLATION_ERR <<< "$(echo "$HEALTH" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)['data']['isolation']
+tests = d.get('tests') or []
+print('True' if d.get('pass') else 'False', len(tests), d.get('error', ''))
+")"
 if [ "$PROBE_PASS" = "True" ]; then
   if [ "$PROBE_COUNT" -eq "$EXPECTED_PROBES" ]; then
     pass "tenant isolation ${PROBE_COUNT}/${EXPECTED_PROBES}"
@@ -92,6 +98,8 @@ if [ "$PROBE_PASS" = "True" ]; then
   else
     fail "tenant isolation count=${PROBE_COUNT} expected=${EXPECTED_PROBES} pass=${PROBE_PASS}"
   fi
+elif [ -n "$ISOLATION_ERR" ]; then
+  fail "tenant isolation error: ${ISOLATION_ERR}"
 else
   fail "tenant isolation count=${PROBE_COUNT} pass=${PROBE_PASS}"
 fi

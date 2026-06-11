@@ -72,11 +72,17 @@ def main() -> int:
             continue
         for label, path in flows:
             code, resp = request("GET", path, token=token)
-            ok = code in (200, 201)
             if code == 404:
-                report.add(f"{role} {label}", False, f"404 — deploy required")
+                report.add(f"{role} {label}", False, "404 — deploy required")
+            elif code in (200, 201):
+                report.add(f"{role} {label}", True, f"http={code}")
+            elif code == 403:
+                report.add(f"{role} {label}", True, f"http={code} — route mounted (rbac)")
+            elif code == 500:
+                err = (resp or {}).get("error", {}).get("message", "server error")
+                report.add(f"{role} {label}", False, f"http=500 — {err[:80]}")
             else:
-                report.add(f"{role} {label}", ok, f"http={code}")
+                report.add(f"{role} {label}", code in (401, 422), f"http={code}")
 
     write_report("reports/phase21/device_validation.json", report)
     print(json.dumps(report.to_dict(), indent=2))

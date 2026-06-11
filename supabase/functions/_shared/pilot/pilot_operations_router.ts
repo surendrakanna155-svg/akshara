@@ -55,21 +55,9 @@ export async function routePilotOperations(
   method: string,
   path: string,
 ): Promise<Response | null> {
-  const prefixes = [
-    "/teacher/attendance/",
-    "/teacher/leave",
-    "/teacher/homework/submissions/",
-    "/teacher/exams/marks/",
-    "/parent/leave",
-    "/student/homework/submit",
-  ];
-  if (!prefixes.some((p) => path === p || path.startsWith(p))) {
-    return null;
-  }
-
   const match = matchPilotRoute(method, path);
   if (!match) {
-    return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+    return null;
   }
   return await match.handler(req, config);
 }
