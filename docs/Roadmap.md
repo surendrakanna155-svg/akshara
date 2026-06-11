@@ -2,7 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v1.0-rc1 (Release Candidate) — baseline v7.7  
+**Current release:** v14.0 Final School Intelligence Audit
+**Previous release:** v13.2 Phase 10 — Final School Platform  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  
@@ -826,6 +827,192 @@ Full register: `docs/TechnicalDebtRegister.md`
 | `v8.2-parent-guidance-assistant` | Parent guidance persona |
 | `v8.3-teacher-copilot` | Teacher persona + attendance context |
 | `v8.4-principal-copilot` | Principal analytics persona |
+
+### v8.5–v8.8 — Education Suite (complete)
+
+| Tag | Capability |
+|-----|------------|
+| `v8.5-ai-question-paper-generator` | AI question papers — bank-first, PDF/print |
+| `v8.6-question-bank` | Reusable question repository |
+| `v8.7-homework-worksheet-generator` | Homework + worksheet generation |
+| `v8.8-report-card-remarks-generator` | Multilingual report remarks |
+
+**Docs:** `docs/Releases/v8.5-*` … `v8.8-*` · `docs/ArchitectureReview/v8.5-v8.8-Education-Suite.md`
+
+### v8.9–v9.3 — Akshara Intelligence Layer (complete)
+
+| Tag | Capability |
+|-----|------------|
+| `v8.9-student-risk-prediction` | Risk scoring from attendance, marks, homework, comm, behavior, timetable |
+| `v9.0-ai-communication-assistant-full` | 8 scenarios × 8 languages · WhatsApp/SMS/email drafts |
+| `v9.1-parent-guidance-assistant-full` | Weekly/monthly/exam review · multilingual printable reports |
+| `v9.2-teacher-success-center` | At-risk students, gaps, insights, suggested actions |
+| `v9.3-principal-intelligence-center` | Executive dashboard, health insights, export summaries |
+
+**Docs:** `docs/Releases/v8.9-*` … `v9.3-*` · `docs/ArchitectureReview/v8.9-v9.3-Intelligence-Layer.md`
+
+**Flag:** `--dart-define=INTELLIGENCE_API_ENABLED=true` (with `ENABLE_API_MODE=true`)
+
+### v9.4–v9.7 — Phase 4 Evolution (complete)
+
+| Tag | Capability |
+|-----|------------|
+| `v9.4-homework-intelligence-bridge` | Education + intelligence homework orchestration |
+| `v9.5-student-360-profile` | Unified student profile + timeline |
+| `v9.6-employee-platform` | Multi-role employee + role assignments |
+| `v9.7-inventory-distribution-engine` | Student inventory lifecycle + finance bridge |
+
+**Docs:** `docs/Releases/v9.4-*` … `v9.7-*` · `docs/ArchitectureReview/v9.4-v9.7-Phase4-Consolidated-Review.md`
+
+**Flags:** `INTELLIGENCE_API_ENABLED`, `SIS_API_ENABLED`, `EMPLOYEE_API_ENABLED`, `INVENTORY_DISTRIBUTION_API_ENABLED`
+
+### v9.8–v10.3 — Phase 5 Evolution (complete)
+
+| Tag | Capability |
+|-----|------------|
+| `v9.8-parent-experience-bridge` | Parent hub — Student 360 + inventory ack + guidance |
+| `v9.9-employee-intelligence-platform` | Employee 360 + workload/burnout intelligence dashboard |
+| `v10.0-school-operations-hub` | Principal daily command center — school health score |
+| `v10.1-book-distribution-platform` | Textbook reports + lost/damaged/missing lifecycle |
+| `v10.2-school-memories-platform` | Event timeline, albums, media |
+| `v10.3-achievement-promotion-engine` | Achievement workflow — generate, approve, publish, track |
+
+**Docs:** `docs/Releases/v9.8-*` … `v10.3-*` · `docs/ArchitectureReview/v9.8-v10.3-Phase5-Consolidated-Review.md`
+
+**Flag:** `--dart-define=PHASE5_API_ENABLED=true` (with `ENABLE_API_MODE=true` and Phase 4 dependency flags)
+
+### v10.4 — Production Hardening (complete)
+
+| Tag | Capability |
+|-----|------------|
+| `v10.4-production-hardening` | Phase A–F: parent polish, storage, promotion assets, contract tests, staging script, vision design |
+
+| Phase | Deliverable |
+|-------|-------------|
+| A | Parent hub — guidance excerpts, homework intelligence, 6-tab polish |
+| B | School Memories object storage — presign/confirm/download pipeline |
+| C | Promotion asset metadata — six-channel structured bundle |
+| D | `phase5_repository_contract_test.dart` |
+| E | `scripts/phase5_staging_verify.sh` + validation doc |
+| F | Vision design docs — Organization Builder v2, Widget Platform, Employee System, Workflow Engine |
+
+**Docs:** `docs/Releases/v10.4-Production-Hardening.md` · `docs/ArchitectureReview/v10.4-Architecture-Review.md` · `docs/Releases/Phase5-Staging-Validation.md`
+
+**Migration:** `20260622700000_v104_storage_foundation.sql`
+
+### v10.4.1 — Polish & Real-World Readiness (complete)
+
+| Deliverable | Detail |
+|-------------|--------|
+| Memories Flutter | Upload/download/share UI + repository pipeline |
+| Parent polish | Child-aware dashboard, provider invalidation, empty/error states |
+| Promotion | Metadata export, metric tracking, approval UX |
+| Audit | Download/share/track domain events |
+| Tests | +7 (integration + polish) |
+
+**Docs:** `docs/Releases/v10.4.1-Polish-Readiness.md`
+
+### v10.4.2 — Real School Readiness (complete)
+
+| Deliverable | Detail |
+|-------------|--------|
+| Deploy tooling | `scripts/deploy_staging.sh` |
+| Staging probes | Route 404 detection in `phase5_staging_verify.sh` (exit 2) |
+| RBAC inventory | Onboarding + distribution + memories/analytics routes |
+| Performance | Operations Hub parallel SQL |
+| Real school doc | `docs/Releases/RealSchoolValidation.md` |
+
+**Quality gates:** `flutter analyze` 0 · `flutter test` 1126+ passing  
+**Staging status:** Deploy blocked — run `./scripts/deploy_staging.sh`  
+**Docs:** `docs/Releases/v10.4.2-Real-School-Readiness.md` · `docs/ArchitectureReview/v10.4.2-Production-Readiness.md`
+
+### v1.0 RC Finalization (complete)
+
+| Deliverable | Detail |
+|-------------|--------|
+| Deployment guide | `docs/Operations/Deployment-Guide.md` |
+| RC readiness | `docs/ArchitectureReview/RC-Readiness-Review.md` — **93% overall** |
+| Performance | Student 360 parallel SQL; Employee dashboard N+1 eliminated |
+| RBAC | 78 routes; onboarding job GET; feature flag aggregator fixed |
+| Launch verify | Phase 5 route probes in `production_launch_verify.sh` |
+
+**Docs:** `docs/Releases/v1.0-RC-Finalization.md`
+
+### v10.5–v11.0 — Akshara Evolution Program (complete)
+
+Foundation screens, backend routes, and mock repositories for setup wizard, widget platform, teacher assistant, parent insights, principal command, and growth platform.
+
+**Docs:** `docs/Releases/v10.5-v11.0-Evolution-Program.md`
+
+### v11.1–v11.5 — Evolution Foundation Hardening (complete)
+
+| Milestone | Capability | Status |
+|-----------|------------|--------|
+| v11.1 | `ApiEvolutionRepository`, remote/DTOs/mappers, contract + integration tests, `EVOLUTION_API_ENABLED` | ✅ |
+| v11.2 | Live widget data (`GET /widgets/data`), refresh/cache, permission filtering, dashboard binding | ✅ |
+| v11.3 | Setup wizard auto-provision (academic year, classes, sections, fee structures, warnings) | ✅ |
+| v11.4 | Growth ↔ Admissions (`lead_id` FK, convert inquiry, funnel dashboard) | ✅ |
+| v11.5 | Class-scoped teacher insights, parent language persistence, priority engine, ops action center | ✅ |
+
+**Quality gates:** `flutter analyze` 0 · `flutter test` 1143 passing  
+**Flag:** `--dart-define=EVOLUTION_API_ENABLED=true` (with `ENABLE_API_MODE=true`)  
+**Docs:** `docs/Releases/v11.1-v11.5-Evolution-Hardening.md` · `docs/ArchitectureReview/v11.1-v11.5-Evolution-Hardening.md`
+
+### v12.0 — Phase 8 School Completion (complete)
+
+| Milestone | Capability | Status |
+|-----------|------------|--------|
+| 1 | Subject Management System | ✅ |
+| 2 | Lesson Log System | ✅ |
+| 3 | Timetable Automation Engine | ✅ |
+| 4 | Parent Insight Language Auto Flow | ✅ |
+| 5 | School Branding Foundation | ✅ |
+| 6 | WhatsApp Provider Abstraction (MSG91/Gupshup) | ✅ |
+
+**Flag:** `--dart-define=SCHOOL_COMPLETION_API_ENABLED=true`  
+**Docs:** `docs/Releases/v12.0-Phase8-School-Completion.md` · `docs/ArchitectureReview/v12.0-Phase8-School-Completion.md`
+
+### v12.1–v12.6 — Phase 9 School Platform Completion (complete)
+
+| Milestone | Capability | Status |
+|-----------|------------|--------|
+| v12.1 | Class ↔ Subject matrix, teacher allocation, workload | ✅ |
+| v12.2 | Lesson analytics engine (teacher + principal) | ✅ |
+| v12.3 | Timetable optimization engine | ✅ |
+| v12.4 | School branding → ThemeData (login, splash, parent) | ✅ |
+| v12.5 | Communication delivery bridge; super-admin provider only | ✅ |
+| v12.6 | Real school pilot toolkit | ✅ |
+
+**Flag:** `--dart-define=SCHOOL_COMPLETION_API_ENABLED=true`  
+**Docs:** `docs/Releases/v12.1-v12.6-Phase9-School-Platform.md` · `docs/ArchitectureReview/v12.1-v12.6-Phase9-School-Platform.md`
+
+### v12.7–v13.2 — Phase 10 Final School Platform (complete)
+
+| Milestone | Capability | Status |
+|-----------|------------|--------|
+| v12.7 | Syllabus automation (templates, generate, clone) | ✅ |
+| v12.8 | Lesson ↔ topic tracking, teacher/principal dashboards | ✅ |
+| v12.9 | Super Admin Control Center (providers, usage, features) | ✅ |
+| v13.0 | Vault & secret management (encrypt, rotate, health) | ✅ |
+| v13.1 | Timetable intelligence (rooms, labs, exam timetable) | ✅ |
+| v13.2 | Parent experience (structured summary, no AI chat) | ✅ |
+
+**Flags:** `SCHOOL_COMPLETION_API_ENABLED=true` · `PARENT_API_ENABLED=true`  
+**Docs:** `docs/Releases/v12.7-v13.2-Phase10-School-Final.md` · `docs/ArchitectureReview/v12.7-v13.2-Phase10-School-Final.md`
+
+### v13.3–v14.0 — School Intelligence Program (complete)
+
+| Milestone | Capability | Status |
+|-----------|------------|--------|
+| v13.3 | Finance Copilot + Executive Dashboard | ✅ |
+| v13.4 | Inventory Copilot + Asset Lifecycle | ✅ |
+| v13.5 | Student Success Intelligence | ✅ |
+| v13.6 | Exam & Academic Intelligence | ✅ |
+| v13.7 | Communication Analytics | ✅ |
+| v13.8 | Teacher Effectiveness | ✅ |
+| v14.0 | Final audit + production readiness | ✅ |
+
+**Docs:** `docs/Releases/v14.0-Final-School-Intelligence-Program.md` · `docs/ArchitectureReview/v14.0-Final-School-Intelligence-Audit.md`
 
 ---
 
