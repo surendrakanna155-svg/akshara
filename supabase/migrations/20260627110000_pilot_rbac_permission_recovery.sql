@@ -3,9 +3,10 @@
 -- as applied but failed before INSERT (broken permissions table name).
 
 INSERT INTO school_membership_roles (school_membership_id, role_slug, is_primary, status)
-SELECT id, role, true, 'active'
-FROM school_memberships
-WHERE role IS NOT NULL AND role <> ''
+SELECT sm.id, sm.role, true, 'active'
+FROM school_memberships sm
+INNER JOIN role_definitions rd ON rd.slug = sm.role
+WHERE sm.role IS NOT NULL AND sm.role <> ''
 ON CONFLICT (school_membership_id, role_slug) DO NOTHING;
 
 -- ─── School admin pilot grants ───────────────────────────────────────────────

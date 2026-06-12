@@ -1,7 +1,7 @@
 -- Phase 5 permissions (v9.8–v10.3)
 
 INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
-  ('viewParentExperience', 'Parent', 'view', 'parent', 'View parent experience hub'),
+  ('viewParentExperience', 'Parent', 'view', 'self', 'View parent experience hub'),
   ('viewEmployeeIntelligence', 'HR', 'view', 'school', 'View employee intelligence and 360'),
   ('viewOperationsHub', 'Management', 'view', 'school', 'View school operations hub'),
   ('viewSchoolMemories', 'Alumni', 'view', 'school', 'View school memories'),

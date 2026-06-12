@@ -16,6 +16,7 @@ const catalogSql = await Deno.readTextFile(CATALOG_PATH);
 Deno.test("pilot permission catalog recovery seeds required definitions", () => {
   assert(catalogSql.includes("('viewSubjects',"));
   assert(catalogSql.includes("('viewFinanceIntelligence',"));
+  assert(catalogSql.includes("('viewParentExperience', 'Parent', 'view', 'self'"));
   assert(catalogSql.includes("ON CONFLICT (slug) DO NOTHING"));
 });
 
