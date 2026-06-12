@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/config/staging_probe_ids.dart';
 import 'route_names.dart';
 import '../features/parent/parent_active_child_provider.dart';
 import '../features/parent/widgets/parent_child_switcher_sheet.dart';
@@ -16,7 +17,7 @@ void handleParentDashboardNavigation(
     case 'experience_hub':
       final studentId = ref != null
           ? ref.read(parentActiveStudentIdProvider)
-          : 'student_1';
+          : StagingProbeIds.studentAId;
       context.push(parentExperienceHubPath(studentId));
     case 'academic_report':
       context.push(RouteNames.parentAcademicReport);
@@ -56,7 +57,7 @@ void handleParentDashboardNavigation(
     case 'ai_copilot':
       final studentId = ref != null
           ? ref.read(parentActiveStudentIdProvider)
-          : 'student_1';
+          : StagingProbeIds.studentAId;
       context.push(parentExperienceHubPath(studentId));
     default:
       if (actionId.startsWith('notice_')) {

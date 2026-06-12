@@ -25,10 +25,12 @@ void handleStudentNavigation(BuildContext context, String actionId) {
     case 'notifications':
       context.push(RouteNames.parentNotifications);
     case 'join_class':
+      context.go(RouteNames.studentTimetable);
     case 'ai_assistant':
     case 'ai_quiz':
+      context.go(RouteNames.studentHomework);
     case 'home':
-      break;
+      context.go(RouteNames.studentDashboard);
     default:
       if (actionId.startsWith('homework_')) {
         context.go(RouteNames.studentHomework);

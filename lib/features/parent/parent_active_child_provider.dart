@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/staging_probe_ids.dart';
 import '../auth/auth_models.dart';
 import '../auth/auth_provider.dart';
 import '../phase5/phase5_providers.dart';
@@ -7,10 +8,10 @@ import 'dashboard/parent_dashboard_provider.dart';
 
 /// Maps parent auth child IDs to student IDs used by Phase 5 / SIS APIs.
 const Map<String, String> kParentChildToStudentId = {
-  'child-ravi': 'student_1',
-  'child-priya': 'student_2',
-  'child_ravi': 'student_1',
-  'child_ananya': 'student_2',
+  'child-ravi': StagingProbeIds.studentAId,
+  'child-priya': StagingProbeIds.studentBId,
+  'child_ravi': StagingProbeIds.studentAId,
+  'child_ananya': StagingProbeIds.studentBId,
 };
 
 /// Profile mock IDs → auth session IDs.
@@ -40,7 +41,7 @@ final parentActiveChildProvider = Provider<LinkedChild?>((ref) {
 /// Student ID for repository/API calls derived from active child.
 final parentActiveStudentIdProvider = Provider<String>((ref) {
   final child = ref.watch(parentActiveChildProvider);
-  if (child == null) return 'student_1';
+  if (child == null) return StagingProbeIds.studentAId;
   return parentStudentIdForChild(child.id);
 });
 

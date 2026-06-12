@@ -12,6 +12,7 @@ import '../../admin/admin_layout.dart';
 import '../management_models.dart';
 import '../management_providers.dart';
 import '../widgets/management_kpi_row.dart';
+import '../widgets/management_principal_overview_panel.dart';
 import '../widgets/management_module_scaffold.dart';
 import '../widgets/management_segment_panel.dart';
 import '../widgets/management_trend_chart.dart';
@@ -67,6 +68,7 @@ class ManagementDashboardScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        ManagementPrincipalOverviewPanel(data: data),
         if (data.feeSnapshot.defaulters > 40)
           AksharaWarningBanner(
             message:

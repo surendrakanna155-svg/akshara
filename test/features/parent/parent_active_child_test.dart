@@ -1,13 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:akshara_erp/core/config/staging_probe_ids.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/parent/parent_active_child_provider.dart';
 
 void main() {
   group('parent active child', () {
     test('maps auth child ids to student ids', () {
-      expect(parentStudentIdForChild('child-ravi'), 'student_1');
-      expect(parentStudentIdForChild('child-priya'), 'student_2');
+      expect(parentStudentIdForChild('child-ravi'), StagingProbeIds.studentAId);
+      expect(parentStudentIdForChild('child-priya'), StagingProbeIds.studentBId);
       expect(parentStudentIdForChild('unknown'), 'unknown');
     });
 

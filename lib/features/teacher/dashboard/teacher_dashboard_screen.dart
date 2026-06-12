@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -21,14 +22,12 @@ class TeacherDashboardScreen extends ConsumerWidget {
   /// Route handler; receives action ids from TA-01 prototype map.
   final void Function(String actionId)? onNavigate;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(teacherDashboardProvider);
     final isLoading = ref.watch(teacherDashboardLoadingProvider);
     final hasError = ref.watch(teacherDashboardErrorProvider);
+    final isEmpty = ref.watch(teacherDashboardEmptyProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
@@ -47,72 +46,58 @@ class TeacherDashboardScreen extends ConsumerWidget {
         onNotificationsTap: () => _navigate('notifications'),
         onProfileTap: () => _navigate('profile'),
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load dashboard right now.',
-                  onRetry: () =>
-                      ref.read(teacherDashboardErrorProvider.notifier).state = false,
-                )
-              : LayoutBuilder(
-              builder: (context, constraints) {
-                final isTablet =
-                    constraints.maxWidth >= _tabletBreakpoint;
-                final horizontalPadding = isTablet
-                    ? AksharaSpacing.tabletMargin
-                    : AksharaSpacing.mobileMargin;
+      body: MobileAsyncBody(
+        isLoading: isLoading,
+        hasError: hasError,
+        isEmpty: isEmpty,
+        onRetry: () => ref.invalidate(teacherDashboardFutureProvider),
+        builder: (context) => LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final isTablet = MobileDashboardLayout.isTablet(width);
 
-                return Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth:
-                          isTablet ? _tabletMaxContentWidth : double.infinity,
-                    ),
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        AksharaSpacing.s4,
-                        horizontalPadding,
-                        AksharaSpacing.s6,
+            return Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: MobileDashboardLayout.contentConstraints(width),
+                child: SingleChildScrollView(
+                  padding: MobileDashboardLayout.screenPadding(width),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      GreetingHeader(
+                        eyebrow: data.greetingEyebrow,
+                        headline: data.greetingHeadline,
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          GreetingHeader(
-                            eyebrow: data.greetingEyebrow,
-                            headline: data.greetingHeadline,
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          AttendanceSummaryCard(
-                            checkIn: data.checkIn,
-                            summary: data.attendanceSummary,
-                            onCheckInTap: () => _navigate('staff_check_in'),
-                            onCheckInNowTap: () =>
-                                _navigate('staff_check_in_now'),
-                            onMarkAttendanceTap: () => _navigate(
-                              'mark_attendance_${data.attendanceSummary.pendingClassId}',
-                            ),
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          if (isTablet)
-                            _TabletSplitBody(
-                              data: data,
-                              onNavigate: _navigate,
-                            )
-                          else
-                            _MobileBody(
-                              data: data,
-                              onNavigate: _navigate,
-                            ),
-                        ],
+                      const SizedBox(height: AksharaSpacing.s4),
+                      AttendanceSummaryCard(
+                        checkIn: data.checkIn,
+                        summary: data.attendanceSummary,
+                        onCheckInTap: () => _navigate('staff_check_in'),
+                        onCheckInNowTap: () => _navigate('staff_check_in_now'),
+                        onMarkAttendanceTap: () => _navigate(
+                          'mark_attendance_${data.attendanceSummary.pendingClassId}',
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: AksharaSpacing.s4),
+                      if (isTablet)
+                        _TabletSplitBody(
+                          data: data,
+                          onNavigate: _navigate,
+                        )
+                      else
+                        _MobileBody(
+                          data: data,
+                          onNavigate: _navigate,
+                        ),
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -140,6 +125,11 @@ class _MobileBody extends StatelessWidget {
           onTimetableTap: () => onNavigate('timetable'),
           onClassTap: (scheduleClass) =>
               onNavigate('class_${scheduleClass.id}'),
+        ),
+        const SizedBox(height: AksharaSpacing.s4),
+        _StudentsNeedingAttentionSection(
+          data: data,
+          onNavigate: onNavigate,
         ),
         const SizedBox(height: AksharaSpacing.s4),
         PendingTasksSection(
@@ -204,6 +194,11 @@ class _TabletSplitBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AksharaSpacing.s4),
+        _StudentsNeedingAttentionSection(
+          data: data,
+          onNavigate: onNavigate,
+        ),
+        const SizedBox(height: AksharaSpacing.s4),
         _QuickActionsSection(
           actions: data.quickActions,
           onNavigate: onNavigate,
@@ -221,6 +216,50 @@ class _TabletSplitBody extends StatelessWidget {
           actionLabel: data.aiInsight.actionLabel,
           onAction: () => onNavigate('class_teacher_dashboard'),
         ),
+      ],
+    );
+  }
+}
+
+class _StudentsNeedingAttentionSection extends StatelessWidget {
+  const _StudentsNeedingAttentionSection({
+    required this.data,
+    required this.onNavigate,
+  });
+
+  final TeacherDashboardData data;
+  final void Function(String actionId) onNavigate;
+
+  @override
+  Widget build(BuildContext context) {
+    final alerts = <String>[];
+    if (data.attendanceSummary.hasPendingAttendance) {
+      alerts.add(data.attendanceSummary.pendingBannerMessage!);
+    }
+    if (data.aiInsight.message.isNotEmpty) {
+      alerts.add(data.aiInsight.message);
+    }
+
+    if (alerts.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AksharaSectionHeader(
+          title: 'Students needing attention',
+          fixedHeight: false,
+          spacingBelow: AksharaSpacing.s3,
+        ),
+        for (final alert in alerts)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+            child: AksharaWarningBanner(
+              message: alert,
+              actionLabel: 'Review',
+              onAction: () => onNavigate('mark_attendance'),
+              compactMessage: true,
+            ),
+          ),
       ],
     );
   }

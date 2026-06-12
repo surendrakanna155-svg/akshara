@@ -26,10 +26,13 @@ void handleTeacherNavigation(BuildContext context, String actionId) {
     case 'notifications':
       context.push(RouteNames.parentNotifications);
     case 'class_teacher_dashboard':
+      context.go(RouteNames.teacherAttendance);
     case 'ai_copilot':
+      context.push(RouteNames.teacherAssistant);
     case 'profile':
+      context.go(RouteNames.teacherDashboard);
     case 'home':
-      break;
+      context.go(RouteNames.teacherDashboard);
     default:
       if (actionId.startsWith('mark_attendance_')) {
         context.go(RouteNames.teacherAttendance);

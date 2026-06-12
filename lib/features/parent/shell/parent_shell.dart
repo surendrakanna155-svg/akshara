@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../features/school_completion/school_branding_theme_provider.dart';
 import '../../../router/route_names.dart';
+import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 
 /// Parent mobile shell with bottom navigation (Home · Attendance · Fees).
@@ -74,7 +75,10 @@ class ParentShell extends ConsumerWidget {
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AksharaSpacing.s4,
+                    vertical: AksharaSpacing.s2,
+                  ),
                   child: Row(
                     children: [
                       Icon(Icons.school, size: 18, color: context.colors.primary),

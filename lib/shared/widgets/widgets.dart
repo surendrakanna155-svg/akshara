@@ -4,6 +4,8 @@ export 'akshara_paginated_list_footer.dart';
 export 'akshara_pagination_bar.dart';
 export 'akshara_virtualized_data_table.dart';
 export 'akshara_app_bar.dart';
+export 'akshara_surface_card.dart';
+export 'mobile_async_body.dart';
 export 'akshara_context_chip.dart';
 export 'akshara_empty_state.dart';
 export 'akshara_error_state.dart';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -21,8 +22,6 @@ class StudentDashboardScreen extends ConsumerWidget {
   /// Route handler; receives action ids from ST-01 prototype map.
   final void Function(String actionId)? onNavigate;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
   static const double _largeMobileBreakpoint = 428;
 
   @override
@@ -30,6 +29,7 @@ class StudentDashboardScreen extends ConsumerWidget {
     final data = ref.watch(studentDashboardProvider);
     final isLoading = ref.watch(studentDashboardLoadingProvider);
     final hasError = ref.watch(studentDashboardErrorProvider);
+    final isEmpty = ref.watch(studentDashboardEmptyProvider);
     final overdueCount =
         data.homeworkDue.where((h) => h.status == HomeworkStatus.overdue).length;
     final dueCount = data.homeworkDue.length;
@@ -53,37 +53,24 @@ class StudentDashboardScreen extends ConsumerWidget {
         onNotificationsTap: () => _navigate(onNavigate, 'notifications'),
         onProfileTap: () => _navigate(onNavigate, 'profile'),
       ),
-      body: isLoading
-          ? const AksharaLoadingState()
-          : hasError
-              ? AksharaErrorState(
-                  message: 'Unable to load your dashboard.',
-                  onRetry: () =>
-                      ref.read(studentDashboardErrorProvider.notifier).state = false,
-                )
-              : LayoutBuilder(
-              builder: (context, constraints) {
-                final isTablet =
-                    constraints.maxWidth >= _tabletBreakpoint;
-                final horizontalPadding = isTablet
-                    ? AksharaSpacing.tabletMargin
-                    : AksharaSpacing.mobileMargin;
+      body: MobileAsyncBody(
+        isLoading: isLoading,
+        hasError: hasError,
+        isEmpty: isEmpty,
+        errorMessage: 'Unable to load your dashboard.',
+        onRetry: () => ref.invalidate(studentDashboardFutureProvider),
+        builder: (context) => LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final isTablet = MobileDashboardLayout.isTablet(width);
 
-                return Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth:
-                          isTablet ? _tabletMaxContentWidth : double.infinity,
-                    ),
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        AksharaSpacing.s4,
-                        horizontalPadding,
-                        AksharaSpacing.s6,
-                      ),
-                      child: Column(
+            return Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: MobileDashboardLayout.contentConstraints(width),
+                child: SingleChildScrollView(
+                  padding: MobileDashboardLayout.screenPadding(width),
+                  child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           HeroGreetingCard(
@@ -196,6 +183,7 @@ class StudentDashboardScreen extends ConsumerWidget {
                 );
               },
             ),
+      ),
     );
   }
 
