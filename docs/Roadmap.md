@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v15.7 Staging Migration Recovery (`v15.7-staging-migration-recovery`)  
-**Previous release:** v15.6 Production Validation  
+**Current release:** v15.8 Pilot Polish (`v15.8-pilot-polish`)  
+**Previous release:** v15.7 Staging Migration Recovery  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

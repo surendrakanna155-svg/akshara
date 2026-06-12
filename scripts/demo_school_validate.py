@@ -293,7 +293,7 @@ def validate_role_journeys(report: RunReport, admin: str, parent: str | None, te
     if teacher:
         for label, path in [
             ("teacher daily dashboard", "/teacher/dashboard"),
-            ("teacher weekly attendance", "/teacher/attendance"),
+            ("teacher weekly attendance", "/teacher/attendance/classes"),
         ]:
             code, resp = request("GET", path, token=teacher)
             check_status(report, label, code, resp)

@@ -54,6 +54,10 @@ void handleParentDashboardNavigation(
     case 'notifications':
       context.push(RouteNames.parentNotifications);
     case 'ai_copilot':
+      final studentId = ref != null
+          ? ref.read(parentActiveStudentIdProvider)
+          : 'student_1';
+      context.push(parentExperienceHubPath(studentId));
     default:
       if (actionId.startsWith('notice_')) {
         context.go(RouteNames.parentNotices);

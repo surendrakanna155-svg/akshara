@@ -33,5 +33,15 @@ void main() {
       });
       expect(ms, lessThan(batchBudgetMs));
     });
+
+    test('scaled list budgets for 1000 and 2000 student pages', () async {
+      final sis = MockSisRepository();
+      for (final pageSize in [50, 100]) {
+        final ms = await measure(() => sis.getStudents(
+              query: query.withPage(1, pageSize: pageSize),
+            ));
+        expect(ms, lessThan(1500), reason: 'pageSize=$pageSize');
+      }
+    });
   });
 }
