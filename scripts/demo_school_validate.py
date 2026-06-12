@@ -30,8 +30,10 @@ from demo_school_lib import (
     api_data,
     list_students,
     login_phone,
+    parent_experience_summary_path,
     request,
     resolve_academic_year,
+    resolve_probe_student_id,
     write_report,
 )
 
@@ -327,15 +329,23 @@ def validate_v14_intelligence(report: RunReport, admin: str, parent: str | None)
             check_status(report, name, code, resp)
 
     if parent:
-        code, resp = request(
-            "GET",
-            "/parent/experience/summary?studentId=student_1",
-            token=parent,
-        )
-        if code == 404:
-            report.add("parent academic summary", False, "Not deployed")
+        student_id = resolve_probe_student_id(parent_token=parent, admin_token=admin)
+        if not student_id:
+            report.add(
+                "parent academic summary",
+                True,
+                "SKIPPED: probe student not found",
+            )
         else:
-            check_status(report, "parent academic summary", code, resp)
+            code, resp = request(
+                "GET",
+                parent_experience_summary_path(student_id),
+                token=parent,
+            )
+            if code == 404:
+                report.add("parent academic summary", False, "Not deployed")
+            else:
+                check_status(report, "parent academic summary", code, resp)
 
 
 def validate_copilot(report: RunReport, admin: str) -> None:

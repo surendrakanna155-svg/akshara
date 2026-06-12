@@ -19,7 +19,10 @@ from demo_school_lib import (
     admin_token,
     api_data,
     login_phone,
+    parent_experience_report_path,
+    parent_experience_summary_path,
     request,
+    resolve_probe_student_id,
     write_report,
 )
 
@@ -88,17 +91,23 @@ def phase_teacher(report: RunReport, teacher: str) -> None:
         probe(report, name, teacher, path)
 
 
-def phase_parent(report: RunReport, parent: str) -> None:
-    for name, path in [
+def phase_parent(report: RunReport, parent: str, admin: str) -> None:
+    student_id = resolve_probe_student_id(parent_token=parent, admin_token=admin)
+    parent_paths = [
         ("P4 dashboard", "/parent/dashboard"),
         ("P4 attendance", "/parent/attendance"),
         ("P4 homework", "/parent/homework"),
         ("P4 fees", "/parent/fees"),
         ("P4 experience hub", "/parent/experience/hub"),
-        ("P4 printable report", "/parent/experience/report/printable?studentId=student_1"),
-        ("P4 guidance summary", "/parent/experience/summary?studentId=student_1"),
-    ]:
+    ]
+    for name, path in parent_paths:
         probe(report, name, parent, path)
+    if not student_id:
+        report.add("P4 printable report", True, "SKIPPED: probe student not found")
+        report.add("P4 guidance summary", True, "SKIPPED: probe student not found")
+    else:
+        probe(report, "P4 printable report", parent, parent_experience_report_path(student_id))
+        probe(report, "P4 guidance summary", parent, parent_experience_summary_path(student_id))
     code, resp = request("GET", "/copilot/assistants", token=parent)
     report.add(
         "P4 no open AI copilot",
@@ -181,7 +190,7 @@ def main() -> int:
     phase_principal(report, admin)
     phase_school_admin(report, admin)
     phase_teacher(report, teacher)
-    phase_parent(report, parent)
+    phase_parent(report, parent, admin)
     phase_student(report, student)
     phase_accountant(report, admin)
     phase_inventory(report, admin)

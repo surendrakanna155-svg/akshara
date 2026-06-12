@@ -30,6 +30,15 @@ ADMIN_PHONE = os.environ.get("DEMO_ADMIN_PHONE", "9876543210")
 PROBE_PARENT_PHONE = "9876543211"
 PROBE_STUDENT_PHONE = "9876543212"
 PROBE_TEACHER_PHONE = "9876543213"
+PROBE_STUDENT_ID = os.environ.get(
+    "PROBE_STUDENT_ID",
+    "a4000000-0000-4000-8000-000000000001",
+)
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
 
 CLASS_LABELS = ["Nursery", "LKG", "UKG"] + [str(n) for n in range(1, 11)]
 SECTION_LABELS = ["A", "B"]
@@ -101,11 +110,16 @@ class RunReport:
     def failed(self) -> int:
         return sum(1 for s in self.steps if not s.ok)
 
+    @property
+    def skipped(self) -> int:
+        return sum(1 for s in self.steps if s.ok and s.detail.startswith("SKIPPED"))
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "title": self.title,
             "passed": self.passed,
             "failed": self.failed,
+            "skipped": self.skipped,
             "steps": [
                 {"name": s.name, "ok": s.ok, "detail": s.detail, "data": s.data}
                 for s in self.steps
@@ -294,6 +308,44 @@ def _entity_id(item: dict, *keys: str) -> str:
         if value:
             return str(value)
     return ""
+
+
+def is_valid_uuid(value: str) -> bool:
+    return bool(_UUID_RE.match(value or ""))
+
+
+def resolve_probe_student_id(
+    parent_token: str | None = None,
+    admin_token: str | None = None,
+) -> str | None:
+    """Resolve staging child UUID for parent experience validation probes."""
+    if parent_token:
+        code, resp = request("GET", "/parent/dashboard", token=parent_token)
+        if code == 200:
+            data = api_data(resp) or {}
+            children = data.get("children") or data.get("linkedStudents") or []
+            for child in children:
+                student_id = _entity_id(child, "id", "studentId")
+                if is_valid_uuid(student_id):
+                    return student_id
+
+    if admin_token:
+        for student in list_students(admin_token, page_size=10, pages=1):
+            student_id = _entity_id(student, "id", "studentId")
+            if is_valid_uuid(student_id):
+                return student_id
+
+    if is_valid_uuid(PROBE_STUDENT_ID):
+        return PROBE_STUDENT_ID
+    return None
+
+
+def parent_experience_summary_path(student_id: str) -> str:
+    return f"/parent/experience/summary?studentId={student_id}"
+
+
+def parent_experience_report_path(student_id: str) -> str:
+    return f"/parent/experience/report/printable?studentId={student_id}"
 
 
 def import_preview_commit(

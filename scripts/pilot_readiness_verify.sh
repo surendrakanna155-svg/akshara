@@ -21,6 +21,7 @@ log() { echo "[pilot-readiness] $*"; }
 pass() { PASS=$((PASS + 1)); log "PASS: $*"; }
 fail() { FAIL=$((FAIL + 1)); log "FAIL: $*"; }
 warn() { WARN=$((WARN + 1)); log "WARN: $*"; }
+skip() { PASS=$((PASS + 1)); log "SKIP: $*"; }
 
 api() {
   local method="$1" path="$2"
@@ -142,7 +143,7 @@ check_get "teacher dashboard" "$TEACHER_TOKEN" "/teacher/dashboard"
 check_get "parent denied admissions" "$PARENT_TOKEN" "/admissions/dashboard" "403"
 check_get "student denied finance" "$STUDENT_TOKEN" "/finance/dashboard" "403"
 
-# v14 intelligence routes
+# v14 intelligence routes (school admin)
 V14_PATHS=(
   "/finance/intelligence/copilot"
   "/finance/intelligence/executive"
@@ -151,11 +152,31 @@ V14_PATHS=(
   "/intelligence/exam/analytics"
   "/school/communications/analytics/summary"
   "/intelligence/teacher-effectiveness/performance"
-  "/parent/experience/summary?studentId=student_1"
 )
 for p in "${V14_PATHS[@]}"; do
   check_route_mounted "v14 ${p}" "$ADMIN_TOKEN" "$p"
 done
+
+# Parent experience requires a real child UUID (not placeholder student_1)
+PROBE_STUDENT_ID=$(PARENT_TOKEN="$PARENT_TOKEN" ADMIN_TOKEN="$ADMIN_TOKEN" python3 <<'PY'
+import os, sys
+sys.path.insert(0, "scripts")
+from demo_school_lib import resolve_probe_student_id
+sid = resolve_probe_student_id(
+    parent_token=os.environ.get("PARENT_TOKEN") or None,
+    admin_token=os.environ.get("ADMIN_TOKEN") or None,
+)
+print(sid or "")
+PY
+)
+if [ -z "$PROBE_STUDENT_ID" ]; then
+  skip "v14 /parent/experience/summary — probe student not found"
+else
+  check_route_mounted \
+    "v14 /parent/experience/summary?studentId=${PROBE_STUDENT_ID}" \
+    "$PARENT_TOKEN" \
+    "/parent/experience/summary?studentId=${PROBE_STUDENT_ID}"
+fi
 
 # Vault (super-admin control center — school admin should get 403 if mounted)
 VAULT_CODE=$(http_code -H "$(auth_header "$ADMIN_TOKEN")" "${BASE}/control-center/vault/health")
