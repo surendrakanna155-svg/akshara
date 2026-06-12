@@ -1,0 +1,83 @@
+{
+  "tag": "v17.4-device-auth-validation",
+  "buildVersion": "17.3.0+173",
+  "validatedAt": "2026-06-12T22:20:00+05:30",
+  "buildFlags": {
+    "APP_ENV": "staging",
+    "API_BASE_URL": "https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api",
+    "ENABLE_API_MODE": true,
+    "AUTH_API_ENABLED": true,
+    "ENABLE_DEMO_AUTH": false
+  },
+  "devices": {
+    "android": {
+      "model": "OnePlus7 GM1901",
+      "deviceId": "014e7e76",
+      "package": "com.akshara.erp",
+      "installStatus": "success",
+      "installMethod": "adb install -r app-release.apk",
+      "uninstallNote": "adb uninstall returned DELETE_FAILED_INTERNAL_ERROR; replace install succeeded",
+      "launchStatus": "success",
+      "screenshots": [
+        "reports/device_auth_v17_4/android_splash_or_login.png"
+      ]
+    },
+    "ios": {
+      "model": "Kanna's iPhone",
+      "deviceId": "00008120-001131801A60201E",
+      "bundleId": "com.akshara.erp.aksharaErp",
+      "installStatus": "success",
+      "installMethod": "scripts/ios_device_install.sh",
+      "launchStatus": "blocked_device_locked",
+      "launchNote": "devicectl launch denied while iPhone locked; manual tap required after developer trust",
+      "screenshots": []
+    }
+  },
+  "apiAuthValidation": {
+    "randomPhone9999999999": {
+      "login": "success_dev_mode_otp_sent",
+      "wrongOtp": "rejected_OTP_INVALID"
+    },
+    "seededAccounts": {
+      "9000100001_parent": {
+        "loginOtp": "pass",
+        "wrongOtp": "rejected",
+        "correctOtp": "pass_scope_parent"
+      },
+      "9000000001_teacher": {
+        "loginOtp": "pass",
+        "wrongOtp": "rejected",
+        "correctOtp_scope_teacher": "fail_MEMBERSHIP_NOT_FOUND",
+        "correctOtp_no_scope": "pass_but_scope_school_role_principal"
+      },
+      "9876543212_student": {
+        "loginOtp": "pass",
+        "wrongOtp": "rejected",
+        "correctOtp": "pass_scope_student"
+      },
+      "9876543210_principal": {
+        "loginOtp": "pass",
+        "wrongOtp": "rejected",
+        "correctOtp": "pass_scope_school_staff_portal"
+      }
+    }
+  },
+  "firstRunAudit": {
+    "initialRoute": "/splash",
+    "postSplashUnauthenticated": "/login",
+    "loginCopy": "Enter your registered mobile number. OTP is verified by the staging server.",
+    "testingAccountChips": false,
+    "staffPortalLink": true,
+    "mobileSchoolCreationPath": false,
+    "mobileSuperAdminBootstrap": false,
+    "erpOnboardingHubRoute": "/sis/onboarding"
+  },
+  "recommendation": "onboarding_routing_fixes",
+  "blockers": [
+    "Teacher mobile verify with scope=teacher returns MEMBERSHIP_NOT_FOUND for all seeded teacher phones",
+    "Teacher phone without scope resolves to school/principal — routes to staff ERP not teacher mobile",
+    "Staging API accepts OTP send for arbitrary phones (AUTH_OTP_DEV_MODE); rejection only at verify step",
+    "iPhone UI validation requires unlocked device and developer trust for screenshots and manual OTP tests",
+    "Principal uses Staff ERP portal (/staff/login), not mobile login screen"
+  ]
+}

@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v17.3 Authentication Hardening (`v17.3-authentication-hardening`)  
-**Previous release:** v17.2 iOS Device Install (`v17.2-ios-device-install`)  
+**Current release:** v17.4 Device Auth Validation (`v17.4-device-auth-validation`)  
+**Previous release:** v17.3 Authentication Hardening (`v17.3-authentication-hardening`)  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  
