@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v16.4 UI Excellence (`v16.4-ui-excellence`)  
-**Previous release:** v16.0 UI/UX Completion (`v16.0-ui-ux-completion`)  
+**Current release:** v16.5 UI Stress Test (`v16.5-ui-stress-test`)  
+**Previous release:** v16.4 UI Excellence (`v16.4-ui-excellence`)  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

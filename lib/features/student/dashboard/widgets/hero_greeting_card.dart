@@ -5,7 +5,7 @@ import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 
-/// ST-01 hero greeting card (96px zone).
+/// ST-01 hero greeting card.
 class HeroGreetingCard extends StatelessWidget {
   const HeroGreetingCard({
     super.key,
@@ -16,7 +16,7 @@ class HeroGreetingCard extends StatelessWidget {
   final String headline;
   final String subtitle;
 
-  static const double cardHeight = 96;
+  static const double minCardHeight = 96;
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +30,14 @@ class HeroGreetingCard extends StatelessWidget {
         elevation: AksharaElevation.level1,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: AksharaRadius.card),
-        child: SizedBox(
-          height: cardHeight,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: minCardHeight),
           child: Padding(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   headline,
@@ -44,6 +45,8 @@ class HeroGreetingCard extends StatelessWidget {
                     color: colors.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: AksharaSpacing.s2),
                 Text(
@@ -51,6 +54,8 @@ class HeroGreetingCard extends StatelessWidget {
                   style: text.bodyMedium.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

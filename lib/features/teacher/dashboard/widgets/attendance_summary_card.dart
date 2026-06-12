@@ -85,8 +85,8 @@ class _StaffCheckInCard extends StatelessWidget {
           borderRadius: AksharaRadius.card,
           side: BorderSide(color: colors.outlineVariant),
         ),
-        child: SizedBox(
-          height: cardHeight,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: cardHeight),
           child: Padding(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             child: Row(
@@ -120,6 +120,8 @@ class _StaffCheckInCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: colors.onSurface,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       if (isCheckedIn &&
                           checkIn.checkedInAt != null) ...[

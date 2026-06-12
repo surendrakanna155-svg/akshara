@@ -35,7 +35,15 @@ class HomeworkDueList extends StatelessWidget {
             spacingBelow: AksharaSpacing.s2,
             trailingStyle: AksharaSectionHeaderTrailingStyle.compact,
           ),
-          for (var i = 0; i < items.length; i++) ...[
+          if (items.isEmpty)
+            AksharaSectionEmpty(
+              message: 'No homework due soon.',
+              icon: Icons.assignment_turned_in_outlined,
+              actionLabel: onSeeAllTap != null ? 'See all' : null,
+              onAction: onSeeAllTap,
+            )
+          else
+            for (var i = 0; i < items.length; i++) ...[
             if (i > 0) const SizedBox(height: AksharaSpacing.s2),
             _HomeworkDueRow(
               item: items[i],

@@ -36,7 +36,15 @@ class TodayScheduleCard extends StatelessWidget {
             spacingBelow: AksharaSpacing.s3,
             trailingStyle: AksharaSectionHeaderTrailingStyle.compact,
           ),
-          for (var i = 0; i < classes.length; i++) ...[
+          if (classes.isEmpty)
+            AksharaSectionEmpty(
+              message: 'No classes scheduled for today.',
+              icon: Icons.event_busy_outlined,
+              actionLabel: onTimetableTap != null ? 'Timetable' : null,
+              onAction: onTimetableTap,
+            )
+          else
+            for (var i = 0; i < classes.length; i++) ...[
             if (i > 0) const SizedBox(height: AksharaSpacing.s2),
             _ClassScheduleRow(
               scheduleClass: classes[i],
@@ -83,14 +91,15 @@ class _ClassScheduleRow extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: AksharaRadius.card,
-          child: SizedBox(
-            height: rowHeight,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: rowHeight),
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AksharaSpacing.s3,
                 vertical: AksharaSpacing.s2,
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SizedBox(
                     width: 56,
@@ -100,12 +109,15 @@ class _ClassScheduleRow extends StatelessWidget {
                         color: colors.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           '${scheduleClass.subject} · ${scheduleClass.classLabel}',
@@ -113,7 +125,7 @@ class _ClassScheduleRow extends StatelessWidget {
                             color: colors.onSurface,
                             fontWeight: FontWeight.w600,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
@@ -122,16 +134,21 @@ class _ClassScheduleRow extends StatelessWidget {
                           style: text.bodySmall.copyWith(
                             color: colors.onSurfaceVariant,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  AksharaStatusChip(
-                    label: statusColors.label,
-                    background: statusColors.background,
-                    foreground: statusColors.foreground,
-                    size: AksharaStatusChipSize.standard,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(width: AksharaSpacing.s2),
+                  Flexible(
+                    child: AksharaStatusChip(
+                      label: statusColors.label,
+                      background: statusColors.background,
+                      foreground: statusColors.foreground,
+                      size: AksharaStatusChipSize.compact,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),

@@ -34,7 +34,13 @@ class PendingTasksSection extends StatelessWidget {
             fixedHeight: false,
             spacingBelow: AksharaSpacing.s3,
           ),
-          LayoutBuilder(
+          if (tasks.isEmpty)
+            const AksharaSectionEmpty(
+              message: 'All caught up — no pending tasks.',
+              icon: Icons.task_alt_outlined,
+            )
+          else
+            LayoutBuilder(
             builder: (context, constraints) {
               final isLargeMobile =
                   constraints.maxWidth >= largeMobileBreakpoint;

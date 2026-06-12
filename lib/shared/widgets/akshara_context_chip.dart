@@ -38,6 +38,8 @@ class AksharaContextChip extends StatelessWidget {
             color: colors.onPrimaryContainer,
             fontWeight: fontWeight,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );

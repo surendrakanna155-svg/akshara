@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../shared/widgets/akshara_status_chip.dart';
+import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -24,7 +24,10 @@ class NoticeCarousel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (notices.isEmpty) {
-      return const SizedBox.shrink();
+      return const AksharaSectionEmpty(
+        message: 'No school notices right now.',
+        icon: Icons.campaign_outlined,
+      );
     }
 
     return SizedBox(

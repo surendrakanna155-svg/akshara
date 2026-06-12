@@ -219,6 +219,8 @@ class _FilledKpiTile extends StatelessWidget {
                   color: accentColors.foreground,
                   fontWeight: FontWeight.w700,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AksharaSpacing.s1),
               Text(

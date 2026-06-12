@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -35,13 +36,14 @@ class EventCard extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: onTap,
-              child: SizedBox(
-                height: rowHeight,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: rowHeight),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     vertical: AksharaSpacing.s2,
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       _DateBox(day: event.day, month: event.month),
                       const SizedBox(width: AksharaSpacing.s3),
@@ -110,30 +112,39 @@ class _DateBox extends StatelessWidget {
     final text = context.aksharaText;
 
     return Container(
-      width: 48,
-      height: 48,
+      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AksharaSpacing.s1,
+        vertical: AksharaSpacing.s1,
+      ),
       decoration: BoxDecoration(
         color: colors.primaryContainer,
         borderRadius: AksharaRadius.chip,
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            '$day',
-            style: text.titleSmall.copyWith(
-              color: colors.onPrimaryContainer,
-              height: 1.1,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$day',
+              style: text.titleSmall.copyWith(
+                color: colors.onPrimaryContainer,
+                height: 1.1,
+              ),
             ),
-          ),
-          Text(
-            month,
-            style: text.labelSmall.copyWith(
-              color: colors.onPrimaryContainer,
-              height: 1.1,
+            Text(
+              month,
+              style: text.labelSmall.copyWith(
+                color: colors.onPrimaryContainer,
+                height: 1.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -153,7 +164,10 @@ class EventCardList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (events.isEmpty) {
-      return const SizedBox.shrink();
+      return const AksharaSectionEmpty(
+        message: 'No upcoming events scheduled.',
+        icon: Icons.event_outlined,
+      );
     }
 
     return Column(

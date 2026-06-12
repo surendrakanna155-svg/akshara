@@ -74,6 +74,8 @@ class AksharaStatusChip extends StatelessWidget {
           color: fg,
           fontWeight: resolvedWeight,
         ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
 

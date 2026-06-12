@@ -34,6 +34,8 @@ class AksharaQuickActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final effectiveMinHeight = minHeight * textScale.clamp(1, 2.25);
 
     final (iconBackground, iconColor, borderColor) = emphasis == null
         ? (
@@ -66,7 +68,7 @@ class AksharaQuickActionCard extends StatelessWidget {
           borderRadius: AksharaRadius.card,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: minHeight,
+              minHeight: effectiveMinHeight,
               minWidth: AksharaSpacing.minTouchTarget,
             ),
             child: Padding(
@@ -76,6 +78,8 @@ class AksharaQuickActionCard extends StatelessWidget {
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: 40,
@@ -130,6 +134,9 @@ class AksharaQuickActionGrid extends StatelessWidget {
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= tabletBreakpoint;
         final useTwoColumnGrid = isWide || children.length > 3;
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final baseAspect = isWide ? 1.35 : 1.5;
+        final aspectRatio = baseAspect / textScale.clamp(1, 2.25);
 
         if (useTwoColumnGrid) {
           return GridView.count(
@@ -138,21 +145,19 @@ class AksharaQuickActionGrid extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: AksharaSpacing.s3,
             crossAxisSpacing: AksharaSpacing.s3,
-            childAspectRatio: isWide ? 1.35 : 1.5,
+            childAspectRatio: aspectRatio,
             children: children,
           );
         }
 
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                if (i > 0) SizedBox(width: mobileItemSpacing),
-                Expanded(child: children[i]),
-              ],
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) SizedBox(width: mobileItemSpacing),
+              Expanded(child: children[i]),
             ],
-          ),
+          ],
         );
       },
     );

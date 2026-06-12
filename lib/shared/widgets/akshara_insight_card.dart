@@ -42,20 +42,21 @@ class AksharaInsightCard extends StatelessWidget {
           borderRadius: AksharaRadius.card,
           side: BorderSide(color: colors.outlineVariant),
         ),
-        child: SizedBox(
-          height: cardHeight,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: accentWidth,
-                decoration: BoxDecoration(
-                  color: accentColors.foreground,
-                  borderRadius: const BorderRadius.horizontal(
-                    left: Radius.circular(AksharaRadius.md),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: cardHeight),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: accentWidth,
+                  decoration: BoxDecoration(
+                    color: accentColors.foreground,
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(AksharaRadius.md),
+                    ),
                   ),
                 ),
-              ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -111,6 +112,7 @@ class AksharaInsightCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

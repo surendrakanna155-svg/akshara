@@ -80,7 +80,12 @@ class ParentDashboardScreen extends ConsumerWidget {
                       const SizedBox(height: AksharaSpacing.s4),
                       academic.when(
                         loading: () => const SizedBox.shrink(),
-                        error: (_, __) => const SizedBox.shrink(),
+                        error: (_, __) => AksharaSectionError(
+                          message: 'Academic summary unavailable.',
+                          onRetry: () => ref.invalidate(
+                            parentAcademicSummaryProvider,
+                          ),
+                        ),
                         data: (summary) => _AcademicHeroCard(
                           summary: summary,
                           onViewReport: () => _navigate('academic_report'),
@@ -187,7 +192,7 @@ class _ChildSummaryKpiRow extends StatelessWidget {
       children: [
         Expanded(
           child: AksharaKpiCard(
-            value: attendance ?? '—',
+            value: truncateStressLabel(attendance ?? '—'),
             subtitle: 'Attendance',
             accent: KpiAccent.success,
             icon: Icons.event_available_outlined,
@@ -207,7 +212,7 @@ class _ChildSummaryKpiRow extends StatelessWidget {
         const SizedBox(width: AksharaSpacing.s3),
         Expanded(
           child: AksharaKpiCard(
-            value: fees ?? '—',
+            value: truncateStressLabel(fees ?? '—'),
             subtitle: 'Fees due',
             accent: KpiAccent.error,
             icon: Icons.payments_outlined,

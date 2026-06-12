@@ -30,6 +30,7 @@ class AksharaChildSelectorChip extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(
             minHeight: AksharaSpacing.minTouchTarget,
+            maxWidth: 220,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -45,24 +46,30 @@ class AksharaChildSelectorChip extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AksharaSpacing.s2),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name,
-                    style: text.bodyMedium.copyWith(
-                      color: colors.onSurface,
-                      fontWeight: FontWeight.w600,
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      name,
+                      style: text.bodyMedium.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    'Class $classLabel',
-                    style: text.bodySmall.copyWith(
-                      color: colors.onSurfaceVariant,
+                    Text(
+                      'Class $classLabel',
+                      style: text.bodySmall.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(width: AksharaSpacing.s1),
               Icon(

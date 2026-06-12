@@ -41,7 +41,15 @@ class DailyScheduleStrip extends StatelessWidget {
             spacingBelow: AksharaSpacing.s3,
             trailingStyle: AksharaSectionHeaderTrailingStyle.compact,
           ),
-          LayoutBuilder(
+          if (periods.isEmpty)
+            AksharaSectionEmpty(
+              message: 'No periods scheduled today.',
+              icon: Icons.schedule_outlined,
+              actionLabel: onFullScheduleTap != null ? 'Full schedule' : null,
+              onAction: onFullScheduleTap,
+            )
+          else
+            LayoutBuilder(
             builder: (context, constraints) {
               final pillWidth = constraints.maxWidth >= largeMobileBreakpoint
                   ? 108.0

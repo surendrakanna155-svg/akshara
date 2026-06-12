@@ -52,6 +52,8 @@ class HeroCard extends StatelessWidget {
                           style: text.bodySmall.copyWith(
                             color: colors.onSurfaceVariant,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: AksharaSpacing.s1),
                         Text(
@@ -59,6 +61,8 @@ class HeroCard extends StatelessWidget {
                           style: text.headlineSmall.copyWith(
                             color: colors.onSurface,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),

@@ -24,8 +24,8 @@ class GreetingHeader extends StatelessWidget {
     return Semantics(
       header: true,
       label: '$eyebrow. $headline',
-      child: SizedBox(
-        height: height,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: height),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -33,12 +33,15 @@ class GreetingHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     eyebrow,
                     style: text.bodySmall.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: AksharaSpacing.s1),
                   Text(
