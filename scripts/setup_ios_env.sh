@@ -4,6 +4,8 @@
 set -euo pipefail
 
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PATH="${ROOT_DIR}/scripts/ios:${PATH}"
 
 if [[ ! -d "$DEVELOPER_DIR" ]]; then
   echo "ERROR: Xcode not found at $DEVELOPER_DIR"

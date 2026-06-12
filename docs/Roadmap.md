@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v17.0 iOS Release Readiness (`v17.0-ios-release-readiness`)  
-**Previous release:** v16.8 Testing Execution Readiness (`v16.8-testing-execution-readiness`)  
+**Current release:** v17.1 Apple Distribution Readiness (`v17.1-apple-distribution-readiness`)  
+**Previous release:** v17.0 iOS Release Readiness (`v17.0-ios-release-readiness`)  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

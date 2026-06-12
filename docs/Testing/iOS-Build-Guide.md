@@ -1,10 +1,10 @@
 # iOS Build Guide — Akshara ERP Pilot
 
-**Release:** v17.0 (`v17.0-ios-release-readiness`)  
+**Release:** v17.1 (`v17.1-apple-distribution-readiness`)  
 **Bundle ID:** `com.akshara.erp.aksharaErp`  
 **Deployment target:** iOS 13.0  
 **Display name:** Akshara ERP  
-**Version:** 17.0.0 (170)
+**Version:** 17.1.0 (171)
 
 ---
 

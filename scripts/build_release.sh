@@ -9,6 +9,7 @@ cd "$ROOT"
 # Native assets (objective_c) and xcrun require full Xcode when xcode-select
 # points at Command Line Tools. ios/Flutter/xcode.env.local mirrors this.
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+export PATH="${ROOT}/scripts/ios:${PATH}"
 
 TARGET="${1:-all}"
 

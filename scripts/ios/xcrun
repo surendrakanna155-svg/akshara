@@ -1,0 +1,5 @@
+#!/bin/sh
+# Wrapper so Dart native-asset hooks find the iOS SDK when hooks_runner
+# filters DEVELOPER_DIR out of the hook environment.
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+exec /usr/bin/xcrun "$@"
