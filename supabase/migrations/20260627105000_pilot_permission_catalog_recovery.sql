@@ -2,7 +2,18 @@
 -- Ensures permission_definitions exist when phase 8–16 migrations were marked applied
 -- but failed before INSERT (broken permissions table name in v15.7 chain).
 
--- from 20260620000001_education_permissions.sql
+-- from 20260615100000_analytics_intelligence.sql
+INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
+  ('viewAnalytics', 'Analytics', 'view', 'school', 'View analytics dashboards and trends'),
+  ('viewSchoolHealth', 'Analytics', 'view', 'school', 'View school health scores and composition')
+ON CONFLICT (slug) DO NOTHING;
+
+-- from 20260609100000_phase2_rls_scope.sql (pilot recovery)
+INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
+  ('viewSis', 'SIS', 'view', 'school', 'View student information system'),
+  ('viewFinance', 'Finance', 'view', 'school', 'View finance module')
+ON CONFLICT (slug) DO NOTHING;
+
 INSERT INTO permission_definitions (slug, module, action, scope, description) VALUES
   ('viewEducation', 'Education', 'view', 'school', 'View question papers, question bank, homework, and report remarks'),
   ('manageEducation', 'Education', 'manage', 'school', 'Generate and publish education content')

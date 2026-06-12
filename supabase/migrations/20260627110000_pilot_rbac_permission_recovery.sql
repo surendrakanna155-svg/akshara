@@ -11,7 +11,9 @@ ON CONFLICT (school_membership_id, role_slug) DO NOTHING;
 
 -- ─── School admin pilot grants ───────────────────────────────────────────────
 
-INSERT INTO role_permissions (role_slug, permission_slug) VALUES
+INSERT INTO role_permissions (role_slug, permission_slug)
+SELECT v.role_slug, v.permission_slug
+FROM (VALUES
   ('schoolAdmin', 'viewSubjects'),
   ('schoolAdmin', 'manageSubjects'),
   ('schoolAdmin', 'viewLessonLogs'),
@@ -72,11 +74,15 @@ INSERT INTO role_permissions (role_slug, permission_slug) VALUES
   ('schoolAdmin', 'viewTeacherEffectiveness'),
   ('schoolAdmin', 'viewAnalytics'),
   ('schoolAdmin', 'viewSchoolHealth')
+) AS v(role_slug, permission_slug)
+INNER JOIN role_definitions rd ON rd.slug = v.role_slug
+INNER JOIN permission_definitions pd ON pd.slug = v.permission_slug
 ON CONFLICT DO NOTHING;
+-- ─── Principal pilot grants ───────────────────────────────────────────────
 
--- ─── Principal pilot grants ──────────────────────────────────────────────────
-
-INSERT INTO role_permissions (role_slug, permission_slug) VALUES
+INSERT INTO role_permissions (role_slug, permission_slug)
+SELECT v.role_slug, v.permission_slug
+FROM (VALUES
   ('principal', 'viewSubjects'),
   ('principal', 'viewLessonLogs'),
   ('principal', 'viewStudentRisk'),
@@ -93,21 +99,29 @@ INSERT INTO role_permissions (role_slug, permission_slug) VALUES
   ('principal', 'viewSchoolHealth'),
   ('principal', 'viewParentAcademicSummary'),
   ('principal', 'viewParentInsights')
+) AS v(role_slug, permission_slug)
+INNER JOIN role_definitions rd ON rd.slug = v.role_slug
+INNER JOIN permission_definitions pd ON pd.slug = v.permission_slug
 ON CONFLICT DO NOTHING;
+-- ─── Parent mobile grants (reports/insights only — no open AI chat) ───────────────────────────────────────────────
 
--- ─── Parent mobile grants (reports/insights only — no open AI chat) ───────────
-
-INSERT INTO role_permissions (role_slug, permission_slug) VALUES
+INSERT INTO role_permissions (role_slug, permission_slug)
+SELECT v.role_slug, v.permission_slug
+FROM (VALUES
   ('parent', 'viewSis'),
   ('parent', 'viewFinance'),
   ('parent', 'viewParentExperience'),
   ('parent', 'viewParentInsights'),
   ('parent', 'viewParentAcademicSummary')
+) AS v(role_slug, permission_slug)
+INNER JOIN role_definitions rd ON rd.slug = v.role_slug
+INNER JOIN permission_definitions pd ON pd.slug = v.permission_slug
 ON CONFLICT DO NOTHING;
+-- ─── Teacher daily workflow grants ───────────────────────────────────────────────
 
--- ─── Teacher daily workflow grants ───────────────────────────────────────────
-
-INSERT INTO role_permissions (role_slug, permission_slug) VALUES
+INSERT INTO role_permissions (role_slug, permission_slug)
+SELECT v.role_slug, v.permission_slug
+FROM (VALUES
   ('teacher', 'viewSubjects'),
   ('teacher', 'viewLessonLogs'),
   ('teacher', 'manageLessonLogs'),
@@ -130,6 +144,9 @@ INSERT INTO role_permissions (role_slug, permission_slug) VALUES
   ('teacher', 'manageTeacherAssistant'),
   ('teacher', 'viewAchievementPromotion'),
   ('teacher', 'manageAchievementPromotion')
+) AS v(role_slug, permission_slug)
+INNER JOIN role_definitions rd ON rd.slug = v.role_slug
+INNER JOIN permission_definitions pd ON pd.slug = v.permission_slug
 ON CONFLICT DO NOTHING;
 
 UPDATE school_memberships SET permissions_version = permissions_version + 1;

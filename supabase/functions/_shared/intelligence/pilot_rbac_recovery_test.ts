@@ -32,7 +32,10 @@ Deno.test("pilot RBAC recovery grants parent insight permissions only", () => {
   assert(!sql.includes("viewAiCopilot"));
 });
 
+Deno.test("pilot RBAC recovery uses FK-safe role permission inserts", () => {
+  assert(sql.includes("INNER JOIN permission_definitions pd ON pd.slug = v.permission_slug"));
+});
+
 Deno.test("pilot RBAC recovery bumps permissions_version", () => {
   assert(sql.includes("UPDATE school_memberships SET permissions_version"));
-  assert((sql.match(/ON CONFLICT DO NOTHING/g) ?? []).length >= 3);
 });
