@@ -147,8 +147,15 @@ File under `reports/pilot_validation/` or project issue tracker.
 
 ## Reference
 
-- Demo seed phones: `docs/Operations/Pilot/Demo-Data-Guide.md`
-- Demo accounts (device testing): `docs/Testing/Demo-Accounts.md`
+- **Execution index (v16.8):** `docs/Releases/v16.8-Testing-Execution-Readiness.md`
+- iOS execution checklist: `docs/Testing/iOS-Execution-Checklist.md`
+- Android tester pack: `docs/Testing/Android-Tester-Pack.md`
+- iPhone tester pack: `docs/Testing/iPhone-Tester-Pack.md`
+- Real user journeys: `docs/Testing/Real-User-Journeys.md`
+- Demo validation: `docs/Testing/Demo-School-Validation.md`
+- Go-live audit: `docs/Testing/Release-Go-Live-Audit.md`
+- Bug triage: `docs/Testing/Bug-Triage-Process.md`
+- Demo accounts: `docs/Testing/Demo-Accounts.md`
 - Device test plan: `docs/Testing/Device-Test-Plan.md`
 - Tester onboarding: `docs/Testing/Tester-Instructions.md`
 - iOS / TestFlight: `docs/Testing/iOS-Build-Guide.md`
