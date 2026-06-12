@@ -184,6 +184,13 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Abandons an in-progress OTP flow so navigation can return to login.
+  void cancelOtpPending() {
+    if (state.status == AuthStatus.otpPending) {
+      state = const AuthState(status: AuthStatus.unauthenticated);
+    }
+  }
+
   /// Sends OTP for mobile login. Uses auth API when demo auth is disabled.
   Future<bool> sendOtp(String phoneNumber, UserRole role) async {
     final normalized = _normalizePhone(phoneNumber);

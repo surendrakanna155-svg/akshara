@@ -1,0 +1,61 @@
+{
+  "bugs": [
+    {
+      "id": "QA-001",
+      "severity": "critical",
+      "phase": 1,
+      "title": "OTP back button trapped on OTP screen",
+      "symptom": "App bar / system back navigates to login but router redirect forces user back to OTP while auth status is otpPending",
+      "rootCause": "_authRedirect rewrites any non-OTP location to OTP when AuthStatus.otpPending",
+      "fix": "AuthNotifier.cancelOtpPending() + PopScope on OTP screens; call before context.go(login)",
+      "status": "fixed",
+      "files": [
+        "lib/features/auth/auth_provider.dart",
+        "lib/features/auth/otp_verification_screen.dart",
+        "test/features/auth/first_run_navigation_test.dart"
+      ]
+    },
+    {
+      "id": "QA-002",
+      "severity": "high",
+      "phase": 6,
+      "title": "Staff OTP back leaves stale pending state",
+      "symptom": "Staff OTP back navigates to staff login but StaffLoginStatus remains otpPending",
+      "rootCause": "Back handler did not reset staffLoginProvider",
+      "fix": "staffLoginProvider.notifier.reset() on back + PopScope for system back",
+      "status": "fixed",
+      "files": ["lib/features/auth/staff/staff_otp_screen.dart"]
+    },
+    {
+      "id": "QA-003",
+      "severity": "high",
+      "phase": 3,
+      "title": "Teacher mobile login fails on staging API",
+      "symptom": "verify-otp with scope=teacher returns MEMBERSHIP_NOT_FOUND for seeded teacher phones",
+      "rootCause": "Demo school seed / backend membership scope gap (pre-existing from v17.4 validation)",
+      "fix": "Requires backend seed fix — out of client-only QA scope",
+      "status": "open",
+      "workaround": "Use Staff ERP portal for teacher phone until seed updated"
+    },
+    {
+      "id": "QA-004",
+      "severity": "medium",
+      "phase": 3,
+      "title": "Staging sends OTP for unregistered phones",
+      "symptom": "Any 10-digit phone receives dev-mode OTP on /auth/login; rejection only at verify",
+      "rootCause": "AUTH_OTP_DEV_MODE staging policy",
+      "fix": "Production SMS + allow-list at go-live",
+      "status": "open"
+    },
+    {
+      "id": "QA-005",
+      "severity": "low",
+      "phase": 5,
+      "title": "iPhone device UI validation incomplete",
+      "symptom": "Automated launch blocked when device locked during prior session",
+      "rootCause": "Manual device step required",
+      "fix": "Manual OTP walkthrough on unlocked iPhone",
+      "status": "open"
+    }
+  ]
+}

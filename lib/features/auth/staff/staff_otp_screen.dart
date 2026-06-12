@@ -84,12 +84,23 @@ class _StaffOtpScreenState extends ConsumerState<StaffOtpScreen> {
     final text = context.aksharaText;
     final loginState = ref.watch(staffLoginProvider);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          ref.read(staffLoginProvider.notifier).reset();
+          context.go(RouteNames.staffLogin);
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Verify OTP'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(RouteNames.staffLogin),
+          onPressed: () {
+            ref.read(staffLoginProvider.notifier).reset();
+            context.go(RouteNames.staffLogin);
+          },
         ),
       ),
       body: SafeArea(
@@ -168,6 +179,7 @@ class _StaffOtpScreenState extends ConsumerState<StaffOtpScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

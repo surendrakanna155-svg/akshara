@@ -1,0 +1,22 @@
+{
+  "tag": "v18.0-autonomous-qa",
+  "version": "18.0.0+180",
+  "completedAt": "2026-06-12",
+  "coverage": {
+    "totalAutomatedTests": 1291,
+    "routesCrawledByRouterSmoke": 123,
+    "routeConstantsDefined": 100,
+    "goldenScreenshots": 21,
+    "firstRunNavigationTests": 3,
+    "screensManuallyAudited": 1
+  },
+  "bugsFound": 5,
+  "bugsFixed": 2,
+  "severityAfterFix": {
+    "critical": 0,
+    "high": 1,
+    "medium": 2,
+    "low": 1
+  },
+  "releaseReadinessScore": 84
+}

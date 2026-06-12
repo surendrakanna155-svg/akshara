@@ -112,6 +112,11 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     }
   }
 
+  void _returnToLogin() {
+    ref.read(authProvider.notifier).cancelOtpPending();
+    context.go(RouteNames.login);
+  }
+
   Future<void> _resend() async {
     final digits = widget.phoneNumber.replaceAll(RegExp(r'\D'), '');
     final demoAuth = ref.read(isDemoAuthEnabledProvider);
@@ -140,12 +145,19 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     final demoAuth = ref.watch(isDemoAuthEnabledProvider);
     final role = _pendingRole;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _returnToLogin();
+        }
+      },
+      child: Scaffold(
       backgroundColor: colors.surface,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(RouteNames.login),
+          onPressed: _returnToLogin,
         ),
       ),
       body: SafeArea(
@@ -266,6 +278,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
             );
           },
         ),
+      ),
       ),
     );
   }
