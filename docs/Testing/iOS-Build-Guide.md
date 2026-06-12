@@ -1,17 +1,19 @@
 # iOS Build Guide — Akshara ERP Pilot
 
-**Release:** v16.7 (`v16.7-device-testing-preparation`)  
+**Release:** v17.0 (`v17.0-ios-release-readiness`)  
 **Bundle ID:** `com.akshara.erp.aksharaErp`  
 **Deployment target:** iOS 13.0  
-**Display name:** Akshara ERP
+**Display name:** Akshara ERP  
+**Version:** 17.0.0 (170)
 
 ---
 
-## Mac environment status (audit)
+## Mac environment status (audit — v17.0)
 
 Run on your build Mac:
 
 ```bash
+source scripts/setup_ios_env.sh
 flutter doctor -v
 xcodebuild -version
 pod --version
@@ -21,11 +23,12 @@ pod --version
 |-------------|-------------------------|--------|
 | Flutter stable | ✅ 3.44.1 | — |
 | Android toolchain | ✅ Ready | APK/AAB builds work |
-| **Full Xcode.app** | ❌ Not installed | Install from App Store |
-| **Xcode CLI tools** | ⚠️ Command Line Tools only | Switch to full Xcode (see below) |
-| **CocoaPods** | ❌ Not installed | `sudo gem install cocoapods` |
-| **Pod install** | ⏳ Pending | Run after Xcode + CocoaPods |
-| Apple Developer account | ⏳ Manual | Required for TestFlight |
+| **Full Xcode.app** | ✅ Installed (26.5) | — |
+| **Xcode CLI tools** | ⚠️ May point to CLT only | `sudo xcode-select --switch` or use `xcode.env.local` |
+| **CocoaPods** | ✅ 1.16.2 (Homebrew) | — |
+| **Pod install** | ✅ Clean | `cd ios && pod install` |
+| Apple Developer account | ⏳ Manual | Required for TestFlight / IPA |
+| Code signing certificates | ❌ **Blocker** | Sign in to Xcode → select Team |
 
 ### Blocker: Command Line Tools vs full Xcode
 

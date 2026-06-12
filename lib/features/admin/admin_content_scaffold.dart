@@ -64,10 +64,7 @@ class AdminContentScaffold extends ConsumerWidget {
             unreadNotifications: unreadNotifications,
             onSearchTap: onSearchTap ?? () => showGlobalSearchOverlay(context, ref),
             onNotificationsTap: onNotificationsTap ??
-                () => _showPlaceholderSnackBar(
-                      context,
-                      'Notifications coming soon.',
-                    ),
+                () => context.push(RouteNames.parentNotifications),
             onAiCopilotTap: onAiCopilotTap ??
                 () => context.go(RouteNames.copilot),
             onProfileTap: onProfileTap ??

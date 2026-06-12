@@ -1,7 +1,7 @@
 # Release Go-Live Audit — Akshara Pilot Execution
 
-**Release tag:** `v16.8-testing-execution-readiness`  
-**Baseline build:** 16.6.0 (166)  
+**Release tag:** `v17.0-ios-release-readiness`  
+**Baseline build:** 17.0.0 (170)  
 **Development status:** **FROZEN** — execution only  
 **Date:** June 2026
 
@@ -11,13 +11,13 @@
 
 | Channel | Go-live? | Notes |
 |---------|----------|-------|
-| **Android APK distribution** | ✅ **GO** | APK/AAB built; tester pack ready |
+| **Android APK distribution** | ✅ **GO** | APK/AAB rebuilt at v17.0 |
 | **Android pilot school** | ✅ **GO** | Demo school 58/58; journeys documented |
-| **iPhone TestFlight** | ⚠️ **NO-GO** | Xcode + CocoaPods not on build Mac |
+| **iPhone TestFlight** | ⚠️ **NO-GO** | Compile ✅ · IPA blocked on Apple signing |
 | **Friend testing (Android)** | ✅ **GO** | Immediate |
-| **Friend testing (iOS)** | ⚠️ **HOLD** | Complete [iOS-Execution-Checklist.md](iOS-Execution-Checklist.md) |
+| **Friend testing (iOS)** | ⚠️ **HOLD** | Complete [TestFlight-Upload-Guide.md](TestFlight-Upload-Guide.md) |
 
-**Overall execution readiness: 85/100**
+**Overall execution readiness: 88/100**
 
 ---
 
@@ -25,11 +25,13 @@
 
 | Gate | Result | Evidence |
 |------|--------|----------|
-| `flutter analyze` | ✅ 0 issues | v16.8 run |
-| `flutter test` | ✅ 1283 passed, 1 skipped | v16.8 run |
+| `flutter analyze` | ✅ 0 issues | v17.0 run |
+| `flutter test` | ✅ All passing | v17.0 run |
 | Staging demo validation | ✅ 58/58 | `validation_report.json` |
 | UI readiness | ✅ 99/100 | v16.5 stress test |
-| Android release build | ✅ | APK 73.3 MB, AAB 67.8 MB |
+| Android release build | ✅ | v17.0 rebuild |
+| iOS compile | ✅ | Xcode release build succeeds |
+| iOS IPA | ❌ | No code signing certificates |
 
 ---
 
@@ -78,11 +80,11 @@ Core pilot uses staging API with demo school. Mock OTP (`123456`) is **documente
 
 | ID | Finding | Pilot impact |
 |----|---------|--------------|
-| GL-01 | ERP notifications/profile "coming soon" snackbars | Low — mobile pilot unaffected |
+| GL-01 | ERP profile menu "coming soon" snackbar | Low — notifications now wired (v17.0) |
 | GL-02 | Student profile settings "coming soon" | Low |
 | GL-03 | Default Flutter launcher icons | Cosmetic — pre-store |
 | GL-04 | Android release signed with debug keystore | OK for sideload; replace for Play production |
-| GL-05 | iOS IPA not built | Blocks TestFlight only |
+| GL-05 | iOS IPA not built | Blocks TestFlight — signing certificates required (v17.0) |
 
 ### No release blockers in scope ✅
 
@@ -101,7 +103,9 @@ No Critical items open. Android distribution approved.
 | Real user journeys | `docs/Testing/Real-User-Journeys.md` | ✅ |
 | Bug triage process | `docs/Testing/Bug-Triage-Process.md` | ✅ |
 | Bug report template | `docs/Testing/Bug-Report-Template.md` | ✅ (v16.7) |
-| Build script | `scripts/build_release.sh` | ✅ (v16.6) |
+| TestFlight upload guide | `docs/Testing/TestFlight-Upload-Guide.md` | ✅ v17.0 |
+| Final device readiness | `docs/Testing/Final-Device-Readiness.md` | ✅ v17.0 |
+| iOS env setup script | `scripts/setup_ios_env.sh` | ✅ v17.0 |
 
 ---
 
@@ -109,9 +113,9 @@ No Critical items open. Android distribution approved.
 
 | # | Blocker | Blocks | Resolution |
 |---|---------|--------|------------|
-| 1 | Full Xcode.app not installed | TestFlight | App Store install + checklist Phase 1 |
-| 2 | CocoaPods not installed | TestFlight | `gem install cocoapods` |
-| 3 | IPA not uploaded | iPhone friends | `./scripts/build_release.sh ipa` → App Store Connect |
+| 1 | Apple Developer code signing | TestFlight IPA | Xcode → Accounts → Team → `./scripts/build_release.sh ipa` |
+| 2 | `xcode-select` → CLI tools (optional) | `flutter doctor` without env | `sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer` |
+| 3 | IPA not uploaded | iPhone friends | [TestFlight-Upload-Guide.md](TestFlight-Upload-Guide.md) |
 | 4 | Production signing keystore | Play Store public release | Out of pilot scope |
 
 ---
@@ -120,13 +124,13 @@ No Critical items open. Android distribution approved.
 
 | Role | Android pilot | iOS TestFlight |
 |------|---------------|----------------|
-| Engineering | ✅ Ready | ⏳ Environment pending |
+| Engineering | ✅ Ready | ✅ Compile ready · ⏳ Signing |
 | QA | ✅ Docs + gates green | ⏳ Pending device smoke |
-| Release manager | ✅ Approve APK send | ⏳ Approve after IPA |
+| Release manager | ✅ Approve APK send | ⏳ Approve after IPA + TestFlight |
 
 ---
 
 ## Reference index
 
 All testing docs: `docs/Testing/`  
-Release history: `docs/Releases/v16.8-Testing-Execution-Readiness.md`
+Release history: `docs/Releases/v17.0-iOS-Release-Readiness.md`
