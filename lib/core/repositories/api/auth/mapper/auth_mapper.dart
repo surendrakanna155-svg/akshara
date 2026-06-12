@@ -69,6 +69,11 @@ class AuthMapper {
       mobile: raw['mobile'] as String? ?? raw['phone'] as String?,
       schoolId: raw['schoolId'] as String?,
       organizationId: raw['organizationId'] as String?,
+      scope: raw['scope'] as String?,
+      childIds: [
+        for (final id in (raw['childIds'] as List<dynamic>? ?? const []))
+          if (id is String) id,
+      ],
     );
   }
 

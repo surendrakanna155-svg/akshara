@@ -49,6 +49,7 @@ class Environment {
     apiBaseUrl: 'https://staging-api.aksharaerp.com/v1',
     enableApiMode: false,
     enableLogging: true,
+    disableDemoAuth: true,
   );
 
   static const production = Environment(
@@ -65,6 +66,8 @@ class Environment {
   /// - `APP_ENV=development|staging|production`
   /// - `API_BASE_URL` (optional override)
   /// - `ENABLE_API_MODE=true` (master API switch)
+  /// When true, explicit local demo/testing auth (role picker + mock OTP) is allowed.
+  /// Requires `--dart-define=ENABLE_DEMO_AUTH=true`. Off by default for staging/production.
   static Environment fromDartDefine() {
     const raw = String.fromEnvironment('APP_ENV', defaultValue: 'development');
     const apiBaseUrl = String.fromEnvironment(
@@ -73,6 +76,10 @@ class Environment {
     );
     const enableApiMode = bool.fromEnvironment(
       'ENABLE_API_MODE',
+      defaultValue: false,
+    );
+    const enableDemoAuth = bool.fromEnvironment(
+      'ENABLE_DEMO_AUTH',
       defaultValue: false,
     );
     final base = switch (raw.toLowerCase()) {
@@ -86,6 +93,9 @@ class Environment {
     }
     if (enableApiMode) {
       resolved = resolved.copyWith(enableApiMode: true);
+    }
+    if (enableDemoAuth) {
+      resolved = resolved.copyWith(disableDemoAuth: false);
     }
     return resolved;
   }

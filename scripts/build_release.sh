@@ -20,6 +20,8 @@ DART_DEFINES=(
   "--dart-define=APP_ENV=staging"
   "--dart-define=API_BASE_URL=${STAGING_API_BASE}"
   "--dart-define=ENABLE_API_MODE=true"
+  "--dart-define=AUTH_API_ENABLED=true"
+  "--dart-define=AUTH_API_ENABLED=true"
   "--dart-define=ADMISSIONS_API_ENABLED=true"
   "--dart-define=FINANCE_API_ENABLED=true"
   "--dart-define=SIS_API_ENABLED=true"

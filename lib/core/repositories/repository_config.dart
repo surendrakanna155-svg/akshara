@@ -20,7 +20,13 @@ import '../config/environment_provider.dart';
 ///
 /// HR: set `--dart-define=ENABLE_API_MODE=true` and
 /// `--dart-define=HR_API_ENABLED=true` for staging API mode.
-final authApiEnabledProvider = Provider<bool>((ref) => false);
+final authApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'AUTH_API_ENABLED',
+    defaultValue: true,
+  );
+});
 final admissionsApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(

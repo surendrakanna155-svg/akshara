@@ -11,8 +11,13 @@ void main() {
       expect(env.enableLogging, isFalse);
     });
 
-    test('staging allows demo auth until API mode enabled', () {
+    test('staging disables demo auth by default (pilot hardened)', () {
       const env = Environment.staging;
+      expect(env.disableDemoAuth, isTrue);
+    });
+
+    test('ENABLE_DEMO_AUTH opt-in re-enables testing mode', () {
+      final env = Environment.staging.copyWith(disableDemoAuth: false);
       expect(env.disableDemoAuth, isFalse);
     });
   });

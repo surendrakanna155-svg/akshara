@@ -8,17 +8,19 @@ import '../../core/auth/auth_session_manager.dart';
 import '../../core/auth/token_refresh_service.dart';
 import '../../core/config/environment_provider.dart';
 import '../../core/providers/shared_preferences_provider.dart';
+import '../../core/repositories/interfaces/auth_repository.dart';
 import '../../core/security/server_permission_models.dart';
 import '../../core/security/server_permission_provider.dart';
 import '../../core/security/erp_role.dart';
 import 'auth_claims.dart';
 import 'auth_models.dart';
+import 'auth_role_mapping.dart';
 import 'auth_session_storage.dart';
 import 'auth_token_models.dart';
 import 'auth_token_provider.dart';
 import 'staff/staff_login_provider.dart';
 
-/// Demo OTP accepted by mock verification (any 6-digit code also works).
+/// Demo OTP accepted only when explicit testing mode is enabled.
 const String kMockValidOtp = '123456';
 
 /// Mock display names per demo role.
@@ -83,6 +85,15 @@ class AuthNotifier extends Notifier<AuthState> {
       return;
     }
 
+    final hardened = ref.read(environmentProvider).disableDemoAuth;
+    final tokenStorage = ref.read(tokenStorageProvider);
+    final tokens = await tokenStorage.read();
+
+    if (hardened && (tokens == null || tokens.accessToken.isEmpty)) {
+      await logout();
+      return;
+    }
+
     final role = UserRole.fromName(persisted.role) ?? UserRole.parent;
     final selectedChild = persisted.hasSelectedChild
         ? LinkedChild(
@@ -92,9 +103,15 @@ class AuthNotifier extends Notifier<AuthState> {
           )
         : null;
 
-    final tokenStorage = ref.read(tokenStorageProvider);
-    final tokens = await tokenStorage.read();
-    var claims = persisted.claims ?? _claimsForRole(role);
+    var claims = persisted.claims;
+    if (claims == null && !hardened) {
+      claims = _claimsForRole(role);
+    }
+    if (claims == null) {
+      await logout();
+      return;
+    }
+
     final sessionMetadata = await ref.read(sessionMetadataStorageProvider).read();
 
     final sessionManager = ref.read(authSessionManagerProvider);
@@ -123,7 +140,7 @@ class AuthNotifier extends Notifier<AuthState> {
       await _touchSessionMetadata(activeTokens);
     }
 
-    if (claims != null && isAuthApiEnabled(ref)) {
+    if (isAuthApiEnabled(ref)) {
       await syncAuthPermissions(
         ref,
         userId: claims.userId,
@@ -167,18 +184,22 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// Sends a mock OTP to [phoneNumber] for the selected demo [role].
+  /// Sends OTP for mobile login. Uses auth API when demo auth is disabled.
   Future<bool> sendOtp(String phoneNumber, UserRole role) async {
-    if (ref.read(environmentProvider).disableDemoAuth) {
-      return false;
-    }
-
     final normalized = _normalizePhone(phoneNumber);
     if (normalized.length != 10) {
       return false;
     }
 
-    if (!kDemoLoginRoles.contains(role)) {
+    if (_useProductionMobileAuth) {
+      return _sendOtpViaApi(normalized);
+    }
+
+    if (ref.read(environmentProvider).disableDemoAuth) {
+      return false;
+    }
+
+    if (!kDemoLoginRoles.contains(role) && role != UserRole.staff) {
       return false;
     }
 
@@ -194,20 +215,125 @@ class AuthNotifier extends Notifier<AuthState> {
     return true;
   }
 
-  /// Verifies OTP. Accepts [kMockValidOtp] or any 6-digit code in mock mode.
-  Future<bool> verifyOtp(String otp) async {
+  /// Applies a testing-mode account selection (explicit opt-in only).
+  Future<void> applyTestingAccount(TestingLoginAccount account) async {
     if (ref.read(environmentProvider).disableDemoAuth) {
+      return;
+    }
+    await _storage.writeDemoRolePreference(account.role);
+    ref.read(demoLoginRoleProvider.notifier).state = account.role;
+    if (account.staffErpRole != null) {
+      await setStaffErpRole(account.staffErpRole!);
+    }
+  }
+
+  bool get _useProductionMobileAuth =>
+      ref.read(environmentProvider).disableDemoAuth && isAuthApiEnabled(ref);
+
+  Future<bool> _sendOtpViaApi(String phone) async {
+    try {
+      final session = await ref.read(authRepositoryProvider).login(
+            phone,
+            identifierType: 'mobile',
+          );
+      if (!session.success) {
+        return false;
+      }
+      state = AuthState(
+        status: AuthStatus.otpPending,
+        phoneNumber: phone,
+      );
+      return true;
+    } on Object {
       return false;
     }
+  }
 
+  /// Verifies OTP via API (production) or strict mock OTP (testing mode).
+  Future<bool> verifyOtp(String otp) async {
     if (state.status != AuthStatus.otpPending) {
       return false;
     }
 
+    if (_useProductionMobileAuth) {
+      return _verifyOtpViaApi(otp);
+    }
+
+    if (ref.read(environmentProvider).disableDemoAuth) {
+      return false;
+    }
+
+    return _verifyOtpDemo(otp);
+  }
+
+  Future<bool> _verifyOtpViaApi(String otp) async {
+    final phone = state.phoneNumber;
+    if (phone == null || phone.isEmpty) {
+      return false;
+    }
+
+    try {
+      final result = await ref.read(authRepositoryProvider).verifyOtp(
+            phone,
+            otp.trim(),
+            identifierType: 'mobile',
+          );
+      if (result == null || result.tokens.accessToken.isEmpty) {
+        return false;
+      }
+      return _completeMobileApiAuth(result);
+    } on Object {
+      return false;
+    }
+  }
+
+  Future<bool> _completeMobileApiAuth(AuthVerificationResult result) async {
+    final user = result.user;
+    final role = userRoleFromAuthUser(user);
+    final linkedChildren = linkedChildrenFromAuthUser(user);
+    final selectedChild = linkedChildren.isNotEmpty ? linkedChildren.first : null;
+
+    final claims = AuthClaims(
+      userId: user.id,
+      erpRole: user.erpRole,
+      tenantId: user.tenantId,
+      schoolId: user.schoolId,
+      organizationId: user.organizationId,
+      permissions: [
+        for (final entry in result.permissions) entry.permission,
+      ],
+      accessTokenExpiresAt: result.tokens.expiresAt,
+    );
+
+    state = AuthState(
+      status: AuthStatus.authenticated,
+      phoneNumber: user.mobile ?? state.phoneNumber,
+      displayName: user.displayName,
+      role: role,
+      selectedChild: selectedChild,
+      linkedChildren: linkedChildren,
+      claims: claims,
+    );
+
+    await ref.read(tokenStorageProvider).write(result.tokens);
+    await _persistSession();
+    _scheduleRefresh(result.tokens);
+
+    if (isAuthApiEnabled(ref)) {
+      await syncAuthPermissions(
+        ref,
+        userId: user.id,
+        tenantId: user.tenantId,
+      );
+    }
+
+    await _auditLogin();
+    return true;
+  }
+
+  Future<bool> _verifyOtpDemo(String otp) async {
     final code = otp.trim();
-    final isValid = code == kMockValidOtp ||
-        (code.length == 6 && int.tryParse(code) != null);
-    if (!isValid) {
+    if (code != kMockValidOtp) {
       return false;
     }
 

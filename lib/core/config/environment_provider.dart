@@ -7,6 +7,11 @@ final environmentProvider = Provider<Environment>((ref) {
   return Environment.fromDartDefine();
 });
 
+/// Whether explicit demo/testing auth is enabled (local dev only unless dart-define).
+final isDemoAuthEnabledProvider = Provider<bool>((ref) {
+  return !ref.watch(environmentProvider).disableDemoAuth;
+});
+
 /// Whether any API repository may be activated (master switch).
 final enableApiModeProvider = Provider<bool>((ref) {
   return ref.watch(environmentProvider).enableApiMode;

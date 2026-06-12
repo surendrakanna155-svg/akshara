@@ -93,8 +93,7 @@ class MockStaffOtpWorkflow implements StaffOtpWorkflow {
     await Future<void>.delayed(const Duration(milliseconds: 500));
 
     final otp = request.otp.trim();
-    final isValid = otp == validOtp ||
-        (otp.length == 6 && int.tryParse(otp) != null);
+    final isValid = otp == validOtp;
     if (!isValid) return null;
 
     final userId = 'staff_${_normalize(request.identifier)}';

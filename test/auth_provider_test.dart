@@ -47,6 +47,13 @@ void main() {
     expect(auth().role, UserRole.parent);
   });
 
+  test('verifyOtp rejects invalid OTP in demo mode', () async {
+    await notifier().sendOtp('9876543210', UserRole.parent);
+    final ok = await notifier().verifyOtp('000000');
+    expect(ok, isFalse);
+    expect(auth().isAuthenticated, isFalse);
+  });
+
   test('verifyOtp authenticates parent and persists session', () async {
     await notifier().sendOtp('9876543210', UserRole.parent);
     final ok = await notifier().verifyOtp(kMockValidOtp);

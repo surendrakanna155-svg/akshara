@@ -35,8 +35,7 @@ class MockAuthRepository implements AuthRepository {
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
     final code = otp.trim();
-    final isValid =
-        code == validOtp || (code.length == 6 && int.tryParse(code) != null);
+    final isValid = code == validOtp;
     if (!isValid) return null;
 
     final userId = 'staff_${_normalize(identifier)}';

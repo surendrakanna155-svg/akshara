@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/environment_provider.dart';
 import '../../router/app_router.dart';
 import '../../router/route_names.dart';
 import '../../theme/radius.dart';
@@ -98,21 +99,36 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
       final auth = ref.read(authProvider);
       context.go(homeRouteForRole(auth.role));
     } else {
+      final demoAuth = ref.read(isDemoAuthEnabledProvider);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid OTP. Try 123456 for demo.')),
+        SnackBar(
+          content: Text(
+            demoAuth
+                ? 'Invalid OTP. Testing mode accepts $kMockValidOtp only.'
+                : 'Invalid OTP or unregistered phone number.',
+          ),
+        ),
       );
     }
   }
 
   Future<void> _resend() async {
     final digits = widget.phoneNumber.replaceAll(RegExp(r'\D'), '');
+    final demoAuth = ref.read(isDemoAuthEnabledProvider);
     final role = _pendingRole;
-    await ref.read(authProvider.notifier).sendOtp(digits, role);
+    await ref.read(authProvider.notifier).sendOtp(
+          digits,
+          demoAuth ? role : UserRole.parent,
+        );
     if (!mounted) {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('OTP resent (mock)')),
+      SnackBar(
+        content: Text(
+          demoAuth ? 'OTP resent (testing mode)' : 'OTP resent',
+        ),
+      ),
     );
     _startResendTimer();
   }
@@ -121,6 +137,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
+    final demoAuth = ref.watch(isDemoAuthEnabledProvider);
     final role = _pendingRole;
 
     return Scaffold(
@@ -170,13 +187,14 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                         ),
                       ),
                       const SizedBox(height: AksharaSpacing.s2),
-                      Text(
-                        'Signing in as ${role.label}',
-                        style: text.labelLarge.copyWith(
-                          color: colors.primary,
-                          fontWeight: FontWeight.w600,
+                      if (demoAuth)
+                        Text(
+                          'Testing as ${role.label}',
+                          style: text.labelLarge.copyWith(
+                            color: colors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: AksharaSpacing.s8),
                       TextFormField(
                         controller: _otpController,

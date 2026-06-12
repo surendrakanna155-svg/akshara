@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/environment_provider.dart';
 import '../../features/school_completion/school_branding_theme_provider.dart';
 import '../../router/route_names.dart';
 import '../../theme/radius.dart';
@@ -11,7 +12,7 @@ import '../../theme/theme_extensions.dart';
 import 'auth_models.dart';
 import 'auth_provider.dart';
 
-/// P-03 Login — phone, demo role selector, and OTP entry (mock).
+/// P-03 Login — phone OTP with production API or explicit testing mode.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -26,6 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   bool _isSubmitting = false;
+  TestingLoginAccount? _selectedTestingAccount;
 
   @override
   void dispose() {
@@ -40,7 +42,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() => _isSubmitting = true);
     final phone = _phoneController.text.trim();
-    final role = ref.read(demoLoginRoleProvider);
+    final demoAuth = ref.read(isDemoAuthEnabledProvider);
+    final UserRole role;
+    if (demoAuth) {
+      role = _selectedTestingAccount?.role ?? ref.read(demoLoginRoleProvider);
+    } else {
+      role = UserRole.parent;
+    }
+
+    if (demoAuth && _selectedTestingAccount != null) {
+      await ref
+          .read(authProvider.notifier)
+          .applyTestingAccount(_selectedTestingAccount!);
+    }
+
     final sent = await ref.read(authProvider.notifier).sendOtp(phone, role);
     if (!mounted) {
       return;
@@ -48,21 +63,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _isSubmitting = false);
 
     if (sent) {
+      final roleQuery = demoAuth ? '&role=${role.name}' : '';
       context.go(
-        '${RouteNames.otpVerification}?phone=$phone&role=${role.name}',
+        '${RouteNames.otpVerification}?phone=$phone$roleQuery',
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid 10-digit mobile number')),
+        SnackBar(
+          content: Text(
+            demoAuth
+                ? 'Enter a valid 10-digit mobile number'
+                : 'Unable to send OTP. Use a registered demo-school phone number.',
+          ),
+        ),
       );
     }
+  }
+
+  void _selectTestingAccount(TestingLoginAccount account) {
+    setState(() {
+      _selectedTestingAccount = account;
+      _phoneController.text = account.phone;
+    });
+    ref.read(authProvider.notifier).applyTestingAccount(account);
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
-    final selectedRole = ref.watch(demoLoginRoleProvider);
+    final demoAuth = ref.watch(isDemoAuthEnabledProvider);
     final schoolName = ref.watch(schoolDisplayNameProvider);
     final logoUrl = ref.watch(schoolLogoUrlProvider);
 
@@ -122,11 +152,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: AksharaSpacing.s2),
                         Text(
-                          'Demo mode — choose your role and sign in with any 10-digit mobile number.',
+                          demoAuth
+                              ? 'Testing mode — choose a demo account, then sign in with OTP 123456.'
+                              : 'Enter your registered mobile number. OTP is verified by the staging server.',
                           style: text.bodyMedium.copyWith(
                             color: colors.onSurfaceVariant,
                           ),
                         ),
+                        if (demoAuth) ...[
+                          const SizedBox(height: AksharaSpacing.s6),
+                          Text(
+                            'Testing accounts',
+                            style: text.labelLarge,
+                          ),
+                          const SizedBox(height: AksharaSpacing.s2),
+                          Wrap(
+                            spacing: AksharaSpacing.s2,
+                            runSpacing: AksharaSpacing.s2,
+                            children: [
+                              for (final account in kTestingLoginAccounts)
+                                ChoiceChip(
+                                  label: Text(account.label),
+                                  selected:
+                                      _selectedTestingAccount?.phone ==
+                                          account.phone,
+                                  onSelected: (_) =>
+                                      _selectTestingAccount(account),
+                                ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: AksharaSpacing.s8),
                         Text(
                           'Mobile number',
@@ -165,7 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ],
                               ),
                             ),
-                            hintText: '9876543210',
+                            hintText: demoAuth ? '9000100001' : '9876543210',
                             border: OutlineInputBorder(
                               borderRadius: AksharaRadius.inputBorder,
                             ),
@@ -178,32 +233,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             }
                             return null;
                           },
-                        ),
-                        const SizedBox(height: AksharaSpacing.s6),
-                        Text(
-                          'Role',
-                          style: text.labelLarge,
-                        ),
-                        const SizedBox(height: AksharaSpacing.s2),
-                        Semantics(
-                          label: 'Select login role',
-                          child: SegmentedButton<UserRole>(
-                            segments: [
-                              for (final role in kDemoLoginRoles)
-                                ButtonSegment<UserRole>(
-                                  value: role,
-                                  label: Text(role.label),
-                                  icon: Icon(role.demoIcon, size: 18),
-                                ),
-                            ],
-                            selected: {selectedRole},
-                            onSelectionChanged: (selection) {
-                              final role = selection.first;
-                              ref
-                                  .read(authProvider.notifier)
-                                  .setDemoLoginRole(role);
-                            },
-                          ),
                         ),
                         const SizedBox(height: AksharaSpacing.s6),
                         FilledButton(
@@ -225,14 +254,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 )
                               : const Text('Continue'),
                         ),
-                        const SizedBox(height: AksharaSpacing.s4),
-                        Text(
-                          'Demo OTP: 123456 (or any 6-digit code)',
-                          style: text.bodySmall.copyWith(
-                            color: colors.onSurfaceVariant,
+                        if (demoAuth) ...[
+                          const SizedBox(height: AksharaSpacing.s4),
+                          Text(
+                            'Testing OTP: $kMockValidOtp only',
+                            style: text.bodySmall.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
-                        ),
+                        ],
                         const SizedBox(height: AksharaSpacing.s4),
                         TextButton.icon(
                           onPressed: () => context.go(RouteNames.staffLogin),

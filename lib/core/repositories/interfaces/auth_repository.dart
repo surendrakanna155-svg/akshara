@@ -39,6 +39,8 @@ class AuthUser {
     this.mobile,
     this.schoolId,
     this.organizationId,
+    this.scope,
+    this.childIds = const [],
   });
 
   final String id;
@@ -49,6 +51,12 @@ class AuthUser {
   final String? mobile;
   final String? schoolId;
   final String? organizationId;
+
+  /// Auth scope from server (`parent`, `teacher`, `student`, `school`).
+  final String? scope;
+
+  /// Linked child ids for parent accounts.
+  final List<String> childIds;
 }
 
 /// Server-granted permission entry.

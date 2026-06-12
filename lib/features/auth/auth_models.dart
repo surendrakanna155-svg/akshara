@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/security/erp_role.dart';
 import 'auth_claims.dart';
 
 /// Akshara ERP roles — persisted for multi-app routing (Parent, Teacher, etc.).
@@ -41,6 +42,45 @@ const List<UserRole> kDemoLoginRoles = [
   UserRole.parent,
   UserRole.teacher,
   UserRole.student,
+];
+
+/// Explicit testing-mode accounts — choose intentionally; never auto-selected.
+class TestingLoginAccount {
+  const TestingLoginAccount({
+    required this.label,
+    required this.phone,
+    required this.role,
+    this.staffErpRole,
+  });
+
+  final String label;
+  final String phone;
+  final UserRole role;
+  final ErpRole? staffErpRole;
+}
+
+const List<TestingLoginAccount> kTestingLoginAccounts = [
+  TestingLoginAccount(
+    label: 'Principal',
+    phone: '9876543210',
+    role: UserRole.staff,
+    staffErpRole: ErpRole.principal,
+  ),
+  TestingLoginAccount(
+    label: 'Teacher',
+    phone: '9000000001',
+    role: UserRole.teacher,
+  ),
+  TestingLoginAccount(
+    label: 'Parent',
+    phone: '9000100001',
+    role: UserRole.parent,
+  ),
+  TestingLoginAccount(
+    label: 'Student',
+    phone: '9876543212',
+    role: UserRole.student,
+  ),
 ];
 
 /// Child linked to a parent account (multi-child households).
