@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
@@ -69,7 +71,7 @@ class FinanceDashboardScreen extends ConsumerWidget {
             message:
                 '${data.defaultersCount} defaulters with outstanding ${data.outstandingAmount}. Review pending fees.',
             actionLabel: 'View defaulters',
-            onAction: () {},
+            onAction: () => context.go(RouteNames.financeDefaulters),
           ),
         if (data.defaultersCount > 40)
           const SizedBox(height: AksharaSpacing.s4),
@@ -95,7 +97,7 @@ class FinanceDashboardScreen extends ConsumerWidget {
             actionLabel: 'Review defaulters',
             icon: Icons.auto_awesome_outlined,
             semanticLabelPrefix: 'AI finance insight',
-            onAction: () {},
+            onAction: () => context.go(RouteNames.financeDefaulters),
           ),
         ] else
           Row(
@@ -135,7 +137,7 @@ class FinanceDashboardScreen extends ConsumerWidget {
                       actionLabel: 'Review defaulters',
                       icon: Icons.auto_awesome_outlined,
                       semanticLabelPrefix: 'AI finance insight',
-                      onAction: () {},
+                      onAction: () => context.go(RouteNames.financeDefaulters),
                     ),
                   ],
                 ),

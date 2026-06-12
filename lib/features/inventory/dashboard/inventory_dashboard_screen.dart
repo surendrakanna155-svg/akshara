@@ -39,7 +39,7 @@ class InventoryDashboardScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageInventory,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaExportQueuedSnackBar(context),
           icon: const Icon(Icons.download_outlined, size: 18),
           label: const Text('Export'),
         ),

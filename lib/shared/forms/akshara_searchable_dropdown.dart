@@ -1,0 +1,75 @@
+import 'package:flutter/material.dart';
+
+import '../../theme/spacing.dart';
+
+/// Searchable dropdown for form catalogs (classes, sections, etc.).
+class AksharaSearchableDropdown extends StatelessWidget {
+  const AksharaSearchableDropdown({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+    this.required = false,
+    this.errorText,
+    this.resolveSelection,
+    this.enabled = true,
+  });
+
+  final String label;
+  final String value;
+  final List<String> options;
+  final ValueChanged<String> onChanged;
+  final bool required;
+  final String? errorText;
+  final String Function(String selected, List<String> options)? resolveSelection;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final selection = resolveSelection != null
+        ? resolveSelection!(value, options)
+        : options.contains(value)
+            ? value
+            : (options.isNotEmpty ? options.first : value);
+    final decorationLabel = required ? '$label *' : label;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownMenu<String>(
+          key: ValueKey('$decorationLabel-$selection'),
+          enabled: enabled,
+          initialSelection: selection,
+          label: Text(decorationLabel),
+          expandedInsets: EdgeInsets.zero,
+          requestFocusOnTap: true,
+          enableFilter: options.length > 6,
+          filterCallback: (entries, filter) {
+            if (filter.isEmpty) return entries;
+            final query = filter.toLowerCase();
+            return entries
+                .where((entry) => entry.label.toLowerCase().contains(query))
+                .toList();
+          },
+          dropdownMenuEntries: [
+            for (final option in options)
+              DropdownMenuEntry(value: option, label: option),
+          ],
+          onSelected: (selected) {
+            if (selected != null) onChanged(selected);
+          },
+        ),
+        if (errorText != null && errorText!.isNotEmpty) ...[
+          const SizedBox(height: AksharaSpacing.s1),
+          Text(
+            errorText!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+          ),
+        ],
+      ],
+    );
+  }
+}

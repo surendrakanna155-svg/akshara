@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../router/route_names.dart';
@@ -6,10 +7,11 @@ import '../../theme/spacing.dart';
 import 'admin_app_bar.dart';
 import 'admin_filter_bar.dart';
 import 'admin_layout.dart';
+import 'global_search/global_search_overlay.dart';
 import 'models/admin_nav_models.dart';
 
 /// Page scaffold for web ERP modules: app bar, optional filter bar, 1440-grid body.
-class AdminContentScaffold extends StatelessWidget {
+class AdminContentScaffold extends ConsumerWidget {
   const AdminContentScaffold({
     super.key,
     required this.breadcrumbs,
@@ -50,7 +52,7 @@ class AdminContentScaffold extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ColoredBox(
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
       child: Column(
@@ -60,11 +62,7 @@ class AdminContentScaffold extends StatelessWidget {
             breadcrumbs: breadcrumbs,
             onMenuTap: onMenuTap,
             unreadNotifications: unreadNotifications,
-            onSearchTap: onSearchTap ??
-                () => _showPlaceholderSnackBar(
-                      context,
-                      'Global search coming soon.',
-                    ),
+            onSearchTap: onSearchTap ?? () => showGlobalSearchOverlay(context, ref),
             onNotificationsTap: onNotificationsTap ??
                 () => _showPlaceholderSnackBar(
                       context,

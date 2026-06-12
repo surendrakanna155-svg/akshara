@@ -1,3 +1,7 @@
+import 'package:akshara_erp/features/finance/dashboard/finance_dashboard_provider.dart';
+import 'package:akshara_erp/features/inventory/inventory_providers.dart';
+import 'package:akshara_erp/features/management/management_providers.dart';
+import 'package:akshara_erp/features/management/intelligence/intelligence_provider.dart';
 import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_provider.dart';
 import 'package:akshara_erp/features/student/dashboard/student_dashboard_provider.dart';
 import 'package:akshara_erp/features/teacher/dashboard/teacher_dashboard_provider.dart';
@@ -5,6 +9,7 @@ import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import '../helpers/provider_test_overrides.dart';
 import '../test_helpers.dart';
@@ -78,3 +83,47 @@ Future<void> pumpGoldenDashboard(
 
 String goldenFileName(String prefix, String viewportLabel) =>
     'goldens/${prefix}_$viewportLabel.png';
+
+/// Pumps an ERP module screen with stable mock providers.
+Future<void> pumpGoldenErpScreen(
+  WidgetTester tester, {
+  required Widget screen,
+  required Size viewport,
+  List<Override> extraOverrides = const [],
+}) async {
+  suppressGoldenOverflowErrors();
+  useGoldenViewport(tester, viewport);
+  await initProviderTestPrefs();
+
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (_, __) => screen,
+      ),
+    ],
+  );
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: erpWidgetTestOverrides([
+        parentDashboardLoadingProvider.overrideWith((ref) => false),
+        teacherDashboardLoadingProvider.overrideWith((ref) => false),
+        studentDashboardLoadingProvider.overrideWith((ref) => false),
+        managementDashboardLoadingProvider.overrideWith((ref) => false),
+        financeDashboardLoadingProvider.overrideWith((ref) => false),
+        inventoryDashboardLoadingProvider.overrideWith((ref) => false),
+        intelligenceCanViewProvider.overrideWith((ref) => true),
+        ...extraOverrides,
+      ]),
+      child: MaterialApp.router(
+        theme: AksharaAppTheme.light(),
+        debugShowCheckedModeBanner: false,
+        routerConfig: router,
+      ),
+    ),
+  );
+
+  await settleRiverpodFutures(tester);
+  await tester.pump();
+}

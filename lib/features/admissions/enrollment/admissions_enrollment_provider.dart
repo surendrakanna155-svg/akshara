@@ -7,6 +7,7 @@ import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_mutations_provider.dart';
 import '../admissions_requests.dart';
+import 'enrollment_validation.dart';
 
 final admissionsEnrollmentLoadingProvider = StateProvider<bool>((ref) => false);
 final admissionsEnrollmentErrorProvider = StateProvider<bool>((ref) => false);
@@ -47,12 +48,25 @@ class EnrollmentFormNotifier extends Notifier<EnrollmentFormState> {
     state = state.copyWith(currentStep: step);
   }
 
-  void nextStep() {
+  /// Returns validation errors for the current step, or null if valid.
+  EnrollmentStepValidation? validateCurrentStep() {
+    final result = validateEnrollmentStep(state.currentStep, state);
+    return result.isValid ? null : result;
+  }
+
+  bool nextStep() {
+    final validation = validateEnrollmentStep(state.currentStep, state);
+    if (!validation.isValid) {
+      state = state.copyWith(stepFieldErrors: validation.fieldErrors);
+      return false;
+    }
+    state = state.copyWith(clearStepFieldErrors: true);
     final steps = EnrollmentStep.values;
     final index = steps.indexOf(state.currentStep);
     if (index < steps.length - 1) {
       state = state.copyWith(currentStep: steps[index + 1]);
     }
+    return true;
   }
 
   void previousStep() {

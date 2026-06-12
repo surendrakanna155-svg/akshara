@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/theme_extensions.dart';
+import '../../../theme/spacing.dart';
 import '../widgets/finance_module_scaffold.dart';
 import '../finance_models.dart';
 import 'finance_intelligence_provider.dart';
@@ -10,50 +14,99 @@ import 'finance_intelligence_provider.dart';
 class FinanceExecutiveDashboardScreen extends ConsumerWidget {
   const FinanceExecutiveDashboardScreen({super.key});
 
+  static const _periodFilters = ['This month', 'This quarter', 'YTD'];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(financeExecutiveProvider);
+    final periodIndex = ref.watch(_financeExecutivePeriodProvider);
 
     return FinanceModuleScaffold(
       screen: FinanceScreen.executiveDashboard,
       showFilterBar: false,
       body: data.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
-        data: (snapshot) => ListView(
-          padding: const EdgeInsets.all(16),
+        error: (e, _) => AksharaErrorState(
+          message: '$e',
+          onRetry: () => ref.invalidate(financeExecutiveProvider),
+        ),
+        data: (snapshot) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              title: const Text('Collection health score'),
-              trailing: Text(
-                '${snapshot.collectionHealthScore}/100',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            AksharaAnalyticsFilterBar(
+              filters: _periodFilters,
+              selectedIndex: periodIndex,
+              onSelected: (index) =>
+                  ref.read(_financeExecutivePeriodProvider.notifier).state = index,
+              trailing: OutlinedButton.icon(
+                onPressed: () => showAksharaExportQueuedSnackBar(context),
+                icon: const Icon(Icons.download_outlined, size: 18),
+                label: const Text('Export'),
               ),
             ),
-            ListTile(
-              title: const Text('Expected collections'),
-              trailing: Text('₹${snapshot.expectedCollections}'),
+            AksharaAnalyticsSummaryRow(
+              metrics: [
+                AksharaAnalyticsMetric(
+                  value: '${snapshot.collectionHealthScore}',
+                  label: 'Collection health',
+                  accent: snapshot.collectionHealthScore >= 70
+                      ? KpiAccent.success
+                      : KpiAccent.warning,
+                  icon: Icons.health_and_safety_outlined,
+                  detail: '/100 score',
+                ),
+                AksharaAnalyticsMetric(
+                  value: '₹${snapshot.expectedCollections}',
+                  label: 'Expected collections',
+                  accent: KpiAccent.primary,
+                  icon: Icons.trending_up,
+                ),
+                AksharaAnalyticsMetric(
+                  value: '₹${snapshot.outstandingCollections}',
+                  label: 'Outstanding',
+                  accent: KpiAccent.error,
+                  icon: Icons.account_balance_wallet_outlined,
+                ),
+              ],
             ),
-            ListTile(
-              title: const Text('Outstanding collections'),
-              trailing: Text('₹${snapshot.outstandingCollections}'),
-            ),
-            if (snapshot.collectionHealthScore < 70)
-              const AksharaWarningBanner(
-                message: 'Collection health below target — review defaulter follow-ups',
+            if (snapshot.collectionHealthScore < 70) ...[
+              const SizedBox(height: AksharaSpacing.s4),
+              AksharaWarningBanner(
+                message:
+                    'Collection health below target — review defaulter follow-ups',
+                actionLabel: 'View defaulters',
+                onAction: () => context.go(RouteNames.financeDefaulters),
               ),
-            const Divider(height: 32),
-            const Text('Risk students', style: TextStyle(fontWeight: FontWeight.bold)),
-            ...snapshot.riskStudents.map(
-              (s) => ListTile(
-                title: Text(s.studentName),
-                subtitle: Text('₹${s.outstandingAmount} outstanding'),
-                trailing: Text('${s.riskScore}%'),
-              ),
-            ),
+            ],
+            const SizedBox(height: AksharaSpacing.s6),
+            const AksharaSectionHeader(title: 'Risk students'),
+            const SizedBox(height: AksharaSpacing.s3),
+            if (snapshot.riskStudents.isEmpty)
+              const AksharaEmptyState(
+                message: 'No high-risk students for this period.',
+                icon: Icons.people_outline,
+              )
+            else
+              for (final student in snapshot.riskStudents)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AksharaSpacing.s3),
+                  child: AksharaSurfaceCard(
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        child: Text('${student.riskScore}%'),
+                      ),
+                      title: Text(student.studentName),
+                      subtitle: Text('₹${student.outstandingAmount} outstanding'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.go(RouteNames.financeDefaulters),
+                    ),
+                  ),
+                ),
           ],
         ),
       ),
     );
   }
 }
+
+final _financeExecutivePeriodProvider = StateProvider<int>((ref) => 0);

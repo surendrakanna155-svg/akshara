@@ -54,33 +54,39 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
         AdminBreadcrumb(label: 'Analytics & Intelligence'),
       ],
       onMenuTap: adminShellMenuTap(context),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TabBar(
-            controller: _tabs,
-            isScrollable: AdminLayout.isMobile(context),
-            tabs: const [
-              Tab(text: 'Analytics'),
-              Tab(text: 'School Health'),
-              Tab(text: 'Risk Center'),
-              Tab(text: 'Trends'),
-              Tab(text: 'Principal Summary'),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final tabHeight = (MediaQuery.sizeOf(context).height * 0.65).clamp(360.0, 720.0);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TabBar(
+                controller: _tabs,
+                isScrollable: AdminLayout.isMobile(context),
+                tabs: const [
+                  Tab(text: 'Analytics'),
+                  Tab(text: 'School Health'),
+                  Tab(text: 'Risk Center'),
+                  Tab(text: 'Trends'),
+                  Tab(text: 'Principal Summary'),
+                ],
+              ),
+              SizedBox(
+                height: tabHeight,
+                child: TabBarView(
+                  controller: _tabs,
+                  children: const [
+                    _AnalyticsDashboardTab(),
+                    _SchoolHealthTab(),
+                    _RiskCenterTab(),
+                    _TrendExplorerTab(),
+                    _PrincipalSummaryTab(),
+                  ],
+                ),
+              ),
             ],
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabs,
-              children: const [
-                _AnalyticsDashboardTab(),
-                _SchoolHealthTab(),
-                _RiskCenterTab(),
-                _TrendExplorerTab(),
-                _PrincipalSummaryTab(),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

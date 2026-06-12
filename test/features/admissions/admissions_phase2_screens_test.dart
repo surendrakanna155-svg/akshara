@@ -86,10 +86,16 @@ void main() {
     ) async {
       await pumpScreen(tester, const AdmissionsEnrollmentScreen());
 
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(0), 'Ravi Kumar');
+      await tester.enterText(fields.at(1), '01 Jan 2012');
+      await tester.enterText(fields.at(2), 'Male');
+      await tester.enterText(fields.at(3), '123456789012');
+
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Parent information'), findsWidgets);
+      expect(find.text('Parent / guardian'), findsOneWidget);
       expect(find.text('Guardian name *'), findsOneWidget);
     });
 

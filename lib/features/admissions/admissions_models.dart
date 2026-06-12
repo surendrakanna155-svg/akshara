@@ -529,6 +529,7 @@ class EnrollmentFormState {
     this.isSubmitting = false,
     this.isSubmitted = false,
     this.generatedAdmissionNumber,
+    this.stepFieldErrors,
   });
 
   final EnrollmentStep currentStep;
@@ -538,6 +539,7 @@ class EnrollmentFormState {
   final bool isSubmitting;
   final bool isSubmitted;
   final String? generatedAdmissionNumber;
+  final Map<String, String>? stepFieldErrors;
 
   EnrollmentFormState copyWith({
     EnrollmentStep? currentStep,
@@ -547,6 +549,8 @@ class EnrollmentFormState {
     bool? isSubmitting,
     bool? isSubmitted,
     String? generatedAdmissionNumber,
+    Map<String, String>? stepFieldErrors,
+    bool clearStepFieldErrors = false,
   }) {
     return EnrollmentFormState(
       currentStep: currentStep ?? this.currentStep,
@@ -557,6 +561,9 @@ class EnrollmentFormState {
       isSubmitted: isSubmitted ?? this.isSubmitted,
       generatedAdmissionNumber:
           generatedAdmissionNumber ?? this.generatedAdmissionNumber,
+      stepFieldErrors: clearStepFieldErrors
+          ? null
+          : (stepFieldErrors ?? this.stepFieldErrors),
     );
   }
 }

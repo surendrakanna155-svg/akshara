@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v16.0 UI/UX Completion (`v16.0-ui-ux-completion`)  
-**Previous release:** v15.8 Pilot Polish (`v15.8-pilot-polish`)  
+**Current release:** v16.4 UI Excellence (`v16.4-ui-excellence`)  
+**Previous release:** v16.0 UI/UX Completion (`v16.0-ui-ux-completion`)  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

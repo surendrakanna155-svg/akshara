@@ -1,3 +1,4 @@
+import 'package:akshara_erp/features/admissions/admissions_models.dart';
 import 'package:akshara_erp/features/admissions/documents/admissions_documents_provider.dart';
 import 'package:akshara_erp/features/admissions/enrollment/admissions_enrollment_provider.dart';
 import 'package:akshara_erp/features/admissions/leads/admissions_lead_detail_provider.dart';
@@ -59,13 +60,34 @@ void main() {
       expect(form.academic.seekingClass, '5');
     });
 
-    test('advances wizard steps', () async {
+    test('advances wizard steps when student step is valid', () async {
       final container = createProviderTestContainer();
       addTearDown(container.dispose);
 
-      container.read(admissionsEnrollmentProvider.notifier).nextStep();
+      final notifier = container.read(admissionsEnrollmentProvider.notifier);
+      notifier.updateStudent(
+        const EnrollmentStudentProfile(
+          fullName: 'Ravi Kumar',
+          dateOfBirth: '01 Jan 2012',
+          gender: 'Male',
+          aadhaar: '123456789012',
+        ),
+      );
+      expect(notifier.nextStep(), isTrue);
       final form = container.read(admissionsEnrollmentProvider);
       expect(form.currentStep.name, 'parentInformation');
+    });
+
+    test('blocks wizard advance when student step is invalid', () async {
+      final container = createProviderTestContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(admissionsEnrollmentProvider.notifier);
+      expect(notifier.nextStep(), isFalse);
+      expect(
+        container.read(admissionsEnrollmentProvider).currentStep.name,
+        'studentProfile',
+      );
     });
   });
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/widgets.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_navigation.dart';
@@ -33,7 +34,7 @@ class AdmissionsReportsScreen extends ConsumerWidget {
           .read(admissionsReportsTabProvider.notifier)
           .state = AdmissionsReportTab.values[index],
       filterTrailing: OutlinedButton.icon(
-        onPressed: () {},
+        onPressed: () => showAksharaExportQueuedSnackBar(context),
         icon: const Icon(Icons.download_outlined, size: 18),
         label: const Text('Export'),
       ),
