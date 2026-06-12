@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v16.6 Release Build (`v16.6-release-build`)  
-**Previous release:** v16.5 UI Stress Test (`v16.5-ui-stress-test`)  
+**Current release:** v16.7 Device Testing Preparation (`v16.7-device-testing-preparation`)  
+**Previous release:** v16.6 Release Build (`v16.6-release-build`)  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

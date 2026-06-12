@@ -148,5 +148,11 @@ File under `reports/pilot_validation/` or project issue tracker.
 ## Reference
 
 - Demo seed phones: `docs/Operations/Pilot/Demo-Data-Guide.md`
+- Demo accounts (device testing): `docs/Testing/Demo-Accounts.md`
+- Device test plan: `docs/Testing/Device-Test-Plan.md`
+- Tester onboarding: `docs/Testing/Tester-Instructions.md`
+- iOS / TestFlight: `docs/Testing/iOS-Build-Guide.md`
+- Bug reports: `docs/Testing/Bug-Report-Template.md`
+- Release audit: `docs/Testing/Final-Release-Audit.md`
 - Deployment flags: `docs/Operations/Deployment-Guide.md`
 - UI stress coverage: `docs/Releases/v16.5-UI-Stress-Test.md`
