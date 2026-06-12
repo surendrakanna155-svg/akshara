@@ -5,7 +5,19 @@ const RECOVERY_PATH = new URL(
   import.meta.url,
 );
 
+const CATALOG_PATH = new URL(
+  "../../../migrations/20260627105000_pilot_permission_catalog_recovery.sql",
+  import.meta.url,
+);
+
 const sql = await Deno.readTextFile(RECOVERY_PATH);
+const catalogSql = await Deno.readTextFile(CATALOG_PATH);
+
+Deno.test("pilot permission catalog recovery seeds required definitions", () => {
+  assert(catalogSql.includes("('viewSubjects',"));
+  assert(catalogSql.includes("('viewFinanceIntelligence',"));
+  assert(catalogSql.includes("ON CONFLICT (slug) DO NOTHING"));
+});
 
 Deno.test("pilot RBAC recovery grants schoolAdmin viewSubjects", () => {
   assert(sql.includes("('schoolAdmin', 'viewSubjects')"));

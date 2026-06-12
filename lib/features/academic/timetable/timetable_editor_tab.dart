@@ -46,6 +46,7 @@ class _TimetableEditorTabState extends ConsumerState<TimetableEditorTab> {
         return ReorderableListView.builder(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           itemCount: periods.length,
+          // ignore: deprecated_member_use
           onReorder: canManage
               ? (oldIndex, newIndex) async {
                   setState(() {

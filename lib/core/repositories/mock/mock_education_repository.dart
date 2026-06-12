@@ -30,7 +30,7 @@ class MockEducationRepository implements EducationRepository {
       ),
     ]);
     _homework.addAll([
-      HomeworkAssignment(
+      const HomeworkAssignment(
         id: 'hw_demo_1',
         title: '5 — Mathematics worksheet',
         className: '5',
@@ -39,15 +39,15 @@ class MockEducationRepository implements EducationRepository {
         topic: 'Fractions',
         difficulty: EduDifficulty.medium,
         assignmentType: EduHomeworkType.practiceWorksheet,
-        content: const [
+        content: [
           {'prompt': 'Add 1/2 + 1/4', 'answerHint': '3/4'},
         ],
         status: 'published',
       ),
     ]);
     _papers.add(
-      QuestionPaperDetail(
-        paper: const QuestionPaperSummary(
+      const QuestionPaperDetail(
+        paper: QuestionPaperSummary(
           id: 'paper_demo_1',
           title: '5 — Mathematics unit test',
           className: '5',
@@ -58,9 +58,9 @@ class MockEducationRepository implements EducationRepository {
           difficulty: EduDifficulty.medium,
           status: 'published',
         ),
-        items: const [],
-        blueprint: const {},
-        answerKey: const [],
+        items: [],
+        blueprint: {},
+        answerKey: [],
       ),
     );
   }

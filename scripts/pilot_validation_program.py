@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from demo_school_lib import (
     PROBE_PARENT_PHONE,
+    PROBE_STUDENT_PHONE,
     PROBE_TEACHER_PHONE,
     RunReport,
     SCHOOL_ID,
