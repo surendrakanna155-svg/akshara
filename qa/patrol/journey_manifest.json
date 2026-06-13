@@ -1,0 +1,488 @@
+[
+  {
+    "name": "erp admissions dashboard",
+    "persona": "superAdmin",
+    "module": null,
+    "anchor": "Total Leads"
+  },
+  {
+    "name": "erp admissions leads",
+    "persona": "superAdmin",
+    "module": "Admissions",
+    "anchor": "Leads"
+  },
+  {
+    "name": "erp admissions enrollment",
+    "persona": "superAdmin",
+    "module": "Admissions",
+    "anchor": "Enrollment"
+  },
+  {
+    "name": "erp admissions reports",
+    "persona": "principal",
+    "module": "Admissions",
+    "anchor": "Reports"
+  },
+  {
+    "name": "erp admissions approval",
+    "persona": "principal",
+    "module": "Admissions",
+    "anchor": "Approval"
+  },
+  {
+    "name": "erp finance dashboard",
+    "persona": "finance",
+    "module": null,
+    "anchor": "Fee Collected (MTD)"
+  },
+  {
+    "name": "erp finance collections",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Collections"
+  },
+  {
+    "name": "erp finance defaulters",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Defaulters"
+  },
+  {
+    "name": "erp finance structures",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Fee Structures"
+  },
+  {
+    "name": "erp finance reports",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Reports"
+  },
+  {
+    "name": "erp finance refunds",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Refunds"
+  },
+  {
+    "name": "erp finance receipt verify",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Receipt"
+  },
+  {
+    "name": "erp fee collect",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Collect"
+  },
+  {
+    "name": "erp fee generate",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Generate"
+  },
+  {
+    "name": "erp hr employees",
+    "persona": "superAdmin",
+    "module": "HR",
+    "anchor": "Employees"
+  },
+  {
+    "name": "erp hr attendance",
+    "persona": "superAdmin",
+    "module": "HR",
+    "anchor": "Attendance"
+  },
+  {
+    "name": "erp hr payroll",
+    "persona": "superAdmin",
+    "module": "HR",
+    "anchor": "Payroll"
+  },
+  {
+    "name": "erp hr create teacher nav",
+    "persona": "superAdmin",
+    "module": "HR",
+    "anchor": "Employees"
+  },
+  {
+    "name": "erp hr settings",
+    "persona": "superAdmin",
+    "module": "HR",
+    "anchor": "HR"
+  },
+  {
+    "name": "erp sis students",
+    "persona": "superAdmin",
+    "module": "SIS",
+    "anchor": "Students"
+  },
+  {
+    "name": "erp sis onboarding",
+    "persona": "superAdmin",
+    "module": "SIS",
+    "anchor": "Students"
+  },
+  {
+    "name": "erp sis student edit",
+    "persona": "superAdmin",
+    "module": "SIS",
+    "anchor": "Students"
+  },
+  {
+    "name": "erp student promote nav",
+    "persona": "superAdmin",
+    "module": "SIS",
+    "anchor": "Students"
+  },
+  {
+    "name": "erp school creation nav",
+    "persona": "superAdmin",
+    "module": "Management",
+    "anchor": "School"
+  },
+  {
+    "name": "erp inventory assets",
+    "persona": "inventory",
+    "module": null,
+    "anchor": "Total Assets"
+  },
+  {
+    "name": "erp inventory distribution",
+    "persona": "inventory",
+    "module": "Inventory",
+    "anchor": "Distribution"
+  },
+  {
+    "name": "erp inventory maintenance",
+    "persona": "inventory",
+    "module": "Inventory",
+    "anchor": "Maintenance"
+  },
+  {
+    "name": "erp management analytics",
+    "persona": "principal",
+    "module": null,
+    "anchor": "Principal overview"
+  },
+  {
+    "name": "erp management settings",
+    "persona": "principal",
+    "module": "Management",
+    "anchor": "Settings"
+  },
+  {
+    "name": "erp management tasks",
+    "persona": "principal",
+    "module": "Management",
+    "anchor": "Tasks"
+  },
+  {
+    "name": "erp control center",
+    "persona": "superAdmin",
+    "module": "Management",
+    "anchor": "Control"
+  },
+  {
+    "name": "erp principal mgmt",
+    "persona": "principal",
+    "module": null,
+    "anchor": "Principal overview"
+  },
+  {
+    "name": "erp communications mgmt",
+    "persona": "superAdmin",
+    "module": "Management",
+    "anchor": "Communication"
+  },
+  {
+    "name": "erp exam reports",
+    "persona": "superAdmin",
+    "module": "Education",
+    "anchor": "Exam"
+  },
+  {
+    "name": "erp homework intel",
+    "persona": "superAdmin",
+    "module": "Education",
+    "anchor": "Homework"
+  },
+  {
+    "name": "erp timetable mgmt",
+    "persona": "superAdmin",
+    "module": "Education",
+    "anchor": "Timetable"
+  },
+  {
+    "name": "erp transport routes",
+    "persona": "superAdmin",
+    "module": "Transport",
+    "anchor": "Routes"
+  },
+  {
+    "name": "erp hostel rooms",
+    "persona": "superAdmin",
+    "module": "Hostel",
+    "anchor": "Rooms"
+  },
+  {
+    "name": "erp library catalog",
+    "persona": "superAdmin",
+    "module": "Library",
+    "anchor": "Catalog"
+  },
+  {
+    "name": "erp alumni registry",
+    "persona": "superAdmin",
+    "module": "Management",
+    "anchor": "Alumni"
+  },
+  {
+    "name": "teacher home",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher attendance mark",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher attendance submit",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher homework queue",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher homework review",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher exams",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher timetable",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher messages",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher leave",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "teacher settings",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "parent home refresh",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent fees tab",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent homework",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent attendance detail",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent notices",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent events",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent profile",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent timetable",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent pay fee",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "parent receipts",
+    "persona": "parent",
+    "module": null,
+    "anchor": "Fees"
+  },
+  {
+    "name": "student home",
+    "persona": "student",
+    "module": null,
+    "anchor": "Home"
+  },
+  {
+    "name": "student attendance",
+    "persona": "student",
+    "module": null,
+    "anchor": "Home"
+  },
+  {
+    "name": "student homework due",
+    "persona": "student",
+    "module": null,
+    "anchor": "Home"
+  },
+  {
+    "name": "student exam schedule",
+    "persona": "student",
+    "module": null,
+    "anchor": "Home"
+  },
+  {
+    "name": "student notices",
+    "persona": "student",
+    "module": null,
+    "anchor": "Home"
+  },
+  {
+    "name": "student profile",
+    "persona": "student",
+    "module": null,
+    "anchor": "Home"
+  },
+  {
+    "name": "student settings",
+    "persona": "student",
+    "module": null,
+    "anchor": "Home"
+  },
+  {
+    "name": "student timetable day",
+    "persona": "student",
+    "module": null,
+    "anchor": "Home"
+  },
+  {
+    "name": "workflow school creation",
+    "persona": "superAdmin",
+    "module": "Management",
+    "anchor": "School"
+  },
+  {
+    "name": "workflow teacher creation",
+    "persona": "superAdmin",
+    "module": "HR",
+    "anchor": "Employees"
+  },
+  {
+    "name": "workflow student creation",
+    "persona": "superAdmin",
+    "module": "SIS",
+    "anchor": "Students"
+  },
+  {
+    "name": "workflow parent creation",
+    "persona": "superAdmin",
+    "module": "SIS",
+    "anchor": "Students"
+  },
+  {
+    "name": "workflow attendance",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "workflow homework",
+    "persona": "teacher",
+    "module": null,
+    "anchor": "Today's Classes"
+  },
+  {
+    "name": "workflow fees",
+    "persona": "finance",
+    "module": null,
+    "anchor": "Fee Collected (MTD)"
+  },
+  {
+    "name": "workflow inventory",
+    "persona": "inventory",
+    "module": null,
+    "anchor": "Total Assets"
+  },
+  {
+    "name": "workflow exams",
+    "persona": "superAdmin",
+    "module": "Education",
+    "anchor": "Exam"
+  },
+  {
+    "name": "workflow reports",
+    "persona": "finance",
+    "module": "Finance",
+    "anchor": "Reports"
+  },
+  {
+    "name": "workflow timetable",
+    "persona": "superAdmin",
+    "module": "Education",
+    "anchor": "Timetable"
+  },
+  {
+    "name": "workflow communications",
+    "persona": "superAdmin",
+    "module": "Management",
+    "anchor": "Communication"
+  },
+  {
+    "name": "workflow analytics",
+    "persona": "principal",
+    "module": null,
+    "anchor": "Principal overview"
+  }
+]

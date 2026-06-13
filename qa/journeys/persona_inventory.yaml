@@ -2,14 +2,11 @@
 # tags: module,inventory,erp
 appId: com.akshara.erp
 env:
-  STAFF_PHONE: "9999999999"
-  ERP_ROLE: "Super Admin"
+  QA_PERSONA: Inventory
 ---
 - runFlow:
     file: ../maestro/flows/_shared/staff_demo_login.yaml
-- runFlow:
-    file: ../maestro/flows/_shared/erp_open_module.yaml
     env:
-      MODULE_LABEL: Inventory
+      QA_PERSONA: Inventory
 - assertVisible: "Total Assets"
 - takeScreenshot: inventory_dashboard

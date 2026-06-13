@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/config/environment_provider.dart';
+import '../../core/testing/qa_test_keys.dart';
 import '../../router/app_router.dart';
 import '../../router/route_names.dart';
 import '../../theme/radius.dart';
@@ -209,6 +210,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                         ),
                       const SizedBox(height: AksharaSpacing.s8),
                       TextFormField(
+                        key: QaTestKeys.otpField,
                         controller: _otpController,
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.done,
@@ -231,6 +233,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
                       ),
                       const SizedBox(height: AksharaSpacing.s6),
                       FilledButton(
+                        key: QaTestKeys.otpVerifyButton,
                         onPressed: _isVerifying ? null : _verify,
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),

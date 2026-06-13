@@ -1,0 +1,9 @@
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Student
+- tapOn: "Attendance"
+- assertVisible: "Attendance"
+- takeScreenshot: biz_student_att_month

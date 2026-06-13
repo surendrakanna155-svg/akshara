@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/auth_provider.dart';
+import '../../core/config/environment_provider.dart';
 import '../../router/app_router.dart';
 import 'router_refresh_notifier.dart';
 
@@ -15,5 +16,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   return createAppRouter(
     refreshListenable: ref.read(routerRefreshNotifierProvider),
     readAuth: () => ref.read(authProvider),
+    readQaLoginEnabled: () => ref.read(isQaLoginEnabledProvider),
   );
 });

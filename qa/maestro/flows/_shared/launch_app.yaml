@@ -4,6 +4,6 @@ appId: com.akshara.erp
     clearState: true
 - extendedWaitUntil:
     visible:
-      text: "Welcome back"
+      text: "QA Automation Login"
     timeout: 25000
-- takeScreenshot: launch_login
+- takeScreenshot: launch_qa_login

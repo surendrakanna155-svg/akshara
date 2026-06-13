@@ -8,7 +8,10 @@ env:
     file: ../maestro/flows/_shared/mobile_demo_login.yaml
     env:
       ACCOUNT_CHIP: Teacher
-- assertVisible: "Dashboard"
+- extendedWaitUntil:
+    visible:
+      text: "Good morning, Priya"
+    timeout: 25000
 - takeScreenshot: teacher_dashboard
 - tapOn: "Attendance"
 - takeScreenshot: teacher_attendance

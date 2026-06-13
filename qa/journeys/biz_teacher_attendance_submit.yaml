@@ -1,0 +1,10 @@
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Teacher
+- tapOn: "Classes"
+- tapOn: "Mark Attendance"
+- scroll
+- takeScreenshot: biz_teacher_att_submit

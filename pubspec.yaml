@@ -1,7 +1,7 @@
 name: akshara_erp
 description: Akshara ERP — multi-tenant school SaaS platform.
 publish_to: 'none'
-version: 18.1.0+181
+version: 18.4.0+184
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -24,6 +24,17 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  patrol: ^4.6.1
+  integration_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true
+
+patrol:
+  app_name: Akshara ERP
+  test_directory: patrol_test
+  android:
+    package_name: com.akshara.erp
+  ios:
+    bundle_id: com.akshara.erp.aksharaErp

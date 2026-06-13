@@ -1,0 +1,9 @@
+appId: com.akshara.erp
+---
+- stopApp
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "QA Automation Login"
+    timeout: 25000

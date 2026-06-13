@@ -5,6 +5,7 @@ abstract final class RouteNames {
   // Auth (P-01 → P-03)
   static const String splash = '/splash';
   static const String login = '/login';
+  static const String qaLogin = '/qa-login';
   static const String otpVerification = '/otp';
   static const String staffLogin = '/staff/login';
   static const String staffOtp = '/staff/otp';

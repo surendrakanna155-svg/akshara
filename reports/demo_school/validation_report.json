@@ -1,7 +1,8 @@
 {
   "title": "Demo School Validation",
-  "passed": 31,
-  "failed": 8,
+  "passed": 58,
+  "failed": 0,
+  "skipped": 0,
   "steps": [
     {
       "name": "admin OTP login (school scope)",
@@ -51,12 +52,6 @@
       "name": "teacher import committed",
       "ok": true,
       "detail": "jobs=9",
-      "data": {}
-    },
-    {
-      "name": "demo student count",
-      "ok": true,
-      "detail": "found=500 target=500",
       "data": {}
     },
     {
@@ -210,52 +205,228 @@
       }
     },
     {
+      "name": "admission pipeline dashboard",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "subjects catalog",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "lesson logs",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "homework catalog",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "exam papers",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "book distribution dashboard",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "parent homework visibility",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "parent exams visibility",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "teacher homework queue",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "school admin daily",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "school admin weekly finance",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "school admin monthly analytics",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "principal intelligence",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "inventory manager",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "accountant finance",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "teacher daily dashboard",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "teacher weekly attendance",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "parent daily dashboard",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "parent weekly fees",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
+      "name": "parent monthly attendance",
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
+    },
+    {
       "name": "finance copilot",
-      "ok": false,
-      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
-      "data": {}
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
     },
     {
       "name": "finance executive",
-      "ok": false,
-      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
-      "data": {}
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
     },
     {
       "name": "inventory copilot",
-      "ok": false,
-      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
-      "data": {}
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
     },
     {
       "name": "student success",
-      "ok": false,
-      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
-      "data": {}
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
     },
     {
       "name": "exam analytics",
-      "ok": false,
-      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
-      "data": {}
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
     },
     {
       "name": "communication analytics",
-      "ok": false,
-      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
-      "data": {}
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
     },
     {
       "name": "teacher effectiveness",
-      "ok": false,
-      "detail": "Route not deployed \u2014 run pilot_deploy_v14.sh",
-      "data": {}
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
     },
     {
       "name": "parent academic summary",
-      "ok": false,
-      "detail": "Not deployed",
-      "data": {}
+      "ok": true,
+      "detail": "ok",
+      "data": {
+        "httpCode": 200
+      }
     },
     {
       "name": "AI Copilot assistants",
@@ -268,7 +439,7 @@
     {
       "name": "AI Copilot session create",
       "ok": true,
-      "detail": "aa1e418f-5c86-499b-91c9-7254c5c545a0",
+      "detail": "42203b3b-3b11-45c8-9341-659265da313b",
       "data": {}
     },
     {

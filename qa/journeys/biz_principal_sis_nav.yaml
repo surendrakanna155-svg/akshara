@@ -1,0 +1,13 @@
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+- extendedWaitUntil:
+    visible:
+      text: "Admin Hub"
+    timeout: 25000
+- runFlow:
+    file: ../maestro/flows/_shared/erp_open_module.yaml
+    env:
+      MODULE_LABEL: Student SIS
+- takeScreenshot: biz_principal_sis

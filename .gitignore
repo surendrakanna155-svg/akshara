@@ -34,6 +34,14 @@ qa/screenshots/**/*
 !qa/screenshots/.gitkeep
 qa/reports/**/*
 !qa/reports/.gitkeep
+qa/patrol/screenshots/**/*
+!qa/patrol/screenshots/.gitkeep
+qa/patrol/reports/**/*
+!qa/patrol/reports/.gitkeep
+!qa/patrol/reports/bugs.json
+
+# Patrol generated bundle
+patrol_test/test_bundle.dart
 
 # Coverage
 coverage/

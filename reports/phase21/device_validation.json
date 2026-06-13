@@ -1,0 +1,115 @@
+{
+  "title": "Device Validation Matrix",
+  "passed": 18,
+  "failed": 0,
+  "steps": [
+    {
+      "name": "admin login",
+      "ok": true,
+      "detail": "9876543210",
+      "data": {}
+    },
+    {
+      "name": "parent login",
+      "ok": true,
+      "detail": "9876543211",
+      "data": {}
+    },
+    {
+      "name": "student login",
+      "ok": true,
+      "detail": "9876543212",
+      "data": {}
+    },
+    {
+      "name": "teacher login",
+      "ok": true,
+      "detail": "9876543213",
+      "data": {}
+    },
+    {
+      "name": "admin dashboard",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "admin finance",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "admin inventory",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "admin intelligence",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "teacher dashboard",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "teacher attendance",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "teacher homework",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "parent dashboard",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "parent fees",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "parent homework",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "parent attendance",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "student dashboard",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "student homework",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "student exams",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    }
+  ]
+}

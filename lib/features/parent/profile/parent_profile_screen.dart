@@ -7,6 +7,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../auth/auth_logout.dart';
 import '../../auth/auth_provider.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../parent_active_child_provider.dart';
 import 'parent_profile_provider.dart';
 import 'profile_models.dart';
@@ -172,6 +173,7 @@ class ParentProfileScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: AksharaSpacing.s6),
                               OutlinedButton.icon(
+                                key: QaTestKeys.logoutButton,
                                 onPressed: () => confirmAndLogout(context, ref),
                                 icon: Icon(
                                   Icons.logout,

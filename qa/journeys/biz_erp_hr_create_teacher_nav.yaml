@@ -1,0 +1,16 @@
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      STAFF_PHONE: "9999999999"
+      ERP_ROLE: "Super Admin"
+- runFlow:
+    file: ../maestro/flows/_shared/erp_open_module.yaml
+    env:
+      MODULE_LABEL: HR
+- scrollUntilVisible:
+    element:
+      text: "Priya"
+    direction: DOWN
+- takeScreenshot: biz_hr_teacher_view

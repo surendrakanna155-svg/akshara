@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../router/route_names.dart';
+import '../../core/testing/qa_test_keys.dart';
 import 'auth_provider.dart';
 
 /// Shows a confirmation dialog, clears the session, and returns to login.
@@ -20,6 +21,7 @@ Future<void> confirmAndLogout(BuildContext context, WidgetRef ref) async {
           child: const Text('Cancel'),
         ),
         FilledButton(
+          key: QaTestKeys.logoutConfirmButton,
           onPressed: () => Navigator.of(context).pop(true),
           child: const Text('Log out'),
         ),

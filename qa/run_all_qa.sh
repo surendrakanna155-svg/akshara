@@ -76,10 +76,18 @@ if [[ "$SKIP_MAESTRO" != "1" ]]; then
       mapfile -t FLOWS < <(find "${ROOT}/qa/journeys" -maxdepth 1 -name '*.yaml' | sort)
     fi
 
+    DEVICE_ID="$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')"
+    MAESTRO_DEVICE_ARGS=()
+    if [[ -n "$DEVICE_ID" ]]; then
+      MAESTRO_DEVICE_ARGS=(--device "$DEVICE_ID")
+      log "Maestro device: ${DEVICE_ID}"
+    fi
+
     log "Running ${#FLOWS[@]} Maestro flow(s)..."
     set +e
     maestro test \
-      -c "${ROOT}/qa/maestro/config.yaml" \
+      --config "${ROOT}/qa/maestro/config.yaml" \
+      "${MAESTRO_DEVICE_ARGS[@]}" \
       --format junit \
       --output "$JUNIT_FILE" \
       --test-output-dir "$SCREENSHOT_DIR" \

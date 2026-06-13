@@ -1,20 +1,13 @@
-# Smoke — OTP back returns to login (v18.0 fix regression)
-# tags: smoke,navigation
+# Smoke — QA persona login reaches dashboard (no OTP)
+# tags: smoke,qa-login
 appId: com.akshara.erp
 ---
 - runFlow:
-    file: ../maestro/flows/_shared/launch_app.yaml
-- tapOn: "Parent"
-- tapOn: "Continue"
+    file: ../maestro/flows/_shared/qa_persona_login.yaml
+    env:
+      QA_PERSONA: Parent
 - extendedWaitUntil:
     visible:
-      text: "Verify OTP"
+      text: "Fees"
     timeout: 15000
-- takeScreenshot: smoke_otp_screen
-- tapOn:
-    icon: ArrowBack
-- extendedWaitUntil:
-    visible:
-      text: "Welcome back"
-    timeout: 10000
-- takeScreenshot: smoke_back_to_login
+- takeScreenshot: smoke_qa_parent_dashboard

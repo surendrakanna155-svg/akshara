@@ -18,6 +18,7 @@ import 'auth_role_mapping.dart';
 import 'auth_session_storage.dart';
 import 'auth_token_models.dart';
 import 'auth_token_provider.dart';
+import 'qa_login_persona.dart';
 import 'staff/staff_login_provider.dart';
 
 /// Demo OTP accepted only when explicit testing mode is enabled.
@@ -400,13 +401,51 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Instant QA persona login — no OTP; requires [isQaLoginEnabledProvider].
+  Future<void> signInQaPersona(QaLoginPersona persona) async {
+    if (!ref.read(isQaLoginEnabledProvider)) {
+      throw StateError('QA login is disabled in this build');
+    }
+
+    final phone = persona.demoPhone;
+    final role = persona.userRole;
+
+    if (role == UserRole.staff) {
+      final erpRole = persona.erpRole ?? ErpRole.superAdmin;
+      await signInStaff(
+        phoneNumber: phone,
+        displayName: persona.displayName,
+        erpRole: erpRole,
+      );
+      return;
+    }
+
+    final session = _authenticatedSessionForRole(role);
+    state = AuthState(
+      status: AuthStatus.authenticated,
+      phoneNumber: phone,
+      displayName: persona.displayName,
+      role: role,
+      selectedChild: session.selectedChild,
+      linkedChildren: session.linkedChildren,
+      claims: AuthClaims.demoForRole(
+        erpRole: persona.erpRole ?? ErpRole.parent,
+        userId: 'qa_${persona.name}',
+      ),
+    );
+    await _persistSession();
+    await _issueDemoTokens();
+    await _auditLogin();
+  }
+
   /// Establishes a staff ERP session with mock JWT claims (tests / dev tools).
   Future<void> signInStaff({
     required String phoneNumber,
     required String displayName,
     ErpRole? erpRole,
   }) async {
-    if (ref.read(environmentProvider).disableDemoAuth) {
+    if (ref.read(environmentProvider).disableDemoAuth &&
+        !ref.read(isQaLoginEnabledProvider)) {
       throw StateError('Mock staff sign-in is disabled in production builds');
     }
 

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-06-11T16:37:06.473276Z",
-  "passed": 11,
-  "failed": 11,
+  "generatedAt": "2026-06-12T09:15:05.243300Z",
+  "passed": 22,
+  "failed": 0,
   "warnings": 0,
-  "deployBlockedRoutes": 11,
-  "stagingReady": false
+  "deployBlockedRoutes": 0,
+  "stagingReady": true
 }

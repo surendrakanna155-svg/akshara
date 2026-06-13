@@ -1,0 +1,9 @@
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Teacher
+- tapOn: "Teach"
+- tapOn: "Homework Review"
+- takeScreenshot: biz_teacher_hw_review

@@ -1,0 +1,71 @@
+{
+  "generated": "2026-06-13",
+  "platform": "patrol-v18.4",
+  "bugs": [
+    {
+      "id": "PATROL-001",
+      "severity": "medium",
+      "title": "Maestro persona flows fail on OTP login screen (pre-v18.3)",
+      "route": "/qa-login",
+      "steps": [
+        "Launch production-profile APK without ENABLE_QA_LOGIN",
+        "Run persona_finance.yaml",
+        "Flow stalls on OTP screen"
+      ],
+      "screenshot": "qa/screenshots/v18_2_baseline/screenshot-❌-(persona_finance).png",
+      "logs": "qa/reports/v18_2_baseline/maestro.log",
+      "status": "mitigated",
+      "mitigation": "Use QA APK with ENABLE_QA_LOGIN=true or Patrol QA persona tests"
+    },
+    {
+      "id": "PATROL-002",
+      "severity": "low",
+      "title": "Logout routes to /login instead of /qa-login in QA builds",
+      "route": "/login",
+      "steps": [
+        "QA login as Parent",
+        "Profile → Log out",
+        "Lands on standard login instead of QA login screen"
+      ],
+      "screenshot": "qa/patrol/screenshots/auth/auth_logout_login.marker",
+      "logs": "patrol_test/auth/logout_test.dart",
+      "status": "open",
+      "recommendation": "Redirect to RouteNames.qaLogin when isQaLoginEnabledProvider is true"
+    },
+    {
+      "id": "PATROL-003",
+      "severity": "low",
+      "title": "ERP drawer module labels may be RBAC-filtered on mobile",
+      "route": "/admin",
+      "steps": [
+        "Login as Super Admin on mobile emulator",
+        "Open navigation drawer",
+        "Some module tiles absent depending on permissions"
+      ],
+      "screenshot": "qa/patrol/screenshots/navigation/nav_erp_drawer.marker",
+      "logs": "patrol_test/navigation/navigation_test.dart",
+      "status": "observed",
+      "recommendation": "Patrol journeys use persona-specific anchors with try/catch fallbacks"
+    },
+    {
+      "id": "PATROL-004",
+      "severity": "high",
+      "title": "Golden parent dashboard drift after QA login banner",
+      "route": "/parent/dashboard",
+      "steps": [
+        "Run flutter test test/golden/",
+        "Compare parent_dashboard master images"
+      ],
+      "screenshot": "test/golden/failures/parent_dashboard_390x844_testImage.png",
+      "logs": "flutter test output",
+      "status": "open",
+      "recommendation": "Refresh golden masters after v18.4 UI stabilization"
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 1,
+    "medium": 1,
+    "low": 2
+  }
+}

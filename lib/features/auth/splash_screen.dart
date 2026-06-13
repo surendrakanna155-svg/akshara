@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../features/school_completion/school_branding_theme_provider.dart';
+import '../../core/config/environment_provider.dart';
+import '../../core/testing/qa_test_keys.dart';
 import '../../router/app_router.dart';
 import '../../router/route_names.dart';
 import '../../theme/spacing.dart';
@@ -44,10 +46,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   String _destinationForAuth(AuthState auth) {
     if (!auth.isAuthenticated) {
-      return RouteNames.login;
+      final qaLogin = ref.read(isQaLoginEnabledProvider);
+      return qaLogin ? RouteNames.qaLogin : RouteNames.login;
     }
 
-    return homeRouteForRole(auth.role);
+    return homeRouteForAuth(auth);
   }
 
   @override
@@ -58,6 +61,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final logoUrl = ref.watch(schoolLogoUrlProvider);
 
     return Scaffold(
+      key: QaTestKeys.splash,
       backgroundColor: colors.primary,
       body: SafeArea(
         child: Center(

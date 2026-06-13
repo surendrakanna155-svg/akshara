@@ -1,6 +1,6 @@
 # Maestro Setup — Akshara ERP
 
-**Platform:** v18.1 Autonomous QA  
+**Platform:** v18.3 QA Automation Login  
 **App ID:** `com.akshara.erp`
 
 ---
@@ -38,31 +38,37 @@ Physical device: enable USB debugging, connect USB, accept RSA prompt.
 
 ## Build & install QA APK
 
-QA builds use **demo auth** (`ENABLE_DEMO_AUTH=true`) and **mock repositories** for offline deterministic flows.
+QA builds use **instant QA login** (`ENABLE_QA_LOGIN=true`) and **mock repositories** for offline deterministic flows. No OTP is required for Maestro journeys.
 
 ```bash
 ./scripts/qa/build_qa_apk.sh
 adb install -r build/app/outputs/flutter-apk/app-profile.apk
 ```
 
-| OTP type | Code |
-|----------|------|
-| Mobile (Parent/Teacher/Student/Principal chip) | `123456` |
-| Staff ERP portal | `654321` |
+On launch, splash routes to **QA Automation Login** with seven persona buttons (Principal, Teacher, Parent, Student, Finance, Inventory, Super Admin).
+
+| Build flag | Purpose |
+|------------|---------|
+| `ENABLE_QA_LOGIN=true` | Show QA login screen |
+| `QA_AUTOMATION=true` | Alias for QA login |
+| `ENABLE_DEMO_AUTH=true` | Mock session tokens (required with QA login) |
+
+Production / school builds must **not** set these flags.
 
 ---
 
 ## Verify Maestro controls
 
 ```bash
-maestro test -c qa/maestro/config.yaml qa/journeys/smoke_launch.yaml
+maestro test --config qa/maestro/config.yaml qa/journeys/smoke_launch.yaml
+maestro test --config qa/maestro/config.yaml qa/journeys/smoke_qa_personas.yaml
 ```
 
 Expected:
 
-1. App launches (splash → login)
-2. `Welcome back` visible
-3. Screenshot saved under `qa/screenshots/`
+1. App launches (splash → QA Automation Login)
+2. Persona buttons visible
+3. `smoke_qa_personas` reaches each dashboard anchor in seconds
 
 Manual checks Maestro supports:
 

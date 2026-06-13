@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build Android APK optimized for Maestro QA (demo auth, offline mocks).
+# Build Android APK optimized for Maestro QA (instant QA login, offline mocks).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -7,12 +7,13 @@ cd "$ROOT"
 
 DART_DEFINES=(
   "--dart-define=APP_ENV=development"
+  "--dart-define=ENABLE_QA_LOGIN=true"
   "--dart-define=ENABLE_DEMO_AUTH=true"
   "--dart-define=ENABLE_API_MODE=false"
   "--dart-define=AUTH_API_ENABLED=false"
 )
 
-echo "==> QA APK build (demo auth, mock repositories)"
+echo "==> QA APK build (QA login mode, mock repositories)"
 flutter pub get
 flutter build apk --profile "${DART_DEFINES[@]}"
 

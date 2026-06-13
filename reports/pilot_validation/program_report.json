@@ -1,0 +1,313 @@
+{
+  "title": "Pilot Validation Program",
+  "passed": 35,
+  "failed": 16,
+  "steps": [
+    {
+      "name": "P9 pilot readiness",
+      "ok": true,
+      "detail": "[pilot-readiness] === Summary: 22 passed, 0 failed, 0 warnings, deploy_blocked=0 ===",
+      "data": {}
+    },
+    {
+      "name": "P9 device matrix",
+      "ok": true,
+      "detail": "Device matrix: 18 passed, 0 failed",
+      "data": {}
+    },
+    {
+      "name": "P1 school dashboard",
+      "ok": true,
+      "detail": "http=200 (1914ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 operations hub",
+      "ok": false,
+      "detail": "http=403 Permission required: viewOperationsHub (529ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 principal command",
+      "ok": false,
+      "detail": "http=403 Permission required: viewPrincipalCommand (581ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 student risk",
+      "ok": true,
+      "detail": "http=200 (1346ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 teacher performance",
+      "ok": false,
+      "detail": "http=403 Permission required: viewTeacherEffectiveness (502ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 attendance analytics",
+      "ok": true,
+      "detail": "http=200 (2260ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 fee analytics",
+      "ok": true,
+      "detail": "http=200 (1475ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 inventory analytics",
+      "ok": true,
+      "detail": "http=200 (1357ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 school health",
+      "ok": true,
+      "detail": "http=200 (2697ms)",
+      "data": {}
+    },
+    {
+      "name": "P1 executive reports",
+      "ok": true,
+      "detail": "http=200 (2303ms)",
+      "data": {}
+    },
+    {
+      "name": "P2 admissions",
+      "ok": true,
+      "detail": "http=200 (1534ms)",
+      "data": {}
+    },
+    {
+      "name": "P2 SIS students",
+      "ok": true,
+      "detail": "http=200 (1401ms)",
+      "data": {}
+    },
+    {
+      "name": "P2 subjects",
+      "ok": false,
+      "detail": "http=403 Permission required: viewSubjects (597ms)",
+      "data": {}
+    },
+    {
+      "name": "P2 lesson logs",
+      "ok": false,
+      "detail": "http=403 Permission required: viewLessonLogs (614ms)",
+      "data": {}
+    },
+    {
+      "name": "P2 timetable",
+      "ok": false,
+      "detail": "http=422 (543ms)",
+      "data": {}
+    },
+    {
+      "name": "P2 pilot dashboard",
+      "ok": false,
+      "detail": "http=403 Permission required: viewPilotDashboard (580ms)",
+      "data": {}
+    },
+    {
+      "name": "P2 branding",
+      "ok": false,
+      "detail": "http=403 Permission required: viewSchoolBranding (665ms)",
+      "data": {}
+    },
+    {
+      "name": "P2 communications queue",
+      "ok": true,
+      "detail": "http=200",
+      "data": {}
+    },
+    {
+      "name": "P3 attendance",
+      "ok": true,
+      "detail": "http=200 (1332ms)",
+      "data": {}
+    },
+    {
+      "name": "P3 homework",
+      "ok": true,
+      "detail": "http=200 (1327ms)",
+      "data": {}
+    },
+    {
+      "name": "P3 lesson logs",
+      "ok": false,
+      "detail": "http=403 Permission required: viewLessonLogs (525ms)",
+      "data": {}
+    },
+    {
+      "name": "P3 lesson analytics",
+      "ok": false,
+      "detail": "http=403 Permission required: viewLessonAnalytics (920ms)",
+      "data": {}
+    },
+    {
+      "name": "P3 teacher assistant",
+      "ok": false,
+      "detail": "http=403 Permission required: viewTeacherAssistant (613ms)",
+      "data": {}
+    },
+    {
+      "name": "P3 teacher success",
+      "ok": false,
+      "detail": "http=403 Permission required: viewAnalytics (614ms)",
+      "data": {}
+    },
+    {
+      "name": "P3 exam papers",
+      "ok": true,
+      "detail": "http=200 (1553ms)",
+      "data": {}
+    },
+    {
+      "name": "P4 dashboard",
+      "ok": true,
+      "detail": "http=200 (1400ms)",
+      "data": {}
+    },
+    {
+      "name": "P4 attendance",
+      "ok": true,
+      "detail": "http=200 (1490ms)",
+      "data": {}
+    },
+    {
+      "name": "P4 homework",
+      "ok": true,
+      "detail": "http=200 (1226ms)",
+      "data": {}
+    },
+    {
+      "name": "P4 fees",
+      "ok": true,
+      "detail": "http=200 (1251ms)",
+      "data": {}
+    },
+    {
+      "name": "P4 experience hub",
+      "ok": false,
+      "detail": "404 deploy required (756ms)",
+      "data": {}
+    },
+    {
+      "name": "P4 printable report",
+      "ok": false,
+      "detail": "http=403 Permission required: viewParentAcademicSummary (490ms)",
+      "data": {}
+    },
+    {
+      "name": "P4 guidance summary",
+      "ok": false,
+      "detail": "http=403 Permission required: viewParentAcademicSummary (738ms)",
+      "data": {}
+    },
+    {
+      "name": "P4 no open AI copilot",
+      "ok": true,
+      "detail": "parent copilot denied http=403",
+      "data": {}
+    },
+    {
+      "name": "P5 dashboard",
+      "ok": true,
+      "detail": "http=200 (1352ms)",
+      "data": {}
+    },
+    {
+      "name": "P5 homework",
+      "ok": true,
+      "detail": "http=200 (1258ms)",
+      "data": {}
+    },
+    {
+      "name": "P5 exams",
+      "ok": true,
+      "detail": "http=200 (1223ms)",
+      "data": {}
+    },
+    {
+      "name": "P5 attendance",
+      "ok": true,
+      "detail": "http=200 (1511ms)",
+      "data": {}
+    },
+    {
+      "name": "P6 collections",
+      "ok": true,
+      "detail": "http=200 (1476ms)",
+      "data": {}
+    },
+    {
+      "name": "P6 invoices",
+      "ok": true,
+      "detail": "http=200 (1551ms)",
+      "data": {}
+    },
+    {
+      "name": "P6 refunds",
+      "ok": true,
+      "detail": "http=200 (1581ms)",
+      "data": {}
+    },
+    {
+      "name": "P6 finance reports",
+      "ok": false,
+      "detail": "http=403 Permission required: viewFinanceExecutiveDashboard (613ms)",
+      "data": {}
+    },
+    {
+      "name": "P6 finance dashboard",
+      "ok": true,
+      "detail": "http=200 (1618ms)",
+      "data": {}
+    },
+    {
+      "name": "P7 inventory dashboard",
+      "ok": true,
+      "detail": "http=200 (1454ms)",
+      "data": {}
+    },
+    {
+      "name": "P7 distribution",
+      "ok": true,
+      "detail": "http=200 (1354ms)",
+      "data": {}
+    },
+    {
+      "name": "P7 distribution reports",
+      "ok": true,
+      "detail": "http=200 (1410ms)",
+      "data": {}
+    },
+    {
+      "name": "P7 procurement",
+      "ok": true,
+      "detail": "http=200 (1350ms)",
+      "data": {}
+    },
+    {
+      "name": "P8 SIS list scale=500",
+      "ok": true,
+      "detail": "http=200 1445ms budget=3000ms",
+      "data": {}
+    },
+    {
+      "name": "P8 SIS list scale=1000",
+      "ok": true,
+      "detail": "http=200 1656ms budget=5000ms",
+      "data": {}
+    },
+    {
+      "name": "P8 SIS list scale=2000",
+      "ok": true,
+      "detail": "http=200 1431ms budget=8000ms",
+      "data": {}
+    }
+  ]
+}

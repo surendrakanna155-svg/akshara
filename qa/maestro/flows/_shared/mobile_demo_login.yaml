@@ -1,17 +1,8 @@
 appId: com.akshara.erp
 ---
+# Instant QA login — maps ACCOUNT_CHIP to QA persona button label.
 # Requires env: ACCOUNT_CHIP (Parent|Teacher|Student|Principal)
 - runFlow:
-    file: launch_app.yaml
-- tapOn: ${ACCOUNT_CHIP}
-- tapOn: "Continue"
-- extendedWaitUntil:
-    visible:
-      text: "Verify OTP"
-    timeout: 15000
-- inputText: ${MOBILE_OTP}
-- tapOn: "Verify & continue"
-- extendedWaitUntil:
-    visible:
-      text: ".*"
-    timeout: 20000
+    file: qa_persona_login.yaml
+    env:
+      QA_PERSONA: ${ACCOUNT_CHIP}

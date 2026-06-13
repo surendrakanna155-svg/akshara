@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/config/environment_provider.dart';
+import '../../core/testing/qa_test_keys.dart';
 import '../../features/school_completion/school_branding_theme_provider.dart';
 import '../../router/route_names.dart';
 import '../../theme/radius.dart';
@@ -189,6 +190,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: AksharaSpacing.s2),
                         TextFormField(
+                          key: QaTestKeys.loginPhoneField,
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
                           textInputAction: TextInputAction.next,
@@ -236,6 +238,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: AksharaSpacing.s6),
                         FilledButton(
+                          key: QaTestKeys.loginContinueButton,
                           onPressed: _isSubmitting ? null : _submit,
                           style: FilledButton.styleFrom(
                             minimumSize: const Size.fromHeight(48),

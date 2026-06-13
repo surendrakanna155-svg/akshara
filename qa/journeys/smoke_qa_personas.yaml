@@ -1,0 +1,79 @@
+# Smoke — validate all QA persona dashboards (instant login)
+# tags: smoke,qa-login,persona
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/qa_persona_login.yaml
+    env:
+      QA_PERSONA: Principal
+- extendedWaitUntil:
+    visible:
+      text: "Principal overview"
+    timeout: 15000
+- takeScreenshot: smoke_principal_dashboard
+- runFlow:
+    file: ../maestro/flows/_shared/qa_relaunch.yaml
+- runFlow:
+    file: ../maestro/flows/_shared/qa_persona_login.yaml
+    env:
+      QA_PERSONA: Teacher
+- extendedWaitUntil:
+    visible:
+      text: "Good morning, Priya"
+    timeout: 25000
+- takeScreenshot: smoke_teacher_dashboard
+- runFlow:
+    file: ../maestro/flows/_shared/qa_relaunch.yaml
+- runFlow:
+    file: ../maestro/flows/_shared/qa_persona_login.yaml
+    env:
+      QA_PERSONA: Parent
+- extendedWaitUntil:
+    visible:
+      text: "Fees"
+    timeout: 15000
+- takeScreenshot: smoke_parent_dashboard
+- runFlow:
+    file: ../maestro/flows/_shared/qa_relaunch.yaml
+- runFlow:
+    file: ../maestro/flows/_shared/qa_persona_login.yaml
+    env:
+      QA_PERSONA: Student
+- extendedWaitUntil:
+    visible:
+      text: "Home"
+    timeout: 15000
+- takeScreenshot: smoke_student_dashboard
+- runFlow:
+    file: ../maestro/flows/_shared/qa_relaunch.yaml
+- runFlow:
+    file: ../maestro/flows/_shared/qa_persona_login.yaml
+    env:
+      QA_PERSONA: Finance
+- extendedWaitUntil:
+    visible:
+      text: "Fee Collected (MTD)"
+    timeout: 25000
+- takeScreenshot: smoke_finance_dashboard
+- runFlow:
+    file: ../maestro/flows/_shared/qa_relaunch.yaml
+- runFlow:
+    file: ../maestro/flows/_shared/qa_persona_login.yaml
+    env:
+      QA_PERSONA: Inventory
+- extendedWaitUntil:
+    visible:
+      text: "Total Assets"
+    timeout: 15000
+- takeScreenshot: smoke_inventory_dashboard
+- runFlow:
+    file: ../maestro/flows/_shared/qa_relaunch.yaml
+- runFlow:
+    file: ../maestro/flows/_shared/qa_persona_login.yaml
+    env:
+      QA_PERSONA: Super Admin
+- extendedWaitUntil:
+    visible:
+      text: "Admin Hub"
+    timeout: 15000
+- takeScreenshot: smoke_super_admin_dashboard

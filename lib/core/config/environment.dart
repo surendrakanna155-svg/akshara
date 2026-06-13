@@ -21,6 +21,7 @@ class Environment {
     this.requireTls = false,
     this.requireAuthentication = false,
     this.disableDemoAuth = false,
+    this.enableQaLogin = false,
   });
 
   final EnvironmentName name;
@@ -36,6 +37,9 @@ class Environment {
 
   /// When true, mock OTP / demo persona shortcuts are disabled.
   final bool disableDemoAuth;
+
+  /// When true, show instant QA persona login (never enabled in production).
+  final bool enableQaLogin;
 
   static const development = Environment(
     name: EnvironmentName.development,
@@ -82,6 +86,14 @@ class Environment {
       'ENABLE_DEMO_AUTH',
       defaultValue: false,
     );
+    const qaAutomation = bool.fromEnvironment(
+      'QA_AUTOMATION',
+      defaultValue: false,
+    );
+    const enableQaLoginDefine = bool.fromEnvironment(
+      'ENABLE_QA_LOGIN',
+      defaultValue: false,
+    );
     final base = switch (raw.toLowerCase()) {
       'staging' => staging,
       'production' => production,
@@ -97,6 +109,14 @@ class Environment {
     if (enableDemoAuth) {
       resolved = resolved.copyWith(disableDemoAuth: false);
     }
+    final wantsQaLogin = qaAutomation || enableQaLoginDefine;
+    if (wantsQaLogin && resolved.name != EnvironmentName.production) {
+      resolved = resolved.copyWith(
+        enableQaLogin: true,
+        disableDemoAuth: false,
+        enableApiMode: false,
+      );
+    }
     return resolved;
   }
 
@@ -108,6 +128,7 @@ class Environment {
     bool? requireTls,
     bool? requireAuthentication,
     bool? disableDemoAuth,
+    bool? enableQaLogin,
   }) {
     return Environment(
       name: name ?? this.name,
@@ -117,6 +138,7 @@ class Environment {
       requireTls: requireTls ?? this.requireTls,
       requireAuthentication: requireAuthentication ?? this.requireAuthentication,
       disableDemoAuth: disableDemoAuth ?? this.disableDemoAuth,
+      enableQaLogin: enableQaLogin ?? this.enableQaLogin,
     );
   }
 }

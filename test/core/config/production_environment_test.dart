@@ -9,6 +9,7 @@ void main() {
       expect(env.requireAuthentication, isTrue);
       expect(env.requireTls, isTrue);
       expect(env.enableLogging, isFalse);
+      expect(env.enableQaLogin, isFalse);
     });
 
     test('staging disables demo auth by default (pilot hardened)', () {

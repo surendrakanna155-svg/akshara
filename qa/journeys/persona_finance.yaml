@@ -2,14 +2,11 @@
 # tags: module,finance,erp
 appId: com.akshara.erp
 env:
-  STAFF_PHONE: "9999999999"
-  ERP_ROLE: "Super Admin"
+  QA_PERSONA: Finance
 ---
 - runFlow:
     file: ../maestro/flows/_shared/staff_demo_login.yaml
-- runFlow:
-    file: ../maestro/flows/_shared/erp_open_module.yaml
     env:
-      MODULE_LABEL: Finance
-- assertVisible: "Fee Collected"
+      QA_PERSONA: Finance
+- assertVisible: "Fee Collected (MTD)"
 - takeScreenshot: finance_dashboard

@@ -1,9 +1,10 @@
-# Smoke — launch app and reach login screen
+# Smoke — launch app and reach QA login screen
 # tags: smoke,first-run
 appId: com.akshara.erp
 ---
 - runFlow:
     file: ../maestro/flows/_shared/launch_app.yaml
-- assertVisible: "Welcome back"
-- assertVisible: "Continue"
-- takeScreenshot: smoke_login
+- assertVisible: "Principal"
+- assertVisible: "Teacher"
+- assertVisible: "Parent"
+- takeScreenshot: smoke_qa_login

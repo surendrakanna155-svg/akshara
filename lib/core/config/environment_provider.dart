@@ -16,3 +16,8 @@ final isDemoAuthEnabledProvider = Provider<bool>((ref) {
 final enableApiModeProvider = Provider<bool>((ref) {
   return ref.watch(environmentProvider).enableApiMode;
 });
+
+/// Instant QA persona login for Maestro / emulator automation builds only.
+final isQaLoginEnabledProvider = Provider<bool>((ref) {
+  return ref.watch(environmentProvider).enableQaLogin;
+});

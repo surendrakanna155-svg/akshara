@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/auth/auth_models.dart';
+import '../features/auth/qa_login_persona.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/otp_verification_screen.dart';
+import '../features/auth/qa_login_screen.dart';
 import '../features/auth/splash_screen.dart';
 import '../features/auth/staff/staff_login_screen.dart';
 import '../features/auth/staff/staff_otp_screen.dart';
@@ -75,15 +77,19 @@ import 'teacher_navigation.dart';
 GoRouter createAppRouter({
   Listenable? refreshListenable,
   required AuthState Function() readAuth,
+  bool Function()? readQaLoginEnabled,
 }) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
+  String authEntryRoute() =>
+      (readQaLoginEnabled?.call() ?? false) ? RouteNames.qaLogin : RouteNames.login;
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: RouteNames.splash,
     refreshListenable: refreshListenable,
     debugLogDiagnostics: true,
-    redirect: (context, state) => _authRedirect(readAuth(), state.uri.path),
+    redirect: (context, state) =>
+        _authRedirect(readAuth(), state.uri.path, authEntryRoute()),
     routes: [
       GoRoute(
         path: RouteNames.root,
@@ -98,6 +104,11 @@ GoRouter createAppRouter({
         path: RouteNames.login,
         name: 'login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.qaLogin,
+        name: 'qaLogin',
+        builder: (context, state) => const QaLoginScreen(),
       ),
       GoRoute(
         path: RouteNames.otpVerification,
@@ -1493,14 +1504,15 @@ GoRouter createAppRouter({
   );
 }
 
-String? _authRedirect(AuthState auth, String location) {
+String? _authRedirect(AuthState auth, String location, String entryRoute) {
   final isSplash = location == RouteNames.splash;
   final isLogin = location == RouteNames.login;
+  final isQaLogin = location == RouteNames.qaLogin;
   final isOtp = location == RouteNames.otpVerification;
   final isStaffLogin = location == RouteNames.staffLogin;
   final isStaffOtp = location == RouteNames.staffOtp;
   final isAuthEntryRoute =
-      isSplash || isLogin || isOtp || isStaffLogin || isStaffOtp;
+      isSplash || isLogin || isQaLogin || isOtp || isStaffLogin || isStaffOtp;
 
   if (auth.status == AuthStatus.unknown) {
     return isSplash ? null : RouteNames.splash;
@@ -1519,11 +1531,11 @@ String? _authRedirect(AuthState auth, String location) {
   final isProtectedRoute = _isProtectedRoute(location);
 
   if (!isAuthenticated && isProtectedRoute) {
-    return RouteNames.login;
+    return entryRoute;
   }
 
-  if (isAuthenticated && (isLogin || isOtp || isStaffLogin || isStaffOtp)) {
-    return homeRouteForRole(auth.role);
+  if (isAuthenticated && (isLogin || isQaLogin || isOtp || isStaffLogin || isStaffOtp)) {
+    return homeRouteForAuth(auth);
   }
 
   if (isSplash) {
@@ -1572,6 +1584,14 @@ String homeRouteForRole(UserRole? role) {
     UserRole.staff => RouteNames.admin,
     null => RouteNames.login,
   };
+}
+
+/// Home route using staff ERP claims when present (QA / staff sessions).
+String homeRouteForAuth(AuthState auth) {
+  if (auth.role == UserRole.staff && auth.claims?.erpRole != null) {
+    return homeRouteForStaffErp(auth.claims!.erpRole);
+  }
+  return homeRouteForRole(auth.role);
 }
 
 /// Parent academic report (v13.2 — structured summary, no AI chat).

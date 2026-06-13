@@ -1,0 +1,10 @@
+appId: com.akshara.erp
+---
+# Requires env: QA_PERSONA (Principal|Teacher|Parent|Student|Finance|Inventory|Super Admin)
+- runFlow:
+    file: launch_app.yaml
+- tapOn: ${QA_PERSONA}
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 20000
