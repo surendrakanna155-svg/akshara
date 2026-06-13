@@ -20,6 +20,17 @@ abstract final class QaTestKeys {
   static ValueKey<String> principalQuickAction(String action) =>
       ValueKey<String>('principal_qa_$action');
 
+  static const enrollmentContinueButton =
+      ValueKey<String>('enrollment_continue_button');
+
+  static String normalizeSubNavLabel(String label) =>
+      label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+
+  static ValueKey<String> moduleSubNavTab(String module, String tabLabel) =>
+      ValueKey<String>(
+        'erp_subnav_${module}_${normalizeSubNavLabel(tabLabel)}',
+      );
+
   static ValueKey<String> qaPersonaButton(String label) =>
       ValueKey<String>('qa_persona_$label');
 }

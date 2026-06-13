@@ -58,9 +58,7 @@ void main() {
         subNavLabel: 'Enrollment',
         workflowAnchor: 'Student profile',
       );
-      await scrollTap($, 'Continue');
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await $('Parent / guardian').scrollTo();
+      await tapEnrollmentContinue($);
       await assertVisibleText($, 'Parent / guardian');
     },
   );
@@ -87,7 +85,7 @@ void main() {
         QaLoginPersona.superAdmin,
         'finance',
         subNavLabel: 'Reports',
-        workflowAnchor: 'Report catalog',
+        workflowAnchor: 'Export PDF',
       );
     },
   );
@@ -139,7 +137,7 @@ void main() {
         $,
         QaLoginPersona.superAdmin,
         'hostel',
-        workflowAnchor: 'Block occupancy',
+        workflowAnchor: 'Occupancy',
       );
     },
   );
@@ -167,7 +165,7 @@ void main() {
         QaLoginPersona.superAdmin,
         'management',
         subNavLabel: 'Analytics',
-        workflowAnchor: 'Class summary',
+        workflowAnchor: 'Enrollment trend',
       );
     },
   );

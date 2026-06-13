@@ -28,7 +28,7 @@ void main() {
       await openErpDrawer($);
       await $(QaTestKeys.erpNavModule('sis')).scrollTo().tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 15));
-      await tapModuleSubNav($, 'Student Registry');
+      await tapModuleSubNav($, 'sis', 'Student Registry');
       await $('Export').scrollTo();
       await assertVisibleText($, 'Export');
     },

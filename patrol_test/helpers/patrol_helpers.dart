@@ -82,18 +82,28 @@ Future<void> navigateErpWorkflow(
   await $(QaTestKeys.erpNavModule(moduleKey)).scrollTo().tap();
   await $.pumpAndSettle(timeout: const Duration(seconds: 15));
   if (subNavLabel != null) {
-    final tab = subNavLabel.endsWith(' tab') ? subNavLabel : '$subNavLabel tab';
-    await $(tab).scrollTo().tap();
+    await $(QaTestKeys.moduleSubNavTab(moduleKey, subNavLabel))
+        .scrollTo()
+        .tap();
     await $.pumpAndSettle(timeout: const Duration(seconds: 10));
   }
   await $(workflowAnchor).scrollTo();
   await assertVisibleText($, workflowAnchor, timeout: const Duration(seconds: 25));
 }
 
-/// Taps a horizontal module sub-nav tab (Finance, Reports, Analytics, …).
-Future<void> tapModuleSubNav(PatrolIntegrationTester $, String label) async {
-  final tab = label.endsWith(' tab') ? label : '$label tab';
-  await $(tab).scrollTo().tap();
+/// Taps a horizontal module sub-nav tab by module key + label.
+Future<void> tapModuleSubNav(
+  PatrolIntegrationTester $,
+  String moduleKey,
+  String label,
+) async {
+  await $(QaTestKeys.moduleSubNavTab(moduleKey, label)).scrollTo().tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+}
+
+/// Advances enrollment wizard; scrolls to Continue when off-screen.
+Future<void> tapEnrollmentContinue(PatrolIntegrationTester $) async {
+  await $(QaTestKeys.enrollmentContinueButton).scrollTo().tap();
   await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 }
 

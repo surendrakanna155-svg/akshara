@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/forms/forms.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -139,6 +140,7 @@ class _AdmissionsEnrollmentScreenState
         const Spacer(),
         if (!isLast)
           FilledButton(
+            key: QaTestKeys.enrollmentContinueButton,
             onPressed: form.isSubmitting ? null : () => _continue(notifier),
             child: const Text('Continue'),
           )
