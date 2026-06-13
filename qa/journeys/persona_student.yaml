@@ -1,0 +1,16 @@
+# Persona — Student mobile journey
+# tags: persona,student,mobile
+appId: com.akshara.erp
+env:
+  ACCOUNT_CHIP: Student
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Student
+- assertVisible: "Home"
+- takeScreenshot: student_dashboard
+- tapOn: "Homework"
+- takeScreenshot: student_homework
+- tapOn: "Timetable"
+- takeScreenshot: student_timetable

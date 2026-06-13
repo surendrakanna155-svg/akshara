@@ -1,0 +1,30 @@
+{
+  "version": "18.1",
+  "totalJourneys": 24,
+  "journeys": [
+    {"id": "smoke_launch", "category": "smoke", "persona": null, "routesCovered": ["/splash", "/login"]},
+    {"id": "smoke_otp_back", "category": "smoke", "persona": null, "routesCovered": ["/login", "/otp"]},
+    {"id": "persona_super_admin", "category": "persona", "persona": "super_admin", "routesCovered": ["/staff/login", "/staff/otp", "/admin"]},
+    {"id": "persona_principal", "category": "persona", "persona": "principal", "routesCovered": ["/login", "/otp", "/admin", "/management/dashboard"]},
+    {"id": "persona_teacher", "category": "persona", "persona": "teacher", "routesCovered": ["/login", "/otp", "/teacher/dashboard", "/teacher/attendance", "/teacher/homework"]},
+    {"id": "persona_parent", "category": "persona", "persona": "parent", "routesCovered": ["/login", "/otp", "/parent/dashboard", "/parent/fees", "/parent/attendance"]},
+    {"id": "persona_student", "category": "persona", "persona": "student", "routesCovered": ["/login", "/otp", "/student/dashboard", "/student/homework", "/student/timetable"]},
+    {"id": "persona_finance", "category": "module", "persona": "finance", "routesCovered": ["/admin", "/finance/dashboard"]},
+    {"id": "persona_inventory", "category": "module", "persona": "inventory", "routesCovered": ["/admin", "/inventory/dashboard"]},
+    {"id": "persona_communication", "category": "module", "persona": "communication", "routesCovered": ["/admin", "/management/dashboard"]},
+    {"id": "persona_intelligence", "category": "module", "persona": "intelligence", "routesCovered": ["/admin", "/management/analytics"]},
+    {"id": "workflow_school_creation", "category": "workflow", "persona": "super_admin", "routesCovered": ["/sis/dashboard", "/sis/onboarding"]},
+    {"id": "workflow_teacher_creation", "category": "workflow", "persona": "super_admin", "routesCovered": ["/hr/employees"]},
+    {"id": "workflow_student_creation", "category": "workflow", "persona": "super_admin", "routesCovered": ["/sis/dashboard", "/sis/students"]},
+    {"id": "workflow_parent_creation", "category": "workflow", "persona": "parent", "routesCovered": ["/parent/profile", "/parent/fees"]},
+    {"id": "workflow_attendance", "category": "workflow", "persona": "teacher", "routesCovered": ["/teacher/attendance"]},
+    {"id": "workflow_homework", "category": "workflow", "persona": "teacher", "routesCovered": ["/teacher/homework"]},
+    {"id": "workflow_fees", "category": "workflow", "persona": "finance", "routesCovered": ["/finance/dashboard"]},
+    {"id": "workflow_inventory", "category": "workflow", "persona": "inventory", "routesCovered": ["/inventory/assets"]},
+    {"id": "workflow_exams", "category": "workflow", "persona": "student", "routesCovered": ["/student/exams"]},
+    {"id": "workflow_reports", "category": "workflow", "persona": "finance", "routesCovered": ["/finance/reports"]},
+    {"id": "workflow_timetable", "category": "workflow", "persona": "student", "routesCovered": ["/student/timetable"]},
+    {"id": "workflow_communications", "category": "workflow", "persona": "communication", "routesCovered": ["/management/dashboard"]},
+    {"id": "workflow_analytics", "category": "workflow", "persona": "intelligence", "routesCovered": ["/management/analytics"]}
+  ]
+}

@@ -1,0 +1,16 @@
+# Persona — Teacher mobile journey
+# tags: persona,teacher,mobile
+appId: com.akshara.erp
+env:
+  ACCOUNT_CHIP: Teacher
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Teacher
+- assertVisible: "Dashboard"
+- takeScreenshot: teacher_dashboard
+- tapOn: "Attendance"
+- takeScreenshot: teacher_attendance
+- tapOn: "Homework"
+- takeScreenshot: teacher_homework

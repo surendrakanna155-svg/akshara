@@ -1,0 +1,17 @@
+appId: com.akshara.erp
+---
+# Requires env: ACCOUNT_CHIP (Parent|Teacher|Student|Principal)
+- runFlow:
+    file: launch_app.yaml
+- tapOn: ${ACCOUNT_CHIP}
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible:
+      text: "Verify OTP"
+    timeout: 15000
+- inputText: ${MOBILE_OTP}
+- tapOn: "Verify & continue"
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 20000

@@ -1,0 +1,20 @@
+# Persona — Principal (mobile demo account → staff ERP shell)
+# tags: persona,principal,erp
+appId: com.akshara.erp
+env:
+  ACCOUNT_CHIP: Principal
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Principal
+- extendedWaitUntil:
+    visible:
+      text: "Admin Hub"
+    timeout: 25000
+- takeScreenshot: principal_admin_hub
+- runFlow:
+    file: ../maestro/flows/_shared/erp_open_module.yaml
+    env:
+      MODULE_LABEL: Management
+- assertVisible: "Revenue"

@@ -1,0 +1,14 @@
+# Module — Communications (school delivery analytics)
+# tags: module,communication,erp
+appId: com.akshara.erp
+env:
+  STAFF_PHONE: "9999999999"
+  ERP_ROLE: "Super Admin"
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+- runFlow:
+    file: ../maestro/flows/_shared/erp_open_module.yaml
+    env:
+      MODULE_LABEL: Management
+- takeScreenshot: communications_management_entry

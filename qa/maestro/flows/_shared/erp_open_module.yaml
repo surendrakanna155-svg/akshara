@@ -1,0 +1,15 @@
+appId: com.akshara.erp
+---
+# Requires env: MODULE_LABEL (Finance, Inventory, Management, etc.)
+- tapOn:
+    point: "7%,7%"
+- extendedWaitUntil:
+    visible:
+      text: ${MODULE_LABEL}
+    timeout: 5000
+- tapOn: ${MODULE_LABEL}
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 20000
+- takeScreenshot: ${MODULE_LABEL}

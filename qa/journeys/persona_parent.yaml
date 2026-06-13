@@ -1,0 +1,20 @@
+# Persona — Parent mobile journey
+# tags: persona,parent,mobile
+appId: com.akshara.erp
+env:
+  ACCOUNT_CHIP: Parent
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Parent
+- assertVisible: "School Notices"
+- takeScreenshot: parent_dashboard
+- tapOn: "Fees"
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 15000
+- takeScreenshot: parent_fees
+- tapOn: "Attendance"
+- takeScreenshot: parent_attendance

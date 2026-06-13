@@ -29,6 +29,12 @@ supabase/.temp/
 __pycache__/
 *.pyc
 
+# QA runtime artifacts (keep folder structure)
+qa/screenshots/**/*
+!qa/screenshots/.gitkeep
+qa/reports/**/*
+!qa/reports/.gitkeep
+
 # Coverage
 coverage/
 lcov.info

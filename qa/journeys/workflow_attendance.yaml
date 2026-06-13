@@ -1,0 +1,11 @@
+# Workflow — Attendance (teacher mark + parent view)
+# tags: workflow,attendance
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Teacher
+- tapOn: "Attendance"
+- assertVisible: "Mark Attendance"
+- takeScreenshot: workflow_teacher_attendance

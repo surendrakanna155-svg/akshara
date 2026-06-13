@@ -1,7 +1,7 @@
 name: akshara_erp
 description: Akshara ERP — multi-tenant school SaaS platform.
 publish_to: 'none'
-version: 18.0.0+180
+version: 18.1.0+181
 
 environment:
   sdk: '>=3.5.0 <4.0.0'

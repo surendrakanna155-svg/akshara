@@ -1,0 +1,29 @@
+{
+  "tag": "v18.1-autonomous-qa-platform",
+  "version": "18.1.0+181",
+  "validatedAt": "2026-06-13",
+  "maestro": {
+    "installed": true,
+    "version": "2.6.1",
+    "path": "~/.maestro/bin/maestro"
+  },
+  "emulator": {
+    "available": "Medium_Phone_API_36.0",
+    "connectedDuringSetup": false,
+    "note": "Launch with: flutter emulators --launch Medium_Phone_API_36.0"
+  },
+  "qaApk": {
+    "built": true,
+    "path": "build/app/outputs/flutter-apk/app-profile.apk",
+    "profile": "ENABLE_DEMO_AUTH=true, ENABLE_API_MODE=false"
+  },
+  "journeysCreated": 24,
+  "sharedFlows": 5,
+  "routesDiscovered": 189,
+  "routesFlutterSmoke": 123,
+  "qualityGates": {
+    "flutterAnalyze": "pass",
+    "flutterTest": "1291 pass",
+    "maestroSmoke": "pending_device"
+  }
+}

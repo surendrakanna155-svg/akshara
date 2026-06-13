@@ -1,0 +1,28 @@
+appId: com.akshara.erp
+---
+# Requires env: STAFF_PHONE, ERP_ROLE (e.g. Super Admin, Principal)
+- runFlow:
+    file: launch_app.yaml
+- tapOn: "Staff ERP portal"
+- extendedWaitUntil:
+    visible:
+      text: "Staff sign in"
+    timeout: 10000
+- tapOn: "Mobile"
+- tapOn:
+    text: "Mobile number"
+- inputText: ${STAFF_PHONE}
+- hideKeyboard
+- tapOn:
+    text: ${ERP_ROLE}
+- tapOn: "Send OTP"
+- extendedWaitUntil:
+    visible:
+      text: "Verify OTP"
+    timeout: 15000
+- inputText: ${STAFF_OTP}
+- tapOn: "Verify & sign in"
+- extendedWaitUntil:
+    visible:
+      text: "Admin Hub"
+    timeout: 25000

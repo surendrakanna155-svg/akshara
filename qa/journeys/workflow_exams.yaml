@@ -1,0 +1,10 @@
+# Workflow — Exams (student + parent)
+# tags: workflow,exams
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Student
+- tapOn: "Exams"
+- takeScreenshot: workflow_student_exams

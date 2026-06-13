@@ -2,8 +2,8 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026  
-**Current release:** v18.0 Autonomous QA (`v18.0-autonomous-qa`)  
-**Previous release:** v17.4 Device Auth Validation (`v17.4-device-auth-validation`)  
+**Current release:** v18.1 Autonomous QA Platform (`v18.1-autonomous-qa-platform`)  
+**Previous release:** v18.0 Autonomous QA (`v18.0-autonomous-qa`)  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
 **Feature freeze:** active — no new milestones  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  

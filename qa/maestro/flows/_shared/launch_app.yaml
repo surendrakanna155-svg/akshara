@@ -1,0 +1,9 @@
+appId: com.akshara.erp
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back"
+    timeout: 25000
+- takeScreenshot: launch_login

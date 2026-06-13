@@ -1,0 +1,13 @@
+# Akshara ERP — Maestro workspace configuration
+# Usage: maestro test -c qa/maestro/config.yaml qa/journeys/<flow>.yaml
+
+appId: com.akshara.erp
+
+# Default env vars for demo-auth QA builds (ENABLE_DEMO_AUTH=true)
+env:
+  MOBILE_OTP: "123456"
+  STAFF_OTP: "654321"
+  QA_PHONE_PARENT: "9000100001"
+  QA_PHONE_TEACHER: "9000000001"
+  QA_PHONE_STUDENT: "9876543212"
+  QA_PHONE_PRINCIPAL: "9876543210"

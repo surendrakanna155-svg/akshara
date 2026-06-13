@@ -1,0 +1,10 @@
+# Workflow — Homework (teacher + student)
+# tags: workflow,homework
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Teacher
+- tapOn: "Homework"
+- takeScreenshot: workflow_teacher_homework

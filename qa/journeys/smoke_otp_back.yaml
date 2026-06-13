@@ -1,0 +1,20 @@
+# Smoke — OTP back returns to login (v18.0 fix regression)
+# tags: smoke,navigation
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/launch_app.yaml
+- tapOn: "Parent"
+- tapOn: "Continue"
+- extendedWaitUntil:
+    visible:
+      text: "Verify OTP"
+    timeout: 15000
+- takeScreenshot: smoke_otp_screen
+- tapOn:
+    icon: ArrowBack
+- extendedWaitUntil:
+    visible:
+      text: "Welcome back"
+    timeout: 10000
+- takeScreenshot: smoke_back_to_login
