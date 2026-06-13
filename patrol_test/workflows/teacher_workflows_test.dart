@@ -113,4 +113,14 @@ void main() {
       await assertVisibleText($, 'Homework Review');
     },
   );
+
+  patrolTest(
+    'workflow: teacher leave requests',
+    config: aksharaPatrolConfig(),
+    ($) async {
+      await bootstrapAndLogin($, QaLoginPersona.teacher);
+      await scrollTap($, 'Leave request');
+      await assertVisibleText($, 'Leave');
+    },
+  );
 }

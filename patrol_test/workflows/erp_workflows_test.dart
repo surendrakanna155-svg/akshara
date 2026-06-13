@@ -85,7 +85,7 @@ void main() {
         QaLoginPersona.superAdmin,
         'finance',
         subNavLabel: 'Reports',
-        workflowAnchor: 'Export PDF',
+        workflowAnchor: 'Report catalog',
       );
     },
   );

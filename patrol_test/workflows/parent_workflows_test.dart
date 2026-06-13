@@ -111,4 +111,47 @@ void main() {
       await assertVisibleText($, 'Parent Experience');
     },
   );
+
+  patrolTest(
+    'workflow: parent school notices',
+    config: aksharaPatrolConfig(),
+    ($) async {
+      await bootstrapAndLogin($, QaLoginPersona.parent);
+      await scrollTap($, 'School Notices');
+      await assertVisibleText($, 'School Notices');
+    },
+  );
+
+  patrolTest(
+    'workflow: parent leave requests',
+    config: aksharaPatrolConfig(),
+    ($) async {
+      await bootstrapAndLogin($, QaLoginPersona.parent);
+      await $(QaTestKeys.profileButton).tap();
+      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await scrollTap($, 'Leave requests');
+      await assertVisibleText($, 'Leave Requests');
+    },
+  );
+
+  patrolTest(
+    'workflow: parent school events',
+    config: aksharaPatrolConfig(),
+    ($) async {
+      await bootstrapAndLogin($, QaLoginPersona.parent);
+      await scrollTap($, 'Science Exhibition');
+      await assertVisibleText($, 'School Events');
+    },
+  );
+
+  patrolTest(
+    'workflow: parent profile settings',
+    config: aksharaPatrolConfig(),
+    ($) async {
+      await bootstrapAndLogin($, QaLoginPersona.parent);
+      await $(QaTestKeys.profileButton).tap();
+      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await assertVisibleText($, 'Profile');
+    },
+  );
 }

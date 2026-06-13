@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../hr_navigation.dart';
@@ -61,6 +62,7 @@ class _HrSubNavTab extends StatelessWidget {
       selected: selected,
       label: '$label tab',
       child: Material(
+        key: QaTestKeys.moduleSubNavTab('hr', label),
         color: selected ? colors.primaryContainer : colors.surface,
         borderRadius: BorderRadius.circular(AksharaSpacing.s3),
         child: InkWell(

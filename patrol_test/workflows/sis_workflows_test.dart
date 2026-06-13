@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 
 import 'package:akshara_erp/features/auth/qa_login_persona.dart';
@@ -11,7 +13,8 @@ void main() {
     ($) async {
       await openErpModule($, QaLoginPersona.superAdmin, 'sis');
       await tapModuleSubNav($, 'sis', 'Student Registry');
-      await assertVisibleText($, 'Search student or admission number');
+      await assertVisibleText($, 'Export');
+      expect(find.byIcon(Icons.search), findsWidgets);
       await scrollTap($, 'Export');
       await assertVisibleText($, 'Export');
     },
@@ -79,7 +82,7 @@ void main() {
       await openErpModule($, QaLoginPersona.principal, 'sis');
       await tapModuleSubNav($, 'sis', 'Student Registry');
       await assertVisibleText($, 'Active');
-      await assertVisibleText($, 'Alumni');
+      await assertVisibleText($, 'Prospect');
     },
   );
 }

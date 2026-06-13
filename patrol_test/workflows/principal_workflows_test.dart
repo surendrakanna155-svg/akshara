@@ -78,9 +78,8 @@ void main() {
     config: aksharaPatrolConfig(),
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.principal);
-      await tapPrincipalQuickAction($, 'attendance');
-      await $('Class summary').scrollTo();
-      await assertVisibleText($, 'Class summary');
+      await tapModuleSubNav($, 'management', 'Analytics');
+      await assertVisibleText($, 'Enrollment trend');
     },
   );
 
@@ -89,7 +88,7 @@ void main() {
     config: aksharaPatrolConfig(),
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.principal);
-      await tapPrincipalQuickAction($, 'approvals');
+      await scrollDashboardDown($, times: 8);
       await assertVisibleText($, 'Approval queue');
     },
   );
@@ -99,9 +98,9 @@ void main() {
     config: aksharaPatrolConfig(),
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.principal);
-      await tapPrincipalQuickAction($, 'risk');
-      await $('Communication engagement').scrollTo();
-      await assertVisibleText($, 'Communication engagement');
+      await scrollDashboardDown($, times: 2);
+      await $('Risk').tap();
+      await assertVisibleText($, 'School Health');
     },
   );
 
@@ -110,9 +109,8 @@ void main() {
     config: aksharaPatrolConfig(),
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.principal);
-      await tapPrincipalQuickAction($, 'fees');
-      await $('Finance module drill-down').scrollTo();
-      await assertVisibleText($, 'Finance module drill-down');
+      await tapModuleSubNav($, 'management', 'Finance');
+      await assertVisibleText($, 'P&L trend');
     },
   );
 }

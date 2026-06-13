@@ -12,7 +12,7 @@ void main() {
     config: aksharaPatrolConfig(),
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.principal);
-      await assertVisibleText($, 'Principal');
+      await assertVisibleText($, 'Principal overview');
       await capturePatrolScreenshot($, 'principal_dashboard', subdir: 'v18_6');
     },
   );
@@ -87,7 +87,7 @@ void main() {
         QaLoginPersona.superAdmin,
         'finance',
         subNavLabel: 'Reports',
-        workflowAnchor: 'Export PDF',
+        workflowAnchor: 'Report catalog',
       );
       await capturePatrolScreenshot($, 'finance_reports', subdir: 'v18_6');
     },

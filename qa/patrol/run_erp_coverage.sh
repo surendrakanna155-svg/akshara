@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ERP workflow coverage — FAST = smoke (~2 min). FULL = all workflow suites (~35 min).
+# ERP workflow coverage — FAST = smoke (~2 min). FULL = every workflow suite (~60+ min).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -39,25 +39,36 @@ flutter test | tee "${REPORT_DIR}/flutter_test.log"
 log "Generate module coverage report"
 python3 scripts/qa/generate_module_coverage_report.py | tee "${REPORT_DIR}/coverage_report.log"
 
+ALL_TARGETS=(
+  "patrol_test/workflows/erp_coverage_smoke_test.dart"
+  "patrol_test/workflows/teacher_workflows_test.dart"
+  "patrol_test/workflows/parent_workflows_test.dart"
+  "patrol_test/workflows/student_workflows_test.dart"
+  "patrol_test/workflows/principal_workflows_test.dart"
+  "patrol_test/workflows/erp_workflows_test.dart"
+  "patrol_test/workflows/finance_workflows_test.dart"
+  "patrol_test/workflows/inventory_workflows_test.dart"
+  "patrol_test/workflows/sis_workflows_test.dart"
+  "patrol_test/workflows/admissions_workflows_test.dart"
+  "patrol_test/workflows/hr_workflows_test.dart"
+  "patrol_test/workflows/transport_workflows_test.dart"
+  "patrol_test/workflows/library_workflows_test.dart"
+  "patrol_test/workflows/hostel_workflows_test.dart"
+  "patrol_test/workflows/alumni_workflows_test.dart"
+  "patrol_test/workflows/control_center_workflows_test.dart"
+  "patrol_test/workflows/management_workflows_test.dart"
+  "patrol_test/workflows/screenshot_validation_test.dart"
+)
+
 if [[ "$MODE" == "fast" ]]; then
   TARGETS=("patrol_test/workflows/erp_coverage_smoke_test.dart")
 else
-  TARGETS=(
-    "patrol_test/workflows/teacher_workflows_test.dart"
-    "patrol_test/workflows/parent_workflows_test.dart"
-    "patrol_test/workflows/student_workflows_test.dart"
-    "patrol_test/workflows/principal_workflows_test.dart"
-    "patrol_test/workflows/erp_workflows_test.dart"
-    "patrol_test/workflows/finance_workflows_test.dart"
-    "patrol_test/workflows/inventory_workflows_test.dart"
-    "patrol_test/workflows/sis_workflows_test.dart"
-    "patrol_test/workflows/admissions_workflows_test.dart"
-    "patrol_test/workflows/screenshot_validation_test.dart"
-  )
+  TARGETS=("${ALL_TARGETS[@]:1}") # skip smoke duplicate in full mode
 fi
 
 FAILED=0
 PASSED=0
+FAILURES=()
 for target in "${TARGETS[@]}"; do
   name="$(basename "$target" .dart)"
   log "Patrol ==> $target"
@@ -68,6 +79,7 @@ for target in "${TARGETS[@]}"; do
   set -e
   if [[ "$ec" -ne 0 ]]; then
     FAILED=$((FAILED + 1))
+    FAILURES+=("$name")
   else
     PASSED=$((PASSED + 1))
   fi
@@ -80,16 +92,18 @@ cat > "${REPORT_DIR}/coverage_summary.json" <<EOF
 {
   "run_id": "${RUN_ID}",
   "mode": "${MODE}",
-  "suite": "v18.6-erp-coverage-expansion",
+  "suite": "v18.6-erp-full-coverage",
   "coverage_before_pct": 38,
   "coverage_after_pct": ${COVERAGE_AFTER},
   "patrol_workflow_tests": ${WORKFLOW_COUNT},
-  "patrol_smoke_tests": 5,
   "patrol_suites_passed": ${PASSED},
   "failed_suites": ${FAILED},
-  "readiness_score": 85
+  "readiness_score": $([[ "$FAILED" -eq 0 ]] && echo 90 || echo 82)
 }
 EOF
 
-[[ "$FAILED" -eq 0 ]] || exit 1
-log "Done."
+if [[ "$FAILED" -gt 0 ]]; then
+  log "FAILED suites: ${FAILURES[*]}"
+  exit 1
+fi
+log "Done. ${PASSED} suites passed."

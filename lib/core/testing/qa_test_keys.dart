@@ -23,6 +23,10 @@ abstract final class QaTestKeys {
   static const enrollmentContinueButton =
       ValueKey<String>('enrollment_continue_button');
 
+  /// Inventory INV lifecycle screen root (Patrol route navigation target).
+  static const inventoryLifecycleScreen =
+      ValueKey<String>('inventory_lifecycle_screen');
+
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
 

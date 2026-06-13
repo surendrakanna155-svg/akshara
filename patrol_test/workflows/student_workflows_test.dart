@@ -78,4 +78,27 @@ void main() {
       await assertVisibleText($, 'Timetable');
     },
   );
+
+  patrolTest(
+    'workflow: student join class quick action',
+    config: aksharaPatrolConfig(),
+    ($) async {
+      await bootstrapAndLogin($, QaLoginPersona.student);
+      await scrollTap($, 'Join Class');
+      await assertVisibleText($, 'Home');
+    },
+  );
+
+  patrolTest(
+    'workflow: student profile settings',
+    config: aksharaPatrolConfig(),
+    ($) async {
+      await bootstrapAndLogin($, QaLoginPersona.student);
+      await $(QaTestKeys.profileButton).tap();
+      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await assertVisibleText($, 'Student details');
+      await $('Settings').scrollTo();
+      await assertVisibleText($, 'App settings');
+    },
+  );
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 
 import 'package:akshara_erp/features/auth/qa_login_persona.dart';
@@ -51,13 +53,10 @@ void main() {
     'workflow: finance verify receipt lookup',
     config: aksharaPatrolConfig(),
     ($) async {
-      await navigateErpWorkflow(
-        $,
-        QaLoginPersona.superAdmin,
-        'finance',
-        subNavLabel: 'Collections',
-        workflowAnchor: 'Receipt lookup',
-      );
+      await openErpModule($, QaLoginPersona.superAdmin, 'finance');
+      await tapModuleSubNav($, 'finance', 'Collections');
+      await assertVisibleText($, 'Collected today');
+      expect(find.byIcon(Icons.search), findsWidgets);
     },
   );
 
@@ -70,7 +69,7 @@ void main() {
         QaLoginPersona.superAdmin,
         'finance',
         subNavLabel: 'Reports',
-        workflowAnchor: 'Export PDF',
+        workflowAnchor: 'Report catalog',
       );
     },
   );

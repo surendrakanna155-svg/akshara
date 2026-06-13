@@ -844,7 +844,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         fullName: 'Ananya Reddy',
         dateOfBirth: '12 Mar 2016',
         gender: 'Female',
-        aadhaar: 'XXXX-XXXX-4521',
+        aadhaar: '1234-5678-9012',
       ),
       parent: EnrollmentParentInfo(
         guardianName: 'Rajesh Reddy',
