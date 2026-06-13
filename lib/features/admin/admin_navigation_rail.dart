@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -76,6 +77,7 @@ class AdminNavigationRail extends ConsumerWidget {
                     final destination = destinations[index];
                     final selected = index == selectedIndex;
                     return ListTile(
+                      key: QaTestKeys.erpNavModule(destination.module.name),
                       leading: Icon(
                         selected ? destination.selectedIcon : destination.icon,
                         color: selected

@@ -102,14 +102,15 @@ class _ShortcutTile extends StatelessWidget {
           onTap: onTap,
           borderRadius: AksharaRadius.card,
           child: SizedBox(
-            height: 72,
+            height: 88,
             child: Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AksharaSpacing.s2,
-                vertical: AksharaSpacing.s3,
+                vertical: AksharaSpacing.s2,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(icon, size: 22, color: colors.primary),
                   const SizedBox(height: AksharaSpacing.s1),

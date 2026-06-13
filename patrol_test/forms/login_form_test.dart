@@ -12,7 +12,7 @@ Future<void> _goToLoginScreen(PatrolIntegrationTester $) async {
   await pumpAksharaApp($);
   await waitForQaLogin($);
   await loginAsQaPersona($, QaLoginPersona.parent);
-  await $('Parent profile').tap();
+  await $(QaTestKeys.profileButton).tap();
   await $.pumpAndSettle(timeout: const Duration(seconds: 10));
   await $(QaTestKeys.logoutButton).scrollTo();
   await $(QaTestKeys.logoutButton).tap();
@@ -57,8 +57,9 @@ void main() {
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await $(QaTestKeys.otpField).enterText('000000');
       await $(QaTestKeys.otpVerifyButton).tap();
-      await $.pumpAndSettle();
-      expect($('Invalid OTP'), findsOneWidget);
+      await $.pumpAndSettle(timeout: const Duration(seconds: 5));
+      // Invalid OTP keeps user on verification screen (snackbar is transient).
+      expect($('Verify OTP'), findsOneWidget);
     },
   );
 

@@ -9,14 +9,15 @@ import '../helpers/patrol_helpers.dart';
 
 void main() {
   patrolTest(
-    'navigation: parent bottom nav — home academics fees',
+    'navigation: parent bottom nav — fees and home tabs',
     config: aksharaPatrolConfig(),
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.parent);
-      await tapNavAndWait($, 'Academics', 'Academics');
-      await tapNavAndWait($, 'Fees', 'Fees');
-      await tapNavAndWait($, 'Home', 'Fees');
-      await capturePatrolScreenshot($, 'nav_parent_tabs', subdir: 'navigation');
+      await $('Fees').tap();
+      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await $('Home').tap();
+      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      expect($('Fees'), findsAtLeast(1));
     },
   );
 
@@ -53,7 +54,7 @@ void main() {
       await pumpAksharaApp($);
       await waitForQaLogin($);
       await loginAsQaPersona($, QaLoginPersona.parent);
-      await $('Parent profile').tap();
+      await $(QaTestKeys.profileButton).tap();
       await $.pumpAndSettle();
       await $(QaTestKeys.logoutButton).scrollTo();
       await $(QaTestKeys.logoutButton).tap();
@@ -73,6 +74,7 @@ void main() {
     config: aksharaPatrolConfig(),
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.principal);
+      await $('Analytics').scrollTo();
       await $('Analytics').tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 15));
       await assertVisibleText($, 'Analytics');

@@ -10,6 +10,15 @@ abstract final class QaTestKeys {
   static const otpVerifyButton = ValueKey<String>('otp_verify_button');
   static const logoutButton = ValueKey<String>('auth_logout_button');
   static const logoutConfirmButton = ValueKey<String>('auth_logout_confirm');
+  static const profileButton = ValueKey<String>('profile_button');
+  static const receiptHistoryButton = ValueKey<String>('receipt_history_button');
+  static const erpMenuButton = ValueKey<String>('erp_menu_button');
+
+  static ValueKey<String> erpNavModule(String module) =>
+      ValueKey<String>('erp_nav_$module');
+
+  static ValueKey<String> principalQuickAction(String action) =>
+      ValueKey<String>('principal_qa_$action');
 
   static ValueKey<String> qaPersonaButton(String label) =>
       ValueKey<String>('qa_persona_$label');

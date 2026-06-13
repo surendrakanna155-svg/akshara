@@ -64,7 +64,7 @@ class _InstallmentRow extends StatelessWidget {
   final VoidCallback? onPay;
   final VoidCallback? onReceipt;
 
-  static const double rowHeight = 72;
+  static const double rowHeight = 96;
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +97,7 @@ class _InstallmentRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   installment.title,
@@ -104,6 +105,8 @@ class _InstallmentRow extends StatelessWidget {
                     color: colors.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (installment.meta != null) ...[
                   const SizedBox(height: AksharaSpacing.s1),
@@ -112,18 +115,22 @@ class _InstallmentRow extends StatelessWidget {
                     style: text.bodySmall.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
                 const SizedBox(height: AksharaSpacing.s1),
-                Row(
+                Wrap(
+                  spacing: AksharaSpacing.s2,
+                  runSpacing: AksharaSpacing.s1,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     AksharaStatusChip(
                       label: statusStyle.label,
                       background: statusStyle.background,
                       foreground: statusStyle.foreground,
                     ),
-                    if (onPay != null) ...[
-                      const SizedBox(width: AksharaSpacing.s2),
+                    if (onPay != null)
                       TextButton(
                         onPressed: onPay,
                         style: TextButton.styleFrom(
@@ -138,7 +145,6 @@ class _InstallmentRow extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ],
                   ],
                 ),
               ],

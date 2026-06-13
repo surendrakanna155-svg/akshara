@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/testing/qa_test_keys.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import 'admin_layout.dart';
@@ -61,6 +62,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
                 children: [
                   if (isMobile)
                     IconButton(
+                      key: QaTestKeys.erpMenuButton,
                       icon: const Icon(Icons.menu),
                       tooltip: 'Open navigation',
                       onPressed: onMenuTap,

@@ -15,9 +15,10 @@ void main() {
       await bootstrapAndLogin($, QaLoginPersona.parent);
       expect($('Fees'), findsAtLeast(1));
 
-      await $('Parent profile').tap();
+      await $(QaTestKeys.profileButton).tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 
+      await $(QaTestKeys.logoutButton).scrollTo();
       await $(QaTestKeys.logoutButton).tap();
       await $(QaTestKeys.logoutConfirmButton).tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));

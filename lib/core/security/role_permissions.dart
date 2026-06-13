@@ -208,6 +208,7 @@ class RolePermissionMatrix {
       Permission.approveAdmissions,
       Permission.viewFinance,
       Permission.viewFinanceExecutiveDashboard,
+      Permission.viewInventory,
       Permission.viewInventoryIntelligence,
       Permission.viewSis,
       Permission.manageSis,

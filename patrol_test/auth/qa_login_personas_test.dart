@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
+
 import '../helpers/patrol_app.dart';
 import '../helpers/patrol_helpers.dart';
 
@@ -27,8 +29,9 @@ void main() {
     ($) async {
       await pumpAksharaApp($);
       await waitForQaLogin($);
+      expect($(QaTestKeys.qaLoginScreen), findsOneWidget);
       expect($('QA Automation Login'), findsOneWidget);
-      expect($('no OTP'), findsAtLeast(1));
+      expect($('Principal'), findsOneWidget);
     },
   );
 }

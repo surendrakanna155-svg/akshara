@@ -20,7 +20,7 @@ class AttendanceCalendar extends StatelessWidget {
   final bool highlightAbsent;
   final double cellSize;
 
-  static const double cardHeight = 320;
+  static const double cardHeight = 360;
   static const List<String> _weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   @override

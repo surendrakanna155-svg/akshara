@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/testing/qa_test_keys.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 
@@ -196,6 +197,7 @@ class AksharaAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
         if (showReceiptHistory)
           IconButton(
+            key: QaTestKeys.receiptHistoryButton,
             icon: const Icon(Icons.receipt_long_outlined),
             tooltip: 'Payment history',
             onPressed: onReceiptHistoryTap,
@@ -207,6 +209,7 @@ class AksharaAppBar extends StatelessWidget implements PreferredSizeWidget {
               button: true,
               label: profileSemanticLabel,
               child: InkWell(
+                key: QaTestKeys.profileButton,
                 onTap: onProfileTap,
                 customBorder: const CircleBorder(),
                 child: CircleAvatar(

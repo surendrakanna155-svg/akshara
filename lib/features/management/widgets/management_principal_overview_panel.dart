@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -75,21 +76,25 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
         AksharaQuickActionGrid(
           children: [
             AksharaQuickActionCard(
+              key: QaTestKeys.principalQuickAction('attendance'),
               icon: Icons.fact_check_outlined,
               label: 'Attendance',
               onTap: () => context.go(RouteNames.managementAnalytics),
             ),
             AksharaQuickActionCard(
+              key: QaTestKeys.principalQuickAction('fees'),
               icon: Icons.payments_outlined,
               label: 'Fees',
               onTap: () => context.go(RouteNames.managementFinance),
             ),
             AksharaQuickActionCard(
+              key: QaTestKeys.principalQuickAction('risk'),
               icon: Icons.warning_amber_outlined,
               label: 'Risk',
               onTap: () => context.go(RouteNames.managementIntelligence),
             ),
             AksharaQuickActionCard(
+              key: QaTestKeys.principalQuickAction('approvals'),
               icon: Icons.task_alt_outlined,
               label: 'Approvals',
               onTap: () => context.go(RouteNames.managementTasks),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/auth/qa_login_persona.dart';
 
 import 'patrol_app.dart';
@@ -62,19 +63,66 @@ Future<void> tapNavAndWait(
   );
 }
 
-/// Opens ERP drawer (mobile) and navigates to a module by label.
+/// Opens ERP drawer on mobile admin shell.
+Future<void> openErpDrawer(PatrolIntegrationTester $) async {
+  await $(QaTestKeys.erpMenuButton).tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 5));
+}
+
+/// QA login → ERP drawer → module (+ optional sub-nav) → workflow anchor.
+Future<void> navigateErpWorkflow(
+  PatrolIntegrationTester $,
+  QaLoginPersona persona,
+  String moduleKey, {
+  String? subNavLabel,
+  required String workflowAnchor,
+}) async {
+  await bootstrapAndLogin($, persona);
+  await openErpDrawer($);
+  await $(QaTestKeys.erpNavModule(moduleKey)).scrollTo().tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 15));
+  if (subNavLabel != null) {
+    final tab = subNavLabel.endsWith(' tab') ? subNavLabel : '$subNavLabel tab';
+    await $(tab).scrollTo().tap();
+    await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+  }
+  await $(workflowAnchor).scrollTo();
+  await assertVisibleText($, workflowAnchor, timeout: const Duration(seconds: 25));
+}
+
+/// Taps a horizontal module sub-nav tab (Finance, Reports, Analytics, …).
+Future<void> tapModuleSubNav(PatrolIntegrationTester $, String label) async {
+  final tab = label.endsWith(' tab') ? label : '$label tab';
+  await $(tab).scrollTo().tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+}
+
+/// Principal overview quick action (stable keys).
+Future<void> tapPrincipalQuickAction(PatrolIntegrationTester $, String action) async {
+  await $(QaTestKeys.principalQuickAction(action)).scrollTo().tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 15));
+}
+
+/// Opens ERP drawer (mobile) and navigates to a module by key.
 Future<void> openErpModule(
   PatrolIntegrationTester $,
   QaLoginPersona persona,
-  String moduleLabel,
+  String moduleKey,
 ) async {
   await bootstrapAndLogin($, persona);
-  try {
-    await $('Open navigation').tap();
-    await $.pumpAndSettle(timeout: const Duration(seconds: 5));
-  } catch (_) {
-    // Tablet/desktop layout — module rail is already visible.
-  }
-  await $(moduleLabel).tap();
+  await openErpDrawer($);
+  await $(QaTestKeys.erpNavModule(moduleKey)).scrollTo().tap();
   await $.pumpAndSettle(timeout: const Duration(seconds: 15));
+}
+
+/// Bottom navigation bar tap (mobile shells).
+Future<void> tapBottomNav(PatrolIntegrationTester $, String label) async {
+  await $(label).scrollTo().tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+}
+
+/// Scroll until visible, then tap label text.
+Future<void> scrollTap(PatrolIntegrationTester $, String label) async {
+  await $(label).scrollTo().tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 }
