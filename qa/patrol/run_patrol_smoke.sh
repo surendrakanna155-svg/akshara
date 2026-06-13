@@ -29,7 +29,8 @@ TARGETS=(
   "patrol_test/dashboards/dashboards_test.dart"
 )
 
-echo "[patrol-smoke] Running ${#TARGETS[@]} target(s)..."
+echo "[patrol-smoke] NOTE: first run builds APK (~2-5 min). Re-runs ~30s."
+echo "[patrol-smoke] Building & testing on ${DEVICE_ARGS[*]:-(default device)}..."
 for target in "${TARGETS[@]}"; do
   echo "==> $target"
   patrol test --target "$target" "${DEVICE_ARGS[@]}" "${DART_DEFINES[@]}"

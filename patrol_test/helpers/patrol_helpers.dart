@@ -18,20 +18,25 @@ PatrolTesterConfig aksharaPatrolConfig() {
   );
 }
 
-/// Records screenshot intent under [qa/patrol/screenshots/] for regression tooling.
+/// Records screenshot intent for regression tooling.
+/// On-device Patrol tests cannot write to host project paths — no-op on Android/iOS.
 Future<void> capturePatrolScreenshot(
   PatrolIntegrationTester $,
   String name, {
   String subdir = 'runtime',
 }) async {
-  if (kIsWeb) {
+  if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
     return;
   }
-  final dir = Directory('qa/patrol/screenshots/$subdir');
-  dir.createSync(recursive: true);
-  File('${dir.path}/$name.marker').writeAsStringSync(
-    DateTime.now().toIso8601String(),
-  );
+  try {
+    final dir = Directory('qa/patrol/screenshots/$subdir');
+    dir.createSync(recursive: true);
+    File('${dir.path}/$name.marker').writeAsStringSync(
+      DateTime.now().toIso8601String(),
+    );
+  } catch (_) {
+    // Patrol CLI captures failure screenshots on the host.
+  }
 }
 
 /// Asserts text is visible.
