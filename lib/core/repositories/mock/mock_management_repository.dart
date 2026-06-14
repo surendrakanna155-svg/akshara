@@ -143,6 +143,7 @@ class MockManagementRepository implements ManagementRepository {
           icon: Icons.trending_up,
           accentName: 'success',
           detail: '+9% vs last month',
+          drillRoute: RouteNames.financeReports,
         ),
         ManagementKpi(
           id: 'fee_collection',
@@ -152,11 +153,13 @@ class MockManagementRepository implements ManagementRepository {
           accentName: 'warning',
         ),
         ManagementKpi(
-          id: 'expenses_mtd',
-          value: '₹46L',
-          label: 'Expenses (MTD)',
-          icon: Icons.receipt_long_outlined,
-          accentName: 'warning',
+          id: 'fee_defaulters',
+          value: '47',
+          label: 'Fee Defaulters',
+          icon: Icons.warning_amber_outlined,
+          accentName: 'error',
+          detail: 'Collection follow-up',
+          drillRoute: RouteNames.financeDefaulters,
         ),
         ManagementKpi(
           id: 'net_margin',
@@ -171,6 +174,7 @@ class MockManagementRepository implements ManagementRepository {
           label: 'New Admissions (QTD)',
           icon: Icons.person_add_outlined,
           accentName: 'primary',
+          drillRoute: RouteNames.managementAdmissions,
         ),
         ManagementKpi(
           id: 'pending_approvals',
@@ -240,6 +244,7 @@ class MockManagementRepository implements ManagementRepository {
           label: 'Attendance (MTD)',
           icon: Icons.fact_check_outlined,
           accentName: 'success',
+          drillRoute: RouteNames.studentSuccessIntelligence,
         ),
         ManagementKpi(
           id: 'staff',
@@ -457,6 +462,7 @@ class MockManagementRepository implements ManagementRepository {
           label: 'Overall Pass %',
           icon: Icons.school_outlined,
           accentName: 'success',
+          drillRoute: RouteNames.examIntelligence,
         ),
         ManagementKpi(
           id: 'distinction',
@@ -471,6 +477,7 @@ class MockManagementRepository implements ManagementRepository {
           label: 'At-risk Students',
           icon: Icons.warning_amber_outlined,
           accentName: 'error',
+          drillRoute: RouteNames.examIntelligence,
         ),
         ManagementKpi(
           id: 'teacher_attendance',
@@ -557,6 +564,7 @@ class MockManagementRepository implements ManagementRepository {
           label: 'At-risk Students',
           icon: Icons.warning_amber_outlined,
           accentName: 'error',
+          drillRoute: RouteNames.examIntelligence,
         ),
         ManagementKpi(
           id: 'teacher_avg',

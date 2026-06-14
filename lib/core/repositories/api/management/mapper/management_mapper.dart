@@ -150,6 +150,7 @@ class ManagementMapper {
             ),
             accentName: item['accentName'] as String? ?? 'neutral',
             detail: item['detail'] as String?,
+            drillRoute: item['drillRoute'] as String?,
           ),
     ];
   }

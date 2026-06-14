@@ -1,10 +1,10 @@
 # AI Intelligence Audit
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** June 2026  
 **Purpose:** Phase 1 — classify all Akshara intelligence surfaces  
 **Classification:** **A** Fully Implemented · **B** Partial · **C** Mock Only · **D** Not Implemented  
-**Baseline:** P0 complete · ERP ~83% · commit `2386eb7`
+**Baseline:** P0 complete · ERP ~83% · INTEL-02 complete
 
 ---
 
@@ -24,8 +24,9 @@
 | Hostel intelligence | 0 | 1 | 1 | 0 | **C** |
 | **Cross-cutting** | 1 | 6 | 12 | 3 | **C** |
 
-**Intelligence completion (weighted):** ~**38%** functional · ~**72%** UI/mock surfaces  
-**Live AI inference:** Not production-ready — mock repository + OpenAI edge stubs
+**Intelligence completion (weighted):** ~**44%** functional · ~**74%** UI/mock surfaces  
+**Live AI inference:** Not production-ready — mock repository + OpenAI edge stubs  
+**Copilot detail:** See `docs/AI_COPILOT_STATUS.md` (~48% copilot vision)
 
 ---
 
@@ -49,7 +50,7 @@
 
 | Capability | Class | UI | Service | Provider | RBAC | Tests | Gaps |
 |------------|-------|-----|---------|----------|------|-------|------|
-| MG-01 dashboard KPIs | **B** | Yes | Mock read | `managementDashboardFutureProvider` | View mgmt | Screen tests | KPIs display-only (no drill) |
+| MG-01 dashboard KPIs | **A** | Yes | Mock read + drill nav | `managementDashboardFutureProvider` | View mgmt | Navigation + Patrol | Drill routes wired (INTEL-02) |
 | MG-01 export | **B** | Yes | Nav to FN reports | Wired P1-01 | manageManagement | Patrol | PDF still queued snackbar |
 | AI insight card (MG-01) | **B** | Yes | Static string | Dashboard data | — | — | Action → tasks (works) |
 | MG-02–07 insight cards | **A** | Yes | Static | Per-screen data | — | Navigation test + Patrol | Routed to intelligence surfaces |
@@ -126,7 +127,7 @@
 | Capability | Class | UI | Service | Provider | RBAC | Tests | Gaps |
 |------------|-------|-----|---------|----------|------|-------|------|
 | Attendance prediction (student risk) | **C** | Yes | Mock field | Student success | Partial | Contract | Not attendance-admin |
-| MG-02 class attendance analytics | **B** | Yes | Mock read | Analytics screen | View | Screen test | No AI action route |
+| MG-02 class attendance analytics | **A** | Yes | Mock read + KPI drill | Analytics screen | View | Screen + Patrol | Attendance KPI → student success intel |
 | ERP attendance admin intelligence | **D** | No | No | — | — | — | Module incomplete |
 | Teacher attendance mark (data source) | **A** | Yes | Write | Teacher mutations | Yes | Patrol | Feeds risk mock only |
 
@@ -140,7 +141,7 @@
 |------------|-------|-----|---------|----------|------|-------|------|
 | Exam intelligence screen | **C** | Yes | Mock | `exam_intelligence_provider.dart` | Yes | Contract | Read-only |
 | AI Education Suite (generative) | **A** | Yes | Mock AI | Education screens | Yes | Yes + Patrol | Mock inference |
-| MG-05 academic insight card | **C** | Yes | Static | Academics screen | — | — | **Action stub** |
+| MG-05 academic insight card | **A** | Yes | Static + KPI drill | Academics screen | — | Patrol | Pass rate / at-risk → exam intelligence |
 | Report card remark AI | **A** | Yes | Yes (mock) | Education mutations | Yes | Patrol | — |
 | Academic promotion intelligence | **D** | No | No | — | — | — | Promotion engine absent |
 
@@ -192,13 +193,21 @@
 
 | # | Feature | Current | Target class | Sprint |
 |---|---------|---------|--------------|--------|
-| 1 | Management insight card routes | C | **A** | ✅ Done |
-| 2 | KPI drill-down (MG-01) | B | **A** | P1-02 |
-| 3 | Context-aware copilot (screen context) | C | **B** | P1 |
+| 1 | Management insight card routes | **A** | **A** | ✅ INTEL-01 |
+| 2 | KPI drill-down (MG-01) | **A** | **A** | ✅ INTEL-02 |
+| 3 | Context-aware copilot (screen context) | C | **B** | **INTEL-03** ← next |
 | 4 | At-risk detection (live pipeline) | C | **B** | P2 |
-| 5 | Floating chat bubble | D | **B** | P2 |
+| 5 | Floating chat bubble | D | **B** | INTEL-04 |
 | 6 | Recommendation engine | D | **B** | P2 |
 | 7 | Universal AI Assistant | D | **B** | P3 |
+
+### Ranked next features (INTEL-02 Track C)
+
+| Priority lens | Recommendation | Rationale |
+|---------------|----------------|-----------|
+| Highest business value | Context-aware copilot | Server context engine exists; unlocks actionable answers on any screen |
+| Lowest effort | Context-aware copilot | ~2–3 d client API wiring vs 5–7 d per persona chat shell |
+| Biggest differentiator | Universal floating assistant + live inference | Matches FutureVision #29; requires INTEL-03/04 first |
 
 ---
 
@@ -211,5 +220,6 @@
 | `FUTURE_VISION_RECONCILIATION.md` | FutureVision # mapping |
 | `docs/Vision/FutureVision.md` | Original vision |
 | `docs/OWNER_DASHBOARD_AUDIT.md` | Owner surface audit |
+| `docs/AI_COPILOT_STATUS.md` | Copilot persona + capability audit (INTEL-02) |
 
 **Next audit trigger:** After each intelligence feature closes (update class + completion %)

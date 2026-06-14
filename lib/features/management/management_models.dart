@@ -38,6 +38,7 @@ class ManagementKpi {
     required this.icon,
     required this.accentName,
     this.detail,
+    this.drillRoute,
   });
 
   final String id;
@@ -46,6 +47,8 @@ class ManagementKpi {
   final IconData icon;
   final String accentName;
   final String? detail;
+  /// GoRouter path when the KPI card is tapped (MG-01 drill-down).
+  final String? drillRoute;
 }
 
 @immutable

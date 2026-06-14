@@ -1,8 +1,8 @@
 # Akshara Final Roadmap
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** June 2026  
-**Status:** Post P0 program (10/10 complete) · ERP ~83%  
+**Status:** Post P0 program (10/10 complete) · ERP ~83% · INTEL-02 complete  
 **Sources:** FutureVision · Master Registry v1.1 · Advanced Feature Status · ERP Completion Plan
 
 ---
@@ -14,8 +14,10 @@
 | P0 program | **10/10 complete** |
 | Weighted ERP completion | **~83%** |
 | QA readiness | **~95%** |
-| Flutter tests | **1326+** |
-| Patrol journeys | **31** |
+| Flutter tests | **1337+** |
+| Patrol journeys | **35** |
+| Intelligence (functional) | **~44%** |
+| Copilot vision | **~48%** (see `AI_COPILOT_STATUS.md`) |
 | Vision reconciliation | Complete |
 
 ---
@@ -52,9 +54,10 @@
 
 | ID | Feature | Vision # | Est. | Business value |
 |----|---------|----------|------|----------------|
-| P1-01 | **Owner dashboard export wiring** | #5 | 1 d | Executive reporting — **Phase E** |
-| P1-02 | KPI drill-down (MG-01) | #5 | 2–3 d | Actionable owner home |
+| P1-01 | **Owner dashboard export wiring** | #5 | 1 d | Executive reporting — **Done** |
+| P1-02 | KPI drill-down (MG-01) | #5 | 2–3 d | **Done** (INTEL-02) |
 | P1-03 | Intelligence insight card routes | #5 | 1–2 d | **Done** (INTEL-01) |
+| INTEL-03 | Context-aware copilot | #3, #29 | 2–3 d | **Next** — server engine ready |
 | P1-04 | Inventory PO approve + receive | — | 4–5 d | Procurement chain |
 | P1-05 | Admissions settings persistence | — | 2–3 d | Config consistency |
 | P1-06 | Notifications broadcast admin | #2 | 4–5 d | School-wide comms |
@@ -103,9 +106,10 @@
 ## Recommended execution order (Q3 2026)
 
 ```
-P1-01 Export wiring (Phase E)
-  → P1-02 KPI drill-downs
-  → P1-03 Insight actions
+P1-01 Export wiring ✅
+  → P1-02 KPI drill-downs ✅ (INTEL-02)
+  → P1-03 Insight actions ✅ (INTEL-01)
+  → INTEL-03 Context-aware copilot ← next
   → P1-04 Inventory PO
   → P1-05 Admissions settings
   → P1-06 Notifications broadcast

@@ -312,6 +312,9 @@ abstract final class QaTestKeys {
   static const managementDashboardExportSnackbar =
       ValueKey<String>('management_dashboard_export_snackbar');
 
+  static ValueKey<String> managementKpiDrillButton(String kpiId) =>
+      ValueKey<String>('management_kpi_drill_$kpiId');
+
   static const libraryIssueScanButton =
       ValueKey<String>('library_issue_scan_button');
 

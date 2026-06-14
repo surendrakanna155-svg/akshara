@@ -3,7 +3,7 @@
 **Program:** Akshara ERP Vision Completion + Intelligence  
 **Started:** June 2026  
 **Registry SSOT:** `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md`  
-**Last updated:** June 2026 (session 1 — intelligence audit)
+**Last updated:** June 2026 (session 3 — INTEL-02 KPI drills + copilot audit)
 
 ---
 
@@ -14,11 +14,12 @@
 | ERP completion | ~83% |
 | P0 program | 10/10 ✅ |
 | Vision reconciliation | Complete |
-| Intelligence completion (functional) | ~38% |
+| Intelligence completion (functional) | ~44% |
+| Copilot vision (documented) | ~48% |
 | Vision completion (weighted all registry) | ~45% |
 | QA readiness | ~95% |
-| Flutter tests | 1327 |
-| Patrol journeys | 32 |
+| Flutter tests | 1337 |
+| Patrol journeys | 35 |
 | CI primary gate | `analyze-and-test` green on `2386eb7` |
 
 ---
@@ -56,12 +57,25 @@
 
 **Intelligence completion delta:** owner dashboard intelligence **B → A** (insight actions)
 
+### Session 3 — KPI drill-downs + copilot verification (INTEL-02)
+
+| Item | Detail |
+|------|--------|
+| Feature | KPI `drillRoute` + tappable MG KPI cards → finance/admissions/intelligence routes |
+| Helper | `management_kpi_navigation.dart` |
+| Tests | `management_kpi_navigation_test.dart` (+8) |
+| Patrol | `management_kpi_drill_e2e_test.dart` (+2 journeys) |
+| Copilot audit | `docs/AI_COPILOT_STATUS.md` (~48% copilot vision) |
+| Prioritization | INTEL-03 context-aware copilot recommended next |
+
+**Intelligence completion delta:** MG-01 KPIs **B → A**; overall **~42% → ~44%**
+
 ---
 
 | Domain | Score |
 |--------|-------|
 | Copilot | B |
-| Owner dashboard | B |
+| Owner dashboard | A |
 | Student | C |
 | Teacher | C |
 | Parent | B |
@@ -77,8 +91,8 @@
 
 | Feature ID | Name | Phase | Class before | Class after | Tests + | Patrol + | Commit | CI |
 |------------|------|-------|--------------|-------------|---------|----------|--------|-----|
-| INTEL-01 | Management insight card routes | 2/6 | C | **A** | +2 | +1 | `ca1bc4e` | pending |
-| INTEL-02 | KPI drill-down MG-01 | 6 | B | — | — | — | — | — |
+| INTEL-01 | Management insight card routes | 2/6 | C | **A** | +2 | +1 | `ca1bc4e` | green |
+| INTEL-02 | KPI drill-down MG-01 | 2/6 | B | **A** | +8 | +2 | pending | pending |
 | INTEL-03 | Context-aware copilot | 2 | C | — | — | — | — | — |
 | ACAD-01 | Academic promotion engine | 3 | D | — | — | — | — | — |
 | AUTO-01 | Workflow automation engine | 5 | D | — | — | — | — | — |
@@ -102,7 +116,7 @@
 
 ## Next action
 
-**INTEL-01:** Wire management module AI insight card `onAction` stubs → intelligence/module routes (Phase 2 / P1-03).
+**INTEL-03:** Pass client screen context (route, module, entity ids) into copilot send API — validate server `copilot_context_engine.ts` bundles.
 
 Execution: audit → implement → tests → Patrol → gates → commit → push → CI → update registry.
 
@@ -111,5 +125,6 @@ Execution: audit → implement → tests → Patrol → gates → commit → pus
 ## Related
 
 - `docs/AI_INTELLIGENCE_AUDIT.md`
+- `docs/AI_COPILOT_STATUS.md`
 - `docs/AKSHARA_FINAL_ROADMAP.md`
 - `docs/QA/final_completion_progress.md`

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_kpi_card.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../finance/widgets/finance_responsive_grid.dart';
+import '../management_kpi_navigation.dart';
 import '../management_models.dart';
 
 /// KPI tiles for management dashboards using shared [AksharaKpiCard].
@@ -37,6 +39,9 @@ class ManagementKpiRow extends StatelessWidget {
           SizedBox(
             height: cardHeight,
             child: AksharaKpiCard(
+              key: managementKpiIsDrillable(kpi)
+                  ? QaTestKeys.managementKpiDrillButton(kpi.id)
+                  : null,
               value: kpi.value,
               subtitle: kpi.label,
               icon: kpi.icon,
@@ -44,6 +49,9 @@ class ManagementKpiRow extends StatelessWidget {
               style: AksharaKpiCardStyle.filled,
               detail: kpi.detail,
               semanticLabel: '${kpi.label}: ${kpi.value}',
+              onTap: managementKpiIsDrillable(kpi)
+                  ? () => navigateManagementKpiDrill(context, kpi)
+                  : null,
             ),
           ),
       ],
