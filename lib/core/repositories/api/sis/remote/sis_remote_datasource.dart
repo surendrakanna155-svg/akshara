@@ -12,6 +12,7 @@ import '../dto/sis_conversion_dto.dart';
 import '../dto/sis_dashboard_dto.dart';
 import '../dto/sis_student_profile_dto.dart';
 import '../dto/sis_students_dto.dart';
+import '../dto/upload_student_document_request_dto.dart';
 import '../dto/update_student_request_dto.dart';
 import '../dto/update_student_status_request_dto.dart';
 import '../mapper/sis_mapper.dart';
@@ -99,6 +100,19 @@ class SisRemoteDataSource {
       data: UpdateStudentRequestDto.fromDomain(request).toJson(),
     );
     return _mapper.toStudentFromWriteResponse(_requireData(response));
+  }
+
+  Future<SisDocumentSummary> uploadStudentDocument({
+    required RepositoryQuery query,
+    required String studentId,
+    required UploadStudentDocumentRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      SisApiPaths.studentDocuments(studentId),
+      queryParameters: _queryParams(query),
+      data: UploadStudentDocumentRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toDocumentSummary(_requireData(response));
   }
 
   Future<SisStudent> updateStudentStatus({

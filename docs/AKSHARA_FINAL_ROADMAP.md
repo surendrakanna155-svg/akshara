@@ -68,9 +68,9 @@
 | P1-06 | Notifications broadcast admin | #2 | 4–5 d | ✅ Batch A |
 | P1-07 | RBAC mutation registry sync | — | 2–3 d | ✅ Batch A |
 | P1-08 | Academic year promotion engine (minimal) | #21 | 5–7 d | **Done** (Completion M1) |
-| P1-09 | Substitute teacher wizard | #6/#9 | 4–5 d | Daily ops coverage |
+| P1-09 | Substitute teacher wizard | #6/#9 | 4–5 d | ✅ M7 |
 | P1-10 | Book Distribution tracking (#11) | #11 | 3–4 d | Shipped v10.1 parity |
-| P1-11 | SIS profile edit + documents | — | 4–5 d | Data quality |
+| P1-11 | SIS profile edit + documents | — | 4–5 d | ✅ M6 |
 | P1-12 | HR leave approve/reject | — | 3–4 d | ✅ Batch A |
 | P1-13 | Finance receipt PDF (real) | #14 | 2 d | ✅ Batch A |
 
@@ -235,10 +235,9 @@ P1-01 Export wiring ✅
   → P1-06 Notifications broadcast ✅
   → P1-07 RBAC registry ✅
   → P1-08 Promotion engine ✅
-  → P1-09 Substitute teacher wizard ← next
-  → P1-11 SIS profile edit + documents
-  → P1-12 HR leave approve/reject ✅
-  → P1-13 Finance receipt PDF ✅
+  → P1-09 Substitute teacher wizard ✅
+  → P1-11 SIS profile edit + documents ✅
+  → P2-03 Teacher reassignment ← next
 ```
 
 ---

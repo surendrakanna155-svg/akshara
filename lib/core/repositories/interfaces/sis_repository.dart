@@ -7,7 +7,8 @@ import '../repository_query.dart';
 abstract class SisRepository {
   Future<SisDashboardData> getDashboard({required RepositoryQuery query});
 
-  Future<PaginatedResult<SisStudent>> getStudents({required RepositoryQuery query});
+  Future<PaginatedResult<SisStudent>> getStudents(
+      {required RepositoryQuery query});
 
   Future<SisStudentProfile> getStudentProfile({
     required RepositoryQuery query,
@@ -31,6 +32,12 @@ abstract class SisRepository {
     required RepositoryQuery query,
     required String studentId,
     required UpdateStudentRequest request,
+  });
+
+  Future<SisDocumentSummary> uploadStudentDocument({
+    required RepositoryQuery query,
+    required String studentId,
+    required UploadStudentDocumentRequest request,
   });
 
   Future<SisStudent> updateStudentStatus({

@@ -124,6 +124,29 @@ void main() {
       expect(result.qualityScore, greaterThan(0));
     });
 
+    test('substitute coverage and assignment flow returns timetable update', () async {
+      final coverage = await repo.getSubstituteCoverage(
+        query: query,
+        academicYearId: 'year_1',
+        dayOfWeek: 'Monday',
+      );
+      expect(coverage.openSlots, isNotEmpty);
+      expect(coverage.candidates, isNotEmpty);
+
+      final assignment = await repo.assignSubstitute(
+        query: query,
+        request: AssignSubstituteRequest(
+          slotId: coverage.openSlots.first.slotId,
+          substituteTeacherId: coverage.candidates.first.teacherId,
+          notifySubstituteTeacher: true,
+          notifyClassIncharge: true,
+          notifyStudents: false,
+        ),
+      );
+      expect(assignment.timetableUpdated, isTrue);
+      expect(assignment.notifiedAudience, isNotEmpty);
+    });
+
     test('delivery analytics returns channel breakdown', () async {
       final analytics = await repo.getDeliveryAnalytics(query: query);
       expect(analytics.deliveryRate, greaterThan(0));

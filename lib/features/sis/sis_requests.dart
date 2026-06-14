@@ -56,6 +56,19 @@ class UpdateStudentRequest {
   final String? email;
 }
 
+/// Domain request to upload a student document metadata record.
+class UploadStudentDocumentRequest {
+  const UploadStudentDocumentRequest({
+    required this.type,
+    required this.fileName,
+    this.status = 'Pending',
+  });
+
+  final String type;
+  final String fileName;
+  final String status;
+}
+
 /// Domain request to change a student's lifecycle status.
 class UpdateStudentStatusRequest {
   const UpdateStudentStatusRequest({required this.status});

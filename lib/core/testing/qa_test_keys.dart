@@ -87,6 +87,17 @@ abstract final class QaTestKeys {
   static const sisRegistrySearchField =
       ValueKey<String>('sis_registry_search_field');
 
+  static const sisEditProfileButton =
+      ValueKey<String>('sis_edit_profile_button');
+  static const sisEditProfileSaveButton =
+      ValueKey<String>('sis_edit_profile_save_button');
+  static const sisUploadDocumentButton =
+      ValueKey<String>('sis_upload_document_button');
+  static const sisUploadDocumentSubmitButton =
+      ValueKey<String>('sis_upload_document_submit_button');
+  static const sisDocumentUploadSuccessSnackbar =
+      ValueKey<String>('sis_document_upload_success_snackbar');
+
   static ValueKey<String> sisRegistryStudentRow(String studentName) =>
       ValueKey<String>(
         'sis_registry_student_${normalizeSubNavLabel(studentName)}',
@@ -522,6 +533,15 @@ abstract final class QaTestKeys {
       ValueKey<String>('communication_template_save_button');
   static const communicationBroadcastHistoryList =
       ValueKey<String>('communication_broadcast_history_list');
+
+  static const substituteDayFilter =
+      ValueKey<String>('substitute_day_filter');
+  static const substituteClassFilter =
+      ValueKey<String>('substitute_class_filter');
+  static const substituteAssignButton =
+      ValueKey<String>('substitute_assign_button');
+  static const substituteAssignSuccessSnackbar =
+      ValueKey<String>('substitute_assign_success_snackbar');
 
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');

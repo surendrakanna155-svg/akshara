@@ -5,6 +5,7 @@ import 'package:akshara_erp/core/repositories/api/sis/dto/academic_assignment_re
 import 'package:akshara_erp/core/repositories/api/sis/dto/admissions_conversion_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/create_student_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/enrollment_request_dto.dart';
+import 'package:akshara_erp/core/repositories/api/sis/dto/upload_student_document_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/sis_enum_codec.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/update_student_status_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/mapper/sis_mapper.dart';
@@ -21,6 +22,8 @@ void main() {
     test('enrollment routes match deployed backend', () {
       expect(SisApiPaths.enrollments, '/sis/enrollments');
       expect(SisApiPaths.enrollment('abc'), '/sis/enrollments/abc');
+      expect(
+          SisApiPaths.studentDocuments('abc'), '/sis/students/abc/documents');
       expect(SisApiPaths.admissionsConversion, '/sis/admissions-conversion');
     });
   });
@@ -39,7 +42,8 @@ void main() {
       expect(json['admissionNumber'], 'ADM-2026-0142');
     });
 
-    test('enrollment create maps academic assignment to /sis/enrollments body', () {
+    test('enrollment create maps academic assignment to /sis/enrollments body',
+        () {
       final json = EnrollmentCreateRequestDto.fromAcademicAssignment(
         const AcademicAssignmentRequest(
           studentId: 'student-1',
@@ -103,6 +107,17 @@ void main() {
         const UpdateStudentStatusRequest(status: SisStudentStatus.alumni),
       ).toJson();
       expect(json['status'], 'graduated');
+    });
+
+    test('document upload request serializes doc metadata', () {
+      final json = UploadStudentDocumentRequestDto.fromDomain(
+        const UploadStudentDocumentRequest(
+          type: 'Transfer Certificate',
+          fileName: 'tc.pdf',
+        ),
+      ).toJson();
+      expect(json['type'], 'Transfer Certificate');
+      expect(json['fileName'], 'tc.pdf');
     });
   });
 

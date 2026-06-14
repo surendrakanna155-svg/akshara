@@ -13,6 +13,8 @@ abstract final class SchoolCompletionApiPaths {
   static const String teacherLessonAnalytics = '/school/lesson-analytics/teacher';
   static const String principalLessonAnalytics = '/school/lesson-analytics/principal';
   static const String timetableOptimize = '/school/timetables/optimize';
+  static const String timetableSubstituteCoverage = '/school/timetables/substitute/coverage';
+  static const String timetableSubstituteAssign = '/school/timetables/substitute/assign';
   static const String deliveryAnalytics = '/school/communications/delivery-analytics';
   static const String communicationAnalyticsSummary = '/school/communications/analytics/summary';
   static const String communicationAnalyticsCampaigns = '/school/communications/analytics/campaigns';

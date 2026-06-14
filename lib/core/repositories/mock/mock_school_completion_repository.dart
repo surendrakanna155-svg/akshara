@@ -68,6 +68,70 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
 
   final List<ClassSubjectAssignment> _classSubjects = [];
   final List<TeacherSubjectAssignment> _teacherSubjects = [];
+  final List<SubstituteOpenSlot> _substituteOpenSlots = const [
+    SubstituteOpenSlot(
+      slotId: 'slot_1',
+      academicYearId: 'year_1',
+      className: 'Grade 7',
+      sectionName: 'A',
+      subjectName: 'Mathematics',
+      originalTeacherId: 'teacher_14',
+      originalTeacherName: 'Ms. Kavya',
+      dayOfWeek: 'Monday',
+      periodLabel: 'P2',
+      slotDate: '2026-06-16',
+    ),
+    SubstituteOpenSlot(
+      slotId: 'slot_2',
+      academicYearId: 'year_1',
+      className: 'Grade 8',
+      sectionName: 'B',
+      subjectName: 'Science',
+      originalTeacherId: 'teacher_11',
+      originalTeacherName: 'Mr. Sandeep',
+      dayOfWeek: 'Monday',
+      periodLabel: 'P4',
+      slotDate: '2026-06-16',
+    ),
+    SubstituteOpenSlot(
+      slotId: 'slot_3',
+      academicYearId: 'year_1',
+      className: 'Grade 9',
+      sectionName: 'A',
+      subjectName: 'English',
+      originalTeacherId: 'teacher_19',
+      originalTeacherName: 'Ms. Nitya',
+      dayOfWeek: 'Tuesday',
+      periodLabel: 'P1',
+      slotDate: '2026-06-17',
+    ),
+  ];
+  final List<SubstituteTeacherCandidate> _substituteCandidates = const [
+    SubstituteTeacherCandidate(
+      teacherId: 'teacher_2',
+      teacherName: 'Mr. Vivek',
+      subjects: ['Mathematics', 'Science'],
+      freePeriods: 3,
+      dailyLoad: 4,
+      canNotify: true,
+    ),
+    SubstituteTeacherCandidate(
+      teacherId: 'teacher_7',
+      teacherName: 'Ms. Divya',
+      subjects: ['English', 'Social Science'],
+      freePeriods: 2,
+      dailyLoad: 5,
+      canNotify: true,
+    ),
+    SubstituteTeacherCandidate(
+      teacherId: 'teacher_9',
+      teacherName: 'Mr. Raghav',
+      subjects: ['Science'],
+      freePeriods: 1,
+      dailyLoad: 6,
+      canNotify: false,
+    ),
+  ];
 
   @override
   Future<List<AcademicSubject>> listSubjects({required RepositoryQuery query}) async =>
@@ -385,6 +449,55 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
           readOnly: true,
         ),
       ],
+    );
+  }
+
+  @override
+  Future<SubstituteCoverageData> getSubstituteCoverage({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? dayOfWeek,
+  }) async {
+    final normalizedDay = dayOfWeek?.trim().toLowerCase();
+    final slots = _substituteOpenSlots
+        .where((slot) => slot.academicYearId == academicYearId)
+        .where(
+          (slot) => normalizedDay == null || normalizedDay.isEmpty
+              ? true
+              : slot.dayOfWeek.toLowerCase() == normalizedDay,
+        )
+        .toList(growable: false);
+    return SubstituteCoverageData(
+      openSlots: slots,
+      candidates: List<SubstituteTeacherCandidate>.from(_substituteCandidates),
+      generatedAt: DateTime.now().toIso8601String(),
+    );
+  }
+
+  @override
+  Future<SubstituteAssignmentResult> assignSubstitute({
+    required RepositoryQuery query,
+    required AssignSubstituteRequest request,
+  }) async {
+    final slot = _substituteOpenSlots.where((entry) => entry.slotId == request.slotId);
+    if (slot.isEmpty) {
+      throw StateError('Open slot not found');
+    }
+    final teacher = _substituteCandidates.where((entry) => entry.teacherId == request.substituteTeacherId);
+    if (teacher.isEmpty) {
+      throw StateError('Substitute teacher not available');
+    }
+    final notifiedAudience = <String>[
+      if (request.notifySubstituteTeacher) 'substitute_teacher',
+      if (request.notifyClassIncharge) 'class_incharge',
+      if (request.notifyStudents) 'students',
+    ];
+    return SubstituteAssignmentResult(
+      assignmentId: 'sub_assign_${DateTime.now().millisecondsSinceEpoch}',
+      slotId: request.slotId,
+      timetableUpdated: true,
+      notifiedAudience: notifiedAudience,
+      message: 'Substitute assigned and timetable updated.',
     );
   }
 

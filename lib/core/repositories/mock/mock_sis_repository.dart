@@ -12,6 +12,20 @@ import 'mock_sis_write_store.dart';
 
 class MockSisRepository implements SisRepository {
   MockSisWriteStore get _store => MockSisWriteStore.instance;
+  static const List<SisDocumentSummary> _seedDocuments = [
+    SisDocumentSummary(
+      id: 'SIS-DOC-901',
+      type: 'Birth Certificate',
+      status: 'Verified',
+      uploadedAt: 'Jan 2026',
+    ),
+    SisDocumentSummary(
+      id: 'SIS-DOC-902',
+      type: 'Aadhaar',
+      status: 'Verified',
+      uploadedAt: 'Jan 2026',
+    ),
+  ];
 
   static const List<SisStudent> _seedStudents = [
     SisStudent(
@@ -158,13 +172,22 @@ class MockSisRepository implements SisRepository {
     _store.conversionQueue ??= List.from(_seedConversionQueue);
   }
 
+  Future<void> _ensureStudentDocuments(RepositoryQuery query) async {
+    await _ensureStudents(query);
+    _store.studentDocuments ??= {
+      for (final student in _store.students!)
+        student.id: List<SisDocumentSummary>.from(_seedDocuments),
+    };
+  }
+
   String _generateAdmissionNumber(String enrollmentId) {
     final suffix = enrollmentId.replaceAll('enr_', '').padLeft(4, '0');
     return 'ADM-2026-$suffix';
   }
 
   @override
-  Future<SisDashboardData> getDashboard({required RepositoryQuery query}) async {
+  Future<SisDashboardData> getDashboard(
+      {required RepositoryQuery query}) async {
     return const SisDashboardData(
       kpis: [
         SisKpi(
@@ -276,6 +299,7 @@ class MockSisRepository implements SisRepository {
     required RepositoryQuery query,
     required String studentId,
   }) async {
+    await _ensureStudentDocuments(query);
     final students = (await getStudents(query: query)).items;
     final student = students.firstWhere(
       (item) => item.id == studentId,
@@ -319,18 +343,9 @@ class MockSisRepository implements SisRepository {
         lateDays: 2,
         periodLabel: 'This term',
       ),
-      documents: const [
-        SisDocumentSummary(
-          type: 'Birth Certificate',
-          status: 'Verified',
-          uploadedAt: 'Jan 2026',
-        ),
-        SisDocumentSummary(
-          type: 'Aadhaar',
-          status: 'Verified',
-          uploadedAt: 'Jan 2026',
-        ),
-      ],
+      documents: List<SisDocumentSummary>.unmodifiable(
+        _store.documentsForStudent(student.id),
+      ),
       timeline: [
         SisTimelineEvent(
           dateLabel: student.enrolledAt,
@@ -414,7 +429,8 @@ class MockSisRepository implements SisRepository {
     required UpdateStudentRequest request,
   }) async {
     await _ensureStudents(query);
-    final index = _store.students!.indexWhere((student) => student.id == studentId);
+    final index =
+        _store.students!.indexWhere((student) => student.id == studentId);
     if (index < 0) throw StateError('Student not found: $studentId');
     final updated = _store.copyStudent(
       _store.students![index],
@@ -434,13 +450,33 @@ class MockSisRepository implements SisRepository {
   }
 
   @override
+  Future<SisDocumentSummary> uploadStudentDocument({
+    required RepositoryQuery query,
+    required String studentId,
+    required UploadStudentDocumentRequest request,
+  }) async {
+    await _ensureStudentDocuments(query);
+    final student = _store.findStudent(studentId);
+    if (student == null) throw StateError('Student not found: $studentId');
+    final document = SisDocumentSummary(
+      id: _store.nextDocumentId(),
+      type: request.type,
+      status: request.status,
+      uploadedAt: 'Today',
+    );
+    _store.documentsForStudent(studentId).insert(0, document);
+    return document;
+  }
+
+  @override
   Future<SisStudent> updateStudentStatus({
     required RepositoryQuery query,
     required String studentId,
     required UpdateStudentStatusRequest request,
   }) async {
     await _ensureStudents(query);
-    final index = _store.students!.indexWhere((student) => student.id == studentId);
+    final index =
+        _store.students!.indexWhere((student) => student.id == studentId);
     if (index < 0) throw StateError('Student not found: $studentId');
     final updated = _store.copyStudent(
       _store.students![index],
@@ -456,8 +492,8 @@ class MockSisRepository implements SisRepository {
     required AcademicAssignmentRequest request,
   }) async {
     await _ensureStudents(query);
-    final index =
-        _store.students!.indexWhere((student) => student.id == request.studentId);
+    final index = _store.students!
+        .indexWhere((student) => student.id == request.studentId);
     if (index < 0) throw StateError('Student not found: ${request.studentId}');
     final updated = _store.copyStudent(
       _store.students![index],

@@ -35,6 +35,30 @@ void main() {
       expect(container.read(createStudentProvider).hasError, isTrue);
       expect(container.read(createStudentProvider).valueOrNull, isNull);
     });
+
+    test('uploadStudentDocument fails when manageSis permission missing',
+        () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.management),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(uploadStudentDocumentProvider.notifier).execute(
+            studentId: 'SIS-STU-10421',
+            request: const UploadStudentDocumentRequest(
+              type: 'Transfer Certificate',
+              fileName: 'tc.pdf',
+            ),
+          );
+
+      expect(container.read(uploadStudentDocumentProvider).hasError, isTrue);
+      expect(container.read(uploadStudentDocumentProvider).valueOrNull, isNull);
+    });
   });
 
   group('SIS API write paths', () {
@@ -43,6 +67,10 @@ void main() {
       expect(SisApiPaths.studentStatus('SIS-1'), '/sis/students/SIS-1/status');
       expect(SisApiPaths.enrollments, '/sis/enrollments');
       expect(SisApiPaths.enrollment('SIS-1'), '/sis/enrollments/SIS-1');
+      expect(
+        SisApiPaths.studentDocuments('SIS-1'),
+        '/sis/students/SIS-1/documents',
+      );
       expect(SisApiPaths.admissionsConversion, '/sis/admissions-conversion');
     });
   });

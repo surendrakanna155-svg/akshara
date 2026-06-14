@@ -55,6 +55,12 @@ class SchoolCompletionHubScreen extends StatelessWidget {
             onTap: () => context.push(RouteNames.timetableOptimization),
           ),
           ListTile(
+            leading: const Icon(Icons.swap_horiz_outlined),
+            title: const Text('Substitute Manager'),
+            subtitle: const Text('Open slots, teacher availability, assign wizard'),
+            onTap: () => context.push(RouteNames.substituteManager),
+          ),
+          ListTile(
             leading: const Icon(Icons.send_outlined),
             title: const Text('Communication Delivery'),
             subtitle: const Text('Template delivery analytics'),

@@ -115,6 +115,36 @@ final updateStudentProvider =
   UpdateStudentNotifier.new,
 );
 
+class UploadStudentDocumentNotifier extends AsyncNotifier<SisDocumentSummary?> {
+  @override
+  FutureOr<SisDocumentSummary?> build() => null;
+
+  Future<SisDocumentSummary?> execute({
+    required String studentId,
+    required UploadStudentDocumentRequest request,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageSis(ref),
+        invalidateStudentId: studentId,
+        action: () => ref.read(sisRepositoryProvider).uploadStudentDocument(
+              query: ref.read(repositoryQueryProvider),
+              studentId: studentId,
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final uploadStudentDocumentProvider =
+    AsyncNotifierProvider<UploadStudentDocumentNotifier, SisDocumentSummary?>(
+  UploadStudentDocumentNotifier.new,
+);
+
 class UpdateStudentStatusNotifier extends AsyncNotifier<SisStudent?> {
   @override
   FutureOr<SisStudent?> build() => null;
@@ -208,8 +238,7 @@ class ConvertAdmissionsEnrollmentNotifier
   }
 }
 
-final convertAdmissionsEnrollmentProvider =
-    AsyncNotifierProvider<ConvertAdmissionsEnrollmentNotifier,
-        SisConversionPreview?>(
+final convertAdmissionsEnrollmentProvider = AsyncNotifierProvider<
+    ConvertAdmissionsEnrollmentNotifier, SisConversionPreview?>(
   ConvertAdmissionsEnrollmentNotifier.new,
 );

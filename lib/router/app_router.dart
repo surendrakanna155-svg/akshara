@@ -589,6 +589,13 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.substituteManager,
+            name: 'substituteManager',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: substituteManagerRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.communicationDelivery,
             name: 'communicationDelivery',
             pageBuilder: (context, state) => NoTransitionPage(

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
@@ -9,6 +12,7 @@ import '../../admin/admin_layout.dart';
 import '../sis_async_state.dart';
 import '../sis_models.dart';
 import '../sis_navigation.dart';
+import '../sis_workflow_actions.dart';
 import '../widgets/sis_kpi_row.dart';
 import '../widgets/sis_module_scaffold.dart';
 import 'sis_profile_provider.dart';
@@ -25,7 +29,8 @@ class SisStudentProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final viewState = ref.watch(sisStudentProfileViewStateProvider(studentId));
-    final profile = viewState.data ?? ref.watch(sisStudentProfileProvider(studentId));
+    final profile =
+        viewState.data ?? ref.watch(sisStudentProfileProvider(studentId));
 
     return SisModuleScaffold(
       screen: SisScreen.registry,
@@ -48,6 +53,7 @@ class SisStudentProfileScreen extends ConsumerWidget {
         ),
         builder: (loadedProfile) => _buildProfileContent(
           context,
+          ref: ref,
           profile: loadedProfile,
         ),
       ),
@@ -56,6 +62,7 @@ class SisStudentProfileScreen extends ConsumerWidget {
 
   Widget _buildProfileContent(
     BuildContext context, {
+    required WidgetRef ref,
     required SisStudentProfile profile,
   }) {
     final student = profile.student;
@@ -68,6 +75,23 @@ class SisStudentProfileScreen extends ConsumerWidget {
         Text(
           '${student.admissionNumber} · Class ${student.classLabel}-${student.section}',
           style: context.aksharaText.bodyMedium,
+        ),
+        const SizedBox(height: AksharaSpacing.s3),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: AksharaManageAction(
+            permission: Permission.manageSis,
+            child: OutlinedButton.icon(
+              key: QaTestKeys.sisEditProfileButton,
+              onPressed: () => showSisProfileEditSheet(
+                context,
+                ref,
+                profile: profile,
+              ),
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Edit Profile'),
+            ),
+          ),
         ),
         const SizedBox(height: AksharaSpacing.s4),
         SisKpiRow(
@@ -106,8 +130,10 @@ class SisStudentProfileScreen extends ConsumerWidget {
         ),
         const SizedBox(height: AksharaSpacing.s6),
         if (isMobile) ...[
-          _DetailSection(title: 'Student details', child: _StudentDetails(student)),
-          _DetailSection(title: 'Parent details', child: _ParentDetails(profile.parent)),
+          _DetailSection(
+              title: 'Student details', child: _StudentDetails(student)),
+          _DetailSection(
+              title: 'Parent details', child: _ParentDetails(profile.parent)),
           if (profile.feeAccount != null)
             _DetailSection(
               title: 'Fee account summary',
@@ -119,7 +145,14 @@ class SisStudentProfileScreen extends ConsumerWidget {
           ),
           _DetailSection(
             title: 'Documents',
-            child: _DocumentsList(documents: profile.documents),
+            child: _DocumentsList(
+              documents: profile.documents,
+              onUploadDocument: () => showSisDocumentUploadDialog(
+                context,
+                ref,
+                profile: profile,
+              ),
+            ),
           ),
           _DetailSection(
             title: 'Timeline',
@@ -164,7 +197,14 @@ class SisStudentProfileScreen extends ConsumerWidget {
                     ),
                     _DetailSection(
                       title: 'Documents',
-                      child: _DocumentsList(documents: profile.documents),
+                      child: _DocumentsList(
+                        documents: profile.documents,
+                        onUploadDocument: () => showSisDocumentUploadDialog(
+                          context,
+                          ref,
+                          profile: profile,
+                        ),
+                      ),
                     ),
                     _DetailSection(
                       title: 'Timeline',
@@ -248,7 +288,8 @@ class _ParentDetails extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(parent.guardianName, style: text.titleSmall),
-        Text('${parent.relationship} · ${parent.phone}', style: text.bodyMedium),
+        Text('${parent.relationship} · ${parent.phone}',
+            style: text.bodyMedium),
         Text(parent.email, style: text.bodySmall),
         Text(parent.address, style: text.bodySmall),
       ],
@@ -274,9 +315,8 @@ class _FeeSummary extends StatelessWidget {
         const SizedBox(height: AksharaSpacing.s2),
         AksharaStatusChip(
           label: account.status,
-          tone: account.status == 'Overdue'
-              ? KpiAccent.error
-              : KpiAccent.success,
+          tone:
+              account.status == 'Overdue' ? KpiAccent.error : KpiAccent.success,
         ),
       ],
     );
@@ -317,10 +357,11 @@ class _AcademicHistory extends StatelessWidget {
         children: [
           for (final entry in entries)
             ListTile(
-            title: Text('${entry.academicYear} · Class ${entry.classLabel}-${entry.section}'),
-            subtitle: Text(entry.result),
-            dense: true,
-          ),
+              title: Text(
+                  '${entry.academicYear} · Class ${entry.classLabel}-${entry.section}'),
+              subtitle: Text(entry.result),
+              dense: true,
+            ),
         ],
       ),
     );
@@ -328,15 +369,35 @@ class _AcademicHistory extends StatelessWidget {
 }
 
 class _DocumentsList extends StatelessWidget {
-  const _DocumentsList({required this.documents});
+  const _DocumentsList({
+    required this.documents,
+    this.onUploadDocument,
+  });
 
   final List<SisDocumentSummary> documents;
+  final VoidCallback? onUploadDocument;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (onUploadDocument != null) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AksharaManageAction(
+                permission: Permission.manageSis,
+                child: OutlinedButton.icon(
+                  key: QaTestKeys.sisUploadDocumentButton,
+                  onPressed: onUploadDocument,
+                  icon: const Icon(Icons.upload_file_outlined),
+                  label: const Text('Upload Document'),
+                ),
+              ),
+            ),
+            const SizedBox(height: AksharaSpacing.s2),
+          ],
           for (final doc in documents)
             ListTile(
               title: Text(doc.type),

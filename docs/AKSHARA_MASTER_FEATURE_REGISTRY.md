@@ -176,7 +176,7 @@
 | Student registry | SIS | SPEC-SIS, ROAD | Core record | Auth | **A** | Yes | Yes | Yes | No | `sis_*`, Patrol SIS | — |
 | Register / convert enrollment | SIS | SPEC-SIS, PLAN | AD→SIS | Admissions | **A** | Yes | Yes | Yes | No | Mutations + E2E | — |
 | Academic class/section assign | SIS | SPEC-SIS | Placement | Academic structure | **B** | Yes | Partial | Yes | No | `sis_academic_assignment_screen.dart` | Manual only |
-| Student profile edit | SIS | PLAN P1 | Data quality | RBAC | **B** | Yes | Partial | Partial | No | Read profile | Write UI |
+| Student profile edit | SIS | PLAN P1 | Data quality | RBAC | **A** | Yes | Yes | Yes | No | `sis_profile_edit_sheet.dart`, Patrol | — |
 | Document vault upload | SIS | SPEC-SIS SIS-07 | Compliance | Storage | **C** | Yes | No | No | No | UI placeholder | Upload API |
 | **Student promotion (year rollover)** | SIS | SPEC-SIS, VISION #21 | Academic continuity | Timetable, Finance | **A** | Yes | Yes | Yes | Partial | `sis_promotion_screen.dart`, academic operations repo | API prod parity |
 | **Student reshuffle** | SIS | SPEC-SIS, SRS | Section balance | Academic | **A** | Yes | Yes | Yes | Partial | `sis_reshuffle_screen.dart` | API prod |
@@ -265,7 +265,7 @@
 | Mark attendance (mobile) | Teacher | SPEC-Teacher, QA | Daily ops | SIS | **A** | Yes | Yes | Patrol | No | Teacher mutations | — |
 | Teacher Copilot | Teacher | VISION #6, ROAD | Productivity | AI | **D** | Yes | Mock | Partial | No | Copilot screens | — |
 | **Teacher reassignment** | Teacher | SPEC-Principal, SRS | Staffing flexibility | Timetable, HR | **E** | No | No | No | No | — | **Vision gap** |
-| **Substitute teacher assignment** | Teacher | SPEC-PR-10 (AR-043) | Coverage | Timetable | **D** | Yes | Suggestions only | Contract | No | `TimetableSubstituteSuggestion` | No wizard |
+| **Substitute teacher assignment** | Teacher | SPEC-PR-10 (AR-043) | Coverage | Timetable | **A** | Yes | Yes | Yes | No | `substitute_manager_screen.dart`, Patrol | — |
 | **Teacher workload balancing** | Teacher | VISION #9 | Fair load | Timetable | **D** | Yes | Metrics only | Contract | No | Phase5, optimization reads | No rebalance action |
 | **Teacher schedule management (writes)** | Teacher | SPEC-Teacher | Self-service | Timetable | **B** | Yes | Read-only schedule | Patrol read | No | Teacher timetable | No swap requests |
 | Class teacher dashboard | Teacher | SPEC-Teacher | Class ops | SIS | **B** | Yes | Partial | Partial | No | Teacher screens | — |

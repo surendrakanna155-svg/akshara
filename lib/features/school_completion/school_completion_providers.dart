@@ -76,6 +76,17 @@ final timetableOptimizationProvider =
       );
 });
 
+final substituteCoverageProvider =
+    FutureProvider.family<SubstituteCoverageData, ({String academicYearId, String? dayOfWeek})>(
+  (ref, params) async {
+    return ref.read(schoolCompletionRepositoryProvider).getSubstituteCoverage(
+          query: ref.watch(schoolCompletionQueryProvider),
+          academicYearId: params.academicYearId,
+          dayOfWeek: params.dayOfWeek,
+        );
+  },
+);
+
 final deliveryAnalyticsProvider = FutureProvider<DeliveryAnalytics>((ref) async {
   return ref.read(schoolCompletionRepositoryProvider).getDeliveryAnalytics(
         query: ref.watch(schoolCompletionQueryProvider),

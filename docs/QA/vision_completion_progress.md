@@ -7,6 +7,19 @@
 
 ---
 
+## Session 7 — Continuous Completion (M6 + M7 start)
+
+| ID | Feature | Status |
+|----|---------|--------|
+| P1-11 | SIS profile edit + documents | ✅ |
+| P1-09 | Substitute teacher wizard | ✅ |
+
+**Metrics after session 7:** ERP ~93% · Tests **1425** · Patrol **~51**
+
+See `docs/MILESTONE_6_COMPLETION_REPORT.md`.
+
+---
+
 ## Session 6 — Batch A P1 Closure Program
 
 | ID | Feature | Status |

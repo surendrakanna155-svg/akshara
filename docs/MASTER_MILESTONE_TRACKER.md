@@ -151,8 +151,8 @@ Current sprint and in-flight work (Q3 2026).
 
 | ID | Feature | Registry | Milestone | Status | Notes |
 |----|---------|----------|-----------|--------|-------|
-| P1-09 | Substitute teacher wizard | Teacher | M7 | ⏳ | Timetable dependency |
-| P1-11 | SIS profile edit + documents | SIS | M6 | ⏳ | Data quality |
+| P1-11 | SIS profile edit + documents | SIS | M6 | ✅ | Profile edit + upload |
+| P1-09 | Substitute teacher wizard | Teacher | M7 | ✅ | `substitute_manager_screen.dart` |
 | FV-PLAT-04 | Organization / Trust Intelligence | Control Center | M9 | 🔄 | M4 tab shipped; full trust rollup pending |
 | FV-PLAT-08 | Tenant Isolation Verification | Platform | M12 | 🔄 | 213 probes passing |
 | FV-PLAT-13 | RLS Enforcement | Platform | M12 | 🔄 | TD-P0-01 partial |
@@ -172,7 +172,7 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 | P1-05 | Admissions settings persistence | ✅ Batch A |
 | P1-06 | Notifications broadcast admin | ✅ Batch A |
 | P1-07 | RBAC mutation registry sync | ✅ Batch A |
-| P1-11 | SIS profile edit + documents | ⏳ |
+| P1-11 | SIS profile edit + documents | ✅ M6 |
 | P1-12 | HR leave approve/reject | ✅ Batch A |
 | P1-13 | Finance receipt PDF | ✅ Batch A |
 | FV-15–16 | QR / offline payments | ⏳ |
@@ -181,7 +181,7 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 
 | ID | Feature | Status |
 |----|---------|--------|
-| P1-09 | Substitute teacher wizard | ⏳ |
+| P1-09 | Substitute teacher wizard | ⏳ → 🔄 | ✅ |
 | P2-03 | Teacher reassignment | ⏳ |
 | P2-04 | Timetable optimization apply | ⏳ |
 | FV-11 | Book Distribution parity | 🔄 |

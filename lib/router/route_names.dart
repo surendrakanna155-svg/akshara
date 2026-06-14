@@ -90,6 +90,7 @@ abstract final class RouteNames {
   static const String subjectAssignments = '/school/subject-assignments';
   static const String lessonAnalytics = '/school/lesson-analytics';
   static const String timetableOptimization = '/school/timetables/optimize';
+  static const String substituteManager = '/school/timetables/substitute';
   static const String communicationDelivery = '/school/communications/delivery';
   static const String communicationBroadcastAdmin =
       '/school/communications/broadcast-admin';

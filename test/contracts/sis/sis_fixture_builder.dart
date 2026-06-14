@@ -108,6 +108,7 @@ class SisFixtureBuilder {
       'documents': [
         for (final document in profile.documents)
           {
+            if (document.id != null) 'id': document.id,
             'type': document.type,
             'status': document.status,
             'uploadedAt': document.uploadedAt,
@@ -148,7 +149,8 @@ class SisFixtureBuilder {
       'submittedAt': enrollment.submittedAt,
       'conversionStatus':
           SisEnumCodec.conversionStatusToApi(enrollment.conversionStatus),
-      'effectiveStatus': SisEnumCodec.conversionStatusToApi(item.effectiveStatus),
+      'effectiveStatus':
+          SisEnumCodec.conversionStatusToApi(item.effectiveStatus),
       if (enrollment.generatedAdmissionNumber != null)
         'generatedAdmissionNumber': enrollment.generatedAdmissionNumber,
       if (enrollment.previewStudentId != null)

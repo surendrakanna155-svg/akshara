@@ -71,13 +71,14 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 
 ---
 
-### SIS — **B · ~85%**
+### SIS — **A · ~90%**
 
 | Gap | Priority |
 |-----|----------|
-| Student profile edit / document upload | P1 |
 | Bulk class promotion | P2 |
 | API write parity | P2 |
+
+**Writes:** register, assign, **profile edit**, **document upload**, year transition. **Effort:** P2 bulk/API.
 
 **Missing:** profile mutation screens, promotion wizard. **Writes:** register, convert enrollment, academic assign. **RBAC:** complete. **Effort:** 4–5 d.
 

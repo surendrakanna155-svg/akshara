@@ -255,6 +255,34 @@ class SchoolCompletionRemoteDataSource {
     return _data(response);
   }
 
+  Future<Map<String, dynamic>> getSubstituteCoverage({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? dayOfWeek,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      SchoolCompletionApiPaths.timetableSubstituteCoverage,
+      queryParameters: {
+        ..._params(query),
+        'academicYearId': academicYearId,
+        if (dayOfWeek != null && dayOfWeek.trim().isNotEmpty) 'dayOfWeek': dayOfWeek,
+      },
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> assignSubstitute({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      SchoolCompletionApiPaths.timetableSubstituteAssign,
+      queryParameters: _params(query),
+      data: body,
+    );
+    return _data(response);
+  }
+
   Future<Map<String, dynamic>> getDeliveryAnalytics({
     required RepositoryQuery query,
   }) async {

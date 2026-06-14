@@ -111,6 +111,18 @@ class MutationPermissionRegistry {
     ),
     MutationPermissionEntry(
       moduleId: 'sis',
+      mutationId: 'updateStudent',
+      permission: Permission.manageSis,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'sis',
+      mutationId: 'uploadStudentDocument',
+      permission: Permission.manageSis,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'sis',
       mutationId: 'previewYearTransition',
       permission: Permission.manageSis,
       kind: 'manage',
@@ -169,6 +181,12 @@ class MutationPermissionRegistry {
       moduleId: 'workflow',
       mutationId: 'executeWorkflowAction',
       permission: Permission.manageWorkflowAutomation,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'school_completion',
+      mutationId: 'assignSubstitute',
+      permission: Permission.manageAcademicTimetable,
       kind: 'manage',
     ),
     // Inventory

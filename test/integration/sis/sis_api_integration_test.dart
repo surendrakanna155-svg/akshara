@@ -38,7 +38,8 @@ void main() {
         }
         if (path == SisApiPaths.students) {
           return _fixtures.listEnvelope([
-            for (final student in students.items) _fixtures.studentItem(student),
+            for (final student in students.items)
+              _fixtures.studentItem(student),
           ]);
         }
         if (path.startsWith('${SisApiPaths.students}/')) {
@@ -117,6 +118,15 @@ void main() {
             ),
           );
         }
+        if (options.method == 'POST' &&
+            options.path == SisApiPaths.studentDocuments('SIS-STU-10421')) {
+          return _fixtures.envelope({
+            'id': 'SIS-DOC-1201',
+            'type': 'Transfer Certificate',
+            'status': 'Pending',
+            'uploadedAt': 'Today',
+          });
+        }
         return responseForPath(options.path);
       });
     }
@@ -178,7 +188,8 @@ void main() {
       expect(student.studentName, 'Created Via API');
     });
 
-    test('api repository assignAcademicAssignment maps POST response', () async {
+    test('api repository assignAcademicAssignment maps POST response',
+        () async {
       final repository = ApiSisRepository(
         remote: SisRemoteDataSource(createTestDio()),
       );
@@ -215,6 +226,25 @@ void main() {
 
       expect(preview.studentId, 'SIS-STU-10499');
       expect(preview.admissionNumber, 'ADM-2026-0499');
+    });
+
+    test('api repository uploadStudentDocument maps POST response', () async {
+      final repository = ApiSisRepository(
+        remote: SisRemoteDataSource(createTestDio()),
+      );
+
+      final document = await repository.uploadStudentDocument(
+        query: kQuery,
+        studentId: 'SIS-STU-10421',
+        request: const UploadStudentDocumentRequest(
+          type: 'Transfer Certificate',
+          fileName: 'tc.pdf',
+        ),
+      );
+
+      expect(document.id, 'SIS-DOC-1201');
+      expect(document.type, 'Transfer Certificate');
+      expect(document.status, 'Pending');
     });
   });
 }

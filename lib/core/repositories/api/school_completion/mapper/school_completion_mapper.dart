@@ -183,6 +183,64 @@ class SchoolCompletionMapper {
     );
   }
 
+  SubstituteCoverageData toSubstituteCoverage(Map<String, dynamic> json) {
+    final openSlotsRaw = json['openSlots'] ?? json['open_slots'];
+    final candidatesRaw = json['candidates'] ?? json['availableTeachers'] ?? json['available_teachers'];
+    return SubstituteCoverageData(
+      openSlots: openSlotsRaw is List
+          ? openSlotsRaw
+              .whereType<Map>()
+              .map((slot) => SubstituteOpenSlot(
+                    slotId: slot['slotId'] as String? ?? slot['slot_id'] as String? ?? '',
+                    academicYearId: slot['academicYearId'] as String? ??
+                        slot['academic_year_id'] as String? ??
+                        '',
+                    className: slot['className'] as String? ?? slot['class_name'] as String? ?? '',
+                    sectionName: slot['sectionName'] as String? ?? slot['section_name'] as String? ?? '',
+                    subjectName: slot['subjectName'] as String? ?? slot['subject_name'] as String? ?? '',
+                    originalTeacherId: slot['originalTeacherId'] as String? ??
+                        slot['original_teacher_id'] as String? ??
+                        '',
+                    originalTeacherName: slot['originalTeacherName'] as String? ??
+                        slot['original_teacher_name'] as String? ??
+                        '',
+                    dayOfWeek: slot['dayOfWeek'] as String? ?? slot['day_of_week'] as String? ?? '',
+                    periodLabel: slot['periodLabel'] as String? ?? slot['period_label'] as String? ?? '',
+                    slotDate: slot['slotDate'] as String? ?? slot['slot_date'] as String? ?? '',
+                  ))
+              .toList()
+          : const [],
+      candidates: candidatesRaw is List
+          ? candidatesRaw
+              .whereType<Map>()
+              .map((candidate) => SubstituteTeacherCandidate(
+                    teacherId: candidate['teacherId'] as String? ?? candidate['teacher_id'] as String? ?? '',
+                    teacherName:
+                        candidate['teacherName'] as String? ?? candidate['teacher_name'] as String? ?? '',
+                    subjects: _stringList(candidate['subjects']),
+                    freePeriods:
+                        candidate['freePeriods'] as int? ?? candidate['free_periods'] as int? ?? 0,
+                    dailyLoad: candidate['dailyLoad'] as int? ?? candidate['daily_load'] as int? ?? 0,
+                    canNotify:
+                        candidate['canNotify'] as bool? ?? candidate['can_notify'] as bool? ?? true,
+                  ))
+              .toList()
+          : const [],
+      generatedAt: json['generatedAt'] as String? ?? json['generated_at'] as String? ?? '',
+    );
+  }
+
+  SubstituteAssignmentResult toSubstituteAssignmentResult(Map<String, dynamic> json) {
+    return SubstituteAssignmentResult(
+      assignmentId: json['assignmentId'] as String? ?? json['assignment_id'] as String? ?? '',
+      slotId: json['slotId'] as String? ?? json['slot_id'] as String? ?? '',
+      timetableUpdated:
+          json['timetableUpdated'] as bool? ?? json['timetable_updated'] as bool? ?? false,
+      notifiedAudience: _stringList(json['notifiedAudience'] ?? json['notified_audience']),
+      message: json['message'] as String? ?? 'Substitute assigned successfully.',
+    );
+  }
+
   DeliveryAnalytics toDeliveryAnalytics(Map<String, dynamic> json) {
     final byChannelRaw = json['byChannel'] ?? json['by_channel'];
     final byChannel = <String, DeliveryChannelStats>{};

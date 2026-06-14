@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/repositories/academic/academic_catalog_provider.dart';
+import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
 
@@ -60,6 +62,15 @@ class TimetableOptimizationScreen extends ConsumerWidget {
                 const Text('Suggestions', style: TextStyle(fontWeight: FontWeight.bold)),
                 ...result.recommendations.map(
                   (r) => ListTile(title: Text(r.title), subtitle: Text(r.detail)),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push(RouteNames.substituteManager),
+                    icon: const Icon(Icons.swap_horiz_outlined),
+                    label: const Text('Open Substitute Teacher Wizard'),
+                  ),
                 ),
               ],
             ),

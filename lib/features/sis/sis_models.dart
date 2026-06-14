@@ -223,11 +223,13 @@ class SisAttendanceSummary {
 @immutable
 class SisDocumentSummary {
   const SisDocumentSummary({
+    this.id,
     required this.type,
     required this.status,
     required this.uploadedAt,
   });
 
+  final String? id;
   final String type;
   final String status;
   final String uploadedAt;

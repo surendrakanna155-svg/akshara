@@ -1,6 +1,7 @@
 import 'package:akshara_erp/core/repositories/api/sis/dto/academic_assignment_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/admissions_conversion_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/create_student_request_dto.dart';
+import 'package:akshara_erp/core/repositories/api/sis/dto/upload_student_document_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/update_student_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/update_student_status_request_dto.dart';
 import 'package:akshara_erp/core/repositories/interfaces/sis_repository.dart';
@@ -43,6 +44,18 @@ void main() {
         const UpdateStudentStatusRequest(status: SisStudentStatus.transferred),
       ).toJson();
       expect(json['status'], 'transferred');
+    });
+
+    test('upload student document request serializes payload', () {
+      final json = UploadStudentDocumentRequestDto.fromDomain(
+        const UploadStudentDocumentRequest(
+          type: 'Transfer Certificate',
+          fileName: 'tc.pdf',
+        ),
+      ).toJson();
+      expect(json['type'], 'Transfer Certificate');
+      expect(json['fileName'], 'tc.pdf');
+      expect(json['status'], 'Pending');
     });
 
     test('academic assignment payload targets enrollment create body', () {
@@ -124,6 +137,42 @@ void main() {
         ),
       );
       expect(updated.status, SisStudentStatus.active);
+    });
+
+    test('updateStudent persists edited fields', () async {
+      const studentId = 'SIS-STU-10421';
+      final updated = await repo.updateStudent(
+        query: kQuery,
+        studentId: studentId,
+        request: const UpdateStudentRequest(
+          studentName: 'Arjun Patel Updated',
+          guardianName: 'Kiran Patel Updated',
+          phone: '+91 90000 12345',
+        ),
+      );
+      expect(updated.studentName, 'Arjun Patel Updated');
+      expect(updated.guardianName, 'Kiran Patel Updated');
+      expect(updated.phone, '+91 90000 12345');
+    });
+
+    test('uploadStudentDocument persists for student profile', () async {
+      const studentId = 'SIS-STU-10421';
+      final uploaded = await repo.uploadStudentDocument(
+        query: kQuery,
+        studentId: studentId,
+        request: const UploadStudentDocumentRequest(
+          type: 'Transfer Certificate',
+          fileName: 'tc.pdf',
+        ),
+      );
+      expect(uploaded.id, isNotNull);
+      expect(uploaded.type, 'Transfer Certificate');
+
+      final profile = await repo.getStudentProfile(
+        query: kQuery,
+        studentId: studentId,
+      );
+      expect(profile.documents.first.type, 'Transfer Certificate');
     });
 
     test('convertAdmissionsEnrollment creates student and marks converted',

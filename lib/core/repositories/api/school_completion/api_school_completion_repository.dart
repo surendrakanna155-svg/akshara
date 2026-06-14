@@ -1,6 +1,7 @@
 import '../../interfaces/school_completion_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/school_completion/school_completion_models.dart';
+import 'dto/assign_substitute_request_dto.dart';
 import 'mapper/school_completion_mapper.dart';
 import 'mapper/school_completion_phase10_mapper.dart';
 import 'mapper/school_completion_phase15_mapper.dart';
@@ -292,6 +293,32 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
       academicYearId: academicYearId,
     );
     return _mapper.toTimetableOptimization(dto);
+  }
+
+  @override
+  Future<SubstituteCoverageData> getSubstituteCoverage({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? dayOfWeek,
+  }) async {
+    final dto = await _remote.getSubstituteCoverage(
+      query: query,
+      academicYearId: academicYearId,
+      dayOfWeek: dayOfWeek,
+    );
+    return _mapper.toSubstituteCoverage(dto);
+  }
+
+  @override
+  Future<SubstituteAssignmentResult> assignSubstitute({
+    required RepositoryQuery query,
+    required AssignSubstituteRequest request,
+  }) async {
+    final dto = await _remote.assignSubstitute(
+      query: query,
+      body: AssignSubstituteRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toSubstituteAssignmentResult(dto);
   }
 
   @override

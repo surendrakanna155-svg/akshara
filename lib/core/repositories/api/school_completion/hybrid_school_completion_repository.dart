@@ -210,6 +210,25 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
       _api.getTimetableOptimization(query: query, academicYearId: academicYearId);
 
   @override
+  Future<SubstituteCoverageData> getSubstituteCoverage({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? dayOfWeek,
+  }) =>
+      _api.getSubstituteCoverage(
+        query: query,
+        academicYearId: academicYearId,
+        dayOfWeek: dayOfWeek,
+      );
+
+  @override
+  Future<SubstituteAssignmentResult> assignSubstitute({
+    required RepositoryQuery query,
+    required AssignSubstituteRequest request,
+  }) =>
+      _api.assignSubstitute(query: query, request: request);
+
+  @override
   Future<DeliveryAnalytics> getDeliveryAnalytics({
     required RepositoryQuery query,
   }) =>

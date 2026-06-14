@@ -18,7 +18,8 @@ class ApiSisRepository implements SisRepository {
   final SisMapper _mapper;
 
   @override
-  Future<SisDashboardData> getDashboard({required RepositoryQuery query}) async {
+  Future<SisDashboardData> getDashboard(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchDashboard(query: query);
     return _mapper.toDashboard(dto);
   }
@@ -79,6 +80,19 @@ class ApiSisRepository implements SisRepository {
     required UpdateStudentRequest request,
   }) async {
     return _remote.updateStudent(
+      query: query,
+      studentId: studentId,
+      request: request,
+    );
+  }
+
+  @override
+  Future<SisDocumentSummary> uploadStudentDocument({
+    required RepositoryQuery query,
+    required String studentId,
+    required UploadStudentDocumentRequest request,
+  }) async {
+    return _remote.uploadStudentDocument(
       query: query,
       studentId: studentId,
       request: request,

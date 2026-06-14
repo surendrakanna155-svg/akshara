@@ -5,6 +5,7 @@ import 'package:akshara_erp/features/sis/dashboard/sis_dashboard_screen.dart';
 import 'package:akshara_erp/features/sis/profile/sis_profile_screen.dart';
 import 'package:akshara_erp/features/sis/registry/sis_registry_provider.dart';
 import 'package:akshara_erp/features/sis/registry/sis_registry_screen.dart';
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/shared/widgets/widgets.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -47,7 +48,8 @@ void main() {
       expect(find.text('1,248'), findsOneWidget);
       expect(find.text('Class distribution'), findsOneWidget);
       expect(find.text('Recent enrollments'), findsOneWidget);
-      expect(find.textContaining('pending admissions conversions'), findsOneWidget);
+      expect(find.textContaining('pending admissions conversions'),
+          findsOneWidget);
     });
 
     testWidgets('SisDashboardScreen shows loading state', (tester) async {
@@ -105,6 +107,8 @@ void main() {
       expect(find.text('Parent details'), findsOneWidget);
       expect(find.text('Fee account summary'), findsOneWidget);
       expect(find.text('Timeline'), findsOneWidget);
+      expect(find.byKey(QaTestKeys.sisEditProfileButton), findsOneWidget);
+      expect(find.byKey(QaTestKeys.sisUploadDocumentButton), findsOneWidget);
     });
 
     testWidgets('SisAcademicAssignmentScreen renders assignment form', (

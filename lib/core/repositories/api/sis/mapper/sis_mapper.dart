@@ -212,14 +212,13 @@ class SisMapper {
   SisStudent toStudentFromEnrollment(Map<String, dynamic> raw) {
     return SisStudent(
       id: raw['studentId'] as String? ?? raw['student_id'] as String? ?? '',
-      studentName: raw['studentName'] as String? ??
-          raw['student_name'] as String? ??
-          '',
+      studentName:
+          raw['studentName'] as String? ?? raw['student_name'] as String? ?? '',
       admissionNumber: '',
-      classLabel: raw['className'] as String? ?? raw['class_name'] as String? ?? '',
-      section: raw['sectionName'] as String? ??
-          raw['section_name'] as String? ??
-          '',
+      classLabel:
+          raw['className'] as String? ?? raw['class_name'] as String? ?? '',
+      section:
+          raw['sectionName'] as String? ?? raw['section_name'] as String? ?? '',
       academicYear: raw['academicYear'] as String? ??
           raw['academic_year'] as String? ??
           '',
@@ -229,7 +228,8 @@ class SisMapper {
       guardianName: '',
       phone: '',
       email: '',
-      enrolledAt: raw['createdAt'] as String? ?? raw['created_at'] as String? ?? '',
+      enrolledAt:
+          raw['createdAt'] as String? ?? raw['created_at'] as String? ?? '',
     );
   }
 
@@ -259,6 +259,15 @@ class SisMapper {
     return toStudentFromDetail(raw);
   }
 
+  SisDocumentSummary toDocumentSummary(Map<String, dynamic> raw) {
+    return SisDocumentSummary(
+      id: raw['id'] as String?,
+      type: raw['type'] as String? ?? '',
+      status: raw['status'] as String? ?? '',
+      uploadedAt: raw['uploadedAt'] as String? ?? '',
+    );
+  }
+
   SisStudentProfile toStudentProfile(SisStudentProfileDto dto) {
     final raw = dto.raw;
     if (raw.containsKey('student') && raw['student'] is Map<String, dynamic>) {
@@ -278,7 +287,8 @@ class SisMapper {
         student: student,
         parent: SisParentDetails(
           guardianName: primaryGuardian?['displayName'] as String? ?? '',
-          relationship: primaryGuardian?['relationship'] as String? ?? 'Guardian',
+          relationship:
+              primaryGuardian?['relationship'] as String? ?? 'Guardian',
           phone: primaryGuardian?['phone'] as String? ?? '',
           email: primaryGuardian?['email'] as String? ?? '',
           address: profileRaw?['address'] as String? ?? '',
@@ -290,7 +300,9 @@ class SisMapper {
                   academicYear: enrollmentRaw['academicYear'] as String? ?? '',
                   classLabel: enrollmentRaw['className'] as String? ?? '',
                   section: enrollmentRaw['sectionName'] as String? ?? '',
-                  result: enrollmentRaw['isCurrent'] == true ? 'Current' : 'Historical',
+                  result: enrollmentRaw['isCurrent'] == true
+                      ? 'Current'
+                      : 'Historical',
                 ),
               ],
         feeAccount: null,
@@ -372,22 +384,18 @@ class SisMapper {
   SisConversionPreview toConversionPreview(SisConversionPreviewDto dto) {
     final raw = dto.raw;
     return SisConversionPreview(
-      studentId: raw['studentId'] as String? ??
-          raw['student_id'] as String? ??
-          '',
+      studentId:
+          raw['studentId'] as String? ?? raw['student_id'] as String? ?? '',
       admissionNumber: raw['admissionNumber'] as String? ??
           raw['admission_number'] as String? ??
           '',
-      studentName: raw['studentName'] as String? ??
-          raw['student_name'] as String? ??
-          '',
+      studentName:
+          raw['studentName'] as String? ?? raw['student_name'] as String? ?? '',
       classLabel: raw['classLabel'] as String? ??
           raw['class_label'] as String? ??
           raw['className'] as String? ??
           '',
-      section: raw['section'] as String? ??
-          raw['sectionName'] as String? ??
-          '',
+      section: raw['section'] as String? ?? raw['sectionName'] as String? ?? '',
       academicYear: raw['academicYear'] as String? ??
           raw['academic_year'] as String? ??
           '',
@@ -400,9 +408,8 @@ class SisMapper {
       id: raw['id'] as String? ?? '',
       studentName: raw['studentName'] as String? ?? '',
       applicationId: raw['applicationId'] as String? ?? '',
-      seekingClass: raw['seekingClass'] as String? ??
-          raw['classLabel'] as String? ??
-          '',
+      seekingClass:
+          raw['seekingClass'] as String? ?? raw['classLabel'] as String? ?? '',
       section: raw['section'] as String? ?? '',
       academicYear: raw['academicYear'] as String? ?? '',
       guardianName: raw['guardianName'] as String? ?? '',
@@ -499,6 +506,7 @@ class SisMapper {
       for (final item in items)
         if (item is Map<String, dynamic>)
           SisDocumentSummary(
+            id: item['id'] as String?,
             type: item['type'] as String? ?? '',
             status: item['status'] as String? ?? '',
             uploadedAt: item['uploadedAt'] as String? ?? '',

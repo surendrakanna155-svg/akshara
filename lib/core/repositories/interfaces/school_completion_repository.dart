@@ -117,6 +117,17 @@ abstract class SchoolCompletionRepository {
     required String academicYearId,
   });
 
+  Future<SubstituteCoverageData> getSubstituteCoverage({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? dayOfWeek,
+  });
+
+  Future<SubstituteAssignmentResult> assignSubstitute({
+    required RepositoryQuery query,
+    required AssignSubstituteRequest request,
+  });
+
   Future<DeliveryAnalytics> getDeliveryAnalytics({
     required RepositoryQuery query,
   });

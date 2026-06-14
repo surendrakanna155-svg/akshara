@@ -9,10 +9,13 @@ class MockSisWriteStore {
 
   List<SisStudent>? students;
   List<SisEnrollmentQueueItem>? conversionQueue;
+  Map<String, List<SisDocumentSummary>>? studentDocuments;
 
   int _studentSeq = 430;
+  int _documentSeq = 900;
 
   String nextStudentId() => 'SIS-STU-10${++_studentSeq}';
+  String nextDocumentId() => 'SIS-DOC-${++_documentSeq}';
 
   SisStudent? findStudent(String id) {
     return students?.cast<SisStudent?>().firstWhere(
@@ -26,6 +29,12 @@ class MockSisWriteStore {
           (item) => item?.enrollment.id == enrollmentId,
           orElse: () => null,
         );
+  }
+
+  List<SisDocumentSummary> documentsForStudent(String studentId) {
+    studentDocuments ??= <String, List<SisDocumentSummary>>{};
+    return studentDocuments!
+        .putIfAbsent(studentId, () => <SisDocumentSummary>[]);
   }
 
   SisStudent copyStudent(

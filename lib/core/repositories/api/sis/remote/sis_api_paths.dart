@@ -15,6 +15,9 @@ abstract final class SisApiPaths {
   static String studentStatus(String studentId) =>
       '$base/students/$studentId/status';
 
+  static String studentDocuments(String studentId) =>
+      '$base/students/$studentId/documents';
+
   static String enrollment(String enrollmentId) =>
       '$base/enrollments/$enrollmentId';
 }

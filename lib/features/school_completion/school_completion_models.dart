@@ -536,6 +536,94 @@ class RoomUtilizationEntry {
   final int capacity;
 }
 
+class SubstituteOpenSlot {
+  const SubstituteOpenSlot({
+    required this.slotId,
+    required this.academicYearId,
+    required this.className,
+    required this.sectionName,
+    required this.subjectName,
+    required this.originalTeacherId,
+    required this.originalTeacherName,
+    required this.dayOfWeek,
+    required this.periodLabel,
+    required this.slotDate,
+  });
+
+  final String slotId;
+  final String academicYearId;
+  final String className;
+  final String sectionName;
+  final String subjectName;
+  final String originalTeacherId;
+  final String originalTeacherName;
+  final String dayOfWeek;
+  final String periodLabel;
+  final String slotDate;
+}
+
+class SubstituteTeacherCandidate {
+  const SubstituteTeacherCandidate({
+    required this.teacherId,
+    required this.teacherName,
+    required this.subjects,
+    required this.freePeriods,
+    required this.dailyLoad,
+    required this.canNotify,
+  });
+
+  final String teacherId;
+  final String teacherName;
+  final List<String> subjects;
+  final int freePeriods;
+  final int dailyLoad;
+  final bool canNotify;
+}
+
+class SubstituteCoverageData {
+  const SubstituteCoverageData({
+    required this.openSlots,
+    required this.candidates,
+    required this.generatedAt,
+  });
+
+  final List<SubstituteOpenSlot> openSlots;
+  final List<SubstituteTeacherCandidate> candidates;
+  final String generatedAt;
+}
+
+class AssignSubstituteRequest {
+  const AssignSubstituteRequest({
+    required this.slotId,
+    required this.substituteTeacherId,
+    required this.notifySubstituteTeacher,
+    required this.notifyClassIncharge,
+    required this.notifyStudents,
+  });
+
+  final String slotId;
+  final String substituteTeacherId;
+  final bool notifySubstituteTeacher;
+  final bool notifyClassIncharge;
+  final bool notifyStudents;
+}
+
+class SubstituteAssignmentResult {
+  const SubstituteAssignmentResult({
+    required this.assignmentId,
+    required this.slotId,
+    required this.timetableUpdated,
+    required this.notifiedAudience,
+    required this.message,
+  });
+
+  final String assignmentId;
+  final String slotId;
+  final bool timetableUpdated;
+  final List<String> notifiedAudience;
+  final String message;
+}
+
 class CampaignSummary {
   const CampaignSummary({
     required this.id,
