@@ -129,6 +129,7 @@ class TransportFixtureBuilder {
         'classLabel': allocation.classLabel,
         'pickupStop': allocation.pickupStop,
         'dropStop': allocation.dropStop,
+        'routeId': allocation.routeId,
         'routeName': allocation.routeName,
         'busNumber': allocation.busNumber,
         'shift': TransportEnumCodec.shiftToApi(allocation.shift),

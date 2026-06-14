@@ -72,6 +72,9 @@ abstract final class AuditSecurityCategorizer {
       case AuditEventType.employeeCreated:
       case AuditEventType.employeeUpdated:
       case AuditEventType.employeeStatusChanged:
+      case AuditEventType.transportStudentAssigned:
+      case AuditEventType.transportStudentTransferred:
+      case AuditEventType.transportStudentRemoved:
         return AuditEventCategory.workflow;
 
       case AuditEventType.errorReported:

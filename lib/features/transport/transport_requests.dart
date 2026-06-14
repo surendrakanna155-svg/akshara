@@ -29,3 +29,37 @@ class ActivateTransportRouteRequest {
 
   final String routeId;
 }
+
+class AssignStudentTransportRequest {
+  const AssignStudentTransportRequest({
+    required this.allocationId,
+    required this.routeId,
+    required this.pickupStop,
+    required this.dropStop,
+  });
+
+  final String allocationId;
+  final String routeId;
+  final String pickupStop;
+  final String dropStop;
+}
+
+class TransferStudentTransportRequest {
+  const TransferStudentTransportRequest({
+    required this.allocationId,
+    required this.targetRouteId,
+    required this.pickupStop,
+    required this.dropStop,
+  });
+
+  final String allocationId;
+  final String targetRouteId;
+  final String pickupStop;
+  final String dropStop;
+}
+
+class RemoveStudentTransportRequest {
+  const RemoveStudentTransportRequest({required this.allocationId});
+
+  final String allocationId;
+}

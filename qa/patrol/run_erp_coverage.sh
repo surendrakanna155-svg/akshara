@@ -73,6 +73,7 @@ ALL_TARGETS=(
   "patrol_test/workflows/inventory_lifecycle_e2e_test.dart"
   "patrol_test/workflows/transport_route_e2e_test.dart"
   "patrol_test/workflows/transport_activate_e2e_test.dart"
+  "patrol_test/workflows/transport_allocation_e2e_test.dart"
   "patrol_test/workflows/education_remark_e2e_test.dart"
   "patrol_test/workflows/transport_workflows_test.dart"
   "patrol_test/workflows/library_workflows_test.dart"

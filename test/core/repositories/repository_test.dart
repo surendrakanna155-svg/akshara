@@ -89,12 +89,15 @@ void main() {
       expect((await repo.getRoutes(query: query)).total, 4);
       expect((await repo.getVehicles(query: query)).total, 4);
       expect((await repo.getDrivers(query: query)).total, 4);
-      expect((await repo.getAllocations(query: query)).total, 4);
+      expect((await repo.getAllocations(query: query)).total, 6);
       expect((await repo.getAttendanceRecords(query: query)).total, 4);
       expect((await repo.getTrackingPlaceholder(query: query)).vehicles, hasLength(3));
       expect((await repo.getReports(query: query)).catalog, hasLength(6));
       expect((await repo.getSettings(query: query)).sections, isNotEmpty);
-      expect((await repo.getOccupancyMetrics(query: query)).utilizationPercent, 88);
+      final metrics = await repo.getOccupancyMetrics(query: query);
+      expect(metrics.allocatedSeats, 4);
+      expect(metrics.unassignedStudents, 2);
+      expect(metrics.utilizationPercent, 3);
     });
 
     test('MockHostelRepository returns all HO screen data', () async {

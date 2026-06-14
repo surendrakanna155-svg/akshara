@@ -119,4 +119,28 @@ class ApiTransportRepository implements TransportRepository {
   }) async {
     throw ApiNotConnectedException('TransportRepository', 'activateRoute');
   }
+
+  @override
+  Future<StudentTransportAllocation> assignStudentTransport({
+    required RepositoryQuery query,
+    required AssignStudentTransportRequest request,
+  }) async {
+    throw ApiNotConnectedException('TransportRepository', 'assignStudentTransport');
+  }
+
+  @override
+  Future<StudentTransportAllocation> transferStudentTransport({
+    required RepositoryQuery query,
+    required TransferStudentTransportRequest request,
+  }) async {
+    throw ApiNotConnectedException('TransportRepository', 'transferStudentTransport');
+  }
+
+  @override
+  Future<StudentTransportAllocation> removeStudentTransport({
+    required RepositoryQuery query,
+    required RemoveStudentTransportRequest request,
+  }) async {
+    throw ApiNotConnectedException('TransportRepository', 'removeStudentTransport');
+  }
 }

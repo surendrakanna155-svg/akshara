@@ -216,6 +216,33 @@ abstract final class QaTestKeys {
   static const transportRouteActivatedSnackbar =
       ValueKey<String>('transport_route_activated_snackbar');
 
+  static ValueKey<String> transportAssignStudentButton(String allocationId) =>
+      ValueKey<String>('transport_assign_student_button_$allocationId');
+
+  static const transportAssignDialogSubmitButton =
+      ValueKey<String>('transport_assign_dialog_submit_button');
+
+  static const transportAssignSuccessSnackbar =
+      ValueKey<String>('transport_assign_success_snackbar');
+
+  static ValueKey<String> transportTransferStudentButton(String allocationId) =>
+      ValueKey<String>('transport_transfer_student_button_$allocationId');
+
+  static const transportTransferDialogSubmitButton =
+      ValueKey<String>('transport_transfer_dialog_submit_button');
+
+  static const transportTransferSuccessSnackbar =
+      ValueKey<String>('transport_transfer_success_snackbar');
+
+  static ValueKey<String> transportRemoveStudentButton(String allocationId) =>
+      ValueKey<String>('transport_remove_student_button_$allocationId');
+
+  static const transportRemoveDialogSubmitButton =
+      ValueKey<String>('transport_remove_dialog_submit_button');
+
+  static const transportRemoveSuccessSnackbar =
+      ValueKey<String>('transport_remove_success_snackbar');
+
   static const transportReportExportPdfButton =
       ValueKey<String>('transport_report_export_pdf_button');
 

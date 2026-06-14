@@ -101,6 +101,7 @@ class TransportMapper {
       classLabel: raw['classLabel'] as String? ?? '',
       pickupStop: raw['pickupStop'] as String? ?? '',
       dropStop: raw['dropStop'] as String? ?? '',
+      routeId: raw['routeId'] as String? ?? '',
       routeName: raw['routeName'] as String? ?? '',
       busNumber: raw['busNumber'] as String? ?? '',
       shift: TransportEnumCodec.parseShift(raw['shift'] as String?),

@@ -137,6 +137,25 @@ class MutationPermissionRegistry {
       permission: Permission.manageHr,
       kind: 'manage',
     ),
+    // Transport
+    MutationPermissionEntry(
+      moduleId: 'transport',
+      mutationId: 'assignStudentTransport',
+      permission: Permission.manageTransport,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'transport',
+      mutationId: 'transferStudentTransport',
+      permission: Permission.manageTransport,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'transport',
+      mutationId: 'removeStudentTransport',
+      permission: Permission.manageTransport,
+      kind: 'manage',
+    ),
   ];
 
   static List<MutationPermissionEntry> forModule(String moduleId) {

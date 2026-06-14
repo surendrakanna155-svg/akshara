@@ -7,6 +7,7 @@ import '../interfaces/transport_repository.dart';
 import '../paginated_result.dart';
 import '../pagination_helpers.dart';
 import '../repository_query.dart';
+import 'mock_transport_write_store.dart';
 
 class MockTransportRepository implements TransportRepository {
   MockTransportRepository() : _routes = List.of(_seedRoutes);
@@ -14,12 +15,86 @@ class MockTransportRepository implements TransportRepository {
   final List<TransportRoute> _routes;
   int _routeCounter = 100;
 
-  static const _occupancyMetrics = OccupancyMetrics(
-    totalCapacity: 860,
-    allocatedSeats: 842,
-    unassignedStudents: 2,
-    utilizationPercent: 88,
-  );
+  static const _seedAllocations = [
+    StudentTransportAllocation(
+      id: 'alloc_1',
+      studentName: 'Arjun Patel',
+      admissionNumber: 'ADM-2026-0138',
+      classLabel: '10',
+      pickupStop: 'Lake View Colony',
+      dropStop: 'Akshara Main Gate',
+      routeId: 'route_12',
+      routeName: 'Route 12 — North',
+      busNumber: 'BUS-07',
+      shift: TransportShift.both,
+      sisStudentId: 'SIS-STU-10421',
+    ),
+    StudentTransportAllocation(
+      id: 'alloc_2',
+      studentName: 'Emma Thomas',
+      admissionNumber: 'ADM-2026-0135',
+      classLabel: '7',
+      pickupStop: 'Green Park Gate',
+      dropStop: 'Akshara Main Gate',
+      routeId: 'route_12',
+      routeName: 'Route 12 — North',
+      busNumber: 'BUS-07',
+      shift: TransportShift.both,
+      sisStudentId: 'SIS-STU-10418',
+    ),
+    StudentTransportAllocation(
+      id: 'alloc_3',
+      studentName: 'Ananya Reddy',
+      admissionNumber: 'ADM-2026-0142',
+      classLabel: '5',
+      pickupStop: 'Hitech City',
+      dropStop: 'Akshara Main Gate',
+      routeId: 'route_08',
+      routeName: 'Route 08 — West',
+      busNumber: 'BUS-03',
+      shift: TransportShift.am,
+      sisStudentId: 'SIS-STU-10422',
+    ),
+    StudentTransportAllocation(
+      id: 'alloc_4',
+      studentName: 'Priya Sharma',
+      admissionNumber: 'ADM-2025-0092',
+      classLabel: '8',
+      pickupStop: 'Madhapur Junction',
+      dropStop: 'Akshara Main Gate',
+      routeId: 'route_05',
+      routeName: 'Route 05 — Central',
+      busNumber: 'BUS-02',
+      shift: TransportShift.both,
+      sisStudentId: 'SIS-STU-10415',
+    ),
+    StudentTransportAllocation(
+      id: 'alloc_5',
+      studentName: 'Kavya Iyer',
+      admissionNumber: 'ADM-2026-0145',
+      classLabel: '6',
+      pickupStop: '—',
+      dropStop: 'Akshara Main Gate',
+      routeId: '',
+      routeName: 'Unassigned',
+      busNumber: '—',
+      shift: TransportShift.both,
+      sisStudentId: 'SIS-STU-10425',
+    ),
+    StudentTransportAllocation(
+      id: 'alloc_6',
+      studentName: 'Rohan Mehta',
+      admissionNumber: 'ADM-2026-0148',
+      classLabel: '9',
+      pickupStop: '—',
+      dropStop: 'Akshara Main Gate',
+      routeId: '',
+      routeName: 'Unassigned',
+      busNumber: '—',
+      shift: TransportShift.am,
+      sisStudentId: 'SIS-STU-10428',
+    ),
+  ];
 
   static const _stopsRoute12 = [
     TransportStop(
@@ -51,54 +126,54 @@ class MockTransportRepository implements TransportRepository {
     ),
   ];
 
-  static const _allocations = [
-    StudentTransportAllocation(
-      id: 'alloc_1',
-      studentName: 'Arjun Patel',
-      admissionNumber: 'ADM-2026-0138',
-      classLabel: '10',
-      pickupStop: 'Lake View Colony',
-      dropStop: 'Akshara Main Gate',
-      routeName: 'Route 12 — North',
+  static const _seedVehicles = [
+    TransportVehicle(
+      id: 'veh_7',
       busNumber: 'BUS-07',
-      shift: TransportShift.both,
-      sisStudentId: 'SIS-STU-10421',
-    ),
-    StudentTransportAllocation(
-      id: 'alloc_2',
-      studentName: 'Emma Thomas',
-      admissionNumber: 'ADM-2026-0135',
-      classLabel: '7',
-      pickupStop: 'Green Park Gate',
-      dropStop: 'Akshara Main Gate',
+      registration: 'TS 09 AB 4521',
+      capacity: 48,
       routeName: 'Route 12 — North',
-      busNumber: 'BUS-07',
-      shift: TransportShift.both,
-      sisStudentId: 'SIS-STU-10418',
+      gpsDeviceId: 'GPS-TR-007',
+      insuranceExpiry: 'Dec 2026',
+      fitnessExpiry: 'Aug 2026',
+      status: TransportVehicleStatus.active,
+      occupancyPercent: 88,
     ),
-    StudentTransportAllocation(
-      id: 'alloc_3',
-      studentName: 'Ananya Reddy',
-      admissionNumber: 'ADM-2026-0142',
-      classLabel: '5',
-      pickupStop: 'Hitech City',
-      dropStop: 'Akshara Main Gate',
-      routeName: 'Route 08 — West',
+    TransportVehicle(
+      id: 'veh_3',
       busNumber: 'BUS-03',
-      shift: TransportShift.am,
-      sisStudentId: 'SIS-STU-10422',
+      registration: 'TS 09 CD 8832',
+      capacity: 40,
+      routeName: 'Route 08 — West',
+      gpsDeviceId: 'GPS-TR-003',
+      insuranceExpiry: 'Nov 2026',
+      fitnessExpiry: 'Jul 2026',
+      status: TransportVehicleStatus.active,
+      occupancyPercent: 76,
     ),
-    StudentTransportAllocation(
-      id: 'alloc_4',
-      studentName: 'Priya Sharma',
-      admissionNumber: 'ADM-2025-0092',
-      classLabel: '8',
-      pickupStop: 'Madhapur Junction',
-      dropStop: 'Akshara Main Gate',
-      routeName: 'Route 05 — Central',
+    TransportVehicle(
+      id: 'veh_2',
       busNumber: 'BUS-02',
-      shift: TransportShift.both,
-      sisStudentId: 'SIS-STU-10415',
+      registration: 'TS 09 EF 1102',
+      capacity: 50,
+      routeName: 'Route 05 — Central',
+      gpsDeviceId: 'GPS-TR-002',
+      insuranceExpiry: 'Oct 2026',
+      fitnessExpiry: 'Sep 2026',
+      status: TransportVehicleStatus.active,
+      occupancyPercent: 90,
+    ),
+    TransportVehicle(
+      id: 'veh_11',
+      busNumber: 'BUS-11',
+      registration: 'TS 09 GH 7744',
+      capacity: 45,
+      routeName: 'Route 03 — East',
+      gpsDeviceId: 'GPS-TR-011',
+      insuranceExpiry: 'Oct 2026',
+      fitnessExpiry: 'Jun 2026',
+      status: TransportVehicleStatus.maintenance,
+      occupancyPercent: 0,
     ),
   ];
 
@@ -209,7 +284,12 @@ class MockTransportRepository implements TransportRepository {
           incidents: 0,
         ),
       ],
-      occupancy: _occupancyMetrics,
+      occupancy: OccupancyMetrics(
+        totalCapacity: 138,
+        allocatedSeats: 4,
+        unassignedStudents: 2,
+        utilizationPercent: 3,
+      ),
       aiInsight:
           'Route 08 — West shows recurring delays at Hitech City. Consider stop reorder or alternate path. 2 students unassigned — link to SIS-02 registry.',
     );
@@ -337,56 +417,7 @@ class MockTransportRepository implements TransportRepository {
   Future<PaginatedResult<TransportVehicle>> getVehicles({
     required RepositoryQuery query,
   }) async =>
-      paginateList(const [
-        TransportVehicle(
-          id: 'veh_7',
-          busNumber: 'BUS-07',
-          registration: 'TS 09 AB 4521',
-          capacity: 48,
-          routeName: 'Route 12 — North',
-          gpsDeviceId: 'GPS-TR-007',
-          insuranceExpiry: 'Dec 2026',
-          fitnessExpiry: 'Aug 2026',
-          status: TransportVehicleStatus.active,
-          occupancyPercent: 88,
-        ),
-        TransportVehicle(
-          id: 'veh_3',
-          busNumber: 'BUS-03',
-          registration: 'TS 09 CD 8832',
-          capacity: 40,
-          routeName: 'Route 08 — West',
-          gpsDeviceId: 'GPS-TR-003',
-          insuranceExpiry: 'Nov 2026',
-          fitnessExpiry: 'Jul 2026',
-          status: TransportVehicleStatus.active,
-          occupancyPercent: 76,
-        ),
-        TransportVehicle(
-          id: 'veh_2',
-          busNumber: 'BUS-02',
-          registration: 'TS 09 EF 1102',
-          capacity: 50,
-          routeName: 'Route 05 — Central',
-          gpsDeviceId: 'GPS-TR-002',
-          insuranceExpiry: 'Jan 2027',
-          fitnessExpiry: 'Sep 2026',
-          status: TransportVehicleStatus.active,
-          occupancyPercent: 90,
-        ),
-        TransportVehicle(
-          id: 'veh_11',
-          busNumber: 'BUS-11',
-          registration: 'TS 09 GH 7744',
-          capacity: 45,
-          routeName: 'Route 03 — East',
-          gpsDeviceId: 'GPS-TR-011',
-          insuranceExpiry: 'Oct 2026',
-          fitnessExpiry: 'Jun 2026',
-          status: TransportVehicleStatus.maintenance,
-          occupancyPercent: 0,
-        ),
-      ], query);
+      paginateList(await _loadVehicles(), query);
 
   @override
   Future<PaginatedResult<TransportDriver>> getDrivers({
@@ -443,7 +474,7 @@ class MockTransportRepository implements TransportRepository {
   Future<PaginatedResult<StudentTransportAllocation>> getAllocations({
     required RepositoryQuery query,
   }) async =>
-      paginateList(_allocations, query);
+      paginateList(await _loadAllocations(), query);
 
   @override
   Future<PaginatedResult<TransportAttendanceRecord>> getAttendanceRecords({
@@ -724,11 +755,246 @@ class MockTransportRepository implements TransportRepository {
 
   @override
   Future<OccupancyMetrics> getOccupancyMetrics({required RepositoryQuery query}) async {
-    return const OccupancyMetrics(
-      totalCapacity: 860,
-      allocatedSeats: 842,
-      unassignedStudents: 2,
-      utilizationPercent: 88,
+    return _computeOccupancyMetrics();
+  }
+
+  Future<List<StudentTransportAllocation>> _loadAllocations() async {
+    final store = MockTransportWriteStore.instance;
+    store.allocations ??= List<StudentTransportAllocation>.from(_seedAllocations);
+    return store.allocations!;
+  }
+
+  Future<List<TransportVehicle>> _loadVehicles() async {
+    final store = MockTransportWriteStore.instance;
+    store.vehicles ??= List<TransportVehicle>.from(_seedVehicles);
+    return store.vehicles!;
+  }
+
+  int _studentsOnRoute(List<StudentTransportAllocation> allocations, String routeId) {
+    return allocations.where((a) => a.routeId == routeId).length;
+  }
+
+  TransportRoute _requireActiveRoute(String routeId) {
+    final index = _routes.indexWhere((r) => r.id == routeId);
+    if (index < 0) {
+      throw StateError('Route not found');
+    }
+    final route = _routes[index];
+    if (route.status != TransportRouteStatus.active) {
+      throw StateError('Route is not active');
+    }
+    if (route.assignedBus == '—') {
+      throw StateError('Route has no assigned vehicle');
+    }
+    return route;
+  }
+
+  void _assertRouteCapacity({
+    required List<StudentTransportAllocation> allocations,
+    required List<TransportVehicle> vehicles,
+    required String routeId,
+  }) {
+    final route = _requireActiveRoute(routeId);
+    final vehicle = vehicles.firstWhere(
+      (v) => v.busNumber == route.assignedBus,
+      orElse: () => throw StateError('Assigned vehicle not found'),
     );
+    final count = _studentsOnRoute(allocations, routeId);
+    if (count >= vehicle.capacity) {
+      throw StateError('Route capacity exceeded');
+    }
+  }
+
+  Future<void> _syncRouteAndVehicleMetrics() async {
+    final allocations = await _loadAllocations();
+    final vehicles = await _loadVehicles();
+
+    for (var i = 0; i < _routes.length; i++) {
+      final route = _routes[i];
+      if (route.status != TransportRouteStatus.active) continue;
+      final count = _studentsOnRoute(allocations, route.id);
+      _routes[i] = TransportRoute(
+        id: route.id,
+        name: route.name,
+        stopCount: route.stopCount,
+        distanceKm: route.distanceKm,
+        amDeparture: route.amDeparture,
+        pmDeparture: route.pmDeparture,
+        assignedBus: route.assignedBus,
+        studentCount: count,
+        status: route.status,
+        stops: route.stops,
+        shift: route.shift,
+      );
+    }
+
+    final store = MockTransportWriteStore.instance;
+    store.vehicles = [
+      for (final vehicle in vehicles)
+        TransportVehicle(
+          id: vehicle.id,
+          busNumber: vehicle.busNumber,
+          registration: vehicle.registration,
+          capacity: vehicle.capacity,
+          routeName: vehicle.routeName,
+          gpsDeviceId: vehicle.gpsDeviceId,
+          insuranceExpiry: vehicle.insuranceExpiry,
+          fitnessExpiry: vehicle.fitnessExpiry,
+          status: vehicle.status,
+          occupancyPercent: _vehicleOccupancyPercent(
+            vehicle: vehicle,
+            allocations: allocations,
+          ),
+        ),
+    ];
+  }
+
+  int _vehicleOccupancyPercent({
+    required TransportVehicle vehicle,
+    required List<StudentTransportAllocation> allocations,
+  }) {
+    if (vehicle.capacity <= 0) return 0;
+    final count = allocations.where((a) => a.busNumber == vehicle.busNumber).length;
+    return ((count / vehicle.capacity) * 100).round();
+  }
+
+  Future<OccupancyMetrics> _computeOccupancyMetrics() async {
+    await _syncRouteAndVehicleMetrics();
+    final allocations = await _loadAllocations();
+    final vehicles = await _loadVehicles();
+    final activeVehicles = vehicles
+        .where((v) => v.status == TransportVehicleStatus.active)
+        .toList(growable: false);
+    final totalCapacity =
+        activeVehicles.fold<int>(0, (sum, vehicle) => sum + vehicle.capacity);
+    final allocatedSeats = allocations.where((a) => a.isAssigned).length;
+    final unassignedStudents = allocations.where((a) => !a.isAssigned).length;
+    final utilizationPercent = totalCapacity == 0
+        ? 0
+        : ((allocatedSeats / totalCapacity) * 100).round();
+    return OccupancyMetrics(
+      totalCapacity: totalCapacity,
+      allocatedSeats: allocatedSeats,
+      unassignedStudents: unassignedStudents,
+      utilizationPercent: utilizationPercent,
+    );
+  }
+
+  @override
+  Future<StudentTransportAllocation> assignStudentTransport({
+    required RepositoryQuery query,
+    required AssignStudentTransportRequest request,
+  }) async {
+    final allocations = await _loadAllocations();
+    final vehicles = await _loadVehicles();
+    final index = allocations.indexWhere((a) => a.id == request.allocationId);
+    if (index < 0) {
+      throw StateError('Student allocation not found');
+    }
+    final current = allocations[index];
+    if (current.isAssigned) {
+      throw StateError('Student is already assigned to a route');
+    }
+
+    final route = _requireActiveRoute(request.routeId);
+    _assertRouteCapacity(
+      allocations: allocations,
+      vehicles: vehicles,
+      routeId: request.routeId,
+    );
+
+    final updated = StudentTransportAllocation(
+      id: current.id,
+      studentName: current.studentName,
+      admissionNumber: current.admissionNumber,
+      classLabel: current.classLabel,
+      pickupStop: request.pickupStop,
+      dropStop: request.dropStop,
+      routeId: route.id,
+      routeName: route.name,
+      busNumber: route.assignedBus,
+      shift: current.shift,
+      sisStudentId: current.sisStudentId,
+    );
+    allocations[index] = updated;
+    await _syncRouteAndVehicleMetrics();
+    return updated;
+  }
+
+  @override
+  Future<StudentTransportAllocation> transferStudentTransport({
+    required RepositoryQuery query,
+    required TransferStudentTransportRequest request,
+  }) async {
+    final allocations = await _loadAllocations();
+    final vehicles = await _loadVehicles();
+    final index = allocations.indexWhere((a) => a.id == request.allocationId);
+    if (index < 0) {
+      throw StateError('Student allocation not found');
+    }
+    final current = allocations[index];
+    if (!current.isAssigned) {
+      throw StateError('Student is not assigned to a route');
+    }
+    if (current.routeId == request.targetRouteId) {
+      throw StateError('Student is already on this route');
+    }
+
+    final targetRoute = _requireActiveRoute(request.targetRouteId);
+    _assertRouteCapacity(
+      allocations: allocations,
+      vehicles: vehicles,
+      routeId: request.targetRouteId,
+    );
+
+    final updated = StudentTransportAllocation(
+      id: current.id,
+      studentName: current.studentName,
+      admissionNumber: current.admissionNumber,
+      classLabel: current.classLabel,
+      pickupStop: request.pickupStop,
+      dropStop: request.dropStop,
+      routeId: targetRoute.id,
+      routeName: targetRoute.name,
+      busNumber: targetRoute.assignedBus,
+      shift: current.shift,
+      sisStudentId: current.sisStudentId,
+    );
+    allocations[index] = updated;
+    await _syncRouteAndVehicleMetrics();
+    return updated;
+  }
+
+  @override
+  Future<StudentTransportAllocation> removeStudentTransport({
+    required RepositoryQuery query,
+    required RemoveStudentTransportRequest request,
+  }) async {
+    final allocations = await _loadAllocations();
+    final index = allocations.indexWhere((a) => a.id == request.allocationId);
+    if (index < 0) {
+      throw StateError('Student allocation not found');
+    }
+    final current = allocations[index];
+    if (!current.isAssigned) {
+      throw StateError('Student is not assigned to a route');
+    }
+
+    final updated = StudentTransportAllocation(
+      id: current.id,
+      studentName: current.studentName,
+      admissionNumber: current.admissionNumber,
+      classLabel: current.classLabel,
+      pickupStop: '—',
+      dropStop: current.dropStop,
+      routeId: '',
+      routeName: 'Unassigned',
+      busNumber: '—',
+      shift: current.shift,
+      sisStudentId: current.sisStudentId,
+    );
+    allocations[index] = updated;
+    await _syncRouteAndVehicleMetrics();
+    return updated;
   }
 }

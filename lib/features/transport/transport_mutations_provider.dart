@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/audit/audit_event.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
+import 'transport_audit.dart';
 import 'transport_models.dart';
 import 'transport_providers.dart';
 import 'transport_requests.dart';
@@ -81,4 +83,137 @@ class ActivateTransportRouteNotifier extends AsyncNotifier<TransportRoute?> {
 final activateTransportRouteProvider =
     AsyncNotifierProvider<ActivateTransportRouteNotifier, TransportRoute?>(
   ActivateTransportRouteNotifier.new,
+);
+
+class AssignStudentTransportNotifier
+    extends AsyncNotifier<StudentTransportAllocation?> {
+  @override
+  FutureOr<StudentTransportAllocation?> build() => null;
+
+  Future<StudentTransportAllocation?> execute(
+    AssignStudentTransportRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result =
+            await ref.read(transportRepositoryProvider).assignStudentTransport(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        await recordTransportAudit(
+          ref,
+          type: AuditEventType.transportStudentAssigned,
+          allocationId: result.id,
+          metadata: {
+            'routeId': result.routeId,
+            'busNumber': result.busNumber,
+          },
+        );
+        ref
+          ..invalidate(transportAllocationsFutureProvider)
+          ..invalidate(transportRoutesFutureProvider)
+          ..invalidate(transportVehiclesFutureProvider)
+          ..invalidate(transportDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final assignStudentTransportProvider = AsyncNotifierProvider<
+    AssignStudentTransportNotifier, StudentTransportAllocation?>(
+  AssignStudentTransportNotifier.new,
+);
+
+class TransferStudentTransportNotifier
+    extends AsyncNotifier<StudentTransportAllocation?> {
+  @override
+  FutureOr<StudentTransportAllocation?> build() => null;
+
+  Future<StudentTransportAllocation?> execute(
+    TransferStudentTransportRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result = await ref
+            .read(transportRepositoryProvider)
+            .transferStudentTransport(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        await recordTransportAudit(
+          ref,
+          type: AuditEventType.transportStudentTransferred,
+          allocationId: result.id,
+          metadata: {
+            'routeId': result.routeId,
+            'busNumber': result.busNumber,
+          },
+        );
+        ref
+          ..invalidate(transportAllocationsFutureProvider)
+          ..invalidate(transportRoutesFutureProvider)
+          ..invalidate(transportVehiclesFutureProvider)
+          ..invalidate(transportDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final transferStudentTransportProvider = AsyncNotifierProvider<
+    TransferStudentTransportNotifier, StudentTransportAllocation?>(
+  TransferStudentTransportNotifier.new,
+);
+
+class RemoveStudentTransportNotifier
+    extends AsyncNotifier<StudentTransportAllocation?> {
+  @override
+  FutureOr<StudentTransportAllocation?> build() => null;
+
+  Future<StudentTransportAllocation?> execute(
+    RemoveStudentTransportRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result =
+            await ref.read(transportRepositoryProvider).removeStudentTransport(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        await recordTransportAudit(
+          ref,
+          type: AuditEventType.transportStudentRemoved,
+          allocationId: result.id,
+          metadata: {'sisStudentId': result.sisStudentId},
+        );
+        ref
+          ..invalidate(transportAllocationsFutureProvider)
+          ..invalidate(transportRoutesFutureProvider)
+          ..invalidate(transportVehiclesFutureProvider)
+          ..invalidate(transportDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final removeStudentTransportProvider = AsyncNotifierProvider<
+    RemoveStudentTransportNotifier, StudentTransportAllocation?>(
+  RemoveStudentTransportNotifier.new,
 );

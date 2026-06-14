@@ -96,4 +96,23 @@ void main() {
       'hr_employee_status_success_snackbar',
     );
   });
+
+  test('Transport allocation keys are stable', () {
+    expect(
+      QaTestKeys.transportAssignStudentButton('alloc_5').value,
+      'transport_assign_student_button_alloc_5',
+    );
+    expect(
+      QaTestKeys.transportAssignSuccessSnackbar.value,
+      'transport_assign_success_snackbar',
+    );
+    expect(
+      QaTestKeys.transportTransferStudentButton('alloc_5').value,
+      'transport_transfer_student_button_alloc_5',
+    );
+    expect(
+      QaTestKeys.transportRemoveSuccessSnackbar.value,
+      'transport_remove_success_snackbar',
+    );
+  });
 }

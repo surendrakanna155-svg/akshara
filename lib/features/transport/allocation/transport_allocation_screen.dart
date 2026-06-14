@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
@@ -12,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../transport_models.dart';
 import '../transport_providers.dart';
+import '../transport_workflow_actions.dart';
 import '../widgets/transport_module_scaffold.dart';
 
 /// TR-05 — Student Allocation (SIS-linked).
@@ -30,7 +32,7 @@ class TransportAllocationScreen extends ConsumerWidget {
     final isLoading = ref.watch(transportAllocationLoadingProvider);
     final isError = ref.watch(transportAllocationErrorProvider);
     final isEmpty = ref.watch(transportAllocationEmptyProvider);
-    final allocations = ref.watch(transportAllocationsProvider);
+    final allocations = ref.watch(transportFilteredAllocationsProvider);
     final filterIndex = ref.watch(transportAllocationFilterProvider);
     final pageResult = ref.watch(transportAllocationsPageResultProvider);
 
@@ -40,27 +42,38 @@ class TransportAllocationScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(transportAllocationFilterProvider.notifier).state = index,
-      filterTrailing: AksharaManageAction(
-        permission: Permission.manageTransport,
-        child: OutlinedButton.icon(
-          onPressed: () => context.go(RouteNames.sisStudents),
-          icon: const Icon(Icons.badge_outlined, size: 18),
-          label: const Text('SIS registry'),
-        ),
-      ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        allocations: allocations ?? const [],
-        pageResult: pageResult,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: AksharaManageAction(
+              permission: Permission.manageTransport,
+              child: OutlinedButton.icon(
+                onPressed: () => context.go(RouteNames.sisStudents),
+                icon: const Icon(Icons.badge_outlined, size: 18),
+                label: const Text('SIS registry'),
+              ),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          _buildBody(
+            context,
+            ref,
+            isLoading: isLoading,
+            isError: isError,
+            isEmpty: isEmpty,
+            allocations: allocations,
+            pageResult: pageResult,
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
@@ -113,13 +126,13 @@ class TransportAllocationScreen extends ConsumerWidget {
   }
 }
 
-class _AllocationTable extends StatelessWidget {
+class _AllocationTable extends ConsumerWidget {
   const _AllocationTable({required this.allocations});
 
   final List<StudentTransportAllocation> allocations;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (AdminLayout.isMobile(context)) {
       return Column(
         children: [
@@ -148,6 +161,7 @@ class _AllocationTable extends StatelessWidget {
               DataColumn(label: Text('Route')),
               DataColumn(label: Text('Bus')),
               DataColumn(label: Text('SIS ID')),
+              DataColumn(label: Text('Actions')),
             ],
             rows: [
               for (final alloc in allocations)
@@ -162,6 +176,7 @@ class _AllocationTable extends StatelessWidget {
                     DataCell(Text(alloc.routeName)),
                     DataCell(Text(alloc.busNumber)),
                     DataCell(Text(alloc.sisStudentId)),
+                    DataCell(_AllocationActions(allocation: alloc)),
                   ],
                 ),
             ],
@@ -172,13 +187,13 @@ class _AllocationTable extends StatelessWidget {
   }
 }
 
-class _AllocationCard extends StatelessWidget {
+class _AllocationCard extends ConsumerWidget {
   const _AllocationCard({required this.allocation});
 
   final StudentTransportAllocation allocation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -186,29 +201,74 @@ class _AllocationCard extends StatelessWidget {
           'Student ${allocation.studentName}, ${allocation.routeName}, bus ${allocation.busNumber}',
       child: Card(
         elevation: 0,
-        child: InkWell(
-          onTap: () => context.go(
-            RouteNames.sisStudentDetail(allocation.sisStudentId),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(AksharaSpacing.s4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(allocation.studentName, style: text.titleSmall),
-                Text('Class ${allocation.classLabel}', style: text.bodySmall),
-                Text(
-                  '${allocation.pickupStop} → ${allocation.dropStop}',
-                  style: text.bodySmall,
-                ),
-                Text(
-                  '${allocation.routeName} · ${allocation.busNumber}',
-                  style: text.bodySmall,
-                ),
-              ],
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(allocation.studentName, style: text.titleSmall),
+              Text('Class ${allocation.classLabel}', style: text.bodySmall),
+              Text(
+                '${allocation.pickupStop} → ${allocation.dropStop}',
+                style: text.bodySmall,
+              ),
+              Text(
+                '${allocation.routeName} · ${allocation.busNumber}',
+                style: text.bodySmall,
+              ),
+              const SizedBox(height: AksharaSpacing.s3),
+              _AllocationActions(allocation: allocation),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AllocationActions extends ConsumerWidget {
+  const _AllocationActions({required this.allocation});
+
+  final StudentTransportAllocation allocation;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AksharaManageAction(
+      permission: Permission.manageTransport,
+      child: Wrap(
+        spacing: AksharaSpacing.s2,
+        runSpacing: AksharaSpacing.s2,
+        children: [
+          if (!allocation.isAssigned)
+            FilledButton(
+              key: QaTestKeys.transportAssignStudentButton(allocation.id),
+              onPressed: () => showAssignStudentTransportDialog(
+                context,
+                ref,
+                allocation: allocation,
+              ),
+              style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+              child: const Text('Assign'),
+            ),
+          if (allocation.isAssigned) ...[
+            OutlinedButton(
+              key: QaTestKeys.transportTransferStudentButton(allocation.id),
+              onPressed: () => showTransferStudentTransportDialog(
+                context,
+                ref,
+                allocation: allocation,
+              ),
+              style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+              child: const Text('Transfer'),
+            ),
+            OutlinedButton(
+              key: QaTestKeys.transportRemoveStudentButton(allocation.id),
+              onPressed: () => removeStudentFromRoute(context, ref, allocation),
+              style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+              child: const Text('Remove'),
+            ),
+          ],
+        ],
       ),
     );
   }

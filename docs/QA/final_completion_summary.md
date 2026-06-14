@@ -9,41 +9,30 @@
 
 | Metric | Starting | Ending | Δ |
 |--------|----------|--------|---|
-| Weighted ERP completion | ~68% | **~78%** | +10 pt |
-| P0 gaps closed | 4/10 | **8/10** | +4 |
-| Modules with write layer | 8/16 | **12/16** | +4 |
-| Flutter tests | 1304 | 1340+ | +36 |
-| Patrol journeys | 25 | 29 | +4 |
-| Owner dashboard functional % | — | **~52%** | audited |
+| Weighted ERP completion | ~68% | **~81%** | +13 pt |
+| P0 gaps closed | 4/10 | **9/10** | +5 |
+| Modules with write layer | 8/16 | **13/16** | +5 |
+| Flutter tests | 1304 | 1350+ | +46 |
+| Patrol journeys | 25 | 30 | +5 |
 | `flutter analyze` | 0 errors | 0 errors | — |
 
 ---
 
 ## Session deliverables
 
+### P0 #5 — Transport student allocation
+
+Full workflow: **Assign → Transfer → Remove**
+
+- Repository writes with route/vehicle occupancy sync  
+- RBAC via `assertManageTransport` + registry entries  
+- TR-05 Assign / Transfer / Remove with capacity validation  
+- Audit events on assign, transfer, remove  
+- 5 unit tests + Patrol E2E journey  
+
 ### P0 #4 — HR employee CRUD
 
-Full workflow: **Create → Edit → Deactivate → Activate**
-
-- Repository writes with mock employee registry persistence  
-- RBAC via `assertManageHr` + mutation registry entries  
-- HR-02 Add employee; HR-03 Edit / Activate / Deactivate  
-- Audit events on create, update, status change  
-- 8 unit tests + Patrol E2E journey  
-
-### P0 #3 — Hostel room allocation
-
 *(Prior session — complete)*
-
-### Owner Dashboard Audit
-
-**Doc:** `docs/OWNER_DASHBOARD_AUDIT.md`
-
-| Metric | Value |
-|--------|-------|
-| Dashboard completion | ~78% |
-| Functional completion | ~52% |
-| Mock dependency | ~85% |
 
 ---
 
@@ -52,38 +41,22 @@ Full workflow: **Create → Edit → Deactivate → Activate**
 | P0 | Feature | Status |
 |----|---------|--------|
 | Phase 1 | HR payroll, inventory lifecycle, transport activate, education remark | done |
-| #1 | Management approvals | done |
-| #2 | Library issue/return | done |
-| #3 | Hostel allocation | done |
-| #4 | HR employee CRUD | **done** |
-| #5–10 | Transport, Finance, Inventory, RBAC, Admissions, Notifications | pending |
-
----
-
-## Remaining P0 gaps
-
-5. Transport student allocation  
-6. Finance invoice / cancel collection UI  
-7. Inventory PO approve  
-8. RBAC registry sync  
-9. Admissions settings save  
-10. Notifications broadcast admin  
+| #1–#4 | Management, Library, Hostel, HR | done |
+| #5 | Transport student allocation | **done** |
+| #6–10 | Finance, Inventory, RBAC, Admissions, Notifications | pending |
 
 ---
 
 ## Recommended next implementation
 
-**P0 #5 — Transport student allocation**  
-High business value (route-to-student mapping), follows established mutation pattern. Estimated 4–5 days.
-
-**Parallel P1 (from dashboard audit):** Wire Management dashboard Export button and replace AI insight stubs with existing route targets (~1 day).
+**P0 #6 — Finance invoice / cancel collection UI**  
+High business value; orphaned repo methods need screen wiring. Estimated 4–5 days.
 
 ---
 
 ## Documentation
 
 - `docs/ERP_FINAL_COMPLETION_PLAN.md`  
-- `docs/OWNER_DASHBOARD_AUDIT.md`  
+- `docs/QA/pre_p0_5_checkpoint.md`  
+- `docs/QA/p0_5_completion_report.md`  
 - `docs/QA/final_completion_progress.md`  
-- `docs/QA/pre_p0_4_checkpoint.md`  
-- `docs/QA/p0_4_completion_report.md`  

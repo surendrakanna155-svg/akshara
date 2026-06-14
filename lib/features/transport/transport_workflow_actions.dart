@@ -97,3 +97,187 @@ Future<void> showActivateTransportRouteDialog(
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
   }
 }
+
+Future<void> showAssignStudentTransportDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required StudentTransportAllocation allocation,
+}) async {
+  final routeController = TextEditingController(text: 'route_12');
+  final pickupController = TextEditingController(text: 'Lake View Colony');
+  final dropController = TextEditingController(text: 'Akshara Main Gate');
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Assign ${allocation.studentName}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: routeController,
+            decoration: const InputDecoration(labelText: 'Route ID'),
+          ),
+          TextField(
+            controller: pickupController,
+            decoration: const InputDecoration(labelText: 'Pickup stop'),
+          ),
+          TextField(
+            controller: dropController,
+            decoration: const InputDecoration(labelText: 'Drop stop'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.transportAssignDialogSubmitButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Assign'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final updated =
+        await ref.read(assignStudentTransportProvider.notifier).execute(
+              AssignStudentTransportRequest(
+                allocationId: allocation.id,
+                routeId: routeController.text.trim(),
+                pickupStop: pickupController.text.trim(),
+                dropStop: dropController.text.trim(),
+              ),
+            );
+    if (!context.mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.transportAssignSuccessSnackbar,
+        content: Text('${updated.studentName} assigned to ${updated.routeName}'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+  }
+}
+
+Future<void> showTransferStudentTransportDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required StudentTransportAllocation allocation,
+}) async {
+  final routeController = TextEditingController(text: 'route_08');
+  final pickupController = TextEditingController(text: 'Hitech City');
+  final dropController = TextEditingController(text: 'Akshara Main Gate');
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Transfer ${allocation.studentName}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: routeController,
+            decoration: const InputDecoration(labelText: 'Target route ID'),
+          ),
+          TextField(
+            controller: pickupController,
+            decoration: const InputDecoration(labelText: 'Pickup stop'),
+          ),
+          TextField(
+            controller: dropController,
+            decoration: const InputDecoration(labelText: 'Drop stop'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.transportTransferDialogSubmitButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Transfer'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final updated =
+        await ref.read(transferStudentTransportProvider.notifier).execute(
+              TransferStudentTransportRequest(
+                allocationId: allocation.id,
+                targetRouteId: routeController.text.trim(),
+                pickupStop: pickupController.text.trim(),
+                dropStop: dropController.text.trim(),
+              ),
+            );
+    if (!context.mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.transportTransferSuccessSnackbar,
+        content: Text('${updated.studentName} transferred to ${updated.routeName}'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+  }
+}
+
+Future<void> removeStudentFromRoute(
+  BuildContext context,
+  WidgetRef ref,
+  StudentTransportAllocation allocation,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Remove from route'),
+      content: Text(
+        'Remove ${allocation.studentName} from ${allocation.routeName}?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.transportRemoveDialogSubmitButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Remove'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final updated =
+        await ref.read(removeStudentTransportProvider.notifier).execute(
+              RemoveStudentTransportRequest(allocationId: allocation.id),
+            );
+    if (!context.mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.transportRemoveSuccessSnackbar,
+        content: Text('${updated.studentName} removed from route'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+  }
+}

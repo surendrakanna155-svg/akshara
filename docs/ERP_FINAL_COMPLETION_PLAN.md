@@ -13,11 +13,11 @@ Akshara ERP has strong **read surfaces** across most modules (Admissions, Financ
 
 | Metric | Start | Current | Target |
 |--------|-------|---------|--------|
-| Weighted ERP completion | ~68% | ~78% | ≥90% |
-| Modules with mutation layer | 8/16 | 12/16 | 14/16 |
-| P0 gaps closed | 4/10 (Phase 1) | 8/10 | 10/10 |
-| Flutter tests | 1304 | 1340+ | — |
-| Patrol regression | 25/25 | 29/29+ | green |
+| Weighted ERP completion | ~68% | ~81% | ≥90% |
+| Modules with mutation layer | 8/16 | 13/16 | 14/16 |
+| P0 gaps closed | 4/10 (Phase 1) | 9/10 | 10/10 |
+| Flutter tests | 1304 | 1350+ | — |
+| Patrol regression | 25/25 | 30/30+ | green |
 
 **Phase 1 completion workflows (done):** HR payroll run, inventory lifecycle event, transport route activate, education remark publish.
 
@@ -29,7 +29,9 @@ Akshara ERP has strong **read surfaces** across most modules (Admissions, Financ
 
 **Final completion P0 #4 (done):** HR employee create, edit, activate/deactivate with audit.
 
-## Module Audits
+**Final completion P0 #5 (done):** Transport student assign, transfer, remove with capacity validation.
+
+---
 
 Grading: **A** Fully complete · **B** Partially complete · **C** Missing business logic · **D** Missing UI · **E** Missing provider layer · **F** Product scope undefined
 
@@ -115,15 +117,14 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 
 ---
 
-### Transport — **B · ~65%**
+### Transport — **B · ~72%** (↑ from ~65%)
 
 | Gap | Priority |
 |-----|----------|
-| Student route allocation | P0 |
 | Bus assignment / driver roster writes | P1 |
 | Live tracking (placeholder) | P3 |
 
-**Writes:** route draft, activate route (done). **Effort:** 4 d (allocation).
+**Writes:** route draft, activate route (done), student assign/transfer/remove (done). **Effort:** 3 d (attendance sync).
 
 ---
 
@@ -236,7 +237,7 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 | 2 | Library issue / return writes | Library | **done** | M | SIS member link | Med |
 | 3 | Hostel room allocation | Hostel | **done** | M | SIS students | Med |
 | 4 | HR employee CRUD | HR | **done** | M | RBAC manageHr | Low |
-| 5 | Transport student allocation | Transport | High | M | Routes active | Low |
+| 5 | Transport student allocation | Transport | **done** | M | Routes active | Low |
 | 6 | Finance invoice / cancel collection UI | Finance | High | M | Finance repo | Low |
 | 7 | Inventory PO approve / asset approve | Inventory | High | M | Finance handoff | Med |
 | 8 | Teacher/parent mutation RBAC audit | RBAC | High | S | Security | Med |
@@ -262,7 +263,7 @@ ERP Exam Admin module, unified reports hub, live transport tracking, server RBAC
 1. ~~**Library issue/return**~~ — done  
 2. ~~**Hostel allocation**~~ — done  
 3. ~~**HR employee CRUD**~~ — done  
-4. **Transport allocation** — routes exist but students not assignable  
+4. ~~**Transport allocation**~~ — done  
 5. **Finance invoice UI** — repo methods orphaned  
 6. **Inventory PO approve** — procurement chain incomplete  
 7. **RBAC registry + mobile mutation audit** — security completeness  
@@ -296,7 +297,7 @@ Find P0 gap → Implement → flutter analyze → affected tests → Patrol (if 
 1. ~~Library issue book + return book (P0 #2)~~ — done  
 2. ~~Hostel room allocation (P0 #3)~~ — done  
 3. ~~HR employee create/edit (P0 #4)~~ — done  
-4. Transport student route assignment (P0 #5)  
+4. ~~Transport student route assignment (P0 #5)~~ — done  
 5. Finance invoice / cancel collection wiring (P0 #6)  
 
 **Estimated sprint:** 3–4 weeks for P0 #2–6 at current velocity.

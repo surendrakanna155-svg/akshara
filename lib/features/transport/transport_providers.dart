@@ -235,6 +235,23 @@ final transportAllocationsProvider =
   return ref.watch(transportAllocationsPageResultProvider)?.items;
 });
 
+final transportFilteredAllocationsProvider =
+    Provider<List<StudentTransportAllocation>>((ref) {
+  final allocations = ref.watch(transportAllocationsProvider);
+  if (allocations == null) return const [];
+  final filterIndex = ref.watch(transportAllocationFilterProvider);
+  return switch (filterIndex) {
+    1 => allocations
+        .where((a) => a.routeName.startsWith('Route 12'))
+        .toList(growable: false),
+    2 => allocations
+        .where((a) => a.routeName.startsWith('Route 08'))
+        .toList(growable: false),
+    3 => allocations.where((a) => !a.isAssigned).toList(growable: false),
+    _ => allocations,
+  };
+});
+
 // TR-06 Attendance
 final transportAttendanceLoadingProvider = StateProvider<bool>((ref) => false);
 final transportAttendanceErrorProvider = StateProvider<bool>((ref) => false);

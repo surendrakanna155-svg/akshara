@@ -25,4 +25,19 @@ abstract class TransportRepository {
     required RepositoryQuery query,
     required ActivateTransportRouteRequest request,
   });
+
+  Future<StudentTransportAllocation> assignStudentTransport({
+    required RepositoryQuery query,
+    required AssignStudentTransportRequest request,
+  });
+
+  Future<StudentTransportAllocation> transferStudentTransport({
+    required RepositoryQuery query,
+    required TransferStudentTransportRequest request,
+  });
+
+  Future<StudentTransportAllocation> removeStudentTransport({
+    required RepositoryQuery query,
+    required RemoveStudentTransportRequest request,
+  });
 }

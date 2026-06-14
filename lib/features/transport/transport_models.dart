@@ -218,6 +218,7 @@ class StudentTransportAllocation {
     required this.classLabel,
     required this.pickupStop,
     required this.dropStop,
+    required this.routeId,
     required this.routeName,
     required this.busNumber,
     required this.shift,
@@ -230,10 +231,15 @@ class StudentTransportAllocation {
   final String classLabel;
   final String pickupStop;
   final String dropStop;
+
+  /// Empty when the student is not assigned to a route.
+  final String routeId;
   final String routeName;
   final String busNumber;
   final TransportShift shift;
   final String sisStudentId;
+
+  bool get isAssigned => routeId.isNotEmpty;
 }
 
 @immutable
