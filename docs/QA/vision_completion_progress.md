@@ -3,7 +3,22 @@
 **Program:** Akshara ERP Vision Completion + Intelligence  
 **Started:** June 2026  
 **Registry SSOT:** `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md`  
-**Last updated:** June 2026 (session 4 — INTEL-04 floating dock + persona shells)
+**Last updated:** June 2026 (session 5 — Four Milestone Completion Program)
+
+---
+
+## Session 5 — Four Milestone Completion Program
+
+| Milestone | Commit | Deliverable |
+|-----------|--------|-------------|
+| M1 Promotion & Reshuffle | `994f28f` | Academic operations repo + SIS wizards |
+| M2 Continuity Platform | `2d70aaa` | Continuity repo + parent messaging |
+| M3 Workflow Automation | `ee4769f` | Workflow engine + management UI |
+| M4 Multi-School Intelligence | `5988c07` | Platform intelligence + INTEL-06–10 |
+
+**Metrics after session 5:** ERP ~88% · Vision ~54% · Intelligence ~72% · Tests **1405** · Patrol **~45**
+
+See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER.md`.
 
 ---
 
