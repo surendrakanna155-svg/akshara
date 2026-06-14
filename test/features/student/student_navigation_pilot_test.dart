@@ -50,9 +50,9 @@ void main() {
               },
             ),
             GoRoute(
-              path: RouteNames.studentAttendance,
+              path: RouteNames.aiAssistant,
               builder: (_, __) {
-                onRoute(RouteNames.studentAttendance);
+                onRoute(RouteNames.aiAssistant);
                 return const SizedBox();
               },
             ),
@@ -84,14 +84,14 @@ void main() {
     expect(routes, contains(RouteNames.studentTimetable));
   });
 
-  testWidgets('student ai_assistant routes to homework', (tester) async {
+  testWidgets('student ai_assistant routes to persona shell', (tester) async {
     final routes = <String>[];
     await pumpNavHarness(
       tester,
       (context) => handleStudentNavigation(context, 'ai_assistant'),
       routes.add,
     );
-    expect(routes, contains(RouteNames.studentHomework));
+    expect(routes, contains(RouteNames.aiAssistant));
   });
 
   testWidgets('student exam prefix routes to exams', (tester) async {

@@ -326,6 +326,33 @@ abstract final class QaTestKeys {
   static const copilotNewConversationButton =
       ValueKey<String>('copilot_new_conversation_button');
 
+  static const copilotFloatingDockFab =
+      ValueKey<String>('copilot_floating_dock_fab');
+
+  static const copilotFloatingDockPanel =
+      ValueKey<String>('copilot_floating_dock_panel');
+
+  static const copilotFloatingDockCollapseButton =
+      ValueKey<String>('copilot_floating_dock_collapse_button');
+
+  static const copilotFloatingDockContextSummary =
+      ValueKey<String>('copilot_floating_dock_context_summary');
+
+  static const copilotFloatingDockOpenButton =
+      ValueKey<String>('copilot_floating_dock_open_button');
+
+  static const copilotPersonaContextBanner =
+      ValueKey<String>('copilot_persona_context_banner');
+
+  static const copilotPersonaOpenFullButton =
+      ValueKey<String>('copilot_persona_open_full_button');
+
+  static const copilotPersonaReplyPanel =
+      ValueKey<String>('copilot_persona_reply_panel');
+
+  static ValueKey<String> copilotPersonaPromptChip(String prompt) =>
+      ValueKey<String>('copilot_persona_prompt_${prompt.hashCode}');
+
   static const libraryIssueScanButton =
       ValueKey<String>('library_issue_scan_button');
 

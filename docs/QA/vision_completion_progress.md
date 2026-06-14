@@ -3,7 +3,7 @@
 **Program:** Akshara ERP Vision Completion + Intelligence  
 **Started:** June 2026  
 **Registry SSOT:** `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md`  
-**Last updated:** June 2026 (session 3 — INTEL-02 KPI drills + copilot audit)
+**Last updated:** June 2026 (session 4 — INTEL-04 floating dock + persona shells)
 
 ---
 
@@ -11,15 +11,15 @@
 
 | Metric | Value |
 |--------|-------|
-| ERP completion | ~83% |
+| ERP completion | ~85% |
 | P0 program | 10/10 ✅ |
 | Vision reconciliation | Complete |
-| Intelligence completion (functional) | ~48% |
-| Copilot vision (documented) | ~58% |
-| Vision completion (weighted all registry) | ~45% |
-| QA readiness | ~95% |
-| Flutter tests | 1342 |
-| Patrol journeys | 36 |
+| Intelligence completion (functional) | ~55% |
+| Copilot vision (documented) | ~72% |
+| Vision completion (weighted all registry) | ~48% |
+| QA readiness | ~96% |
+| Flutter tests | 1357 |
+| Patrol journeys | 38 |
 | CI primary gate | `analyze-and-test` green on `2386eb7` |
 
 ---
@@ -70,6 +70,19 @@
 
 **Intelligence completion delta:** MG-01 KPIs **B → A**; overall **~42% → ~44%**
 
+### Session 4 — Floating dock + persona shells (INTEL-04)
+
+| Item | Detail |
+|------|--------|
+| Feature | Global floating AI dock + 8 persona experience shells |
+| Dock | `CopilotDockHost` on Admin/Parent/Teacher/Student shells |
+| Persona | `/ai-assistant` route + `CopilotPersonaExperience` configs |
+| Context | Dock open injects `CopilotScreenContext`; validation tests |
+| Patrol | `copilot_dock_e2e_test.dart` (+2 journeys) |
+| Audits | `AI_ENTRYPOINT_AUDIT.md`, `INTELLIGENCE_FOUNDATION_STATUS.md` |
+
+**Intelligence completion delta:** floating bubble **D → B**; mobile personas **C → B**; overall **~44% → ~55%**
+
 ---
 
 | Domain | Score |
@@ -93,8 +106,8 @@
 |------------|------|-------|--------------|-------------|---------|----------|--------|-----|
 | INTEL-01 | Management insight card routes | 2/6 | C | **A** | +2 | +1 | `ca1bc4e` | green |
 | INTEL-02 | KPI drill-down MG-01 | 2/6 | B | **A** | +8 | +2 | `b021b72` | green |
-| INTEL-03 | Context-aware copilot | 2 | C | **B** | +5 | +1 | `1d116d2` | pending |
-| INTEL-04 | Floating chat bubble | 2 | D | — | — | — | — | — |
+| INTEL-03 | Context-aware copilot | 2 | C | **B** | +5 | +1 | `1d116d2` | green |
+| INTEL-04 | Floating copilot dock | 2 | D | **B** | +15 | +2 | pending | pending |
 | ACAD-01 | Academic promotion engine | 3 | D | — | — | — | — | — |
 | AUTO-01 | Workflow automation engine | 5 | D | — | — | — | — | — |
 
@@ -117,7 +130,7 @@
 
 ## Next action
 
-**INTEL-04:** Floating copilot dock + mobile persona chat shells using shared `CopilotScreenContext`.
+**INTEL-05 / P1-04:** At-risk live pipeline foundation or Inventory PO — see `INTELLIGENCE_FOUNDATION_STATUS.md` recommended order.
 
 Execution: audit → implement → tests → Patrol → gates → commit → push → CI → update registry.
 

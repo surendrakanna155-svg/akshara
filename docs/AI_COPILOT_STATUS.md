@@ -1,8 +1,8 @@
 # AI Copilot Status
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** June 2026  
-**Program:** INTEL-02 Track B — Copilot verification  
+**Program:** INTEL-04 — Floating dock + persona shells  
 **Classification:** **A** Fully Implemented · **B** Partial · **C** Mock Only · **D** Not Implemented
 
 ---
@@ -11,12 +11,12 @@
 
 | Metric | Value |
 |--------|-------|
-| **Overall copilot completion** | **~48%** functional · **~62%** UI/surface |
+| **Overall copilot completion** | **~72%** functional · **~85%** UI/surface |
 | **Live AI inference** | Server edge only (OpenAI stub); client default = mock |
-| **Production-ready chat** | ERP admin copilot only (hybrid mock/API) |
-| **Persona coverage** | 1 of 6 personas has real chat UI (admin/owner ERP) |
+| **Production-ready chat** | ERP staff copilot + context injection |
+| **Persona coverage** | 8 persona experiences; staff → `/copilot`, mobile → `/ai-assistant` |
 
-Akshara has a **solid ERP copilot foundation** (screen, repository, RBAC, contract tests, Supabase orchestration) but **no universal assistant**. Mobile personas route to stubs or non-chat surfaces. Context-aware prompting exists **server-side only** — the Flutter client never passes screen/module context.
+Akshara has a **production-grade ERP copilot** (screen, repository, RBAC, context injection, floating dock) plus **role-aware persona shells** on mobile. Prediction engines and live inference remain future work (P3).
 
 ---
 
@@ -26,12 +26,12 @@ Legend: ✅ Yes · ⚠️ Partial · ❌ No · — N/A
 
 | Surface | Class | UI | Navigation | Service | Prompt routing | Context | RBAC | Tests |
 |---------|-------|-----|------------|---------|----------------|---------|------|-------|
-| Floating AI bubble (FAB) | **D** | ❌ | ❌ | ❌ | ❌ | ❌ | — | ❌ |
-| ERP AI Copilot screen (`/copilot`) | **B** | ✅ | ✅ Admin app bar | ✅ Mock + API hybrid | ✅ Assistant picker | ⚠️ Server only | ✅ `viewAiCopilot` / `runAiCopilot` | ✅ Contract + integration + RBAC |
-| Context-aware assistant | **C** | ⚠️ Same screen | ✅ | ✅ `copilot_context_engine.ts` | ✅ Orchestrator | ⚠️ Not wired from client | ✅ Permission-scoped bundles | ✅ Server tests |
-| Student assistant | **C** | ⚠️ App-bar icon only | ⚠️ → homework stub | ❌ No student chat repo | ❌ | ❌ | Student persona | ⚠️ Mobile nav pilot |
-| Teacher assistant | **B** | ✅ Insights screen | ✅ App bar → `/teacher-assistant` | ✅ Evolution repo + edge | ⚠️ Insights not chat | ❌ | ✅ `viewTeacherAssistant` | ✅ Contract + integration |
-| Parent assistant | **C** | ⚠️ Experience hub only | ⚠️ `ai_copilot` → hub | ⚠️ Guidance mock in intelligence lab | ❌ | ❌ | Parent persona | ⚠️ Partial |
+| Floating AI bubble (FAB) | **B** | ✅ | ✅ All shells | ✅ Dock providers | ✅ Persona icons | ✅ On open | ✅ Hidden on AI routes | ✅ Unit + Patrol |
+| ERP AI Copilot screen (`/copilot`) | **B** | ✅ | ✅ Admin + dock | ✅ Mock + API hybrid | ✅ Assistant picker | ✅ Client + server | ✅ `viewAiCopilot` | ✅ Contract + integration + RBAC |
+| Context-aware assistant | **B** | ✅ Banner + scope | ✅ | ✅ Context engine | ✅ Orchestrator | ✅ `CopilotScreenContext` | ✅ | ✅ Unit + Patrol |
+| Student assistant | **B** | ✅ Persona shell | ✅ Dock + dashboard | ⚠️ Stub replies | ⚠️ Focus prompts | ✅ Context inject | Student persona | ✅ Nav + Patrol |
+| Teacher assistant | **B** | ✅ Persona + insights | ✅ Dock + dashboard | ⚠️ Stub + evolution repo | ⚠️ | ✅ Context inject | ✅ | ✅ Contract + Patrol |
+| Parent assistant | **B** | ✅ Persona shell | ✅ Dock + dashboard | ⚠️ Stub replies | ⚠️ | ✅ Context inject | Parent persona | ✅ Nav pilot |
 | Admin assistant | **B** | ✅ Copilot screen | ✅ Admin scaffold | ✅ Copilot repository | ✅ 5 assistant types | ⚠️ Server bundles | ✅ Full RBAC | ✅ Full suite |
 | Owner assistant | **B** | ✅ Same as admin copilot | ✅ Management + admin routes | ✅ Copilot + management intel | ⚠️ Module copilots mock | ⚠️ KPI/insight drills now wired | ✅ Super-admin / mgmt perms | ✅ Management + copilot tests |
 
@@ -39,21 +39,19 @@ Legend: ✅ Yes · ⚠️ Partial · ❌ No · — N/A
 
 ## Per-surface detail
 
-### 1. Floating AI chat bubble — **D**
+### 1. Floating AI chat bubble — **B**
 
 | Check | Status |
 |-------|--------|
-| UI | Not implemented (DesignSystem §17 specifies dock/FAB; no widget) |
-| Navigation | — |
-| Service | — |
-| Prompt routing | — |
-| Context awareness | — |
-| RBAC | — |
-| Tests | — |
+| UI | `CopilotFloatingDock` + `CopilotDockHost` on all shells |
+| Navigation | Tap → expand panel → open staff copilot or persona shell |
+| Service | Context captured via `openAiAssistantFromDock` |
+| Prompt routing | Persona icon + experience title |
+| Context awareness | `copilotEffectiveContextProvider` summary in panel |
+| RBAC | Staff → full copilot when `viewAiCopilot`; else persona shell |
+| Tests | `copilot_dock_test.dart` + `copilot_dock_e2e_test.dart` |
 
-**Effort:** 3–5 d (shared `ChatPanel` dock + route-aware entry)  
-**Business value:** High — matches FutureVision #29 universal entry point  
-**Gap:** No global entry; users must know module-specific paths
+**Remaining gap:** Module-specific copilots not unified; no persistent dock position prefs
 
 ---
 

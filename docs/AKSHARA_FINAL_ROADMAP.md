@@ -58,8 +58,8 @@
 | P1-02 | KPI drill-down (MG-01) | #5 | 2–3 d | **Done** (INTEL-02) |
 | P1-03 | Intelligence insight card routes | #5 | 1–2 d | **Done** (INTEL-01) |
 | INTEL-03 | Context-aware copilot | #3, #29 | 2–3 d | **Done** (`1d116d2`) |
-| INTEL-04 | Floating copilot dock + mobile shells | #29 | 3–5 d | **Next** |
-| P1-04 | Inventory PO approve + receive | — | 4–5 d | Procurement chain |
+| INTEL-04 | Floating copilot dock + mobile shells | #29 | 3–5 d | **Done** |
+| P1-04 | Inventory PO approve + receive | — | 4–5 d | **Next** |
 | P1-05 | Admissions settings persistence | — | 2–3 d | Config consistency |
 | P1-06 | Notifications broadcast admin | #2 | 4–5 d | School-wide comms |
 | P1-07 | RBAC mutation registry sync | — | 2–3 d | Security completeness |
@@ -111,8 +111,8 @@ P1-01 Export wiring ✅
   → P1-02 KPI drill-downs ✅ (INTEL-02)
   → P1-03 Insight actions ✅ (INTEL-01)
   → INTEL-03 Context-aware copilot ✅
-  → INTEL-04 Floating copilot dock ← next
-  → P1-04 Inventory PO
+  → INTEL-04 Floating copilot dock ✅
+  → P1-04 Inventory PO ← next
   → P1-05 Admissions settings
   → P1-06 Notifications broadcast
   → P1-07 RBAC registry

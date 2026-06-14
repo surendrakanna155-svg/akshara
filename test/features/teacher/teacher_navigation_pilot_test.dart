@@ -50,9 +50,9 @@ void main() {
               },
             ),
             GoRoute(
-              path: RouteNames.teacherAssistant,
+              path: RouteNames.aiAssistant,
               builder: (_, __) {
-                onRoute(RouteNames.teacherAssistant);
+                onRoute(RouteNames.aiAssistant);
                 return const SizedBox();
               },
             ),
@@ -91,7 +91,7 @@ void main() {
       (context) => handleTeacherNavigation(context, 'ai_copilot'),
       routes.add,
     );
-    expect(routes, contains(RouteNames.teacherAssistant));
+    expect(routes, contains(RouteNames.aiAssistant));
   });
 
   testWidgets('teacher class_teacher_dashboard routes to attendance', (

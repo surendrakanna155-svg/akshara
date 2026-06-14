@@ -55,6 +55,7 @@ abstract final class RouteNames {
   // Web ERP admin shell (desktop / tablet / mobile drawer)
   static const String admin = '/admin';
   static const String copilot = '/copilot';
+  static const String aiAssistant = '/ai-assistant';
   static const String education = '/education';
   static const String intelligence = '/intelligence';
   static const String studentSuccessIntelligence = '/intelligence/student-success';

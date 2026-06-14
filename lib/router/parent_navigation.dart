@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/staging_probe_ids.dart';
+import '../features/copilot/copilot_navigation.dart';
 import 'route_names.dart';
 import '../features/parent/parent_active_child_provider.dart';
 import '../features/parent/widgets/parent_child_switcher_sheet.dart';
@@ -55,10 +56,11 @@ void handleParentDashboardNavigation(
     case 'notifications':
       context.push(RouteNames.parentNotifications);
     case 'ai_copilot':
-      final studentId = ref != null
-          ? ref.read(parentActiveStudentIdProvider)
-          : StagingProbeIds.studentAId;
-      context.push(parentExperienceHubPath(studentId));
+      if (ref != null) {
+        openAiPersonaAssistant(context, ref);
+      } else {
+        context.push(RouteNames.aiAssistant);
+      }
     default:
       if (actionId.startsWith('notice_')) {
         context.go(RouteNames.parentNotices);

@@ -72,6 +72,7 @@ ALL_TARGETS=(
   "patrol_test/workflows/management_insight_routes_e2e_test.dart"
   "patrol_test/workflows/management_kpi_drill_e2e_test.dart"
   "patrol_test/workflows/copilot_context_e2e_test.dart"
+  "patrol_test/workflows/copilot_dock_e2e_test.dart"
   "patrol_test/workflows/library_issue_return_e2e_test.dart"
   "patrol_test/workflows/hostel_allocation_e2e_test.dart"
   "patrol_test/workflows/inventory_po_e2e_test.dart"

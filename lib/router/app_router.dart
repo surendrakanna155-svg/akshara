@@ -44,6 +44,7 @@ import '../features/teacher/messages/teacher_conversation_screen.dart';
 import '../features/teacher/messages/teacher_messages_screen.dart';
 import '../features/teacher/shell/teacher_shell.dart';
 import '../features/teacher/timetable/teacher_timetable_screen.dart';
+import '../features/copilot/dock/copilot_dock_host.dart';
 import '../features/admin/admin_shell.dart';
 import 'admin_navigation.dart';
 import 'route_guards.dart';
@@ -148,12 +149,18 @@ GoRouter createAppRouter({
         redirect: (context, state) => RouteNames.parentDashboard,
       ),
       GoRoute(
+        path: RouteNames.aiAssistant,
+        name: 'aiAssistant',
+        builder: (context, state) => aiAssistantRouteBuilder(context, state),
+      ),
+      GoRoute(
         path: RouteNames.parentNotifications,
         name: 'parentNotifications',
         builder: (context, state) => const NotificationsScreen(),
       ),
       ShellRoute(
-        builder: (context, state, child) => ParentShell(child: child),
+        builder: (context, state, child) =>
+            CopilotDockHost(child: ParentShell(child: child)),
         routes: [
           GoRoute(
             path: RouteNames.parentDashboard,
@@ -276,7 +283,8 @@ GoRouter createAppRouter({
         redirect: (context, state) => RouteNames.teacherDashboard,
       ),
       ShellRoute(
-        builder: (context, state, child) => TeacherShell(child: child),
+        builder: (context, state, child) =>
+            CopilotDockHost(child: TeacherShell(child: child)),
         routes: [
           GoRoute(
             path: RouteNames.teacherDashboard,
@@ -343,7 +351,8 @@ GoRouter createAppRouter({
         redirect: (context, state) => RouteNames.studentDashboard,
       ),
       ShellRoute(
-        builder: (context, state, child) => AdminShell(child: child),
+        builder: (context, state, child) =>
+            CopilotDockHost(child: AdminShell(child: child)),
         routes: [
           GoRoute(
             path: RouteNames.admin,
@@ -1441,7 +1450,8 @@ GoRouter createAppRouter({
         ],
       ),
       ShellRoute(
-        builder: (context, state, child) => StudentShell(child: child),
+        builder: (context, state, child) =>
+            CopilotDockHost(child: StudentShell(child: child)),
         routes: [
           GoRoute(
             path: RouteNames.studentDashboard,
@@ -1771,8 +1781,11 @@ Widget parentLeaveRouteBuilder(BuildContext context, GoRouterState state) {
 
 /// Teacher dashboard wired with router navigation.
 Widget teacherDashboardRouteBuilder(BuildContext context, GoRouterState state) {
-  return TeacherDashboardScreen(
-    onNavigate: (actionId) => handleTeacherNavigation(context, actionId),
+  return Consumer(
+    builder: (context, ref, _) => TeacherDashboardScreen(
+      onNavigate: (actionId) =>
+          handleTeacherNavigation(context, actionId, ref: ref),
+    ),
   );
 }
 
@@ -1830,8 +1843,11 @@ Widget teacherLeaveRouteBuilder(BuildContext context, GoRouterState state) {
 
 /// Student dashboard wired with router navigation.
 Widget studentDashboardRouteBuilder(BuildContext context, GoRouterState state) {
-  return StudentDashboardScreen(
-    onNavigate: (actionId) => handleStudentNavigation(context, actionId),
+  return Consumer(
+    builder: (context, ref, _) => StudentDashboardScreen(
+      onNavigate: (actionId) =>
+          handleStudentNavigation(context, actionId, ref: ref),
+    ),
   );
 }
 

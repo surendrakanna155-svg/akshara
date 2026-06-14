@@ -1,10 +1,10 @@
 # AI Intelligence Audit
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** June 2026  
 **Purpose:** Phase 1 — classify all Akshara intelligence surfaces  
 **Classification:** **A** Fully Implemented · **B** Partial · **C** Mock Only · **D** Not Implemented  
-**Baseline:** P0 complete · ERP ~83% · INTEL-02 complete
+**Baseline:** P0 complete · ERP ~85% · INTEL-04 complete
 
 ---
 
@@ -12,7 +12,7 @@
 
 | Domain | A | B | C | D | Overall |
 |--------|---|---|---|---|---------|
-| AI Chat / Copilot | 0 | 1 | 1 | 1 | **B** |
+| AI Chat / Copilot | 0 | 2 | 1 | 0 | **B** |
 | Owner dashboard intelligence | 0 | 2 | 1 | 0 | **B** |
 | Student intelligence | 0 | 1 | 2 | 0 | **C** |
 | Teacher intelligence | 0 | 1 | 2 | 0 | **C** |
@@ -24,9 +24,9 @@
 | Hostel intelligence | 0 | 1 | 1 | 0 | **C** |
 | **Cross-cutting** | 1 | 6 | 12 | 3 | **C** |
 
-**Intelligence completion (weighted):** ~**44%** functional · ~**74%** UI/mock surfaces  
+**Intelligence completion (weighted):** ~**55%** functional · ~**78%** UI/mock surfaces  
 **Live AI inference:** Not production-ready — mock repository + OpenAI edge stubs  
-**Copilot detail:** See `docs/AI_COPILOT_STATUS.md` (~48% copilot vision)
+**Copilot detail:** See `docs/AI_COPILOT_STATUS.md` (~72% copilot vision)
 
 ---
 
@@ -34,11 +34,11 @@
 
 | Capability | Class | UI | Service | Provider | RBAC | Tests | Gaps |
 |------------|-------|-----|---------|----------|------|-------|------|
-| ERP Copilot screen (`/copilot`) | **B** | Yes | Mock + API hybrid | `copilot_provider.dart` | `copilotCanUseProvider` | Contract + integration | No floating bubble; admin route only |
-| Admin app-bar AI button | **B** | Yes | Nav to `/copilot` | `admin_content_scaffold.dart` | Role-gated | Partial | Not context-aware |
-| Mobile AI app-bar (teacher/student) | **C** | Yes | Nav action IDs only | Dashboard providers | Persona | Mobile tests | Routes to stub handlers in shell |
-| **Floating chat bubble (FAB)** | **D** | No | No | No | — | — | **Not implemented** |
-| Context-aware Copilot | **C** | Partial | `copilot_context_engine.ts` (server) | Session + assistant type | Yes | Server tests | Client does not pass screen context |
+| ERP Copilot screen (`/copilot`) | **B** | Yes | Mock + API hybrid | `copilot_provider.dart` | `copilotCanUseProvider` | Contract + integration | Persona shells separate route |
+| Admin app-bar AI button | **B** | Yes | Nav + context inject | `admin_content_scaffold.dart` | Role-gated | Partial | Dock duplicates entry |
+| Mobile AI app-bar (teacher/student/parent) | **B** | Yes | Persona shell | `openAiPersonaAssistant` | Persona | Nav + Patrol | Stub replies only |
+| **Floating chat bubble (FAB)** | **B** | Yes | Dock open helpers | `copilot_floating_dock.dart` | All shells | Dock + Patrol | Expand animation clip |
+| Context-aware Copilot | **B** | Yes | Client + server merge | `CopilotScreenContext` | Yes | Unit + Patrol | KPI scope on MG-01 |
 | Role-specific assistants | **B** | Yes | `CopilotAssistantType` enum | Mock assistants list | RBAC | Contract | Finance/HR/principal types; not all modules |
 | Universal AI Assistant (#29) | **D** | No | No | No | — | — | FutureVision P3 |
 
@@ -197,7 +197,7 @@
 | 2 | KPI drill-down (MG-01) | **A** | **A** | ✅ INTEL-02 |
 | 3 | Context-aware copilot (screen context) | **B** | **B** | ✅ INTEL-03 |
 | 4 | At-risk detection (live pipeline) | C | **B** | P2 |
-| 5 | Floating chat bubble | D | **B** | **INTEL-04** ← next |
+| 5 | Floating chat bubble + persona shells | **B** | **B** | ✅ INTEL-04 |
 | 6 | Recommendation engine | D | **B** | P2 |
 | 7 | Universal AI Assistant | D | **B** | P3 |
 
@@ -205,9 +205,9 @@
 
 | Priority lens | Recommendation | Rationale |
 |---------------|----------------|-----------|
-| Highest business value | Context-aware copilot | Server context engine exists; unlocks actionable answers on any screen |
-| Lowest effort | Context-aware copilot | ~2–3 d client API wiring vs 5–7 d per persona chat shell |
-| Biggest differentiator | Universal floating assistant + live inference | Matches FutureVision #29; requires INTEL-03/04 first |
+| Highest business value | At-risk live pipeline | Persona routing done; engines unlock actionable alerts |
+| Lowest effort | Attendance intelligence wiring | Mock → SIS feed before ML |
+| Biggest differentiator | Recommendation engine + live inference | Requires INTEL-04 foundation ✅ |
 
 ---
 
@@ -220,6 +220,8 @@
 | `FUTURE_VISION_RECONCILIATION.md` | FutureVision # mapping |
 | `docs/Vision/FutureVision.md` | Original vision |
 | `docs/OWNER_DASHBOARD_AUDIT.md` | Owner surface audit |
-| `docs/AI_COPILOT_STATUS.md` | Copilot persona + capability audit (INTEL-02) |
+| `docs/AI_COPILOT_STATUS.md` | Copilot persona + capability audit |
+| `docs/AI_ENTRYPOINT_AUDIT.md` | Cross-app AI entry inventory (INTEL-04) |
+| `docs/INTELLIGENCE_FOUNDATION_STATUS.md` | Pre-engine readiness (INTEL-04) |
 
 **Next audit trigger:** After each intelligence feature closes (update class + completion %)

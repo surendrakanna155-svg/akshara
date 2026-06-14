@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/copilot/copilot_navigation.dart';
 import 'route_names.dart';
 
 /// Maps TA-01 dashboard [actionId] values to GoRouter destinations.
-void handleTeacherNavigation(BuildContext context, String actionId) {
+void handleTeacherNavigation(
+  BuildContext context,
+  String actionId, {
+  WidgetRef? ref,
+}) {
   switch (actionId) {
     case 'mark_attendance':
     case 'staff_check_in':
@@ -28,7 +34,11 @@ void handleTeacherNavigation(BuildContext context, String actionId) {
     case 'class_teacher_dashboard':
       context.go(RouteNames.teacherAttendance);
     case 'ai_copilot':
-      context.push(RouteNames.teacherAssistant);
+      if (ref != null) {
+        openAiPersonaAssistant(context, ref);
+      } else {
+        context.push(RouteNames.aiAssistant);
+      }
     case 'profile':
       context.go(RouteNames.teacherDashboard);
     case 'home':

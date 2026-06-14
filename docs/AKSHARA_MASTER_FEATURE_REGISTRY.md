@@ -278,7 +278,9 @@
 | **Performance insights** | AI | ROAD v13.6+ | **D** | Mock | `teacher_effectiveness/`, exam intelligence | Contract |
 | **Resource optimization (school-wide)** | AI | Product vision | **E** | No | — | Inventory copilot only |
 | Principal Copilot | AI | VISION #5 | **D** | Mock | Copilot + intelligence | Partial |
-| **Context-aware ERP Copilot** | AI | INTEL-03 | **B** | Yes (stub) | `copilot_screen_context.dart`, Patrol | Mobile shells pending |
+| **Context-aware ERP Copilot** | AI | INTEL-03 | **B** | Yes (stub) | `copilot_screen_context.dart`, Patrol | Done |
+| **Floating copilot dock** | AI | INTEL-04 | **B** | Yes | `copilot_floating_dock.dart`, Patrol | Done |
+| **Persona AI shells (8 roles)** | AI | INTEL-04 | **B** | Stub prompts | `copilot_persona_shell_screen.dart` | Live inference pending |
 | Compute risk / refresh actions | AI | Intelligence UI | **B** | Partial | `intelligence_mutations_provider.dart` | Yes |
 | Achievement Promotion Engine | AI | VISION #19 | **D** | Mock | `promotion/` | Partial |
 | AI Education Suite (generative) | AI | VISION #22–27 | **A** | Yes (mock AI) | Education screens | Yes |

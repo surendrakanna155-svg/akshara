@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/copilot/copilot_navigation.dart';
 import 'route_names.dart';
 
 /// Maps ST-01 dashboard [actionId] values to GoRouter destinations.
-void handleStudentNavigation(BuildContext context, String actionId) {
+void handleStudentNavigation(
+  BuildContext context,
+  String actionId, {
+  WidgetRef? ref,
+}) {
   switch (actionId) {
     case 'attendance':
       context.go(RouteNames.studentAttendance);
@@ -28,7 +34,11 @@ void handleStudentNavigation(BuildContext context, String actionId) {
       context.go(RouteNames.studentTimetable);
     case 'ai_assistant':
     case 'ai_quiz':
-      context.go(RouteNames.studentHomework);
+      if (ref != null) {
+        openAiPersonaAssistant(context, ref);
+      } else {
+        context.push(RouteNames.aiAssistant);
+      }
     case 'home':
       context.go(RouteNames.studentDashboard);
     default:
