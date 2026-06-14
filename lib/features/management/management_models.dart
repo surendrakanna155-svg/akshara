@@ -9,6 +9,7 @@ enum ManagementScreen {
   academics,
   performance,
   tasks,
+  workflowAutomation,
   settings;
 
   String get label => switch (this) {
@@ -19,6 +20,7 @@ enum ManagementScreen {
         ManagementScreen.academics => 'Academics',
         ManagementScreen.performance => 'Performance',
         ManagementScreen.tasks => 'Tasks',
+        ManagementScreen.workflowAutomation => 'Workflow',
         ManagementScreen.settings => 'Settings',
       };
 }

@@ -11,6 +11,7 @@ const List<ManagementScreen> kManagementNavScreens = [
   ManagementScreen.academics,
   ManagementScreen.performance,
   ManagementScreen.tasks,
+  ManagementScreen.workflowAutomation,
   ManagementScreen.settings,
 ];
 
@@ -23,6 +24,7 @@ extension ManagementScreenRoutes on ManagementScreen {
         ManagementScreen.academics => RouteNames.managementAcademics,
         ManagementScreen.performance => RouteNames.managementPerformance,
         ManagementScreen.tasks => RouteNames.managementTasks,
+        ManagementScreen.workflowAutomation => RouteNames.managementWorkflowAutomation,
         ManagementScreen.settings => RouteNames.managementSettings,
       };
 }

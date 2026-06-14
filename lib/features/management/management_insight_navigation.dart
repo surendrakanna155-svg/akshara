@@ -17,6 +17,7 @@ void navigateManagementInsightAction(
     ManagementScreen.academics => RouteNames.examIntelligence,
     ManagementScreen.performance => RouteNames.teacherEffectiveness,
     ManagementScreen.tasks => RouteNames.managementIntelligence,
+    ManagementScreen.workflowAutomation => RouteNames.managementWorkflowAutomation,
     ManagementScreen.settings => RouteNames.managementSettings,
   };
   context.go(route);

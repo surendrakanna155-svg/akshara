@@ -11,6 +11,7 @@ import '../features/management/finance/management_finance_screen.dart';
 import '../features/management/performance/management_performance_screen.dart';
 import '../features/management/settings/management_settings_screen.dart';
 import '../features/management/tasks/management_tasks_screen.dart';
+import '../features/workflow/workflow_automation_screen.dart';
 import 'route_names.dart';
 
 String? managementRootRedirect(BuildContext context, GoRouterState state) {
@@ -88,4 +89,11 @@ Widget managementSettingsRouteBuilder(
   GoRouterState state,
 ) {
   return const ManagementSettingsScreen();
+}
+
+Widget managementWorkflowAutomationRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const WorkflowAutomationScreen();
 }

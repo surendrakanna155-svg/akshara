@@ -21,6 +21,7 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.finance: Permission.viewFinance,
   RouteNames.sis: Permission.viewSis,
   RouteNames.management: Permission.viewManagement,
+  RouteNames.managementWorkflowAutomation: Permission.viewManagement,
   RouteNames.transport: Permission.viewTransport,
   RouteNames.hr: Permission.viewHr,
   RouteNames.hostel: Permission.viewHostel,
