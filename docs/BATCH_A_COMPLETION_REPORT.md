@@ -193,9 +193,10 @@ All six Batch A items delivered end-to-end: repository writes, mutation provider
 
 | Field | Value |
 |-------|-------|
-| Commit | *(recorded after push)* |
-| CI workflow | `Flutter CI` · `analyze-and-test` |
-| CI run ID | *(recorded after push)* |
+| Commit | `42cceef` |
+| CI workflow | `Flutter CI` · run [27509675705](https://github.com/surendrakanna155-svg/akshara/actions/runs/27509675705) |
+| `analyze-and-test` | ✅ success (1412 tests) |
+| `phase1-patrol-smoke` | ❌ failure (pre-existing Phase 1 workflows — same as baseline `37c1676`) |
 
 ---
 
