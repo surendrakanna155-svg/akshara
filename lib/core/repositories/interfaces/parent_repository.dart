@@ -12,6 +12,7 @@ import '../../../features/parent/payment/payment_models.dart';
 import '../../../features/parent/profile/profile_models.dart';
 import '../../../features/parent/receipts/receipt_models.dart';
 import '../../../features/parent/timetable/timetable_models.dart';
+import '../../../features/teacher/messages/message_models.dart';
 import '../repository_query.dart';
 
 /// Contract for parent mobile app data access (mock or API).
@@ -61,5 +62,12 @@ abstract class ParentRepository {
   Future<String> getPrintableReport({
     required RepositoryQuery query,
     required String studentId,
+  });
+
+  Future<List<MessageThread>> getMessageThreads({required RepositoryQuery query});
+
+  Future<MessageThread> sendMessage({
+    required RepositoryQuery query,
+    required ParentMessageSendRequest request,
   });
 }

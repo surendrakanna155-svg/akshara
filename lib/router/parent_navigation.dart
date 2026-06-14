@@ -53,6 +53,7 @@ void handleParentDashboardNavigation(
     case 'profile':
       context.go(RouteNames.parentProfile);
     case 'contact_teacher':
+      context.go(RouteNames.parentMessages);
     case 'notifications':
       context.push(RouteNames.parentNotifications);
     case 'ai_copilot':

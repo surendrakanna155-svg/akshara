@@ -119,6 +119,12 @@ final canManageSisProvider = Provider<bool>((ref) {
   return ref.watch(rbacServiceProvider).hasPermission(Permission.manageSis);
 });
 
+final canManageCommunicationProvider = Provider<bool>((ref) {
+  return ref
+      .watch(rbacServiceProvider)
+      .hasPermission(Permission.manageCommunication);
+});
+
 final canViewManagementProvider = Provider<bool>((ref) {
   return ref
       .watch(rbacServiceProvider)

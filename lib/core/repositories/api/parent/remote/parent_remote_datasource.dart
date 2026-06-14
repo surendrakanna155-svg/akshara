@@ -3,6 +3,8 @@ import 'package:dio/dio.dart';
 import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../../../features/parent/parent_requests.dart';
+import '../../teacher/dto/teacher_responses_dto.dart';
+import '../dto/parent_message_send_request_dto.dart';
 import '../dto/parent_leave_submit_request_dto.dart';
 import '../dto/parent_payment_request_dto.dart';
 import '../dto/parent_responses_dto.dart';
@@ -220,5 +222,27 @@ class ParentRemoteDataSource {
       queryParameters: {..._queryParams(query), 'studentId': studentId},
     );
     return _requireData(response)['report'] as String? ?? '';
+  }
+
+  Future<TeacherMessagesResponseDto> fetchMessageThreads({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.messages,
+      queryParameters: _queryParams(query),
+    );
+    return TeacherMessagesResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<MessageThreadDto> sendMessage({
+    required RepositoryQuery query,
+    required ParentMessageSendRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ParentApiPaths.messages,
+      queryParameters: _queryParams(query),
+      data: ParentMessageSendRequestDto.fromDomain(request).toJson(),
+    );
+    return MessageThreadDto.fromJson(_requireData(response));
   }
 }

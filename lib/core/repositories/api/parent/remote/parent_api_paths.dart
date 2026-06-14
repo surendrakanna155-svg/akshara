@@ -13,6 +13,7 @@ abstract final class ParentApiPaths {
   static const String events = '$base/events';
   static const String leave = '$base/leave';
   static const String profile = '$base/profile';
+  static const String messages = '$base/messages';
   static const String paymentsInitiate = '$base/payments/initiate';
   static const String paymentsConfirm = '$base/payments/confirm';
 

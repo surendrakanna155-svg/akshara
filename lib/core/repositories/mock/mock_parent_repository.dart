@@ -13,6 +13,7 @@ import '../../../features/parent/payment/payment_models.dart';
 import '../../../features/parent/profile/profile_models.dart';
 import '../../../features/parent/receipts/receipt_models.dart';
 import '../../../features/parent/timetable/timetable_models.dart';
+import '../../../features/teacher/messages/message_models.dart';
 import '../interfaces/parent_repository.dart';
 import '../repository_query.dart';
 import 'mock_parent_write_store.dart';
@@ -232,8 +233,63 @@ class MockParentRepository implements ParentRepository {
     ].join('\n');
   }
 
+  @override
+  Future<List<MessageThread>> getMessageThreads({required RepositoryQuery query}) async {
+    await _ensureMessageThreads();
+    return List<MessageThread>.from(_store.messageThreads!);
+  }
+
+  @override
+  Future<MessageThread> sendMessage({
+    required RepositoryQuery query,
+    required ParentMessageSendRequest request,
+  }) async {
+    await _ensureMessageThreads();
+    final message = MessageItem(
+      id: _store.nextMessageId(),
+      body: request.body.trim(),
+      senderLabel: 'Suresh Kumar',
+      timeLabel: 'Just now',
+      isTeacher: false,
+    );
+    if (request.threadId != null) {
+      final index = _store.messageThreads!.indexWhere(
+        (thread) => thread.id == request.threadId,
+      );
+      if (index >= 0) {
+        final current = _store.messageThreads![index];
+        final updated = MessageThread(
+          id: current.id,
+          parentName: current.parentName,
+          studentName: current.studentName,
+          preview: request.body.trim(),
+          timeLabel: 'Just now',
+          unreadCount: 0,
+          messages: [...current.messages, message],
+        );
+        _store.messageThreads![index] = updated;
+        return updated;
+      }
+    }
+    final created = MessageThread(
+      id: _store.nextThreadId(),
+      parentName: 'Suresh Kumar',
+      studentName: request.subject,
+      preview: request.body.trim(),
+      timeLabel: 'Just now',
+      unreadCount: 0,
+      messages: [message],
+    );
+    _store.messageThreads!.insert(0, created);
+    return created;
+  }
+
   Future<void> _ensureLeaveHistory() async {
     _store.leaveRequests ??= List<LeaveRequest>.from(_mockLeaveHistory());
+  }
+
+  Future<void> _ensureMessageThreads() async {
+    _store.messageThreads ??= List<MessageThread>.from(_mockMessageThreads());
   }
 
   ParentChildProfile _childProfileFor(String childId) {
@@ -926,5 +982,51 @@ PaymentSummary _summaryForInstallment(String installmentId) {
         ],
       ),
   };
+}
+
+List<MessageThread> _mockMessageThreads() {
+  return const [
+    MessageThread(
+      id: 'parent_thread_1',
+      parentName: 'Suresh Kumar',
+      studentName: 'Ravi Kumar · 8-A',
+      preview: 'Thanks teacher, we will review tonight.',
+      timeLabel: 'Today',
+      unreadCount: 0,
+      messages: [
+        MessageItem(
+          id: 'parent_msg_1',
+          body: 'Ravi was absent due to fever. Can we get class notes?',
+          senderLabel: 'Suresh Kumar',
+          timeLabel: '09:10 AM',
+          isTeacher: false,
+        ),
+        MessageItem(
+          id: 'parent_msg_2',
+          body: 'Sure, I will share today\'s summary by evening.',
+          senderLabel: 'Priya Sharma',
+          timeLabel: '09:22 AM',
+          isTeacher: true,
+        ),
+      ],
+    ),
+    MessageThread(
+      id: 'parent_thread_2',
+      parentName: 'Suresh Kumar',
+      studentName: 'Ananya Kumar · 5-B',
+      preview: 'PTM slot confirmed for Friday.',
+      timeLabel: 'Yesterday',
+      unreadCount: 1,
+      messages: [
+        MessageItem(
+          id: 'parent_msg_3',
+          body: 'PTM slot confirmed for Friday.',
+          senderLabel: 'Class Teacher',
+          timeLabel: 'Yesterday',
+          isTeacher: true,
+        ),
+      ],
+    ),
+  ];
 }
 

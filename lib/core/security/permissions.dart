@@ -19,6 +19,7 @@ enum Permission {
   // Management
   viewManagement,
   manageManagement,
+  manageWorkflowAutomation,
 
   // Transport
   viewTransport,
@@ -125,6 +126,7 @@ enum Permission {
   viewLessonAnalytics,
   viewTimetableOptimization,
   viewCommunicationDelivery,
+  manageCommunication,
   manageCommunicationTemplates,
   viewPilotDashboard,
 

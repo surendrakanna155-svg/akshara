@@ -45,3 +45,18 @@ class ParentPaymentConfirmRequest {
   final String paymentIntentId;
   final String transactionRef;
 }
+
+/// Domain request to send a parent message to a teacher.
+class ParentMessageSendRequest {
+  const ParentMessageSendRequest({
+    required this.recipient,
+    required this.subject,
+    required this.body,
+    this.threadId,
+  });
+
+  final String recipient;
+  final String subject;
+  final String body;
+  final String? threadId;
+}

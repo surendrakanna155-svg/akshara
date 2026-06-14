@@ -12,6 +12,7 @@ import '../../../../features/parent/payment/payment_models.dart';
 import '../../../../features/parent/profile/profile_models.dart';
 import '../../../../features/parent/receipts/receipt_models.dart';
 import '../../../../features/parent/timetable/timetable_models.dart';
+import '../../../../features/teacher/messages/message_models.dart';
 import '../../interfaces/parent_repository.dart';
 import '../../repository_query.dart';
 import 'mapper/parent_mapper.dart';
@@ -168,4 +169,59 @@ class ApiParentRepository implements ParentRepository {
     required String studentId,
   }) =>
       _remote.fetchPrintableReport(query: query, studentId: studentId);
+
+  @override
+  Future<List<MessageThread>> getMessageThreads({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchMessageThreads(query: query);
+    return [
+      for (final thread in dto.items)
+        if (thread.raw.isNotEmpty)
+        MessageThread(
+          id: thread.raw['id'] as String? ?? '',
+          parentName: thread.raw['parentName'] as String? ?? '',
+          studentName: thread.raw['studentName'] as String? ?? '',
+          preview: thread.raw['preview'] as String? ?? '',
+          timeLabel: thread.raw['timeLabel'] as String? ?? '',
+          unreadCount: (thread.raw['unreadCount'] as num?)?.toInt() ?? 0,
+          messages: [
+            for (final item in (thread.raw['messages'] as List<dynamic>? ?? const []))
+              if (item is Map<String, dynamic>)
+              MessageItem(
+                id: item['id'] as String? ?? '',
+                body: item['body'] as String? ?? '',
+                senderLabel: item['senderLabel'] as String? ?? '',
+                timeLabel: item['timeLabel'] as String? ?? '',
+                isTeacher: item['isTeacher'] as bool? ?? false,
+              ),
+          ],
+        ),
+    ];
+  }
+
+  @override
+  Future<MessageThread> sendMessage({
+    required RepositoryQuery query,
+    required ParentMessageSendRequest request,
+  }) async {
+    final thread = await _remote.sendMessage(query: query, request: request);
+    return MessageThread(
+      id: thread.raw['id'] as String? ?? '',
+      parentName: thread.raw['parentName'] as String? ?? '',
+      studentName: thread.raw['studentName'] as String? ?? '',
+      preview: thread.raw['preview'] as String? ?? '',
+      timeLabel: thread.raw['timeLabel'] as String? ?? '',
+      unreadCount: (thread.raw['unreadCount'] as num?)?.toInt() ?? 0,
+      messages: [
+        for (final item in (thread.raw['messages'] as List<dynamic>? ?? const []))
+          if (item is Map<String, dynamic>)
+          MessageItem(
+            id: item['id'] as String? ?? '',
+            body: item['body'] as String? ?? '',
+            senderLabel: item['senderLabel'] as String? ?? '',
+            timeLabel: item['timeLabel'] as String? ?? '',
+            isTeacher: item['isTeacher'] as bool? ?? false,
+          ),
+      ],
+    );
+  }
 }
