@@ -10,6 +10,8 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../copilot/copilot_context_provider.dart';
+import '../../copilot/copilot_screen_context.dart';
 import '../management_models.dart';
 import '../management_providers.dart';
 import '../widgets/management_kpi_row.dart';
@@ -64,20 +66,31 @@ class ManagementDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No management data for the selected filters.',
         emptyIcon: Icons.dashboard_outlined,
         onRetry: () => retryErpFuture(ref, managementDashboardFutureProvider),
-        builder: (data) => _buildDashboardContent(context, data),
+        builder: (data) => _buildDashboardContent(context, ref, data, filterIndex),
       ),
     );
   }
 
   Widget _buildDashboardContent(
     BuildContext context,
+    WidgetRef ref,
     ManagementDashboardData data,
+    int filterIndex,
   ) {
     final isMobile = AdminLayout.isMobile(context);
     final chartHeight = isMobile ? 240.0 : 300.0;
     final queuePreview = data.approvalQueue.take(5).toList();
 
-    return Column(
+    return CopilotContextScope(
+      route: RouteNames.managementDashboard,
+      screen: 'Owner Dashboard',
+      module: 'management',
+      filters: {'period': filterLabels[filterIndex]},
+      kpis: [
+        for (final kpi in data.kpis)
+          CopilotKpiSnapshot(id: kpi.id, label: kpi.label, value: kpi.value),
+      ],
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ManagementPrincipalOverviewPanel(data: data),
@@ -163,6 +176,7 @@ class ManagementDashboardScreen extends ConsumerWidget {
           onAction: () => context.go(RouteNames.managementTasks),
         ),
       ],
+      ),
     );
   }
 }

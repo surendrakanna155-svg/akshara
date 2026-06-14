@@ -1,4 +1,5 @@
 import '../../../features/copilot/copilot_models.dart';
+import '../../../features/copilot/copilot_screen_context.dart';
 import '../repository_query.dart';
 
 abstract class CopilotRepository {
@@ -26,5 +27,6 @@ abstract class CopilotRepository {
     required RepositoryQuery query,
     required String sessionId,
     required String content,
+    CopilotScreenContext? screenContext,
   });
 }

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
 import '../../../../../features/copilot/copilot_models.dart';
+import '../../../../../features/copilot/copilot_screen_context.dart';
 import '../dto/copilot_dto.dart';
 import 'copilot_api_paths.dart';
 
@@ -79,11 +80,15 @@ class CopilotRemoteDataSource {
     required RepositoryQuery query,
     required String sessionId,
     required String content,
+    CopilotScreenContext? screenContext,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       CopilotApiPaths.messages(sessionId),
       queryParameters: _queryParams(query),
-      data: {'content': content},
+      data: {
+        'content': content,
+        if (screenContext != null) 'screenContext': screenContext.toJson(),
+      },
     );
     return CopilotSendMessageResultDto.fromJson(parseCopilotEnvelope(_responseMap(response)));
   }

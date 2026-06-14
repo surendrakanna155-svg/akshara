@@ -1,6 +1,7 @@
 import '../../interfaces/copilot_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/copilot/copilot_models.dart';
+import '../../../../features/copilot/copilot_screen_context.dart';
 import 'mapper/copilot_mapper.dart';
 import 'remote/copilot_remote_datasource.dart';
 
@@ -66,11 +67,13 @@ class ApiCopilotRepository implements CopilotRepository {
     required RepositoryQuery query,
     required String sessionId,
     required String content,
+    CopilotScreenContext? screenContext,
   }) async {
     final dto = await _remote.sendMessage(
       query: query,
       sessionId: sessionId,
       content: content,
+      screenContext: screenContext,
     );
     return _mapper.toSendResult(dto);
   }

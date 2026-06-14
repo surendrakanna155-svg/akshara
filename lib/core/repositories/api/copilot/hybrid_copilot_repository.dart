@@ -1,6 +1,7 @@
 import '../../interfaces/copilot_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/copilot/copilot_models.dart';
+import '../../../../features/copilot/copilot_screen_context.dart';
 import 'api_copilot_repository.dart';
 
 class HybridCopilotRepository implements CopilotRepository {
@@ -43,6 +44,12 @@ class HybridCopilotRepository implements CopilotRepository {
     required RepositoryQuery query,
     required String sessionId,
     required String content,
+    CopilotScreenContext? screenContext,
   }) =>
-      _api.sendMessage(query: query, sessionId: sessionId, content: content);
+      _api.sendMessage(
+        query: query,
+        sessionId: sessionId,
+        content: content,
+        screenContext: screenContext,
+      );
 }

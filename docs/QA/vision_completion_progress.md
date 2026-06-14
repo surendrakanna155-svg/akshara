@@ -14,12 +14,12 @@
 | ERP completion | ~83% |
 | P0 program | 10/10 ✅ |
 | Vision reconciliation | Complete |
-| Intelligence completion (functional) | ~44% |
-| Copilot vision (documented) | ~48% |
+| Intelligence completion (functional) | ~48% |
+| Copilot vision (documented) | ~58% |
 | Vision completion (weighted all registry) | ~45% |
 | QA readiness | ~95% |
-| Flutter tests | 1337 |
-| Patrol journeys | 35 |
+| Flutter tests | 1342 |
+| Patrol journeys | 36 |
 | CI primary gate | `analyze-and-test` green on `2386eb7` |
 
 ---
@@ -92,8 +92,9 @@
 | Feature ID | Name | Phase | Class before | Class after | Tests + | Patrol + | Commit | CI |
 |------------|------|-------|--------------|-------------|---------|----------|--------|-----|
 | INTEL-01 | Management insight card routes | 2/6 | C | **A** | +2 | +1 | `ca1bc4e` | green |
-| INTEL-02 | KPI drill-down MG-01 | 2/6 | B | **A** | +8 | +2 | pending | pending |
-| INTEL-03 | Context-aware copilot | 2 | C | — | — | — | — | — |
+| INTEL-02 | KPI drill-down MG-01 | 2/6 | B | **A** | +8 | +2 | `b021b72` | green |
+| INTEL-03 | Context-aware copilot | 2 | C | **B** | +5 | +1 | pending | pending |
+| INTEL-04 | Floating chat bubble | 2 | D | — | — | — | — | — |
 | ACAD-01 | Academic promotion engine | 3 | D | — | — | — | — | — |
 | AUTO-01 | Workflow automation engine | 5 | D | — | — | — | — | — |
 
@@ -116,7 +117,7 @@
 
 ## Next action
 
-**INTEL-03:** Pass client screen context (route, module, entity ids) into copilot send API — validate server `copilot_context_engine.ts` bundles.
+**INTEL-04:** Floating copilot dock + mobile persona chat shells using shared `CopilotScreenContext`.
 
 Execution: audit → implement → tests → Patrol → gates → commit → push → CI → update registry.
 

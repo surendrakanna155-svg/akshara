@@ -1,4 +1,6 @@
 import '../../../features/copilot/copilot_models.dart';
+import '../../../features/copilot/copilot_screen_context.dart';
+import '../../../features/copilot/copilot_stub_responses.dart';
 import '../interfaces/copilot_repository.dart';
 import '../repository_query.dart';
 
@@ -76,6 +78,24 @@ class MockCopilotRepository implements CopilotRepository {
       description: 'Templates, broadcasts, and delivery metrics (read-only).',
       skills: ['summarize', 'explain', 'search', 'report', 'operational_qa'],
     ),
+    CopilotAssistant(
+      type: CopilotAssistantType.parentGuidance,
+      label: 'Parent Guidance Assistant',
+      description: 'Staff guidance for parent FAQs and communication tone.',
+      skills: ['parent_faq', 'draft_guidance', 'explain', 'operational_qa'],
+    ),
+    CopilotAssistant(
+      type: CopilotAssistantType.teacher,
+      label: 'Teacher Copilot',
+      description: 'Class attendance, homework, and timetable guidance.',
+      skills: ['attendance', 'timetable', 'class_insights', 'operational_qa'],
+    ),
+    CopilotAssistant(
+      type: CopilotAssistantType.principal,
+      label: 'Principal Copilot',
+      description: 'School health, risks, and executive briefings.',
+      skills: ['executive_summary', 'risk_briefing', 'health_score', 'operational_qa'],
+    ),
   ];
 
   static const _suggestions = {
@@ -100,6 +120,18 @@ class MockCopilotRepository implements CopilotRepository {
     CopilotAssistantType.communication: [
       'Summarize notification templates available',
       'Explain broadcast delivery metrics',
+    ],
+    CopilotAssistantType.parentGuidance: [
+      'How should I explain a fee balance to a parent?',
+      'Draft a polite absence follow-up message',
+    ],
+    CopilotAssistantType.teacher: [
+      'Which students need attendance follow-up?',
+      'Summarize homework completion for my class',
+    ],
+    CopilotAssistantType.principal: [
+      'Summarize school health for this week',
+      'Which at-risk students need attention?',
     ],
   };
 
@@ -161,24 +193,28 @@ class MockCopilotRepository implements CopilotRepository {
     required RepositoryQuery query,
     required String sessionId,
     required String content,
+    CopilotScreenContext? screenContext,
   }) async {
     final now = DateTime.now();
+    final reply = buildContextAwareStubReply(
+      userMessage: content,
+      screenContext: screenContext,
+    );
     final userMessage = CopilotMessage(
       id: 'msg_user_$now',
       sessionId: sessionId,
       role: 'user',
       content: content,
       createdAt: now,
+      metadata: screenContext == null ? const {} : {'screenContext': screenContext.toJson()},
     );
     final assistantMessage = CopilotMessage(
       id: 'msg_assistant_$now',
       sessionId: sessionId,
       role: 'assistant',
-      content:
-          'Read-only assistant response for "${content.trim()}". '
-          'I can summarize, explain, and search ERP context but cannot mutate records.',
+      content: reply,
       createdAt: now.add(const Duration(seconds: 1)),
-      metadata: const {'model': 'akshara-stub', 'stub': true},
+      metadata: const {'model': 'akshara-stub', 'stub': true, 'contextAware': true},
     );
     _messages.putIfAbsent(sessionId, () => []).addAll([userMessage, assistantMessage]);
     final index = _sessions.indexWhere((s) => s.id == sessionId);

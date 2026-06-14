@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/akshara_empty_state.dart';
 import '../../shared/widgets/akshara_error_state.dart';
 import '../../shared/widgets/akshara_loading_state.dart';
@@ -11,6 +12,7 @@ import '../admin/admin_content_scaffold.dart';
 import '../admin/admin_layout.dart';
 import '../admin/admin_shell.dart';
 import '../admin/models/admin_nav_models.dart';
+import 'copilot_context_provider.dart';
 import 'copilot_models.dart';
 import 'copilot_provider.dart';
 
@@ -72,6 +74,7 @@ class _CopilotScreenState extends ConsumerState<CopilotScreen> {
     final selectedSessionId = ref.watch(copilotSelectedSessionIdProvider);
     final canSend = ref.watch(copilotCanSendProvider);
     final sendState = ref.watch(copilotSendMessageProvider);
+    final screenContext = ref.watch(copilotEffectiveContextProvider);
     final isMobile = AdminLayout.isMobile(context);
 
     return AdminContentScaffold(
@@ -122,6 +125,27 @@ class _CopilotScreenState extends ConsumerState<CopilotScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (screenContext != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AksharaSpacing.s4,
+                            AksharaSpacing.s4,
+                            AksharaSpacing.s4,
+                            0,
+                          ),
+                          child: Material(
+                            key: QaTestKeys.copilotContextBanner,
+                            color: context.colors.primaryContainer.withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(AksharaSpacing.s2),
+                            child: Padding(
+                              padding: const EdgeInsets.all(AksharaSpacing.s3),
+                              child: Text(
+                                'Context: ${screenContext.displaySummary}',
+                                style: context.aksharaText.bodySmall,
+                              ),
+                            ),
+                          ),
+                        ),
                       Padding(
                         padding: const EdgeInsets.all(AksharaSpacing.s4),
                         child: suggestionsAsync.when(
@@ -183,6 +207,7 @@ class _CopilotScreenState extends ConsumerState<CopilotScreen> {
                           children: [
                             Expanded(
                               child: TextField(
+                                key: QaTestKeys.copilotMessageField,
                                 controller: _messageController,
                                 minLines: 1,
                                 maxLines: 4,
@@ -196,6 +221,7 @@ class _CopilotScreenState extends ConsumerState<CopilotScreen> {
                             ),
                             const SizedBox(width: AksharaSpacing.s3),
                             FilledButton.icon(
+                              key: QaTestKeys.copilotSendButton,
                               onPressed: canSend &&
                                       selectedSessionId != null &&
                                       !sendState.isLoading
@@ -262,6 +288,7 @@ class _Sidebar extends StatelessWidget {
           ),
           const SizedBox(height: AksharaSpacing.s4),
           FilledButton.icon(
+            key: QaTestKeys.copilotNewConversationButton,
             onPressed: onNewConversation,
             icon: const Icon(Icons.add_comment_outlined),
             label: const Text('New conversation'),

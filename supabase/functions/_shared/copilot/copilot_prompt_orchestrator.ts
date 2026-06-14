@@ -40,6 +40,7 @@ Parent guidance mode:
 export function buildSystemPrompt(
   assistantType: CopilotAssistantType,
   context: CopilotContextBundle,
+  screenContext?: Record<string, unknown>,
 ): string {
   const assistant = COPILOT_ASSISTANTS.find((a) => a.type === assistantType)!;
   const extraPolicy = assistantType === "communication"
@@ -66,13 +67,15 @@ export function buildSystemPrompt(
     `Teacher operations: ${JSON.stringify(context.teacherOps)}`,
     `Analytics context: ${JSON.stringify(context.analytics)}`,
     `Student lookup: ${JSON.stringify(context.studentLookup)}`,
-  ].join("\n");
+    screenContext ? `Client screen context: ${JSON.stringify(screenContext)}` : "",
+  ].filter(Boolean).join("\n");
 }
 
 export function buildStubAssistantReply(
   assistantType: CopilotAssistantType,
   userMessage: string,
   context: CopilotContextBundle,
+  screenContext?: Record<string, unknown>,
 ): string {
   const intro = `**${assistantType.toUpperCase()} Assistant (read-only stub)**\n\n`;
   const question = userMessage.trim().slice(0, 200);
@@ -138,6 +141,14 @@ export function buildStubAssistantReply(
       `- School health score: ${health?.schoolHealthScore ?? "n/a"}`,
       `- Anomalies flagged: ${(context.analytics.anomalies as unknown[])?.length ?? 0}`,
       `- Use this context to explain risk, health, trends, and management briefings.`,
+      "",
+    );
+  }
+
+  if (screenContext && Object.keys(screenContext).length > 0) {
+    lines.push(
+      "**Client screen context**",
+      `- ${JSON.stringify(screenContext)}`,
       "",
     );
   }

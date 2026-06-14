@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../router/route_names.dart';
 import '../../theme/spacing.dart';
+import '../copilot/copilot_navigation.dart';
 import 'admin_app_bar.dart';
 import 'admin_filter_bar.dart';
 import 'admin_layout.dart';
@@ -66,7 +67,7 @@ class AdminContentScaffold extends ConsumerWidget {
             onNotificationsTap: onNotificationsTap ??
                 () => context.push(RouteNames.parentNotifications),
             onAiCopilotTap: onAiCopilotTap ??
-                () => context.go(RouteNames.copilot),
+                () => openCopilotWithCurrentContext(context, ref),
             onProfileTap: onProfileTap ??
                 () => _showPlaceholderSnackBar(
                       context,

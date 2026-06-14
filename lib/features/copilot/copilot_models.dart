@@ -5,7 +5,10 @@ enum CopilotAssistantType {
   finance,
   sis,
   academic,
-  communication;
+  communication,
+  parentGuidance,
+  teacher,
+  principal;
 
   String get label => switch (this) {
         CopilotAssistantType.admissions => 'Admissions Assistant',
@@ -13,6 +16,9 @@ enum CopilotAssistantType {
         CopilotAssistantType.sis => 'SIS Assistant',
         CopilotAssistantType.academic => 'Academic Assistant',
         CopilotAssistantType.communication => 'Communication Assistant',
+        CopilotAssistantType.parentGuidance => 'Parent Guidance Assistant',
+        CopilotAssistantType.teacher => 'Teacher Copilot',
+        CopilotAssistantType.principal => 'Principal Copilot',
       };
 
   static CopilotAssistantType? fromApi(String value) {

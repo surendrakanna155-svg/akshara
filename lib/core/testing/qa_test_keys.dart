@@ -315,6 +315,17 @@ abstract final class QaTestKeys {
   static ValueKey<String> managementKpiDrillButton(String kpiId) =>
       ValueKey<String>('management_kpi_drill_$kpiId');
 
+  static const erpCopilotButton = ValueKey<String>('erp_copilot_button');
+
+  static const copilotContextBanner = ValueKey<String>('copilot_context_banner');
+
+  static const copilotMessageField = ValueKey<String>('copilot_message_field');
+
+  static const copilotSendButton = ValueKey<String>('copilot_send_button');
+
+  static const copilotNewConversationButton =
+      ValueKey<String>('copilot_new_conversation_button');
+
   static const libraryIssueScanButton =
       ValueKey<String>('library_issue_scan_button');
 

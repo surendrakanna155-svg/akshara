@@ -102,6 +102,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
                     onPressed: onNotificationsTap,
                   ),
                   IconButton(
+                    key: QaTestKeys.erpCopilotButton,
                     icon: const Icon(Icons.psychology_outlined),
                     tooltip: 'AI Copilot',
                     onPressed: onAiCopilotTap,

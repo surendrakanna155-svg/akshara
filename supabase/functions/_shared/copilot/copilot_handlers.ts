@@ -214,8 +214,9 @@ export async function handleSendMessage(
   const denied = requireCopilotRun(auth.claims);
   if (denied) return denied;
 
-  const body = await readJson<{ content?: string }>(req);
+  const body = await readJson<{ content?: string; screenContext?: Record<string, unknown> }>(req);
   const content = body?.content?.trim() ?? "";
+  const screenContext = body?.screenContext;
   if (!content) {
     return errorEnvelope("VALIDATION_ERROR", "content required", 422);
   }
@@ -245,6 +246,7 @@ export async function handleSendMessage(
       const systemPrompt = buildSystemPrompt(
         session.assistant_type as CopilotAssistantType,
         context,
+        screenContext,
       );
 
       await recordServerAuditEvent(db, auth.claims, {
@@ -255,6 +257,7 @@ export async function handleSendMessage(
         metadata: {
           assistantType: session.assistant_type,
           promptLength: String(content.length),
+          hasScreenContext: String(screenContext != null),
         },
       }, req);
 

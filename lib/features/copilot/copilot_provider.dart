@@ -5,6 +5,7 @@ import '../../core/repositories/repository_query.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
+import 'copilot_context_provider.dart';
 import 'copilot_models.dart';
 
 final copilotSelectedAssistantProvider =
@@ -72,10 +73,12 @@ class CopilotSendMessageNotifier extends AsyncNotifier<CopilotSendMessageResult?
 
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      final screenContext = ref.read(copilotEffectiveContextProvider);
       final result = await ref.read(copilotRepositoryProvider).sendMessage(
             query: ref.read(copilotQueryProvider),
             sessionId: sessionId,
             content: content.trim(),
+            screenContext: screenContext,
           );
       ref.invalidate(copilotSessionDetailFutureProvider);
       ref.invalidate(copilotSessionsFutureProvider);
