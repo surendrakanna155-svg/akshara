@@ -77,7 +77,7 @@
 
 | Feature ID | Name | Phase | Class before | Class after | Tests + | Patrol + | Commit | CI |
 |------------|------|-------|--------------|-------------|---------|----------|--------|-----|
-| INTEL-01 | Management insight card routes | 2/6 | C | **A** | +2 | +1 | pending | pending |
+| INTEL-01 | Management insight card routes | 2/6 | C | **A** | +2 | +1 | `ca1bc4e` | pending |
 | INTEL-02 | KPI drill-down MG-01 | 6 | B | — | — | — | — | — |
 | INTEL-03 | Context-aware copilot | 2 | C | — | — | — | — | — |
 | ACAD-01 | Academic promotion engine | 3 | D | — | — | — | — | — |
