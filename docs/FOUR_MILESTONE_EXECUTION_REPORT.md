@@ -69,7 +69,7 @@ Executed Phase 0 reconciliation and **four complete milestones** with full-stack
 
 | Milestone | Commit | Message |
 |-----------|--------|---------|
-| Batch (M1–M4 + INTEL-06–10 + Phase 0 docs) | *pending push* | `feat(completion): four-milestone program — promotion, continuity, workflow, platform intelligence` |
+| Batch (M1–M4 + INTEL-06–10 + Phase 0 docs) | `994f28f` … `5988c07` | Four milestone commits on `main` |
 
 > Update this table after `git push` with actual SHAs.
 

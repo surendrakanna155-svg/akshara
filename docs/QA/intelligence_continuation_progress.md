@@ -26,14 +26,10 @@
 |---|---------|--------|---------|----------|----------------|-----------|--------|
 | 1 | **INTEL-05 — AI Access Modes** | ✅ Complete | +6 | +1 | ~58% | ~78% | `c25d32f` |
 | 2 | **At-Risk Student Intelligence** | ✅ MVP | +2 | — | ~62% | ~78% | `c25d32f` |
-| 3 | **INTEL-06 — Teacher Intervention Suggestions** | ✅ MVP | +2 | — | ~72% | ~78% | pending |
-| 4 | **INTEL-07 — Attendance Intelligence** | ✅ MVP | +2 | — | ~78% | ~78% | pending |
-| 5 | **INTEL-08 — Fee Collection Intelligence** | ✅ MVP | +2 | — | ~84% | ~78% | pending |
-| 6 | **INTEL-09 — Academic Promotion Readiness** | ✅ MVP | +2 | — | ~90% | ~78% | pending |
-| 7 | **Student Reshuffle Engine** | ✅ P2 stub | — | — | ~92% | — | pending |
-| 8 | **Teacher Continuity Engine** | ✅ P2 stub | — | — | ~94% | — | pending |
-| 9 | **Workflow Automation Engine** | ✅ P2 stub | — | — | ~96% | — | pending |
-| 10 | **INTEL-10 — Unified Recommendation Engine** | ✅ MVP | +1 | — | **~100%** | ~78% | pending |
+| 1 | Promotion & Reshuffle Engine | ✅ Complete | +3 | +12 | ~72% | ~78% | `994f28f` |
+| 2 | Continuity Platform | ✅ Complete | +3 | +1 | ~78% | ~78% | `2d70aaa` |
+| 3 | Workflow Automation Platform | ✅ Complete | +4 | +1 | ~84% | ~78% | `ee4769f` |
+| 4 | Multi-School Intelligence | ✅ Complete | +3 | +1 | **~72%** | **~80%** | `5988c07` |
 
 > **100% definition:** All intelligence framework MVPs at Class B (deterministic engines + UI tabs + copilot context + unit tests). Live ML, bulk SIS promote, and workflow runtime remain deferred.
 
