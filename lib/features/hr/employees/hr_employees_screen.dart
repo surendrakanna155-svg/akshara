@@ -41,23 +41,32 @@ class HrEmployeesScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(hrEmployeesFilterProvider.notifier).state = index,
-      filterTrailing: AksharaManageAction(
-        permission: Permission.manageHr,
-        child: FilledButton.icon(
-          key: QaTestKeys.hrCreateEmployeeButton,
-          onPressed: () => showCreateHrEmployeeDialog(context, ref),
-          icon: const Icon(Icons.person_add_outlined, size: 18),
-          label: const Text('Add employee'),
-        ),
-      ),
-      body: _buildBody(
-        context,
-        ref: ref,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        employees: employees,
-        pageResult: pageResult,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: AksharaManageAction(
+              permission: Permission.manageHr,
+              child: FilledButton.icon(
+                key: QaTestKeys.hrCreateEmployeeButton,
+                onPressed: () => showCreateHrEmployeeDialog(context, ref),
+                icon: const Icon(Icons.person_add_outlined, size: 18),
+                label: const Text('Add employee'),
+              ),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          _buildBody(
+            context,
+            ref: ref,
+            isLoading: isLoading,
+            isError: isError,
+            isEmpty: isEmpty,
+            employees: employees,
+            pageResult: pageResult,
+          ),
+        ],
       ),
     );
   }

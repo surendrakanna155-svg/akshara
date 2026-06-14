@@ -43,40 +43,47 @@ class HostelStudentsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(hostelStudentsFilterProvider.notifier).state = index,
-      filterTrailing: AksharaManageAction(
-        permission: Permission.manageHostel,
-        child: Wrap(
-          spacing: AksharaSpacing.s2,
-          runSpacing: AksharaSpacing.s2,
-          children: [
-            OutlinedButton.icon(
-              key: QaTestKeys.hostelAdmitStudentButton,
-              onPressed: () => showAdmitHostelStudentDialog(context, ref),
-              icon: const Icon(Icons.person_add_outlined, size: 18),
-              label: const Text('Admit'),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AksharaManageAction(
+            permission: Permission.manageHostel,
+            child: Wrap(
+              spacing: AksharaSpacing.s2,
+              runSpacing: AksharaSpacing.s2,
+              alignment: WrapAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  key: QaTestKeys.hostelAdmitStudentButton,
+                  onPressed: () => showAdmitHostelStudentDialog(context, ref),
+                  icon: const Icon(Icons.person_add_outlined, size: 18),
+                  label: const Text('Admit'),
+                ),
+                FilledButton.icon(
+                  key: QaTestKeys.hostelAssignRoomButton,
+                  onPressed: () => showAssignHostelRoomDialog(context, ref),
+                  icon: const Icon(Icons.bed_outlined, size: 18),
+                  label: const Text('Assign room'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => context.go(RouteNames.sisStudents),
+                  icon: const Icon(Icons.badge_outlined, size: 18),
+                  label: const Text('SIS registry'),
+                ),
+              ],
             ),
-            FilledButton.icon(
-              key: QaTestKeys.hostelAssignRoomButton,
-              onPressed: () => showAssignHostelRoomDialog(context, ref),
-              icon: const Icon(Icons.bed_outlined, size: 18),
-              label: const Text('Assign room'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => context.go(RouteNames.sisStudents),
-              icon: const Icon(Icons.badge_outlined, size: 18),
-              label: const Text('SIS registry'),
-            ),
-          ],
-        ),
-      ),
-      body: _buildBody(
-        context,
-        ref,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        students: students,
-        pageResult: pageResult,
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          _buildBody(
+            context,
+            ref,
+            isLoading: isLoading,
+            isError: isError,
+            isEmpty: isEmpty,
+            students: students,
+            pageResult: pageResult,
+          ),
+        ],
       ),
     );
   }

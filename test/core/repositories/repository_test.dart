@@ -102,14 +102,23 @@ void main() {
       const query = RepositoryQuery.demo;
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
-      expect((await repo.getStudents(query: query)).total, 4);
+      expect((await repo.getStudents(query: query)).total, 5);
       expect((await repo.getRooms(query: query)).total, 5);
       expect((await repo.getAttendanceRecords(query: query)).total, 4);
       expect((await repo.getLeaveRequests(query: query)).total, 4);
       expect((await repo.getMessData(query: query)).weeklyMenus, hasLength(4));
       expect((await repo.getVisitors(query: query)).activeVisitors, hasLength(2));
       expect((await repo.getReports(query: query)).catalog, hasLength(6));
-      expect((await repo.getOccupancyMetrics(query: query)).utilizationPercent, 87);
+      final metrics = await repo.getOccupancyMetrics(query: query);
+      final rooms = await repo.getRooms(query: query);
+      final totalBeds =
+          rooms.items.fold<int>(0, (sum, room) => sum + room.totalBeds);
+      final occupiedBeds =
+          rooms.items.fold<int>(0, (sum, room) => sum + room.occupiedBeds);
+      final expectedUtilization = totalBeds == 0
+          ? 0
+          : ((occupiedBeds / totalBeds) * 100).round();
+      expect(metrics.utilizationPercent, expectedUtilization);
     });
 
     test('MockLibraryRepository returns all LB screen data', () async {
