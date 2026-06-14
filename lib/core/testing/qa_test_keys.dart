@@ -306,6 +306,12 @@ abstract final class QaTestKeys {
   static const managementApprovalSuccessSnackbar =
       ValueKey<String>('management_approval_success_snackbar');
 
+  static const managementDashboardExportButton =
+      ValueKey<String>('management_dashboard_export_button');
+
+  static const managementDashboardExportSnackbar =
+      ValueKey<String>('management_dashboard_export_snackbar');
+
   static const libraryIssueScanButton =
       ValueKey<String>('library_issue_scan_button');
 

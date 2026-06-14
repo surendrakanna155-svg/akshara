@@ -85,7 +85,7 @@ All P0 items closed. Next tier: P0-adjacent completion plan items reclassified a
 
 | Field | Value |
 |-------|-------|
-| Hash | *(filled after commit)* |
+| Hash | `eff64bb` |
 | Message | feat(finance): implement P0#6 invoice issue/cancel and collection cancel UI. |
 | Branch | `main` |
 
@@ -95,7 +95,7 @@ All P0 items closed. Next tier: P0-adjacent completion plan items reclassified a
 
 | Workflow | Job | Result |
 |----------|-----|--------|
-| Flutter CI | `analyze-and-test` | *(filled after push)* |
+| Flutter CI | `analyze-and-test` | **success** (run 27504672294) |
 | Flutter CI | `phase1-patrol-smoke` | known GHA flake |
 
 **Primary gate:** `analyze-and-test` green on commit hash above.

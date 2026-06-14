@@ -68,6 +68,7 @@ ALL_TARGETS=(
   "patrol_test/workflows/hr_payroll_e2e_test.dart"
   "patrol_test/workflows/hr_employee_crud_e2e_test.dart"
   "patrol_test/workflows/management_approval_e2e_test.dart"
+  "patrol_test/workflows/management_dashboard_export_e2e_test.dart"
   "patrol_test/workflows/library_issue_return_e2e_test.dart"
   "patrol_test/workflows/hostel_allocation_e2e_test.dart"
   "patrol_test/workflows/inventory_po_e2e_test.dart"

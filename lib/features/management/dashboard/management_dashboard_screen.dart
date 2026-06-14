@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -41,7 +42,18 @@ class ManagementDashboardScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageManagement,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          key: QaTestKeys.managementDashboardExportButton,
+          onPressed: () {
+            context.go(RouteNames.financeReports);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                key: QaTestKeys.managementDashboardExportSnackbar,
+                content: Text(
+                  'Executive report export — select a report and export PDF',
+                ),
+              ),
+            );
+          },
           icon: const Icon(Icons.download_outlined, size: 18),
           label: const Text('Export'),
         ),

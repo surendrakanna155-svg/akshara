@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/management/academics/management_academics_screen.dart';
 import 'package:akshara_erp/features/management/admissions/management_admissions_screen.dart';
 import 'package:akshara_erp/features/management/analytics/management_analytics_screen.dart';
@@ -50,6 +51,16 @@ void main() {
 
       expect(find.text('Revenue (MTD)'), findsOneWidget);
       expect(find.text('Approval queue'), findsOneWidget);
+    });
+
+    testWidgets('ManagementDashboardScreen export button is present', (
+      tester,
+    ) async {
+      await pumpManagementScreen(tester, const ManagementDashboardScreen());
+      expect(
+        find.byKey(QaTestKeys.managementDashboardExportButton),
+        findsOneWidget,
+      );
     });
 
     testWidgets('ManagementDashboardScreen shows loading state', (tester) async {

@@ -332,6 +332,9 @@ Find P0 gap → Implement → flutter analyze → affected tests → Patrol (if 
 
 - `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md` — master feature registry (SSOT)  
 - `docs/AKSHARA_VISION_GAP_ANALYSIS.md` — vision vs implementation gaps  
+- `docs/FUTURE_VISION_RECONCILIATION.md` — FutureVision vs registry audit  
+- `docs/ADVANCED_FEATURE_STATUS.md` — advanced feature classification  
+- `docs/AKSHARA_FINAL_ROADMAP.md` — post-P0 prioritized roadmap  
 - `docs/AKSHARA_IMPLEMENTATION_BACKLOG.md` — prioritized P0–P3 backlog  
 - `docs/QA/final_completion_progress.md` — session log  
 - `docs/QA/final_completion_summary.md` — executive rollup  
