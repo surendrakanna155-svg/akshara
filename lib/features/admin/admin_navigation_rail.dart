@@ -4,8 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../../theme/breakpoints.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import '../copilot/copilot_navigation.dart';
+import '../copilot/settings/ai_access_preferences_provider.dart';
+import '../copilot/widgets/copilot_ai_quick_actions.dart';
 import 'admin_navigation_provider.dart';
 import 'models/admin_nav_models.dart';
 
@@ -51,6 +55,13 @@ class AdminNavigationRail extends ConsumerWidget {
     final text = context.aksharaText;
     final ext = context.akshara;
     final selectedIndex = _selectedIndex(destinations);
+    final width = MediaQuery.sizeOf(context).width;
+    final breakpoint = AksharaBreakpoints.fromWidth(width);
+    final prefs = ref.watch(aiAccessPreferencesProvider);
+    final showSidebarAi = shouldShowAdminSidebarAiEntry(
+      prefs: prefs,
+      breakpoint: breakpoint,
+    );
 
     if (inDrawer) {
       return Material(
@@ -103,6 +114,7 @@ class AdminNavigationRail extends ConsumerWidget {
                   },
                 ),
               ),
+              if (showSidebarAi) _AdminSidebarAiTile(onNavigate: onDestinationSelected),
             ],
           ),
         ),
@@ -116,9 +128,7 @@ class AdminNavigationRail extends ConsumerWidget {
         minWidth: ext.navRailCollapsedWidth,
         minExtendedWidth: ext.navRailExpandedWidth,
         selectedIndex: selectedIndex,
-        labelType: expanded
-            ? NavigationRailLabelType.none
-            : NavigationRailLabelType.none,
+        labelType: NavigationRailLabelType.none,
         leading: expanded
             ? Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -139,6 +149,15 @@ class AdminNavigationRail extends ConsumerWidget {
                 ),
               )
             : const SizedBox(height: AksharaSpacing.s6),
+        trailing: showSidebarAi
+            ? Padding(
+                padding: const EdgeInsets.only(bottom: AksharaSpacing.s4),
+                child: _AdminSidebarAiTile(
+                  compact: !expanded,
+                  onNavigate: onDestinationSelected,
+                ),
+              )
+            : null,
         onDestinationSelected: (index) =>
             _navigate(context, destinations[index]),
         destinations: [
@@ -149,6 +168,58 @@ class AdminNavigationRail extends ConsumerWidget {
               label: Text(destination.label),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _AdminSidebarAiTile extends ConsumerWidget {
+  const _AdminSidebarAiTile({
+    this.compact = false,
+    this.onNavigate,
+  });
+
+  final bool compact;
+  final VoidCallback? onNavigate;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+
+    return Semantics(
+      button: true,
+      label: 'AI Assistant sidebar entry',
+      child: Material(
+        color: colors.surfaceContainerHighest,
+        child: InkWell(
+          key: QaTestKeys.copilotSidebarAiEntry,
+          onTap: () {
+            openAiAssistantFromDock(context, ref);
+            onNavigate?.call();
+          },
+          onLongPress: () =>
+              handleCopilotAiEntryLongPress(context, ref, Offset.zero),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? AksharaSpacing.s2 : AksharaSpacing.s4,
+              vertical: AksharaSpacing.s3,
+            ),
+            child: compact
+                ? Icon(Icons.psychology_outlined, color: colors.primary)
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.psychology_outlined, color: colors.primary),
+                      const SizedBox(width: AksharaSpacing.s3),
+                      Text(
+                        'AI Assistant',
+                        style: text.labelLarge.copyWith(color: colors.primary),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }

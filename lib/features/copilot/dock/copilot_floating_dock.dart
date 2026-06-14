@@ -10,6 +10,8 @@ import '../copilot_context_provider.dart';
 import '../copilot_navigation.dart';
 import '../copilot_role_intelligence.dart';
 import '../persona/copilot_persona_experience.dart';
+import '../settings/ai_access_preferences_provider.dart';
+import '../widgets/copilot_ai_quick_actions.dart';
 import 'copilot_dock_provider.dart';
 
 /// Global floating AI dock — one tap to open role-aware assistant (INTEL-04).
@@ -28,6 +30,11 @@ class CopilotFloatingDock extends ConsumerWidget {
     final usesFullCopilot = ref.watch(copilotDockUsesFullCopilotProvider);
     final width = MediaQuery.sizeOf(context).width;
     final isMobile = AksharaBreakpoints.fromWidth(width) == LayoutBreakpoint.mobile;
+    final breakpoint = AksharaBreakpoints.fromWidth(width);
+    final prefs = ref.watch(aiAccessPreferencesProvider);
+    if (!copilotFloatingDockEnabled(prefs: prefs, breakpoint: breakpoint)) {
+      return const SizedBox.shrink();
+    }
     final bottomInset = isMobile ? 88.0 : AksharaSpacing.s6;
 
     return Positioned(
@@ -60,7 +67,8 @@ class CopilotFloatingDock extends ConsumerWidget {
                     onTap: () {
                       ref.read(copilotDockExpandedProvider.notifier).state = true;
                     },
-                    onLongPress: () => openAiAssistantFromDock(context, ref),
+                    onLongPress: () =>
+                        handleCopilotAiEntryLongPress(context, ref, Offset.zero),
                   ),
           ),
         ),

@@ -1,8 +1,25 @@
-# AI Entry Point Audit — INTEL-04 Track D
+# AI Entry Point Audit — INTEL-04 / INTEL-05
 
 **Date:** June 2026  
 **Scope:** ERP · Parent App · Teacher App · Student App  
 **Classification:** **Implemented** · **Partial** · **Missing**
+
+---
+
+## AI Access Modes (INTEL-05)
+
+| Mode | ERP Admin | Parent | Teacher | Student | Class |
+|------|-----------|--------|---------|---------|-------|
+| Floating bubble | ✅ Optional overlay | ✅ Optional | ✅ Optional | ✅ Optional | **Implemented** |
+| Bottom nav center | ✅ Mobile drawer fallback | ✅ Default (auto) | ✅ Default (auto) | ✅ Default (auto) | **Implemented** |
+| Sidebar entry | ✅ Default desktop (auto) | — | — | — | **Implemented** |
+| App bar AI action | ✅ When selected | ⚠️ Dashboard chips | ⚠️ Dashboard chips | ⚠️ Dashboard chips | **Partial** |
+| Auto (recommended) | ✅ | ✅ | ✅ | ✅ | **Implemented** |
+| Settings → AI Assistant | ✅ MG-08 + profile | ✅ Parent profile | — | — | **Partial** |
+| Cross-device sync | — | — | — | — | **Missing** (local prefs only) |
+| Long-press quick actions | ✅ All entry buttons | ✅ | ✅ | ✅ | **Implemented** |
+
+Settings route: `/settings/ai-assistant` · Persistence: `ai_access_preferences_v1_{userId}`
 
 ---
 

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../auth/auth_logout.dart';
 import '../../auth/auth_provider.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../core/testing/qa_test_keys.dart';
 import '../parent_active_child_provider.dart';
 import 'parent_profile_provider.dart';
@@ -163,6 +166,14 @@ class ParentProfileScreen extends ConsumerWidget {
                                 label: 'Leave requests',
                                 value: 'Apply leave and track approvals',
                                 onTap: onLeaveTap,
+                              ),
+                              const SizedBox(height: AksharaSpacing.s4),
+                              ProfileInfoRow(
+                                key: QaTestKeys.aiAssistantSettingsLink,
+                                icon: Icons.psychology_outlined,
+                                label: 'AI Assistant',
+                                value: 'Choose how AI appears in the app',
+                                onTap: () => context.push(RouteNames.aiAssistantSettings),
                               ),
                               const SizedBox(height: AksharaSpacing.s4),
                               AksharaInsightCard(

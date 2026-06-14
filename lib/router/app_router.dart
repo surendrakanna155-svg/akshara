@@ -149,6 +149,11 @@ GoRouter createAppRouter({
         redirect: (context, state) => RouteNames.parentDashboard,
       ),
       GoRoute(
+        path: RouteNames.aiAssistantSettings,
+        name: 'aiAssistantSettings',
+        builder: (context, state) => aiAssistantSettingsRouteBuilder(context, state),
+      ),
+      GoRoute(
         path: RouteNames.aiAssistant,
         name: 'aiAssistant',
         builder: (context, state) => aiAssistantRouteBuilder(context, state),

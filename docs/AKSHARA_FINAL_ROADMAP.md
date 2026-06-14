@@ -59,6 +59,7 @@
 | P1-03 | Intelligence insight card routes | #5 | 1–2 d | **Done** (INTEL-01) |
 | INTEL-03 | Context-aware copilot | #3, #29 | 2–3 d | **Done** (`1d116d2`) |
 | INTEL-04 | Floating copilot dock + mobile shells | #29 | 3–5 d | **Done** |
+| INTEL-05 | AI access modes + at-risk MVP | #29, #3 | 3–5 d | **Done** |
 | P1-04 | Inventory PO approve + receive | — | 4–5 d | **Next** |
 | P1-05 | Admissions settings persistence | — | 2–3 d | Config consistency |
 | P1-06 | Notifications broadcast admin | #2 | 4–5 d | School-wide comms |

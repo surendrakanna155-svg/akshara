@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../features/auth/auth_provider.dart';
 import '../../../router/route_names.dart';
 import '../copilot_provider.dart';
+import '../../../theme/breakpoints.dart';
+import '../settings/ai_access_preferences.dart';
+import '../settings/ai_access_preferences_provider.dart';
 import '../copilot_role_intelligence.dart';
 
 /// Whether the floating dock panel is expanded (INTEL-04).
@@ -13,6 +16,7 @@ final copilotDockExpandedProvider = StateProvider<bool>((ref) => false);
 const _hiddenDockRoutes = {
   RouteNames.copilot,
   RouteNames.aiAssistant,
+  RouteNames.aiAssistantSettings,
 };
 
 bool copilotDockHiddenForRoute(String route) {
@@ -33,6 +37,14 @@ final copilotDockVisibleProvider = Provider<bool>((ref) {
 final copilotDockUsesFullCopilotProvider = Provider<bool>((ref) {
   return ref.watch(copilotCanUseProvider);
 });
+
+/// True when the floating dock should render on the current route and access mode.
+bool copilotFloatingDockEnabled({
+  required AiAccessPreferences prefs,
+  required LayoutBreakpoint breakpoint,
+}) {
+  return shouldShowFloatingAiDock(prefs: prefs, breakpoint: breakpoint);
+}
 
 IconData copilotDockIconForPersona(CopilotPersonaRole persona) => switch (persona) {
       CopilotPersonaRole.platformOwner ||

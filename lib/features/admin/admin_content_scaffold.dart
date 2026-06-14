@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../router/route_names.dart';
 import '../../theme/spacing.dart';
 import '../copilot/copilot_navigation.dart';
+import '../../theme/breakpoints.dart';
+import '../copilot/settings/ai_access_preferences_provider.dart';
 import 'admin_app_bar.dart';
 import 'admin_filter_bar.dart';
 import 'admin_layout.dart';
@@ -54,6 +56,14 @@ class AdminContentScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final breakpoint =
+        AksharaBreakpoints.fromWidth(MediaQuery.sizeOf(context).width);
+    final prefs = ref.watch(aiAccessPreferencesProvider);
+    final showAppBarAi = shouldShowAppBarAiAction(
+      prefs: prefs,
+      breakpoint: breakpoint,
+    );
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       body: Column(
@@ -66,6 +76,7 @@ class AdminContentScaffold extends ConsumerWidget {
             onSearchTap: onSearchTap ?? () => showGlobalSearchOverlay(context, ref),
             onNotificationsTap: onNotificationsTap ??
                 () => context.push(RouteNames.parentNotifications),
+            showAiCopilot: showAppBarAi,
             onAiCopilotTap: onAiCopilotTap ??
                 () => openCopilotWithCurrentContext(context, ref),
             onProfileTap: onProfileTap ??

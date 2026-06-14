@@ -1,4 +1,7 @@
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
+import 'package:akshara_erp/features/copilot/settings/ai_access_mode.dart';
+import 'package:akshara_erp/features/copilot/settings/ai_access_preferences.dart';
+import 'package:akshara_erp/features/copilot/settings/ai_access_preferences_provider.dart';
 import 'package:akshara_erp/features/copilot/copilot_role_intelligence.dart';
 import 'package:akshara_erp/features/copilot/dock/copilot_dock_provider.dart';
 import 'package:akshara_erp/features/copilot/dock/copilot_floating_dock.dart';
@@ -72,6 +75,14 @@ void main() {
         ProviderScope(
           overrides: [
             authStateOverride(erpWidgetTestStaffAuth()),
+            aiAccessPreferencesProvider.overrideWith(() {
+              return _TestAiAccessPreferencesNotifier(
+                const AiAccessPreferences(
+                  mode: AiAccessMode.floatingBubble,
+                  floatingBubbleEnabled: true,
+                ),
+              );
+            }),
           ],
           child: MaterialApp.router(
             theme: AksharaAppTheme.light(),
@@ -119,4 +130,13 @@ void main() {
       expect(find.byKey(QaTestKeys.copilotFloatingDockFab), findsNothing);
     });
   });
+}
+
+class _TestAiAccessPreferencesNotifier extends AiAccessPreferencesNotifier {
+  _TestAiAccessPreferencesNotifier(this._initial);
+
+  final AiAccessPreferences _initial;
+
+  @override
+  AiAccessPreferences build() => _initial;
 }

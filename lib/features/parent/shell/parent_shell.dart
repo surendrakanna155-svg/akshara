@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../features/copilot/widgets/copilot_bottom_nav_ai_slot.dart';
 import '../../../features/school_completion/school_branding_theme_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../theme/spacing.dart';
@@ -101,22 +102,29 @@ class ParentShell extends ConsumerWidget {
           Expanded(child: child),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        height: context.akshara.bottomNavHeight,
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (index) {
-          final destination = _destinations[index];
-          if (destination.route != path) {
-            context.go(destination.route);
-          }
-        },
-        destinations: [
-          for (final d in _destinations)
-            NavigationDestination(
-              icon: Icon(d.icon),
-              selectedIcon: Icon(d.selectedIcon),
-              label: d.label,
-            ),
+      bottomNavigationBar: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          NavigationBar(
+            height: context.akshara.bottomNavHeight,
+            selectedIndex: selectedIndex,
+            onDestinationSelected: (index) {
+              final destination = _destinations[index];
+              if (destination.route != path) {
+                context.go(destination.route);
+              }
+            },
+            destinations: [
+              for (final d in _destinations)
+                NavigationDestination(
+                  icon: Icon(d.icon),
+                  selectedIcon: Icon(d.selectedIcon),
+                  label: d.label,
+                ),
+            ],
+          ),
+          const CopilotBottomNavAiSlot(),
         ],
       ),
     );

@@ -353,6 +353,30 @@ abstract final class QaTestKeys {
   static ValueKey<String> copilotPersonaPromptChip(String prompt) =>
       ValueKey<String>('copilot_persona_prompt_${prompt.hashCode}');
 
+  static const copilotAiEntryButton = ValueKey<String>('copilot_ai_entry_button');
+
+  static const copilotSidebarAiEntry = ValueKey<String>('copilot_sidebar_ai_entry');
+
+  static const copilotQuickActionReplyDialog =
+      ValueKey<String>('copilot_quick_action_reply_dialog');
+
+  static ValueKey<String> copilotQuickActionTile(String actionId) =>
+      ValueKey<String>('copilot_quick_action_$actionId');
+
+  static ValueKey<String> aiAccessModeOption(String modeKey) =>
+      ValueKey<String>('ai_access_mode_$modeKey');
+
+  static const aiAccessFloatingBubbleToggle =
+      ValueKey<String>('ai_access_floating_bubble_toggle');
+
+  static const aiAccessSyncNote = ValueKey<String>('ai_access_sync_note');
+
+  static const aiAssistantSettingsLink =
+      ValueKey<String>('ai_assistant_settings_link');
+
+  static ValueKey<String> atRiskStudentRow(String studentId) =>
+      ValueKey<String>('at_risk_student_$studentId');
+
   static const libraryIssueScanButton =
       ValueKey<String>('library_issue_scan_button');
 

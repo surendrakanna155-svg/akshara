@@ -1,8 +1,8 @@
 # AI Copilot Status
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** June 2026  
-**Program:** INTEL-04 — Floating dock + persona shells  
+**Program:** INTEL-05 — AI Access Modes + UX  
 **Classification:** **A** Fully Implemented · **B** Partial · **C** Mock Only · **D** Not Implemented
 
 ---
@@ -11,7 +11,7 @@
 
 | Metric | Value |
 |--------|-------|
-| **Overall copilot completion** | **~72%** functional · **~85%** UI/surface |
+| **Overall copilot completion** | **~78%** functional · **~88%** UI/surface |
 | **Live AI inference** | Server edge only (OpenAI stub); client default = mock |
 | **Production-ready chat** | ERP staff copilot + context injection |
 | **Persona coverage** | 8 persona experiences; staff → `/copilot`, mobile → `/ai-assistant` |
@@ -34,6 +34,20 @@ Legend: ✅ Yes · ⚠️ Partial · ❌ No · — N/A
 | Parent assistant | **B** | ✅ Persona shell | ✅ Dock + dashboard | ⚠️ Stub replies | ⚠️ | ✅ Context inject | Parent persona | ✅ Nav pilot |
 | Admin assistant | **B** | ✅ Copilot screen | ✅ Admin scaffold | ✅ Copilot repository | ✅ 5 assistant types | ⚠️ Server bundles | ✅ Full RBAC | ✅ Full suite |
 | Owner assistant | **B** | ✅ Same as admin copilot | ✅ Management + admin routes | ✅ Copilot + management intel | ⚠️ Module copilots mock | ⚠️ KPI/insight drills now wired | ✅ Super-admin / mgmt perms | ✅ Management + copilot tests |
+
+---
+
+## AI Access Modes (INTEL-05)
+
+| Capability | Class | Notes |
+|------------|-------|-------|
+| User-selectable modes (5 + auto) | **A** | Settings screen + per-account prefs |
+| Floating bubble optional overlay | **B** | Independent toggle |
+| Bottom nav center (mobile default) | **B** | Parent/Teacher/Student shells |
+| Sidebar entry (desktop default) | **B** | Admin rail trailing + mobile drawer |
+| App bar AI gating | **B** | Hidden unless mode selected |
+| Cross-device sync | **D** | Local SharedPreferences only |
+| Long-press quick actions | **B** | Context-aware stub dialog + continue |
 
 ---
 

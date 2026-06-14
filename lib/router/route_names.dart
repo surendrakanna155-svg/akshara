@@ -56,6 +56,7 @@ abstract final class RouteNames {
   static const String admin = '/admin';
   static const String copilot = '/copilot';
   static const String aiAssistant = '/ai-assistant';
+  static const String aiAssistantSettings = '/settings/ai-assistant';
   static const String education = '/education';
   static const String intelligence = '/intelligence';
   static const String studentSuccessIntelligence = '/intelligence/student-success';

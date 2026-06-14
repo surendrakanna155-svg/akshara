@@ -16,6 +16,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.unreadNotifications = 0,
     this.onSearchTap,
     this.onNotificationsTap,
+    this.showAiCopilot = true,
     this.onAiCopilotTap,
     this.onProfileTap,
   });
@@ -25,6 +26,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
   final int unreadNotifications;
   final VoidCallback? onSearchTap;
   final VoidCallback? onNotificationsTap;
+  final bool showAiCopilot;
   final VoidCallback? onAiCopilotTap;
   final VoidCallback? onProfileTap;
 
@@ -101,12 +103,13 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
                     tooltip: 'Notifications',
                     onPressed: onNotificationsTap,
                   ),
-                  IconButton(
-                    key: QaTestKeys.erpCopilotButton,
-                    icon: const Icon(Icons.psychology_outlined),
-                    tooltip: 'AI Copilot',
-                    onPressed: onAiCopilotTap,
-                  ),
+                  if (showAiCopilot)
+                    IconButton(
+                      key: QaTestKeys.erpCopilotButton,
+                      icon: const Icon(Icons.psychology_outlined),
+                      tooltip: 'AI Copilot',
+                      onPressed: onAiCopilotTap,
+                    ),
                   Semantics(
                     button: true,
                     label: 'Staff profile',

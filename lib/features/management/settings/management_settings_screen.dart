@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
@@ -72,6 +75,18 @@ class ManagementSettingsScreen extends ConsumerWidget {
           _SettingsSection(section: section),
           const SizedBox(height: AksharaSpacing.s6),
         ],
+        const AksharaSectionHeader(title: 'AI Assistant'),
+        Card(
+          elevation: 0,
+          child: ListTile(
+            key: QaTestKeys.aiAssistantSettingsLink,
+            leading: const Icon(Icons.psychology_outlined),
+            title: const Text('AI access modes'),
+            subtitle: const Text('Choose floating bubble, sidebar, app bar, or auto layout'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(RouteNames.aiAssistantSettings),
+          ),
+        ),
       ],
     );
   }

@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../features/copilot/copilot_context_provider.dart';
+import '../../../features/copilot/copilot_screen_context.dart';
+import '../../../router/route_names.dart';
 import '../intelligence_provider.dart';
+import 'at_risk_student_intelligence.dart';
+import 'at_risk_student_provider.dart';
 import 'student_success_models.dart';
 import 'student_success_provider.dart';
 
@@ -19,7 +25,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -43,6 +49,73 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
     final improvements = ref.watch(studentImprovementsProvider);
     final interventions = ref.watch(interventionEffectivenessProvider);
 
+    final atRisk = ref.watch(atRiskStudentProfilesProvider);
+
+    return dashboard.when(
+      data: (dashboardData) {
+        final profiles = atRisk.valueOrNull ?? const <AtRiskStudentProfile>[];
+        final atRiskSummary = profiles.isEmpty ? null : summarizeAtRiskProfiles(profiles);
+        final criticalCount = atRiskSummary?.criticalCount ?? dashboardData.highDropoutRiskCount;
+        return CopilotContextScope(
+          route: RouteNames.studentSuccessIntelligence,
+          module: 'intelligence',
+          screen: 'Student Success Intelligence',
+          kpis: [
+            CopilotKpiSnapshot(
+              id: 'students_analyzed',
+              label: 'Students analyzed',
+              value: '${dashboardData.studentsAnalyzed}',
+            ),
+            CopilotKpiSnapshot(
+              id: 'at_risk',
+              label: 'At-risk flagged',
+              value: '${atRiskSummary?.totalFlagged ?? dashboardData.highDropoutRiskCount}',
+            ),
+            CopilotKpiSnapshot(
+              id: 'critical_risk',
+              label: 'Critical risk',
+              value: '$criticalCount',
+            ),
+          ],
+          child: _buildScaffold(
+            canGenerate: canGenerate,
+            dashboard: dashboardData,
+            predictions: predictions,
+            improvements: improvements,
+            interventions: interventions,
+            atRisk: atRisk,
+          ),
+        );
+      },
+      loading: () => _buildScaffold(
+        canGenerate: canGenerate,
+        dashboard: null,
+        predictions: predictions,
+        improvements: improvements,
+        interventions: interventions,
+        atRisk: atRisk,
+      ),
+      error: (e, _) => _buildScaffold(
+        canGenerate: canGenerate,
+        dashboard: null,
+        dashboardError: '$e',
+        predictions: predictions,
+        improvements: improvements,
+        interventions: interventions,
+        atRisk: atRisk,
+      ),
+    );
+  }
+
+  Widget _buildScaffold({
+    required bool canGenerate,
+    required AsyncValue<List<StudentSuccessSnapshot>> predictions,
+    required AsyncValue<List<StudentImprovementItem>> improvements,
+    required AsyncValue<List<InterventionEffectivenessItem>> interventions,
+    required AsyncValue<List<AtRiskStudentProfile>> atRisk,
+    StudentSuccessDashboard? dashboard,
+    String? dashboardError,
+  }) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Student Success Intelligence'),
@@ -51,6 +124,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
           isScrollable: true,
           tabs: const [
             Tab(text: 'Dashboard'),
+            Tab(text: 'At-Risk'),
             Tab(text: 'Predictions'),
             Tab(text: 'Improvements'),
             Tab(text: 'Interventions'),
@@ -74,8 +148,14 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
       body: TabBarView(
         controller: _tabs,
         children: [
-          dashboard.when(
-            data: (d) => _dashboardTab(d),
+          if (dashboard != null)
+            _dashboardTab(dashboard)
+          else if (dashboardError != null)
+            Center(child: Text('Error: $dashboardError'))
+          else
+            const Center(child: CircularProgressIndicator()),
+          atRisk.when(
+            data: (profiles) => _atRiskTab(profiles),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
           ),
@@ -96,6 +176,34 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _atRiskTab(List<AtRiskStudentProfile> profiles) {
+    if (profiles.isEmpty) {
+      return const Center(child: Text('No at-risk students flagged at medium tier or above.'));
+    }
+
+    final summary = summarizeAtRiskProfiles(profiles);
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _metricTile('Flagged students', summary.totalFlagged),
+        _metricTile('Critical', summary.criticalCount),
+        _metricTile('High', summary.highCount),
+        _metricTile('Medium', summary.mediumCount),
+        const SizedBox(height: 16),
+        Text('Intervention queue', style: Theme.of(context).textTheme.titleMedium),
+        for (final profile in summary.topProfiles)
+          ListTile(
+            key: QaTestKeys.atRiskStudentRow(profile.studentId),
+            title: Text('${profile.studentName} · ${profile.tier.label}'),
+            subtitle: Text(
+              '${profile.className} · ${profile.primarySignal}\n${profile.recommendedAction}',
+            ),
+            isThreeLine: true,
+          ),
+      ],
     );
   }
 

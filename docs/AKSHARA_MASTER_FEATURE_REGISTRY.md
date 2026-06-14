@@ -281,6 +281,8 @@
 | **Context-aware ERP Copilot** | AI | INTEL-03 | **B** | Yes (stub) | `copilot_screen_context.dart`, Patrol | Done |
 | **Floating copilot dock** | AI | INTEL-04 | **B** | Yes | `copilot_floating_dock.dart`, Patrol | Done |
 | **Persona AI shells (8 roles)** | AI | INTEL-04 | **B** | Stub prompts | `copilot_persona_shell_screen.dart` | Live inference pending |
+| **AI access mode preferences** | AI | INTEL-05 | **B** | Local prefs | `ai_assistant_settings_screen.dart` | Server sync pending |
+| **At-risk student intelligence MVP** | AI | INTEL-05 | **B** | Deterministic tiers | `at_risk_student_intelligence.dart` | Live ML pending |
 | Compute risk / refresh actions | AI | Intelligence UI | **B** | Partial | `intelligence_mutations_provider.dart` | Yes |
 | Achievement Promotion Engine | AI | VISION #19 | **D** | Mock | `promotion/` | Partial |
 | AI Education Suite (generative) | AI | VISION #22–27 | **A** | Yes (mock AI) | Education screens | Yes |

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../features/copilot/widgets/copilot_bottom_nav_ai_slot.dart';
 import '../../../router/route_names.dart';
 import '../../../theme/theme_extensions.dart';
 
 /// Teacher mobile shell with bottom navigation (Home · Classes · Teach · Messages).
-class TeacherShell extends StatelessWidget {
+class TeacherShell extends ConsumerWidget {
   const TeacherShell({
     super.key,
     required this.child,
@@ -60,28 +62,35 @@ class TeacherShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final path = GoRouterState.of(context).uri.path;
     final selectedIndex = _selectedIndex(path);
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: NavigationBar(
-        height: context.akshara.bottomNavHeight,
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (index) {
-          final destination = _destinations[index];
-          if (destination.route != null && destination.route != path) {
-            context.go(destination.route!);
-          }
-        },
-        destinations: [
-          for (final d in _destinations)
-            NavigationDestination(
-              icon: Icon(d.icon),
-              selectedIcon: Icon(d.selectedIcon),
-              label: d.label,
-            ),
+      bottomNavigationBar: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          NavigationBar(
+            height: context.akshara.bottomNavHeight,
+            selectedIndex: selectedIndex,
+            onDestinationSelected: (index) {
+              final destination = _destinations[index];
+              if (destination.route != null && destination.route != path) {
+                context.go(destination.route!);
+              }
+            },
+            destinations: [
+              for (final d in _destinations)
+                NavigationDestination(
+                  icon: Icon(d.icon),
+                  selectedIcon: Icon(d.selectedIcon),
+                  label: d.label,
+                ),
+            ],
+          ),
+          const CopilotBottomNavAiSlot(),
         ],
       ),
     );
