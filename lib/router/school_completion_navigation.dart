@@ -16,6 +16,7 @@ import '../features/school_completion/subject_assignment_screen.dart';
 import '../features/school_completion/substitute_manager_screen.dart';
 import '../features/school_completion/subjects_screen.dart';
 import '../features/school_completion/syllabus_automation_screen.dart';
+import '../features/school_completion/teacher_reassignment_screen.dart';
 import '../features/school_completion/timetable_automation_screen.dart';
 import '../features/school_completion/timetable_intelligence_screen.dart';
 import '../features/school_completion/timetable_optimization_screen.dart';
@@ -65,6 +66,11 @@ Widget timetableOptimizationRouteBuilder(
 Widget substituteManagerRouteBuilder(
     BuildContext context, GoRouterState state) {
   return const SubstituteManagerScreen();
+}
+
+Widget teacherReassignmentRouteBuilder(
+    BuildContext context, GoRouterState state) {
+  return const TeacherReassignmentScreen();
 }
 
 Widget communicationDeliveryRouteBuilder(

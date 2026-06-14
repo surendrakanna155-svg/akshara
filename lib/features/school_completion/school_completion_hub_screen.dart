@@ -57,8 +57,16 @@ class SchoolCompletionHubScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.swap_horiz_outlined),
             title: const Text('Substitute Manager'),
-            subtitle: const Text('Open slots, teacher availability, assign wizard'),
+            subtitle:
+                const Text('Open slots, teacher availability, assign wizard'),
             onTap: () => context.push(RouteNames.substituteManager),
+          ),
+          ListTile(
+            leading: const Icon(Icons.compare_arrows_outlined),
+            title: const Text('Teacher Reassignment'),
+            subtitle:
+                const Text('Move selected periods from one teacher to another'),
+            onTap: () => context.push(RouteNames.teacherReassignment),
           ),
           ListTile(
             leading: const Icon(Icons.send_outlined),

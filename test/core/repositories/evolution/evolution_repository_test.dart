@@ -1,5 +1,6 @@
 import 'package:akshara_erp/core/repositories/mock/mock_evolution_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/evolution/evolution_requests.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -44,8 +45,10 @@ void main() {
 
     final campaignId = await repo.createGrowthCampaign(
       query: query,
-      name: 'Test Campaign',
-      channel: 'referral',
+      request: const CreateGrowthCampaignRequest(
+        name: 'Test Campaign',
+        channel: 'referral',
+      ),
     );
     expect(campaignId, isNotEmpty);
 

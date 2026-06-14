@@ -1,7 +1,9 @@
 import '../../interfaces/school_completion_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/school_completion/school_completion_models.dart';
+import 'dto/apply_timetable_optimization_request_dto.dart';
 import 'dto/assign_substitute_request_dto.dart';
+import 'dto/reassign_teacher_request_dto.dart';
 import 'mapper/school_completion_mapper.dart';
 import 'mapper/school_completion_phase10_mapper.dart';
 import 'mapper/school_completion_phase15_mapper.dart';
@@ -11,8 +13,10 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
   ApiSchoolCompletionRepository({
     required SchoolCompletionRemoteDataSource remote,
     SchoolCompletionMapper mapper = const SchoolCompletionMapper(),
-    SchoolCompletionPhase10Mapper phase10Mapper = const SchoolCompletionPhase10Mapper(),
-    SchoolCompletionPhase15Mapper phase15Mapper = const SchoolCompletionPhase15Mapper(),
+    SchoolCompletionPhase10Mapper phase10Mapper =
+        const SchoolCompletionPhase10Mapper(),
+    SchoolCompletionPhase15Mapper phase15Mapper =
+        const SchoolCompletionPhase15Mapper(),
   })  : _remote = remote,
         _mapper = mapper,
         _phase10Mapper = phase10Mapper,
@@ -24,7 +28,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
   final SchoolCompletionPhase15Mapper _phase15Mapper;
 
   @override
-  Future<List<AcademicSubject>> listSubjects({required RepositoryQuery query}) async {
+  Future<List<AcademicSubject>> listSubjects(
+      {required RepositoryQuery query}) async {
     final items = await _remote.listSubjects(query: query);
     return items.map(_mapper.toSubject).toList();
   }
@@ -74,7 +79,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     String? className,
   }) async {
-    final items = await _remote.listLessonLogs(query: query, className: className);
+    final items =
+        await _remote.listLessonLogs(query: query, className: className);
     return items.map(_mapper.toLessonLog).toList();
   }
 
@@ -139,7 +145,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
   }
 
   @override
-  Future<WhatsAppProviderConfig> getWhatsAppProvider({required RepositoryQuery query}) async {
+  Future<WhatsAppProviderConfig> getWhatsAppProvider(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.getWhatsAppProvider(query: query);
     return _mapper.toWhatsAppConfig(dto);
   }
@@ -213,7 +220,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     required String assignmentId,
   }) =>
-      _remote.deleteClassSubjectAssignment(query: query, assignmentId: assignmentId);
+      _remote.deleteClassSubjectAssignment(
+          query: query, assignmentId: assignmentId);
 
   @override
   Future<List<TeacherSubjectAssignment>> listTeacherSubjectAssignments({
@@ -296,6 +304,24 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
   }
 
   @override
+  Future<ApplyTimetableOptimizationResult> applyTimetableOptimization({
+    required RepositoryQuery query,
+    required String academicYearId,
+    List<String> recommendationIds = const [],
+    bool applyAll = false,
+  }) async {
+    final dto = await _remote.applyTimetableOptimization(
+      query: query,
+      body: ApplyTimetableOptimizationRequestDto.fromDomain(
+        academicYearId: academicYearId,
+        recommendationIds: recommendationIds,
+        applyAll: applyAll,
+      ).toJson(),
+    );
+    return _mapper.toApplyTimetableOptimizationResult(dto);
+  }
+
+  @override
   Future<SubstituteCoverageData> getSubstituteCoverage({
     required RepositoryQuery query,
     required String academicYearId,
@@ -322,6 +348,32 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
   }
 
   @override
+  Future<TeacherReassignmentData> getTeacherReassignmentOptions({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? sourceTeacherId,
+  }) async {
+    final dto = await _remote.getTeacherReassignmentOptions(
+      query: query,
+      academicYearId: academicYearId,
+      sourceTeacherId: sourceTeacherId,
+    );
+    return _mapper.toTeacherReassignmentData(dto);
+  }
+
+  @override
+  Future<TeacherReassignmentResult> reassignTeacher({
+    required RepositoryQuery query,
+    required ReassignTeacherRequest request,
+  }) async {
+    final dto = await _remote.reassignTeacher(
+      query: query,
+      body: ReassignTeacherRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toTeacherReassignmentResult(dto);
+  }
+
+  @override
   Future<DeliveryAnalytics> getDeliveryAnalytics({
     required RepositoryQuery query,
   }) async {
@@ -343,7 +395,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
     String? board,
     String? gradeLabel,
   }) async {
-    final items = await _remote.listSubjectTemplates(query: query, board: board, gradeLabel: gradeLabel);
+    final items = await _remote.listSubjectTemplates(
+        query: query, board: board, gradeLabel: gradeLabel);
     return items.map(_phase10Mapper.toSubjectTemplate).toList();
   }
 
@@ -387,7 +440,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     String? academicYearId,
   }) async {
-    final items = await _remote.listSyllabusChapters(query: query, academicYearId: academicYearId);
+    final items = await _remote.listSyllabusChapters(
+        query: query, academicYearId: academicYearId);
     return items.map(_phase10Mapper.toChapter).toList();
   }
 
@@ -406,7 +460,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
       );
 
   @override
-  Future<TeacherProgressDashboard> getTeacherProgress({required RepositoryQuery query}) async {
+  Future<TeacherProgressDashboard> getTeacherProgress(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.getTeacherProgress(query: query);
     return _phase10Mapper.toTeacherProgress(dto);
   }
@@ -434,7 +489,11 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
   }) async {
     final dto = await _remote.createRoom(
       query: query,
-      body: {'roomLabel': roomLabel, 'roomType': roomType, 'capacity': capacity},
+      body: {
+        'roomLabel': roomLabel,
+        'roomType': roomType,
+        'capacity': capacity
+      },
     );
     return _phase10Mapper.toRoom(dto);
   }
@@ -444,7 +503,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     required String academicYearId,
   }) async {
-    final dto = await _remote.getTimetableIntelligence(query: query, academicYearId: academicYearId);
+    final dto = await _remote.getTimetableIntelligence(
+        query: query, academicYearId: academicYearId);
     return _phase10Mapper.toIntelligence(dto);
   }
 
@@ -477,7 +537,8 @@ class ApiSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     required String academicYearId,
   }) async {
-    final dto = await _remote.allocateRooms(query: query, academicYearId: academicYearId);
+    final dto = await _remote.allocateRooms(
+        query: query, academicYearId: academicYearId);
     return RoomAllocationResult(
       allocatedPeriods: (dto['allocatedPeriods'] as num?)?.toInt() ?? 0,
       labAssignments: (dto['labAssignments'] as num?)?.toInt() ?? 0,

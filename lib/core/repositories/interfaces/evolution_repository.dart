@@ -1,4 +1,5 @@
 import '../../../features/evolution/evolution_models.dart';
+import '../../../features/evolution/evolution_requests.dart';
 import '../repository_query.dart';
 
 abstract class EvolutionRepository {
@@ -92,9 +93,22 @@ abstract class EvolutionRepository {
 
   Future<String> createGrowthCampaign({
     required RepositoryQuery query,
-    required String name,
-    required String channel,
-    double? budgetInr,
+    required CreateGrowthCampaignRequest request,
+  });
+
+  Future<GrowthCampaign> updateGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+    required UpdateGrowthCampaignRequest request,
+  });
+
+  Future<GrowthCampaign> pauseGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+  });
+
+  Future<List<GrowthCampaign>> listCampaignHistory({
+    required RepositoryQuery query,
   });
 
   Future<String> createGrowthInquiry({

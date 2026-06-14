@@ -21,6 +21,9 @@ abstract final class EvolutionApiPaths {
   static const String growthDashboard = '/growth/dashboard';
   static const String growthFunnel = '/growth/funnel';
   static const String growthCampaigns = '/growth/campaigns';
+  static String growthCampaign(String id) => '/growth/campaigns/$id';
+  static String growthCampaignPause(String id) => '/growth/campaigns/$id/pause';
+  static const String growthCampaignHistory = '/growth/campaigns/history';
   static const String growthInquiries = '/growth/inquiries';
   static String growthInquiryConvert(String id) => '/growth/inquiries/$id/convert';
 

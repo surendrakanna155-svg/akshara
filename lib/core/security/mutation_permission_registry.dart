@@ -189,6 +189,49 @@ class MutationPermissionRegistry {
       permission: Permission.manageAcademicTimetable,
       kind: 'manage',
     ),
+    MutationPermissionEntry(
+      moduleId: 'school_completion',
+      mutationId: 'reassignTeacher',
+      permission: Permission.manageAcademicTimetable,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'school_completion',
+      mutationId: 'applyTimetableOptimization',
+      permission: Permission.manageAcademicTimetable,
+      kind: 'manage',
+    ),
+    // Evolution
+    MutationPermissionEntry(
+      moduleId: 'evolution',
+      mutationId: 'createGrowthCampaign',
+      permission: Permission.manageGrowthPlatform,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'evolution',
+      mutationId: 'createGrowthInquiry',
+      permission: Permission.manageGrowthPlatform,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'evolution',
+      mutationId: 'convertGrowthInquiry',
+      permission: Permission.manageGrowthPlatform,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'evolution',
+      mutationId: 'updateGrowthCampaign',
+      permission: Permission.manageGrowthPlatform,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'evolution',
+      mutationId: 'pauseGrowthCampaign',
+      permission: Permission.manageGrowthPlatform,
+      kind: 'manage',
+    ),
     // Inventory
     MutationPermissionEntry(
       moduleId: 'inventory',

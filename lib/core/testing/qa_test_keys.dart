@@ -534,14 +534,66 @@ abstract final class QaTestKeys {
   static const communicationBroadcastHistoryList =
       ValueKey<String>('communication_broadcast_history_list');
 
-  static const substituteDayFilter =
-      ValueKey<String>('substitute_day_filter');
+  static const substituteDayFilter = ValueKey<String>('substitute_day_filter');
   static const substituteClassFilter =
       ValueKey<String>('substitute_class_filter');
   static const substituteAssignButton =
       ValueKey<String>('substitute_assign_button');
   static const substituteAssignSuccessSnackbar =
       ValueKey<String>('substitute_assign_success_snackbar');
+  static const teacherReassignmentSourceFilter =
+      ValueKey<String>('teacher_reassignment_source_filter');
+  static const teacherReassignmentSubmitButton =
+      ValueKey<String>('teacher_reassignment_submit_button');
+  static const teacherReassignmentSuccessSnackbar =
+      ValueKey<String>('teacher_reassignment_success_snackbar');
+  static const timetableOptimizationApplyAllButton =
+      ValueKey<String>('timetable_optimization_apply_all_button');
+  static const timetableOptimizationApplySuccessSnackbar =
+      ValueKey<String>('timetable_optimization_apply_success_snackbar');
+  static const growthPlatformScreen =
+      ValueKey<String>('growth_platform_screen');
+
+  static const growthCreateCampaignButton =
+      ValueKey<String>('growth_create_campaign_button');
+  static const growthCreateInquiryButton =
+      ValueKey<String>('growth_create_inquiry_button');
+  static const growthCampaignNameField =
+      ValueKey<String>('growth_campaign_name_field');
+  static const growthCampaignChannelField =
+      ValueKey<String>('growth_campaign_channel_field');
+  static const growthCampaignBudgetField =
+      ValueKey<String>('growth_campaign_budget_field');
+  static const growthCampaignAudienceField =
+      ValueKey<String>('growth_campaign_audience_field');
+  static const growthCampaignScheduleButton =
+      ValueKey<String>('growth_campaign_schedule_button');
+  static const growthCampaignCreateSubmitButton =
+      ValueKey<String>('growth_campaign_create_submit_button');
+  static const growthInquiryParentField =
+      ValueKey<String>('growth_inquiry_parent_field');
+  static const growthInquirySourceField =
+      ValueKey<String>('growth_inquiry_source_field');
+  static const growthInquiryGradeField =
+      ValueKey<String>('growth_inquiry_grade_field');
+  static const growthInquiryCreateSubmitButton =
+      ValueKey<String>('growth_inquiry_create_submit_button');
+
+  static ValueKey<String> growthCampaignRow(String campaignId) =>
+      ValueKey<String>('growth_campaign_row_$campaignId');
+  static ValueKey<String> growthPauseCampaignButton(String campaignId) =>
+      ValueKey<String>('growth_pause_campaign_button_$campaignId');
+  static ValueKey<String> growthActivateCampaignButton(String campaignId) =>
+      ValueKey<String>('growth_activate_campaign_button_$campaignId');
+  static ValueKey<String> growthInquiryRow(String inquiryId) =>
+      ValueKey<String>('growth_inquiry_row_$inquiryId');
+  static ValueKey<String> growthConvertInquiryButton(String inquiryId) =>
+      ValueKey<String>('growth_convert_inquiry_button_$inquiryId');
+
+  static ValueKey<String> timetableOptimizationApplyButton(
+    String recommendationId,
+  ) =>
+      ValueKey<String>('timetable_optimization_apply_$recommendationId');
 
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');

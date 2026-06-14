@@ -245,6 +245,40 @@ class EvolutionRemoteDataSource {
     return _data(response)['id'] as String;
   }
 
+  Future<Map<String, dynamic>> updateGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      EvolutionApiPaths.growthCampaign(campaignId),
+      queryParameters: _params(query),
+      data: body,
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> pauseGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      EvolutionApiPaths.growthCampaignPause(campaignId),
+      queryParameters: _params(query),
+    );
+    return _data(response);
+  }
+
+  Future<List<Map<String, dynamic>>> listCampaignHistory({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      EvolutionApiPaths.growthCampaignHistory,
+      queryParameters: _params(query),
+    );
+    return _items(response);
+  }
+
   Future<String> createGrowthInquiry({
     required RepositoryQuery query,
     required Map<String, dynamic> body,

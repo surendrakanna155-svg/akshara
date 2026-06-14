@@ -3,6 +3,7 @@ import 'package:akshara_erp/core/repositories/api/evolution/remote/evolution_api
 import 'package:akshara_erp/core/repositories/api/evolution/remote/evolution_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_evolution_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/evolution/evolution_requests.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/fake_dio_interceptor.dart';
@@ -23,6 +24,7 @@ void main() {
       final principal = await mockRepo.getPrincipalCommandCenter(query: kQuery);
       final growth = await mockRepo.getGrowthDashboard(query: kQuery);
       final funnel = await mockRepo.getGrowthFunnel(query: kQuery);
+      final campaigns = await mockRepo.listGrowthCampaigns(query: kQuery);
 
       final dio = createFakeDio((options) {
         if (options.path == EvolutionApiPaths.widgetRegistry) {
@@ -120,6 +122,53 @@ void main() {
             },
           };
         }
+        if (options.path == EvolutionApiPaths.growthCampaigns) {
+          return {
+            'data': {
+              'items': campaigns
+                  .map(
+                    (c) => {
+                      'id': c.id,
+                      'name': c.name,
+                      'channel': c.channel,
+                      'status': c.status,
+                      'budgetInr': c.budgetInr,
+                      'audience': c.audience,
+                      'scheduledAt': c.scheduledAt,
+                      'createdAt': c.createdAt,
+                    },
+                  )
+                  .toList(),
+            },
+          };
+        }
+        if (options.path == EvolutionApiPaths.growthCampaign('camp_1')) {
+          return {
+            'data': {
+              'id': 'camp_1',
+              'name': 'Summer Open Day',
+              'channel': 'walk_in',
+              'status': 'active',
+              'budgetInr': 25000,
+              'audience': 'local_families',
+              'scheduledAt': '2026-06-20T09:00:00Z',
+              'createdAt': '2026-05-01T10:00:00Z',
+            },
+          };
+        }
+        if (options.path == EvolutionApiPaths.growthCampaignPause('camp_1')) {
+          return {
+            'data': {
+              'id': 'camp_1',
+              'name': 'Summer Open Day',
+              'channel': 'walk_in',
+              'status': 'paused',
+              'budgetInr': 25000,
+              'audience': 'local_families',
+              'createdAt': '2026-05-01T10:00:00Z',
+            },
+          };
+        }
         return {'data': {}};
       });
 
@@ -144,6 +193,23 @@ void main() {
     test('getGrowthFunnel returns funnel stages', () async {
       final funnel = await apiRepo.getGrowthFunnel(query: kQuery);
       expect(funnel.stages, isNotEmpty);
+    });
+
+    test('growth campaign update and pause map response', () async {
+      final updated = await apiRepo.updateGrowthCampaign(
+        query: kQuery,
+        campaignId: 'camp_1',
+        request: const UpdateGrowthCampaignRequest(
+          audience: 'local_families',
+        ),
+      );
+      expect(updated.audience, 'local_families');
+
+      final paused = await apiRepo.pauseGrowthCampaign(
+        query: kQuery,
+        campaignId: 'camp_1',
+      );
+      expect(paused.status, 'paused');
     });
   });
 }

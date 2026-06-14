@@ -254,16 +254,46 @@ class TimetableSubstituteSuggestion {
 
 class TimetableRecommendation {
   const TimetableRecommendation({
+    this.recommendationId,
     required this.kind,
     required this.title,
     required this.detail,
     required this.readOnly,
   });
 
+  final String? recommendationId;
   final String kind;
   final String title;
   final String detail;
   final bool readOnly;
+}
+
+class ApplyTimetableOptimizationRequest {
+  const ApplyTimetableOptimizationRequest({
+    required this.academicYearId,
+    this.recommendationIds = const [],
+    this.applyAll = false,
+  });
+
+  final String academicYearId;
+  final List<String> recommendationIds;
+  final bool applyAll;
+}
+
+class ApplyTimetableOptimizationResult {
+  const ApplyTimetableOptimizationResult({
+    required this.appliedRecommendationIds,
+    required this.appliedCount,
+    required this.updatedConflictCount,
+    required this.updatedQualityScore,
+    required this.message,
+  });
+
+  final List<String> appliedRecommendationIds;
+  final int appliedCount;
+  final int updatedConflictCount;
+  final int updatedQualityScore;
+  final String message;
 }
 
 class DeliveryAnalytics {
@@ -620,6 +650,104 @@ class SubstituteAssignmentResult {
   final String assignmentId;
   final String slotId;
   final bool timetableUpdated;
+  final List<String> notifiedAudience;
+  final String message;
+}
+
+class TeacherReassignmentSlot {
+  const TeacherReassignmentSlot({
+    required this.slotId,
+    required this.academicYearId,
+    required this.sourceTeacherId,
+    required this.sourceTeacherName,
+    required this.className,
+    required this.sectionName,
+    required this.subjectName,
+    required this.dayOfWeek,
+    required this.periodLabel,
+    required this.slotDate,
+  });
+
+  final String slotId;
+  final String academicYearId;
+  final String sourceTeacherId;
+  final String sourceTeacherName;
+  final String className;
+  final String sectionName;
+  final String subjectName;
+  final String dayOfWeek;
+  final String periodLabel;
+  final String slotDate;
+}
+
+class TeacherReassignmentCandidate {
+  const TeacherReassignmentCandidate({
+    required this.teacherId,
+    required this.teacherName,
+    required this.subjects,
+    required this.freePeriods,
+    required this.dailyLoad,
+    required this.canNotify,
+  });
+
+  final String teacherId;
+  final String teacherName;
+  final List<String> subjects;
+  final int freePeriods;
+  final int dailyLoad;
+  final bool canNotify;
+}
+
+class TeacherReassignmentData {
+  const TeacherReassignmentData({
+    required this.sourceTeacherId,
+    required this.sourceTeacherName,
+    required this.slots,
+    required this.candidates,
+    required this.generatedAt,
+  });
+
+  final String sourceTeacherId;
+  final String sourceTeacherName;
+  final List<TeacherReassignmentSlot> slots;
+  final List<TeacherReassignmentCandidate> candidates;
+  final String generatedAt;
+}
+
+class ReassignTeacherRequest {
+  const ReassignTeacherRequest({
+    required this.academicYearId,
+    required this.sourceTeacherId,
+    required this.targetTeacherId,
+    required this.slotIds,
+    required this.notifySourceTeacher,
+    required this.notifyTargetTeacher,
+    required this.notifyStudents,
+  });
+
+  final String academicYearId;
+  final String sourceTeacherId;
+  final String targetTeacherId;
+  final List<String> slotIds;
+  final bool notifySourceTeacher;
+  final bool notifyTargetTeacher;
+  final bool notifyStudents;
+}
+
+class TeacherReassignmentResult {
+  const TeacherReassignmentResult({
+    required this.reassignmentId,
+    required this.sourceTeacherId,
+    required this.targetTeacherId,
+    required this.updatedSlotIds,
+    required this.notifiedAudience,
+    required this.message,
+  });
+
+  final String reassignmentId;
+  final String sourceTeacherId;
+  final String targetTeacherId;
+  final List<String> updatedSlotIds;
   final List<String> notifiedAudience;
   final String message;
 }

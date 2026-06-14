@@ -239,6 +239,9 @@ class GrowthCampaign {
     required this.channel,
     required this.status,
     this.budgetInr,
+    this.scheduledAt,
+    this.audience = 'all',
+    this.createdAt,
   });
 
   final String id;
@@ -246,6 +249,9 @@ class GrowthCampaign {
   final String channel;
   final String status;
   final double? budgetInr;
+  final String? scheduledAt;
+  final String audience;
+  final String? createdAt;
 }
 
 class GrowthInquiry {

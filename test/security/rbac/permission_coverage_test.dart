@@ -79,5 +79,14 @@ void main() {
       );
       expect(entry.permission, Permission.manageFinance);
     });
+
+    test('school completion timetable apply mutation registered', () {
+      final entry = MutationPermissionRegistry.entries.firstWhere(
+        (e) => e.mutationId == 'applyTimetableOptimization',
+      );
+      expect(entry.moduleId, 'school_completion');
+      expect(entry.permission, Permission.manageAcademicTimetable);
+      expect(entry.kind, 'manage');
+    });
   });
 }

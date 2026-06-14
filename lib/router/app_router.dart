@@ -596,6 +596,13 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.teacherReassignment,
+            name: 'teacherReassignment',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherReassignmentRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.communicationDelivery,
             name: 'communicationDelivery',
             pageBuilder: (context, state) => NoTransitionPage(

@@ -1,6 +1,7 @@
 import '../../interfaces/evolution_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/evolution/evolution_models.dart';
+import '../../../../features/evolution/evolution_requests.dart';
 import 'api_evolution_repository.dart';
 
 /// Routes all evolution operations to [ApiEvolutionRepository].
@@ -160,16 +161,37 @@ class HybridEvolutionRepository implements EvolutionRepository {
   @override
   Future<String> createGrowthCampaign({
     required RepositoryQuery query,
-    required String name,
-    required String channel,
-    double? budgetInr,
+    required CreateGrowthCampaignRequest request,
   }) =>
       _api.createGrowthCampaign(
         query: query,
-        name: name,
-        channel: channel,
-        budgetInr: budgetInr,
+        request: request,
       );
+
+  @override
+  Future<GrowthCampaign> updateGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+    required UpdateGrowthCampaignRequest request,
+  }) =>
+      _api.updateGrowthCampaign(
+        query: query,
+        campaignId: campaignId,
+        request: request,
+      );
+
+  @override
+  Future<GrowthCampaign> pauseGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+  }) =>
+      _api.pauseGrowthCampaign(query: query, campaignId: campaignId);
+
+  @override
+  Future<List<GrowthCampaign>> listCampaignHistory({
+    required RepositoryQuery query,
+  }) =>
+      _api.listCampaignHistory(query: query);
 
   @override
   Future<String> createGrowthInquiry({

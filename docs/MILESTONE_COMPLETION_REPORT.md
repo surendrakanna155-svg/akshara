@@ -2,93 +2,71 @@
 
 **Program:** Akshara Continuous Completion  
 **Date:** June 2026  
-**Commits:** *(recorded after push)*
+**Latest commit:** *(after push)*
 
 ---
 
-## Milestones closed this session
+## Milestones closed
 
 | Milestone | Scope | Status |
 |-----------|-------|--------|
-| **M6** | P1-11 SIS profile edit + documents | ✅ Core complete |
-| **M7** (started) | P1-09 Substitute teacher wizard | ✅ |
+| **M6** | P1-11 SIS profile + documents | ✅ |
+| **M7** (through FV-18) | P1-09, P2-03, P2-04, FV-18 | ✅ |
 
 ---
 
-## Implementation summary
+## Session 8 deliverables
 
-### P1-11 — SIS Profile Edit + Documents
+### P2-03 — Teacher Reassignment
+- 3-step wizard at `/school/timetables/reassign`
+- Repository + mutation + Patrol
 
-- Repository: `uploadStudentDocument`, persisted mock store, API POST
-- Mutations: `updateStudentProvider`, `uploadStudentDocumentProvider`
-- UI: profile edit sheet, document upload dialog, RBAC manage actions
-- Patrol: `sis_profile_edit_e2e_test.dart`
+### P2-04 — Timetable Optimization Apply
+- Actionable recommendations with Apply / Apply All
+- Persisted mock optimization state after apply
 
-### P1-09 — Substitute Teacher Wizard
-
-- Models: open slots, teacher candidates, assignment result
-- Repository: `getSubstituteCoverage`, `assignSubstitute`
-- UI: `substitute_manager_screen.dart` (3-step wizard)
-- Route: `/school/timetables/substitute`
-- Notification on assign via Communication Hub
-- Patrol: `substitute_teacher_e2e_test.dart`
+### FV-18 — Growth Platform Campaigns
+- Tabbed admin (Dashboard / Campaigns / Inquiries)
+- Mutation providers with `manageGrowthPlatform` RBAC
+- Campaign create dialog, pause/activate, inquiry convert
 
 ---
 
-## Tests added
+## Tests & Patrol
 
-| Area | New/extended tests |
-|------|-------------------|
-| SIS | contract, write RBAC, screens, integration, Patrol |
-| School completion | contract, widget, Patrol |
-
-**Total:** 1425 passing (~1 skipped)
-
----
-
-## Patrol journeys added
-
-- `sis_profile_edit_e2e_test.dart`
-- `substitute_teacher_e2e_test.dart`
-
-**Estimated total:** ~51 journeys
+| Metric | Value |
+|--------|-------|
+| Flutter tests | **1438** |
+| New Patrol journeys | teacher_reassignment, timetable_optimization_apply, growth_campaign |
+| Estimated Patrol total | **~54** |
 
 ---
 
 ## Completion percentages
 
-| Metric | Before (Batch A) | After |
-|--------|------------------|-------|
-| ERP | ~91% | **~93%** |
+| Metric | After Batch A | Now |
+|--------|---------------|-----|
+| ERP | ~91% | **~94%** |
+| Vision | ~56% | **~60%** |
 | Intelligence | ~72% | ~72% |
 | Dashboard | ~58% | ~58% |
 | Copilot | ~80% | ~80% |
-| Vision | ~56% | ~58% |
 
 ---
 
-## CI status
+## Next (post FV-18)
 
-| Job | Status |
-|-----|--------|
-| `analyze-and-test` | *(after push)* |
-| `phase1-patrol-smoke` | Pre-existing Phase 1 workflows |
-
----
-
-## Next items (automatic continuation)
-
-| ID | Feature | Milestone |
-|----|---------|-----------|
-| P2-03 | Teacher reassignment | M7 |
-| P2-04 | Timetable optimization apply | M7 |
-| FV-15–16 | QR / offline payments | M6 stretch |
-| FV-18 | Growth Platform campaigns | M7 |
+| ID | Feature |
+|----|---------|
+| FV-17 | School Memories admin |
+| FV-11 | Book Distribution parity |
+| FV-15–16 | QR / offline payments |
+| M8 | AI Evolution |
 
 ---
 
 ## Related
 
+- `docs/MILESTONE_7_COMPLETION_REPORT.md`
 - `docs/MILESTONE_6_COMPLETION_REPORT.md`
 - `docs/BATCH_A_COMPLETION_REPORT.md`
-- `docs/MASTER_MILESTONE_TRACKER.md`

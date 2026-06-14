@@ -7,6 +7,20 @@
 
 ---
 
+## Session 8 — M7 through FV-18
+
+| ID | Feature | Status |
+|----|---------|--------|
+| P2-03 | Teacher reassignment | ✅ |
+| P2-04 | Timetable optimization apply | ✅ |
+| FV-18 | Growth Platform campaigns | ✅ |
+
+**Metrics after session 8:** ERP ~94% · Vision ~60% · Tests **1438** · Patrol **~54**
+
+See `docs/MILESTONE_7_COMPLETION_REPORT.md`.
+
+---
+
 ## Session 7 — Continuous Completion (M6 + M7 start)
 
 | ID | Feature | Status |

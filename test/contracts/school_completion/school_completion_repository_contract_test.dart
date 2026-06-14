@@ -29,7 +29,8 @@ void main() {
         className: 'Grade 7',
         topic: 'Algebra intro',
       );
-      final logs = await repo.listLessonLogs(query: query, className: 'Grade 7');
+      final logs =
+          await repo.listLessonLogs(query: query, className: 'Grade 7');
       expect(logs.any((l) => l.id == created.id), isTrue);
     });
 
@@ -122,9 +123,50 @@ void main() {
         academicYearId: 'year_1',
       );
       expect(result.qualityScore, greaterThan(0));
+      expect(
+        result.recommendations.any(
+          (recommendation) =>
+              recommendation.recommendationId != null &&
+              !recommendation.readOnly,
+        ),
+        isTrue,
+      );
     });
 
-    test('substitute coverage and assignment flow returns timetable update', () async {
+    test('apply timetable optimization persists optimization updates',
+        () async {
+      final before = await repo.getTimetableOptimization(
+        query: query,
+        academicYearId: 'year_1',
+      );
+      final actionable = before.recommendations.firstWhere(
+        (recommendation) =>
+            recommendation.recommendationId != null && !recommendation.readOnly,
+      );
+      final applied = await repo.applyTimetableOptimization(
+        query: query,
+        academicYearId: 'year_1',
+        recommendationIds: [actionable.recommendationId!],
+      );
+      expect(applied.appliedCount, 1);
+      expect(applied.appliedRecommendationIds,
+          contains(actionable.recommendationId));
+      expect(applied.updatedConflictCount, lessThan(before.conflictCount));
+      expect(applied.updatedQualityScore, greaterThan(before.qualityScore));
+
+      final after = await repo.getTimetableOptimization(
+        query: query,
+        academicYearId: 'year_1',
+      );
+      final updatedRecommendation = after.recommendations.firstWhere(
+        (recommendation) =>
+            recommendation.recommendationId == actionable.recommendationId,
+      );
+      expect(updatedRecommendation.readOnly, isTrue);
+    });
+
+    test('substitute coverage and assignment flow returns timetable update',
+        () async {
       final coverage = await repo.getSubstituteCoverage(
         query: query,
         academicYearId: 'year_1',
@@ -147,6 +189,32 @@ void main() {
       expect(assignment.notifiedAudience, isNotEmpty);
     });
 
+    test('teacher reassignment options and execute flow return update summary',
+        () async {
+      final options = await repo.getTeacherReassignmentOptions(
+        query: query,
+        academicYearId: 'year_1',
+      );
+      expect(options.slots, isNotEmpty);
+      expect(options.candidates, isNotEmpty);
+
+      final result = await repo.reassignTeacher(
+        query: query,
+        request: ReassignTeacherRequest(
+          academicYearId: 'year_1',
+          sourceTeacherId: options.sourceTeacherId,
+          targetTeacherId: options.candidates.first.teacherId,
+          slotIds: [options.slots.first.slotId],
+          notifySourceTeacher: true,
+          notifyTargetTeacher: true,
+          notifyStudents: false,
+        ),
+      );
+      expect(result.updatedSlotIds, isNotEmpty);
+      expect(result.sourceTeacherId, options.sourceTeacherId);
+      expect(result.targetTeacherId, options.candidates.first.teacherId);
+    });
+
     test('delivery analytics returns channel breakdown', () async {
       final analytics = await repo.getDeliveryAnalytics(query: query);
       expect(analytics.deliveryRate, greaterThan(0));
@@ -157,8 +225,10 @@ void main() {
       final analytics = await repo.getCommunicationAnalytics(query: query);
       expect(analytics.campaigns.totalCampaigns, greaterThan(0));
       expect(analytics.delivery.deliveryRate, greaterThan(0));
-      expect(analytics.effectiveness.effectivenessScore, greaterThanOrEqualTo(0));
-      expect(analytics.parentEngagement.averageEngagementScore, greaterThanOrEqualTo(0));
+      expect(
+          analytics.effectiveness.effectivenessScore, greaterThanOrEqualTo(0));
+      expect(analytics.parentEngagement.averageEngagementScore,
+          greaterThanOrEqualTo(0));
       expect(analytics.parentAdoption.adoptionRate, greaterThanOrEqualTo(0));
     });
 

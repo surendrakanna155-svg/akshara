@@ -132,9 +132,119 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
       canNotify: false,
     ),
   ];
+  final List<TeacherReassignmentSlot> _teacherReassignmentSlots = const [
+    TeacherReassignmentSlot(
+      slotId: 'trs_1',
+      academicYearId: 'year_1',
+      sourceTeacherId: 'teacher_14',
+      sourceTeacherName: 'Ms. Kavya',
+      className: 'Grade 7',
+      sectionName: 'A',
+      subjectName: 'Mathematics',
+      dayOfWeek: 'Monday',
+      periodLabel: 'P2',
+      slotDate: '2026-06-16',
+    ),
+    TeacherReassignmentSlot(
+      slotId: 'trs_2',
+      academicYearId: 'year_1',
+      sourceTeacherId: 'teacher_14',
+      sourceTeacherName: 'Ms. Kavya',
+      className: 'Grade 7',
+      sectionName: 'B',
+      subjectName: 'Mathematics',
+      dayOfWeek: 'Tuesday',
+      periodLabel: 'P3',
+      slotDate: '2026-06-17',
+    ),
+    TeacherReassignmentSlot(
+      slotId: 'trs_3',
+      academicYearId: 'year_1',
+      sourceTeacherId: 'teacher_11',
+      sourceTeacherName: 'Mr. Sandeep',
+      className: 'Grade 8',
+      sectionName: 'B',
+      subjectName: 'Science',
+      dayOfWeek: 'Wednesday',
+      periodLabel: 'P4',
+      slotDate: '2026-06-18',
+    ),
+  ];
+  final List<TeacherReassignmentCandidate> _teacherReassignmentCandidates =
+      const [
+    TeacherReassignmentCandidate(
+      teacherId: 'teacher_2',
+      teacherName: 'Mr. Vivek',
+      subjects: ['Mathematics', 'Science'],
+      freePeriods: 3,
+      dailyLoad: 4,
+      canNotify: true,
+    ),
+    TeacherReassignmentCandidate(
+      teacherId: 'teacher_7',
+      teacherName: 'Ms. Divya',
+      subjects: ['English', 'Mathematics'],
+      freePeriods: 2,
+      dailyLoad: 5,
+      canNotify: true,
+    ),
+    TeacherReassignmentCandidate(
+      teacherId: 'teacher_9',
+      teacherName: 'Mr. Raghav',
+      subjects: ['Science'],
+      freePeriods: 1,
+      dailyLoad: 6,
+      canNotify: false,
+    ),
+  ];
+  final Map<String, TimetableOptimizationResult> _timetableOptimizationByYear =
+      {
+    'year_1': const TimetableOptimizationResult(
+      qualityScore: 82,
+      conflictCount: 2,
+      overloadAlerts: [
+        TimetableOverloadAlert(
+            teacherId: 't1', teacherName: 'Ms. Rao', periodCount: 28),
+      ],
+      freePeriodAnalysis: [
+        TimetableFreePeriodEntry(
+            teacherId: 't2', teacherName: 'Mr. Kumar', freePeriods: 8),
+      ],
+      substituteSuggestions: [
+        TimetableSubstituteSuggestion(
+          conflictMessage: 'Teacher double-booked Monday P3',
+          suggestion: 'Assign substitute or move to free slot',
+        ),
+      ],
+      recommendations: [
+        TimetableRecommendation(
+          recommendationId: 'rec_balance_load',
+          kind: 'overloaded_teacher',
+          title: 'Rebalance workload',
+          detail: 'Shift two periods from Ms. Rao to Mr. Kumar.',
+          readOnly: false,
+        ),
+        TimetableRecommendation(
+          recommendationId: 'rec_free_slot',
+          kind: 'slot_reassignment',
+          title: 'Move Grade 7 Algebra slot',
+          detail: 'Move Monday P3 Algebra from Room 202 to Tuesday P2.',
+          readOnly: false,
+        ),
+        TimetableRecommendation(
+          recommendationId: 'rec_policy',
+          kind: 'policy_note',
+          title: 'Monitor overload trend',
+          detail: 'Track overload pattern for the next 2 weeks.',
+          readOnly: true,
+        ),
+      ],
+    ),
+  };
 
   @override
-  Future<List<AcademicSubject>> listSubjects({required RepositoryQuery query}) async =>
+  Future<List<AcademicSubject>> listSubjects(
+          {required RepositoryQuery query}) async =>
       List.from(_subjects);
 
   @override
@@ -224,13 +334,16 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     return TimetableAutomationResult(
       timetablesCreated: 8,
       subjectsUsed: _subjects.map((s) => s.subjectName).toList(),
-      warnings: _subjects.length < 5 ? const ['Consider adding elective subjects'] : const [],
+      warnings: _subjects.length < 5
+          ? const ['Consider adding elective subjects']
+          : const [],
       conflictCount: 1,
     );
   }
 
   @override
-  Future<SchoolBranding> getBranding({required RepositoryQuery query}) async => _branding;
+  Future<SchoolBranding> getBranding({required RepositoryQuery query}) async =>
+      _branding;
 
   @override
   Future<SchoolBranding> saveBranding({
@@ -242,7 +355,8 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
   }
 
   @override
-  Future<WhatsAppProviderConfig> getWhatsAppProvider({required RepositoryQuery query}) async =>
+  Future<WhatsAppProviderConfig> getWhatsAppProvider(
+          {required RepositoryQuery query}) async =>
       _whatsApp;
 
   @override
@@ -272,7 +386,9 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     String? academicYearId,
   }) async {
     if (academicYearId == null) return List.from(_classSubjects);
-    return _classSubjects.where((a) => a.academicYearId == academicYearId).toList();
+    return _classSubjects
+        .where((a) => a.academicYearId == academicYearId)
+        .toList();
   }
 
   @override
@@ -320,7 +436,9 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     String? academicYearId,
   }) async {
     if (academicYearId == null) return List.from(_teacherSubjects);
-    return _teacherSubjects.where((a) => a.academicYearId == academicYearId).toList();
+    return _teacherSubjects
+        .where((a) => a.academicYearId == academicYearId)
+        .toList();
   }
 
   @override
@@ -340,7 +458,8 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
         a.classId == classId &&
         a.sectionId == sectionId);
     if (duplicate) {
-      throw StateError('Teacher already assigned to this subject for the class/section');
+      throw StateError(
+          'Teacher already assigned to this subject for the class/section');
     }
     final assignment = TeacherSubjectAssignment(
       id: 'tsa_${_teacherSubjects.length + 1}',
@@ -426,29 +545,82 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     required String academicYearId,
   }) async {
-    return const TimetableOptimizationResult(
-      qualityScore: 82,
-      conflictCount: 1,
-      overloadAlerts: [
-        TimetableOverloadAlert(teacherId: 't1', teacherName: 'Ms. Rao', periodCount: 28),
-      ],
-      freePeriodAnalysis: [
-        TimetableFreePeriodEntry(teacherId: 't2', teacherName: 'Mr. Kumar', freePeriods: 8),
-      ],
-      substituteSuggestions: [
-        TimetableSubstituteSuggestion(
-          conflictMessage: 'Teacher double-booked Monday P3',
-          suggestion: 'Assign substitute or move to free slot',
-        ),
-      ],
-      recommendations: [
-        TimetableRecommendation(
-          kind: 'overloaded_teacher',
-          title: 'Rebalance workload',
-          detail: 'Shift periods from overloaded teachers',
-          readOnly: true,
-        ),
-      ],
+    final seeded = _timetableOptimizationByYear[academicYearId];
+    if (seeded != null) {
+      return seeded;
+    }
+    final fallback = _timetableOptimizationByYear['year_1']!;
+    _timetableOptimizationByYear[academicYearId] = fallback;
+    return fallback;
+  }
+
+  @override
+  Future<ApplyTimetableOptimizationResult> applyTimetableOptimization({
+    required RepositoryQuery query,
+    required String academicYearId,
+    List<String> recommendationIds = const [],
+    bool applyAll = false,
+  }) async {
+    final current = await getTimetableOptimization(
+        query: query, academicYearId: academicYearId);
+    final actionable = current.recommendations
+        .where((recommendation) =>
+            !recommendation.readOnly && recommendation.recommendationId != null)
+        .toList(growable: false);
+    final allowedIds = actionable
+        .map((recommendation) => recommendation.recommendationId!)
+        .toSet();
+    final requestedIds = applyAll
+        ? allowedIds
+        : recommendationIds.where((id) => allowedIds.contains(id)).toSet();
+
+    if (requestedIds.isEmpty) {
+      return ApplyTimetableOptimizationResult(
+        appliedRecommendationIds: const [],
+        appliedCount: 0,
+        updatedConflictCount: current.conflictCount,
+        updatedQualityScore: current.qualityScore,
+        message: 'No actionable recommendations selected.',
+      );
+    }
+
+    final updatedRecommendations =
+        current.recommendations.map((recommendation) {
+      final id = recommendation.recommendationId;
+      if (id == null || !requestedIds.contains(id)) {
+        return recommendation;
+      }
+      return TimetableRecommendation(
+        recommendationId: recommendation.recommendationId,
+        kind: recommendation.kind,
+        title: recommendation.title,
+        detail: '${recommendation.detail} (Applied)',
+        readOnly: true,
+      );
+    }).toList(growable: false);
+    final appliedCount = requestedIds.length;
+    final updatedConflicts = (current.conflictCount - appliedCount)
+        .clamp(0, current.conflictCount)
+        .toInt();
+    final updatedQuality =
+        (current.qualityScore + (appliedCount * 4)).clamp(0, 100).toInt();
+    final updated = TimetableOptimizationResult(
+      qualityScore: updatedQuality,
+      conflictCount: updatedConflicts,
+      overloadAlerts: current.overloadAlerts,
+      freePeriodAnalysis: current.freePeriodAnalysis,
+      substituteSuggestions: current.substituteSuggestions,
+      recommendations: updatedRecommendations,
+    );
+    _timetableOptimizationByYear[academicYearId] = updated;
+    return ApplyTimetableOptimizationResult(
+      appliedRecommendationIds: requestedIds.toList(growable: false),
+      appliedCount: appliedCount,
+      updatedConflictCount: updatedConflicts,
+      updatedQualityScore: updatedQuality,
+      message: appliedCount == 1
+          ? '1 recommendation applied successfully.'
+          : '$appliedCount recommendations applied successfully.',
     );
   }
 
@@ -479,11 +651,13 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     required AssignSubstituteRequest request,
   }) async {
-    final slot = _substituteOpenSlots.where((entry) => entry.slotId == request.slotId);
+    final slot =
+        _substituteOpenSlots.where((entry) => entry.slotId == request.slotId);
     if (slot.isEmpty) {
       throw StateError('Open slot not found');
     }
-    final teacher = _substituteCandidates.where((entry) => entry.teacherId == request.substituteTeacherId);
+    final teacher = _substituteCandidates
+        .where((entry) => entry.teacherId == request.substituteTeacherId);
     if (teacher.isEmpty) {
       throw StateError('Substitute teacher not available');
     }
@@ -498,6 +672,77 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
       timetableUpdated: true,
       notifiedAudience: notifiedAudience,
       message: 'Substitute assigned and timetable updated.',
+    );
+  }
+
+  @override
+  Future<TeacherReassignmentData> getTeacherReassignmentOptions({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? sourceTeacherId,
+  }) async {
+    final filtered = _teacherReassignmentSlots
+        .where((slot) => slot.academicYearId == academicYearId)
+        .toList(growable: false);
+    if (filtered.isEmpty) {
+      return TeacherReassignmentData(
+        sourceTeacherId: sourceTeacherId ?? '',
+        sourceTeacherName: '',
+        slots: const [],
+        candidates: List<TeacherReassignmentCandidate>.from(
+            _teacherReassignmentCandidates),
+        generatedAt: DateTime.now().toIso8601String(),
+      );
+    }
+    final resolvedSourceTeacherId = sourceTeacherId?.trim().isNotEmpty == true
+        ? sourceTeacherId!.trim()
+        : filtered.first.sourceTeacherId;
+    final slotsForTeacher = filtered
+        .where((slot) => slot.sourceTeacherId == resolvedSourceTeacherId)
+        .toList(growable: false);
+    final sourceTeacherName = slotsForTeacher.isNotEmpty
+        ? slotsForTeacher.first.sourceTeacherName
+        : filtered.first.sourceTeacherName;
+    return TeacherReassignmentData(
+      sourceTeacherId: resolvedSourceTeacherId,
+      sourceTeacherName: sourceTeacherName,
+      slots: slotsForTeacher,
+      candidates: List<TeacherReassignmentCandidate>.from(
+          _teacherReassignmentCandidates),
+      generatedAt: DateTime.now().toIso8601String(),
+    );
+  }
+
+  @override
+  Future<TeacherReassignmentResult> reassignTeacher({
+    required RepositoryQuery query,
+    required ReassignTeacherRequest request,
+  }) async {
+    final availableSlotIds =
+        _teacherReassignmentSlots.map((slot) => slot.slotId).toSet();
+    final hasInvalidSlot =
+        request.slotIds.any((slotId) => !availableSlotIds.contains(slotId));
+    if (hasInvalidSlot) {
+      throw StateError('One or more selected timetable periods are invalid.');
+    }
+    final targetExists = _teacherReassignmentCandidates
+        .any((candidate) => candidate.teacherId == request.targetTeacherId);
+    if (!targetExists) {
+      throw StateError('Target teacher is not available for reassignment.');
+    }
+    final notifiedAudience = <String>[
+      if (request.notifySourceTeacher) 'source_teacher',
+      if (request.notifyTargetTeacher) 'target_teacher',
+      if (request.notifyStudents) 'students',
+    ];
+    return TeacherReassignmentResult(
+      reassignmentId:
+          'teacher_reassign_${DateTime.now().millisecondsSinceEpoch}',
+      sourceTeacherId: request.sourceTeacherId,
+      targetTeacherId: request.targetTeacherId,
+      updatedSlotIds: request.slotIds,
+      notifiedAudience: notifiedAudience,
+      message: 'Teacher reassignment completed and timetable updated.',
     );
   }
 
@@ -526,10 +771,14 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
       onboardingStatus: 'in_progress',
       setupWizardCompleted: false,
       pilotScore: 68,
-      importHealth: PilotImportHealth(totalJobs: 2, committedJobs: 1, failedRows: 4),
-      teacherActivation: PilotActivationStats(total: 20, active: 14, pending: 6, activationRate: 70),
-      parentActivation: PilotActivationStats(total: 150, active: 90, pending: 60, activationRate: 60),
-      otpDelivery: PilotOtpDelivery(sentLast7Days: 45, failedLast7Days: 2, deliveryRate: 96),
+      importHealth:
+          PilotImportHealth(totalJobs: 2, committedJobs: 1, failedRows: 4),
+      teacherActivation: PilotActivationStats(
+          total: 20, active: 14, pending: 6, activationRate: 70),
+      parentActivation: PilotActivationStats(
+          total: 150, active: 90, pending: 60, activationRate: 60),
+      otpDelivery: PilotOtpDelivery(
+          sentLast7Days: 45, failedLast7Days: 2, deliveryRate: 96),
     );
   }
 
@@ -547,7 +796,8 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
           subjectName: 'Mathematics',
           gradeLabel: 'Grade 7',
           chapters: [
-            SyllabusTemplateChapter(name: 'Algebra', topics: ['Expressions', 'Equations']),
+            SyllabusTemplateChapter(
+                name: 'Algebra', topics: ['Expressions', 'Equations']),
           ],
         ),
       ];
@@ -561,7 +811,8 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     required String subjectName,
     required String gradeLabel,
   }) async =>
-      const SyllabusGenerationResult(chaptersCreated: 4, topicsCreated: 12, generationId: 'gen_1');
+      const SyllabusGenerationResult(
+          chaptersCreated: 4, topicsCreated: 12, generationId: 'gen_1');
 
   @override
   Future<SyllabusGenerationResult> cloneSyllabus({
@@ -569,7 +820,8 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     required String fromYearId,
     required String toYearId,
   }) async =>
-      const SyllabusGenerationResult(chaptersCreated: 4, topicsCreated: 12, generationId: 'gen_clone');
+      const SyllabusGenerationResult(
+          chaptersCreated: 4, topicsCreated: 12, generationId: 'gen_clone');
 
   @override
   Future<List<SyllabusChapter>> listSyllabusChapters({
@@ -625,9 +877,21 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
       );
 
   @override
-  Future<List<AcademicRoom>> listRooms({required RepositoryQuery query}) async => const [
-        AcademicRoom(id: 'room_1', roomLabel: 'Room 101', roomType: 'classroom', capacity: 40, status: 'active'),
-        AcademicRoom(id: 'room_2', roomLabel: 'Science Lab', roomType: 'lab', capacity: 30, status: 'active'),
+  Future<List<AcademicRoom>> listRooms(
+          {required RepositoryQuery query}) async =>
+      const [
+        AcademicRoom(
+            id: 'room_1',
+            roomLabel: 'Room 101',
+            roomType: 'classroom',
+            capacity: 40,
+            status: 'active'),
+        AcademicRoom(
+            id: 'room_2',
+            roomLabel: 'Science Lab',
+            roomType: 'lab',
+            capacity: 30,
+            status: 'active'),
       ];
 
   @override
@@ -637,7 +901,12 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
     String roomType = 'classroom',
     int capacity = 40,
   }) async =>
-      AcademicRoom(id: 'room_new', roomLabel: roomLabel, roomType: roomType, capacity: capacity, status: 'active');
+      AcademicRoom(
+          id: 'room_new',
+          roomLabel: roomLabel,
+          roomType: roomType,
+          capacity: capacity,
+          status: 'active');
 
   @override
   Future<TimetableIntelligenceResult> getTimetableIntelligence({
@@ -649,7 +918,8 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
         examCount: 6,
         conflictCount: 1,
         roomUtilization: [
-          RoomUtilizationEntry(roomLabel: 'Room 101', periodCount: 24, capacity: 40),
+          RoomUtilizationEntry(
+              roomLabel: 'Room 101', periodCount: 24, capacity: 40),
         ],
       );
 
@@ -693,7 +963,8 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
           last7DaysFailed: 2,
           trend: [
             AnalyticsDeliveryTrendPoint(date: '2026-06-04', sent: 8, failed: 0),
-            AnalyticsDeliveryTrendPoint(date: '2026-06-05', sent: 12, failed: 1),
+            AnalyticsDeliveryTrendPoint(
+                date: '2026-06-05', sent: 12, failed: 1),
           ],
         ),
         effectiveness: CommunicationEffectiveness(
@@ -701,11 +972,14 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
           openRate: 62,
           responseRate: 28,
           topTemplates: [
-            TemplateEffectiveness(templateCode: 'attendance_alert', sent: 80, openRate: 70),
+            TemplateEffectiveness(
+                templateCode: 'attendance_alert', sent: 80, openRate: 70),
           ],
           channelEffectiveness: {
-            'whatsapp': ChannelEffectiveness(sent: 80, openRate: 68, responseRate: 30),
-            'in_app': ChannelEffectiveness(sent: 40, openRate: 50, responseRate: 22),
+            'whatsapp':
+                ChannelEffectiveness(sent: 80, openRate: 68, responseRate: 30),
+            'in_app':
+                ChannelEffectiveness(sent: 40, openRate: 50, responseRate: 22),
           },
         ),
         parentEngagement: ParentEngagementAnalytics(
@@ -733,8 +1007,10 @@ class MockSchoolCompletionRepository implements SchoolCompletionRepository {
           adoptionRate: 60,
           newActivations30d: 12,
           adoptionByGrade: [
-            ParentAdoptionByGrade(gradeLabel: 'Grade 7', total: 50, active: 35, rate: 70),
-            ParentAdoptionByGrade(gradeLabel: 'Grade 8', total: 50, active: 28, rate: 56),
+            ParentAdoptionByGrade(
+                gradeLabel: 'Grade 7', total: 50, active: 35, rate: 70),
+            ParentAdoptionByGrade(
+                gradeLabel: 'Grade 8', total: 50, active: 28, rate: 56),
           ],
         ),
       );

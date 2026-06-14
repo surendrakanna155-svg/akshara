@@ -1,4 +1,5 @@
 import '../../../features/evolution/evolution_models.dart';
+import '../../../features/evolution/evolution_requests.dart';
 import '../interfaces/evolution_repository.dart';
 import '../repository_query.dart';
 
@@ -14,6 +15,8 @@ class MockEvolutionRepository implements EvolutionRepository {
       channel: 'walk_in',
       status: 'active',
       budgetInr: 25000,
+      audience: 'local_families',
+      createdAt: '2026-05-01T10:00:00Z',
     ),
   ];
   final List<GrowthInquiry> _inquiries = [
@@ -359,13 +362,64 @@ class MockEvolutionRepository implements EvolutionRepository {
   @override
   Future<String> createGrowthCampaign({
     required RepositoryQuery query,
-    required String name,
-    required String channel,
-    double? budgetInr,
+    required CreateGrowthCampaignRequest request,
   }) async {
     final id = 'camp_${_campaigns.length + 1}';
-    _campaigns.add(GrowthCampaign(id: id, name: name, channel: channel, status: 'active', budgetInr: budgetInr));
+    _campaigns.add(
+      GrowthCampaign(
+        id: id,
+        name: request.name,
+        channel: request.channel,
+        status: 'active',
+        budgetInr: request.budgetInr,
+        audience: request.audience,
+        scheduledAt: request.scheduledAt,
+        createdAt: DateTime.now().toUtc().toIso8601String(),
+      ),
+    );
     return id;
+  }
+
+  @override
+  Future<GrowthCampaign> updateGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+    required UpdateGrowthCampaignRequest request,
+  }) async {
+    final index = _campaigns.indexWhere((campaign) => campaign.id == campaignId);
+    if (index < 0) throw StateError('Campaign not found');
+    final existing = _campaigns[index];
+    final updated = GrowthCampaign(
+      id: existing.id,
+      name: request.name ?? existing.name,
+      channel: request.channel ?? existing.channel,
+      status: request.status ?? existing.status,
+      budgetInr: request.budgetInr ?? existing.budgetInr,
+      audience: request.audience ?? existing.audience,
+      scheduledAt: request.scheduledAt ?? existing.scheduledAt,
+      createdAt: existing.createdAt,
+    );
+    _campaigns[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<GrowthCampaign> pauseGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+  }) async {
+    return updateGrowthCampaign(
+      query: query,
+      campaignId: campaignId,
+      request: const UpdateGrowthCampaignRequest(status: 'paused'),
+    );
+  }
+
+  @override
+  Future<List<GrowthCampaign>> listCampaignHistory({
+    required RepositoryQuery query,
+  }) async {
+    return List<GrowthCampaign>.from(_campaigns);
   }
 
   @override

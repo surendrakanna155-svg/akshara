@@ -4,12 +4,14 @@ import '../../../../features/school_completion/school_completion_models.dart';
 import 'api_school_completion_repository.dart';
 
 class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
-  HybridSchoolCompletionRepository({required ApiSchoolCompletionRepository api}) : _api = api;
+  HybridSchoolCompletionRepository({required ApiSchoolCompletionRepository api})
+      : _api = api;
 
   final ApiSchoolCompletionRepository _api;
 
   @override
-  Future<List<AcademicSubject>> listSubjects({required RepositoryQuery query}) =>
+  Future<List<AcademicSubject>> listSubjects(
+          {required RepositoryQuery query}) =>
       _api.listSubjects(query: query);
 
   @override
@@ -97,7 +99,8 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
       _api.saveBranding(query: query, branding: branding);
 
   @override
-  Future<WhatsAppProviderConfig> getWhatsAppProvider({required RepositoryQuery query}) =>
+  Future<WhatsAppProviderConfig> getWhatsAppProvider(
+          {required RepositoryQuery query}) =>
       _api.getWhatsAppProvider(query: query);
 
   @override
@@ -113,14 +116,16 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
     required String toPhone,
     String? templateId,
   }) =>
-      _api.testWhatsAppProvider(query: query, toPhone: toPhone, templateId: templateId);
+      _api.testWhatsAppProvider(
+          query: query, toPhone: toPhone, templateId: templateId);
 
   @override
   Future<List<ClassSubjectAssignment>> listClassSubjectAssignments({
     required RepositoryQuery query,
     String? academicYearId,
   }) =>
-      _api.listClassSubjectAssignments(query: query, academicYearId: academicYearId);
+      _api.listClassSubjectAssignments(
+          query: query, academicYearId: academicYearId);
 
   @override
   Future<ClassSubjectAssignment> createClassSubjectAssignment({
@@ -147,14 +152,16 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     required String assignmentId,
   }) =>
-      _api.deleteClassSubjectAssignment(query: query, assignmentId: assignmentId);
+      _api.deleteClassSubjectAssignment(
+          query: query, assignmentId: assignmentId);
 
   @override
   Future<List<TeacherSubjectAssignment>> listTeacherSubjectAssignments({
     required RepositoryQuery query,
     String? academicYearId,
   }) =>
-      _api.listTeacherSubjectAssignments(query: query, academicYearId: academicYearId);
+      _api.listTeacherSubjectAssignments(
+          query: query, academicYearId: academicYearId);
 
   @override
   Future<TeacherSubjectAssignment> createTeacherSubjectAssignment({
@@ -207,7 +214,22 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     required String academicYearId,
   }) =>
-      _api.getTimetableOptimization(query: query, academicYearId: academicYearId);
+      _api.getTimetableOptimization(
+          query: query, academicYearId: academicYearId);
+
+  @override
+  Future<ApplyTimetableOptimizationResult> applyTimetableOptimization({
+    required RepositoryQuery query,
+    required String academicYearId,
+    List<String> recommendationIds = const [],
+    bool applyAll = false,
+  }) =>
+      _api.applyTimetableOptimization(
+        query: query,
+        academicYearId: academicYearId,
+        recommendationIds: recommendationIds,
+        applyAll: applyAll,
+      );
 
   @override
   Future<SubstituteCoverageData> getSubstituteCoverage({
@@ -229,6 +251,25 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
       _api.assignSubstitute(query: query, request: request);
 
   @override
+  Future<TeacherReassignmentData> getTeacherReassignmentOptions({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? sourceTeacherId,
+  }) =>
+      _api.getTeacherReassignmentOptions(
+        query: query,
+        academicYearId: academicYearId,
+        sourceTeacherId: sourceTeacherId,
+      );
+
+  @override
+  Future<TeacherReassignmentResult> reassignTeacher({
+    required RepositoryQuery query,
+    required ReassignTeacherRequest request,
+  }) =>
+      _api.reassignTeacher(query: query, request: request);
+
+  @override
   Future<DeliveryAnalytics> getDeliveryAnalytics({
     required RepositoryQuery query,
   }) =>
@@ -246,7 +287,8 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
     String? board,
     String? gradeLabel,
   }) =>
-      _api.listSubjectTemplates(query: query, board: board, gradeLabel: gradeLabel);
+      _api.listSubjectTemplates(
+          query: query, board: board, gradeLabel: gradeLabel);
 
   @override
   Future<SyllabusGenerationResult> generateSyllabus({
@@ -272,7 +314,8 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
     required String fromYearId,
     required String toYearId,
   }) =>
-      _api.cloneSyllabus(query: query, fromYearId: fromYearId, toYearId: toYearId);
+      _api.cloneSyllabus(
+          query: query, fromYearId: fromYearId, toYearId: toYearId);
 
   @override
   Future<List<SyllabusChapter>> listSyllabusChapters({
@@ -287,10 +330,12 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
     required String topicId,
     String? lessonLogId,
   }) =>
-      _api.completeTopic(query: query, topicId: topicId, lessonLogId: lessonLogId);
+      _api.completeTopic(
+          query: query, topicId: topicId, lessonLogId: lessonLogId);
 
   @override
-  Future<TeacherProgressDashboard> getTeacherProgress({required RepositoryQuery query}) =>
+  Future<TeacherProgressDashboard> getTeacherProgress(
+          {required RepositoryQuery query}) =>
       _api.getTeacherProgress(query: query);
 
   @override
@@ -322,7 +367,8 @@ class HybridSchoolCompletionRepository implements SchoolCompletionRepository {
     required RepositoryQuery query,
     required String academicYearId,
   }) =>
-      _api.getTimetableIntelligence(query: query, academicYearId: academicYearId);
+      _api.getTimetableIntelligence(
+          query: query, academicYearId: academicYearId);
 
   @override
   Future<CommunicationAnalyticsSummary> getCommunicationAnalytics({

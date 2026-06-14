@@ -168,6 +168,9 @@ class EvolutionMapper {
       channel: json['channel'] as String,
       status: json['status'] as String? ?? 'active',
       budgetInr: budget == null ? null : (budget as num).toDouble(),
+      scheduledAt: json['scheduledAt'] as String? ?? json['scheduled_at'] as String?,
+      audience: json['audience'] as String? ?? 'all',
+      createdAt: json['createdAt'] as String? ?? json['created_at'] as String?,
     );
   }
 

@@ -49,7 +49,8 @@ abstract class SchoolCompletionRepository {
     required SchoolBranding branding,
   });
 
-  Future<WhatsAppProviderConfig> getWhatsAppProvider({required RepositoryQuery query});
+  Future<WhatsAppProviderConfig> getWhatsAppProvider(
+      {required RepositoryQuery query});
 
   Future<WhatsAppProviderConfig> saveWhatsAppProvider({
     required RepositoryQuery query,
@@ -117,6 +118,13 @@ abstract class SchoolCompletionRepository {
     required String academicYearId,
   });
 
+  Future<ApplyTimetableOptimizationResult> applyTimetableOptimization({
+    required RepositoryQuery query,
+    required String academicYearId,
+    List<String> recommendationIds = const [],
+    bool applyAll = false,
+  });
+
   Future<SubstituteCoverageData> getSubstituteCoverage({
     required RepositoryQuery query,
     required String academicYearId,
@@ -126,6 +134,17 @@ abstract class SchoolCompletionRepository {
   Future<SubstituteAssignmentResult> assignSubstitute({
     required RepositoryQuery query,
     required AssignSubstituteRequest request,
+  });
+
+  Future<TeacherReassignmentData> getTeacherReassignmentOptions({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? sourceTeacherId,
+  });
+
+  Future<TeacherReassignmentResult> reassignTeacher({
+    required RepositoryQuery query,
+    required ReassignTeacherRequest request,
   });
 
   Future<DeliveryAnalytics> getDeliveryAnalytics({

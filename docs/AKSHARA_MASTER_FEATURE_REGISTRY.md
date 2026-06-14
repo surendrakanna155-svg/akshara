@@ -252,7 +252,7 @@
 | **Drag-drop period editor** | Timetable | VISION #8, SPEC-PR | Manual scheduling | Timetable repo | **A** | Yes | Yes (mock) | Yes | No | `timetable_editor_tab.dart` | API prod |
 | **Conflict detection** | Timetable | VISION #8 | Quality | Timetable repo | **A** | Yes | Yes (mock) | Contract | No | Conflicts tab + API | — |
 | **Auto scheduling / generate** | Timetable | VISION #8, school_completion | Time savings | Constraints engine | **B** | Yes | Yes (mock) | Integration | No | Generate tab, edge fn | Server rules |
-| **Schedule optimization** | Timetable | VISION #9 | Load balance | Workload engine | **D** | Yes | Read-only scores | Contract | No | `timetable_optimization_screen.dart` | No apply action |
+| **Schedule optimization** | Timetable | VISION #9 | Load balance | Workload engine | **A** | Yes | Apply action | Yes | No | `timetable_optimization_screen.dart`, Patrol | — |
 | Publish workflow | Timetable | VISION #8 | Go-live schedule | — | **B** | Yes | Partial | Partial | No | Publish in hub | Notification fan-out |
 | Parent/teacher timetable views | Timetable | SPEC mobile | Visibility | Timetable | **A** | Yes | Yes | Patrol | No | Mobile + ERP views | — |
 
@@ -264,7 +264,7 @@
 |---------|--------|--------|----------------|--------------|-------|---------|------------|--------|------|---------------------|------|
 | Mark attendance (mobile) | Teacher | SPEC-Teacher, QA | Daily ops | SIS | **A** | Yes | Yes | Patrol | No | Teacher mutations | — |
 | Teacher Copilot | Teacher | VISION #6, ROAD | Productivity | AI | **D** | Yes | Mock | Partial | No | Copilot screens | — |
-| **Teacher reassignment** | Teacher | SPEC-Principal, SRS | Staffing flexibility | Timetable, HR | **E** | No | No | No | No | — | **Vision gap** |
+| **Teacher reassignment** | Teacher | SPEC-Principal, SRS | Staffing flexibility | Timetable, HR | **A** | Yes | Yes | Yes | No | `teacher_reassignment_screen.dart`, Patrol | — |
 | **Substitute teacher assignment** | Teacher | SPEC-PR-10 (AR-043) | Coverage | Timetable | **A** | Yes | Yes | Yes | No | `substitute_manager_screen.dart`, Patrol | — |
 | **Teacher workload balancing** | Teacher | VISION #9 | Fair load | Timetable | **D** | Yes | Metrics only | Contract | No | Phase5, optimization reads | No rebalance action |
 | **Teacher schedule management (writes)** | Teacher | SPEC-Teacher | Self-service | Timetable | **B** | Yes | Read-only schedule | Patrol read | No | Teacher timetable | No swap requests |
@@ -390,7 +390,7 @@
 | Book Distribution System | VISION #11, ROAD v10.1 | **B** | Partial reads | `school_completion/book_distribution/` |
 | School Memories | VISION #17, ROAD v10.2 | **B** | Partial | Evolution / memories routes |
 | Achievement Promotion Engine | VISION #19, ROAD v10.3 | **C** | Mock workflow | `promotion/` |
-| Akshara Growth Platform | VISION #18 | **B** | Partial | Growth / marketing reads |
+| Akshara Growth Platform | VISION #18 | **A** | Campaign admin + mutations | `growth_platform_screen.dart`, Patrol |
 | School Branding | VISION #20 | **E** | Not implemented | M13 · Design future |
 | AI Parent Meeting Summary | VISION #28 | **E** | Not implemented | M8 · Intelligence backlog |
 | Universal AI Assistant | VISION #29 | **E** | Not implemented | M8 · FV-PLAT-10 dependency |

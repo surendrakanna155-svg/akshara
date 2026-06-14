@@ -20,7 +20,8 @@ class SchoolCompletionRemoteDataSource {
         if (query.pageSize != 20) 'pageSize': query.pageSize,
       };
 
-  Future<List<Map<String, dynamic>>> listSubjects({required RepositoryQuery query}) async {
+  Future<List<Map<String, dynamic>>> listSubjects(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       SchoolCompletionApiPaths.subjects,
       queryParameters: _params(query),
@@ -91,7 +92,8 @@ class SchoolCompletionRemoteDataSource {
     return _data(response);
   }
 
-  Future<Map<String, dynamic>> getBranding({required RepositoryQuery query}) async {
+  Future<Map<String, dynamic>> getBranding(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       SchoolCompletionApiPaths.branding,
       queryParameters: _params(query),
@@ -111,7 +113,8 @@ class SchoolCompletionRemoteDataSource {
     return _data(response);
   }
 
-  Future<Map<String, dynamic>> getWhatsAppProvider({required RepositoryQuery query}) async {
+  Future<Map<String, dynamic>> getWhatsAppProvider(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       SchoolCompletionApiPaths.whatsAppProvider,
       queryParameters: _params(query),
@@ -255,6 +258,18 @@ class SchoolCompletionRemoteDataSource {
     return _data(response);
   }
 
+  Future<Map<String, dynamic>> applyTimetableOptimization({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      SchoolCompletionApiPaths.timetableOptimizeApply,
+      queryParameters: _params(query),
+      data: body,
+    );
+    return _data(response);
+  }
+
   Future<Map<String, dynamic>> getSubstituteCoverage({
     required RepositoryQuery query,
     required String academicYearId,
@@ -265,7 +280,8 @@ class SchoolCompletionRemoteDataSource {
       queryParameters: {
         ..._params(query),
         'academicYearId': academicYearId,
-        if (dayOfWeek != null && dayOfWeek.trim().isNotEmpty) 'dayOfWeek': dayOfWeek,
+        if (dayOfWeek != null && dayOfWeek.trim().isNotEmpty)
+          'dayOfWeek': dayOfWeek,
       },
     );
     return _data(response);
@@ -277,6 +293,35 @@ class SchoolCompletionRemoteDataSource {
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       SchoolCompletionApiPaths.timetableSubstituteAssign,
+      queryParameters: _params(query),
+      data: body,
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> getTeacherReassignmentOptions({
+    required RepositoryQuery query,
+    required String academicYearId,
+    String? sourceTeacherId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      SchoolCompletionApiPaths.timetableTeacherReassignmentOptions,
+      queryParameters: {
+        ..._params(query),
+        'academicYearId': academicYearId,
+        if (sourceTeacherId != null && sourceTeacherId.trim().isNotEmpty)
+          'sourceTeacherId': sourceTeacherId,
+      },
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> reassignTeacher({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      SchoolCompletionApiPaths.timetableTeacherReassignment,
       queryParameters: _params(query),
       data: body,
     );
@@ -368,7 +413,8 @@ class SchoolCompletionRemoteDataSource {
     );
   }
 
-  Future<Map<String, dynamic>> getTeacherProgress({required RepositoryQuery query}) async {
+  Future<Map<String, dynamic>> getTeacherProgress(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       SchoolCompletionApiPaths.teacherProgress,
       queryParameters: _params(query),
@@ -376,7 +422,8 @@ class SchoolCompletionRemoteDataSource {
     return _data(response);
   }
 
-  Future<Map<String, dynamic>> getPrincipalAcademicProgress({required RepositoryQuery query}) async {
+  Future<Map<String, dynamic>> getPrincipalAcademicProgress(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       SchoolCompletionApiPaths.principalAcademicProgress,
       queryParameters: _params(query),
@@ -384,7 +431,8 @@ class SchoolCompletionRemoteDataSource {
     return _data(response);
   }
 
-  Future<List<Map<String, dynamic>>> listRooms({required RepositoryQuery query}) async {
+  Future<List<Map<String, dynamic>>> listRooms(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       SchoolCompletionApiPaths.rooms,
       queryParameters: _params(query),

@@ -48,6 +48,37 @@ void main() {
             },
           };
         }
+        if (options.path == SchoolCompletionApiPaths.timetableOptimize) {
+          return {
+            'data': {
+              'qualityScore': 81,
+              'conflictCount': 2,
+              'overloadAlerts': const [],
+              'freePeriodAnalysis': const [],
+              'substituteSuggestions': const [],
+              'recommendations': [
+                {
+                  'recommendationId': 'rec_balance_load',
+                  'kind': 'overloaded_teacher',
+                  'title': 'Rebalance workload',
+                  'detail': 'Shift periods from overloaded teacher.',
+                  'readOnly': false,
+                },
+              ],
+            },
+          };
+        }
+        if (options.path == SchoolCompletionApiPaths.timetableOptimizeApply) {
+          return {
+            'data': {
+              'appliedRecommendationIds': ['rec_balance_load'],
+              'appliedCount': 1,
+              'updatedConflictCount': 1,
+              'updatedQualityScore': 85,
+              'message': '1 recommendation applied successfully.',
+            },
+          };
+        }
         return {'data': {}};
       });
 
@@ -64,6 +95,24 @@ void main() {
     test('getBranding maps API payload', () async {
       final branding = await apiRepo.getBranding(query: kQuery);
       expect(branding.displayName, isNotEmpty);
+    });
+
+    test('timetable optimization and apply mapping works', () async {
+      final optimization = await apiRepo.getTimetableOptimization(
+        query: kQuery,
+        academicYearId: 'year_1',
+      );
+      expect(optimization.recommendations.first.recommendationId,
+          'rec_balance_load');
+      expect(optimization.recommendations.first.readOnly, isFalse);
+
+      final applied = await apiRepo.applyTimetableOptimization(
+        query: kQuery,
+        academicYearId: 'year_1',
+        recommendationIds: const ['rec_balance_load'],
+      );
+      expect(applied.appliedCount, 1);
+      expect(applied.updatedQualityScore, 85);
     });
   });
 }

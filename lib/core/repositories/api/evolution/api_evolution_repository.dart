@@ -1,6 +1,7 @@
 import '../../interfaces/evolution_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/evolution/evolution_models.dart';
+import '../../../../features/evolution/evolution_requests.dart';
 import 'mapper/evolution_mapper.dart';
 import 'remote/evolution_remote_datasource.dart';
 
@@ -213,18 +214,46 @@ class ApiEvolutionRepository implements EvolutionRepository {
   @override
   Future<String> createGrowthCampaign({
     required RepositoryQuery query,
-    required String name,
-    required String channel,
-    double? budgetInr,
+    required CreateGrowthCampaignRequest request,
   }) =>
       _remote.createGrowthCampaign(
         query: query,
-        body: {
-          'name': name,
-          'channel': channel,
-          if (budgetInr != null) 'budgetInr': budgetInr,
-        },
+        body: request.toJson(),
       );
+
+  @override
+  Future<GrowthCampaign> updateGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+    required UpdateGrowthCampaignRequest request,
+  }) async {
+    final dto = await _remote.updateGrowthCampaign(
+      query: query,
+      campaignId: campaignId,
+      body: request.toJson(),
+    );
+    return _mapper.toGrowthCampaign(dto);
+  }
+
+  @override
+  Future<GrowthCampaign> pauseGrowthCampaign({
+    required RepositoryQuery query,
+    required String campaignId,
+  }) async {
+    final dto = await _remote.pauseGrowthCampaign(
+      query: query,
+      campaignId: campaignId,
+    );
+    return _mapper.toGrowthCampaign(dto);
+  }
+
+  @override
+  Future<List<GrowthCampaign>> listCampaignHistory({
+    required RepositoryQuery query,
+  }) async {
+    final items = await _remote.listCampaignHistory(query: query);
+    return items.map(_mapper.toGrowthCampaign).toList();
+  }
 
   @override
   Future<String> createGrowthInquiry({

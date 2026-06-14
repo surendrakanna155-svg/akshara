@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_models.dart';
 import 'school_completion_mutations_provider.dart';
@@ -11,10 +13,12 @@ class SubstituteManagerScreen extends ConsumerStatefulWidget {
   const SubstituteManagerScreen({super.key});
 
   @override
-  ConsumerState<SubstituteManagerScreen> createState() => _SubstituteManagerScreenState();
+  ConsumerState<SubstituteManagerScreen> createState() =>
+      _SubstituteManagerScreenState();
 }
 
-class _SubstituteManagerScreenState extends ConsumerState<SubstituteManagerScreen> {
+class _SubstituteManagerScreenState
+    extends ConsumerState<SubstituteManagerScreen> {
   final String _academicYearId = 'year_1';
   String? _dayFilter;
   String _classFilter = '';
@@ -41,10 +45,14 @@ class _SubstituteManagerScreenState extends ConsumerState<SubstituteManagerScree
     if (slot == null) return candidates;
     final scored = [...candidates];
     scored.sort((a, b) {
-      final aMatch = a.subjects.any((subject) => subject == slot.subjectName) ? 1 : 0;
-      final bMatch = b.subjects.any((subject) => subject == slot.subjectName) ? 1 : 0;
+      final aMatch =
+          a.subjects.any((subject) => subject == slot.subjectName) ? 1 : 0;
+      final bMatch =
+          b.subjects.any((subject) => subject == slot.subjectName) ? 1 : 0;
       if (aMatch != bMatch) return bMatch.compareTo(aMatch);
-      if (a.freePeriods != b.freePeriods) return b.freePeriods.compareTo(a.freePeriods);
+      if (a.freePeriods != b.freePeriods) {
+        return b.freePeriods.compareTo(a.freePeriods);
+      }
       return a.dailyLoad.compareTo(b.dailyLoad);
     });
     return scored;
@@ -53,7 +61,8 @@ class _SubstituteManagerScreenState extends ConsumerState<SubstituteManagerScree
   @override
   Widget build(BuildContext context) {
     final coverage = ref.watch(
-      substituteCoverageProvider((academicYearId: _academicYearId, dayOfWeek: _dayFilter)),
+      substituteCoverageProvider(
+          (academicYearId: _academicYearId, dayOfWeek: _dayFilter)),
     );
     final assignmentState = ref.watch(assignSubstituteProvider);
     final assigning = assignmentState.isLoading;
@@ -66,12 +75,14 @@ class _SubstituteManagerScreenState extends ConsumerState<SubstituteManagerScree
         data: (data) {
           final slots = _filteredSlots(data.openSlots);
           final teachers = _rankedTeachers(data.candidates, _selectedSlot);
-          if (_selectedSlot != null && !slots.any((slot) => slot.slotId == _selectedSlot!.slotId)) {
+          if (_selectedSlot != null &&
+              !slots.any((slot) => slot.slotId == _selectedSlot!.slotId)) {
             _selectedSlot = null;
             _selectedTeacher = null;
           }
           if (_selectedTeacher != null &&
-              !teachers.any((teacher) => teacher.teacherId == _selectedTeacher!.teacherId)) {
+              !teachers.any((teacher) =>
+                  teacher.teacherId == _selectedTeacher!.teacherId)) {
             _selectedTeacher = null;
           }
           return ListView(
@@ -83,8 +94,18 @@ class _SubstituteManagerScreenState extends ConsumerState<SubstituteManagerScree
                 onDayChanged: (value) => setState(() => _dayFilter = value),
                 onClassChanged: (value) => setState(() => _classFilter = value),
               ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () => context.push(RouteNames.teacherReassignment),
+                  icon: const Icon(Icons.compare_arrows_outlined),
+                  label: const Text('Open Teacher Reassignment Wizard'),
+                ),
+              ),
               const SizedBox(height: 16),
-              Text('Open slots', style: Theme.of(context).textTheme.titleMedium),
+              Text('Open slots',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               _OpenSlotsTable(
                 slots: slots,
@@ -95,13 +116,15 @@ class _SubstituteManagerScreenState extends ConsumerState<SubstituteManagerScree
                 }),
               ),
               const SizedBox(height: 16),
-              Text('Available teachers', style: Theme.of(context).textTheme.titleMedium),
+              Text('Available teachers',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               _AvailableTeachersPanel(
                 slot: _selectedSlot,
                 teachers: teachers,
                 selectedTeacher: _selectedTeacher,
-                onSelect: (teacher) => setState(() => _selectedTeacher = teacher),
+                onSelect: (teacher) =>
+                    setState(() => _selectedTeacher = teacher),
               ),
               const SizedBox(height: 16),
               Card(
@@ -141,41 +164,52 @@ class _SubstituteManagerScreenState extends ConsumerState<SubstituteManagerScree
                           children: [
                             SwitchListTile(
                               value: _notifySubstituteTeacher,
-                              onChanged: (value) => setState(() => _notifySubstituteTeacher = value),
+                              onChanged: (value) => setState(
+                                  () => _notifySubstituteTeacher = value),
                               title: const Text('Notify substitute teacher'),
                             ),
                             SwitchListTile(
                               value: _notifyClassIncharge,
-                              onChanged: (value) => setState(() => _notifyClassIncharge = value),
+                              onChanged: (value) =>
+                                  setState(() => _notifyClassIncharge = value),
                               title: const Text('Notify class incharge'),
                             ),
                             SwitchListTile(
                               value: _notifyStudents,
-                              onChanged: (value) => setState(() => _notifyStudents = value),
+                              onChanged: (value) =>
+                                  setState(() => _notifyStudents = value),
                               title: const Text('Notify students'),
                             ),
                             const SizedBox(height: 8),
                             FilledButton.icon(
                               key: QaTestKeys.substituteAssignButton,
-                              onPressed: _selectedSlot == null || _selectedTeacher == null || assigning
+                              onPressed: _selectedSlot == null ||
+                                      _selectedTeacher == null ||
+                                      assigning
                                   ? null
                                   : () async {
-                                      final messenger = ScaffoldMessenger.of(context);
+                                      final messenger =
+                                          ScaffoldMessenger.of(context);
                                       final result = await ref
-                                          .read(assignSubstituteProvider.notifier)
+                                          .read(
+                                              assignSubstituteProvider.notifier)
                                           .execute(
                                             AssignSubstituteRequest(
                                               slotId: _selectedSlot!.slotId,
-                                              substituteTeacherId: _selectedTeacher!.teacherId,
-                                              notifySubstituteTeacher: _notifySubstituteTeacher,
-                                              notifyClassIncharge: _notifyClassIncharge,
+                                              substituteTeacherId:
+                                                  _selectedTeacher!.teacherId,
+                                              notifySubstituteTeacher:
+                                                  _notifySubstituteTeacher,
+                                              notifyClassIncharge:
+                                                  _notifyClassIncharge,
                                               notifyStudents: _notifyStudents,
                                             ),
                                           );
                                       if (!mounted || result == null) return;
                                       messenger.showSnackBar(
                                         SnackBar(
-                                          key: QaTestKeys.substituteAssignSuccessSnackbar,
+                                          key: QaTestKeys
+                                              .substituteAssignSuccessSnackbar,
                                           content: Text(result.message),
                                         ),
                                       );
@@ -188,7 +222,8 @@ class _SubstituteManagerScreenState extends ConsumerState<SubstituteManagerScree
                                   ? const SizedBox(
                                       width: 18,
                                       height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     )
                                   : const Icon(Icons.check_circle_outline),
                               label: const Text('Assign substitute'),
@@ -236,9 +271,12 @@ class _FilterBar extends StatelessWidget {
             items: const [
               DropdownMenuItem<String?>(value: null, child: Text('All days')),
               DropdownMenuItem<String?>(value: 'Monday', child: Text('Monday')),
-              DropdownMenuItem<String?>(value: 'Tuesday', child: Text('Tuesday')),
-              DropdownMenuItem<String?>(value: 'Wednesday', child: Text('Wednesday')),
-              DropdownMenuItem<String?>(value: 'Thursday', child: Text('Thursday')),
+              DropdownMenuItem<String?>(
+                  value: 'Tuesday', child: Text('Tuesday')),
+              DropdownMenuItem<String?>(
+                  value: 'Wednesday', child: Text('Wednesday')),
+              DropdownMenuItem<String?>(
+                  value: 'Thursday', child: Text('Thursday')),
               DropdownMenuItem<String?>(value: 'Friday', child: Text('Friday')),
             ],
             onChanged: onDayChanged,
@@ -354,7 +392,8 @@ class _AvailableTeachersPanel extends StatelessWidget {
       child: Column(
         children: teachers.map((teacher) {
           final selected = selectedTeacher?.teacherId == teacher.teacherId;
-          final subjectMatch = teacher.subjects.any((subject) => subject == slot!.subjectName);
+          final subjectMatch =
+              teacher.subjects.any((subject) => subject == slot!.subjectName);
           return ListTile(
             key: ValueKey('substitute_teacher_${teacher.teacherId}'),
             selected: selected,
@@ -367,9 +406,11 @@ class _AvailableTeachersPanel extends StatelessWidget {
               spacing: 8,
               children: [
                 if (subjectMatch) const Chip(label: Text('Subject match')),
-                if (!teacher.canNotify) const Chip(label: Text('No direct notify')),
+                if (!teacher.canNotify)
+                  const Chip(label: Text('No direct notify')),
                 OutlinedButton(
-                  key: ValueKey('substitute_teacher_select_${teacher.teacherId}'),
+                  key: ValueKey(
+                      'substitute_teacher_select_${teacher.teacherId}'),
                   onPressed: () => onSelect(teacher),
                   child: Text(selected ? 'Selected' : 'Select'),
                 ),

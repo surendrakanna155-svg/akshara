@@ -82,8 +82,8 @@
 |----|---------|----------|------------|
 | P2-01 | Student reshuffle workflow | — | P1-08 | **Done** (M1) |
 | P2-02 | Section balancing engine | — | P2-01 | **Done** (M1) |
-| P2-03 | Teacher reassignment | #9 | Timetable |
-| P2-04 | Timetable optimization apply | #8–9 | Timetable read |
+| P2-03 | Teacher reassignment | #9 | Timetable | ✅ M7 |
+| P2-04 | Timetable optimization apply | #8–9 | Timetable read | ✅ M7 |
 | P2-05 | Reassignment continuity protocol | — | P1-08, P1-06 | **Done** (M2) |
 | P2-06 | Workflow automation engine MVP | design doc | Architecture | **Done** (M3) |
 | P2-07 | Smart routing for approvals | — | P2-06 | **Done** (M3) |
@@ -128,7 +128,7 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 | FV-11 | Book Distribution parity | #11 | 🔄 v10.1 |
 | FV-12 | Inventory Replacement Workflow | #12 | ⏳ |
 | FV-17 | School Memories admin | #17 | 🔄 v10.2 |
-| FV-18 | Growth Platform campaigns | #18 | 🔄 |
+| FV-18 | Growth Platform campaigns | #18 | ✅ M7 |
 | FV-23–27 | AI Education Suite maintenance | #22–27 | ✅ v8.5–v8.8 |
 | P3-02 | ERP Exam Admin scope | — | ❌ Product decision |
 
@@ -237,7 +237,10 @@ P1-01 Export wiring ✅
   → P1-08 Promotion engine ✅
   → P1-09 Substitute teacher wizard ✅
   → P1-11 SIS profile edit + documents ✅
-  → P2-03 Teacher reassignment ← next
+  → P2-03 Teacher reassignment ✅
+  → P2-04 Timetable optimization apply ✅
+  → FV-18 Growth Platform campaigns ✅
+  → FV-17 School Memories admin ← next
 ```
 
 ---

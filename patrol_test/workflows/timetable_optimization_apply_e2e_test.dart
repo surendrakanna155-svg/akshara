@@ -1,0 +1,24 @@
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
+import 'package:akshara_erp/features/auth/qa_login_persona.dart';
+import 'package:akshara_erp/router/route_names.dart';
+import 'package:patrol/patrol.dart';
+
+import '../helpers/patrol_app.dart';
+import '../helpers/patrol_helpers.dart';
+
+void main() {
+  patrolTest(
+    'workflow: apply timetable optimization recommendations',
+    config: aksharaPatrolConfig(),
+    ($) async {
+      await bootstrapAndLogin($, QaLoginPersona.superAdmin);
+      await goToErpRoute($, RouteNames.timetableOptimization);
+
+      await $('Timetable Optimization').waitUntilVisible();
+      await $(QaTestKeys.timetableOptimizationApplyAllButton).tap();
+
+      await assertVisibleKey(
+          $, QaTestKeys.timetableOptimizationApplySuccessSnackbar);
+    },
+  );
+}

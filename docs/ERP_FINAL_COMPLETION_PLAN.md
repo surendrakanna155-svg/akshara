@@ -2,9 +2,8 @@
 
 **Version:** 2.1  
 **Date:** June 2026  
-**Baseline:** QA-ready (~95% test readiness, ~62% E2E journey coverage)  
-**Target:** ERP feature-complete (business workflows, not test inflation)  
-**Post Batch A:** ERP ~91% · Tests 1412 · Patrol ~49
+**Post Batch A:** ERP ~91% · Tests 1412 · Patrol ~49  
+**Post M6/M7 (FV-18):** ERP **~94%** · Tests **1438** · Patrol **~54**
 
 ---
 
