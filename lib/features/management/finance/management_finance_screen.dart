@@ -11,6 +11,7 @@ import '../../../shared/widgets/akshara_warning_banner.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../management_insight_navigation.dart';
 import '../management_models.dart';
 import '../management_providers.dart';
 import '../widgets/management_kpi_row.dart';
@@ -143,7 +144,10 @@ class ManagementFinanceScreen extends ConsumerWidget {
           actionLabel: 'Open defaulters',
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI finance insight',
-          onAction: () {},
+          onAction: () => navigateManagementInsightAction(
+            context,
+            ManagementScreen.finance,
+          ),
         ),
       ],
     );

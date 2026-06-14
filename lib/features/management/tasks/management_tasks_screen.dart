@@ -12,6 +12,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../management_insight_navigation.dart';
 import '../management_models.dart';
 import '../management_providers.dart';
 import '../management_workflow_actions.dart';
@@ -81,7 +82,10 @@ class ManagementTasksScreen extends ConsumerWidget {
               actionLabel: 'Review pending',
               icon: Icons.auto_awesome_outlined,
               semanticLabelPrefix: 'AI approval insight',
-              onAction: () {},
+              onAction: () => navigateManagementInsightAction(
+                context,
+                ManagementScreen.tasks,
+              ),
             ),
           ],
         ],

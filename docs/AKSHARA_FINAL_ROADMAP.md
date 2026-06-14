@@ -54,7 +54,7 @@
 |----|---------|----------|------|----------------|
 | P1-01 | **Owner dashboard export wiring** | #5 | 1 d | Executive reporting — **Phase E** |
 | P1-02 | KPI drill-down (MG-01) | #5 | 2–3 d | Actionable owner home |
-| P1-03 | Intelligence insight card routes | #5 | 1–2 d | Close audit gap #2 |
+| P1-03 | Intelligence insight card routes | #5 | 1–2 d | **Done** (INTEL-01) |
 | P1-04 | Inventory PO approve + receive | — | 4–5 d | Procurement chain |
 | P1-05 | Admissions settings persistence | — | 2–3 d | Config consistency |
 | P1-06 | Notifications broadcast admin | #2 | 4–5 d | School-wide comms |

@@ -9,6 +9,7 @@ import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../management_insight_navigation.dart';
 import '../management_models.dart';
 import '../management_providers.dart';
 import '../widgets/management_kpi_row.dart';
@@ -101,7 +102,10 @@ class ManagementAcademicsScreen extends ConsumerWidget {
           actionLabel: 'Review at-risk list',
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI academic insight',
-          onAction: () {},
+          onAction: () => navigateManagementInsightAction(
+            context,
+            ManagementScreen.academics,
+          ),
         ),
       ],
     );

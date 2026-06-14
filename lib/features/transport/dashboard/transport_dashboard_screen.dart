@@ -98,7 +98,7 @@ class TransportDashboardScreen extends ConsumerWidget {
           actionLabel: 'View allocation',
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI transport insight',
-          onAction: () => context.go(RouteNames.sisStudents),
+          onAction: () => context.go(RouteNames.transportAllocation),
         ),
       ],
     );
