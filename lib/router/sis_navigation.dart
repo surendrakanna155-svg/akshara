@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/onboarding/onboarding_hub_screen.dart';
+import '../features/continuity/continuity_migration_screen.dart';
+import '../features/sis/academic_operations/sis_promotion_screen.dart';
+import '../features/sis/academic_operations/sis_reshuffle_screen.dart';
+import '../features/sis/academic_operations/sis_section_balance_screen.dart';
 import '../features/sis/academic_assignment/sis_academic_assignment_screen.dart';
 import '../features/sis/admissions_conversion/sis_admissions_conversion_screen.dart';
 import '../features/sis/dashboard/sis_dashboard_screen.dart';
@@ -41,6 +45,22 @@ Widget sisAdmissionsConversionRouteBuilder(
   GoRouterState state,
 ) {
   return const SisAdmissionsConversionScreen();
+}
+
+Widget sisPromotionRouteBuilder(BuildContext context, GoRouterState state) {
+  return const SisPromotionScreen();
+}
+
+Widget sisReshuffleRouteBuilder(BuildContext context, GoRouterState state) {
+  return const SisReshuffleScreen();
+}
+
+Widget sisSectionBalanceRouteBuilder(BuildContext context, GoRouterState state) {
+  return const SisSectionBalanceScreen();
+}
+
+Widget sisContinuityRouteBuilder(BuildContext context, GoRouterState state) {
+  return const ContinuityMigrationScreen();
 }
 
 Widget sisOnboardingRouteBuilder(BuildContext context, GoRouterState state) {

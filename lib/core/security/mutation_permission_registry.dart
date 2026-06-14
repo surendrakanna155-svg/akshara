@@ -97,11 +97,53 @@ class MutationPermissionRegistry {
       permission: Permission.manageSis,
       kind: 'manage',
     ),
+    MutationPermissionEntry(
+      moduleId: 'sis',
+      mutationId: 'previewYearTransition',
+      permission: Permission.manageSis,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'sis',
+      mutationId: 'executeYearTransition',
+      permission: Permission.manageSis,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'sis',
+      mutationId: 'executeReshufflePlan',
+      permission: Permission.manageSis,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'sis',
+      mutationId: 'previewContinuityMigration',
+      permission: Permission.manageSis,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'sis',
+      mutationId: 'executeContinuityMigration',
+      permission: Permission.manageSis,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'sis',
+      mutationId: 'transferMessageOwnership',
+      permission: Permission.manageCommunication,
+      kind: 'manage',
+    ),
     // Management
     MutationPermissionEntry(
       moduleId: 'management',
       mutationId: 'resolveManagementApproval',
       permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'workflow',
+      mutationId: 'executeWorkflowAction',
+      permission: Permission.manageWorkflowAutomation,
       kind: 'manage',
     ),
     // Library

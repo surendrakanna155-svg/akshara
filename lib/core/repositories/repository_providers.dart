@@ -3,17 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'academic/academic_repository.dart';
 import 'academic/hybrid_academic_repository.dart';
 import 'api/api_repository_providers.dart';
+import 'api/academic_operations/hybrid_academic_operations_repository.dart';
+import 'api/workflow/hybrid_workflow_repository.dart';
 import 'api/finance/hybrid_finance_repository.dart';
 import 'api/sis/hybrid_sis_repository.dart';
+import 'api/continuity/hybrid_continuity_repository.dart';
 import 'interfaces/admissions_repository.dart';
+import 'interfaces/academic_operations_repository.dart';
+import 'interfaces/workflow_repository.dart';
 import 'interfaces/finance_repository.dart';
 import 'interfaces/hostel_repository.dart';
 import 'interfaces/hr_repository.dart';
 import 'interfaces/library_repository.dart';
 import 'interfaces/management_repository.dart';
 import 'interfaces/sis_repository.dart';
+import 'interfaces/continuity_repository.dart';
 import 'interfaces/alumni_repository.dart';
 import 'interfaces/control_center_repository.dart';
+import 'interfaces/platform_intelligence_repository.dart';
 import 'interfaces/inventory_finance_repository.dart';
 import 'interfaces/inventory_repository.dart';
 import 'interfaces/onboarding_repository.dart';
@@ -58,6 +65,9 @@ import 'api/communication/hybrid_communication_repository.dart';
 import 'mock/mock_academic_repository.dart';
 import 'mock/mock_admissions_repository.dart';
 import 'mock/mock_alumni_repository.dart';
+import 'mock/mock_academic_operations_repository.dart';
+import 'mock/mock_continuity_repository.dart';
+import 'mock/mock_workflow_repository.dart';
 import 'mock/mock_finance_repository.dart';
 import 'mock/mock_hostel_repository.dart';
 import 'api/inventory_finance/hybrid_inventory_finance_repository.dart';
@@ -68,6 +78,7 @@ import 'mock/mock_library_repository.dart';
 import 'mock/mock_management_repository.dart';
 import 'mock/mock_sis_repository.dart';
 import 'mock/mock_control_center_repository.dart';
+import 'mock/mock_platform_intelligence_repository.dart';
 import 'mock/mock_transport_repository.dart';
 import 'mock/mock_onboarding_repository.dart';
 import 'mock/mock_parent_repository.dart';
@@ -107,6 +118,41 @@ final academicRepositoryProvider = Provider<AcademicRepository>((ref) {
     );
   }
   return MockAcademicRepository();
+});
+
+final academicOperationsRepositoryProvider =
+    Provider<AcademicOperationsRepository>((ref) {
+  if (isModuleApiEnabled(ref, academicOperationsApiEnabledProvider)) {
+    return HybridAcademicOperationsRepository(
+      api: ref.read(apiAcademicOperationsRepositoryProvider),
+    );
+  }
+  return MockAcademicOperationsRepository(
+    sisRepository: MockSisRepository(),
+  );
+});
+
+final continuityRepositoryProvider = Provider<ContinuityRepository>((ref) {
+  if (isModuleApiEnabled(ref, continuityApiEnabledProvider)) {
+    return HybridContinuityRepository(
+      api: ref.read(apiContinuityRepositoryProvider),
+    );
+  }
+  return MockContinuityRepository(
+    teacherRepository: ref.read(teacherRepositoryProvider),
+    communicationRepository: ref.read(communicationRepositoryProvider),
+    timetableRepository: ref.read(timetableRepositoryProvider),
+    parentRepository: ref.read(parentRepositoryProvider),
+  );
+});
+
+final workflowRepositoryProvider = Provider<WorkflowRepository>((ref) {
+  if (isModuleApiEnabled(ref, workflowApiEnabledProvider)) {
+    return HybridWorkflowRepository(
+      api: ref.read(apiWorkflowRepositoryProvider),
+    );
+  }
+  return MockWorkflowRepository();
 });
 
 final managementRepositoryProvider = Provider<ManagementRepository>((ref) {
@@ -199,6 +245,13 @@ final controlCenterRepositoryProvider = Provider<ControlCenterRepository>((ref) 
     return ref.read(apiControlCenterRepositoryProvider);
   }
   return MockControlCenterRepository();
+});
+
+final platformIntelligenceRepositoryProvider = Provider<PlatformIntelligenceRepository>((ref) {
+  if (isModuleApiEnabled(ref, platformIntelligenceApiEnabledProvider)) {
+    return ref.read(apiPlatformIntelligenceRepositoryProvider);
+  }
+  return MockPlatformIntelligenceRepository();
 });
 
 final parentRepositoryProvider = Provider<ParentRepository>((ref) {

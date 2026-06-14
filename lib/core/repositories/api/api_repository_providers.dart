@@ -3,6 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../network/dio_provider.dart';
 import '../academic/api/academic_remote_data_source.dart';
 import '../academic/api/api_academic_repository.dart';
+import 'academic_operations/api_academic_operations_repository.dart';
+import 'academic_operations/remote/academic_operations_remote_datasource.dart';
+import 'continuity/api_continuity_repository.dart';
+import 'continuity/remote/continuity_remote_datasource.dart';
+import 'workflow/api_workflow_repository.dart';
+import 'workflow/remote/workflow_remote_datasource.dart';
 import 'admissions/api_admissions_repository.dart';
 import 'admissions/remote/admissions_remote_datasource.dart';
 import 'finance/api_finance_repository.dart';
@@ -27,6 +33,8 @@ import 'library/api_library_repository.dart';
 import 'library/remote/library_remote_datasource.dart';
 import 'control_center/api_control_center_repository.dart';
 import 'control_center/remote/control_center_remote_datasource.dart';
+import 'platform_intelligence/api_platform_intelligence_repository.dart';
+import 'platform_intelligence/remote/platform_intelligence_remote_datasource.dart';
 import 'parent/api_parent_repository.dart';
 import 'parent/remote/parent_remote_datasource.dart';
 import 'teacher/api_teacher_repository.dart';
@@ -71,6 +79,16 @@ final sisRemoteDataSourceProvider = Provider<SisRemoteDataSource>(
 final academicRemoteDataSourceProvider = Provider<AcademicRemoteDataSource>(
   (ref) => AcademicRemoteDataSource(ref.watch(dioProvider)),
 );
+final academicOperationsRemoteDataSourceProvider =
+    Provider<AcademicOperationsRemoteDataSource>(
+  (ref) => AcademicOperationsRemoteDataSource(ref.watch(dioProvider)),
+);
+final continuityRemoteDataSourceProvider = Provider<ContinuityRemoteDataSource>(
+  (ref) => ContinuityRemoteDataSource(ref.watch(dioProvider)),
+);
+final workflowRemoteDataSourceProvider = Provider<WorkflowRemoteDataSource>(
+  (ref) => WorkflowRemoteDataSource(ref.watch(dioProvider)),
+);
 
 final managementRemoteDataSourceProvider = Provider<ManagementRemoteDataSource>(
   (ref) => ManagementRemoteDataSource(ref.watch(dioProvider)),
@@ -111,6 +129,22 @@ final apiSisRepositoryProvider = Provider<ApiSisRepository>(
 final apiAcademicRepositoryProvider = Provider<ApiAcademicRepository>(
   (ref) => ApiAcademicRepository(
     remote: ref.watch(academicRemoteDataSourceProvider),
+  ),
+);
+final apiAcademicOperationsRepositoryProvider =
+    Provider<ApiAcademicOperationsRepository>(
+  (ref) => ApiAcademicOperationsRepository(
+    remote: ref.watch(academicOperationsRemoteDataSourceProvider),
+  ),
+);
+final apiContinuityRepositoryProvider = Provider<ApiContinuityRepository>(
+  (ref) => ApiContinuityRepository(
+    remote: ref.watch(continuityRemoteDataSourceProvider),
+  ),
+);
+final apiWorkflowRepositoryProvider = Provider<ApiWorkflowRepository>(
+  (ref) => ApiWorkflowRepository(
+    remote: ref.watch(workflowRemoteDataSourceProvider),
   ),
 );
 
@@ -216,6 +250,18 @@ final apiControlCenterRepositoryProvider =
     Provider<ApiControlCenterRepository>(
   (ref) => ApiControlCenterRepository(
     remote: ref.watch(controlCenterRemoteDataSourceProvider),
+  ),
+);
+
+final platformIntelligenceRemoteDataSourceProvider =
+    Provider<PlatformIntelligenceRemoteDataSource>(
+  (ref) => PlatformIntelligenceRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiPlatformIntelligenceRepositoryProvider =
+    Provider<ApiPlatformIntelligenceRepository>(
+  (ref) => ApiPlatformIntelligenceRepository(
+    remote: ref.watch(platformIntelligenceRemoteDataSourceProvider),
   ),
 );
 

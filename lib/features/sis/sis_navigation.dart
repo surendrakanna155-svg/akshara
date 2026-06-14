@@ -8,6 +8,10 @@ const List<SisScreen> kSisNavScreens = [
   SisScreen.registry,
   SisScreen.academicAssignment,
   SisScreen.admissionsConversion,
+  SisScreen.promotion,
+  SisScreen.reshuffle,
+  SisScreen.sectionBalance,
+  SisScreen.continuity,
 ];
 
 extension SisScreenRoutes on SisScreen {
@@ -16,6 +20,10 @@ extension SisScreenRoutes on SisScreen {
         SisScreen.registry => RouteNames.sisStudents,
         SisScreen.academicAssignment => RouteNames.sisAcademicAssignment,
         SisScreen.admissionsConversion => RouteNames.sisAdmissionsConversion,
+        SisScreen.promotion => RouteNames.sisPromotion,
+        SisScreen.reshuffle => RouteNames.sisReshuffle,
+        SisScreen.sectionBalance => RouteNames.sisSectionBalance,
+        SisScreen.continuity => RouteNames.sisContinuity,
       };
 }
 

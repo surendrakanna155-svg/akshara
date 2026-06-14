@@ -24,10 +24,13 @@ abstract final class RouteNames {
   static const String parentPayment = '/parent/payment';
   static const String parentReceipts = '/parent/receipts';
   static const String parentLeave = '/parent/leave';
+  static const String parentMessages = '/parent/messages';
   static const String parentNotifications = '/parent/notifications';
 
   static String parentReceiptDetail(String receiptId) =>
       '$parentReceipts/$receiptId';
+  static String parentConversation(String threadId) =>
+      '$parentMessages/$threadId';
 
   // Teacher app (mobile)
   static const String teacher = '/teacher';
@@ -160,6 +163,10 @@ abstract final class RouteNames {
   static const String sisStudents = '/sis/students';
   static const String sisAcademicAssignment = '/sis/academic-assignment';
   static const String sisAdmissionsConversion = '/sis/admissions-conversion';
+  static const String sisPromotion = '/sis/promotion';
+  static const String sisReshuffle = '/sis/reshuffle';
+  static const String sisSectionBalance = '/sis/section-balance';
+  static const String sisContinuity = '/sis/continuity';
   static const String onboardingHub = '/sis/onboarding';
 
   static String sisStudentDetail(String studentId) =>
@@ -171,6 +178,10 @@ abstract final class RouteNames {
     sisStudents,
     sisAcademicAssignment,
     sisAdmissionsConversion,
+    sisPromotion,
+    sisReshuffle,
+    sisSectionBalance,
+    sisContinuity,
     onboardingHub,
   ];
 
@@ -208,6 +219,7 @@ abstract final class RouteNames {
   static const String managementIntelligence = '/management/intelligence';
   static const String managementPerformance = '/management/performance';
   static const String managementTasks = '/management/tasks';
+  static const String managementWorkflowAutomation = '/management/workflow-automation';
   static const String managementSettings = '/management/settings';
 
   /// All management module routes (MG-01 → MG-08).
@@ -221,6 +233,7 @@ abstract final class RouteNames {
     managementIntelligence,
     managementPerformance,
     managementTasks,
+    managementWorkflowAutomation,
     managementSettings,
   ];
   static const String transport = '/transport';
@@ -341,6 +354,7 @@ abstract final class RouteNames {
 
   static const String controlCenter = '/control-center';
   static const String controlCenterDashboard = '/control-center/dashboard';
+  static const String controlCenterIntelligence = '/control-center/intelligence';
   static const String controlCenterSchools = '/control-center/schools';
   static const String controlCenterSubscriptions =
       '/control-center/subscriptions';
@@ -359,6 +373,7 @@ abstract final class RouteNames {
   /// All control center module routes (ACC-01 → ACC-14).
   static const List<String> controlCenterModuleRoutes = [
     controlCenterDashboard,
+    controlCenterIntelligence,
     controlCenterSchools,
     controlCenterSubscriptions,
     controlCenterBilling,

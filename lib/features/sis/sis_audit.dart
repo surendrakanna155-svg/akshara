@@ -14,3 +14,15 @@ void assertManageSis(Ref ref) {
     );
   }
 }
+
+void assertManageCommunication(Ref ref) {
+  if (!ref.read(canManageCommunicationProvider)) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to manage communication.',
+        code: 'RBAC_MANAGE_COMMUNICATION',
+      ),
+    );
+  }
+}

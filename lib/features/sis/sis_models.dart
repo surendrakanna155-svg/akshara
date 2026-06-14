@@ -7,13 +7,21 @@ enum SisScreen {
   dashboard,
   registry,
   academicAssignment,
-  admissionsConversion;
+  admissionsConversion,
+  promotion,
+  reshuffle,
+  sectionBalance,
+  continuity;
 
   String get label => switch (this) {
         SisScreen.dashboard => 'Dashboard',
         SisScreen.registry => 'Student Registry',
         SisScreen.academicAssignment => 'Academic Assignment',
         SisScreen.admissionsConversion => 'Admissions Conversion',
+        SisScreen.promotion => 'Promotion',
+        SisScreen.reshuffle => 'Reshuffle',
+        SisScreen.sectionBalance => 'Section Balance',
+        SisScreen.continuity => 'Continuity',
       };
 }
 

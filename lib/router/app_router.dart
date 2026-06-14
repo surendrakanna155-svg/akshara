@@ -25,6 +25,8 @@ import '../features/parent/receipts/parent_receipt_detail_screen.dart';
 import '../features/parent/receipts/parent_receipts_screen.dart';
 import '../features/parent/notices/parent_notices_screen.dart';
 import '../features/parent/profile/parent_profile_screen.dart';
+import '../features/parent/messages/parent_conversation_screen.dart';
+import '../features/parent/messages/parent_messages_screen.dart';
 import '../features/parent/shell/parent_shell.dart';
 import '../features/parent/timetable/parent_timetable_screen.dart';
 import '../features/student/attendance/student_attendance_screen.dart';
@@ -264,6 +266,22 @@ GoRouter createAppRouter({
             pageBuilder: (context, state) => NoTransitionPage(
               child: parentLeaveRouteBuilder(context, state),
             ),
+          ),
+          GoRoute(
+            path: RouteNames.parentMessages,
+            name: 'parentMessages',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentMessagesRouteBuilder(context, state),
+            ),
+            routes: [
+              GoRoute(
+                path: ':threadId',
+                name: 'parentConversation',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: parentConversationRouteBuilder(context, state),
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.parentReceipts,
@@ -847,6 +865,34 @@ GoRouter createAppRouter({
                 ),
               ),
               GoRoute(
+                path: 'promotion',
+                name: 'sisPromotion',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisPromotionRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'reshuffle',
+                name: 'sisReshuffle',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisReshuffleRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'section-balance',
+                name: 'sisSectionBalance',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisSectionBalanceRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'continuity',
+                name: 'sisContinuity',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisContinuityRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: 'onboarding',
                 name: 'sisOnboarding',
                 pageBuilder: (context, state) => NoTransitionPage(
@@ -993,6 +1039,13 @@ GoRouter createAppRouter({
                 name: 'managementTasks',
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: managementTasksRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'workflow-automation',
+                name: 'managementWorkflowAutomation',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: managementWorkflowAutomationRouteBuilder(context, state),
                 ),
               ),
               GoRoute(
@@ -1357,6 +1410,13 @@ GoRouter createAppRouter({
                 name: 'controlCenterDashboard',
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: controlCenterDashboardRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'intelligence',
+                name: 'controlCenterIntelligence',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: controlCenterIntelligenceRouteBuilder(context, state),
                 ),
               ),
               GoRoute(
@@ -1781,6 +1841,24 @@ Widget parentLeaveRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentLeaveScreen(
     onNotificationsTap: () =>
         context.push(RouteNames.parentNotifications),
+  );
+}
+
+Widget parentMessagesRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentMessagesScreen(
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
+    onThreadTap: (thread) => context.push(RouteNames.parentConversation(thread.id)),
+  );
+}
+
+Widget parentConversationRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  final threadId = state.pathParameters['threadId'] ?? '';
+  return ParentConversationScreen(
+    threadId: threadId,
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );
 }
 

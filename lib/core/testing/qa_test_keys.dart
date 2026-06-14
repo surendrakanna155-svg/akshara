@@ -85,6 +85,48 @@ abstract final class QaTestKeys {
         'sis_registry_student_${normalizeSubNavLabel(studentName)}',
       );
 
+  static const sisPromotionSourceYearField =
+      ValueKey<String>('sis_promotion_source_year');
+  static const sisPromotionTargetYearField =
+      ValueKey<String>('sis_promotion_target_year');
+  static const sisPromotionContinueButton =
+      ValueKey<String>('sis_promotion_continue_button');
+  static const sisPromotionExecutionSummary =
+      ValueKey<String>('sis_promotion_execution_summary');
+
+  static ValueKey<String> sisPromotionPreviewRow(String studentId) =>
+      ValueKey<String>('sis_promotion_preview_$studentId');
+
+  static const sisReshuffleExecuteButton =
+      ValueKey<String>('sis_reshuffle_execute_button');
+  static const sisReshuffleExecutionSummary =
+      ValueKey<String>('sis_reshuffle_execution_summary');
+
+  static ValueKey<String> sisReshufflePreviewRow(String studentId) =>
+      ValueKey<String>('sis_reshuffle_preview_$studentId');
+
+  static const sisSectionBalanceExecuteButton =
+      ValueKey<String>('sis_section_balance_execute_button');
+  static const sisContinuityPreviewButton =
+      ValueKey<String>('sis_continuity_preview_button');
+  static const sisContinuityExecuteButton =
+      ValueKey<String>('sis_continuity_execute_button');
+  static const sisContinuityPlanSummary =
+      ValueKey<String>('sis_continuity_plan_summary');
+  static const sisContinuityExecutionSummary =
+      ValueKey<String>('sis_continuity_execution_summary');
+  static const sisQuarterlyExecuteButton =
+      ValueKey<String>('sis_quarterly_execute_button');
+  static const sisPerformanceExecuteButton =
+      ValueKey<String>('sis_performance_execute_button');
+
+  static ValueKey<String> sisSectionBalancePreviewRow(String studentId) =>
+      ValueKey<String>('sis_section_balance_preview_$studentId');
+  static ValueKey<String> sisQuarterlyPreviewRow(String studentId) =>
+      ValueKey<String>('sis_quarterly_preview_$studentId');
+  static ValueKey<String> sisPerformancePreviewRow(String studentId) =>
+      ValueKey<String>('sis_performance_preview_$studentId');
+
   // --- Teacher attendance E2E ---
   static const teacherAttendanceSubmittedBanner =
       ValueKey<String>('teacher_attendance_submitted_banner');
@@ -311,6 +353,10 @@ abstract final class QaTestKeys {
 
   static const managementDashboardExportSnackbar =
       ValueKey<String>('management_dashboard_export_snackbar');
+  static const workflowAutomationScreen =
+      ValueKey<String>('workflow_automation_screen');
+  static const workflowRunScheduledNowButton =
+      ValueKey<String>('workflow_run_scheduled_now_button');
 
   static ValueKey<String> managementKpiDrillButton(String kpiId) =>
       ValueKey<String>('management_kpi_drill_$kpiId');
@@ -437,6 +483,9 @@ abstract final class QaTestKeys {
   /// Inventory INV lifecycle screen root (Patrol route navigation target).
   static const inventoryLifecycleScreen =
       ValueKey<String>('inventory_lifecycle_screen');
+
+  static const platformIntelligenceScreen =
+      ValueKey<String>('platform_intelligence_screen');
 
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');

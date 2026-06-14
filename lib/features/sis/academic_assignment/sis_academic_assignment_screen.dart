@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
@@ -65,7 +67,7 @@ class _SisAcademicAssignmentScreenState
         children: [
           const AksharaSectionHeader(title: 'Academic assignment'),
           Text(
-            'Assign class, section, and academic year. Promote or transfer workflows are placeholders.',
+            'Assign class, section, and academic year, then move students into promotion and section operations.',
             style: context.aksharaText.bodyMedium,
           ),
           const SizedBox(height: AksharaSpacing.s4),
@@ -116,11 +118,7 @@ class _SisAcademicAssignmentScreenState
                         onSectionChanged: (v) => setState(() => _section = v),
                         onYearChanged: (v) => setState(() => _academicYear = v),
                         onSaveAssignment: () => _saveAssignment(selected),
-                        onPromote: () => _updateStatus(
-                          selected,
-                          SisStudentStatus.active,
-                          'Promoted',
-                        ),
+                        onPromote: () => context.go(RouteNames.sisPromotion),
                         onTransfer: () => _updateStatus(
                           selected,
                           SisStudentStatus.transferred,
@@ -174,11 +172,7 @@ class _SisAcademicAssignmentScreenState
                             onYearChanged: (v) =>
                                 setState(() => _academicYear = v),
                             onSaveAssignment: () => _saveAssignment(selected),
-                            onPromote: () => _updateStatus(
-                              selected,
-                              SisStudentStatus.active,
-                              'Promoted',
-                            ),
+                            onPromote: () => context.go(RouteNames.sisPromotion),
                             onTransfer: () => _updateStatus(
                               selected,
                               SisStudentStatus.transferred,
@@ -384,7 +378,7 @@ class _AssignmentForm extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: () {},
               icon: const Icon(Icons.upload_file_outlined),
-              label: const Text('Bulk assignment (placeholder)'),
+              label: const Text('Bulk assignment template'),
             ),
           ],
         ),

@@ -50,6 +50,27 @@ final academicApiEnabledProvider = Provider<bool>((ref) {
     defaultValue: false,
   );
 });
+final academicOperationsApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'ACADEMIC_OPERATIONS_API_ENABLED',
+    defaultValue: false,
+  );
+});
+final continuityApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'CONTINUITY_API_ENABLED',
+    defaultValue: false,
+  );
+});
+final workflowApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'WORKFLOW_API_ENABLED',
+    defaultValue: false,
+  );
+});
 final academicTimetableApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
@@ -152,6 +173,13 @@ final controlCenterApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment('CONTROL_CENTER_API_ENABLED', defaultValue: false);
 });
+final platformIntelligenceApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'PLATFORM_INTELLIGENCE_API_ENABLED',
+    defaultValue: false,
+  );
+});
 final auditApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment('AUDIT_API_ENABLED', defaultValue: false);
@@ -210,6 +238,9 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(financeApiEnabledProvider) ||
       ref.watch(sisApiEnabledProvider) ||
       ref.watch(academicApiEnabledProvider) ||
+      ref.watch(academicOperationsApiEnabledProvider) ||
+      ref.watch(continuityApiEnabledProvider) ||
+      ref.watch(workflowApiEnabledProvider) ||
       ref.watch(managementApiEnabledProvider) ||
       ref.watch(transportApiEnabledProvider) ||
       ref.watch(hrApiEnabledProvider) ||
@@ -225,6 +256,7 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(aiCopilotApiEnabledProvider) ||
       ref.watch(alumniApiEnabledProvider) ||
       ref.watch(controlCenterApiEnabledProvider) ||
+      ref.watch(platformIntelligenceApiEnabledProvider) ||
       ref.watch(auditApiEnabledProvider) ||
       ref.watch(paymentApiEnabledProvider) ||
       ref.watch(communicationApiEnabledProvider) ||
