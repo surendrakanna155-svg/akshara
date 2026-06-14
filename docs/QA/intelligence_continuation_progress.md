@@ -23,8 +23,8 @@
 
 | # | Feature | Status | Tests + | Patrol + | Intelligence % | Copilot % | Commit |
 |---|---------|--------|---------|----------|----------------|-----------|--------|
-| 1 | **INTEL-05 — AI Access Modes** | ✅ Complete | +6 | +1 | ~58% | ~78% | pending |
-| 2 | **At-Risk Student Intelligence** | ✅ MVP | +2 | — | ~62% | ~78% | pending |
+| 1 | **INTEL-05 — AI Access Modes** | ✅ Complete | +6 | +1 | ~58% | ~78% | `c25d32f` |
+| 2 | **At-Risk Student Intelligence** | ✅ MVP | +2 | — | ~62% | ~78% | `c25d32f` |
 | 3 | Teacher Intervention Suggestions | Pending | — | — | — | — | — |
 | 4 | Attendance Intelligence | Pending | — | — | — | — | — |
 | 5 | Fee Collection Intelligence | Pending | — | — | — | — | — |
