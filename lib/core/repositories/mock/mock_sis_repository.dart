@@ -7,6 +7,7 @@ import '../interfaces/sis_repository.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 import '../../tenant/tenant_mock_scope.dart';
+import 'mock_admissions_sis_bridge.dart';
 import 'mock_sis_write_store.dart';
 
 class MockSisRepository implements SisRepository {
@@ -475,9 +476,19 @@ class MockSisRepository implements SisRepository {
   }) async {
     await _ensureStudents(query);
     await _ensureConversionQueue(query);
-    final index = _store.conversionQueue!.indexWhere(
+    var index = _store.conversionQueue!.indexWhere(
       (item) => item.enrollment.id == request.enrollmentId,
     );
+    if (index < 0) {
+      final linked =
+          MockAdmissionsSisBridge.findEnrollment(request.enrollmentId);
+      if (linked != null) {
+        MockAdmissionsSisBridge.syncEnrollmentToConversionQueue(linked);
+        index = _store.conversionQueue!.indexWhere(
+          (item) => item.enrollment.id == request.enrollmentId,
+        );
+      }
+    }
     if (index < 0) {
       throw StateError('Enrollment not found: ${request.enrollmentId}');
     }

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../admissions_journey_context_provider.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
@@ -41,6 +43,7 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAdmissions,
         child: FilledButton.icon(
+          key: QaTestKeys.admissionsCreateApplicationButton,
           onPressed: () => _createApplication(context, ref),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('New Application'),
@@ -85,16 +88,24 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
 
   Future<void> _createApplication(BuildContext context, WidgetRef ref) async {
     try {
-      await ref.read(createApplicationProvider.notifier).execute(
-            const CreateApplicationRequest(
-              studentName: 'New Student',
-              classLabel: '5',
-              parentName: 'New Parent',
+      final lastLead = ref.read(admissionsLastCreatedLeadProvider);
+      final app = await ref.read(createApplicationProvider.notifier).execute(
+            CreateApplicationRequest(
+              studentName: lastLead?.studentName ?? 'New Student',
+              classLabel: lastLead?.classLabel ?? '5',
+              parentName: lastLead?.parentName ?? 'New Parent',
+              leadId: lastLead?.id,
+              counselor: lastLead?.counselor ?? '',
             ),
           );
+      if (app != null) {
+        ref.read(admissionsActiveApplicationIdProvider.notifier).state = app.id;
+      }
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Draft application created')),
+        SnackBar(
+          content: Text('Draft application created (${app?.id ?? ''})'),
+        ),
       );
     } catch (error) {
       if (!context.mounted) return;
@@ -112,9 +123,13 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
     if (app.status == ApplicationStatus.draft) {
       try {
         await ref.read(submitApplicationProvider.notifier).execute(app.id);
+        ref.read(admissionsActiveApplicationIdProvider.notifier).state = app.id;
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Application submitted')),
+          SnackBar(
+            key: QaTestKeys.admissionsApplicationSubmittedSnackbar,
+            content: Text('Application submitted (${app.id})'),
+          ),
         );
       } catch (error) {
         if (!context.mounted) return;

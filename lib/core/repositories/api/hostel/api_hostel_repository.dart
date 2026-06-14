@@ -1,8 +1,10 @@
+import '../api_exception.dart';
 import '../../interfaces/hostel_repository.dart';
 import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/hostel/hostel_models.dart';
+import '../../../../features/hostel/hostel_requests.dart';
 import 'mapper/hostel_mapper.dart';
 import 'remote/hostel_remote_datasource.dart';
 
@@ -75,5 +77,29 @@ class ApiHostelRepository implements HostelRepository {
   }) async {
     final dto = await _remote.fetchOccupancyMetrics(query: query);
     return _mapper.toOccupancyMetrics(dto);
+  }
+
+  @override
+  Future<HostelStudent> admitHostelStudent({
+    required RepositoryQuery query,
+    required AdmitHostelStudentRequest request,
+  }) async {
+    throw ApiNotConnectedException('HostelRepository', 'admitHostelStudent');
+  }
+
+  @override
+  Future<HostelStudent> assignHostelRoom({
+    required RepositoryQuery query,
+    required AssignHostelRoomRequest request,
+  }) async {
+    throw ApiNotConnectedException('HostelRepository', 'assignHostelRoom');
+  }
+
+  @override
+  Future<HostelStudent> checkoutHostelStudent({
+    required RepositoryQuery query,
+    required CheckoutHostelStudentRequest request,
+  }) async {
+    throw ApiNotConnectedException('HostelRepository', 'checkoutHostelStudent');
   }
 }

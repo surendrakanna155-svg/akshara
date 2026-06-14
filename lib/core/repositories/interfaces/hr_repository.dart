@@ -1,4 +1,5 @@
 import '../../../features/hr/hr_models.dart';
+import '../../../features/hr/hr_requests.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 
@@ -13,4 +14,14 @@ abstract class HrRepository {
   Future<HrRecruitmentData> getRecruitment({required RepositoryQuery query});
   Future<HrPerformanceData> getPerformance({required RepositoryQuery query});
   Future<HrSettingsData> getSettings({required RepositoryQuery query});
+
+  Future<HrLeaveRequest> createLeaveRequest({
+    required RepositoryQuery query,
+    required CreateHrLeaveRequest request,
+  });
+
+  Future<HrPayrollRun> processPayrollRun({
+    required RepositoryQuery query,
+    required ProcessHrPayrollRunRequest request,
+  });
 }

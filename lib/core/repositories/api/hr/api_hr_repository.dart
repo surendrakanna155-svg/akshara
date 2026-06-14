@@ -2,6 +2,8 @@ import '../../interfaces/hr_repository.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/hr/hr_models.dart';
+import '../../../../features/hr/hr_requests.dart';
+import '../api_exception.dart';
 import 'mapper/hr_mapper.dart';
 import 'remote/hr_remote_datasource.dart';
 
@@ -81,5 +83,21 @@ class ApiHrRepository implements HrRepository {
   Future<HrSettingsData> getSettings({required RepositoryQuery query}) async {
     final dto = await _remote.fetchSettings(query: query);
     return _mapper.toSettings(dto);
+  }
+
+  @override
+  Future<HrLeaveRequest> createLeaveRequest({
+    required RepositoryQuery query,
+    required CreateHrLeaveRequest request,
+  }) async {
+    throw ApiNotConnectedException('HrRepository', 'createLeaveRequest');
+  }
+
+  @override
+  Future<HrPayrollRun> processPayrollRun({
+    required RepositoryQuery query,
+    required ProcessHrPayrollRunRequest request,
+  }) async {
+    throw ApiNotConnectedException('HrRepository', 'processPayrollRun');
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -11,6 +12,7 @@ import '../../admissions/admissions_models.dart';
 import '../fee_structures/finance_fee_structures_provider.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_journey_context_provider.dart';
 import '../finance_workflow_actions.dart';
 import '../integration/finance_admissions_handoff_provider.dart';
 import '../widgets/finance_handoff_queue.dart';
@@ -103,10 +105,23 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
                                 includeHostel: hostel,
                               );
                               if (!context.mounted) return;
+                              final invoiceId = ref.read(financeLastInvoiceIdProvider);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                    'Fee account created for ${selected.handoff.studentName}',
+                                  key: QaTestKeys.financeFeeAccountCreatedSnackbar,
+                                  content: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Fee account created for ${selected.handoff.studentName}',
+                                      ),
+                                      if (invoiceId != null)
+                                        Text(
+                                          invoiceId,
+                                          key: QaTestKeys.financeLastInvoiceIdField,
+                                        ),
+                                    ],
                                   ),
                                 ),
                               );
@@ -160,9 +175,24 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
                                     includeHostel: hostel,
                                   );
                                   if (!context.mounted) return;
+                                  final invoiceId = ref.read(financeLastInvoiceIdProvider);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Fee account created'),
+                                    SnackBar(
+                                      key: QaTestKeys.financeFeeAccountCreatedSnackbar,
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Fee account created for ${selected.handoff.studentName}',
+                                          ),
+                                          if (invoiceId != null)
+                                            Text(
+                                              invoiceId,
+                                              key: QaTestKeys.financeLastInvoiceIdField,
+                                            ),
+                                        ],
+                                      ),
                                     ),
                                   );
                                 } catch (error) {
@@ -279,6 +309,14 @@ class _AssignmentPanelState extends ConsumerState<_AssignmentPanel> {
               const AksharaSectionHeader(title: 'Generated fee account'),
               const SizedBox(height: AksharaSpacing.s3),
               _PreviewCard(preview: preview),
+              if (ref.watch(financeLastInvoiceIdProvider) case final invoiceId?) ...[
+                const SizedBox(height: AksharaSpacing.s2),
+                Text(
+                  invoiceId,
+                  key: QaTestKeys.financeLastInvoiceIdField,
+                  style: context.aksharaText.bodySmall,
+                ),
+              ],
             ] else ...[
               Material(
                 child: DropdownMenu<String>(
@@ -326,6 +364,7 @@ class _AssignmentPanelState extends ConsumerState<_AssignmentPanel> {
               AksharaManageAction(
                 permission: Permission.manageFinance,
                 child: FilledButton.icon(
+                  key: QaTestKeys.financeAssignFeePlanButton,
                   onPressed: () {
                     widget.onComplete(
                       structure,

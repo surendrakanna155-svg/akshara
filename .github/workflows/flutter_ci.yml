@@ -2,11 +2,13 @@ name: Flutter CI
 
 on:
   push:
+    branches: [main, 'release/**']
   pull_request:
 
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,11 +22,50 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze
-        run: flutter analyze
-
-      - name: Test with coverage
-        run: flutter test --coverage
+      - name: Run CI gates (analyze + full test suite + coverage)
+        run: bash scripts/qa/run_ci_gates.sh
 
       - name: Verify coverage artifact
         run: test -f coverage/lcov.info
+
+  phase1-patrol-smoke:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    needs: analyze-and-test
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Patrol CLI
+        run: dart pub global activate patrol_cli
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Phase 1 Patrol E2E (4 workflows)
+        env:
+          PATH: ${{ env.PATH }}:${{ env.HOME }}/.pub-cache/bin
+        run: |
+          bash scripts/qa/start_emulator.sh || true
+          patrol test \
+            --dart-define=APP_ENV=development \
+            --dart-define=ENABLE_QA_LOGIN=true \
+            --dart-define=ENABLE_DEMO_AUTH=true \
+            --dart-define=ENABLE_API_MODE=false \
+            --target patrol_test/workflows/hr_payroll_e2e_test.dart \
+            --target patrol_test/workflows/inventory_lifecycle_e2e_test.dart \
+            --target patrol_test/workflows/transport_activate_e2e_test.dart \
+            --target patrol_test/workflows/education_remark_e2e_test.dart

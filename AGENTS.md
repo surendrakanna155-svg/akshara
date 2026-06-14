@@ -481,3 +481,20 @@ CI configuration (when added)
 | Repository interface breaking change | Agent A owns; Agent B + E update in same release |
 | Test count drops > 5 | Agent E investigates before release proceeds |
 | Production readiness drops | Agent F updates Roadmap; no new features until recovered |
+
+---
+
+## Multi-Agent Orchestration (Cursor)
+
+Parallel subagent execution uses:
+
+| Resource | Path |
+|----------|------|
+| Architecture | `docs/MULTI_AGENT_SYSTEM.md` |
+| Handoff protocol | `qa/agents/handoff_protocol.md` |
+| Task manifest | `qa/agents/work_manifest.json` |
+| Live board | `qa/agents/handoff_board.json` |
+| Coordinator CLI | `scripts/qa/agent_coordinator.py` |
+| Parent skill | `.cursor/skills/multi-agent-coordinator/SKILL.md` |
+
+**Rules:** Parent coordinator runs the loop; subagents edit **only** manifest-listed files; max **4** parallel tasks; **`complete --summary`** for cross-agent wait/handoff; full Patrol only on Agent **G** gate or mission end.

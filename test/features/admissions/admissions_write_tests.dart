@@ -15,6 +15,10 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../helpers/provider_test_overrides.dart';
 
 void main() {
+  setUpAll(() async {
+    await initProviderTestPrefs();
+  });
+
   group('Admissions RBAC mutations', () {
     test('createLead fails when manageAdmissions permission missing', () async {
       final container = ProviderContainer(
@@ -27,17 +31,58 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await expectLater(
-        container.read(createLeadProvider.notifier).execute(
-              const CreateLeadRequest(
-                parentName: 'A',
-                studentName: 'B',
-                classLabel: '5',
-                phone: '9999999999',
-              ),
+      await container.read(createLeadProvider.notifier).execute(
+            const CreateLeadRequest(
+              parentName: 'A',
+              studentName: 'B',
+              classLabel: '5',
+              phone: '9999999999',
             ),
-        throwsA(isA<Object>()),
+          );
+
+      expect(container.read(createLeadProvider).hasError, isTrue);
+    });
+
+    test('createLead fails for financeAdmin without manageAdmissions', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
       );
+      addTearDown(container.dispose);
+
+      await container.read(createLeadProvider.notifier).execute(
+            const CreateLeadRequest(
+              parentName: 'Finance Block',
+              studentName: 'Student',
+              classLabel: '5',
+              phone: '8888888888',
+            ),
+          );
+
+      expect(container.read(createLeadProvider).hasError, isTrue);
+    });
+
+    test('approveAdmission fails when approveAdmissions permission missing', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(approveAdmissionProvider.notifier).execute(
+            approvalId: 'appr_1',
+            request: const ApprovalDecisionRequest(comment: 'Should fail'),
+          );
+
+      expect(container.read(approveAdmissionProvider).hasError, isTrue);
     });
   });
 

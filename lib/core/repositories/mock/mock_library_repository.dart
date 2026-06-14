@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/library/library_models.dart';
+import '../../../features/library/library_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/library_repository.dart';
 import '../paginated_result.dart';
@@ -8,7 +9,20 @@ import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockLibraryRepository implements LibraryRepository {
-  static const _recentIssues = [
+  MockLibraryRepository()
+      : _books = List<LibraryBook>.from(_seedBooks),
+        _issues = List<LibraryIssueRecord>.from(_seedIssues),
+        _returns = List<LibraryReturnRecord>.from(_seedReturns),
+        _members = List<LibraryMember>.from(_seedMembers);
+
+  final List<LibraryBook> _books;
+  final List<LibraryIssueRecord> _issues;
+  final List<LibraryReturnRecord> _returns;
+  final List<LibraryMember> _members;
+  int _issueCounter = 5;
+  int _returnCounter = 5;
+
+  static const _seedIssues = [
     LibraryIssueRecord(
       id: 'iss_1',
       memberName: 'Arjun Patel',
@@ -34,17 +48,27 @@ class MockLibraryRepository implements LibraryRepository {
     LibraryIssueRecord(
       id: 'iss_3',
       memberName: 'Dr. Meera Iyer',
-      memberType: LibraryMemberType.staff,
-      bookTitle: 'Pedagogy of the Oppressed',
-      isbn: '978-0-8264-1276-8',
+      memberType: LibraryMemberType.teacher,
+      bookTitle: 'Effective Java',
+      isbn: '978-0-13-468599-1',
       issuedDate: '1 Jun 2026',
       dueDate: '15 Jun 2026',
       status: LibraryLoanStatus.active,
-      sisStudentId: null,
+    ),
+    LibraryIssueRecord(
+      id: 'iss_4',
+      memberName: 'Priya Sharma',
+      memberType: LibraryMemberType.student,
+      bookTitle: 'Pride and Prejudice',
+      isbn: '978-0-14-143951-8',
+      issuedDate: '15 May 2026',
+      dueDate: '29 May 2026',
+      status: LibraryLoanStatus.overdue,
+      sisStudentId: 'SIS-STU-10415',
     ),
   ];
 
-  static const _books = [
+  static const _seedBooks = [
     LibraryBook(
       id: 'bk_1',
       isbn: '978-0-14-143951-8',
@@ -113,7 +137,7 @@ class MockLibraryRepository implements LibraryRepository {
     ),
   ];
 
-  static const _members = [
+  static const _seedMembers = [
     LibraryMember(
       id: 'mem_1',
       name: 'Arjun Patel',
@@ -164,10 +188,61 @@ class MockLibraryRepository implements LibraryRepository {
     ),
   ];
 
+  static const _seedReturns = [
+    LibraryReturnRecord(
+      id: 'ret_1',
+      memberName: 'Ananya Reddy',
+      bookTitle: 'NCERT Mathematics Class 10',
+      isbn: '978-81-219-2612-0',
+      returnedDate: '5 Jun 2026',
+      condition: LibraryReturnCondition.good,
+      fineAmount: '₹0',
+      daysOverdue: 0,
+    ),
+    LibraryReturnRecord(
+      id: 'ret_2',
+      memberName: 'Rohan Mehta',
+      bookTitle: 'The Great Gatsby',
+      isbn: '978-0-553-29698-3',
+      returnedDate: '4 Jun 2026',
+      condition: LibraryReturnCondition.fair,
+      fineAmount: '₹50',
+      daysOverdue: 2,
+    ),
+    LibraryReturnRecord(
+      id: 'ret_3',
+      memberName: 'Priya Sharma',
+      bookTitle: 'Concepts of Physics Vol. 1',
+      isbn: '978-0-07-802563-1',
+      returnedDate: '3 Jun 2026',
+      condition: LibraryReturnCondition.damaged,
+      fineAmount: '₹200',
+      daysOverdue: 5,
+    ),
+    LibraryReturnRecord(
+      id: 'ret_4',
+      memberName: 'Dr. Meera Iyer',
+      bookTitle: 'Pride and Prejudice',
+      isbn: '978-0-14-143951-8',
+      returnedDate: '2 Jun 2026',
+      condition: LibraryReturnCondition.good,
+      fineAmount: '₹0',
+      daysOverdue: 0,
+    ),
+  ];
+
+  List<LibraryIssueRecord> get _openIssues => _issues
+      .where(
+        (issue) =>
+            issue.status == LibraryLoanStatus.active ||
+            issue.status == LibraryLoanStatus.overdue,
+      )
+      .toList(growable: false);
+
   @override
   Future<LibraryDashboardData> getDashboard({required RepositoryQuery query}) async {
-    return const LibraryDashboardData(
-      kpis: [
+    return LibraryDashboardData(
+      kpis: const [
         LibraryKpi(
           id: 'total_books',
           value: '4,280',
@@ -214,13 +289,13 @@ class MockLibraryRepository implements LibraryRepository {
           detail: 'Student & Teacher app',
         ),
       ],
-      recentIssues: _recentIssues,
-      overdueTitles: [
+      recentIssues: _openIssues.take(3).toList(growable: false),
+      overdueTitles: const [
         'To Kill a Mockingbird — 3 copies overdue',
         'NCERT Mathematics Class 10 — 2 copies overdue',
         'The Great Gatsby — 1 copy overdue',
       ],
-      issueTrend: [
+      issueTrend: const [
         LibraryTrendPoint(label: 'Jan', amountLakhs: 820, targetLakhs: 900),
         LibraryTrendPoint(label: 'Feb', amountLakhs: 880, targetLakhs: 900),
         LibraryTrendPoint(label: 'Mar', amountLakhs: 910, targetLakhs: 950),
@@ -228,7 +303,7 @@ class MockLibraryRepository implements LibraryRepository {
         LibraryTrendPoint(label: 'May', amountLakhs: 920, targetLakhs: 950),
         LibraryTrendPoint(label: 'Jun', amountLakhs: 960, targetLakhs: 1000),
       ],
-      categoryDistribution: [
+      categoryDistribution: const [
         LibrarySegment(label: 'Fiction', value: 38, percent: 38),
         LibrarySegment(label: 'Textbook', value: 28, percent: 28),
         LibrarySegment(label: 'Science', value: 18, percent: 18),
@@ -250,98 +325,13 @@ class MockLibraryRepository implements LibraryRepository {
   Future<PaginatedResult<LibraryIssueRecord>> getIssues({
     required RepositoryQuery query,
   }) async =>
-      paginateList(const [
-        LibraryIssueRecord(
-          id: 'iss_1',
-          memberName: 'Arjun Patel',
-          memberType: LibraryMemberType.student,
-          bookTitle: 'To Kill a Mockingbird',
-          isbn: '978-0-06-112008-4',
-          issuedDate: '22 May 2026',
-          dueDate: '5 Jun 2026',
-          status: LibraryLoanStatus.overdue,
-          sisStudentId: 'SIS-STU-10421',
-        ),
-        LibraryIssueRecord(
-          id: 'iss_2',
-          memberName: 'Emma Thomas',
-          memberType: LibraryMemberType.student,
-          bookTitle: 'The Great Gatsby',
-          isbn: '978-0-553-29698-3',
-          issuedDate: '28 May 2026',
-          dueDate: '11 Jun 2026',
-          status: LibraryLoanStatus.active,
-          sisStudentId: 'SIS-STU-10418',
-        ),
-        LibraryIssueRecord(
-          id: 'iss_3',
-          memberName: 'Dr. Meera Iyer',
-          memberType: LibraryMemberType.teacher,
-          bookTitle: 'Effective Java',
-          isbn: '978-0-13-468599-1',
-          issuedDate: '1 Jun 2026',
-          dueDate: '15 Jun 2026',
-          status: LibraryLoanStatus.active,
-        ),
-        LibraryIssueRecord(
-          id: 'iss_4',
-          memberName: 'Priya Sharma',
-          memberType: LibraryMemberType.student,
-          bookTitle: 'Pride and Prejudice',
-          isbn: '978-0-14-143951-8',
-          issuedDate: '15 May 2026',
-          dueDate: '29 May 2026',
-          status: LibraryLoanStatus.overdue,
-          sisStudentId: 'SIS-STU-10415',
-        ),
-      ], query);
+      paginateList(_openIssues, query);
 
   @override
   Future<PaginatedResult<LibraryReturnRecord>> getReturns({
     required RepositoryQuery query,
   }) async =>
-      paginateList(const [
-        LibraryReturnRecord(
-          id: 'ret_1',
-          memberName: 'Ananya Reddy',
-          bookTitle: 'NCERT Mathematics Class 10',
-          isbn: '978-81-219-2612-0',
-          returnedDate: '5 Jun 2026',
-          condition: LibraryReturnCondition.good,
-          fineAmount: '₹0',
-          daysOverdue: 0,
-        ),
-        LibraryReturnRecord(
-          id: 'ret_2',
-          memberName: 'Rohan Mehta',
-          bookTitle: 'The Great Gatsby',
-          isbn: '978-0-553-29698-3',
-          returnedDate: '4 Jun 2026',
-          condition: LibraryReturnCondition.fair,
-          fineAmount: '₹50',
-          daysOverdue: 2,
-        ),
-        LibraryReturnRecord(
-          id: 'ret_3',
-          memberName: 'Priya Sharma',
-          bookTitle: 'Concepts of Physics Vol. 1',
-          isbn: '978-0-07-802563-1',
-          returnedDate: '3 Jun 2026',
-          condition: LibraryReturnCondition.damaged,
-          fineAmount: '₹200',
-          daysOverdue: 5,
-        ),
-        LibraryReturnRecord(
-          id: 'ret_4',
-          memberName: 'Dr. Meera Iyer',
-          bookTitle: 'Pride and Prejudice',
-          isbn: '978-0-14-143951-8',
-          returnedDate: '2 Jun 2026',
-          condition: LibraryReturnCondition.good,
-          fineAmount: '₹0',
-          daysOverdue: 0,
-        ),
-      ], query);
+      paginateList(_returns, query);
 
   @override
   Future<PaginatedResult<LibraryMember>> getMembers({
@@ -519,5 +509,165 @@ class MockLibraryRepository implements LibraryRepository {
         LibrarySegment(label: 'Effective Java', value: 18, percent: 12),
       ],
     );
+  }
+
+  @override
+  Future<LibraryIssueRecord> issueLibraryBook({
+    required RepositoryQuery query,
+    required IssueLibraryBookRequest request,
+  }) async {
+    final bookIndex = _books.indexWhere((book) => book.isbn == request.isbn);
+    if (bookIndex < 0) {
+      throw StateError('Book not found for ISBN ${request.isbn}');
+    }
+
+    final memberIndex = _members.indexWhere((m) => m.id == request.memberId);
+    if (memberIndex < 0) {
+      throw StateError('Member not found: ${request.memberId}');
+    }
+
+    final book = _books[bookIndex];
+    final member = _members[memberIndex];
+
+    if (book.availableCopies <= 0) {
+      throw StateError('No copies available for ${book.title}');
+    }
+    if (member.status != LibraryMemberStatus.active) {
+      throw StateError('Member ${member.name} is not active');
+    }
+
+    _issueCounter += 1;
+    final issueId = 'iss_$_issueCounter';
+    const issuedDate = '13 Jun 2026';
+    const dueDate = '27 Jun 2026';
+
+    final issue = LibraryIssueRecord(
+      id: issueId,
+      memberName: member.name,
+      memberType: member.memberType,
+      bookTitle: book.title,
+      isbn: book.isbn,
+      issuedDate: issuedDate,
+      dueDate: dueDate,
+      status: LibraryLoanStatus.active,
+      sisStudentId: member.sisStudentId,
+    );
+    _issues.insert(0, issue);
+
+    final updatedAvailable = book.availableCopies - 1;
+    _books[bookIndex] = LibraryBook(
+      id: book.id,
+      isbn: book.isbn,
+      title: book.title,
+      author: book.author,
+      category: book.category,
+      totalCopies: book.totalCopies,
+      availableCopies: updatedAvailable,
+      shelf: book.shelf,
+      status: updatedAvailable == 0
+          ? LibraryBookStatus.issued
+          : LibraryBookStatus.available,
+    );
+
+    _members[memberIndex] = LibraryMember(
+      id: member.id,
+      name: member.name,
+      memberType: member.memberType,
+      identifier: member.identifier,
+      classOrDepartment: member.classOrDepartment,
+      activeLoans: member.activeLoans + 1,
+      status: member.status,
+      sisStudentId: member.sisStudentId,
+    );
+
+    return issue;
+  }
+
+  @override
+  Future<LibraryReturnRecord> returnLibraryBook({
+    required RepositoryQuery query,
+    required ReturnLibraryBookRequest request,
+  }) async {
+    final issueIndex = _issues.indexWhere((issue) => issue.id == request.issueId);
+    if (issueIndex < 0) {
+      throw StateError('Issue not found: ${request.issueId}');
+    }
+
+    final issue = _issues[issueIndex];
+    if (issue.status == LibraryLoanStatus.returned) {
+      throw StateError('Issue already returned');
+    }
+
+    final bookIndex = _books.indexWhere((book) => book.isbn == issue.isbn);
+    if (bookIndex < 0) {
+      throw StateError('Book not found for ISBN ${issue.isbn}');
+    }
+
+    final memberIndex =
+        _members.indexWhere((member) => member.name == issue.memberName);
+    if (memberIndex < 0) {
+      throw StateError('Member not found: ${issue.memberName}');
+    }
+
+    final daysOverdue =
+        issue.status == LibraryLoanStatus.overdue ? 2 : 0;
+    final damageFine = request.condition == LibraryReturnCondition.damaged
+        ? 200
+        : 0;
+    final totalFine = daysOverdue * 30 + damageFine;
+    final fineLabel = totalFine == 0 ? '₹0' : '₹$totalFine';
+
+    _returnCounter += 1;
+    final returnRecord = LibraryReturnRecord(
+      id: 'ret_$_returnCounter',
+      memberName: issue.memberName,
+      bookTitle: issue.bookTitle,
+      isbn: issue.isbn,
+      returnedDate: '13 Jun 2026',
+      condition: request.condition,
+      fineAmount: fineLabel,
+      daysOverdue: daysOverdue,
+    );
+    _returns.insert(0, returnRecord);
+
+    _issues[issueIndex] = LibraryIssueRecord(
+      id: issue.id,
+      memberName: issue.memberName,
+      memberType: issue.memberType,
+      bookTitle: issue.bookTitle,
+      isbn: issue.isbn,
+      issuedDate: issue.issuedDate,
+      dueDate: issue.dueDate,
+      status: LibraryLoanStatus.returned,
+      sisStudentId: issue.sisStudentId,
+    );
+
+    final book = _books[bookIndex];
+    final updatedAvailable = book.availableCopies + 1;
+    _books[bookIndex] = LibraryBook(
+      id: book.id,
+      isbn: book.isbn,
+      title: book.title,
+      author: book.author,
+      category: book.category,
+      totalCopies: book.totalCopies,
+      availableCopies: updatedAvailable,
+      shelf: book.shelf,
+      status: LibraryBookStatus.available,
+    );
+
+    final member = _members[memberIndex];
+    _members[memberIndex] = LibraryMember(
+      id: member.id,
+      name: member.name,
+      memberType: member.memberType,
+      identifier: member.identifier,
+      classOrDepartment: member.classOrDepartment,
+      activeLoans: member.activeLoans > 0 ? member.activeLoans - 1 : 0,
+      status: member.status,
+      sisStudentId: member.sisStudentId,
+    );
+
+    return returnRecord;
   }
 }

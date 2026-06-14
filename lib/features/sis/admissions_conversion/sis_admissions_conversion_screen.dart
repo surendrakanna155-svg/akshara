@@ -6,6 +6,7 @@ import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../admin/admin_layout.dart';
 import '../../admissions/admissions_models.dart';
 import '../integration/sis_admissions_integration_provider.dart';
@@ -192,21 +193,29 @@ class _SisAdmissionsConversionScreenState
       academicYear: _previewYear ?? item.enrollment.academicYear,
     );
 
-    final result = await completeSisEnrollmentConversion(
-      ref,
-      enrollmentId: item.enrollment.id,
-      preview: preview,
-    );
+    try {
+      final result = await completeSisEnrollmentConversion(
+        ref,
+        enrollmentId: item.enrollment.id,
+        preview: preview,
+      );
 
-    if (!mounted || result == null) return;
+      if (!mounted || result == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Created SIS profile ${result.studentId} (${result.admissionNumber})',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.sisConversionSuccessSnackbar,
+          content: Text(
+            'Created SIS profile ${result.studentId} (${result.admissionNumber})',
+          ),
         ),
-      ),
-    );
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
   }
 }
 
@@ -316,6 +325,7 @@ class _ConversionPanel extends ConsumerWidget {
               AksharaManageAction(
                 permission: Permission.manageSis,
                 child: FilledButton.icon(
+                  key: QaTestKeys.sisConvertEnrollmentButton,
                   onPressed: onConvert,
                   icon: const Icon(Icons.person_add_alt_1),
                   label: const Text('Convert to SIS student'),

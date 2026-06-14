@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/transport/transport_models.dart';
+import '../../../features/transport/transport_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/transport_repository.dart';
 import '../paginated_result.dart';
@@ -8,6 +9,11 @@ import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockTransportRepository implements TransportRepository {
+  MockTransportRepository() : _routes = List.of(_seedRoutes);
+
+  final List<TransportRoute> _routes;
+  int _routeCounter = 100;
+
   static const _occupancyMetrics = OccupancyMetrics(
     totalCapacity: 860,
     allocatedSeats: 842,
@@ -209,7 +215,7 @@ class MockTransportRepository implements TransportRepository {
     );
   }
 
-  static const _routes = [
+  static const _seedRoutes = [
         TransportRoute(
           id: 'route_12',
           name: 'Route 12 — North',
@@ -273,6 +279,59 @@ class MockTransportRepository implements TransportRepository {
         page: query.page,
         pageSize: query.pageSize,
       );
+
+  @override
+  Future<TransportRoute> createRoute({
+    required RepositoryQuery query,
+    required CreateTransportRouteRequest request,
+  }) async {
+    final id = 'route_${++_routeCounter}';
+    final route = TransportRoute(
+      id: id,
+      name: request.name,
+      stopCount: 0,
+      distanceKm: request.distanceKm,
+      amDeparture: request.amDeparture,
+      pmDeparture: request.pmDeparture,
+      assignedBus: '—',
+      studentCount: 0,
+      status: TransportRouteStatus.draft,
+      stops: const [],
+      shift: request.shift,
+    );
+    _routes.insert(0, route);
+    return route;
+  }
+
+  @override
+  Future<TransportRoute> activateRoute({
+    required RepositoryQuery query,
+    required ActivateTransportRouteRequest request,
+  }) async {
+    final index = _routes.indexWhere((r) => r.id == request.routeId);
+    if (index < 0) {
+      throw StateError('Route not found');
+    }
+    final current = _routes[index];
+    if (current.status != TransportRouteStatus.draft) {
+      throw StateError('Only draft routes can be activated');
+    }
+    final activated = TransportRoute(
+      id: current.id,
+      name: current.name,
+      stopCount: current.stopCount,
+      distanceKm: current.distanceKm,
+      amDeparture: current.amDeparture,
+      pmDeparture: current.pmDeparture,
+      assignedBus: current.assignedBus == '—' ? 'BUS-TBD' : current.assignedBus,
+      studentCount: current.studentCount,
+      status: TransportRouteStatus.active,
+      stops: current.stops,
+      shift: current.shift,
+    );
+    _routes[index] = activated;
+    return activated;
+  }
 
   @override
   Future<PaginatedResult<TransportVehicle>> getVehicles({

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/hostel/hostel_models.dart';
+import '../../../features/hostel/hostel_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/hostel_repository.dart';
 import '../paginated_result.dart';
@@ -8,14 +9,30 @@ import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockHostelRepository implements HostelRepository {
-  static const _occupancyMetrics = HostelOccupancyMetrics(
-    totalBeds: 440,
-    occupiedBeds: 383,
-    vacantBeds: 57,
-    utilizationPercent: 87,
-  );
+  MockHostelRepository()
+      : _students = List<HostelStudent>.from(_seedStudents),
+        _rooms = List<HostelRoom>.from(_seedRooms);
 
-  static const _students = [
+  final List<HostelStudent> _students;
+  final List<HostelRoom> _rooms;
+  int _studentCounter = 5;
+
+  HostelOccupancyMetrics get _occupancyMetrics {
+    final totalBeds = _rooms.fold<int>(0, (sum, room) => sum + room.totalBeds);
+    final occupiedBeds =
+        _rooms.fold<int>(0, (sum, room) => sum + room.occupiedBeds);
+    final vacantBeds = totalBeds - occupiedBeds;
+    final utilizationPercent =
+        totalBeds == 0 ? 0 : ((occupiedBeds / totalBeds) * 100).round();
+    return HostelOccupancyMetrics(
+      totalBeds: totalBeds,
+      occupiedBeds: occupiedBeds,
+      vacantBeds: vacantBeds,
+      utilizationPercent: utilizationPercent,
+    );
+  }
+
+  static const _seedStudents = [
     HostelStudent(
       id: 'ho_stu_1',
       studentName: 'Arjun Patel',
@@ -68,9 +85,22 @@ class MockHostelRepository implements HostelRepository {
       feePending: '₹4,800',
       parentAppLinked: true,
     ),
+    HostelStudent(
+      id: 'ho_stu_5',
+      studentName: 'Karthik Sharma',
+      admissionNumber: 'ADM-2026-0145',
+      classLabel: '8',
+      block: '—',
+      room: '—',
+      bed: '—',
+      sisStudentId: 'SIS-STU-10425',
+      status: HostelStudentStatus.awaitingAllocation,
+      feePending: '₹0',
+      parentAppLinked: true,
+    ),
   ];
 
-  static const _rooms = [
+  static const _seedRooms = [
     HostelRoom(
       id: 'room_1',
       block: 'Block A',
@@ -130,8 +160,8 @@ class MockHostelRepository implements HostelRepository {
 
   @override
   Future<HostelDashboardData> getDashboard({required RepositoryQuery query}) async {
-    return const HostelDashboardData(
-      kpis: [
+    return HostelDashboardData(
+      kpis: const [
         HostelKpi(
           id: 'occupancy',
           value: '87%',
@@ -177,7 +207,7 @@ class MockHostelRepository implements HostelRepository {
           detail: 'Links to Finance FN-02',
         ),
       ],
-      blockOccupancy: [
+      blockOccupancy: const [
         HostelBlockOccupancy(
           block: 'Block A',
           occupied: 148,
@@ -197,7 +227,7 @@ class MockHostelRepository implements HostelRepository {
           percent: 80,
         ),
       ],
-      sessionAttendance: [
+      sessionAttendance: const [
         HostelSessionAttendance(
           session: HostelAttendanceSession.morning,
           present: 408,
@@ -533,11 +563,175 @@ class MockHostelRepository implements HostelRepository {
 
   @override
   Future<HostelOccupancyMetrics> getOccupancyMetrics({required RepositoryQuery query}) async {
-    return const HostelOccupancyMetrics(
-      totalBeds: 440,
-      occupiedBeds: 383,
-      vacantBeds: 57,
-      utilizationPercent: 87,
+    return _occupancyMetrics;
+  }
+
+  int _roomIndexByNumber(String roomNumber) =>
+      _rooms.indexWhere((room) => room.roomNumber == roomNumber);
+
+  HostelRoomStatus _statusForOccupancy(
+    HostelRoom room,
+    int occupiedBeds,
+  ) {
+    if (room.status == HostelRoomStatus.maintenance) {
+      return HostelRoomStatus.maintenance;
+    }
+    if (occupiedBeds <= 0) {
+      return HostelRoomStatus.vacant;
+    }
+    if (occupiedBeds >= room.totalBeds) {
+      return HostelRoomStatus.occupied;
+    }
+    return HostelRoomStatus.occupied;
+  }
+
+  void _releaseStudentBed(HostelStudent student) {
+    if (student.room == '—') return;
+    final roomIndex = _roomIndexByNumber(student.room);
+    if (roomIndex < 0) return;
+
+    final room = _rooms[roomIndex];
+    final occupiedBeds = room.occupiedBeds > 0 ? room.occupiedBeds - 1 : 0;
+    _rooms[roomIndex] = HostelRoom(
+      id: room.id,
+      block: room.block,
+      roomNumber: room.roomNumber,
+      floor: room.floor,
+      type: room.type,
+      totalBeds: room.totalBeds,
+      occupiedBeds: occupiedBeds,
+      status: _statusForOccupancy(room, occupiedBeds),
+      facilities: room.facilities,
     );
+  }
+
+  void _occupyRoomBed(HostelRoom room, int roomIndex) {
+    final occupiedBeds = room.occupiedBeds + 1;
+    _rooms[roomIndex] = HostelRoom(
+      id: room.id,
+      block: room.block,
+      roomNumber: room.roomNumber,
+      floor: room.floor,
+      type: room.type,
+      totalBeds: room.totalBeds,
+      occupiedBeds: occupiedBeds,
+      status: _statusForOccupancy(room, occupiedBeds),
+      facilities: room.facilities,
+    );
+  }
+
+  @override
+  Future<HostelStudent> admitHostelStudent({
+    required RepositoryQuery query,
+    required AdmitHostelStudentRequest request,
+  }) async {
+    if (_students.any((s) => s.sisStudentId == request.sisStudentId)) {
+      throw StateError('Student already admitted to hostel');
+    }
+
+    _studentCounter += 1;
+    final student = HostelStudent(
+      id: 'ho_stu_$_studentCounter',
+      studentName: request.studentName,
+      admissionNumber: request.admissionNumber,
+      classLabel: request.classLabel,
+      block: '—',
+      room: '—',
+      bed: '—',
+      sisStudentId: request.sisStudentId,
+      status: HostelStudentStatus.awaitingAllocation,
+      feePending: '₹0',
+      parentAppLinked: true,
+    );
+    _students.insert(0, student);
+    return student;
+  }
+
+  @override
+  Future<HostelStudent> assignHostelRoom({
+    required RepositoryQuery query,
+    required AssignHostelRoomRequest request,
+  }) async {
+    final studentIndex =
+        _students.indexWhere((s) => s.id == request.hostelStudentId);
+    if (studentIndex < 0) {
+      throw StateError('Hostel student not found');
+    }
+
+    final student = _students[studentIndex];
+    if (student.status == HostelStudentStatus.checkedOut) {
+      throw StateError('Checked-out students cannot be assigned a room');
+    }
+
+    final roomIndex = _rooms.indexWhere((room) => room.id == request.roomId);
+    if (roomIndex < 0) {
+      throw StateError('Room not found');
+    }
+
+    final room = _rooms[roomIndex];
+    if (room.status == HostelRoomStatus.maintenance) {
+      throw StateError('Room is under maintenance');
+    }
+    if (room.occupiedBeds >= room.totalBeds) {
+      throw StateError('Room is at full capacity');
+    }
+
+    _releaseStudentBed(student);
+
+    _occupyRoomBed(room, roomIndex);
+
+    final assigned = HostelStudent(
+      id: student.id,
+      studentName: student.studentName,
+      admissionNumber: student.admissionNumber,
+      classLabel: student.classLabel,
+      block: room.block,
+      room: room.roomNumber,
+      bed: request.bed,
+      sisStudentId: student.sisStudentId,
+      status: HostelStudentStatus.resident,
+      feePending: student.feePending,
+      parentAppLinked: student.parentAppLinked,
+    );
+    _students[studentIndex] = assigned;
+    return assigned;
+  }
+
+  @override
+  Future<HostelStudent> checkoutHostelStudent({
+    required RepositoryQuery query,
+    required CheckoutHostelStudentRequest request,
+  }) async {
+    final studentIndex =
+        _students.indexWhere((s) => s.id == request.hostelStudentId);
+    if (studentIndex < 0) {
+      throw StateError('Hostel student not found');
+    }
+
+    final student = _students[studentIndex];
+    if (student.status == HostelStudentStatus.checkedOut) {
+      throw StateError('Student already checked out');
+    }
+    if (student.status == HostelStudentStatus.awaitingAllocation) {
+      throw StateError('Assign a room before checkout');
+    }
+
+    _releaseStudentBed(student);
+
+    final checkedOut = HostelStudent(
+      id: student.id,
+      studentName: student.studentName,
+      admissionNumber: student.admissionNumber,
+      classLabel: student.classLabel,
+      block: '—',
+      room: '—',
+      bed: '—',
+      sisStudentId: student.sisStudentId,
+      status: HostelStudentStatus.checkedOut,
+      feePending: student.feePending,
+      parentAppLinked: student.parentAppLinked,
+    );
+    _students[studentIndex] = checkedOut;
+    return checkedOut;
   }
 }

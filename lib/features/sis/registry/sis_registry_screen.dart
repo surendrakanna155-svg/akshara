@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -66,6 +67,7 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
             label: 'Student search',
             child: Material(
               child: TextField(
+                key: QaTestKeys.sisRegistrySearchField,
                 controller: _searchController,
                 decoration: const InputDecoration(
                   labelText: 'Search student or admission number',
@@ -150,6 +152,7 @@ class _StudentRegistryTable extends StatelessWidget {
       rowBuilder: (index) {
         final student = students[index];
         return DataRow(
+          key: QaTestKeys.sisRegistryStudentRow(student.studentName),
           cells: [
             DataCell(Text(student.studentName)),
             DataCell(Text(student.admissionNumber)),
@@ -204,6 +207,7 @@ class _StudentMobileCard extends StatelessWidget {
       button: true,
       label: '${student.studentName}, ${student.admissionNumber}',
       child: Card(
+        key: QaTestKeys.sisRegistryStudentRow(student.studentName),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AksharaSpacing.s3),

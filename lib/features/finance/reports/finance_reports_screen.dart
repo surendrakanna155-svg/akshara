@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -100,7 +101,17 @@ class FinanceReportsScreen extends ConsumerWidget {
             runSpacing: AksharaSpacing.s3,
             children: [
               OutlinedButton.icon(
-                onPressed: () {},
+                key: QaTestKeys.financeReportExportPdfButton,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      key: QaTestKeys.financeReportExportSuccessSnackbar,
+                      content: Text(
+                        'Report export queued (${selectedReport.title})',
+                      ),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.picture_as_pdf_outlined),
                 label: const Text('Export PDF'),
               ),

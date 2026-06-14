@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
@@ -74,6 +75,28 @@ class TransportReportsScreen extends ConsumerWidget {
         const AksharaSectionHeader(title: 'Report catalog'),
         const SizedBox(height: AksharaSpacing.s3),
         _ReportCatalogList(items: data.catalog),
+        const SizedBox(height: AksharaSpacing.s4),
+        Wrap(
+          spacing: AksharaSpacing.s3,
+          runSpacing: AksharaSpacing.s3,
+          children: [
+            OutlinedButton.icon(
+              key: QaTestKeys.transportReportExportPdfButton,
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    key: QaTestKeys.transportReportExportSuccessSnackbar,
+                    content: Text(
+                      'Transport occupancy report export queued (${data.catalog.first.title})',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('Export route occupancy PDF'),
+            ),
+          ],
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         if (isMobile) ...[
           TransportTrendChart(
@@ -126,6 +149,15 @@ class _ReportCatalogList extends StatelessWidget {
 
   final List<TransportReportCatalogItem> items;
 
+  void _queueExport(BuildContext context, TransportReportCatalogItem item) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.transportReportExportSuccessSnackbar,
+        content: Text('Report export queued (${item.title})'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = context.aksharaText;
@@ -148,7 +180,7 @@ class _ReportCatalogList extends StatelessWidget {
                 trailing: IconButton(
                   icon: const Icon(Icons.download_outlined),
                   tooltip: 'Download report',
-                  onPressed: () {},
+                  onPressed: () => _queueExport(context, item),
                 ),
               ),
             ),

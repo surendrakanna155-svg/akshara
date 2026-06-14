@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -58,6 +59,7 @@ class AdmissionsApprovalQueueTable extends StatelessWidget {
 
   DataRow _buildRow(BuildContext context, ApprovalQueueItem item) {
     return DataRow(
+      key: QaTestKeys.admissionsApprovalQueueRow(item.studentName),
       selected: item.id == selectedId,
       onSelectChanged: onSelect == null ? null : (_) => onSelect!(item),
       cells: [
@@ -104,6 +106,7 @@ class _ApprovalMobileCard extends StatelessWidget {
     final text = context.aksharaText;
 
     return Material(
+      key: QaTestKeys.admissionsApprovalQueueRow(item.studentName),
       color: selected
           ? colors.primaryContainer.withValues(alpha: 0.25)
           : colors.surface,

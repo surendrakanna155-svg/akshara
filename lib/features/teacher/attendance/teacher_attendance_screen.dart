@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -105,6 +106,7 @@ class _AttendanceBody extends ConsumerWidget {
                       if (data.isSubmitted) ...[
                         const SizedBox(height: AksharaSpacing.s2),
                         const AksharaWarningBanner(
+                          key: QaTestKeys.teacherAttendanceSubmittedBanner,
                           message: 'Attendance submitted successfully.',
                         ),
                       ],
@@ -264,6 +266,7 @@ class _AttendanceActionBar extends StatelessWidget {
               const SizedBox(width: AksharaSpacing.s3),
               Expanded(
                 child: FilledButton(
+                  key: QaTestKeys.teacherAttendanceSubmitButton,
                   onPressed: canSubmit ? onSubmit : null,
                   child: Text(
                     unmarkedCount > 0

@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_insight_card.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
+import '../hr_workflow_actions.dart';
 import '../widgets/hr_module_scaffold.dart';
 import '../widgets/hr_segment_panel.dart';
 
@@ -41,13 +39,31 @@ class HrLeaveScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(hrLeaveFilterProvider.notifier).state = index,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
-        requests: requests,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: AksharaManageAction(
+              permission: Permission.manageHr,
+              child: FilledButton.icon(
+                key: QaTestKeys.hrCreateLeaveButton,
+                onPressed: () => showCreateHrLeaveDialog(context, ref),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('New leave'),
+              ),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          _buildBody(
+            context,
+            isLoading: isLoading,
+            isError: isError,
+            isEmpty: isEmpty,
+            data: data,
+            requests: requests,
+          ),
+        ],
       ),
     );
   }

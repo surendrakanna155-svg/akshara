@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/transport/allocation/transport_allocation_screen.dart';
 import 'package:akshara_erp/features/transport/attendance/transport_attendance_screen.dart';
 import 'package:akshara_erp/features/transport/dashboard/transport_dashboard_screen.dart';
@@ -76,6 +77,11 @@ void main() {
 
       expect(find.text('Route catalog'), findsOneWidget);
       expect(find.text('Route 12 — North'), findsOneWidget);
+      expect(find.byKey(QaTestKeys.transportSaveRouteButton), findsOneWidget);
+      expect(
+        find.byKey(QaTestKeys.transportActivateRouteButton('route_15')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('TransportVehiclesScreen renders vehicle registry', (

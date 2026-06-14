@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
@@ -78,6 +79,7 @@ class FinanceHandoffQueue extends StatelessWidget {
           rows: [
             for (final item in displayItems)
               DataRow(
+                key: QaTestKeys.financeHandoffQueueRow(item.handoff.studentName),
                 cells: [
                   DataCell(Text(item.handoff.studentName)),
                   DataCell(Text(item.handoff.classLabel)),
@@ -142,6 +144,7 @@ class _HandoffMobileCard extends StatelessWidget {
     final text = context.aksharaText;
 
     return Card(
+      key: QaTestKeys.financeHandoffQueueRow(item.handoff.studentName),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AksharaSpacing.s3),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../inventory_models.dart';
+import '../inventory_workflow_actions.dart';
 import '../widgets/inventory_module_scaffold.dart';
 import 'inventory_intelligence_models.dart';
 import 'inventory_intelligence_provider.dart';
@@ -29,6 +31,20 @@ class InventoryLifecycleScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: AksharaManageAction(
+                  permission: Permission.manageInventory,
+                  child: FilledButton.icon(
+                    key: QaTestKeys.inventoryRecordLifecycleButton,
+                    onPressed: () =>
+                        showRecordAssetLifecycleEventDialog(context, ref),
+                    icon: const Icon(Icons.add_chart_outlined, size: 18),
+                    label: const Text('Record event'),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
               _metric('Assets tracked', '${snapshot.assetsTracked}'),
               const SizedBox(height: 8),
               Wrap(
@@ -36,7 +52,9 @@ class InventoryLifecycleScreen extends ConsumerWidget {
                 runSpacing: 8,
                 children: AssetLifecycleEventType.values.map((type) {
                   final count = snapshot.eventCounts[type] ?? 0;
-                  return Chip(label: Text('${type.label}: $count'));
+                  return Material(
+                    child: Chip(label: Text('${type.label}: $count')),
+                  );
                 }).toList(),
               ),
               procurement.when(
@@ -58,10 +76,13 @@ class InventoryLifecycleScreen extends ConsumerWidget {
                       ),
                     ),
                     ...proc.recommendations.map(
-                      (r) => ListTile(
-                        title: Text(r.poNumber),
-                        subtitle: Text(r.action),
-                        trailing: Text(r.priority),
+                      (r) => Card(
+                        elevation: 0,
+                        child: ListTile(
+                          title: Text(r.poNumber),
+                          subtitle: Text(r.action),
+                          trailing: Text(r.priority),
+                        ),
                       ),
                     ),
                   ],
@@ -81,13 +102,16 @@ class InventoryLifecycleScreen extends ConsumerWidget {
                 )
               else
                 ...snapshot.recentEvents.map(
-                  (e) => ListTile(
-                    leading: Icon(_iconForEvent(e.eventType)),
-                    title: Text(
-                      '${e.eventType.label} — ${e.assetTag.isNotEmpty ? e.assetTag : e.assetId}',
-                    ),
-                    subtitle: Text(
-                      e.notes.isNotEmpty ? e.notes : e.recordedAt,
+                  (e) => Card(
+                    elevation: 0,
+                    child: ListTile(
+                      leading: Icon(_iconForEvent(e.eventType)),
+                      title: Text(
+                        '${e.eventType.label} — ${e.assetTag.isNotEmpty ? e.assetTag : e.assetId}',
+                      ),
+                      subtitle: Text(
+                        e.notes.isNotEmpty ? e.notes : e.recordedAt,
+                      ),
                     ),
                   ),
                 ),
@@ -100,11 +124,14 @@ class InventoryLifecycleScreen extends ConsumerWidget {
 }
 
 Widget _metric(String label, String value) {
-  return ListTile(
-    title: Text(label),
-    trailing: Text(
-      value,
-      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+  return Card(
+    elevation: 0,
+    child: ListTile(
+      title: Text(label),
+      trailing: Text(
+        value,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      ),
     ),
   );
 }

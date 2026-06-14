@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/inventory/allocation/inventory_allocation_screen.dart';
 import 'package:akshara_erp/features/inventory/assets/inventory_assets_screen.dart';
 import 'package:akshara_erp/features/inventory/categories/inventory_categories_screen.dart';
@@ -6,6 +7,8 @@ import 'package:akshara_erp/features/inventory/maintenance/inventory_maintenance
 import 'package:akshara_erp/features/inventory/procurement/inventory_procurement_screen.dart';
 import 'package:akshara_erp/features/inventory/reports/inventory_reports_screen.dart';
 import 'package:akshara_erp/features/inventory/vendors/inventory_vendors_screen.dart';
+import 'package:akshara_erp/features/inventory/intelligence/inventory_copilot_screen.dart';
+import 'package:akshara_erp/features/inventory/intelligence/inventory_lifecycle_screen.dart';
 import 'package:akshara_erp/features/inventory/inventory_providers.dart';
 import 'package:akshara_erp/shared/widgets/widgets.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
@@ -129,6 +132,27 @@ void main() {
 
       expect(find.text('Report catalog'), findsOneWidget);
       expect(find.text('Asset Register'), findsOneWidget);
+    });
+
+    testWidgets('InventoryProcurementScreen shows create PO button', (
+      tester,
+    ) async {
+      await pumpInventoryScreen(tester, const InventoryProcurementScreen());
+      expect(find.byKey(QaTestKeys.inventoryCreatePoButton), findsOneWidget);
+    });
+
+    testWidgets('InventoryLifecycleScreen renders lifecycle intelligence', (
+      tester,
+    ) async {
+      await pumpInventoryScreen(tester, const InventoryLifecycleScreen());
+      expect(find.text('Assets tracked'), findsOneWidget);
+      expect(find.byKey(QaTestKeys.inventoryLifecycleScreen), findsOneWidget);
+      expect(find.byKey(QaTestKeys.inventoryRecordLifecycleButton), findsOneWidget);
+    });
+
+    testWidgets('InventoryCopilotScreen renders copilot metrics', (tester) async {
+      await pumpInventoryScreen(tester, const InventoryCopilotScreen());
+      expect(find.text('Stock forecast (units)'), findsOneWidget);
     });
   });
 }

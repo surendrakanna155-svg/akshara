@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import 'admissions_journey_context_provider.dart';
 import 'admissions_models.dart';
 import 'admissions_mutations_provider.dart';
 import 'admissions_requests.dart';
@@ -22,18 +24,22 @@ Future<void> showCreateLeadDialog(BuildContext context, WidgetRef ref) async {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+              key: QaTestKeys.admissionsLeadParentNameField,
               controller: parentController,
               decoration: const InputDecoration(labelText: 'Parent name'),
             ),
             TextField(
+              key: QaTestKeys.admissionsLeadStudentNameField,
               controller: studentController,
               decoration: const InputDecoration(labelText: 'Student name'),
             ),
             TextField(
+              key: QaTestKeys.admissionsLeadClassField,
               controller: classController,
               decoration: const InputDecoration(labelText: 'Class'),
             ),
             TextField(
+              key: QaTestKeys.admissionsLeadPhoneField,
               controller: phoneController,
               decoration: const InputDecoration(labelText: 'Phone'),
               keyboardType: TextInputType.phone,
@@ -47,6 +53,7 @@ Future<void> showCreateLeadDialog(BuildContext context, WidgetRef ref) async {
           child: const Text('Cancel'),
         ),
         FilledButton(
+          key: QaTestKeys.admissionsLeadDialogCreateButton,
           onPressed: () => Navigator.of(context).pop(true),
           child: const Text('Create'),
         ),
@@ -57,7 +64,7 @@ Future<void> showCreateLeadDialog(BuildContext context, WidgetRef ref) async {
   if (confirmed != true || !context.mounted) return;
 
   try {
-    await ref.read(createLeadProvider.notifier).execute(
+    final lead = await ref.read(createLeadProvider.notifier).execute(
           CreateLeadRequest(
             parentName: parentController.text.trim(),
             studentName: studentController.text.trim(),
@@ -65,9 +72,15 @@ Future<void> showCreateLeadDialog(BuildContext context, WidgetRef ref) async {
             phone: phoneController.text.trim(),
           ),
         );
+    if (lead != null) {
+      ref.read(admissionsLastCreatedLeadProvider.notifier).state = lead;
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Lead created successfully')),
+      SnackBar(
+        key: QaTestKeys.admissionsLeadCreatedSnackbar,
+        content: Text('Lead created successfully (${lead?.id ?? ''})'),
+      ),
     );
   } catch (error) {
     if (!context.mounted) return;
@@ -319,7 +332,10 @@ Future<void> runApproveAdmission(
         );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Admission approved')),
+      const SnackBar(
+        key: QaTestKeys.admissionsApprovedSnackbar,
+        content: Text('Admission approved'),
+      ),
     );
   } catch (error) {
     if (!context.mounted) return;

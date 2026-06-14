@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/inventory/inventory_models.dart';
+import '../../../features/inventory/inventory_requests.dart';
 import '../../../features/inventory/intelligence/inventory_intelligence_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/inventory_repository.dart';
@@ -9,6 +10,36 @@ import '../pagination_helpers.dart';
 import '../repository_query.dart';
 
 class MockInventoryRepository implements InventoryRepository {
+  MockInventoryRepository()
+      : _procurementOrders = List.of(_seedProcurement),
+        _lifecycleEvents = List.of(_seedLifecycleEvents);
+
+  final List<InventoryProcurementOrder> _procurementOrders;
+  final List<AssetLifecycleEvent> _lifecycleEvents;
+  int _poCounter = 200;
+  int _lifecycleEventCounter = 100;
+
+  static const _seedLifecycleEvents = [
+    AssetLifecycleEvent(
+      id: 'evt_1',
+      assetId: 'asset_1',
+      assetTag: 'INV-AST-1042',
+      eventType: AssetLifecycleEventType.distribution,
+      notes: 'Assigned to IT Lab — Block C',
+      recordedAt: '2026-03-01T10:00:00Z',
+      recordedBy: 'user_1',
+    ),
+    AssetLifecycleEvent(
+      id: 'evt_2',
+      assetId: 'asset_4',
+      assetTag: 'INV-AST-1045',
+      eventType: AssetLifecycleEventType.damage,
+      notes: 'Chair leg repair required',
+      recordedAt: '2026-02-28T14:30:00Z',
+      recordedBy: 'user_2',
+    ),
+  ];
+
   static const _assets = [
     InventoryAsset(
       id: 'asset_1',
@@ -217,7 +248,7 @@ class MockInventoryRepository implements InventoryRepository {
     ),
   ];
 
-  static const _procurement = [
+  static const _seedProcurement = [
     InventoryProcurementOrder(
       id: 'po_1',
       poNumber: 'PO-2026-0142',
@@ -467,7 +498,55 @@ class MockInventoryRepository implements InventoryRepository {
   Future<PaginatedResult<InventoryProcurementOrder>> getProcurementOrders({
     required RepositoryQuery query,
   }) async =>
-      paginateList(_procurement, query);
+      paginateList(_procurementOrders, query);
+
+  @override
+  Future<InventoryProcurementOrder> createProcurementOrder({
+    required RepositoryQuery query,
+    required CreateInventoryProcurementOrderRequest request,
+  }) async {
+    final id = 'po_${++_poCounter}';
+    final order = InventoryProcurementOrder(
+      id: id,
+      poNumber: 'PO-2026-${_poCounter.toString().padLeft(4, '0')}',
+      vendorName: request.vendorName,
+      items: request.items,
+      totalAmount: request.totalAmount,
+      orderDate: 'Today',
+      expectedDelivery: request.expectedDelivery,
+      status: InventoryProcurementStatus.draft,
+      financePoId: 'FN-PO-2026-${_poCounter.toString().padLeft(4, '0')}',
+      requestedBy: request.requestedBy,
+    );
+    _procurementOrders.insert(0, order);
+    return order;
+  }
+
+  @override
+  Future<InventoryProcurementOrder> recordProcurementReceiveHandoff({
+    required RepositoryQuery query,
+    required String orderId,
+  }) async {
+    final index = _procurementOrders.indexWhere((order) => order.id == orderId);
+    if (index < 0) {
+      throw StateError('Procurement order not found: $orderId');
+    }
+    final current = _procurementOrders[index];
+    final updated = InventoryProcurementOrder(
+      id: current.id,
+      poNumber: current.poNumber,
+      vendorName: current.vendorName,
+      items: current.items,
+      totalAmount: current.totalAmount,
+      orderDate: current.orderDate,
+      expectedDelivery: current.expectedDelivery,
+      status: InventoryProcurementStatus.received,
+      financePoId: current.financePoId,
+      requestedBy: current.requestedBy,
+    );
+    _procurementOrders[index] = updated;
+    return updated;
+  }
 
   @override
   Future<PaginatedResult<InventoryVendor>> getVendors({
@@ -585,40 +664,18 @@ class MockInventoryRepository implements InventoryRepository {
       );
 
   @override
-  Future<AssetLifecycleData> getAssetLifecycle({required RepositoryQuery query}) async =>
-      AssetLifecycleData(
-        recentEvents: const [
-          AssetLifecycleEvent(
-            id: 'evt_1',
-            assetId: 'asset_1',
-            assetTag: 'INV-AST-1042',
-            eventType: AssetLifecycleEventType.distribution,
-            notes: 'Assigned to IT Lab — Block C',
-            recordedAt: '2026-03-01T10:00:00Z',
-            recordedBy: 'user_1',
-          ),
-          AssetLifecycleEvent(
-            id: 'evt_2',
-            assetId: 'asset_4',
-            assetTag: 'INV-AST-1045',
-            eventType: AssetLifecycleEventType.damage,
-            notes: 'Chair leg repair required',
-            recordedAt: '2026-02-28T14:30:00Z',
-            recordedBy: 'user_2',
-          ),
-        ],
-        eventCounts: {
-          for (final type in AssetLifecycleEventType.values) type: switch (type) {
-            AssetLifecycleEventType.purchase => 12,
-            AssetLifecycleEventType.distribution => 48,
-            AssetLifecycleEventType.replacement => 3,
-            AssetLifecycleEventType.damage => 5,
-            AssetLifecycleEventType.retirement => 2,
-          },
-        },
-        assetsTracked: 70,
-        generatedAt: '2026-06-10T00:00:00Z',
-      );
+  Future<AssetLifecycleData> getAssetLifecycle({required RepositoryQuery query}) async {
+    final eventCounts = {
+      for (final type in AssetLifecycleEventType.values)
+        type: _lifecycleEvents.where((e) => e.eventType == type).length,
+    };
+    return AssetLifecycleData(
+      recentEvents: List.of(_lifecycleEvents),
+      eventCounts: eventCounts,
+      assetsTracked: 70 + _lifecycleEvents.length,
+      generatedAt: '2026-06-10T00:00:00Z',
+    );
+  }
 
   @override
   Future<ProcurementWorkflowData> getProcurementWorkflow({required RepositoryQuery query}) async =>
@@ -649,14 +706,17 @@ class MockInventoryRepository implements InventoryRepository {
   Future<AssetLifecycleEvent> recordAssetLifecycleEvent({
     required RepositoryQuery query,
     required RecordAssetLifecycleEventRequest request,
-  }) async =>
-      AssetLifecycleEvent(
-        id: 'evt_new',
-        assetId: request.assetId,
-        assetTag: request.assetTag ?? '',
-        eventType: request.eventType,
-        notes: request.notes ?? '',
-        recordedAt: '2026-06-10T12:00:00Z',
-        recordedBy: 'mock_user',
-      );
+  }) async {
+    final event = AssetLifecycleEvent(
+      id: 'evt_${++_lifecycleEventCounter}',
+      assetId: request.assetId,
+      assetTag: request.assetTag ?? '',
+      eventType: request.eventType,
+      notes: request.notes ?? '',
+      recordedAt: '2026-06-13T12:00:00Z',
+      recordedBy: 'mock_user',
+    );
+    _lifecycleEvents.insert(0, event);
+    return event;
+  }
 }

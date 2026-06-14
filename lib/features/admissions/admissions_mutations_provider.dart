@@ -11,6 +11,7 @@ import '../../core/repositories/repository_providers.dart';
 import 'applications/admissions_applications_provider.dart';
 import 'approval/admissions_approval_provider.dart';
 import 'documents/admissions_documents_provider.dart';
+import 'enrollment/admissions_enrollment_provider.dart';
 import 'enrollment/admissions_enrollment_records_provider.dart';
 import 'fee_handoff/admissions_fee_handoff_provider.dart';
 import 'leads/admissions_leads_provider.dart';
@@ -27,12 +28,16 @@ void _invalidateAdmissionsReads(
   bool enrollments = false,
   bool approval = false,
   bool handoffs = false,
+  bool enrollmentPrefill = false,
 }) {
   if (leads) ref.invalidate(admissionsLeadsFutureProvider);
   if (applications) ref.invalidate(admissionsApplicationsFutureProvider);
   if (documents) ref.invalidate(admissionsDocumentsFutureProvider);
   if (enrollments) ref.invalidate(admissionsPendingEnrollmentsFutureProvider);
   if (approval) ref.invalidate(admissionsApprovalQueueFutureProvider);
+  if (enrollmentPrefill) {
+    ref.invalidate(admissionsEnrollmentPrefillFutureProvider);
+  }
   if (handoffs) {
     ref.invalidate(admissionsApprovedHandoffsFutureProvider);
   }
@@ -51,6 +56,7 @@ Future<T?> _runMutation<T>(
   bool invalidateEnrollments = false,
   bool invalidateApproval = false,
   bool invalidateHandoffs = false,
+  bool invalidateEnrollmentPrefill = false,
   void Function()? assertPermission,
 }) async {
   assertPermission?.call();
@@ -70,6 +76,7 @@ Future<T?> _runMutation<T>(
       enrollments: invalidateEnrollments,
       approval: invalidateApproval,
       handoffs: invalidateHandoffs,
+      enrollmentPrefill: invalidateEnrollmentPrefill,
     );
     return result;
   } catch (error) {
@@ -92,6 +99,7 @@ class CreateLeadNotifier extends AsyncNotifier<AdmissionsLead?> {
         entityId: 'lead',
         entityIdForAudit: (lead) => lead.id,
         invalidateLeads: true,
+        invalidateEnrollmentPrefill: true,
         action: () => ref.read(admissionsRepositoryProvider).createLead(
               query: ref.read(repositoryQueryProvider),
               request: request,
@@ -348,6 +356,7 @@ class SubmitEnrollmentNotifier extends AsyncNotifier<PendingEnrollmentRecord?> {
         entityId: 'enrollment',
         entityIdForAudit: (record) => record.id,
         invalidateEnrollments: true,
+        invalidateApproval: true,
         action: () => ref.read(admissionsRepositoryProvider).submitEnrollment(
               query: ref.read(repositoryQueryProvider),
               request: enriched,

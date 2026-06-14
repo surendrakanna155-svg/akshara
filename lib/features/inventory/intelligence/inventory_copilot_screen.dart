@@ -21,6 +21,8 @@ class InventoryCopilotScreen extends ConsumerWidget {
         loading: () => const AksharaLoadingState(),
         error: (e, _) => AksharaErrorState(message: '$e'),
         data: (snapshot) => ListView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
           children: [
             _metric('Stock forecast (units)', '${snapshot.stockForecastUnits}'),
@@ -34,28 +36,39 @@ class InventoryCopilotScreen extends ConsumerWidget {
             const Divider(height: 32),
             const Text('Stock trend', style: TextStyle(fontWeight: FontWeight.bold)),
             ...snapshot.stockTrend.map(
-              (t) => ListTile(
-                title: Text(t.month),
-                subtitle: Text('Forecast ${t.forecast} units'),
-                trailing: Text('${t.consumption} consumed'),
+              (t) => Card(
+                elevation: 0,
+                child: ListTile(
+                  title: Text(t.month),
+                  subtitle: Text('Forecast ${t.forecast} units'),
+                  trailing: Text('${t.consumption} consumed'),
+                ),
               ),
             ),
             const Divider(height: 32),
             const Text('Low-stock predictions', style: TextStyle(fontWeight: FontWeight.bold)),
             ...snapshot.lowStockPredictions.map(
-              (p) => ListTile(
-                title: Text(p.itemName),
-                subtitle: Text('${p.currentStock} units · ${p.predictedDaysUntilStockout}d to stockout'),
-                trailing: Text('Risk ${p.riskScore}'),
+              (p) => Card(
+                elevation: 0,
+                child: ListTile(
+                  title: Text(p.itemName),
+                  subtitle: Text(
+                    '${p.currentStock} units · ${p.predictedDaysUntilStockout}d to stockout',
+                  ),
+                  trailing: Text('Risk ${p.riskScore}'),
+                ),
               ),
             ),
             const Divider(height: 32),
             const Text('Reorder recommendations', style: TextStyle(fontWeight: FontWeight.bold)),
             ...snapshot.reorderRecommendations.map(
-              (r) => ListTile(
-                title: Text(r.itemName),
-                subtitle: Text('${r.recommendedQuantity} units · ${r.urgency} urgency'),
-                trailing: Tooltip(message: r.reason, child: const Icon(Icons.info_outline)),
+              (r) => Card(
+                elevation: 0,
+                child: ListTile(
+                  title: Text(r.itemName),
+                  subtitle: Text('${r.recommendedQuantity} units · ${r.urgency} urgency'),
+                  trailing: Tooltip(message: r.reason, child: const Icon(Icons.info_outline)),
+                ),
               ),
             ),
           ],
@@ -66,8 +79,11 @@ class InventoryCopilotScreen extends ConsumerWidget {
 }
 
 Widget _metric(String label, String value) {
-  return ListTile(
-    title: Text(label),
-    trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+  return Card(
+    elevation: 0,
+    child: ListTile(
+      title: Text(label),
+      trailing: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+    ),
   );
 }

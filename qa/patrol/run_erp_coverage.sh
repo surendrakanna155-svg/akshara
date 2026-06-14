@@ -13,6 +13,8 @@ RUN_ID="$(date +%Y%m%d_%H%M%S)"
 REPORT_DIR="${ROOT}/qa/patrol/reports/erp_coverage/${RUN_ID}"
 mkdir -p "$REPORT_DIR"
 
+log() { echo "[erp-coverage] $*" | tee -a "${REPORT_DIR}/run.log"; }
+
 DART_DEFINES=(
   "--dart-define=APP_ENV=development"
   "--dart-define=ENABLE_QA_LOGIN=true"
@@ -23,10 +25,15 @@ DART_DEFINES=(
 DEVICE_ARGS=()
 if command -v adb >/dev/null 2>&1; then
   DEVICE_ID="$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')"
+  if [[ -z "$DEVICE_ID" ]]; then
+    log "No Android device — starting emulator (cold boot)"
+    if [[ -x "${ROOT}/scripts/qa/start_emulator.sh" ]]; then
+      bash "${ROOT}/scripts/qa/start_emulator.sh" | tee -a "${REPORT_DIR}/run.log"
+      DEVICE_ID="$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')"
+    fi
+  fi
   [[ -n "$DEVICE_ID" ]] && DEVICE_ARGS=(--device "$DEVICE_ID")
 fi
-
-log() { echo "[erp-coverage] $*" | tee -a "${REPORT_DIR}/run.log"; }
 
 log "Mode: ${MODE} | Reports: ${REPORT_DIR}"
 
@@ -50,7 +57,19 @@ ALL_TARGETS=(
   "patrol_test/workflows/inventory_workflows_test.dart"
   "patrol_test/workflows/sis_workflows_test.dart"
   "patrol_test/workflows/admissions_workflows_test.dart"
+  "patrol_test/workflows/admissions_e2e_journey_test.dart"
+  "patrol_test/workflows/finance_fee_assignment_e2e_test.dart"
+  "patrol_test/workflows/finance_fee_collection_e2e_test.dart"
+  "patrol_test/workflows/finance_full_journey_e2e_test.dart"
+  "patrol_test/workflows/teacher_attendance_e2e_test.dart"
   "patrol_test/workflows/hr_workflows_test.dart"
+  "patrol_test/workflows/hr_leave_e2e_test.dart"
+  "patrol_test/workflows/hr_payroll_e2e_test.dart"
+  "patrol_test/workflows/inventory_po_e2e_test.dart"
+  "patrol_test/workflows/inventory_lifecycle_e2e_test.dart"
+  "patrol_test/workflows/transport_route_e2e_test.dart"
+  "patrol_test/workflows/transport_activate_e2e_test.dart"
+  "patrol_test/workflows/education_remark_e2e_test.dart"
   "patrol_test/workflows/transport_workflows_test.dart"
   "patrol_test/workflows/library_workflows_test.dart"
   "patrol_test/workflows/hostel_workflows_test.dart"

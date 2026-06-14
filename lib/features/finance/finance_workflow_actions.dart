@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/testing/qa_test_keys.dart';
+import 'finance_journey_context_provider.dart';
 import 'fee_assignment/finance_fee_assignment_provider.dart';
 import 'finance_models.dart';
 import 'finance_mutations_provider.dart';
@@ -331,6 +333,93 @@ Future<void> showEditFinanceSettingDialog(
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${item.label} updated')),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
+Future<void> showRecordCollectionDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  String defaultInvoiceId = 'inv_1',
+  String defaultAmount = '5000',
+}) async {
+  final journeyInvoice = ref.read(financeLastInvoiceIdProvider);
+  final invoiceController = TextEditingController(
+    text: journeyInvoice ?? defaultInvoiceId,
+  );
+  final amountController = TextEditingController(text: defaultAmount);
+  var paymentMethod = 'UPI';
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Record collection'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: QaTestKeys.financeCollectionInvoiceField,
+              controller: invoiceController,
+              decoration: const InputDecoration(labelText: 'Invoice ID'),
+            ),
+            TextField(
+              key: QaTestKeys.financeCollectionAmountField,
+              controller: amountController,
+              decoration: const InputDecoration(labelText: 'Amount collected'),
+              keyboardType: TextInputType.number,
+            ),
+            DropdownMenu<String>(
+              initialSelection: paymentMethod,
+              label: const Text('Payment method'),
+              dropdownMenuEntries: const [
+                DropdownMenuEntry(value: 'Cash', label: 'Cash'),
+                DropdownMenuEntry(value: 'UPI', label: 'UPI'),
+                DropdownMenuEntry(value: 'Card', label: 'Card'),
+              ],
+              onSelected: (value) {
+                if (value != null) paymentMethod = value;
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.financeCollectionSubmitButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Record payment'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final result = await ref.read(createCollectionProvider.notifier).execute(
+          CreateCollectionRequest(
+            invoiceId: invoiceController.text.trim(),
+            amountCollected: amountController.text.trim(),
+            paymentMethod: paymentMethod,
+            collectionDate: 'Today',
+          ),
+        );
+    if (!context.mounted || result == null) return;
+    ref.read(financeLastReceiptNumberProvider.notifier).state =
+        result.receiptNumber;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.financeCollectionSuccessSnackbar,
+        content: Text('Receipt ${result.receiptNumber} recorded'),
+      ),
     );
   } catch (error) {
     if (!context.mounted) return;

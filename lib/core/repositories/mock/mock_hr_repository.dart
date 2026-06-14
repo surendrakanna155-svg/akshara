@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../features/auth/auth_provider.dart';
 import '../../../features/hr/hr_models.dart';
+import '../../../features/hr/hr_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/hr_repository.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 import '../../tenant/tenant_mock_scope.dart';
+import 'mock_hr_write_store.dart';
 
 class MockHrRepository implements HrRepository {
   static const _employees = [
@@ -404,9 +406,28 @@ class MockHrRepository implements HrRepository {
 
   @override
   Future<HrLeaveData> getLeave({required RepositoryQuery query}) async {
-    return const HrLeaveData(
-      requests: [
-        HrLeaveRequest(
+    final requests = await _loadLeaveRequests();
+    final pending = requests.where((r) => r.status == HrLeaveStatus.pending).length;
+    return HrLeaveData(
+      requests: requests,
+      pendingCount: pending,
+      leaveByType: const [
+        HrSegment(label: 'Casual', value: 12, percent: 35),
+        HrSegment(label: 'Sick', value: 8, percent: 24),
+        HrSegment(label: 'Earned', value: 14, percent: 41),
+      ],
+      integrationNote:
+          'Staff leave approvals sync with Teacher app TA-07 and Principal approval workflow.',
+    );
+  }
+
+  Future<List<HrLeaveRequest>> _loadLeaveRequests() async {
+    final store = MockHrWriteStore.instance;
+    if (store.leaveRequests != null) {
+      return List.from(store.leaveRequests!);
+    }
+    store.leaveRequests = List<HrLeaveRequest>.of([
+        const HrLeaveRequest(
           id: 'lv_req_1',
           employeeId: 'HR-EMP-108',
           employeeName: 'Sunita Nair',
@@ -419,7 +440,7 @@ class MockHrRepository implements HrRepository {
           approver: 'Rajesh Iyer',
           reason: 'Medical leave',
         ),
-        HrLeaveRequest(
+        const HrLeaveRequest(
           id: 'lv_req_2',
           employeeId: 'HR-EMP-102',
           employeeName: 'Mrs. Rao',
@@ -432,7 +453,7 @@ class MockHrRepository implements HrRepository {
           approver: 'Rajesh Iyer',
           reason: 'Personal errand',
         ),
-        HrLeaveRequest(
+        const HrLeaveRequest(
           id: 'lv_req_3',
           employeeId: 'HR-EMP-101',
           employeeName: kMockTeacherName,
@@ -445,7 +466,7 @@ class MockHrRepository implements HrRepository {
           approver: 'Rajesh Iyer',
           reason: 'Family function',
         ),
-        HrLeaveRequest(
+        const HrLeaveRequest(
           id: 'lv_req_4',
           employeeId: 'HR-EMP-107',
           employeeName: 'Anil Verma',
@@ -458,7 +479,7 @@ class MockHrRepository implements HrRepository {
           approver: 'Kavitha Menon',
           reason: 'Travel',
         ),
-        HrLeaveRequest(
+        const HrLeaveRequest(
           id: 'lv_req_5',
           employeeId: 'HR-EMP-104',
           employeeName: 'Ramesh Kumar',
@@ -471,21 +492,38 @@ class MockHrRepository implements HrRepository {
           approver: 'Kavitha Menon',
           reason: 'Driver leave',
         ),
-      ],
-      pendingCount: 3,
-      leaveByType: [
-        HrSegment(label: 'Casual', value: 12, percent: 35),
-        HrSegment(label: 'Sick', value: 8, percent: 24),
-        HrSegment(label: 'Earned', value: 14, percent: 41),
-      ],
-      integrationNote:
-          'Staff leave approvals sync with Teacher app TA-07 and Principal approval workflow.',
+      ]);
+    return List.from(store.leaveRequests!);
+  }
+
+  @override
+  Future<HrLeaveRequest> createLeaveRequest({
+    required RepositoryQuery query,
+    required CreateHrLeaveRequest request,
+  }) async {
+    final store = MockHrWriteStore.instance;
+    await _loadLeaveRequests();
+    final id = store.nextLeaveId();
+    final leave = HrLeaveRequest(
+      id: id,
+      employeeId: request.employeeId,
+      employeeName: request.employeeName,
+      department: request.department,
+      leaveType: request.leaveType,
+      fromDate: request.fromDate,
+      toDate: request.toDate,
+      days: request.days,
+      status: HrLeaveStatus.pending,
+      approver: request.approver,
+      reason: request.reason,
     );
+    store.leaveRequests!.insert(0, leave);
+    return leave;
   }
 
   @override
   Future<HrPayrollData> getPayroll({required RepositoryQuery query}) async {
-    return const HrPayrollData(
+    const base = HrPayrollData(
       runs: [
         HrPayrollRun(
           id: 'pay_run_1',
@@ -563,6 +601,55 @@ class MockHrRepository implements HrRepository {
           'Salary disbursement posts to Finance collections ledger (FN-05 placeholder). Review in Finance module before bank transfer.',
       financeRoute: RouteNames.financeCollections,
     );
+
+    final store = MockHrWriteStore.instance;
+    final runs = base.runs.map((run) {
+      final override = store.payrollRunStatuses[run.id];
+      if (override == null) return run;
+      return HrPayrollRun(
+        id: run.id,
+        period: run.period,
+        employeeCount: run.employeeCount,
+        grossAmount: run.grossAmount,
+        netAmount: run.netAmount,
+        status: override,
+        processedOn: override == HrPayrollStatus.processed
+            ? (requestProcessedOn(store, run.id) ?? '2026-06-13')
+            : run.processedOn,
+      );
+    }).toList();
+
+    return HrPayrollData(
+      runs: runs,
+      entries: base.entries,
+      salaryTrend: base.salaryTrend,
+      financeIntegrationNote: base.financeIntegrationNote,
+      financeRoute: base.financeRoute,
+    );
+  }
+
+  static String? requestProcessedOn(MockHrWriteStore store, String runId) =>
+      store.payrollProcessedOn[runId];
+
+  @override
+  Future<HrPayrollRun> processPayrollRun({
+    required RepositoryQuery query,
+    required ProcessHrPayrollRunRequest request,
+  }) async {
+    const draftRunId = 'pay_run_2';
+    if (request.runId != draftRunId) {
+      throw StateError('Payroll run not found or not processable');
+    }
+    final store = MockHrWriteStore.instance;
+    final current = store.payrollRunStatuses[draftRunId];
+    if (current == HrPayrollStatus.processed) {
+      throw StateError('Payroll run already processed');
+    }
+    store.payrollRunStatuses[draftRunId] = HrPayrollStatus.processed;
+    store.payrollProcessedOn[draftRunId] =
+        request.processedOn ?? '2026-06-13';
+    final data = await getPayroll(query: query);
+    return data.runs.firstWhere((r) => r.id == draftRunId);
   }
 
   @override

@@ -9,6 +9,7 @@ import '../../../features/teacher/timetable/timetable_models.dart';
 import '../../../shared/semantic_status.dart';
 import '../interfaces/teacher_repository.dart';
 import '../repository_query.dart';
+import 'mock_attendance_sync_store.dart';
 import 'mock_teacher_write_store.dart';
 
 class MockTeacherRepository implements TeacherRepository {
@@ -153,6 +154,11 @@ class MockTeacherRepository implements TeacherRepository {
           break;
       }
     }
+    MockAttendanceSyncStore.instance.recordTeacherSubmit(
+      present: present,
+      absent: absent,
+      late: late,
+    );
     return TeacherAttendanceSubmitResult(
       classId: request.classId,
       submittedAtLabel: 'Submitted just now',

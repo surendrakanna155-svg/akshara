@@ -1,0 +1,57 @@
+name: Flutter Patrol RC
+
+# Staged Patrol gates: fast smoke on release branches; full regression on manual dispatch.
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+  workflow_dispatch:
+    inputs:
+      coverage_mode:
+        description: 'Patrol coverage mode'
+        required: true
+        default: fast
+        type: choice
+        options:
+          - fast
+          - full
+
+jobs:
+  patrol:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Patrol CLI
+        run: dart pub global activate patrol_cli
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run ERP coverage
+        env:
+          ERP_COVERAGE_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.coverage_mode || (github.ref == 'refs/heads/main' && 'full' || 'fast') }}
+          PATH: ${{ env.PATH }}:${{ env.HOME }}/.pub-cache/bin
+        run: bash qa/patrol/run_erp_coverage.sh
+
+      - name: Upload Patrol reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: patrol-reports-${{ github.run_id }}
+          path: qa/patrol/reports/erp_coverage/

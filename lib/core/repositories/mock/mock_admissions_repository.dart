@@ -7,6 +7,7 @@ import '../paginated_result.dart';
 import '../pagination_helpers.dart';
 import '../repository_query.dart';
 import '../../tenant/tenant_mock_scope.dart';
+import 'mock_admissions_sis_bridge.dart';
 import 'mock_admissions_write_store.dart';
 
 /// In-memory admissions data for MVP screens.
@@ -469,7 +470,20 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   Future<PaginatedResult<PendingEnrollmentRecord>> getPendingEnrollments({
     required RepositoryQuery query,
   }) async {
-    return paginateList(const [
+    final enrollments = await _loadAllEnrollments(query);
+    return paginateList(enrollments, query);
+  }
+
+  Future<List<PendingEnrollmentRecord>> _loadAllEnrollments(
+    RepositoryQuery query,
+  ) async {
+    if (_store.enrollments != null) {
+      return TenantMockScope.filter(
+        query: query,
+        items: List.from(_store.enrollments!),
+      );
+    }
+    return const [
       PendingEnrollmentRecord(
         id: 'enr_1',
         studentName: 'Ananya Reddy',
@@ -514,14 +528,27 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         gender: 'Female',
         dateOfBirth: '22 Jan 2014',
       ),
-    ], query);
+    ];
   }
 
   @override
   Future<PaginatedResult<ApprovedStudentHandoff>> getApprovedHandoffs({
     required RepositoryQuery query,
   }) async {
-    return paginateList(const [
+    return PaginatedResult.fromItems(
+      await _loadAllHandoffs(query),
+      page: query.page,
+      pageSize: query.pageSize,
+    );
+  }
+
+  Future<List<ApprovedStudentHandoff>> _loadAllHandoffs(
+    RepositoryQuery query,
+  ) async {
+    if (_store.handoffs != null) {
+      return List.from(_store.handoffs!);
+    }
+    const seed = [
       ApprovedStudentHandoff(
         id: 'handoff_1',
         studentName: 'Arjun Patel',
@@ -561,7 +588,9 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         previewStudentId: 'SIS-STU-10418',
         sisHandoffLabel: 'Active in Student SIS',
       ),
-    ], query);
+    ];
+    _store.handoffs = List.from(seed);
+    return _store.handoffs!;
   }
 
   @override
@@ -839,6 +868,34 @@ class MockAdmissionsRepository implements AdmissionsRepository {
 
   @override
   Future<EnrollmentFormState> getEnrollmentPrefill({required RepositoryQuery query}) async {
+    final lastLead = _store.lastCreatedLead;
+    if (lastLead != null) {
+      return EnrollmentFormState(
+        student: EnrollmentStudentProfile(
+          fullName: lastLead.studentName,
+          dateOfBirth: '12 Mar 2016',
+          gender: 'Female',
+          aadhaar: '123456789012',
+        ),
+        parent: EnrollmentParentInfo(
+          guardianName: lastLead.parentName,
+          relationship: 'Father',
+          phone: lastLead.phone.replaceAll(RegExp(r'[^\d]'), '').length >= 10
+              ? lastLead.phone
+              : '+91 98765 43210',
+          email: 'parent.e2e@email.com',
+          address: '12, Lake View Colony, Hyderabad',
+        ),
+        academic: EnrollmentAcademicInfo(
+          seekingClass: lastLead.classLabel,
+          section: 'A',
+          academicYear: '2026–27',
+          previousSchool: 'Previous school',
+          needsTransport: false,
+          needsHostel: false,
+        ),
+      );
+    }
     return const EnrollmentFormState(
       student: EnrollmentStudentProfile(
         fullName: 'Ananya Reddy',
@@ -901,13 +958,53 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   Future<void> _ensureEnrollments(RepositoryQuery query) async {
-    _store.enrollments ??=
-        List.from((await getPendingEnrollments(query: query)).items);
+    _store.enrollments ??= List.from(await _loadAllEnrollments(query));
+  }
+
+  void _syncApprovalQueueForEnrollment(PendingEnrollmentRecord record) {
+    _store.approvalQueue ??= [];
+    final existingIndex = _store.approvalQueue!.indexWhere(
+      (item) => item.applicationId == record.applicationId,
+    );
+    if (existingIndex >= 0) {
+      final current = _store.approvalQueue![existingIndex];
+      if (current.decision == ApprovalDecision.pending) {
+        _store.approvalQueue![existingIndex] = ApprovalQueueItem(
+          id: current.id,
+          applicationId: record.applicationId,
+          studentName: record.studentName,
+          classLabel: record.seekingClass,
+          parentName: record.guardianName,
+          counselor: current.counselor,
+          submittedLabel: record.submittedAt,
+          documentsComplete: current.documentsTotal,
+          documentsTotal: current.documentsTotal,
+          decision: ApprovalDecision.pending,
+          aiScore: current.aiScore,
+        );
+      }
+      return;
+    }
+    _store.approvalQueue!.insert(
+      0,
+      ApprovalQueueItem(
+        id: _store.nextApprovalId(),
+        applicationId: record.applicationId,
+        studentName: record.studentName,
+        classLabel: record.seekingClass,
+        parentName: record.guardianName,
+        counselor: 'Admissions desk',
+        submittedLabel: record.submittedAt,
+        documentsComplete: 6,
+        documentsTotal: 6,
+        decision: ApprovalDecision.pending,
+        aiScore: 78,
+      ),
+    );
   }
 
   Future<void> _ensureHandoffs(RepositoryQuery query) async {
-    _store.handoffs ??=
-        List.from((await getApprovedHandoffs(query: query)).items);
+    _store.handoffs ??= List.from(await _loadAllHandoffs(query));
   }
 
   Future<void> _ensureApprovalQueue(RepositoryQuery query) async {
@@ -934,6 +1031,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
       nextFollowUpLabel: 'Schedule first call',
     );
     _store.leads!.insert(0, lead);
+    _store.lastCreatedLead = lead;
     return lead;
   }
 
@@ -1045,6 +1143,9 @@ class MockAdmissionsRepository implements AdmissionsRepository {
       counselor: request.counselor,
     );
     _store.applications!.insert(0, app);
+    if (request.leadId != null && request.leadId!.isNotEmpty) {
+      _store.applicationLeadIds[app.id] = request.leadId!;
+    }
     return app;
   }
 
@@ -1093,11 +1194,14 @@ class MockAdmissionsRepository implements AdmissionsRepository {
     required EnrollmentSubmitRequest request,
   }) async {
     await _ensureEnrollments(query);
-    final admissionNumber = 'ADM-2026-${_store.nextEnrollId().split('-').last}';
+    final enrollmentId = _store.nextEnrollId();
+    final suffix = enrollmentId.replaceAll('enr_', '').padLeft(4, '0');
+    final admissionNumber = 'ADM-2026-$suffix';
+    final applicationId = request.applicationId ?? 'APP-2208';
     final record = PendingEnrollmentRecord(
-      id: _store.nextEnrollId(),
+      id: enrollmentId,
       studentName: request.student.fullName,
-      applicationId: request.applicationId ?? 'APP-2208',
+      applicationId: applicationId,
       seekingClass: request.academic.seekingClass,
       section: request.academic.section,
       academicYear: request.academic.academicYear,
@@ -1110,6 +1214,8 @@ class MockAdmissionsRepository implements AdmissionsRepository {
       dateOfBirth: request.student.dateOfBirth,
     );
     _store.enrollments!.insert(0, record);
+    _syncApprovalQueueForEnrollment(record);
+    MockAdmissionsSisBridge.syncEnrollmentToConversionQueue(record);
     return record;
   }
 
@@ -1238,7 +1344,58 @@ class MockAdmissionsRepository implements AdmissionsRepository {
       aiScore: current.aiScore,
     );
     _store.approvalQueue![index] = updated;
+    if (decision == ApprovalDecision.approved) {
+      _syncHandoffForApprovedAdmission(updated);
+    }
     return updated;
+  }
+
+  void _syncHandoffForApprovedAdmission(ApprovalQueueItem item) {
+    _store.handoffs ??= [];
+    final enrollment =
+        _store.findEnrollmentByApplication(item.applicationId);
+    final admissionNumber = enrollment?.generatedAdmissionNumber ??
+        'ADM-2026-${item.applicationId.replaceAll('APP-', '')}';
+    final previewStudentId = enrollment != null
+        ? 'SIS-STU-104${enrollment.id.replaceAll('enr_', '').padLeft(2, '0')}'
+        : 'SIS-STU-PENDING';
+    final existingIndex = _store.handoffs!.indexWhere(
+      (handoff) => handoff.applicationId == item.applicationId,
+    );
+    if (existingIndex >= 0) {
+      final current = _store.handoffs![existingIndex];
+      if (current.handoffStatus == FeeHandoffStatus.completed) return;
+      _store.handoffs![existingIndex] = ApprovedStudentHandoff(
+        id: current.id,
+        studentName: item.studentName,
+        classLabel: item.classLabel,
+        applicationId: item.applicationId,
+        admissionNumber: admissionNumber,
+        needsTransport: current.needsTransport,
+        needsHostel: current.needsHostel,
+        selectedFeeStructureId: current.selectedFeeStructureId,
+        handoffStatus: FeeHandoffStatus.pending,
+        previewStudentId: previewStudentId,
+        sisHandoffLabel: 'Ready for fee setup',
+      );
+      return;
+    }
+    _store.handoffs!.insert(
+      0,
+      ApprovedStudentHandoff(
+        id: _store.nextHandoffId(),
+        studentName: item.studentName,
+        classLabel: item.classLabel,
+        applicationId: item.applicationId,
+        admissionNumber: admissionNumber,
+        needsTransport: false,
+        needsHostel: false,
+        selectedFeeStructureId: 'fee_std',
+        handoffStatus: FeeHandoffStatus.pending,
+        previewStudentId: previewStudentId,
+        sisHandoffLabel: 'Ready for fee setup',
+      ),
+    );
   }
 
   @override

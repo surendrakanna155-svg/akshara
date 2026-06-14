@@ -17,11 +17,41 @@ class MockAdmissionsWriteStore {
   int _appSeq = 3000;
   int _docSeq = 4000;
   int _enrollSeq = 5000;
+  int _approvalSeq = 6000;
+  int _handoffSeq = 7000;
 
   String nextLeadId() => 'LD-${++_leadSeq}';
   String nextAppId() => 'APP-${++_appSeq}';
   String nextDocId() => 'DOC-${++_docSeq}';
-  String nextEnrollId() => 'ENR-${++_enrollSeq}';
+  String nextEnrollId() => 'enr_${++_enrollSeq}';
+  String nextApprovalId() => 'appr_${++_approvalSeq}';
+  String nextHandoffId() => 'handoff_${++_handoffSeq}';
+
+  /// applicationId → leadId for journey traceability.
+  final Map<String, String> applicationLeadIds = {};
+
+  AdmissionsLead? lastCreatedLead;
+
+  PendingEnrollmentRecord? findEnrollment(String id) {
+    return enrollments?.cast<PendingEnrollmentRecord?>().firstWhere(
+          (record) => record?.id == id,
+          orElse: () => null,
+        );
+  }
+
+  PendingEnrollmentRecord? findEnrollmentByApplication(String applicationId) {
+    return enrollments?.cast<PendingEnrollmentRecord?>().firstWhere(
+          (record) => record?.applicationId == applicationId,
+          orElse: () => null,
+        );
+  }
+
+  ApprovalQueueItem? findApprovalByApplication(String applicationId) {
+    return approvalQueue?.cast<ApprovalQueueItem?>().firstWhere(
+          (item) => item?.applicationId == applicationId,
+          orElse: () => null,
+        );
+  }
 
   AdmissionsLead? findLead(String id) {
     return leads?.cast<AdmissionsLead?>().firstWhere(

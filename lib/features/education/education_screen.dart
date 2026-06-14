@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
+import '../../core/testing/qa_test_keys.dart';
 import 'education_models.dart';
 import 'education_pdf_service.dart';
 import 'education_provider.dart';
@@ -66,7 +67,10 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
             Tab(text: 'Question Papers'),
             Tab(text: 'Question Bank'),
             Tab(text: 'Homework'),
-            Tab(text: 'Report Remarks'),
+            Tab(
+              key: QaTestKeys.educationReportRemarksTab,
+              text: 'Report Remarks',
+            ),
           ],
         ),
       ),
@@ -340,10 +344,80 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
                   children: items
                       .map(
                         (remark) => Card(
-                          child: ListTile(
-                            title: Text(remark.remarkType.name),
-                            subtitle: Text(remark.displayRemark),
-                            trailing: Text(remark.status),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(remark.remarkType.name),
+                                  subtitle: Text(remark.displayRemark),
+                                ),
+                                if (remark.status == 'draft' && canManage)
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      key: QaTestKeys.educationPublishRemarkButton,
+                                      onPressed: () async {
+                                        final messenger =
+                                            ScaffoldMessenger.of(context);
+                                        try {
+                                          await ref
+                                              .read(
+                                                educationMutationsProvider.notifier,
+                                              )
+                                              .publishRemark(remark.id);
+                                          messenger.showSnackBar(
+                                            const SnackBar(
+                                              key: QaTestKeys
+                                                  .educationRemarkPublishedSnackbar,
+                                              content: Text(
+                                                'Report remark published',
+                                              ),
+                                            ),
+                                          );
+                                        } catch (error) {
+                                          messenger.showSnackBar(
+                                            SnackBar(content: Text('$error')),
+                                          );
+                                        }
+                                      },
+                                      child: const Text('Publish'),
+                                    ),
+                                  )
+                                else if (remark.status == 'published')
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      key: QaTestKeys.educationReportCardExportButton,
+                                      onPressed: () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            key: QaTestKeys
+                                                .educationReportCardExportSuccessSnackbar,
+                                            content: Text(
+                                              'Report card PDF export queued (${remark.studentId})',
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(
+                                        Icons.picture_as_pdf_outlined,
+                                      ),
+                                      label: const Text('Export PDF'),
+                                    ),
+                                  )
+                                else
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(remark.status),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       )

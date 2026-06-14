@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/management/management_models.dart';
+import '../../../features/management/management_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/management_repository.dart';
 import '../repository_query.dart';
 
 /// Executive management mock data aligned with Admissions, Finance, and SIS MVPs.
 class MockManagementRepository implements ManagementRepository {
+  MockManagementRepository()
+      : _approvals = List<ManagementApprovalItem>.from(_seedApprovals);
+
+  final List<ManagementApprovalItem> _approvals;
+
   static const _recentConversions = [
     ManagementRecentConversion(
       id: 'conv_1',
@@ -46,7 +52,7 @@ class MockManagementRepository implements ManagementRepository {
     ),
   ];
 
-  static const _approvalQueue = [
+  static const _seedApprovals = [
     ManagementApprovalItem(
       id: 'appr_mg_1',
       type: ManagementApprovalType.budget,
@@ -102,12 +108,34 @@ class MockManagementRepository implements ManagementRepository {
       aiRecommendation: ManagementAiRecommendation.approve,
       sourceModuleRoute: RouteNames.admissionsApproval,
     ),
+    ManagementApprovalItem(
+      id: 'appr_mg_6',
+      type: ManagementApprovalType.marketing,
+      title: 'Digital ads — Q3 enrollment',
+      requester: 'Marketing Lead',
+      amount: '₹1.5L',
+      dateLabel: '3 days ago',
+      status: ManagementApprovalStatus.approved,
+      aiRecommendation: ManagementAiRecommendation.approve,
+      sourceModuleRoute: RouteNames.admissionsDashboard,
+    ),
+    ManagementApprovalItem(
+      id: 'appr_mg_7',
+      type: ManagementApprovalType.expense,
+      title: 'Sports day logistics',
+      requester: 'Activities Head',
+      amount: '₹85K',
+      dateLabel: '4 days ago',
+      status: ManagementApprovalStatus.rejected,
+      aiRecommendation: ManagementAiRecommendation.reject,
+      sourceModuleRoute: RouteNames.financeRefunds,
+    ),
   ];
 
   @override
   Future<ManagementDashboardData> getDashboard({required RepositoryQuery query}) async {
-    return const ManagementDashboardData(
-      kpis: [
+    return ManagementDashboardData(
+      kpis: const [
         ManagementKpi(
           id: 'revenue_mtd',
           value: '₹1.2Cr',
@@ -152,7 +180,7 @@ class MockManagementRepository implements ManagementRepository {
           accentName: 'error',
         ),
       ],
-      revenueTrend: [
+      revenueTrend: const [
         ManagementTrendPoint(label: 'Jul', amountLakhs: 8.2, targetLakhs: 9.0),
         ManagementTrendPoint(label: 'Aug', amountLakhs: 9.1, targetLakhs: 9.0),
         ManagementTrendPoint(label: 'Sep', amountLakhs: 10.4, targetLakhs: 10.0),
@@ -166,22 +194,25 @@ class MockManagementRepository implements ManagementRepository {
         ManagementTrendPoint(label: 'May', amountLakhs: 12.8, targetLakhs: 12.0),
         ManagementTrendPoint(label: 'Jun', amountLakhs: 12.0, targetLakhs: 12.5),
       ],
-      expenseBreakdown: [
+      expenseBreakdown: const [
         ManagementSegment(label: 'Salaries', value: 22, percent: 48),
         ManagementSegment(label: 'Utilities', value: 6, percent: 13),
         ManagementSegment(label: 'Marketing', value: 5, percent: 11),
         ManagementSegment(label: 'Transport', value: 4, percent: 9),
         ManagementSegment(label: 'Supplies', value: 9, percent: 19),
       ],
-      approvalQueue: _approvalQueue,
-      admissionsSnapshot: ManagementAdmissionsSnapshot(
+      approvalQueue: _approvals
+          .where((a) => a.status == ManagementApprovalStatus.pending)
+          .take(4)
+          .toList(growable: false),
+      admissionsSnapshot: const ManagementAdmissionsSnapshot(
         leadsMtd: 248,
         confirmed: 42,
         joined: 36,
         conversionRate: '14.5%',
         recentConversions: _recentConversions,
       ),
-      feeSnapshot: ManagementFeeSnapshot(
+      feeSnapshot: const ManagementFeeSnapshot(
         collectedMtd: '₹42.0L',
         outstanding: '₹18.6L',
         collectionRate: '68%',
@@ -576,8 +607,8 @@ class MockManagementRepository implements ManagementRepository {
 
   @override
   Future<ManagementTasksData> getTasksAndApprovals({required RepositoryQuery query}) async {
-    return const ManagementTasksData(
-      kpis: [
+    return ManagementTasksData(
+      kpis: const [
         ManagementKpi(
           id: 'pending',
           value: '7',
@@ -607,31 +638,7 @@ class MockManagementRepository implements ManagementRepository {
           accentName: 'neutral',
         ),
       ],
-      approvals: [
-        ..._approvalQueue,
-        ManagementApprovalItem(
-          id: 'appr_mg_6',
-          type: ManagementApprovalType.marketing,
-          title: 'Digital ads — Q3 enrollment',
-          requester: 'Marketing Lead',
-          amount: '₹1.5L',
-          dateLabel: '3 days ago',
-          status: ManagementApprovalStatus.approved,
-          aiRecommendation: ManagementAiRecommendation.approve,
-          sourceModuleRoute: RouteNames.admissionsDashboard,
-        ),
-        ManagementApprovalItem(
-          id: 'appr_mg_7',
-          type: ManagementApprovalType.expense,
-          title: 'Sports day logistics',
-          requester: 'Activities Head',
-          amount: '₹85K',
-          dateLabel: '4 days ago',
-          status: ManagementApprovalStatus.rejected,
-          aiRecommendation: ManagementAiRecommendation.reject,
-          sourceModuleRoute: RouteNames.financeRefunds,
-        ),
-      ],
+      approvals: List<ManagementApprovalItem>.from(_approvals),
       aiInsight:
           'AI recommends approving payroll and Class 5 admission. Review vendor payment — amount exceeds ₹50K threshold.',
     );
@@ -724,5 +731,39 @@ class MockManagementRepository implements ManagementRepository {
         ),
       ],
     );
+  }
+
+  @override
+  Future<ManagementApprovalItem> resolveManagementApproval({
+    required RepositoryQuery query,
+    required ResolveManagementApprovalRequest request,
+  }) async {
+    if (request.status == ManagementApprovalStatus.pending) {
+      throw StateError('Cannot resolve approval to pending');
+    }
+
+    final index = _approvals.indexWhere((a) => a.id == request.approvalId);
+    if (index < 0) {
+      throw StateError('Approval not found');
+    }
+
+    final current = _approvals[index];
+    if (current.status != ManagementApprovalStatus.pending) {
+      throw StateError('Only pending approvals can be resolved');
+    }
+
+    final resolved = ManagementApprovalItem(
+      id: current.id,
+      type: current.type,
+      title: current.title,
+      requester: current.requester,
+      amount: current.amount,
+      dateLabel: current.dateLabel,
+      status: request.status,
+      aiRecommendation: current.aiRecommendation,
+      sourceModuleRoute: current.sourceModuleRoute,
+    );
+    _approvals[index] = resolved;
+    return resolved;
   }
 }

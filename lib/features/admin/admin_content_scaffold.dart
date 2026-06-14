@@ -53,9 +53,9 @@ class AdminContentScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ColoredBox(
-      color: Theme.of(context).colorScheme.surfaceContainerLowest,
-      child: Column(
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AdminAppBar(

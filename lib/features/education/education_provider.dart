@@ -5,7 +5,21 @@ import '../../core/repositories/repository_query.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
+import '../../core/errors/api_failure.dart';
 import 'education_models.dart';
+
+void assertManageEducation(Ref ref) {
+  final perms = ref.read(userPermissionsProvider);
+  if (perms == null || !perms.has(Permission.manageEducation)) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to manage Education.',
+        code: 'RBAC_MANAGE_EDUCATION',
+      ),
+    );
+  }
+}
 
 final educationQueryProvider = Provider<RepositoryQuery>(
   (ref) => ref.watch(repositoryQueryProvider),
@@ -64,6 +78,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   Future<QuestionPaperDetail> generatePaper(GenerateQuestionPaperRequest request) async {
     state = const AsyncLoading();
     try {
+      assertManageEducation(ref);
       final detail = await ref.read(educationRepositoryProvider).generateQuestionPaper(
             query: ref.read(educationQueryProvider),
             request: request,
@@ -80,6 +95,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   Future<void> publishPaper(String paperId) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      assertManageEducation(ref);
       await ref.read(educationRepositoryProvider).publishQuestionPaper(
             query: ref.read(educationQueryProvider),
             paperId: paperId,
@@ -90,6 +106,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
 
   Future<HomeworkAssignment> generateHomework(GenerateHomeworkRequest request) async {
     state = const AsyncLoading();
+    assertManageEducation(ref);
     final created = await ref.read(educationRepositoryProvider).generateHomework(
           query: ref.read(educationQueryProvider),
           request: request,
@@ -101,6 +118,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
 
   Future<ReportCardRemark> generateRemark(GenerateReportRemarkRequest request) async {
     state = const AsyncLoading();
+    assertManageEducation(ref);
     final created = await ref.read(educationRepositoryProvider).generateReportRemark(
           query: ref.read(educationQueryProvider),
           request: request,
@@ -111,11 +129,29 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> updateRemark(String remarkId, String editedRemark) async {
+    assertManageEducation(ref);
     await ref.read(educationRepositoryProvider).updateReportRemark(
           query: ref.read(educationQueryProvider),
           remarkId: remarkId,
           editedRemark: editedRemark,
         );
     ref.invalidate(reportRemarksListProvider);
+  }
+
+  Future<ReportCardRemark> publishRemark(String remarkId) async {
+    state = const AsyncLoading();
+    try {
+      assertManageEducation(ref);
+      final published = await ref.read(educationRepositoryProvider).publishReportRemark(
+            query: ref.read(educationQueryProvider),
+            remarkId: remarkId,
+          );
+      ref.invalidate(reportRemarksListProvider);
+      state = const AsyncData(null);
+      return published;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
   }
 }

@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/repositories/mock/mock_admissions_write_store.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
+import '../admissions_journey_context_provider.dart';
 import '../admissions_mutations_provider.dart';
 import '../admissions_requests.dart';
 import 'enrollment_validation.dart';
@@ -92,13 +94,24 @@ class EnrollmentFormNotifier extends Notifier<EnrollmentFormState> {
   Future<void> submit() async {
     state = state.copyWith(isSubmitting: true);
     try {
+      final applicationId = ref.read(admissionsActiveApplicationIdProvider);
       final record = await ref.read(submitEnrollmentProvider.notifier).execute(
             EnrollmentSubmitRequest(
               student: state.student,
               parent: state.parent,
               academic: state.academic,
+              applicationId: applicationId,
             ),
           );
+      if (record != null) {
+        ref.read(admissionsLastEnrollmentIdProvider.notifier).state = record.id;
+        final approval = MockAdmissionsWriteStore.instance
+            .findApprovalByApplication(record.applicationId);
+        if (approval != null) {
+          ref.read(admissionsLastApprovalIdProvider.notifier).state =
+              approval.id;
+        }
+      }
       state = state.copyWith(
         isSubmitting: false,
         isSubmitted: true,

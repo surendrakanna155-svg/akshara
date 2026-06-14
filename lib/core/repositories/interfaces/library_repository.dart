@@ -1,4 +1,5 @@
 import '../../../features/library/library_models.dart';
+import '../../../features/library/library_requests.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 
@@ -12,4 +13,12 @@ abstract class LibraryRepository {
   Future<LibraryFinesData> getFines({required RepositoryQuery query});
   Future<LibraryDigitalResourcesData> getDigitalResources({required RepositoryQuery query});
   Future<LibraryReportsData> getReports({required RepositoryQuery query});
+  Future<LibraryIssueRecord> issueLibraryBook({
+    required RepositoryQuery query,
+    required IssueLibraryBookRequest request,
+  });
+  Future<LibraryReturnRecord> returnLibraryBook({
+    required RepositoryQuery query,
+    required ReturnLibraryBookRequest request,
+  });
 }

@@ -34,6 +34,8 @@ class AksharaSearchableDropdown extends StatelessWidget {
             : (options.isNotEmpty ? options.first : value);
     final decorationLabel = required ? '$label *' : label;
 
+    final enableFilter = options.length > 6;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -44,14 +46,16 @@ class AksharaSearchableDropdown extends StatelessWidget {
           label: Text(decorationLabel),
           expandedInsets: EdgeInsets.zero,
           requestFocusOnTap: true,
-          enableFilter: options.length > 6,
-          filterCallback: (entries, filter) {
-            if (filter.isEmpty) return entries;
-            final query = filter.toLowerCase();
-            return entries
-                .where((entry) => entry.label.toLowerCase().contains(query))
-                .toList();
-          },
+          enableFilter: enableFilter,
+          filterCallback: enableFilter
+              ? (entries, filter) {
+                  if (filter.isEmpty) return entries;
+                  final query = filter.toLowerCase();
+                  return entries
+                      .where((entry) => entry.label.toLowerCase().contains(query))
+                      .toList();
+                }
+              : null,
           dropdownMenuEntries: [
             for (final option in options)
               DropdownMenuEntry(value: option, label: option),

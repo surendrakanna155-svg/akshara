@@ -1,6 +1,8 @@
 import '../../interfaces/management_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/management/management_models.dart';
+import '../../../../features/management/management_requests.dart';
+import '../api_exception.dart';
 import 'mapper/management_mapper.dart';
 import 'remote/management_remote_datasource.dart';
 
@@ -71,5 +73,16 @@ class ApiManagementRepository implements ManagementRepository {
   Future<ManagementSettingsData> getSettings({required RepositoryQuery query}) async {
     final dto = await _remote.fetchSettings(query: query);
     return _mapper.toSettings(dto);
+  }
+
+  @override
+  Future<ManagementApprovalItem> resolveManagementApproval({
+    required RepositoryQuery query,
+    required ResolveManagementApprovalRequest request,
+  }) async {
+    throw ApiNotConnectedException(
+      'ManagementRepository',
+      'resolveManagementApproval',
+    );
   }
 }

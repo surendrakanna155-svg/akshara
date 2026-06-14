@@ -8,6 +8,7 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
+import '../admissions_journey_context_provider.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_enrollment_provider.dart';
@@ -148,9 +149,10 @@ class _AdmissionsEnrollmentScreenState
           AksharaManageAction(
             permission: Permission.manageAdmissions,
             child: FilledButton(
+              key: QaTestKeys.enrollmentSubmitButton,
               onPressed: form.isSubmitting || form.isSubmitted
                   ? null
-                  : notifier.submit,
+                  : () => _submitEnrollment(context, ref, notifier),
               child: form.isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -162,5 +164,32 @@ class _AdmissionsEnrollmentScreenState
           ),
       ],
     );
+  }
+
+  Future<void> _submitEnrollment(
+    BuildContext context,
+    WidgetRef ref,
+    EnrollmentFormNotifier notifier,
+  ) async {
+    try {
+      await notifier.submit();
+      if (!context.mounted) return;
+      final enrollmentId = ref.read(admissionsLastEnrollmentIdProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.admissionsEnrollmentSubmittedSnackbar,
+          content: Text(
+            enrollmentId == null
+                ? 'Enrollment submitted successfully'
+                : 'Enrollment submitted ($enrollmentId)',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
   }
 }

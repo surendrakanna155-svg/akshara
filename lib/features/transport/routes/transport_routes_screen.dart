@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../transport_models.dart';
 import '../transport_providers.dart';
+import '../transport_workflow_actions.dart';
 import '../widgets/transport_module_scaffold.dart';
 
 /// TR-02 — Routes Management.
@@ -37,22 +39,32 @@ class TransportRoutesScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(transportRoutesFilterProvider.notifier).state = index,
-      filterTrailing: AksharaManageAction(
-        permission: Permission.manageTransport,
-        child: FilledButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('New route'),
-        ),
-      ),
-      body: _buildBody(
-        context,
-        ref: ref,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        routes: routes,
-        pageResult: pageResult,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: AksharaManageAction(
+              permission: Permission.manageTransport,
+              child: FilledButton.icon(
+                key: QaTestKeys.transportSaveRouteButton,
+                onPressed: () => showCreateTransportRouteDialog(context, ref),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('New route'),
+              ),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          _buildBody(
+            context,
+            ref: ref,
+            isLoading: isLoading,
+            isError: isError,
+            isEmpty: isEmpty,
+            routes: routes,
+            pageResult: pageResult,
+          ),
+        ],
       ),
     );
   }
@@ -91,7 +103,7 @@ class TransportRoutesScreen extends ConsumerWidget {
       children: [
         const AksharaSectionHeader(title: 'Route catalog'),
         const SizedBox(height: AksharaSpacing.s3),
-        _RoutesTable(routes: routes),
+        _RoutesTable(routes: routes, ref: ref),
         if (pageResult != null)
           AksharaPaginationBar<TransportRoute>(
             result: pageResult,
@@ -103,18 +115,19 @@ class TransportRoutesScreen extends ConsumerWidget {
   }
 }
 
-class _RoutesTable extends StatelessWidget {
-  const _RoutesTable({required this.routes});
+class _RoutesTable extends ConsumerWidget {
+  const _RoutesTable({required this.routes, required this.ref});
 
   final List<TransportRoute> routes;
+  final WidgetRef ref;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (AdminLayout.isMobile(context)) {
       return Column(
         children: [
           for (final route in routes) ...[
-            _RouteCard(route: route),
+            _RouteCard(route: route, ref: this.ref),
             const SizedBox(height: AksharaSpacing.s3),
           ],
         ],
@@ -131,6 +144,7 @@ class _RoutesTable extends StatelessWidget {
         DataColumn(label: Text('Bus')),
         DataColumn(label: Text('Students')),
         DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Actions')),
       ],
       rowCount: routes.length,
       dataRowMinHeight: 56,
@@ -148,6 +162,22 @@ class _RoutesTable extends StatelessWidget {
             DataCell(Text(route.assignedBus)),
             DataCell(Text('${route.studentCount}')),
             DataCell(_RouteStatusChip(status: route.status)),
+            DataCell(
+              route.status == TransportRouteStatus.draft
+                  ? AksharaManageAction(
+                      permission: Permission.manageTransport,
+                      child: TextButton(
+                        key: QaTestKeys.transportActivateRouteButton(route.id),
+                        onPressed: () => showActivateTransportRouteDialog(
+                          context,
+                          this.ref,
+                          route: route,
+                        ),
+                        child: const Text('Activate'),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         );
       },
@@ -155,13 +185,14 @@ class _RoutesTable extends StatelessWidget {
   }
 }
 
-class _RouteCard extends StatelessWidget {
-  const _RouteCard({required this.route});
+class _RouteCard extends ConsumerWidget {
+  const _RouteCard({required this.route, required this.ref});
 
   final TransportRoute route;
+  final WidgetRef ref;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef widgetRef) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -190,6 +221,24 @@ class _RouteCard extends StatelessWidget {
                 'AM ${route.amDeparture} · PM ${route.pmDeparture} · ${route.studentCount} students',
                 style: text.bodySmall,
               ),
+              if (route.status == TransportRouteStatus.draft) ...[
+                const SizedBox(height: AksharaSpacing.s3),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: AksharaManageAction(
+                    permission: Permission.manageTransport,
+                    child: TextButton(
+                      key: QaTestKeys.transportActivateRouteButton(route.id),
+                      onPressed: () => showActivateTransportRouteDialog(
+                        context,
+                        ref,
+                        route: route,
+                      ),
+                      child: const Text('Activate'),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -1,4 +1,5 @@
 import '../../../features/inventory/inventory_models.dart';
+import '../../../features/inventory/inventory_requests.dart';
 import '../../../features/inventory/intelligence/inventory_intelligence_models.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
@@ -19,5 +20,15 @@ abstract class InventoryRepository {
   Future<AssetLifecycleEvent> recordAssetLifecycleEvent({
     required RepositoryQuery query,
     required RecordAssetLifecycleEventRequest request,
+  });
+
+  Future<InventoryProcurementOrder> createProcurementOrder({
+    required RepositoryQuery query,
+    required CreateInventoryProcurementOrderRequest request,
+  });
+
+  Future<InventoryProcurementOrder> recordProcurementReceiveHandoff({
+    required RepositoryQuery query,
+    required String orderId,
   });
 }

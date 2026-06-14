@@ -1,4 +1,5 @@
 import '../../../features/transport/transport_models.dart';
+import '../../../features/transport/transport_requests.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 
@@ -14,4 +15,14 @@ abstract class TransportRepository {
   Future<TransportReportsData> getReports({required RepositoryQuery query});
   Future<TransportSettingsData> getSettings({required RepositoryQuery query});
   Future<OccupancyMetrics> getOccupancyMetrics({required RepositoryQuery query});
+
+  Future<TransportRoute> createRoute({
+    required RepositoryQuery query,
+    required CreateTransportRouteRequest request,
+  });
+
+  Future<TransportRoute> activateRoute({
+    required RepositoryQuery query,
+    required ActivateTransportRouteRequest request,
+  });
 }

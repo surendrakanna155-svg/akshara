@@ -27,7 +27,7 @@ enum HostelRoomStatus { occupied, vacant, maintenance, alert }
 
 enum HostelRoomType { standard, ac, dormitory, staff }
 
-enum HostelStudentStatus { resident, onLeave, checkedOut }
+enum HostelStudentStatus { awaitingAllocation, resident, onLeave, checkedOut }
 
 enum HostelAttendanceSession { morning, evening, night }
 

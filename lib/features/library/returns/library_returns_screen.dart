@@ -11,7 +11,9 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../library_models.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../library_providers.dart';
+import '../library_workflow_actions.dart';
 import '../widgets/library_module_scaffold.dart';
 
 /// LB-04 — Return Books.
@@ -42,7 +44,8 @@ class LibraryReturnsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
         child: FilledButton.icon(
-          onPressed: () {},
+          key: QaTestKeys.libraryReturnScanButton,
+          onPressed: () => showReturnLibraryBookDialog(context, ref),
           icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
           label: const Text('Scan return'),
         ),

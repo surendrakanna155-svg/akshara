@@ -421,6 +421,9 @@ class AuthNotifier extends Notifier<AuthState> {
     }
 
     final session = _authenticatedSessionForRole(role);
+    await ref.read(serverPermissionCacheProvider).clear();
+    ref.read(serverPermissionSyncProvider.notifier).state =
+        const ServerPermissionSyncState();
     state = AuthState(
       status: AuthStatus.authenticated,
       phoneNumber: phone,
@@ -453,6 +456,10 @@ class AuthNotifier extends Notifier<AuthState> {
         erpRole ?? ref.read(staffErpRoleProvider);
     await _storage.writeStaffErpRolePreference(resolvedErpRole);
     ref.read(staffErpRoleProvider.notifier).state = resolvedErpRole;
+
+    await ref.read(serverPermissionCacheProvider).clear();
+    ref.read(serverPermissionSyncProvider.notifier).state =
+        const ServerPermissionSyncState();
 
     state = AuthState(
       status: AuthStatus.authenticated,

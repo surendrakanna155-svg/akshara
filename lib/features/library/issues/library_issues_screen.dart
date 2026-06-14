@@ -11,7 +11,9 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../library_models.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../library_providers.dart';
+import '../library_workflow_actions.dart';
 import '../widgets/library_module_scaffold.dart';
 
 /// LB-03 — Issue Books.
@@ -43,13 +45,15 @@ class LibraryIssuesScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
         child: FilledButton.icon(
-          onPressed: () {},
+          key: QaTestKeys.libraryIssueScanButton,
+          onPressed: () => showIssueLibraryBookDialog(context, ref),
           icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
           label: const Text('Scan ISBN'),
         ),
       ),
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
@@ -60,7 +64,8 @@ class LibraryIssuesScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
@@ -111,13 +116,13 @@ class LibraryIssuesScreen extends ConsumerWidget {
   }
 }
 
-class _IssuesTable extends StatelessWidget {
+class _IssuesTable extends ConsumerWidget {
   const _IssuesTable({required this.issues});
 
   final List<LibraryIssueRecord> issues;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (AdminLayout.isMobile(context)) {
       return Column(
         children: [
@@ -146,6 +151,7 @@ class _IssuesTable extends StatelessWidget {
               DataColumn(label: Text('Issued')),
               DataColumn(label: Text('Due')),
               DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Actions')),
             ],
             rows: [
               for (final issue in issues)
@@ -163,6 +169,7 @@ class _IssuesTable extends StatelessWidget {
                     DataCell(Text(issue.issuedDate)),
                     DataCell(Text(issue.dueDate)),
                     DataCell(_LoanStatusChip(status: issue.status)),
+                    DataCell(_IssueActions(issue: issue)),
                   ],
                 ),
             ],
@@ -179,13 +186,13 @@ class _IssuesTable extends StatelessWidget {
       };
 }
 
-class _IssueCard extends StatelessWidget {
+class _IssueCard extends ConsumerWidget {
   const _IssueCard({required this.issue});
 
   final LibraryIssueRecord issue;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -202,10 +209,36 @@ class _IssueCard extends StatelessWidget {
               Text('Due ${issue.dueDate}', style: text.bodySmall),
               const SizedBox(height: AksharaSpacing.s2),
               _LoanStatusChip(status: issue.status),
+              if (issue.status == LibraryLoanStatus.active ||
+                  issue.status == LibraryLoanStatus.overdue) ...[
+                const SizedBox(height: AksharaSpacing.s3),
+                _IssueActions(issue: issue),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _IssueActions extends ConsumerWidget {
+  const _IssueActions({required this.issue});
+
+  final LibraryIssueRecord issue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (issue.status != LibraryLoanStatus.active &&
+        issue.status != LibraryLoanStatus.overdue) {
+      return const SizedBox.shrink();
+    }
+
+    return OutlinedButton(
+      key: QaTestKeys.libraryReturnBookButton(issue.id),
+      onPressed: () => returnLibraryIssue(context, ref, issue),
+      style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+      child: const Text('Return'),
     );
   }
 }

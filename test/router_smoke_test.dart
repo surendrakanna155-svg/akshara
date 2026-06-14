@@ -4,6 +4,7 @@ import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/auth/login_screen.dart';
 import 'package:akshara_erp/router/app_router.dart';
 import 'package:akshara_erp/router/route_names.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'test_helpers.dart';
@@ -265,6 +266,40 @@ void main() {
       ];
 
       for (final (route, title) in routes) {
+        router.go(route);
+        await settleRiverpodFutures(tester);
+        await tester.pumpAndSettle();
+
+        expect(router.routeInformationProvider.value.uri.path, route);
+        expect(find.text(title), findsAtLeastNWidgets(1));
+      }
+    });
+
+    testWidgets('staff reaches education and inventory intelligence routes', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final router = createAppRouter(readAuth: () => _staffAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: _staffAuth,
+        settleSplash: true,
+      );
+
+      const desktopRoutes = [
+        (RouteNames.education, 'Education Suite'),
+        (RouteNames.inventoryCopilot, 'Stock forecast (units)'),
+        (RouteNames.inventoryLifecycle, 'Assets tracked'),
+      ];
+
+      for (final (route, title) in desktopRoutes) {
         router.go(route);
         await settleRiverpodFutures(tester);
         await tester.pumpAndSettle();

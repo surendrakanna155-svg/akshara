@@ -1,4 +1,5 @@
 import '../../../features/management/management_models.dart';
+import '../../../features/management/management_requests.dart';
 import '../repository_query.dart';
 
 /// Contract for management portal data access (mock or API).
@@ -11,4 +12,8 @@ abstract class ManagementRepository {
   Future<ManagementPerformanceData> getSchoolPerformance({required RepositoryQuery query});
   Future<ManagementTasksData> getTasksAndApprovals({required RepositoryQuery query});
   Future<ManagementSettingsData> getSettings({required RepositoryQuery query});
+  Future<ManagementApprovalItem> resolveManagementApproval({
+    required RepositoryQuery query,
+    required ResolveManagementApprovalRequest request,
+  });
 }

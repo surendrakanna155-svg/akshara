@@ -361,17 +361,21 @@ class MockFinanceRepository implements FinanceRepository {
 
     final collectionId = _store.nextId('col_');
     final receiptNumber = 'RCP-${DateTime.now().year}-${collectionId.split('_').last}';
+    final account = _store.studentAccounts.cast<StudentFeeAccount?>().firstWhere(
+          (item) => item?.id == invoice.studentId,
+          orElse: () => null,
+        );
     final payment = CollectionPayment(
       id: collectionId,
       receiptNumber: receiptNumber,
-      studentName: 'Student',
-      admissionNumber: 'ADM-MOCK',
+      studentName: account?.studentName ?? 'Student',
+      admissionNumber: account?.admissionNumber ?? 'ADM-MOCK',
       amount: request.amountCollected,
       mode: request.paymentMethod,
       collectedAt: request.collectionDate ?? 'Today',
       collectedBy: 'Finance Staff',
       status: CollectionStatus.completed,
-      classLabel: '10',
+      classLabel: account?.classLabel ?? '10',
     );
     _store.payments.insert(0, payment);
 
@@ -794,7 +798,7 @@ class MockFinanceRepository implements FinanceRepository {
     required RepositoryQuery query,
     required AssignFeePlanRequest request,
   }) async {
-    return createStudentAccount(
+    final account = await createStudentAccount(
       query: query,
       request: CreateStudentAccountRequest(
         studentName: request.studentName,
@@ -806,6 +810,37 @@ class MockFinanceRepository implements FinanceRepository {
         installmentPlanLabel: _store.planLabel(request.installmentPlanId),
       ),
     );
+    _syncInvoiceForFeeAccount(account);
+    return account;
+  }
+
+  void _syncInvoiceForFeeAccount(StudentFeeAccount account) {
+    final numericTotal = account.totalDue.replaceAll(RegExp(r'[₹,\s]'), '');
+    final invoiceId = _store.nextId('inv_');
+    _store.invoices.insert(
+      0,
+      FinanceInvoice(
+        id: invoiceId,
+        studentId: account.id,
+        feeAssignmentId: account.id,
+        academicYear: '2026-27',
+        invoiceNumber:
+            'INV-2026-${account.admissionNumber.replaceAll(RegExp(r'[^A-Z0-9]'), '')}',
+        invoiceDate: '2026-06-10',
+        dueDate: '2026-07-10',
+        subtotalAmount: numericTotal,
+        discountAmount: '0',
+        totalAmount: numericTotal,
+        outstandingAmount: numericTotal,
+        paidAmount: '0',
+        invoiceStatus: InvoiceStatus.issued,
+        termLabel: account.installmentPlan,
+        createdBy: 'finance_staff',
+        createdAt: '2026-06-10T00:00:00.000Z',
+        updatedAt: '2026-06-10T00:00:00.000Z',
+      ),
+    );
+    _store.invoiceIdByFeeAccountId[account.id] = invoiceId;
   }
 
   @override
@@ -1193,6 +1228,7 @@ class _FinanceMutableStore {
   List<FinanceInvoice> invoices;
   List<CollectionPayment> payments;
   FinanceSettingsData settings;
+  final Map<String, String> invoiceIdByFeeAccountId = {};
   int _counter = 100;
 
   String nextId(String prefix) => '$prefix${_counter++}';

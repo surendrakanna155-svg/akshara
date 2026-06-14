@@ -55,4 +55,23 @@ class EducationPdfService {
     );
     await Printing.layoutPdf(onLayout: (format) async => doc.save());
   }
+
+  static Future<void> printReportCardRemark(ReportCardRemark remark) async {
+    final doc = pw.Document();
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (context) => [
+          pw.Header(level: 0, child: pw.Text('Report Card Remark')),
+          pw.Text('Student: ${remark.studentId}'),
+          pw.Text('Year: ${remark.academicYearLabel}'),
+          pw.Text('Type: ${remark.remarkType.name}'),
+          pw.Text('Status: ${remark.status}'),
+          pw.SizedBox(height: 12),
+          pw.Text(remark.displayRemark),
+        ],
+      ),
+    );
+    await Printing.layoutPdf(onLayout: (format) async => doc.save());
+  }
 }

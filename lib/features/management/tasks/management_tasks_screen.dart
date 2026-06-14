@@ -11,8 +11,10 @@ import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../management_models.dart';
 import '../management_providers.dart';
+import '../management_workflow_actions.dart';
 import '../widgets/management_kpi_row.dart';
 import '../widgets/management_module_scaffold.dart';
 
@@ -248,13 +250,13 @@ class _AiRecommendationChip extends StatelessWidget {
   }
 }
 
-class _ApprovalActions extends StatelessWidget {
+class _ApprovalActions extends ConsumerWidget {
   const _ApprovalActions({required this.approval});
 
   final ManagementApprovalItem approval;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (approval.status != ManagementApprovalStatus.pending) {
       return const SizedBox.shrink();
     }
@@ -265,7 +267,8 @@ class _ApprovalActions extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           FilledButton(
-            onPressed: () {},
+            key: QaTestKeys.managementApproveButton(approval.id),
+            onPressed: () => approveManagementItem(context, ref, approval),
             style: FilledButton.styleFrom(
               visualDensity: VisualDensity.compact,
             ),
@@ -273,7 +276,8 @@ class _ApprovalActions extends StatelessWidget {
           ),
           const SizedBox(width: AksharaSpacing.s2),
           OutlinedButton(
-            onPressed: () {},
+            key: QaTestKeys.managementRejectButton(approval.id),
+            onPressed: () => rejectManagementItem(context, ref, approval),
             style: OutlinedButton.styleFrom(
               visualDensity: VisualDensity.compact,
             ),

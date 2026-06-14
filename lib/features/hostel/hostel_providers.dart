@@ -75,9 +75,12 @@ final hostelFilteredStudentsProvider = Provider<List<HostelStudent>>((ref) {
         .where((s) => s.status == HostelStudentStatus.resident)
         .toList(),
     2 => students
-        .where((s) => s.status == HostelStudentStatus.onLeave)
+        .where((s) => s.status == HostelStudentStatus.awaitingAllocation)
         .toList(),
     3 => students
+        .where((s) => s.status == HostelStudentStatus.onLeave)
+        .toList(),
+    4 => students
         .where((s) => s.status == HostelStudentStatus.checkedOut)
         .toList(),
     _ => students,

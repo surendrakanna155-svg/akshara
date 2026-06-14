@@ -1,0 +1,124 @@
+{
+  "version": "1.0",
+  "mission": "overnight-autonomous-build",
+  "max_parallel": 4,
+  "tasks": [
+    {
+      "id": "TASK-A1",
+      "agent": "A",
+      "title": "Admissions mock handoff polish (if needed by HR/SIS deps)",
+      "depends_on": [],
+      "files": [
+        "lib/core/repositories/mock/mock_admissions_repository.dart",
+        "lib/core/repositories/interfaces/admissions_repository.dart"
+      ],
+      "acceptance": "Contract tests pass; no file overlap with other in_progress tasks"
+    },
+    {
+      "id": "TASK-B1",
+      "agent": "B",
+      "title": "Finance export stub or pilot-hide for report buttons",
+      "depends_on": [],
+      "files": [
+        "lib/features/finance/reports/finance_reports_screen.dart",
+        "lib/features/finance/finance_workflow_actions.dart"
+      ],
+      "acceptance": "Widget test or Patrol anchor stable; analyze clean"
+    },
+    {
+      "id": "TASK-C1",
+      "agent": "C",
+      "title": "HR mutations provider MVP (create leave request)",
+      "depends_on": [],
+      "files": [
+        "lib/features/hr/hr_mutations_provider.dart",
+        "lib/features/hr/leave/hr_leave_screen.dart",
+        "lib/core/testing/qa_test_keys.dart"
+      ],
+      "acceptance": "Provider unit test + mock repo write"
+    },
+    {
+      "id": "TASK-C2",
+      "agent": "C",
+      "title": "Teacher→parent attendance mock sync",
+      "depends_on": [],
+      "files": [
+        "lib/core/repositories/mock/mock_parent_repository.dart",
+        "lib/core/repositories/mock/mock_teacher_repository.dart",
+        "test/integration/teacher/teacher_attendance_e2e_integration_test.dart"
+      ],
+      "acceptance": "Integration test: submit updates parent KPI"
+    },
+    {
+      "id": "TASK-D1",
+      "agent": "D",
+      "title": "Inventory mutation MVP (create PO draft)",
+      "depends_on": [],
+      "files": [
+        "lib/features/inventory/inventory_mutations_provider.dart",
+        "lib/features/inventory/procurement/inventory_procurement_screen.dart",
+        "lib/core/testing/qa_test_keys.dart"
+      ],
+      "acceptance": "Provider test + mock write"
+    },
+    {
+      "id": "TASK-D2",
+      "agent": "D",
+      "title": "Transport mutation MVP (save route draft)",
+      "depends_on": [],
+      "files": [
+        "lib/features/transport/transport_mutations_provider.dart",
+        "lib/features/transport/routes/transport_routes_screen.dart",
+        "lib/core/testing/qa_test_keys.dart"
+      ],
+      "acceptance": "Provider test + mock write"
+    },
+    {
+      "id": "TASK-E1",
+      "agent": "E",
+      "title": "Patrol smoke for HR leave submit",
+      "depends_on": ["TASK-C1"],
+      "files": [
+        "patrol_test/workflows/hr_leave_e2e_test.dart",
+        "patrol_test/helpers/hr_journey_helpers.dart"
+      ],
+      "acceptance": "Patrol green on device/emulator"
+    },
+    {
+      "id": "TASK-E2",
+      "agent": "E",
+      "title": "Patrol smoke inventory PO + transport route",
+      "depends_on": ["TASK-D1", "TASK-D2"],
+      "files": [
+        "patrol_test/workflows/inventory_po_e2e_test.dart",
+        "patrol_test/workflows/transport_route_e2e_test.dart",
+        "patrol_test/helpers/inventory_journey_helpers.dart",
+        "patrol_test/helpers/transport_journey_helpers.dart"
+      ],
+      "acceptance": "Patrol green"
+    },
+    {
+      "id": "TASK-E3",
+      "agent": "E",
+      "title": "RBAC deny tests admissions clerk + finance staff",
+      "depends_on": ["TASK-C1", "TASK-D1"],
+      "files": [
+        "test/features/admissions/admissions_write_tests.dart",
+        "test/features/finance/finance_write_tests.dart"
+      ],
+      "acceptance": "flutter test paths pass"
+    },
+    {
+      "id": "TASK-G1",
+      "agent": "G",
+      "title": "Full regression gate",
+      "depends_on": ["TASK-E1", "TASK-E2", "TASK-E3", "TASK-C2", "TASK-B1"],
+      "files": [
+        "docs/QA/overnight_progress.md",
+        "docs/QA/overnight_summary.md",
+        "qa/patrol/run_erp_coverage.sh"
+      ],
+      "acceptance": "flutter analyze; flutter test; ERP_COVERAGE_MODE=full Patrol 22/22"
+    }
+  ]
+}

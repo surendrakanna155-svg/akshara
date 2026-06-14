@@ -5,6 +5,7 @@ import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -12,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../hostel_models.dart';
 import '../hostel_providers.dart';
+import '../hostel_workflow_actions.dart';
 import '../widgets/hostel_module_scaffold.dart';
 
 /// HO-02 — Hostel Students (SIS-linked).
@@ -21,6 +23,7 @@ class HostelStudentsScreen extends ConsumerWidget {
   static const List<String> filterLabels = [
     'All',
     'Resident',
+    'Awaiting',
     'On leave',
     'Checked out',
   ];
@@ -42,14 +45,33 @@ class HostelStudentsScreen extends ConsumerWidget {
           ref.read(hostelStudentsFilterProvider.notifier).state = index,
       filterTrailing: AksharaManageAction(
         permission: Permission.manageHostel,
-        child: OutlinedButton.icon(
-          onPressed: () => context.go(RouteNames.sisStudents),
-          icon: const Icon(Icons.badge_outlined, size: 18),
-          label: const Text('SIS registry'),
+        child: Wrap(
+          spacing: AksharaSpacing.s2,
+          runSpacing: AksharaSpacing.s2,
+          children: [
+            OutlinedButton.icon(
+              key: QaTestKeys.hostelAdmitStudentButton,
+              onPressed: () => showAdmitHostelStudentDialog(context, ref),
+              icon: const Icon(Icons.person_add_outlined, size: 18),
+              label: const Text('Admit'),
+            ),
+            FilledButton.icon(
+              key: QaTestKeys.hostelAssignRoomButton,
+              onPressed: () => showAssignHostelRoomDialog(context, ref),
+              icon: const Icon(Icons.bed_outlined, size: 18),
+              label: const Text('Assign room'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => context.go(RouteNames.sisStudents),
+              icon: const Icon(Icons.badge_outlined, size: 18),
+              label: const Text('SIS registry'),
+            ),
+          ],
         ),
       ),
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
@@ -60,7 +82,8 @@ class HostelStudentsScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
@@ -113,13 +136,13 @@ class HostelStudentsScreen extends ConsumerWidget {
   }
 }
 
-class _StudentsTable extends StatelessWidget {
+class _StudentsTable extends ConsumerWidget {
   const _StudentsTable({required this.students});
 
   final List<HostelStudent> students;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (AdminLayout.isMobile(context)) {
       return Column(
         children: [
@@ -148,6 +171,7 @@ class _StudentsTable extends StatelessWidget {
               DataColumn(label: Text('Bed')),
               DataColumn(label: Text('Fee pending')),
               DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Actions')),
             ],
             rows: [
               for (final student in students)
@@ -163,6 +187,7 @@ class _StudentsTable extends StatelessWidget {
                     DataCell(Text(student.bed)),
                     DataCell(Text(student.feePending)),
                     DataCell(_StudentStatusChip(status: student.status)),
+                    DataCell(_StudentActions(student: student)),
                   ],
                 ),
             ],
@@ -173,13 +198,13 @@ class _StudentsTable extends StatelessWidget {
   }
 }
 
-class _StudentCard extends StatelessWidget {
+class _StudentCard extends ConsumerWidget {
   const _StudentCard({required this.student});
 
   final HostelStudent student;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -203,10 +228,51 @@ class _StudentCard extends StatelessWidget {
               ),
               const SizedBox(height: AksharaSpacing.s2),
               _StudentStatusChip(status: student.status),
+              const SizedBox(height: AksharaSpacing.s3),
+              _StudentActions(student: student),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _StudentActions extends ConsumerWidget {
+  const _StudentActions({required this.student});
+
+  final HostelStudent student;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Wrap(
+      spacing: AksharaSpacing.s2,
+      runSpacing: AksharaSpacing.s2,
+      children: [
+        if (student.status == HostelStudentStatus.awaitingAllocation)
+          FilledButton(
+            key: QaTestKeys.hostelAssignStudentButton(student.id),
+            onPressed: () =>
+                showAssignHostelRoomDialog(context, ref, student: student),
+            style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+            child: const Text('Assign'),
+          ),
+        if (student.status == HostelStudentStatus.resident ||
+            student.status == HostelStudentStatus.onLeave) ...[
+          OutlinedButton(
+            key: QaTestKeys.hostelTransferStudentButton(student.id),
+            onPressed: () => transferHostelStudentRoom(context, ref, student),
+            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+            child: const Text('Transfer'),
+          ),
+          OutlinedButton(
+            key: QaTestKeys.hostelCheckoutStudentButton(student.id),
+            onPressed: () => checkoutHostelStudent(context, ref, student),
+            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+            child: const Text('Check out'),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -219,6 +285,8 @@ class _StudentStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, tone) = switch (status) {
+      HostelStudentStatus.awaitingAllocation =>
+        ('Awaiting room', KpiAccent.warning),
       HostelStudentStatus.resident => ('Resident', KpiAccent.success),
       HostelStudentStatus.onLeave => ('On leave', KpiAccent.warning),
       HostelStudentStatus.checkedOut => ('Checked out', KpiAccent.neutral),

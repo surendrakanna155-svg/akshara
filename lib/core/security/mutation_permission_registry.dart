@@ -79,6 +79,45 @@ class MutationPermissionRegistry {
       permission: Permission.manageSis,
       kind: 'manage',
     ),
+    // Management
+    MutationPermissionEntry(
+      moduleId: 'management',
+      mutationId: 'resolveManagementApproval',
+      permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    // Library
+    MutationPermissionEntry(
+      moduleId: 'library',
+      mutationId: 'issueLibraryBook',
+      permission: Permission.manageLibrary,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'library',
+      mutationId: 'returnLibraryBook',
+      permission: Permission.manageLibrary,
+      kind: 'manage',
+    ),
+    // Hostel
+    MutationPermissionEntry(
+      moduleId: 'hostel',
+      mutationId: 'admitHostelStudent',
+      permission: Permission.manageHostel,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'hostel',
+      mutationId: 'assignHostelRoom',
+      permission: Permission.manageHostel,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'hostel',
+      mutationId: 'checkoutHostelStudent',
+      permission: Permission.manageHostel,
+      kind: 'manage',
+    ),
   ];
 
   static List<MutationPermissionEntry> forModule(String moduleId) {

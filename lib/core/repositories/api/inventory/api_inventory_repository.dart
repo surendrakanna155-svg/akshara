@@ -3,7 +3,9 @@ import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/inventory/inventory_models.dart';
+import '../../../../features/inventory/inventory_requests.dart';
 import '../../../../features/inventory/intelligence/inventory_intelligence_models.dart';
+import '../api_exception.dart';
 import 'mapper/inventory_intelligence_mapper.dart';
 import 'mapper/inventory_mapper.dart';
 import 'remote/inventory_remote_datasource.dart';
@@ -109,5 +111,24 @@ class ApiInventoryRepository implements InventoryRepository {
       },
     );
     return _intelligenceMapper.toLifecycleEvent(dto);
+  }
+
+  @override
+  Future<InventoryProcurementOrder> createProcurementOrder({
+    required RepositoryQuery query,
+    required CreateInventoryProcurementOrderRequest request,
+  }) async {
+    throw ApiNotConnectedException('InventoryRepository', 'createProcurementOrder');
+  }
+
+  @override
+  Future<InventoryProcurementOrder> recordProcurementReceiveHandoff({
+    required RepositoryQuery query,
+    required String orderId,
+  }) async {
+    throw ApiNotConnectedException(
+      'InventoryRepository',
+      'recordProcurementReceiveHandoff',
+    );
   }
 }

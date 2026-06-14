@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 
 import '../../../shared/widgets/widgets.dart';
+import '../finance_workflow_actions.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -79,10 +82,21 @@ class FinanceCollectionsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AksharaSpacing.s6),
+          AksharaManageAction(
+            permission: Permission.manageFinance,
+            child: FilledButton.icon(
+              key: QaTestKeys.financeRecordCollectionButton,
+              onPressed: () => showRecordCollectionDialog(context, ref),
+              icon: const Icon(Icons.add_card_outlined),
+              label: const Text('Record collection'),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
           Semantics(
             label: 'Receipt lookup',
             child: Material(
               child: TextField(
+                key: QaTestKeys.financeReceiptSearchField,
                 decoration: const InputDecoration(
                   labelText: 'Receipt or student lookup',
                   prefixIcon: Icon(Icons.search),

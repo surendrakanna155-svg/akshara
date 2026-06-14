@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
@@ -12,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../inventory_models.dart';
 import '../inventory_providers.dart';
+import '../inventory_workflow_actions.dart';
 import '../widgets/inventory_module_scaffold.dart';
 
 /// INV-06 — Procurement.
@@ -48,13 +50,31 @@ class InventoryProcurementScreen extends ConsumerWidget {
           label: const Text('Finance POs'),
         ),
       ),
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        orders: orders,
-        pageResult: pageResult,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: AksharaManageAction(
+              permission: Permission.manageInventory,
+              child: FilledButton.icon(
+                key: QaTestKeys.inventoryCreatePoButton,
+                onPressed: () => showCreateProcurementOrderDialog(context, ref),
+                icon: const Icon(Icons.add_shopping_cart_outlined, size: 18),
+                label: const Text('Create PO'),
+              ),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          _buildBody(
+            context,
+            isLoading: isLoading,
+            isError: isError,
+            isEmpty: isEmpty,
+            orders: orders,
+            pageResult: pageResult,
+          ),
+        ],
       ),
     );
   }
@@ -113,13 +133,13 @@ class InventoryProcurementScreen extends ConsumerWidget {
   }
 }
 
-class _ProcurementTable extends StatelessWidget {
+class _ProcurementTable extends ConsumerWidget {
   const _ProcurementTable({required this.orders});
 
   final List<InventoryProcurementOrder> orders;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (AdminLayout.isMobile(context)) {
       return Column(
         children: [
@@ -148,6 +168,7 @@ class _ProcurementTable extends StatelessWidget {
               DataColumn(label: Text('Delivery')),
               DataColumn(label: Text('Finance PO')),
               DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Actions')),
             ],
             rows: [
               for (final order in orders)
@@ -160,6 +181,7 @@ class _ProcurementTable extends StatelessWidget {
                     DataCell(Text(order.expectedDelivery)),
                     DataCell(Text(order.financePoId)),
                     DataCell(_ProcurementStatusChip(status: order.status)),
+                    DataCell(_ProcurementReceiveAction(order: order)),
                   ],
                 ),
             ],
@@ -170,13 +192,35 @@ class _ProcurementTable extends StatelessWidget {
   }
 }
 
-class _ProcurementCard extends StatelessWidget {
+class _ProcurementReceiveAction extends ConsumerWidget {
+  const _ProcurementReceiveAction({required this.order});
+
+  final InventoryProcurementOrder order;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (order.status != InventoryProcurementStatus.ordered) {
+      return const SizedBox.shrink();
+    }
+
+    return AksharaManageAction(
+      permission: Permission.manageInventory,
+      child: TextButton(
+        key: QaTestKeys.inventoryPoReceiveHandoffButton(order.id),
+        onPressed: () => submitProcurementReceiveHandoff(context, ref, order),
+        child: const Text('Record receipt'),
+      ),
+    );
+  }
+}
+
+class _ProcurementCard extends ConsumerWidget {
   const _ProcurementCard({required this.order});
 
   final InventoryProcurementOrder order;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -197,6 +241,13 @@ class _ProcurementCard extends StatelessWidget {
               ),
               const SizedBox(height: AksharaSpacing.s2),
               _ProcurementStatusChip(status: order.status),
+              if (order.status == InventoryProcurementStatus.ordered) ...[
+                const SizedBox(height: AksharaSpacing.s2),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _ProcurementReceiveAction(order: order),
+                ),
+              ],
             ],
           ),
         ),

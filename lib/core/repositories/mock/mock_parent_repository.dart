@@ -1,4 +1,5 @@
 import '../../../features/parent/academics/parent_academic_models.dart';
+import 'mock_attendance_sync_store.dart';
 import '../../../features/parent/attendance/attendance_models.dart';
 import '../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../features/parent/events/events_models.dart';
@@ -26,8 +27,32 @@ class MockParentRepository implements ParentRepository {
   Future<AttendanceMonthData> getAttendance({
     required RepositoryQuery query,
     required DateTime month,
-  }) async =>
-      AttendanceMonthData.mock(month: month);
+  }) async {
+    final base = AttendanceMonthData.mock(month: month);
+    final sync = MockAttendanceSyncStore.instance;
+    if (!sync.hasTeacherSubmission) {
+      return base;
+    }
+    final total = sync.presentCount + sync.absentCount + sync.lateCount;
+    final percent = total == 0
+        ? base.kpi.attendancePercent
+        : ((sync.presentCount / total) * 100).round();
+    return AttendanceMonthData(
+      month: base.month,
+      childName: base.childName,
+      childClass: base.childClass,
+      kpi: AttendanceKpiMetrics(
+        attendancePercent: percent,
+        absentDays: sync.absentCount,
+        lateDays: sync.lateCount,
+      ),
+      calendarDays: base.calendarDays,
+      recentLogs: base.recentLogs,
+      warningBannerMessage: base.warningBannerMessage,
+      unreadNotifications: base.unreadNotifications,
+      classTeacherPhone: base.classTeacherPhone,
+    );
+  }
 
   @override
   Future<ParentHomeworkData> getHomework({required RepositoryQuery query}) async =>

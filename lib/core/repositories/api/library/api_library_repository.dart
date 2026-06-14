@@ -1,8 +1,10 @@
+import '../api_exception.dart';
 import '../../interfaces/library_repository.dart';
 import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/library/library_models.dart';
+import '../../../../features/library/library_requests.dart';
 import 'mapper/library_mapper.dart';
 import 'remote/library_remote_datasource.dart';
 
@@ -65,5 +67,21 @@ class ApiLibraryRepository implements LibraryRepository {
   Future<LibraryReportsData> getReports({required RepositoryQuery query}) async {
     final dto = await _remote.fetchReports(query: query);
     return _mapper.toReports(dto);
+  }
+
+  @override
+  Future<LibraryIssueRecord> issueLibraryBook({
+    required RepositoryQuery query,
+    required IssueLibraryBookRequest request,
+  }) async {
+    throw ApiNotConnectedException('LibraryRepository', 'issueLibraryBook');
+  }
+
+  @override
+  Future<LibraryReturnRecord> returnLibraryBook({
+    required RepositoryQuery query,
+    required ReturnLibraryBookRequest request,
+  }) async {
+    throw ApiNotConnectedException('LibraryRepository', 'returnLibraryBook');
   }
 }

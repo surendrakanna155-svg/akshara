@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../../../core/repositories/academic/academic_catalog_selection.dart';
 import '../../../../core/repositories/academic/academic_year_label.dart';
+import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/forms/forms.dart';
 import '../../../../theme/spacing.dart';
 import '../../admissions_models.dart';
@@ -58,6 +59,7 @@ class _AdmissionsEnrollmentStudentStepState
       subtitle: 'Enter details exactly as on official documents.',
       children: [
         AksharaFormField(
+          key: QaTestKeys.enrollmentStudentNameField,
           label: 'Student full name',
           required: true,
           hint: 'e.g. Ravi Kumar',

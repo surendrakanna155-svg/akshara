@@ -41,7 +41,7 @@ void main() {
       final students = container.read(hostelStudentsProvider);
 
       expect(students, isNotNull);
-      expect(students!, hasLength(4));
+      expect(students!, hasLength(5));
       expect(students.first.sisStudentId, startsWith('SIS-STU-'));
     });
 

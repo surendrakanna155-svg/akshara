@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/environment_provider.dart';
+import '../../../core/repositories/mock/mock_admissions_sis_bridge.dart';
 import '../../../core/repositories/repository_config.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
@@ -91,6 +92,17 @@ Future<SisConversionPreview?> completeSisEnrollmentConversion(
             academicYear: preview.academicYear,
           ),
         );
+  }
+
+  final linkedEnrollment = MockAdmissionsSisBridge.findEnrollment(enrollmentId);
+  if (linkedEnrollment != null &&
+      !MockAdmissionsSisBridge.isApplicationApproved(
+        linkedEnrollment.applicationId,
+      )) {
+    throw StateError(
+      'Admission must be approved before SIS conversion '
+      '(${linkedEnrollment.applicationId}).',
+    );
   }
 
   ref.read(enrollmentConversionOverridesProvider.notifier).update(

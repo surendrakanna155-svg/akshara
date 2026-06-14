@@ -8,7 +8,9 @@ import '../../core/repositories/academic/academic_catalog_mutation.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
+import 'collections/finance_collections_provider.dart';
 import 'discounts/finance_discounts_provider.dart';
+import 'finance_journey_context_provider.dart';
 import 'fee_structures/finance_fee_structures_provider.dart';
 import 'finance_audit.dart';
 import 'finance_models.dart';
@@ -21,12 +23,17 @@ void _invalidateFinanceReads(
   Ref ref, {
   bool feeStructures = false,
   bool studentAccounts = false,
+  bool collections = false,
   bool refunds = false,
   bool discounts = false,
   bool settings = false,
 }) {
   if (feeStructures) ref.invalidate(financeFeeStructuresFutureProvider);
   if (studentAccounts) ref.invalidate(financeStudentAccountsFutureProvider);
+  if (collections) {
+    ref.invalidate(financeCollectionsFutureProvider);
+    ref.invalidate(financeDailySummaryFutureProvider);
+  }
   if (refunds) ref.invalidate(financeRefundsFutureProvider);
   if (discounts) ref.invalidate(financeDiscountsFutureProvider);
   if (settings) ref.invalidate(financeSettingsFutureProvider);
@@ -41,6 +48,7 @@ Future<T?> _runMutation<T>(
   Map<String, String> metadata = const {},
   bool invalidateFeeStructures = false,
   bool invalidateStudentAccounts = false,
+  bool invalidateCollections = false,
   bool invalidateRefunds = false,
   bool invalidateDiscounts = false,
   bool invalidateSettings = false,
@@ -59,6 +67,7 @@ Future<T?> _runMutation<T>(
       ref,
       feeStructures: invalidateFeeStructures,
       studentAccounts: invalidateStudentAccounts,
+      collections: invalidateCollections,
       refunds: invalidateRefunds,
       discounts: invalidateDiscounts,
       settings: invalidateSettings,
@@ -207,7 +216,7 @@ class AssignFeePlanNotifier extends AsyncNotifier<StudentFeeAccount?> {
   Future<StudentFeeAccount?> execute(AssignFeePlanRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      return _runMutation(
+      final account = await _runMutation(
         ref,
         assertPermission: () => assertManageFinance(ref),
         auditAction: 'assignFeePlan',
@@ -220,6 +229,22 @@ class AssignFeePlanNotifier extends AsyncNotifier<StudentFeeAccount?> {
               request: request,
             ),
       );
+      if (account != null) {
+        final invoices = await ref.read(financeRepositoryProvider).getInvoices(
+              query: ref.read(repositoryQueryProvider).withPage(
+                    1,
+                    pageSize: 200,
+                  ),
+            );
+        for (final invoice in invoices.items) {
+          if (invoice.feeAssignmentId == account.id ||
+              invoice.studentId == account.id) {
+            ref.read(financeLastInvoiceIdProvider.notifier).state = invoice.id;
+            break;
+          }
+        }
+      }
+      return account;
     });
     return state.valueOrNull;
   }
@@ -228,6 +253,37 @@ class AssignFeePlanNotifier extends AsyncNotifier<StudentFeeAccount?> {
 final assignFeePlanProvider =
     AsyncNotifierProvider<AssignFeePlanNotifier, StudentFeeAccount?>(
   AssignFeePlanNotifier.new,
+);
+
+class CreateCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
+  @override
+  FutureOr<FinanceCollectionResult?> build() => null;
+
+  Future<FinanceCollectionResult?> execute(CreateCollectionRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'createCollection',
+        entityId: request.invoiceId,
+        entityIdForAudit: (result) => result.collectionId,
+        metadata: {'paymentMethod': request.paymentMethod},
+        invalidateCollections: true,
+        invalidateStudentAccounts: true,
+        action: () => ref.read(financeRepositoryProvider).createCollection(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final createCollectionProvider =
+    AsyncNotifierProvider<CreateCollectionNotifier, FinanceCollectionResult?>(
+  CreateCollectionNotifier.new,
 );
 
 class CreateRefundNotifier extends AsyncNotifier<RefundRequest?> {

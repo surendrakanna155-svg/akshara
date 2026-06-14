@@ -3,6 +3,8 @@ import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/transport/transport_models.dart';
+import '../../../../features/transport/transport_requests.dart';
+import '../api_exception.dart';
 import 'mapper/transport_mapper.dart';
 import 'remote/transport_remote_datasource.dart';
 
@@ -100,5 +102,21 @@ class ApiTransportRepository implements TransportRepository {
   }) async {
     final dto = await _remote.fetchOccupancyMetrics(query: query);
     return _mapper.toOccupancyMetrics(dto);
+  }
+
+  @override
+  Future<TransportRoute> createRoute({
+    required RepositoryQuery query,
+    required CreateTransportRouteRequest request,
+  }) async {
+    throw ApiNotConnectedException('TransportRepository', 'createRoute');
+  }
+
+  @override
+  Future<TransportRoute> activateRoute({
+    required RepositoryQuery query,
+    required ActivateTransportRouteRequest request,
+  }) async {
+    throw ApiNotConnectedException('TransportRepository', 'activateRoute');
   }
 }

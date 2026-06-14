@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/hr/attendance/hr_attendance_screen.dart';
 import 'package:akshara_erp/features/hr/dashboard/hr_dashboard_screen.dart';
 import 'package:akshara_erp/features/hr/employees/hr_employee_profile_screen.dart';
@@ -102,6 +103,19 @@ void main() {
 
       expect(find.text('Leave requests'), findsOneWidget);
       expect(find.text('Sunita Nair'), findsOneWidget);
+      expect(find.byKey(QaTestKeys.hrCreateLeaveButton), findsOneWidget);
+    });
+
+    testWidgets('HrLeaveScreen create button visible on mobile width', (
+      tester,
+    ) async {
+      await pumpHrScreen(
+        tester,
+        const HrLeaveScreen(),
+        viewport: const Size(390, 844),
+      );
+
+      expect(find.byKey(QaTestKeys.hrCreateLeaveButton), findsOneWidget);
     });
 
     testWidgets('HrPayrollScreen renders payroll', (tester) async {
@@ -109,6 +123,8 @@ void main() {
 
       expect(find.text('Payroll runs'), findsOneWidget);
       expect(find.text('Priya Sharma'), findsOneWidget);
+      expect(find.byKey(QaTestKeys.hrProcessPayrollButton), findsOneWidget);
+      expect(find.byKey(QaTestKeys.hrPayrollExportPdfButton), findsOneWidget);
     });
 
     testWidgets('HrRecruitmentScreen renders pipeline', (tester) async {

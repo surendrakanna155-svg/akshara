@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/repositories/paginated_result.dart';
 import '../../../router/route_names.dart';
 
@@ -41,6 +42,7 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAdmissions,
         child: FilledButton.icon(
+          key: QaTestKeys.admissionsCreateLeadButton,
           onPressed: () => showCreateLeadDialog(context, ref),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('New Lead'),
