@@ -13,11 +13,11 @@ Akshara ERP has strong **read surfaces** across most modules (Admissions, Financ
 
 | Metric | Start | Current | Target |
 |--------|-------|---------|--------|
-| Weighted ERP completion | ~68% | ~75% | ≥90% |
-| Modules with mutation layer | 8/16 | 11/16 | 14/16 |
-| P0 gaps closed | 4/10 (Phase 1) | 7/10 | 10/10 |
-| Flutter tests | 1304 | 1316+ | — |
-| Patrol regression | 25/25 | 25/25+ | green |
+| Weighted ERP completion | ~68% | ~78% | ≥90% |
+| Modules with mutation layer | 8/16 | 12/16 | 14/16 |
+| P0 gaps closed | 4/10 (Phase 1) | 8/10 | 10/10 |
+| Flutter tests | 1304 | 1340+ | — |
+| Patrol regression | 25/25 | 29/29+ | green |
 
 **Phase 1 completion workflows (done):** HR payroll run, inventory lifecycle event, transport route activate, education remark publish.
 
@@ -25,7 +25,9 @@ Akshara ERP has strong **read surfaces** across most modules (Admissions, Financ
 
 **Final completion P0 #2 (done):** Library issue book + return book workflows.
 
----
+**Final completion P0 #3 (done):** Hostel admission, room assignment, transfer, and checkout.
+
+**Final completion P0 #4 (done):** HR employee create, edit, activate/deactivate with audit.
 
 ## Module Audits
 
@@ -78,15 +80,14 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 
 ---
 
-### HR — **B · ~72%**
+### HR — **B · ~78%** (↑ from ~72%)
 
 | Gap | Priority |
 |-----|----------|
-| Employee CRUD | P0 |
 | Leave approve/reject (manager) | P1 |
 | Attendance integration | P2 |
 
-**Missing:** create/edit employee, leave approval chain. **Writes:** leave create, payroll run (done). **Effort:** 5 d (employee CRUD).
+**Missing:** leave approval chain. **Writes:** employee CRUD (done), leave create, payroll run (done). **Effort:** 3 d (leave approval).
 
 ---
 
@@ -234,7 +235,7 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 | 1 | Executive approval workflow | Management | **done** | S | RBAC | Low |
 | 2 | Library issue / return writes | Library | **done** | M | SIS member link | Med |
 | 3 | Hostel room allocation | Hostel | **done** | M | SIS students | Med |
-| 4 | HR employee CRUD | HR | High | M | RBAC manageHr | Low |
+| 4 | HR employee CRUD | HR | **done** | M | RBAC manageHr | Low |
 | 5 | Transport student allocation | Transport | High | M | Routes active | Low |
 | 6 | Finance invoice / cancel collection UI | Finance | High | M | Finance repo | Low |
 | 7 | Inventory PO approve / asset approve | Inventory | High | M | Finance handoff | Med |
@@ -259,8 +260,8 @@ ERP Exam Admin module, unified reports hub, live transport tracking, server RBAC
 ## Top 10 Remaining Gaps (post Management P0)
 
 1. ~~**Library issue/return**~~ — done  
-2. **Hostel allocation** — boarding schools blocked without check-in  
-3. **HR employee CRUD** — staff onboarding incomplete  
+2. ~~**Hostel allocation**~~ — done  
+3. ~~**HR employee CRUD**~~ — done  
 4. **Transport allocation** — routes exist but students not assignable  
 5. **Finance invoice UI** — repo methods orphaned  
 6. **Inventory PO approve** — procurement chain incomplete  
@@ -293,8 +294,8 @@ Find P0 gap → Implement → flutter analyze → affected tests → Patrol (if 
 ## Recommended Next Sprint (ordered)
 
 1. ~~Library issue book + return book (P0 #2)~~ — done  
-2. Hostel room allocation (P0 #3)  
-3. HR employee create/edit (P0 #4)  
+2. ~~Hostel room allocation (P0 #3)~~ — done  
+3. ~~HR employee create/edit (P0 #4)~~ — done  
 4. Transport student route assignment (P0 #5)  
 5. Finance invoice / cancel collection wiring (P0 #6)  
 

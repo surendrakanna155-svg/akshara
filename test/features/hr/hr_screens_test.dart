@@ -79,6 +79,7 @@ void main() {
 
       expect(find.text('Employee directory'), findsOneWidget);
       expect(find.text('Priya Sharma'), findsAtLeastNWidgets(1));
+      expect(find.byKey(QaTestKeys.hrCreateEmployeeButton), findsOneWidget);
     });
 
     testWidgets('HrEmployeeProfileScreen renders profile', (tester) async {

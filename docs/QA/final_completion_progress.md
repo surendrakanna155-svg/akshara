@@ -2,7 +2,7 @@
 
 **Program:** Akshara ERP Final Completion  
 **Started:** June 2026  
-**Last updated:** June 2026 (session 4)
+**Last updated:** June 2026 (session 5 — P0 #4)
 
 ---
 
@@ -19,54 +19,44 @@
 
 ---
 
-## Session 4 — Hostel Room Allocation (P0 #3) + Owner Dashboard Audit
+## Session 5 — HR Employee CRUD (P0 #4)
 
-### Track A — Hostel implemented
+### Implemented
 
-- `HostelStudentStatus.awaitingAllocation` added to model  
-- `HostelRepository.admitHostelStudent`, `assignHostelRoom`, `checkoutHostelStudent`  
-- Mutable mock: students, rooms, computed occupancy metrics  
-- `hostel_requests.dart`, `hostel_mutations_provider.dart`, `hostel_workflow_actions.dart`  
-- HO-02: Admit, Assign room, row Assign/Transfer/Check out actions  
-- QA keys + `mutation_permission_registry` entries  
-- Tests: `hostel_write_tests.dart` (6 tests)  
-- Patrol: `hostel_allocation_e2e_test.dart`  
+- `HrRepository.createEmployee`, `updateEmployee`, `setEmployeeStatus`  
+- Mutable mock employee registry via `MockHrWriteStore`  
+- `CreateHrEmployeeRequest`, `UpdateHrEmployeeRequest`, `SetHrEmployeeStatusRequest`  
+- `createHrEmployeeProvider`, `updateHrEmployeeProvider`, `setHrEmployeeStatusProvider`  
+- Audit events: `employeeCreated`, `employeeUpdated`, `employeeStatusChanged`  
+- HR-02: Add employee button; HR-03: Edit / Activate / Deactivate  
+- QA keys + `mutation_permission_registry` HR entries  
+- Tests: extended `hr_write_tests.dart` (+8 tests)  
+- Patrol: `hr_employee_crud_e2e_test.dart`  
 
 **Journey validated (mock):**
 
-- Admit → awaiting allocation  
-- Assign → room capacity + resident status  
-- Transfer → re-assign releases old bed  
-- Checkout → checked out + bed restored  
-
-### Track B — Owner Dashboard Audit
-
-- Created `docs/OWNER_DASHBOARD_AUDIT.md`  
-- Dashboard completion ~78%, functional ~52%, mock dependency ~85%  
+- Create → probation status + registry insert  
+- Edit → profile update + detail refresh  
+- Deactivate / Activate → status toggle + audit  
 
 ### Gates
 
 | Gate | Result |
 |------|--------|
 | `flutter analyze` | 0 issues |
-| Hostel unit + contract + RBAC tests | pass |
+| HR unit + RBAC + screen tests | pass |
+| Patrol HR employee CRUD | pass (local) |
 
 ### ERP completion delta
 
 | Module | Before | After |
 |--------|--------|-------|
-| Hostel | ~42% | ~62% |
-| **Overall** | **~72%** | **~75%** |
+| HR | ~72% | ~78% |
+| **Overall** | **~75%** | **~78%** |
 
 ---
 
-## Session 3 — Library Issue / Return (P0 #2)
-
-*(See prior entry — complete)*
-
----
-
-## Session 2 — Management Approvals (P0 #1)
+## Session 4 — Hostel Room Allocation (P0 #3) + Owner Dashboard Audit
 
 *(See prior entry — complete)*
 
@@ -79,7 +69,7 @@
 | 1 | Management approvals | **done** |
 | 2 | Library issue/return | **done** |
 | 3 | Hostel allocation | **done** |
-| 4 | HR employee CRUD | pending |
+| 4 | HR employee CRUD | **done** |
 | 5 | Transport student allocation | pending |
 | 6 | Finance invoice UI | pending |
 | 7 | Inventory PO approve | pending |
@@ -91,6 +81,5 @@
 
 ## Next actions
 
-1. Implement HR employee CRUD (P0 #4)  
-2. Run Patrol `hostel_allocation_e2e_test.dart` on device/CI  
-3. Wire Management dashboard Export + AI insight stubs (from Owner Dashboard audit)  
+1. Implement Transport student allocation (P0 #5)  
+2. Wire Management dashboard Export + AI insight stubs (from Owner Dashboard audit)  

@@ -24,4 +24,19 @@ abstract class HrRepository {
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,
   });
+
+  Future<HrEmployee> createEmployee({
+    required RepositoryQuery query,
+    required CreateHrEmployeeRequest request,
+  });
+
+  Future<HrEmployee> updateEmployee({
+    required RepositoryQuery query,
+    required UpdateHrEmployeeRequest request,
+  });
+
+  Future<HrEmployee> setEmployeeStatus({
+    required RepositoryQuery query,
+    required SetHrEmployeeStatusRequest request,
+  });
 }

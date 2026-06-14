@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../router/route_names.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/repositories/paginated_result.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../hr_workflow_actions.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
 import '../widgets/hr_module_scaffold.dart';
@@ -38,6 +41,15 @@ class HrEmployeesScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(hrEmployeesFilterProvider.notifier).state = index,
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageHr,
+        child: FilledButton.icon(
+          key: QaTestKeys.hrCreateEmployeeButton,
+          onPressed: () => showCreateHrEmployeeDialog(context, ref),
+          icon: const Icon(Icons.person_add_outlined, size: 18),
+          label: const Text('Add employee'),
+        ),
+      ),
       body: _buildBody(
         context,
         ref: ref,

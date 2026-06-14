@@ -118,6 +118,25 @@ class MutationPermissionRegistry {
       permission: Permission.manageHostel,
       kind: 'manage',
     ),
+    // HR
+    MutationPermissionEntry(
+      moduleId: 'hr',
+      mutationId: 'createEmployee',
+      permission: Permission.manageHr,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'hr',
+      mutationId: 'updateEmployee',
+      permission: Permission.manageHr,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'hr',
+      mutationId: 'setEmployeeStatus',
+      permission: Permission.manageHr,
+      kind: 'manage',
+    ),
   ];
 
   static List<MutationPermissionEntry> forModule(String moduleId) {

@@ -77,6 +77,10 @@ enum AuditEventType {
   academicTimetableGenerated,
   academicTimetablePublished,
 
+  employeeCreated,
+  employeeUpdated,
+  employeeStatusChanged,
+
   errorReported,
 }
 

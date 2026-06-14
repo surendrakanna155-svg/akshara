@@ -72,4 +72,28 @@ void main() {
       'inventory_po_receive_handoff_success_snackbar',
     );
   });
+
+  test('HR employee CRUD keys are stable', () {
+    expect(QaTestKeys.hrCreateEmployeeButton.value, 'hr_create_employee_button');
+    expect(
+      QaTestKeys.hrCreateEmployeeDialogSubmitButton.value,
+      'hr_create_employee_dialog_submit_button',
+    );
+    expect(
+      QaTestKeys.hrEmployeeCreatedSnackbar.value,
+      'hr_employee_created_snackbar',
+    );
+    expect(
+      QaTestKeys.hrEditEmployeeButton('HR-EMP-102').value,
+      'hr_edit_employee_button_HR-EMP-102',
+    );
+    expect(
+      QaTestKeys.hrDeactivateEmployeeButton('HR-EMP-102').value,
+      'hr_deactivate_employee_button_HR-EMP-102',
+    );
+    expect(
+      QaTestKeys.hrEmployeeStatusSuccessSnackbar.value,
+      'hr_employee_status_success_snackbar',
+    );
+  });
 }

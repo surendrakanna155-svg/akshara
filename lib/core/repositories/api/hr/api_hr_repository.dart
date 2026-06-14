@@ -100,4 +100,28 @@ class ApiHrRepository implements HrRepository {
   }) async {
     throw ApiNotConnectedException('HrRepository', 'processPayrollRun');
   }
+
+  @override
+  Future<HrEmployee> createEmployee({
+    required RepositoryQuery query,
+    required CreateHrEmployeeRequest request,
+  }) async {
+    throw ApiNotConnectedException('HrRepository', 'createEmployee');
+  }
+
+  @override
+  Future<HrEmployee> updateEmployee({
+    required RepositoryQuery query,
+    required UpdateHrEmployeeRequest request,
+  }) async {
+    throw ApiNotConnectedException('HrRepository', 'updateEmployee');
+  }
+
+  @override
+  Future<HrEmployee> setEmployeeStatus({
+    required RepositoryQuery query,
+    required SetHrEmployeeStatusRequest request,
+  }) async {
+    throw ApiNotConnectedException('HrRepository', 'setEmployeeStatus');
+  }
 }

@@ -141,6 +141,33 @@ abstract final class QaTestKeys {
   static const hrLeaveSuccessSnackbar =
       ValueKey<String>('hr_leave_success_snackbar');
 
+  static const hrCreateEmployeeButton =
+      ValueKey<String>('hr_create_employee_button');
+
+  static const hrCreateEmployeeDialogSubmitButton =
+      ValueKey<String>('hr_create_employee_dialog_submit_button');
+
+  static const hrEmployeeCreatedSnackbar =
+      ValueKey<String>('hr_employee_created_snackbar');
+
+  static ValueKey<String> hrEditEmployeeButton(String employeeId) =>
+      ValueKey<String>('hr_edit_employee_button_$employeeId');
+
+  static const hrEditEmployeeDialogSubmitButton =
+      ValueKey<String>('hr_edit_employee_dialog_submit_button');
+
+  static const hrEmployeeUpdatedSnackbar =
+      ValueKey<String>('hr_employee_updated_snackbar');
+
+  static ValueKey<String> hrActivateEmployeeButton(String employeeId) =>
+      ValueKey<String>('hr_activate_employee_button_$employeeId');
+
+  static ValueKey<String> hrDeactivateEmployeeButton(String employeeId) =>
+      ValueKey<String>('hr_deactivate_employee_button_$employeeId');
+
+  static const hrEmployeeStatusSuccessSnackbar =
+      ValueKey<String>('hr_employee_status_success_snackbar');
+
   static const hrProcessPayrollButton =
       ValueKey<String>('hr_process_payroll_button');
 

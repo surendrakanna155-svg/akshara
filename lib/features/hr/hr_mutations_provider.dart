@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/audit/audit_event.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
+import 'hr_audit.dart';
 import 'hr_models.dart';
 import 'hr_providers.dart';
 import 'hr_requests.dart';
@@ -80,4 +82,117 @@ class ProcessHrPayrollRunNotifier extends AsyncNotifier<HrPayrollRun?> {
 final processHrPayrollRunProvider =
     AsyncNotifierProvider<ProcessHrPayrollRunNotifier, HrPayrollRun?>(
   ProcessHrPayrollRunNotifier.new,
+);
+
+class CreateHrEmployeeNotifier extends AsyncNotifier<HrEmployee?> {
+  @override
+  FutureOr<HrEmployee?> build() => null;
+
+  Future<HrEmployee?> execute(CreateHrEmployeeRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHr(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).createEmployee(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        await recordHrAudit(
+          ref,
+          type: AuditEventType.employeeCreated,
+          employeeId: result.id,
+          metadata: {
+            'employeeCode': result.employeeCode,
+            'name': result.name,
+          },
+        );
+        ref
+          ..invalidate(hrEmployeesFutureProvider)
+          ..invalidate(hrDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final createHrEmployeeProvider =
+    AsyncNotifierProvider<CreateHrEmployeeNotifier, HrEmployee?>(
+  CreateHrEmployeeNotifier.new,
+);
+
+class UpdateHrEmployeeNotifier extends AsyncNotifier<HrEmployee?> {
+  @override
+  FutureOr<HrEmployee?> build() => null;
+
+  Future<HrEmployee?> execute(UpdateHrEmployeeRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHr(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).updateEmployee(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        await recordHrAudit(
+          ref,
+          type: AuditEventType.employeeUpdated,
+          employeeId: result.id,
+          metadata: {'name': result.name},
+        );
+        ref
+          ..invalidate(hrEmployeesFutureProvider)
+          ..invalidate(hrEmployeeDetailFutureProvider(request.employeeId))
+          ..invalidate(hrDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final updateHrEmployeeProvider =
+    AsyncNotifierProvider<UpdateHrEmployeeNotifier, HrEmployee?>(
+  UpdateHrEmployeeNotifier.new,
+);
+
+class SetHrEmployeeStatusNotifier extends AsyncNotifier<HrEmployee?> {
+  @override
+  FutureOr<HrEmployee?> build() => null;
+
+  Future<HrEmployee?> execute(SetHrEmployeeStatusRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHr(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).setEmployeeStatus(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        await recordHrAudit(
+          ref,
+          type: AuditEventType.employeeStatusChanged,
+          employeeId: result.id,
+          metadata: {'status': result.status.name},
+        );
+        ref
+          ..invalidate(hrEmployeesFutureProvider)
+          ..invalidate(hrEmployeeDetailFutureProvider(request.employeeId))
+          ..invalidate(hrDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final setHrEmployeeStatusProvider =
+    AsyncNotifierProvider<SetHrEmployeeStatusNotifier, HrEmployee?>(
+  SetHrEmployeeStatusNotifier.new,
 );

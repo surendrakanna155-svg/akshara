@@ -314,19 +314,22 @@ class MockHrRepository implements HrRepository {
   @override
   Future<PaginatedResult<HrEmployee>> getEmployees({
     required RepositoryQuery query,
-  }) async =>
-      PaginatedResult.fromItems(
-        TenantMockScope.filter(
-          query: query,
-          items: List.unmodifiable(_employees),
-        ),
-        page: query.page,
-        pageSize: query.pageSize,
-      );
+  }) async {
+    final employees = await _loadEmployees();
+    return PaginatedResult.fromItems(
+      TenantMockScope.filter(
+        query: query,
+        items: employees,
+      ),
+      page: query.page,
+      pageSize: query.pageSize,
+    );
+  }
 
   @override
   Future<HrEmployeeDetail?> getEmployeeDetail({required RepositoryQuery query, required String employeeId}) async {
-    final matches = _employees.where((e) => e.id == employeeId);
+    final employees = await _loadEmployees();
+    final matches = employees.where((e) => e.id == employeeId);
     if (matches.isEmpty) return null;
     final employee = matches.first;
 
@@ -650,6 +653,103 @@ class MockHrRepository implements HrRepository {
         request.processedOn ?? '2026-06-13';
     final data = await getPayroll(query: query);
     return data.runs.firstWhere((r) => r.id == draftRunId);
+  }
+
+  Future<List<HrEmployee>> _loadEmployees() async {
+    final store = MockHrWriteStore.instance;
+    store.employees ??= List<HrEmployee>.from(_employees);
+    return store.employees!;
+  }
+
+  @override
+  Future<HrEmployee> createEmployee({
+    required RepositoryQuery query,
+    required CreateHrEmployeeRequest request,
+  }) async {
+    final employees = await _loadEmployees();
+    if (employees.any((e) => e.employeeCode == request.employeeCode)) {
+      throw StateError('Employee code already exists');
+    }
+
+    final employee = HrEmployee(
+      id: MockHrWriteStore.instance.nextEmployeeId(),
+      name: request.name,
+      employeeCode: request.employeeCode,
+      department: request.department,
+      role: request.role,
+      designation: request.designation,
+      email: request.email,
+      phone: request.phone,
+      joinDate: request.joinDate,
+      status: HrEmployeeStatus.probation,
+    );
+    employees.insert(0, employee);
+    return employee;
+  }
+
+  @override
+  Future<HrEmployee> updateEmployee({
+    required RepositoryQuery query,
+    required UpdateHrEmployeeRequest request,
+  }) async {
+    final employees = await _loadEmployees();
+    final index = employees.indexWhere((e) => e.id == request.employeeId);
+    if (index < 0) {
+      throw StateError('Employee not found');
+    }
+
+    final current = employees[index];
+    final updated = HrEmployee(
+      id: current.id,
+      name: request.name,
+      employeeCode: current.employeeCode,
+      department: request.department,
+      role: current.role,
+      designation: request.designation,
+      email: current.email,
+      phone: request.phone,
+      joinDate: current.joinDate,
+      status: current.status,
+      teacherAppLinked: current.teacherAppLinked,
+      classLabel: current.classLabel,
+    );
+    employees[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<HrEmployee> setEmployeeStatus({
+    required RepositoryQuery query,
+    required SetHrEmployeeStatusRequest request,
+  }) async {
+    if (request.status != HrEmployeeStatus.active &&
+        request.status != HrEmployeeStatus.inactive) {
+      throw StateError('Only active or inactive status supported');
+    }
+
+    final employees = await _loadEmployees();
+    final index = employees.indexWhere((e) => e.id == request.employeeId);
+    if (index < 0) {
+      throw StateError('Employee not found');
+    }
+
+    final current = employees[index];
+    final updated = HrEmployee(
+      id: current.id,
+      name: current.name,
+      employeeCode: current.employeeCode,
+      department: current.department,
+      role: current.role,
+      designation: current.designation,
+      email: current.email,
+      phone: current.phone,
+      joinDate: current.joinDate,
+      status: request.status,
+      teacherAppLinked: current.teacherAppLinked,
+      classLabel: current.classLabel,
+    );
+    employees[index] = updated;
+    return updated;
   }
 
   @override

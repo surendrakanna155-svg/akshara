@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/widgets/akshara_empty_state.dart';
-import '../../../shared/widgets/akshara_error_state.dart';
-import '../../../shared/widgets/akshara_loading_state.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
-import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../hr_workflow_actions.dart';
 import '../hr_models.dart';
 import '../hr_navigation.dart';
 import '../hr_providers.dart';
@@ -37,6 +36,7 @@ class HrEmployeeProfileScreen extends ConsumerWidget {
       showFilterBar: false,
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         detail: detail,
@@ -45,7 +45,8 @@ class HrEmployeeProfileScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required HrEmployeeDetail? detail,
@@ -111,6 +112,38 @@ class HrEmployeeProfileScreen extends ConsumerWidget {
                       style: text.bodySmall),
                   Text('Email: ${employee.email}', style: text.bodySmall),
                   Text('Phone: ${employee.phone}', style: text.bodySmall),
+                  const SizedBox(height: AksharaSpacing.s3),
+                  AksharaManageAction(
+                    permission: Permission.manageHr,
+                    child: Wrap(
+                      spacing: AksharaSpacing.s2,
+                      runSpacing: AksharaSpacing.s2,
+                      children: [
+                        OutlinedButton(
+                          key: QaTestKeys.hrEditEmployeeButton(employee.id),
+                          onPressed: () => showEditHrEmployeeDialog(
+                            context,
+                            ref,
+                            employee: employee,
+                          ),
+                          child: const Text('Edit'),
+                        ),
+                        if (employee.status == HrEmployeeStatus.inactive)
+                          FilledButton(
+                            key: QaTestKeys.hrActivateEmployeeButton(employee.id),
+                            onPressed: () => activateHrEmployee(context, ref, employee),
+                            child: const Text('Activate'),
+                          )
+                        else if (employee.status != HrEmployeeStatus.inactive)
+                          OutlinedButton(
+                            key: QaTestKeys.hrDeactivateEmployeeButton(employee.id),
+                            onPressed: () =>
+                                deactivateHrEmployee(context, ref, employee),
+                            child: const Text('Deactivate'),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

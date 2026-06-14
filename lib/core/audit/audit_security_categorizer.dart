@@ -69,6 +69,9 @@ abstract final class AuditSecurityCategorizer {
       case AuditEventType.aiCopilotResponse:
       case AuditEventType.academicTimetableGenerated:
       case AuditEventType.academicTimetablePublished:
+      case AuditEventType.employeeCreated:
+      case AuditEventType.employeeUpdated:
+      case AuditEventType.employeeStatusChanged:
         return AuditEventCategory.workflow;
 
       case AuditEventType.errorReported:
