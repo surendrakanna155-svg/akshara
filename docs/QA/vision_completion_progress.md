@@ -93,7 +93,7 @@
 |------------|------|-------|--------------|-------------|---------|----------|--------|-----|
 | INTEL-01 | Management insight card routes | 2/6 | C | **A** | +2 | +1 | `ca1bc4e` | green |
 | INTEL-02 | KPI drill-down MG-01 | 2/6 | B | **A** | +8 | +2 | `b021b72` | green |
-| INTEL-03 | Context-aware copilot | 2 | C | **B** | +5 | +1 | pending | pending |
+| INTEL-03 | Context-aware copilot | 2 | C | **B** | +5 | +1 | `1d116d2` | pending |
 | INTEL-04 | Floating chat bubble | 2 | D | — | — | — | — | — |
 | ACAD-01 | Academic promotion engine | 3 | D | — | — | — | — | — |
 | AUTO-01 | Workflow automation engine | 5 | D | — | — | — | — | — |

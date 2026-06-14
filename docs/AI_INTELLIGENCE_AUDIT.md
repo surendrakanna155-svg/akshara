@@ -195,9 +195,9 @@
 |---|---------|---------|--------------|--------|
 | 1 | Management insight card routes | **A** | **A** | ✅ INTEL-01 |
 | 2 | KPI drill-down (MG-01) | **A** | **A** | ✅ INTEL-02 |
-| 3 | Context-aware copilot (screen context) | C | **B** | **INTEL-03** ← next |
+| 3 | Context-aware copilot (screen context) | **B** | **B** | ✅ INTEL-03 |
 | 4 | At-risk detection (live pipeline) | C | **B** | P2 |
-| 5 | Floating chat bubble | D | **B** | INTEL-04 |
+| 5 | Floating chat bubble | D | **B** | **INTEL-04** ← next |
 | 6 | Recommendation engine | D | **B** | P2 |
 | 7 | Universal AI Assistant | D | **B** | P3 |
 

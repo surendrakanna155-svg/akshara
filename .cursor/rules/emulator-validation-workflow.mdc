@@ -1,0 +1,46 @@
+---
+description: Emulator reuse, validation gate order, and Patrol workflow for all Akshara features
+alwaysApply: true
+---
+
+# Emulator & Validation Workflow
+
+## Emulator policy
+
+1. **Reuse** an existing Android emulator whenever `adb devices` shows one.
+2. If none is running: **continue implementation**; start the emulator only when Patrol validation is required.
+3. Emulator startup must **never block** coding — boot in background while other work proceeds.
+4. Classify emulator failures before changing app code:
+   - **Infrastructure** — AVD/adb/boot timeout
+   - **Patrol** — harness, keys, timing
+   - **Application defect** — widget/navigation/RBAC bug
+
+## Validation order (every feature)
+
+```
+flutter analyze
+→ affected unit/provider/widget tests
+→ emulator startup (if needed, non-blocking)
+→ affected Patrol suites
+→ fix failures → re-run
+→ commit → push → CI verification
+```
+
+Do **not** run Patrol before implementation reaches the validation stage. Run Flutter/unit/widget tests first.
+
+## Broader Patrol regression
+
+When shared infrastructure changes, run broader Patrol before marking complete:
+
+- routing (`lib/router/`)
+- RBAC (`lib/core/security/`, route guards)
+- workflow engine / mutations
+- providers (cross-module)
+- copilot (`lib/features/copilot/`)
+- dashboard framework (management/mobile shells)
+
+Use `qa/patrol/run_erp_coverage.sh` (FULL mode for infra changes).
+
+## Feature completion checklist
+
+Implement → Test → Patrol → Fix → Retest → Commit → Push → CI green → update registry → update roadmap.

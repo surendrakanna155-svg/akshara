@@ -12,10 +12,11 @@
 2. **Never modify files outside your ownership** unless fixing compile breaks in shared infrastructure explicitly assigned
 3. **Reuse existing abstractions** — extend, do not duplicate (`TokenStorage`, `AuditLogger`, `RbacService`, `TenantContext`, `RouteGuards`, `Dio`)
 4. **Run gates before completion:** `flutter analyze` (0 issues) + `flutter test` (all passing)
-5. **Create docs:** Every release needs `docs/Releases/` + `docs/ArchitectureReview/` entries
-6. **No business features** unless assigned by Roadmap milestone
-7. **Completion report required** — see `docs/CURSOR_WORKFLOW.md`
-8. **Multi-milestone sessions:** default depth = 3 milestones — see `docs/CURSOR_WORKFLOW.md` §11; do not stop after one milestone unless a stop condition applies
+5. **Emulator & Patrol workflow:** `.cursor/rules/emulator-validation-workflow.mdc` — reuse emulator; unit tests before Patrol; never block coding on boot
+6. **Create docs:** Every release needs `docs/Releases/` + `docs/ArchitectureReview/` entries
+7. **No business features** unless assigned by Roadmap milestone
+8. **Completion report required** — see `docs/CURSOR_WORKFLOW.md`
+9. **Multi-milestone sessions:** default depth = 3 milestones — see `docs/CURSOR_WORKFLOW.md` §11; do not stop after one milestone unless a stop condition applies
 
 ---
 

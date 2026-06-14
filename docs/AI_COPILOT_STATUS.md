@@ -184,8 +184,8 @@ Owners use management dashboards + ERP copilot. **INTEL-01/02** wired insight ac
 
 ## Recommended implementation order
 
-1. **INTEL-03 — Context-aware copilot** (client passes route + entity context) — lowest effort, highest value  
-2. **INTEL-04 — Floating chat bubble (ERP dock)** — completes admin/owner UX per DesignSystem  
+1. **INTEL-04 — Floating copilot dock** — DesignSystem §17 entry point
+2. **INTEL-05 — Parent guidance chat** — child-scoped mobile shell
 3. **INTEL-05 — Parent guidance chat** — high parent-facing value  
 4. **INTEL-06 — Teacher copilot chat** — unify insights + conversation  
 5. **INTEL-07 — Student study assistant** — replace homework stub routing  
