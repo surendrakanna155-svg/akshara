@@ -91,8 +91,8 @@
 
 | Field | Value |
 |-------|-------|
-| Hash | *(record after push)* |
-| CI | *(verify after push)* |
+| Hash | `f978d2d` |
+| CI | Verify after push |
 
 ---
 
