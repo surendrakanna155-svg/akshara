@@ -156,5 +156,60 @@ void main() {
 
       expect(container.read(createCollectionProvider).hasError, isTrue);
     });
+
+    test('issueInvoice succeeds with finance admin role', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final issued = await container.read(issueInvoiceProvider.notifier).execute(
+            invoiceId: 'inv_3',
+          );
+
+      expect(issued, isNotNull);
+      expect(issued!.invoiceStatus, InvoiceStatus.issued);
+    });
+
+    test('cancelInvoice fails when manageFinance permission missing', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(cancelInvoiceProvider.notifier).execute(
+            invoiceId: 'inv_3',
+          );
+
+      expect(container.read(cancelInvoiceProvider).hasError, isTrue);
+    });
+
+    test('cancelCollection succeeds with finance admin role', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container
+          .read(cancelCollectionProvider.notifier)
+          .execute(collectionId: 'col_1');
+
+      expect(result, isNotNull);
+    });
   });
 }

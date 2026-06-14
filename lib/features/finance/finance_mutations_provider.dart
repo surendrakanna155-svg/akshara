@@ -15,6 +15,7 @@ import 'fee_structures/finance_fee_structures_provider.dart';
 import 'finance_audit.dart';
 import 'finance_models.dart';
 import 'finance_requests.dart';
+import 'invoices/finance_invoices_provider.dart';
 import 'refunds/finance_refunds_provider.dart';
 import 'settings/finance_settings_provider.dart';
 import 'student_accounts/finance_student_accounts_provider.dart';
@@ -24,6 +25,7 @@ void _invalidateFinanceReads(
   bool feeStructures = false,
   bool studentAccounts = false,
   bool collections = false,
+  bool invoices = false,
   bool refunds = false,
   bool discounts = false,
   bool settings = false,
@@ -34,6 +36,7 @@ void _invalidateFinanceReads(
     ref.invalidate(financeCollectionsFutureProvider);
     ref.invalidate(financeDailySummaryFutureProvider);
   }
+  if (invoices) ref.invalidate(financeInvoicesFutureProvider);
   if (refunds) ref.invalidate(financeRefundsFutureProvider);
   if (discounts) ref.invalidate(financeDiscountsFutureProvider);
   if (settings) ref.invalidate(financeSettingsFutureProvider);
@@ -49,6 +52,7 @@ Future<T?> _runMutation<T>(
   bool invalidateFeeStructures = false,
   bool invalidateStudentAccounts = false,
   bool invalidateCollections = false,
+  bool invalidateInvoices = false,
   bool invalidateRefunds = false,
   bool invalidateDiscounts = false,
   bool invalidateSettings = false,
@@ -68,6 +72,7 @@ Future<T?> _runMutation<T>(
       feeStructures: invalidateFeeStructures,
       studentAccounts: invalidateStudentAccounts,
       collections: invalidateCollections,
+      invoices: invalidateInvoices,
       refunds: invalidateRefunds,
       discounts: invalidateDiscounts,
       settings: invalidateSettings,
@@ -464,4 +469,93 @@ class UpdateFinanceSettingsNotifier extends AsyncNotifier<FinanceSettingsData?> 
 final updateFinanceSettingsProvider =
     AsyncNotifierProvider<UpdateFinanceSettingsNotifier, FinanceSettingsData?>(
   UpdateFinanceSettingsNotifier.new,
+);
+
+class IssueInvoiceNotifier extends AsyncNotifier<FinanceInvoice?> {
+  @override
+  FutureOr<FinanceInvoice?> build() => null;
+
+  Future<FinanceInvoice?> execute({required String invoiceId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'issueInvoice',
+        entityId: invoiceId,
+        invalidateInvoices: true,
+        invalidateStudentAccounts: true,
+        action: () => ref.read(financeRepositoryProvider).issueInvoice(
+              query: ref.read(repositoryQueryProvider),
+              invoiceId: invoiceId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final issueInvoiceProvider =
+    AsyncNotifierProvider<IssueInvoiceNotifier, FinanceInvoice?>(
+  IssueInvoiceNotifier.new,
+);
+
+class CancelInvoiceNotifier extends AsyncNotifier<FinanceInvoice?> {
+  @override
+  FutureOr<FinanceInvoice?> build() => null;
+
+  Future<FinanceInvoice?> execute({required String invoiceId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'cancelInvoice',
+        entityId: invoiceId,
+        invalidateInvoices: true,
+        invalidateStudentAccounts: true,
+        action: () => ref.read(financeRepositoryProvider).cancelInvoice(
+              query: ref.read(repositoryQueryProvider),
+              invoiceId: invoiceId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final cancelInvoiceProvider =
+    AsyncNotifierProvider<CancelInvoiceNotifier, FinanceInvoice?>(
+  CancelInvoiceNotifier.new,
+);
+
+class CancelCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
+  @override
+  FutureOr<FinanceCollectionResult?> build() => null;
+
+  Future<FinanceCollectionResult?> execute({required String collectionId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'cancelCollection',
+        entityId: collectionId,
+        entityIdForAudit: (result) => result.collectionId,
+        invalidateCollections: true,
+        invalidateStudentAccounts: true,
+        invalidateInvoices: true,
+        action: () => ref.read(financeRepositoryProvider).cancelCollection(
+              query: ref.read(repositoryQueryProvider),
+              collectionId: collectionId,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final cancelCollectionProvider =
+    AsyncNotifierProvider<CancelCollectionNotifier, FinanceCollectionResult?>(
+  CancelCollectionNotifier.new,
 );

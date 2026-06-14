@@ -61,6 +61,7 @@ ALL_TARGETS=(
   "patrol_test/workflows/finance_fee_assignment_e2e_test.dart"
   "patrol_test/workflows/finance_fee_collection_e2e_test.dart"
   "patrol_test/workflows/finance_full_journey_e2e_test.dart"
+  "patrol_test/workflows/finance_invoice_e2e_test.dart"
   "patrol_test/workflows/teacher_attendance_e2e_test.dart"
   "patrol_test/workflows/hr_workflows_test.dart"
   "patrol_test/workflows/hr_leave_e2e_test.dart"

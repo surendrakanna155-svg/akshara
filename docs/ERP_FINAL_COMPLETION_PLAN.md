@@ -1,9 +1,31 @@
 # Akshara ERP — Final Completion Plan
 
-**Version:** 2.0  
+**Version:** 2.1  
 **Date:** June 2026  
 **Baseline:** QA-ready (~95% test readiness, ~62% E2E journey coverage)  
 **Target:** ERP feature-complete (business workflows, not test inflation)
+
+---
+
+## Vision Reconciliation (June 2026)
+
+A full audit of Roadmap, Vision, SRS (20 parts), module specs, PRDs, backlog, dashboard audit, release/QA docs, and AGENTS produced a **single source of truth** so no original capability is lost.
+
+| Deliverable | Purpose |
+|-------------|---------|
+| [`AKSHARA_MASTER_FEATURE_REGISTRY.md`](AKSHARA_MASTER_FEATURE_REGISTRY.md) | ~215 features — source, classification A–F, code/test/Patrol validation |
+| [`AKSHARA_VISION_GAP_ANALYSIS.md`](AKSHARA_VISION_GAP_ANALYSIS.md) | Advanced gaps: academic reshuffle, teacher ops, comms continuity, automation, owner dashboard, AI |
+| [`AKSHARA_IMPLEMENTATION_BACKLOG.md`](AKSHARA_IMPLEMENTATION_BACKLOG.md) | P0–P3 prioritized backlog reconciled with vision |
+
+**Key findings:**
+
+- **P0 program (9/10 done)** aligns with core ERP pilot needs — no P0 item dropped from vision.  
+- **Vision differentiators** largely P1–P2: promotion/reshuffle, substitute wizard, communication migration, workflow engine, owner dashboard actions.  
+- **Timetable** is strongest advanced area (drag-drop, conflicts, generate — mock-functional).  
+- **AI surfaces** exist; **live inference** is P3.  
+- **Exam Admin** remains product-blocked (P3, scope undefined).
+
+**Next P0 after reconciliation:** #6 Finance invoice / cancel collection UI (repo exists, spec clear, billing-chain vision gap).
 
 ---
 
@@ -13,9 +35,9 @@ Akshara ERP has strong **read surfaces** across most modules (Admissions, Financ
 
 | Metric | Start | Current | Target |
 |--------|-------|---------|--------|
-| Weighted ERP completion | ~68% | ~81% | ≥90% |
+| Weighted ERP completion | ~68% | ~83% | ≥90% |
 | Modules with mutation layer | 8/16 | 13/16 | 14/16 |
-| P0 gaps closed | 4/10 (Phase 1) | 9/10 | 10/10 |
+| P0 gaps closed | 4/10 (Phase 1) | 9/10 | **10/10** |
 | Flutter tests | 1304 | 1350+ | — |
 | Patrol regression | 25/25 | 30/30+ | green |
 
@@ -30,6 +52,8 @@ Akshara ERP has strong **read surfaces** across most modules (Admissions, Financ
 **Final completion P0 #4 (done):** HR employee create, edit, activate/deactivate with audit.
 
 **Final completion P0 #5 (done):** Transport student assign, transfer, remove with capacity validation.
+
+**Final completion P0 #6 (done):** Finance invoice issue/cancel UI + collection cancel on detail.
 
 ---
 
@@ -306,7 +330,12 @@ Find P0 gap → Implement → flutter analyze → affected tests → Patrol (if 
 
 ## References
 
+- `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md` — master feature registry (SSOT)  
+- `docs/AKSHARA_VISION_GAP_ANALYSIS.md` — vision vs implementation gaps  
+- `docs/AKSHARA_IMPLEMENTATION_BACKLOG.md` — prioritized P0–P3 backlog  
 - `docs/QA/final_completion_progress.md` — session log  
 - `docs/QA/final_completion_summary.md` — executive rollup  
 - `docs/QA/PHASE3_COVERAGE_INVENTORY.md` — E2E button coverage  
+- `docs/OWNER_DASHBOARD_AUDIT.md` — owner dashboard functional audit  
+- `docs/Vision/FutureVision.md` — long-term capability map  
 - `AGENTS.md` — agent ownership boundaries  

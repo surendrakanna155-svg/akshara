@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_insight_card.dart';
+import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_workflow_actions.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_collection_detail_provider.dart';
@@ -39,12 +43,16 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
           ref,
           financeCollectionDetailFutureProvider(collectionId),
         ),
-        builder: (detail) => _buildDetailContent(context, detail!),
+        builder: (detail) => _buildDetailContent(context, ref, detail!),
       ),
     );
   }
 
-  Widget _buildDetailContent(BuildContext context, CollectionDetail detail) {
+  Widget _buildDetailContent(
+    BuildContext context,
+    WidgetRef ref,
+    CollectionDetail detail,
+  ) {
     final payment = detail.payment;
     final isMobile = AdminLayout.isMobile(context);
 
@@ -105,6 +113,22 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: AksharaSpacing.s6),
+        if (payment.status != CollectionStatus.refunded)
+          AksharaManageAction(
+            permission: Permission.manageFinance,
+            child: OutlinedButton.icon(
+              key: QaTestKeys.financeCancelCollectionButton(collectionId),
+              onPressed: () => executeCancelCollection(
+                context,
+                ref,
+                collectionId: collectionId,
+                receiptNumber: payment.receiptNumber,
+              ),
+              icon: const Icon(Icons.undo_outlined),
+              label: const Text('Cancel collection'),
+            ),
+          ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message: detail.aiInsight,

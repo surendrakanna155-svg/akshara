@@ -66,6 +66,24 @@ class MutationPermissionRegistry {
       permission: Permission.manageFinance,
       kind: 'manage',
     ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'issueInvoice',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'cancelInvoice',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'cancelCollection',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
     // SIS
     MutationPermissionEntry(
       moduleId: 'sis',

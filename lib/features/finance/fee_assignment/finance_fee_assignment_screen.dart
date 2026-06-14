@@ -15,6 +15,7 @@ import '../finance_models.dart';
 import '../finance_journey_context_provider.dart';
 import '../finance_workflow_actions.dart';
 import '../integration/finance_admissions_handoff_provider.dart';
+import '../invoices/finance_invoice_management_section.dart';
 import '../widgets/finance_handoff_queue.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_fee_assignment_provider.dart';
@@ -208,6 +209,7 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
                 );
               },
             ),
+          const FinanceInvoiceManagementSection(),
         ],
       ),
     );

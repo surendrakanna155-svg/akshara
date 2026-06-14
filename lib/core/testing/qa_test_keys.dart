@@ -130,6 +130,30 @@ abstract final class QaTestKeys {
   static const financeLastInvoiceIdField =
       ValueKey<String>('finance_last_invoice_id');
 
+  static ValueKey<String> financeIssueInvoiceButton(String invoiceId) =>
+      ValueKey<String>('finance_issue_invoice_$invoiceId');
+
+  static ValueKey<String> financeCancelInvoiceButton(String invoiceId) =>
+      ValueKey<String>('finance_cancel_invoice_$invoiceId');
+
+  static const financeInvoiceIssuedSnackbar =
+      ValueKey<String>('finance_invoice_issued_snackbar');
+
+  static const financeInvoiceCancelledSnackbar =
+      ValueKey<String>('finance_invoice_cancelled_snackbar');
+
+  static ValueKey<String> financeCancelCollectionButton(String collectionId) =>
+      ValueKey<String>('finance_cancel_collection_$collectionId');
+
+  static const financeCollectionCancelledSnackbar =
+      ValueKey<String>('finance_collection_cancelled_snackbar');
+
+  static const financeCancelInvoiceConfirmButton =
+      ValueKey<String>('finance_cancel_invoice_confirm_button');
+
+  static const financeCancelCollectionConfirmButton =
+      ValueKey<String>('finance_cancel_collection_confirm_button');
+
   static const financeReportExportPdfButton =
       ValueKey<String>('finance_report_export_pdf_button');
 

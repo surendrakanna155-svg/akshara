@@ -426,3 +426,112 @@ Future<void> showRecordCollectionDialog(
     _showMutationError(context, error);
   }
 }
+
+Future<void> executeIssueInvoice(
+  BuildContext context,
+  WidgetRef ref, {
+  required String invoiceId,
+}) async {
+  try {
+    final invoice = await ref.read(issueInvoiceProvider.notifier).execute(
+          invoiceId: invoiceId,
+        );
+    if (!context.mounted || invoice == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.financeInvoiceIssuedSnackbar,
+        content: Text('Invoice ${invoice.invoiceNumber} issued'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
+Future<void> executeCancelInvoice(
+  BuildContext context,
+  WidgetRef ref, {
+  required String invoiceId,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Cancel invoice'),
+      content: Text('Cancel invoice $invoiceId? This cannot be undone.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Keep'),
+        ),
+        FilledButton(
+          key: QaTestKeys.financeCancelInvoiceConfirmButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Cancel invoice'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final invoice = await ref.read(cancelInvoiceProvider.notifier).execute(
+          invoiceId: invoiceId,
+        );
+    if (!context.mounted || invoice == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.financeInvoiceCancelledSnackbar,
+        content: Text('Invoice ${invoice.invoiceNumber} cancelled'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
+Future<void> executeCancelCollection(
+  BuildContext context,
+  WidgetRef ref, {
+  required String collectionId,
+  required String receiptNumber,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Cancel collection'),
+      content: Text(
+        'Cancel receipt $receiptNumber? The payment will be marked refunded.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Keep'),
+        ),
+        FilledButton(
+          key: QaTestKeys.financeCancelCollectionConfirmButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Cancel collection'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final result = await ref.read(cancelCollectionProvider.notifier).execute(
+          collectionId: collectionId,
+        );
+    if (!context.mounted || result == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.financeCollectionCancelledSnackbar,
+        content: Text('Collection ${result.receiptNumber} cancelled'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
