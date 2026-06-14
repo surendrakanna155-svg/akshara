@@ -5,6 +5,7 @@ import '../features/control_center/analytics/control_center_analytics_screen.dar
 import '../features/control_center/billing/control_center_billing_screen.dart';
 import '../features/control_center/crm/control_center_crm_screen.dart';
 import '../features/control_center/dashboard/control_center_dashboard_screen.dart';
+import '../features/control_center/intelligence/platform_intelligence_screen.dart';
 import '../features/control_center/features/control_center_features_screen.dart';
 import '../features/control_center/monitoring/control_center_monitoring_screen.dart';
 import '../features/control_center/providers/control_center_providers_screen.dart';
@@ -36,6 +37,13 @@ Widget controlCenterSchoolsRouteBuilder(
   GoRouterState state,
 ) {
   return const ControlCenterSchoolsScreen();
+}
+
+Widget controlCenterIntelligenceRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const PlatformIntelligenceScreen();
 }
 
 Widget controlCenterSubscriptionsRouteBuilder(

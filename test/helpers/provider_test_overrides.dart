@@ -12,7 +12,10 @@ import 'package:akshara_erp/core/repositories/api/audit/remote/audit_remote_data
 import 'package:akshara_erp/core/repositories/api/auth/remote/auth_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/finance/remote/finance_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/alumni/remote/alumni_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/academic_operations/remote/academic_operations_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/workflow/remote/workflow_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/control_center/remote/control_center_remote_datasource.dart';
+import 'package:akshara_erp/core/repositories/api/platform_intelligence/remote/platform_intelligence_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/hostel/remote/hostel_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/hr/remote/hr_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/api/inventory/remote/inventory_remote_datasource.dart';
@@ -89,12 +92,18 @@ ProviderContainer createProviderTestContainer({
   bool managementApiEnabled = false,
   Dio? apiControlCenterDio,
   bool controlCenterApiEnabled = false,
+  Dio? apiPlatformIntelligenceDio,
+  bool platformIntelligenceApiEnabled = false,
   Dio? apiParentDio,
   bool parentApiEnabled = false,
   Dio? apiTeacherDio,
   bool teacherApiEnabled = false,
   Dio? apiStudentDio,
   bool studentApiEnabled = false,
+  Dio? apiAcademicOperationsDio,
+  bool academicOperationsApiEnabled = false,
+  Dio? apiWorkflowDio,
+  bool workflowApiEnabled = false,
 }) {
   final apiOverrides = <Override>[];
   if (apiAdmissionsDio != null) {
@@ -188,6 +197,13 @@ ProviderContainer createProviderTestContainer({
       ),
     );
   }
+  if (apiPlatformIntelligenceDio != null) {
+    apiOverrides.add(
+      platformIntelligenceRemoteDataSourceProvider.overrideWith(
+        (ref) => PlatformIntelligenceRemoteDataSource(apiPlatformIntelligenceDio),
+      ),
+    );
+  }
   if (apiParentDio != null) {
     apiOverrides.add(
       parentRemoteDataSourceProvider.overrideWith(
@@ -209,6 +225,20 @@ ProviderContainer createProviderTestContainer({
       ),
     );
   }
+  if (apiAcademicOperationsDio != null) {
+    apiOverrides.add(
+      academicOperationsRemoteDataSourceProvider.overrideWith(
+        (ref) => AcademicOperationsRemoteDataSource(apiAcademicOperationsDio),
+      ),
+    );
+  }
+  if (apiWorkflowDio != null) {
+    apiOverrides.add(
+      workflowRemoteDataSourceProvider.overrideWith(
+        (ref) => WorkflowRemoteDataSource(apiWorkflowDio),
+      ),
+    );
+  }
   if (admissionsApiEnabled ||
       financeApiEnabled ||
       authApiEnabled ||
@@ -222,9 +252,12 @@ ProviderContainer createProviderTestContainer({
       alumniApiEnabled ||
       managementApiEnabled ||
       controlCenterApiEnabled ||
+      platformIntelligenceApiEnabled ||
       parentApiEnabled ||
       teacherApiEnabled ||
-      studentApiEnabled) {
+      studentApiEnabled ||
+      academicOperationsApiEnabled ||
+      workflowApiEnabled) {
     apiOverrides.add(
       environmentProvider.overrideWith(
         (ref) => Environment.development.copyWith(enableApiMode: true),
@@ -296,6 +329,11 @@ ProviderContainer createProviderTestContainer({
       controlCenterApiEnabledProvider.overrideWith((ref) => true),
     );
   }
+  if (platformIntelligenceApiEnabled) {
+    apiOverrides.add(
+      platformIntelligenceApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
   if (parentApiEnabled) {
     apiOverrides.add(
       parentApiEnabledProvider.overrideWith((ref) => true),
@@ -309,6 +347,16 @@ ProviderContainer createProviderTestContainer({
   if (studentApiEnabled) {
     apiOverrides.add(
       studentApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (academicOperationsApiEnabled) {
+    apiOverrides.add(
+      academicOperationsApiEnabledProvider.overrideWith((ref) => true),
+    );
+  }
+  if (workflowApiEnabled) {
+    apiOverrides.add(
+      workflowApiEnabledProvider.overrideWith((ref) => true),
     );
   }
   return ProviderContainer(

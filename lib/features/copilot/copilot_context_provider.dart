@@ -133,7 +133,7 @@ class _CopilotContextScopeState extends ConsumerState<CopilotContextScope> {
   @override
   void didUpdateWidget(covariant CopilotContextScope oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _publish();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _publish());
   }
 
   @override

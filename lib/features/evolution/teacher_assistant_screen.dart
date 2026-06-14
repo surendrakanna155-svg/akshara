@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
+import '../../features/intelligence/teacher_effectiveness/teacher_intervention_intelligence.dart';
+import '../../features/intelligence/teacher_effectiveness/teacher_intervention_provider.dart';
 import '../../shared/widgets/widgets.dart';
 import 'evolution_providers.dart';
 
@@ -12,6 +14,7 @@ class TeacherAssistantScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final insights = ref.watch(teacherAssistantInsightsProvider);
     final interventions = ref.watch(teacherInterventionsProvider);
+    final interventionSuggestions = ref.watch(teacherInterventionSummaryProvider);
     final classFilter = ref.watch(teacherClassFilterProvider);
 
     return Scaffold(
@@ -54,6 +57,12 @@ class TeacherAssistantScreen extends ConsumerWidget {
                 subtitle: Text('${s['className']} · ${s['topReason']}'),
                 trailing: Chip(label: Text('${s['riskLevel']}')),
               ),
+            ),
+            const SizedBox(height: 16),
+            interventionSuggestions.when(
+              data: (summary) => _interventionSuggestionsSection(context, summary),
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const SizedBox.shrink(),
             ),
             const SizedBox(height: 16),
             _section('Weak topics', data.weakTopics),
@@ -100,6 +109,42 @@ class TeacherAssistantScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(teacherAssistantInsightsProvider),
         ),
       ),
+    );
+  }
+
+  Widget _interventionSuggestionsSection(
+    BuildContext context,
+    TeacherInterventionSummary summary,
+  ) {
+    if (summary.topSuggestions.isEmpty && summary.classLevelActions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Intervention suggestions', style: Theme.of(context).textTheme.titleMedium),
+        ListTile(
+          dense: true,
+          title: Text('${summary.totalSuggestions} students flagged'),
+          subtitle: Text('Urgent ${summary.urgentCount} · High ${summary.highCount}'),
+        ),
+        for (final suggestion in summary.topSuggestions)
+          ListTile(
+            title: Text('${suggestion.studentName} · ${suggestion.priority.label}'),
+            subtitle: Text(
+              '${suggestion.className} · ${suggestion.triggerReason}\n'
+              '${suggestion.suggestedIntervention}',
+            ),
+            isThreeLine: true,
+          ),
+        if (summary.classLevelActions.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text('Class-level actions', style: Theme.of(context).textTheme.titleSmall),
+          for (final action in summary.classLevelActions)
+            ListTile(dense: true, leading: const Icon(Icons.lightbulb_outline), title: Text(action)),
+        ],
+      ],
     );
   }
 

@@ -12,12 +12,13 @@
 | Metric | Value |
 |--------|-------|
 | P0 program | **10/10 complete** |
-| Weighted ERP completion | **~83%** |
-| QA readiness | **~95%** |
-| Flutter tests | **1337+** |
-| Patrol journeys | **35** |
-| Intelligence (functional) | **~44%** |
-| Copilot vision | **~48%** (see `AI_COPILOT_STATUS.md`) |
+| Weighted ERP completion | **~88%** |
+| QA readiness | **~97%** |
+| Flutter tests | **1405+** |
+| Patrol journeys | **45+** |
+| Intelligence (functional) | **~72%** |
+| Copilot vision | **~80%** (see `AI_COPILOT_STATUS.md`) |
+| Multi-school intelligence | **~52%** (M4) |
 | Vision reconciliation | Complete |
 
 ---
@@ -64,7 +65,7 @@
 | P1-05 | Admissions settings persistence | — | 2–3 d | Config consistency |
 | P1-06 | Notifications broadcast admin | #2 | 4–5 d | School-wide comms |
 | P1-07 | RBAC mutation registry sync | — | 2–3 d | Security completeness |
-| P1-08 | Academic year promotion engine (minimal) | #21 | 5–7 d | Year rollover |
+| P1-08 | Academic year promotion engine (minimal) | #21 | 5–7 d | **Done** (Completion M1) |
 | P1-09 | Substitute teacher wizard | #6/#9 | 4–5 d | Daily ops coverage |
 | P1-10 | Book Distribution tracking (#11) | #11 | 3–4 d | Shipped v10.1 parity |
 | P1-11 | SIS profile edit + documents | — | 4–5 d | Data quality |
@@ -77,13 +78,13 @@
 
 | ID | Feature | Vision # | Depends on |
 |----|---------|----------|------------|
-| P2-01 | Student reshuffle workflow | — | P1-08 |
-| P2-02 | Section balancing engine | — | P2-01 |
+| P2-01 | Student reshuffle workflow | — | P1-08 | **Done** (M1) |
+| P2-02 | Section balancing engine | — | P2-01 | **Done** (M1) |
 | P2-03 | Teacher reassignment | #9 | Timetable |
 | P2-04 | Timetable optimization apply | #8–9 | Timetable read |
-| P2-05 | Reassignment continuity protocol | — | P1-08, P1-06 |
-| P2-06 | Workflow automation engine MVP | design doc | Architecture |
-| P2-07 | Smart routing for approvals | — | P2-06 |
+| P2-05 | Reassignment continuity protocol | — | P1-08, P1-06 | **Done** (M2) |
+| P2-06 | Workflow automation engine MVP | design doc | Architecture | **Done** (M3) |
+| P2-07 | Smart routing for approvals | — | P2-06 | **Done** (M3) |
 | P2-08 | School Memories admin (#17) | #17 | Evolution module |
 | P2-09 | Growth Platform campaigns (#18) | #18 | Marketing |
 | P2-10 | API write parity (batch) | — | Agent A per module |

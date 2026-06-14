@@ -5,6 +5,7 @@ import 'control_center_models.dart';
 /// Primary control center sub-navigation tabs (ACC-01 → ACC-12).
 const List<ControlCenterScreen> kControlCenterNavScreens = [
   ControlCenterScreen.dashboard,
+  ControlCenterScreen.intelligence,
   ControlCenterScreen.schools,
   ControlCenterScreen.subscriptions,
   ControlCenterScreen.billing,
@@ -23,6 +24,7 @@ const List<ControlCenterScreen> kControlCenterNavScreens = [
 extension ControlCenterScreenRoutes on ControlCenterScreen {
   String get route => switch (this) {
         ControlCenterScreen.dashboard => RouteNames.controlCenterDashboard,
+        ControlCenterScreen.intelligence => RouteNames.controlCenterIntelligence,
         ControlCenterScreen.schools => RouteNames.controlCenterSchools,
         ControlCenterScreen.subscriptions =>
           RouteNames.controlCenterSubscriptions,

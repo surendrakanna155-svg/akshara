@@ -109,11 +109,11 @@
 | Academic class/section assign | SIS | SPEC-SIS | Placement | Academic structure | **B** | Yes | Partial | Yes | No | `sis_academic_assignment_screen.dart` | Manual only |
 | Student profile edit | SIS | PLAN P1 | Data quality | RBAC | **B** | Yes | Partial | Partial | No | Read profile | Write UI |
 | Document vault upload | SIS | SPEC-SIS SIS-07 | Compliance | Storage | **C** | Yes | No | No | No | UI placeholder | Upload API |
-| **Student promotion (year rollover)** | SIS | SPEC-SIS, VISION #21 | Academic continuity | Timetable, Finance | **B** | Yes | Partial | Partial | No | Status toggle only | **No promotion engine** |
-| **Student reshuffle** | SIS | SPEC-SIS, SRS | Section balance | Academic | **E** | No | No | No | No | — | **Vision gap** |
-| **Performance-based section assignment** | SIS | SRS / Principal | Merit grouping | Exams | **E** | No | No | No | No | — | **Vision gap** |
-| **Quarterly reshuffle** | SIS | Product vision | Flexibility | SIS | **E** | No | No | No | No | — | **Vision gap** |
-| **Section balancing** | SIS | Product vision | Class size equity | SIS | **E** | No | No | No | No | — | **Vision gap** |
+| **Student promotion (year rollover)** | SIS | SPEC-SIS, VISION #21 | Academic continuity | Timetable, Finance | **A** | Yes | Yes | Yes | Partial | `sis_promotion_screen.dart`, academic operations repo | API prod parity |
+| **Student reshuffle** | SIS | SPEC-SIS, SRS | Section balance | Academic | **A** | Yes | Yes | Yes | Partial | `sis_reshuffle_screen.dart` | API prod |
+| **Performance-based section assignment** | SIS | SRS / Principal | Merit grouping | Exams | **B** | Yes | Yes | Partial | Partial | Performance balance tab | Live exam feed |
+| **Quarterly reshuffle** | SIS | Product vision | Flexibility | SIS | **B** | Yes | Yes | Partial | Partial | Quarterly tab | — |
+| **Section balancing** | SIS | Product vision | Class size equity | SIS | **A** | Yes | Yes | Yes | Partial | `sis_section_balance_screen.dart` | API prod |
 | Transfer & TC / exit | SIS | SPEC-SIS | Lifecycle | Alumni | **B** | Yes | Read | Partial | No | Exit screens | Write workflow |
 | Bulk class promotion | SIS | PLAN P2 | Efficiency | Promotion engine | **E** | No | No | No | No | — | Depends promotion |
 | Student 360 profile | SIS | ROAD v9.5 | Unified view | All modules | **D** | Yes | Mock | Yes | No | `student_360/` | Cross-module API |

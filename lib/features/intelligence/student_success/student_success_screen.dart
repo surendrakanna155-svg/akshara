@@ -6,8 +6,12 @@ import '../../../features/copilot/copilot_context_provider.dart';
 import '../../../features/copilot/copilot_screen_context.dart';
 import '../../../router/route_names.dart';
 import '../intelligence_provider.dart';
+import 'attendance_intelligence.dart';
+import 'attendance_intelligence_provider.dart';
 import 'at_risk_student_intelligence.dart';
 import 'at_risk_student_provider.dart';
+import '../academic/promotion_readiness_intelligence.dart';
+import '../academic/promotion_readiness_provider.dart';
 import 'student_success_models.dart';
 import 'student_success_provider.dart';
 
@@ -25,7 +29,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 5, vsync: this);
+    _tabs = TabController(length: 7, vsync: this);
   }
 
   @override
@@ -50,6 +54,8 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
     final interventions = ref.watch(interventionEffectivenessProvider);
 
     final atRisk = ref.watch(atRiskStudentProfilesProvider);
+    final attendance = ref.watch(attendanceIntelligenceProfilesProvider);
+    final promotion = ref.watch(promotionReviewQueueProvider);
 
     return dashboard.when(
       data: (dashboardData) {
@@ -84,6 +90,8 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
             improvements: improvements,
             interventions: interventions,
             atRisk: atRisk,
+            attendance: attendance,
+            promotion: promotion,
           ),
         );
       },
@@ -94,6 +102,8 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
         improvements: improvements,
         interventions: interventions,
         atRisk: atRisk,
+        attendance: attendance,
+        promotion: promotion,
       ),
       error: (e, _) => _buildScaffold(
         canGenerate: canGenerate,
@@ -103,6 +113,8 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
         improvements: improvements,
         interventions: interventions,
         atRisk: atRisk,
+        attendance: attendance,
+        promotion: promotion,
       ),
     );
   }
@@ -113,6 +125,8 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
     required AsyncValue<List<StudentImprovementItem>> improvements,
     required AsyncValue<List<InterventionEffectivenessItem>> interventions,
     required AsyncValue<List<AtRiskStudentProfile>> atRisk,
+    required AsyncValue<List<AttendanceIntelligenceProfile>> attendance,
+    required AsyncValue<List<PromotionReadinessProfile>> promotion,
     StudentSuccessDashboard? dashboard,
     String? dashboardError,
   }) {
@@ -125,6 +139,8 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
           tabs: const [
             Tab(text: 'Dashboard'),
             Tab(text: 'At-Risk'),
+            Tab(text: 'Attendance'),
+            Tab(text: 'Promotion'),
             Tab(text: 'Predictions'),
             Tab(text: 'Improvements'),
             Tab(text: 'Interventions'),
@@ -159,6 +175,16 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('Error: $e')),
           ),
+          attendance.when(
+            data: (profiles) => _attendanceTab(profiles),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+          ),
+          promotion.when(
+            data: (profiles) => _promotionTab(profiles),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
+          ),
           predictions.when(
             data: (items) => _predictionsTab(items),
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -176,6 +202,64 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _attendanceTab(List<AttendanceIntelligenceProfile> profiles) {
+    if (profiles.isEmpty) {
+      return const Center(child: Text('No attendance risks flagged at watch tier or above.'));
+    }
+
+    final summary = summarizeAttendanceProfiles(profiles);
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _metricTile('Flagged students', summary.totalFlagged),
+        _metricTile('Chronic risk', summary.chronicCount),
+        _metricTile('At risk', summary.atRiskCount),
+        _metricTile('Watch list', summary.watchCount),
+        _metricTile('Avg predicted attendance', summary.averagePrediction),
+        const SizedBox(height: 16),
+        Text('Attendance intervention queue', style: Theme.of(context).textTheme.titleMedium),
+        for (final profile in summary.topProfiles)
+          ListTile(
+            title: Text('${profile.studentName} · ${profile.tier.label}'),
+            subtitle: Text(
+              '${profile.className} · ${profile.primarySignal}\n${profile.recommendedAction}',
+            ),
+            isThreeLine: true,
+          ),
+      ],
+    );
+  }
+
+  Widget _promotionTab(List<PromotionReadinessProfile> profiles) {
+    if (profiles.isEmpty) {
+      return const Center(child: Text('No students require promotion review.'));
+    }
+
+    final allProfiles = ref.read(promotionReadinessProfilesProvider).valueOrNull ?? profiles;
+    final summary = summarizePromotionReadiness(allProfiles);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _metricTile('Students assessed', summary.totalAssessed),
+        _metricTile('Ready', summary.readyCount),
+        _metricTile('Borderline', summary.borderlineCount),
+        _metricTile('Not ready', summary.notReadyCount),
+        _metricTile('Hold', summary.holdCount),
+        const SizedBox(height: 16),
+        Text('Promotion review queue', style: Theme.of(context).textTheme.titleMedium),
+        for (final profile in profiles)
+          ListTile(
+            title: Text('${profile.studentName} · ${profile.readiness.label}'),
+            subtitle: Text(
+              '${profile.className} · Score ${profile.readinessScore}\n${profile.recommendedAction}',
+            ),
+            isThreeLine: true,
+          ),
+      ],
     );
   }
 

@@ -7,6 +7,7 @@ const String kControlCenterPiiBannerMessage =
 /// Control Center sub-module destinations (ACC-01 → ACC-12).
 enum ControlCenterScreen {
   dashboard,
+  intelligence,
   schools,
   subscriptions,
   billing,
@@ -23,6 +24,7 @@ enum ControlCenterScreen {
 
   String get label => switch (this) {
         ControlCenterScreen.dashboard => 'Dashboard',
+        ControlCenterScreen.intelligence => 'Intelligence',
         ControlCenterScreen.schools => 'Schools',
         ControlCenterScreen.subscriptions => 'Subscriptions',
         ControlCenterScreen.billing => 'Billing',

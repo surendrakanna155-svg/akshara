@@ -12,6 +12,9 @@ import '../../admin/admin_shell.dart';
 import '../../admin/models/admin_nav_models.dart';
 import 'intelligence_models.dart';
 import 'intelligence_provider.dart';
+import '../../intelligence/operations/operations_intelligence_provider.dart';
+import '../../intelligence/unified/unified_recommendation_intelligence.dart';
+import '../../intelligence/unified/unified_recommendations_provider.dart';
 
 /// Analytics & Intelligence hub — dashboard, health, risks, trends, principal summary (v7.6).
 class IntelligenceHubScreen extends ConsumerStatefulWidget {
@@ -28,7 +31,7 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 5, vsync: this);
+    _tabs = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -68,6 +71,7 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
                   Tab(text: 'School Health'),
                   Tab(text: 'Risk Center'),
                   Tab(text: 'Trends'),
+                  Tab(text: 'Recommendations'),
                   Tab(text: 'Principal Summary'),
                 ],
               ),
@@ -80,6 +84,7 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
                     _SchoolHealthTab(),
                     _RiskCenterTab(),
                     _TrendExplorerTab(),
+                    _UnifiedRecommendationsTab(),
                     _PrincipalSummaryTab(),
                   ],
                 ),
@@ -292,6 +297,95 @@ class _TrendExplorerTab extends ConsumerWidget {
     );
   }
 }
+
+class _UnifiedRecommendationsTab extends ConsumerWidget {
+  const _UnifiedRecommendationsTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unified = ref.watch(unifiedRecommendationSummaryProvider);
+    final operations = ref.watch(operationsIntelligenceSummaryProvider);
+
+    return unified.when(
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading recommendations'),
+      error: (_, __) => AksharaErrorState(
+        message: 'Unable to load unified recommendations.',
+        onRetry: () {
+          ref.invalidate(unifiedRecommendationsProvider);
+          ref.invalidate(operationsIntelligenceHintsProvider);
+        },
+      ),
+      data: (summary) {
+        if (summary.topRecommendations.isEmpty) {
+          return const AksharaEmptyState(
+            message: 'No cross-module recommendations yet. Run intelligence compute on student and finance modules.',
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          children: [
+            Text(
+              '${summary.totalRecommendations} recommendations · ${summary.criticalCount} critical',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            for (final item in summary.topRecommendations)
+              Card(
+                child: ListTile(
+                  leading: Icon(_iconForRecommendationSource(item.source)),
+                  title: Text(item.title),
+                  subtitle: Text(
+                    '${item.source.label} · Priority ${item.priorityScore}\n'
+                    '${item.detail}\n${item.suggestedAction}',
+                  ),
+                  isThreeLine: true,
+                ),
+              ),
+            operations.when(
+              data: (ops) {
+                if (ops.topHints.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const AksharaSectionHeader(title: 'Operations intelligence (P2)'),
+                    ListTile(
+                      dense: true,
+                      title: Text(
+                        'Section balance ${ops.sectionBalanceCount} · '
+                        'Teacher continuity ${ops.teacherContinuityCount} · '
+                        'Workflow ${ops.workflowCount}',
+                      ),
+                    ),
+                    for (final hint in ops.topHints)
+                      ListTile(
+                        leading: const Icon(Icons.settings_suggest_outlined),
+                        title: Text('${hint.kind.label}: ${hint.title}'),
+                        subtitle: Text('${hint.detail}\n${hint.suggestedAction}'),
+                        isThreeLine: true,
+                      ),
+                  ],
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+IconData _iconForRecommendationSource(UnifiedRecommendationSource source) =>
+    switch (source) {
+      UnifiedRecommendationSource.atRisk => Icons.person_off_outlined,
+      UnifiedRecommendationSource.attendance => Icons.event_busy_outlined,
+      UnifiedRecommendationSource.feeCollection => Icons.payments_outlined,
+      UnifiedRecommendationSource.teacherIntervention => Icons.school_outlined,
+      UnifiedRecommendationSource.promotion => Icons.upgrade_outlined,
+      UnifiedRecommendationSource.operations => Icons.settings_suggest_outlined,
+    };
 
 class _PrincipalSummaryTab extends ConsumerWidget {
   const _PrincipalSummaryTab();

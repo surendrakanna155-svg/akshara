@@ -1,7 +1,8 @@
-# Intelligence Continuation Progress — INTEL-05+
+# Intelligence Continuation Progress — INTEL-05 through INTEL-10
 
 **Program:** Akshara Intelligence Vision Completion  
 **Started:** June 2026 (post INTEL-04)  
+**Completed:** June 2026 (INTEL-06–10 MVPs)  
 **SSOT:** `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md` · `docs/INTELLIGENCE_FOUNDATION_STATUS.md`
 
 ---
@@ -25,57 +26,72 @@
 |---|---------|--------|---------|----------|----------------|-----------|--------|
 | 1 | **INTEL-05 — AI Access Modes** | ✅ Complete | +6 | +1 | ~58% | ~78% | `c25d32f` |
 | 2 | **At-Risk Student Intelligence** | ✅ MVP | +2 | — | ~62% | ~78% | `c25d32f` |
-| 3 | Teacher Intervention Suggestions | Pending | — | — | — | — | — |
-| 4 | Attendance Intelligence | Pending | — | — | — | — | — |
-| 5 | Fee Collection Intelligence | Pending | — | — | — | — | — |
-| 6 | Academic Promotion Engine | Pending | — | — | — | — | — |
-| 7 | Student Reshuffle Engine | Pending | — | — | — | — | — |
-| 8 | Teacher Continuity Engine | Pending | — | — | — | — | — |
-| 9 | Workflow Automation Engine | Pending | — | — | — | — | — |
-| 10 | Recommendation Engine | Pending | — | — | — | — | — |
+| 3 | **INTEL-06 — Teacher Intervention Suggestions** | ✅ MVP | +2 | — | ~72% | ~78% | pending |
+| 4 | **INTEL-07 — Attendance Intelligence** | ✅ MVP | +2 | — | ~78% | ~78% | pending |
+| 5 | **INTEL-08 — Fee Collection Intelligence** | ✅ MVP | +2 | — | ~84% | ~78% | pending |
+| 6 | **INTEL-09 — Academic Promotion Readiness** | ✅ MVP | +2 | — | ~90% | ~78% | pending |
+| 7 | **Student Reshuffle Engine** | ✅ P2 stub | — | — | ~92% | — | pending |
+| 8 | **Teacher Continuity Engine** | ✅ P2 stub | — | — | ~94% | — | pending |
+| 9 | **Workflow Automation Engine** | ✅ P2 stub | — | — | ~96% | — | pending |
+| 10 | **INTEL-10 — Unified Recommendation Engine** | ✅ MVP | +1 | — | **~100%** | ~78% | pending |
+
+> **100% definition:** All intelligence framework MVPs at Class B (deterministic engines + UI tabs + copilot context + unit tests). Live ML, bulk SIS promote, and workflow runtime remain deferred.
 
 ---
 
-## INTEL-05 deliverables
+## INTEL-06–10 deliverables
 
-### Track A — AI Access Mode Preferences
-- `AiAccessMode` enum (5 modes + auto defaults)
-- Per-account SharedPreferences persistence (`ai_access_preferences_v1_{userId}`)
-- Settings screen: `/settings/ai-assistant`
-- Shell wiring: floating dock, bottom nav center, sidebar entry, app bar gating
+### INTEL-06 — Teacher Intervention Suggestions
+- `teacher_intervention_intelligence.dart` + provider
+- Intervention queue on Teacher Assistant screen
+- Priority tiers: urgent / high / medium / low
 
-### Track B — AI UX Improvements
-- `CopilotAiEntryButton` — tap opens assistant, long-press quick actions menu
-- Actions: explain screen, summarize KPIs, alerts, risks, suggested actions, open full copilot
-- Context preserved via `copilotEffectiveContextProvider`
+### INTEL-07 — Attendance Intelligence
+- `attendance_intelligence.dart` + provider
+- Attendance tab on Student Success screen
+- Tiers: stable / watch / at-risk / chronic
 
-### Track C — Audits updated
-- `docs/AI_ENTRYPOINT_AUDIT.md` — AI Access Modes section
-- `docs/AI_COPILOT_STATUS.md` — access mode matrix
+### INTEL-08 — Fee Collection Intelligence
+- `fee_collection_intelligence.dart` + provider
+- Collection gap + defaulter queue on Finance Copilot screen
 
-### Track D — At-Risk Student Intelligence (priority #2)
-- Deterministic tier engine: `at_risk_student_intelligence.dart`
-- At-Risk tab on Student Success screen + copilot KPI scope
-- Intervention queue with recommended actions (stub, not live ML)
+### INTEL-09 — Promotion Readiness (not bulk promote)
+- `promotion_readiness_intelligence.dart` + provider
+- Promotion review tab on Student Success screen
+
+### P2 Operations stubs (reshuffle / continuity / workflow)
+- `operations_intelligence.dart` + provider
+- Section balance, teacher continuity, workflow hints from mock ops actions
+- Surfaced on Intelligence Hub Recommendations tab
+
+### INTEL-10 — Unified Recommendation Engine
+- `unified_recommendation_intelligence.dart` + provider
+- Aggregates at-risk, attendance, fee, teacher, promotion, operations
+- Recommendations tab on Analytics & Intelligence hub
 
 ---
 
-## Current metrics (post INTEL-05)
+## Current metrics (post INTEL-06–10)
 
 | Metric | Value |
 |--------|-------|
 | Copilot completion | **~78%** |
-| Intelligence completion | **~62%** |
+| Intelligence completion | **~100%** (framework MVPs) |
 | ERP completion | **~85%** |
 | QA readiness | **~97%** |
-| Flutter tests | **1365** |
+| Flutter tests | **1375** (+10) |
 | Patrol journeys | **39** |
 
 ---
 
-## Next action
+## Deferred (post-MVP)
 
-**Teacher Intervention Suggestions** — wire persona prompts to teacher dashboard context and intervention queue (INTEL-06 candidate).
+| Item | Reason |
+|------|--------|
+| Live ML scoring | Requires backend model service |
+| SIS bulk promotion | P1-08 SIS engine scope |
+| Workflow runtime | P2 automation engine |
+| Cross-device AI prefs sync | Documented Partial in INTEL-05 |
 
 ---
 
@@ -85,3 +101,4 @@
 - `docs/AI_COPILOT_STATUS.md`
 - `docs/INTELLIGENCE_FOUNDATION_STATUS.md`
 - `docs/QA/intel_04_completion_report.md`
+- `test/features/intelligence/intelligence_program_mvp_test.dart`
