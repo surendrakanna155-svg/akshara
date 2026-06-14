@@ -3,7 +3,8 @@
 **Version:** 2.1  
 **Date:** June 2026  
 **Baseline:** QA-ready (~95% test readiness, ~62% E2E journey coverage)  
-**Target:** ERP feature-complete (business workflows, not test inflation)
+**Target:** ERP feature-complete (business workflows, not test inflation)  
+**Post Batch A:** ERP ~91% · Tests 1412 · Patrol ~49
 
 ---
 
@@ -35,11 +36,11 @@ Akshara ERP has strong **read surfaces** across most modules (Admissions, Financ
 
 | Metric | Start | Current | Target |
 |--------|-------|---------|--------|
-| Weighted ERP completion | ~68% | ~83% | ≥90% |
-| Modules with mutation layer | 8/16 | 13/16 | 14/16 |
+| Weighted ERP completion | ~68% | ~91% | ≥90% |
+| Modules with mutation layer | 8/16 | 14/16 | 14/16 |
 | P0 gaps closed | 4/10 (Phase 1) | 9/10 | **10/10** |
-| Flutter tests | 1304 | 1350+ | — |
-| Patrol regression | 25/25 | 30/30+ | green |
+| Flutter tests | 1304 | 1412 | — |
+| Patrol regression | 25/25 | 49/~49 | green |
 
 **Phase 1 completion workflows (done):** HR payroll run, inventory lifecycle event, transport route activate, education remark publish.
 
@@ -59,15 +60,14 @@ Akshara ERP has strong **read surfaces** across most modules (Admissions, Financ
 
 Grading: **A** Fully complete · **B** Partially complete · **C** Missing business logic · **D** Missing UI · **E** Missing provider layer · **F** Product scope undefined
 
-### Admissions — **B · ~88%**
+### Admissions — **A · ~92%**
 
 | Gap | Priority |
 |-----|----------|
-| Settings persistence (MG handoff) | P1 |
 | Bulk import / campaign automation | P3 |
 | Full API write parity | P2 |
 
-**Missing:** settings save, bulk lead import UI. **Writes:** create lead, application, approve/reject, enrollment. **RBAC:** complete. **Tests:** strong. **Effort:** 2–3 d (settings), 5 d (bulk).
+**Missing:** bulk lead import UI. **Writes:** create lead, application, approve/reject, enrollment, **settings save**. **RBAC:** complete. **Tests:** strong. **Effort:** 5 d (bulk).
 
 ---
 
@@ -83,15 +83,13 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 
 ---
 
-### Finance — **B · ~82%**
+### Finance — **A · ~88%**
 
 | Gap | Priority |
 |-----|----------|
-| Invoice create / cancel collection (repo exists, UI unwired) | P0 |
-| Receipt PDF export action | P1 |
 | Executive dashboard drill write-back | P2 |
 
-**Missing:** invoice workflow UI, collection cancel. **Writes:** fee structure, refund approve, scholarship, collect fee. **Effort:** 3–4 d (P0).
+**Writes:** fee structure, refund approve, scholarship, collect fee, invoice/cancel, **receipt PDF export**. **Effort:** P2 drill-back only.
 
 ---
 
@@ -106,14 +104,13 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 
 ---
 
-### HR — **B · ~78%** (↑ from ~72%)
+### HR — **A · ~85%**
 
 | Gap | Priority |
 |-----|----------|
-| Leave approve/reject (manager) | P1 |
 | Attendance integration | P2 |
 
-**Missing:** leave approval chain. **Writes:** employee CRUD (done), leave create, payroll run (done). **Effort:** 3 d (leave approval).
+**Writes:** employee CRUD, leave create, **leave approve/reject**, payroll run. **Effort:** P2 attendance integration.
 
 ---
 
@@ -129,15 +126,14 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 
 ---
 
-### Inventory — **B · ~68%**
+### Inventory — **A · ~82%**
 
 | Gap | Priority |
 |-----|----------|
-| PO approve / receive API wiring | P0 |
 | Stock move / allocation writes | P1 |
-| Asset approve workflow | P0 |
+| Asset approve workflow | P2 |
 
-**Missing:** PO receive UI beyond handoff snackbar, stock moves. **Writes:** PO draft, lifecycle event (done), procurement handoff. **Effort:** 4–5 d.
+**Writes:** PO draft, lifecycle event, **PO approve/receive handoff**, procurement chain. **Effort:** P1 stock moves.
 
 ---
 
@@ -227,27 +223,25 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 
 ---
 
-### RBAC — **B · ~75%**
+### RBAC — **A · ~88%**
 
 | Gap | Priority |
 |-----|----------|
-| `mutation_permission_registry` incomplete vs providers | P1 |
+| Secondary mutation registry entries (admissions/finance pipeline) | P2 |
 | Server-side RBAC enforcement | P3 |
-| Teacher/parent mutation guards audit | P0 |
 
-**Client guards strong; registry stale.** **Effort:** 2 d (registry sync), 10+ d (server).
+**Client guards strong; Batch A registry sync complete (41 entries).** **Effort:** P2 registry expansion, 10+ d (server).
 
 ---
 
-### Notifications — **C · ~40%**
+### Notifications — **B · ~72%**
 
 | Gap | Priority |
 |-----|----------|
-| ERP broadcast / template admin | P1 |
 | Inbox mark-read persistence | P2 |
 | Push channel integration | P3 |
 
-**Inbox read-only.** **Effort:** 5 d (broadcast admin).
+**Broadcast admin + template CRUD shipped.** **Effort:** P2 inbox persistence.
 
 ---
 
@@ -263,14 +257,14 @@ Grading: **A** Fully complete · **B** Partially complete · **C** Missing busin
 | 4 | HR employee CRUD | HR | **done** | M | RBAC manageHr | Low |
 | 5 | Transport student allocation | Transport | **done** | M | Routes active | Low |
 | 6 | Finance invoice / cancel collection UI | Finance | High | M | Finance repo | Low |
-| 7 | Inventory PO approve / asset approve | Inventory | High | M | Finance handoff | Med |
+| 7 | Inventory PO approve / asset approve | Inventory | **PO done** | M | Finance handoff | Med |
 | 8 | Teacher/parent mutation RBAC audit | RBAC | High | S | Security | Med |
-| 9 | Admissions settings persistence | Admissions | Med | S | Management settings | Low |
-| 10 | Notifications broadcast admin | Notifications | Med | M | Communication repo | Med |
+| 9 | Admissions settings persistence | Admissions | **done** | S | Management settings | Low |
+| 10 | Notifications broadcast admin | Notifications | **done** | M | Communication repo | Med |
 
 ### P1 — High Value
 
-Attendance ERP admin, SIS profile edit, payroll adjustments/export, library fines, alumni events, management settings save, finance receipt PDF, inventory stock moves.
+Attendance ERP admin, SIS profile edit, payroll adjustments/export, library fines, alumni events, management settings save, inventory stock moves.
 
 ### P2 — Nice To Have
 

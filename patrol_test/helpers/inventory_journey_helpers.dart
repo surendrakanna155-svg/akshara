@@ -34,3 +34,36 @@ Future<void> createInventoryProcurementOrder(PatrolIntegrationTester $) async {
   await $.pumpAndSettle(timeout: const Duration(seconds: 10));
   await assertVisibleKey($, QaTestKeys.inventoryPoSuccessSnackbar);
 }
+
+Future<void> approveAndReceiveInventoryProcurementOrder(
+  PatrolIntegrationTester $, {
+  String orderId = 'po_4',
+}) async {
+  await assertVisibleKey(
+      $, QaTestKeys.inventoryPoApproveHandoffButton(orderId));
+  await _ensureKeyTapTarget(
+      $, QaTestKeys.inventoryPoApproveHandoffButton(orderId));
+  await $.tester
+      .tap(find.byKey(QaTestKeys.inventoryPoApproveHandoffButton(orderId)));
+  await $.pumpAndSettle(timeout: const Duration(seconds: 5));
+  await assertVisibleKey($, QaTestKeys.inventoryPoApproveHandoffDialogButton);
+  await $.tester
+      .tap(find.byKey(QaTestKeys.inventoryPoApproveHandoffDialogButton));
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+  await assertVisibleKey(
+      $, QaTestKeys.inventoryPoApproveHandoffSuccessSnackbar);
+
+  await assertVisibleKey(
+      $, QaTestKeys.inventoryPoReceiveHandoffButton(orderId));
+  await _ensureKeyTapTarget(
+      $, QaTestKeys.inventoryPoReceiveHandoffButton(orderId));
+  await $.tester
+      .tap(find.byKey(QaTestKeys.inventoryPoReceiveHandoffButton(orderId)));
+  await $.pumpAndSettle(timeout: const Duration(seconds: 5));
+  await assertVisibleKey($, QaTestKeys.inventoryPoReceiveHandoffDialogButton);
+  await $.tester
+      .tap(find.byKey(QaTestKeys.inventoryPoReceiveHandoffDialogButton));
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+  await assertVisibleKey(
+      $, QaTestKeys.inventoryPoReceiveHandoffSuccessSnackbar);
+}

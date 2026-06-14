@@ -125,6 +125,12 @@ final canManageCommunicationProvider = Provider<bool>((ref) {
       .hasPermission(Permission.manageCommunication);
 });
 
+final canManageCommunicationTemplatesProvider = Provider<bool>((ref) {
+  return ref
+      .watch(rbacServiceProvider)
+      .hasPermission(Permission.manageCommunicationTemplates);
+});
+
 final canViewManagementProvider = Provider<bool>((ref) {
   return ref
       .watch(rbacServiceProvider)
@@ -148,9 +154,7 @@ final canViewLibraryProvider = Provider<bool>((ref) {
 });
 
 final canViewInventoryProvider = Provider<bool>((ref) {
-  return ref
-      .watch(rbacServiceProvider)
-      .hasPermission(Permission.viewInventory);
+  return ref.watch(rbacServiceProvider).hasPermission(Permission.viewInventory);
 });
 
 final canViewAlumniProvider = Provider<bool>((ref) {

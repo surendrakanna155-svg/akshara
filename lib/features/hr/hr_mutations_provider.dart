@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audit/audit_event.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/repositories/interfaces/communication_repository.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
@@ -25,6 +26,10 @@ void assertManageHr(Ref ref) {
       ),
     );
   }
+}
+
+void assertApproveHrLeave(Ref ref) {
+  assertManageHr(ref);
 }
 
 class CreateHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
@@ -53,6 +58,104 @@ class CreateHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
 final createHrLeaveProvider =
     AsyncNotifierProvider<CreateHrLeaveNotifier, HrLeaveRequest?>(
   CreateHrLeaveNotifier.new,
+);
+
+class ApproveHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
+  @override
+  FutureOr<HrLeaveRequest?> build() => null;
+
+  Future<HrLeaveRequest?> execute({
+    required String leaveRequestId,
+    required ApproveLeaveRequest request,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertApproveHrLeave(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).approveLeaveRequest(
+              query: ref.read(repositoryQueryProvider),
+              leaveRequestId: leaveRequestId,
+              request: request,
+            );
+        await recordHrAudit(
+          ref,
+          type: AuditEventType.leaveRequestApproved,
+          employeeId: result.employeeId,
+          metadata: {'leaveRequestId': result.id},
+        );
+        await ref.read(communicationRepositoryProvider).sendBroadcast(
+              query: ref.read(repositoryQueryProvider),
+              request: BroadcastRequest(
+                audience: 'hr_staff',
+                title: 'Leave approved',
+                body:
+                    '${result.employeeName}\'s leave has been approved by ${result.approver}.',
+              ),
+            );
+        ref
+          ..invalidate(hrLeaveFutureProvider)
+          ..invalidate(hrDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final approveHrLeaveProvider =
+    AsyncNotifierProvider<ApproveHrLeaveNotifier, HrLeaveRequest?>(
+  ApproveHrLeaveNotifier.new,
+);
+
+class RejectHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
+  @override
+  FutureOr<HrLeaveRequest?> build() => null;
+
+  Future<HrLeaveRequest?> execute({
+    required String leaveRequestId,
+    required ApproveLeaveRequest request,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertApproveHrLeave(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).rejectLeaveRequest(
+              query: ref.read(repositoryQueryProvider),
+              leaveRequestId: leaveRequestId,
+              request: request,
+            );
+        await recordHrAudit(
+          ref,
+          type: AuditEventType.leaveRequestRejected,
+          employeeId: result.employeeId,
+          metadata: {'leaveRequestId': result.id},
+        );
+        await ref.read(communicationRepositoryProvider).sendBroadcast(
+              query: ref.read(repositoryQueryProvider),
+              request: BroadcastRequest(
+                audience: 'hr_staff',
+                title: 'Leave rejected',
+                body:
+                    '${result.employeeName}\'s leave has been rejected. Comment: ${request.comment.trim().isEmpty ? 'No comment' : request.comment.trim()}',
+              ),
+            );
+        ref
+          ..invalidate(hrLeaveFutureProvider)
+          ..invalidate(hrDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final rejectHrLeaveProvider =
+    AsyncNotifierProvider<RejectHrLeaveNotifier, HrLeaveRequest?>(
+  RejectHrLeaveNotifier.new,
 );
 
 class ProcessHrPayrollRunNotifier extends AsyncNotifier<HrPayrollRun?> {

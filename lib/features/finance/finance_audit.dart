@@ -12,12 +12,13 @@ Future<void> recordFinanceAudit(
   Ref ref, {
   required String action,
   required String entityId,
+  AuditEventType type = AuditEventType.financeHandoffSent,
   Map<String, String> metadata = const {},
 }) {
   final auth = ref.read(authProvider);
   return recordAuditEvent(
     ref,
-    type: AuditEventType.financeHandoffSent,
+    type: type,
     userId: auth.claims?.userId,
     tenantId: ref.read(tenantContextProvider).tenantId,
     schoolId: auth.claims?.schoolId,

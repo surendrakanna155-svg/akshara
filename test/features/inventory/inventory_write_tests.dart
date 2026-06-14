@@ -1,7 +1,9 @@
 import 'package:akshara_erp/core/repositories/mock/mock_inventory_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/features/inventory/inventory_requests.dart';
 import 'package:akshara_erp/features/inventory/inventory_mutations_provider.dart';
+import 'package:akshara_erp/features/inventory/inventory_providers.dart';
 import 'package:akshara_erp/features/inventory/intelligence/inventory_intelligence_models.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
@@ -49,6 +51,21 @@ void main() {
         orderId: 'po_1',
       );
       expect(updated.status.name, 'received');
+      expect(updated.approvalHistory.last.action, 'received');
+    });
+
+    test('approveProcurementOrder marks draft PO ordered', () async {
+      final repo = MockInventoryRepository();
+      final draft = await repo.getProcurementOrders(query: query);
+      final target = draft.items.firstWhere((order) => order.id == 'po_4');
+      expect(target.status.name, 'draft');
+
+      final approved = await repo.approveProcurementOrder(
+        query: query,
+        orderId: 'po_4',
+      );
+      expect(approved.status.name, 'ordered');
+      expect(approved.approvalHistory.last.action, 'approved');
     });
   });
 
@@ -72,7 +89,8 @@ void main() {
             ),
           );
 
-      expect(container.read(recordAssetLifecycleEventProvider).hasError, isTrue);
+      expect(
+          container.read(recordAssetLifecycleEventProvider).hasError, isTrue);
     });
   });
 
@@ -93,7 +111,54 @@ void main() {
       );
       final after = await repo.getAssetLifecycle(query: query);
 
-      expect(after.recentEvents.length, greaterThan(before.recentEvents.length));
+      expect(
+          after.recentEvents.length, greaterThan(before.recentEvents.length));
+    });
+  });
+
+  group('Inventory procurement handoff chain', () {
+    test('approve + receive handoff updates finance and inventory state',
+        () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final before =
+          await container.read(inventoryProcurementFutureProvider.future);
+      final draft = before.items.firstWhere((order) => order.id == 'po_4');
+      expect(draft.status.name, 'draft');
+
+      final approveResult = await container
+          .read(approveProcurementHandoffProvider.notifier)
+          .execute(draft);
+      expect(approveResult.apCommitmentId, startsWith('ap_if_'));
+
+      final inventoryRepo = container.read(inventoryRepositoryProvider);
+      final afterApprove = await inventoryRepo.getProcurementOrders(
+        query: RepositoryQuery.demo,
+      );
+      final ordered =
+          afterApprove.items.firstWhere((order) => order.id == 'po_4');
+      expect(ordered.status.name, 'ordered');
+
+      final receiveResult = await container
+          .read(receiveProcurementHandoffProvider.notifier)
+          .execute(ordered);
+      expect(receiveResult.grnId, startsWith('grn_if_'));
+
+      final afterReceive = await inventoryRepo.getProcurementOrders(
+        query: RepositoryQuery.demo,
+      );
+      final received =
+          afterReceive.items.firstWhere((order) => order.id == 'po_4');
+      expect(received.status.name, 'received');
+      expect(received.approvalHistory.last.action, 'received');
     });
   });
 }

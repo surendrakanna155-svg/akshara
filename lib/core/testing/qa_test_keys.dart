@@ -11,7 +11,14 @@ abstract final class QaTestKeys {
   static const logoutButton = ValueKey<String>('auth_logout_button');
   static const logoutConfirmButton = ValueKey<String>('auth_logout_confirm');
   static const profileButton = ValueKey<String>('profile_button');
-  static const receiptHistoryButton = ValueKey<String>('receipt_history_button');
+  static const receiptHistoryButton =
+      ValueKey<String>('receipt_history_button');
+  static const parentReceiptDownloadButton =
+      ValueKey<String>('parent_receipt_download_button');
+  static const parentReceiptShareButton =
+      ValueKey<String>('parent_receipt_share_button');
+  static const parentReceiptPdfSuccessSnackbar =
+      ValueKey<String>('parent_receipt_pdf_success_snackbar');
   static const erpMenuButton = ValueKey<String>('erp_menu_button');
 
   static ValueKey<String> erpNavModule(String module) =>
@@ -206,6 +213,14 @@ abstract final class QaTestKeys {
 
   static const hrLeaveSuccessSnackbar =
       ValueKey<String>('hr_leave_success_snackbar');
+  static const hrLeaveApprovalSnackbar =
+      ValueKey<String>('hr_leave_approval_snackbar');
+
+  static ValueKey<String> hrApproveLeaveButton(String leaveRequestId) =>
+      ValueKey<String>('hr_approve_leave_$leaveRequestId');
+
+  static ValueKey<String> hrRejectLeaveButton(String leaveRequestId) =>
+      ValueKey<String>('hr_reject_leave_$leaveRequestId');
 
   static const hrCreateEmployeeButton =
       ValueKey<String>('hr_create_employee_button');
@@ -254,6 +269,15 @@ abstract final class QaTestKeys {
 
   static ValueKey<String> inventoryPoReceiveHandoffButton(String orderId) =>
       ValueKey<String>('inventory_po_receive_handoff_button_$orderId');
+
+  static ValueKey<String> inventoryPoApproveHandoffButton(String orderId) =>
+      ValueKey<String>('inventory_po_approve_handoff_button_$orderId');
+
+  static const inventoryPoApproveHandoffDialogButton =
+      ValueKey<String>('inventory_po_approve_handoff_dialog_button');
+
+  static const inventoryPoApproveHandoffSuccessSnackbar =
+      ValueKey<String>('inventory_po_approve_handoff_success_snackbar');
 
   static const inventoryPoReceiveHandoffDialogButton =
       ValueKey<String>('inventory_po_receive_handoff_dialog_button');
@@ -363,7 +387,8 @@ abstract final class QaTestKeys {
 
   static const erpCopilotButton = ValueKey<String>('erp_copilot_button');
 
-  static const copilotContextBanner = ValueKey<String>('copilot_context_banner');
+  static const copilotContextBanner =
+      ValueKey<String>('copilot_context_banner');
 
   static const copilotMessageField = ValueKey<String>('copilot_message_field');
 
@@ -399,9 +424,11 @@ abstract final class QaTestKeys {
   static ValueKey<String> copilotPersonaPromptChip(String prompt) =>
       ValueKey<String>('copilot_persona_prompt_${prompt.hashCode}');
 
-  static const copilotAiEntryButton = ValueKey<String>('copilot_ai_entry_button');
+  static const copilotAiEntryButton =
+      ValueKey<String>('copilot_ai_entry_button');
 
-  static const copilotSidebarAiEntry = ValueKey<String>('copilot_sidebar_ai_entry');
+  static const copilotSidebarAiEntry =
+      ValueKey<String>('copilot_sidebar_ai_entry');
 
   static const copilotQuickActionReplyDialog =
       ValueKey<String>('copilot_quick_action_reply_dialog');
@@ -486,6 +513,15 @@ abstract final class QaTestKeys {
 
   static const platformIntelligenceScreen =
       ValueKey<String>('platform_intelligence_screen');
+
+  static const communicationBroadcastAdminScreen =
+      ValueKey<String>('communication_broadcast_admin_screen');
+  static const communicationBroadcastSendButton =
+      ValueKey<String>('communication_broadcast_send_button');
+  static const communicationTemplateSaveButton =
+      ValueKey<String>('communication_template_save_button');
+  static const communicationBroadcastHistoryList =
+      ValueKey<String>('communication_broadcast_history_list');
 
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');

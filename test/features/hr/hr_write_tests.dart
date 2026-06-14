@@ -95,6 +95,44 @@ void main() {
       expect(container.read(processHrPayrollRunProvider).hasError, isTrue);
     });
 
+    test('approveHrLeave fails without manageHr permission', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(approveHrLeaveProvider.notifier).execute(
+            leaveRequestId: 'lv_req_1',
+            request: const ApproveLeaveRequest(comment: 'Approved'),
+          );
+
+      expect(container.read(approveHrLeaveProvider).hasError, isTrue);
+    });
+
+    test('rejectHrLeave fails without manageHr permission', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(rejectHrLeaveProvider.notifier).execute(
+            leaveRequestId: 'lv_req_2',
+            request: const ApproveLeaveRequest(comment: 'Insufficient coverage'),
+          );
+
+      expect(container.read(rejectHrLeaveProvider).hasError, isTrue);
+    });
+
     test('createHrEmployee fails without manageHr permission', () async {
       final container = ProviderContainer(
         overrides: [
@@ -217,6 +255,54 @@ void main() {
         HrPayrollStatus.processed,
       );
     });
+
+    test('approveHrLeave succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(approveHrLeaveProvider.notifier).execute(
+            leaveRequestId: 'lv_req_1',
+            request: const ApproveLeaveRequest(comment: 'All good'),
+          );
+
+      expect(container.read(approveHrLeaveProvider).hasValue, isTrue);
+      expect(
+        container.read(approveHrLeaveProvider).value?.status,
+        HrLeaveStatus.approved,
+      );
+    });
+
+    test('rejectHrLeave succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(rejectHrLeaveProvider.notifier).execute(
+            leaveRequestId: 'lv_req_2',
+            request: const ApproveLeaveRequest(
+              comment: 'Exam invigilation required',
+            ),
+          );
+
+      expect(container.read(rejectHrLeaveProvider).hasValue, isTrue);
+      expect(
+        container.read(rejectHrLeaveProvider).value?.status,
+        HrLeaveStatus.rejected,
+      );
+    });
   });
 
   group('HR mock employee writes', () {
@@ -318,6 +404,46 @@ void main() {
       expect(
         after.runs.firstWhere((r) => r.id == 'pay_run_2').status,
         HrPayrollStatus.processed,
+      );
+    });
+  });
+
+  group('HR mock leave approval writes', () {
+    test('approveLeaveRequest updates pending status', () async {
+      MockHrWriteStore.instance.reset();
+      final repo = MockHrRepository();
+      const query = RepositoryQuery.demo;
+
+      final approved = await repo.approveLeaveRequest(
+        query: query,
+        leaveRequestId: 'lv_req_1',
+        request: const ApproveLeaveRequest(comment: 'Approved by HR'),
+      );
+      expect(approved.status, HrLeaveStatus.approved);
+
+      final leave = await repo.getLeave(query: query);
+      expect(
+        leave.requests.firstWhere((r) => r.id == 'lv_req_1').status,
+        HrLeaveStatus.approved,
+      );
+    });
+
+    test('rejectLeaveRequest updates pending status', () async {
+      MockHrWriteStore.instance.reset();
+      final repo = MockHrRepository();
+      const query = RepositoryQuery.demo;
+
+      final rejected = await repo.rejectLeaveRequest(
+        query: query,
+        leaveRequestId: 'lv_req_2',
+        request: const ApproveLeaveRequest(comment: 'Insufficient leave balance'),
+      );
+      expect(rejected.status, HrLeaveStatus.rejected);
+
+      final leave = await repo.getLeave(query: query);
+      expect(
+        leave.requests.firstWhere((r) => r.id == 'lv_req_2').status,
+        HrLeaveStatus.rejected,
       );
     });
   });

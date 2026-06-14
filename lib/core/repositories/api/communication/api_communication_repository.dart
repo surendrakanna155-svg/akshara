@@ -101,6 +101,40 @@ class ApiCommunicationRepository implements CommunicationRepository {
   }
 
   @override
+  Future<CommunicationTemplate> createTemplate({
+    required RepositoryQuery query,
+    required CreateCommunicationTemplateRequest request,
+  }) async {
+    final dto = await _remote.createTemplate(
+      query: query,
+      request: CreateCommunicationTemplateRequestDto.fromDomain(request),
+    );
+    return _mapper.toTemplate(dto);
+  }
+
+  @override
+  Future<CommunicationTemplate> updateTemplate({
+    required RepositoryQuery query,
+    required String templateId,
+    required UpdateCommunicationTemplateRequest request,
+  }) async {
+    final dto = await _remote.updateTemplate(
+      query: query,
+      templateId: templateId,
+      request: UpdateCommunicationTemplateRequestDto.fromDomain(request),
+    );
+    return _mapper.toTemplate(dto);
+  }
+
+  @override
+  Future<List<BroadcastHistoryItem>> listBroadcastHistory({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.listBroadcastHistory(query: query);
+    return [for (final item in dto.items) _mapper.toBroadcastHistoryItem(item)];
+  }
+
+  @override
   Future<BroadcastResult> sendBroadcast({
     required RepositoryQuery query,
     required BroadcastRequest request,

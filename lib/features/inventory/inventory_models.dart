@@ -202,6 +202,21 @@ class InventoryMaintenanceRecord {
 }
 
 @immutable
+class InventoryProcurementApprovalEntry {
+  const InventoryProcurementApprovalEntry({
+    required this.action,
+    required this.actor,
+    required this.recordedAt,
+    this.note,
+  });
+
+  final String action;
+  final String actor;
+  final String recordedAt;
+  final String? note;
+}
+
+@immutable
 class InventoryProcurementOrder {
   const InventoryProcurementOrder({
     required this.id,
@@ -214,6 +229,7 @@ class InventoryProcurementOrder {
     required this.status,
     required this.financePoId,
     required this.requestedBy,
+    this.approvalHistory = const [],
   });
 
   final String id;
@@ -226,6 +242,7 @@ class InventoryProcurementOrder {
   final InventoryProcurementStatus status;
   final String financePoId;
   final String requestedBy;
+  final List<InventoryProcurementApprovalEntry> approvalHistory;
 }
 
 @immutable

@@ -525,6 +525,71 @@ class MockHrRepository implements HrRepository {
   }
 
   @override
+  Future<HrLeaveRequest> approveLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveRequestId,
+    required ApproveLeaveRequest request,
+  }) async {
+    await _loadLeaveRequests();
+    return _resolveLeaveRequest(
+      leaveRequestId: leaveRequestId,
+      status: HrLeaveStatus.approved,
+      comment: request.comment,
+    );
+  }
+
+  @override
+  Future<HrLeaveRequest> rejectLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveRequestId,
+    required ApproveLeaveRequest request,
+  }) async {
+    await _loadLeaveRequests();
+    return _resolveLeaveRequest(
+      leaveRequestId: leaveRequestId,
+      status: HrLeaveStatus.rejected,
+      comment: request.comment,
+    );
+  }
+
+  HrLeaveRequest _resolveLeaveRequest({
+    required String leaveRequestId,
+    required HrLeaveStatus status,
+    required String comment,
+  }) {
+    final store = MockHrWriteStore.instance;
+    final requests = store.leaveRequests ?? const <HrLeaveRequest>[];
+    final index = requests.indexWhere((r) => r.id == leaveRequestId);
+    if (index < 0) {
+      throw StateError('Leave request not found');
+    }
+
+    final current = requests[index];
+    if (current.status != HrLeaveStatus.pending) {
+      throw StateError('Leave request is already resolved');
+    }
+    final note = comment.trim();
+    final nextReason = note.isEmpty
+        ? current.reason
+        : '${current.reason}\nManager note: $note';
+    final updated = HrLeaveRequest(
+      id: current.id,
+      employeeId: current.employeeId,
+      employeeName: current.employeeName,
+      department: current.department,
+      leaveType: current.leaveType,
+      fromDate: current.fromDate,
+      toDate: current.toDate,
+      days: current.days,
+      status: status,
+      approver: current.approver,
+      reason: nextReason,
+    );
+    requests[index] = updated;
+    return updated;
+  }
+
+  @override
   Future<HrPayrollData> getPayroll({required RepositoryQuery query}) async {
     const base = HrPayrollData(
       runs: [

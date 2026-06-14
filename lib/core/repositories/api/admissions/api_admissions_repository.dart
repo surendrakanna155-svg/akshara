@@ -133,6 +133,13 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
+  Future<AdmissionsSettingsData> updateSettings({
+    required RepositoryQuery query,
+    required UpdateAdmissionsSettingsRequest request,
+  }) =>
+      _remote.updateSettings(query: query, request: request);
+
+  @override
   Future<EnrollmentFormState> getEnrollmentPrefill({
     required RepositoryQuery query,
   }) async {

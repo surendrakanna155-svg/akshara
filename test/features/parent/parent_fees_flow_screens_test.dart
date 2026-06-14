@@ -6,6 +6,7 @@ import 'package:akshara_erp/features/parent/payment/payment_models.dart';
 import 'package:akshara_erp/features/parent/receipts/parent_receipt_detail_screen.dart';
 import 'package:akshara_erp/features/parent/receipts/parent_receipts_provider.dart';
 import 'package:akshara_erp/features/parent/receipts/parent_receipts_screen.dart';
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/shared/widgets/widgets.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -120,6 +121,24 @@ void main() {
       expect(find.text('Receipt'), findsOneWidget);
       expect(find.text('Download'), findsOneWidget);
       expect(find.text('Share'), findsOneWidget);
+    });
+
+    testWidgets('ParentReceiptDetailScreen triggers download callback', (
+      tester,
+    ) async {
+      var downloadedReceiptId = '';
+      await pumpParentScreen(
+        tester,
+        ParentReceiptDetailScreen(
+          receiptId: 'rcpt_term_1',
+          onDownload: (receipt) => downloadedReceiptId = receipt.id,
+        ),
+      );
+
+      await tester.tap(find.byKey(QaTestKeys.parentReceiptDownloadButton));
+      await tester.pumpAndSettle();
+
+      expect(downloadedReceiptId, 'rcpt_term_1');
     });
 
     testWidgets('ParentLeaveScreen renders leave history', (tester) async {

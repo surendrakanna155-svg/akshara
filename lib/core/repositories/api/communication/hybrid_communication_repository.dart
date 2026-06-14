@@ -67,6 +67,31 @@ class HybridCommunicationRepository implements CommunicationRepository {
       _delegate.getTemplates(query: query);
 
   @override
+  Future<CommunicationTemplate> createTemplate({
+    required RepositoryQuery query,
+    required CreateCommunicationTemplateRequest request,
+  }) =>
+      _delegate.createTemplate(query: query, request: request);
+
+  @override
+  Future<CommunicationTemplate> updateTemplate({
+    required RepositoryQuery query,
+    required String templateId,
+    required UpdateCommunicationTemplateRequest request,
+  }) =>
+      _delegate.updateTemplate(
+        query: query,
+        templateId: templateId,
+        request: request,
+      );
+
+  @override
+  Future<List<BroadcastHistoryItem>> listBroadcastHistory({
+    required RepositoryQuery query,
+  }) =>
+      _delegate.listBroadcastHistory(query: query);
+
+  @override
   Future<BroadcastResult> sendBroadcast({
     required RepositoryQuery query,
     required BroadcastRequest request,

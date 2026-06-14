@@ -62,6 +62,41 @@ final createProcurementOrderProvider = AsyncNotifierProvider<
   CreateProcurementOrderNotifier.new,
 );
 
+class ApproveProcurementHandoffNotifier
+    extends AsyncNotifier<InventoryFinanceApproveResult?> {
+  @override
+  FutureOr<InventoryFinanceApproveResult?> build() => null;
+
+  Future<InventoryFinanceApproveResult> execute(
+    InventoryProcurementOrder order,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageInventory(ref);
+      try {
+        final query = ref.read(repositoryQueryProvider);
+        final financeResult = await ref
+            .read(inventoryFinanceApprovePurchaseOrderProvider.notifier)
+            .approve(order.financePoId);
+        await ref.read(inventoryRepositoryProvider).approveProcurementOrder(
+              query: query,
+              orderId: order.id,
+            );
+        ref.invalidate(inventoryProcurementFutureProvider);
+        return financeResult;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.value!;
+  }
+}
+
+final approveProcurementHandoffProvider = AsyncNotifierProvider<
+    ApproveProcurementHandoffNotifier, InventoryFinanceApproveResult?>(
+  ApproveProcurementHandoffNotifier.new,
+);
+
 class RecordAssetLifecycleEventNotifier
     extends AsyncNotifier<AssetLifecycleEvent?> {
   @override
@@ -107,23 +142,39 @@ class ReceiveProcurementHandoffNotifier
     state = await AsyncValue.guard(() async {
       assertManageInventory(ref);
       try {
-        final purchaseOrderId =
-            order.financePoId.isNotEmpty ? order.financePoId : order.id;
+        final query = ref.read(repositoryQueryProvider);
+        final financeOrder =
+            await ref.read(inventoryFinanceRepositoryProvider).getPurchaseOrder(
+                  query: query,
+                  purchaseOrderId: order.financePoId,
+                );
+        if (financeOrder == null) {
+          throw StateError('Finance PO not found: ${order.financePoId}');
+        }
+        final receiveLines = [
+          for (final line in financeOrder.lines)
+            ReceiveInventoryGoodsLineRequest(
+              purchaseOrderLineId: line.id,
+              quantityReceived: line.quantityPending > 0
+                  ? line.quantityPending
+                  : line.quantity,
+            ),
+        ];
+        if (receiveLines.isEmpty) {
+          throw StateError('Finance PO has no lines: ${financeOrder.id}');
+        }
         final financeResult = await ref
             .read(inventoryFinanceReceiveGoodsProvider.notifier)
             .receive(
-              purchaseOrderId: purchaseOrderId,
-              request: const ReceiveInventoryGoodsRequest(
-                lines: [
-                  ReceiveInventoryGoodsLineRequest(
-                    purchaseOrderLineId: 'pilot_line',
-                    quantityReceived: 1,
-                  ),
-                ],
+              purchaseOrderId: financeOrder.id,
+              request: ReceiveInventoryGoodsRequest(
+                lines: receiveLines,
               ),
             );
-        await ref.read(inventoryRepositoryProvider).recordProcurementReceiveHandoff(
-              query: ref.read(repositoryQueryProvider),
+        await ref
+            .read(inventoryRepositoryProvider)
+            .recordProcurementReceiveHandoff(
+              query: query,
               orderId: order.id,
             );
         ref.invalidate(inventoryProcurementFutureProvider);

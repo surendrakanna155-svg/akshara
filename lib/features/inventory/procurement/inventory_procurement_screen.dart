@@ -181,7 +181,7 @@ class _ProcurementTable extends ConsumerWidget {
                     DataCell(Text(order.expectedDelivery)),
                     DataCell(Text(order.financePoId)),
                     DataCell(_ProcurementStatusChip(status: order.status)),
-                    DataCell(_ProcurementReceiveAction(order: order)),
+                    DataCell(_ProcurementOrderAction(order: order)),
                   ],
                 ),
             ],
@@ -192,13 +192,24 @@ class _ProcurementTable extends ConsumerWidget {
   }
 }
 
-class _ProcurementReceiveAction extends ConsumerWidget {
-  const _ProcurementReceiveAction({required this.order});
+class _ProcurementOrderAction extends ConsumerWidget {
+  const _ProcurementOrderAction({required this.order});
 
   final InventoryProcurementOrder order;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (order.status == InventoryProcurementStatus.draft) {
+      return AksharaManageAction(
+        permission: Permission.manageInventory,
+        child: TextButton(
+          key: QaTestKeys.inventoryPoApproveHandoffButton(order.id),
+          onPressed: () => submitProcurementApproveHandoff(context, ref, order),
+          child: const Text('Approve'),
+        ),
+      );
+    }
+
     if (order.status != InventoryProcurementStatus.ordered) {
       return const SizedBox.shrink();
     }
@@ -208,7 +219,7 @@ class _ProcurementReceiveAction extends ConsumerWidget {
       child: TextButton(
         key: QaTestKeys.inventoryPoReceiveHandoffButton(order.id),
         onPressed: () => submitProcurementReceiveHandoff(context, ref, order),
-        child: const Text('Record receipt'),
+        child: const Text('Receive'),
       ),
     );
   }
@@ -232,7 +243,8 @@ class _ProcurementCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${order.poNumber} — ${order.vendorName}', style: text.titleSmall),
+              Text('${order.poNumber} — ${order.vendorName}',
+                  style: text.titleSmall),
               const SizedBox(height: AksharaSpacing.s2),
               Text(order.items, style: text.bodyMedium),
               Text(
@@ -241,11 +253,12 @@ class _ProcurementCard extends ConsumerWidget {
               ),
               const SizedBox(height: AksharaSpacing.s2),
               _ProcurementStatusChip(status: order.status),
-              if (order.status == InventoryProcurementStatus.ordered) ...[
+              if (order.status == InventoryProcurementStatus.ordered ||
+                  order.status == InventoryProcurementStatus.draft) ...[
                 const SizedBox(height: AksharaSpacing.s2),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: _ProcurementReceiveAction(order: order),
+                  child: _ProcurementOrderAction(order: order),
                 ),
               ],
             ],

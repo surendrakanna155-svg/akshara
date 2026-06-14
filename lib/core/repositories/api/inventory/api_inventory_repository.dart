@@ -15,7 +15,8 @@ class ApiInventoryRepository implements InventoryRepository {
   ApiInventoryRepository({
     required InventoryRemoteDataSource remote,
     InventoryMapper mapper = const InventoryMapper(),
-    InventoryIntelligenceMapper intelligenceMapper = const InventoryIntelligenceMapper(),
+    InventoryIntelligenceMapper intelligenceMapper =
+        const InventoryIntelligenceMapper(),
   })  : _remote = remote,
         _mapper = mapper,
         _intelligenceMapper = intelligenceMapper;
@@ -25,19 +26,22 @@ class ApiInventoryRepository implements InventoryRepository {
   final InventoryIntelligenceMapper _intelligenceMapper;
 
   @override
-  Future<InventoryDashboardData> getDashboard({required RepositoryQuery query}) async {
+  Future<InventoryDashboardData> getDashboard(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchDashboard(query: query);
     return _mapper.toDashboard(dto);
   }
 
   @override
-  Future<PaginatedResult<InventoryAsset>> getAssets({required RepositoryQuery query}) async {
+  Future<PaginatedResult<InventoryAsset>> getAssets(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchAssets(query: query);
     return paginateList(_mapper.toAssets(dto), query);
   }
 
   @override
-  Future<PaginatedResult<InventoryCategory>> getCategories({required RepositoryQuery query}) async {
+  Future<PaginatedResult<InventoryCategory>> getCategories(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchCategories(query: query);
     return paginateList(_mapper.toCategories(dto), query);
   }
@@ -67,31 +71,36 @@ class ApiInventoryRepository implements InventoryRepository {
   }
 
   @override
-  Future<PaginatedResult<InventoryVendor>> getVendors({required RepositoryQuery query}) async {
+  Future<PaginatedResult<InventoryVendor>> getVendors(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchVendors(query: query);
     return paginateList(_mapper.toVendors(dto), query);
   }
 
   @override
-  Future<InventoryReportsData> getReports({required RepositoryQuery query}) async {
+  Future<InventoryReportsData> getReports(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchReports(query: query);
     return _mapper.toReports(dto);
   }
 
   @override
-  Future<InventoryCopilotData> getInventoryCopilot({required RepositoryQuery query}) async {
+  Future<InventoryCopilotData> getInventoryCopilot(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchInventoryCopilot(query: query);
     return _intelligenceMapper.toCopilot(dto);
   }
 
   @override
-  Future<AssetLifecycleData> getAssetLifecycle({required RepositoryQuery query}) async {
+  Future<AssetLifecycleData> getAssetLifecycle(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchAssetLifecycle(query: query);
     return _intelligenceMapper.toLifecycle(dto);
   }
 
   @override
-  Future<ProcurementWorkflowData> getProcurementWorkflow({required RepositoryQuery query}) async {
+  Future<ProcurementWorkflowData> getProcurementWorkflow(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchProcurementWorkflow(query: query);
     return _intelligenceMapper.toProcurementWorkflow(dto);
   }
@@ -118,7 +127,17 @@ class ApiInventoryRepository implements InventoryRepository {
     required RepositoryQuery query,
     required CreateInventoryProcurementOrderRequest request,
   }) async {
-    throw ApiNotConnectedException('InventoryRepository', 'createProcurementOrder');
+    throw ApiNotConnectedException(
+        'InventoryRepository', 'createProcurementOrder');
+  }
+
+  @override
+  Future<InventoryProcurementOrder> approveProcurementOrder({
+    required RepositoryQuery query,
+    required String orderId,
+  }) async {
+    throw ApiNotConnectedException(
+        'InventoryRepository', 'approveProcurementOrder');
   }
 
   @override

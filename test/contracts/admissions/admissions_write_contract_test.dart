@@ -4,6 +4,7 @@ import 'package:akshara_erp/core/repositories/api/admissions/dto/create_lead_req
 import 'package:akshara_erp/core/repositories/api/admissions/dto/enrollment_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/admissions/dto/finance_handoff_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/admissions/dto/followup_request_dto.dart';
+import 'package:akshara_erp/core/repositories/api/admissions/dto/update_admissions_settings_request_dto.dart';
 import 'package:akshara_erp/core/repositories/interfaces/admissions_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_admissions_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
@@ -81,6 +82,26 @@ void main() {
       expect(json['task'], 'Call parent');
       expect(json['scheduled_label'], 'Tomorrow 10 AM');
     });
+
+    test('update settings request uses snake_case keys', () {
+      final json = UpdateAdmissionsSettingsRequestDto.fromDomain(
+        const UpdateAdmissionsSettingsRequest(
+          academicYear: '2026-27',
+          updates: [
+            AdmissionsSettingUpdate(
+              sectionId: 'leadStages',
+              itemId: 'newEnquiry.enabled',
+              value: 'false',
+            ),
+          ],
+        ),
+      ).toJson();
+      expect(json['academic_year'], '2026-27');
+      final updates = json['updates'] as List<dynamic>;
+      expect(
+          (updates.first as Map<String, dynamic>)['section_id'], 'leadStages');
+      expect((updates.first)['item_id'], 'newEnquiry.enabled');
+    });
   });
 
   group('Mock admissions write repository', () {
@@ -110,7 +131,8 @@ void main() {
 
     test('submitApplication moves application to submitted status', () async {
       final apps = await repo.getApplications(query: kQuery);
-      final draft = apps.items.firstWhere((a) => a.status == ApplicationStatus.draft);
+      final draft =
+          apps.items.firstWhere((a) => a.status == ApplicationStatus.draft);
       final submitted = await repo.submitApplication(
         query: kQuery,
         applicationId: draft.id,
@@ -129,6 +151,30 @@ void main() {
         request: const DocumentVerificationRequest(note: 'OK'),
       );
       expect(approved.status, DocumentVerificationStatus.verified);
+    });
+
+    test('updateSettings persists values in subsequent getSettings', () async {
+      final updated = await repo.updateSettings(
+        query: kQuery,
+        request: const UpdateAdmissionsSettingsRequest(
+          updates: [
+            AdmissionsSettingUpdate(
+              sectionId: 'leadStages',
+              itemId: 'newEnquiry.enabled',
+              value: 'false',
+            ),
+          ],
+        ),
+      );
+      final persisted = await repo.getSettings(query: kQuery);
+      final updatedStage = updated.leadStages.firstWhere(
+        (stage) => stage.stage == LeadStage.newEnquiry,
+      );
+      final persistedStage = persisted.leadStages.firstWhere(
+        (stage) => stage.stage == LeadStage.newEnquiry,
+      );
+      expect(updatedStage.enabled, isFalse);
+      expect(persistedStage.enabled, isFalse);
     });
   });
 }

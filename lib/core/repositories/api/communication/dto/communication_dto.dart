@@ -24,7 +24,8 @@ class CommunicationTemplateDto {
 class CommunicationTemplatesResponseDto {
   const CommunicationTemplatesResponseDto({required this.items});
 
-  factory CommunicationTemplatesResponseDto.fromJson(Map<String, dynamic> json) {
+  factory CommunicationTemplatesResponseDto.fromJson(
+      Map<String, dynamic> json) {
     final items = json['items'] as List<dynamic>? ?? const [];
     return CommunicationTemplatesResponseDto(
       items: [
@@ -65,6 +66,19 @@ class BroadcastResponseDto {
   final Map<String, dynamic> raw;
 }
 
+class BroadcastHistoryResponseDto {
+  const BroadcastHistoryResponseDto({required this.items});
+
+  factory BroadcastHistoryResponseDto.fromJson(Map<String, dynamic> json) {
+    final items = json['items'] as List<dynamic>? ?? const [];
+    return BroadcastHistoryResponseDto(
+      items: [for (final item in items) item as Map<String, dynamic>],
+    );
+  }
+
+  final List<Map<String, dynamic>> items;
+}
+
 class BroadcastRequestDto {
   const BroadcastRequestDto({required this.raw});
 
@@ -74,6 +88,52 @@ class BroadcastRequestDto {
         'audience': request.audience,
         'title': request.title,
         'body': request.body,
+      },
+    );
+  }
+
+  final Map<String, dynamic> raw;
+
+  Map<String, dynamic> toJson() => raw;
+}
+
+class CreateCommunicationTemplateRequestDto {
+  const CreateCommunicationTemplateRequestDto({required this.raw});
+
+  factory CreateCommunicationTemplateRequestDto.fromDomain(
+    CreateCommunicationTemplateRequest request,
+  ) {
+    return CreateCommunicationTemplateRequestDto(
+      raw: {
+        'code': request.code,
+        'channel': request.channel,
+        if (request.subjectTemplate != null)
+          'subject_template': request.subjectTemplate,
+        'body_template': request.bodyTemplate,
+        'variables': request.variables,
+      },
+    );
+  }
+
+  final Map<String, dynamic> raw;
+
+  Map<String, dynamic> toJson() => raw;
+}
+
+class UpdateCommunicationTemplateRequestDto {
+  const UpdateCommunicationTemplateRequestDto({required this.raw});
+
+  factory UpdateCommunicationTemplateRequestDto.fromDomain(
+    UpdateCommunicationTemplateRequest request,
+  ) {
+    return UpdateCommunicationTemplateRequestDto(
+      raw: {
+        if (request.code != null) 'code': request.code,
+        if (request.channel != null) 'channel': request.channel,
+        if (request.subjectTemplate != null)
+          'subject_template': request.subjectTemplate,
+        if (request.bodyTemplate != null) 'body_template': request.bodyTemplate,
+        if (request.variables != null) 'variables': request.variables,
       },
     );
   }
@@ -106,11 +166,12 @@ class CommunicationMapper {
       id: raw['id'] as String? ?? '',
       code: raw['code'] as String? ?? '',
       channel: raw['channel'] as String? ?? 'push',
-      subjectTemplate: raw['subjectTemplate'] as String?,
-      bodyTemplate: raw['bodyTemplate'] as String? ?? '',
-      variables: vars is List
-          ? [for (final v in vars) v.toString()]
-          : const [],
+      subjectTemplate: raw['subjectTemplate'] as String? ??
+          raw['subject_template'] as String?,
+      bodyTemplate: raw['bodyTemplate'] as String? ??
+          raw['body_template'] as String? ??
+          '',
+      variables: vars is List ? [for (final v in vars) v.toString()] : const [],
     );
   }
 
@@ -120,6 +181,18 @@ class CommunicationMapper {
       broadcastId: raw['broadcastId'] as String? ?? '',
       recipientCount: raw['recipientCount'] as int? ?? 0,
       status: raw['status'] as String? ?? 'sent',
+    );
+  }
+
+  BroadcastHistoryItem toBroadcastHistoryItem(Map<String, dynamic> raw) {
+    return BroadcastHistoryItem(
+      id: raw['id'] as String? ?? '',
+      title: raw['title'] as String? ?? '',
+      audience: raw['audience'] as String? ?? '',
+      status: raw['status'] as String? ?? 'queued',
+      recipientCount: raw['recipientCount'] as int? ?? 0,
+      sentAt:
+          DateTime.tryParse(raw['sentAt'] as String? ?? '') ?? DateTime.now(),
     );
   }
 

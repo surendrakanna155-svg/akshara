@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
 
@@ -19,20 +21,40 @@ class CommunicationDeliveryScreen extends ConsumerWidget {
         data: (data) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            ListTile(title: const Text('Delivery rate'), trailing: Text('${data.deliveryRate}%')),
-            ListTile(title: const Text('Sent'), trailing: Text('${data.totalSent}')),
-            ListTile(title: const Text('Failed'), trailing: Text('${data.totalFailed}')),
-            ListTile(title: const Text('Pending'), trailing: Text('${data.totalPending}')),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () =>
+                    context.push(RouteNames.communicationBroadcastAdmin),
+                icon: const Icon(Icons.campaign_outlined),
+                label: const Text('Open Broadcast Admin'),
+              ),
+            ),
             const SizedBox(height: 12),
-            const Text('By channel', style: TextStyle(fontWeight: FontWeight.bold)),
+            ListTile(
+                title: const Text('Delivery rate'),
+                trailing: Text('${data.deliveryRate}%')),
+            ListTile(
+                title: const Text('Sent'), trailing: Text('${data.totalSent}')),
+            ListTile(
+                title: const Text('Failed'),
+                trailing: Text('${data.totalFailed}')),
+            ListTile(
+                title: const Text('Pending'),
+                trailing: Text('${data.totalPending}')),
+            const SizedBox(height: 12),
+            const Text('By channel',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             ...data.byChannel.entries.map(
               (e) => ListTile(
                 title: Text(e.key),
-                subtitle: Text('Sent ${e.value.sent} · Failed ${e.value.failed}'),
+                subtitle:
+                    Text('Sent ${e.value.sent} · Failed ${e.value.failed}'),
               ),
             ),
             const Divider(),
-            const Text('Recent events', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Recent events',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             if (data.recentEvents.isEmpty)
               const ListTile(title: Text('No delivery events yet')),
             ...data.recentEvents.map(

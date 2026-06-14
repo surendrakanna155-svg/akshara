@@ -32,7 +32,8 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.copilot: Permission.viewAiCopilot,
   RouteNames.education: Permission.viewEducation,
   RouteNames.intelligence: Permission.viewStudentRisk,
-  RouteNames.studentSuccessIntelligence: Permission.viewStudentSuccessIntelligence,
+  RouteNames.studentSuccessIntelligence:
+      Permission.viewStudentSuccessIntelligence,
   RouteNames.examIntelligence: Permission.viewExamIntelligence,
   RouteNames.homeworkIntelligence: Permission.viewHomeworkIntelligence,
   RouteNames.student360: Permission.viewStudent360,
@@ -57,6 +58,7 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.lessonAnalytics: Permission.viewLessonAnalytics,
   RouteNames.timetableOptimization: Permission.viewTimetableOptimization,
   RouteNames.communicationDelivery: Permission.viewCommunicationDelivery,
+  RouteNames.communicationBroadcastAdmin: Permission.manageCommunication,
   RouteNames.communicationAnalytics: Permission.viewCommunicationAnalytics,
   RouteNames.pilotDashboard: Permission.viewPilotDashboard,
   RouteNames.parentActivationDashboard: Permission.viewPilotDashboard,
@@ -66,7 +68,8 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.academicProgress: Permission.viewAcademicProgress,
   RouteNames.timetableIntelligence: Permission.manageAcademicRooms,
   RouteNames.financeIntelligence: Permission.viewFinanceIntelligence,
-  RouteNames.financeExecutiveDashboard: Permission.viewFinanceExecutiveDashboard,
+  RouteNames.financeExecutiveDashboard:
+      Permission.viewFinanceExecutiveDashboard,
   RouteNames.inventoryCopilot: Permission.viewInventoryIntelligence,
   RouteNames.inventoryLifecycle: Permission.viewInventoryIntelligence,
 };

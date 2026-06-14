@@ -24,6 +24,12 @@ class CreateHrLeaveRequest {
   final String approver;
 }
 
+class ApproveLeaveRequest {
+  const ApproveLeaveRequest({this.comment = ''});
+
+  final String comment;
+}
+
 class ProcessHrPayrollRunRequest {
   const ProcessHrPayrollRunRequest({
     required this.runId,

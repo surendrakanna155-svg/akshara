@@ -1,8 +1,8 @@
 # Master Milestone Tracker
 
-**Program:** Akshara Completion Program — Four Milestone Execution  
+**Program:** Akshara Completion Program — Four Milestone Execution + Future Vision Preservation  
 **Date:** June 2026  
-**SSOT:** `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md` · `docs/AKSHARA_FINAL_ROADMAP.md` · `docs/Vision/FutureVision.md`
+**SSOT:** `docs/FUTURE_VISION_MASTER_INDEX.md` · `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md` · `docs/AKSHARA_FINAL_ROADMAP.md` · `docs/Vision/FutureVision.md`
 
 ---
 
@@ -110,19 +110,222 @@
 
 ---
 
-## Deferred (explicit — not in four-milestone scope)
+## Completed
 
-| Item | Reason |
-|------|--------|
-| Live ML inference | P3 — backend model service |
-| Production RLS | P3-08 |
-| Director portal (DR-01–08) | Spec only — separate program |
-| ERP Exam Admin scope | Product decision P3-02 |
+Four-milestone program, intelligence program, and prior shipped evolution releases.
+
+| Group | Items | Status | Report / refs |
+|-------|-------|--------|---------------|
+| **M1** Promotion & Reshuffle Engine | Promotion, reshuffle, section balance, performance balance, quarterly | ✅ | `MILESTONE_1_COMPLETION_REPORT.md` |
+| **M2** Continuity Platform | Teacher/timetable/parent/notification/assignment/message continuity, wizard | ✅ | `MILESTONE_2_COMPLETION_REPORT.md` |
+| **M3** Workflow Automation | Rule engine, triggers, auto-approve, routing, escalation, scheduled jobs, UI | ✅ | `MILESTONE_3_COMPLETION_REPORT.md` |
+| **M4** Multi-School Intelligence | Platform Owner, org/trust, comparison, revenue, growth, risk, copilot scope | ✅ | `MILESTONE_4_COMPLETION_REPORT.md` |
+| **INTEL-05–10** | AI access modes, at-risk MVP, teacher intervention, attendance/fee intel, promotion readiness, unified recommendations | ✅ | `intelligence_program_mvp_test.dart` |
+| **P0 ERP writes (7 direct)** | Executive approval, library, hostel, HR CRUD, transport allocation, finance invoice/cancel | ✅ | P0 program |
+| **P1 shipped** | Owner export, KPI drill-down, insight routes, INTEL-03/04, promotion engine (P1-08) | ✅ | INTEL completion reports |
+| **Evolution v8–v10** | Year transition, intelligence layer, education suite, Phase 5 modules (v9.8–v10.4) | ✅ | `Roadmap.md`, release docs |
+| **AI Education Suite** | FV-23–27 question papers, bank, homework, worksheet, remarks | ✅ | v8.5–v8.8 |
+
+---
+
+## Batch A — P1 Closure Program ✅
+
+**Baseline:** `37c1676` · **Report:** `docs/BATCH_A_COMPLETION_REPORT.md`
+
+| ID | Feature | Status | Implementation |
+|----|---------|--------|----------------|
+| P1-04 | Inventory PO approve + receive | ✅ | `approveProcurementHandoff`, `receiveProcurementHandoff`, approval history |
+| P1-05 | Admissions settings persistence | ✅ | `updateSettings`, editable UI + Save |
+| P1-06 | Notifications broadcast admin | ✅ | `broadcast_admin_screen.dart`, Communication Hub link |
+| P1-07 | RBAC mutation registry sync | ✅ | 41 registry entries, `docs/RBAC_SYNC_REPORT.md` |
+| P1-12 | HR leave approve/reject | ✅ | Comment dialog, audit, broadcast notification |
+| P1-13 | Finance receipt PDF | ✅ | `finance_receipt_pdf_service.dart`, router download/share |
+
+**Tests:** +7 (1412 total) · **Patrol:** +4 journeys (~49) · **ERP:** ~91%
+
+---
+
+## Active
+
+Current sprint and in-flight work (Q3 2026).
+
+| ID | Feature | Registry | Milestone | Status | Notes |
+|----|---------|----------|-----------|--------|-------|
+| P1-09 | Substitute teacher wizard | Teacher | M7 | ⏳ | Timetable dependency |
+| P1-11 | SIS profile edit + documents | SIS | M6 | ⏳ | Data quality |
+| FV-PLAT-04 | Organization / Trust Intelligence | Control Center | M9 | 🔄 | M4 tab shipped; full trust rollup pending |
+| FV-PLAT-08 | Tenant Isolation Verification | Platform | M12 | 🔄 | 213 probes passing |
+| FV-PLAT-13 | RLS Enforcement | Platform | M12 | 🔄 | TD-P0-01 partial |
+| FV-PLAT-12 | Security Hardening | Platform | M12 | 🔄 | v2.7 baseline |
+
+---
+
+## Future Milestones
+
+Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_INDEX.md`.
+
+### M6 — Remaining P1 ERP Completion
+
+| ID | Feature | Status |
+|----|---------|--------|
+| P1-04 | Inventory PO approve + receive | ✅ Batch A |
+| P1-05 | Admissions settings persistence | ✅ Batch A |
+| P1-06 | Notifications broadcast admin | ✅ Batch A |
+| P1-07 | RBAC mutation registry sync | ✅ Batch A |
+| P1-11 | SIS profile edit + documents | ⏳ |
+| P1-12 | HR leave approve/reject | ✅ Batch A |
+| P1-13 | Finance receipt PDF | ✅ Batch A |
+| FV-15–16 | QR / offline payments | ⏳ |
+
+### M7 — Advanced Academic Platform
+
+| ID | Feature | Status |
+|----|---------|--------|
+| P1-09 | Substitute teacher wizard | ⏳ |
+| P2-03 | Teacher reassignment | ⏳ |
+| P2-04 | Timetable optimization apply | ⏳ |
+| FV-11 | Book Distribution parity | 🔄 |
+| FV-12 | Inventory Replacement Workflow | ⏳ |
+| FV-17 | School Memories admin | 🔄 |
+| FV-18 | Growth Platform campaigns | 🔄 |
+| P3-02 | ERP Exam Admin scope decision | ❌ Blocked |
+
+### M8 — AI Evolution
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-PLAT-10 | Live AI Inference | ⏳ |
+| FV-29 | Universal AI Assistant | ⏳ |
+| FV-28 | AI Parent Meeting Summary | ⏳ |
+| FV-PLAT-07 | AI Content Generation (platform) | 📐 Design |
+| FV-PLAT-05 | Resource Optimization Engine | ⏳ |
+| FV-01–06 | Role copilots (live inference upgrade) | 🔄 |
+
+### M9 — Multi-School SaaS
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-PLAT-02 | Multi-School SaaS Operations | 🔄 |
+| FV-PLAT-03 | Director Portal (DR-01–09) | 📐 Spec |
+| FV-PLAT-04 | Organization / Trust Intelligence (full) | 🔄 |
+| FV-P4-03 | Franchise Management | 📐 Design |
+| FV-P4-04 | Multi-Branch Management | 📐 Design |
+
+### M10 — Organization Builder
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-30 | Universal Organization Builder | 📐 Design |
+| FV-PLAT-01 | Universal Employee System | 📐 Design |
+| FV-A | AI School Setup Wizard | 📐 Design |
+| FV-07 | Multi-Role Employee (implementation) | 🔄 |
+
+### M11 — Dynamic Widget Platform
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-31 | Dynamic Widget Platform | 📐 Design |
+| — | Operations Hub widget persistence | ⏳ |
+
+### M12 — Infrastructure & Security
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-P4-02 | Observability Platform | 📐 Design |
+| FV-PLAT-09 | Monitoring & Alerting | ⏳ |
+| FV-PLAT-06 | Production Readiness Program | 🔄 |
+| FV-PLAT-12 | Security Hardening | 🔄 |
+| FV-PLAT-08 | Tenant Isolation Verification | 🔄 |
+| FV-PLAT-13 | RLS Enforcement | 🔄 |
+| FV-P4-01 | Penetration Testing | 📐 Design |
+
+### M13 — Multi-Industry Expansion
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-32 | Multi-Industry Vertical Framework | 📐 Design |
+| FV-PLAT-11 | White Label Platform Expansion | 🔄 |
+| FV-20 | School Branding System | ⏳ |
+| FV-33 | Salon ERP (Velora) | ⏳ |
+| FV-34 | Hospital ERP | ⏳ |
+| FV-35 | Restaurant ERP | ⏳ |
+| FV-36 | Hostel ERP (full write path) | 🔄 |
+
+---
+
+## Platform Evolution
+
+| Capability | Milestone | Status |
+|------------|-----------|--------|
+| Universal Employee System (FV-PLAT-01) | M10 | 📐 Design |
+| Dynamic Widget Platform (FV-31) | M11 | 📐 Design |
+| Universal Organization Builder (FV-30) | M10 | 📐 Design |
+| Universal AI Assistant (FV-29) | M8 | ⏳ |
+
+---
+
+## Multi-School SaaS
+
+| Capability | Milestone | Status |
+|------------|-----------|--------|
+| Multi-School Operations (FV-PLAT-02) | M9 | 🔄 |
+| Director Portal (FV-PLAT-03) | M9 | 📐 Spec |
+| Organization / Trust Intelligence (FV-PLAT-04) | M9 | 🔄 |
+| Franchise Management (FV-P4-03) | M9 | 📐 Design |
+| Multi-Branch Management (FV-P4-04) | M9 | 📐 Design |
+
+---
+
+## AI Evolution
+
+| Capability | Milestone | Status |
+|------------|-----------|--------|
+| AI Question Paper Generation (FV-23) | M7 | ✅ |
+| AI Content Generation (FV-PLAT-07) | M8 | 📐 Design |
+| AI Parent Meeting Summary (FV-28) | M8 | ⏳ |
+| Live AI Inference (FV-PLAT-10) | M8 | ⏳ |
+| Resource Optimization Engine (FV-PLAT-05) | M8 | ⏳ |
+
+---
+
+## Infrastructure & Security
+
+| Capability | Milestone | Status |
+|------------|-----------|--------|
+| Observability Platform (FV-P4-02) | M12 | 📐 Design |
+| Monitoring & Alerting (FV-PLAT-09) | M12 | ⏳ |
+| Production Readiness Program (FV-PLAT-06) | M12 | 🔄 |
+| Security Hardening (FV-PLAT-12) | M12 | 🔄 |
+| Tenant Isolation Verification (FV-PLAT-08) | M12 | 🔄 |
+| RLS Enforcement (FV-PLAT-13) | M12 | 🔄 |
+| Penetration Testing (FV-P4-01) | M12 | 📐 Design |
+
+---
+
+## Multi-Industry Expansion
+
+| Capability | Milestone | Status |
+|------------|-----------|--------|
+| Multi-Industry Vertical Framework (FV-32) | M13 | 📐 Design |
+| White Label Platform Expansion (FV-PLAT-11) | M13 | 🔄 |
+| School Branding System (FV-20) | M13 | ⏳ |
+| Salon / Hospital / Restaurant / Hostel packs (FV-33–36) | M13 | ⏳ / 🔄 |
+
+---
+
+## Deferred (explicit — product decisions)
+
+| Item | Reason | Milestone |
+|------|--------|-----------|
+| ERP Exam Admin scope | Product decision | M7 (P3-02) |
+| First non-education vertical pilot | Depends M10 + M13 | M13 |
 
 ---
 
 ## Related documents
 
+- `docs/FUTURE_VISION_PRESERVATION_AUDIT.md` (new)
+- `docs/FUTURE_VISION_MASTER_INDEX.md` (new — permanent capability index)
 - `docs/FOUR_MILESTONE_EXECUTION_REPORT.md`
 - `docs/PROJECT_BASELINE_STATUS.md`
 - `docs/QA/vision_completion_progress.md`

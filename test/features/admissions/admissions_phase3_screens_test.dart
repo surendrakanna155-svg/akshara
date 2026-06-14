@@ -1,3 +1,5 @@
+import 'package:akshara_erp/core/repositories/mock/mock_admissions_repository.dart';
+import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/features/admissions/approval/admissions_approval_provider.dart';
 import 'package:akshara_erp/features/admissions/approval/admissions_approval_screen.dart';
 import 'package:akshara_erp/features/admissions/fee_handoff/admissions_fee_handoff_screen.dart';
@@ -91,6 +93,38 @@ void main() {
       expect(find.text('Lead stages'), findsOneWidget);
       expect(find.text('Notification templates'), findsOneWidget);
       expect(find.text('Visit reminder'), findsOneWidget);
+    });
+
+    testWidgets('AdmissionsSettingsScreen saves updated settings', (
+      tester,
+    ) async {
+      useDesktopViewport(tester);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: erpWidgetTestOverrides([
+            admissionsRepositoryProvider.overrideWithValue(
+              MockAdmissionsRepository(),
+            ),
+          ]),
+          child: MaterialApp(
+            theme: AksharaAppTheme.light(),
+            home: const AdmissionsSettingsScreen(),
+          ),
+        ),
+      );
+      await settleRiverpodFutures(tester);
+      await tester.pumpAndSettle();
+
+      final switches = find.byType(SwitchListTile);
+      expect(switches, findsWidgets);
+      await tester.tap(switches.first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save settings'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('Admissions settings saved'), findsOneWidget);
     });
   });
 }

@@ -5,17 +5,30 @@ import '../repository_query.dart';
 
 /// Contract for admissions data access (mock or API).
 abstract class AdmissionsRepository {
-  Future<AdmissionsDashboardData> getDashboard({required RepositoryQuery query});
-  Future<PaginatedResult<AdmissionsLead>> getLeads({required RepositoryQuery query});
-  Future<PaginatedResult<AdmissionsApplication>> getApplications({required RepositoryQuery query});
-  Future<PaginatedResult<StudentDocumentRecord>> getDocuments({required RepositoryQuery query});
-  Future<PaginatedResult<PendingEnrollmentRecord>> getPendingEnrollments({required RepositoryQuery query});
-  Future<PaginatedResult<ApprovedStudentHandoff>> getApprovedHandoffs({required RepositoryQuery query});
-  Future<PaginatedResult<FeeStructureOption>> getFeeStructureOptions({required RepositoryQuery query});
-  Future<PaginatedResult<ApprovalQueueItem>> getApprovalQueue({required RepositoryQuery query});
+  Future<AdmissionsDashboardData> getDashboard(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<AdmissionsLead>> getLeads(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<AdmissionsApplication>> getApplications(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<StudentDocumentRecord>> getDocuments(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<PendingEnrollmentRecord>> getPendingEnrollments(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<ApprovedStudentHandoff>> getApprovedHandoffs(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<FeeStructureOption>> getFeeStructureOptions(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<ApprovalQueueItem>> getApprovalQueue(
+      {required RepositoryQuery query});
   Future<AdmissionsReportsData> getReports({required RepositoryQuery query});
   Future<AdmissionsSettingsData> getSettings({required RepositoryQuery query});
-  Future<EnrollmentFormState> getEnrollmentPrefill({required RepositoryQuery query});
+  Future<AdmissionsSettingsData> updateSettings({
+    required RepositoryQuery query,
+    required UpdateAdmissionsSettingsRequest request,
+  });
+  Future<EnrollmentFormState> getEnrollmentPrefill(
+      {required RepositoryQuery query});
 
   Future<AdmissionsLead> createLead({
     required RepositoryQuery query,

@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/audit/audit_event.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/academic/academic_catalog_mutation.dart';
@@ -14,6 +16,7 @@ import 'finance_journey_context_provider.dart';
 import 'fee_structures/finance_fee_structures_provider.dart';
 import 'finance_audit.dart';
 import 'finance_models.dart';
+import 'receipts/finance_receipt_pdf_service.dart';
 import 'finance_requests.dart';
 import 'invoices/finance_invoices_provider.dart';
 import 'refunds/finance_refunds_provider.dart';
@@ -558,4 +561,60 @@ class CancelCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
 final cancelCollectionProvider =
     AsyncNotifierProvider<CancelCollectionNotifier, FinanceCollectionResult?>(
   CancelCollectionNotifier.new,
+);
+
+class ExportReceiptPdfNotifier extends AsyncNotifier<Uint8List?> {
+  @override
+  FutureOr<Uint8List?> build() => null;
+
+  Future<Uint8List?> execute({required String receiptId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageFinance(ref);
+      try {
+        final receipt = await ref.read(financeRepositoryProvider).getReceipt(
+              query: ref.read(repositoryQueryProvider),
+              receiptId: receiptId,
+            );
+        if (receipt == null) {
+          throw StateError('Receipt not found');
+        }
+        final amount = int.tryParse(
+              receipt.amount.replaceAll(RegExp(r'[^\d-]'), ''),
+            ) ??
+            0;
+        final bytes = await const FinanceReceiptPdfService().buildReceiptPdf(
+          receiptNumber: receipt.receiptNumber,
+          schoolName: 'Akshara Public School',
+          title: 'Fee Receipt',
+          dateLabel: receipt.receiptDate,
+          paymentMethod: 'N/A',
+          statusLabel: 'Paid',
+          studentName: receipt.studentAccountId,
+          classLabel: 'N/A',
+          lineItems: [
+            ReceiptPdfLineItem(label: 'Collected amount', amount: amount),
+          ],
+          totalAmount: amount,
+          financeReceipt: receipt,
+        );
+        await recordFinanceAudit(
+          ref,
+          type: AuditEventType.receiptPdfExported,
+          action: 'exportReceiptPdf',
+          entityId: receipt.id,
+          metadata: {'receiptNumber': receipt.receiptNumber},
+        );
+        return bytes;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final exportReceiptPdfProvider =
+    AsyncNotifierProvider<ExportReceiptPdfNotifier, Uint8List?>(
+  ExportReceiptPdfNotifier.new,
 );

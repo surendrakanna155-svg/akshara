@@ -94,6 +94,34 @@ class ApiHrRepository implements HrRepository {
   }
 
   @override
+  Future<HrLeaveRequest> approveLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveRequestId,
+    required ApproveLeaveRequest request,
+  }) async {
+    final dto = await _remote.approveLeaveRequest(
+      query: query,
+      leaveRequestId: leaveRequestId,
+      comment: request.comment,
+    );
+    return _mapper.toLeaveRequest(dto);
+  }
+
+  @override
+  Future<HrLeaveRequest> rejectLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveRequestId,
+    required ApproveLeaveRequest request,
+  }) async {
+    final dto = await _remote.rejectLeaveRequest(
+      query: query,
+      leaveRequestId: leaveRequestId,
+      comment: request.comment,
+    );
+    return _mapper.toLeaveRequest(dto);
+  }
+
+  @override
   Future<HrPayrollRun> processPayrollRun({
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,

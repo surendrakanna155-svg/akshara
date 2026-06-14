@@ -34,3 +34,12 @@ Future<void> submitHrLeaveRequest(PatrolIntegrationTester $) async {
   await $.pumpAndSettle(timeout: const Duration(seconds: 10));
   await assertVisibleKey($, QaTestKeys.hrLeaveSuccessSnackbar);
 }
+
+Future<void> approveFirstPendingHrLeave(PatrolIntegrationTester $) async {
+  await _ensureKeyTapTarget($, QaTestKeys.hrApproveLeaveButton('lv_req_1'));
+  await $.tester.tap(find.byKey(QaTestKeys.hrApproveLeaveButton('lv_req_1')));
+  await $.pumpAndSettle(timeout: const Duration(seconds: 5));
+  await $('Approve').tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+  await assertVisibleKey($, QaTestKeys.hrLeaveApprovalSnackbar);
+}

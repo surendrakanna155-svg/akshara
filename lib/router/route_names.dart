@@ -62,7 +62,8 @@ abstract final class RouteNames {
   static const String aiAssistantSettings = '/settings/ai-assistant';
   static const String education = '/education';
   static const String intelligence = '/intelligence';
-  static const String studentSuccessIntelligence = '/intelligence/student-success';
+  static const String studentSuccessIntelligence =
+      '/intelligence/student-success';
   static const String examIntelligence = '/intelligence/exam';
   static const String homeworkIntelligence = '/homework-intelligence';
   static const String student360 = '/student-360';
@@ -90,8 +91,12 @@ abstract final class RouteNames {
   static const String lessonAnalytics = '/school/lesson-analytics';
   static const String timetableOptimization = '/school/timetables/optimize';
   static const String communicationDelivery = '/school/communications/delivery';
-  static const String communicationAnalytics = '/school/communications/analytics';
-  static const String teacherEffectiveness = '/intelligence/teacher-effectiveness';
+  static const String communicationBroadcastAdmin =
+      '/school/communications/broadcast-admin';
+  static const String communicationAnalytics =
+      '/school/communications/analytics';
+  static const String teacherEffectiveness =
+      '/intelligence/teacher-effectiveness';
   static const String pilotDashboard = '/school/pilot';
   static const String parentActivationDashboard = '/school/parent-activation';
   static const String roomAllocation = '/school/rooms-allocation';
@@ -169,8 +174,7 @@ abstract final class RouteNames {
   static const String sisContinuity = '/sis/continuity';
   static const String onboardingHub = '/sis/onboarding';
 
-  static String sisStudentDetail(String studentId) =>
-      '$sisStudents/$studentId';
+  static String sisStudentDetail(String studentId) => '$sisStudents/$studentId';
 
   /// All SIS module routes (SIS-01 → SIS-05).
   static const List<String> sisRoutes = [
@@ -219,7 +223,8 @@ abstract final class RouteNames {
   static const String managementIntelligence = '/management/intelligence';
   static const String managementPerformance = '/management/performance';
   static const String managementTasks = '/management/tasks';
-  static const String managementWorkflowAutomation = '/management/workflow-automation';
+  static const String managementWorkflowAutomation =
+      '/management/workflow-automation';
   static const String managementSettings = '/management/settings';
 
   /// All management module routes (MG-01 → MG-08).
@@ -354,7 +359,8 @@ abstract final class RouteNames {
 
   static const String controlCenter = '/control-center';
   static const String controlCenterDashboard = '/control-center/dashboard';
-  static const String controlCenterIntelligence = '/control-center/intelligence';
+  static const String controlCenterIntelligence =
+      '/control-center/intelligence';
   static const String controlCenterSchools = '/control-center/schools';
   static const String controlCenterSubscriptions =
       '/control-center/subscriptions';

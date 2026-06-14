@@ -18,7 +18,8 @@ class CommunicationRemoteDataSource {
       path,
       queryParameters: _queryParams(query),
     );
-    return CommunicationNotificationsResponseDto.fromJson(_requireData(response));
+    return CommunicationNotificationsResponseDto.fromJson(
+        _requireData(response));
   }
 
   Future<CommunicationTemplatesResponseDto> fetchTemplates({
@@ -29,6 +30,41 @@ class CommunicationRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return CommunicationTemplatesResponseDto.fromJson(_requireData(response));
+  }
+
+  Future<CommunicationTemplateDto> createTemplate({
+    required RepositoryQuery query,
+    required CreateCommunicationTemplateRequestDto request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      CommunicationApiPaths.templates,
+      queryParameters: _queryParams(query),
+      data: request.toJson(),
+    );
+    return CommunicationTemplateDto.fromJson(_requireData(response));
+  }
+
+  Future<CommunicationTemplateDto> updateTemplate({
+    required RepositoryQuery query,
+    required String templateId,
+    required UpdateCommunicationTemplateRequestDto request,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      CommunicationApiPaths.template(templateId),
+      queryParameters: _queryParams(query),
+      data: request.toJson(),
+    );
+    return CommunicationTemplateDto.fromJson(_requireData(response));
+  }
+
+  Future<BroadcastHistoryResponseDto> listBroadcastHistory({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      CommunicationApiPaths.broadcastHistory,
+      queryParameters: _queryParams(query),
+    );
+    return BroadcastHistoryResponseDto.fromJson(_requireData(response));
   }
 
   Future<BroadcastResponseDto> sendBroadcast({

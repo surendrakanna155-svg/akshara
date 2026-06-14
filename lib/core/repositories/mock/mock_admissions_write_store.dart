@@ -12,6 +12,7 @@ class MockAdmissionsWriteStore {
   List<PendingEnrollmentRecord>? enrollments;
   List<ApprovedStudentHandoff>? handoffs;
   List<ApprovalQueueItem>? approvalQueue;
+  AdmissionsSettingsData? settings;
 
   int _leadSeq = 2000;
   int _appSeq = 3000;
@@ -88,7 +89,8 @@ class MockAdmissionsWriteStore {
         );
   }
 
-  AdmissionsLead copyLead(AdmissionsLead lead, {
+  AdmissionsLead copyLead(
+    AdmissionsLead lead, {
     String? parentName,
     String? studentName,
     String? classLabel,

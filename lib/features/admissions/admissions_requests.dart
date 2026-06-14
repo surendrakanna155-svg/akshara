@@ -208,3 +208,27 @@ class GeneratedAdmissionNumber {
 
   final String admissionNumber;
 }
+
+/// Single setting value update within admissions settings.
+class AdmissionsSettingUpdate {
+  const AdmissionsSettingUpdate({
+    required this.sectionId,
+    required this.itemId,
+    required this.value,
+  });
+
+  final String sectionId;
+  final String itemId;
+  final String value;
+}
+
+/// Domain request to update admissions module settings.
+class UpdateAdmissionsSettingsRequest {
+  const UpdateAdmissionsSettingsRequest({
+    this.academicYear,
+    this.updates = const [],
+  });
+
+  final String? academicYear;
+  final List<AdmissionsSettingUpdate> updates;
+}

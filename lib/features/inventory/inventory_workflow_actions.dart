@@ -54,14 +54,15 @@ Future<void> showCreateProcurementOrderDialog(
   if (confirmed != true || !context.mounted) return;
 
   try {
-    final order = await ref.read(createProcurementOrderProvider.notifier).execute(
-          CreateInventoryProcurementOrderRequest(
-            vendorName: vendorController.text.trim(),
-            items: itemsController.text.trim(),
-            totalAmount: amountController.text.trim(),
-            requestedBy: 'QA Procurement',
-          ),
-        );
+    final order =
+        await ref.read(createProcurementOrderProvider.notifier).execute(
+              CreateInventoryProcurementOrderRequest(
+                vendorName: vendorController.text.trim(),
+                items: itemsController.text.trim(),
+                totalAmount: amountController.text.trim(),
+                requestedBy: 'QA Procurement',
+              ),
+            );
     if (!context.mounted || order == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -71,7 +72,8 @@ Future<void> showCreateProcurementOrderDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$error')));
   }
 }
 
@@ -137,7 +139,8 @@ Future<void> showRecordAssetLifecycleEventDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$error')));
   }
 }
 
@@ -171,8 +174,9 @@ Future<void> submitProcurementReceiveHandoff(
   if (confirmed != true || !context.mounted) return;
 
   try {
-    final result =
-        await ref.read(receiveProcurementHandoffProvider.notifier).execute(order);
+    final result = await ref
+        .read(receiveProcurementHandoffProvider.notifier)
+        .execute(order);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -188,6 +192,60 @@ Future<void> submitProcurementReceiveHandoff(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$error')));
+  }
+}
+
+Future<void> submitProcurementApproveHandoff(
+  BuildContext context,
+  WidgetRef ref,
+  InventoryProcurementOrder order,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Approve purchase order'),
+      content: Text(
+        'Approve ${order.poNumber} and sync Finance approval '
+        'for ${order.financePoId}?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.inventoryPoApproveHandoffDialogButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Approve PO'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final result = await ref
+        .read(approveProcurementHandoffProvider.notifier)
+        .execute(order);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.inventoryPoApproveHandoffSuccessSnackbar,
+        content: Text(
+          'PO ${order.poNumber} approved (${result.apCommitmentId})',
+        ),
+        action: SnackBarAction(
+          label: 'Finance',
+          onPressed: () => context.go(RouteNames.financeReconciliation),
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$error')));
   }
 }

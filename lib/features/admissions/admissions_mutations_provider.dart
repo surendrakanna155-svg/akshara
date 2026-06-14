@@ -15,6 +15,7 @@ import 'enrollment/admissions_enrollment_provider.dart';
 import 'enrollment/admissions_enrollment_records_provider.dart';
 import 'fee_handoff/admissions_fee_handoff_provider.dart';
 import 'leads/admissions_leads_provider.dart';
+import 'settings/admissions_settings_provider.dart';
 import '../../core/tenant/tenant_provider.dart';
 import 'admissions_audit.dart';
 import 'admissions_models.dart';
@@ -29,6 +30,7 @@ void _invalidateAdmissionsReads(
   bool approval = false,
   bool handoffs = false,
   bool enrollmentPrefill = false,
+  bool settings = false,
 }) {
   if (leads) ref.invalidate(admissionsLeadsFutureProvider);
   if (applications) ref.invalidate(admissionsApplicationsFutureProvider);
@@ -40,6 +42,9 @@ void _invalidateAdmissionsReads(
   }
   if (handoffs) {
     ref.invalidate(admissionsApprovedHandoffsFutureProvider);
+  }
+  if (settings) {
+    ref.invalidate(admissionsSettingsFutureProvider);
   }
 }
 
@@ -57,6 +62,7 @@ Future<T?> _runMutation<T>(
   bool invalidateApproval = false,
   bool invalidateHandoffs = false,
   bool invalidateEnrollmentPrefill = false,
+  bool invalidateSettings = false,
   void Function()? assertPermission,
 }) async {
   assertPermission?.call();
@@ -77,6 +83,7 @@ Future<T?> _runMutation<T>(
       approval: invalidateApproval,
       handoffs: invalidateHandoffs,
       enrollmentPrefill: invalidateEnrollmentPrefill,
+      settings: invalidateSettings,
     );
     return result;
   } catch (error) {
@@ -310,7 +317,8 @@ class CreateApplicationNotifier extends AsyncNotifier<AdmissionsApplication?> {
   @override
   FutureOr<AdmissionsApplication?> build() => null;
 
-  Future<AdmissionsApplication?> execute(CreateApplicationRequest request) async {
+  Future<AdmissionsApplication?> execute(
+      CreateApplicationRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -529,4 +537,36 @@ class SendToFinanceNotifier extends AsyncNotifier<ApprovedStudentHandoff?> {
 final sendToFinanceProvider =
     AsyncNotifierProvider<SendToFinanceNotifier, ApprovedStudentHandoff?>(
   SendToFinanceNotifier.new,
+);
+
+class UpdateAdmissionsSettingsNotifier
+    extends AsyncNotifier<AdmissionsSettingsData?> {
+  @override
+  FutureOr<AdmissionsSettingsData?> build() => null;
+
+  Future<AdmissionsSettingsData?> execute(
+    UpdateAdmissionsSettingsRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageAdmissions(ref),
+        auditType: AuditEventType.leadUpdated,
+        entityId: 'admissionsSettings',
+        metadata: const {'action': 'updateSettings'},
+        invalidateSettings: true,
+        action: () => ref.read(admissionsRepositoryProvider).updateSettings(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final updateAdmissionsSettingsProvider = AsyncNotifierProvider<
+    UpdateAdmissionsSettingsNotifier, AdmissionsSettingsData?>(
+  UpdateAdmissionsSettingsNotifier.new,
 );

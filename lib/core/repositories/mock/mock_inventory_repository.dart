@@ -179,7 +179,8 @@ class MockInventoryRepository implements InventoryRepository {
       hrEmployeeId: null,
       hostelBlock: null,
       librarySection: 'Circulation Desk',
-      integrationNote: 'Library circulation equipment — links to library module',
+      integrationNote:
+          'Library circulation equipment — links to library module',
     ),
     InventoryAllocation(
       id: 'alloc_4',
@@ -258,8 +259,22 @@ class MockInventoryRepository implements InventoryRepository {
       orderDate: '1 Mar 2026',
       expectedDelivery: '18 Mar 2026',
       status: InventoryProcurementStatus.ordered,
-      financePoId: 'FN-PO-2026-0142',
+      financePoId: 'po_if_1',
       requestedBy: 'IT Department',
+      approvalHistory: [
+        InventoryProcurementApprovalEntry(
+          action: 'created',
+          actor: 'IT Department',
+          recordedAt: '2026-03-01T10:00:00Z',
+          note: 'Draft PO created',
+        ),
+        InventoryProcurementApprovalEntry(
+          action: 'approved',
+          actor: 'Finance Admin',
+          recordedAt: '2026-03-01T16:30:00Z',
+          note: 'AP commitment synced',
+        ),
+      ],
     ),
     InventoryProcurementOrder(
       id: 'po_2',
@@ -270,8 +285,22 @@ class MockInventoryRepository implements InventoryRepository {
       orderDate: '25 Feb 2026',
       expectedDelivery: '10 Mar 2026',
       status: InventoryProcurementStatus.ordered,
-      financePoId: 'FN-PO-2026-0138',
+      financePoId: 'po_if_3',
       requestedBy: 'Hostel Warden',
+      approvalHistory: [
+        InventoryProcurementApprovalEntry(
+          action: 'created',
+          actor: 'Hostel Warden',
+          recordedAt: '2026-02-25T09:00:00Z',
+          note: 'Draft PO created',
+        ),
+        InventoryProcurementApprovalEntry(
+          action: 'approved',
+          actor: 'Finance Admin',
+          recordedAt: '2026-02-25T14:10:00Z',
+          note: 'Approved for ordering',
+        ),
+      ],
     ),
     InventoryProcurementOrder(
       id: 'po_3',
@@ -282,8 +311,26 @@ class MockInventoryRepository implements InventoryRepository {
       orderDate: '20 Feb 2026',
       expectedDelivery: '5 Mar 2026',
       status: InventoryProcurementStatus.received,
-      financePoId: 'FN-PO-2026-0135',
+      financePoId: 'po_if_4',
       requestedBy: 'Science Department',
+      approvalHistory: [
+        InventoryProcurementApprovalEntry(
+          action: 'created',
+          actor: 'Science Department',
+          recordedAt: '2026-02-20T08:45:00Z',
+        ),
+        InventoryProcurementApprovalEntry(
+          action: 'approved',
+          actor: 'Finance Admin',
+          recordedAt: '2026-02-20T13:30:00Z',
+        ),
+        InventoryProcurementApprovalEntry(
+          action: 'received',
+          actor: 'Stores QA',
+          recordedAt: '2026-03-05T12:20:00Z',
+          note: 'All lines received and posted',
+        ),
+      ],
     ),
     InventoryProcurementOrder(
       id: 'po_4',
@@ -294,8 +341,16 @@ class MockInventoryRepository implements InventoryRepository {
       orderDate: '3 Mar 2026',
       expectedDelivery: '25 Mar 2026',
       status: InventoryProcurementStatus.draft,
-      financePoId: 'FN-PO-2026-0145',
+      financePoId: 'po_if_2',
       requestedBy: 'Library (placeholder)',
+      approvalHistory: [
+        InventoryProcurementApprovalEntry(
+          action: 'created',
+          actor: 'Library',
+          recordedAt: '2026-03-03T11:30:00Z',
+          note: 'Awaiting finance approval',
+        ),
+      ],
     ),
   ];
 
@@ -355,7 +410,8 @@ class MockInventoryRepository implements InventoryRepository {
   ];
 
   @override
-  Future<InventoryDashboardData> getDashboard({required RepositoryQuery query}) async {
+  Future<InventoryDashboardData> getDashboard(
+      {required RepositoryQuery query}) async {
     return const InventoryDashboardData(
       kpis: [
         InventoryKpi(
@@ -515,11 +571,54 @@ class MockInventoryRepository implements InventoryRepository {
       orderDate: 'Today',
       expectedDelivery: request.expectedDelivery,
       status: InventoryProcurementStatus.draft,
-      financePoId: 'FN-PO-2026-${_poCounter.toString().padLeft(4, '0')}',
+      financePoId: 'po_if_${_poCounter.toString().padLeft(4, '0')}',
       requestedBy: request.requestedBy,
+      approvalHistory: [
+        InventoryProcurementApprovalEntry(
+          action: 'created',
+          actor: request.requestedBy,
+          recordedAt: '2026-06-13T09:00:00Z',
+          note: 'Draft created and linked to Finance PO',
+        ),
+      ],
     );
     _procurementOrders.insert(0, order);
     return order;
+  }
+
+  @override
+  Future<InventoryProcurementOrder> approveProcurementOrder({
+    required RepositoryQuery query,
+    required String orderId,
+  }) async {
+    final index = _procurementOrders.indexWhere((order) => order.id == orderId);
+    if (index < 0) {
+      throw StateError('Procurement order not found: $orderId');
+    }
+    final current = _procurementOrders[index];
+    final updated = InventoryProcurementOrder(
+      id: current.id,
+      poNumber: current.poNumber,
+      vendorName: current.vendorName,
+      items: current.items,
+      totalAmount: current.totalAmount,
+      orderDate: current.orderDate,
+      expectedDelivery: current.expectedDelivery,
+      status: InventoryProcurementStatus.ordered,
+      financePoId: current.financePoId,
+      requestedBy: current.requestedBy,
+      approvalHistory: [
+        ...current.approvalHistory,
+        const InventoryProcurementApprovalEntry(
+          action: 'approved',
+          actor: 'Finance Admin',
+          recordedAt: '2026-06-13T10:00:00Z',
+          note: 'Approved and moved to ordered state',
+        ),
+      ],
+    );
+    _procurementOrders[index] = updated;
+    return updated;
   }
 
   @override
@@ -543,6 +642,15 @@ class MockInventoryRepository implements InventoryRepository {
       status: InventoryProcurementStatus.received,
       financePoId: current.financePoId,
       requestedBy: current.requestedBy,
+      approvalHistory: [
+        ...current.approvalHistory,
+        const InventoryProcurementApprovalEntry(
+          action: 'received',
+          actor: 'Inventory Stores',
+          recordedAt: '2026-06-13T11:30:00Z',
+          note: 'Goods receipt handoff recorded',
+        ),
+      ],
     );
     _procurementOrders[index] = updated;
     return updated;
@@ -555,7 +663,8 @@ class MockInventoryRepository implements InventoryRepository {
       paginateList(_vendors, query);
 
   @override
-  Future<InventoryReportsData> getReports({required RepositoryQuery query}) async {
+  Future<InventoryReportsData> getReports(
+      {required RepositoryQuery query}) async {
     return const InventoryReportsData(
       catalog: [
         InventoryReportCatalogItem(
@@ -625,7 +734,8 @@ class MockInventoryRepository implements InventoryRepository {
   }
 
   @override
-  Future<InventoryCopilotData> getInventoryCopilot({required RepositoryQuery query}) async =>
+  Future<InventoryCopilotData> getInventoryCopilot(
+          {required RepositoryQuery query}) async =>
       const InventoryCopilotData(
         stockForecastUnits: 1240,
         forecastConfidence: 81,
@@ -649,8 +759,10 @@ class MockInventoryRepository implements InventoryRepository {
           ),
         ],
         stockTrend: [
-          InventoryStockTrendPoint(month: '2026-01', consumption: 180, forecast: 198),
-          InventoryStockTrendPoint(month: '2026-02', consumption: 210, forecast: 231),
+          InventoryStockTrendPoint(
+              month: '2026-01', consumption: 180, forecast: 198),
+          InventoryStockTrendPoint(
+              month: '2026-02', consumption: 210, forecast: 231),
         ],
         riskAlerts: [
           InventoryRiskAlert(
@@ -664,7 +776,8 @@ class MockInventoryRepository implements InventoryRepository {
       );
 
   @override
-  Future<AssetLifecycleData> getAssetLifecycle({required RepositoryQuery query}) async {
+  Future<AssetLifecycleData> getAssetLifecycle(
+      {required RepositoryQuery query}) async {
     final eventCounts = {
       for (final type in AssetLifecycleEventType.values)
         type: _lifecycleEvents.where((e) => e.eventType == type).length,
@@ -678,7 +791,8 @@ class MockInventoryRepository implements InventoryRepository {
   }
 
   @override
-  Future<ProcurementWorkflowData> getProcurementWorkflow({required RepositoryQuery query}) async =>
+  Future<ProcurementWorkflowData> getProcurementWorkflow(
+          {required RepositoryQuery query}) async =>
       const ProcurementWorkflowData(
         pendingApprovals: 2,
         overdueDeliveries: 1,

@@ -101,6 +101,32 @@ class HrRemoteDataSource {
     return HrSettingsResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<HrLeaveRequestDto> approveLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveRequestId,
+    required String comment,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.approveLeave(leaveRequestId),
+      queryParameters: _queryParams(query),
+      data: {'comment': comment},
+    );
+    return HrLeaveRequestDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrLeaveRequestDto> rejectLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveRequestId,
+    required String comment,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.rejectLeave(leaveRequestId),
+      queryParameters: _queryParams(query),
+      data: {'comment': comment},
+    );
+    return HrLeaveRequestDto.fromJson(_responseMap(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,

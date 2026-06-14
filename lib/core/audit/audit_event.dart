@@ -80,6 +80,9 @@ enum AuditEventType {
   employeeCreated,
   employeeUpdated,
   employeeStatusChanged,
+  leaveRequestApproved,
+  leaveRequestRejected,
+  receiptPdfExported,
 
   transportStudentAssigned,
   transportStudentTransferred,

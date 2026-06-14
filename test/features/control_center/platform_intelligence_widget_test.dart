@@ -1,5 +1,3 @@
-import 'package:akshara_erp/features/control_center/intelligence/platform_intelligence_models.dart';
-import 'package:akshara_erp/features/control_center/intelligence/platform_intelligence_providers.dart';
 import 'package:akshara_erp/features/control_center/intelligence/platform_intelligence_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';

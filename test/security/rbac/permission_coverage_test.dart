@@ -32,5 +32,52 @@ void main() {
         );
       }
     });
+
+    test('Batch A inventory procurement mutations registered', () {
+      for (final id in [
+        'createProcurementOrder',
+        'approveProcurementHandoff',
+        'receiveProcurementHandoff',
+      ]) {
+        expect(
+          MutationPermissionRegistry.entries.any((e) => e.mutationId == id),
+          isTrue,
+          reason: id,
+        );
+      }
+    });
+
+    test('Batch A admissions settings mutation registered', () {
+      final entry = MutationPermissionRegistry.entries.firstWhere(
+        (e) => e.mutationId == 'updateSettings' && e.moduleId == 'admissions',
+      );
+      expect(entry.permission, Permission.manageAdmissions);
+    });
+
+    test('Batch A communication mutations registered', () {
+      for (final id in ['sendBroadcast', 'saveTemplate']) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.mutationId == id,
+        );
+        expect(entry.moduleId, 'communication');
+      }
+    });
+
+    test('Batch A HR leave mutations registered', () {
+      for (final id in ['approveLeaveRequest', 'rejectLeaveRequest']) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.mutationId == id,
+        );
+        expect(entry.moduleId, 'hr');
+        expect(entry.permission, Permission.manageHr);
+      }
+    });
+
+    test('Batch A finance receipt export mutation registered', () {
+      final entry = MutationPermissionRegistry.entries.firstWhere(
+        (e) => e.mutationId == 'exportReceiptPdf',
+      );
+      expect(entry.permission, Permission.manageFinance);
+    });
   });
 }

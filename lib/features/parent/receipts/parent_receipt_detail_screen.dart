@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -203,6 +204,7 @@ class _ReceiptDetailBody extends StatelessWidget {
                       children: [
                         Expanded(
                           child: OutlinedButton.icon(
+                            key: QaTestKeys.parentReceiptShareButton,
                             onPressed: onShare == null
                                 ? null
                                 : () => onShare!(receipt),
@@ -213,6 +215,7 @@ class _ReceiptDetailBody extends StatelessWidget {
                         const SizedBox(width: AksharaSpacing.s3),
                         Expanded(
                           child: FilledButton.icon(
+                            key: QaTestKeys.parentReceiptDownloadButton,
                             onPressed: onDownload == null
                                 ? null
                                 : () => onDownload!(receipt),

@@ -37,6 +37,12 @@ class MutationPermissionRegistry {
     ),
     MutationPermissionEntry(
       moduleId: 'admissions',
+      mutationId: 'updateSettings',
+      permission: Permission.manageAdmissions,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'admissions',
       mutationId: 'approveApplication',
       permission: Permission.approveAdmissions,
       kind: 'approve',
@@ -81,6 +87,12 @@ class MutationPermissionRegistry {
     MutationPermissionEntry(
       moduleId: 'finance',
       mutationId: 'cancelCollection',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'exportReceiptPdf',
       permission: Permission.manageFinance,
       kind: 'manage',
     ),
@@ -140,10 +152,42 @@ class MutationPermissionRegistry {
       permission: Permission.manageManagement,
       kind: 'manage',
     ),
+    // Communication
+    MutationPermissionEntry(
+      moduleId: 'communication',
+      mutationId: 'sendBroadcast',
+      permission: Permission.manageCommunication,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'communication',
+      mutationId: 'saveTemplate',
+      permission: Permission.manageCommunicationTemplates,
+      kind: 'manage',
+    ),
     MutationPermissionEntry(
       moduleId: 'workflow',
       mutationId: 'executeWorkflowAction',
       permission: Permission.manageWorkflowAutomation,
+      kind: 'manage',
+    ),
+    // Inventory
+    MutationPermissionEntry(
+      moduleId: 'inventory',
+      mutationId: 'createProcurementOrder',
+      permission: Permission.manageInventory,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory',
+      mutationId: 'approveProcurementHandoff',
+      permission: Permission.manageInventory,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory',
+      mutationId: 'receiveProcurementHandoff',
+      permission: Permission.manageInventory,
       kind: 'manage',
     ),
     // Library
@@ -194,6 +238,18 @@ class MutationPermissionRegistry {
     MutationPermissionEntry(
       moduleId: 'hr',
       mutationId: 'setEmployeeStatus',
+      permission: Permission.manageHr,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'hr',
+      mutationId: 'approveLeaveRequest',
+      permission: Permission.manageHr,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'hr',
+      mutationId: 'rejectLeaveRequest',
       permission: Permission.manageHr,
       kind: 'manage',
     ),

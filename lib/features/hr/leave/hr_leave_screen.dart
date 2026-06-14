@@ -7,8 +7,10 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../hr_mutations_provider.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
+import '../hr_requests.dart';
 import '../hr_workflow_actions.dart';
 import '../widgets/hr_module_scaffold.dart';
 import '../widgets/hr_segment_panel.dart';
@@ -32,6 +34,9 @@ class HrLeaveScreen extends ConsumerWidget {
     final data = ref.watch(hrLeaveProvider);
     final requests = ref.watch(hrFilteredLeaveProvider);
     final filterIndex = ref.watch(hrLeaveFilterProvider);
+    final leaveApproveState = ref.watch(approveHrLeaveProvider);
+    final leaveRejectState = ref.watch(rejectHrLeaveProvider);
+    final isMutating = leaveApproveState.isLoading || leaveRejectState.isLoading;
 
     return HrModuleScaffold(
       screen: HrScreen.leave,
@@ -57,11 +62,13 @@ class HrLeaveScreen extends ConsumerWidget {
           const SizedBox(height: AksharaSpacing.s4),
           _buildBody(
             context,
+            ref: ref,
             isLoading: isLoading,
             isError: isError,
             isEmpty: isEmpty,
             data: data,
             requests: requests,
+            isMutating: isMutating,
           ),
         ],
       ),
@@ -70,11 +77,13 @@ class HrLeaveScreen extends ConsumerWidget {
 
   Widget _buildBody(
     BuildContext context, {
+    required WidgetRef ref,
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
     required HrLeaveData? data,
     required List<HrLeaveRequest> requests,
+    required bool isMutating,
   }) {
     if (isLoading) {
       return const Padding(
@@ -105,7 +114,22 @@ class HrLeaveScreen extends ConsumerWidget {
           style: context.aksharaText.bodySmall,
         ),
         const SizedBox(height: AksharaSpacing.s3),
-        _LeaveTable(requests: requests),
+        _LeaveTable(
+          requests: requests,
+          isMutating: isMutating,
+          onApprove: (request) => _resolveLeaveRequest(
+            context,
+            ref,
+            request: request,
+            approve: true,
+          ),
+          onReject: (request) => _resolveLeaveRequest(
+            context,
+            ref,
+            request: request,
+            approve: false,
+          ),
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         if (!isMobile)
           HrSegmentPanel(
@@ -130,12 +154,102 @@ class HrLeaveScreen extends ConsumerWidget {
       ],
     );
   }
+
+  Future<void> _resolveLeaveRequest(
+    BuildContext context,
+    WidgetRef ref, {
+    required HrLeaveRequest request,
+    required bool approve,
+  }) async {
+    final comment = await _showCommentDialog(context, approve: approve);
+    if (!context.mounted || comment == null) return;
+
+    final mutationRequest = ApproveLeaveRequest(comment: comment);
+    if (approve) {
+      await ref.read(approveHrLeaveProvider.notifier).execute(
+            leaveRequestId: request.id,
+            request: mutationRequest,
+          );
+    } else {
+      await ref.read(rejectHrLeaveProvider.notifier).execute(
+            leaveRequestId: request.id,
+            request: mutationRequest,
+          );
+    }
+    if (!context.mounted) return;
+    final mutationState = approve
+        ? ref.read(approveHrLeaveProvider)
+        : ref.read(rejectHrLeaveProvider);
+    if (mutationState.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            approve
+                ? 'Unable to approve leave request.'
+                : 'Unable to reject leave request.',
+          ),
+        ),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hrLeaveApprovalSnackbar,
+        content: Text(
+          approve
+              ? 'Leave request approved.'
+              : 'Leave request rejected.',
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _showCommentDialog(
+    BuildContext context, {
+    required bool approve,
+  }) {
+    final controller = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(approve ? 'Approve leave' : 'Reject leave'),
+        content: TextField(
+          controller: controller,
+          minLines: 2,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'Comment',
+            hintText: 'Add manager note',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context).pop(controller.text.trim()),
+            child: Text(approve ? 'Approve' : 'Reject'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _LeaveTable extends StatelessWidget {
-  const _LeaveTable({required this.requests});
+  const _LeaveTable({
+    required this.requests,
+    required this.isMutating,
+    required this.onApprove,
+    required this.onReject,
+  });
 
   final List<HrLeaveRequest> requests;
+  final bool isMutating;
+  final Future<void> Function(HrLeaveRequest request) onApprove;
+  final Future<void> Function(HrLeaveRequest request) onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +257,12 @@ class _LeaveTable extends StatelessWidget {
       return Column(
         children: [
           for (final request in requests) ...[
-            _LeaveCard(request: request),
+            _LeaveCard(
+              request: request,
+              isMutating: isMutating,
+              onApprove: onApprove,
+              onReject: onReject,
+            ),
             const SizedBox(height: AksharaSpacing.s3),
           ],
         ],
@@ -167,6 +286,7 @@ class _LeaveTable extends StatelessWidget {
               DataColumn(label: Text('Days')),
               DataColumn(label: Text('Approver')),
               DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Actions')),
             ],
             rows: [
               for (final request in requests)
@@ -180,6 +300,14 @@ class _LeaveTable extends StatelessWidget {
                     DataCell(Text('${request.days}')),
                     DataCell(Text(request.approver)),
                     DataCell(_LeaveStatusChip(status: request.status)),
+                    DataCell(
+                      _LeaveActionButtons(
+                        request: request,
+                        isMutating: isMutating,
+                        onApprove: onApprove,
+                        onReject: onReject,
+                      ),
+                    ),
                   ],
                 ),
             ],
@@ -191,9 +319,17 @@ class _LeaveTable extends StatelessWidget {
 }
 
 class _LeaveCard extends StatelessWidget {
-  const _LeaveCard({required this.request});
+  const _LeaveCard({
+    required this.request,
+    required this.isMutating,
+    required this.onApprove,
+    required this.onReject,
+  });
 
   final HrLeaveRequest request;
+  final bool isMutating;
+  final Future<void> Function(HrLeaveRequest request) onApprove;
+  final Future<void> Function(HrLeaveRequest request) onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -220,9 +356,57 @@ class _LeaveCard extends StatelessWidget {
                 '${request.leaveType.name} · ${request.fromDate} – ${request.toDate}',
                 style: text.bodySmall,
               ),
+              if (request.status == HrLeaveStatus.pending) ...[
+                const SizedBox(height: AksharaSpacing.s3),
+                _LeaveActionButtons(
+                  request: request,
+                  isMutating: isMutating,
+                  onApprove: onApprove,
+                  onReject: onReject,
+                ),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LeaveActionButtons extends StatelessWidget {
+  const _LeaveActionButtons({
+    required this.request,
+    required this.isMutating,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  final HrLeaveRequest request;
+  final bool isMutating;
+  final Future<void> Function(HrLeaveRequest request) onApprove;
+  final Future<void> Function(HrLeaveRequest request) onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    if (request.status != HrLeaveStatus.pending) {
+      return const Text('—');
+    }
+    return AksharaManageAction(
+      permission: Permission.manageHr,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton(
+            key: QaTestKeys.hrApproveLeaveButton(request.id),
+            onPressed: isMutating ? null : () => onApprove(request),
+            child: const Text('Approve'),
+          ),
+          TextButton(
+            key: QaTestKeys.hrRejectLeaveButton(request.id),
+            onPressed: isMutating ? null : () => onReject(request),
+            child: const Text('Reject'),
+          ),
+        ],
       ),
     );
   }

@@ -20,6 +20,18 @@ abstract class HrRepository {
     required CreateHrLeaveRequest request,
   });
 
+  Future<HrLeaveRequest> approveLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveRequestId,
+    required ApproveLeaveRequest request,
+  });
+
+  Future<HrLeaveRequest> rejectLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveRequestId,
+    required ApproveLeaveRequest request,
+  });
+
   Future<HrPayrollRun> processPayrollRun({
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,

@@ -1,9 +1,9 @@
 # Akshara Master Feature Registry
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Date:** June 2026  
 **Purpose:** Single source of truth — every planned feature traced to source documents and current implementation status  
-**Baseline:** ERP completion ~81% · QA readiness ~95% · P0 closed 9/10
+**Baseline:** ERP completion ~91% · QA readiness ~97% · Batch A P1 Closure complete · Future Vision preserved
 
 ---
 
@@ -14,7 +14,8 @@
 | Was feature X in the original vision? | Find row → **Original source** |
 | Is it built? | **Classification** + **Validation** columns |
 | What files/tests cover it? | **Implementation refs** |
-| What's next? | `docs/AKSHARA_IMPLEMENTATION_BACKLOG.md` |
+| What's next? | `docs/AKSHARA_FINAL_ROADMAP.md` M6–M13 |
+| Is every FutureVision item tracked? | **FutureVision Capability Registry** (below) + `FUTURE_VISION_MASTER_INDEX.md` |
 
 **Classification key**
 
@@ -51,7 +52,75 @@
 | AUDIT | `docs/OWNER_DASHBOARD_AUDIT.md` | Owner dashboard functional audit |
 | QA | `docs/QA/autonomous_backlog.md` | Journey QA backlog |
 | AGENTS | `AGENTS.md` | Agent ownership boundaries |
-| DEBT | `docs/TechnicalDebtRegister.md` | Open technical debt |
+| FUTURE | `docs/FUTURE_VISION_MASTER_INDEX.md` | Permanent capability index |
+| PRESERVE | `docs/FUTURE_VISION_PRESERVATION_AUDIT.md` | Preservation audit |
+
+---
+
+## FutureVision Capability Registry
+
+**Rule:** No FutureVision item may exist without a row here. Canonical index: `docs/FUTURE_VISION_MASTER_INDEX.md`.
+
+| ID | Feature | Priority | Status | Completion % | Milestone | Test | Prod | Registry module |
+|----|---------|----------|--------|:------------:|-----------|:----:|:----:|-----------------|
+| FV-01 | AI Communication Assistant | P1 | Partial | 55 | M8 | Partial | No | Notifications |
+| FV-02 | Communication Hub Expansion | P1 | Partial | 45 | M6 | Partial | No | Notifications |
+| FV-03 | Student Risk Intelligence | P2 | Partial | 60 | M8 | Yes | No | Intelligence |
+| FV-04 | Parent Guidance Assistant | P2 | Partial | 50 | M8 | Partial | No | Mobile / AI |
+| FV-05 | Principal Copilot | P2 | Partial | 65 | M8 | Partial | No | Management / AI |
+| FV-06 | Teacher Copilot | P2 | Partial | 50 | M8 | Partial | No | Teacher |
+| FV-07 | Multi-Role Employee System | P3 | Partial | 40 | M10 | Contract | No | HR / Phase5 |
+| FV-08 | Smart Timetable Expansion | P2 | Partial | 85 | M7 | Yes | Partial | Timetable |
+| FV-09 | Workload Engine Expansion | P2 | Partial | 35 | M7 | Contract | No | Timetable / Teacher |
+| FV-10 | Inventory & Asset Expansion | P3 | Partial | 60 | M6 | Yes | No | Inventory |
+| FV-11 | Book Distribution System | P3 | Partial | 75 | M7 | Partial | No | Evolution |
+| FV-12 | Inventory Replacement Workflow | P3 | Planned | 0 | M7 | No | No | Inventory |
+| FV-13 | Unified Payment Request Engine | P1 | Partial | 55 | M6 | Yes | No | Finance |
+| FV-14 | Online Payment Enhancements | P1 | Partial | 60 | M6 | Yes | No | Finance / Parent |
+| FV-15 | QR Payment Support | P1 | Planned | 0 | M6 | No | No | Finance |
+| FV-16 | Offline Payment Tracking | P1 | Planned | 0 | M6 | No | No | Finance |
+| FV-17 | School Memories | P2 | Partial | 70 | M7 | Partial | No | Evolution |
+| FV-18 | Akshara Growth Platform | P2 | Partial | 45 | M7 | Partial | No | Marketing |
+| FV-19 | Achievement Promotion Engine | P2 | Partial | 65 | M7 | Partial | No | Evolution |
+| FV-20 | School Branding System | P2 | Planned | 0 | M13 | No | No | Platform |
+| FV-21 | Academic Year Transition Engine | P1 | Shipped | 100 | M1 ✅ | Yes | Partial | SIS |
+| FV-22 | AI Education Suite (umbrella) | P2 | Shipped | 95 | M7 ✅ | Yes | No | Academic / AI |
+| FV-23 | AI Question Paper Generator | P2 | Shipped | 95 | M7 ✅ | Yes | No | Academic |
+| FV-24 | AI Question Bank | P2 | Shipped | 95 | M7 ✅ | Yes | No | Academic |
+| FV-25 | AI Homework Generator | P2 | Shipped | 90 | M7 ✅ | Yes | No | Academic |
+| FV-26 | AI Worksheet Generator | P2 | Shipped | 90 | M7 ✅ | Yes | No | Academic |
+| FV-27 | AI Report Card Remarks | P2 | Shipped | 90 | M7 ✅ | Yes | No | Academic |
+| FV-28 | AI Parent Meeting Summary | P2 | Planned | 0 | M8 | No | No | Intelligence |
+| FV-29 | Universal AI Assistant | P3 | Planned | 20 | M8 | Partial | No | Platform / AI |
+| FV-30 | Universal Organization Builder | P3 | Design | 10 | M10 | No | No | Platform |
+| FV-31 | Dynamic Widget Platform | P3 | Design | 15 | M11 | No | No | Platform / Management |
+| FV-32 | Multi-Industry Vertical Framework | P4 | Design | 5 | M13 | No | No | Platform |
+| FV-33 | Salon ERP Foundation | P4 | Planned | 0 | M13 | No | No | Platform |
+| FV-34 | Hospital ERP Foundation | P4 | Planned | 0 | M13 | No | No | Platform |
+| FV-35 | Restaurant ERP Foundation | P4 | Planned | 0 | M13 | No | No | Platform |
+| FV-36 | Hostel ERP Foundation (full) | P4 | Partial | 30 | M13 | Yes | No | Hostel |
+| FV-A | AI School Setup Wizard | P3 | Design | 25 | M10 | Partial | No | Platform |
+| FV-P4-01 | Security & Penetration Testing | P4 | Design | 5 | M12 | No | No | Platform |
+| FV-P4-02 | Observability Platform | P4 | Design | 10 | M12 | Partial | No | Platform |
+| FV-P4-03 | Franchise Management | P4 | Design | 5 | M9 | No | No | Platform |
+| FV-P4-04 | Multi-Branch Management | P4 | Design | 5 | M9 | No | No | Platform |
+| FV-P4-05 | WhatsApp Business Integration | P1/P2 | Partial | 35 | M6/M8 | Contract | No | Notifications |
+| FV-P4-06 | Universal Workflow Engine | P3 | Shipped | 90 | M3 ✅ | Yes | Partial | Operations |
+| FV-PLAT-01 | Universal Employee System | P3 | Design | 10 | M10 | No | No | Platform |
+| FV-PLAT-02 | Multi-School SaaS Operations | P4 | Partial | 40 | M9 | Partial | No | Control Center |
+| FV-PLAT-03 | Director Portal (DR-01–09) | P4 | Spec | 5 | M9 | No | No | Director |
+| FV-PLAT-04 | Organization / Trust Intelligence | P4 | Partial | 55 | M9 | Yes | No | Control Center |
+| FV-PLAT-05 | Resource Optimization Engine | P2 | Planned | 5 | M8 | No | No | Intelligence |
+| FV-PLAT-06 | Production Readiness Program | P4 | Partial | 70 | M12 | Yes | Partial | Platform |
+| FV-PLAT-07 | AI Content Generation (platform) | P2 | Design | 15 | M8 | No | No | Academic / AI |
+| FV-PLAT-08 | Tenant Isolation Verification | P4 | Partial | 80 | M12 | Yes | Partial | Platform |
+| FV-PLAT-09 | Monitoring & Alerting | P4 | Planned | 5 | M12 | No | No | Platform |
+| FV-PLAT-10 | Live AI Inference | P3 | Planned | 15 | M8 | Partial | No | Intelligence / AI |
+| FV-PLAT-11 | White Label Platform Expansion | P4 | Partial | 20 | M13 | No | No | Control Center |
+| FV-PLAT-12 | Security Hardening | P4 | Partial | 75 | M12 | Yes | Partial | Platform |
+| FV-PLAT-13 | RLS Enforcement | P4 | Partial | 65 | M12 | Yes | Partial | Platform |
+
+**Status key:** Shipped = classification A + milestone ✅ · Partial = B/D · Design/Spec = architecture doc only · Planned = E/not started
 
 ---
 
@@ -93,7 +162,7 @@
 | Document verification queue | Admissions | SPEC-Admissions | Compliance | — | **B** | Yes | Partial | Partial | No | Read screens | Write workflow |
 | Fee handoff to Finance | Admissions | SPEC-Admissions | Revenue | Finance | **B** | Yes | Partial | Yes | No | FN handoff queue | — |
 | Admissions analytics | Admissions | SPEC-Admissions AD-09 | Funnel insight | — | **B** | Yes | Read | Partial | No | Reports screens | Export |
-| Settings persistence | Admissions | PLAN P0#9 | Config consistency | Management settings | **E** | No | No | No | No | MG-08 stub | **P0 open** |
+| Settings persistence | Admissions | PLAN P0#9 | Config consistency | Management settings | **A** | Yes | Yes | Yes | No | `updateSettings`, Patrol | — |
 | Bulk lead import | Admissions | PLAN P3 | Scale ops | — | **E** | No | No | No | No | — | Future |
 | Marketing → AD funnel | Admissions | SPEC-Marketing | Growth | Marketing | **D** | Yes | Mock | Partial | No | Growth platform reads | Integration |
 | Campaign automation | Admissions | VISION #18 | Lead gen | Marketing | **F** | Partial | Partial | No | No | Growth v11.4 | Not AD-native |
@@ -133,7 +202,7 @@
 | Reconciliation UI | Finance | ROAD v7.2c | Audit | — | **B** | Yes | Partial | Partial | No | FN reconciliation | — |
 | **Invoice create UI** | Finance | PLAN **P0#6**, SPEC-FN | Billing | Repo methods exist | **B** | Yes | Partial | Yes | No | Fee assignment invoice panel | Patrol pending |
 | **Cancel collection UI** | Finance | PLAN P0#6 | Corrections | Invoice | **B** | Yes | Yes | Yes | No | Collection detail cancel | Patrol pending |
-| Receipt PDF export | Finance | AUDIT, PLAN P1 | Compliance | — | **D** | Yes | Snackbar only | Partial | No | Export stubs | Real PDF |
+| Receipt PDF export | Finance | AUDIT, PLAN P1 | Compliance | — | **A** | Yes | Yes | Yes | No | `finance_receipt_pdf_service.dart`, Patrol | — |
 | Payment engine (Razorpay) | Finance | VISION #13–16, ROAD | Online pay | Parent app | **B** | Yes | Partial | Yes | No | Parent payment | Production keys |
 | QR / offline payment | Finance | VISION #15–16 | Counter pay | — | **E** | No | No | No | No | — | Future |
 | Finance Copilot | Finance | ROAD v13.3 | Insights | Intelligence | **D** | Yes | Mock | Contract | No | `finance_copilot_screen.dart` | Live AI |
@@ -211,7 +280,7 @@
 | Employee directory | HR | SPEC-HR | Staff registry | — | **A** | Yes | Yes | Yes | No | HR read | — |
 | **Employee CRUD** | HR | PLAN P0#4 | Onboarding | RBAC | **A** | Yes | Yes | Yes | Patrol | `hr_mutations_provider.dart` | — |
 | Leave request create | HR | SPEC-HR | Time off | — | **A** | Yes | Yes | Patrol | No | HR mutations | — |
-| Leave approve/reject (manager) | HR | PLAN P1 | Governance | RBAC | **E** | No | No | No | No | — | **Gap** |
+| Leave approve/reject (manager) | HR | PLAN P1 | Governance | RBAC | **A** | Yes | Yes | Yes | No | `approveHrLeaveProvider`, Patrol | — |
 | Payroll run process | HR | PLAN Phase 1 | Compensation | Finance | **A** | Yes | Yes | Patrol | No | HR payroll mutations | — |
 | Payroll adjust / mark paid | HR | PLAN P1–P2 | Payroll completion | Finance | **B** | Yes | Partial | Partial | No | Read + export snackbar | Writes |
 | Recruitment pipeline | HR | SPEC-HR | Hiring | — | **B** | Yes | Read | Partial | No | HR screens | Writes |
@@ -245,7 +314,7 @@
 | Library issue / return | Library | PLAN P0#2 | **A** | Done | `library_mutations_provider.dart`, Patrol |
 | Library fines / catalog writes | Library | PLAN P1 | **B** | Open | Mock reads |
 | Inventory lifecycle event | Inventory | PLAN Phase 1 | **A** | Done | Mutations + Patrol |
-| **PO approve / receive** | Inventory | PLAN **P0#7** | **B** | **P0 open** | Partial handoff |
+| **PO approve / receive** | Inventory | PLAN P1 | **A** | Done | Approve/receive handoff + Patrol |
 | Asset approve | Inventory | PLAN P0#7 | **E** | **P0 open** | — |
 | Alumni registry | Alumni | SPEC-Alumni | **D** | P1 events | Read-only mock |
 | Alumni events / donations writes | Alumni | PLAN P1–P2 | **E** | Open | — |
@@ -257,13 +326,13 @@
 | Feature | Module | Source | Business value | Class | In code | Functional | Tested | Gaps |
 |---------|--------|--------|----------------|-------|---------|------------|--------|------|
 | Notification inbox (read) | Notifications | SPEC-NT | Awareness | **B** | Yes | Read | Partial | No broadcast |
-| **Broadcast / template admin** | Notifications | PLAN **P0#10** | School comms | **E** | Partial | No | No | **P0 open** |
+| **Broadcast / template admin** | Notifications | PLAN P1 | School comms | **A** | Yes | Yes | Yes | No | `broadcast_admin_screen.dart`, Patrol | — |
 | Communication Hub | Notifications | ROAD v7.1 | Unified comms | **D** | Yes | Stub providers | Partial | Live channels |
 | AI Communication Assistant | Notifications | VISION #1, ROAD v9.0 | Draft messages | **D** | Yes | Mock | Partial | — |
 | WhatsApp provider (MSG91) | Notifications | ROAD v12.0 | Delivery | **B** | Yes | Partial | Contract | Production config |
-| **Parent continuity after reassignment** | Communication | Product vision | UX trust | **E** | No | No | No | **Vision gap** |
-| **Notification migration on reassignment** | Communication | Product vision | Data integrity | **E** | No | No | No | **Vision gap** |
-| **Message ownership migration** | Communication | Product vision | Thread continuity | **E** | No | No | No | **Vision gap** |
+| **Parent continuity after reassignment** | Communication | Product vision | UX trust | **A** | Yes | Yes | Yes | M2 shipped |
+| **Notification migration on reassignment** | Communication | Product vision | Data integrity | **A** | Yes | Yes | Yes | M2 shipped |
+| **Message ownership migration** | Communication | Product vision | Thread continuity | **A** | Yes | Yes | Yes | M2 shipped |
 
 ---
 
@@ -293,9 +362,9 @@
 
 | Feature | Module | Source | Class | In code | Functional | Gaps |
 |---------|--------|--------|-------|---------|------------|------|
-| **Workflow automation engine** | Operations | VISION design/Workflow | **E** | No | No | No rules engine |
+| **Workflow automation engine** | Operations | VISION FV-P4-06 | **A** | Yes | Yes | M3 · `workflow_engine.dart` |
 | Approval automation (rules) | Operations | Product vision | **B** | Partial | Manual approvals only | Management P0#1 done; no auto-routing |
-| **Smart routing (approvals/tasks)** | Operations | Product vision | **E** | No | No | — |
+| **Smart routing (approvals/tasks)** | Operations | Product vision | **A** | Yes | Yes | M3 · `autoRouteToRole` |
 | Operations Hub alerts | Operations | ROAD v10.0 | **D** | Yes | Display-only | No actions |
 | Audit workflow events | Platform | AUDIT spec | **A** | Yes | Client queue | Server ingestion partial |
 
@@ -322,18 +391,30 @@
 | School Memories | VISION #17, ROAD v10.2 | **B** | Partial | Evolution / memories routes |
 | Achievement Promotion Engine | VISION #19, ROAD v10.3 | **C** | Mock workflow | `promotion/` |
 | Akshara Growth Platform | VISION #18 | **B** | Partial | Growth / marketing reads |
-| School Branding | VISION #20 | **E** | Not implemented | Design future |
-| AI Parent Meeting Summary | VISION #28 | **E** | Not implemented | Intelligence backlog |
-| Universal AI Assistant | VISION #29 | **E** | Not implemented | P3 |
-| Universal Organization Builder | VISION #30 | **E** | Design only | `design/Universal-Organization-Builder-v2.md` |
-| Dynamic Widget Platform | VISION #31 | **E** | Schema seed only | Ops Hub widgets |
-| Multi-Industry Foundation | VISION #32 | **E** | Not implemented | P3 |
-| Salon / Hospital / Restaurant / Hostel packs | VISION #33–36 | **E** | Not implemented | P3 |
-| AI School Setup Wizard | VISION Section A | **E** | Design v10.6 | Onboarding partial |
-| Inventory Replacement Workflow | VISION #12 | **E** | Not implemented | Inventory P2 |
-| Security & Pen Testing | VISION P4 | **E** | Program not started | — |
-| Observability & Monitoring | VISION P4 | **E** | Not implemented | — |
-| Multi-School SaaS / Franchise / Multi-Branch | VISION P4 | **E** | Not implemented | Control Center partial |
+| School Branding | VISION #20 | **E** | Not implemented | M13 · Design future |
+| AI Parent Meeting Summary | VISION #28 | **E** | Not implemented | M8 · Intelligence backlog |
+| Universal AI Assistant | VISION #29 | **E** | Not implemented | M8 · FV-PLAT-10 dependency |
+| Universal Organization Builder | VISION #30 | **E** | Design only | M10 · `design/Universal-Organization-Builder-v2.md` |
+| Dynamic Widget Platform | VISION #31 | **E** | Schema seed only | M11 · Ops Hub widgets |
+| Multi-Industry Foundation | VISION #32 | **E** | Not implemented | M13 |
+| Salon / Hospital / Restaurant / Hostel packs | VISION #33–36 | **E** | Not implemented | M13 |
+| AI School Setup Wizard | VISION Section A | **E** | Design v10.6 | M10 · Onboarding partial |
+| Inventory Replacement Workflow | VISION #12 | **E** | Not implemented | M7 · Inventory |
+| Security & Pen Testing | VISION FV-P4-01 | **E** | Program not started | M12 |
+| Observability Platform | VISION FV-P4-02 | **E** | Not implemented | M12 |
+| Multi-School SaaS Operations | VISION FV-PLAT-02 | **B** | Partial | M9 · Control Center |
+| Franchise Management | VISION FV-P4-03 | **E** | Design only | M9 |
+| Multi-Branch Management | VISION FV-P4-04 | **E** | Design only | M9 |
+| Director Portal | Director.md FV-PLAT-03 | **E** | Spec only | M9 · DR-01–09 zero Flutter |
+| Resource Optimization Engine | FV-PLAT-05 | **E** | Not implemented | M8 |
+| Production Readiness Program | FV-PLAT-06 | **B** | Checklist 70% | M12 · `ProductionReadinessChecklist.md` |
+| AI Content Generation (platform) | FV-PLAT-07 | **E** | Design only | M8 · `design/AI-Content-Generation.md` |
+| Tenant Isolation Verification | FV-PLAT-08 | **B** | 213 probes | M12 |
+| Monitoring & Alerting | FV-PLAT-09 | **E** | Not implemented | M12 |
+| Live AI Inference | FV-PLAT-10 | **E** | Mock only | M8 |
+| White Label Platform Expansion | FV-PLAT-11 | **B** | ACC-08 placeholder | M13 |
+| Universal Employee System | FV-PLAT-01 | **E** | Design only | M10 · `design/Universal-Employee-System.md` |
+| Organization / Trust Intelligence | FV-PLAT-04 | **B** | M4 partial | M9 · Organization tab |
 
 ---
 
@@ -346,7 +427,7 @@
 | Mutation permission registry | PLAN **P0#8** | **B** | Partial registry | `mutation_permission_registry.dart` |
 | Mobile mutation audit | PLAN P0#8 | **E** | Not complete | — |
 | Audit client queue | ROAD v2.7 | **A** | Done | `audit/` |
-| Server RLS / RBAC | DEBT TD-P0-01 | **E** | Not production | Technical debt |
+| Server RLS / RBAC | DEBT FV-PLAT-13 | **B** | Partial — TD-P0-01 | M12 · Technical debt |
 | API write parity (all modules) | PLAN P2 | **B** | Stubs | `ApiNotConnectedException` pattern |
 
 ---
@@ -367,9 +448,9 @@
 |-------|--------|
 | P0 item closed | Update row classification → A; add refs |
 | New spec in `docs/*.md` | Add rows with SPEC source |
-| Vision doc update | Sync `AKSHARA_VISION_GAP_ANALYSIS.md` |
-| Release tag | Agent F updates registry + backlog |
+| Vision doc update | Sync `FUTURE_VISION_MASTER_INDEX.md` + preservation audit |
+| Release tag | Agent F updates registry + backlog + master index |
 
 **Owners:** Agent F (docs) · Agent B/E validate code/test columns · Agent G gates releases
 
-**Related:** `docs/AKSHARA_VISION_GAP_ANALYSIS.md` · `docs/AKSHARA_IMPLEMENTATION_BACKLOG.md` · `docs/ERP_FINAL_COMPLETION_PLAN.md`
+**Related:** `docs/FUTURE_VISION_MASTER_INDEX.md` · `docs/FUTURE_VISION_PRESERVATION_AUDIT.md` · `docs/AKSHARA_VISION_GAP_ANALYSIS.md` · `docs/AKSHARA_IMPLEMENTATION_BACKLOG.md` · `docs/ERP_FINAL_COMPLETION_PLAN.md`

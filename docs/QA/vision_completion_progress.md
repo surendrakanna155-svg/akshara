@@ -3,7 +3,24 @@
 **Program:** Akshara ERP Vision Completion + Intelligence  
 **Started:** June 2026  
 **Registry SSOT:** `docs/AKSHARA_MASTER_FEATURE_REGISTRY.md`  
-**Last updated:** June 2026 (session 5 — Four Milestone Completion Program)
+**Last updated:** June 2026 (session 6 — Batch A P1 Closure Program)
+
+---
+
+## Session 6 — Batch A P1 Closure Program
+
+| ID | Feature | Status |
+|----|---------|--------|
+| P1-04 | Inventory PO approve + receive | ✅ |
+| P1-05 | Admissions settings persistence | ✅ |
+| P1-06 | Notifications broadcast admin | ✅ |
+| P1-07 | RBAC mutation registry sync | ✅ |
+| P1-12 | HR leave approve/reject | ✅ |
+| P1-13 | Finance receipt PDF | ✅ |
+
+**Metrics after session 6:** ERP ~91% · Vision ~56% · Intelligence ~72% · Dashboard ~58% · Copilot ~80% · Tests **1412** · Patrol **~49**
+
+See `docs/BATCH_A_COMPLETION_REPORT.md` and `docs/RBAC_SYNC_REPORT.md`.
 
 ---
 

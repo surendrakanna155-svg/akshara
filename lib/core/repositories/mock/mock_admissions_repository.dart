@@ -13,7 +13,8 @@ import 'mock_admissions_write_store.dart';
 /// In-memory admissions data for MVP screens.
 class MockAdmissionsRepository implements AdmissionsRepository {
   @override
-  Future<AdmissionsDashboardData> getDashboard({required RepositoryQuery query}) async {
+  Future<AdmissionsDashboardData> getDashboard(
+      {required RepositoryQuery query}) async {
     return AdmissionsDashboardData(
       kpis: const [
         AdmissionsKpi(
@@ -683,7 +684,8 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<AdmissionsReportsData> getReports({required RepositoryQuery query}) async {
+  Future<AdmissionsReportsData> getReports(
+      {required RepositoryQuery query}) async {
     return const AdmissionsReportsData(
       funnelSegments: [
         ChartSegment(label: 'Enquiries', value: 312, percent: 100),
@@ -772,102 +774,115 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
-  Future<AdmissionsSettingsData> getSettings({required RepositoryQuery query}) async {
-    return AdmissionsSettingsData(
-      leadStages: [
-        for (final stage in LeadStage.values)
-          if (stage != LeadStage.lost)
-            LeadStageConfig(
-              stage: stage,
-              enabled: true,
-              autoAdvanceDays: switch (stage) {
-                LeadStage.newEnquiry => 3,
-                LeadStage.contacted => 5,
-                LeadStage.schoolVisit => 7,
-                _ => null,
-              },
-            ),
-      ],
-      leadScores: const [
-        LeadScoreConfig(score: LeadScore.hot, minEngagement: 80, followUpHours: 4),
-        LeadScoreConfig(score: LeadScore.warm, minEngagement: 50, followUpHours: 24),
-        LeadScoreConfig(score: LeadScore.cold, minEngagement: 20, followUpHours: 72),
-      ],
-      workflowSteps: const [
-        ApplicationWorkflowConfig(
-          status: ApplicationStatus.draft,
-          enabled: true,
-          requiresPrincipalApproval: false,
-        ),
-        ApplicationWorkflowConfig(
-          status: ApplicationStatus.submitted,
-          enabled: true,
-          requiresPrincipalApproval: false,
-        ),
-        ApplicationWorkflowConfig(
-          status: ApplicationStatus.documentsPending,
-          enabled: true,
-          requiresPrincipalApproval: false,
-        ),
-        ApplicationWorkflowConfig(
-          status: ApplicationStatus.underReview,
-          enabled: true,
-          requiresPrincipalApproval: true,
-        ),
-        ApplicationWorkflowConfig(
-          status: ApplicationStatus.approved,
-          enabled: true,
-          requiresPrincipalApproval: false,
-        ),
-      ],
-      assignmentRules: const [
-        CounselorAssignmentRule(
-          id: 'rule_1',
-          label: 'Round-robin by class band',
-          strategy: 'Round-robin · Primary vs Secondary',
-          enabled: true,
-        ),
-        CounselorAssignmentRule(
-          id: 'rule_2',
-          label: 'Walk-in desk assignment',
-          strategy: 'First available counselor',
-          enabled: true,
-        ),
-        CounselorAssignmentRule(
-          id: 'rule_3',
-          label: 'Marketing campaign owner',
-          strategy: 'Retain campaign counselor',
-          enabled: false,
-        ),
-      ],
-      notificationTemplates: const [
-        NotificationTemplate(
-          id: 'tpl_1',
-          name: 'Visit reminder',
-          channel: 'WhatsApp',
-          preview: 'Reminder: School visit scheduled for {{date}} at {{time}}.',
-          enabled: true,
-        ),
-        NotificationTemplate(
-          id: 'tpl_2',
-          name: 'Application received',
-          channel: 'SMS',
-          preview: 'We received {{student}} application. Ref: {{app_id}}.',
-          enabled: true,
-        ),
-        NotificationTemplate(
-          id: 'tpl_3',
-          name: 'Admission approved',
-          channel: 'Email',
-          preview: 'Congratulations! {{student}} admission is approved.',
-          enabled: true,
-        ),
-      ],
-    );
+  Future<AdmissionsSettingsData> getSettings(
+      {required RepositoryQuery query}) async {
+    return _store.settings ??= _defaultSettings();
   }
 
   @override
-  Future<EnrollmentFormState> getEnrollmentPrefill({required RepositoryQuery query}) async {
+  Future<AdmissionsSettingsData> updateSettings({
+    required RepositoryQuery query,
+    required UpdateAdmissionsSettingsRequest request,
+  }) async {
+    final current = await getSettings(query: query);
+    final updates = {
+      for (final update in request.updates)
+        '${update.sectionId}:${update.itemId}': update.value,
+    };
+    final next = AdmissionsSettingsData(
+      leadStages: [
+        for (final stage in current.leadStages)
+          LeadStageConfig(
+            stage: stage.stage,
+            enabled: _resolveBoolUpdate(
+              updates,
+              sectionId: 'leadStages',
+              itemId: '${stage.stage.name}.enabled',
+              fallback: stage.enabled,
+            ),
+            autoAdvanceDays: _resolveIntUpdate(
+              updates,
+              sectionId: 'leadStages',
+              itemId: '${stage.stage.name}.autoAdvanceDays',
+              fallback: stage.autoAdvanceDays,
+            ),
+          ),
+      ],
+      leadScores: [
+        for (final score in current.leadScores)
+          LeadScoreConfig(
+            score: score.score,
+            minEngagement: _resolveIntUpdate(
+                  updates,
+                  sectionId: 'leadScores',
+                  itemId: '${score.score.name}.minEngagement',
+                  fallback: score.minEngagement,
+                ) ??
+                score.minEngagement,
+            followUpHours: _resolveIntUpdate(
+                  updates,
+                  sectionId: 'leadScores',
+                  itemId: '${score.score.name}.followUpHours',
+                  fallback: score.followUpHours,
+                ) ??
+                score.followUpHours,
+          ),
+      ],
+      workflowSteps: [
+        for (final step in current.workflowSteps)
+          ApplicationWorkflowConfig(
+            status: step.status,
+            enabled: _resolveBoolUpdate(
+              updates,
+              sectionId: 'workflowSteps',
+              itemId: '${step.status.name}.enabled',
+              fallback: step.enabled,
+            ),
+            requiresPrincipalApproval: _resolveBoolUpdate(
+              updates,
+              sectionId: 'workflowSteps',
+              itemId: '${step.status.name}.requiresPrincipalApproval',
+              fallback: step.requiresPrincipalApproval,
+            ),
+          ),
+      ],
+      assignmentRules: [
+        for (final rule in current.assignmentRules)
+          CounselorAssignmentRule(
+            id: rule.id,
+            label: rule.label,
+            strategy: rule.strategy,
+            enabled: _resolveBoolUpdate(
+              updates,
+              sectionId: 'assignmentRules',
+              itemId: '${rule.id}.enabled',
+              fallback: rule.enabled,
+            ),
+          ),
+      ],
+      notificationTemplates: [
+        for (final template in current.notificationTemplates)
+          NotificationTemplate(
+            id: template.id,
+            name: template.name,
+            channel: template.channel,
+            preview: template.preview,
+            enabled: _resolveBoolUpdate(
+              updates,
+              sectionId: 'notificationTemplates',
+              itemId: '${template.id}.enabled',
+              fallback: template.enabled,
+            ),
+          ),
+      ],
+    );
+    _store.settings = next;
+    return next;
+  }
+
+  @override
+  Future<EnrollmentFormState> getEnrollmentPrefill(
+      {required RepositoryQuery query}) async {
     final lastLead = _store.lastCreatedLead;
     if (lastLead != null) {
       return EnrollmentFormState(
@@ -942,6 +957,125 @@ class MockAdmissionsRepository implements AdmissionsRepository {
     ];
   }
 
+  AdmissionsSettingsData _defaultSettings() {
+    return AdmissionsSettingsData(
+      leadStages: [
+        for (final stage in LeadStage.values)
+          if (stage != LeadStage.lost)
+            LeadStageConfig(
+              stage: stage,
+              enabled: true,
+              autoAdvanceDays: switch (stage) {
+                LeadStage.newEnquiry => 3,
+                LeadStage.contacted => 5,
+                LeadStage.schoolVisit => 7,
+                _ => null,
+              },
+            ),
+      ],
+      leadScores: const [
+        LeadScoreConfig(
+            score: LeadScore.hot, minEngagement: 80, followUpHours: 4),
+        LeadScoreConfig(
+            score: LeadScore.warm, minEngagement: 50, followUpHours: 24),
+        LeadScoreConfig(
+            score: LeadScore.cold, minEngagement: 20, followUpHours: 72),
+      ],
+      workflowSteps: const [
+        ApplicationWorkflowConfig(
+          status: ApplicationStatus.draft,
+          enabled: true,
+          requiresPrincipalApproval: false,
+        ),
+        ApplicationWorkflowConfig(
+          status: ApplicationStatus.submitted,
+          enabled: true,
+          requiresPrincipalApproval: false,
+        ),
+        ApplicationWorkflowConfig(
+          status: ApplicationStatus.documentsPending,
+          enabled: true,
+          requiresPrincipalApproval: false,
+        ),
+        ApplicationWorkflowConfig(
+          status: ApplicationStatus.underReview,
+          enabled: true,
+          requiresPrincipalApproval: true,
+        ),
+        ApplicationWorkflowConfig(
+          status: ApplicationStatus.approved,
+          enabled: true,
+          requiresPrincipalApproval: false,
+        ),
+      ],
+      assignmentRules: const [
+        CounselorAssignmentRule(
+          id: 'rule_1',
+          label: 'Round-robin by class band',
+          strategy: 'Round-robin · Primary vs Secondary',
+          enabled: true,
+        ),
+        CounselorAssignmentRule(
+          id: 'rule_2',
+          label: 'Walk-in desk assignment',
+          strategy: 'First available counselor',
+          enabled: true,
+        ),
+        CounselorAssignmentRule(
+          id: 'rule_3',
+          label: 'Marketing campaign owner',
+          strategy: 'Retain campaign counselor',
+          enabled: false,
+        ),
+      ],
+      notificationTemplates: const [
+        NotificationTemplate(
+          id: 'tpl_1',
+          name: 'Visit reminder',
+          channel: 'WhatsApp',
+          preview: 'Reminder: School visit scheduled for {{date}} at {{time}}.',
+          enabled: true,
+        ),
+        NotificationTemplate(
+          id: 'tpl_2',
+          name: 'Application received',
+          channel: 'SMS',
+          preview: 'We received {{student}} application. Ref: {{app_id}}.',
+          enabled: true,
+        ),
+        NotificationTemplate(
+          id: 'tpl_3',
+          name: 'Admission approved',
+          channel: 'Email',
+          preview: 'Congratulations! {{student}} admission is approved.',
+          enabled: true,
+        ),
+      ],
+    );
+  }
+
+  bool _resolveBoolUpdate(
+    Map<String, String> updates, {
+    required String sectionId,
+    required String itemId,
+    required bool fallback,
+  }) {
+    final raw = updates['$sectionId:$itemId'];
+    if (raw == null) return fallback;
+    return raw.toLowerCase() == 'true';
+  }
+
+  int? _resolveIntUpdate(
+    Map<String, String> updates, {
+    required String sectionId,
+    required String itemId,
+    required int? fallback,
+  }) {
+    final raw = updates['$sectionId:$itemId'];
+    if (raw == null) return fallback;
+    return int.tryParse(raw) ?? fallback;
+  }
+
   MockAdmissionsWriteStore get _store => MockAdmissionsWriteStore.instance;
 
   Future<void> _ensureLeads(RepositoryQuery query) async {
@@ -953,8 +1087,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   Future<void> _ensureDocuments(RepositoryQuery query) async {
-    _store.documents ??=
-        List.from((await getDocuments(query: query)).items);
+    _store.documents ??= List.from((await getDocuments(query: query)).items);
   }
 
   Future<void> _ensureEnrollments(RepositoryQuery query) async {
@@ -1225,7 +1358,8 @@ class MockAdmissionsRepository implements AdmissionsRepository {
     required GenerateAdmissionNumberRequest request,
   }) async {
     return GeneratedAdmissionNumber(
-      admissionNumber: 'ADM-2026-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      admissionNumber:
+          'ADM-2026-${DateTime.now().millisecondsSinceEpoch % 10000}',
     );
   }
 
@@ -1283,8 +1417,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
     DocumentVerificationStatus status, {
     required String verifiedBy,
   }) {
-    final index =
-        _store.documents!.indexWhere((doc) => doc.id == documentId);
+    final index = _store.documents!.indexWhere((doc) => doc.id == documentId);
     if (index < 0) throw StateError('Document not found: $documentId');
     final current = _store.documents![index];
     final updated = StudentDocumentRecord(
@@ -1352,8 +1485,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
 
   void _syncHandoffForApprovedAdmission(ApprovalQueueItem item) {
     _store.handoffs ??= [];
-    final enrollment =
-        _store.findEnrollmentByApplication(item.applicationId);
+    final enrollment = _store.findEnrollmentByApplication(item.applicationId);
     final admissionNumber = enrollment?.generatedAdmissionNumber ??
         'ADM-2026-${item.applicationId.replaceAll('APP-', '')}';
     final previewStudentId = enrollment != null

@@ -104,6 +104,10 @@ class HrMapper {
     );
   }
 
+  HrLeaveRequest toLeaveRequest(HrLeaveRequestDto dto) {
+    return _mapLeaveRequest(dto.raw);
+  }
+
   HrPayrollData toPayroll(HrPayrollResponseDto dto) {
     final raw = dto.raw;
     return HrPayrollData(
@@ -288,22 +292,24 @@ class HrMapper {
     return [
       for (final item in items)
         if (item is Map<String, dynamic>)
-          HrLeaveRequest(
-            id: item['id'] as String? ?? '',
-            employeeId: item['employeeId'] as String? ?? '',
-            employeeName: item['employeeName'] as String? ?? '',
-            department: HrEnumCodec.parseDepartment(
-              item['department'] as String?,
-            ),
-            leaveType: HrEnumCodec.parseLeaveType(item['leaveType'] as String?),
-            fromDate: item['fromDate'] as String? ?? '',
-            toDate: item['toDate'] as String? ?? '',
-            days: item['days'] as int? ?? 0,
-            status: HrEnumCodec.parseLeaveStatus(item['status'] as String?),
-            approver: item['approver'] as String? ?? '',
-            reason: item['reason'] as String? ?? '',
-          ),
+          _mapLeaveRequest(item),
     ];
+  }
+
+  HrLeaveRequest _mapLeaveRequest(Map<String, dynamic> item) {
+    return HrLeaveRequest(
+      id: item['id'] as String? ?? '',
+      employeeId: item['employeeId'] as String? ?? '',
+      employeeName: item['employeeName'] as String? ?? '',
+      department: HrEnumCodec.parseDepartment(item['department'] as String?),
+      leaveType: HrEnumCodec.parseLeaveType(item['leaveType'] as String?),
+      fromDate: item['fromDate'] as String? ?? '',
+      toDate: item['toDate'] as String? ?? '',
+      days: item['days'] as int? ?? 0,
+      status: HrEnumCodec.parseLeaveStatus(item['status'] as String?),
+      approver: item['approver'] as String? ?? '',
+      reason: item['reason'] as String? ?? '',
+    );
   }
 
   List<HrPayrollRun> _mapPayrollRuns(List<dynamic> items) {

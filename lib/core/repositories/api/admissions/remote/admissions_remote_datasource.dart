@@ -21,13 +21,15 @@ import '../dto/document_verification_request_dto.dart';
 import '../dto/enrollment_request_dto.dart';
 import '../dto/finance_handoff_request_dto.dart';
 import '../dto/followup_request_dto.dart';
+import '../dto/update_admissions_settings_request_dto.dart';
 import '../dto/update_lead_request_dto.dart';
 import '../mapper/admissions_mapper.dart';
 import 'admissions_api_paths.dart';
 
 /// Dio-backed remote data source for Admissions.
 class AdmissionsRemoteDataSource {
-  AdmissionsRemoteDataSource(this._dio, {AdmissionsMapper mapper = const AdmissionsMapper()})
+  AdmissionsRemoteDataSource(this._dio,
+      {AdmissionsMapper mapper = const AdmissionsMapper()})
       : _mapper = mapper;
 
   final Dio _dio;
@@ -131,6 +133,20 @@ class AdmissionsRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return AdmissionsSettingsDto.fromJson(_responseMap(response));
+  }
+
+  Future<AdmissionsSettingsData> updateSettings({
+    required RepositoryQuery query,
+    required UpdateAdmissionsSettingsRequest request,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      AdmissionsApiPaths.settings,
+      queryParameters: _queryParams(query),
+      data: UpdateAdmissionsSettingsRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toSettings(
+      AdmissionsSettingsDto.fromJson(_responseMap(response)),
+    );
   }
 
   Future<EnrollmentPrefillDto> fetchEnrollmentPrefill({

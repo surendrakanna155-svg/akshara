@@ -61,6 +61,12 @@ class SchoolCompletionHubScreen extends StatelessWidget {
             onTap: () => context.push(RouteNames.communicationDelivery),
           ),
           ListTile(
+            leading: const Icon(Icons.campaign_outlined),
+            title: const Text('Broadcast Admin'),
+            subtitle: const Text('Compose, templates, and broadcast history'),
+            onTap: () => context.push(RouteNames.communicationBroadcastAdmin),
+          ),
+          ListTile(
             leading: const Icon(Icons.insights_outlined),
             title: const Text('Communication Analytics'),
             subtitle: const Text('Campaigns, engagement, and parent adoption'),

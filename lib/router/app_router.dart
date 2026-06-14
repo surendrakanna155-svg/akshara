@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +23,7 @@ import '../features/parent/fees/parent_fees_screen.dart';
 import '../features/parent/homework/parent_homework_screen.dart';
 import '../features/parent/leave/parent_leave_screen.dart';
 import '../features/parent/payment/parent_payment_screen.dart';
+import '../features/parent/receipts/parent_receipt_pdf_service.dart';
 import '../features/parent/receipts/parent_receipt_detail_screen.dart';
 import '../features/parent/receipts/parent_receipts_screen.dart';
 import '../features/parent/notices/parent_notices_screen.dart';
@@ -48,6 +51,9 @@ import '../features/teacher/shell/teacher_shell.dart';
 import '../features/teacher/timetable/teacher_timetable_screen.dart';
 import '../features/copilot/dock/copilot_dock_host.dart';
 import '../features/admin/admin_shell.dart';
+import '../core/repositories/repository_providers.dart';
+import '../core/tenant/tenant_provider.dart';
+import '../core/testing/qa_test_keys.dart';
 import 'admin_navigation.dart';
 import 'route_guards.dart';
 import 'admissions_navigation.dart';
@@ -83,8 +89,9 @@ GoRouter createAppRouter({
   bool Function()? readQaLoginEnabled,
 }) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
-  String authEntryRoute() =>
-      (readQaLoginEnabled?.call() ?? false) ? RouteNames.qaLogin : RouteNames.login;
+  String authEntryRoute() => (readQaLoginEnabled?.call() ?? false)
+      ? RouteNames.qaLogin
+      : RouteNames.login;
 
   return GoRouter(
     navigatorKey: rootNavigatorKey,
@@ -153,7 +160,8 @@ GoRouter createAppRouter({
       GoRoute(
         path: RouteNames.aiAssistantSettings,
         name: 'aiAssistantSettings',
-        builder: (context, state) => aiAssistantSettingsRouteBuilder(context, state),
+        builder: (context, state) =>
+            aiAssistantSettingsRouteBuilder(context, state),
       ),
       GoRoute(
         path: RouteNames.aiAssistant,
@@ -588,6 +596,13 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.communicationBroadcastAdmin,
+            name: 'communicationBroadcastAdmin',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: communicationBroadcastAdminRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.communicationAnalytics,
             name: 'communicationAnalytics',
             pageBuilder: (context, state) => NoTransitionPage(
@@ -759,7 +774,8 @@ GoRouter createAppRouter({
                     path: ':collectionId',
                     name: 'financeCollectionDetail',
                     pageBuilder: (context, state) => NoTransitionPage(
-                      child: financeCollectionDetailRouteBuilder(context, state),
+                      child:
+                          financeCollectionDetailRouteBuilder(context, state),
                     ),
                   ),
                 ],
@@ -1045,7 +1061,8 @@ GoRouter createAppRouter({
                 path: 'workflow-automation',
                 name: 'managementWorkflowAutomation',
                 pageBuilder: (context, state) => NoTransitionPage(
-                  child: managementWorkflowAutomationRouteBuilder(context, state),
+                  child:
+                      managementWorkflowAutomationRouteBuilder(context, state),
                 ),
               ),
               GoRoute(
@@ -1609,7 +1626,8 @@ String? _authRedirect(AuthState auth, String location, String entryRoute) {
     return entryRoute;
   }
 
-  if (isAuthenticated && (isLogin || isQaLogin || isOtp || isStaffLogin || isStaffOtp)) {
+  if (isAuthenticated &&
+      (isLogin || isQaLogin || isOtp || isStaffLogin || isStaffOtp)) {
     return homeRouteForAuth(auth);
   }
 
@@ -1670,7 +1688,8 @@ String homeRouteForAuth(AuthState auth) {
 }
 
 /// Parent academic report (v13.2 — structured summary, no AI chat).
-Widget parentAcademicReportRouteBuilder(BuildContext context, GoRouterState state) {
+Widget parentAcademicReportRouteBuilder(
+    BuildContext context, GoRouterState state) {
   return const ParentAcademicReportScreen();
 }
 
@@ -1689,8 +1708,7 @@ Widget parentDashboardRouteBuilder(BuildContext context, GoRouterState state) {
 /// Attendance screen with notification bell routing.
 Widget parentAttendanceRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentAttendanceScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
     onAcademicsNavigate: (destination) =>
         handleParentAcademicsNavigation(context, destination),
   );
@@ -1699,8 +1717,7 @@ Widget parentAttendanceRouteBuilder(BuildContext context, GoRouterState state) {
 /// Fees screen with notification bell routing.
 Widget parentFeesRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentFeesScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
     onPayNow: ({String? installmentId}) => handleParentFeesNavigation(
       context,
       installmentId: installmentId,
@@ -1738,48 +1755,42 @@ String _receiptIdForInstallment(String installmentId) {
 /// Timetable screen (PA-04).
 Widget parentTimetableRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentTimetableScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );
 }
 
 /// Homework list screen (PA-05).
 Widget parentHomeworkRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentHomeworkScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );
 }
 
 /// Exams screen (PA-06).
 Widget parentExamsRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentExamsScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );
 }
 
 /// School notices screen (PA-07).
 Widget parentNoticesRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentNoticesScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );
 }
 
 /// School events screen (PA-08).
 Widget parentEventsRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentEventsScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );
 }
 
 /// Parent profile screen (PA-09).
 Widget parentProfileRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentProfileScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
     onLeaveTap: () => context.go(RouteNames.parentLeave),
     onReceiptsTap: () => context.go(RouteNames.parentReceipts),
   );
@@ -1787,14 +1798,12 @@ Widget parentProfileRouteBuilder(BuildContext context, GoRouterState state) {
 
 /// Fee payment flow (PA-10).
 Widget parentPaymentRouteBuilder(BuildContext context, GoRouterState state) {
-  final installmentId =
-      state.uri.queryParameters['installmentId'] ?? 'term_2';
+  final installmentId = state.uri.queryParameters['installmentId'] ?? 'term_2';
 
   return ParentPaymentScreen(
     key: ValueKey('payment-$installmentId'),
     installmentId: installmentId,
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
     onViewReceipt: (receiptId) =>
         handleParentFeesNavigation(context, receiptId: receiptId),
     onBackToFees: () => context.go(RouteNames.parentFees),
@@ -1804,8 +1813,7 @@ Widget parentPaymentRouteBuilder(BuildContext context, GoRouterState state) {
 /// Receipts list (PA-11).
 Widget parentReceiptsRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentReceiptsScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
     onReceiptTap: (receipt) => context.push(
       RouteNames.parentReceiptDetail(receipt.id),
     ),
@@ -1818,19 +1826,50 @@ Widget parentReceiptDetailRouteBuilder(
   GoRouterState state,
 ) {
   final receiptId = state.pathParameters['receiptId'] ?? '';
+  return Consumer(
+    builder: (context, ref, _) {
+      final pdfService = ParentReceiptPdfService();
+      Future<void> exportReceiptPdf({
+        required bool share,
+        required dynamic receipt,
+      }) async {
+        final financeReceipt =
+            await ref.read(financeRepositoryProvider).getReceipt(
+                  query: ref.read(repositoryQueryProvider),
+                  receiptId: receipt.id,
+                );
+        final bytes = await pdfService.buildReceiptPdf(
+          receipt,
+          financeReceipt: financeReceipt,
+        );
+        if (share) {
+          await pdfService.shareReceipt(
+            bytes: bytes,
+            receiptNumber: receipt.receiptNumber,
+          );
+        } else {
+          await pdfService.printReceipt(bytes);
+        }
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            key: QaTestKeys.parentReceiptPdfSuccessSnackbar,
+            content: Text(
+              share ? 'Receipt PDF ready to share.' : 'Receipt PDF generated.',
+            ),
+          ),
+        );
+      }
 
-  return ParentReceiptDetailScreen(
-    receiptId: receiptId,
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
-    onDownload: (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Receipt download started (mock).')),
-      );
-    },
-    onShare: (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Share sheet opened (mock).')),
+      return ParentReceiptDetailScreen(
+        receiptId: receiptId,
+        onNotificationsTap: () => context.push(RouteNames.parentNotifications),
+        onDownload: (receipt) {
+          unawaited(exportReceiptPdf(share: false, receipt: receipt));
+        },
+        onShare: (receipt) {
+          unawaited(exportReceiptPdf(share: true, receipt: receipt));
+        },
       );
     },
   );
@@ -1839,15 +1878,15 @@ Widget parentReceiptDetailRouteBuilder(
 /// Leave requests (PA-12).
 Widget parentLeaveRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentLeaveScreen(
-    onNotificationsTap: () =>
-        context.push(RouteNames.parentNotifications),
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );
 }
 
 Widget parentMessagesRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentMessagesScreen(
     onNotificationsTap: () => context.push(RouteNames.parentNotifications),
-    onThreadTap: (thread) => context.push(RouteNames.parentConversation(thread.id)),
+    onThreadTap: (thread) =>
+        context.push(RouteNames.parentConversation(thread.id)),
   );
 }
 
@@ -1875,7 +1914,8 @@ Widget teacherDashboardRouteBuilder(BuildContext context, GoRouterState state) {
 VoidCallback _teacherNotificationsTap(BuildContext context) =>
     () => context.push(RouteNames.parentNotifications);
 
-Widget teacherAttendanceRouteBuilder(BuildContext context, GoRouterState state) {
+Widget teacherAttendanceRouteBuilder(
+    BuildContext context, GoRouterState state) {
   return TeacherAttendanceScreen(
     onNotificationsTap: _teacherNotificationsTap(context),
   );
@@ -1937,7 +1977,8 @@ Widget studentDashboardRouteBuilder(BuildContext context, GoRouterState state) {
 VoidCallback _studentNotificationsTap(BuildContext context) =>
     () => context.push(RouteNames.parentNotifications);
 
-Widget studentAttendanceRouteBuilder(BuildContext context, GoRouterState state) {
+Widget studentAttendanceRouteBuilder(
+    BuildContext context, GoRouterState state) {
   return StudentAttendanceScreen(
     onNotificationsTap: _studentNotificationsTap(context),
   );

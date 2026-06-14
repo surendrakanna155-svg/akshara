@@ -105,6 +105,8 @@ void main() {
       expect(find.text('Leave requests'), findsOneWidget);
       expect(find.text('Sunita Nair'), findsOneWidget);
       expect(find.byKey(QaTestKeys.hrCreateLeaveButton), findsOneWidget);
+      expect(find.text('Approve'), findsWidgets);
+      expect(find.text('Reject'), findsWidgets);
     });
 
     testWidgets('HrLeaveScreen create button visible on mobile width', (

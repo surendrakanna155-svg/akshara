@@ -116,7 +116,8 @@ class InventoryMapper {
     return [for (final item in dto.items) toProcurementOrder(item)];
   }
 
-  InventoryProcurementOrder toProcurementOrder(InventoryProcurementOrderDto dto) {
+  InventoryProcurementOrder toProcurementOrder(
+      InventoryProcurementOrderDto dto) {
     final raw = dto.raw;
     return InventoryProcurementOrder(
       id: raw['id'] as String? ?? '',
@@ -131,6 +132,9 @@ class InventoryMapper {
       ),
       financePoId: raw['financePoId'] as String? ?? '',
       requestedBy: raw['requestedBy'] as String? ?? '',
+      approvalHistory: _mapProcurementApprovalHistory(
+        raw['approvalHistory'] as List<dynamic>? ?? const [],
+      ),
     );
   }
 
@@ -252,6 +256,21 @@ class InventoryMapper {
             title: item['title'] as String? ?? '',
             description: item['description'] as String? ?? '',
             lastGenerated: item['lastGenerated'] as String? ?? '',
+          ),
+    ];
+  }
+
+  List<InventoryProcurementApprovalEntry> _mapProcurementApprovalHistory(
+    List<dynamic> items,
+  ) {
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>)
+          InventoryProcurementApprovalEntry(
+            action: item['action'] as String? ?? '',
+            actor: item['actor'] as String? ?? '',
+            recordedAt: item['recordedAt'] as String? ?? '',
+            note: item['note'] as String?,
           ),
     ];
   }
