@@ -222,6 +222,25 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 
 ---
 
+## Release Stabilization — v1.0-preprod (June 2026)
+
+**Branch:** `release/v1.0-preprod` · **Status:** Pilot-ready (application layer)
+
+| Phase | Status | Document |
+|-------|--------|----------|
+| Release baseline | ✅ | `RELEASE_BASELINE.md` |
+| Full regression | ✅ Flutter green | `FULL_REGRESSION_REPORT.md` |
+| UX stabilization | ✅ | `UX_STABILIZATION_REPORT.md` |
+| Workflow verification | ✅ | `WORKFLOW_VERIFICATION_REPORT.md` |
+| Performance review | ✅ | `PERFORMANCE_REVIEW.md` |
+| Production readiness | ✅ App 97/100 | `PRODUCTION_READINESS_FINAL.md` |
+| Pilot readiness | ✅ With conditions | `PILOT_READINESS_REPORT.md` |
+| Final status | ✅ | `AKSHARA_V1_FINAL_STATUS.md` |
+
+**Next:** Pilot deployment → infrastructure program for GA.
+
+---
+
 ## Recommended execution order (Q3 2026)
 
 ```

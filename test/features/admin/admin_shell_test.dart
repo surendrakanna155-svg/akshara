@@ -92,6 +92,15 @@ void main() {
       expect(find.byType(AdminModulePlaceholderScreen), findsOneWidget);
     });
 
+    testWidgets('expanded rail scrolls on short desktop viewport without overflow',
+        (tester) async {
+      await pumpAdminShell(tester, viewport: const Size(1280, 600));
+
+      expect(find.byType(AdminNavigationRail), findsOneWidget);
+      expect(find.byType(ListView), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('tablet shows collapsed navigation rail (72px)', (tester) async {
       await pumpAdminShell(tester, viewport: const Size(1024, 768));
 

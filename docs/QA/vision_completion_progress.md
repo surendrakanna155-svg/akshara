@@ -212,20 +212,19 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 
 ## Next action
 
-**Production deployment preparation** — address Final Production Audit blockers (RLS, pen test, TLS, deploy pipelines).
+**Pilot deployment** on `release/v1.0-preprod` — see `docs/PILOT_READINESS_REPORT.md` and `docs/AKSHARA_V1_FINAL_STATUS.md`.
 
 ---
 
-## M13 completion (June 2026)
+## Release stabilization (June 2026)
 
 | Metric | Value |
 |--------|-------|
-| ERP | ~99.5% |
-| Vision | ~98% |
-| Tests | 1645 passing |
-| Patrol | ~79 journeys |
-| Final audits | 4 gap reports in `docs/ArchitectureReview/FINAL_*` |
-| Report | `docs/MILESTONE_13_COMPLETION_REPORT.md` |
+| Branch | `release/v1.0-preprod` |
+| Tests | 1646 passing |
+| Patrol | 79 workflows |
+| Pilot verdict | Ready with Conditions |
+| Report | `docs/AKSHARA_V1_FINAL_STATUS.md` |
 
 ---
 

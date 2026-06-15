@@ -254,7 +254,22 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 | FV-35 | Restaurant ERP | ✅ MVP |
 | FV-36 | Hostel / Accommodation Pack | ✅ MVP |
 
-### Post-M13 — Final Audits
+## Release Stabilization (v1.0-preprod)
+
+| Phase | Status | Doc |
+|-------|--------|-----|
+| Release branch | ✅ | `release/v1.0-preprod` |
+| Full regression (Flutter) | ✅ | `FULL_REGRESSION_REPORT.md` |
+| UX stabilization | ✅ | `UX_STABILIZATION_REPORT.md` |
+| Workflow verification | ✅ | `WORKFLOW_VERIFICATION_REPORT.md` |
+| Performance review | ✅ | `PERFORMANCE_REVIEW.md` |
+| Production readiness final | ✅ | `PRODUCTION_READINESS_FINAL.md` |
+| Pilot readiness | ✅ Ready with Conditions | `PILOT_READINESS_REPORT.md` |
+| Final status | ✅ | `AKSHARA_V1_FINAL_STATUS.md` |
+
+---
+
+## Post-M13 — Final Audits
 
 | Audit | Status | Doc |
 |-------|--------|-----|

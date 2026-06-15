@@ -92,6 +92,45 @@ ALL_TARGETS=(
   "patrol_test/workflows/alumni_workflows_test.dart"
   "patrol_test/workflows/control_center_workflows_test.dart"
   "patrol_test/workflows/management_workflows_test.dart"
+  # M6–M8 intelligence & AI
+  "patrol_test/workflows/operations_hub_e2e_test.dart"
+  "patrol_test/workflows/resource_optimization_e2e_test.dart"
+  "patrol_test/workflows/ai_content_generation_e2e_test.dart"
+  "patrol_test/workflows/universal_ai_assistant_e2e_test.dart"
+  "patrol_test/workflows/parent_meeting_summary_e2e_test.dart"
+  # M6+ extended journeys
+  "patrol_test/workflows/admissions_settings_persistence_e2e_test.dart"
+  "patrol_test/workflows/book_distribution_e2e_test.dart"
+  "patrol_test/workflows/communication_broadcast_e2e_test.dart"
+  "patrol_test/workflows/finance_offline_payment_e2e_test.dart"
+  "patrol_test/workflows/finance_qr_payment_e2e_test.dart"
+  "patrol_test/workflows/growth_campaign_e2e_test.dart"
+  "patrol_test/workflows/hr_leave_approval_e2e_test.dart"
+  "patrol_test/workflows/inventory_replacement_e2e_test.dart"
+  "patrol_test/workflows/parent_receipt_pdf_e2e_test.dart"
+  "patrol_test/workflows/school_memories_admin_e2e_test.dart"
+  "patrol_test/workflows/sis_profile_edit_e2e_test.dart"
+  "patrol_test/workflows/substitute_teacher_e2e_test.dart"
+  "patrol_test/workflows/teacher_reassignment_e2e_test.dart"
+  "patrol_test/workflows/timetable_optimization_apply_e2e_test.dart"
+  # M9 multi-school SaaS
+  "patrol_test/workflows/multi_school_operations_e2e_test.dart"
+  "patrol_test/workflows/director_portal_e2e_test.dart"
+  "patrol_test/workflows/trust_intelligence_e2e_test.dart"
+  "patrol_test/workflows/branch_operations_e2e_test.dart"
+  "patrol_test/workflows/franchise_portfolio_e2e_test.dart"
+  # M10–M11 platform evolution
+  "patrol_test/workflows/organization_builder_e2e_test.dart"
+  "patrol_test/workflows/dynamic_widget_platform_e2e_test.dart"
+  # M12 infrastructure
+  "patrol_test/workflows/platform_operations_e2e_test.dart"
+  # M13 multi-industry
+  "patrol_test/workflows/industry_framework_e2e_test.dart"
+  "patrol_test/workflows/healthcare_vertical_e2e_test.dart"
+  "patrol_test/workflows/salon_vertical_e2e_test.dart"
+  "patrol_test/workflows/restaurant_vertical_e2e_test.dart"
+  "patrol_test/workflows/accommodation_vertical_e2e_test.dart"
+  "patrol_test/workflows/white_label_platform_e2e_test.dart"
   "patrol_test/workflows/screenshot_validation_test.dart"
 )
 

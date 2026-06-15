@@ -2,7 +2,7 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026 (v7.7 governance sync)  
-**Current score:** 96 / 100 (production-weighted; M12 app-layer observability + readiness reporting)  
+**Current score:** 97 / 100 (application layer — release v1.0-preprod stabilization)  
 **Operations runbooks:** `docs/Operations/` (v7.7)
 
 Use this checklist before pilot, staging, and production deployments. Mark `[x]` when verified.
