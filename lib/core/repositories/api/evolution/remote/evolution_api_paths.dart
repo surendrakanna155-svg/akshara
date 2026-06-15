@@ -6,6 +6,9 @@ abstract final class EvolutionApiPaths {
   static const String widgetRegistry = '/widgets/registry';
   static const String widgetDashboardLayout = '/widgets/dashboard/layout';
   static const String widgetData = '/widgets/data';
+  static String widgetLayoutVersions = '/widgets/layouts/versions';
+  static String widgetRoleLayout(String role) => '/widgets/layouts/$role';
+  static const String widgetDataSources = '/widgets/data-sources';
 
   static const String teacherAssistantInsights = '/teacher-assistant/insights';
   static const String teacherInterventions = '/teacher-assistant/interventions';

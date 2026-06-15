@@ -83,6 +83,9 @@ abstract final class RouteNames {
   static const String achievementPromotion = '/promotions';
   static const String setupWizard = '/setup-wizard';
   static const String dynamicDashboard = '/dashboard/dynamic';
+  static const String dynamicWidgets = '/dynamic-widgets';
+  static const String dynamicWidgetLayout = '/dynamic-widgets/layout';
+  static const String dynamicWidgetRuntime = '/dynamic-widgets/runtime';
   static const String teacherAssistant = '/teacher-assistant';
   static const String parentInsights = '/parent/insights';
   static const String principalCommand = '/principal-command';
@@ -114,6 +117,13 @@ abstract final class RouteNames {
   static const String parentMeetings = '/parent-meetings';
   static const String multiSchoolPortfolio = '/multi-school/portfolio';
   static const String multiSchoolOnboarding = '/multi-school/onboarding';
+  static const String organizationBuilder = '/organization-builder';
+  static const String organizationBuilderInterview =
+      '/organization-builder/interview';
+  static const String organizationBuilderPreview =
+      '/organization-builder/preview';
+  static const String organizationBuilderProvisioning =
+      '/organization-builder/provisioning';
   static const String admissions = '/admissions';
   static const String admissionsDashboard = '/admissions/dashboard';
   static const String admissionsLeads = '/admissions/leads';
@@ -469,5 +479,12 @@ abstract final class RouteNames {
     parentMeetings,
     multiSchoolPortfolio,
     multiSchoolOnboarding,
+    organizationBuilder,
+    organizationBuilderInterview,
+    organizationBuilderPreview,
+    organizationBuilderProvisioning,
+    dynamicWidgets,
+    dynamicWidgetLayout,
+    dynamicWidgetRuntime,
   ];
 }

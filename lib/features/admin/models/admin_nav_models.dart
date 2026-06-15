@@ -17,6 +17,8 @@ enum AdminModule {
   alumni,
   controlCenter,
   director,
+  organizationBuilder,
+  dynamicWidgets,
 }
 
 /// Single breadcrumb segment for [AdminAppBar].

@@ -112,6 +112,22 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     selectedIcon: Icons.insights,
     requiredPermission: Permission.viewDirectorPortal,
   ),
+  AdminNavDestination(
+    module: AdminModule.organizationBuilder,
+    route: RouteNames.organizationBuilder,
+    label: 'Org Builder',
+    icon: Icons.domain_add_outlined,
+    selectedIcon: Icons.domain_add,
+    requiredPermission: Permission.viewOrganizationBuilder,
+  ),
+  AdminNavDestination(
+    module: AdminModule.dynamicWidgets,
+    route: RouteNames.dynamicWidgets,
+    label: 'Widgets',
+    icon: Icons.widgets_outlined,
+    selectedIcon: Icons.widgets,
+    requiredPermission: Permission.viewDynamicWidgets,
+  ),
 ];
 
 /// Permission-filtered navigation destinations for the current session.
@@ -215,6 +231,20 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
     description:
         'Multi-school executive oversight for revenue, growth, admissions, compliance, and strategic reporting (DR-01 → DR-09).',
     route: RouteNames.directorDashboard,
+  ),
+  AdminModule.organizationBuilder: AdminModuleInfo(
+    module: AdminModule.organizationBuilder,
+    title: 'Organization Builder',
+    description:
+        'AI-guided vertical pack interview to provision schools, salons, hospitals, and restaurants (FV-30).',
+    route: RouteNames.organizationBuilder,
+  ),
+  AdminModule.dynamicWidgets: AdminModuleInfo(
+    module: AdminModule.dynamicWidgets,
+    title: 'Dynamic Widgets',
+    description:
+        'Versioned widget layouts, data source registry, and role-bound dashboards (FV-31).',
+    route: RouteNames.dynamicWidgets,
   ),
 };
 

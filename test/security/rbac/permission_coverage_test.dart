@@ -136,6 +136,32 @@ void main() {
       expect(franchise.permission, Permission.manageFranchiseOperations);
     });
 
+    test('organization builder mutations registered', () {
+      for (final id in [
+        'saveInterviewStep',
+        'generatePreview',
+        'startProvisioning',
+      ]) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.mutationId == id,
+        );
+        expect(entry.moduleId, 'organization_builder');
+        expect(entry.permission, Permission.manageOrganizationBuilder);
+        expect(entry.kind, 'manage');
+      }
+    });
+
+    test('dynamic widget mutations registered', () {
+      for (final id in ['saveRoleDashboardLayout', 'resetLayoutToPackDefault']) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.mutationId == id,
+        );
+        expect(entry.moduleId, 'dynamic_widgets');
+        expect(entry.permission, Permission.manageDynamicWidgets);
+        expect(entry.kind, 'manage');
+      }
+    });
+
     test('director portal mutations registered', () {
       for (final id in ['acknowledgeCompliance', 'exportReport']) {
         final entry = MutationPermissionRegistry.entries.firstWhere(

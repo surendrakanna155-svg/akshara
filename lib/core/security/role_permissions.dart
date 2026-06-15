@@ -120,6 +120,8 @@ class RolePermissionMatrix {
       Permission.manageProcurementWorkflow,
       Permission.viewMultiSchoolOperations,
       Permission.manageMultiSchoolOperations,
+      Permission.viewOrganizationBuilder,
+      Permission.manageOrganizationBuilder,
     },
     ErpRole.schoolAdmin: {
       Permission.viewAdminHub,
@@ -153,6 +155,8 @@ class RolePermissionMatrix {
       Permission.manageProcurementWorkflow,
       Permission.viewMultiSchoolOperations,
       Permission.manageMultiSchoolOperations,
+      Permission.viewOrganizationBuilder,
+      Permission.manageOrganizationBuilder,
       Permission.viewAlumni,
       Permission.manageAlumni,
       Permission.viewOnboarding,
@@ -346,6 +350,8 @@ class RolePermissionMatrix {
       Permission.viewAchievementPromotion,
       Permission.viewMultiSchoolOperations,
       Permission.manageMultiSchoolOperations,
+      Permission.viewOrganizationBuilder,
+      Permission.manageOrganizationBuilder,
     },
     ErpRole.financeAdmin: {
       Permission.viewAdminHub,

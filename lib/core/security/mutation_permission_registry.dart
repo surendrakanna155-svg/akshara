@@ -255,6 +255,36 @@ class MutationPermissionRegistry {
       kind: 'manage',
     ),
     MutationPermissionEntry(
+      moduleId: 'organization_builder',
+      mutationId: 'saveInterviewStep',
+      permission: Permission.manageOrganizationBuilder,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'organization_builder',
+      mutationId: 'generatePreview',
+      permission: Permission.manageOrganizationBuilder,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'organization_builder',
+      mutationId: 'startProvisioning',
+      permission: Permission.manageOrganizationBuilder,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'dynamic_widgets',
+      mutationId: 'saveRoleDashboardLayout',
+      permission: Permission.manageDynamicWidgets,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'dynamic_widgets',
+      mutationId: 'resetLayoutToPackDefault',
+      permission: Permission.manageDynamicWidgets,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
       moduleId: 'ai_content',
       mutationId: 'generateAiContent',
       permission: Permission.manageManagement,

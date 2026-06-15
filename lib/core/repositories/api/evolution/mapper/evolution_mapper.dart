@@ -1,3 +1,4 @@
+import '../../../../../features/dynamic_widgets/dynamic_widget_models.dart';
 import '../../../../../features/evolution/evolution_models.dart';
 
 class EvolutionMapper {
@@ -195,6 +196,127 @@ class EvolutionMapper {
       severity: json['severity'] as String? ?? 'medium',
       actionType: json['actionType'] as String? ?? json['action_type'] as String? ?? 'review',
     );
+  }
+
+  WidgetLayoutVersion toWidgetLayoutVersion(Map<String, dynamic> json) {
+    final updatedAt = json['updatedAt'] as String? ?? json['updated_at'] as String?;
+    return WidgetLayoutVersion(
+      layoutId: json['layoutId'] as String? ?? json['layout_id'] as String? ?? '',
+      role: json['role'] as String? ?? '',
+      verticalPack: json['verticalPack'] as String? ?? json['vertical_pack'] as String? ?? 'school',
+      version: json['version'] as int? ?? 1,
+      updatedAt: updatedAt == null ? null : DateTime.tryParse(updatedAt),
+      isTenantOverride: json['isTenantOverride'] as bool? ?? json['is_tenant_override'] as bool? ?? false,
+    );
+  }
+
+  List<WidgetLayoutVersion> toWidgetLayoutVersions(dynamic value) {
+    if (value is! List) return const [];
+    return [
+      for (final item in value)
+        if (item is Map<String, dynamic>) toWidgetLayoutVersion(item)
+        else if (item is Map) toWidgetLayoutVersion(Map<String, dynamic>.from(item)),
+    ];
+  }
+
+  WidgetDataSource toWidgetDataSource(Map<String, dynamic> json) {
+    final types = json['supportedTypes'] ?? json['supported_types'];
+    return WidgetDataSource(
+      key: json['key'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      repositoryModule: json['repositoryModule'] as String? ?? json['repository_module'] as String? ?? 'evolution',
+      methodName: json['methodName'] as String? ?? json['method_name'] as String? ?? 'getWidgetData',
+      supportedTypes: types is List
+          ? [for (final t in types) WidgetTypeX.fromString(t.toString())]
+          : const [WidgetType.kpi],
+      requiredPermission: json['requiredPermission'] as String? ?? json['required_permission'] as String? ?? 'viewDynamicWidgets',
+      description: json['description'] as String?,
+    );
+  }
+
+  DynamicWidgetNavItem toDynamicWidgetNavItem(Map<String, dynamic> json) {
+    return DynamicWidgetNavItem(
+      label: json['label'] as String? ?? '',
+      route: json['route'] as String? ?? '',
+      icon: json['icon'] as String? ?? 'dashboard',
+    );
+  }
+
+  DynamicWidgetItem toDynamicWidgetItem(Map<String, dynamic> json) {
+    final permissions = json['permissions'];
+    return DynamicWidgetItem(
+      id: json['id'] as String? ?? '',
+      type: WidgetTypeX.fromString(json['type'] as String?),
+      title: json['title'] as String? ?? '',
+      dataSource: json['dataSource'] as String? ?? json['data_source'] as String? ?? '',
+      permissions: permissions is List ? [for (final p in permissions) p.toString()] : const [],
+      drillDown: json['drillDown'] as String? ?? json['drill_down'] as String?,
+      size: WidgetGridSizeX.fromString(json['size'] as String?),
+      visible: json['visible'] as bool? ?? true,
+      order: json['order'] as int? ?? 0,
+    );
+  }
+
+  RoleDashboardLayout toRoleDashboardLayout(Map<String, dynamic> json) {
+    final widgets = json['widgets'];
+    final navigation = json['navigation'];
+    return RoleDashboardLayout(
+      layoutId: json['layoutId'] as String? ?? json['layout_id'] as String? ?? '',
+      role: json['role'] as String? ?? '',
+      verticalPack: json['verticalPack'] as String? ?? json['vertical_pack'] as String? ?? 'school',
+      version: json['version'] as int? ?? 1,
+      widgets: widgets is List
+          ? [
+              for (final item in widgets)
+                if (item is Map<String, dynamic>)
+                  toDynamicWidgetItem(item)
+                else if (item is Map)
+                  toDynamicWidgetItem(Map<String, dynamic>.from(item)),
+            ]
+          : const [],
+      navigation: navigation is List
+          ? [
+              for (final item in navigation)
+                if (item is Map<String, dynamic>)
+                  toDynamicWidgetNavItem(item)
+                else if (item is Map)
+                  toDynamicWidgetNavItem(Map<String, dynamic>.from(item)),
+            ]
+          : const [],
+      isTenantOverride: json['isTenantOverride'] as bool? ?? json['is_tenant_override'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> roleDashboardLayoutToJson(RoleDashboardLayout layout) {
+    return {
+      'layoutId': layout.layoutId,
+      'role': layout.role,
+      'verticalPack': layout.verticalPack,
+      'version': layout.version,
+      'isTenantOverride': layout.isTenantOverride,
+      'widgets': [
+        for (final widget in layout.widgets)
+          {
+            'id': widget.id,
+            'type': widget.type.wireValue,
+            'title': widget.title,
+            'dataSource': widget.dataSource,
+            'permissions': widget.permissions,
+            if (widget.drillDown != null) 'drillDown': widget.drillDown,
+            'size': widget.size.wireValue,
+            'visible': widget.visible,
+            'order': widget.order,
+          },
+      ],
+      'navigation': [
+        for (final nav in layout.navigation)
+          {
+            'label': nav.label,
+            'route': nav.route,
+            'icon': nav.icon,
+          },
+      ],
+    };
   }
 
   Map<String, dynamic> _map(dynamic value) {

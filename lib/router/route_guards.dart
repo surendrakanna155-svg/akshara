@@ -52,6 +52,9 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.achievementPromotion: Permission.viewAchievementPromotion,
   RouteNames.setupWizard: Permission.viewSchoolSetup,
   RouteNames.dynamicDashboard: Permission.viewDynamicWidgets,
+  RouteNames.dynamicWidgets: Permission.viewDynamicWidgets,
+  RouteNames.dynamicWidgetLayout: Permission.viewDynamicWidgets,
+  RouteNames.dynamicWidgetRuntime: Permission.viewDynamicWidgets,
   RouteNames.teacherAssistant: Permission.viewTeacherAssistant,
   RouteNames.parentInsights: Permission.viewParentInsights,
   RouteNames.principalCommand: Permission.viewPrincipalCommand,
@@ -85,6 +88,11 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.inventoryLifecycle: Permission.viewInventoryIntelligence,
   RouteNames.multiSchoolPortfolio: Permission.viewMultiSchoolOperations,
   RouteNames.multiSchoolOnboarding: Permission.viewMultiSchoolOperations,
+  RouteNames.organizationBuilder: Permission.viewOrganizationBuilder,
+  RouteNames.organizationBuilderInterview: Permission.viewOrganizationBuilder,
+  RouteNames.organizationBuilderPreview: Permission.viewOrganizationBuilder,
+  RouteNames.organizationBuilderProvisioning:
+      Permission.viewOrganizationBuilder,
 };
 
 /// Resolves the view permission required for [location].

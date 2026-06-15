@@ -1,5 +1,6 @@
 import '../../interfaces/evolution_repository.dart';
 import '../../repository_query.dart';
+import '../../../../features/dynamic_widgets/dynamic_widget_models.dart';
 import '../../../../features/evolution/evolution_models.dart';
 import '../../../../features/evolution/evolution_requests.dart';
 import 'mapper/evolution_mapper.dart';
@@ -288,5 +289,66 @@ class ApiEvolutionRepository implements EvolutionRepository {
   }) async {
     final items = await _remote.getOperationsActions(query: query);
     return items.map(_mapper.toOperationsAction).toList();
+  }
+
+  @override
+  Future<List<WidgetLayoutVersion>> getWidgetLayoutVersions({
+    required RepositoryQuery query,
+    String? role,
+    String? verticalPack,
+  }) async {
+    final items = await _remote.getWidgetLayoutVersions(
+      query: query,
+      role: role,
+      verticalPack: verticalPack,
+    );
+    return items.map(_mapper.toWidgetLayoutVersion).toList();
+  }
+
+  @override
+  Future<RoleDashboardLayout> getRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+  }) async {
+    final dto = await _remote.getRoleDashboardLayout(query: query, role: role);
+    return _mapper.toRoleDashboardLayout(dto);
+  }
+
+  @override
+  Future<RoleDashboardLayout> saveRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+    required RoleDashboardLayout layout,
+    int? version,
+  }) async {
+    final dto = await _remote.saveRoleDashboardLayout(
+      query: query,
+      role: role,
+      layout: _mapper.roleDashboardLayoutToJson(layout),
+      version: version,
+    );
+    return _mapper.toRoleDashboardLayout(dto);
+  }
+
+  @override
+  Future<List<WidgetDataSource>> listWidgetDataSources({
+    required RepositoryQuery query,
+  }) async {
+    final items = await _remote.listWidgetDataSources(query: query);
+    return items.map(_mapper.toWidgetDataSource).toList();
+  }
+
+  @override
+  Future<RoleDashboardLayout> resetLayoutToPackDefault({
+    required RepositoryQuery query,
+    required String role,
+    required String verticalPack,
+  }) async {
+    final dto = await _remote.resetLayoutToPackDefault(
+      query: query,
+      role: role,
+      verticalPack: verticalPack,
+    );
+    return _mapper.toRoleDashboardLayout(dto);
   }
 }

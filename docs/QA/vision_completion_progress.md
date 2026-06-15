@@ -212,22 +212,19 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 
 ## Next action
 
-**M10:** Universal Organization Builder (FV-30) — see `AKSHARA_FINAL_ROADMAP.md` and `docs/Vision/design/Universal-Organization-Builder-v2.md`.
-
-Execution: implement → tests → Patrol → gates → commit → push → CI → continue to M11.
+**M12:** Infrastructure & Security (FV-PLAT-08/12/13, observability) — see `AKSHARA_FINAL_ROADMAP.md`.
 
 ---
 
-## M9 completion (June 2026)
+## M11 completion (June 2026)
 
 | Metric | Value |
 |--------|-------|
-| ERP | ~97% |
-| Vision | ~85% |
-| Multi-school | ~82% |
-| Tests | 1522 passing |
-| Patrol | ~70 journeys |
-| Report | `docs/MILESTONE_9_COMPLETION_REPORT.md` |
+| ERP | ~98% |
+| Vision | ~90% |
+| Tests | 1561 passing |
+| Patrol | ~72 journeys |
+| Reports | `docs/MILESTONE_10_COMPLETION_REPORT.md`, `docs/MILESTONE_11_COMPLETION_REPORT.md` |
 
 ---
 

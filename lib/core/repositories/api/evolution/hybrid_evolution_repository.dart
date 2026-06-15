@@ -1,5 +1,6 @@
 import '../../interfaces/evolution_repository.dart';
 import '../../repository_query.dart';
+import '../../../../features/dynamic_widgets/dynamic_widget_models.dart';
 import '../../../../features/evolution/evolution_models.dart';
 import '../../../../features/evolution/evolution_requests.dart';
 import 'api_evolution_repository.dart';
@@ -223,4 +224,55 @@ class HybridEvolutionRepository implements EvolutionRepository {
     required RepositoryQuery query,
   }) =>
       _api.getOperationsActions(query: query);
+
+  @override
+  Future<List<WidgetLayoutVersion>> getWidgetLayoutVersions({
+    required RepositoryQuery query,
+    String? role,
+    String? verticalPack,
+  }) =>
+      _api.getWidgetLayoutVersions(
+        query: query,
+        role: role,
+        verticalPack: verticalPack,
+      );
+
+  @override
+  Future<RoleDashboardLayout> getRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+  }) =>
+      _api.getRoleDashboardLayout(query: query, role: role);
+
+  @override
+  Future<RoleDashboardLayout> saveRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+    required RoleDashboardLayout layout,
+    int? version,
+  }) =>
+      _api.saveRoleDashboardLayout(
+        query: query,
+        role: role,
+        layout: layout,
+        version: version,
+      );
+
+  @override
+  Future<List<WidgetDataSource>> listWidgetDataSources({
+    required RepositoryQuery query,
+  }) =>
+      _api.listWidgetDataSources(query: query);
+
+  @override
+  Future<RoleDashboardLayout> resetLayoutToPackDefault({
+    required RepositoryQuery query,
+    required String role,
+    required String verticalPack,
+  }) =>
+      _api.resetLayoutToPackDefault(
+        query: query,
+        role: role,
+        verticalPack: verticalPack,
+      );
 }

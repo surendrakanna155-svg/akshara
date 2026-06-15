@@ -42,9 +42,11 @@ import 'api/evolution/hybrid_evolution_repository.dart';
 import 'api/school_completion/hybrid_school_completion_repository.dart';
 import 'interfaces/school_completion_repository.dart';
 import 'interfaces/multi_school_operations_repository.dart';
+import 'interfaces/organization_builder_repository.dart';
 import 'mock/mock_evolution_repository.dart';
 import 'mock/mock_school_completion_repository.dart';
 import 'mock/mock_multi_school_operations_repository.dart';
+import 'mock/mock_organization_builder_repository.dart';
 import 'interfaces/communication_repository.dart';
 import 'api/copilot/hybrid_copilot_repository.dart';
 import '../ai/ai_inference_providers.dart';
@@ -445,4 +447,14 @@ final multiSchoolOperationsRepositoryProvider =
     return ref.read(apiMultiSchoolOperationsRepositoryProvider);
   }
   return MockMultiSchoolOperationsRepository();
+});
+
+final organizationBuilderRepositoryProvider =
+    Provider<OrganizationBuilderRepository>((ref) {
+  if (isModuleApiEnabled(ref, organizationBuilderApiEnabledProvider)) {
+    return ref.read(apiOrganizationBuilderRepositoryProvider);
+  }
+  return MockOrganizationBuilderRepository(
+    pipeline: ref.watch(aiInferencePipelineProvider),
+  );
 });

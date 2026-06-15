@@ -159,23 +159,23 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 
 ### M10 — Organization Builder
 
-**Target:** 2027 H1 · Declarative provisioning
+**Target:** 2027 H1 · Declarative provisioning · **✅ Complete June 2026**
 
 | ID | Feature | Vision | Status |
 |----|---------|--------|--------|
-| FV-30 | Universal Organization Builder | #30 | 📐 v10.4 design |
+| FV-30 | Universal Organization Builder | #30 | ✅ |
 | FV-PLAT-01 | Universal Employee System | design | 📐 |
-| FV-A | AI School Setup Wizard | §A | 📐 v10.6 |
-| FV-07 | Multi-Role Employee implementation | #7 | 🔄 v9.6 mock |
+| FV-A | AI School Setup Wizard | §A | 🔄 Linked |
+| FV-07 | Multi-Role Employee implementation | #7 | 🔄 |
 
 ### M11 — Dynamic Widget Platform
 
-**Target:** 2027 H2 · Tenant-scoped layouts
+**Target:** 2027 H2 · Tenant-scoped layouts · **✅ Complete June 2026**
 
 | ID | Feature | Vision | Status |
 |----|---------|--------|--------|
-| FV-31 | Dynamic Widget Platform | #31 | 📐 Ops Hub schema seed |
-| — | Widget definition persistence | — | ⏳ |
+| FV-31 | Dynamic Widget Platform | #31 | ✅ |
+| — | Widget definition persistence | — | ✅ |
 
 ### M12 — Infrastructure & Security
 

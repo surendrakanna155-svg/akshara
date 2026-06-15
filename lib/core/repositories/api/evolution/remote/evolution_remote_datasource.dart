@@ -309,4 +309,71 @@ class EvolutionRemoteDataSource {
     );
     return _items(response);
   }
+
+  Future<List<Map<String, dynamic>>> getWidgetLayoutVersions({
+    required RepositoryQuery query,
+    String? role,
+    String? verticalPack,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      EvolutionApiPaths.widgetLayoutVersions,
+      queryParameters: {
+        ..._params(query),
+        if (role != null && role.isNotEmpty) 'role': role,
+        if (verticalPack != null && verticalPack.isNotEmpty) 'verticalPack': verticalPack,
+      },
+    );
+    return _items(response);
+  }
+
+  Future<Map<String, dynamic>> getRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      EvolutionApiPaths.widgetRoleLayout(role),
+      queryParameters: _params(query),
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> saveRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+    required Map<String, dynamic> layout,
+    int? version,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      EvolutionApiPaths.widgetRoleLayout(role),
+      queryParameters: _params(query),
+      data: {
+        'layout': layout,
+        if (version != null) 'version': version,
+      },
+    );
+    return _data(response);
+  }
+
+  Future<List<Map<String, dynamic>>> listWidgetDataSources({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      EvolutionApiPaths.widgetDataSources,
+      queryParameters: _params(query),
+    );
+    return _items(response);
+  }
+
+  Future<Map<String, dynamic>> resetLayoutToPackDefault({
+    required RepositoryQuery query,
+    required String role,
+    required String verticalPack,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '${EvolutionApiPaths.widgetRoleLayout(role)}/reset',
+      queryParameters: _params(query),
+      data: {'verticalPack': verticalPack},
+    );
+    return _data(response);
+  }
 }

@@ -172,6 +172,10 @@ enum Permission {
   // FV-PLAT-02 — Multi-School SaaS Operations
   viewMultiSchoolOperations,
   manageMultiSchoolOperations,
+
+  // FV-30 — Universal Organization Builder
+  viewOrganizationBuilder,
+  manageOrganizationBuilder,
 }
 
 /// Immutable set of [Permission] values for a session.

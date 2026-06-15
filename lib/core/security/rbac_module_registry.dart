@@ -106,6 +106,16 @@ class RbacModuleRegistry {
       view: Permission.viewStudentRisk,
       manage: Permission.generateIntelligence,
     ),
+    ModulePermissionSet(
+      moduleId: 'organization_builder',
+      view: Permission.viewOrganizationBuilder,
+      manage: Permission.manageOrganizationBuilder,
+    ),
+    ModulePermissionSet(
+      moduleId: 'dynamic_widgets',
+      view: Permission.viewDynamicWidgets,
+      manage: Permission.manageDynamicWidgets,
+    ),
   ];
 
   static ModulePermissionSet? forModule(String moduleId) {

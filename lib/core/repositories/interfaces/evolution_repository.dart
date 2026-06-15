@@ -1,3 +1,4 @@
+import '../../../features/dynamic_widgets/dynamic_widget_models.dart';
 import '../../../features/evolution/evolution_models.dart';
 import '../../../features/evolution/evolution_requests.dart';
 import '../repository_query.dart';
@@ -127,5 +128,33 @@ abstract class EvolutionRepository {
 
   Future<List<OperationsActionItem>> getOperationsActions({
     required RepositoryQuery query,
+  });
+
+  Future<List<WidgetLayoutVersion>> getWidgetLayoutVersions({
+    required RepositoryQuery query,
+    String? role,
+    String? verticalPack,
+  });
+
+  Future<RoleDashboardLayout> getRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+  });
+
+  Future<RoleDashboardLayout> saveRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+    required RoleDashboardLayout layout,
+    int? version,
+  });
+
+  Future<List<WidgetDataSource>> listWidgetDataSources({
+    required RepositoryQuery query,
+  });
+
+  Future<RoleDashboardLayout> resetLayoutToPackDefault({
+    required RepositoryQuery query,
+    required String role,
+    required String verticalPack,
   });
 }

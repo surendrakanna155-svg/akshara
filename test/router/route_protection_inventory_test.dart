@@ -39,6 +39,27 @@ void main() {
       });
     }
 
+    for (final role in roles) {
+      test('$role organization builder access matches permission matrix', () {
+        final rbac = RbacService(UserPermissions.forRole(role));
+        final allowed =
+            canAccessErpRoute(rbac, RouteNames.organizationBuilder);
+        final expected = UserPermissions.forRole(role)
+            .has(Permission.viewOrganizationBuilder);
+        expect(allowed, expected);
+      });
+    }
+
+    for (final role in roles) {
+      test('$role dynamic widgets access matches permission matrix', () {
+        final rbac = RbacService(UserPermissions.forRole(role));
+        final allowed = canAccessErpRoute(rbac, RouteNames.dynamicWidgets);
+        final expected =
+            UserPermissions.forRole(role).has(Permission.viewDynamicWidgets);
+        expect(allowed, expected);
+      });
+    }
+
     test('all ERP prefixes map to a permission', () {
       for (final prefix in RouteNames.adminErpRoutes) {
         expect(erpRoutePermissionFor(prefix), isNotNull);

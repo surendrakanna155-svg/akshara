@@ -29,6 +29,10 @@ void main() {
         erpRoutePermissionFor(RouteNames.copilot),
         Permission.viewAiCopilot,
       );
+      expect(
+        erpRoutePermissionFor(RouteNames.organizationBuilder),
+        Permission.viewOrganizationBuilder,
+      );
       expect(erpRoutePermissionFor(RouteNames.parentDashboard), isNull);
     });
   });

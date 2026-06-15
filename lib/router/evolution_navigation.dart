@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/evolution/dynamic_dashboard_screen.dart';
+import '../features/dynamic_widgets/dynamic_widget_runtime_screen.dart';
 import '../features/evolution/growth_platform_screen.dart';
 import '../features/evolution/parent_insights_screen.dart';
 import '../features/evolution/principal_command_screen.dart';
@@ -14,7 +14,7 @@ Widget setupWizardRouteBuilder(BuildContext context, GoRouterState state) {
 }
 
 Widget dynamicDashboardRouteBuilder(BuildContext context, GoRouterState state) {
-  return const DynamicDashboardScreen();
+  return const DynamicWidgetRuntimeScreen();
 }
 
 Widget teacherAssistantRouteBuilder(BuildContext context, GoRouterState state) {

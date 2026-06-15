@@ -1,3 +1,4 @@
+import '../../../features/dynamic_widgets/dynamic_widget_models.dart';
 import '../../../features/evolution/evolution_models.dart';
 import '../../../features/evolution/evolution_requests.dart';
 import '../interfaces/evolution_repository.dart';
@@ -37,6 +38,8 @@ class MockEvolutionRepository implements EvolutionRepository {
     DashboardWidgetPlacement(widgetId: 'fee_collection', order: 2, visible: true, width: 1, height: 1),
     DashboardWidgetPlacement(widgetId: 'attendance_risk', order: 3, visible: true, width: 1, height: 1),
   ];
+
+  final Map<String, RoleDashboardLayout> _roleLayoutOverrides = {};
 
   @override
   Future<SetupWizardSession> createSetupWizard({
@@ -486,5 +489,313 @@ class MockEvolutionRepository implements EvolutionRepository {
         actionType: 'follow_up',
       ),
     ];
+  }
+
+  static const List<WidgetDataSource> _kDataSources = [
+    WidgetDataSource(
+      key: 'operations.school_health',
+      label: 'School health score',
+      repositoryModule: 'evolution',
+      methodName: 'getWidgetData',
+      supportedTypes: [WidgetType.kpi, WidgetType.chart],
+      requiredPermission: 'viewOperationsHub',
+      description: 'Overall school health aggregate',
+    ),
+    WidgetDataSource(
+      key: 'intelligence.student_risk',
+      label: 'Student risk alerts',
+      repositoryModule: 'evolution',
+      methodName: 'getWidgetData',
+      supportedTypes: [WidgetType.alert, WidgetType.list],
+      requiredPermission: 'viewStudentRisk',
+    ),
+    WidgetDataSource(
+      key: 'finance.fee_collection',
+      label: 'Fee collections',
+      repositoryModule: 'evolution',
+      methodName: 'getWidgetData',
+      supportedTypes: [WidgetType.kpi],
+      requiredPermission: 'viewFinance',
+    ),
+    WidgetDataSource(
+      key: 'intelligence.attendance_risk',
+      label: 'Attendance risk',
+      repositoryModule: 'evolution',
+      methodName: 'getWidgetData',
+      supportedTypes: [WidgetType.alert, WidgetType.kpi],
+      requiredPermission: 'viewStudentRisk',
+    ),
+    WidgetDataSource(
+      key: 'academics.homework_summary',
+      label: 'Homework completion',
+      repositoryModule: 'evolution',
+      methodName: 'getWidgetData',
+      supportedTypes: [WidgetType.kpi, WidgetType.chart],
+      requiredPermission: 'viewHomeworkIntelligence',
+    ),
+    WidgetDataSource(
+      key: 'operations.summary',
+      label: 'Operations actions',
+      repositoryModule: 'evolution',
+      methodName: 'getOperationsActions',
+      supportedTypes: [WidgetType.list, WidgetType.action],
+      requiredPermission: 'viewOperationsHub',
+    ),
+  ];
+
+  RoleDashboardLayout _packDefaultLayout({
+    required String role,
+    required String verticalPack,
+  }) {
+    final widgets = switch (verticalPack) {
+      'salon' => _salonWidgets(role),
+      'hospital' => _hospitalWidgets(role),
+      'restaurant' => _restaurantWidgets(role),
+      _ => _schoolWidgets(role),
+    };
+    return RoleDashboardLayout(
+      layoutId: '$role-dashboard-v1',
+      role: role,
+      verticalPack: verticalPack,
+      version: 1,
+      widgets: widgets,
+      navigation: const [
+        DynamicWidgetNavItem(
+          label: 'Operations',
+          route: '/operations/hub',
+          icon: 'dashboard',
+        ),
+      ],
+    );
+  }
+
+  List<DynamicWidgetItem> _schoolWidgets(String role) {
+  return switch (role) {
+      'teacher' => const [
+          DynamicWidgetItem(
+            id: 'homework_summary',
+            type: WidgetType.kpi,
+            title: 'Homework Summary',
+            dataSource: 'academics.homework_summary',
+            permissions: ['viewHomeworkIntelligence'],
+            drillDown: '/homework-intelligence',
+            size: WidgetGridSize.half,
+            order: 0,
+          ),
+          DynamicWidgetItem(
+            id: 'operations_summary',
+            type: WidgetType.list,
+            title: 'Operations Summary',
+            dataSource: 'operations.summary',
+            permissions: ['viewOperationsHub'],
+            drillDown: '/operations/hub',
+            size: WidgetGridSize.half,
+            order: 1,
+          ),
+        ],
+      'financeAdmin' => const [
+          DynamicWidgetItem(
+            id: 'fee_collection',
+            type: WidgetType.kpi,
+            title: 'Fee Collection',
+            dataSource: 'finance.fee_collection',
+            permissions: ['viewFinance'],
+            drillDown: '/finance/dashboard',
+            size: WidgetGridSize.full,
+            order: 0,
+          ),
+        ],
+      _ => const [
+          DynamicWidgetItem(
+            id: 'school_health',
+            type: WidgetType.kpi,
+            title: 'School Health',
+            dataSource: 'operations.school_health',
+            permissions: ['viewOperationsHub'],
+            drillDown: '/operations/hub',
+            size: WidgetGridSize.half,
+            order: 0,
+          ),
+          DynamicWidgetItem(
+            id: 'student_risk',
+            type: WidgetType.alert,
+            title: 'Student Risk',
+            dataSource: 'intelligence.student_risk',
+            permissions: ['viewStudentRisk'],
+            drillDown: '/intelligence/student-success',
+            size: WidgetGridSize.half,
+            order: 1,
+          ),
+          DynamicWidgetItem(
+            id: 'fee_collection',
+            type: WidgetType.kpi,
+            title: 'Fee Collection',
+            dataSource: 'finance.fee_collection',
+            permissions: ['viewFinance'],
+            drillDown: '/finance/dashboard',
+            size: WidgetGridSize.half,
+            order: 2,
+          ),
+          DynamicWidgetItem(
+            id: 'attendance_risk',
+            type: WidgetType.alert,
+            title: 'Attendance Risk',
+            dataSource: 'intelligence.attendance_risk',
+            permissions: ['viewStudentRisk'],
+            drillDown: '/sis/attendance',
+            size: WidgetGridSize.half,
+            order: 3,
+          ),
+        ],
+    };
+  }
+
+  List<DynamicWidgetItem> _salonWidgets(String role) => const [
+        DynamicWidgetItem(
+          id: 'chair_utilization',
+          type: WidgetType.kpi,
+          title: 'Chair Utilization',
+          dataSource: 'salon.chair_utilization',
+          permissions: ['viewOperationsHub'],
+          size: WidgetGridSize.half,
+          order: 0,
+        ),
+        DynamicWidgetItem(
+          id: 'appointment_pipeline',
+          type: WidgetType.chart,
+          title: 'Appointment Pipeline',
+          dataSource: 'salon.appointment_pipeline',
+          permissions: ['viewOperationsHub'],
+          size: WidgetGridSize.half,
+          order: 1,
+        ),
+      ];
+
+  List<DynamicWidgetItem> _hospitalWidgets(String role) => const [
+        DynamicWidgetItem(
+          id: 'bed_occupancy',
+          type: WidgetType.kpi,
+          title: 'Bed Occupancy',
+          dataSource: 'hospital.bed_occupancy',
+          permissions: ['viewOperationsHub'],
+          size: WidgetGridSize.half,
+          order: 0,
+        ),
+        DynamicWidgetItem(
+          id: 'opd_queue',
+          type: WidgetType.list,
+          title: 'OPD Queue',
+          dataSource: 'hospital.opd_queue',
+          permissions: ['viewOperationsHub'],
+          size: WidgetGridSize.half,
+          order: 1,
+        ),
+      ];
+
+  List<DynamicWidgetItem> _restaurantWidgets(String role) => const [
+        DynamicWidgetItem(
+          id: 'active_covers',
+          type: WidgetType.kpi,
+          title: 'Active Covers',
+          dataSource: 'restaurant.active_covers',
+          permissions: ['viewOperationsHub'],
+          size: WidgetGridSize.half,
+          order: 0,
+        ),
+        DynamicWidgetItem(
+          id: 'ticket_time',
+          type: WidgetType.alert,
+          title: 'Kitchen Ticket Time',
+          dataSource: 'restaurant.ticket_time',
+          permissions: ['viewOperationsHub'],
+          size: WidgetGridSize.half,
+          order: 1,
+        ),
+      ];
+
+  RoleDashboardLayout _resolvedLayout(String role, {String verticalPack = 'school'}) {
+    return _roleLayoutOverrides[role] ??
+        _packDefaultLayout(role: role, verticalPack: verticalPack);
+  }
+
+  @override
+  Future<List<WidgetLayoutVersion>> getWidgetLayoutVersions({
+    required RepositoryQuery query,
+    String? role,
+    String? verticalPack,
+  }) async {
+    final roles = role != null ? [role] : ['principal', 'schoolAdmin', 'teacher', 'financeAdmin'];
+    final pack = verticalPack ?? 'school';
+    return [
+      for (final r in roles)
+        WidgetLayoutVersion(
+          layoutId: '$r-dashboard-v1',
+          role: r,
+          verticalPack: pack,
+          version: _resolvedLayout(r, verticalPack: pack).version,
+          updatedAt: DateTime(2026, 6, 1),
+          isTenantOverride: _roleLayoutOverrides.containsKey(r),
+        ),
+    ];
+  }
+
+  @override
+  Future<RoleDashboardLayout> getRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+  }) async =>
+      _resolvedLayout(role);
+
+  @override
+  Future<RoleDashboardLayout> saveRoleDashboardLayout({
+    required RepositoryQuery query,
+    required String role,
+    required RoleDashboardLayout layout,
+    int? version,
+  }) async {
+    final nextVersion = (version ?? layout.version) + 1;
+    final saved = layout.copyWith(
+      version: nextVersion,
+      isTenantOverride: true,
+    );
+    _roleLayoutOverrides[role] = saved;
+    _layout = [
+      for (var i = 0; i < saved.widgets.length; i++)
+        DashboardWidgetPlacement(
+          widgetId: saved.widgets[i].id,
+          order: saved.widgets[i].order,
+          visible: saved.widgets[i].visible,
+          width: saved.widgets[i].size.flex,
+          height: 1,
+        ),
+    ];
+    return saved;
+  }
+
+  @override
+  Future<List<WidgetDataSource>> listWidgetDataSources({
+    required RepositoryQuery query,
+  }) async =>
+      List.from(_kDataSources);
+
+  @override
+  Future<RoleDashboardLayout> resetLayoutToPackDefault({
+    required RepositoryQuery query,
+    required String role,
+    required String verticalPack,
+  }) async {
+    _roleLayoutOverrides.remove(role);
+    final layout = _packDefaultLayout(role: role, verticalPack: verticalPack);
+    _layout = [
+      for (final widget in layout.widgets)
+        DashboardWidgetPlacement(
+          widgetId: widget.id,
+          order: widget.order,
+          visible: widget.visible,
+          width: widget.size.flex,
+          height: 1,
+        ),
+    ];
+    return layout;
   }
 }

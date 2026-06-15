@@ -28,6 +28,8 @@ abstract final class ServerRbacRouteInventory {
     'promotion',
     'onboarding',
     'organization_intelligence',
+    'organization_builder',
+    'dynamic_widgets',
     'branch',
     'franchise',
   ];
@@ -89,8 +91,12 @@ abstract final class ServerRbacRouteInventory {
     'manageBranchOperations',
     'viewFranchiseOperations',
     'manageFranchiseOperations',
+    'viewOrganizationBuilder',
+    'manageOrganizationBuilder',
+    'viewDynamicWidgets',
+    'manageDynamicWidgets',
   ];
 
   /// Mirrors server RBAC inventory entry count (v13.4).
-  static const protectedRouteCount = 83;
+  static const protectedRouteCount = 87;
 }

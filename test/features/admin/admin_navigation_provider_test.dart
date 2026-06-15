@@ -20,7 +20,7 @@ void main() {
       addTearDown(container.dispose);
 
       final destinations = container.read(adminNavDestinationsProvider);
-      expect(destinations, hasLength(13));
+      expect(destinations, hasLength(15));
       expect(
         destinations.map((d) => d.route).toList(),
         [
@@ -37,6 +37,8 @@ void main() {
           RouteNames.alumniDashboard,
           RouteNames.controlCenterDashboard,
           RouteNames.directorDashboard,
+          RouteNames.organizationBuilder,
+          RouteNames.dynamicWidgets,
         ],
       );
     });

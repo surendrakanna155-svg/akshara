@@ -218,17 +218,17 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 
 | ID | Feature | Status |
 |----|---------|--------|
-| FV-30 | Universal Organization Builder | 📐 Design |
+| FV-30 | Universal Organization Builder | ✅ |
 | FV-PLAT-01 | Universal Employee System | 📐 Design |
-| FV-A | AI School Setup Wizard | 📐 Design |
+| FV-A | AI School Setup Wizard | 🔄 Linked |
 | FV-07 | Multi-Role Employee (implementation) | 🔄 |
 
 ### M11 — Dynamic Widget Platform
 
 | ID | Feature | Status |
 |----|---------|--------|
-| FV-31 | Dynamic Widget Platform | 📐 Design |
-| — | Operations Hub widget persistence | ⏳ |
+| FV-31 | Dynamic Widget Platform | ✅ |
+| — | Widget definition persistence | ✅ |
 
 ### M12 — Infrastructure & Security
 

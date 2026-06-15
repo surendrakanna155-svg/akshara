@@ -910,6 +910,100 @@ abstract final class QaTestKeys {
   static const multiSchoolOnboardingCompletedSnackbar =
       ValueKey<String>('multi_school_onboarding_completed_snackbar');
 
+  static const organizationBuilderHubScreen =
+      ValueKey<String>('organization_builder_hub_screen');
+  static const organizationBuilderInterviewScreen =
+      ValueKey<String>('organization_builder_interview_screen');
+  static const organizationBuilderPreviewScreen =
+      ValueKey<String>('organization_builder_preview_screen');
+  static const organizationBuilderProvisioningScreen =
+      ValueKey<String>('organization_builder_provisioning_screen');
+  static const organizationBuilderSchoolSetupLink =
+      ValueKey<String>('organization_builder_school_setup_link');
+  static const organizationBuilderInterviewBackButton =
+      ValueKey<String>('organization_builder_interview_back_button');
+  static const organizationBuilderInterviewContinueButton =
+      ValueKey<String>('organization_builder_interview_continue_button');
+  static const organizationBuilderInterviewPreviewButton =
+      ValueKey<String>('organization_builder_interview_preview_button');
+  static const organizationBuilderInterviewNameField =
+      ValueKey<String>('organization_builder_interview_name_field');
+  static const organizationBuilderInterviewScalePrimaryField =
+      ValueKey<String>('organization_builder_interview_scale_primary_field');
+  static const organizationBuilderInterviewScaleSecondaryField =
+      ValueKey<String>('organization_builder_interview_scale_secondary_field');
+  static const organizationBuilderInterviewModulesField =
+      ValueKey<String>('organization_builder_interview_modules_field');
+  static const organizationBuilderInterviewWorkflowsField =
+      ValueKey<String>('organization_builder_interview_workflows_field');
+  static const organizationBuilderInterviewChannelsField =
+      ValueKey<String>('organization_builder_interview_channels_field');
+  static const organizationBuilderInterviewPaymentsField =
+      ValueKey<String>('organization_builder_interview_payments_field');
+  static const organizationBuilderStartProvisioningButton =
+      ValueKey<String>('organization_builder_start_provisioning_button');
+  static const organizationBuilderProvisioningCompleted =
+      ValueKey<String>('organization_builder_provisioning_completed');
+
+  static ValueKey<String> organizationBuilderPackCard(String packId) =>
+      ValueKey<String>('organization_builder_pack_$packId');
+  static ValueKey<String> organizationBuilderStartInterviewButton(
+    String packId,
+  ) =>
+      ValueKey<String>('organization_builder_start_interview_$packId');
+  static ValueKey<String> organizationBuilderDraftRow(String draftId) =>
+      ValueKey<String>('organization_builder_draft_$draftId');
+  static ValueKey<String> organizationBuilderRecommendation(String recId) =>
+      ValueKey<String>('organization_builder_recommendation_$recId');
+  static ValueKey<String> organizationBuilderPreviewModule(String moduleId) =>
+      ValueKey<String>('organization_builder_preview_module_$moduleId');
+  static ValueKey<String> organizationBuilderPreviewRole(String roleId) =>
+      ValueKey<String>('organization_builder_preview_role_$roleId');
+  static ValueKey<String> organizationBuilderPreviewWidget(String widgetId) =>
+      ValueKey<String>('organization_builder_preview_widget_$widgetId');
+  static ValueKey<String> organizationBuilderPreviewWorkflow(
+    String workflowId,
+  ) =>
+      ValueKey<String>('organization_builder_preview_workflow_$workflowId');
+  static ValueKey<String> organizationBuilderProvisioningStep(String stepId) =>
+      ValueKey<String>('organization_builder_provisioning_step_$stepId');
+
+  static const dynamicWidgetRegistryScreen =
+      ValueKey<String>('dynamic_widget_registry_screen');
+  static const dynamicWidgetLayoutEditorScreen =
+      ValueKey<String>('dynamic_widget_layout_editor_screen');
+  static const dynamicWidgetRuntimeScreen =
+      ValueKey<String>('dynamic_widget_runtime_screen');
+  static const dynamicWidgetOpenRuntimeButton =
+      ValueKey<String>('dynamic_widget_open_runtime_button');
+  static const dynamicWidgetOpenLayoutEditorButton =
+      ValueKey<String>('dynamic_widget_open_layout_editor_button');
+  static const dynamicWidgetLayoutRoleDropdown =
+      ValueKey<String>('dynamic_widget_layout_role_dropdown');
+  static const dynamicWidgetLayoutPackDropdown =
+      ValueKey<String>('dynamic_widget_layout_pack_dropdown');
+  static const dynamicWidgetSaveLayoutButton =
+      ValueKey<String>('dynamic_widget_save_layout_button');
+  static const dynamicWidgetResetLayoutButton =
+      ValueKey<String>('dynamic_widget_reset_layout_button');
+  static const dynamicWidgetRuntimeRefreshButton =
+      ValueKey<String>('dynamic_widget_runtime_refresh_button');
+
+  static ValueKey<String> dynamicWidgetCatalogItem(String widgetId) =>
+      ValueKey<String>('dynamic_widget_catalog_$widgetId');
+  static ValueKey<String> dynamicWidgetDataSourceItem(String key) =>
+      ValueKey<String>('dynamic_widget_data_source_$key');
+  static ValueKey<String> dynamicWidgetLayoutVersion(String role) =>
+      ValueKey<String>('dynamic_widget_layout_version_$role');
+  static ValueKey<String> dynamicWidgetLayoutItem(String widgetId) =>
+      ValueKey<String>('dynamic_widget_layout_item_$widgetId');
+  static ValueKey<String> dynamicWidgetLayoutMoveUp(String widgetId) =>
+      ValueKey<String>('dynamic_widget_layout_move_up_$widgetId');
+  static ValueKey<String> dynamicWidgetLayoutMoveDown(String widgetId) =>
+      ValueKey<String>('dynamic_widget_layout_move_down_$widgetId');
+  static ValueKey<String> dynamicWidgetRuntimeTile(String widgetId) =>
+      ValueKey<String>('dynamic_widget_runtime_tile_$widgetId');
+
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
 

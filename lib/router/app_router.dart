@@ -81,6 +81,8 @@ import 'sis_navigation.dart';
 import 'parent_navigation.dart';
 import 'parent_meetings_navigation.dart';
 import 'multi_school_navigation.dart';
+import 'organization_builder_navigation.dart';
+import 'dynamic_widget_navigation.dart';
 import 'route_names.dart';
 import 'student_navigation.dart';
 import 'teacher_navigation.dart';
@@ -732,6 +734,55 @@ GoRouter createAppRouter({
             name: 'multiSchoolOnboarding',
             pageBuilder: (context, state) => NoTransitionPage(
               child: multiSchoolOnboardingRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.organizationBuilder,
+            name: 'organizationBuilder',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: organizationBuilderHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.organizationBuilderInterview,
+            name: 'organizationBuilderInterview',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: organizationBuilderInterviewRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.organizationBuilderPreview,
+            name: 'organizationBuilderPreview',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: organizationBuilderPreviewRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.organizationBuilderProvisioning,
+            name: 'organizationBuilderProvisioning',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: organizationBuilderProvisioningRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.dynamicWidgets,
+            name: 'dynamicWidgets',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: dynamicWidgetRegistryRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.dynamicWidgetLayout,
+            name: 'dynamicWidgetLayout',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: dynamicWidgetLayoutRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.dynamicWidgetRuntime,
+            name: 'dynamicWidgetRuntime',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: dynamicWidgetRuntimeRouteBuilder(context, state),
             ),
           ),
           GoRoute(
