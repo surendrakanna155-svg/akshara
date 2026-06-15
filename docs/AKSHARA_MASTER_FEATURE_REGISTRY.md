@@ -413,7 +413,7 @@
 | Tenant Isolation Verification | FV-PLAT-08 | **A** | 213 probes UI | M12 |
 | Monitoring & Alerting | FV-PLAT-09 | **A** | Shipped | M12 · Alert center |
 | Live AI Inference | FV-PLAT-10 | **A** | Shipped | M8 |
-| White Label Platform Expansion | FV-PLAT-11 | **B** | ACC-08 placeholder | M13 |
+| White Label Platform Expansion | FV-PLAT-11 | **A** | Shipped | M13 · white_label module |
 | Universal Employee System | FV-PLAT-01 | **E** | Design only | M10 · `design/Universal-Employee-System.md` |
 
 ---
