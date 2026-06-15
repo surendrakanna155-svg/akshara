@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('CopilotPersonaExperience', () {
-    test('defines experience for all eight personas', () {
+    test('defines experience for all configured personas', () {
       for (final persona in CopilotPersonaRole.values) {
         final experience = CopilotPersonaExperience.forPersona(persona);
         expect(experience.persona, persona);
@@ -48,6 +48,17 @@ void main() {
       );
       expect(experience.focusAreas, contains('Study recommendations'));
       expect(experience.focusAreas, contains('Exam preparation'));
+    });
+
+    test('finance and hr personas include operational focus areas', () {
+      final finance =
+          CopilotPersonaExperience.forPersona(CopilotPersonaRole.finance);
+      final hr = CopilotPersonaExperience.forPersona(CopilotPersonaRole.hr);
+
+      expect(finance.focusAreas, contains('Fee collection trends'));
+      expect(finance.starterPrompts, isNotEmpty);
+      expect(hr.focusAreas, contains('Payroll readiness'));
+      expect(hr.starterPrompts, isNotEmpty);
     });
   });
 }

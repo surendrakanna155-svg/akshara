@@ -1,11 +1,13 @@
 import '../../../features/copilot/copilot_models.dart';
 import '../../../features/copilot/copilot_screen_context.dart';
 import '../../../features/copilot/copilot_stub_responses.dart';
+import '../../ai/ai_inference_models.dart';
+import '../../ai/ai_inference_pipeline.dart';
 import '../interfaces/copilot_repository.dart';
 import '../repository_query.dart';
 
 class MockCopilotRepository implements CopilotRepository {
-  MockCopilotRepository() {
+  MockCopilotRepository({AiInferencePipeline? pipeline}) : _pipeline = pipeline {
     _sessions.addAll([
       CopilotSession(
         id: 'copilot_session_1',
@@ -46,6 +48,7 @@ class MockCopilotRepository implements CopilotRepository {
 
   final List<CopilotSession> _sessions = [];
   final Map<String, List<CopilotMessage>> _messages = {};
+  final AiInferencePipeline? _pipeline;
 
   static const _assistants = [
     CopilotAssistant(
@@ -196,10 +199,7 @@ class MockCopilotRepository implements CopilotRepository {
     CopilotScreenContext? screenContext,
   }) async {
     final now = DateTime.now();
-    final reply = buildContextAwareStubReply(
-      userMessage: content,
-      screenContext: screenContext,
-    );
+    final reply = await _resolveReply(content, screenContext);
     final userMessage = CopilotMessage(
       id: 'msg_user_$now',
       sessionId: sessionId,
@@ -214,7 +214,11 @@ class MockCopilotRepository implements CopilotRepository {
       role: 'assistant',
       content: reply,
       createdAt: now.add(const Duration(seconds: 1)),
-      metadata: const {'model': 'akshara-stub', 'stub': true, 'contextAware': true},
+      metadata: {
+        'model': _pipeline != null ? 'akshara-inference' : 'akshara-stub',
+        'stub': _pipeline == null,
+        'contextAware': true,
+      },
     );
     _messages.putIfAbsent(sessionId, () => []).addAll([userMessage, assistantMessage]);
     final index = _sessions.indexWhere((s) => s.id == sessionId);
@@ -233,8 +237,30 @@ class MockCopilotRepository implements CopilotRepository {
     return CopilotSendMessageResult(
       userMessage: userMessage,
       assistantMessage: assistantMessage,
-      model: 'akshara-stub',
-      stub: true,
+      model: _pipeline != null ? 'akshara-inference' : 'akshara-stub',
+      stub: _pipeline == null,
     );
+  }
+
+  Future<String> _resolveReply(
+    String content,
+    CopilotScreenContext? screenContext,
+  ) async {
+    final pipeline = _pipeline;
+    if (pipeline == null) {
+      return buildContextAwareStubReply(
+        userMessage: content,
+        screenContext: screenContext,
+      );
+    }
+    final response = await pipeline.complete(
+      AiInferenceRequest(
+        prompt: content,
+        taskType: aiTaskTypeName(AiInferenceTaskType.copilotChat),
+        systemPrompt: 'Akshara ERP copilot assistant',
+        context: screenContext?.toJson() ?? const {},
+      ),
+    );
+    return response.content;
   }
 }

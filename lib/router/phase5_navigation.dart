@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/ai_content/ai_content_screen.dart';
 import '../features/employee/employee_360_screen.dart';
 import '../features/memories/school_memories_screen.dart';
 import '../features/operations/operations_hub_screen.dart';
 import '../features/parent/experience/parent_experience_hub_screen.dart';
 import '../features/promotion/achievement_promotion_screen.dart';
+import '../features/resource_optimization/resource_optimization_screen.dart';
 import 'route_names.dart';
 
-Widget parentExperienceHubRouteBuilder(BuildContext context, GoRouterState state) {
+Widget parentExperienceHubRouteBuilder(
+    BuildContext context, GoRouterState state) {
   final studentId = state.uri.queryParameters['studentId'];
   final tabName = state.uri.queryParameters['tab'];
   final tabIndex = switch (tabName) {
@@ -31,12 +34,23 @@ Widget operationsHubRouteBuilder(BuildContext context, GoRouterState state) {
   return const OperationsHubScreen();
 }
 
+Widget resourceOptimizationRouteBuilder(
+    BuildContext context, GoRouterState state) {
+  return const ResourceOptimizationScreen();
+}
+
+Widget aiContentRouteBuilder(BuildContext context, GoRouterState state) {
+  return const AiContentScreen();
+}
+
 Widget schoolMemoriesRouteBuilder(BuildContext context, GoRouterState state) {
   return const SchoolMemoriesScreen();
 }
 
-Widget achievementPromotionRouteBuilder(BuildContext context, GoRouterState state) {
+Widget achievementPromotionRouteBuilder(
+    BuildContext context, GoRouterState state) {
   return const AchievementPromotionScreen();
 }
 
-String employee360Path(String employeeId) => '${RouteNames.employee360}/$employeeId';
+String employee360Path(String employeeId) =>
+    '${RouteNames.employee360}/$employeeId';

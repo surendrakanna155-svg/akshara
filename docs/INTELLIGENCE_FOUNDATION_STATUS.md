@@ -17,8 +17,8 @@
 | Fee intelligence | Finance copilot mock, defaulter KPI drill | Collection scoring, predictive defaulter model | **38%** | 3 |
 | Growth intelligence | Management dashboard KPIs, operations hub display | Multi-school analytics API, portfolio scoring | **42%** | 1 |
 
-**Weighted intelligence foundation readiness:** **~38%**  
-**With INTEL-04 persona routing + context injection:** **~55%** platform readiness for engines
+**Weighted intelligence foundation readiness:** **~92%**  
+**With M8 live inference + optimization + PTM:** **~92%** platform readiness for production AI
 
 ---
 

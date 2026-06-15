@@ -46,7 +46,8 @@ bool copilotFloatingDockEnabled({
   return shouldShowFloatingAiDock(prefs: prefs, breakpoint: breakpoint);
 }
 
-IconData copilotDockIconForPersona(CopilotPersonaRole persona) => switch (persona) {
+IconData copilotDockIconForPersona(CopilotPersonaRole persona) =>
+    switch (persona) {
       CopilotPersonaRole.platformOwner ||
       CopilotPersonaRole.organizationOwner =>
         Icons.hub_outlined,
@@ -56,6 +57,8 @@ IconData copilotDockIconForPersona(CopilotPersonaRole persona) => switch (person
       CopilotPersonaRole.teacher => Icons.co_present_outlined,
       CopilotPersonaRole.parent => Icons.family_restroom_outlined,
       CopilotPersonaRole.student => Icons.auto_stories_outlined,
+      CopilotPersonaRole.finance => Icons.account_balance_wallet_outlined,
+      CopilotPersonaRole.hr => Icons.badge_outlined,
     };
 
 CopilotPersonaRole copilotDockPersona(WidgetRef ref) {
@@ -64,7 +67,8 @@ CopilotPersonaRole copilotDockPersona(WidgetRef ref) {
   return copilotPersonaForErpRole(claims.erpRole);
 }
 
-String copilotDockSemanticLabel(CopilotPersonaRole persona, {required bool expanded}) {
+String copilotDockSemanticLabel(CopilotPersonaRole persona,
+    {required bool expanded}) {
   final state = expanded ? 'expanded' : 'collapsed';
   return 'AI assistant dock, ${persona.label}, $state';
 }

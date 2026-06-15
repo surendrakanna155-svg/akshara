@@ -31,7 +31,8 @@ String buildContextAwareStubReply({
     buffer.writeln('- Active child: ${ctx!.activeChildId}');
   }
   if (filters.isNotEmpty) {
-    buffer.writeln('- Filters: ${filters.entries.map((e) => '${e.key}=${e.value}').join(', ')}');
+    buffer.writeln(
+        '- Filters: ${filters.entries.map((e) => '${e.key}=${e.value}').join(', ')}');
   }
   if (kpis.isNotEmpty) {
     buffer.writeln('- KPIs on screen:');
@@ -40,7 +41,8 @@ String buildContextAwareStubReply({
     }
   }
   if (records.isNotEmpty) {
-    buffer.writeln('- Records: ${records.entries.map((e) => '${e.key}=${e.value}').join(', ')}');
+    buffer.writeln(
+        '- Records: ${records.entries.map((e) => '${e.key}=${e.value}').join(', ')}');
   }
 
   buffer
@@ -70,5 +72,9 @@ String _personaInsight(CopilotPersonaRole persona, String module) {
       '**Parent insight:** Review your child\'s attendance and upcoming homework deadlines; contact the class teacher for concerns.',
     CopilotPersonaRole.student =>
       '**Study insight:** Focus revision on weak subjects and upcoming exam topics from your timetable.',
+    CopilotPersonaRole.finance =>
+      '**Finance insight:** Track collection velocity and reconcile daily exceptions to reduce month-end leakage.',
+    CopilotPersonaRole.hr =>
+      '**HR insight:** Review leave bottlenecks and payroll readiness weekly to avoid staffing disruptions.',
   };
 }

@@ -74,6 +74,8 @@ abstract final class RouteNames {
   static const String parentAcademicReport = '/parent/academic-report';
   static const String employee360 = '/employees/360';
   static const String operationsHub = '/operations/hub';
+  static const String resourceOptimization = '/resource-optimization';
+  static const String aiContent = '/ai-content';
   static const String schoolMemories = '/memories';
   static const String achievementPromotion = '/promotions';
   static const String setupWizard = '/setup-wizard';
@@ -106,6 +108,7 @@ abstract final class RouteNames {
   static const String syllabusAutomation = '/school/syllabus/automation';
   static const String academicProgress = '/school/academic/progress';
   static const String timetableIntelligence = '/school/timetables/intelligence';
+  static const String parentMeetings = '/parent-meetings';
   static const String admissions = '/admissions';
   static const String admissionsDashboard = '/admissions/dashboard';
   static const String admissionsLeads = '/admissions/leads';
@@ -416,6 +419,8 @@ abstract final class RouteNames {
     inventoryDistribution,
     inventoryReplacements,
     operationsHub,
+    resourceOptimization,
+    aiContent,
     schoolMemories,
     achievementPromotion,
     admissions,
@@ -429,5 +434,6 @@ abstract final class RouteNames {
     inventory,
     alumni,
     controlCenter,
+    parentMeetings,
   ];
 }

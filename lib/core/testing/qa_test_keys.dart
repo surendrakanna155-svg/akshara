@@ -584,6 +584,12 @@ abstract final class QaTestKeys {
   static const copilotPersonaReplyPanel =
       ValueKey<String>('copilot_persona_reply_panel');
 
+  static const universalAiAssistantStreamingToggle =
+      ValueKey<String>('universal_ai_assistant_streaming_toggle');
+
+  static const universalAiAssistantLoadingIndicator =
+      ValueKey<String>('universal_ai_assistant_loading_indicator');
+
   static ValueKey<String> copilotPersonaPromptChip(String prompt) =>
       ValueKey<String>('copilot_persona_prompt_${prompt.hashCode}');
 
@@ -703,6 +709,31 @@ abstract final class QaTestKeys {
       ValueKey<String>('timetable_optimization_apply_all_button');
   static const timetableOptimizationApplySuccessSnackbar =
       ValueKey<String>('timetable_optimization_apply_success_snackbar');
+  static const resourceOptimizationAppliedSnackbar =
+      ValueKey<String>('resource_optimization_applied_snackbar');
+  static const resourceOptimizationDismissedSnackbar =
+      ValueKey<String>('resource_optimization_dismissed_snackbar');
+  static const aiContentTypePicker = ValueKey<String>('ai_content_type_picker');
+  static const aiContentPromptField =
+      ValueKey<String>('ai_content_prompt_field');
+  static const aiContentAudienceField =
+      ValueKey<String>('ai_content_audience_field');
+  static const aiContentToneField = ValueKey<String>('ai_content_tone_field');
+  static const aiContentConstraintsField =
+      ValueKey<String>('ai_content_constraints_field');
+  static const aiContentGenerateButton =
+      ValueKey<String>('ai_content_generate_button');
+  static const aiContentGeneratedCard =
+      ValueKey<String>('ai_content_generated_card');
+  static const aiContentGeneratedSnackbar =
+      ValueKey<String>('ai_content_generated_snackbar');
+  static const aiContentCopyButton = ValueKey<String>('ai_content_copy_button');
+  static const aiContentShareButton =
+      ValueKey<String>('ai_content_share_button');
+  static const aiContentCopiedSnackbar =
+      ValueKey<String>('ai_content_copied_snackbar');
+  static const aiContentSharedSnackbar =
+      ValueKey<String>('ai_content_shared_snackbar');
   static const growthPlatformScreen =
       ValueKey<String>('growth_platform_screen');
 
@@ -746,6 +777,48 @@ abstract final class QaTestKeys {
     String recommendationId,
   ) =>
       ValueKey<String>('timetable_optimization_apply_$recommendationId');
+
+  static ValueKey<String> resourceOptimizationTab(String domain) =>
+      ValueKey<String>('resource_optimization_tab_$domain');
+
+  static ValueKey<String> resourceOptimizationApplyButton(
+    String recommendationId,
+  ) =>
+      ValueKey<String>('resource_optimization_apply_$recommendationId');
+
+  static ValueKey<String> resourceOptimizationDismissButton(
+    String recommendationId,
+  ) =>
+      ValueKey<String>('resource_optimization_dismiss_$recommendationId');
+
+  static const parentMeetingsScreen =
+      ValueKey<String>('parent_meetings_screen');
+  static const parentMeetingsCreateButton =
+      ValueKey<String>('parent_meetings_create_button');
+  static const parentMeetingsStudentIdField =
+      ValueKey<String>('parent_meetings_student_id_field');
+  static const parentMeetingsStudentNameField =
+      ValueKey<String>('parent_meetings_student_name_field');
+  static const parentMeetingsParentNameField =
+      ValueKey<String>('parent_meetings_parent_name_field');
+  static const parentMeetingsTeacherNameField =
+      ValueKey<String>('parent_meetings_teacher_name_field');
+  static const parentMeetingsCreateSubmitButton =
+      ValueKey<String>('parent_meetings_create_submit_button');
+  static const parentMeetingsNotesField =
+      ValueKey<String>('parent_meetings_notes_field');
+  static const parentMeetingsSaveNotesButton =
+      ValueKey<String>('parent_meetings_save_notes_button');
+  static const parentMeetingsGenerateSummaryButton =
+      ValueKey<String>('parent_meetings_generate_summary_button');
+  static const parentMeetingsScheduleFollowUpButton =
+      ValueKey<String>('parent_meetings_schedule_follow_up_button');
+
+  static ValueKey<String> parentMeetingTile(String meetingId) =>
+      ValueKey<String>('parent_meeting_tile_$meetingId');
+
+  static ValueKey<String> parentMeetingActionToggle(String actionId) =>
+      ValueKey<String>('parent_meeting_action_toggle_$actionId');
 
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');

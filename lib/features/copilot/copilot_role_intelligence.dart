@@ -2,7 +2,7 @@ import '../../core/security/erp_role.dart';
 import '../../router/route_names.dart';
 import 'copilot_models.dart';
 
-/// Eight copilot personas aligned with Akshara intelligence vision.
+/// Copilot personas aligned with Akshara intelligence vision.
 enum CopilotPersonaRole {
   platformOwner,
   organizationOwner,
@@ -11,7 +11,9 @@ enum CopilotPersonaRole {
   academicCoordinator,
   teacher,
   parent,
-  student;
+  student,
+  finance,
+  hr;
 
   String get label => switch (this) {
         CopilotPersonaRole.platformOwner => 'Platform Owner',
@@ -22,6 +24,8 @@ enum CopilotPersonaRole {
         CopilotPersonaRole.teacher => 'Teacher',
         CopilotPersonaRole.parent => 'Parent',
         CopilotPersonaRole.student => 'Student',
+        CopilotPersonaRole.finance => 'Finance',
+        CopilotPersonaRole.hr => 'HR',
       };
 
   List<String> get intelligenceFocus => switch (this) {
@@ -71,6 +75,18 @@ enum CopilotPersonaRole {
             'exam preparation',
             'performance insights',
           ],
+        CopilotPersonaRole.finance => [
+            'fee collection trends',
+            'defaulter risk',
+            'cashflow planning',
+            'reconciliation anomalies',
+          ],
+        CopilotPersonaRole.hr => [
+            'staff attendance',
+            'leave compliance',
+            'payroll readiness',
+            'workforce planning',
+          ],
       };
 
   static CopilotPersonaRole? fromName(String? value) {
@@ -88,7 +104,7 @@ CopilotPersonaRole copilotPersonaForErpRole(ErpRole role) => switch (role) {
       ErpRole.management => CopilotPersonaRole.directorCorrespondent,
       ErpRole.principal => CopilotPersonaRole.principal,
       ErpRole.admissionsCounselor => CopilotPersonaRole.academicCoordinator,
-      ErpRole.financeAdmin => CopilotPersonaRole.directorCorrespondent,
+      ErpRole.financeAdmin => CopilotPersonaRole.finance,
       ErpRole.teacher => CopilotPersonaRole.teacher,
       ErpRole.parent => CopilotPersonaRole.parent,
       ErpRole.student => CopilotPersonaRole.student,
@@ -96,7 +112,7 @@ CopilotPersonaRole copilotPersonaForErpRole(ErpRole role) => switch (role) {
       ErpRole.hostelManager ||
       ErpRole.librarian ||
       ErpRole.inventoryManager =>
-        CopilotPersonaRole.directorCorrespondent,
+        CopilotPersonaRole.hr,
     };
 
 CopilotAssistantType defaultAssistantForPersona(CopilotPersonaRole persona) =>
@@ -110,9 +126,12 @@ CopilotAssistantType defaultAssistantForPersona(CopilotPersonaRole persona) =>
       CopilotPersonaRole.teacher => CopilotAssistantType.teacher,
       CopilotPersonaRole.parent => CopilotAssistantType.parentGuidance,
       CopilotPersonaRole.student => CopilotAssistantType.academic,
+      CopilotPersonaRole.finance => CopilotAssistantType.finance,
+      CopilotPersonaRole.hr => CopilotAssistantType.communication,
     };
 
-CopilotAssistantType assistantForRoute(String route, CopilotPersonaRole persona) {
+CopilotAssistantType assistantForRoute(
+    String route, CopilotPersonaRole persona) {
   if (route.startsWith(RouteNames.finance)) return CopilotAssistantType.finance;
   if (route.startsWith(RouteNames.managementAdmissions) ||
       route.contains('/admissions')) {
@@ -161,13 +180,18 @@ String copilotScreenLabelForRoute(String route) {
     return 'Student Success Intelligence';
   }
   if (route == RouteNames.examIntelligence) return 'Exam Intelligence';
-  if (route == RouteNames.controlCenterDashboard) return 'Control Center Dashboard';
-  if (route == RouteNames.controlCenterIntelligence) return 'Platform Intelligence';
+  if (route == RouteNames.controlCenterDashboard) {
+    return 'Control Center Dashboard';
+  }
+  if (route == RouteNames.controlCenterIntelligence) {
+    return 'Platform Intelligence';
+  }
   if (route == RouteNames.copilot) return 'AI Copilot';
   final segment = route.split('/').where((s) => s.isNotEmpty).lastOrNull;
   if (segment == null || segment.isEmpty) return 'Home';
   return segment
       .split('_')
-      .map((part) => part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
+      .map((part) =>
+          part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
 }

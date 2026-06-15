@@ -197,12 +197,12 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 
 | ID | Feature | Status |
 |----|---------|--------|
-| FV-PLAT-10 | Live AI Inference | ⏳ |
-| FV-29 | Universal AI Assistant | ⏳ |
-| FV-28 | AI Parent Meeting Summary | ⏳ |
-| FV-PLAT-07 | AI Content Generation (platform) | 📐 Design |
-| FV-PLAT-05 | Resource Optimization Engine | ⏳ |
-| FV-01–06 | Role copilots (live inference upgrade) | 🔄 |
+| FV-PLAT-10 | Live AI Inference | ✅ |
+| FV-29 | Universal AI Assistant | ✅ |
+| FV-28 | AI Parent Meeting Summary | ✅ |
+| FV-PLAT-07 | AI Content Generation (platform) | ✅ MVP |
+| FV-PLAT-05 | Resource Optimization Engine | ✅ |
+| FV-01–06 | Role copilots (live inference upgrade) | ✅ |
 
 ### M9 — Multi-School SaaS
 

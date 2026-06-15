@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('copilotPersonaForErpRole', () {
-    test('maps all eight vision personas from ERP roles', () {
+    test('maps expanded personas from ERP roles', () {
       expect(
         copilotPersonaForErpRole(ErpRole.superAdmin),
         CopilotPersonaRole.platformOwner,
@@ -29,9 +29,20 @@ void main() {
         copilotPersonaForErpRole(ErpRole.admissionsCounselor),
         CopilotPersonaRole.academicCoordinator,
       );
-      expect(copilotPersonaForErpRole(ErpRole.teacher), CopilotPersonaRole.teacher);
-      expect(copilotPersonaForErpRole(ErpRole.parent), CopilotPersonaRole.parent);
-      expect(copilotPersonaForErpRole(ErpRole.student), CopilotPersonaRole.student);
+      expect(
+        copilotPersonaForErpRole(ErpRole.financeAdmin),
+        CopilotPersonaRole.finance,
+      );
+      expect(copilotPersonaForErpRole(ErpRole.teacher),
+          CopilotPersonaRole.teacher);
+      expect(
+          copilotPersonaForErpRole(ErpRole.parent), CopilotPersonaRole.parent);
+      expect(copilotPersonaForErpRole(ErpRole.student),
+          CopilotPersonaRole.student);
+      expect(
+        copilotPersonaForErpRole(ErpRole.inventoryManager),
+        CopilotPersonaRole.hr,
+      );
     });
   });
 
@@ -68,7 +79,8 @@ void main() {
         screen: 'Owner Dashboard',
         filters: {'period': 'Q1'},
         kpis: [
-          CopilotKpiSnapshot(id: 'revenue_mtd', label: 'Revenue (MTD)', value: '₹1.2Cr'),
+          CopilotKpiSnapshot(
+              id: 'revenue_mtd', label: 'Revenue (MTD)', value: '₹1.2Cr'),
         ],
         records: {'approvalQueue': '7'},
       );
@@ -93,7 +105,8 @@ void main() {
         route: RouteNames.managementDashboard,
         screen: 'Owner Dashboard',
         kpis: [
-          CopilotKpiSnapshot(id: 'attendance', label: 'Attendance', value: '94%'),
+          CopilotKpiSnapshot(
+              id: 'attendance', label: 'Attendance', value: '94%'),
         ],
       );
 

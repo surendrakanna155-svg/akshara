@@ -80,6 +80,22 @@ void main() {
       expect(entry.permission, Permission.manageFinance);
     });
 
+    test('parent meetings mutations registered', () {
+      for (final id in [
+        'createMeeting',
+        'saveNotes',
+        'generateSummary',
+        'completeAction',
+        'scheduleFollowUp',
+      ]) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.mutationId == id,
+        );
+        expect(entry.moduleId, 'parent_meetings');
+        expect(entry.permission, Permission.manageAcademicProgress);
+      }
+    });
+
     test('school completion timetable apply mutation registered', () {
       final entry = MutationPermissionRegistry.entries.firstWhere(
         (e) => e.mutationId == 'applyTimetableOptimization',

@@ -212,6 +212,24 @@ class MutationPermissionRegistry {
       permission: Permission.manageManagement,
       kind: 'manage',
     ),
+    MutationPermissionEntry(
+      moduleId: 'resource_optimization',
+      mutationId: 'applyResourceOptimizationRecommendation',
+      permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'resource_optimization',
+      mutationId: 'dismissResourceOptimizationRecommendation',
+      permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'ai_content',
+      mutationId: 'generateAiContent',
+      permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
     // School Memories
     MutationPermissionEntry(
       moduleId: 'school_memories',
@@ -260,6 +278,37 @@ class MutationPermissionRegistry {
       moduleId: 'school_completion',
       mutationId: 'applyTimetableOptimization',
       permission: Permission.manageAcademicTimetable,
+      kind: 'manage',
+    ),
+
+    MutationPermissionEntry(
+      moduleId: 'parent_meetings',
+      mutationId: 'createMeeting',
+      permission: Permission.manageAcademicProgress,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'parent_meetings',
+      mutationId: 'saveNotes',
+      permission: Permission.manageAcademicProgress,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'parent_meetings',
+      mutationId: 'generateSummary',
+      permission: Permission.manageAcademicProgress,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'parent_meetings',
+      mutationId: 'completeAction',
+      permission: Permission.manageAcademicProgress,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'parent_meetings',
+      mutationId: 'scheduleFollowUp',
+      permission: Permission.manageAcademicProgress,
       kind: 'manage',
     ),
     // Evolution

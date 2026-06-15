@@ -182,6 +182,11 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 | OPS-01 | Operations Hub alert actions | M7 | D | **A** | +2 | +1 | Session 10 | green |
 | INTEL-11 | Intelligence recommendation nav | M8 | D | **A** | +2 | — | Session 10 | green |
 | FV-12 | Inventory Replacement Workflow | M7 | D | **A** | +2 | +1 | Session 11 | green |
+| FV-PLAT-10 | Live AI Inference | M8 | D | **A** | +4 | — | M8 | green |
+| FV-29 | Universal AI Assistant | M8 | D | **A** | +3 | +1 | M8 | green |
+| FV-28 | Parent Meeting Summary | M8 | D | **A** | +2 | +1 | M8 | green |
+| FV-PLAT-05 | Resource Optimization | M8 | D | **A** | +3 | +1 | M8 | green |
+| FV-PLAT-07 | AI Content Generation | M8 | D | **A** | +2 | +1 | M8 | green |
 | INTEL-02 | KPI drill-down MG-01 | 2/6 | B | **A** | +8 | +2 | `b021b72` | green |
 | INTEL-03 | Context-aware copilot | 2 | C | **B** | +5 | +1 | `1d116d2` | green |
 | INTEL-04 | Floating copilot dock | 2 | D | **B** | +15 | +2 | `f978d2d` | pending |
@@ -207,7 +212,7 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 
 ## Next action
 
-**M8:** Live AI Inference (FV-PLAT-10) — see `AKSHARA_FINAL_ROADMAP.md`.
+**M9:** Multi-School SaaS (FV-PLAT-02) — see `AKSHARA_FINAL_ROADMAP.md`.
 
 Execution: audit → implement → tests → Patrol → gates → commit → push → CI → update registry.
 

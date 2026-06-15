@@ -42,6 +42,8 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.inventoryDistribution: Permission.viewInventoryDistribution,
   RouteNames.inventoryReplacements: Permission.viewInventoryDistribution,
   RouteNames.operationsHub: Permission.viewOperationsHub,
+  RouteNames.resourceOptimization: Permission.viewOperationsHub,
+  RouteNames.aiContent: Permission.runAiCopilot,
   RouteNames.schoolMemories: Permission.viewSchoolMemories,
   RouteNames.achievementPromotion: Permission.viewAchievementPromotion,
   RouteNames.setupWizard: Permission.viewSchoolSetup,
@@ -71,6 +73,7 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.syllabusAutomation: Permission.manageSyllabus,
   RouteNames.academicProgress: Permission.viewAcademicProgress,
   RouteNames.timetableIntelligence: Permission.manageAcademicRooms,
+  RouteNames.parentMeetings: Permission.viewAcademicProgress,
   RouteNames.financeIntelligence: Permission.viewFinanceIntelligence,
   RouteNames.financeExecutiveDashboard:
       Permission.viewFinanceExecutiveDashboard,
@@ -102,6 +105,12 @@ Permission? erpRoutePermissionFor(String location) {
 /// Whether [location] is allowed for the given [RbacService].
 bool canAccessErpRoute(RbacService rbac, String location) {
   if (!isAdminErpRoute(location)) return true;
+
+  if (location == RouteNames.resourceOptimization ||
+      location.startsWith('${RouteNames.resourceOptimization}/')) {
+    return rbac.hasPermission(Permission.viewOperationsHub) ||
+        rbac.hasPermission(Permission.manageManagement);
+  }
 
   final permission = erpRoutePermissionFor(location);
   if (permission == null) return true;

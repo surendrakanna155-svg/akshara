@@ -138,12 +138,12 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 
 | ID | Feature | Vision | Status |
 |----|---------|--------|--------|
-| FV-PLAT-10 | Live AI Inference | P3-01 | ⏳ |
-| FV-29 | Universal AI Assistant | #29 | ⏳ |
-| FV-28 | AI Parent Meeting Summary | #28 | ⏳ |
-| FV-PLAT-07 | AI Content Generation (platform) | design | 📐 |
-| FV-PLAT-05 | Resource Optimization Engine | — | ⏳ |
-| FV-01–06 | Role copilot live upgrade | #1–6 | 🔄 Mock → live |
+| FV-PLAT-10 | Live AI Inference | P3-01 | ✅ |
+| FV-29 | Universal AI Assistant | #29 | ✅ |
+| FV-28 | AI Parent Meeting Summary | #28 | ✅ |
+| FV-PLAT-07 | AI Content Generation (platform) | design | ✅ MVP |
+| FV-PLAT-05 | Resource Optimization Engine | — | ✅ |
+| FV-01–06 | Role copilot live upgrade | #1–6 | ✅ |
 
 ### M9 — Multi-School SaaS
 
@@ -244,7 +244,8 @@ P1-01 Export wiring ✅
   → FV-11 Book Distribution parity ✅
   → OPS-01 Operations Hub actions ✅
   → FV-12 Inventory Replacement Workflow ✅
-  → M8 Live AI Inference (FV-PLAT-10) ← next
+  → M8 Live AI Inference (FV-PLAT-10) ✅
+  → M9 Multi-School SaaS (FV-PLAT-02) ← next
 ```
 
 ---

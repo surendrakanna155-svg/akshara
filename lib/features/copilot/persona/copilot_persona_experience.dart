@@ -23,7 +23,8 @@ class CopilotPersonaExperience {
     CopilotPersonaRole.platformOwner: CopilotPersonaExperience(
       persona: CopilotPersonaRole.platformOwner,
       title: 'Platform Intelligence',
-      subtitle: 'Multi-school analytics, revenue, growth, and expansion signals.',
+      subtitle:
+          'Multi-school analytics, revenue, growth, and expansion signals.',
       focusAreas: [
         'Multi-school analytics',
         'Revenue trends',
@@ -70,7 +71,8 @@ class CopilotPersonaExperience {
     CopilotPersonaRole.principal: CopilotPersonaExperience(
       persona: CopilotPersonaRole.principal,
       title: 'Principal Intelligence',
-      subtitle: 'Attendance, academics, teacher effectiveness, and at-risk students.',
+      subtitle:
+          'Attendance, academics, teacher effectiveness, and at-risk students.',
       focusAreas: [
         'Attendance trends',
         'Academic performance',
@@ -139,6 +141,37 @@ class CopilotPersonaExperience {
       starterPrompts: [
         'What should I revise before the next exam?',
         'Summarize my weak subjects',
+      ],
+    ),
+    CopilotPersonaRole.finance: CopilotPersonaExperience(
+      persona: CopilotPersonaRole.finance,
+      title: 'Finance Intelligence',
+      subtitle:
+          'Collection health, defaulters, reconciliation, and cashflow insights.',
+      focusAreas: [
+        'Fee collection trends',
+        'Defaulter risk',
+        'Cashflow planning',
+        'Reconciliation anomalies',
+      ],
+      starterPrompts: [
+        'Summarize collection risk for this month',
+        'Which classes show rising defaulter exposure?',
+      ],
+    ),
+    CopilotPersonaRole.hr: CopilotPersonaExperience(
+      persona: CopilotPersonaRole.hr,
+      title: 'HR Intelligence',
+      subtitle: 'Attendance, leave, payroll readiness, and workforce planning.',
+      focusAreas: [
+        'Staff attendance',
+        'Leave compliance',
+        'Payroll readiness',
+        'Workforce planning',
+      ],
+      starterPrompts: [
+        'Highlight leave bottlenecks by department',
+        'What payroll readiness risks need action this week?',
       ],
     ),
   };

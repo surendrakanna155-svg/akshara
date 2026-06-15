@@ -75,6 +75,7 @@ import 'transport_navigation.dart';
 import 'control_center_navigation.dart';
 import 'sis_navigation.dart';
 import 'parent_navigation.dart';
+import 'parent_meetings_navigation.dart';
 import 'route_names.dart';
 import 'student_navigation.dart';
 import 'teacher_navigation.dart';
@@ -484,6 +485,20 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.resourceOptimization,
+            name: 'resourceOptimization',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: resourceOptimizationRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.aiContent,
+            name: 'aiContent',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: aiContentRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.schoolMemories,
             name: 'schoolMemories',
             pageBuilder: (context, state) => NoTransitionPage(
@@ -670,6 +685,13 @@ GoRouter createAppRouter({
             name: 'timetableIntelligence',
             pageBuilder: (context, state) => NoTransitionPage(
               child: timetableIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentMeetings,
+            name: 'parentMeetings',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentMeetingsRouteBuilder(context, state),
             ),
           ),
           GoRoute(

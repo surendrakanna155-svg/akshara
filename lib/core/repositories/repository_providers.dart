@@ -44,6 +44,7 @@ import 'mock/mock_evolution_repository.dart';
 import 'mock/mock_school_completion_repository.dart';
 import 'interfaces/communication_repository.dart';
 import 'api/copilot/hybrid_copilot_repository.dart';
+import '../ai/ai_inference_providers.dart';
 import 'mock/mock_copilot_repository.dart';
 import 'mock/mock_education_repository.dart';
 import 'mock/mock_intelligence_repository.dart';
@@ -82,8 +83,10 @@ import 'mock/mock_platform_intelligence_repository.dart';
 import 'mock/mock_transport_repository.dart';
 import 'mock/mock_onboarding_repository.dart';
 import 'mock/mock_parent_repository.dart';
+import 'mock/mock_parent_meetings_repository.dart';
 import 'mock/mock_teacher_repository.dart';
 import 'mock/mock_student_repository.dart';
+import '../../features/parent_meetings/parent_meetings_repository.dart';
 import 'repository_config.dart';
 
 final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
@@ -190,7 +193,8 @@ final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   return MockInventoryRepository();
 });
 
-final inventoryFinanceRepositoryProvider = Provider<InventoryFinanceRepository>((ref) {
+final inventoryFinanceRepositoryProvider =
+    Provider<InventoryFinanceRepository>((ref) {
   if (isModuleApiEnabled(ref, inventoryFinanceApiEnabledProvider)) {
     return HybridInventoryFinanceRepository(
       api: ref.read(apiInventoryFinanceRepositoryProvider),
@@ -205,7 +209,9 @@ final copilotRepositoryProvider = Provider<CopilotRepository>((ref) {
       api: ref.read(apiCopilotRepositoryProvider),
     );
   }
-  return MockCopilotRepository();
+  return MockCopilotRepository(
+    pipeline: ref.watch(aiInferencePipelineProvider),
+  );
 });
 
 final timetableRepositoryProvider = Provider<TimetableRepository>((ref) {
@@ -217,7 +223,8 @@ final timetableRepositoryProvider = Provider<TimetableRepository>((ref) {
   return MockTimetableRepository();
 });
 
-final analyticsIntelligenceRepositoryProvider = Provider<AnalyticsIntelligenceRepository>((ref) {
+final analyticsIntelligenceRepositoryProvider =
+    Provider<AnalyticsIntelligenceRepository>((ref) {
   if (isModuleApiEnabled(ref, analyticsIntelligenceApiEnabledProvider)) {
     return HybridAnalyticsIntelligenceRepository(
       api: ref.read(apiAnalyticsIntelligenceRepositoryProvider),
@@ -240,14 +247,16 @@ final alumniRepositoryProvider = Provider<AlumniRepository>((ref) {
   return MockAlumniRepository();
 });
 
-final controlCenterRepositoryProvider = Provider<ControlCenterRepository>((ref) {
+final controlCenterRepositoryProvider =
+    Provider<ControlCenterRepository>((ref) {
   if (isModuleApiEnabled(ref, controlCenterApiEnabledProvider)) {
     return ref.read(apiControlCenterRepositoryProvider);
   }
   return MockControlCenterRepository();
 });
 
-final platformIntelligenceRepositoryProvider = Provider<PlatformIntelligenceRepository>((ref) {
+final platformIntelligenceRepositoryProvider =
+    Provider<PlatformIntelligenceRepository>((ref) {
   if (isModuleApiEnabled(ref, platformIntelligenceApiEnabledProvider)) {
     return ref.read(apiPlatformIntelligenceRepositoryProvider);
   }
@@ -259,6 +268,11 @@ final parentRepositoryProvider = Provider<ParentRepository>((ref) {
     return ref.read(apiParentRepositoryProvider);
   }
   return MockParentRepository();
+});
+
+final parentMeetingsRepositoryProvider =
+    Provider<ParentMeetingsRepository>((ref) {
+  return MockParentMeetingsRepository();
 });
 
 final teacherRepositoryProvider = Provider<TeacherRepository>((ref) {
@@ -275,7 +289,8 @@ final studentRepositoryProvider = Provider<StudentRepository>((ref) {
   return MockStudentRepository();
 });
 
-final communicationRepositoryProvider = Provider<CommunicationRepository>((ref) {
+final communicationRepositoryProvider =
+    Provider<CommunicationRepository>((ref) {
   if (isModuleApiEnabled(ref, communicationApiEnabledProvider)) {
     return HybridCommunicationRepository(
       api: ref.read(apiCommunicationRepositoryProvider),
@@ -304,7 +319,8 @@ final intelligenceRepositoryProvider = Provider<IntelligenceRepository>((ref) {
   return MockIntelligenceRepository();
 });
 
-final homeworkIntelligenceRepositoryProvider = Provider<HomeworkIntelligenceRepository>((ref) {
+final homeworkIntelligenceRepositoryProvider =
+    Provider<HomeworkIntelligenceRepository>((ref) {
   if (isModuleApiEnabled(ref, intelligenceApiEnabledProvider)) {
     return ref.read(apiHomeworkIntelligenceRepositoryProvider);
   }
@@ -325,42 +341,48 @@ final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
   return MockEmployeeRepository();
 });
 
-final inventoryDistributionRepositoryProvider = Provider<InventoryDistributionRepository>((ref) {
+final inventoryDistributionRepositoryProvider =
+    Provider<InventoryDistributionRepository>((ref) {
   if (isModuleApiEnabled(ref, inventoryDistributionApiEnabledProvider)) {
     return ref.read(apiInventoryDistributionRepositoryProvider);
   }
   return MockInventoryDistributionRepository();
 });
 
-final parentExperienceRepositoryProvider = Provider<ParentExperienceRepository>((ref) {
+final parentExperienceRepositoryProvider =
+    Provider<ParentExperienceRepository>((ref) {
   if (isModuleApiEnabled(ref, phase5ApiEnabledProvider)) {
     return ref.read(apiParentExperienceRepositoryProvider);
   }
   return MockParentExperienceRepository();
 });
 
-final employeeIntelligenceRepositoryProvider = Provider<EmployeeIntelligenceRepository>((ref) {
+final employeeIntelligenceRepositoryProvider =
+    Provider<EmployeeIntelligenceRepository>((ref) {
   if (isModuleApiEnabled(ref, phase5ApiEnabledProvider)) {
     return ref.read(apiEmployeeIntelligenceRepositoryProvider);
   }
   return MockEmployeeIntelligenceRepository();
 });
 
-final operationsHubRepositoryProvider = Provider<OperationsHubRepository>((ref) {
+final operationsHubRepositoryProvider =
+    Provider<OperationsHubRepository>((ref) {
   if (isModuleApiEnabled(ref, phase5ApiEnabledProvider)) {
     return ref.read(apiOperationsHubRepositoryProvider);
   }
   return MockOperationsHubRepository();
 });
 
-final schoolMemoriesRepositoryProvider = Provider<SchoolMemoriesRepository>((ref) {
+final schoolMemoriesRepositoryProvider =
+    Provider<SchoolMemoriesRepository>((ref) {
   if (isModuleApiEnabled(ref, phase5ApiEnabledProvider)) {
     return ref.read(apiSchoolMemoriesRepositoryProvider);
   }
   return MockSchoolMemoriesRepository();
 });
 
-final achievementPromotionRepositoryProvider = Provider<AchievementPromotionRepository>((ref) {
+final achievementPromotionRepositoryProvider =
+    Provider<AchievementPromotionRepository>((ref) {
   if (isModuleApiEnabled(ref, phase5ApiEnabledProvider)) {
     return ref.read(apiAchievementPromotionRepositoryProvider);
   }
@@ -376,12 +398,14 @@ final onboardingRepositoryProvider = Provider<OnboardingRepository>((ref) {
 
 final evolutionRepositoryProvider = Provider<EvolutionRepository>((ref) {
   if (isModuleApiEnabled(ref, evolutionApiEnabledProvider)) {
-    return HybridEvolutionRepository(api: ref.read(apiEvolutionRepositoryProvider));
+    return HybridEvolutionRepository(
+        api: ref.read(apiEvolutionRepositoryProvider));
   }
   return MockEvolutionRepository();
 });
 
-final schoolCompletionRepositoryProvider = Provider<SchoolCompletionRepository>((ref) {
+final schoolCompletionRepositoryProvider =
+    Provider<SchoolCompletionRepository>((ref) {
   if (isModuleApiEnabled(ref, schoolCompletionApiEnabledProvider)) {
     return HybridSchoolCompletionRepository(
       api: ref.read(apiSchoolCompletionRepositoryProvider),

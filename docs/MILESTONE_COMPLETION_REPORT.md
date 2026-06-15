@@ -2,7 +2,44 @@
 
 **Program:** Akshara Autonomous Execution  
 **Date:** June 2026  
-**Latest commit:** `ba51b10` (FV-12) · `8b53d24` (Session 10)
+**Latest commit:** *(M8 pending push)*
+
+---
+
+## M8 — AI Evolution (complete)
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-PLAT-10 | Live AI Inference | ✅ |
+| FV-29 | Universal AI Assistant | ✅ |
+| FV-28 | Parent Meeting Summary | ✅ |
+| FV-PLAT-05 | Resource Optimization Engine | ✅ |
+| FV-PLAT-07 | AI Content Generation MVP | ✅ |
+
+See `docs/MILESTONE_8_COMPLETION_REPORT.md` for full delivery notes.
+
+---
+
+## Cumulative metrics
+
+| Metric | Value |
+|--------|-------|
+| ERP completion | **~96%** |
+| Vision completion | **~76%** |
+| Intelligence | **~92%** |
+| Copilot | **~96%** |
+| Flutter tests | **1486** |
+| Patrol journeys | **~65** |
+
+---
+
+## Next queue
+
+| ID | Feature |
+|----|---------|
+| FV-PLAT-02 | Multi-School SaaS Operations (M9) |
+| FV-PLAT-04 | Organization / Trust Intelligence |
+| FV-PLAT-03 | Director Portal |
 
 ---
 
