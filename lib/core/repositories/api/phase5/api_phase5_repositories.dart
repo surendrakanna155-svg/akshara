@@ -6,8 +6,8 @@ import 'phase5_remote_datasource.dart';
 
 class ApiParentExperienceRepository implements ParentExperienceRepository {
   ApiParentExperienceRepository({required Phase5RemoteDataSource remote})
-    : _remote = remote,
-      _mapper = Phase5Mapper();
+      : _remote = remote,
+        _mapper = Phase5Mapper();
 
   final Phase5RemoteDataSource _remote;
   final Phase5Mapper _mapper;
@@ -18,7 +18,8 @@ class ApiParentExperienceRepository implements ParentExperienceRepository {
     required String studentId,
   }) async {
     return _mapper.mapParentExperienceHub(
-      await _remote.fetchParentExperienceHub(query: query, studentId: studentId),
+      await _remote.fetchParentExperienceHub(
+          query: query, studentId: studentId),
     );
   }
 
@@ -42,10 +43,11 @@ class ApiParentExperienceRepository implements ParentExperienceRepository {
   }
 }
 
-class ApiEmployeeIntelligenceRepository implements EmployeeIntelligenceRepository {
+class ApiEmployeeIntelligenceRepository
+    implements EmployeeIntelligenceRepository {
   ApiEmployeeIntelligenceRepository({required Phase5RemoteDataSource remote})
-    : _remote = remote,
-      _mapper = Phase5Mapper();
+      : _remote = remote,
+        _mapper = Phase5Mapper();
 
   final Phase5RemoteDataSource _remote;
   final Phase5Mapper _mapper;
@@ -72,22 +74,39 @@ class ApiEmployeeIntelligenceRepository implements EmployeeIntelligenceRepositor
 
 class ApiOperationsHubRepository implements OperationsHubRepository {
   ApiOperationsHubRepository({required Phase5RemoteDataSource remote})
-    : _remote = remote,
-      _mapper = Phase5Mapper();
+      : _remote = remote,
+        _mapper = Phase5Mapper();
 
   final Phase5RemoteDataSource _remote;
   final Phase5Mapper _mapper;
 
   @override
   Future<OperationsHubSnapshot> getHub({required RepositoryQuery query}) async {
-    return _mapper.mapOperationsHub(await _remote.fetchOperationsHub(query: query));
+    return _mapper
+        .mapOperationsHub(await _remote.fetchOperationsHub(query: query));
+  }
+
+  @override
+  Future<void> dismissAlert({
+    required RepositoryQuery query,
+    required String alertId,
+  }) async {
+    await _remote.dismissOperationsAlert(query: query, alertId: alertId);
+  }
+
+  @override
+  Future<void> completeAction({
+    required RepositoryQuery query,
+    required String actionId,
+  }) async {
+    await _remote.completeOperationsAction(query: query, actionId: actionId);
   }
 }
 
 class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
   ApiSchoolMemoriesRepository({required Phase5RemoteDataSource remote})
-    : _remote = remote,
-      _mapper = Phase5Mapper();
+      : _remote = remote,
+        _mapper = Phase5Mapper();
 
   final Phase5RemoteDataSource _remote;
   final Phase5Mapper _mapper;
@@ -97,7 +116,8 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
     required RepositoryQuery query,
     String? category,
   }) async {
-    final items = await _remote.fetchMemoryEvents(query: query, category: category);
+    final items =
+        await _remote.fetchMemoryEvents(query: query, category: category);
     return items.map(_mapper.mapMemoryEvent).toList();
   }
 
@@ -190,7 +210,8 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
     required RepositoryQuery query,
     required String mediaId,
   }) async {
-    final data = await _remote.fetchMemoryDownloadUrl(query: query, mediaId: mediaId);
+    final data =
+        await _remote.fetchMemoryDownloadUrl(query: query, mediaId: mediaId);
     return data['downloadUrl'] as String? ?? '';
   }
 
@@ -242,10 +263,11 @@ class ApiSchoolMemoriesRepository implements SchoolMemoriesRepository {
   }
 }
 
-class ApiAchievementPromotionRepository implements AchievementPromotionRepository {
+class ApiAchievementPromotionRepository
+    implements AchievementPromotionRepository {
   ApiAchievementPromotionRepository({required Phase5RemoteDataSource remote})
-    : _remote = remote,
-      _mapper = Phase5Mapper();
+      : _remote = remote,
+        _mapper = Phase5Mapper();
 
   final Phase5RemoteDataSource _remote;
   final Phase5Mapper _mapper;
@@ -284,7 +306,8 @@ class ApiAchievementPromotionRepository implements AchievementPromotionRepositor
     required String promotionId,
   }) async {
     return _mapper.mapPromotion(
-      await _remote.generatePromotionAssets(query: query, promotionId: promotionId),
+      await _remote.generatePromotionAssets(
+          query: query, promotionId: promotionId),
     );
   }
 

@@ -2,7 +2,33 @@
 
 **Program:** Akshara Autonomous Execution  
 **Date:** June 2026  
-**Latest commit:** *(after push)*
+**Latest commit:** *(Session 10 — pending push)*
+
+---
+
+## Session 10 — FV-17 / FV-11 / Ops Hub / Intelligence actions
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-17 | School Memories admin | ✅ |
+| FV-11 | Book Distribution parity | ✅ |
+| OPS-01 | Operations Hub alert dismiss + action complete | ✅ |
+| INTEL-11 | Intelligence recommendation navigation | ✅ |
+
+### FV-17 — School Memories admin
+- `memories_mutations_provider.dart` — create + publish with RBAC/audit
+- Draft/Published tabs, create dialog, publish on event detail
+- Widget test + Patrol `school_memories_admin_e2e_test.dart`
+
+### FV-11 — Book Distribution parity
+- `inventory_distribution_mutations_provider.dart` — create, mark distributed, request replacement
+- Full distribution screen with KPIs, status actions, create FAB dialog
+- Contract + widget tests + Patrol `book_distribution_e2e_test.dart`
+
+### Operations Hub + Intelligence
+- `dismissAlert` / `completeAction` on Operations Hub repo + mutations
+- Alert tap navigation, dismiss/complete buttons on hub screen
+- `intelligence_recommendation_navigation.dart` — unified recommendation + ops hint routes
 
 ---
 
@@ -36,10 +62,10 @@
 
 | Metric | Value |
 |--------|-------|
-| ERP completion | **~95%** |
-| Vision completion | **~61%** |
-| Flutter tests | **1452+** |
-| Patrol journeys | **~56** |
+| ERP completion | **~96%** |
+| Vision completion | **~63%** |
+| Flutter tests | **1465** |
+| Patrol journeys | **~59** |
 
 ---
 
@@ -57,10 +83,9 @@
 
 | ID | Feature |
 |----|---------|
-| FV-17 | School Memories admin |
-| FV-11 | Book Distribution parity |
-| AI insight card actions (Class D) |
-| Operations Hub alerts (Class D) |
+| FV-12 | Inventory Replacement Workflow |
+| M8 | Live AI Inference (FV-PLAT-10), Universal AI Assistant (FV-29) |
+| P3-02 | ERP Exam Admin — blocked (product decision) |
 
 ---
 

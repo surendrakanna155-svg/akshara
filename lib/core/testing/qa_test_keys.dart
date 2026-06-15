@@ -214,6 +214,30 @@ abstract final class QaTestKeys {
   static const financeQrPaymentConfirmedSnackbar =
       ValueKey<String>('finance_qr_payment_confirmed_snackbar');
 
+  static const schoolMemoriesScreen =
+      ValueKey<String>('school_memories_screen');
+  static const schoolMemoriesStatusTabs =
+      ValueKey<String>('school_memories_status_tabs');
+  static const schoolMemoriesCreateFab =
+      ValueKey<String>('school_memories_create_fab');
+  static const schoolMemoriesCreateTitleField =
+      ValueKey<String>('school_memories_create_title_field');
+  static const schoolMemoriesCreateCategoryField =
+      ValueKey<String>('school_memories_create_category_field');
+  static const schoolMemoriesCreateDescriptionField =
+      ValueKey<String>('school_memories_create_description_field');
+  static const schoolMemoriesCreateSubmitButton =
+      ValueKey<String>('school_memories_create_submit_button');
+  static const schoolMemoriesCreatedSnackbar =
+      ValueKey<String>('school_memories_created_snackbar');
+  static const schoolMemoriesPublishButton =
+      ValueKey<String>('school_memories_publish_button');
+  static const schoolMemoriesPublishedSnackbar =
+      ValueKey<String>('school_memories_published_snackbar');
+
+  static ValueKey<String> schoolMemoriesEventTile(String eventId) =>
+      ValueKey<String>('school_memories_event_$eventId');
+
   static ValueKey<String> financeCollectionReceiptRow(String receiptNumber) =>
       ValueKey<String>(
         'finance_collection_receipt_${normalizeSubNavLabel(receiptNumber)}',
@@ -396,6 +420,43 @@ abstract final class QaTestKeys {
 
   static const inventoryReportExportSuccessSnackbar =
       ValueKey<String>('inventory_report_export_success_snackbar');
+  static const inventoryDistributionScreen =
+      ValueKey<String>('inventory_distribution_screen');
+  static const inventoryDistributionCreateFab =
+      ValueKey<String>('inventory_distribution_create_fab');
+  static const inventoryDistributionStudentIdField =
+      ValueKey<String>('inventory_distribution_student_id_field');
+  static const inventoryDistributionCatalogItemField =
+      ValueKey<String>('inventory_distribution_catalog_item_field');
+  static const inventoryDistributionQuantityField =
+      ValueKey<String>('inventory_distribution_quantity_field');
+  static const inventoryDistributionCreateSubmitButton =
+      ValueKey<String>('inventory_distribution_create_submit_button');
+  static const inventoryDistributionCreateSuccessSnackbar =
+      ValueKey<String>('inventory_distribution_create_success_snackbar');
+  static const inventoryDistributionMarkDistributedSuccessSnackbar =
+      ValueKey<String>(
+    'inventory_distribution_mark_distributed_success_snackbar',
+  );
+  static const inventoryDistributionReplacementSuccessSnackbar =
+      ValueKey<String>('inventory_distribution_replacement_success_snackbar');
+
+  static ValueKey<String> inventoryDistributionRow(String distributionId) =>
+      ValueKey<String>('inventory_distribution_row_$distributionId');
+
+  static ValueKey<String> inventoryDistributionMarkDistributedButton(
+    String distributionId,
+  ) =>
+      ValueKey<String>(
+        'inventory_distribution_mark_distributed_$distributionId',
+      );
+
+  static ValueKey<String> inventoryDistributionRequestReplacementButton(
+    String distributionId,
+  ) =>
+      ValueKey<String>(
+        'inventory_distribution_request_replacement_$distributionId',
+      );
 
   static const educationPublishRemarkButton =
       ValueKey<String>('education_publish_remark_button');
@@ -429,6 +490,19 @@ abstract final class QaTestKeys {
       ValueKey<String>('management_dashboard_share_button');
   static const managementDashboardExportSuccessSnackbar =
       ValueKey<String>('management_dashboard_export_success_snackbar');
+  static const operationsHubAlertDismissedSnackbar =
+      ValueKey<String>('operations_hub_alert_dismissed_snackbar');
+  static const operationsHubActionCompletedSnackbar =
+      ValueKey<String>('operations_hub_action_completed_snackbar');
+
+  static ValueKey<String> operationsHubAlertTile(String alertId) =>
+      ValueKey<String>('operations_hub_alert_$alertId');
+  static ValueKey<String> operationsHubDismissAlertButton(String alertId) =>
+      ValueKey<String>('operations_hub_dismiss_alert_$alertId');
+  static ValueKey<String> operationsHubActionTile(String actionId) =>
+      ValueKey<String>('operations_hub_action_$actionId');
+  static ValueKey<String> operationsHubCompleteActionButton(String actionId) =>
+      ValueKey<String>('operations_hub_complete_action_$actionId');
   static const managementSettingsSaveButton =
       ValueKey<String>('management_settings_save_button');
   static const managementSettingsAcademicYearEditButton =

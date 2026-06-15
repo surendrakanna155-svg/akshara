@@ -15,13 +15,15 @@ import 'intelligence_provider.dart';
 import '../../intelligence/operations/operations_intelligence_provider.dart';
 import '../../intelligence/unified/unified_recommendation_intelligence.dart';
 import '../../intelligence/unified/unified_recommendations_provider.dart';
+import 'intelligence_recommendation_navigation.dart';
 
 /// Analytics & Intelligence hub — dashboard, health, risks, trends, principal summary (v7.6).
 class IntelligenceHubScreen extends ConsumerStatefulWidget {
   const IntelligenceHubScreen({super.key});
 
   @override
-  ConsumerState<IntelligenceHubScreen> createState() => _IntelligenceHubScreenState();
+  ConsumerState<IntelligenceHubScreen> createState() =>
+      _IntelligenceHubScreenState();
 }
 
 class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
@@ -59,7 +61,8 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
       onMenuTap: adminShellMenuTap(context),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final tabHeight = (MediaQuery.sizeOf(context).height * 0.65).clamp(360.0, 720.0);
+          final tabHeight =
+              (MediaQuery.sizeOf(context).height * 0.65).clamp(360.0, 720.0);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -104,7 +107,8 @@ class _AnalyticsDashboardTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final metricsAsync = ref.watch(intelligenceDashboardProvider);
     return metricsAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading analytics dashboard'),
+      loading: () => const AksharaLoadingState(
+          semanticLabel: 'Loading analytics dashboard'),
       error: (_, __) => AksharaErrorState(
         message: 'Unable to load analytics dashboard.',
         onRetry: () => invalidateIntelligenceReads(ref),
@@ -117,10 +121,17 @@ class _AnalyticsDashboardTab extends ConsumerWidget {
             spacing: AksharaSpacing.s3,
             runSpacing: AksharaSpacing.s3,
             children: [
-              _KpiCard(label: 'Student risk', value: '${metrics.studentRiskScore}'),
-              _KpiCard(label: 'Attendance risk', value: '${metrics.attendanceRiskScore}'),
-              _KpiCard(label: 'Academic risk', value: '${metrics.academicPerformanceRisk}'),
-              _KpiCard(label: 'Fee collection risk', value: '${metrics.feeCollectionRisk}'),
+              _KpiCard(
+                  label: 'Student risk', value: '${metrics.studentRiskScore}'),
+              _KpiCard(
+                  label: 'Attendance risk',
+                  value: '${metrics.attendanceRiskScore}'),
+              _KpiCard(
+                  label: 'Academic risk',
+                  value: '${metrics.academicPerformanceRisk}'),
+              _KpiCard(
+                  label: 'Fee collection risk',
+                  value: '${metrics.feeCollectionRisk}'),
             ],
           ),
           const SizedBox(height: AksharaSpacing.s6),
@@ -129,10 +140,18 @@ class _AnalyticsDashboardTab extends ConsumerWidget {
             spacing: AksharaSpacing.s3,
             runSpacing: AksharaSpacing.s3,
             children: [
-              _KpiCard(label: 'Admissions conversion', value: '${metrics.admissionConversionRate}%'),
-              _KpiCard(label: 'Teacher workload', value: '${metrics.teacherWorkloadIndex}'),
-              _KpiCard(label: 'Timetable health', value: '${metrics.timetableHealthScore}'),
-              _KpiCard(label: 'Communication engagement', value: '${metrics.communicationEngagementScore}'),
+              _KpiCard(
+                  label: 'Admissions conversion',
+                  value: '${metrics.admissionConversionRate}%'),
+              _KpiCard(
+                  label: 'Teacher workload',
+                  value: '${metrics.teacherWorkloadIndex}'),
+              _KpiCard(
+                  label: 'Timetable health',
+                  value: '${metrics.timetableHealthScore}'),
+              _KpiCard(
+                  label: 'Communication engagement',
+                  value: '${metrics.communicationEngagementScore}'),
             ],
           ),
         ],
@@ -155,7 +174,8 @@ class _SchoolHealthTab extends ConsumerWidget {
 
     final healthAsync = ref.watch(intelligenceHealthProvider);
     return healthAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading school health'),
+      loading: () =>
+          const AksharaLoadingState(semanticLabel: 'Loading school health'),
       error: (_, __) => AksharaErrorState(
         message: 'Unable to load school health summary.',
         onRetry: () => invalidateIntelligenceReads(ref),
@@ -163,7 +183,9 @@ class _SchoolHealthTab extends ConsumerWidget {
       data: (health) => ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          _KpiCard(label: 'School health score', value: '${health.schoolHealthScore}'),
+          _KpiCard(
+              label: 'School health score',
+              value: '${health.schoolHealthScore}'),
           const SizedBox(height: AksharaSpacing.s4),
           Wrap(
             spacing: AksharaSpacing.s3,
@@ -171,8 +193,10 @@ class _SchoolHealthTab extends ConsumerWidget {
             children: [
               _KpiCard(label: 'Academic', value: '${health.academicHealth}'),
               _KpiCard(label: 'Finance', value: '${health.financeHealth}'),
-              _KpiCard(label: 'Operations', value: '${health.operationsHealth}'),
-              _KpiCard(label: 'Engagement', value: '${health.engagementHealth}'),
+              _KpiCard(
+                  label: 'Operations', value: '${health.operationsHealth}'),
+              _KpiCard(
+                  label: 'Engagement', value: '${health.engagementHealth}'),
             ],
           ),
           const SizedBox(height: AksharaSpacing.s6),
@@ -202,7 +226,8 @@ class _RiskCenterTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final risksAsync = ref.watch(intelligenceRisksProvider);
     return risksAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading risk summaries'),
+      loading: () =>
+          const AksharaLoadingState(semanticLabel: 'Loading risk summaries'),
       error: (_, __) => AksharaErrorState(
         message: 'Unable to load risk summaries.',
         onRetry: () => invalidateIntelligenceReads(ref),
@@ -221,7 +246,8 @@ class _RiskCenterTab extends ConsumerWidget {
             for (final risk in bundle.items)
               Card(
                 child: ListTile(
-                  leading: Icon(_iconForRisk(risk.level), color: _colorForRisk(risk.level)),
+                  leading: Icon(_iconForRisk(risk.level),
+                      color: _colorForRisk(risk.level)),
                   title: Text(risk.label),
                   subtitle: Text('Score ${risk.score} · ${risk.detail}'),
                   trailing: Text(risk.level.name.toUpperCase()),
@@ -253,7 +279,8 @@ class _TrendExplorerTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trendsAsync = ref.watch(intelligenceTrendsProvider);
     return trendsAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading trend analysis'),
+      loading: () =>
+          const AksharaLoadingState(semanticLabel: 'Loading trend analysis'),
       error: (_, __) => AksharaErrorState(
         message: 'Unable to load trend analysis.',
         onRetry: () => invalidateIntelligenceReads(ref),
@@ -307,7 +334,8 @@ class _UnifiedRecommendationsTab extends ConsumerWidget {
     final operations = ref.watch(operationsIntelligenceSummaryProvider);
 
     return unified.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading recommendations'),
+      loading: () =>
+          const AksharaLoadingState(semanticLabel: 'Loading recommendations'),
       error: (_, __) => AksharaErrorState(
         message: 'Unable to load unified recommendations.',
         onRetry: () {
@@ -318,7 +346,8 @@ class _UnifiedRecommendationsTab extends ConsumerWidget {
       data: (summary) {
         if (summary.topRecommendations.isEmpty) {
           return const AksharaEmptyState(
-            message: 'No cross-module recommendations yet. Run intelligence compute on student and finance modules.',
+            message:
+                'No cross-module recommendations yet. Run intelligence compute on student and finance modules.',
           );
         }
 
@@ -334,6 +363,8 @@ class _UnifiedRecommendationsTab extends ConsumerWidget {
               Card(
                 child: ListTile(
                   leading: Icon(_iconForRecommendationSource(item.source)),
+                  onTap: () =>
+                      navigateIntelligenceRecommendation(context, item.source),
                   title: Text(item.title),
                   subtitle: Text(
                     '${item.source.label} · Priority ${item.priorityScore}\n'
@@ -348,7 +379,8 @@ class _UnifiedRecommendationsTab extends ConsumerWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const AksharaSectionHeader(title: 'Operations intelligence (P2)'),
+                    const AksharaSectionHeader(
+                        title: 'Operations intelligence (P2)'),
                     ListTile(
                       dense: true,
                       title: Text(
@@ -360,8 +392,10 @@ class _UnifiedRecommendationsTab extends ConsumerWidget {
                     for (final hint in ops.topHints)
                       ListTile(
                         leading: const Icon(Icons.settings_suggest_outlined),
+                        onTap: () => navigateOperationsHint(context, hint.kind),
                         title: Text('${hint.kind.label}: ${hint.title}'),
-                        subtitle: Text('${hint.detail}\n${hint.suggestedAction}'),
+                        subtitle:
+                            Text('${hint.detail}\n${hint.suggestedAction}'),
                         isThreeLine: true,
                       ),
                   ],
@@ -404,7 +438,8 @@ class _PrincipalSummaryTab extends ConsumerWidget {
     final recommendationsAsync = ref.watch(intelligenceRecommendationsProvider);
 
     return summaryAsync.when(
-      loading: () => const AksharaLoadingState(semanticLabel: 'Loading principal summary'),
+      loading: () =>
+          const AksharaLoadingState(semanticLabel: 'Loading principal summary'),
       error: (_, __) => AksharaErrorState(
         message: 'Unable to load principal summary.',
         onRetry: () => invalidateIntelligenceReads(ref),
@@ -450,9 +485,11 @@ class _PrincipalSummaryTab extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: AksharaSpacing.s6),
-                AksharaSectionHeader(title: 'Weekly briefing · ${briefing.weekLabel}'),
+                AksharaSectionHeader(
+                    title: 'Weekly briefing · ${briefing.weekLabel}'),
                 for (final section in briefing.sections) ...[
-                  Text(section.title, style: Theme.of(context).textTheme.titleSmall),
+                  Text(section.title,
+                      style: Theme.of(context).textTheme.titleSmall),
                   for (final bullet in section.bullets)
                     ListTile(
                       dense: true,

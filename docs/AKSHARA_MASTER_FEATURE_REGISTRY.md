@@ -73,13 +73,13 @@
 | FV-08 | Smart Timetable Expansion | P2 | Partial | 85 | M7 | Yes | Partial | Timetable |
 | FV-09 | Workload Engine Expansion | P2 | Partial | 35 | M7 | Contract | No | Timetable / Teacher |
 | FV-10 | Inventory & Asset Expansion | P3 | Partial | 60 | M6 | Yes | No | Inventory |
-| FV-11 | Book Distribution System | P3 | Partial | 75 | M7 | Partial | No | Evolution |
+| FV-11 | Book Distribution System | P3 | Shipped | 95 | M7 ✅ | Yes | Partial | Evolution |
 | FV-12 | Inventory Replacement Workflow | P3 | Planned | 0 | M7 | No | No | Inventory |
 | FV-13 | Unified Payment Request Engine | P1 | Partial | 55 | M6 | Yes | No | Finance |
 | FV-14 | Online Payment Enhancements | P1 | Partial | 60 | M6 | Yes | No | Finance / Parent |
 | FV-15 | QR Payment Support | P1 | Planned | 0 | M6 | No | No | Finance |
 | FV-16 | Offline Payment Tracking | P1 | Planned | 0 | M6 | No | No | Finance |
-| FV-17 | School Memories | P2 | Partial | 70 | M7 | Partial | No | Evolution |
+| FV-17 | School Memories | P2 | Shipped | 95 | M7 ✅ | Yes | Partial | Evolution |
 | FV-18 | Akshara Growth Platform | P2 | Partial | 45 | M7 | Partial | No | Marketing |
 | FV-19 | Achievement Promotion Engine | P2 | Partial | 65 | M7 | Partial | No | Evolution |
 | FV-20 | School Branding System | P2 | Planned | 0 | M13 | No | No | Platform |
@@ -219,10 +219,10 @@
 | **KPI drill-downs** | Management | AUDIT, SPEC-MG | Actionable metrics | Module routes | **C** | Yes | Partial | Partial | No | Finance drill only | **Most KPIs display-only** |
 | **Dashboard export** | Management | AUDIT | Reporting | PDF service | **A** | Yes | Yes | Yes | No | `management_dashboard_pdf_service.dart` | — |
 | **Period filters → repo** | Management | AUDIT | Accurate periods | Repository query | **A** | Yes | Yes | Yes | No | `managementDashboardQueryProvider` | — |
-| **AI insight card actions** | Management | AUDIT, VISION #5 | Executive guidance | Intelligence routes | **D** | Yes | Stub (~12 cards) | No | No | Insight cards | Route targets |
+| **AI insight card actions** | Management | AUDIT, VISION #5 | Executive guidance | Intelligence routes | **A** | Yes | Yes | Yes | No | `management_insight_navigation.dart` | — |
 | **Executive reports / PDF** | Management | SPEC-MG, Intelligence | Board reporting | Export | **D** | Yes | Text only | Partial | No | `intelligence_screen.dart` | Export stub |
 | Intelligence hub | Management | ROAD v9.3 | Risk overview | Intelligence repos | **B** | Yes | Read + partial compute | Yes | No | `/intelligence` | Compute = mock |
-| Operations Hub | Management | ROAD v10.0 | School health | All modules | **B** | Yes | Read-only | Partial | No | `operations_hub_screen.dart` | Actions display-only |
+| Operations Hub | Management | ROAD v10.0 | School health | All modules | **A** | Yes | Yes | Yes | No | `operations_hub_screen.dart` | Widget persistence M11 |
 | Management settings save | Management | PLAN P1, AUDIT | Config | — | **A** | Yes | Yes | Yes | No | `updateManagementSettings` mutation | — |
 | School health score | Management | VISION #5 | At-a-glance status | Intelligence | **D** | Yes | Mock | Contract | No | Phase5/intelligence | Live data |
 | Principal Command Center | Management | ROAD v10.5 | Daily ops | Principal spec | **B** | Yes | Partial | Patrol | No | Principal routes | Priority cards null onTap |
@@ -365,7 +365,7 @@
 | **Workflow automation engine** | Operations | VISION FV-P4-06 | **A** | Yes | Yes | M3 · `workflow_engine.dart` |
 | Approval automation (rules) | Operations | Product vision | **B** | Partial | Manual approvals only | Management P0#1 done; no auto-routing |
 | **Smart routing (approvals/tasks)** | Operations | Product vision | **A** | Yes | Yes | M3 · `autoRouteToRole` |
-| Operations Hub alerts | Operations | ROAD v10.0 | **D** | Yes | Display-only | No actions |
+| Operations Hub alerts | Operations | ROAD v10.0 | **A** | Yes | Dismiss + complete actions | Patrol E2E |
 | Audit workflow events | Platform | AUDIT spec | **A** | Yes | Client queue | Server ingestion partial |
 
 ---

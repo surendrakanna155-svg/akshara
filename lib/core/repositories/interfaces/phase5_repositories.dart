@@ -29,6 +29,16 @@ abstract class EmployeeIntelligenceRepository {
 
 abstract class OperationsHubRepository {
   Future<OperationsHubSnapshot> getHub({required RepositoryQuery query});
+
+  Future<void> dismissAlert({
+    required RepositoryQuery query,
+    required String alertId,
+  });
+
+  Future<void> completeAction({
+    required RepositoryQuery query,
+    required String actionId,
+  });
 }
 
 abstract class SchoolMemoriesRepository {

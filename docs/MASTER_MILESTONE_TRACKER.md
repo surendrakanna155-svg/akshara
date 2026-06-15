@@ -187,9 +187,9 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 | P1-09 | Substitute teacher wizard | ✅ |
 | P2-03 | Teacher reassignment | ✅ |
 | P2-04 | Timetable optimization apply | ✅ |
-| FV-11 | Book Distribution parity | 🔄 |
+| FV-11 | Book Distribution parity | ✅ |
 | FV-12 | Inventory Replacement Workflow | ⏳ |
-| FV-17 | School Memories admin | 🔄 |
+| FV-17 | School Memories admin | ✅ |
 | FV-18 | Growth Platform campaigns | ✅ |
 | P3-02 | ERP Exam Admin scope decision | ❌ Blocked |
 

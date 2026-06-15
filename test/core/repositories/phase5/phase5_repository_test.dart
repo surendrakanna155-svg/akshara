@@ -29,6 +29,22 @@ void main() {
       expect(hub.criticalAlerts, isNotEmpty);
     });
 
+    test('operations hub dismissAlert removes alert from list', () async {
+      final repo = MockOperationsHubRepository();
+      await repo.dismissAlert(query: query, alertId: 'student-risk');
+      final hub = await repo.getHub(query: query);
+      expect(hub.criticalAlerts.any((alert) => alert.id == 'student-risk'),
+          isFalse);
+    });
+
+    test('operations hub completeAction removes pending action', () async {
+      final repo = MockOperationsHubRepository();
+      await repo.completeAction(query: query, actionId: 'inv-pending');
+      final hub = await repo.getHub(query: query);
+      expect(hub.pendingActions.any((action) => action.id == 'inv-pending'),
+          isFalse);
+    });
+
     test('school memories lists published events', () async {
       final repo = MockSchoolMemoriesRepository();
       final events = await repo.listEvents(query: query);
@@ -43,7 +59,8 @@ void main() {
         title: 'Inter-school Cricket',
       );
       expect(created.status, 'draft');
-      final generated = await repo.generateAssets(query: query, promotionId: created.id);
+      final generated =
+          await repo.generateAssets(query: query, promotionId: created.id);
       expect(generated.status, 'pending_approval');
     });
   });

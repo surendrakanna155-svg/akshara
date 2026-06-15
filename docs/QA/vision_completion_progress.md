@@ -16,7 +16,7 @@
 | MG-08 | Management settings persistence | ✅ |
 | MG-01 | Dashboard export PDF + period filters | ✅ |
 
-**Metrics after session 9:** ERP ~95% · Tests **1447+** · Patrol **~56**
+**Metrics after session 9:** ERP ~95% · Tests **1452** · Patrol **~56**
 
 ---
 
@@ -177,6 +177,10 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 | Feature ID | Name | Phase | Class before | Class after | Tests + | Patrol + | Commit | CI |
 |------------|------|-------|--------------|-------------|---------|----------|--------|-----|
 | INTEL-01 | Management insight card routes | 2/6 | C | **A** | +2 | +1 | `ca1bc4e` | green |
+| FV-17 | School Memories admin | M7 | D | **A** | +2 | +1 | Session 10 | green |
+| FV-11 | Book Distribution parity | M7 | D | **A** | +3 | +1 | Session 10 | green |
+| OPS-01 | Operations Hub alert actions | M7 | D | **A** | +2 | +1 | Session 10 | green |
+| INTEL-11 | Intelligence recommendation nav | M8 | D | **A** | +2 | — | Session 10 | green |
 | INTEL-02 | KPI drill-down MG-01 | 2/6 | B | **A** | +8 | +2 | `b021b72` | green |
 | INTEL-03 | Context-aware copilot | 2 | C | **B** | +5 | +1 | `1d116d2` | green |
 | INTEL-04 | Floating copilot dock | 2 | D | **B** | +15 | +2 | `f978d2d` | pending |
@@ -202,7 +206,7 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 
 ## Next action
 
-**INTEL-05 / P1-04:** At-risk live pipeline foundation or Inventory PO — see `INTELLIGENCE_FOUNDATION_STATUS.md` recommended order.
+**FV-12:** Inventory Replacement Workflow — see `AKSHARA_FINAL_ROADMAP.md` M7 tail.
 
 Execution: audit → implement → tests → Patrol → gates → commit → push → CI → update registry.
 

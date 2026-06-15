@@ -200,6 +200,31 @@ class MutationPermissionRegistry {
       permission: Permission.manageManagement,
       kind: 'manage',
     ),
+    MutationPermissionEntry(
+      moduleId: 'management',
+      mutationId: 'dismissOperationsHubAlert',
+      permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'management',
+      mutationId: 'completeOperationsHubAction',
+      permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    // School Memories
+    MutationPermissionEntry(
+      moduleId: 'school_memories',
+      mutationId: 'createSchoolMemoryEvent',
+      permission: Permission.manageSchoolMemories,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'school_memories',
+      mutationId: 'publishSchoolMemoryEvent',
+      permission: Permission.manageSchoolMemories,
+      kind: 'manage',
+    ),
     // Communication
     MutationPermissionEntry(
       moduleId: 'communication',
@@ -285,6 +310,24 @@ class MutationPermissionRegistry {
       moduleId: 'inventory',
       mutationId: 'receiveProcurementHandoff',
       permission: Permission.manageInventory,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory_distribution',
+      mutationId: 'createDistribution',
+      permission: Permission.manageInventoryDistribution,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory_distribution',
+      mutationId: 'markDistributed',
+      permission: Permission.manageInventoryDistribution,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory_distribution',
+      mutationId: 'requestReplacement',
+      permission: Permission.manageInventoryDistribution,
       kind: 'manage',
     ),
     // Library

@@ -125,9 +125,9 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 | P1-09 | Substitute teacher wizard | #6/#9 | ⏳ |
 | P2-03 | Teacher reassignment | #9 | ⏳ |
 | P2-04 | Timetable optimization apply | #8–9 | ⏳ |
-| FV-11 | Book Distribution parity | #11 | 🔄 v10.1 |
+| FV-11 | Book Distribution parity | #11 | ✅ v10.1 |
 | FV-12 | Inventory Replacement Workflow | #12 | ⏳ |
-| FV-17 | School Memories admin | #17 | 🔄 v10.2 |
+| FV-17 | School Memories admin | #17 | ✅ v10.2 |
 | FV-18 | Growth Platform campaigns | #18 | ✅ M7 |
 | FV-23–27 | AI Education Suite maintenance | #22–27 | ✅ v8.5–v8.8 |
 | P3-02 | ERP Exam Admin scope | — | ❌ Product decision |
@@ -240,7 +240,10 @@ P1-01 Export wiring ✅
   → P2-03 Teacher reassignment ✅
   → P2-04 Timetable optimization apply ✅
   → FV-18 Growth Platform campaigns ✅
-  → FV-17 School Memories admin ← next
+  → FV-17 School Memories admin ✅
+  → FV-11 Book Distribution parity ✅
+  → OPS-01 Operations Hub actions ✅
+  → FV-12 Inventory Replacement Workflow ← next
 ```
 
 ---

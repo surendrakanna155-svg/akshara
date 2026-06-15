@@ -59,7 +59,8 @@ class Phase5RemoteDataSource {
     return _data(response);
   }
 
-  Future<Map<String, dynamic>> fetchOperationsHub({required RepositoryQuery query}) async {
+  Future<Map<String, dynamic>> fetchOperationsHub(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/operations/hub',
       queryParameters: _params(query),
@@ -67,7 +68,28 @@ class Phase5RemoteDataSource {
     return _data(response);
   }
 
-  Future<Map<String, dynamic>> fetchDistributionReports({required RepositoryQuery query}) async {
+  Future<void> dismissOperationsAlert({
+    required RepositoryQuery query,
+    required String alertId,
+  }) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/operations/hub/alerts/$alertId/dismiss',
+      queryParameters: _params(query),
+    );
+  }
+
+  Future<void> completeOperationsAction({
+    required RepositoryQuery query,
+    required String actionId,
+  }) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/operations/hub/actions/$actionId/complete',
+      queryParameters: _params(query),
+    );
+  }
+
+  Future<Map<String, dynamic>> fetchDistributionReports(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/inventory/distribution/reports',
       queryParameters: _params(query),
@@ -81,10 +103,14 @@ class Phase5RemoteDataSource {
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/memories/events',
-      queryParameters: {..._params(query), if (category != null) 'category': category},
+      queryParameters: {
+        ..._params(query),
+        if (category != null) 'category': category
+      },
     );
     final data = _data(response);
-    return (data['items'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+    return (data['items'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
   }
 
   Future<Map<String, dynamic>> fetchMemoryEvent({
@@ -201,10 +227,14 @@ class Phase5RemoteDataSource {
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/promotions',
-      queryParameters: {..._params(query), if (status != null) 'status': status},
+      queryParameters: {
+        ..._params(query),
+        if (status != null) 'status': status
+      },
     );
     final data = _data(response);
-    return (data['items'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+    return (data['items'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
   }
 
   Future<Map<String, dynamic>> createPromotion({

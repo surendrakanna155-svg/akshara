@@ -80,7 +80,10 @@ class MockParentExperienceRepository implements ParentExperienceRepository {
       ),
       homeworkIntelligence: const ParentHomeworkIntelligence(
         weakTopics: ['Mathematics Unit Test (52%)', 'Science Mock (58%)'],
-        suggestedRevision: ['Revise Mathematics Unit Test', 'Revise Science Mock'],
+        suggestedRevision: [
+          'Revise Mathematics Unit Test',
+          'Revise Science Mock'
+        ],
         teacherRecommendations: [
           'Complete 2 pending homework assignments',
           'Review teacher feedback on returned worksheets',
@@ -99,7 +102,8 @@ class MockParentExperienceRepository implements ParentExperienceRepository {
   }) async {}
 }
 
-class MockEmployeeIntelligenceRepository implements EmployeeIntelligenceRepository {
+class MockEmployeeIntelligenceRepository
+    implements EmployeeIntelligenceRepository {
   @override
   Future<Employee360Profile> getEmployee360({
     required RepositoryQuery query,
@@ -124,7 +128,10 @@ class MockEmployeeIntelligenceRepository implements EmployeeIntelligenceReposito
         coordinatorLoad: 1,
       ),
       leave: const {'approved': 2, 'pending': 0},
-      insights: const ['Strong classroom engagement', 'Monitor substitution load'],
+      insights: const [
+        'Strong classroom engagement',
+        'Monitor substitution load'
+      ],
     );
   }
 
@@ -144,8 +151,10 @@ class MockEmployeeIntelligenceRepository implements EmployeeIntelligenceReposito
         EmployeeInsightRow(employeeId: 'emp_1', name: 'Priya Nair', score: 88),
       ],
       workloadBalancing: [
-        EmployeeWorkloadRow(employeeId: 'emp_3', name: 'Raj Kumar', workloadPercent: 91),
-        EmployeeWorkloadRow(employeeId: 'emp_1', name: 'Priya Nair', workloadPercent: 72),
+        EmployeeWorkloadRow(
+            employeeId: 'emp_3', name: 'Raj Kumar', workloadPercent: 91),
+        EmployeeWorkloadRow(
+            employeeId: 'emp_1', name: 'Priya Nair', workloadPercent: 72),
       ],
       avgWorkloadPercent: 68,
     );
@@ -153,32 +162,47 @@ class MockEmployeeIntelligenceRepository implements EmployeeIntelligenceReposito
 }
 
 class MockOperationsHubRepository implements OperationsHubRepository {
+  final List<OperationsAlert> _alerts = [
+    const OperationsAlert(
+      id: 'student-risk',
+      module: 'intelligence',
+      title: '2 high-risk students',
+      severity: 'high',
+    ),
+    const OperationsAlert(
+      id: 'fee-overdue',
+      module: 'finance',
+      title: '6 critical fee defaulters',
+      severity: 'high',
+    ),
+  ];
+
+  final List<OperationsAction> _actions = [
+    const OperationsAction(
+      id: 'inv-pending',
+      module: 'inventory',
+      title: '4 distributions pending',
+    ),
+    const OperationsAction(
+      id: 'workflow-approvals',
+      module: 'management',
+      title: '3 workflow approvals pending',
+    ),
+  ];
+
   @override
   Future<OperationsHubSnapshot> getHub({required RepositoryQuery query}) async {
-    return const OperationsHubSnapshot(
+    return OperationsHubSnapshot(
       schoolHealth: 82,
-      dailySummary: OperationsDailySummary(
+      dailySummary: const OperationsDailySummary(
         attendancePct: 91,
         collectionsToday: 125000,
         communicationsToday: 5,
         criticalAlerts: 3,
       ),
-      criticalAlerts: [
-        OperationsAlert(
-          id: 'student-risk',
-          module: 'intelligence',
-          title: '2 high-risk students',
-          severity: 'high',
-        ),
-      ],
-      pendingActions: [
-        OperationsAction(
-          id: 'inv-pending',
-          module: 'inventory',
-          title: '4 distributions pending',
-        ),
-      ],
-      widgets: OperationsWidgets(
+      criticalAlerts: List<OperationsAlert>.unmodifiable(_alerts),
+      pendingActions: List<OperationsAction>.unmodifiable(_actions),
+      widgets: const OperationsWidgets(
         todayAttendance: {'present': 420, 'absent': 38, 'total': 458},
         todayCollections: {'amount': 125000, 'count': 18},
         todayCommunications: {'sent': 5, 'pending': 2},
@@ -188,6 +212,22 @@ class MockOperationsHubRepository implements OperationsHubRepository {
         feeAlerts: 6,
       ),
     );
+  }
+
+  @override
+  Future<void> dismissAlert({
+    required RepositoryQuery query,
+    required String alertId,
+  }) async {
+    _alerts.removeWhere((alert) => alert.id == alertId);
+  }
+
+  @override
+  Future<void> completeAction({
+    required RepositoryQuery query,
+    required String actionId,
+  }) async {
+    _actions.removeWhere((action) => action.id == actionId);
   }
 }
 
@@ -225,6 +265,14 @@ class MockSchoolMemoriesRepository implements SchoolMemoriesRepository {
         eventDate: '2026-01-20',
         status: 'published',
       ),
+      SchoolMemoryEvent(
+        id: 'evt_3',
+        title: 'Graduation Preview',
+        category: 'graduation',
+        eventDate: '2026-06-20',
+        status: 'draft',
+        description: 'Draft curation for graduation highlights.',
+      ),
     ]);
   }
 
@@ -236,7 +284,9 @@ class MockSchoolMemoriesRepository implements SchoolMemoriesRepository {
     required RepositoryQuery query,
     String? category,
   }) async {
-    return _events.where((e) => category == null || e.category == category).toList();
+    return _events
+        .where((e) => category == null || e.category == category)
+        .toList();
   }
 
   @override
@@ -426,7 +476,8 @@ class MockSchoolMemoriesRepository implements SchoolMemoriesRepository {
   }
 }
 
-class MockAchievementPromotionRepository implements AchievementPromotionRepository {
+class MockAchievementPromotionRepository
+    implements AchievementPromotionRepository {
   final List<AchievementPromotion> _items = const [
     AchievementPromotion(
       id: 'promo_1',
