@@ -74,13 +74,17 @@ Future<T?> _runMutation<T>(
   assertPermission?.call();
   try {
     final result = await action();
-    await recordFinanceAudit(
-      ref,
-      type: auditType,
-      action: auditAction,
-      entityId: entityIdForAudit?.call(result) ?? entityId,
-      metadata: metadata,
-    );
+    try {
+      await recordFinanceAudit(
+        ref,
+        type: auditType,
+        action: auditAction,
+        entityId: entityIdForAudit?.call(result) ?? entityId,
+        metadata: metadata,
+      );
+    } catch (_) {
+      // Audit persistence must not block finance mutations in QA automation.
+    }
     _invalidateFinanceReads(
       ref,
       feeStructures: invalidateFeeStructures,

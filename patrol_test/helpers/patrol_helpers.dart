@@ -16,9 +16,9 @@ import 'patrol_app.dart';
 /// Default Patrol config for Akshara QA builds (extended timeouts for splash).
 PatrolTesterConfig aksharaPatrolConfig() {
   return const PatrolTesterConfig(
-    existsTimeout: Duration(seconds: 20),
-    visibleTimeout: Duration(seconds: 20),
-    settleTimeout: Duration(seconds: 20),
+    existsTimeout: Duration(seconds: 30),
+    visibleTimeout: Duration(seconds: 30),
+    settleTimeout: Duration(seconds: 30),
     printLogs: false,
   );
 }
@@ -48,7 +48,7 @@ Future<void> capturePatrolScreenshot(
 Future<void> assertVisibleText(
   PatrolIntegrationTester $,
   String text, {
-  Duration timeout = const Duration(seconds: 15),
+  Duration timeout = const Duration(seconds: 30),
 }) async {
   await $.pump(const Duration(milliseconds: 500));
   final finder = find.text(text);
@@ -88,23 +88,130 @@ GoRouter _patrolGoRouter(PatrolIntegrationTester $) {
 /// Navigates directly to an ERP route via GoRouter (bypasses horizontal sub-nav).
 Future<void> goToErpRoute(PatrolIntegrationTester $, String route) async {
   _patrolGoRouter($).go(route);
-  for (var i = 0; i < 20; i++) {
-    await $.pump(const Duration(milliseconds: 500));
-    if (_patrolGoRouter($).state.uri.path == route) break;
+  for (var i = 0; i < 60; i++) {
+    await $.pump(const Duration(milliseconds: 250));
+    final path = _patrolGoRouter($).state.uri.path;
+    if (path == route || path.startsWith('$route/')) break;
   }
+  await $.pumpAndSettle(timeout: const Duration(seconds: 20));
+}
+
+/// Waits for a widget key, scrolling the primary body when needed.
+Future<void> tapByKey(
+  PatrolIntegrationTester $,
+  Key key, {
+  bool scrollFirst = true,
+}) async {
+  final finder = find.byKey(key);
+  if (scrollFirst) {
+    try {
+      await $(key).scrollTo();
+    } catch (_) {
+      // App bar / fixed overlays are not in a scrollable.
+    }
+  }
+  await assertVisibleKey($, key, timeout: const Duration(seconds: 30));
+  await $.tester.tap(finder);
+  await $.pump(const Duration(seconds: 1));
+}
+
+/// Taps the Nth tab in a scrollable AppBar [TabBar] (0-based).
+Future<void> tapAppBarTabByIndex(
+  PatrolIntegrationTester $,
+  int index,
+) async {
+  final tabBar = find.byType(TabBar);
+  final tabs = find.descendant(of: tabBar, matching: find.byType(Tab));
+  final scrollable = find.descendant(
+    of: tabBar,
+    matching: find.byType(Scrollable),
+  );
+
+  for (var i = 0; i < 80; i++) {
+    if (_safeAny($, tabs) && $.tester.widgetList(tabs).length > index) {
+      final tabFinder = tabs.at(index);
+      if (await _tryTapFinder($, tabFinder)) {
+        await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+        return;
+      }
+    }
+    if (_safeAny($, scrollable)) {
+      await $.tester.drag(scrollable.first, const Offset(-260, 0));
+      await $.pump(const Duration(milliseconds: 300));
+    }
+  }
+  expect(tabs, findsWidgets);
+  await $.tester.tap(tabs.at(index));
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+}
+
+/// Taps a scrollable AppBar [Tab] by label or QA key.
+Future<void> tapAppBarTab(
+  PatrolIntegrationTester $, {
+  String? label,
+  Key? tabKey,
+}) async {
+  assert(label != null || tabKey != null);
+  final tabFinder =
+      tabKey != null ? find.byKey(tabKey) : find.text(label!);
+  final scrollable = find.descendant(
+    of: find.byType(TabBar),
+    matching: find.byType(Scrollable),
+  );
+
+  for (var i = 0; i < 60; i++) {
+    if (await _tryTapFinder($, tabFinder)) {
+      await $.pumpAndSettle(timeout: const Duration(seconds: 8));
+      return;
+    }
+    if (_safeAny($, scrollable)) {
+      await $.tester.drag(scrollable.first, const Offset(-220, 0));
+      await $.pump(const Duration(milliseconds: 300));
+    }
+  }
+  if (label != null) {
+    await $(label).waitUntilVisible(timeout: const Duration(seconds: 30));
+    await $(label).tap();
+  } else {
+    await $(tabKey!).waitUntilVisible(timeout: const Duration(seconds: 30));
+    await $(tabKey).tap();
+  }
+  await $.pumpAndSettle(timeout: const Duration(seconds: 8));
+}
+
+/// Enters text into a [TextField] located by its decoration label.
+Future<void> enterLabeledField(
+  PatrolIntegrationTester $,
+  String label,
+  String value,
+) async {
+  final field = find.byWidgetPredicate(
+    (widget) =>
+        widget is TextField && widget.decoration?.labelText == label,
+  );
+  await $.tester.ensureVisible(field);
+  await $.pump(const Duration(milliseconds: 200));
+  await $.tester.enterText(field, value);
+  await $.pump(const Duration(milliseconds: 200));
 }
 
 /// Asserts a QA widget key is present after navigation.
 Future<void> assertVisibleKey(
   PatrolIntegrationTester $,
   Key key, {
-  Duration timeout = const Duration(seconds: 15),
+  Duration timeout = const Duration(seconds: 30),
 }) async {
   await $.pump(const Duration(milliseconds: 500));
   final finder = find.byKey(key);
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
     if (_safeAny($, finder)) {
+      try {
+        await $.tester.ensureVisible(finder);
+      } catch (_) {
+        // Off-screen in scrollable bodies — key is still mounted.
+      }
+      await $.pump(const Duration(milliseconds: 200));
       expect(finder, findsOneWidget);
       return;
     }
@@ -123,8 +230,9 @@ Future<void> navigateErpModuleRoute(
 }) async {
   await bootstrapAndLogin($, persona);
   await goToErpRoute($, route);
-  await assertVisibleKey($, screenKey);
-  await assertVisibleText($, workflowAnchor);
+  await assertVisibleKey($, screenKey, timeout: const Duration(seconds: 45));
+  await assertVisibleText($, workflowAnchor,
+      timeout: const Duration(seconds: 30));
 }
 
 /// Opens ERP drawer on mobile admin shell.
@@ -342,4 +450,73 @@ Future<void> tapBottomNav(PatrolIntegrationTester $, String label) async {
 Future<void> scrollTap(PatrolIntegrationTester $, String label) async {
   await $(label).scrollTo().tap();
   await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+}
+
+/// Taps label text after scrolling the module body (not Patrol scrollTo).
+Future<void> tapBodyText(
+  PatrolIntegrationTester $,
+  String label, {
+  String scrollAnchor = 'Principal overview',
+}) async {
+  final finder = find.text(label);
+  for (var i = 0; i < 8; i++) {
+    if (_safeAny($, finder)) {
+      try {
+        await $.tester.ensureVisible(finder);
+        await $.tester.tap(finder, warnIfMissed: false);
+        await $.pump(const Duration(seconds: 1));
+        return;
+      } catch (_) {}
+    }
+    await scrollModuleBody($, scrollAnchor);
+  }
+  await $(label).waitUntilVisible(timeout: const Duration(seconds: 30));
+  await $.tester.tap(finder);
+  await $.pump(const Duration(seconds: 1));
+}
+
+/// Waits until a [SnackBar] message containing [text] appears.
+Future<void> assertSnackBarText(
+  PatrolIntegrationTester $,
+  String text, {
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  final finder = find.textContaining(text);
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (_safeAny($, finder)) {
+      expect(finder, findsWidgets);
+      return;
+    }
+    await $.pump(const Duration(milliseconds: 100));
+  }
+  expect(finder, findsWidgets);
+}
+
+/// Waits for loading indicators to clear after async provider fetch.
+Future<void> waitForLoadingToClear(
+  PatrolIntegrationTester $, {
+  Duration timeout = const Duration(seconds: 30),
+}) async {
+  final loading = find.byType(CircularProgressIndicator);
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (!_safeAny($, loading)) {
+      await $.pump(const Duration(milliseconds: 300));
+      return;
+    }
+    await $.pump(const Duration(milliseconds: 200));
+  }
+}
+
+/// Opens full copilot from the floating dock (QA default access mode).
+Future<void> openCopilotViaFloatingDock(PatrolIntegrationTester $) async {
+  await $(QaTestKeys.copilotFloatingDockFab).waitUntilVisible(
+    timeout: const Duration(seconds: 30),
+  );
+  await $(QaTestKeys.copilotFloatingDockFab).tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+  await assertVisibleKey($, QaTestKeys.copilotFloatingDockOpenButton);
+  await $(QaTestKeys.copilotFloatingDockOpenButton).tap();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 15));
 }

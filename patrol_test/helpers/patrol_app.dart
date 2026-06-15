@@ -9,6 +9,8 @@ import 'package:akshara_erp/core/errors/error_reporting_service.dart';
 import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
 import 'package:akshara_erp/core/security/server_permission_provider.dart';
 import 'package:akshara_erp/features/auth/qa_login_persona.dart';
+import 'package:akshara_erp/features/copilot/settings/ai_access_preferences.dart';
+import 'package:akshara_erp/features/copilot/settings/ai_access_preferences_storage.dart';
 
 /// QA automation environment — mirrors [scripts/qa/build_qa_apk.sh] dart-defines.
 const Environment kPatrolQaEnvironment = Environment(
@@ -20,12 +22,22 @@ const Environment kPatrolQaEnvironment = Environment(
   enableQaLogin: true,
 );
 
+/// Seeds floating AI dock for all QA personas (mobile Patrol runs).
+Future<void> seedPatrolAiDockPreferences(SharedPreferences prefs) async {
+  const aiPrefs = AiAccessPreferences(floatingBubbleEnabled: true);
+  final storage = AiAccessPreferencesStorage(prefs);
+  for (final persona in QaLoginPersona.values) {
+    await storage.write('qa_${persona.name}', aiPrefs);
+  }
+}
+
 /// Builds a Riverpod container with QA login enabled for Patrol tests.
 Future<ProviderContainer> createPatrolContainer({
   SharedPreferences? prefs,
 }) async {
   final sharedPrefs = prefs ?? await SharedPreferences.getInstance();
   await sharedPrefs.remove(kServerPermissionSnapshotKey);
+  await seedPatrolAiDockPreferences(sharedPrefs);
   final bootstrap = ProviderContainer(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(sharedPrefs),

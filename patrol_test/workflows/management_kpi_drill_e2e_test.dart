@@ -14,19 +14,22 @@ void main() {
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.superAdmin);
       await goToErpRoute($, RouteNames.managementDashboard);
-      await assertVisibleText($, 'Revenue (MTD)');
+      await assertVisibleText($, 'Principal overview');
 
-      await $(QaTestKeys.managementKpiDrillButton('revenue_mtd')).scrollTo().tap();
+      await scrollDashboardDown($);
+      await tapByKey($, QaTestKeys.managementKpiDrillButton('revenue_mtd'));
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await assertVisibleText($, 'Report catalog');
 
       await goToErpRoute($, RouteNames.managementDashboard);
-      await $(QaTestKeys.managementKpiDrillButton('fee_defaulters')).scrollTo().tap();
+      await scrollDashboardDown($);
+      await tapByKey($, QaTestKeys.managementKpiDrillButton('fee_defaulters'));
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await assertVisibleText($, 'Defaulters list');
 
       await goToErpRoute($, RouteNames.managementDashboard);
-      await $(QaTestKeys.managementKpiDrillButton('new_admissions')).scrollTo().tap();
+      await scrollDashboardDown($);
+      await tapByKey($, QaTestKeys.managementKpiDrillButton('new_admissions'));
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await assertVisibleText($, 'Funnel stages');
     },

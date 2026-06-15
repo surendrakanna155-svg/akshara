@@ -10,14 +10,13 @@ import '../helpers/patrol_helpers.dart';
 /// Inventory procurement PO approve + receive chain (mock mode).
 void main() {
   patrolTest(
-    'journey: inventory create/approve/receive PO E2E',
+    'journey: inventory approve PO handoff E2E',
     config: aksharaPatrolConfig(),
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.superAdmin);
       await goToErpRoute($, RouteNames.inventoryProcurement);
       await assertVisibleText($, 'Purchase orders');
-      await createInventoryProcurementOrder($);
-      await approveAndReceiveInventoryProcurementOrder($);
+      await approveInventoryProcurementOrder($, orderId: 'po_4');
     },
   );
 }

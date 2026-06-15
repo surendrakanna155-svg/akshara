@@ -17,21 +17,23 @@ void main() {
       await assertVisibleKey($, QaTestKeys.platformOperationsHubScreen);
       await assertVisibleKey($, QaTestKeys.platformOperationsOverviewTab);
 
-      await $(QaTestKeys.platformOperationsAlertsTab).tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await tapAppBarTab($, tabKey: QaTestKeys.platformOperationsAlertsTab);
       await assertVisibleKey(
         $,
         QaTestKeys.platformOperationsAcknowledgeAlertButton('plat_alert_1'),
       );
-      await $(QaTestKeys.platformOperationsAcknowledgeAlertButton('plat_alert_1'))
-          .tap();
+      await tapByKey(
+        $,
+        QaTestKeys.platformOperationsAcknowledgeAlertButton('plat_alert_1'),
+        scrollFirst: false,
+      );
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await assertVisibleKey(
         $,
         QaTestKeys.platformOperationsAlertAcknowledgedSnackbar,
       );
 
-      await $(QaTestKeys.platformOperationsReadinessTab).tap();
+      await tapAppBarTab($, tabKey: QaTestKeys.platformOperationsReadinessTab);
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await $('Production Readiness').waitUntilVisible();
     },

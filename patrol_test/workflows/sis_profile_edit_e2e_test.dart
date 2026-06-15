@@ -11,15 +11,15 @@ void main() {
     ($) async {
       await openErpModule($, QaLoginPersona.superAdmin, 'sis');
       await tapModuleSubNav($, 'sis', 'Student Registry');
-      await $(QaTestKeys.sisRegistryStudentRow('Arjun Patel')).scrollTo().tap();
+      await tapByKey($, QaTestKeys.sisRegistryStudentRow('Arjun Patel'));
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 
-      await $(QaTestKeys.sisEditProfileButton).scrollTo().tap();
-      await $(QaTestKeys.sisEditProfileSaveButton).tap();
+      await tapByKey($, QaTestKeys.sisEditProfileButton);
+      await tapByKey($, QaTestKeys.sisEditProfileSaveButton, scrollFirst: false);
       await assertVisibleText($, 'Student profile updated');
 
-      await $(QaTestKeys.sisUploadDocumentButton).scrollTo().tap();
-      await $(QaTestKeys.sisUploadDocumentSubmitButton).tap();
+      await tapByKey($, QaTestKeys.sisUploadDocumentButton);
+      await tapByKey($, QaTestKeys.sisUploadDocumentSubmitButton, scrollFirst: false);
       await assertVisibleKey($, QaTestKeys.sisDocumentUploadSuccessSnackbar);
     },
   );

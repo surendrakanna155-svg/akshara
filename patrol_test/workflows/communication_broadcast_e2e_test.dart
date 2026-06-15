@@ -18,11 +18,11 @@ void main() {
         workflowAnchor: 'Broadcast Admin',
       );
 
-      await $('Title').enterText('Emergency notice');
-      await $('Body').enterText('School closes early due to weather alert.');
-      await $(QaTestKeys.communicationBroadcastSendButton).tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await assertVisibleText($, 'Broadcast sent to');
+      await enterLabeledField($, 'Title', 'Emergency notice');
+      await enterLabeledField($, 'Body', 'School closes early due to weather alert.');
+      await tapByKey($, QaTestKeys.communicationBroadcastSendButton, scrollFirst: false);
+      await $.pumpAndSettle(timeout: const Duration(seconds: 12));
+      await assertSnackBarText($, 'Broadcast sent to');
     },
   );
 }

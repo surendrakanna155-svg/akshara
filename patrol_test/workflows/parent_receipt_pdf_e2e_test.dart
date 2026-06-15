@@ -13,13 +13,14 @@ void main() {
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.parent);
       await tapBottomNav($, 'Fees');
-      await $(QaTestKeys.receiptHistoryButton).scrollTo().tap();
+      await tapByKey($, QaTestKeys.receiptHistoryButton);
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await $('Term 1 — Full payment').tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await $(QaTestKeys.parentReceiptDownloadButton).tap();
+      await tapByKey($, QaTestKeys.parentReceiptDownloadButton, scrollFirst: false);
       await $.pumpAndSettle(timeout: const Duration(seconds: 15));
-      await assertVisibleKey($, QaTestKeys.parentReceiptPdfSuccessSnackbar);
+      await assertVisibleKey($, QaTestKeys.parentReceiptPdfSuccessSnackbar,
+          timeout: const Duration(seconds: 30));
     },
   );
 }

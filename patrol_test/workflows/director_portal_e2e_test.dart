@@ -3,6 +3,7 @@ import 'package:akshara_erp/features/auth/qa_login_persona.dart';
 import 'package:akshara_erp/router/route_names.dart';
 import 'package:patrol/patrol.dart';
 
+import '../helpers/patrol_app.dart';
 import '../helpers/patrol_helpers.dart';
 
 void main() {
@@ -10,20 +11,14 @@ void main() {
     'workflow: director portal dashboard and reports',
     config: aksharaPatrolConfig(),
     ($) async {
-      await navigateErpModuleRoute(
-        $,
-        QaLoginPersona.superAdmin,
-        RouteNames.directorDashboard,
-        screenKey: QaTestKeys.directorDashboardScreen,
-        workflowAnchor: 'School portfolio health',
-      );
-
+      await bootstrapAndLogin($, QaLoginPersona.superAdmin);
       await goToErpRoute($, RouteNames.directorReports);
-      await $(QaTestKeys.directorReportsGenerateSummaryButton).scrollTo().tap();
+      await waitForLoadingToClear($, timeout: const Duration(seconds: 45));
+      await tapByKey($, QaTestKeys.directorReportsGenerateSummaryButton);
       await $.pumpAndSettle(timeout: const Duration(seconds: 12));
       await assertVisibleKey($, QaTestKeys.directorExecutiveSummaryCard);
 
-      await $(QaTestKeys.directorReportExportButton('rpt-1')).scrollTo().tap();
+      await tapByKey($, QaTestKeys.directorReportExportButton('rpt-1'));
       await $.pumpAndSettle(timeout: const Duration(seconds: 8));
       await assertVisibleKey($, QaTestKeys.directorReportExportedSnackbar);
     },

@@ -141,13 +141,13 @@ class CopilotScreenContext {
       suggestedAssistant: CopilotAssistantType.fromApi(
         json['suggestedAssistant'] as String? ?? '',
       ),
-      filters: (json['filters'] as Map<String, dynamic>? ?? const {})
-          .map((key, value) => MapEntry(key, value.toString())),
+      filters: Map<String, dynamic>.from(json['filters'] as Map? ?? const {})
+          .map((key, value) => MapEntry(key.toString(), value.toString())),
       kpis: kpiItems
           .map((item) => CopilotKpiSnapshot.fromJson(item as Map<String, dynamic>))
           .toList(),
-      records: (json['records'] as Map<String, dynamic>? ?? const {})
-          .map((key, value) => MapEntry(key, value.toString())),
+      records: Map<String, dynamic>.from(json['records'] as Map? ?? const {})
+          .map((key, value) => MapEntry(key.toString(), value.toString())),
     );
   }
 

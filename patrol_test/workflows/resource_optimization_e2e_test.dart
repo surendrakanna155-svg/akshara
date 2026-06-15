@@ -15,20 +15,25 @@ void main() {
       await goToErpRoute($, RouteNames.resourceOptimization);
 
       await assertVisibleText($, 'Resource Optimization Engine');
-      await $(QaTestKeys.resourceOptimizationApplyButton(
-              'staffing_balance_load'))
-          .scrollTo()
-          .tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await assertVisibleKey($, QaTestKeys.resourceOptimizationAppliedSnackbar);
-
-      await $(QaTestKeys.resourceOptimizationDismissButton(
-              'staffing_reduce_idle'))
-          .scrollTo()
-          .tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await waitForLoadingToClear($);
       await assertVisibleKey(
-          $, QaTestKeys.resourceOptimizationDismissedSnackbar);
+        $,
+        QaTestKeys.resourceOptimizationApplyButton('staffing_balance_load'),
+        timeout: const Duration(seconds: 45),
+      );
+      await tapByKey(
+        $,
+        QaTestKeys.resourceOptimizationApplyButton('staffing_balance_load'),
+      );
+      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await assertSnackBarText($, 'Optimization recommendation applied');
+
+      await tapByKey(
+        $,
+        QaTestKeys.resourceOptimizationDismissButton('staffing_reduce_idle'),
+      );
+      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await assertSnackBarText($, 'Optimization recommendation dismissed');
     },
   );
 }

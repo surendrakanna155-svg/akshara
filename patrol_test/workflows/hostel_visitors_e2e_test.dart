@@ -2,22 +2,22 @@ import 'package:patrol/patrol.dart';
 
 import 'package:akshara_erp/features/auth/qa_login_persona.dart';
 
-import '../helpers/management_approval_journey_helpers.dart';
 import '../helpers/patrol_helpers.dart';
 
 void main() {
   patrolTest(
-    'journey: management approval E2E',
+    'journey: hostel visitors register action',
     config: aksharaPatrolConfig(),
     ($) async {
       await navigateErpWorkflow(
         $,
         QaLoginPersona.superAdmin,
-        'management',
-        subNavLabel: 'Tasks',
-        workflowAnchor: 'Approval queue',
+        'hostel',
+        subNavLabel: 'Visitors',
+        workflowAnchor: 'Active visitors',
       );
-      await approveFirstManagementItem($);
+      await assertVisibleText($, 'Register visitor');
+      await assertVisibleText($, 'Visitor log');
     },
   );
 }

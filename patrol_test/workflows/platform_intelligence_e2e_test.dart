@@ -12,7 +12,7 @@ void main() {
       await navigateErpWorkflow(
         $,
         QaLoginPersona.superAdmin,
-        'control_center',
+        'controlCenter',
         subNavLabel: 'Intelligence',
         workflowAnchor: 'Platform Owner',
       );

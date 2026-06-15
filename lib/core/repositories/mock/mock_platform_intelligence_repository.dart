@@ -417,23 +417,27 @@ class MockPlatformIntelligenceRepository
       return fallback;
     }
 
-    final response = await _pipeline.complete(
-      AiInferenceRequest(
-        prompt: 'Generate cross-school trust recommendations as '
-            'id|title|detail|owner|priority for schools ${schoolIds.join(", ")}.',
-        taskType: aiTaskTypeName(AiInferenceTaskType.intelligenceCompute),
-        systemPrompt:
-            'You are an education trust strategy assistant. Keep actions concise and measurable.',
-        context: {
-          'module': 'organization_intelligence',
-          'tenantId': query.tenantId,
-          'organizationId': query.organizationId,
-          'schoolIds': schoolIds.join(','),
-        },
-      ),
-    );
-    final parsed = _parseRecommendations(response.content);
-    return parsed.isEmpty ? fallback : parsed;
+    try {
+      final response = await _pipeline.complete(
+        AiInferenceRequest(
+          prompt: 'Generate cross-school trust recommendations as '
+              'id|title|detail|owner|priority for schools ${schoolIds.join(", ")}.',
+          taskType: aiTaskTypeName(AiInferenceTaskType.intelligenceCompute),
+          systemPrompt:
+              'You are an education trust strategy assistant. Keep actions concise and measurable.',
+          context: {
+            'module': 'organization_intelligence',
+            'tenantId': query.tenantId,
+            'organizationId': query.organizationId,
+            'schoolIds': schoolIds.join(','),
+          },
+        ),
+      );
+      final parsed = _parseRecommendations(response.content);
+      return parsed.isEmpty ? fallback : parsed;
+    } catch (_) {
+      return fallback;
+    }
   }
 
   @override

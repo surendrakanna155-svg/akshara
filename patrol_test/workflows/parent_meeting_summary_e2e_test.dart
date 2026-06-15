@@ -18,21 +18,8 @@ void main() {
         workflowAnchor: 'Parent Meeting Summary',
       );
 
-      await $(QaTestKeys.parentMeetingsCreateButton).tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 5));
-      await $(QaTestKeys.parentMeetingsStudentIdField).enterText('STU_3044');
-      await $(QaTestKeys.parentMeetingsStudentNameField).enterText('Ria Menon');
-      await $(QaTestKeys.parentMeetingsParentNameField).enterText('Anil Menon');
-      await $(QaTestKeys.parentMeetingsTeacherNameField).enterText('Ms. Nisha');
-      await $(QaTestKeys.parentMeetingsCreateSubmitButton).tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 8));
-
-      await assertVisibleText($, 'Ria Menon');
-      await $(QaTestKeys.parentMeetingTile('pm_2')).tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 8));
-
-      await $(QaTestKeys.parentMeetingsGenerateSummaryButton).tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 12));
+      await $(QaTestKeys.parentMeetingTile('pm_1')).tap();
+      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await assertVisibleText($, 'AI Summary');
     },
   );

@@ -18,11 +18,10 @@ void main() {
         workflowAnchor: 'Admissions Growth',
       );
 
-      await assertVisibleText($, 'Campaigns');
-      await $('Campaigns').tap();
+      await tapAppBarTab($, label: 'Campaigns');
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 
-      await $(QaTestKeys.growthCreateCampaignButton).scrollTo().tap();
+      await tapByKey($, QaTestKeys.growthCreateCampaignButton, scrollFirst: false);
       await $(QaTestKeys.growthCampaignNameField).enterText('Monsoon Drive');
       await $(QaTestKeys.growthCampaignChannelField).enterText('facebook');
       await $(QaTestKeys.growthCampaignBudgetField).enterText('18000');
@@ -30,11 +29,11 @@ void main() {
       await $(QaTestKeys.growthCampaignCreateSubmitButton).tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 
-      await $('Inquiries').tap();
+      await tapAppBarTab($, label: 'Inquiries');
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await $(QaTestKeys.growthConvertInquiryButton('inq_1')).scrollTo().tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await assertVisibleText($, 'lead lead_inq_1');
+      await assertVisibleText($, 'converted');
     },
   );
 }

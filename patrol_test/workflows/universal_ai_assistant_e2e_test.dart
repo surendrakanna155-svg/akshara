@@ -17,13 +17,20 @@ void main() {
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 
       await assertVisibleText($, 'Finance Intelligence');
-      await assertVisibleKey($, QaTestKeys.universalAiAssistantStreamingToggle);
+      await assertVisibleKey(
+        $,
+        QaTestKeys.universalAiAssistantStreamingToggle,
+        timeout: const Duration(seconds: 30),
+      );
 
-      await $('Summarize collection risk for this month').scrollTo().tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await $('Summarize collection risk for this month').waitUntilVisible(
+        timeout: const Duration(seconds: 30),
+      );
+      await $('Summarize collection risk for this month').tap();
+      await $.pumpAndSettle(timeout: const Duration(seconds: 20));
 
       await assertVisibleKey($, QaTestKeys.copilotPersonaReplyPanel);
-      await assertVisibleText($, 'Finance Copilot');
+      await assertVisibleText($, 'Finance Intelligence');
     },
   );
 }

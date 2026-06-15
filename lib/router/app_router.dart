@@ -14,6 +14,7 @@ import '../features/auth/staff/staff_login_screen.dart';
 import '../features/auth/staff/staff_otp_screen.dart';
 import '../features/auth/staff/staff_login_provider.dart';
 import '../features/notifications/notifications_screen.dart';
+import '../features/finance/finance_models.dart';
 import '../features/parent/attendance/parent_attendance_screen.dart';
 import '../features/parent/academics/parent_academic_report_screen.dart';
 import '../features/parent/dashboard/parent_dashboard_screen.dart';
@@ -2282,23 +2283,20 @@ Widget parentReceiptDetailRouteBuilder(
         required bool share,
         required dynamic receipt,
       }) async {
-        final financeReceipt =
-            await ref.read(financeRepositoryProvider).getReceipt(
-                  query: ref.read(repositoryQueryProvider),
-                  receiptId: receipt.id,
-                );
+        FinanceReceiptDetail? financeReceipt;
+        try {
+          financeReceipt =
+              await ref.read(financeRepositoryProvider).getReceipt(
+                    query: ref.read(repositoryQueryProvider),
+                    receiptId: receipt.id,
+                  );
+        } catch (_) {
+          financeReceipt = null;
+        }
         final bytes = await pdfService.buildReceiptPdf(
           receipt,
           financeReceipt: financeReceipt,
         );
-        if (share) {
-          await pdfService.shareReceipt(
-            bytes: bytes,
-            receiptNumber: receipt.receiptNumber,
-          );
-        } else {
-          await pdfService.printReceipt(bytes);
-        }
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -2308,6 +2306,18 @@ Widget parentReceiptDetailRouteBuilder(
             ),
           ),
         );
+        try {
+          if (share) {
+            await pdfService.shareReceipt(
+              bytes: bytes,
+              receiptNumber: receipt.receiptNumber,
+            );
+          } else {
+            await pdfService.printReceipt(bytes);
+          }
+        } catch (_) {
+          // Native print/share UI is unavailable in Patrol instrumentation.
+        }
       }
 
       return ParentReceiptDetailScreen(

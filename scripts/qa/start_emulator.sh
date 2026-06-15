@@ -30,6 +30,10 @@ nohup "$ANDROID_HOME/emulator/emulator" \
   -no-boot-anim \
   -gpu host \
   >> "$LOG" 2>&1 &
+EMU_PID=$!
+
+# Allow cold boot to spawn qemu before liveness checks.
+sleep 15
 
 deadline=$((SECONDS + BOOT_TIMEOUT_SEC))
 while (( SECONDS < deadline )); do
@@ -40,7 +44,7 @@ while (( SECONDS < deadline )); do
       exit 0
     fi
   fi
-  if ! pgrep -f "qemu-system.*${AVD}" >/dev/null 2>&1; then
+  if ! kill -0 "$EMU_PID" 2>/dev/null; then
     log "Emulator process exited early. Last log lines:"
     tail -20 "$LOG" >&2 || true
     exit 1

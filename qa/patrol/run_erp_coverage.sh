@@ -131,6 +131,17 @@ ALL_TARGETS=(
   "patrol_test/workflows/restaurant_vertical_e2e_test.dart"
   "patrol_test/workflows/accommodation_vertical_e2e_test.dart"
   "patrol_test/workflows/white_label_platform_e2e_test.dart"
+  # Post-M13 QA expansion — batch 1
+  "patrol_test/workflows/finance_filters_e2e_test.dart"
+  "patrol_test/workflows/finance_exports_e2e_test.dart"
+  "patrol_test/workflows/admissions_exports_e2e_test.dart"
+  "patrol_test/workflows/management_actions_e2e_test.dart"
+  "patrol_test/workflows/sis_filters_e2e_test.dart"
+  "patrol_test/workflows/director_portal_navigation_e2e_test.dart"
+  "patrol_test/workflows/industry_pack_navigation_e2e_test.dart"
+  "patrol_test/workflows/healthcare_navigation_e2e_test.dart"
+  "patrol_test/workflows/hostel_visitors_e2e_test.dart"
+  "patrol_test/workflows/library_digital_resources_e2e_test.dart"
   "patrol_test/workflows/screenshot_validation_test.dart"
 )
 

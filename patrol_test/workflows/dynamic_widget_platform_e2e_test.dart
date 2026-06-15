@@ -15,14 +15,18 @@ void main() {
       await goToErpRoute($, RouteNames.dynamicWidgets);
 
       await assertVisibleKey($, QaTestKeys.dynamicWidgetRegistryScreen);
-      await assertVisibleKey($, QaTestKeys.dynamicWidgetCatalogItem('school_health'));
-
-      await $(QaTestKeys.dynamicWidgetOpenRuntimeButton).tap();
+      await tapByKey(
+        $,
+        QaTestKeys.dynamicWidgetOpenRuntimeButton,
+        scrollFirst: false,
+      );
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await waitForLoadingToClear($);
       await assertVisibleKey($, QaTestKeys.dynamicWidgetRuntimeScreen);
       await assertVisibleKey($, QaTestKeys.dynamicWidgetRuntimeTile('school_health'));
 
       await goToErpRoute($, RouteNames.dynamicWidgetLayout);
+      await waitForLoadingToClear($);
       await assertVisibleKey($, QaTestKeys.dynamicWidgetLayoutEditorScreen);
       await assertVisibleKey($, QaTestKeys.dynamicWidgetLayoutItem('school_health'));
     },

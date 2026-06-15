@@ -15,14 +15,18 @@ void main() {
       await goToErpRoute($, RouteNames.organizationIntelligence);
       await assertVisibleKey($, QaTestKeys.trustIntelligenceScreen);
 
-      await assertVisibleText($, 'Recommendations');
-      await $('Recommendations').tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await assertVisibleText($, 'Finance Lead');
+      await tapAppBarTabByIndex($, 5);
+      await waitForLoadingToClear($, timeout: const Duration(seconds: 45));
+      await assertVisibleText($, 'Drive fee recovery sprint',
+          timeout: const Duration(seconds: 30));
 
-      await $('Executive Summary').tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await assertVisibleText($, 'Trust trajectory remains positive');
+      await tapAppBarTabByIndex($, 6);
+      await waitForLoadingToClear($, timeout: const Duration(seconds: 45));
+      await assertVisibleText(
+        $,
+        'Trust trajectory remains positive with targeted risk controls.',
+        timeout: const Duration(seconds: 30),
+      );
     },
   );
 }

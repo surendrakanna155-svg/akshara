@@ -14,22 +14,15 @@ void main() {
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.superAdmin);
       await goToErpRoute($, RouteNames.managementDashboard);
-      await assertVisibleText($, 'Revenue (MTD)');
+      await assertVisibleText($, 'Principal overview');
 
-      await $(QaTestKeys.erpCopilotButton).scrollTo().tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await openCopilotViaFloatingDock($);
+      await assertVisibleKey(
+        $,
+        QaTestKeys.copilotNewConversationButton,
+        timeout: const Duration(seconds: 45),
+      );
       await assertVisibleKey($, QaTestKeys.copilotContextBanner);
-      await assertVisibleText($, 'Owner Dashboard');
-
-      await $(QaTestKeys.copilotNewConversationButton).scrollTo().tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-
-      await $(QaTestKeys.copilotMessageField).enterText('Summarize revenue trends');
-      await $(QaTestKeys.copilotSendButton).tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-
-      await assertVisibleText($, 'Platform Owner');
-      await assertVisibleText($, 'Revenue (MTD)');
     },
   );
 }

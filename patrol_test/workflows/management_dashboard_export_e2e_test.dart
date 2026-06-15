@@ -14,12 +14,15 @@ void main() {
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.superAdmin);
       await goToErpRoute($, RouteNames.managementDashboard);
-      await assertVisibleText($, 'Revenue (MTD)');
+      await assertVisibleText($, 'Principal overview');
 
       await $(QaTestKeys.managementDashboardExportButton).scrollTo().tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await assertVisibleKey($, QaTestKeys.managementDashboardExportSnackbar);
-      await assertVisibleText($, 'Report catalog');
+      await assertVisibleKey(
+        $,
+        QaTestKeys.managementDashboardExportSuccessSnackbar,
+      );
+      await assertVisibleText($, 'Management dashboard PDF generated');
     },
   );
 }

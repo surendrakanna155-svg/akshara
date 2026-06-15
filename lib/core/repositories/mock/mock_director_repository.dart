@@ -279,22 +279,28 @@ class MockDirectorRepository implements DirectorRepository {
     required RepositoryQuery query,
     required String focusArea,
   }) async {
-    final response = await _pipeline.complete(
-      AiInferenceRequest(
-        prompt:
-            'Create a concise director executive summary for $focusArea using aggregated school portfolio metrics only.',
-        taskType: aiTaskTypeName(AiInferenceTaskType.intelligenceCompute),
-        systemPrompt:
-            'You are an executive assistant for a school chain director. Never include student or parent PII.',
-        context: {
-          'focusArea': focusArea,
-          'schools': _schools.length,
-          'totalStudents':
-              _schools.fold<int>(0, (sum, school) => sum + school.students),
-        },
-      ),
-    );
-    return response.content;
+    try {
+      final response = await _pipeline.complete(
+        AiInferenceRequest(
+          prompt:
+              'Create a concise director executive summary for $focusArea using aggregated school portfolio metrics only.',
+          taskType: aiTaskTypeName(AiInferenceTaskType.intelligenceCompute),
+          systemPrompt:
+              'You are an executive assistant for a school chain director. Never include student or parent PII.',
+          context: {
+            'focusArea': focusArea,
+            'schools': _schools.length,
+            'totalStudents':
+                _schools.fold<int>(0, (sum, school) => sum + school.students),
+          },
+        ),
+      );
+      return response.content;
+    } catch (_) {
+      return 'Portfolio remains stable with focused interventions required at '
+          '${_schools.where((s) => s.status == DirectorSchoolStatus.atRisk || s.status == DirectorSchoolStatus.critical).length} '
+          'campuses. Fee collection and admissions velocity are trending positive chain-wide.';
+    }
   }
 
   @override

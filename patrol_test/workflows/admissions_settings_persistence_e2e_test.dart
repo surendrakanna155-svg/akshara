@@ -16,7 +16,7 @@ void main() {
         workflowAnchor: 'Lead stages',
       );
 
-      await $('Save settings').scrollTo().tap();
+      await tapBodyText($, 'Save settings', scrollAnchor: 'Lead stages');
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await assertVisibleText($, 'Admissions settings saved');
     },

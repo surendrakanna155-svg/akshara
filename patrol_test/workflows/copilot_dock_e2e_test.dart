@@ -14,10 +14,10 @@ void main() {
     ($) async {
       await bootstrapAndLogin($, QaLoginPersona.superAdmin);
       await goToErpRoute($, RouteNames.managementDashboard);
-      await assertVisibleText($, 'Revenue (MTD)');
+      await assertVisibleText($, 'Principal overview');
 
       await $(QaTestKeys.copilotFloatingDockFab).waitUntilVisible(
-        timeout: const Duration(seconds: 15),
+        timeout: const Duration(seconds: 30),
       );
       await $(QaTestKeys.copilotFloatingDockFab).tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
@@ -26,10 +26,14 @@ void main() {
       await assertVisibleKey($, QaTestKeys.copilotFloatingDockContextSummary);
 
       await $(QaTestKeys.copilotFloatingDockOpenButton).tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await $.pumpAndSettle(timeout: const Duration(seconds: 15));
 
+      await assertVisibleKey(
+        $,
+        QaTestKeys.copilotNewConversationButton,
+        timeout: const Duration(seconds: 45),
+      );
       await assertVisibleKey($, QaTestKeys.copilotContextBanner);
-      await assertVisibleText($, 'Owner Dashboard');
     },
   );
 
@@ -41,7 +45,7 @@ void main() {
       await goToErpRoute($, RouteNames.teacherDashboard);
 
       await $(QaTestKeys.copilotFloatingDockFab).waitUntilVisible(
-        timeout: const Duration(seconds: 15),
+        timeout: const Duration(seconds: 30),
       );
       await $(QaTestKeys.copilotFloatingDockFab).tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));

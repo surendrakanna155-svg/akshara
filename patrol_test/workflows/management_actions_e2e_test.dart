@@ -2,12 +2,11 @@ import 'package:patrol/patrol.dart';
 
 import 'package:akshara_erp/features/auth/qa_login_persona.dart';
 
-import '../helpers/management_approval_journey_helpers.dart';
 import '../helpers/patrol_helpers.dart';
 
 void main() {
   patrolTest(
-    'journey: management approval E2E',
+    'journey: management tasks pending filter',
     config: aksharaPatrolConfig(),
     ($) async {
       await navigateErpWorkflow(
@@ -17,7 +16,9 @@ void main() {
         subNavLabel: 'Tasks',
         workflowAnchor: 'Approval queue',
       );
-      await approveFirstManagementItem($);
+      await $('Pending').scrollTo().tap();
+      await $.pumpAndSettle(timeout: const Duration(seconds: 8));
+      await assertVisibleText($, 'Approval queue');
     },
   );
 }

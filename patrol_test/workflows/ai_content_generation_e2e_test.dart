@@ -14,20 +14,21 @@ void main() {
       await bootstrapAndLogin($, QaLoginPersona.superAdmin);
       await goToErpRoute($, RouteNames.aiContent);
 
-      await $(QaTestKeys.aiContentPromptField)
-          .scrollTo()
-          .enterText('Create a notice about exam revision classes.');
-      await $(QaTestKeys.aiContentGenerateButton).scrollTo().tap();
-      await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+      await $(QaTestKeys.aiContentPromptField).enterText(
+        'Create a notice about exam revision classes.',
+      );
+      await tapByKey($, QaTestKeys.aiContentGenerateButton);
+      await $.pumpAndSettle(timeout: const Duration(seconds: 25));
 
-      await assertVisibleKey($, QaTestKeys.aiContentGeneratedSnackbar);
+      await assertSnackBarText($, 'AI content generated');
+      await waitForLoadingToClear($);
       await $(QaTestKeys.aiContentCopyButton).scrollTo().tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await assertVisibleKey($, QaTestKeys.aiContentCopiedSnackbar);
+      await assertSnackBarText($, 'Content copied to clipboard');
 
       await $(QaTestKeys.aiContentShareButton).scrollTo().tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
-      await assertVisibleKey($, QaTestKeys.aiContentSharedSnackbar);
+      await assertSnackBarText($, 'Content copied for sharing');
     },
   );
 }

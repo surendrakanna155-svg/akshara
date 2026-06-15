@@ -16,9 +16,17 @@ void main() {
       await goToErpRoute($, RouteNames.teacherReassignment);
 
       await $('Teacher Reassignment Wizard').waitUntilVisible();
-      await $(const ValueKey('teacher_reassignment_slot_trs_1')).tap();
-      await $(const ValueKey('teacher_reassignment_select_teacher_2')).tap();
-      await $(QaTestKeys.teacherReassignmentSubmitButton).tap();
+      await tapByKey(
+        $,
+        const ValueKey('teacher_reassignment_slot_trs_1'),
+        scrollFirst: false,
+      );
+      await tapByKey(
+        $,
+        const ValueKey('teacher_reassignment_select_teacher_2'),
+        scrollFirst: false,
+      );
+      await tapByKey($, QaTestKeys.teacherReassignmentSubmitButton, scrollFirst: false);
 
       await assertVisibleKey($, QaTestKeys.teacherReassignmentSuccessSnackbar);
     },
