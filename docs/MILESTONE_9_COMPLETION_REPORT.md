@@ -3,7 +3,7 @@
 **Program:** Akshara M9 — Multi-School SaaS Platform  
 **Date:** June 2026  
 **Baseline:** `6531ae6` · `4f09ba9` (M8)  
-**Delivered commit:** _(pending push — see git log after commit)_
+**Delivered commit:** `3b1bdb7`
 
 ---
 
