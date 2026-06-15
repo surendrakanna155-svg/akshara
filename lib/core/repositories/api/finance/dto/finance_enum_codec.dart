@@ -44,6 +44,36 @@ class FinanceEnumCodec {
         _ => CollectionStatus.completed,
       };
 
+  static OfflinePaymentMethod parseOfflinePaymentMethod(String? raw) =>
+      switch (raw) {
+        'cash' => OfflinePaymentMethod.cash,
+        'cheque' || 'check' => OfflinePaymentMethod.cheque,
+        'dd' || 'demand_draft' || 'demandDraft' => OfflinePaymentMethod.dd,
+        _ => OfflinePaymentMethod.cash,
+      };
+
+  static String offlinePaymentMethodToApi(OfflinePaymentMethod method) =>
+      switch (method) {
+        OfflinePaymentMethod.cash => 'cash',
+        OfflinePaymentMethod.cheque => 'cheque',
+        OfflinePaymentMethod.dd => 'dd',
+      };
+
+  static OfflinePaymentStatus parseOfflinePaymentStatus(String? raw) =>
+      switch (raw) {
+        'pending_reconciliation' ||
+        'pendingReconciliation' =>
+          OfflinePaymentStatus.pendingReconciliation,
+        'reconciled' => OfflinePaymentStatus.reconciled,
+        _ => OfflinePaymentStatus.pendingReconciliation,
+      };
+
+  static String offlinePaymentStatusToApi(OfflinePaymentStatus status) =>
+      switch (status) {
+        OfflinePaymentStatus.pendingReconciliation => 'pending_reconciliation',
+        OfflinePaymentStatus.reconciled => 'reconciled',
+      };
+
   static InstallmentPlanType parseInstallmentPlanType(String? raw) =>
       switch (raw) {
         'quarterly' => InstallmentPlanType.quarterly,
@@ -88,7 +118,8 @@ class FinanceEnumCodec {
         InvoiceStatus.cancelled => 'cancelled',
       };
 
-  static CollectionStatus invoiceStatusToCollectionStatus(InvoiceStatus status) =>
+  static CollectionStatus invoiceStatusToCollectionStatus(
+          InvoiceStatus status) =>
       switch (status) {
         InvoiceStatus.paid => CollectionStatus.completed,
         InvoiceStatus.cancelled => CollectionStatus.refunded,

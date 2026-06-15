@@ -50,6 +50,28 @@ void main() {
 
       expect(resolved.status, ManagementApprovalStatus.rejected);
     });
+
+    test('updateSettings persists editable setting value', () async {
+      final repo = MockManagementRepository();
+      final updated = await repo.updateSettings(
+        query: query,
+        request: const UpdateManagementSettingsRequest(
+          updates: [
+            ManagementSettingUpdate(
+              sectionId: 'approvals',
+              itemId: 'vendor',
+              value: '₹65,000',
+            ),
+          ],
+        ),
+      );
+
+      final setting = updated.sections
+          .firstWhere((s) => s.id == 'approvals')
+          .items
+          .firstWhere((item) => item.id == 'vendor');
+      expect(setting.value, '₹65,000');
+    });
   });
 
   group('Management RBAC mutations', () {
@@ -71,7 +93,8 @@ void main() {
             ),
           );
 
-      expect(container.read(resolveManagementApprovalProvider).hasError, isTrue);
+      expect(
+          container.read(resolveManagementApprovalProvider).hasError, isTrue);
     });
 
     test('resolveManagementApproval succeeds for superAdmin', () async {
@@ -92,11 +115,56 @@ void main() {
             ),
           );
 
-      expect(container.read(resolveManagementApprovalProvider).hasValue, isTrue);
+      expect(
+          container.read(resolveManagementApprovalProvider).hasValue, isTrue);
       expect(
         container.read(resolveManagementApprovalProvider).value?.status,
         ManagementApprovalStatus.approved,
       );
+    });
+
+    test('updateManagementSettings fails without manageManagement', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(updateManagementSettingsProvider.notifier).execute(
+            const UpdateManagementSettingsRequest(
+              updates: [
+                ManagementSettingUpdate(
+                  sectionId: 'school',
+                  itemId: 'name',
+                  value: 'Updated Name',
+                ),
+              ],
+            ),
+          );
+
+      expect(container.read(updateManagementSettingsProvider).hasError, isTrue);
+    });
+
+    test('exportManagementDashboard succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final bytes = await container
+          .read(exportManagementDashboardProvider.notifier)
+          .execute();
+      expect(bytes, isNotNull);
+      expect(bytes!.isNotEmpty, isTrue);
     });
   });
 }

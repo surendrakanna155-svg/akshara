@@ -3,6 +3,8 @@ import 'package:akshara_erp/core/repositories/api/finance/dto/create_collection_
 import 'package:akshara_erp/core/repositories/api/finance/dto/create_fee_structure_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/create_refund_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/create_scholarship_request_dto.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/create_qr_payment_session_request_dto.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/confirm_qr_payment_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/update_finance_settings_request_dto.dart';
 import 'package:akshara_erp/core/repositories/interfaces/finance_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_finance_repository.dart';
@@ -47,6 +49,24 @@ void main() {
       expect(json['invoice_id'], 'inv-1');
       expect(json['payment_method'], 'upi');
       expect(json['amount_collected'], 25000);
+    });
+
+    test('create qr payment session request serializes invoice and amount', () {
+      final json = CreateQrPaymentSessionRequestDto.fromDomain(
+        const CreateQrPaymentSessionRequest(
+          invoiceId: 'inv-1',
+          amount: '25000',
+        ),
+      ).toJson();
+      expect(json['invoice_id'], 'inv-1');
+      expect(json['amount'], '25000');
+    });
+
+    test('confirm qr payment request serializes receipt number', () {
+      final json = ConfirmQrPaymentRequestDto.fromDomain(
+        const ConfirmQrPaymentRequest(receiptNumber: 'RCP-QR-1'),
+      ).toJson();
+      expect(json['receipt_number'], 'RCP-QR-1');
     });
 
     test('assign fee plan request serializes handoff and structure ids', () {
@@ -120,7 +140,8 @@ void main() {
       expect(repo, isA<FinanceRepository>());
     });
 
-    test('createFeeStructure returns persisted structure in subsequent get', () async {
+    test('createFeeStructure returns persisted structure in subsequent get',
+        () async {
       final created = await repo.createFeeStructure(
         query: kQuery,
         request: const CreateFeeStructureRequest(
@@ -141,7 +162,8 @@ void main() {
         query: kQuery,
         academicYear: '2026-27',
       );
-      expect(structures.items.any((structure) => structure.id == created.id), isTrue);
+      expect(structures.items.any((structure) => structure.id == created.id),
+          isTrue);
     });
 
     test('assignFeePlan creates student account', () async {
@@ -168,7 +190,28 @@ void main() {
       expect(approved.status, RefundStatus.processed);
     });
 
-    test('approveRefund reverses invoice outstanding and collection status', () async {
+    test('create and confirm qr payment session persists status', () async {
+      final session = await repo.createQrPaymentSession(
+        query: kQuery,
+        request: const CreateQrPaymentSessionRequest(
+          invoiceId: 'inv_1',
+          amount: '5500',
+        ),
+      );
+      expect(session.upiPayload, contains('upi://pay?'));
+      expect(session.status, QrPaymentSessionStatus.pending);
+
+      final confirmed = await repo.confirmQrPaymentSession(
+        query: kQuery,
+        sessionId: session.id,
+        request: const ConfirmQrPaymentRequest(receiptNumber: 'RCP-QR-5500'),
+      );
+      expect(confirmed.status, QrPaymentSessionStatus.confirmed);
+      expect(confirmed.receiptNumber, 'RCP-QR-5500');
+    });
+
+    test('approveRefund reverses invoice outstanding and collection status',
+        () async {
       final invoiceBefore = await repo.getInvoice(
         query: kQuery,
         invoiceId: 'inv_1',
@@ -185,8 +228,7 @@ void main() {
         collectionId: 'col_3',
       );
 
-      final outstandingBefore =
-          double.parse(invoiceBefore!.outstandingAmount);
+      final outstandingBefore = double.parse(invoiceBefore!.outstandingAmount);
       final outstandingAfter = double.parse(invoiceAfter!.outstandingAmount);
       expect(outstandingAfter, outstandingBefore + 38500);
       expect(collectionAfter?.payment.status, CollectionStatus.refunded);
@@ -222,8 +264,8 @@ void main() {
           ],
         ),
       );
-      final gateway = updated.sections
-          .firstWhere((section) => section.id == 'gateway');
+      final gateway =
+          updated.sections.firstWhere((section) => section.id == 'gateway');
       final upi = gateway.items.firstWhere((item) => item.id == 'upi');
       expect(upi.value, 'Razorpay (live)');
     });

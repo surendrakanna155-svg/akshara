@@ -130,6 +130,56 @@ class CreateCollectionRequest {
   final String? collectionDate;
 }
 
+/// Domain request to record an offline payment entry for reconciliation.
+class RecordOfflinePaymentRequest {
+  const RecordOfflinePaymentRequest({
+    required this.invoiceId,
+    required this.studentName,
+    required this.amount,
+    required this.method,
+    required this.referenceNumber,
+    required this.recordedAt,
+  });
+
+  final String invoiceId;
+  final String studentName;
+  final String amount;
+  final OfflinePaymentMethod method;
+  final String referenceNumber;
+  final String recordedAt;
+}
+
+/// Domain request to reconcile a pending offline payment into collections.
+class ReconcileOfflinePaymentRequest {
+  const ReconcileOfflinePaymentRequest({
+    this.reconciledAt,
+    this.notes,
+  });
+
+  final String? reconciledAt;
+  final String? notes;
+}
+
+/// Domain request to create a UPI QR payment session for an invoice.
+class CreateQrPaymentSessionRequest {
+  const CreateQrPaymentSessionRequest({
+    required this.invoiceId,
+    required this.amount,
+  });
+
+  final String invoiceId;
+  final String amount;
+}
+
+/// Domain request to confirm a completed UPI QR payment session.
+class ConfirmQrPaymentRequest {
+  const ConfirmQrPaymentRequest({
+    this.receiptNumber,
+  });
+
+  final String? receiptNumber;
+}
+
 /// Domain request to create a refund.
 class CreateRefundRequest {
   const CreateRefundRequest({

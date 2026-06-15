@@ -68,11 +68,62 @@ class HybridFinanceRepository implements FinanceRepository {
       _api.createCollection(query: query, request: request);
 
   @override
+  Future<QrPaymentSession> createQrPaymentSession({
+    required RepositoryQuery query,
+    required CreateQrPaymentSessionRequest request,
+  }) =>
+      _api.createQrPaymentSession(query: query, request: request);
+
+  @override
+  Future<QrPaymentSession?> getQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+  }) =>
+      _api.getQrPaymentSession(query: query, sessionId: sessionId);
+
+  @override
+  Future<QrPaymentSession> confirmQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+    required ConfirmQrPaymentRequest request,
+  }) =>
+      _api.confirmQrPaymentSession(
+        query: query,
+        sessionId: sessionId,
+        request: request,
+      );
+
+  @override
   Future<FinanceCollectionResult> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
   }) =>
       _api.cancelCollection(query: query, collectionId: collectionId);
+
+  @override
+  Future<OfflinePaymentRecord> recordOfflinePayment({
+    required RepositoryQuery query,
+    required RecordOfflinePaymentRequest request,
+  }) =>
+      _api.recordOfflinePayment(query: query, request: request);
+
+  @override
+  Future<PaginatedResult<OfflinePaymentRecord>> listOfflinePayments({
+    required RepositoryQuery query,
+  }) =>
+      _api.listOfflinePayments(query: query);
+
+  @override
+  Future<OfflinePaymentRecord> reconcileOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required ReconcileOfflinePaymentRequest request,
+  }) =>
+      _api.reconcileOfflinePayment(
+        query: query,
+        offlinePaymentId: offlinePaymentId,
+        request: request,
+      );
 
   @override
   Future<DefaultersDashboardData> getDefaultersDashboard({
@@ -243,10 +294,12 @@ class HybridFinanceRepository implements FinanceRepository {
       _api.updateSettings(query: query, request: request);
 
   @override
-  Future<FinanceCopilotData> getFinanceCopilot({required RepositoryQuery query}) =>
+  Future<FinanceCopilotData> getFinanceCopilot(
+          {required RepositoryQuery query}) =>
       _api.getFinanceCopilot(query: query);
 
   @override
-  Future<FinanceExecutiveData> getFinanceExecutiveDashboard({required RepositoryQuery query}) =>
+  Future<FinanceExecutiveData> getFinanceExecutiveDashboard(
+          {required RepositoryQuery query}) =>
       _api.getFinanceExecutiveDashboard(query: query);
 }

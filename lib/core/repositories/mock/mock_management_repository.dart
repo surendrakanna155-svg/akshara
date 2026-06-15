@@ -9,9 +9,11 @@ import '../repository_query.dart';
 /// Executive management mock data aligned with Admissions, Finance, and SIS MVPs.
 class MockManagementRepository implements ManagementRepository {
   MockManagementRepository()
-      : _approvals = List<ManagementApprovalItem>.from(_seedApprovals);
+      : _approvals = List<ManagementApprovalItem>.from(_seedApprovals),
+        _settings = _seedSettings;
 
   final List<ManagementApprovalItem> _approvals;
+  ManagementSettingsData _settings;
 
   static const _recentConversions = [
     ManagementRecentConversion(
@@ -133,26 +135,34 @@ class MockManagementRepository implements ManagementRepository {
   ];
 
   @override
-  Future<ManagementDashboardData> getDashboard({required RepositoryQuery query}) async {
+  Future<ManagementDashboardData> getDashboard(
+      {required RepositoryQuery query}) async {
+    final period = query.additionalQueryParams['period'];
+    final quarter = query.additionalQueryParams['quarter'];
+    final periodSuffix = switch ((period, quarter)) {
+      ('quarter', 'q1') => ' (Q1)',
+      ('quarter', _) => ' (All quarters)',
+      _ => ' (FY 2026-27)',
+    };
     return ManagementDashboardData(
-      kpis: const [
+      kpis: [
         ManagementKpi(
           id: 'revenue_mtd',
           value: '₹1.2Cr',
-          label: 'Revenue (MTD)',
+          label: 'Revenue$periodSuffix',
           icon: Icons.trending_up,
           accentName: 'success',
           detail: '+9% vs last month',
           drillRoute: RouteNames.financeReports,
         ),
-        ManagementKpi(
+        const ManagementKpi(
           id: 'fee_collection',
           value: '68%',
           label: 'Fee Collection %',
           icon: Icons.payments_outlined,
           accentName: 'warning',
         ),
-        ManagementKpi(
+        const ManagementKpi(
           id: 'fee_defaulters',
           value: '47',
           label: 'Fee Defaulters',
@@ -161,7 +171,7 @@ class MockManagementRepository implements ManagementRepository {
           detail: 'Collection follow-up',
           drillRoute: RouteNames.financeDefaulters,
         ),
-        ManagementKpi(
+        const ManagementKpi(
           id: 'net_margin',
           value: '31.6%',
           label: 'Net Margin',
@@ -171,12 +181,12 @@ class MockManagementRepository implements ManagementRepository {
         ManagementKpi(
           id: 'new_admissions',
           value: '42',
-          label: 'New Admissions (QTD)',
+          label: 'New Admissions$periodSuffix',
           icon: Icons.person_add_outlined,
           accentName: 'primary',
           drillRoute: RouteNames.managementAdmissions,
         ),
-        ManagementKpi(
+        const ManagementKpi(
           id: 'pending_approvals',
           value: '7',
           label: 'Pending Approvals',
@@ -187,16 +197,26 @@ class MockManagementRepository implements ManagementRepository {
       revenueTrend: const [
         ManagementTrendPoint(label: 'Jul', amountLakhs: 8.2, targetLakhs: 9.0),
         ManagementTrendPoint(label: 'Aug', amountLakhs: 9.1, targetLakhs: 9.0),
-        ManagementTrendPoint(label: 'Sep', amountLakhs: 10.4, targetLakhs: 10.0),
-        ManagementTrendPoint(label: 'Oct', amountLakhs: 11.0, targetLakhs: 10.5),
-        ManagementTrendPoint(label: 'Nov', amountLakhs: 11.8, targetLakhs: 11.0),
-        ManagementTrendPoint(label: 'Dec', amountLakhs: 12.2, targetLakhs: 11.5),
-        ManagementTrendPoint(label: 'Jan', amountLakhs: 10.5, targetLakhs: 11.0),
-        ManagementTrendPoint(label: 'Feb', amountLakhs: 11.2, targetLakhs: 11.0),
-        ManagementTrendPoint(label: 'Mar', amountLakhs: 11.8, targetLakhs: 11.5),
-        ManagementTrendPoint(label: 'Apr', amountLakhs: 12.4, targetLakhs: 12.0),
-        ManagementTrendPoint(label: 'May', amountLakhs: 12.8, targetLakhs: 12.0),
-        ManagementTrendPoint(label: 'Jun', amountLakhs: 12.0, targetLakhs: 12.5),
+        ManagementTrendPoint(
+            label: 'Sep', amountLakhs: 10.4, targetLakhs: 10.0),
+        ManagementTrendPoint(
+            label: 'Oct', amountLakhs: 11.0, targetLakhs: 10.5),
+        ManagementTrendPoint(
+            label: 'Nov', amountLakhs: 11.8, targetLakhs: 11.0),
+        ManagementTrendPoint(
+            label: 'Dec', amountLakhs: 12.2, targetLakhs: 11.5),
+        ManagementTrendPoint(
+            label: 'Jan', amountLakhs: 10.5, targetLakhs: 11.0),
+        ManagementTrendPoint(
+            label: 'Feb', amountLakhs: 11.2, targetLakhs: 11.0),
+        ManagementTrendPoint(
+            label: 'Mar', amountLakhs: 11.8, targetLakhs: 11.5),
+        ManagementTrendPoint(
+            label: 'Apr', amountLakhs: 12.4, targetLakhs: 12.0),
+        ManagementTrendPoint(
+            label: 'May', amountLakhs: 12.8, targetLakhs: 12.0),
+        ManagementTrendPoint(
+            label: 'Jun', amountLakhs: 12.0, targetLakhs: 12.5),
       ],
       expenseBreakdown: const [
         ManagementSegment(label: 'Salaries', value: 22, percent: 48),
@@ -228,7 +248,8 @@ class MockManagementRepository implements ManagementRepository {
   }
 
   @override
-  Future<ManagementAnalyticsData> getAnalytics({required RepositoryQuery query}) async {
+  Future<ManagementAnalyticsData> getAnalytics(
+      {required RepositoryQuery query}) async {
     return const ManagementAnalyticsData(
       kpis: [
         ManagementKpi(
@@ -262,9 +283,12 @@ class MockManagementRepository implements ManagementRepository {
         ),
       ],
       enrollmentTrend: [
-        ManagementTrendPoint(label: '2024', amountLakhs: 11.2, targetLakhs: 11.0),
-        ManagementTrendPoint(label: '2025', amountLakhs: 11.8, targetLakhs: 11.5),
-        ManagementTrendPoint(label: '2026', amountLakhs: 12.4, targetLakhs: 12.0),
+        ManagementTrendPoint(
+            label: '2024', amountLakhs: 11.2, targetLakhs: 11.0),
+        ManagementTrendPoint(
+            label: '2025', amountLakhs: 11.8, targetLakhs: 11.5),
+        ManagementTrendPoint(
+            label: '2026', amountLakhs: 12.4, targetLakhs: 12.0),
       ],
       attendanceByClass: [
         ManagementSegment(label: 'Primary', value: 95, percent: 95),
@@ -304,7 +328,8 @@ class MockManagementRepository implements ManagementRepository {
   }
 
   @override
-  Future<ManagementAdmissionsFunnelData> getAdmissionsFunnel({required RepositoryQuery query}) async {
+  Future<ManagementAdmissionsFunnelData> getAdmissionsFunnel(
+      {required RepositoryQuery query}) async {
     return const ManagementAdmissionsFunnelData(
       kpis: [
         ManagementKpi(
@@ -357,7 +382,8 @@ class MockManagementRepository implements ManagementRepository {
   }
 
   @override
-  Future<ManagementFinancialHealthData> getFinancialHealth({required RepositoryQuery query}) async {
+  Future<ManagementFinancialHealthData> getFinancialHealth(
+      {required RepositoryQuery query}) async {
     return const ManagementFinancialHealthData(
       revenue: '₹1.2Cr',
       expenses: '₹46L',
@@ -453,7 +479,8 @@ class MockManagementRepository implements ManagementRepository {
   }
 
   @override
-  Future<ManagementAcademicHealthData> getAcademicHealth({required RepositoryQuery query}) async {
+  Future<ManagementAcademicHealthData> getAcademicHealth(
+      {required RepositoryQuery query}) async {
     return const ManagementAcademicHealthData(
       kpis: [
         ManagementKpi(
@@ -541,7 +568,8 @@ class MockManagementRepository implements ManagementRepository {
   }
 
   @override
-  Future<ManagementPerformanceData> getSchoolPerformance({required RepositoryQuery query}) async {
+  Future<ManagementPerformanceData> getSchoolPerformance(
+      {required RepositoryQuery query}) async {
     return const ManagementPerformanceData(
       kpis: [
         ManagementKpi(
@@ -614,7 +642,8 @@ class MockManagementRepository implements ManagementRepository {
   }
 
   @override
-  Future<ManagementTasksData> getTasksAndApprovals({required RepositoryQuery query}) async {
+  Future<ManagementTasksData> getTasksAndApprovals(
+      {required RepositoryQuery query}) async {
     return ManagementTasksData(
       kpis: const [
         ManagementKpi(
@@ -653,92 +682,147 @@ class MockManagementRepository implements ManagementRepository {
   }
 
   @override
-  Future<ManagementSettingsData> getSettings({required RepositoryQuery query}) async {
-    return const ManagementSettingsData(
-      academicYear: '2026-27',
-      sections: [
+  Future<ManagementSettingsData> getSettings(
+      {required RepositoryQuery query}) async {
+    return _settings;
+  }
+
+  @override
+  Future<ManagementSettingsData> updateSettings({
+    required RepositoryQuery query,
+    required UpdateManagementSettingsRequest request,
+  }) async {
+    var academicYear = _settings.academicYear;
+    if (request.academicYear != null &&
+        request.academicYear!.trim().isNotEmpty) {
+      academicYear = request.academicYear!.trim();
+    }
+
+    final sections = [
+      for (final section in _settings.sections)
         ManagementSettingsSection(
-          id: 'school',
-          title: 'School profile',
+          id: section.id,
+          title: section.title,
           items: [
-            ManagementSettingItem(
-              id: 'name',
-              label: 'School name',
-              value: 'Akshara International School',
-              description: 'Displayed on reports and parent app',
-              editable: true,
-            ),
-            ManagementSettingItem(
-              id: 'campus',
-              label: 'Primary campus',
-              value: 'Hyderabad — Main',
-              description: 'Single-campus MVP configuration',
-              editable: false,
-            ),
+            for (final item in section.items)
+              _applySettingUpdates(
+                section.id,
+                item,
+                request.updates,
+              ),
           ],
         ),
-        ManagementSettingsSection(
-          id: 'approvals',
-          title: 'Approval thresholds',
-          items: [
-            ManagementSettingItem(
-              id: 'expense',
-              label: 'Expense approval threshold',
-              value: '₹25,000',
-              description: 'Routes to MG-07 Tasks & Approvals',
-              editable: true,
-            ),
-            ManagementSettingItem(
-              id: 'vendor',
-              label: 'Vendor payment threshold',
-              value: '₹50,000',
-              description: 'Requires management sign-off',
-              editable: true,
-            ),
-          ],
-        ),
-        ManagementSettingsSection(
-          id: 'notifications',
-          title: 'Executive alerts',
-          items: [
-            ManagementSettingItem(
-              id: 'fee_alert',
-              label: 'Fee collection alert',
-              value: 'Below 70%',
-              description: 'Links to Finance FN-07 defaulters',
-              editable: true,
-            ),
-            ManagementSettingItem(
-              id: 'admissions_alert',
-              label: 'Admissions conversion alert',
-              value: 'Below 12%',
-              description: 'Links to Admissions AD-09 reports',
-              editable: true,
-            ),
-          ],
-        ),
-        ManagementSettingsSection(
-          id: 'integrations',
-          title: 'Module integrations',
-          items: [
-            ManagementSettingItem(
-              id: 'finance_embed',
-              label: 'Financial health embed',
-              value: 'Finance MVP (FN-01–11)',
-              description: 'MG-04 drills to Finance routes',
-              editable: false,
-            ),
-            ManagementSettingItem(
-              id: 'sis_embed',
-              label: 'Academic data source',
-              value: 'Student SIS (SIS-01–05)',
-              description: 'MG-05 uses SIS enrollment metrics',
-              editable: false,
-            ),
-          ],
-        ),
-      ],
+    ];
+    _settings = ManagementSettingsData(
+      academicYear: academicYear,
+      sections: sections,
     );
+    return _settings;
+  }
+
+  static const _seedSettings = ManagementSettingsData(
+    academicYear: '2026-27',
+    sections: [
+      ManagementSettingsSection(
+        id: 'school',
+        title: 'School profile',
+        items: [
+          ManagementSettingItem(
+            id: 'name',
+            label: 'School name',
+            value: 'Akshara International School',
+            description: 'Displayed on reports and parent app',
+            editable: true,
+          ),
+          ManagementSettingItem(
+            id: 'campus',
+            label: 'Primary campus',
+            value: 'Hyderabad — Main',
+            description: 'Single-campus MVP configuration',
+            editable: false,
+          ),
+        ],
+      ),
+      ManagementSettingsSection(
+        id: 'approvals',
+        title: 'Approval thresholds',
+        items: [
+          ManagementSettingItem(
+            id: 'expense',
+            label: 'Expense approval threshold',
+            value: '₹25,000',
+            description: 'Routes to MG-07 Tasks & Approvals',
+            editable: true,
+          ),
+          ManagementSettingItem(
+            id: 'vendor',
+            label: 'Vendor payment threshold',
+            value: '₹50,000',
+            description: 'Requires management sign-off',
+            editable: true,
+          ),
+        ],
+      ),
+      ManagementSettingsSection(
+        id: 'notifications',
+        title: 'Executive alerts',
+        items: [
+          ManagementSettingItem(
+            id: 'fee_alert',
+            label: 'Fee collection alert',
+            value: 'Below 70%',
+            description: 'Links to Finance FN-07 defaulters',
+            editable: true,
+          ),
+          ManagementSettingItem(
+            id: 'admissions_alert',
+            label: 'Admissions conversion alert',
+            value: 'Below 12%',
+            description: 'Links to Admissions AD-09 reports',
+            editable: true,
+          ),
+        ],
+      ),
+      ManagementSettingsSection(
+        id: 'integrations',
+        title: 'Module integrations',
+        items: [
+          ManagementSettingItem(
+            id: 'finance_embed',
+            label: 'Financial health embed',
+            value: 'Finance MVP (FN-01–11)',
+            description: 'MG-04 drills to Finance routes',
+            editable: false,
+          ),
+          ManagementSettingItem(
+            id: 'sis_embed',
+            label: 'Academic data source',
+            value: 'Student SIS (SIS-01–05)',
+            description: 'MG-05 uses SIS enrollment metrics',
+            editable: false,
+          ),
+        ],
+      ),
+    ],
+  );
+
+  ManagementSettingItem _applySettingUpdates(
+    String sectionId,
+    ManagementSettingItem item,
+    List<ManagementSettingUpdate> updates,
+  ) {
+    for (final update in updates) {
+      if (update.sectionId == sectionId && update.itemId == item.id) {
+        return ManagementSettingItem(
+          id: item.id,
+          label: item.label,
+          value: update.value,
+          description: item.description,
+          editable: item.editable,
+        );
+      }
+    }
+    return item;
   }
 
   @override

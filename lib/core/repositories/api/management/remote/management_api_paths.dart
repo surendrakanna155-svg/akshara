@@ -10,4 +10,6 @@ abstract final class ManagementApiPaths {
   static const String schoolPerformance = '$base/school-performance';
   static const String tasks = '$base/tasks';
   static const String settings = '$base/settings';
+  static String approvalResolve(String approvalId) =>
+      '$base/tasks/$approvalId/resolve';
 }

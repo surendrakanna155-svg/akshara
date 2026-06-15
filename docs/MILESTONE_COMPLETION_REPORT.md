@@ -1,72 +1,69 @@
 # Milestone Completion Report
 
-**Program:** Akshara Continuous Completion  
+**Program:** Akshara Autonomous Execution  
 **Date:** June 2026  
-**Latest commit:** `7c035ee`
+**Latest commit:** *(after push)*
 
 ---
 
-## Milestones closed
+## Session 9 — FV-15/16 + Management Class D
 
-| Milestone | Scope | Status |
-|-----------|-------|--------|
-| **M6** | P1-11 SIS profile + documents | ✅ |
-| **M7** (through FV-18) | P1-09, P2-03, P2-04, FV-18 | ✅ |
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-15 | QR Payment Support | ✅ |
+| FV-16 | Offline Payment Tracking | ✅ |
+| MG-08 | Management settings persistence | ✅ |
+| MG-01 | Dashboard export PDF + period filters | ✅ |
+
+### FV-15 — QR Payments
+- `QrPaymentSession` model + UPI payload generation
+- Routes `/finance/payments/qr`, `qr_flutter` QR display
+- Confirm flow creates collection via session
+
+### FV-16 — Offline Payments
+- Pending/reconciled offline payment queue
+- Route `/finance/payments/offline`
+- Reconcile creates collection on sync
+
+### Management Class D
+- Settings save via `updateManagementSettings`
+- Executive dashboard PDF export (print/share)
+- Period filters wired to repository query params
 
 ---
 
-## Session 8 deliverables
-
-### P2-03 — Teacher Reassignment
-- 3-step wizard at `/school/timetables/reassign`
-- Repository + mutation + Patrol
-
-### P2-04 — Timetable Optimization Apply
-- Actionable recommendations with Apply / Apply All
-- Persisted mock optimization state after apply
-
-### FV-18 — Growth Platform Campaigns
-- Tabbed admin (Dashboard / Campaigns / Inquiries)
-- Mutation providers with `manageGrowthPlatform` RBAC
-- Campaign create dialog, pause/activate, inquiry convert
-
----
-
-## Tests & Patrol
+## Cumulative metrics
 
 | Metric | Value |
 |--------|-------|
-| Flutter tests | **1438** |
-| New Patrol journeys | teacher_reassignment, timetable_optimization_apply, growth_campaign |
-| Estimated Patrol total | **~54** |
+| ERP completion | **~95%** |
+| Vision completion | **~61%** |
+| Flutter tests | **1452+** |
+| Patrol journeys | **~56** |
 
 ---
 
-## Completion percentages
+## Prior sessions (reference)
 
-| Metric | After Batch A | Now |
-|--------|---------------|-----|
-| ERP | ~91% | **~94%** |
-| Vision | ~56% | **~60%** |
-| Intelligence | ~72% | ~72% |
-| Dashboard | ~58% | ~58% |
-| Copilot | ~80% | ~80% |
+| Session | Scope |
+|---------|-------|
+| Batch A | P1-04–07, P1-12, P1-13 |
+| Session 7 | P1-11, P1-09 |
+| Session 8 | P2-03, P2-04, FV-18 |
 
 ---
 
-## Next (post FV-18)
+## Next queue
 
 | ID | Feature |
 |----|---------|
 | FV-17 | School Memories admin |
 | FV-11 | Book Distribution parity |
-| FV-15–16 | QR / offline payments |
-| M8 | AI Evolution |
+| AI insight card actions (Class D) |
+| Operations Hub alerts (Class D) |
 
 ---
 
-## Related
+## CI
 
-- `docs/MILESTONE_7_COMPLETION_REPORT.md`
-- `docs/MILESTONE_6_COMPLETION_REPORT.md`
-- `docs/BATCH_A_COMPLETION_REPORT.md`
+Primary `analyze-and-test` expected green locally. Patrol RC known historical flake.

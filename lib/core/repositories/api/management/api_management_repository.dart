@@ -2,7 +2,7 @@ import '../../interfaces/management_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/management/management_models.dart';
 import '../../../../features/management/management_requests.dart';
-import '../api_exception.dart';
+import 'dto/management_enum_codec.dart';
 import 'mapper/management_mapper.dart';
 import 'remote/management_remote_datasource.dart';
 
@@ -18,13 +18,15 @@ class ApiManagementRepository implements ManagementRepository {
   final ManagementMapper _mapper;
 
   @override
-  Future<ManagementDashboardData> getDashboard({required RepositoryQuery query}) async {
+  Future<ManagementDashboardData> getDashboard(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchDashboard(query: query);
     return _mapper.toDashboard(dto);
   }
 
   @override
-  Future<ManagementAnalyticsData> getAnalytics({required RepositoryQuery query}) async {
+  Future<ManagementAnalyticsData> getAnalytics(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchAnalytics(query: query);
     return _mapper.toAnalytics(dto);
   }
@@ -70,8 +72,18 @@ class ApiManagementRepository implements ManagementRepository {
   }
 
   @override
-  Future<ManagementSettingsData> getSettings({required RepositoryQuery query}) async {
+  Future<ManagementSettingsData> getSettings(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchSettings(query: query);
+    return _mapper.toSettings(dto);
+  }
+
+  @override
+  Future<ManagementSettingsData> updateSettings({
+    required RepositoryQuery query,
+    required UpdateManagementSettingsRequest request,
+  }) async {
+    final dto = await _remote.updateSettings(query: query, request: request);
     return _mapper.toSettings(dto);
   }
 
@@ -80,9 +92,11 @@ class ApiManagementRepository implements ManagementRepository {
     required RepositoryQuery query,
     required ResolveManagementApprovalRequest request,
   }) async {
-    throw ApiNotConnectedException(
-      'ManagementRepository',
-      'resolveManagementApproval',
+    final dto = await _remote.resolveApproval(
+      query: query,
+      approvalId: request.approvalId,
+      status: ManagementEnumCodec.approvalStatusToApi(request.status),
     );
+    return _mapper.toApproval(dto);
   }
 }

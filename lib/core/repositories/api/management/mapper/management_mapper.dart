@@ -136,6 +136,23 @@ class ManagementMapper {
     );
   }
 
+  ManagementApprovalItem toApproval(ManagementApprovalResponseDto dto) {
+    final raw = dto.raw;
+    return ManagementApprovalItem(
+      id: raw['id'] as String? ?? '',
+      type: ManagementEnumCodec.parseApprovalType(raw['type'] as String?),
+      title: raw['title'] as String? ?? '',
+      requester: raw['requester'] as String? ?? '',
+      amount: raw['amount'] as String? ?? '',
+      dateLabel: raw['dateLabel'] as String? ?? '',
+      status: ManagementEnumCodec.parseApprovalStatus(raw['status'] as String?),
+      aiRecommendation: ManagementEnumCodec.parseAiRecommendation(
+        raw['aiRecommendation'] as String?,
+      ),
+      sourceModuleRoute: raw['sourceModuleRoute'] as String? ?? '',
+    );
+  }
+
   List<ManagementKpi> _mapKpis(List<dynamic> items) {
     return [
       for (final item in items)
@@ -337,7 +354,8 @@ class ManagementMapper {
           ManagementSettingsSection(
             id: item['id'] as String? ?? '',
             title: item['title'] as String? ?? '',
-            items: _mapSettingItems(item['items'] as List<dynamic>? ?? const []),
+            items:
+                _mapSettingItems(item['items'] as List<dynamic>? ?? const []),
           ),
     ];
   }

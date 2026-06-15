@@ -95,3 +95,9 @@ class ManagementSettingsResponseDto {
 
   final Map<String, dynamic> raw;
 }
+
+class ManagementApprovalResponseDto {
+  const ManagementApprovalResponseDto({required this.raw});
+
+  final Map<String, dynamic> raw;
+}

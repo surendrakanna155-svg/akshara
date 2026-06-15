@@ -6,8 +6,10 @@ import '../features/finance/collections/finance_collections_screen.dart';
 import '../features/finance/dashboard/finance_dashboard_screen.dart';
 import '../features/finance/defaulters/finance_defaulters_screen.dart';
 import '../features/finance/discounts/finance_discounts_screen.dart';
+import '../features/finance/finance_qr_payment_screen.dart';
 import '../features/finance/fee_assignment/finance_fee_assignment_screen.dart';
 import '../features/finance/fee_structures/finance_fee_structures_screen.dart';
+import '../features/finance/payments/finance_offline_payments_screen.dart';
 import '../features/finance/reconciliation/finance_reconciliation_screen.dart';
 import '../features/finance/refunds/finance_refunds_screen.dart';
 import '../features/finance/intelligence/finance_copilot_screen.dart';
@@ -15,6 +17,8 @@ import '../features/finance/intelligence/finance_executive_dashboard_screen.dart
 import '../features/finance/reports/finance_reports_screen.dart';
 import '../features/finance/settings/finance_settings_screen.dart';
 import '../features/finance/student_accounts/finance_student_accounts_screen.dart';
+import '../core/security/permissions.dart';
+import 'route_guards.dart';
 import 'route_names.dart';
 
 /// Redirects bare `/finance` to the dashboard entry point.
@@ -60,12 +64,33 @@ Widget financeCollectionsRouteBuilder(
   return const FinanceCollectionsScreen();
 }
 
+Widget financeOfflinePaymentsRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const FinanceOfflinePaymentsScreen();
+}
+
 Widget financeCollectionDetailRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
   final collectionId = state.pathParameters['collectionId'] ?? '';
   return FinanceCollectionDetailScreen(collectionId: collectionId);
+}
+
+Widget financeQrPaymentRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return ManagePermissionGuard(
+    permission: Permission.manageFinance,
+    auditRoute: RouteNames.financeQrPayment,
+    child: FinanceQrPaymentScreen(
+      initialInvoiceId: state.uri.queryParameters['invoiceId'],
+      initialAmount: state.uri.queryParameters['amount'],
+    ),
+  );
 }
 
 Widget financeDefaultersRouteBuilder(

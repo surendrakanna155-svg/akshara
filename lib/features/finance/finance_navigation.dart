@@ -9,6 +9,7 @@ const List<FinanceScreen> kFinanceNavScreens = [
   FinanceScreen.studentAccounts,
   FinanceScreen.feeAssignment,
   FinanceScreen.collections,
+  FinanceScreen.offlinePayments,
   FinanceScreen.defaulters,
   FinanceScreen.refunds,
   FinanceScreen.discounts,
@@ -26,6 +27,7 @@ extension FinanceScreenRoutes on FinanceScreen {
         FinanceScreen.studentAccounts => RouteNames.financeStudentAccounts,
         FinanceScreen.feeAssignment => RouteNames.financeFeeAssignment,
         FinanceScreen.collections => RouteNames.financeCollections,
+        FinanceScreen.offlinePayments => RouteNames.financeOfflinePayments,
         FinanceScreen.collectionDetail => RouteNames.financeCollections,
         FinanceScreen.defaulters => RouteNames.financeDefaulters,
         FinanceScreen.refunds => RouteNames.financeRefunds,
@@ -34,7 +36,8 @@ extension FinanceScreenRoutes on FinanceScreen {
         FinanceScreen.reconciliation => RouteNames.financeReconciliation,
         FinanceScreen.settings => RouteNames.financeSettings,
         FinanceScreen.intelligence => RouteNames.financeIntelligence,
-        FinanceScreen.executiveDashboard => RouteNames.financeExecutiveDashboard,
+        FinanceScreen.executiveDashboard =>
+          RouteNames.financeExecutiveDashboard,
       };
 }
 
@@ -55,6 +58,12 @@ List<AdminBreadcrumb> financeBreadcrumbs(FinanceScreen screen) {
 
 /// Resolves [FinanceScreen] from a router location path.
 FinanceScreen? financeScreenForLocation(String location) {
+  if (location.startsWith(RouteNames.financeQrPayment)) {
+    return FinanceScreen.collections;
+  }
+  if (location.startsWith(RouteNames.financeOfflinePayments)) {
+    return FinanceScreen.offlinePayments;
+  }
   if (location.startsWith('${RouteNames.financeCollections}/')) {
     return FinanceScreen.collections;
   }

@@ -15,7 +15,8 @@ class ApiFinanceRepository implements FinanceRepository {
   ApiFinanceRepository({
     required FinanceRemoteDataSource remote,
     FinanceMapper mapper = const FinanceMapper(),
-    FinanceIntelligenceMapper intelligenceMapper = const FinanceIntelligenceMapper(),
+    FinanceIntelligenceMapper intelligenceMapper =
+        const FinanceIntelligenceMapper(),
   })  : _remote = remote,
         _mapper = mapper,
         _intelligenceMapper = intelligenceMapper;
@@ -143,6 +144,42 @@ class ApiFinanceRepository implements FinanceRepository {
   }
 
   @override
+  Future<QrPaymentSession> createQrPaymentSession({
+    required RepositoryQuery query,
+    required CreateQrPaymentSessionRequest request,
+  }) async {
+    final dto =
+        await _remote.createQrPaymentSession(query: query, request: request);
+    return _mapper.toQrPaymentSession(dto);
+  }
+
+  @override
+  Future<QrPaymentSession?> getQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+  }) async {
+    final dto = await _remote.fetchQrPaymentSession(
+      query: query,
+      sessionId: sessionId,
+    );
+    return _mapper.toQrPaymentSession(dto);
+  }
+
+  @override
+  Future<QrPaymentSession> confirmQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+    required ConfirmQrPaymentRequest request,
+  }) async {
+    final dto = await _remote.confirmQrPaymentSession(
+      query: query,
+      sessionId: sessionId,
+      request: request,
+    );
+    return _mapper.toQrPaymentSession(dto);
+  }
+
+  @override
   Future<FinanceCollectionResult> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
@@ -152,6 +189,43 @@ class ApiFinanceRepository implements FinanceRepository {
       collectionId: collectionId,
     );
     return _mapper.toCollectionResult(dto);
+  }
+
+  @override
+  Future<OfflinePaymentRecord> recordOfflinePayment({
+    required RepositoryQuery query,
+    required RecordOfflinePaymentRequest request,
+  }) async {
+    final dto =
+        await _remote.recordOfflinePayment(query: query, request: request);
+    return _mapper.toOfflinePayment(dto);
+  }
+
+  @override
+  Future<PaginatedResult<OfflinePaymentRecord>> listOfflinePayments({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchOfflinePayments(query: query);
+    return PaginatedResult.fromDto(
+      items: _mapper.toOfflinePayments(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
+  }
+
+  @override
+  Future<OfflinePaymentRecord> reconcileOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required ReconcileOfflinePaymentRequest request,
+  }) async {
+    final dto = await _remote.reconcileOfflinePayment(
+      query: query,
+      offlinePaymentId: offlinePaymentId,
+      request: request,
+    );
+    return _mapper.toOfflinePayment(dto);
   }
 
   @override
@@ -370,7 +444,8 @@ class ApiFinanceRepository implements FinanceRepository {
       _remote.updateSettings(query: query, request: request);
 
   @override
-  Future<FinanceCopilotData> getFinanceCopilot({required RepositoryQuery query}) async {
+  Future<FinanceCopilotData> getFinanceCopilot(
+      {required RepositoryQuery query}) async {
     final dto = await _remote.fetchFinanceCopilot(query: query);
     return _intelligenceMapper.toCopilot(dto);
   }

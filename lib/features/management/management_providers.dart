@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/providers/repository_future.dart';
-
 import '../../core/repositories/repository_providers.dart';
+import '../../core/repositories/repository_query.dart';
 import '../../shared/async/erp_async_state.dart';
 import 'management_models.dart';
 
@@ -13,15 +13,31 @@ final managementDashboardErrorProvider = StateProvider<bool>((ref) => false);
 final managementDashboardEmptyProvider = StateProvider<bool>((ref) => false);
 final managementDashboardFilterProvider = StateProvider<int>((ref) => 0);
 
-final managementDashboardFutureProvider = FutureProvider<ManagementDashboardData>((ref) async {
-return await ref.read(managementRepositoryProvider).getDashboard(query: ref.watch(repositoryQueryProvider));
+final managementDashboardQueryProvider = Provider<RepositoryQuery>((ref) {
+  final base = ref.watch(repositoryQueryProvider);
+  final filterIndex = ref.watch(managementDashboardFilterProvider);
+  final params = switch (filterIndex) {
+    1 => const {'period': 'quarter', 'quarter': 'q1'},
+    2 => const {'period': 'quarter', 'quarter': 'all'},
+    _ => const {'period': 'fy', 'quarter': 'all'},
+  };
+  return base.withAdditionalParams(params);
+});
+
+final managementDashboardFutureProvider =
+    FutureProvider<ManagementDashboardData>((ref) async {
+  return await ref
+      .read(managementRepositoryProvider)
+      .getDashboard(query: ref.watch(managementDashboardQueryProvider));
 });
 
 final managementDashboardProvider = Provider<ManagementDashboardData?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(managementDashboardFutureProvider),
-    manualLoading: ref.watch(managementDashboardLoadingProvider), manualError: ref.watch(managementDashboardErrorProvider), manualEmpty: ref.watch(managementDashboardEmptyProvider),
+    manualLoading: ref.watch(managementDashboardLoadingProvider),
+    manualError: ref.watch(managementDashboardErrorProvider),
+    manualEmpty: ref.watch(managementDashboardEmptyProvider),
   );
 });
 
@@ -41,15 +57,20 @@ final managementAnalyticsErrorProvider = StateProvider<bool>((ref) => false);
 final managementAnalyticsEmptyProvider = StateProvider<bool>((ref) => false);
 final managementAnalyticsFilterProvider = StateProvider<int>((ref) => 0);
 
-final managementAnalyticsFutureProvider = FutureProvider<ManagementAnalyticsData>((ref) async {
-return await ref.read(managementRepositoryProvider).getAnalytics(query: ref.watch(repositoryQueryProvider));
+final managementAnalyticsFutureProvider =
+    FutureProvider<ManagementAnalyticsData>((ref) async {
+  return await ref
+      .read(managementRepositoryProvider)
+      .getAnalytics(query: ref.watch(repositoryQueryProvider));
 });
 
 final managementAnalyticsProvider = Provider<ManagementAnalyticsData?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(managementAnalyticsFutureProvider),
-    manualLoading: ref.watch(managementAnalyticsLoadingProvider), manualError: ref.watch(managementAnalyticsErrorProvider), manualEmpty: ref.watch(managementAnalyticsEmptyProvider),
+    manualLoading: ref.watch(managementAnalyticsLoadingProvider),
+    manualError: ref.watch(managementAnalyticsErrorProvider),
+    manualEmpty: ref.watch(managementAnalyticsEmptyProvider),
   );
 });
 
@@ -126,7 +147,8 @@ final managementAcademicHealthProvider =
 });
 
 // MG-06 School Performance
-final managementPerformanceLoadingProvider = StateProvider<bool>((ref) => false);
+final managementPerformanceLoadingProvider =
+    StateProvider<bool>((ref) => false);
 final managementPerformanceErrorProvider = StateProvider<bool>((ref) => false);
 final managementPerformanceEmptyProvider = StateProvider<bool>((ref) => false);
 final managementPerformanceFilterProvider = StateProvider<int>((ref) => 0);
@@ -154,17 +176,23 @@ final managementTasksLoadingProvider = StateProvider<bool>((ref) => false);
 final managementTasksErrorProvider = StateProvider<bool>((ref) => false);
 final managementTasksEmptyProvider = StateProvider<bool>((ref) => false);
 final managementTasksFilterProvider = StateProvider<int>((ref) => 0);
-final managementSelectedApprovalIdProvider = StateProvider<String?>((ref) => null);
+final managementSelectedApprovalIdProvider =
+    StateProvider<String?>((ref) => null);
 
-final managementTasksFutureProvider = FutureProvider<ManagementTasksData>((ref) async {
-return await ref.read(managementRepositoryProvider).getTasksAndApprovals(query: ref.watch(repositoryQueryProvider));
+final managementTasksFutureProvider =
+    FutureProvider<ManagementTasksData>((ref) async {
+  return await ref
+      .read(managementRepositoryProvider)
+      .getTasksAndApprovals(query: ref.watch(repositoryQueryProvider));
 });
 
 final managementTasksProvider = Provider<ManagementTasksData?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(managementTasksFutureProvider),
-    manualLoading: ref.watch(managementTasksLoadingProvider), manualError: ref.watch(managementTasksErrorProvider), manualEmpty: ref.watch(managementTasksEmptyProvider),
+    manualLoading: ref.watch(managementTasksLoadingProvider),
+    manualError: ref.watch(managementTasksErrorProvider),
+    manualEmpty: ref.watch(managementTasksEmptyProvider),
   );
 });
 
@@ -191,14 +219,19 @@ final managementFilteredApprovalsProvider =
 final managementSettingsLoadingProvider = StateProvider<bool>((ref) => false);
 final managementSettingsErrorProvider = StateProvider<bool>((ref) => false);
 
-final managementSettingsFutureProvider = FutureProvider<ManagementSettingsData>((ref) async {
-return await ref.read(managementRepositoryProvider).getSettings(query: ref.watch(repositoryQueryProvider));
+final managementSettingsFutureProvider =
+    FutureProvider<ManagementSettingsData>((ref) async {
+  return await ref
+      .read(managementRepositoryProvider)
+      .getSettings(query: ref.watch(repositoryQueryProvider));
 });
 
 final managementSettingsProvider = Provider<ManagementSettingsData?>((ref) {
   return watchRepositoryFuture(
     ref,
     ref.watch(managementSettingsFutureProvider),
-    manualLoading: ref.watch(managementSettingsLoadingProvider), manualError: ref.watch(managementSettingsErrorProvider), manualEmpty: false,
+    manualLoading: ref.watch(managementSettingsLoadingProvider),
+    manualError: ref.watch(managementSettingsErrorProvider),
+    manualEmpty: false,
   );
 });

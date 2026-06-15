@@ -9,6 +9,7 @@ enum FinanceScreen {
   studentAccounts,
   feeAssignment,
   collections,
+  offlinePayments,
   collectionDetail,
   defaulters,
   refunds,
@@ -25,6 +26,7 @@ enum FinanceScreen {
         FinanceScreen.studentAccounts => 'Student Accounts',
         FinanceScreen.feeAssignment => 'Fee Assignment',
         FinanceScreen.collections => 'Collections',
+        FinanceScreen.offlinePayments => 'Offline Payments',
         FinanceScreen.collectionDetail => 'Collection Detail',
         FinanceScreen.defaulters => 'Defaulters',
         FinanceScreen.refunds => 'Refunds',
@@ -45,7 +47,13 @@ enum FeeAccountStatus { active, overdue, closed, pending }
 
 enum CollectionStatus { completed, pending, failed, refunded }
 
+enum QrPaymentSessionStatus { pending, confirmed, expired }
+
 enum InstallmentPlanType { quarterly, termly, monthly, annual }
+
+enum OfflinePaymentMethod { cash, cheque, dd }
+
+enum OfflinePaymentStatus { pendingReconciliation, reconciled }
 
 @immutable
 class FinanceKpi {
@@ -269,6 +277,27 @@ class CollectionPayment {
 }
 
 @immutable
+class QrPaymentSession {
+  const QrPaymentSession({
+    required this.id,
+    required this.invoiceId,
+    required this.amount,
+    required this.upiPayload,
+    required this.status,
+    required this.expiresAt,
+    this.receiptNumber,
+  });
+
+  final String id;
+  final String invoiceId;
+  final String amount;
+  final String upiPayload;
+  final QrPaymentSessionStatus status;
+  final DateTime expiresAt;
+  final String? receiptNumber;
+}
+
+@immutable
 class FinanceCollectionResult {
   const FinanceCollectionResult({
     required this.collectionId,
@@ -291,6 +320,31 @@ class FinanceCollectionResult {
   final String collectionDate;
   final FinanceReceiptDetail receipt;
   final FinanceInvoice invoice;
+}
+
+@immutable
+class OfflinePaymentRecord {
+  const OfflinePaymentRecord({
+    required this.id,
+    required this.invoiceId,
+    required this.studentName,
+    required this.amount,
+    required this.method,
+    required this.referenceNumber,
+    required this.recordedAt,
+    required this.status,
+    this.collectionId,
+  });
+
+  final String id;
+  final String invoiceId;
+  final String studentName;
+  final String amount;
+  final OfflinePaymentMethod method;
+  final String referenceNumber;
+  final String recordedAt;
+  final OfflinePaymentStatus status;
+  final String? collectionId;
 }
 
 @immutable

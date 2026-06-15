@@ -795,6 +795,20 @@ GoRouter createAppRouter({
                 ],
               ),
               GoRoute(
+                path: 'payments/qr',
+                name: 'financeQrPayment',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeQrPaymentRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'payments/offline',
+                name: 'financeOfflinePayments',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: financeOfflinePaymentsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: 'defaulters',
                 name: 'financeDefaulters',
                 pageBuilder: (context, state) => NoTransitionPage(

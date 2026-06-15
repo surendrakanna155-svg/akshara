@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 
+import '../../../../../features/management/management_requests.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../repository_query.dart';
 import '../dto/management_responses_dto.dart';
+import '../dto/update_management_settings_request_dto.dart';
 import 'management_api_paths.dart';
 
 /// Dio-backed remote data source for Management.
@@ -37,7 +40,8 @@ class ManagementRemoteDataSource {
       ManagementApiPaths.admissionsFunnel,
       queryParameters: _queryParams(query),
     );
-    return ManagementAdmissionsFunnelResponseDto.fromJson(_responseMap(response));
+    return ManagementAdmissionsFunnelResponseDto.fromJson(
+        _responseMap(response));
   }
 
   Future<ManagementFinancialHealthResponseDto> fetchFinancialHealth({
@@ -47,7 +51,8 @@ class ManagementRemoteDataSource {
       ManagementApiPaths.financialHealth,
       queryParameters: _queryParams(query),
     );
-    return ManagementFinancialHealthResponseDto.fromJson(_responseMap(response));
+    return ManagementFinancialHealthResponseDto.fromJson(
+        _responseMap(response));
   }
 
   Future<ManagementAcademicHealthResponseDto> fetchAcademicHealth({
@@ -90,11 +95,38 @@ class ManagementRemoteDataSource {
     return ManagementSettingsResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<ManagementSettingsResponseDto> updateSettings({
+    required RepositoryQuery query,
+    required UpdateManagementSettingsRequest request,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      ManagementApiPaths.settings,
+      queryParameters: _queryParams(query),
+      data: UpdateManagementSettingsRequestDto.fromDomain(request).toJson(),
+    );
+    return ManagementSettingsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ManagementApprovalResponseDto> resolveApproval({
+    required RepositoryQuery query,
+    required String approvalId,
+    required String status,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ManagementApiPaths.approvalResolve(approvalId),
+      queryParameters: _queryParams(query),
+      data: {'status': status},
+    );
+    final envelope = ApiEnvelopeDto.fromJson(_responseMap(response));
+    return ManagementApprovalResponseDto(raw: envelope.requireData());
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
       if (query.schoolId != null) 'schoolId': query.schoolId,
       if (query.organizationId != null) 'organizationId': query.organizationId,
+      ...query.paginationQueryParams(),
     };
   }
 

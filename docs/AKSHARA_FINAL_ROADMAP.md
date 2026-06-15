@@ -112,8 +112,8 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 | P1-11 | SIS profile edit + documents | — | ⏳ |
 | P1-12 | HR leave approve/reject | — | ✅ Batch A |
 | P1-13 | Finance receipt PDF (real) | #14 | ✅ Batch A |
-| FV-15 | QR Payment Support | #15 | ⏳ |
-| FV-16 | Offline Payment Tracking | #16 | ⏳ |
+| FV-15 | QR Payment Support | #15 | ✅ M6 |
+| FV-16 | Offline Payment Tracking | #16 | ✅ M6 |
 | FV-P4-05 | WhatsApp Business Integration | P4 | 🔄 Partial |
 
 ### M7 — Advanced Academic Platform

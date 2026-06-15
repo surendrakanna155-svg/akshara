@@ -9,6 +9,7 @@ import '../../../router/route_names.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../finance_workflow_actions.dart';
+import '../finance_journey_context_provider.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -37,6 +38,7 @@ class FinanceCollectionsScreen extends ConsumerWidget {
     final summary = ref.watch(financeDailySummaryProvider);
     final filterIndex = ref.watch(financeCollectionFilterProvider);
     final receiptQuery = ref.watch(financeReceiptSearchProvider);
+    final journeyInvoiceId = ref.watch(financeLastInvoiceIdProvider) ?? 'inv_1';
 
     return FinanceModuleScaffold(
       screen: FinanceScreen.collections,
@@ -82,14 +84,33 @@ class FinanceCollectionsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: AksharaSpacing.s6),
-          AksharaManageAction(
-            permission: Permission.manageFinance,
-            child: FilledButton.icon(
-              key: QaTestKeys.financeRecordCollectionButton,
-              onPressed: () => showRecordCollectionDialog(context, ref),
-              icon: const Icon(Icons.add_card_outlined),
-              label: const Text('Record collection'),
-            ),
+          Wrap(
+            spacing: AksharaSpacing.s3,
+            runSpacing: AksharaSpacing.s2,
+            children: [
+              AksharaManageAction(
+                permission: Permission.manageFinance,
+                child: FilledButton.icon(
+                  key: QaTestKeys.financeRecordCollectionButton,
+                  onPressed: () => showRecordCollectionDialog(context, ref),
+                  icon: const Icon(Icons.add_card_outlined),
+                  label: const Text('Record collection'),
+                ),
+              ),
+              AksharaManageAction(
+                permission: Permission.manageFinance,
+                child: OutlinedButton.icon(
+                  key: QaTestKeys.financeQrPayButton,
+                  onPressed: () => navigateToQrPaymentScreen(
+                    context,
+                    invoiceId: journeyInvoiceId,
+                    amount: '5000',
+                  ),
+                  icon: const Icon(Icons.qr_code_2),
+                  label: const Text('QR Pay'),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AksharaSpacing.s4),
           Semantics(
@@ -151,12 +172,25 @@ class FinanceCollectionsScreen extends ConsumerWidget {
                           .state = page,
                     ),
                   const SizedBox(height: AksharaSpacing.s6),
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.balance_outlined),
-                    label: Text(
-                      'Reconciliation (${summary.pendingReconciliation} pending)',
-                    ),
+                  Wrap(
+                    spacing: AksharaSpacing.s3,
+                    runSpacing: AksharaSpacing.s2,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            context.go(RouteNames.financeReconciliation),
+                        icon: const Icon(Icons.balance_outlined),
+                        label: Text(
+                          'Reconciliation (${summary.pendingReconciliation} pending)',
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            context.go(RouteNames.financeOfflinePayments),
+                        icon: const Icon(Icons.payments_outlined),
+                        label: const Text('Offline payments'),
+                      ),
+                    ],
                   ),
                 ],
               );
@@ -251,22 +285,22 @@ class _CollectionMobileCard extends StatelessWidget {
         onTap: () => context.go(RouteNames.financeCollectionDetail(payment.id)),
         borderRadius: BorderRadius.circular(AksharaSpacing.s3),
         child: Padding(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(payment.receiptNumber, style: text.titleSmall),
-            const SizedBox(height: AksharaSpacing.s2),
-            Text(payment.studentName, style: text.bodyMedium),
-            Text(
-              '${payment.amount} · ${payment.mode} · ${payment.collectedAt}',
-              style: text.bodySmall,
-            ),
-            const SizedBox(height: AksharaSpacing.s2),
-            _CollectionStatusChip(status: payment.status),
-          ],
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(payment.receiptNumber, style: text.titleSmall),
+              const SizedBox(height: AksharaSpacing.s2),
+              Text(payment.studentName, style: text.bodyMedium),
+              Text(
+                '${payment.amount} · ${payment.mode} · ${payment.collectedAt}',
+                style: text.bodySmall,
+              ),
+              const SizedBox(height: AksharaSpacing.s2),
+              _CollectionStatusChip(status: payment.status),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

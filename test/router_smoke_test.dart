@@ -201,7 +201,7 @@ void main() {
         (RouteNames.hrRecruitment, 'Recruitment pipeline'),
         (RouteNames.hrPerformance, 'Performance reviews'),
         (RouteNames.hrSettings, 'HR settings'),
-        (RouteNames.managementDashboard, 'Revenue (MTD)'),
+        (RouteNames.managementDashboard, 'Revenue (FY 2026-27)'),
         (RouteNames.managementAnalytics, 'Class summary'),
         (RouteNames.managementAdmissions, 'Funnel stages'),
         (RouteNames.managementFinance, 'Finance module drill-down'),

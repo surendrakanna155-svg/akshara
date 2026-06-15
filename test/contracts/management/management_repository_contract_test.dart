@@ -5,6 +5,7 @@ import 'package:akshara_erp/core/repositories/api/management/remote/management_r
 import 'package:akshara_erp/core/repositories/interfaces/management_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_management_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/management/management_requests.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,7 +79,8 @@ void main() {
           _fixtures.academicHealthEnvelope(mockData),
         ),
       );
-      expect(mapped.subjectPerformance.length, mockData.subjectPerformance.length);
+      expect(
+          mapped.subjectPerformance.length, mockData.subjectPerformance.length);
     });
 
     test('getSchoolPerformance DTO mapping matches mock output', () async {
@@ -107,6 +109,27 @@ void main() {
         ),
       );
       expect(mapped.sections.length, mockData.sections.length);
+    });
+
+    test('updateSettings persists in mock repository', () async {
+      final updated = await mockRepo.updateSettings(
+        query: kQuery,
+        request: const UpdateManagementSettingsRequest(
+          updates: [
+            ManagementSettingUpdate(
+              sectionId: 'school',
+              itemId: 'name',
+              value: 'Akshara Updated School',
+            ),
+          ],
+        ),
+      );
+      final updatedName = updated.sections
+          .firstWhere((section) => section.id == 'school')
+          .items
+          .firstWhere((item) => item.id == 'name')
+          .value;
+      expect(updatedName, 'Akshara Updated School');
     });
   });
 }

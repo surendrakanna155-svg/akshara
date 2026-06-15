@@ -92,6 +92,30 @@ class MutationPermissionRegistry {
     ),
     MutationPermissionEntry(
       moduleId: 'finance',
+      mutationId: 'recordOfflinePayment',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'reconcileOfflinePayment',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'createQrPaymentSession',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'confirmQrPaymentSession',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
       mutationId: 'exportReceiptPdf',
       permission: Permission.manageFinance,
       kind: 'manage',
@@ -161,6 +185,18 @@ class MutationPermissionRegistry {
     MutationPermissionEntry(
       moduleId: 'management',
       mutationId: 'resolveManagementApproval',
+      permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'management',
+      mutationId: 'updateManagementSettings',
+      permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'management',
+      mutationId: 'exportManagementDashboard',
       permission: Permission.manageManagement,
       kind: 'manage',
     ),

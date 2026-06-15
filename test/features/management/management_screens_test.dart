@@ -49,7 +49,7 @@ void main() {
     testWidgets('ManagementDashboardScreen renders KPIs', (tester) async {
       await pumpManagementScreen(tester, const ManagementDashboardScreen());
 
-      expect(find.text('Revenue (MTD)'), findsOneWidget);
+      expect(find.text('Revenue (FY 2026-27)'), findsOneWidget);
       expect(find.text('Approval queue'), findsOneWidget);
     });
 
@@ -63,7 +63,8 @@ void main() {
       );
     });
 
-    testWidgets('ManagementDashboardScreen shows loading state', (tester) async {
+    testWidgets('ManagementDashboardScreen shows loading state',
+        (tester) async {
       useViewport(tester, const Size(1440, 900));
       await tester.pumpWidget(
         ProviderScope(
@@ -130,6 +131,27 @@ void main() {
 
       expect(find.text('Management settings'), findsOneWidget);
       expect(find.text('School profile'), findsOneWidget);
+    });
+
+    testWidgets('ManagementSettingsScreen allows editing and save',
+        (tester) async {
+      await pumpManagementScreen(tester, const ManagementSettingsScreen());
+
+      await tester.tap(
+        find.byKey(QaTestKeys.managementSettingsItemEditButton('school_name')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(QaTestKeys.managementSettingsDialogField),
+        'Akshara Leadership School',
+      );
+      await tester
+          .tap(find.byKey(QaTestKeys.managementSettingsDialogSaveButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(QaTestKeys.managementSettingsSaveButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Management settings saved'), findsOneWidget);
     });
   });
 

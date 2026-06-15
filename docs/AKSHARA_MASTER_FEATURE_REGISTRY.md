@@ -204,7 +204,7 @@
 | **Cancel collection UI** | Finance | PLAN P0#6 | Corrections | Invoice | **B** | Yes | Yes | Yes | No | Collection detail cancel | Patrol pending |
 | Receipt PDF export | Finance | AUDIT, PLAN P1 | Compliance | — | **A** | Yes | Yes | Yes | No | `finance_receipt_pdf_service.dart`, Patrol | — |
 | Payment engine (Razorpay) | Finance | VISION #13–16, ROAD | Online pay | Parent app | **B** | Yes | Partial | Yes | No | Parent payment | Production keys |
-| QR / offline payment | Finance | VISION #15–16 | Counter pay | — | **E** | No | No | No | No | — | Future |
+| QR / offline payment | Finance | VISION #15–16 | Counter pay | — | **A** | Yes | Yes | Yes | No | QR + offline payment screens, Patrol | — |
 | Finance Copilot | Finance | ROAD v13.3 | Insights | Intelligence | **D** | Yes | Mock | Contract | No | `finance_copilot_screen.dart` | Live AI |
 | Ledgers / budgets (full) | Finance | SPEC-Finance | Accounting | — | **B** | Yes | Read | Partial | No | FN read surfaces | Write depth |
 
@@ -217,13 +217,13 @@
 | Management dashboard MG-01 | Management | SPEC-Management, AUDIT | Owner home | All KPI repos | **B** | Yes | ~52% functional | Yes | No | `management_dashboard_screen.dart` | See AUDIT |
 | Executive approval approve/reject | Management | PLAN P0#1 | Governance | RBAC | **A** | Yes | Yes | Yes | No | Mutations, Patrol E2E | — |
 | **KPI drill-downs** | Management | AUDIT, SPEC-MG | Actionable metrics | Module routes | **C** | Yes | Partial | Partial | No | Finance drill only | **Most KPIs display-only** |
-| **Dashboard export** | Management | AUDIT | Reporting | PDF service | **D** | Yes | Stub | No | No | `onPressed: () {}` | **Vision gap** |
-| **Period filters → repo** | Management | AUDIT | Accurate periods | Repository query | **D** | Yes | UI only | No | No | Local filter state | Not wired |
+| **Dashboard export** | Management | AUDIT | Reporting | PDF service | **A** | Yes | Yes | Yes | No | `management_dashboard_pdf_service.dart` | — |
+| **Period filters → repo** | Management | AUDIT | Accurate periods | Repository query | **A** | Yes | Yes | Yes | No | `managementDashboardQueryProvider` | — |
 | **AI insight card actions** | Management | AUDIT, VISION #5 | Executive guidance | Intelligence routes | **D** | Yes | Stub (~12 cards) | No | No | Insight cards | Route targets |
 | **Executive reports / PDF** | Management | SPEC-MG, Intelligence | Board reporting | Export | **D** | Yes | Text only | Partial | No | `intelligence_screen.dart` | Export stub |
 | Intelligence hub | Management | ROAD v9.3 | Risk overview | Intelligence repos | **B** | Yes | Read + partial compute | Yes | No | `/intelligence` | Compute = mock |
 | Operations Hub | Management | ROAD v10.0 | School health | All modules | **B** | Yes | Read-only | Partial | No | `operations_hub_screen.dart` | Actions display-only |
-| Management settings save | Management | PLAN P1, AUDIT | Config | — | **D** | Yes | Stub | No | No | MG-08 | Save no-op |
+| Management settings save | Management | PLAN P1, AUDIT | Config | — | **A** | Yes | Yes | Yes | No | `updateManagementSettings` mutation | — |
 | School health score | Management | VISION #5 | At-a-glance status | Intelligence | **D** | Yes | Mock | Contract | No | Phase5/intelligence | Live data |
 | Principal Command Center | Management | ROAD v10.5 | Daily ops | Principal spec | **B** | Yes | Partial | Patrol | No | Principal routes | Priority cards null onTap |
 

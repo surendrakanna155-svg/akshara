@@ -8,11 +8,13 @@ import '../dto/finance_discounts_dto.dart';
 import '../dto/finance_enum_codec.dart';
 import '../dto/finance_fee_structures_dto.dart';
 import '../dto/finance_invoices_dto.dart';
+import '../dto/offline_payment_dto.dart';
 import '../dto/finance_receipt_dto.dart';
 import '../dto/finance_refunds_dto.dart';
 import '../dto/finance_reports_dto.dart';
 import '../dto/finance_settings_dto.dart';
 import '../dto/finance_student_accounts_dto.dart';
+import '../dto/qr_payment_session_dto.dart';
 import '../dto/scholarship_dto.dart';
 import '../../../../../features/finance/finance_models.dart';
 
@@ -70,7 +72,8 @@ class FinanceMapper {
         ),
         FinanceKpi(
           id: 'collection_rate',
-          value: '${collectionRate.toStringAsFixed(collectionRate % 1 == 0 ? 0 : 1)}%',
+          value:
+              '${collectionRate.toStringAsFixed(collectionRate % 1 == 0 ? 0 : 1)}%',
           label: 'Collection Rate',
           icon: Icons.trending_up,
           accentName: 'primary',
@@ -117,9 +120,8 @@ class FinanceMapper {
   String _formatDashboardAmount(double amount) {
     if (amount >= 100000) {
       final lakhs = amount / 100000;
-      final formatted = lakhs % 1 == 0
-          ? lakhs.toStringAsFixed(0)
-          : lakhs.toStringAsFixed(1);
+      final formatted =
+          lakhs % 1 == 0 ? lakhs.toStringAsFixed(0) : lakhs.toStringAsFixed(1);
       return '₹${formatted}L';
     }
     if (amount >= 1000) {
@@ -210,7 +212,8 @@ class FinanceMapper {
 
   FinanceCollectionResult toCollectionResult(FinanceCollectionResultDto dto) {
     final raw = dto.raw;
-    final collectionRaw = raw['collection'] as Map<String, dynamic>? ?? const {};
+    final collectionRaw =
+        raw['collection'] as Map<String, dynamic>? ?? const {};
     final receiptRaw = raw['receipt'] as Map<String, dynamic>? ?? const {};
     final invoiceRaw = raw['invoice'] as Map<String, dynamic>? ?? const {};
     return FinanceCollectionResult(
@@ -236,6 +239,60 @@ class FinanceMapper {
     );
   }
 
+  List<OfflinePaymentRecord> toOfflinePayments(OfflinePaymentsResponseDto dto) {
+    return [for (final item in dto.items) toOfflinePayment(item)];
+  }
+
+  OfflinePaymentRecord toOfflinePayment(OfflinePaymentDto dto) {
+    final raw = dto.raw;
+    final amount =
+        raw['amount_display'] as String? ?? raw['amount']?.toString() ?? '';
+    return OfflinePaymentRecord(
+      id: raw['id'] as String? ?? '',
+      invoiceId:
+          raw['invoiceId'] as String? ?? raw['invoice_id'] as String? ?? '',
+      studentName:
+          raw['studentName'] as String? ?? raw['student_name'] as String? ?? '',
+      amount: amount,
+      method: FinanceEnumCodec.parseOfflinePaymentMethod(
+        raw['method'] as String? ?? raw['payment_method'] as String?,
+      ),
+      referenceNumber: raw['referenceNumber'] as String? ??
+          raw['reference_number'] as String? ??
+          '',
+      recordedAt:
+          raw['recordedAt'] as String? ?? raw['recorded_at'] as String? ?? '',
+      status: FinanceEnumCodec.parseOfflinePaymentStatus(
+        raw['status'] as String?,
+      ),
+      collectionId:
+          raw['collectionId'] as String? ?? raw['collection_id'] as String?,
+    );
+  }
+
+  QrPaymentSession toQrPaymentSession(QrPaymentSessionDto dto) {
+    final raw = dto.raw;
+    final expiresAtRaw =
+        raw['expiresAt'] as String? ?? raw['expires_at'] as String? ?? '';
+    final statusRaw = raw['status'] as String? ?? 'pending';
+    return QrPaymentSession(
+      id: raw['id'] as String? ?? '',
+      invoiceId:
+          raw['invoiceId'] as String? ?? raw['invoice_id'] as String? ?? '',
+      amount: raw['amount'] as String? ?? '',
+      upiPayload:
+          raw['upiPayload'] as String? ?? raw['upi_payload'] as String? ?? '',
+      status: switch (statusRaw.toLowerCase()) {
+        'confirmed' => QrPaymentSessionStatus.confirmed,
+        'expired' => QrPaymentSessionStatus.expired,
+        _ => QrPaymentSessionStatus.pending,
+      },
+      expiresAt: DateTime.tryParse(expiresAtRaw) ?? DateTime.now(),
+      receiptNumber:
+          raw['receiptNumber'] as String? ?? raw['receipt_number'] as String?,
+    );
+  }
+
   List<FinanceFeeStructure> toFeeStructures(
     FinanceFeeStructuresResponseDto dto,
   ) {
@@ -256,8 +313,8 @@ class FinanceMapper {
         raw['status'] as String?,
       ),
       installmentOptions: [
-        for (final option in raw['installmentOptions'] as List<dynamic>? ??
-            const [])
+        for (final option
+            in raw['installmentOptions'] as List<dynamic>? ?? const [])
           if (option is int) option else (option as num?)?.toInt() ?? 0,
       ],
       categories: _mapFeeCategories(
@@ -316,7 +373,8 @@ class FinanceMapper {
       agingBuckets: _mapAgingBuckets(
         raw['agingBuckets'] as List<dynamic>? ?? const [],
       ),
-      defaulters: _mapDefaulters(raw['defaulters'] as List<dynamic>? ?? const []),
+      defaulters:
+          _mapDefaulters(raw['defaulters'] as List<dynamic>? ?? const []),
       aiInsight: raw['aiInsight'] as String? ?? '',
       aiActionLabel: raw['aiActionLabel'] as String? ?? '',
     );
@@ -703,7 +761,8 @@ class FinanceMapper {
           FinanceSettingsSection(
             id: item['id'] as String? ?? '',
             title: item['title'] as String? ?? '',
-            items: _mapSettingItems(item['items'] as List<dynamic>? ?? const []),
+            items:
+                _mapSettingItems(item['items'] as List<dynamic>? ?? const []),
           ),
     ];
   }

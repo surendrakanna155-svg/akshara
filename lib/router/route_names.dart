@@ -137,6 +137,8 @@ abstract final class RouteNames {
   static const String financeStudentAccounts = '/finance/student-accounts';
   static const String financeFeeAssignment = '/finance/fee-assignment';
   static const String financeCollections = '/finance/collections';
+  static const String financeQrPayment = '/finance/payments/qr';
+  static const String financeOfflinePayments = '/finance/payments/offline';
   static const String financeDefaulters = '/finance/defaulters';
   static const String financeRefunds = '/finance/refunds';
   static const String financeDiscounts = '/finance/discounts';
@@ -156,6 +158,8 @@ abstract final class RouteNames {
     financeStudentAccounts,
     financeFeeAssignment,
     financeCollections,
+    financeQrPayment,
+    financeOfflinePayments,
     financeDefaulters,
     financeRefunds,
     financeDiscounts,

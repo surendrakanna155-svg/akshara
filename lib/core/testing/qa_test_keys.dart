@@ -179,6 +179,41 @@ abstract final class QaTestKeys {
   static const financeCollectionSuccessSnackbar =
       ValueKey<String>('finance_collection_success_snackbar');
 
+  static const financeRecordOfflinePaymentFab =
+      ValueKey<String>('finance_record_offline_payment_fab');
+  static const financeOfflinePaymentInvoiceField =
+      ValueKey<String>('finance_offline_payment_invoice_field');
+  static const financeOfflinePaymentStudentField =
+      ValueKey<String>('finance_offline_payment_student_field');
+  static const financeOfflinePaymentAmountField =
+      ValueKey<String>('finance_offline_payment_amount_field');
+  static const financeOfflinePaymentReferenceField =
+      ValueKey<String>('finance_offline_payment_reference_field');
+  static const financeOfflinePaymentSubmitButton =
+      ValueKey<String>('finance_offline_payment_submit_button');
+  static const financeOfflinePaymentSuccessSnackbar =
+      ValueKey<String>('finance_offline_payment_success_snackbar');
+  static const financeOfflinePaymentReconcileSuccessSnackbar =
+      ValueKey<String>('finance_offline_payment_reconcile_success_snackbar');
+
+  static ValueKey<String> financeReconcileOfflinePaymentButton(
+          String paymentId) =>
+      ValueKey<String>('finance_reconcile_offline_payment_$paymentId');
+
+  static const financeQrPayButton = ValueKey<String>('finance_qr_pay_button');
+  static const financeQrInvoiceField =
+      ValueKey<String>('finance_qr_invoice_field');
+  static const financeQrAmountField =
+      ValueKey<String>('finance_qr_amount_field');
+  static const financeGenerateQrButton =
+      ValueKey<String>('finance_generate_qr_button');
+  static const financeQrReceiptField =
+      ValueKey<String>('finance_qr_receipt_field');
+  static const financeConfirmQrPaymentButton =
+      ValueKey<String>('finance_confirm_qr_payment_button');
+  static const financeQrPaymentConfirmedSnackbar =
+      ValueKey<String>('finance_qr_payment_confirmed_snackbar');
+
   static ValueKey<String> financeCollectionReceiptRow(String receiptNumber) =>
       ValueKey<String>(
         'finance_collection_receipt_${normalizeSubNavLabel(receiptNumber)}',
@@ -388,6 +423,22 @@ abstract final class QaTestKeys {
 
   static const managementDashboardExportSnackbar =
       ValueKey<String>('management_dashboard_export_snackbar');
+  static const managementDashboardPrintButton =
+      ValueKey<String>('management_dashboard_print_button');
+  static const managementDashboardShareButton =
+      ValueKey<String>('management_dashboard_share_button');
+  static const managementDashboardExportSuccessSnackbar =
+      ValueKey<String>('management_dashboard_export_success_snackbar');
+  static const managementSettingsSaveButton =
+      ValueKey<String>('management_settings_save_button');
+  static const managementSettingsAcademicYearEditButton =
+      ValueKey<String>('management_settings_academic_year_edit_button');
+  static const managementSettingsDialogField =
+      ValueKey<String>('management_settings_dialog_field');
+  static const managementSettingsDialogSaveButton =
+      ValueKey<String>('management_settings_dialog_save_button');
+  static ValueKey<String> managementSettingsItemEditButton(String itemId) =>
+      ValueKey<String>('management_settings_item_edit_$itemId');
   static const workflowAutomationScreen =
       ValueKey<String>('workflow_automation_screen');
   static const workflowRunScheduledNowButton =

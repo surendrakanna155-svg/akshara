@@ -7,18 +7,41 @@ import '../repository_query.dart';
 /// Contract for finance data access (mock or API).
 abstract class FinanceRepository {
   Future<FinanceDashboardData> getDashboard({required RepositoryQuery query});
-  Future<PaginatedResult<CollectionPayment>> getCollections({required RepositoryQuery query});
-  Future<DailyCollectionSummary> getDailySummary({required RepositoryQuery query});
-  Future<PaginatedResult<FinanceFeeStructure>> getFeeStructures({required RepositoryQuery query, required String academicYear});
-  Future<PaginatedResult<String>> getAcademicYears({required RepositoryQuery query});
-  Future<PaginatedResult<StudentFeeAccount>> getStudentAccounts({required RepositoryQuery query});
-  Future<PaginatedResult<InstallmentPlan>> getInstallmentPlans({required RepositoryQuery query});
+  Future<PaginatedResult<CollectionPayment>> getCollections(
+      {required RepositoryQuery query});
+  Future<DailyCollectionSummary> getDailySummary(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<FinanceFeeStructure>> getFeeStructures(
+      {required RepositoryQuery query, required String academicYear});
+  Future<PaginatedResult<String>> getAcademicYears(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<StudentFeeAccount>> getStudentAccounts(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<InstallmentPlan>> getInstallmentPlans(
+      {required RepositoryQuery query});
 
-  Future<CollectionDetail?> getCollectionDetail({required RepositoryQuery query, required String collectionId});
+  Future<CollectionDetail?> getCollectionDetail(
+      {required RepositoryQuery query, required String collectionId});
 
   Future<FinanceCollectionResult> createCollection({
     required RepositoryQuery query,
     required CreateCollectionRequest request,
+  });
+
+  Future<QrPaymentSession> createQrPaymentSession({
+    required RepositoryQuery query,
+    required CreateQrPaymentSessionRequest request,
+  });
+
+  Future<QrPaymentSession?> getQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+  });
+
+  Future<QrPaymentSession> confirmQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+    required ConfirmQrPaymentRequest request,
   });
 
   Future<FinanceCollectionResult> cancelCollection({
@@ -26,13 +49,31 @@ abstract class FinanceRepository {
     required String collectionId,
   });
 
-  Future<DefaultersDashboardData> getDefaultersDashboard({required RepositoryQuery query});
-  Future<PaginatedResult<RefundRequest>> getRefundRequests({required RepositoryQuery query});
+  Future<OfflinePaymentRecord> recordOfflinePayment({
+    required RepositoryQuery query,
+    required RecordOfflinePaymentRequest request,
+  });
+
+  Future<PaginatedResult<OfflinePaymentRecord>> listOfflinePayments({
+    required RepositoryQuery query,
+  });
+
+  Future<OfflinePaymentRecord> reconcileOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required ReconcileOfflinePaymentRequest request,
+  });
+
+  Future<DefaultersDashboardData> getDefaultersDashboard(
+      {required RepositoryQuery query});
+  Future<PaginatedResult<RefundRequest>> getRefundRequests(
+      {required RepositoryQuery query});
   Future<RefundRequest?> getRefund({
     required RepositoryQuery query,
     required String refundId,
   });
-  Future<DiscountsDashboardData> getDiscountsDashboard({required RepositoryQuery query});
+  Future<DiscountsDashboardData> getDiscountsDashboard(
+      {required RepositoryQuery query});
   Future<FinanceReportsData> getReportsData({required RepositoryQuery query});
   Future<FinanceSettingsData> getSettings({required RepositoryQuery query});
 
@@ -119,7 +160,9 @@ abstract class FinanceRepository {
     required UpdateFinanceSettingsRequest request,
   });
 
-  Future<FinanceCopilotData> getFinanceCopilot({required RepositoryQuery query});
+  Future<FinanceCopilotData> getFinanceCopilot(
+      {required RepositoryQuery query});
 
-  Future<FinanceExecutiveData> getFinanceExecutiveDashboard({required RepositoryQuery query});
+  Future<FinanceExecutiveData> getFinanceExecutiveDashboard(
+      {required RepositoryQuery query});
 }

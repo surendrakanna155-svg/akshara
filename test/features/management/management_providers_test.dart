@@ -16,7 +16,8 @@ void main() {
       container.dispose();
     });
 
-    test('managementDashboardProvider returns dashboard data', () async {      await container.read(managementDashboardFutureProvider.future);
+    test('managementDashboardProvider returns dashboard data', () async {
+      await container.read(managementDashboardFutureProvider.future);
 
       final data = container.read(managementDashboardProvider);
       expect(data, isNotNull);
@@ -33,42 +34,50 @@ void main() {
       expect(container.read(managementDashboardProvider), isNull);
     });
 
-    test('managementAnalyticsProvider returns analytics data', () async {      await container.read(managementAnalyticsFutureProvider.future);
+    test('managementAnalyticsProvider returns analytics data', () async {
+      await container.read(managementAnalyticsFutureProvider.future);
 
       final data = container.read(managementAnalyticsProvider);
       expect(data, isNotNull);
       expect(data!.classSummary, hasLength(3));
     });
 
-    test('managementAdmissionsFunnelProvider returns funnel data', () async {      await container.read(managementAdmissionsFunnelFutureProvider.future);
+    test('managementAdmissionsFunnelProvider returns funnel data', () async {
+      await container.read(managementAdmissionsFunnelFutureProvider.future);
 
       final data = container.read(managementAdmissionsFunnelProvider);
       expect(data, isNotNull);
       expect(data!.funnelStages, hasLength(5));
     });
 
-    test('managementFinancialHealthProvider returns finance health data', () async {      await container.read(managementFinancialHealthFutureProvider.future);
+    test('managementFinancialHealthProvider returns finance health data',
+        () async {
+      await container.read(managementFinancialHealthFutureProvider.future);
 
       final data = container.read(managementFinancialHealthProvider);
       expect(data, isNotNull);
       expect(data!.drillLinks, hasLength(6));
     });
 
-    test('managementAcademicHealthProvider returns academic data', () async {      await container.read(managementAcademicHealthFutureProvider.future);
+    test('managementAcademicHealthProvider returns academic data', () async {
+      await container.read(managementAcademicHealthFutureProvider.future);
 
       final data = container.read(managementAcademicHealthProvider);
       expect(data, isNotNull);
       expect(data!.atRiskStudents, hasLength(3));
     });
 
-    test('managementSchoolPerformanceProvider returns performance data', () async {      await container.read(managementSchoolPerformanceFutureProvider.future);
+    test('managementSchoolPerformanceProvider returns performance data',
+        () async {
+      await container.read(managementSchoolPerformanceFutureProvider.future);
 
       final data = container.read(managementSchoolPerformanceProvider);
       expect(data, isNotNull);
       expect(data!.classPerformance, hasLength(3));
     });
 
-    test('managementTasksProvider returns tasks data', () async {      await container.read(managementTasksFutureProvider.future);
+    test('managementTasksProvider returns tasks data', () async {
+      await container.read(managementTasksFutureProvider.future);
 
       final data = container.read(managementTasksProvider);
       expect(data, isNotNull);
@@ -86,11 +95,43 @@ void main() {
       expect(filtered, isNotEmpty);
     });
 
-    test('managementSettingsProvider returns settings sections', () async {      await container.read(managementSettingsFutureProvider.future);
+    test('managementSettingsProvider returns settings sections', () async {
+      await container.read(managementSettingsFutureProvider.future);
 
       final data = container.read(managementSettingsProvider);
       expect(data, isNotNull);
       expect(data!.sections.length, greaterThanOrEqualTo(4));
+    });
+
+    test('managementDashboardQueryProvider maps FY filter params', () {
+      final query = container.read(managementDashboardQueryProvider);
+      expect(query.additionalQueryParams['period'], 'fy');
+      expect(query.additionalQueryParams['quarter'], 'all');
+    });
+
+    test('managementDashboardQueryProvider maps Q1 filter params', () {
+      container = createProviderTestContainer(
+        overrides: [
+          managementDashboardFilterProvider.overrideWith((ref) => 1),
+        ],
+      );
+      final query = container.read(managementDashboardQueryProvider);
+      expect(query.additionalQueryParams['period'], 'quarter');
+      expect(query.additionalQueryParams['quarter'], 'q1');
+    });
+
+    test('management dashboard labels vary by period', () async {
+      container = createProviderTestContainer(
+        overrides: [
+          managementDashboardFilterProvider.overrideWith((ref) => 2),
+        ],
+      );
+      final data =
+          await container.read(managementDashboardFutureProvider.future);
+      expect(
+        data.kpis.first.label,
+        contains('All quarters'),
+      );
     });
   });
 }

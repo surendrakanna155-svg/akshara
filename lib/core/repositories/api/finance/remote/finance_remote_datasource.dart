@@ -6,10 +6,12 @@ import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../repository_query.dart';
 import '../dto/approve_refund_request_dto.dart';
 import '../dto/assign_fee_plan_request_dto.dart';
+import '../dto/confirm_qr_payment_request_dto.dart';
 import '../dto/create_fee_structure_request_dto.dart';
 import '../dto/create_refund_request_dto.dart';
 import '../dto/create_scholarship_request_dto.dart';
 import '../dto/create_collection_request_dto.dart';
+import '../dto/create_qr_payment_session_request_dto.dart';
 import '../dto/finance_collections_dto.dart';
 import '../dto/finance_dashboard_dto.dart';
 import '../dto/finance_defaulters_dto.dart';
@@ -21,7 +23,11 @@ import '../dto/finance_refunds_dto.dart';
 import '../dto/finance_reports_dto.dart';
 import '../dto/finance_settings_dto.dart';
 import '../dto/finance_student_accounts_dto.dart';
+import '../dto/offline_payment_dto.dart';
+import '../dto/reconcile_offline_payment_request_dto.dart';
+import '../dto/record_offline_payment_request_dto.dart';
 import '../dto/scholarship_dto.dart';
+import '../dto/qr_payment_session_dto.dart';
 import '../dto/update_fee_structure_request_dto.dart';
 import '../dto/update_finance_settings_request_dto.dart';
 import '../dto/update_scholarship_request_dto.dart';
@@ -143,6 +149,42 @@ class FinanceRemoteDataSource {
     return FinanceCollectionResultDto.fromJson(_requireData(response));
   }
 
+  Future<QrPaymentSessionDto> createQrPaymentSession({
+    required RepositoryQuery query,
+    required CreateQrPaymentSessionRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.qrPayments,
+      queryParameters: _queryParams(query),
+      data: CreateQrPaymentSessionRequestDto.fromDomain(request).toJson(),
+    );
+    return QrPaymentSessionDto.fromJson(_requireData(response));
+  }
+
+  Future<QrPaymentSessionDto> fetchQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.qrPaymentSession(sessionId),
+      queryParameters: _queryParams(query),
+    );
+    return QrPaymentSessionDto.fromJson(_requireData(response));
+  }
+
+  Future<QrPaymentSessionDto> confirmQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+    required ConfirmQrPaymentRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.qrPaymentConfirm(sessionId),
+      queryParameters: _queryParams(query),
+      data: ConfirmQrPaymentRequestDto.fromDomain(request).toJson(),
+    );
+    return QrPaymentSessionDto.fromJson(_requireData(response));
+  }
+
   Future<FinanceCollectionResultDto> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
@@ -152,6 +194,41 @@ class FinanceRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return FinanceCollectionResultDto.fromJson(_requireData(response));
+  }
+
+  Future<OfflinePaymentDto> recordOfflinePayment({
+    required RepositoryQuery query,
+    required RecordOfflinePaymentRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.offlinePayments,
+      queryParameters: _queryParams(query),
+      data: RecordOfflinePaymentRequestDto.fromDomain(request).toJson(),
+    );
+    return OfflinePaymentDto.fromJson(_requireData(response));
+  }
+
+  Future<OfflinePaymentsResponseDto> fetchOfflinePayments({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.offlinePayments,
+      queryParameters: _queryParams(query),
+    );
+    return OfflinePaymentsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<OfflinePaymentDto> reconcileOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required ReconcileOfflinePaymentRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.offlinePaymentReconcile(offlinePaymentId),
+      queryParameters: _queryParams(query),
+      data: ReconcileOfflinePaymentRequestDto.fromDomain(request).toJson(),
+    );
+    return OfflinePaymentDto.fromJson(_requireData(response));
   }
 
   Future<DefaultersDashboardDto> fetchDefaultersDashboard({
@@ -427,7 +504,8 @@ class FinanceRemoteDataSource {
     return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 
-  Future<Map<String, dynamic>> fetchFinanceCopilot({required RepositoryQuery query}) async {
+  Future<Map<String, dynamic>> fetchFinanceCopilot(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       FinanceApiPaths.intelligenceCopilot,
       queryParameters: _queryParams(query),
@@ -435,7 +513,8 @@ class FinanceRemoteDataSource {
     return _requireData(response);
   }
 
-  Future<Map<String, dynamic>> fetchFinanceExecutive({required RepositoryQuery query}) async {
+  Future<Map<String, dynamic>> fetchFinanceExecutive(
+      {required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       FinanceApiPaths.intelligenceExecutive,
       queryParameters: _queryParams(query),

@@ -13,6 +13,7 @@ import '../../admin/admin_layout.dart';
 import '../../copilot/copilot_context_provider.dart';
 import '../../copilot/copilot_screen_context.dart';
 import '../management_models.dart';
+import '../management_mutations_provider.dart';
 import '../management_providers.dart';
 import '../widgets/management_kpi_row.dart';
 import '../widgets/management_principal_overview_panel.dart';
@@ -45,15 +46,56 @@ class ManagementDashboardScreen extends ConsumerWidget {
         permission: Permission.manageManagement,
         child: OutlinedButton.icon(
           key: QaTestKeys.managementDashboardExportButton,
-          onPressed: () {
-            context.go(RouteNames.financeReports);
+          onPressed: () async {
+            final bytes = await ref
+                .read(exportManagementDashboardProvider.notifier)
+                .execute();
+            if (!context.mounted || bytes == null) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                key: QaTestKeys.managementDashboardExportSnackbar,
-                content: Text(
-                  'Executive report export — select a report and export PDF',
-                ),
+                key: QaTestKeys.managementDashboardExportSuccessSnackbar,
+                content: Text('Management dashboard PDF generated'),
               ),
+            );
+            await showModalBottomSheet<void>(
+              context: context,
+              builder: (sheetContext) {
+                return SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AksharaSpacing.s4),
+                    child: Wrap(
+                      runSpacing: AksharaSpacing.s3,
+                      children: [
+                        ListTile(
+                          key: QaTestKeys.managementDashboardPrintButton,
+                          leading: const Icon(Icons.print_outlined),
+                          title: const Text('Print dashboard PDF'),
+                          onTap: () async {
+                            Navigator.of(sheetContext).pop();
+                            await ref
+                                .read(managementDashboardPdfServiceProvider)
+                                .printDashboard(bytes);
+                          },
+                        ),
+                        ListTile(
+                          key: QaTestKeys.managementDashboardShareButton,
+                          leading: const Icon(Icons.share_outlined),
+                          title: const Text('Share dashboard PDF'),
+                          onTap: () async {
+                            Navigator.of(sheetContext).pop();
+                            await ref
+                                .read(managementDashboardPdfServiceProvider)
+                                .shareDashboard(
+                                  bytes: bytes,
+                                  fileName: 'management_dashboard.pdf',
+                                );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             );
           },
           icon: const Icon(Icons.download_outlined, size: 18),
@@ -66,7 +108,8 @@ class ManagementDashboardScreen extends ConsumerWidget {
         emptyMessage: 'No management data for the selected filters.',
         emptyIcon: Icons.dashboard_outlined,
         onRetry: () => retryErpFuture(ref, managementDashboardFutureProvider),
-        builder: (data) => _buildDashboardContent(context, ref, data, filterIndex),
+        builder: (data) =>
+            _buildDashboardContent(context, ref, data, filterIndex),
       ),
     );
   }
@@ -91,91 +134,91 @@ class ManagementDashboardScreen extends ConsumerWidget {
           CopilotKpiSnapshot(id: kpi.id, label: kpi.label, value: kpi.value),
       ],
       child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ManagementPrincipalOverviewPanel(data: data),
-        if (data.feeSnapshot.defaulters > 40)
-          AksharaWarningBanner(
-            message:
-                '${data.feeSnapshot.defaulters} fee defaulters with ${data.feeSnapshot.outstanding} outstanding.',
-            actionLabel: 'View defaulters',
-            onAction: () => context.go(RouteNames.financeDefaulters),
-          ),
-        if (data.feeSnapshot.defaulters > 40)
-          const SizedBox(height: AksharaSpacing.s4),
-        ManagementKpiRow(
-          desktopColumns: 3,
-          kpis: data.kpis,
-        ),
-        const SizedBox(height: AksharaSpacing.s6),
-        if (isMobile) ...[
-          ManagementTrendChart(
-            title: 'Revenue trend',
-            points: data.revenueTrend,
-            height: chartHeight,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ManagementPrincipalOverviewPanel(data: data),
+          if (data.feeSnapshot.defaulters > 40)
+            AksharaWarningBanner(
+              message:
+                  '${data.feeSnapshot.defaulters} fee defaulters with ${data.feeSnapshot.outstanding} outstanding.',
+              actionLabel: 'View defaulters',
+              onAction: () => context.go(RouteNames.financeDefaulters),
+            ),
+          if (data.feeSnapshot.defaulters > 40)
+            const SizedBox(height: AksharaSpacing.s4),
+          ManagementKpiRow(
+            desktopColumns: 3,
+            kpis: data.kpis,
           ),
           const SizedBox(height: AksharaSpacing.s6),
-          ManagementSegmentPanel(
-            title: 'Expense breakdown',
-            segments: data.expenseBreakdown,
-            height: chartHeight,
-          ),
-        ] else
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 3,
-                child: ManagementTrendChart(
-                  title: 'Revenue trend',
-                  points: data.revenueTrend,
-                  height: chartHeight,
+          if (isMobile) ...[
+            ManagementTrendChart(
+              title: 'Revenue trend',
+              points: data.revenueTrend,
+              height: chartHeight,
+            ),
+            const SizedBox(height: AksharaSpacing.s6),
+            ManagementSegmentPanel(
+              title: 'Expense breakdown',
+              segments: data.expenseBreakdown,
+              height: chartHeight,
+            ),
+          ] else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: ManagementTrendChart(
+                    title: 'Revenue trend',
+                    points: data.revenueTrend,
+                    height: chartHeight,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AksharaSpacing.s6),
-              Expanded(
-                flex: 2,
-                child: ManagementSegmentPanel(
-                  title: 'Expense breakdown',
-                  segments: data.expenseBreakdown,
-                  height: chartHeight,
+                const SizedBox(width: AksharaSpacing.s6),
+                Expanded(
+                  flex: 2,
+                  child: ManagementSegmentPanel(
+                    title: 'Expense breakdown',
+                    segments: data.expenseBreakdown,
+                    height: chartHeight,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        const SizedBox(height: AksharaSpacing.s6),
-        const AksharaSectionHeader(title: 'Approval queue'),
-        const SizedBox(height: AksharaSpacing.s3),
-        _ApprovalQueuePreview(items: queuePreview),
-        const SizedBox(height: AksharaSpacing.s6),
-        if (isMobile) ...[
-          _AdmissionsSnapshotCard(snapshot: data.admissionsSnapshot),
-          const SizedBox(height: AksharaSpacing.s4),
-          _FeeSnapshotCard(snapshot: data.feeSnapshot),
-        ] else
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _AdmissionsSnapshotCard(
-                  snapshot: data.admissionsSnapshot,
+              ],
+            ),
+          const SizedBox(height: AksharaSpacing.s6),
+          const AksharaSectionHeader(title: 'Approval queue'),
+          const SizedBox(height: AksharaSpacing.s3),
+          _ApprovalQueuePreview(items: queuePreview),
+          const SizedBox(height: AksharaSpacing.s6),
+          if (isMobile) ...[
+            _AdmissionsSnapshotCard(snapshot: data.admissionsSnapshot),
+            const SizedBox(height: AksharaSpacing.s4),
+            _FeeSnapshotCard(snapshot: data.feeSnapshot),
+          ] else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _AdmissionsSnapshotCard(
+                    snapshot: data.admissionsSnapshot,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AksharaSpacing.s6),
-              Expanded(
-                child: _FeeSnapshotCard(snapshot: data.feeSnapshot),
-              ),
-            ],
+                const SizedBox(width: AksharaSpacing.s6),
+                Expanded(
+                  child: _FeeSnapshotCard(snapshot: data.feeSnapshot),
+                ),
+              ],
+            ),
+          const SizedBox(height: AksharaSpacing.s6),
+          AksharaInsightCard(
+            message: data.aiInsight,
+            actionLabel: 'View approvals',
+            icon: Icons.auto_awesome_outlined,
+            semanticLabelPrefix: 'AI management insight',
+            onAction: () => context.go(RouteNames.managementTasks),
           ),
-        const SizedBox(height: AksharaSpacing.s6),
-        AksharaInsightCard(
-          message: data.aiInsight,
-          actionLabel: 'View approvals',
-          icon: Icons.auto_awesome_outlined,
-          semanticLabelPrefix: 'AI management insight',
-          onAction: () => context.go(RouteNames.managementTasks),
-        ),
-      ],
+        ],
       ),
     );
   }
@@ -231,7 +274,8 @@ class _ApprovalQueuePreview extends StatelessWidget {
             rows: [
               for (final item in items)
                 DataRow(
-                  onSelectChanged: (_) => context.go(RouteNames.managementTasks),
+                  onSelectChanged: (_) =>
+                      context.go(RouteNames.managementTasks),
                   cells: [
                     DataCell(Text(item.title)),
                     DataCell(Text(item.requester)),

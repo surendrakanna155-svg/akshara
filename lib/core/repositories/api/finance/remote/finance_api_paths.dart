@@ -4,6 +4,8 @@ abstract final class FinanceApiPaths {
 
   static const String dashboard = '$base/dashboard';
   static const String collections = '$base/collections';
+  static const String offlinePayments = '$base/payments/offline';
+  static const String qrPayments = '$base/payments/qr';
   static const String dailySummary = '$base/collections/daily-summary';
   static const String feeStructures = '$base/fee-structures';
   static const String feeAssignments = '$base/fee-assignments';
@@ -21,9 +23,15 @@ abstract final class FinanceApiPaths {
 
   static String collectionDetail(String id) => '$base/collections/$id';
   static String collectionCancel(String id) => '${collectionDetail(id)}/cancel';
+  static String offlinePaymentReconcile(String id) =>
+      '$offlinePayments/$id/reconcile';
+  static String qrPaymentSession(String id) => '$qrPayments/$id';
+  static String qrPaymentConfirm(String id) =>
+      '${qrPaymentSession(id)}/confirm';
   static String feeStructure(String id) => '$feeStructures/$id';
   static String feeAssignment(String id) => '$feeAssignments/$id';
-  static String studentAccount(String studentId) => '$studentAccounts/$studentId';
+  static String studentAccount(String studentId) =>
+      '$studentAccounts/$studentId';
   static String receipt(String id) => '$receipts/$id';
   static String refund(String id) => '$refunds/$id';
   static String refundApprove(String id) => '${refund(id)}/approve';

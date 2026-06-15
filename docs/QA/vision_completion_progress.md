@@ -7,6 +7,19 @@
 
 ---
 
+## Session 9 — FV-15/16 + Management Class D
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-15 | QR Payment Support | ✅ |
+| FV-16 | Offline Payment Tracking | ✅ |
+| MG-08 | Management settings persistence | ✅ |
+| MG-01 | Dashboard export PDF + period filters | ✅ |
+
+**Metrics after session 9:** ERP ~95% · Tests **1447+** · Patrol **~56**
+
+---
+
 ## Session 8 — M7 through FV-18
 
 | ID | Feature | Status |

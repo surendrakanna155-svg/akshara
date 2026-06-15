@@ -114,6 +114,29 @@ class FinanceFixtureBuilder {
         'classLabel': payment.classLabel,
       };
 
+  Map<String, dynamic> offlinePaymentItem(OfflinePaymentRecord payment) => {
+        'id': payment.id,
+        'invoiceId': payment.invoiceId,
+        'studentName': payment.studentName,
+        'amount': payment.amount,
+        'method': FinanceEnumCodec.offlinePaymentMethodToApi(payment.method),
+        'referenceNumber': payment.referenceNumber,
+        'recordedAt': payment.recordedAt,
+        'status': FinanceEnumCodec.offlinePaymentStatusToApi(payment.status),
+        if (payment.collectionId != null) 'collectionId': payment.collectionId,
+      };
+
+  Map<String, dynamic> qrPaymentSessionItem(QrPaymentSession session) => {
+        'id': session.id,
+        'invoiceId': session.invoiceId,
+        'amount': session.amount,
+        'upiPayload': session.upiPayload,
+        'status': session.status.name,
+        'expiresAt': session.expiresAt.toIso8601String(),
+        if (session.receiptNumber != null)
+          'receiptNumber': session.receiptNumber,
+      };
+
   Map<String, dynamic> dailySummaryEnvelope(DailyCollectionSummary summary) {
     return envelope({
       'dateLabel': summary.dateLabel,
@@ -183,14 +206,16 @@ class FinanceFixtureBuilder {
         'totalAmount': invoice.totalAmount,
         'outstandingAmount': invoice.outstandingAmount,
         'paidAmount': invoice.paidAmount,
-        'invoiceStatus': FinanceEnumCodec.invoiceStatusToApi(invoice.invoiceStatus),
+        'invoiceStatus':
+            FinanceEnumCodec.invoiceStatusToApi(invoice.invoiceStatus),
         'termLabel': invoice.termLabel,
         'createdBy': invoice.createdBy,
         'createdAt': invoice.createdAt,
         'updatedAt': invoice.updatedAt,
       };
 
-  Map<String, dynamic> collectionResultEnvelope(FinanceCollectionResult result) =>
+  Map<String, dynamic> collectionResultEnvelope(
+          FinanceCollectionResult result) =>
       envelope({
         'collection': {
           'id': result.collectionId,
@@ -426,7 +451,8 @@ class FinanceFixtureBuilder {
     });
   }
 
-  List<Map<String, dynamic>> _trendPoints(List<FinanceReportTrendPoint> points) {
+  List<Map<String, dynamic>> _trendPoints(
+      List<FinanceReportTrendPoint> points) {
     return [
       for (final point in points)
         {

@@ -178,7 +178,7 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 | P1-11 | SIS profile edit + documents | ✅ M6 |
 | P1-12 | HR leave approve/reject | ✅ Batch A |
 | P1-13 | Finance receipt PDF | ✅ Batch A |
-| FV-15–16 | QR / offline payments | ⏳ |
+| FV-15–16 | QR / offline payments | ✅ |
 
 ### M7 — Advanced Academic Platform
 

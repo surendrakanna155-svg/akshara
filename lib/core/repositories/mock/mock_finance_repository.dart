@@ -19,7 +19,8 @@ String _formatFinanceAmount(double value) => '₹${value.round()}';
 class MockFinanceRepository implements FinanceRepository {
   final _FinanceMutableStore _store = _FinanceMutableStore();
   @override
-  Future<FinanceDashboardData> getDashboard({required RepositoryQuery query}) async {
+  Future<FinanceDashboardData> getDashboard(
+      {required RepositoryQuery query}) async {
     return const FinanceDashboardData(
       outstandingAmount: '₹18.6L',
       defaultersCount: 47,
@@ -75,7 +76,8 @@ class MockFinanceRepository implements FinanceRepository {
         CollectionTrendPoint(label: 'Mar', amountLakhs: 8.4, targetLakhs: 8.0),
         CollectionTrendPoint(label: 'Apr', amountLakhs: 9.1, targetLakhs: 8.5),
         CollectionTrendPoint(label: 'May', amountLakhs: 10.5, targetLakhs: 9.0),
-        CollectionTrendPoint(label: 'Jun', amountLakhs: 11.2, targetLakhs: 10.0),
+        CollectionTrendPoint(
+            label: 'Jun', amountLakhs: 11.2, targetLakhs: 10.0),
       ],
       recentPayments: [
         RecentPayment(
@@ -145,7 +147,8 @@ class MockFinanceRepository implements FinanceRepository {
       );
 
   @override
-  Future<DailyCollectionSummary> getDailySummary({required RepositoryQuery query}) async {
+  Future<DailyCollectionSummary> getDailySummary(
+      {required RepositoryQuery query}) async {
     return const DailyCollectionSummary(
       dateLabel: 'Today, 5 Jun 2026',
       totalCollected: '₹2,41,500',
@@ -215,7 +218,8 @@ class MockFinanceRepository implements FinanceRepository {
       ], query);
 
   @override
-  Future<CollectionDetail?> getCollectionDetail({required RepositoryQuery query, required String collectionId}) async {
+  Future<CollectionDetail?> getCollectionDetail(
+      {required RepositoryQuery query, required String collectionId}) async {
     for (final payment in _store.payments) {
       if (payment.id == collectionId) {
         return CollectionDetail(
@@ -360,11 +364,13 @@ class MockFinanceRepository implements FinanceRepository {
         : (paid > 0 ? InvoiceStatus.partiallyPaid : InvoiceStatus.issued);
 
     final collectionId = _store.nextId('col_');
-    final receiptNumber = 'RCP-${DateTime.now().year}-${collectionId.split('_').last}';
-    final account = _store.studentAccounts.cast<StudentFeeAccount?>().firstWhere(
-          (item) => item?.id == invoice.studentId,
-          orElse: () => null,
-        );
+    final receiptNumber =
+        'RCP-${DateTime.now().year}-${collectionId.split('_').last}';
+    final account =
+        _store.studentAccounts.cast<StudentFeeAccount?>().firstWhere(
+              (item) => item?.id == invoice.studentId,
+              orElse: () => null,
+            );
     final payment = CollectionPayment(
       id: collectionId,
       receiptNumber: receiptNumber,
@@ -410,11 +416,98 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
+  Future<QrPaymentSession> createQrPaymentSession({
+    required RepositoryQuery query,
+    required CreateQrPaymentSessionRequest request,
+  }) async {
+    final sessionId = _store.nextId('qr_');
+    final amount = request.amount.trim();
+    final session = QrPaymentSession(
+      id: sessionId,
+      invoiceId: request.invoiceId,
+      amount: amount,
+      upiPayload: 'upi://pay?pa=school@upi&pn=Akshara&am=$amount&tr=$sessionId',
+      status: QrPaymentSessionStatus.pending,
+      expiresAt: DateTime.now().add(const Duration(minutes: 10)),
+    );
+    _store.qrPaymentSessions.insert(0, session);
+    return session;
+  }
+
+  @override
+  Future<QrPaymentSession?> getQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+  }) async {
+    final index =
+        _store.qrPaymentSessions.indexWhere((item) => item.id == sessionId);
+    if (index < 0) return null;
+    final current = _store.qrPaymentSessions[index];
+    if (current.status == QrPaymentSessionStatus.pending &&
+        DateTime.now().isAfter(current.expiresAt)) {
+      final expired = QrPaymentSession(
+        id: current.id,
+        invoiceId: current.invoiceId,
+        amount: current.amount,
+        upiPayload: current.upiPayload,
+        status: QrPaymentSessionStatus.expired,
+        expiresAt: current.expiresAt,
+        receiptNumber: current.receiptNumber,
+      );
+      _store.qrPaymentSessions[index] = expired;
+      return expired;
+    }
+    return current;
+  }
+
+  @override
+  Future<QrPaymentSession> confirmQrPaymentSession({
+    required RepositoryQuery query,
+    required String sessionId,
+    required ConfirmQrPaymentRequest request,
+  }) async {
+    final index =
+        _store.qrPaymentSessions.indexWhere((item) => item.id == sessionId);
+    if (index < 0) {
+      throw StateError('QR session not found: $sessionId');
+    }
+    final current = _store.qrPaymentSessions[index];
+    if (current.status == QrPaymentSessionStatus.expired ||
+        DateTime.now().isAfter(current.expiresAt)) {
+      final expired = QrPaymentSession(
+        id: current.id,
+        invoiceId: current.invoiceId,
+        amount: current.amount,
+        upiPayload: current.upiPayload,
+        status: QrPaymentSessionStatus.expired,
+        expiresAt: current.expiresAt,
+        receiptNumber: current.receiptNumber,
+      );
+      _store.qrPaymentSessions[index] = expired;
+      throw StateError('QR session expired');
+    }
+    final confirmed = QrPaymentSession(
+      id: current.id,
+      invoiceId: current.invoiceId,
+      amount: current.amount,
+      upiPayload: current.upiPayload,
+      status: QrPaymentSessionStatus.confirmed,
+      expiresAt: current.expiresAt,
+      receiptNumber: request.receiptNumber?.trim().isNotEmpty == true
+          ? request.receiptNumber!.trim()
+          : 'RCP-${DateTime.now().year}-${current.id.split('_').last}',
+    );
+    _store.qrPaymentSessions[index] = confirmed;
+    return confirmed;
+  }
+
+  @override
   Future<FinanceCollectionResult> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
   }) async {
-    final paymentIndex = _store.payments.indexWhere((item) => item.id == collectionId);
+    final paymentIndex =
+        _store.payments.indexWhere((item) => item.id == collectionId);
     if (paymentIndex < 0) {
       throw StateError('Collection not found: $collectionId');
     }
@@ -457,7 +550,97 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<DefaultersDashboardData> getDefaultersDashboard({required RepositoryQuery query}) async {
+  Future<OfflinePaymentRecord> recordOfflinePayment({
+    required RepositoryQuery query,
+    required RecordOfflinePaymentRequest request,
+  }) async {
+    final record = OfflinePaymentRecord(
+      id: _store.nextId('op_'),
+      invoiceId: request.invoiceId,
+      studentName: request.studentName,
+      amount: request.amount,
+      method: request.method,
+      referenceNumber: request.referenceNumber,
+      recordedAt: request.recordedAt,
+      status: OfflinePaymentStatus.pendingReconciliation,
+    );
+    _store.offlinePayments.insert(0, record);
+    _store.pendingOfflinePaymentQueue.add(record.id);
+    return record;
+  }
+
+  @override
+  Future<PaginatedResult<OfflinePaymentRecord>> listOfflinePayments({
+    required RepositoryQuery query,
+  }) async {
+    return paginateList(
+      List.unmodifiable(_store.offlinePayments),
+      query,
+    );
+  }
+
+  @override
+  Future<OfflinePaymentRecord> reconcileOfflinePayment({
+    required RepositoryQuery query,
+    required String offlinePaymentId,
+    required ReconcileOfflinePaymentRequest request,
+  }) async {
+    final index = _store.offlinePayments
+        .indexWhere((item) => item.id == offlinePaymentId);
+    if (index < 0) {
+      throw StateError('Offline payment not found: $offlinePaymentId');
+    }
+    final current = _store.offlinePayments[index];
+    if (current.status == OfflinePaymentStatus.reconciled) {
+      return current;
+    }
+
+    final collection = await _createCollectionForOfflinePayment(
+      query: query,
+      record: current,
+      request: request,
+    );
+    final reconciled = OfflinePaymentRecord(
+      id: current.id,
+      invoiceId: current.invoiceId,
+      studentName: current.studentName,
+      amount: current.amount,
+      method: current.method,
+      referenceNumber: current.referenceNumber,
+      recordedAt: request.reconciledAt ?? current.recordedAt,
+      status: OfflinePaymentStatus.reconciled,
+      collectionId: collection.collectionId,
+    );
+    _store.offlinePayments[index] = reconciled;
+    _store.pendingOfflinePaymentQueue.remove(offlinePaymentId);
+    return reconciled;
+  }
+
+  Future<FinanceCollectionResult> _createCollectionForOfflinePayment({
+    required RepositoryQuery query,
+    required OfflinePaymentRecord record,
+    required ReconcileOfflinePaymentRequest request,
+  }) {
+    return createCollection(
+      query: query,
+      request: CreateCollectionRequest(
+        invoiceId: record.invoiceId,
+        amountCollected: record.amount,
+        paymentMethod: switch (record.method) {
+          OfflinePaymentMethod.cash => 'Cash',
+          OfflinePaymentMethod.cheque => 'Cheque',
+          OfflinePaymentMethod.dd => 'Demand Draft',
+        },
+        referenceNumber: record.referenceNumber,
+        notes: request.notes,
+        collectionDate: request.reconciledAt ?? record.recordedAt,
+      ),
+    );
+  }
+
+  @override
+  Future<DefaultersDashboardData> getDefaultersDashboard(
+      {required RepositoryQuery query}) async {
     return const DefaultersDashboardData(
       kpis: [
         FinanceKpi(
@@ -567,7 +750,8 @@ class MockFinanceRepository implements FinanceRepository {
               timestamp: '3 Jun · 9:00 AM',
               channel: 'Email',
               outcome: 'Opened',
-              notes: 'New admission — first installment pending after AD-08 handoff.',
+              notes:
+                  'New admission — first installment pending after AD-08 handoff.',
             ),
           ],
         ),
@@ -628,7 +812,8 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<FinanceReportsData> getReportsData({required RepositoryQuery query}) async {
+  Future<FinanceReportsData> getReportsData(
+      {required RepositoryQuery query}) async {
     return const FinanceReportsData(
       selectedReportId: 'rpt_collection',
       catalog: [
@@ -851,13 +1036,15 @@ class MockFinanceRepository implements FinanceRepository {
     final account = _store.findStudentAccount(request.feeAccountId);
     final refund = RefundRequest(
       id: _store.nextId('ref_'),
-      studentName:
-          request.studentName.isNotEmpty ? request.studentName : account.studentName,
+      studentName: request.studentName.isNotEmpty
+          ? request.studentName
+          : account.studentName,
       admissionNumber: request.admissionNumber.isNotEmpty
           ? request.admissionNumber
           : account.admissionNumber,
-      classLabel:
-          request.classLabel.isNotEmpty ? request.classLabel : account.classLabel,
+      classLabel: request.classLabel.isNotEmpty
+          ? request.classLabel
+          : account.classLabel,
       amount: request.amount,
       reason: request.reason,
       requestedAt: 'Today',
@@ -883,7 +1070,8 @@ class MockFinanceRepository implements FinanceRepository {
     if (index < 0) throw StateError('Refund not found: $refundId');
     final current = _store.refundRequests[index];
     if (current.status != RefundStatus.pending) {
-      throw StateError('Cannot approve refund in status: ${current.status.name}');
+      throw StateError(
+          'Cannot approve refund in status: ${current.status.name}');
     }
 
     final refundAmount = _parseFinanceAmount(current.amount);
@@ -1056,7 +1244,8 @@ class MockFinanceRepository implements FinanceRepository {
     if (index < 0) throw StateError('Invoice not found: $invoiceId');
     final current = _store.invoices[index];
     if (current.invoiceStatus != InvoiceStatus.draft) {
-      throw StateError('Cannot issue invoice in status: ${current.invoiceStatus.name}');
+      throw StateError(
+          'Cannot issue invoice in status: ${current.invoiceStatus.name}');
     }
     final updated = current.copyWith(
       invoiceStatus: InvoiceStatus.issued,
@@ -1078,7 +1267,8 @@ class MockFinanceRepository implements FinanceRepository {
     final current = _store.invoices[index];
     if (current.invoiceStatus == InvoiceStatus.paid ||
         current.invoiceStatus == InvoiceStatus.cancelled) {
-      throw StateError('Cannot cancel invoice in status: ${current.invoiceStatus.name}');
+      throw StateError(
+          'Cannot cancel invoice in status: ${current.invoiceStatus.name}');
     }
     final updated = current.copyWith(
       invoiceStatus: InvoiceStatus.cancelled,
@@ -1142,7 +1332,8 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
-  Future<FinanceCopilotData> getFinanceCopilot({required RepositoryQuery query}) async =>
+  Future<FinanceCopilotData> getFinanceCopilot(
+          {required RepositoryQuery query}) async =>
       const FinanceCopilotData(
         feeCollectionForecast: 842000,
         forecastConfidence: 82,
@@ -1158,8 +1349,10 @@ class MockFinanceRepository implements FinanceRepository {
           ),
         ],
         collectionTrend: [
-          FinanceCollectionTrendPoint(month: '2026-01', collected: 720000, expected: 756000),
-          FinanceCollectionTrendPoint(month: '2026-02', collected: 780000, expected: 819000),
+          FinanceCollectionTrendPoint(
+              month: '2026-01', collected: 720000, expected: 756000),
+          FinanceCollectionTrendPoint(
+              month: '2026-02', collected: 780000, expected: 819000),
         ],
         riskAlerts: [
           FinanceCollectionRiskAlert(
@@ -1193,7 +1386,8 @@ class MockFinanceRepository implements FinanceRepository {
         generatedAt: '2026-06-10T00:00:00Z',
       );
 
-  String _accountIdForAdmission(String admissionNumber) => switch (admissionNumber) {
+  String _accountIdForAdmission(String admissionNumber) =>
+      switch (admissionNumber) {
         'ADM-2026-0138' => 'acct_1',
         'ADM-2026-0142' => 'acct_2',
         'ADM-2026-0135' => 'acct_3',
@@ -1201,14 +1395,14 @@ class MockFinanceRepository implements FinanceRepository {
         _ => 'acct_unknown',
       };
 
-  String _balanceForAdmission(String admissionNumber) => switch (admissionNumber) {
+  String _balanceForAdmission(String admissionNumber) =>
+      switch (admissionNumber) {
         'ADM-2026-0138' => '₹1,23,000',
         'ADM-2026-0142' => '₹2,15,000',
         'ADM-2026-0135' => '₹2,55,000',
         'ADM-2025-0092' => '₹65,000',
         _ => '—',
       };
-
 }
 
 class _FinanceMutableStore {
@@ -1219,6 +1413,15 @@ class _FinanceMutableStore {
         scholarships = List.of(_seedScholarships),
         invoices = List.of(_seedInvoices),
         payments = List.of(_seedPayments),
+        offlinePayments = List.of(_seedOfflinePayments),
+        pendingOfflinePaymentQueue = _seedOfflinePayments
+            .where(
+              (item) =>
+                  item.status == OfflinePaymentStatus.pendingReconciliation,
+            )
+            .map((item) => item.id)
+            .toList(),
+        qrPaymentSessions = <QrPaymentSession>[],
         settings = _seedSettings;
 
   List<FinanceFeeStructure> feeStructures;
@@ -1227,6 +1430,9 @@ class _FinanceMutableStore {
   List<ScholarshipCatalogItem> scholarships;
   List<FinanceInvoice> invoices;
   List<CollectionPayment> payments;
+  List<OfflinePaymentRecord> offlinePayments;
+  List<String> pendingOfflinePaymentQueue;
+  List<QrPaymentSession> qrPaymentSessions;
   FinanceSettingsData settings;
   final Map<String, String> invoiceIdByFeeAccountId = {};
   int _counter = 100;
@@ -1772,6 +1978,30 @@ class _FinanceMutableStore {
       collectedBy: 'R. Kumar',
       status: CollectionStatus.refunded,
       classLabel: '6',
+    ),
+  ];
+
+  static const List<OfflinePaymentRecord> _seedOfflinePayments = [
+    OfflinePaymentRecord(
+      id: 'op_1',
+      invoiceId: 'inv_1',
+      studentName: 'Arjun Patel',
+      amount: '15000',
+      method: OfflinePaymentMethod.cash,
+      referenceNumber: 'CASH-1001',
+      recordedAt: '2026-06-11',
+      status: OfflinePaymentStatus.pendingReconciliation,
+    ),
+    OfflinePaymentRecord(
+      id: 'op_2',
+      invoiceId: 'inv_2',
+      studentName: 'Priya Sharma',
+      amount: '8000',
+      method: OfflinePaymentMethod.cheque,
+      referenceNumber: 'CHQ-2099',
+      recordedAt: '2026-06-09',
+      status: OfflinePaymentStatus.reconciled,
+      collectionId: 'col_2',
     ),
   ];
 

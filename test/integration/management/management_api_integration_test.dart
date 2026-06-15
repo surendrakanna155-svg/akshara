@@ -3,6 +3,7 @@ import 'package:akshara_erp/core/repositories/api/management/remote/management_a
 import 'package:akshara_erp/core/repositories/api/management/remote/management_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_management_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/management/management_requests.dart';
 import 'package:akshara_erp/features/management/management_providers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -22,10 +23,12 @@ void main() {
       mockRepo = MockManagementRepository();
       final dashboard = await mockRepo.getDashboard(query: kQuery);
       final analytics = await mockRepo.getAnalytics(query: kQuery);
-      final admissionsFunnel = await mockRepo.getAdmissionsFunnel(query: kQuery);
+      final admissionsFunnel =
+          await mockRepo.getAdmissionsFunnel(query: kQuery);
       final financialHealth = await mockRepo.getFinancialHealth(query: kQuery);
       final academicHealth = await mockRepo.getAcademicHealth(query: kQuery);
-      final schoolPerformance = await mockRepo.getSchoolPerformance(query: kQuery);
+      final schoolPerformance =
+          await mockRepo.getSchoolPerformance(query: kQuery);
       final tasks = await mockRepo.getTasksAndApprovals(query: kQuery);
       final settings = await mockRepo.getSettings(query: kQuery);
 
@@ -53,8 +56,10 @@ void main() {
         createFakeDio((options) => responseForPath(options.path)),
       );
 
-      expect((await remote.fetchDashboard(query: kQuery)).raw['kpis'], isNotNull);
-      expect((await remote.fetchAnalytics(query: kQuery)).raw['classSummary'], isNotNull);
+      expect(
+          (await remote.fetchDashboard(query: kQuery)).raw['kpis'], isNotNull);
+      expect((await remote.fetchAnalytics(query: kQuery)).raw['classSummary'],
+          isNotNull);
       expect(
         (await remote.fetchAdmissionsFunnel(query: kQuery)).raw['funnelStages'],
         isNotNull,
@@ -68,11 +73,31 @@ void main() {
         isNotNull,
       );
       expect(
-        (await remote.fetchSchoolPerformance(query: kQuery)).raw['classPerformance'],
+        (await remote.fetchSchoolPerformance(query: kQuery))
+            .raw['classPerformance'],
         isNotNull,
       );
-      expect((await remote.fetchTasksAndApprovals(query: kQuery)).raw['approvals'], isNotNull);
-      expect((await remote.fetchSettings(query: kQuery)).raw['sections'], isNotNull);
+      expect(
+          (await remote.fetchTasksAndApprovals(query: kQuery)).raw['approvals'],
+          isNotNull);
+      expect((await remote.fetchSettings(query: kQuery)).raw['sections'],
+          isNotNull);
+      expect(
+        (await remote.updateSettings(
+          query: kQuery,
+          request: const UpdateManagementSettingsRequest(
+            updates: [
+              ManagementSettingUpdate(
+                sectionId: 'school',
+                itemId: 'name',
+                value: 'Updated School',
+              ),
+            ],
+          ),
+        ))
+            .raw['sections'],
+        isNotNull,
+      );
     });
 
     test('api repository matches mock dashboard data', () async {
@@ -98,7 +123,8 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final data = await container.read(managementDashboardFutureProvider.future);
+      final data =
+          await container.read(managementDashboardFutureProvider.future);
       expect(data.kpis, isNotEmpty);
     });
   });

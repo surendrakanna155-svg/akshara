@@ -13,6 +13,7 @@ import '../../core/tenant/tenant_provider.dart';
 import 'collections/finance_collections_provider.dart';
 import 'discounts/finance_discounts_provider.dart';
 import 'finance_journey_context_provider.dart';
+import 'finance_payments_provider.dart';
 import 'fee_structures/finance_fee_structures_provider.dart';
 import 'finance_audit.dart';
 import 'finance_models.dart';
@@ -28,10 +29,12 @@ void _invalidateFinanceReads(
   bool feeStructures = false,
   bool studentAccounts = false,
   bool collections = false,
+  bool offlinePayments = false,
   bool invoices = false,
   bool refunds = false,
   bool discounts = false,
   bool settings = false,
+  bool qrPaymentSession = false,
 }) {
   if (feeStructures) ref.invalidate(financeFeeStructuresFutureProvider);
   if (studentAccounts) ref.invalidate(financeStudentAccountsFutureProvider);
@@ -39,10 +42,14 @@ void _invalidateFinanceReads(
     ref.invalidate(financeCollectionsFutureProvider);
     ref.invalidate(financeDailySummaryFutureProvider);
   }
+  if (offlinePayments) {
+    ref.invalidate(offlinePaymentsFutureProvider);
+  }
   if (invoices) ref.invalidate(financeInvoicesFutureProvider);
   if (refunds) ref.invalidate(financeRefundsFutureProvider);
   if (discounts) ref.invalidate(financeDiscountsFutureProvider);
   if (settings) ref.invalidate(financeSettingsFutureProvider);
+  if (qrPaymentSession) ref.invalidate(qrPaymentSessionProvider);
 }
 
 Future<T?> _runMutation<T>(
@@ -55,17 +62,21 @@ Future<T?> _runMutation<T>(
   bool invalidateFeeStructures = false,
   bool invalidateStudentAccounts = false,
   bool invalidateCollections = false,
+  bool invalidateOfflinePayments = false,
   bool invalidateInvoices = false,
   bool invalidateRefunds = false,
   bool invalidateDiscounts = false,
   bool invalidateSettings = false,
+  bool invalidateQrPaymentSession = false,
   void Function()? assertPermission,
+  AuditEventType auditType = AuditEventType.financeHandoffSent,
 }) async {
   assertPermission?.call();
   try {
     final result = await action();
     await recordFinanceAudit(
       ref,
+      type: auditType,
       action: auditAction,
       entityId: entityIdForAudit?.call(result) ?? entityId,
       metadata: metadata,
@@ -75,10 +86,12 @@ Future<T?> _runMutation<T>(
       feeStructures: invalidateFeeStructures,
       studentAccounts: invalidateStudentAccounts,
       collections: invalidateCollections,
+      offlinePayments: invalidateOfflinePayments,
       invoices: invalidateInvoices,
       refunds: invalidateRefunds,
       discounts: invalidateDiscounts,
       settings: invalidateSettings,
+      qrPaymentSession: invalidateQrPaymentSession,
     );
     return result;
   } catch (error) {
@@ -91,7 +104,8 @@ class CreateFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
   @override
   FutureOr<FinanceFeeStructure?> build() => null;
 
-  Future<FinanceFeeStructure?> execute(CreateFeeStructureRequest request) async {
+  Future<FinanceFeeStructure?> execute(
+      CreateFeeStructureRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final catalog = ref.read(academicCatalogProvider);
@@ -160,7 +174,8 @@ class CreateStudentAccountNotifier extends AsyncNotifier<StudentFeeAccount?> {
   @override
   FutureOr<StudentFeeAccount?> build() => null;
 
-  Future<StudentFeeAccount?> execute(CreateStudentAccountRequest request) async {
+  Future<StudentFeeAccount?> execute(
+      CreateStudentAccountRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -267,17 +282,20 @@ class CreateCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
   @override
   FutureOr<FinanceCollectionResult?> build() => null;
 
-  Future<FinanceCollectionResult?> execute(CreateCollectionRequest request) async {
+  Future<FinanceCollectionResult?> execute(
+      CreateCollectionRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
         ref,
         assertPermission: () => assertManageFinance(ref),
         auditAction: 'createCollection',
+        auditType: AuditEventType.collectionCreated,
         entityId: request.invoiceId,
         entityIdForAudit: (result) => result.collectionId,
         metadata: {'paymentMethod': request.paymentMethod},
         invalidateCollections: true,
+        invalidateOfflinePayments: true,
         invalidateStudentAccounts: true,
         action: () => ref.read(financeRepositoryProvider).createCollection(
               query: ref.read(repositoryQueryProvider),
@@ -292,6 +310,155 @@ class CreateCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
 final createCollectionProvider =
     AsyncNotifierProvider<CreateCollectionNotifier, FinanceCollectionResult?>(
   CreateCollectionNotifier.new,
+);
+
+class RecordOfflinePaymentNotifier
+    extends AsyncNotifier<OfflinePaymentRecord?> {
+  @override
+  FutureOr<OfflinePaymentRecord?> build() => null;
+
+  Future<OfflinePaymentRecord?> execute(
+    RecordOfflinePaymentRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'recordOfflinePayment',
+        auditType: AuditEventType.paymentInitiated,
+        entityId: request.invoiceId,
+        entityIdForAudit: (record) => record.id,
+        metadata: {'method': request.method.name},
+        invalidateOfflinePayments: true,
+        action: () => ref.read(financeRepositoryProvider).recordOfflinePayment(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final recordOfflinePaymentProvider =
+    AsyncNotifierProvider<RecordOfflinePaymentNotifier, OfflinePaymentRecord?>(
+  RecordOfflinePaymentNotifier.new,
+);
+
+class ReconcileOfflinePaymentNotifier
+    extends AsyncNotifier<OfflinePaymentRecord?> {
+  @override
+  FutureOr<OfflinePaymentRecord?> build() => null;
+
+  Future<OfflinePaymentRecord?> execute({
+    required String offlinePaymentId,
+    ReconcileOfflinePaymentRequest request =
+        const ReconcileOfflinePaymentRequest(),
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'reconcileOfflinePayment',
+        auditType: AuditEventType.collectionCreated,
+        entityId: offlinePaymentId,
+        entityIdForAudit: (record) => record.id,
+        invalidateCollections: true,
+        invalidateOfflinePayments: true,
+        invalidateStudentAccounts: true,
+        invalidateInvoices: true,
+        action: () =>
+            ref.read(financeRepositoryProvider).reconcileOfflinePayment(
+                  query: ref.read(repositoryQueryProvider),
+                  offlinePaymentId: offlinePaymentId,
+                  request: request,
+                ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final reconcileOfflinePaymentProvider = AsyncNotifierProvider<
+    ReconcileOfflinePaymentNotifier, OfflinePaymentRecord?>(
+  ReconcileOfflinePaymentNotifier.new,
+);
+
+class CreateQrPaymentSessionNotifier extends AsyncNotifier<QrPaymentSession?> {
+  @override
+  FutureOr<QrPaymentSession?> build() => null;
+
+  Future<QrPaymentSession?> execute(
+      CreateQrPaymentSessionRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final session = await _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'createQrPaymentSession',
+        entityId: request.invoiceId,
+        entityIdForAudit: (result) => result.id,
+        metadata: {'amount': request.amount},
+        invalidateQrPaymentSession: true,
+        action: () =>
+            ref.read(financeRepositoryProvider).createQrPaymentSession(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                ),
+      );
+      if (session != null) {
+        ref.read(financeQrPaymentSessionIdProvider.notifier).state = session.id;
+      }
+      return session;
+    });
+    return state.valueOrNull;
+  }
+}
+
+final createQrPaymentSessionProvider =
+    AsyncNotifierProvider<CreateQrPaymentSessionNotifier, QrPaymentSession?>(
+  CreateQrPaymentSessionNotifier.new,
+);
+
+class ConfirmQrPaymentSessionNotifier extends AsyncNotifier<QrPaymentSession?> {
+  @override
+  FutureOr<QrPaymentSession?> build() => null;
+
+  Future<QrPaymentSession?> execute({
+    required String sessionId,
+    required ConfirmQrPaymentRequest request,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'confirmQrPaymentSession',
+        entityId: sessionId,
+        entityIdForAudit: (result) => result.id,
+        metadata: {
+          if (request.receiptNumber != null)
+            'receiptNumber': request.receiptNumber!,
+        },
+        invalidateCollections: true,
+        invalidateQrPaymentSession: true,
+        action: () =>
+            ref.read(financeRepositoryProvider).confirmQrPaymentSession(
+                  query: ref.read(repositoryQueryProvider),
+                  sessionId: sessionId,
+                  request: request,
+                ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final confirmQrPaymentSessionProvider =
+    AsyncNotifierProvider<ConfirmQrPaymentSessionNotifier, QrPaymentSession?>(
+  ConfirmQrPaymentSessionNotifier.new,
 );
 
 class CreateRefundNotifier extends AsyncNotifier<RefundRequest?> {
@@ -387,7 +554,8 @@ class CreateScholarshipNotifier extends AsyncNotifier<ScholarshipCatalogItem?> {
   @override
   FutureOr<ScholarshipCatalogItem?> build() => null;
 
-  Future<ScholarshipCatalogItem?> execute(CreateScholarshipRequest request) async {
+  Future<ScholarshipCatalogItem?> execute(
+      CreateScholarshipRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -444,7 +612,8 @@ final updateScholarshipProvider =
   UpdateScholarshipNotifier.new,
 );
 
-class UpdateFinanceSettingsNotifier extends AsyncNotifier<FinanceSettingsData?> {
+class UpdateFinanceSettingsNotifier
+    extends AsyncNotifier<FinanceSettingsData?> {
   @override
   FutureOr<FinanceSettingsData?> build() => null;
 
@@ -536,16 +705,19 @@ class CancelCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
   @override
   FutureOr<FinanceCollectionResult?> build() => null;
 
-  Future<FinanceCollectionResult?> execute({required String collectionId}) async {
+  Future<FinanceCollectionResult?> execute(
+      {required String collectionId}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
         ref,
         assertPermission: () => assertManageFinance(ref),
         auditAction: 'cancelCollection',
+        auditType: AuditEventType.collectionCancelled,
         entityId: collectionId,
         entityIdForAudit: (result) => result.collectionId,
         invalidateCollections: true,
+        invalidateOfflinePayments: true,
         invalidateStudentAccounts: true,
         invalidateInvoices: true,
         action: () => ref.read(financeRepositoryProvider).cancelCollection(

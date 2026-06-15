@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../router/route_names.dart';
 import 'finance_journey_context_provider.dart';
 import 'fee_assignment/finance_fee_assignment_provider.dart';
 import 'finance_models.dart';
@@ -425,6 +427,21 @@ Future<void> showRecordCollectionDialog(
     if (!context.mounted) return;
     _showMutationError(context, error);
   }
+}
+
+void navigateToQrPaymentScreen(
+  BuildContext context, {
+  required String invoiceId,
+  required String amount,
+}) {
+  final uri = Uri(
+    path: RouteNames.financeQrPayment,
+    queryParameters: {
+      'invoiceId': invoiceId,
+      'amount': amount,
+    },
+  );
+  context.push(uri.toString());
 }
 
 Future<void> executeIssueInvoice(

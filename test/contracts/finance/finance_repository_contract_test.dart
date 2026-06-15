@@ -10,6 +10,8 @@ import 'package:akshara_erp/core/repositories/api/finance/dto/finance_refunds_dt
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_reports_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_settings_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_student_accounts_dto.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/offline_payment_dto.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/qr_payment_session_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/mapper/finance_mapper.dart';
 import 'package:akshara_erp/core/repositories/api/finance/remote/finance_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/interfaces/finance_repository.dart';
@@ -72,7 +74,8 @@ void main() {
       final mapped = const FinanceMapper().toCollections(
         FinanceCollectionsResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final payment in mockData.items) _fixtures.collectionItem(payment),
+            for (final payment in mockData.items)
+              _fixtures.collectionItem(payment),
           ]),
         ),
       );
@@ -98,6 +101,63 @@ void main() {
       );
       expect(mapped.invoice.invoiceStatus, InvoiceStatus.partiallyPaid);
       expect(mapped.receipt.receiptNumber, isNotEmpty);
+    });
+
+    test('listOfflinePayments DTO mapping matches mock output', () async {
+      final mockData = await mockRepo.listOfflinePayments(query: kQuery);
+      final mapped = const FinanceMapper().toOfflinePayments(
+        OfflinePaymentsResponseDto.fromJson(
+          _fixtures.listEnvelope([
+            for (final payment in mockData.items)
+              _fixtures.offlinePaymentItem(payment),
+          ]),
+        ),
+      );
+      expect(mapped.length, mockData.items.length);
+      expect(mapped.first.status, mockData.items.first.status);
+    });
+
+    test('record and reconcile offline payment updates status', () async {
+      final recorded = await mockRepo.recordOfflinePayment(
+        query: kQuery,
+        request: const RecordOfflinePaymentRequest(
+          invoiceId: 'inv_1',
+          studentName: 'Contract Student',
+          amount: '5000',
+          method: OfflinePaymentMethod.cash,
+          referenceNumber: 'CASH-CONTRACT-1',
+          recordedAt: '2026-06-12',
+        ),
+      );
+      expect(recorded.status, OfflinePaymentStatus.pendingReconciliation);
+
+      final reconciled = await mockRepo.reconcileOfflinePayment(
+        query: kQuery,
+        offlinePaymentId: recorded.id,
+        request: const ReconcileOfflinePaymentRequest(),
+      );
+      expect(reconciled.status, OfflinePaymentStatus.reconciled);
+      expect(reconciled.collectionId, isNotEmpty);
+    });
+
+    test('qr payment session DTO maps to domain model', () {
+      final mapped = const FinanceMapper().toQrPaymentSession(
+        QrPaymentSessionDto.fromJson(
+          _fixtures.qrPaymentSessionItem(
+            QrPaymentSession(
+              id: 'qr_1',
+              invoiceId: 'inv_1',
+              amount: '4500',
+              upiPayload: 'upi://pay?pa=school@upi&pn=Akshara&am=4500&tr=qr_1',
+              status: QrPaymentSessionStatus.pending,
+              expiresAt: DateTime.utc(2026, 6, 15, 9, 0, 0),
+            ),
+          ),
+        ),
+      );
+      expect(mapped.id, 'qr_1');
+      expect(mapped.status, QrPaymentSessionStatus.pending);
+      expect(mapped.upiPayload, contains('upi://pay?'));
     });
 
     test('getDailySummary DTO mapping matches mock output', () async {
@@ -153,7 +213,8 @@ void main() {
       );
 
       expect(mapped.length, mockData.items.length);
-      expect(mapped.first.admissionNumber, mockData.items.first.admissionNumber);
+      expect(
+          mapped.first.admissionNumber, mockData.items.first.admissionNumber);
     });
 
     test('getInstallmentPlans DTO mapping matches mock output', () async {
@@ -161,7 +222,8 @@ void main() {
       final mapped = const FinanceMapper().toInstallmentPlans(
         InstallmentPlansResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final plan in mockData.items) _fixtures.installmentPlanItem(plan),
+            for (final plan in mockData.items)
+              _fixtures.installmentPlanItem(plan),
           ]),
         ),
       );
@@ -234,7 +296,8 @@ void main() {
       final mapped = const FinanceMapper().toInvoices(
         FinanceInvoicesResponseDto.fromJson(
           _fixtures.listEnvelope([
-            for (final invoice in mockData.items) _fixtures.invoiceItem(invoice),
+            for (final invoice in mockData.items)
+              _fixtures.invoiceItem(invoice),
           ]),
         ),
       );
@@ -294,17 +357,40 @@ void main() {
     test('mock repository exposes all FinanceRepository methods', () async {
       expect(await mockRepo.getDashboard(query: kQuery), isNotNull);
       expect((await mockRepo.getCollections(query: kQuery)).items, isNotEmpty);
+      expect(
+        (await mockRepo.listOfflinePayments(query: kQuery)).items,
+        isNotEmpty,
+      );
+      final qrSession = await mockRepo.createQrPaymentSession(
+        query: kQuery,
+        request: const CreateQrPaymentSessionRequest(
+          invoiceId: 'inv_1',
+          amount: '4000',
+        ),
+      );
+      expect(qrSession.status, QrPaymentSessionStatus.pending);
+      expect(
+        await mockRepo.getQrPaymentSession(
+          query: kQuery,
+          sessionId: qrSession.id,
+        ),
+        isNotNull,
+      );
       expect(await mockRepo.getDailySummary(query: kQuery), isNotNull);
       expect(
         (await mockRepo.getFeeStructures(
           query: kQuery,
           academicYear: '2026-27',
-        )).items,
+        ))
+            .items,
         isNotEmpty,
       );
-      expect((await mockRepo.getAcademicYears(query: kQuery)).items, isNotEmpty);
-      expect((await mockRepo.getStudentAccounts(query: kQuery)).items, isNotEmpty);
-      expect((await mockRepo.getInstallmentPlans(query: kQuery)).items, isNotEmpty);
+      expect(
+          (await mockRepo.getAcademicYears(query: kQuery)).items, isNotEmpty);
+      expect(
+          (await mockRepo.getStudentAccounts(query: kQuery)).items, isNotEmpty);
+      expect((await mockRepo.getInstallmentPlans(query: kQuery)).items,
+          isNotEmpty);
       expect(
         await mockRepo.getCollectionDetail(
           query: kQuery,
@@ -313,7 +399,8 @@ void main() {
         isNotNull,
       );
       expect(await mockRepo.getDefaultersDashboard(query: kQuery), isNotNull);
-      expect((await mockRepo.getRefundRequests(query: kQuery)).items, isNotEmpty);
+      expect(
+          (await mockRepo.getRefundRequests(query: kQuery)).items, isNotEmpty);
       expect(await mockRepo.getDiscountsDashboard(query: kQuery), isNotNull);
       expect(await mockRepo.getReportsData(query: kQuery), isNotNull);
       expect(await mockRepo.getSettings(query: kQuery), isNotNull);
