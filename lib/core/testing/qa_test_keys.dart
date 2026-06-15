@@ -458,6 +458,33 @@ abstract final class QaTestKeys {
         'inventory_distribution_request_replacement_$distributionId',
       );
 
+  static const inventoryDistributionReplacementsLink =
+      ValueKey<String>('inventory_distribution_replacements_link');
+
+  static const inventoryReplacementScreen =
+      ValueKey<String>('inventory_replacement_screen');
+
+  static ValueKey<String> inventoryReplacementRow(String requestId) =>
+      ValueKey<String>('inventory_replacement_row_$requestId');
+
+  static ValueKey<String> inventoryReplacementApproveButton(String requestId) =>
+      ValueKey<String>('inventory_replacement_approve_$requestId');
+
+  static ValueKey<String> inventoryReplacementFulfillButton(String requestId) =>
+      ValueKey<String>('inventory_replacement_fulfill_$requestId');
+
+  static ValueKey<String> inventoryReplacementRejectButton(String requestId) =>
+      ValueKey<String>('inventory_replacement_reject_$requestId');
+
+  static const inventoryReplacementApproveSuccessSnackbar =
+      ValueKey<String>('inventory_replacement_approve_success_snackbar');
+
+  static const inventoryReplacementFulfillSuccessSnackbar =
+      ValueKey<String>('inventory_replacement_fulfill_success_snackbar');
+
+  static const inventoryReplacementRejectSuccessSnackbar =
+      ValueKey<String>('inventory_replacement_reject_success_snackbar');
+
   static const educationPublishRemarkButton =
       ValueKey<String>('education_publish_remark_button');
 

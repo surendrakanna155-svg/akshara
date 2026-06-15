@@ -55,6 +55,31 @@ void main() {
       expect(mapped.first.id, mockData.first.id);
       expect(mapped.first.status, mockData.first.status);
     });
+
+    test('replacement request list and approve parity', () async {
+      final requests = await mockRepo.listReplacementRequests(query: _query);
+      expect(requests, isNotEmpty);
+
+      final approved = await mockRepo.approveReplacement(
+        query: _query,
+        requestId: requests.first.id,
+      );
+      expect(approved.status, 'approved');
+
+      final mapped = Phase4Mapper.replacementRequestFromApi({
+        'id': approved.id,
+        'distributionId': approved.distributionId,
+        'studentId': approved.studentId,
+        'itemName': approved.itemName,
+        'category': approved.category,
+        'quantity': approved.quantity,
+        'status': approved.status,
+        'notes': approved.notes,
+        'requestedAt': approved.requestedAt,
+        'resolvedAt': approved.resolvedAt,
+      });
+      expect(mapped.status, 'approved');
+    });
   });
 }
 

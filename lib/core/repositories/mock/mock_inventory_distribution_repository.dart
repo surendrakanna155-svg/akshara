@@ -25,11 +25,28 @@ class MockInventoryDistributionRepository implements InventoryDistributionReposi
     ),
   ];
 
+  final List<InvReplacementRequest> _replacementRequests = [
+    const InvReplacementRequest(
+      id: 'rpl_1',
+      distributionId: 'dist_1',
+      studentId: 'student_1',
+      itemName: 'Mathematics Textbook Grade 8',
+      category: 'books',
+      quantity: 1,
+      status: 'pending',
+      notes: 'Pages torn — needs replacement',
+      requestedAt: '2026-06-01T10:00:00Z',
+    ),
+  ];
+
+  int get _openReplacementCount =>
+      _replacementRequests.where((r) => r.status == 'pending' || r.status == 'approved').length;
+
   @override
   Future<InvDistributionDashboard> getDashboard({required RepositoryQuery query}) async {
     return InvDistributionDashboard(
       pendingDistributions: _items.where((i) => i.status == 'available').length,
-      replacementRequests: 0,
+      replacementRequests: _openReplacementCount,
       paymentPending: 0,
       distributedToday: 1,
       byCategory: const [
@@ -128,24 +145,133 @@ class MockInventoryDistributionRepository implements InventoryDistributionReposi
     required String distributionId,
     String? notes,
   }) async {
+    final idx = _items.indexWhere((i) => i.id == distributionId);
+    if (idx < 0) throw StateError('Distribution not found');
+    final source = _items[idx];
     final dist = await transitionStatus(
       query: query,
       distributionId: distributionId,
       status: 'replacement_requested',
       notes: notes,
     );
+    _replacementRequests.add(
+      InvReplacementRequest(
+        id: 'rpl_${_replacementRequests.length + 1}',
+        distributionId: distributionId,
+        studentId: source.studentId,
+        itemName: source.itemName,
+        category: source.category,
+        quantity: source.quantity,
+        status: 'pending',
+        notes: notes,
+        requestedAt: DateTime.now().toIso8601String(),
+      ),
+    );
     return (distribution: dist, paymentRequestId: null);
   }
 
   @override
+  Future<List<InvReplacementRequest>> listReplacementRequests({
+    required RepositoryQuery query,
+    String? status,
+  }) async {
+    return _replacementRequests.where((r) {
+      if (status != null && r.status != status) return false;
+      return true;
+    }).toList();
+  }
+
+  @override
+  Future<InvReplacementRequest> approveReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+  }) async {
+    return _updateReplacement(requestId, (r) => InvReplacementRequest(
+          id: r.id,
+          distributionId: r.distributionId,
+          studentId: r.studentId,
+          itemName: r.itemName,
+          category: r.category,
+          quantity: r.quantity,
+          status: 'approved',
+          notes: r.notes,
+          requestedAt: r.requestedAt,
+          resolvedAt: DateTime.now().toIso8601String(),
+          rejectionReason: r.rejectionReason,
+        ));
+  }
+
+  @override
+  Future<InvReplacementRequest> fulfillReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+  }) async {
+    final request = _replacementRequests.firstWhere((r) => r.id == requestId);
+    await createDistribution(
+      query: query,
+      studentId: request.studentId,
+      catalogItemId: _items
+              .firstWhere((i) => i.id == request.distributionId,
+                  orElse: () => _items.first)
+              .catalogItemId,
+      quantity: request.quantity,
+    );
+    return _updateReplacement(requestId, (r) => InvReplacementRequest(
+          id: r.id,
+          distributionId: r.distributionId,
+          studentId: r.studentId,
+          itemName: r.itemName,
+          category: r.category,
+          quantity: r.quantity,
+          status: 'fulfilled',
+          notes: r.notes,
+          requestedAt: r.requestedAt,
+          resolvedAt: DateTime.now().toIso8601String(),
+          rejectionReason: r.rejectionReason,
+        ));
+  }
+
+  @override
+  Future<InvReplacementRequest> rejectReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+    String? reason,
+  }) async {
+    return _updateReplacement(requestId, (r) => InvReplacementRequest(
+          id: r.id,
+          distributionId: r.distributionId,
+          studentId: r.studentId,
+          itemName: r.itemName,
+          category: r.category,
+          quantity: r.quantity,
+          status: 'rejected',
+          notes: r.notes,
+          requestedAt: r.requestedAt,
+          resolvedAt: DateTime.now().toIso8601String(),
+          rejectionReason: reason,
+        ));
+  }
+
+  InvReplacementRequest _updateReplacement(
+    String requestId,
+    InvReplacementRequest Function(InvReplacementRequest current) transform,
+  ) {
+    final idx = _replacementRequests.indexWhere((r) => r.id == requestId);
+    if (idx < 0) throw StateError('Replacement request not found');
+    final updated = transform(_replacementRequests[idx]);
+    _replacementRequests[idx] = updated;
+    return updated;
+  }
+
+  @override
   Future<InvDistributionReports> getReports({required RepositoryQuery query}) async {
-    return const InvDistributionReports(
+    return InvDistributionReports(
       pending: 1,
       issued: 1,
-      replacement: 0,
+      replacement: _replacementRequests.where((r) => r.status == 'pending').length,
       lost: 0,
       damaged: 0,
-      byKitCategory: [
+      byKitCategory: const [
         InvKitCategoryReport(category: 'books', pending: 0, issued: 1),
         InvKitCategoryReport(category: 'uniforms', pending: 1, issued: 0),
       ],

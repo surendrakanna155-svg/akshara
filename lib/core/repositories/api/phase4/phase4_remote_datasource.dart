@@ -199,4 +199,54 @@ class Phase4RemoteDataSource {
     );
     return _data(response);
   }
+
+  Future<List<Map<String, dynamic>>> fetchReplacementRequests({
+    required RepositoryQuery query,
+    String? status,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/inventory/distribution/replacements',
+      queryParameters: {
+        ..._params(query),
+        if (status != null) 'status': status,
+      },
+    );
+    final data = _data(response);
+    return (data['items'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> approveReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/inventory/distribution/replacements/$requestId/approve',
+      queryParameters: _params(query),
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> fulfillReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/inventory/distribution/replacements/$requestId/fulfill',
+      queryParameters: _params(query),
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> rejectReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+    String? reason,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/inventory/distribution/replacements/$requestId/reject',
+      queryParameters: _params(query),
+      data: {if (reason != null) 'reason': reason},
+    );
+    return _data(response);
+  }
 }

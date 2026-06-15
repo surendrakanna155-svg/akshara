@@ -223,4 +223,48 @@ class ApiInventoryDistributionRepository implements InventoryDistributionReposit
       await _remote.fetchDistributionReports(query: query),
     );
   }
+
+  @override
+  Future<List<InvReplacementRequest>> listReplacementRequests({
+    required RepositoryQuery query,
+    String? status,
+  }) async {
+    final rows = await _remote.fetchReplacementRequests(query: query, status: status);
+    return rows.map(Phase4Mapper.replacementRequestFromApi).toList();
+  }
+
+  @override
+  Future<InvReplacementRequest> approveReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+  }) async {
+    return Phase4Mapper.replacementRequestFromApi(
+      await _remote.approveReplacement(query: query, requestId: requestId),
+    );
+  }
+
+  @override
+  Future<InvReplacementRequest> fulfillReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+  }) async {
+    return Phase4Mapper.replacementRequestFromApi(
+      await _remote.fulfillReplacement(query: query, requestId: requestId),
+    );
+  }
+
+  @override
+  Future<InvReplacementRequest> rejectReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+    String? reason,
+  }) async {
+    return Phase4Mapper.replacementRequestFromApi(
+      await _remote.rejectReplacement(
+        query: query,
+        requestId: requestId,
+        reason: reason,
+      ),
+    );
+  }
 }

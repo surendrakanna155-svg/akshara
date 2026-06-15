@@ -30,6 +30,7 @@ void _invalidateDistributionReads(Ref ref) {
   ref.invalidate(inventoryDistributionsListProvider);
   ref.invalidate(inventoryDistributionDashboardProvider);
   ref.invalidate(distributionReportsProvider);
+  ref.invalidate(inventoryReplacementRequestsProvider);
 }
 
 class CreateDistributionNotifier
@@ -137,4 +138,98 @@ class RequestReplacementNotifier
 final requestReplacementProvider =
     AsyncNotifierProvider<RequestReplacementNotifier, InvStudentDistribution?>(
   RequestReplacementNotifier.new,
+);
+
+class ApproveReplacementNotifier extends AsyncNotifier<InvReplacementRequest?> {
+  @override
+  FutureOr<InvReplacementRequest?> build() => null;
+
+  Future<InvReplacementRequest?> execute({required String requestId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageInventoryDistribution(ref);
+      try {
+        final result = await ref
+            .read(inventoryDistributionRepositoryProvider)
+            .approveReplacement(
+              query: ref.read(phase4QueryProvider),
+              requestId: requestId,
+            );
+        _invalidateDistributionReads(ref);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final approveReplacementProvider =
+    AsyncNotifierProvider<ApproveReplacementNotifier, InvReplacementRequest?>(
+  ApproveReplacementNotifier.new,
+);
+
+class FulfillReplacementNotifier extends AsyncNotifier<InvReplacementRequest?> {
+  @override
+  FutureOr<InvReplacementRequest?> build() => null;
+
+  Future<InvReplacementRequest?> execute({required String requestId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageInventoryDistribution(ref);
+      try {
+        final result = await ref
+            .read(inventoryDistributionRepositoryProvider)
+            .fulfillReplacement(
+              query: ref.read(phase4QueryProvider),
+              requestId: requestId,
+            );
+        _invalidateDistributionReads(ref);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final fulfillReplacementProvider =
+    AsyncNotifierProvider<FulfillReplacementNotifier, InvReplacementRequest?>(
+  FulfillReplacementNotifier.new,
+);
+
+class RejectReplacementNotifier extends AsyncNotifier<InvReplacementRequest?> {
+  @override
+  FutureOr<InvReplacementRequest?> build() => null;
+
+  Future<InvReplacementRequest?> execute({
+    required String requestId,
+    String? reason,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageInventoryDistribution(ref);
+      try {
+        final result = await ref
+            .read(inventoryDistributionRepositoryProvider)
+            .rejectReplacement(
+              query: ref.read(phase4QueryProvider),
+              requestId: requestId,
+              reason: reason,
+            );
+        _invalidateDistributionReads(ref);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final rejectReplacementProvider =
+    AsyncNotifierProvider<RejectReplacementNotifier, InvReplacementRequest?>(
+  RejectReplacementNotifier.new,
 );

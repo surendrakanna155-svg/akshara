@@ -37,4 +37,25 @@ abstract class InventoryDistributionRepository {
   });
 
   Future<InvDistributionReports> getReports({required RepositoryQuery query});
+
+  Future<List<InvReplacementRequest>> listReplacementRequests({
+    required RepositoryQuery query,
+    String? status,
+  });
+
+  Future<InvReplacementRequest> approveReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+  });
+
+  Future<InvReplacementRequest> fulfillReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+  });
+
+  Future<InvReplacementRequest> rejectReplacement({
+    required RepositoryQuery query,
+    required String requestId,
+    String? reason,
+  });
 }

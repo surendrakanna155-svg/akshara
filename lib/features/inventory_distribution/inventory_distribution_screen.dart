@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/security/permissions.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -22,7 +24,17 @@ class InventoryDistributionScreen extends ConsumerWidget {
 
     return Scaffold(
       key: QaTestKeys.inventoryDistributionScreen,
-      appBar: AppBar(title: const Text('Inventory Distribution')),
+      appBar: AppBar(
+        title: const Text('Inventory Distribution'),
+        actions: [
+          IconButton(
+            key: QaTestKeys.inventoryDistributionReplacementsLink,
+            tooltip: 'Replacement workflow',
+            icon: const Icon(Icons.swap_horiz),
+            onPressed: () => context.go(RouteNames.inventoryReplacements),
+          ),
+        ],
+      ),
       floatingActionButton: AksharaManageAction(
         permission: Permission.manageInventoryDistribution,
         child: FloatingActionButton.extended(
@@ -121,6 +133,7 @@ class _KpiSection extends StatelessWidget {
           title: 'Replacement requests',
           value: dashboard.replacementRequests.toString(),
           icon: Icons.sync_problem_outlined,
+          onTap: () => context.go(RouteNames.inventoryReplacements),
         ),
         _KpiCard(
           title: 'Payment pending',
@@ -142,31 +155,37 @@ class _KpiCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.icon,
+    this.onTap,
   });
 
   final String title;
   final String value;
   final IconData icon;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: 220,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.s3),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 20),
-              const SizedBox(height: AksharaSpacing.s2),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: AksharaSpacing.s1),
-              Text(title),
-            ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AksharaSpacing.s3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: 20),
+                const SizedBox(height: AksharaSpacing.s2),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: AksharaSpacing.s1),
+                Text(title),
+              ],
+            ),
           ),
         ),
       ),

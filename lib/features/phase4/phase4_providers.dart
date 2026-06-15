@@ -56,3 +56,9 @@ final inventoryDistributionsListProvider = FutureProvider((ref) async {
         query: ref.watch(phase4QueryProvider),
       );
 });
+
+final inventoryReplacementRequestsProvider = FutureProvider((ref) async {
+  return ref.read(inventoryDistributionRepositoryProvider).listReplacementRequests(
+        query: ref.watch(phase4QueryProvider),
+      );
+});

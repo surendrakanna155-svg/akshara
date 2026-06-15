@@ -141,6 +141,22 @@ class Phase4Mapper {
     );
   }
 
+  static InvReplacementRequest replacementRequestFromApi(Map<String, dynamic> json) {
+    return InvReplacementRequest(
+      id: json['id'] as String,
+      distributionId: json['distributionId'] as String,
+      studentId: json['studentId'] as String,
+      itemName: json['itemName'] as String?,
+      category: json['category'] as String?,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      status: json['status'] as String? ?? 'pending',
+      notes: json['notes'] as String?,
+      requestedAt: json['requestedAt'] as String? ?? '',
+      resolvedAt: json['resolvedAt'] as String?,
+      rejectionReason: json['rejectionReason'] as String?,
+    );
+  }
+
   static List<Map<String, dynamic>> _listOfMaps(dynamic value) =>
       (value as List<dynamic>? ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
 

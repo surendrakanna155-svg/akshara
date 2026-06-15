@@ -181,6 +181,7 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 | FV-11 | Book Distribution parity | M7 | D | **A** | +3 | +1 | Session 10 | green |
 | OPS-01 | Operations Hub alert actions | M7 | D | **A** | +2 | +1 | Session 10 | green |
 | INTEL-11 | Intelligence recommendation nav | M8 | D | **A** | +2 | — | Session 10 | green |
+| FV-12 | Inventory Replacement Workflow | M7 | D | **A** | +2 | +1 | Session 11 | green |
 | INTEL-02 | KPI drill-down MG-01 | 2/6 | B | **A** | +8 | +2 | `b021b72` | green |
 | INTEL-03 | Context-aware copilot | 2 | C | **B** | +5 | +1 | `1d116d2` | green |
 | INTEL-04 | Floating copilot dock | 2 | D | **B** | +15 | +2 | `f978d2d` | pending |
@@ -206,7 +207,7 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 
 ## Next action
 
-**FV-12:** Inventory Replacement Workflow — see `AKSHARA_FINAL_ROADMAP.md` M7 tail.
+**M8:** Live AI Inference (FV-PLAT-10) — see `AKSHARA_FINAL_ROADMAP.md`.
 
 Execution: audit → implement → tests → Patrol → gates → commit → push → CI → update registry.
 

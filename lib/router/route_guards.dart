@@ -40,6 +40,7 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.student360: Permission.viewStudent360,
   RouteNames.employees: Permission.viewEmployees,
   RouteNames.inventoryDistribution: Permission.viewInventoryDistribution,
+  RouteNames.inventoryReplacements: Permission.viewInventoryDistribution,
   RouteNames.operationsHub: Permission.viewOperationsHub,
   RouteNames.schoolMemories: Permission.viewSchoolMemories,
   RouteNames.achievementPromotion: Permission.viewAchievementPromotion,

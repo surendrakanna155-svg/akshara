@@ -69,6 +69,7 @@ abstract final class RouteNames {
   static const String student360 = '/student-360';
   static const String employees = '/employees';
   static const String inventoryDistribution = '/inventory/distribution';
+  static const String inventoryReplacements = '/inventory/replacements';
   static const String parentExperience = '/parent/experience';
   static const String parentAcademicReport = '/parent/academic-report';
   static const String employee360 = '/employees/360';
@@ -413,6 +414,7 @@ abstract final class RouteNames {
     student360,
     employees,
     inventoryDistribution,
+    inventoryReplacements,
     operationsHub,
     schoolMemories,
     achievementPromotion,

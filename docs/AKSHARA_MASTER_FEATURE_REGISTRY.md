@@ -74,7 +74,7 @@
 | FV-09 | Workload Engine Expansion | P2 | Partial | 35 | M7 | Contract | No | Timetable / Teacher |
 | FV-10 | Inventory & Asset Expansion | P3 | Partial | 60 | M6 | Yes | No | Inventory |
 | FV-11 | Book Distribution System | P3 | Shipped | 95 | M7 ✅ | Yes | Partial | Evolution |
-| FV-12 | Inventory Replacement Workflow | P3 | Planned | 0 | M7 | No | No | Inventory |
+| FV-12 | Inventory Replacement Workflow | P3 | Shipped | 95 | M7 ✅ | Yes | Partial | Inventory |
 | FV-13 | Unified Payment Request Engine | P1 | Partial | 55 | M6 | Yes | No | Finance |
 | FV-14 | Online Payment Enhancements | P1 | Partial | 60 | M6 | Yes | No | Finance / Parent |
 | FV-15 | QR Payment Support | P1 | Planned | 0 | M6 | No | No | Finance |

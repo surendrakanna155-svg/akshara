@@ -2,7 +2,22 @@
 
 **Program:** Akshara Autonomous Execution  
 **Date:** June 2026  
-**Latest commit:** `8b53d24`
+**Latest commit:** *(FV-12 pending)*
+
+---
+
+## Session 11 — FV-12 Inventory Replacement Workflow
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-12 | Inventory Replacement Workflow | ✅ |
+
+### FV-12 — RMA lifecycle
+- `InvReplacementRequest` model + repo list/approve/fulfill/reject (mock + API)
+- `/inventory/replacements` tabbed workflow screen
+- Mutation notifiers + registry entries
+- Widget test + Patrol `inventory_replacement_e2e_test.dart`
+- Distribution screen links to replacement workflow
 
 ---
 
@@ -63,9 +78,9 @@
 | Metric | Value |
 |--------|-------|
 | ERP completion | **~96%** |
-| Vision completion | **~63%** |
-| Flutter tests | **1465** |
-| Patrol journeys | **~59** |
+| Vision completion | **~64%** |
+| Flutter tests | **1467** |
+| Patrol journeys | **~60** |
 
 ---
 
@@ -83,7 +98,6 @@
 
 | ID | Feature |
 |----|---------|
-| FV-12 | Inventory Replacement Workflow |
 | M8 | Live AI Inference (FV-PLAT-10), Universal AI Assistant (FV-29) |
 | P3-02 | ERP Exam Admin — blocked (product decision) |
 

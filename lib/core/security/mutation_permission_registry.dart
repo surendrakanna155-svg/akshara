@@ -330,6 +330,24 @@ class MutationPermissionRegistry {
       permission: Permission.manageInventoryDistribution,
       kind: 'manage',
     ),
+    MutationPermissionEntry(
+      moduleId: 'inventory_distribution',
+      mutationId: 'approveReplacement',
+      permission: Permission.manageInventoryDistribution,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory_distribution',
+      mutationId: 'fulfillReplacement',
+      permission: Permission.manageInventoryDistribution,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory_distribution',
+      mutationId: 'rejectReplacement',
+      permission: Permission.manageInventoryDistribution,
+      kind: 'manage',
+    ),
     // Library
     MutationPermissionEntry(
       moduleId: 'library',

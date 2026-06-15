@@ -463,6 +463,13 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.inventoryReplacements,
+            name: 'inventoryReplacements',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: inventoryReplacementsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: '${RouteNames.employee360}/:employeeId',
             name: 'employee360',
             pageBuilder: (context, state) => NoTransitionPage(
