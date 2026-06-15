@@ -3,7 +3,7 @@
 **Program:** Release Stabilization (Post M13)  
 **Branch:** `release/v1.0-preprod`  
 **Date:** June 2026  
-**Commit:** _(see git log after stabilization commit)_
+**Commit:** `28e7ec0`
 
 ---
 

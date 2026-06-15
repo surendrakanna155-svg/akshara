@@ -2,7 +2,7 @@
 
 **Branch:** `release/v1.0-preprod`  
 **Date:** June 2026  
-**Baseline commit:** `8e30075` (pre-stabilization)  
+**Stabilization commit:** `28e7ec0`  
 **Program:** Akshara Release Stabilization (Post M13)
 
 ---
@@ -25,7 +25,7 @@
 | Gate | Result |
 |------|--------|
 | `flutter analyze` | 0 issues |
-| `flutter test` | 1645 passing (~1 skipped) |
+| `flutter test` | **1646** passing (~1 skipped) |
 | Patrol workflow files | 79 |
 | Patrol full suite targets | 78 (+ 1 smoke in fast mode) |
 | Protected routes | 120+ |
