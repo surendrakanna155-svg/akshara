@@ -44,11 +44,21 @@ import 'interfaces/school_completion_repository.dart';
 import 'interfaces/multi_school_operations_repository.dart';
 import 'interfaces/organization_builder_repository.dart';
 import 'interfaces/platform_operations_repository.dart';
+import 'interfaces/healthcare_repository.dart';
+import 'interfaces/salon_repository.dart';
+import 'interfaces/restaurant_repository.dart';
+import 'interfaces/accommodation_repository.dart';
+import 'interfaces/white_label_platform_repository.dart';
 import 'mock/mock_evolution_repository.dart';
 import 'mock/mock_school_completion_repository.dart';
 import 'mock/mock_multi_school_operations_repository.dart';
 import 'mock/mock_organization_builder_repository.dart';
 import 'mock/mock_platform_operations_repository.dart';
+import 'mock/mock_healthcare_repository.dart';
+import 'mock/mock_salon_repository.dart';
+import 'mock/mock_restaurant_repository.dart';
+import 'mock/mock_accommodation_repository.dart';
+import 'mock/mock_white_label_platform_repository.dart';
 import 'interfaces/communication_repository.dart';
 import 'api/copilot/hybrid_copilot_repository.dart';
 import '../ai/ai_inference_providers.dart';
@@ -469,4 +479,49 @@ final platformOperationsRepositoryProvider =
   return MockPlatformOperationsRepository(
     pipeline: ref.watch(aiInferencePipelineProvider),
   );
+});
+
+final healthcareRepositoryProvider = Provider<HealthcareRepository>((ref) {
+  if (isModuleApiEnabled(ref, healthcareApiEnabledProvider)) {
+    return ref.read(apiHealthcareRepositoryProvider);
+  }
+  return MockHealthcareRepository(
+    pipeline: ref.watch(aiInferencePipelineProvider),
+  );
+});
+
+final salonRepositoryProvider = Provider<SalonRepository>((ref) {
+  if (isModuleApiEnabled(ref, salonApiEnabledProvider)) {
+    return ref.read(apiSalonRepositoryProvider);
+  }
+  return MockSalonRepository(
+    pipeline: ref.watch(aiInferencePipelineProvider),
+  );
+});
+
+final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) {
+  if (isModuleApiEnabled(ref, restaurantApiEnabledProvider)) {
+    return ref.read(apiRestaurantRepositoryProvider);
+  }
+  return MockRestaurantRepository(
+    pipeline: ref.watch(aiInferencePipelineProvider),
+  );
+});
+
+final accommodationRepositoryProvider =
+    Provider<AccommodationRepository>((ref) {
+  if (isModuleApiEnabled(ref, accommodationApiEnabledProvider)) {
+    return ref.read(apiAccommodationRepositoryProvider);
+  }
+  return MockAccommodationRepository(
+    pipeline: ref.watch(aiInferencePipelineProvider),
+  );
+});
+
+final whiteLabelPlatformRepositoryProvider =
+    Provider<WhiteLabelPlatformRepository>((ref) {
+  if (isModuleApiEnabled(ref, whiteLabelPlatformApiEnabledProvider)) {
+    return ref.read(apiWhiteLabelPlatformRepositoryProvider);
+  }
+  return MockWhiteLabelPlatformRepository();
 });

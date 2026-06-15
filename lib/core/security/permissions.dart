@@ -180,6 +180,30 @@ enum Permission {
   // FV-PLAT-06/08/09/12 — Platform Operations
   viewPlatformOperations,
   managePlatformOperations,
+
+  // FV-32 — Multi-Industry Framework
+  viewIndustryFramework,
+  manageIndustryFramework,
+
+  // FV-33 — Healthcare Pack
+  viewHealthcare,
+  manageHealthcare,
+
+  // FV-34 — Salon Pack
+  viewSalonBusiness,
+  manageSalonBusiness,
+
+  // FV-35 — Restaurant Pack
+  viewRestaurantHospitality,
+  manageRestaurantHospitality,
+
+  // FV-36 — Accommodation Pack
+  viewAccommodation,
+  manageAccommodation,
+
+  // FV-PLAT-11 — White Label Platform
+  viewWhiteLabelPlatform,
+  manageWhiteLabelPlatform,
 }
 
 /// Immutable set of [Permission] values for a session.

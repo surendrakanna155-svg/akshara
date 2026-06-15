@@ -132,6 +132,51 @@ abstract final class RouteNames {
       '/platform-operations/tenant-isolation';
   static const String platformOperationsReadiness =
       '/platform-operations/readiness';
+
+  // FV-32 — Multi-Industry Framework
+  static const String industry = '/industry';
+  static const String industryFramework = '/industry/framework';
+
+  // FV-33 — Healthcare
+  static const String healthcare = '/healthcare';
+  static const String healthcareDashboard = '/healthcare';
+  static const String healthcarePatients = '/healthcare/patients';
+  static const String healthcareAppointments = '/healthcare/appointments';
+  static const String healthcarePractitioners = '/healthcare/practitioners';
+  static const String healthcareIntelligence = '/healthcare/intelligence';
+
+  // FV-34 — Salon
+  static const String salon = '/salon';
+  static const String salonDashboard = '/salon';
+  static const String salonCustomers = '/salon/customers';
+  static const String salonAppointments = '/salon/appointments';
+  static const String salonServices = '/salon/services';
+  static const String salonIntelligence = '/salon/intelligence';
+
+  // FV-35 — Restaurant
+  static const String restaurant = '/restaurant';
+  static const String restaurantDashboard = '/restaurant';
+  static const String restaurantTables = '/restaurant/tables';
+  static const String restaurantOrders = '/restaurant/orders';
+  static const String restaurantKitchen = '/restaurant/kitchen';
+  static const String restaurantIntelligence = '/restaurant/intelligence';
+
+  // FV-36 — Accommodation
+  static const String accommodation = '/accommodation';
+  static const String accommodationDashboard = '/accommodation';
+  static const String accommodationResidents = '/accommodation/residents';
+  static const String accommodationOccupancy = '/accommodation/occupancy';
+  static const String accommodationAllocations = '/accommodation/allocations';
+  static const String accommodationIntelligence = '/accommodation/intelligence';
+
+  // FV-PLAT-11 — White Label Platform
+  static const String whiteLabel = '/white-label';
+  static const String whiteLabelHub = '/white-label';
+  static const String whiteLabelBranding = '/white-label/branding';
+  static const String whiteLabelTheme = '/white-label/theme';
+  static const String whiteLabelLogo = '/white-label/logo';
+  static const String whiteLabelDeployment = '/white-label/deployment';
+
   static const String admissions = '/admissions';
   static const String admissionsDashboard = '/admissions/dashboard';
   static const String admissionsLeads = '/admissions/leads';
@@ -496,6 +541,33 @@ abstract final class RouteNames {
     platformOperationsSecurity,
     platformOperationsTenantIsolation,
     platformOperationsReadiness,
+    industry,
+    industryFramework,
+    healthcare,
+    healthcarePatients,
+    healthcareAppointments,
+    healthcarePractitioners,
+    healthcareIntelligence,
+    salon,
+    salonCustomers,
+    salonAppointments,
+    salonServices,
+    salonIntelligence,
+    restaurant,
+    restaurantTables,
+    restaurantOrders,
+    restaurantKitchen,
+    restaurantIntelligence,
+    accommodation,
+    accommodationResidents,
+    accommodationOccupancy,
+    accommodationAllocations,
+    accommodationIntelligence,
+    whiteLabel,
+    whiteLabelBranding,
+    whiteLabelTheme,
+    whiteLabelLogo,
+    whiteLabelDeployment,
     dynamicWidgets,
     dynamicWidgetLayout,
     dynamicWidgetRuntime,

@@ -83,6 +83,12 @@ import 'parent_meetings_navigation.dart';
 import 'multi_school_navigation.dart';
 import 'organization_builder_navigation.dart';
 import 'platform_operations_navigation.dart';
+import 'industry_navigation.dart';
+import 'healthcare_navigation.dart';
+import 'salon_navigation.dart';
+import 'restaurant_navigation.dart';
+import 'accommodation_navigation.dart';
+import 'white_label_navigation.dart';
 import 'dynamic_widget_navigation.dart';
 import 'route_names.dart';
 import 'student_navigation.dart';
@@ -798,6 +804,195 @@ GoRouter createAppRouter({
             name: 'platformOperationsReadiness',
             pageBuilder: (context, state) => NoTransitionPage(
               child: platformOperationsHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.industry,
+            name: 'industry',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: industryHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.industryFramework,
+            name: 'industryFramework',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: industryFrameworkRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.healthcare,
+            name: 'healthcare',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: healthcareDashboardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.healthcarePatients,
+            name: 'healthcarePatients',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: healthcarePatientRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.healthcareAppointments,
+            name: 'healthcareAppointments',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: healthcareAppointmentRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.healthcarePractitioners,
+            name: 'healthcarePractitioners',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: healthcarePractitionerRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.healthcareIntelligence,
+            name: 'healthcareIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: healthcareIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.salon,
+            name: 'salon',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: salonDashboardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.salonCustomers,
+            name: 'salonCustomers',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: salonSalonCustomerRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.salonAppointments,
+            name: 'salonAppointments',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: salonSalonAppointmentRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.salonServices,
+            name: 'salonServices',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: salonSalonServiceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.salonIntelligence,
+            name: 'salonIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: salonIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.restaurant,
+            name: 'restaurant',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: restaurantDashboardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.restaurantTables,
+            name: 'restaurantTables',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: restaurantRestaurantTableRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.restaurantOrders,
+            name: 'restaurantOrders',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: restaurantRestaurantOrderRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.restaurantKitchen,
+            name: 'restaurantKitchen',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: restaurantKitchenTicketRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.restaurantIntelligence,
+            name: 'restaurantIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: restaurantIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.accommodation,
+            name: 'accommodation',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: accommodationDashboardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.accommodationResidents,
+            name: 'accommodationResidents',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: accommodationResidentRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.accommodationOccupancy,
+            name: 'accommodationOccupancy',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: accommodationRoomOccupancyRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.accommodationAllocations,
+            name: 'accommodationAllocations',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: accommodationAccommodationAllocationRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.accommodationIntelligence,
+            name: 'accommodationIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: accommodationIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.whiteLabel,
+            name: 'whiteLabel',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: whiteLabelHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.whiteLabelBranding,
+            name: 'whiteLabelBranding',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: whiteLabelBrandingRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.whiteLabelTheme,
+            name: 'whiteLabelTheme',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: whiteLabelThemeRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.whiteLabelLogo,
+            name: 'whiteLabelLogo',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: whiteLabelLogoRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.whiteLabelDeployment,
+            name: 'whiteLabelDeployment',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: whiteLabelDeploymentRouteBuilder(context, state),
             ),
           ),
           GoRoute(

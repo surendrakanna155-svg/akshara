@@ -246,13 +246,22 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 
 | ID | Feature | Status |
 |----|---------|--------|
-| FV-32 | Multi-Industry Vertical Framework | 📐 Design |
-| FV-PLAT-11 | White Label Platform Expansion | 🔄 |
-| FV-20 | School Branding System | ⏳ |
-| FV-33 | Salon ERP (Velora) | ⏳ |
-| FV-34 | Hospital ERP | ⏳ |
-| FV-35 | Restaurant ERP | ⏳ |
-| FV-36 | Hostel ERP (full write path) | 🔄 |
+| FV-32 | Multi-Industry Vertical Framework | ✅ |
+| FV-PLAT-11 | White Label Platform Expansion | ✅ |
+| FV-20 | School Branding System | 🔄 Partial |
+| FV-33 | Healthcare / Salon (registry: Salon) | ✅ MVP |
+| FV-34 | Salon / Hospital (registry: Hospital) | ✅ MVP |
+| FV-35 | Restaurant ERP | ✅ MVP |
+| FV-36 | Hostel / Accommodation Pack | ✅ MVP |
+
+### Post-M13 — Final Audits
+
+| Audit | Status | Doc |
+|-------|--------|-----|
+| Final Platform Audit | ✅ | `FINAL_PLATFORM_AUDIT.md` |
+| Final UX Audit | ✅ | `FINAL_UX_AUDIT.md` |
+| Final Workflow Audit | ✅ | `FINAL_WORKFLOW_AUDIT.md` |
+| Final Production Audit | ✅ | `FINAL_PRODUCTION_AUDIT.md` |
 
 ---
 
@@ -309,10 +318,10 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 
 | Capability | Milestone | Status |
 |------------|-----------|--------|
-| Multi-Industry Vertical Framework (FV-32) | M13 | 📐 Design |
-| White Label Platform Expansion (FV-PLAT-11) | M13 | 🔄 |
-| School Branding System (FV-20) | M13 | ⏳ |
-| Salon / Hospital / Restaurant / Hostel packs (FV-33–36) | M13 | ⏳ / 🔄 |
+| Multi-Industry Vertical Framework (FV-32) | M13 | ✅ |
+| White Label Platform Expansion (FV-PLAT-11) | M13 | ✅ |
+| School Branding System (FV-20) | M13 | 🔄 Partial |
+| Salon / Hospital / Restaurant / Hostel packs (FV-33–36) | M13 | ✅ MVP |
 
 ---
 
@@ -321,7 +330,7 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 | Item | Reason | Milestone |
 |------|--------|-----------|
 | ERP Exam Admin scope | Product decision | M7 (P3-02) |
-| First non-education vertical pilot | Depends M10 + M13 | M13 |
+| First non-education vertical pilot | Ready for staging pilot | M13 ✅ |
 
 ---
 

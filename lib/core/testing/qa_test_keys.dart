@@ -1056,6 +1056,140 @@ abstract final class QaTestKeys {
   ) =>
       ValueKey<String>('platform_operations_readiness_category_$categoryId');
 
+  // FV-32 — Industry Framework
+  static const industryHubScreen = ValueKey<String>('industry_hub_screen');
+  static const industryFrameworkLink = ValueKey<String>('industry_framework_link');
+  static const industryActiveLabel = ValueKey<String>('industry_active_label');
+  static ValueKey<String> industryTypeChip(String value) =>
+      ValueKey<String>('industry_type_chip_$value');
+  static ValueKey<String> industryModuleToggle(String moduleId) =>
+      ValueKey<String>('industry_module_toggle_$moduleId');
+  static ValueKey<String> industryCapabilityTile(String industry) =>
+      ValueKey<String>('industry_capability_$industry');
+
+  // FV-33 — Healthcare
+  static const healthcareDashboardScreen =
+      ValueKey<String>('healthcare_dashboard_screen');
+  static const healthcareDashboardSummary =
+      ValueKey<String>('healthcare_dashboard_summary');
+  static ValueKey<String> healthcareKpiTile(String id) =>
+      ValueKey<String>('healthcare_kpi_$id');
+  static ValueKey<String> healthcareNavLink(String route) =>
+      ValueKey<String>('healthcare_nav_$route');
+  static const healthcarePatientScreen =
+      ValueKey<String>('healthcare_patient_screen');
+  static ValueKey<String> healthcarePatientTile(String id) =>
+      ValueKey<String>('healthcare_patient_$id');
+  static const healthcareAppointmentScreen =
+      ValueKey<String>('healthcare_appointment_screen');
+  static ValueKey<String> healthcareAppointmentTile(String id) =>
+      ValueKey<String>('healthcare_appointment_$id');
+  static const healthcarePractitionerScreen =
+      ValueKey<String>('healthcare_practitioner_screen');
+  static ValueKey<String> healthcarePractitionerTile(String id) =>
+      ValueKey<String>('healthcare_practitioner_$id');
+  static const healthcareIntelligenceScreen =
+      ValueKey<String>('healthcare_intelligence_screen');
+
+  // FV-34 — Salon
+  static const salonDashboardScreen = ValueKey<String>('salon_dashboard_screen');
+  static const salonDashboardSummary = ValueKey<String>('salon_dashboard_summary');
+  static ValueKey<String> salonKpiTile(String id) =>
+      ValueKey<String>('salon_kpi_$id');
+  static ValueKey<String> salonNavLink(String route) =>
+      ValueKey<String>('salon_nav_$route');
+  static const salonSalonCustomerScreen =
+      ValueKey<String>('salon_customer_screen');
+  static ValueKey<String> salonSalonCustomerTile(String id) =>
+      ValueKey<String>('salon_customer_$id');
+  static const salonSalonAppointmentScreen =
+      ValueKey<String>('salon_appointment_screen');
+  static ValueKey<String> salonSalonAppointmentTile(String id) =>
+      ValueKey<String>('salon_appointment_$id');
+  static const salonSalonServiceScreen =
+      ValueKey<String>('salon_service_screen');
+  static ValueKey<String> salonSalonServiceTile(String id) =>
+      ValueKey<String>('salon_service_$id');
+  static const salonIntelligenceScreen =
+      ValueKey<String>('salon_intelligence_screen');
+
+  // FV-35 — Restaurant
+  static const restaurantDashboardScreen =
+      ValueKey<String>('restaurant_dashboard_screen');
+  static const restaurantDashboardSummary =
+      ValueKey<String>('restaurant_dashboard_summary');
+  static ValueKey<String> restaurantKpiTile(String id) =>
+      ValueKey<String>('restaurant_kpi_$id');
+  static ValueKey<String> restaurantNavLink(String route) =>
+      ValueKey<String>('restaurant_nav_$route');
+  static const restaurantRestaurantTableScreen =
+      ValueKey<String>('restaurant_table_screen');
+  static ValueKey<String> restaurantRestaurantTableTile(String id) =>
+      ValueKey<String>('restaurant_table_$id');
+  static const restaurantRestaurantOrderScreen =
+      ValueKey<String>('restaurant_order_screen');
+  static ValueKey<String> restaurantRestaurantOrderTile(String id) =>
+      ValueKey<String>('restaurant_order_$id');
+  static const restaurantKitchenTicketScreen =
+      ValueKey<String>('restaurant_kitchen_screen');
+  static ValueKey<String> restaurantKitchenTicketTile(String id) =>
+      ValueKey<String>('restaurant_kitchen_$id');
+  static const restaurantIntelligenceScreen =
+      ValueKey<String>('restaurant_intelligence_screen');
+
+  // FV-36 — Accommodation
+  static const accommodationDashboardScreen =
+      ValueKey<String>('accommodation_dashboard_screen');
+  static const accommodationDashboardSummary =
+      ValueKey<String>('accommodation_dashboard_summary');
+  static ValueKey<String> accommodationKpiTile(String id) =>
+      ValueKey<String>('accommodation_kpi_$id');
+  static ValueKey<String> accommodationNavLink(String route) =>
+      ValueKey<String>('accommodation_nav_$route');
+  static const accommodationResidentScreen =
+      ValueKey<String>('accommodation_resident_screen');
+  static ValueKey<String> accommodationResidentTile(String id) =>
+      ValueKey<String>('accommodation_resident_$id');
+  static const accommodationRoomOccupancyScreen =
+      ValueKey<String>('accommodation_occupancy_screen');
+  static ValueKey<String> accommodationRoomOccupancyTile(String id) =>
+      ValueKey<String>('accommodation_occupancy_$id');
+  static const accommodationAccommodationAllocationScreen =
+      ValueKey<String>('accommodation_allocation_screen');
+  static ValueKey<String> accommodationAccommodationAllocationTile(String id) =>
+      ValueKey<String>('accommodation_allocation_$id');
+  static const accommodationIntelligenceScreen =
+      ValueKey<String>('accommodation_intelligence_screen');
+
+  // FV-PLAT-11 — White Label
+  static const whiteLabelHubScreen = ValueKey<String>('white_label_hub_screen');
+  static const whiteLabelActiveConfig = ValueKey<String>('white_label_active_config');
+  static const whiteLabelBrandingLink = ValueKey<String>('white_label_branding_link');
+  static const whiteLabelThemeLink = ValueKey<String>('white_label_theme_link');
+  static const whiteLabelLogoLink = ValueKey<String>('white_label_logo_link');
+  static const whiteLabelDeploymentLink =
+      ValueKey<String>('white_label_deployment_link');
+  static const whiteLabelBrandingScreen =
+      ValueKey<String>('white_label_branding_screen');
+  static ValueKey<String> whiteLabelBrandingTile(String id) =>
+      ValueKey<String>('white_label_branding_$id');
+  static const whiteLabelSaveBrandingButton =
+      ValueKey<String>('white_label_save_branding_button');
+  static const whiteLabelThemeScreen = ValueKey<String>('white_label_theme_screen');
+  static ValueKey<String> whiteLabelThemeTile(String id) =>
+      ValueKey<String>('white_label_theme_$id');
+  static ValueKey<String> whiteLabelApplyThemeButton(String id) =>
+      ValueKey<String>('white_label_apply_theme_$id');
+  static const whiteLabelLogoScreen = ValueKey<String>('white_label_logo_screen');
+  static ValueKey<String> whiteLabelLogoTile(String id) =>
+      ValueKey<String>('white_label_logo_$id');
+  static const whiteLabelUploadLogoButton =
+      ValueKey<String>('white_label_upload_logo_button');
+  static const whiteLabelDeploymentScreen =
+      ValueKey<String>('white_label_deployment_screen');
+  static ValueKey<String> whiteLabelDeploymentTile(String id) =>
+      ValueKey<String>('white_label_deployment_$id');
+
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
 

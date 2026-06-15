@@ -98,6 +98,36 @@ enum CopilotPersonaRole {
   }
 }
 
+/// Industry-specific copilot intelligence focus by vertical pack key.
+List<String> copilotIndustryIntelligenceFocus(String industryKey) =>
+    switch (industryKey) {
+      'hospital' || 'healthcare_clinical' => [
+          'patient flow',
+          'appointment utilization',
+          'practitioner workload',
+          'clinical compliance',
+        ],
+      'salon' || 'salon_business' => [
+          'appointment fill rate',
+          'service mix',
+          'customer retention',
+          'stylist utilization',
+        ],
+      'restaurant' || 'restaurant_hospitality' => [
+          'table turnover',
+          'kitchen ticket backlog',
+          'order accuracy',
+          'peak hour staffing',
+        ],
+      'hostel' || 'accommodation_residency' => [
+          'room occupancy',
+          'resident lifecycle',
+          'allocation efficiency',
+          'maintenance backlog',
+        ],
+      _ => const [],
+    };
+
 CopilotPersonaRole copilotPersonaForErpRole(ErpRole role) => switch (role) {
       ErpRole.superAdmin => CopilotPersonaRole.platformOwner,
       ErpRole.schoolAdmin => CopilotPersonaRole.organizationOwner,
@@ -170,6 +200,12 @@ String copilotModuleForRoute(String route) {
   if (route.startsWith('/student')) return 'student';
   if (route.startsWith(RouteNames.copilot)) return 'copilot';
   if (route.startsWith('/admin')) return 'admin';
+  if (route.startsWith(RouteNames.industry)) return 'industry';
+  if (route.startsWith(RouteNames.healthcare)) return 'healthcare';
+  if (route.startsWith(RouteNames.salon)) return 'salon';
+  if (route.startsWith(RouteNames.restaurant)) return 'restaurant';
+  if (route.startsWith(RouteNames.accommodation)) return 'accommodation';
+  if (route.startsWith(RouteNames.whiteLabel)) return 'white_label';
   return 'general';
 }
 
@@ -197,6 +233,13 @@ String copilotScreenLabelForRoute(String route) {
     return 'Director Strategic Reports';
   }
   if (route == RouteNames.copilot) return 'AI Copilot';
+  if (route == RouteNames.industry) return 'Industry Hub';
+  if (route == RouteNames.industryFramework) return 'Industry Framework';
+  if (route == RouteNames.healthcare) return 'Healthcare Dashboard';
+  if (route == RouteNames.salon) return 'Salon Dashboard';
+  if (route == RouteNames.restaurant) return 'Restaurant Dashboard';
+  if (route == RouteNames.accommodation) return 'Accommodation Dashboard';
+  if (route == RouteNames.whiteLabel) return 'White Label Platform';
   final segment = route.split('/').where((s) => s.isNotEmpty).lastOrNull;
   if (segment == null || segment.isEmpty) return 'Home';
   return segment

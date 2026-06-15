@@ -97,8 +97,20 @@ abstract final class ServerRbacRouteInventory {
     'manageDynamicWidgets',
     'viewPlatformOperations',
     'managePlatformOperations',
+    'viewIndustryFramework',
+    'manageIndustryFramework',
+    'viewHealthcare',
+    'manageHealthcare',
+    'viewSalonBusiness',
+    'manageSalonBusiness',
+    'viewRestaurantHospitality',
+    'manageRestaurantHospitality',
+    'viewAccommodation',
+    'manageAccommodation',
+    'viewWhiteLabelPlatform',
+    'manageWhiteLabelPlatform',
   ];
 
   /// Mirrors server RBAC inventory entry count (v13.4).
-  static const protectedRouteCount = 92;
+  static const protectedRouteCount = 120;
 }

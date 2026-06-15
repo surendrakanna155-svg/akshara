@@ -94,11 +94,11 @@
 | FV-29 | Universal AI Assistant | P3 | Planned | 20 | M8 | Partial | No | Platform / AI |
 | FV-30 | Universal Organization Builder | P3 | Design | 10 | M10 | No | No | Platform |
 | FV-31 | Dynamic Widget Platform | P3 | Design | 15 | M11 | No | No | Platform / Management |
-| FV-32 | Multi-Industry Vertical Framework | P4 | Design | 5 | M13 | No | No | Platform |
-| FV-33 | Salon ERP Foundation | P4 | Planned | 0 | M13 | No | No | Platform |
-| FV-34 | Hospital ERP Foundation | P4 | Planned | 0 | M13 | No | No | Platform |
-| FV-35 | Restaurant ERP Foundation | P4 | Planned | 0 | M13 | No | No | Platform |
-| FV-36 | Hostel ERP Foundation (full) | P4 | Partial | 30 | M13 | Yes | No | Hostel |
+| FV-32 | Multi-Industry Vertical Framework | P4 | Shipped | 85 | M13 | Yes | No | Platform |
+| FV-33 | Salon ERP Foundation / Healthcare (mission) | P4 | Shipped MVP | 75 | M13 | Yes | No | Platform |
+| FV-34 | Hospital ERP Foundation / Salon (mission) | P4 | Shipped MVP | 75 | M13 | Yes | No | Platform |
+| FV-35 | Restaurant ERP Foundation | P4 | Shipped MVP | 75 | M13 | Yes | No | Platform |
+| FV-36 | Hostel ERP Foundation (full) | P4 | Shipped MVP | 80 | M13 | Yes | No | Hostel |
 | FV-A | AI School Setup Wizard | P3 | Design | 25 | M10 | Partial | No | Platform |
 | FV-P4-01 | Security & Penetration Testing | P4 | Design | 5 | M12 | No | No | Platform |
 | FV-P4-02 | Observability Platform | P4 | Shipped | 90 | M12 | Yes | No | Platform |
@@ -116,7 +116,7 @@
 | FV-PLAT-08 | Tenant Isolation Verification | P4 | Shipped | 90 | M12 | Yes | Partial | Platform |
 | FV-PLAT-09 | Monitoring & Alerting | P4 | Shipped | 85 | M12 | Yes | No | Platform |
 | FV-PLAT-10 | Live AI Inference | P3 | Planned | 15 | M8 | Partial | No | Intelligence / AI |
-| FV-PLAT-11 | White Label Platform Expansion | P4 | Partial | 20 | M13 | No | No | Control Center |
+| FV-PLAT-11 | White Label Platform Expansion | P4 | Shipped | 85 | M13 | Yes | No | Platform |
 | FV-PLAT-12 | Security Hardening | P4 | Shipped | 88 | M12 | Yes | Partial | Platform |
 | FV-PLAT-13 | RLS Enforcement | P4 | Partial | 65 | M12 | Yes | Partial | Platform |
 
@@ -396,8 +396,8 @@
 | Universal AI Assistant | VISION #29 | **E** | Not implemented | M8 · FV-PLAT-10 dependency |
 | Universal Organization Builder | VISION #30 | **E** | Design only | M10 · `design/Universal-Organization-Builder-v2.md` |
 | Dynamic Widget Platform | VISION #31 | **E** | Schema seed only | M11 · Ops Hub widgets |
-| Multi-Industry Foundation | VISION #32 | **E** | Not implemented | M13 |
-| Salon / Hospital / Restaurant / Hostel packs | VISION #33–36 | **E** | Not implemented | M13 |
+| Multi-Industry Foundation | VISION #32 | **A** | Shipped | M13 · Industry hub |
+| Salon / Hospital / Restaurant / Hostel packs | VISION #33–36 | **B** | MVP shipped | M13 · verticals/ |
 | AI School Setup Wizard | VISION Section A | **E** | Design v10.6 | M10 · Onboarding partial |
 | Inventory Replacement Workflow | VISION #12 | **E** | Not implemented | M7 · Inventory |
 | Security & Pen Testing | VISION FV-P4-01 | **E** | Program not started | M12 |

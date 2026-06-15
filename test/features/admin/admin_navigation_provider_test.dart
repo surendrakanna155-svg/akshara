@@ -20,7 +20,7 @@ void main() {
       addTearDown(container.dispose);
 
       final destinations = container.read(adminNavDestinationsProvider);
-      expect(destinations, hasLength(16));
+      expect(destinations, hasLength(22));
       expect(
         destinations.map((d) => d.route).toList(),
         [
@@ -39,6 +39,12 @@ void main() {
           RouteNames.directorDashboard,
           RouteNames.organizationBuilder,
           RouteNames.platformOperations,
+          RouteNames.industry,
+          RouteNames.healthcare,
+          RouteNames.salon,
+          RouteNames.restaurant,
+          RouteNames.accommodation,
+          RouteNames.whiteLabel,
           RouteNames.dynamicWidgets,
         ],
       );

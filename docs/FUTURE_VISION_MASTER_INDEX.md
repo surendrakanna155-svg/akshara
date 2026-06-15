@@ -91,12 +91,12 @@
 
 | ID | Feature | Milestone | Status | Completion % | Test | Prod | Depends on | Blocks |
 |----|---------|-----------|--------|:------------:|:----:|:----:|------------|--------|
-| FV-32 | Multi-Industry Vertical Framework | M13 | 📐 Design | 5 | No | No | FV-30, FV-31 | FV-33–36 |
-| FV-33 | Salon ERP Foundation (Velora) | M13 | ⏳ Planned | 0 | No | No | FV-32 | New vertical |
-| FV-34 | Hospital ERP Foundation | M13 | ⏳ Planned | 0 | No | No | FV-32 | New vertical |
-| FV-35 | Restaurant ERP Foundation | M13 | ⏳ Planned | 0 | No | No | FV-32 | New vertical |
-| FV-36 | Hostel ERP Foundation (full) | M13 | 🔄 Partial | 30 | Yes | No | Hostel read v6.2 | Residential ops |
-| FV-PLAT-11 | White Label Platform Expansion | M13 | 🔄 Partial | 20 | No | No | ACC-08 placeholder | FV-20 |
+| FV-32 | Multi-Industry Vertical Framework | M13 | ✅ Shipped | 85 | Yes | No | FV-30, FV-31 | FV-33–36 |
+| FV-33 | Salon ERP Foundation (Velora) / Healthcare (mission) | M13 | ✅ MVP | 75 | Yes | No | FV-32 | New vertical |
+| FV-34 | Hospital ERP Foundation / Salon (mission) | M13 | ✅ MVP | 75 | Yes | No | FV-32 | New vertical |
+| FV-35 | Restaurant ERP Foundation | M13 | ✅ MVP | 75 | Yes | No | FV-32 | New vertical |
+| FV-36 | Hostel ERP Foundation (full) | M13 | ✅ MVP | 80 | Yes | No | Hostel + accommodation pack | Residential ops |
+| FV-PLAT-11 | White Label Platform Expansion | M13 | ✅ Shipped | 85 | Yes | No | ACC-08 + white_label module | FV-20 |
 | FV-P4-01 | Security & Penetration Testing | M12 | 📐 Design | 5 | No | No | v1.0 GA | Production launch |
 | FV-P4-02 | Observability Platform | M12 | ✅ Shipped | 90 | Yes | No | Production traffic | SLOs, tracing |
 | FV-PLAT-09 | Monitoring & Alerting | M12 | ✅ Shipped | 85 | Yes | No | FV-P4-02 | Incident response |

@@ -121,6 +121,36 @@ class RbacModuleRegistry {
       view: Permission.viewPlatformOperations,
       manage: Permission.managePlatformOperations,
     ),
+    ModulePermissionSet(
+      moduleId: 'industry_framework',
+      view: Permission.viewIndustryFramework,
+      manage: Permission.manageIndustryFramework,
+    ),
+    ModulePermissionSet(
+      moduleId: 'healthcare',
+      view: Permission.viewHealthcare,
+      manage: Permission.manageHealthcare,
+    ),
+    ModulePermissionSet(
+      moduleId: 'salon',
+      view: Permission.viewSalonBusiness,
+      manage: Permission.manageSalonBusiness,
+    ),
+    ModulePermissionSet(
+      moduleId: 'restaurant',
+      view: Permission.viewRestaurantHospitality,
+      manage: Permission.manageRestaurantHospitality,
+    ),
+    ModulePermissionSet(
+      moduleId: 'accommodation',
+      view: Permission.viewAccommodation,
+      manage: Permission.manageAccommodation,
+    ),
+    ModulePermissionSet(
+      moduleId: 'white_label_platform',
+      view: Permission.viewWhiteLabelPlatform,
+      manage: Permission.manageWhiteLabelPlatform,
+    ),
   ];
 
   static ModulePermissionSet? forModule(String moduleId) {

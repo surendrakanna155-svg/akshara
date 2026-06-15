@@ -18,8 +18,14 @@ enum AdminModule {
   controlCenter,
   director,
   organizationBuilder,
-  dynamicWidgets,
   platformOperations,
+  industry,
+  healthcare,
+  salon,
+  restaurant,
+  accommodation,
+  whiteLabel,
+  dynamicWidgets,
 }
 
 /// Single breadcrumb segment for [AdminAppBar].

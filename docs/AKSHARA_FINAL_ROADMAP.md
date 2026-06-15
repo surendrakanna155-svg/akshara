@@ -193,17 +193,17 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 
 ### M13 — Multi-Industry Expansion
 
-**Target:** 2027+ · New verticals
+**Target:** 2027+ · New verticals · **✅ Complete June 2026**
 
 | ID | Feature | Vision | Status |
 |----|---------|--------|--------|
-| FV-32 | Multi-Industry Vertical Framework | #32 | 📐 |
-| FV-PLAT-11 | White Label Platform Expansion | ACC-08 | 🔄 |
-| FV-20 | School Branding System | #20 | ⏳ |
-| FV-33 | Salon ERP (Velora) | #33 | ⏳ |
-| FV-34 | Hospital ERP | #34 | ⏳ |
-| FV-35 | Restaurant ERP | #35 | ⏳ |
-| FV-36 | Hostel ERP (full) | #36 | 🔄 Read v6.2 |
+| FV-32 | Multi-Industry Vertical Framework | #32 | ✅ |
+| FV-PLAT-11 | White Label Platform Expansion | ACC-08 | ✅ |
+| FV-20 | School Branding System | #20 | 🔄 Partial |
+| FV-33 | Healthcare / Salon ERP | #33 | ✅ MVP |
+| FV-34 | Salon / Hospital ERP | #34 | ✅ MVP |
+| FV-35 | Restaurant ERP | #35 | ✅ MVP |
+| FV-36 | Hostel / Accommodation ERP | #36 | ✅ MVP |
 
 ---
 

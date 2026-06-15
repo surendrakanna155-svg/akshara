@@ -260,6 +260,46 @@ final platformOperationsApiEnabledProvider = Provider<bool>((ref) {
   );
 });
 
+final healthcareApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'HEALTHCARE_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final salonApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'SALON_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final restaurantApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'RESTAURANT_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final accommodationApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'ACCOMMODATION_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+final whiteLabelPlatformApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'WHITE_LABEL_PLATFORM_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
 /// Returns true when the global API mode and module flag are both enabled.
 bool isModuleApiEnabled(Ref ref, Provider<bool> moduleFlagProvider) {
   if (!ref.watch(enableApiModeProvider)) return false;
@@ -306,5 +346,10 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(schoolCompletionApiEnabledProvider) ||
       ref.watch(multiSchoolOperationsApiEnabledProvider) ||
       ref.watch(organizationBuilderApiEnabledProvider) ||
-      ref.watch(platformOperationsApiEnabledProvider);
+      ref.watch(platformOperationsApiEnabledProvider) ||
+      ref.watch(healthcareApiEnabledProvider) ||
+      ref.watch(salonApiEnabledProvider) ||
+      ref.watch(restaurantApiEnabledProvider) ||
+      ref.watch(accommodationApiEnabledProvider) ||
+      ref.watch(whiteLabelPlatformApiEnabledProvider);
 });

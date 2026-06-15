@@ -212,22 +212,20 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 
 ## Next action
 
-**M13:** Multi-Industry Expansion (FV-32–36, FV-PLAT-11) — see `AKSHARA_FINAL_ROADMAP.md`.
+**Production deployment preparation** — address Final Production Audit blockers (RLS, pen test, TLS, deploy pipelines).
 
 ---
 
-## M12 completion (June 2026)
+## M13 completion (June 2026)
 
 | Metric | Value |
 |--------|-------|
-| ERP | ~99% |
-| Vision | ~95% |
-| Multi-school | ~90% |
-| Intelligence | ~95% |
-| Tests | 1582 passing |
-| Patrol | ~73 journeys |
-| Production readiness | 96/100 (app layer) |
-| Report | `docs/MILESTONE_12_COMPLETION_REPORT.md` |
+| ERP | ~99.5% |
+| Vision | ~98% |
+| Tests | 1645 passing |
+| Patrol | ~79 journeys |
+| Final audits | 4 gap reports in `docs/ArchitectureReview/FINAL_*` |
+| Report | `docs/MILESTONE_13_COMPLETION_REPORT.md` |
 
 ---
 

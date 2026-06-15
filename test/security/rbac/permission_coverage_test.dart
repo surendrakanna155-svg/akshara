@@ -166,6 +166,23 @@ void main() {
       }
     });
 
+    test('M13 industry and vertical mutations registered', () {
+      for (final spec in [
+        ('industry_framework', 'setActiveIndustry', Permission.manageIndustryFramework),
+        ('healthcare', 'bookAppointment', Permission.manageHealthcare),
+        ('salon', 'bookSalonAppointment', Permission.manageSalonBusiness),
+        ('restaurant', 'createRestaurantOrder', Permission.manageRestaurantHospitality),
+        ('accommodation', 'allocateRoom', Permission.manageAccommodation),
+        ('white_label_platform', 'saveBrandingProfile', Permission.manageWhiteLabelPlatform),
+      ]) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.moduleId == spec.$1 && e.mutationId == spec.$2,
+        );
+        expect(entry.permission, spec.$3);
+        expect(entry.kind, 'manage');
+      }
+    });
+
     test('dynamic widget mutations registered', () {
       for (final id in ['saveRoleDashboardLayout', 'resetLayoutToPackDefault']) {
         final entry = MutationPermissionRegistry.entries.firstWhere(

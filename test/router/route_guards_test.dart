@@ -37,6 +37,18 @@ void main() {
         erpRoutePermissionFor(RouteNames.platformOperations),
         Permission.viewPlatformOperations,
       );
+      expect(
+        erpRoutePermissionFor(RouteNames.industry),
+        Permission.viewIndustryFramework,
+      );
+      expect(
+        erpRoutePermissionFor(RouteNames.healthcare),
+        Permission.viewHealthcare,
+      );
+      expect(
+        erpRoutePermissionFor(RouteNames.whiteLabel),
+        Permission.viewWhiteLabelPlatform,
+      );
       expect(erpRoutePermissionFor(RouteNames.parentDashboard), isNull);
     });
   });

@@ -70,6 +70,16 @@ import 'organization_builder/api_organization_builder_repository.dart';
 import 'organization_builder/remote/organization_builder_remote_datasource.dart';
 import 'platform_operations/api_platform_operations_repository.dart';
 import 'platform_operations/remote/platform_operations_remote_datasource.dart';
+import 'healthcare/api_healthcare_repository.dart';
+import 'healthcare/remote/healthcare_remote_datasource.dart';
+import 'salon/api_salon_repository.dart';
+import 'salon/remote/salon_remote_datasource.dart';
+import 'restaurant/api_restaurant_repository.dart';
+import 'restaurant/remote/restaurant_remote_datasource.dart';
+import 'accommodation/api_accommodation_repository.dart';
+import 'accommodation/remote/accommodation_remote_datasource.dart';
+import 'white_label/api_white_label_platform_repository.dart';
+import 'white_label/remote/white_label_remote_datasource.dart';
 
 final admissionsRemoteDataSourceProvider = Provider<AdmissionsRemoteDataSource>(
   (ref) => AdmissionsRemoteDataSource(ref.watch(dioProvider)),
@@ -458,5 +468,61 @@ final apiPlatformOperationsRepositoryProvider =
     Provider<ApiPlatformOperationsRepository>(
   (ref) => ApiPlatformOperationsRepository(
     remote: ref.watch(platformOperationsRemoteDataSourceProvider),
+  ),
+);
+
+final healthcareRemoteDataSourceProvider =
+    Provider<HealthcareRemoteDataSource>(
+  (ref) => HealthcareRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiHealthcareRepositoryProvider = Provider<ApiHealthcareRepository>(
+  (ref) => ApiHealthcareRepository(
+    remote: ref.watch(healthcareRemoteDataSourceProvider),
+  ),
+);
+
+final salonRemoteDataSourceProvider = Provider<SalonRemoteDataSource>(
+  (ref) => SalonRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiSalonRepositoryProvider = Provider<ApiSalonRepository>(
+  (ref) => ApiSalonRepository(
+    remote: ref.watch(salonRemoteDataSourceProvider),
+  ),
+);
+
+final restaurantRemoteDataSourceProvider =
+    Provider<RestaurantRemoteDataSource>(
+  (ref) => RestaurantRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiRestaurantRepositoryProvider = Provider<ApiRestaurantRepository>(
+  (ref) => ApiRestaurantRepository(
+    remote: ref.watch(restaurantRemoteDataSourceProvider),
+  ),
+);
+
+final accommodationRemoteDataSourceProvider =
+    Provider<AccommodationRemoteDataSource>(
+  (ref) => AccommodationRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiAccommodationRepositoryProvider =
+    Provider<ApiAccommodationRepository>(
+  (ref) => ApiAccommodationRepository(
+    remote: ref.watch(accommodationRemoteDataSourceProvider),
+  ),
+);
+
+final whiteLabelRemoteDataSourceProvider =
+    Provider<WhiteLabelRemoteDataSource>(
+  (ref) => WhiteLabelRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiWhiteLabelPlatformRepositoryProvider =
+    Provider<ApiWhiteLabelPlatformRepository>(
+  (ref) => ApiWhiteLabelPlatformRepository(
+    remote: ref.watch(whiteLabelRemoteDataSourceProvider),
   ),
 );

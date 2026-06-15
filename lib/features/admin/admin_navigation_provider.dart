@@ -129,6 +129,54 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     requiredPermission: Permission.viewPlatformOperations,
   ),
   AdminNavDestination(
+    module: AdminModule.industry,
+    route: RouteNames.industry,
+    label: 'Industry',
+    icon: Icons.category_outlined,
+    selectedIcon: Icons.category,
+    requiredPermission: Permission.viewIndustryFramework,
+  ),
+  AdminNavDestination(
+    module: AdminModule.healthcare,
+    route: RouteNames.healthcare,
+    label: 'Healthcare',
+    icon: Icons.local_hospital_outlined,
+    selectedIcon: Icons.local_hospital,
+    requiredPermission: Permission.viewHealthcare,
+  ),
+  AdminNavDestination(
+    module: AdminModule.salon,
+    route: RouteNames.salon,
+    label: 'Salon',
+    icon: Icons.content_cut_outlined,
+    selectedIcon: Icons.content_cut,
+    requiredPermission: Permission.viewSalonBusiness,
+  ),
+  AdminNavDestination(
+    module: AdminModule.restaurant,
+    route: RouteNames.restaurant,
+    label: 'Restaurant',
+    icon: Icons.restaurant_outlined,
+    selectedIcon: Icons.restaurant,
+    requiredPermission: Permission.viewRestaurantHospitality,
+  ),
+  AdminNavDestination(
+    module: AdminModule.accommodation,
+    route: RouteNames.accommodation,
+    label: 'Accommodation',
+    icon: Icons.night_shelter_outlined,
+    selectedIcon: Icons.night_shelter,
+    requiredPermission: Permission.viewAccommodation,
+  ),
+  AdminNavDestination(
+    module: AdminModule.whiteLabel,
+    route: RouteNames.whiteLabel,
+    label: 'White Label',
+    icon: Icons.palette_outlined,
+    selectedIcon: Icons.palette,
+    requiredPermission: Permission.viewWhiteLabelPlatform,
+  ),
+  AdminNavDestination(
     module: AdminModule.dynamicWidgets,
     route: RouteNames.dynamicWidgets,
     label: 'Widgets',
@@ -253,6 +301,48 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
     description:
         'Observability, security hardening, tenant isolation, alerting, and production readiness (FV-PLAT-06/08/09/12).',
     route: RouteNames.platformOperations,
+  ),
+  AdminModule.industry: AdminModuleInfo(
+    module: AdminModule.industry,
+    title: 'Industry Framework',
+    description:
+        'Multi-industry capability registry, module activation, and vertical pack routing (FV-32).',
+    route: RouteNames.industry,
+  ),
+  AdminModule.healthcare: AdminModuleInfo(
+    module: AdminModule.healthcare,
+    title: 'Healthcare',
+    description:
+        'Patient registry, appointments, practitioners, and clinical intelligence (FV-33).',
+    route: RouteNames.healthcare,
+  ),
+  AdminModule.salon: AdminModuleInfo(
+    module: AdminModule.salon,
+    title: 'Salon Business',
+    description:
+        'Customer registry, appointment scheduling, services, and salon intelligence (FV-34).',
+    route: RouteNames.salon,
+  ),
+  AdminModule.restaurant: AdminModuleInfo(
+    module: AdminModule.restaurant,
+    title: 'Restaurant Hospitality',
+    description:
+        'Table management, orders, kitchen workflow, and hospitality intelligence (FV-35).',
+    route: RouteNames.restaurant,
+  ),
+  AdminModule.accommodation: AdminModuleInfo(
+    module: AdminModule.accommodation,
+    title: 'Accommodation',
+    description:
+        'Resident lifecycle, occupancy, room allocation, and accommodation intelligence (FV-36).',
+    route: RouteNames.accommodation,
+  ),
+  AdminModule.whiteLabel: AdminModuleInfo(
+    module: AdminModule.whiteLabel,
+    title: 'White Label Platform',
+    description:
+        'Branding profiles, themes, logos, and deployment profiles (FV-PLAT-11).',
+    route: RouteNames.whiteLabel,
   ),
   AdminModule.dynamicWidgets: AdminModuleInfo(
     module: AdminModule.dynamicWidgets,

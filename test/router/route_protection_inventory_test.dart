@@ -71,6 +71,36 @@ void main() {
       });
     }
 
+    for (final role in roles) {
+      test('$role industry framework access matches permission matrix', () {
+        final rbac = RbacService(UserPermissions.forRole(role));
+        final allowed = canAccessErpRoute(rbac, RouteNames.industry);
+        final expected = UserPermissions.forRole(role)
+            .has(Permission.viewIndustryFramework);
+        expect(allowed, expected);
+      });
+    }
+
+    for (final role in roles) {
+      test('$role healthcare access matches permission matrix', () {
+        final rbac = RbacService(UserPermissions.forRole(role));
+        final allowed = canAccessErpRoute(rbac, RouteNames.healthcare);
+        final expected =
+            UserPermissions.forRole(role).has(Permission.viewHealthcare);
+        expect(allowed, expected);
+      });
+    }
+
+    for (final role in roles) {
+      test('$role white label access matches permission matrix', () {
+        final rbac = RbacService(UserPermissions.forRole(role));
+        final allowed = canAccessErpRoute(rbac, RouteNames.whiteLabel);
+        final expected = UserPermissions.forRole(role)
+            .has(Permission.viewWhiteLabelPlatform);
+        expect(allowed, expected);
+      });
+    }
+
     test('all ERP prefixes map to a permission', () {
       for (final prefix in RouteNames.adminErpRoutes) {
         expect(erpRoutePermissionFor(prefix), isNotNull);
