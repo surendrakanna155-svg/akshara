@@ -134,6 +134,37 @@ void main() {
               ],
             },
           },
+        PlatformIntelligenceApiPaths.trustDashboard => {
+            'data': {
+              'trustName': 'Akshara Trust Network',
+              'kpis': [
+                {'id': 'trust_health', 'label': 'Trust Health', 'value': '87'},
+              ],
+              'trend': [
+                {'label': 'Jun', 'value': 87},
+              ],
+              'riskHighlights': [
+                {
+                  'title': 'Collections risk concentrated',
+                  'detail': 'Action required',
+                  'priority': 'high'
+                },
+              ],
+            },
+          },
+        PlatformIntelligenceApiPaths.executiveSummary => {
+            'data': {
+              'headline': 'Trust trajectory remains positive.',
+              'summary': 'Strong growth with targeted interventions.',
+              'priorityActions': [
+                {
+                  'title': 'Execute fee recovery sprint',
+                  'detail': '30-day execution window',
+                  'priority': 'high'
+                },
+              ],
+            },
+          },
         _ => const {'data': {}},
       };
     }
@@ -158,6 +189,18 @@ void main() {
       final revenue = await repository.getRevenueIntelligence(query: _query);
       final growth = await repository.getGrowthIntelligence(query: _query);
       final risk = await repository.getPortfolioRiskIntelligence(query: _query);
+      final trust = await repository.getTrustDashboard(
+        query: _query,
+        trustId: 'TRUST-001',
+      );
+      final summary = await repository.getExecutiveSummary(
+        query: _query,
+        trustId: 'TRUST-001',
+      );
+      final recommendations = await repository.getCrossSchoolRecommendations(
+        query: _query,
+        schoolIds: const ['SCH-1001'],
+      );
 
       expect(dashboard.ownerKpis, isNotEmpty);
       expect(organization.organizationName, contains('Akshara'));
@@ -165,6 +208,9 @@ void main() {
       expect(revenue.revenueTrend.first.label, 'Jun');
       expect(growth.pipeline.first.name, 'East Region Expansion');
       expect(risk.risks.first.riskScore, 36);
+      expect(trust.trustName, contains('Akshara'));
+      expect(summary.priorityActions, isNotEmpty);
+      expect(recommendations, isNotEmpty);
     });
 
     test('provider chain loads dashboard in api mode', () async {

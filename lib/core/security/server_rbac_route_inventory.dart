@@ -27,6 +27,9 @@ abstract final class ServerRbacRouteInventory {
     'memories',
     'promotion',
     'onboarding',
+    'organization_intelligence',
+    'branch',
+    'franchise',
   ];
 
   static const permissionSlugs = [
@@ -81,6 +84,11 @@ abstract final class ServerRbacRouteInventory {
     'viewInventoryIntelligence',
     'manageAssetLifecycle',
     'manageProcurementWorkflow',
+    'viewOrganizationIntelligence',
+    'viewBranchOperations',
+    'manageBranchOperations',
+    'viewFranchiseOperations',
+    'manageFranchiseOperations',
   ];
 
   /// Mirrors server RBAC inventory entry count (v13.4).

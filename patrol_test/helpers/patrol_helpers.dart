@@ -81,8 +81,7 @@ Future<void> tapNavAndWait(
 GoRouter _patrolGoRouter(PatrolIntegrationTester $) {
   final scope = find.byType(UncontrolledProviderScope);
   expect(scope, findsOneWidget);
-  final container =
-      $.tester.widget<UncontrolledProviderScope>(scope).container;
+  final container = $.tester.widget<UncontrolledProviderScope>(scope).container;
   return container.read(goRouterProvider);
 }
 
@@ -149,7 +148,8 @@ Future<void> navigateErpWorkflow(
   if (subNavLabel != null) {
     await _tapHorizontalSubNav($, moduleKey, subNavLabel);
   }
-  await assertVisibleText($, workflowAnchor, timeout: const Duration(seconds: 25));
+  await assertVisibleText($, workflowAnchor,
+      timeout: const Duration(seconds: 25));
 }
 
 /// Taps a horizontal module sub-nav tab — never drags the page body.
@@ -173,6 +173,7 @@ String _moduleNavSemantics(String moduleKey) => switch (moduleKey) {
       'hostel' => 'Hostel module navigation',
       'alumni' => 'Alumni module navigation',
       'controlCenter' => 'Control Center module navigation',
+      'director' => 'Director module navigation',
       _ => '$moduleKey module navigation',
     };
 
@@ -300,8 +301,10 @@ Future<void> tapEnrollmentContinue(PatrolIntegrationTester $) async {
 }
 
 /// Principal overview quick action — scrolls page body down, never the sub-nav.
-Future<void> tapPrincipalQuickAction(PatrolIntegrationTester $, String action) async {
-  await $('Principal overview').waitUntilVisible(timeout: const Duration(seconds: 20));
+Future<void> tapPrincipalQuickAction(
+    PatrolIntegrationTester $, String action) async {
+  await $('Principal overview')
+      .waitUntilVisible(timeout: const Duration(seconds: 20));
   final keyFinder = find.byKey(QaTestKeys.principalQuickAction(action));
   final overview = find.text('Principal overview');
   for (var i = 0; i < 5; i++) {

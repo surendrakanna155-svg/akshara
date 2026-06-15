@@ -144,6 +144,9 @@ CopilotAssistantType assistantForRoute(
   if (route.startsWith(RouteNames.controlCenter)) {
     return CopilotAssistantType.principal;
   }
+  if (route.startsWith(RouteNames.director)) {
+    return CopilotAssistantType.principal;
+  }
   if (route.startsWith('/management')) return CopilotAssistantType.principal;
   if (route.startsWith('/sis')) return CopilotAssistantType.sis;
   return defaultAssistantForPersona(persona);
@@ -157,6 +160,7 @@ String copilotModuleForRoute(String route) {
   if (route.startsWith('/intelligence')) return 'intelligence';
   if (route.startsWith('/inventory')) return 'inventory';
   if (route.startsWith('/control-center')) return 'control_center';
+  if (route.startsWith('/director')) return 'director';
   if (route.startsWith('/transport')) return 'transport';
   if (route.startsWith('/hostel')) return 'hostel';
   if (route.startsWith('/library')) return 'library';
@@ -185,6 +189,12 @@ String copilotScreenLabelForRoute(String route) {
   }
   if (route == RouteNames.controlCenterIntelligence) {
     return 'Platform Intelligence';
+  }
+  if (route == RouteNames.directorDashboard) {
+    return 'Director Executive Dashboard';
+  }
+  if (route == RouteNames.directorReports) {
+    return 'Director Strategic Reports';
   }
   if (route == RouteNames.copilot) return 'AI Copilot';
   final segment = route.split('/').where((s) => s.isNotEmpty).lastOrNull;

@@ -27,4 +27,19 @@ abstract class PlatformIntelligenceRepository {
   Future<PortfolioRiskIntelligence> getPortfolioRiskIntelligence({
     required RepositoryQuery query,
   });
+
+  Future<TrustDashboardIntelligence> getTrustDashboard({
+    required RepositoryQuery query,
+    required String trustId,
+  });
+
+  Future<List<CrossSchoolRecommendation>> getCrossSchoolRecommendations({
+    required RepositoryQuery query,
+    required List<String> schoolIds,
+  });
+
+  Future<ExecutiveSummaryIntelligence> getExecutiveSummary({
+    required RepositoryQuery query,
+    required String trustId,
+  });
 }

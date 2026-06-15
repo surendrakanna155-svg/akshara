@@ -16,6 +16,7 @@ enum AdminModule {
   inventory,
   alumni,
   controlCenter,
+  director,
 }
 
 /// Single breadcrumb segment for [AdminAppBar].

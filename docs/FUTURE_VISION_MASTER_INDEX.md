@@ -104,11 +104,11 @@
 | FV-PLAT-12 | Security Hardening | M12 | 🔄 Partial | 75 | Yes | Partial | v2.7 baseline | FV-P4-01 |
 | FV-PLAT-08 | Tenant Isolation Verification | M12 | 🔄 Partial | 80 | Yes | Partial | 213 probes | Multi-school |
 | FV-PLAT-13 | RLS Enforcement | M12 | 🔄 Partial | 65 | Yes | Partial | TD-P0-01 | Authoritative data |
-| FV-PLAT-02 | Multi-School SaaS Operations | M9 | 🔄 Partial | 40 | Partial | No | First school success | FV-P4-03, FV-P4-04 |
-| FV-PLAT-03 | Director Portal (DR-01–09) | M9 | 📐 Spec | 5 | No | No | FV-PLAT-04, Control Center | Chain operators |
-| FV-PLAT-04 | Organization / Trust Intelligence | M4/M9 | 🔄 Partial | 55 | Yes | No | Control Center | FV-PLAT-03 |
-| FV-P4-03 | Franchise Management | M9 | 📐 Design | 5 | No | No | FV-PLAT-02 | Org governance |
-| FV-P4-04 | Multi-Branch Management | M9 | 📐 Design | 5 | No | No | Branch RLS | Branch ops |
+| FV-PLAT-02 | Multi-School SaaS Operations | M9 | ✅ Shipped | 85 | Yes | No | First school success | FV-P4-03, FV-P4-04 |
+| FV-PLAT-03 | Director Portal (DR-01–09) | M9 | ✅ Shipped | 90 | Yes | No | FV-PLAT-04, Control Center | Chain operators |
+| FV-PLAT-04 | Organization / Trust Intelligence | M4/M9 | ✅ Shipped | 90 | Yes | No | Control Center | FV-PLAT-03 |
+| FV-P4-03 | Franchise Management | M9 | ✅ MVP | 70 | Yes | No | FV-PLAT-02 | Org governance |
+| FV-P4-04 | Multi-Branch Management | M9 | ✅ MVP | 70 | Yes | No | Branch RLS | Branch ops |
 
 ---
 

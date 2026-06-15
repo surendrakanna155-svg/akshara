@@ -104,6 +104,14 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     selectedIcon: Icons.hub,
     requiredPermission: Permission.viewControlCenter,
   ),
+  AdminNavDestination(
+    module: AdminModule.director,
+    route: RouteNames.directorDashboard,
+    label: 'Director',
+    icon: Icons.insights_outlined,
+    selectedIcon: Icons.insights,
+    requiredPermission: Permission.viewDirectorPortal,
+  ),
 ];
 
 /// Permission-filtered navigation destinations for the current session.
@@ -111,8 +119,7 @@ final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
   final rbac = ref.watch(rbacServiceProvider);
   return kAllAdminNavDestinations
       .where(
-        (destination) =>
-            rbac.hasPermission(destination.requiredPermission),
+        (destination) => rbac.hasPermission(destination.requiredPermission),
       )
       .toList(growable: false);
 });
@@ -201,6 +208,13 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
     description:
         'Platform operations — schools, subscriptions, billing, CRM, support, analytics, and white label (ACC-01 → ACC-12). Super Admin only.',
     route: RouteNames.controlCenterDashboard,
+  ),
+  AdminModule.director: AdminModuleInfo(
+    module: AdminModule.director,
+    title: 'Director Portal',
+    description:
+        'Multi-school executive oversight for revenue, growth, admissions, compliance, and strategic reporting (DR-01 → DR-09).',
+    route: RouteNames.directorDashboard,
   ),
 };
 

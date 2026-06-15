@@ -74,6 +74,28 @@ class PlatformIntelligenceRemoteDataSource {
     return PlatformIntelligenceResponseDto.fromJson(response.data ?? const {});
   }
 
+  Future<PlatformIntelligenceResponseDto> fetchTrustDashboard({
+    required RepositoryQuery query,
+    required String trustId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      PlatformIntelligenceApiPaths.trustDashboard,
+      queryParameters: {..._queryParams(query), 'trustId': trustId},
+    );
+    return PlatformIntelligenceResponseDto.fromJson(response.data ?? const {});
+  }
+
+  Future<PlatformIntelligenceResponseDto> fetchExecutiveSummary({
+    required RepositoryQuery query,
+    required String trustId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      PlatformIntelligenceApiPaths.executiveSummary,
+      queryParameters: {..._queryParams(query), 'trustId': trustId},
+    );
+    return PlatformIntelligenceResponseDto.fromJson(response.data ?? const {});
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,

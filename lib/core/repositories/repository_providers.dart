@@ -21,6 +21,7 @@ import 'interfaces/continuity_repository.dart';
 import 'interfaces/alumni_repository.dart';
 import 'interfaces/control_center_repository.dart';
 import 'interfaces/platform_intelligence_repository.dart';
+import 'interfaces/director_repository.dart';
 import 'interfaces/inventory_finance_repository.dart';
 import 'interfaces/inventory_repository.dart';
 import 'interfaces/onboarding_repository.dart';
@@ -40,8 +41,10 @@ import 'interfaces/evolution_repository.dart';
 import 'api/evolution/hybrid_evolution_repository.dart';
 import 'api/school_completion/hybrid_school_completion_repository.dart';
 import 'interfaces/school_completion_repository.dart';
+import 'interfaces/multi_school_operations_repository.dart';
 import 'mock/mock_evolution_repository.dart';
 import 'mock/mock_school_completion_repository.dart';
+import 'mock/mock_multi_school_operations_repository.dart';
 import 'interfaces/communication_repository.dart';
 import 'api/copilot/hybrid_copilot_repository.dart';
 import '../ai/ai_inference_providers.dart';
@@ -59,6 +62,7 @@ import 'interfaces/timetable_repository.dart';
 import 'interfaces/analytics_intelligence_repository.dart';
 import 'api/timetable/hybrid_timetable_repository.dart';
 import 'api/analytics/hybrid_analytics_intelligence_repository.dart';
+import 'api/director/api_director_repository.dart';
 import 'mock/mock_timetable_repository.dart';
 import 'mock/mock_analytics_intelligence_repository.dart';
 import 'mock/mock_communication_repository.dart';
@@ -80,6 +84,7 @@ import 'mock/mock_management_repository.dart';
 import 'mock/mock_sis_repository.dart';
 import 'mock/mock_control_center_repository.dart';
 import 'mock/mock_platform_intelligence_repository.dart';
+import 'mock/mock_director_repository.dart';
 import 'mock/mock_transport_repository.dart';
 import 'mock/mock_onboarding_repository.dart';
 import 'mock/mock_parent_repository.dart';
@@ -87,6 +92,8 @@ import 'mock/mock_parent_meetings_repository.dart';
 import 'mock/mock_teacher_repository.dart';
 import 'mock/mock_student_repository.dart';
 import '../../features/parent_meetings/parent_meetings_repository.dart';
+import '../../features/branch/branch_repository.dart';
+import '../../features/franchise/franchise_repository.dart';
 import 'repository_config.dart';
 
 final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
@@ -260,7 +267,25 @@ final platformIntelligenceRepositoryProvider =
   if (isModuleApiEnabled(ref, platformIntelligenceApiEnabledProvider)) {
     return ref.read(apiPlatformIntelligenceRepositoryProvider);
   }
-  return MockPlatformIntelligenceRepository();
+  return MockPlatformIntelligenceRepository(
+    pipeline: ref.watch(aiInferencePipelineProvider),
+  );
+});
+
+final branchRepositoryProvider = Provider<BranchRepository>((ref) {
+  return MockBranchRepository();
+});
+
+final franchiseRepositoryProvider = Provider<FranchiseRepository>((ref) {
+  return MockFranchiseRepository();
+});
+
+final directorRepositoryProvider = Provider<DirectorRepository>((ref) {
+  if (isModuleApiEnabled(ref, directorApiEnabledProvider)) {
+    return const ApiDirectorRepository();
+  }
+  return MockDirectorRepository(
+      pipeline: ref.watch(aiInferencePipelineProvider));
 });
 
 final parentRepositoryProvider = Provider<ParentRepository>((ref) {
@@ -412,4 +437,12 @@ final schoolCompletionRepositoryProvider =
     );
   }
   return MockSchoolCompletionRepository();
+});
+
+final multiSchoolOperationsRepositoryProvider =
+    Provider<MultiSchoolOperationsRepository>((ref) {
+  if (isModuleApiEnabled(ref, multiSchoolOperationsApiEnabledProvider)) {
+    return ref.read(apiMultiSchoolOperationsRepositoryProvider);
+  }
+  return MockMultiSchoolOperationsRepository();
 });

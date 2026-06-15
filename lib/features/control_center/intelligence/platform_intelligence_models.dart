@@ -177,3 +177,48 @@ class PortfolioRiskIntelligence {
   final List<PlatformTrendPoint> riskTrend;
   final List<PortfolioRiskItem> risks;
 }
+
+@immutable
+class TrustDashboardIntelligence {
+  const TrustDashboardIntelligence({
+    required this.trustName,
+    required this.kpis,
+    required this.trend,
+    required this.riskHighlights,
+  });
+
+  final String trustName;
+  final List<PlatformIntelligenceKpi> kpis;
+  final List<PlatformTrendPoint> trend;
+  final List<PlatformInsightItem> riskHighlights;
+}
+
+@immutable
+class CrossSchoolRecommendation {
+  const CrossSchoolRecommendation({
+    required this.id,
+    required this.title,
+    required this.detail,
+    required this.owner,
+    required this.priority,
+  });
+
+  final String id;
+  final String title;
+  final String detail;
+  final String owner;
+  final String priority;
+}
+
+@immutable
+class ExecutiveSummaryIntelligence {
+  const ExecutiveSummaryIntelligence({
+    required this.headline,
+    required this.summary,
+    required this.priorityActions,
+  });
+
+  final String headline;
+  final String summary;
+  final List<PlatformInsightItem> priorityActions;
+}

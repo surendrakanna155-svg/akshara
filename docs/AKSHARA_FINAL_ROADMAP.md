@@ -147,15 +147,15 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 
 ### M9 — Multi-School SaaS
 
-**Target:** 2027 H1 · Chain/franchise operators
+**Target:** 2027 H1 · Chain/franchise operators · **✅ Complete June 2026**
 
 | ID | Feature | Vision | Status |
 |----|---------|--------|--------|
-| FV-PLAT-02 | Multi-School SaaS Operations | P4 | 🔄 |
-| FV-PLAT-03 | Director Portal (DR-01–09) | Director.md | 📐 Spec |
-| FV-PLAT-04 | Organization / Trust Intelligence | M4 | 🔄 Partial |
-| FV-P4-03 | Franchise Management | P4 | 📐 Design |
-| FV-P4-04 | Multi-Branch Management | P4 | 📐 Design |
+| FV-PLAT-02 | Multi-School SaaS Operations | P4 | ✅ |
+| FV-PLAT-03 | Director Portal (DR-01–09) | Director.md | ✅ |
+| FV-PLAT-04 | Organization / Trust Intelligence | M4 | ✅ |
+| FV-P4-03 | Franchise Management | P4 | ✅ MVP |
+| FV-P4-04 | Multi-Branch Management | P4 | ✅ MVP |
 
 ### M10 — Organization Builder
 

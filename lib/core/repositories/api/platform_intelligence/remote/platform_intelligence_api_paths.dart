@@ -6,4 +6,8 @@ abstract final class PlatformIntelligenceApiPaths {
   static const String revenue = '/api/control-center/intelligence/revenue';
   static const String growth = '/api/control-center/intelligence/growth';
   static const String risk = '/api/control-center/intelligence/risk';
+  static const String trustDashboard =
+      '/api/control-center/intelligence/trust-dashboard';
+  static const String executiveSummary =
+      '/api/control-center/intelligence/executive-summary';
 }

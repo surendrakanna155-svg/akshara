@@ -102,14 +102,14 @@
 | FV-A | AI School Setup Wizard | P3 | Design | 25 | M10 | Partial | No | Platform |
 | FV-P4-01 | Security & Penetration Testing | P4 | Design | 5 | M12 | No | No | Platform |
 | FV-P4-02 | Observability Platform | P4 | Design | 10 | M12 | Partial | No | Platform |
-| FV-P4-03 | Franchise Management | P4 | Design | 5 | M9 | No | No | Platform |
-| FV-P4-04 | Multi-Branch Management | P4 | Design | 5 | M9 | No | No | Platform |
+| FV-P4-03 | Franchise Management | P4 | Shipped MVP | 70 | M9 | Yes | No | Platform |
+| FV-P4-04 | Multi-Branch Management | P4 | Shipped MVP | 70 | M9 | Yes | No | Platform |
 | FV-P4-05 | WhatsApp Business Integration | P1/P2 | Partial | 35 | M6/M8 | Contract | No | Notifications |
 | FV-P4-06 | Universal Workflow Engine | P3 | Shipped | 90 | M3 ✅ | Yes | Partial | Operations |
 | FV-PLAT-01 | Universal Employee System | P3 | Design | 10 | M10 | No | No | Platform |
-| FV-PLAT-02 | Multi-School SaaS Operations | P4 | Partial | 40 | M9 | Partial | No | Control Center |
-| FV-PLAT-03 | Director Portal (DR-01–09) | P4 | Spec | 5 | M9 | No | No | Director |
-| FV-PLAT-04 | Organization / Trust Intelligence | P4 | Partial | 55 | M9 | Yes | No | Control Center |
+| FV-PLAT-02 | Multi-School SaaS Operations | P4 | Shipped | 85 | M9 | Yes | No | Control Center |
+| FV-PLAT-03 | Director Portal (DR-01–09) | P4 | Shipped | 90 | M9 | Yes | No | Director |
+| FV-PLAT-04 | Organization / Trust Intelligence | P4 | Shipped | 90 | M9 | Yes | No | Control Center |
 | FV-PLAT-05 | Resource Optimization Engine | P2 | Planned | 5 | M8 | No | No | Intelligence |
 | FV-PLAT-06 | Production Readiness Program | P4 | Partial | 70 | M12 | Yes | Partial | Platform |
 | FV-PLAT-07 | AI Content Generation (platform) | P2 | Design | 15 | M8 | No | No | Academic / AI |
@@ -402,19 +402,19 @@
 | Inventory Replacement Workflow | VISION #12 | **E** | Not implemented | M7 · Inventory |
 | Security & Pen Testing | VISION FV-P4-01 | **E** | Program not started | M12 |
 | Observability Platform | VISION FV-P4-02 | **E** | Not implemented | M12 |
-| Multi-School SaaS Operations | VISION FV-PLAT-02 | **B** | Partial | M9 · Control Center |
-| Franchise Management | VISION FV-P4-03 | **E** | Design only | M9 |
-| Multi-Branch Management | VISION FV-P4-04 | **E** | Design only | M9 |
-| Director Portal | Director.md FV-PLAT-03 | **E** | Spec only | M9 · DR-01–09 zero Flutter |
-| Resource Optimization Engine | FV-PLAT-05 | **E** | Not implemented | M8 |
+| Multi-School SaaS Operations | VISION FV-PLAT-02 | **A** | Shipped | M9 · Control Center |
+| Franchise Management | VISION FV-P4-03 | **B** | MVP shipped | M9 |
+| Multi-Branch Management | VISION FV-P4-04 | **B** | MVP shipped | M9 |
+| Director Portal | Director.md FV-PLAT-03 | **A** | DR-01–09 shipped | M9 |
+| Organization / Trust Intelligence | FV-PLAT-04 | **A** | Full hub shipped | M9 |
+| Resource Optimization Engine | FV-PLAT-05 | **A** | Shipped | M8 |
 | Production Readiness Program | FV-PLAT-06 | **B** | Checklist 70% | M12 · `ProductionReadinessChecklist.md` |
-| AI Content Generation (platform) | FV-PLAT-07 | **E** | Design only | M8 · `design/AI-Content-Generation.md` |
+| AI Content Generation (platform) | FV-PLAT-07 | **A** | MVP shipped | M8 |
 | Tenant Isolation Verification | FV-PLAT-08 | **B** | 213 probes | M12 |
 | Monitoring & Alerting | FV-PLAT-09 | **E** | Not implemented | M12 |
-| Live AI Inference | FV-PLAT-10 | **E** | Mock only | M8 |
+| Live AI Inference | FV-PLAT-10 | **A** | Shipped | M8 |
 | White Label Platform Expansion | FV-PLAT-11 | **B** | ACC-08 placeholder | M13 |
 | Universal Employee System | FV-PLAT-01 | **E** | Design only | M10 · `design/Universal-Employee-System.md` |
-| Organization / Trust Intelligence | FV-PLAT-04 | **B** | M4 partial | M9 · Organization tab |
 
 ---
 

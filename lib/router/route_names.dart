@@ -76,6 +76,9 @@ abstract final class RouteNames {
   static const String operationsHub = '/operations/hub';
   static const String resourceOptimization = '/resource-optimization';
   static const String aiContent = '/ai-content';
+  static const String organizationIntelligence = '/organization/intelligence';
+  static const String branches = '/branches';
+  static const String franchise = '/franchise';
   static const String schoolMemories = '/memories';
   static const String achievementPromotion = '/promotions';
   static const String setupWizard = '/setup-wizard';
@@ -109,6 +112,8 @@ abstract final class RouteNames {
   static const String academicProgress = '/school/academic/progress';
   static const String timetableIntelligence = '/school/timetables/intelligence';
   static const String parentMeetings = '/parent-meetings';
+  static const String multiSchoolPortfolio = '/multi-school/portfolio';
+  static const String multiSchoolOnboarding = '/multi-school/onboarding';
   static const String admissions = '/admissions';
   static const String admissionsDashboard = '/admissions/dashboard';
   static const String admissionsLeads = '/admissions/leads';
@@ -386,6 +391,29 @@ abstract final class RouteNames {
   static const String controlCenterProviders = '/control-center/providers';
   static const String controlCenterFeatures = '/control-center/features';
 
+  static const String director = '/director';
+  static const String directorDashboard = '/director/dashboard';
+  static const String directorSchools = '/director/schools';
+  static const String directorPortfolio = '/director/portfolio';
+  static const String directorRevenue = '/director/revenue';
+  static const String directorGrowth = '/director/growth';
+  static const String directorMarketing = '/director/marketing';
+  static const String directorAdmissions = '/director/admissions';
+  static const String directorCompliance = '/director/compliance';
+  static const String directorReports = '/director/reports';
+
+  static const List<String> directorModuleRoutes = [
+    directorDashboard,
+    directorSchools,
+    directorPortfolio,
+    directorRevenue,
+    directorGrowth,
+    directorMarketing,
+    directorAdmissions,
+    directorCompliance,
+    directorReports,
+  ];
+
   /// All control center module routes (ACC-01 → ACC-14).
   static const List<String> controlCenterModuleRoutes = [
     controlCenterDashboard,
@@ -421,6 +449,9 @@ abstract final class RouteNames {
     operationsHub,
     resourceOptimization,
     aiContent,
+    organizationIntelligence,
+    branches,
+    franchise,
     schoolMemories,
     achievementPromotion,
     admissions,
@@ -434,6 +465,9 @@ abstract final class RouteNames {
     inventory,
     alumni,
     controlCenter,
+    director,
     parentMeetings,
+    multiSchoolPortfolio,
+    multiSchoolOnboarding,
   ];
 }

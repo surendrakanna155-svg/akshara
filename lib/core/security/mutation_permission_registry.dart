@@ -225,9 +225,63 @@ class MutationPermissionRegistry {
       kind: 'manage',
     ),
     MutationPermissionEntry(
+      moduleId: 'multi_school',
+      mutationId: 'activateSchool',
+      permission: Permission.manageMultiSchoolOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'multi_school',
+      mutationId: 'deactivateSchool',
+      permission: Permission.manageMultiSchoolOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'multi_school',
+      mutationId: 'completeOnboarding',
+      permission: Permission.manageMultiSchoolOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'multi_school',
+      mutationId: 'dismissAlert',
+      permission: Permission.manageMultiSchoolOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'multi_school',
+      mutationId: 'completeAction',
+      permission: Permission.manageMultiSchoolOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
       moduleId: 'ai_content',
       mutationId: 'generateAiContent',
       permission: Permission.manageManagement,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'director',
+      mutationId: 'acknowledgeCompliance',
+      permission: Permission.manageDirectorPortal,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'director',
+      mutationId: 'exportReport',
+      permission: Permission.manageDirectorPortal,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'branch',
+      mutationId: 'assignBranchSchool',
+      permission: Permission.manageBranchOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'franchise',
+      mutationId: 'improveFranchiseScore',
+      permission: Permission.manageFranchiseOperations,
       kind: 'manage',
     ),
     // School Memories

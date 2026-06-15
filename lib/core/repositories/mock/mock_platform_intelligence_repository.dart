@@ -1,9 +1,16 @@
 import '../../../features/control_center/intelligence/platform_intelligence_models.dart';
+import '../../ai/ai_inference_models.dart';
+import '../../ai/ai_inference_pipeline.dart';
 import '../interfaces/platform_intelligence_repository.dart';
 import '../repository_query.dart';
 
 class MockPlatformIntelligenceRepository
     implements PlatformIntelligenceRepository {
+  MockPlatformIntelligenceRepository({AiInferencePipeline? pipeline})
+      : _pipeline = pipeline;
+
+  final AiInferencePipeline? _pipeline;
+
   static const _ownerKpis = [
     PlatformIntelligenceKpi(
       id: 'portfolio_revenue',
@@ -322,5 +329,168 @@ class MockPlatformIntelligenceRepository
         ),
       ],
     );
+  }
+
+  @override
+  Future<TrustDashboardIntelligence> getTrustDashboard({
+    required RepositoryQuery query,
+    required String trustId,
+  }) async {
+    return TrustDashboardIntelligence(
+      trustName: 'Akshara Trust Network ($trustId)',
+      kpis: const [
+        PlatformIntelligenceKpi(
+          id: 'trust_health',
+          label: 'Trust Health Index',
+          value: '87',
+          delta: '+3 QoQ',
+        ),
+        PlatformIntelligenceKpi(
+          id: 'retention',
+          label: 'School Retention',
+          value: '96%',
+          delta: '+1.2%',
+        ),
+        PlatformIntelligenceKpi(
+          id: 'cash_efficiency',
+          label: 'Cash Collection Efficiency',
+          value: '95.4%',
+          delta: '+1.8 pts',
+        ),
+      ],
+      trend: const [
+        PlatformTrendPoint(label: 'Jan', value: 79),
+        PlatformTrendPoint(label: 'Feb', value: 80),
+        PlatformTrendPoint(label: 'Mar', value: 82),
+        PlatformTrendPoint(label: 'Apr', value: 84),
+        PlatformTrendPoint(label: 'May', value: 86),
+        PlatformTrendPoint(label: 'Jun', value: 87),
+      ],
+      riskHighlights: const [
+        PlatformInsightItem(
+          title: 'Collections risk concentrated in two campuses',
+          detail:
+              'Mumbai and Pune clusters contribute 62% of portfolio outstanding.',
+          priority: 'high',
+        ),
+        PlatformInsightItem(
+          title: 'Enrollment growth remains healthy',
+          detail: 'Net student growth sustained above 9% for three months.',
+          priority: 'medium',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<List<CrossSchoolRecommendation>> getCrossSchoolRecommendations({
+    required RepositoryQuery query,
+    required List<String> schoolIds,
+  }) async {
+    final fallback = <CrossSchoolRecommendation>[
+      const CrossSchoolRecommendation(
+        id: 'trust_fee_recovery_sprint',
+        title: 'Drive fee recovery sprint',
+        detail:
+            'Trigger parent reminder sequences and assign finance owners for overdue schools.',
+        owner: 'Finance Lead',
+        priority: 'high',
+      ),
+      const CrossSchoolRecommendation(
+        id: 'trust_attendance_recovery',
+        title: 'Launch attendance recovery plan',
+        detail:
+            'Coordinate absentee interventions across low-performing schools.',
+        owner: 'School Ops Lead',
+        priority: 'high',
+      ),
+      const CrossSchoolRecommendation(
+        id: 'trust_growth_campaign',
+        title: 'Package cross-school growth campaign',
+        detail:
+            'Replicate conversion workflow from top schools to emerging campuses.',
+        owner: 'Growth Manager',
+        priority: 'medium',
+      ),
+    ];
+    if (_pipeline == null) {
+      return fallback;
+    }
+
+    final response = await _pipeline.complete(
+      AiInferenceRequest(
+        prompt: 'Generate cross-school trust recommendations as '
+            'id|title|detail|owner|priority for schools ${schoolIds.join(", ")}.',
+        taskType: aiTaskTypeName(AiInferenceTaskType.intelligenceCompute),
+        systemPrompt:
+            'You are an education trust strategy assistant. Keep actions concise and measurable.',
+        context: {
+          'module': 'organization_intelligence',
+          'tenantId': query.tenantId,
+          'organizationId': query.organizationId,
+          'schoolIds': schoolIds.join(','),
+        },
+      ),
+    );
+    final parsed = _parseRecommendations(response.content);
+    return parsed.isEmpty ? fallback : parsed;
+  }
+
+  @override
+  Future<ExecutiveSummaryIntelligence> getExecutiveSummary({
+    required RepositoryQuery query,
+    required String trustId,
+  }) async {
+    return const ExecutiveSummaryIntelligence(
+      headline:
+          'Trust trajectory remains positive with targeted risk controls.',
+      summary:
+          'Revenue and enrollment growth are healthy across the portfolio. Two campuses need immediate fee recovery and one onboarding cluster requires execution support before next quarter.',
+      priorityActions: [
+        PlatformInsightItem(
+          title: 'Execute 30-day fee recovery war-room',
+          detail: 'Weekly closure owners for high-outstanding campuses.',
+          priority: 'high',
+        ),
+        PlatformInsightItem(
+          title: 'Scale premium conversion playbook',
+          detail: 'Replicate proven onboarding and analytics motions.',
+          priority: 'medium',
+        ),
+        PlatformInsightItem(
+          title: 'Stabilize transport SLA in Pune region',
+          detail: 'Resolve recurring delays before quarterly review.',
+          priority: 'medium',
+        ),
+      ],
+    );
+  }
+
+  List<CrossSchoolRecommendation> _parseRecommendations(String content) {
+    final lines = content
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList(growable: false);
+    final output = <CrossSchoolRecommendation>[];
+    for (final line in lines) {
+      final parts = line.split('|');
+      if (parts.length < 5) continue;
+      output.add(
+        CrossSchoolRecommendation(
+          id: _sanitizeId(parts[0]),
+          title: parts[1].trim(),
+          detail: parts[2].trim(),
+          owner: parts[3].trim(),
+          priority: parts[4].trim(),
+        ),
+      );
+    }
+    return output;
+  }
+
+  String _sanitizeId(String value) {
+    final id = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+    return id.isEmpty ? 'trust_recommendation' : id;
   }
 }

@@ -99,6 +99,23 @@ class PlatformIntelligenceMapper {
     );
   }
 
+  TrustDashboardIntelligence toTrustDashboard(Map<String, dynamic> raw) {
+    return TrustDashboardIntelligence(
+      trustName: raw['trustName'] as String? ?? '',
+      kpis: _kpis(raw['kpis']),
+      trend: _trend(raw['trend']),
+      riskHighlights: _insights(raw['riskHighlights']),
+    );
+  }
+
+  ExecutiveSummaryIntelligence toExecutiveSummary(Map<String, dynamic> raw) {
+    return ExecutiveSummaryIntelligence(
+      headline: raw['headline'] as String? ?? '',
+      summary: raw['summary'] as String? ?? '',
+      priorityActions: _insights(raw['priorityActions']),
+    );
+  }
+
   List<PlatformIntelligenceKpi> _kpis(Object? value) {
     return (value as List? ?? const [])
         .whereType<Map<String, dynamic>>()

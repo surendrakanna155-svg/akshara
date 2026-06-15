@@ -89,7 +89,7 @@ void main() {
         'scheduleFollowUp',
       ]) {
         final entry = MutationPermissionRegistry.entries.firstWhere(
-          (e) => e.mutationId == id,
+          (e) => e.mutationId == id && e.moduleId == 'parent_meetings',
         );
         expect(entry.moduleId, 'parent_meetings');
         expect(entry.permission, Permission.manageAcademicProgress);
@@ -103,6 +103,47 @@ void main() {
       expect(entry.moduleId, 'school_completion');
       expect(entry.permission, Permission.manageAcademicTimetable);
       expect(entry.kind, 'manage');
+    });
+
+    test('multi-school operations mutations registered', () {
+      for (final id in [
+        'activateSchool',
+        'deactivateSchool',
+        'completeOnboarding',
+        'dismissAlert',
+        'completeAction',
+      ]) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.mutationId == id,
+        );
+        expect(entry.moduleId, 'multi_school');
+        expect(entry.permission, Permission.manageMultiSchoolOperations);
+        expect(entry.kind, 'manage');
+      }
+    });
+
+    test('branch and franchise mutations registered', () {
+      final branch = MutationPermissionRegistry.entries.firstWhere(
+        (e) => e.mutationId == 'assignBranchSchool',
+      );
+      expect(branch.moduleId, 'branch');
+      expect(branch.permission, Permission.manageBranchOperations);
+
+      final franchise = MutationPermissionRegistry.entries.firstWhere(
+        (e) => e.mutationId == 'improveFranchiseScore',
+      );
+      expect(franchise.moduleId, 'franchise');
+      expect(franchise.permission, Permission.manageFranchiseOperations);
+    });
+
+    test('director portal mutations registered', () {
+      for (final id in ['acknowledgeCompliance', 'exportReport']) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.mutationId == id,
+        );
+        expect(entry.moduleId, 'director');
+        expect(entry.permission, Permission.manageDirectorPortal);
+      }
     });
   });
 }

@@ -87,11 +87,13 @@ final analyticsIntelligenceApiEnabledProvider = Provider<bool>((ref) {
 });
 final managementApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
-  return const bool.fromEnvironment('MANAGEMENT_API_ENABLED', defaultValue: false);
+  return const bool.fromEnvironment('MANAGEMENT_API_ENABLED',
+      defaultValue: false);
 });
 final transportApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
-  return const bool.fromEnvironment('TRANSPORT_API_ENABLED', defaultValue: false);
+  return const bool.fromEnvironment('TRANSPORT_API_ENABLED',
+      defaultValue: false);
 });
 final hrApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
@@ -107,7 +109,8 @@ final libraryApiEnabledProvider = Provider<bool>((ref) {
 });
 final inventoryApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
-  return const bool.fromEnvironment('INVENTORY_API_ENABLED', defaultValue: false);
+  return const bool.fromEnvironment('INVENTORY_API_ENABLED',
+      defaultValue: false);
 });
 final inventoryFinanceApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
@@ -171,7 +174,13 @@ final alumniApiEnabledProvider = Provider<bool>((ref) {
 });
 final controlCenterApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
-  return const bool.fromEnvironment('CONTROL_CENTER_API_ENABLED', defaultValue: false);
+  return const bool.fromEnvironment('CONTROL_CENTER_API_ENABLED',
+      defaultValue: false);
+});
+final directorApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('DIRECTOR_API_ENABLED',
+      defaultValue: false);
 });
 final platformIntelligenceApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
@@ -217,12 +226,22 @@ final studentApiEnabledProvider = Provider<bool>((ref) {
 
 final evolutionApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
-  return const bool.fromEnvironment('EVOLUTION_API_ENABLED', defaultValue: false);
+  return const bool.fromEnvironment('EVOLUTION_API_ENABLED',
+      defaultValue: false);
 });
 
 final schoolCompletionApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
-  return const bool.fromEnvironment('SCHOOL_COMPLETION_API_ENABLED', defaultValue: false);
+  return const bool.fromEnvironment('SCHOOL_COMPLETION_API_ENABLED',
+      defaultValue: false);
+});
+
+final multiSchoolOperationsApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'MULTI_SCHOOL_OPERATIONS_API_ENABLED',
+    defaultValue: false,
+  );
 });
 
 /// Returns true when the global API mode and module flag are both enabled.
@@ -256,6 +275,7 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(aiCopilotApiEnabledProvider) ||
       ref.watch(alumniApiEnabledProvider) ||
       ref.watch(controlCenterApiEnabledProvider) ||
+      ref.watch(directorApiEnabledProvider) ||
       ref.watch(platformIntelligenceApiEnabledProvider) ||
       ref.watch(auditApiEnabledProvider) ||
       ref.watch(paymentApiEnabledProvider) ||
@@ -267,5 +287,6 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(academicTimetableApiEnabledProvider) ||
       ref.watch(analyticsIntelligenceApiEnabledProvider) ||
       ref.watch(evolutionApiEnabledProvider) ||
-      ref.watch(schoolCompletionApiEnabledProvider);
+      ref.watch(schoolCompletionApiEnabledProvider) ||
+      ref.watch(multiSchoolOperationsApiEnabledProvider);
 });

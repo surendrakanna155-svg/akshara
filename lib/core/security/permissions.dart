@@ -49,6 +49,15 @@ enum Permission {
   viewControlCenter,
   manageControlCenter,
 
+  // Director Portal
+  viewDirectorPortal,
+  manageDirectorPortal,
+  viewOrganizationIntelligence,
+  viewBranchOperations,
+  manageBranchOperations,
+  viewFranchiseOperations,
+  manageFranchiseOperations,
+
   // Admin hub
   viewAdminHub,
 
@@ -159,6 +168,10 @@ enum Permission {
 
   // Phase 16 — Teacher Effectiveness
   viewTeacherEffectiveness,
+
+  // FV-PLAT-02 — Multi-School SaaS Operations
+  viewMultiSchoolOperations,
+  manageMultiSchoolOperations,
 }
 
 /// Immutable set of [Permission] values for a session.

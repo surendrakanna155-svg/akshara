@@ -212,9 +212,22 @@ See `docs/FOUR_MILESTONE_EXECUTION_REPORT.md` and `docs/MASTER_MILESTONE_TRACKER
 
 ## Next action
 
-**M9:** Multi-School SaaS (FV-PLAT-02) — see `AKSHARA_FINAL_ROADMAP.md`.
+**M10:** Universal Organization Builder (FV-30) — see `AKSHARA_FINAL_ROADMAP.md` and `docs/Vision/design/Universal-Organization-Builder-v2.md`.
 
-Execution: audit → implement → tests → Patrol → gates → commit → push → CI → update registry.
+Execution: implement → tests → Patrol → gates → commit → push → CI → continue to M11.
+
+---
+
+## M9 completion (June 2026)
+
+| Metric | Value |
+|--------|-------|
+| ERP | ~97% |
+| Vision | ~85% |
+| Multi-school | ~82% |
+| Tests | 1522 passing |
+| Patrol | ~70 journeys |
+| Report | `docs/MILESTONE_9_COMPLETION_REPORT.md` |
 
 ---
 

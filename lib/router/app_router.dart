@@ -63,6 +63,9 @@ import 'education_navigation.dart';
 import 'intelligence_navigation.dart';
 import 'phase4_navigation.dart';
 import 'phase5_navigation.dart';
+import 'organization_intelligence_navigation.dart';
+import 'branch_navigation.dart';
+import 'franchise_navigation.dart';
 import 'evolution_navigation.dart';
 import 'school_completion_navigation.dart';
 import 'management_navigation.dart';
@@ -73,9 +76,11 @@ import 'inventory_navigation.dart';
 import 'library_navigation.dart';
 import 'transport_navigation.dart';
 import 'control_center_navigation.dart';
+import 'director_navigation.dart';
 import 'sis_navigation.dart';
 import 'parent_navigation.dart';
 import 'parent_meetings_navigation.dart';
+import 'multi_school_navigation.dart';
 import 'route_names.dart';
 import 'student_navigation.dart';
 import 'teacher_navigation.dart';
@@ -499,6 +504,27 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.organizationIntelligence,
+            name: 'organizationIntelligence',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: organizationIntelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.branches,
+            name: 'branches',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: branchRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.franchise,
+            name: 'franchise',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: franchiseRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.schoolMemories,
             name: 'schoolMemories',
             pageBuilder: (context, state) => NoTransitionPage(
@@ -692,6 +718,20 @@ GoRouter createAppRouter({
             name: 'parentMeetings',
             pageBuilder: (context, state) => NoTransitionPage(
               child: parentMeetingsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.multiSchoolPortfolio,
+            name: 'multiSchoolPortfolio',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: multiSchoolPortfolioRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.multiSchoolOnboarding,
+            name: 'multiSchoolOnboarding',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: multiSchoolOnboardingRouteBuilder(context, state),
             ),
           ),
           GoRoute(
@@ -1582,6 +1622,76 @@ GoRouter createAppRouter({
                 name: 'controlCenterFeatures',
                 pageBuilder: (context, state) => NoTransitionPage(
                   child: controlCenterFeaturesRouteBuilder(context, state),
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: RouteNames.director,
+            name: 'director',
+            redirect: directorRootRedirect,
+            routes: [
+              GoRoute(
+                path: 'dashboard',
+                name: 'directorDashboard',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorDashboardRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'schools',
+                name: 'directorSchools',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorSchoolsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'portfolio',
+                name: 'directorPortfolio',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorPortfolioRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'revenue',
+                name: 'directorRevenue',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorRevenueRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'growth',
+                name: 'directorGrowth',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorGrowthRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'marketing',
+                name: 'directorMarketing',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorMarketingRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'admissions',
+                name: 'directorAdmissions',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorAdmissionsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'compliance',
+                name: 'directorCompliance',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorComplianceRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'reports',
+                name: 'directorReports',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorReportsRouteBuilder(context, state),
                 ),
               ),
             ],

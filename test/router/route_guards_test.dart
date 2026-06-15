@@ -22,6 +22,10 @@ void main() {
         Permission.viewControlCenter,
       );
       expect(
+        erpRoutePermissionFor(RouteNames.directorDashboard),
+        Permission.viewDirectorPortal,
+      );
+      expect(
         erpRoutePermissionFor(RouteNames.copilot),
         Permission.viewAiCopilot,
       );
@@ -59,6 +63,10 @@ void main() {
       );
       expect(
         canAccessErpRoute(financeAdmin, RouteNames.controlCenterDashboard),
+        isFalse,
+      );
+      expect(
+        canAccessErpRoute(financeAdmin, RouteNames.directorDashboard),
         isFalse,
       );
     });

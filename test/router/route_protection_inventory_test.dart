@@ -14,8 +14,8 @@ void main() {
       test('$role finance route access matches matrix', () {
         final rbac = RbacService(UserPermissions.forRole(role));
         final allowed = canAccessErpRoute(rbac, RouteNames.financeDashboard);
-        final expected = UserPermissions.forRole(role)
-            .has(Permission.viewFinance);
+        final expected =
+            UserPermissions.forRole(role).has(Permission.viewFinance);
         expect(allowed, expected);
       });
     }
@@ -26,6 +26,16 @@ void main() {
         final allowed =
             canAccessErpRoute(rbac, RouteNames.controlCenterDashboard);
         expect(allowed, role == ErpRole.superAdmin);
+      });
+    }
+
+    for (final role in roles) {
+      test('$role director portal access matches permission matrix', () {
+        final rbac = RbacService(UserPermissions.forRole(role));
+        final allowed = canAccessErpRoute(rbac, RouteNames.directorDashboard);
+        final expected =
+            UserPermissions.forRole(role).has(Permission.viewDirectorPortal);
+        expect(allowed, expected);
       });
     }
 

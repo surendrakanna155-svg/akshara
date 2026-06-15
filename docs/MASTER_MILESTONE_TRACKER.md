@@ -208,11 +208,11 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 
 | ID | Feature | Status |
 |----|---------|--------|
-| FV-PLAT-02 | Multi-School SaaS Operations | 🔄 |
-| FV-PLAT-03 | Director Portal (DR-01–09) | 📐 Spec |
-| FV-PLAT-04 | Organization / Trust Intelligence (full) | 🔄 |
-| FV-P4-03 | Franchise Management | 📐 Design |
-| FV-P4-04 | Multi-Branch Management | 📐 Design |
+| FV-PLAT-02 | Multi-School SaaS Operations | ✅ |
+| FV-PLAT-03 | Director Portal (DR-01–09) | ✅ |
+| FV-PLAT-04 | Organization / Trust Intelligence (full) | ✅ |
+| FV-P4-03 | Franchise Management | ✅ MVP |
+| FV-P4-04 | Multi-Branch Management | ✅ MVP |
 
 ### M10 — Organization Builder
 
@@ -271,11 +271,11 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 
 | Capability | Milestone | Status |
 |------------|-----------|--------|
-| Multi-School Operations (FV-PLAT-02) | M9 | 🔄 |
-| Director Portal (FV-PLAT-03) | M9 | 📐 Spec |
-| Organization / Trust Intelligence (FV-PLAT-04) | M9 | 🔄 |
-| Franchise Management (FV-P4-03) | M9 | 📐 Design |
-| Multi-Branch Management (FV-P4-04) | M9 | 📐 Design |
+| Multi-School Operations (FV-PLAT-02) | M9 | ✅ |
+| Director Portal (FV-PLAT-03) | M9 | ✅ |
+| Organization / Trust Intelligence (FV-PLAT-04) | M9 | ✅ |
+| Franchise Management (FV-P4-03) | M9 | ✅ MVP |
+| Multi-Branch Management (FV-P4-04) | M9 | ✅ MVP |
 
 ---
 

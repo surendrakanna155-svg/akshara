@@ -79,6 +79,20 @@ class RbacModuleRegistry {
       manage: Permission.manageControlCenter,
     ),
     ModulePermissionSet(
+      moduleId: 'organization_intelligence',
+      view: Permission.viewOrganizationIntelligence,
+    ),
+    ModulePermissionSet(
+      moduleId: 'branch',
+      view: Permission.viewBranchOperations,
+      manage: Permission.manageBranchOperations,
+    ),
+    ModulePermissionSet(
+      moduleId: 'franchise',
+      view: Permission.viewFranchiseOperations,
+      manage: Permission.manageFranchiseOperations,
+    ),
+    ModulePermissionSet(
       moduleId: 'admin',
       view: Permission.viewAdminHub,
     ),

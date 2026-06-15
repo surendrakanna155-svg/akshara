@@ -682,6 +682,16 @@ abstract final class QaTestKeys {
 
   static const platformIntelligenceScreen =
       ValueKey<String>('platform_intelligence_screen');
+  static const trustIntelligenceScreen =
+      ValueKey<String>('trust_intelligence_screen');
+  static const branchScreen = ValueKey<String>('branch_screen');
+  static const branchAssignSchoolButton =
+      ValueKey<String>('branch_assign_school_button');
+  static const branchAssignmentSnackbar =
+      ValueKey<String>('branch_assignment_snackbar');
+  static const franchiseScreen = ValueKey<String>('franchise_screen');
+  static const franchiseUpdatedSnackbar =
+      ValueKey<String>('franchise_updated_snackbar');
 
   static const communicationBroadcastAdminScreen =
       ValueKey<String>('communication_broadcast_admin_screen');
@@ -819,6 +829,86 @@ abstract final class QaTestKeys {
 
   static ValueKey<String> parentMeetingActionToggle(String actionId) =>
       ValueKey<String>('parent_meeting_action_toggle_$actionId');
+
+  static const directorDashboardScreen =
+      ValueKey<String>('director_dashboard_screen');
+  static const directorCopilotLinkButton =
+      ValueKey<String>('director_copilot_link_button');
+  static const directorReportsGenerateSummaryButton =
+      ValueKey<String>('director_reports_generate_summary_button');
+  static const directorExecutiveSummaryCard =
+      ValueKey<String>('director_executive_summary_card');
+  static const directorReportExportedSnackbar =
+      ValueKey<String>('director_report_exported_snackbar');
+  static const directorComplianceAcknowledgedSnackbar =
+      ValueKey<String>('director_compliance_acknowledged_snackbar');
+
+  static ValueKey<String> directorComplianceAcknowledgeButton(
+    String complianceId,
+  ) =>
+      ValueKey<String>('director_compliance_ack_$complianceId');
+
+  static ValueKey<String> directorReportExportButton(String reportId) =>
+      ValueKey<String>('director_report_export_$reportId');
+
+  static ValueKey<String> branchTile(String branchId) =>
+      ValueKey<String>('branch_tile_$branchId');
+
+  static ValueKey<String> branchAssignmentTile(String assignmentId) =>
+      ValueKey<String>('branch_assignment_tile_$assignmentId');
+
+  static ValueKey<String> franchiseTile(String franchiseId) =>
+      ValueKey<String>('franchise_tile_$franchiseId');
+
+  static ValueKey<String> franchiseImproveButton(String franchiseId) =>
+      ValueKey<String>('franchise_improve_button_$franchiseId');
+
+  static const multiSchoolPortfolioScreen =
+      ValueKey<String>('multi_school_portfolio_screen');
+  static const multiSchoolOnboardingCta =
+      ValueKey<String>('multi_school_onboarding_cta');
+  static const multiSchoolAlertDismissedSnackbar =
+      ValueKey<String>('multi_school_alert_dismissed_snackbar');
+  static const multiSchoolActivationSnackbar =
+      ValueKey<String>('multi_school_activation_snackbar');
+  static const multiSchoolDeactivationSnackbar =
+      ValueKey<String>('multi_school_deactivation_snackbar');
+
+  static ValueKey<String> multiSchoolAlertCard(String alertId) =>
+      ValueKey<String>('multi_school_alert_$alertId');
+  static ValueKey<String> multiSchoolDismissAlertButton(String alertId) =>
+      ValueKey<String>('multi_school_dismiss_alert_$alertId');
+  static ValueKey<String> multiSchoolSchoolRow(String schoolId) =>
+      ValueKey<String>('multi_school_school_row_$schoolId');
+  static ValueKey<String> multiSchoolActivateSchoolButton(String schoolId) =>
+      ValueKey<String>('multi_school_activate_school_$schoolId');
+  static ValueKey<String> multiSchoolDeactivateSchoolButton(String schoolId) =>
+      ValueKey<String>('multi_school_deactivate_school_$schoolId');
+  static ValueKey<String> multiSchoolHealthChip(int score) =>
+      ValueKey<String>('multi_school_health_chip_$score');
+
+  static const multiSchoolOnboardingWizardScreen =
+      ValueKey<String>('multi_school_onboarding_wizard_screen');
+  static const multiSchoolOnboardingSchoolNameField =
+      ValueKey<String>('multi_school_onboarding_school_name_field');
+  static const multiSchoolOnboardingContactNameField =
+      ValueKey<String>('multi_school_onboarding_contact_name_field');
+  static const multiSchoolOnboardingContactEmailField =
+      ValueKey<String>('multi_school_onboarding_contact_email_field');
+  static const multiSchoolOnboardingPlanField =
+      ValueKey<String>('multi_school_onboarding_plan_field');
+  static const multiSchoolOnboardingCountryField =
+      ValueKey<String>('multi_school_onboarding_country_field');
+  static const multiSchoolOnboardingCapacityField =
+      ValueKey<String>('multi_school_onboarding_capacity_field');
+  static const multiSchoolOnboardingActivateSwitch =
+      ValueKey<String>('multi_school_onboarding_activate_switch');
+  static const multiSchoolOnboardingSubmitButton =
+      ValueKey<String>('multi_school_onboarding_submit_button');
+  static const multiSchoolOnboardingContinueButton =
+      ValueKey<String>('multi_school_onboarding_continue_button');
+  static const multiSchoolOnboardingCompletedSnackbar =
+      ValueKey<String>('multi_school_onboarding_completed_snackbar');
 
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
