@@ -2,7 +2,7 @@
 
 **Program:** Akshara M12 — Infrastructure, Security & Production Hardening  
 **Last updated:** June 2026  
-**Baseline commit:** _(see MILESTONE_12_COMPLETION_REPORT.md)_  
+**Baseline commit:** `d41e290`  
 **Live report:** Platform Operations hub → Readiness tab (`/platform-operations/readiness`)
 
 ---

@@ -3,7 +3,7 @@
 **Program:** Akshara M12 — Infrastructure, Security & Production Hardening  
 **Date:** June 2026  
 **Baseline:** `6d87c54` (M11)  
-**Delivered commit:** _(see git log after commit)_
+**Delivered commit:** `d41e290`
 
 ---
 
