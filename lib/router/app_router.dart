@@ -82,6 +82,7 @@ import 'parent_navigation.dart';
 import 'parent_meetings_navigation.dart';
 import 'multi_school_navigation.dart';
 import 'organization_builder_navigation.dart';
+import 'platform_operations_navigation.dart';
 import 'dynamic_widget_navigation.dart';
 import 'route_names.dart';
 import 'student_navigation.dart';
@@ -762,6 +763,41 @@ GoRouter createAppRouter({
             name: 'organizationBuilderProvisioning',
             pageBuilder: (context, state) => NoTransitionPage(
               child: organizationBuilderProvisioningRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.platformOperations,
+            name: 'platformOperations',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: platformOperationsHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.platformOperationsAlerts,
+            name: 'platformOperationsAlerts',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: platformOperationsHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.platformOperationsSecurity,
+            name: 'platformOperationsSecurity',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: platformOperationsHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.platformOperationsTenantIsolation,
+            name: 'platformOperationsTenantIsolation',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: platformOperationsHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.platformOperationsReadiness,
+            name: 'platformOperationsReadiness',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: platformOperationsHubRouteBuilder(context, state),
             ),
           ),
           GoRoute(

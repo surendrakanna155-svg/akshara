@@ -252,6 +252,14 @@ final organizationBuilderApiEnabledProvider = Provider<bool>((ref) {
   );
 });
 
+final platformOperationsApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'PLATFORM_OPERATIONS_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
 /// Returns true when the global API mode and module flag are both enabled.
 bool isModuleApiEnabled(Ref ref, Provider<bool> moduleFlagProvider) {
   if (!ref.watch(enableApiModeProvider)) return false;
@@ -297,5 +305,6 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(evolutionApiEnabledProvider) ||
       ref.watch(schoolCompletionApiEnabledProvider) ||
       ref.watch(multiSchoolOperationsApiEnabledProvider) ||
-      ref.watch(organizationBuilderApiEnabledProvider);
+      ref.watch(organizationBuilderApiEnabledProvider) ||
+      ref.watch(platformOperationsApiEnabledProvider);
 });

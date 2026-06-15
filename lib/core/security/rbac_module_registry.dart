@@ -116,6 +116,11 @@ class RbacModuleRegistry {
       view: Permission.viewDynamicWidgets,
       manage: Permission.manageDynamicWidgets,
     ),
+    ModulePermissionSet(
+      moduleId: 'platform_operations',
+      view: Permission.viewPlatformOperations,
+      manage: Permission.managePlatformOperations,
+    ),
   ];
 
   static ModulePermissionSet? forModule(String moduleId) {

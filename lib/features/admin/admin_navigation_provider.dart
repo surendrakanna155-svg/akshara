@@ -121,6 +121,14 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     requiredPermission: Permission.viewOrganizationBuilder,
   ),
   AdminNavDestination(
+    module: AdminModule.platformOperations,
+    route: RouteNames.platformOperations,
+    label: 'Platform Ops',
+    icon: Icons.monitor_heart_outlined,
+    selectedIcon: Icons.monitor_heart,
+    requiredPermission: Permission.viewPlatformOperations,
+  ),
+  AdminNavDestination(
     module: AdminModule.dynamicWidgets,
     route: RouteNames.dynamicWidgets,
     label: 'Widgets',
@@ -238,6 +246,13 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
     description:
         'AI-guided vertical pack interview to provision schools, salons, hospitals, and restaurants (FV-30).',
     route: RouteNames.organizationBuilder,
+  ),
+  AdminModule.platformOperations: AdminModuleInfo(
+    module: AdminModule.platformOperations,
+    title: 'Platform Operations',
+    description:
+        'Observability, security hardening, tenant isolation, alerting, and production readiness (FV-PLAT-06/08/09/12).',
+    route: RouteNames.platformOperations,
   ),
   AdminModule.dynamicWidgets: AdminModuleInfo(
     module: AdminModule.dynamicWidgets,

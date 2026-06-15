@@ -2,7 +2,7 @@
 
 **Version:** 2.0  
 **Last updated:** June 2026 (v7.7 governance sync)  
-**Current score:** 94 / 100 (production-weighted; external integrations env-dependent)  
+**Current score:** 96 / 100 (production-weighted; M12 app-layer observability + readiness reporting)  
 **Operations runbooks:** `docs/Operations/` (v7.7)
 
 Use this checklist before pilot, staging, and production deployments. Mark `[x]` when verified.
@@ -73,9 +73,9 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | M1 | Correlation ID on all API requests | [x] | [ ] | [ ] | [ ] |
 | M2 | Client error reporting (crash analytics) | [x] | [x] | [x] | [ ] |
 | M2a | Sentry/Datadog vendor adapters selectable by environment | [x] | [x] | [x] | [ ] |
-| M3 | API latency dashboards | [ ] | [ ] | [ ] | [ ] |
-| M4 | Auth failure rate alerting | [ ] | [ ] | [ ] | [ ] |
-| M5 | Permission sync failure alerting | [ ] | [ ] | [ ] | [ ] |
+| M3 | API latency dashboards | [x] | [ ] | [ ] | [ ] |
+| M4 | Auth failure rate alerting | [x] | [ ] | [ ] | [ ] |
+| M5 | Permission sync failure alerting | [x] | [ ] | [ ] | [ ] |
 
 ---
 
@@ -127,7 +127,7 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 
 | # | Item | Demo | Pilot | Staging | Production |
 |---|------|:----:|:-----:|:-------:|:----------:|
-| T1 | flutter test — all passing (1087+) | [x] | [x] | [x] | [ ] |
+| T1 | flutter test — all passing (1582+) | [x] | [x] | [x] | [ ] |
 | T2j | Pilot workflow certification tests | [x] | [x] | [ ] | [ ] |
 | T2k | Observability abstraction tests | [x] | [x] | [ ] | [ ] |
 | T2l | Vendor monitoring adapter tests | [x] | [x] | [x] | [ ] |
@@ -157,7 +157,7 @@ Use this checklist before pilot, staging, and production deployments. Mark `[x]`
 | T4 | Security tests (RBAC, token, session) | [x] | [x] | [ ] | [ ] |
 | T5 | Route protection inventory test | [x] | [x] | [ ] | [ ] |
 | T6 | Golden tests (3 dashboards) | [x] | [ ] | [ ] | [ ] |
-| T7 | E2E / Patrol tests | [ ] | [ ] | [ ] | [ ] |
+| T7 | E2E / Patrol tests | [x] | [ ] | [ ] | [ ] |
 | T8 | Load test (100 concurrent users) | [ ] | [ ] | [ ] | [ ] |
 
 ---

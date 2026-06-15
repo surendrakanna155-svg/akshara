@@ -19,6 +19,7 @@ enum AdminModule {
   director,
   organizationBuilder,
   dynamicWidgets,
+  platformOperations,
 }
 
 /// Single breadcrumb segment for [AdminAppBar].

@@ -60,6 +60,17 @@ void main() {
       });
     }
 
+    for (final role in roles) {
+      test('$role platform operations access matches permission matrix', () {
+        final rbac = RbacService(UserPermissions.forRole(role));
+        final allowed =
+            canAccessErpRoute(rbac, RouteNames.platformOperations);
+        final expected = UserPermissions.forRole(role)
+            .has(Permission.viewPlatformOperations);
+        expect(allowed, expected);
+      });
+    }
+
     test('all ERP prefixes map to a permission', () {
       for (final prefix in RouteNames.adminErpRoutes) {
         expect(erpRoutePermissionFor(prefix), isNotNull);

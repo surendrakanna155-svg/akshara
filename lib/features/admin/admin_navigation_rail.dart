@@ -121,24 +121,25 @@ class AdminNavigationRail extends ConsumerWidget {
       );
     }
 
+    final railWidth =
+        expanded ? ext.navRailExpandedWidth : ext.navRailCollapsedWidth;
+
     return Material(
       color: colors.surfaceContainerLow,
-      child: NavigationRail(
-        extended: expanded,
-        minWidth: ext.navRailCollapsedWidth,
-        minExtendedWidth: ext.navRailExpandedWidth,
-        selectedIndex: selectedIndex,
-        labelType: NavigationRailLabelType.none,
-        leading: expanded
-            ? Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AksharaSpacing.s4,
-                  AksharaSpacing.s6,
-                  AksharaSpacing.s4,
-                  AksharaSpacing.s4,
-                ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
+      child: SafeArea(
+        child: SizedBox(
+          width: railWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (expanded)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AksharaSpacing.s4,
+                    AksharaSpacing.s6,
+                    AksharaSpacing.s4,
+                    AksharaSpacing.s4,
+                  ),
                   child: Text(
                     'Akshara ERP',
                     style: text.titleSmall.copyWith(
@@ -146,28 +147,82 @@ class AdminNavigationRail extends ConsumerWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                )
+              else
+                const SizedBox(height: AksharaSpacing.s6),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: destinations.length,
+                  itemBuilder: (context, index) {
+                    final destination = destinations[index];
+                    final selected = index == selectedIndex;
+                    return Semantics(
+                      selected: selected,
+                      button: true,
+                      child: InkWell(
+                        key: QaTestKeys.erpNavModule(destination.module.name),
+                        onTap: () => _navigate(context, destination),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal:
+                                expanded ? AksharaSpacing.s4 : AksharaSpacing.s2,
+                            vertical: AksharaSpacing.s3,
+                          ),
+                          child: expanded
+                              ? Row(
+                                  children: [
+                                    Icon(
+                                      selected
+                                          ? destination.selectedIcon
+                                          : destination.icon,
+                                      color: selected
+                                          ? colors.primary
+                                          : colors.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: AksharaSpacing.s3),
+                                    Expanded(
+                                      child: Text(
+                                        destination.label,
+                                        style: text.labelLarge.copyWith(
+                                          color: selected
+                                              ? colors.primary
+                                              : colors.onSurface,
+                                          fontWeight: selected
+                                              ? FontWeight.w600
+                                              : FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Align(
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    selected
+                                        ? destination.selectedIcon
+                                        : destination.icon,
+                                    color: selected
+                                        ? colors.primary
+                                        : colors.onSurfaceVariant,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              )
-            : const SizedBox(height: AksharaSpacing.s6),
-        trailing: showSidebarAi
-            ? Padding(
-                padding: const EdgeInsets.only(bottom: AksharaSpacing.s4),
-                child: _AdminSidebarAiTile(
-                  compact: !expanded,
-                  onNavigate: onDestinationSelected,
+              ),
+              if (showSidebarAi)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AksharaSpacing.s4),
+                  child: _AdminSidebarAiTile(
+                    compact: !expanded,
+                    onNavigate: onDestinationSelected,
+                  ),
                 ),
-              )
-            : null,
-        onDestinationSelected: (index) =>
-            _navigate(context, destinations[index]),
-        destinations: [
-          for (final destination in destinations)
-            NavigationRailDestination(
-              icon: Icon(destination.icon),
-              selectedIcon: Icon(destination.selectedIcon),
-              label: Text(destination.label),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

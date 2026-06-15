@@ -1004,6 +1004,58 @@ abstract final class QaTestKeys {
   static ValueKey<String> dynamicWidgetRuntimeTile(String widgetId) =>
       ValueKey<String>('dynamic_widget_runtime_tile_$widgetId');
 
+  static const platformOperationsHubScreen =
+      ValueKey<String>('platform_operations_hub_screen');
+  static const platformOperationsTabBar =
+      ValueKey<String>('platform_operations_tab_bar');
+  static const platformOperationsOverviewTab =
+      ValueKey<String>('platform_operations_overview_tab');
+  static const platformOperationsHealthTab =
+      ValueKey<String>('platform_operations_health_tab');
+  static const platformOperationsErrorsTab =
+      ValueKey<String>('platform_operations_errors_tab');
+  static const platformOperationsWorkflowsTab =
+      ValueKey<String>('platform_operations_workflows_tab');
+  static const platformOperationsAiTab =
+      ValueKey<String>('platform_operations_ai_tab');
+  static const platformOperationsAlertsTab =
+      ValueKey<String>('platform_operations_alerts_tab');
+  static const platformOperationsSecurityTab =
+      ValueKey<String>('platform_operations_security_tab');
+  static const platformOperationsTenantTab =
+      ValueKey<String>('platform_operations_tenant_tab');
+  static const platformOperationsReadinessTab =
+      ValueKey<String>('platform_operations_readiness_tab');
+  static const platformOperationsOperationsHubLink =
+      ValueKey<String>('platform_operations_operations_hub_link');
+  static const platformOperationsIntelligenceHubLink =
+      ValueKey<String>('platform_operations_intelligence_hub_link');
+  static const platformOperationsDirectorPortalLink =
+      ValueKey<String>('platform_operations_director_portal_link');
+  static const platformOperationsTrustIntelligenceLink =
+      ValueKey<String>('platform_operations_trust_intelligence_link');
+  static const platformOperationsRunTenantVerificationButton =
+      ValueKey<String>('platform_operations_run_tenant_verification_button');
+  static const platformOperationsAlertAcknowledgedSnackbar =
+      ValueKey<String>('platform_operations_alert_acknowledged_snackbar');
+
+  static ValueKey<String> platformOperationsAlertTile(String alertId) =>
+      ValueKey<String>('platform_operations_alert_tile_$alertId');
+  static ValueKey<String> platformOperationsAcknowledgeAlertButton(
+    String alertId,
+  ) =>
+      ValueKey<String>('platform_operations_ack_alert_$alertId');
+  static ValueKey<String> platformOperationsAccessReviewTile(String reviewId) =>
+      ValueKey<String>('platform_operations_access_review_$reviewId');
+  static ValueKey<String> platformOperationsCompleteAccessReviewButton(
+    String reviewId,
+  ) =>
+      ValueKey<String>('platform_operations_complete_access_review_$reviewId');
+  static ValueKey<String> platformOperationsReadinessCategory(
+    String categoryId,
+  ) =>
+      ValueKey<String>('platform_operations_readiness_category_$categoryId');
+
   static String normalizeSubNavLabel(String label) =>
       label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
 

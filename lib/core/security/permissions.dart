@@ -176,6 +176,10 @@ enum Permission {
   // FV-30 — Universal Organization Builder
   viewOrganizationBuilder,
   manageOrganizationBuilder,
+
+  // FV-PLAT-06/08/09/12 — Platform Operations
+  viewPlatformOperations,
+  managePlatformOperations,
 }
 
 /// Immutable set of [Permission] values for a session.

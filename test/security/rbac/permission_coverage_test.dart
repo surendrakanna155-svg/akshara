@@ -151,6 +151,21 @@ void main() {
       }
     });
 
+    test('platform operations mutations registered', () {
+      for (final id in [
+        'acknowledgeAlert',
+        'runTenantVerification',
+        'completeAccessReview',
+      ]) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.mutationId == id,
+        );
+        expect(entry.moduleId, 'platform_operations');
+        expect(entry.permission, Permission.managePlatformOperations);
+        expect(entry.kind, 'manage');
+      }
+    });
+
     test('dynamic widget mutations registered', () {
       for (final id in ['saveRoleDashboardLayout', 'resetLayoutToPackDefault']) {
         final entry = MutationPermissionRegistry.entries.firstWhere(

@@ -33,6 +33,10 @@ void main() {
         erpRoutePermissionFor(RouteNames.organizationBuilder),
         Permission.viewOrganizationBuilder,
       );
+      expect(
+        erpRoutePermissionFor(RouteNames.platformOperations),
+        Permission.viewPlatformOperations,
+      );
       expect(erpRoutePermissionFor(RouteNames.parentDashboard), isNull);
     });
   });

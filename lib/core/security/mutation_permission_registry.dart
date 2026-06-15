@@ -273,6 +273,24 @@ class MutationPermissionRegistry {
       kind: 'manage',
     ),
     MutationPermissionEntry(
+      moduleId: 'platform_operations',
+      mutationId: 'acknowledgeAlert',
+      permission: Permission.managePlatformOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'platform_operations',
+      mutationId: 'runTenantVerification',
+      permission: Permission.managePlatformOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'platform_operations',
+      mutationId: 'completeAccessReview',
+      permission: Permission.managePlatformOperations,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
       moduleId: 'dynamic_widgets',
       mutationId: 'saveRoleDashboardLayout',
       permission: Permission.manageDynamicWidgets,

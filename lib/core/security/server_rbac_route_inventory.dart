@@ -95,8 +95,10 @@ abstract final class ServerRbacRouteInventory {
     'manageOrganizationBuilder',
     'viewDynamicWidgets',
     'manageDynamicWidgets',
+    'viewPlatformOperations',
+    'managePlatformOperations',
   ];
 
   /// Mirrors server RBAC inventory entry count (v13.4).
-  static const protectedRouteCount = 87;
+  static const protectedRouteCount = 92;
 }

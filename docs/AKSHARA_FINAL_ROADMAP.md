@@ -179,15 +179,15 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 
 ### M12 — Infrastructure & Security
 
-**Target:** Pre-GA hardening
+**Target:** Pre-GA hardening · **✅ Complete June 2026 (app layer)**
 
 | ID | Feature | Vision | Status |
 |----|---------|--------|--------|
-| FV-P4-02 | Observability Platform | P4 | 📐 |
-| FV-PLAT-09 | Monitoring & Alerting | — | ⏳ |
-| FV-PLAT-06 | Production Readiness Program | checklist | 🔄 70% |
-| FV-PLAT-12 | Security Hardening | v2.7 | 🔄 |
-| FV-PLAT-08 | Tenant Isolation Verification | probes | 🔄 213 probes |
+| FV-P4-02 | Observability Platform | P4 | ✅ |
+| FV-PLAT-09 | Monitoring & Alerting | — | ✅ |
+| FV-PLAT-06 | Production Readiness Program | checklist | ✅ 96% app |
+| FV-PLAT-12 | Security Hardening | v2.7 | ✅ Foundation |
+| FV-PLAT-08 | Tenant Isolation Verification | probes | ✅ 213 probes |
 | FV-PLAT-13 | RLS Enforcement | TD-P0-01 | 🔄 |
 | FV-P4-01 | Penetration Testing | P4 | 📐 |
 

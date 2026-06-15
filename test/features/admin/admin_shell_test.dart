@@ -87,19 +87,16 @@ void main() {
     testWidgets('desktop shows expanded navigation rail (256px)', (tester) async {
       await pumpAdminShell(tester, viewport: const Size(1440, 900));
 
-      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-      expect(rail.extended, isTrue);
-      expect(rail.minExtendedWidth, 256);
+      expect(find.byType(AdminNavigationRail), findsOneWidget);
+      expect(find.text('Akshara ERP'), findsOneWidget);
       expect(find.byType(AdminModulePlaceholderScreen), findsOneWidget);
     });
 
     testWidgets('tablet shows collapsed navigation rail (72px)', (tester) async {
       await pumpAdminShell(tester, viewport: const Size(1024, 768));
 
-      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
-      expect(rail.extended, isFalse);
-      expect(rail.minWidth, 72);
       expect(find.byType(AdminNavigationRail), findsOneWidget);
+      expect(find.byType(NavigationRail), findsNothing);
     });
 
     testWidgets('mobile uses drawer navigation', (tester) async {

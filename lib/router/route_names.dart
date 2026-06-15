@@ -124,6 +124,14 @@ abstract final class RouteNames {
       '/organization-builder/preview';
   static const String organizationBuilderProvisioning =
       '/organization-builder/provisioning';
+  static const String platformOperations = '/platform-operations';
+  static const String platformOperationsAlerts = '/platform-operations/alerts';
+  static const String platformOperationsSecurity =
+      '/platform-operations/security';
+  static const String platformOperationsTenantIsolation =
+      '/platform-operations/tenant-isolation';
+  static const String platformOperationsReadiness =
+      '/platform-operations/readiness';
   static const String admissions = '/admissions';
   static const String admissionsDashboard = '/admissions/dashboard';
   static const String admissionsLeads = '/admissions/leads';
@@ -483,6 +491,11 @@ abstract final class RouteNames {
     organizationBuilderInterview,
     organizationBuilderPreview,
     organizationBuilderProvisioning,
+    platformOperations,
+    platformOperationsAlerts,
+    platformOperationsSecurity,
+    platformOperationsTenantIsolation,
+    platformOperationsReadiness,
     dynamicWidgets,
     dynamicWidgetLayout,
     dynamicWidgetRuntime,

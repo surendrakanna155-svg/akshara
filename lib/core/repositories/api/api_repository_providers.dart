@@ -68,6 +68,8 @@ import 'multi_school/api_multi_school_operations_repository.dart';
 import 'multi_school/remote/multi_school_operations_remote_datasource.dart';
 import 'organization_builder/api_organization_builder_repository.dart';
 import 'organization_builder/remote/organization_builder_remote_datasource.dart';
+import 'platform_operations/api_platform_operations_repository.dart';
+import 'platform_operations/remote/platform_operations_remote_datasource.dart';
 
 final admissionsRemoteDataSourceProvider = Provider<AdmissionsRemoteDataSource>(
   (ref) => AdmissionsRemoteDataSource(ref.watch(dioProvider)),
@@ -444,5 +446,17 @@ final apiOrganizationBuilderRepositoryProvider =
     Provider<ApiOrganizationBuilderRepository>(
   (ref) => ApiOrganizationBuilderRepository(
     remote: ref.watch(organizationBuilderRemoteDataSourceProvider),
+  ),
+);
+
+final platformOperationsRemoteDataSourceProvider =
+    Provider<PlatformOperationsRemoteDataSource>(
+  (ref) => PlatformOperationsRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiPlatformOperationsRepositoryProvider =
+    Provider<ApiPlatformOperationsRepository>(
+  (ref) => ApiPlatformOperationsRepository(
+    remote: ref.watch(platformOperationsRemoteDataSourceProvider),
   ),
 );

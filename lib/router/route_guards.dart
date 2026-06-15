@@ -93,6 +93,12 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.organizationBuilderPreview: Permission.viewOrganizationBuilder,
   RouteNames.organizationBuilderProvisioning:
       Permission.viewOrganizationBuilder,
+  RouteNames.platformOperations: Permission.viewPlatformOperations,
+  RouteNames.platformOperationsAlerts: Permission.viewPlatformOperations,
+  RouteNames.platformOperationsSecurity: Permission.viewPlatformOperations,
+  RouteNames.platformOperationsTenantIsolation:
+      Permission.viewPlatformOperations,
+  RouteNames.platformOperationsReadiness: Permission.viewPlatformOperations,
 };
 
 /// Resolves the view permission required for [location].
