@@ -56,7 +56,9 @@ class ParentShell extends ConsumerWidget {
     if (location.startsWith(RouteNames.parentNotices) ||
         location.startsWith(RouteNames.parentEvents) ||
         location.startsWith(RouteNames.parentProfile) ||
-        location.startsWith(RouteNames.parentMessages)) {
+        location.startsWith(RouteNames.parentMessages) ||
+        location.startsWith(RouteNames.parentTransport) ||
+        location.startsWith(RouteNames.parentPtm)) {
       return 0;
     }
     return 0;

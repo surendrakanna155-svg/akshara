@@ -143,6 +143,11 @@ ALL_TARGETS=(
   "patrol_test/workflows/hostel_visitors_e2e_test.dart"
   "patrol_test/workflows/library_digital_resources_e2e_test.dart"
   "patrol_test/workflows/screenshot_validation_test.dart"
+  # Red Team operational remediation (post #14–#25)
+  "patrol_test/workflows/red_team_parent_operational_e2e_test.dart"
+  "patrol_test/workflows/red_team_student_operational_e2e_test.dart"
+  "patrol_test/workflows/red_team_route_security_e2e_test.dart"
+  "patrol_test/workflows/red_team_admin_security_e2e_test.dart"
 )
 
 if [[ "$MODE" == "fast" ]]; then

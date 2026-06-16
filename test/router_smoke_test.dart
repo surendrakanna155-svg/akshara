@@ -379,5 +379,37 @@ void main() {
         RouteNames.otpVerification,
       );
     });
+
+    testWidgets('redirects unauthenticated users from AI assistant route', (
+      tester,
+    ) async {
+      final router = createAppRouter(
+        readAuth: () => const AuthState(status: AuthStatus.unauthenticated),
+      );
+
+      await pumpAksharaRouter(tester, router: router);
+      router.go(RouteNames.aiAssistant);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.login,
+      );
+    });
+
+    testWidgets('allows authenticated student to reach AI assistant', (
+      tester,
+    ) async {
+      final router = createAppRouter(readAuth: () => _studentAuth);
+
+      await pumpAksharaRouter(tester, router: router);
+      router.go(RouteNames.aiAssistant);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.aiAssistant,
+      );
+    });
   });
 }

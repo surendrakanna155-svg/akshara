@@ -1,9 +1,9 @@
 # Future Vision Master Index
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Date:** June 2026  
 **Purpose:** Permanent master index for every Akshara capability — feature name, milestone, status, completion %, dependency chain  
-**SSOT chain:** This index → `AKSHARA_MASTER_FEATURE_REGISTRY.md` → `AKSHARA_FINAL_ROADMAP.md` → `MASTER_MILESTONE_TRACKER.md`
+**SSOT chain:** This index → `AKSHARA_MASTER_FEATURE_REGISTRY.md` → `AKSHARA_FINAL_ROADMAP.md` → `MASTER_MILESTONE_TRACKER.md` → `DOCUMENTATION_SYNC_REPORT.md`
 
 **Rule:** No FutureVision item may exist without a row here. No row here may exist without a registry entry and roadmap milestone.
 
@@ -109,6 +109,31 @@
 | FV-PLAT-04 | Organization / Trust Intelligence | M4/M9 | ✅ Shipped | 90 | Yes | No | Control Center | FV-PLAT-03 |
 | FV-P4-03 | Franchise Management | M9 | ✅ MVP | 70 | Yes | No | FV-PLAT-02 | Org governance |
 | FV-P4-04 | Multi-Branch Management | M9 | ✅ MVP | 70 | Yes | No | Branch RLS | Branch ops |
+
+---
+
+## Post-RT — Operational Hardening (June 2026)
+
+| ID | Feature | Milestone | Status | Completion % | Test | Prod | Depends on | Blocks |
+|----|---------|-----------|--------|:------------:|:----:|:----:|------------|--------|
+| FV-POST-01 | Exam Administration Publish Workflow | Post-RT | ✅ Shipped | 85 | Yes | No | Teacher exams, sync store | API persistence |
+| FV-POST-02 | Parent Communication Governance | Post-RT | ✅ Shipped | 80 | Yes | No | Class teacher role | FV-POST-11 |
+| FV-POST-03 | Class Teacher Governance | Post-RT | ✅ Shipped | 75 | Yes | No | FV-POST-12 | FV-POST-02 |
+| FV-POST-04 | Subject Teacher Escalation | Post-RT | ✅ Shipped | 80 | Yes | No | FV-POST-02 | Notifications |
+| FV-POST-05 | Student 360 Risk View (mobile) | Post-RT | ✅ Shipped | 75 | Partial | No | FV-03, mock registry | ERP unify |
+| FV-POST-06 | Students Requiring Attention Today | Post-RT | ✅ Shipped | 75 | Partial | No | FV-POST-05 | API dashboard |
+| FV-POST-07 | Unified Onboarding Wizard | Post-RT | 🔄 Partial | 70 | Yes | Partial | v7.15 onboarding | FV-POST-13 |
+| FV-POST-08 | Translation Framework | Post-RT | 🔄 Partial | 65 | Partial | No | i18n catalog | FV-POST-08b |
+| FV-POST-08b | Translation Rollout (app-wide) | Post-RT | 🔄 Partial | 25 | No | No | FV-POST-08 | Parent UX |
+| FV-POST-09 | Backup & Restore Architecture | Post-RT | 🔄 Partial | 40 | No | No | Admin RBAC | Object storage |
+| FV-POST-10 | Red Team Remediation (#1–#25) | Post-RT | ✅ Shipped | 95 | Yes | Partial | RC baseline | Patrol E2E |
+| FV-POST-11 | Parent Inbox Integration | Post-RT | 🔄 Partial | 60 | Partial | No | FV-POST-02 | API inbox |
+| FV-POST-12 | HR/SIS Teacher Assignment Mapping | Post-RT | 🔄 Partial | 35 | No | No | HR API, SIS | FV-POST-03 |
+| FV-POST-13 | School Config Sync (remote) | Post-RT | 🔄 Partial | 30 | Partial | No | FV-POST-07 | Cross-device |
+| FV-M15-01 | M15 Theme Modernization | M15 | ⏳ Planned | 5 | No | No | RC lock lift | Visual polish |
+| FV-DEF-01 | Academic Assessment Platform | Deferred | 📐 Design | 10 | No | No | Product decision | FV-DEF-02/03 |
+| FV-DEF-02 | Formal Question Paper Generation | Deferred | ⏳ Planned | 0 | No | No | FV-DEF-01 | Exam ops |
+| FV-DEF-03 | Assessment AI | Deferred | ⏳ Planned | 0 | No | No | FV-DEF-01 | Academic diff |
 
 ---
 

@@ -41,7 +41,7 @@ class LibraryResourcesScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
         child: FilledButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add resource'),
           icon: const Icon(Icons.upload_outlined, size: 18),
           label: const Text('Upload'),
         ),

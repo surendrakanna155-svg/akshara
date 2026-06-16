@@ -232,31 +232,36 @@ class _StudentsNeedingAttentionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alerts = <String>[];
-    if (data.attendanceSummary.hasPendingAttendance) {
-      alerts.add(data.attendanceSummary.pendingBannerMessage!);
+    final items = data.studentsNeedingAttention;
+    if (items.isEmpty && !data.attendanceSummary.hasPendingAttendance) {
+      return const SizedBox.shrink();
     }
-    if (data.aiInsight.message.isNotEmpty) {
-      alerts.add(data.aiInsight.message);
-    }
-
-    if (alerts.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const AksharaSectionHeader(
-          title: 'Students needing attention',
+          title: 'Students requiring attention today',
           fixedHeight: false,
           spacingBelow: AksharaSpacing.s3,
         ),
-        for (final alert in alerts)
+        if (data.attendanceSummary.hasPendingAttendance)
           Padding(
             padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
             child: AksharaWarningBanner(
-              message: alert,
-              actionLabel: 'Review',
+              message: data.attendanceSummary.pendingBannerMessage!,
+              actionLabel: data.attendanceSummary.pendingBannerActionLabel,
               onAction: () => onNavigate('mark_attendance'),
+              compactMessage: true,
+            ),
+          ),
+        for (final item in items)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+            child: AksharaWarningBanner(
+              message: '${item.studentName}: ${item.summary}',
+              actionLabel: 'Review',
+              onAction: () => onNavigate('student_risk_${item.sisStudentId}'),
               compactMessage: true,
             ),
           ),

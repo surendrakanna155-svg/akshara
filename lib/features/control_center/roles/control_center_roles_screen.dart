@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_error_state.dart';
@@ -114,7 +115,7 @@ class _RoleCard extends StatelessWidget {
           trailing: IconButton(
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Edit ${role.name}',
-            onPressed: () {},
+            onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Edit'),
           ),
         ),
       ),

@@ -1,9 +1,9 @@
 # Akshara — Consolidated Future Vision
 
-**Version:** 2.0  
+**Version:** 2.1  
 **Status:** Vision + implementation roadmap (see [`ImplementationRoadmap.md`](./ImplementationRoadmap.md))  
-**Baseline:** v1.0-rc1 · v1.0-customer-ready · production stable  
-**Last updated:** June 2026 (v10.4 Production Hardening complete)
+**Baseline:** v1.0-preprod · `release/v1.0-preprod` · Red Team remediation complete  
+**Last updated:** June 2026 (Post-RT operational hardening + documentation sync)
 
 ---
 
@@ -287,6 +287,121 @@ The **Akshara Intelligence Layer** unifies risk prediction, multilingual communi
 - **Universal Workflow Engine** — [`design/Universal-Workflow-Engine.md`](./design/Universal-Workflow-Engine.md)
 - **AI School Setup Wizard** — guided onboarding using intelligence + analytics signals
 
+---
+
+## H. Communication Vision (Post-RT — implemented mock-first)
+
+**Principle:** Class teachers own parent relationships; subject teachers escalate; every message is auditable.
+
+| Capability | Vision | Implementation status |
+|------------|--------|----------------------|
+| Class teacher owns parent communication | Only homeroom teacher sends direct messages | ✅ `ParentCommunicationGovernance` |
+| Subject teacher escalation | Flag concerns → class teacher review queue | ✅ `SubjectTeacherConcernStore` |
+| Audit trail | Sent, delivered, read, acknowledged timeline | 🔄 In-memory; server audit pending |
+| Read receipts | Parent detail auto-marks read | ✅ Mock parent repo |
+| Parent acknowledgement | Explicit acknowledge action | ✅ Mock parent repo |
+
+**Operational docs:** `docs/Operations/workflows/Teacher-Parent-Communication-Workflow.md` · `Escalation-Workflow.md`
+
+---
+
+## I. Communication Intelligence
+
+**Principle:** Template-first, AI only for custom messages, token optimization, multi-channel delivery.
+
+| Capability | Vision | Status |
+|------------|--------|--------|
+| Template-first communication | Curated `TeacherParentTemplate` catalog | ✅ Shipped |
+| AI only for custom messages | Copilot assists drafts; templates bypass LLM | 🔄 Copilot stub + capability filter |
+| Token optimization strategy | Dictionary translation + templates avoid LLM calls | ✅ `TranslationService` |
+| Multi-channel communication | In-app, SMS, WhatsApp, email | 🔄 In-app only; channels modeled |
+
+---
+
+## J. Translation Vision
+
+**Principle:** Parents receive messages in their preferred language automatically.
+
+| Capability | Vision | Status |
+|------------|--------|--------|
+| Parent preferred language | Per-student language map | 🔄 `ParentCommunicationStore` seed |
+| Automatic translation | `TranslatedMessagePair` on send | ✅ Parent comm path |
+| Multi-language notifications | Notices, exams, insights bilingual | 🔄 Mock parent/student only |
+| Supported languages | en, te, hi, ta, kn, ml, ur | ✅ Catalog ~53 phrases |
+
+**Rollout in progress:** ERP screens, teacher UI, homework, announcements remain English.
+
+---
+
+## K. Student Intelligence (Mobile Teacher)
+
+| Capability | Vision | Status |
+|------------|--------|--------|
+| Student 360 | Single-screen risk + factors + history | ✅ `TeacherStudentRiskScreen` |
+| Students requiring attention today | Prioritized dashboard list | ✅ `attentionForClass()` |
+| Risk prioritization | Low / medium / high with factor enumeration | ✅ Heuristic engine |
+| Suggested outreach | Template deep-links from risk screen | ✅ |
+
+**Operational doc:** `docs/Operations/workflows/Student-Risk-Workflow.md`
+
+---
+
+## L. Startup Onboarding
+
+| Capability | Vision | Status |
+|------------|--------|--------|
+| Unified onboarding | Profile → curriculum → fees → branding → modules → go-live | ✅ UI + hybrid repo |
+| Go Live workflow | Status flip + checklist | 🔄 Local/API status only |
+| Tenant setup automation | Declarative module + RBAC provision | ⏳ Planned |
+
+**Operational doc:** `docs/Operations/workflows/Unified-Onboarding-Workflow.md`
+
+---
+
+## M. Backup Vision
+
+| Capability | Vision | Status |
+|------------|--------|--------|
+| Akshara-managed backups | Nightly incremental + weekly full per tenant | 📐 Architecture doc |
+| School-owned exports | ZIP manifest with domain folders | 📐 Architecture doc |
+| Google Drive export | OAuth destination picker | 🔄 UI stub |
+| OneDrive export | OAuth destination picker | 🔄 UI stub |
+
+**Docs:** `docs/BACKUP_RESTORE_ARCHITECTURE.md` · `docs/BACKUP_RECOVERY_ARCHITECTURE.md` (infra PITR)
+
+---
+
+## N. M15 Theme Modernization Vision
+
+| Element | Vision | Status |
+|---------|--------|--------|
+| Premium theme | Refined color system, semantic tokens | ⏳ Not started |
+| Glass surfaces | Frosted cards on shell backgrounds | ⏳ Readiness only |
+| KPI cards | Elevated metrics with drill-through preserved | ⏳ Readiness only |
+| Role-based illustrations | Persona art per dashboard | ⏳ Planned |
+
+| Role | Illustration concept |
+|------|---------------------|
+| Student | Astronaut exploring learning |
+| Parent | Family supporting student journey |
+| Teacher | Classroom collaboration |
+| Principal | School building / community |
+| Director | Network of connected schools |
+
+**Readiness:** `docs/M15_THEME_MODERNIZATION_READINESS.md` — READY TO BEGIN on dedicated branch.
+
+---
+
+## O. Deferred — Academic Assessment Platform
+
+| Capability | Status | Doc |
+|------------|--------|-----|
+| Bank-first assessment workflow | 📐 Design only | `docs/ACADEMIC_ASSESSMENT_PLATFORM_DESIGN.md` |
+| Question paper generation (formal exams) | ⏸ Deferred | Distinct from Evolution FV-23 |
+| Assessment AI | ⏸ Deferred | Requires assessment platform foundation |
+
+---
+
 ## v1.0 stability contract
 
 Evolution work must **not break**: onboarding, attendance, finance, payments, communication, education suite, analytics, copilot, timetable, tenant isolation, RBAC, audit, 216+ probes.
@@ -300,4 +415,6 @@ Evolution work must **not break**: onboarding, attendance, finance, payments, co
 | [`ImplementationRoadmap.md`](./ImplementationRoadmap.md) | Priority, dependencies, rollout |
 | [`design/FutureTracks-Index.md`](./design/FutureTracks-Index.md) | Per-track design specs |
 | [`../Roadmap.md`](../Roadmap.md) | Shipped milestones |
-| [`../Operations/Customer-Readiness-Report.md`](../Operations/Customer-Readiness-Report.md) | First school execution |
+| [`../DOCUMENTATION_SYNC_REPORT.md`](../DOCUMENTATION_SYNC_REPORT.md) | June 2026 documentation sync + gap analysis |
+| [`../ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md`](../ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md) | Post-RT architecture |
+| [`../Operations/workflows/`](../Operations/workflows/) | Operational process flows |

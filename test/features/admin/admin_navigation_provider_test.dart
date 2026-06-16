@@ -1,3 +1,5 @@
+import 'package:akshara_erp/core/school_config/school_configuration_models.dart';
+import 'package:akshara_erp/core/school_config/school_configuration_provider.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
@@ -8,10 +10,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  final defaultCapabilities = SchoolConfiguration.demoDefault().capabilities;
+
   group('adminNavDestinationsProvider', () {
     test('superAdmin sees all ERP module groups', () {
       final container = ProviderContainer(
         overrides: [
+          schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
           userPermissionsProvider.overrideWithValue(
             UserPermissions.forRole(ErpRole.superAdmin),
           ),
@@ -53,6 +58,7 @@ void main() {
     test('financeAdmin sees finance and admin hub only', () {
       final container = ProviderContainer(
         overrides: [
+          schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
           userPermissionsProvider.overrideWithValue(
             UserPermissions.forRole(ErpRole.financeAdmin),
           ),
@@ -72,6 +78,7 @@ void main() {
     test('admissionsCounselor sees admissions and SIS modules', () {
       final container = ProviderContainer(
         overrides: [
+          schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
           userPermissionsProvider.overrideWithValue(
             UserPermissions.forRole(ErpRole.admissionsCounselor),
           ),
@@ -90,6 +97,7 @@ void main() {
     test('principal sees admissions, finance, SIS, and management', () {
       final container = ProviderContainer(
         overrides: [
+          schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
           userPermissionsProvider.overrideWithValue(
             UserPermissions.forRole(ErpRole.principal),
           ),

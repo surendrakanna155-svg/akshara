@@ -829,6 +829,39 @@ abstract final class QaTestKeys {
   static ValueKey<String> parentMeetingTile(String meetingId) =>
       ValueKey<String>('parent_meeting_tile_$meetingId');
 
+  // --- Red Team remediation (parent/student mobile + admin security) ---
+  static const parentDashboardScreen =
+      ValueKey<String>('parent_dashboard_screen');
+  static ValueKey<String> parentDashboardQuickAction(String actionId) =>
+      ValueKey<String>('parent_dashboard_qa_$actionId');
+  static ValueKey<String> parentDashboardNotice(String noticeId) =>
+      ValueKey<String>('parent_dashboard_notice_$noticeId');
+  static const parentNoticeCarousel =
+      ValueKey<String>('parent_notice_carousel');
+
+  static const parentTransportScreen =
+      ValueKey<String>('parent_transport_screen');
+  static const parentPtmScreen = ValueKey<String>('parent_ptm_screen');
+
+  static const studentDashboardScreen =
+      ValueKey<String>('student_dashboard_screen');
+  static ValueKey<String> studentDashboardQuickAction(String actionId) =>
+      ValueKey<String>('student_dashboard_qa_$actionId');
+
+  static const studentReportCardScreen =
+      ValueKey<String>('student_report_card_screen');
+  static const studentProgressScreen =
+      ValueKey<String>('student_progress_screen');
+
+  static const adminHubScreen = ValueKey<String>('admin_hub_screen');
+  static ValueKey<String> adminHubModuleCard(String moduleLabel) =>
+      ValueKey<String>(
+        'admin_hub_module_${normalizeSubNavLabel(moduleLabel)}',
+      );
+
+  static const accessDeniedScreen =
+      ValueKey<String>('access_denied_screen');
+
   static ValueKey<String> parentMeetingActionToggle(String actionId) =>
       ValueKey<String>('parent_meeting_action_toggle_$actionId');
 
@@ -911,6 +944,26 @@ abstract final class QaTestKeys {
       ValueKey<String>('multi_school_onboarding_continue_button');
   static const multiSchoolOnboardingCompletedSnackbar =
       ValueKey<String>('multi_school_onboarding_completed_snackbar');
+
+  // Unified startup onboarding (/admin/onboarding/unified)
+  static const unifiedOnboardingScreen =
+      ValueKey<String>('unified_onboarding_screen');
+  static const unifiedOnboardingSchoolNameField =
+      ValueKey<String>('unified_onboarding_school_name');
+  static const unifiedOnboardingAddressField =
+      ValueKey<String>('unified_onboarding_address');
+  static const unifiedOnboardingContactPhoneField =
+      ValueKey<String>('unified_onboarding_contact_phone');
+  static const unifiedOnboardingContactEmailField =
+      ValueKey<String>('unified_onboarding_contact_email');
+  static const unifiedOnboardingContinueButton =
+      ValueKey<String>('unified_onboarding_continue');
+  static const unifiedOnboardingGoLiveButton =
+      ValueKey<String>('unified_onboarding_go_live');
+  static const unifiedOnboardingGoLiveSuccess =
+      ValueKey<String>('unified_onboarding_go_live_success');
+  static const unifiedOnboardingProvisionSummary =
+      ValueKey<String>('unified_onboarding_provision_summary');
 
   static const organizationBuilderHubScreen =
       ValueKey<String>('organization_builder_hub_screen');

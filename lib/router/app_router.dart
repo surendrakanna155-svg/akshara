@@ -30,9 +30,14 @@ import '../features/parent/receipts/parent_receipts_screen.dart';
 import '../features/parent/notices/parent_notices_screen.dart';
 import '../features/parent/profile/parent_profile_screen.dart';
 import '../features/parent/messages/parent_conversation_screen.dart';
+import '../features/parent/communication/parent_communication_detail_screen.dart';
 import '../features/parent/messages/parent_messages_screen.dart';
 import '../features/parent/shell/parent_shell.dart';
+import '../features/parent/ptm/parent_ptm_screen.dart';
+import '../features/parent/transport/parent_transport_screen.dart';
 import '../features/parent/timetable/parent_timetable_screen.dart';
+import '../features/student/progress/student_progress_screen.dart';
+import '../features/student/progress/student_report_card_screen.dart';
 import '../features/student/attendance/student_attendance_screen.dart';
 import '../features/student/dashboard/student_dashboard_screen.dart';
 import '../features/student/exams/student_exams_screen.dart';
@@ -43,8 +48,12 @@ import '../features/student/shell/student_shell.dart';
 import '../features/student/timetable/student_timetable_screen.dart';
 import '../features/teacher/attendance/teacher_attendance_screen.dart';
 import '../features/teacher/dashboard/teacher_dashboard_screen.dart';
+import '../features/teacher/dashboard/teacher_class_teacher_dashboard_screen.dart';
+import '../features/teacher/student_risk/teacher_student_risk_screen.dart';
+import '../features/teacher/communication/teacher_parent_communication_screen.dart';
 import '../features/teacher/exams/teacher_exams_screen.dart';
 import '../features/teacher/homework/teacher_homework_screen.dart';
+import '../features/teacher/homework/teacher_homework_create_screen.dart';
 import '../features/teacher/leave/teacher_leave_screen.dart';
 import '../features/teacher/messages/teacher_conversation_screen.dart';
 import '../features/teacher/messages/teacher_messages_screen.dart';
@@ -52,6 +61,8 @@ import '../features/teacher/shell/teacher_shell.dart';
 import '../features/teacher/timetable/teacher_timetable_screen.dart';
 import '../features/copilot/dock/copilot_dock_host.dart';
 import '../features/admin/admin_shell.dart';
+import '../features/admin/backup/backup_restore_screen.dart';
+import '../features/onboarding/unified_onboarding_flow_screen.dart';
 import '../core/repositories/repository_providers.dart';
 import '../core/tenant/tenant_provider.dart';
 import '../core/testing/qa_test_keys.dart';
@@ -251,6 +262,20 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.parentTransport,
+            name: 'parentTransport',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentTransportRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentPtm,
+            name: 'parentPtm',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentPtmRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.parentProfile,
             name: 'parentProfile',
             pageBuilder: (context, state) => NoTransitionPage(
@@ -300,6 +325,13 @@ GoRouter createAppRouter({
             ),
             routes: [
               GoRoute(
+                path: 'comm/:messageId',
+                name: 'parentCommunicationMessage',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: parentCommunicationDetailRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: ':threadId',
                 name: 'parentConversation',
                 pageBuilder: (context, state) => NoTransitionPage(
@@ -342,6 +374,13 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.teacherClassTeacherDashboard,
+            name: 'teacherClassTeacherDashboard',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: const TeacherClassTeacherDashboardScreen(),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.teacherAttendance,
             name: 'teacherAttendance',
             pageBuilder: (context, state) => NoTransitionPage(
@@ -363,10 +402,33 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.teacherHomeworkCreate,
+            name: 'teacherHomeworkCreate',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: const TeacherHomeworkCreateScreen(),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.teacherExams,
             name: 'teacherExams',
             pageBuilder: (context, state) => NoTransitionPage(
               child: teacherExamsRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherParentCommunication,
+            name: 'teacherParentCommunication',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: TeacherParentCommunicationScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '${RouteNames.teacher}/student-risk/:sisStudentId',
+            name: 'teacherStudentRisk',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: TeacherStudentRiskScreen(
+                sisStudentId: state.pathParameters['sisStudentId'] ?? '',
+              ),
             ),
           ),
           GoRoute(
@@ -407,6 +469,20 @@ GoRouter createAppRouter({
             name: 'admin',
             pageBuilder: (context, state) => NoTransitionPage(
               child: adminHubRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.unifiedOnboarding,
+            name: 'unifiedOnboarding',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: UnifiedOnboardingFlowScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.backupRestore,
+            name: 'backupRestore',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: BackupRestoreScreen(),
             ),
           ),
           GoRoute(
@@ -1369,6 +1445,13 @@ GoRouter createAppRouter({
                 ),
               ),
               GoRoute(
+                path: 'reports',
+                name: 'hrReports',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: hrReportsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: 'settings',
                 name: 'hrSettings',
                 pageBuilder: (context, state) => NoTransitionPage(
@@ -2029,6 +2112,20 @@ GoRouter createAppRouter({
             ),
           ),
           GoRoute(
+            path: RouteNames.studentReportCard,
+            name: 'studentReportCard',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentReportCardRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentProgress,
+            name: 'studentProgress',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: studentProgressRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
             path: RouteNames.studentNotices,
             name: 'studentNotices',
             pageBuilder: (context, state) => NoTransitionPage(
@@ -2104,14 +2201,25 @@ String? _authRedirect(AuthState auth, String location, String entryRoute) {
   return null;
 }
 
+bool _isAiAssistantRoute(String location) {
+  return location == RouteNames.aiAssistant ||
+      location == RouteNames.aiAssistantSettings ||
+      location.startsWith('${RouteNames.aiAssistant}/');
+}
+
 bool _isProtectedRoute(String location) {
   return location.startsWith('/parent') ||
       location.startsWith('/teacher') ||
       location.startsWith('/student') ||
+      _isAiAssistantRoute(location) ||
       isAdminErpRoute(location);
 }
 
 bool _canAccessRoute(AuthState auth, String location) {
+  if (_isAiAssistantRoute(location)) {
+    return auth.isAuthenticated;
+  }
+
   if (isAdminErpRoute(location)) {
     return canAccessAdminErpShell(auth);
   }
@@ -2245,6 +2353,20 @@ Widget parentEventsRouteBuilder(BuildContext context, GoRouterState state) {
   );
 }
 
+/// Parent transport allocation and ETA (PA-12).
+Widget parentTransportRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentTransportScreen(
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
+  );
+}
+
+/// Parent-teacher meetings for active child (PA-13).
+Widget parentPtmRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentPtmScreen(
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
+  );
+}
+
 /// Parent profile screen (PA-09).
 Widget parentProfileRouteBuilder(BuildContext context, GoRouterState state) {
   return ParentProfileScreen(
@@ -2354,6 +2476,19 @@ Widget parentMessagesRouteBuilder(BuildContext context, GoRouterState state) {
     onNotificationsTap: () => context.push(RouteNames.parentNotifications),
     onThreadTap: (thread) =>
         context.push(RouteNames.parentConversation(thread.id)),
+    onCommunicationTap: (messageId) =>
+        context.push(RouteNames.parentCommunicationMessage(messageId)),
+  );
+}
+
+Widget parentCommunicationDetailRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  final messageId = state.pathParameters['messageId'] ?? '';
+  return ParentCommunicationDetailScreen(
+    messageId: messageId,
+    onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );
 }
 
@@ -2466,6 +2601,22 @@ Widget studentHomeworkRouteBuilder(BuildContext context, GoRouterState state) {
 Widget studentExamsRouteBuilder(BuildContext context, GoRouterState state) {
   return StudentExamsScreen(
     onNotificationsTap: _studentNotificationsTap(context),
+  );
+}
+
+Widget studentReportCardRouteBuilder(
+    BuildContext context, GoRouterState state) {
+  return StudentReportCardScreen(
+    onNotificationsTap: _studentNotificationsTap(context),
+  );
+}
+
+Widget studentProgressRouteBuilder(BuildContext context, GoRouterState state) {
+  return Consumer(
+    builder: (context, ref, _) => StudentProgressScreen(
+      onNotificationsTap: _studentNotificationsTap(context),
+      onAiTap: () => handleStudentNavigation(context, 'ai_assistant', ref: ref),
+    ),
   );
 }
 

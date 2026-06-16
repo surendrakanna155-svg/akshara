@@ -43,7 +43,7 @@ class AlumniRegistryScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAlumni,
         child: FilledButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add alumni'),
           icon: const Icon(Icons.person_add_outlined, size: 18),
           label: const Text('Add alumni'),
         ),

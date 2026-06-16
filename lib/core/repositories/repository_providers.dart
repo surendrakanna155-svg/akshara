@@ -25,6 +25,7 @@ import 'interfaces/director_repository.dart';
 import 'interfaces/inventory_finance_repository.dart';
 import 'interfaces/inventory_repository.dart';
 import 'interfaces/onboarding_repository.dart';
+import 'interfaces/startup_onboarding_repository.dart';
 import 'interfaces/transport_repository.dart';
 import 'interfaces/parent_repository.dart';
 import 'interfaces/teacher_repository.dart';
@@ -77,6 +78,9 @@ import 'interfaces/analytics_intelligence_repository.dart';
 import 'api/timetable/hybrid_timetable_repository.dart';
 import 'api/analytics/hybrid_analytics_intelligence_repository.dart';
 import 'api/director/api_director_repository.dart';
+import 'api/director/hybrid_director_repository.dart';
+import 'api/hostel/hybrid_hostel_repository.dart';
+import 'api/hr/hybrid_hr_repository.dart';
 import 'mock/mock_timetable_repository.dart';
 import 'mock/mock_analytics_intelligence_repository.dart';
 import 'mock/mock_communication_repository.dart';
@@ -90,6 +94,9 @@ import 'mock/mock_workflow_repository.dart';
 import 'mock/mock_finance_repository.dart';
 import 'mock/mock_hostel_repository.dart';
 import 'api/inventory_finance/hybrid_inventory_finance_repository.dart';
+import 'api/inventory/hybrid_inventory_repository.dart';
+import 'api/library/hybrid_library_repository.dart';
+import 'api/transport/hybrid_transport_repository.dart';
 import 'mock/mock_inventory_finance_repository.dart';
 import 'mock/mock_inventory_repository.dart';
 import 'mock/mock_hr_repository.dart';
@@ -101,6 +108,7 @@ import 'mock/mock_platform_intelligence_repository.dart';
 import 'mock/mock_director_repository.dart';
 import 'mock/mock_transport_repository.dart';
 import 'mock/mock_onboarding_repository.dart';
+import 'mock/mock_startup_onboarding_repository.dart';
 import 'mock/mock_parent_repository.dart';
 import 'mock/mock_parent_meetings_repository.dart';
 import 'mock/mock_teacher_repository.dart';
@@ -152,7 +160,10 @@ final academicOperationsRepositoryProvider =
     );
   }
   return MockAcademicOperationsRepository(
-    sisRepository: MockSisRepository(),
+    sisRepository: (() {
+      final sis = ref.read(sisRepositoryProvider);
+      return sis is MockSisRepository ? sis : MockSisRepository();
+    })(),
   );
 });
 
@@ -188,28 +199,40 @@ final managementRepositoryProvider = Provider<ManagementRepository>((ref) {
 
 final transportRepositoryProvider = Provider<TransportRepository>((ref) {
   if (isModuleApiEnabled(ref, transportApiEnabledProvider)) {
-    return ref.read(apiTransportRepositoryProvider);
+    return HybridTransportRepository(
+      api: ref.read(apiTransportRepositoryProvider),
+      mock: MockTransportRepository(),
+    );
   }
   return MockTransportRepository();
 });
 
 final hrRepositoryProvider = Provider<HrRepository>((ref) {
   if (isModuleApiEnabled(ref, hrApiEnabledProvider)) {
-    return ref.read(apiHrRepositoryProvider);
+    return HybridHrRepository(
+      api: ref.read(apiHrRepositoryProvider),
+      mock: MockHrRepository(),
+    );
   }
   return MockHrRepository();
 });
 
 final hostelRepositoryProvider = Provider<HostelRepository>((ref) {
   if (isModuleApiEnabled(ref, hostelApiEnabledProvider)) {
-    return ref.read(apiHostelRepositoryProvider);
+    return HybridHostelRepository(
+      api: ref.read(apiHostelRepositoryProvider),
+      mock: MockHostelRepository(),
+    );
   }
   return MockHostelRepository();
 });
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
   if (isModuleApiEnabled(ref, inventoryApiEnabledProvider)) {
-    return ref.read(apiInventoryRepositoryProvider);
+    return HybridInventoryRepository(
+      api: ref.read(apiInventoryRepositoryProvider),
+      mock: MockInventoryRepository(),
+    );
   }
   return MockInventoryRepository();
 });
@@ -256,7 +279,10 @@ final analyticsIntelligenceRepositoryProvider =
 
 final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
   if (isModuleApiEnabled(ref, libraryApiEnabledProvider)) {
-    return ref.read(apiLibraryRepositoryProvider);
+    return HybridLibraryRepository(
+      api: ref.read(apiLibraryRepositoryProvider),
+      mock: MockLibraryRepository(),
+    );
   }
   return MockLibraryRepository();
 });
@@ -296,7 +322,12 @@ final franchiseRepositoryProvider = Provider<FranchiseRepository>((ref) {
 
 final directorRepositoryProvider = Provider<DirectorRepository>((ref) {
   if (isModuleApiEnabled(ref, directorApiEnabledProvider)) {
-    return const ApiDirectorRepository();
+    return HybridDirectorRepository(
+      api: const ApiDirectorRepository(),
+      mock: MockDirectorRepository(
+        pipeline: ref.watch(aiInferencePipelineProvider),
+      ),
+    );
   }
   return MockDirectorRepository(
       pipeline: ref.watch(aiInferencePipelineProvider));
@@ -433,6 +464,14 @@ final onboardingRepositoryProvider = Provider<OnboardingRepository>((ref) {
     return ref.read(apiOnboardingRepositoryProvider);
   }
   return MockOnboardingRepository();
+});
+
+final startupOnboardingRepositoryProvider =
+    Provider<StartupOnboardingRepository>((ref) {
+  if (isModuleApiEnabled(ref, onboardingApiEnabledProvider)) {
+    return ref.read(hybridStartupOnboardingRepositoryProvider);
+  }
+  return MockStartupOnboardingRepository();
 });
 
 final evolutionRepositoryProvider = Provider<EvolutionRepository>((ref) {

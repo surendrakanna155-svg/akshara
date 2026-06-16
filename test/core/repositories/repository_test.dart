@@ -56,7 +56,7 @@ void main() {
       const query = RepositoryQuery.demo;
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
-      expect((await repo.getStudents(query: query)).total, 5);
+      expect((await repo.getStudents(query: query)).total, 10);
       expect(
         (await repo.getAcademicAssignment(query: query)).classOptions,
         isNotEmpty,

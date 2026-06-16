@@ -24,6 +24,11 @@ void handleStudentNavigation(
     case 'exam_results':
     case 'exams':
       context.go(RouteNames.studentExams);
+    case 'report_card':
+      context.go(RouteNames.studentReportCard);
+    case 'progress':
+    case 'academic_progress':
+      context.go(RouteNames.studentProgress);
     case 'notices':
       context.go(RouteNames.studentNotices);
     case 'profile':

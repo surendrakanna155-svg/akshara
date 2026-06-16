@@ -22,6 +22,13 @@ class MockAttendanceSyncStore {
     lastSubmittedAt = DateTime.now();
   }
 
+  int attendancePercent({String? grade, String? section}) {
+    if (!hasTeacherSubmission) return -1;
+    final total = presentCount + absentCount + lateCount;
+    if (total == 0) return -1;
+    return ((presentCount / total) * 100).round();
+  }
+
   void reset() {
     presentCount = 0;
     absentCount = 0;

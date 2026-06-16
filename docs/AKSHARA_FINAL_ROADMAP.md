@@ -1,9 +1,9 @@
 # Akshara Final Roadmap
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Date:** June 2026  
-**Status:** Post P0 program (10/10 complete) · ERP ~88% · Four Milestone Program complete · Future Vision preserved  
-**Sources:** FutureVision · Master Registry v1.2 · `FUTURE_VISION_MASTER_INDEX.md` · Four Milestone Execution Report
+**Status:** Post-RT hardening complete (mock-first) · `release/v1.0-preprod` · STABILIZATION MODE  
+**Sources:** FutureVision v2.1 · Master Registry v1.3 · `DOCUMENTATION_SYNC_REPORT.md`
 
 ---
 
@@ -237,7 +237,50 @@ Post–four-milestone execution program. SSOT index: `docs/FUTURE_VISION_MASTER_
 | Pilot readiness | ✅ With conditions | `PILOT_READINESS_REPORT.md` |
 | Final status | ✅ | `AKSHARA_V1_FINAL_STATUS.md` |
 
-**Next:** Pilot deployment → infrastructure program for GA.
+**Next:** Pilot deployment → Live Integrations Sign-off (v7.8) → M15 theme on dedicated branch.
+
+---
+
+## Post-RT — Operational Hardening (June 2026)
+
+**Branch:** `release/v1.0-preprod` · **Doc:** `DOCUMENTATION_SYNC_REPORT.md`
+
+### Implemented
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-POST-01 | Exam Administration Publish Workflow | ✅ |
+| FV-POST-02 | Parent Communication Governance | ✅ |
+| FV-POST-03 | Class Teacher Governance | ✅ |
+| FV-POST-04 | Subject Teacher Escalation | ✅ |
+| FV-POST-05 | Student 360 Risk View | ✅ |
+| FV-POST-06 | Students Requiring Attention Today | ✅ |
+| FV-POST-10 | Red Team Remediation (#1–#25) | ✅ |
+
+### In Progress
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-POST-07 | Unified Onboarding Wizard | 🔄 API flag off; go-live stub |
+| FV-POST-08 | Translation Framework + Rollout | 🔄 Parent comm only |
+| FV-POST-09 | Backup & Restore | 🔄 Architecture + UI stub |
+| FV-POST-11 | Parent Inbox Integration | 🔄 Mock only |
+| FV-POST-12 | HR/SIS Mapping | 🔄 Static registry |
+| FV-POST-13 | School Config Sync | 🔄 Local prefs |
+
+### Deferred
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-DEF-01 | Academic Assessment Platform | ⏸ Design only |
+| FV-DEF-02 | Formal Question Paper Generation | ⏸ |
+| FV-DEF-03 | Assessment AI | ⏸ |
+
+### Not Started
+
+| ID | Feature | Status |
+|----|---------|--------|
+| FV-M15-01 | M15 Theme Modernization | ⏳ Readiness complete |
 
 ---
 
@@ -300,6 +343,7 @@ Every item maps to:
 | `AKSHARA_MASTER_FEATURE_REGISTRY.md` | Feature SSOT |
 | `MASTER_MILESTONE_TRACKER.md` | Execution status board |
 | `AKSHARA_IMPLEMENTATION_BACKLOG.md` | Detailed backlog |
+| `DOCUMENTATION_SYNC_REPORT.md` | June 2026 sync + gap analysis |
 | `ERP_FINAL_COMPLETION_PLAN.md` | Module grades |
 | `FUTURE_VISION_RECONCILIATION.md` | Prior reconciliation |
 | `ADVANCED_FEATURE_STATUS.md` | Advanced feature audit |

@@ -13,6 +13,7 @@ import '../../../features/parent/profile/profile_models.dart';
 import '../../../features/parent/receipts/receipt_models.dart';
 import '../../../features/parent/timetable/timetable_models.dart';
 import '../../../features/teacher/messages/message_models.dart';
+import '../../communication/parent_communication_models.dart';
 import '../repository_query.dart';
 
 /// Contract for parent mobile app data access (mock or API).
@@ -69,5 +70,25 @@ abstract class ParentRepository {
   Future<MessageThread> sendMessage({
     required RepositoryQuery query,
     required ParentMessageSendRequest request,
+  });
+
+  Future<List<ParentCommunicationInboxItem>> getCommunicationInbox({
+    required RepositoryQuery query,
+    required String activeChildId,
+  });
+
+  Future<ParentCommunicationInboxItem?> getCommunicationMessage({
+    required RepositoryQuery query,
+    required String communicationId,
+  });
+
+  Future<void> markCommunicationRead({
+    required RepositoryQuery query,
+    required String communicationId,
+  });
+
+  Future<void> acknowledgeCommunication({
+    required RepositoryQuery query,
+    required String communicationId,
   });
 }

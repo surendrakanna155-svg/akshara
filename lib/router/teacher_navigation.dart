@@ -17,9 +17,12 @@ void handleTeacherNavigation(
     case 'staff_check_in_now':
       context.go(RouteNames.teacherAttendance);
     case 'create_homework':
+      context.go(RouteNames.teacherHomeworkCreate);
+      break;
     case 'hw_review':
     case 'homework':
       context.go(RouteNames.teacherHomework);
+      break;
     case 'timetable':
       context.go(RouteNames.teacherTimetable);
     case 'exams':
@@ -27,12 +30,20 @@ void handleTeacherNavigation(
     case 'messages':
     case 'unread_messages':
       context.go(RouteNames.teacherMessages);
+    case 'parent_communication':
+      context.go(RouteNames.teacherParentCommunication);
+    case 'student_risk':
+      if (actionId.startsWith('student_risk_')) {
+        final id = actionId.replaceFirst('student_risk_', '');
+        context.push(RouteNames.teacherStudentRisk(id));
+      }
     case 'leave':
       context.go(RouteNames.teacherLeave);
     case 'notifications':
       context.push(RouteNames.parentNotifications);
     case 'class_teacher_dashboard':
-      context.go(RouteNames.teacherAttendance);
+      context.go(RouteNames.teacherClassTeacherDashboard);
+      break;
     case 'ai_copilot':
       if (ref != null) {
         openAiPersonaAssistant(context, ref);

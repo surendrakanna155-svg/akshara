@@ -6,6 +6,7 @@ import '../interfaces/alumni_repository.dart';
 import '../paginated_result.dart';
 import '../pagination_helpers.dart';
 import '../repository_query.dart';
+import 'mock_alumni_write_store.dart';
 
 class MockAlumniRepository implements AlumniRepository {
   static const _upcomingEvents = [
@@ -104,6 +105,11 @@ class MockAlumniRepository implements AlumniRepository {
     ),
   ];
 
+  List<AlumniRecord> get _allAlumniRecords => [
+        ...MockAlumniWriteStore.instance.graduates,
+        ..._alumniRegistry,
+      ];
+
   @override
   Future<AlumniDashboardData> getDashboard({required RepositoryQuery query}) async {
     return AlumniDashboardData(
@@ -153,7 +159,7 @@ class MockAlumniRepository implements AlumniRepository {
           accentName: 'warning',
         ),
       ],
-      recentGraduates: _alumniRegistry.take(3).toList(),
+      recentGraduates: _allAlumniRecords.take(3).toList(),
       upcomingEvents: _upcomingEvents,
       donationSummary: const AlumniDonationSummary(
         totalReceived: '₹18.6L',
@@ -176,12 +182,12 @@ class MockAlumniRepository implements AlumniRepository {
   Future<PaginatedResult<AlumniRecord>> getAlumniRegistry({
     required RepositoryQuery query,
   }) async =>
-      paginateList(_alumniRegistry, query);
+      paginateList(_allAlumniRecords, query);
 
   @override
   Future<AlumniDetail?> getAlumniDetail({required RepositoryQuery query, required String alumniId}) async {
     final matches =
-        _alumniRegistry.where((a) => a.id == alumniId).toList(growable: false);
+        _allAlumniRecords.where((a) => a.id == alumniId).toList(growable: false);
     if (matches.isEmpty) return null;
     final alumni = matches.first;
 

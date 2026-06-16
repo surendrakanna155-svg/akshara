@@ -52,6 +52,9 @@ import 'communication/api_communication_repository.dart';
 import 'communication/remote/communication_remote_datasource.dart';
 import 'onboarding/api_onboarding_repository.dart';
 import 'onboarding/remote/onboarding_remote_datasource.dart';
+import 'startup_onboarding/api_startup_onboarding_repository.dart';
+import 'startup_onboarding/hybrid_startup_onboarding_repository.dart';
+import 'startup_onboarding/remote/startup_onboarding_remote_datasource.dart';
 import 'education/api_education_repository.dart';
 import 'education/remote/education_remote_datasource.dart';
 import 'intelligence/api_intelligence_repository.dart';
@@ -331,6 +334,25 @@ final onboardingRemoteDataSourceProvider = Provider<OnboardingRemoteDataSource>(
 final apiOnboardingRepositoryProvider = Provider<ApiOnboardingRepository>(
   (ref) => ApiOnboardingRepository(
     remote: ref.watch(onboardingRemoteDataSourceProvider),
+  ),
+);
+
+final startupOnboardingRemoteDataSourceProvider =
+    Provider<StartupOnboardingRemoteDataSource>(
+  (ref) => StartupOnboardingRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiStartupOnboardingRepositoryProvider =
+    Provider<ApiStartupOnboardingRepository>(
+  (ref) => ApiStartupOnboardingRepository(
+    remote: ref.watch(startupOnboardingRemoteDataSourceProvider),
+  ),
+);
+
+final hybridStartupOnboardingRepositoryProvider =
+    Provider<HybridStartupOnboardingRepository>(
+  (ref) => HybridStartupOnboardingRepository(
+    api: ref.watch(apiStartupOnboardingRepositoryProvider),
   ),
 );
 

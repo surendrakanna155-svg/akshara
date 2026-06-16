@@ -20,12 +20,14 @@ void main() {
       expect(ErpRole.staffErpRoles, isNot(contains(ErpRole.student)));
       expect(ErpRole.staffErpRoles, contains(ErpRole.superAdmin));
       expect(ErpRole.staffErpRoles, contains(ErpRole.financeAdmin));
+      expect(ErpRole.staffErpRoles, contains(ErpRole.vicePrincipal));
     });
 
     test('labels are human readable', () {
       expect(ErpRole.superAdmin.label, 'Super Admin');
       expect(ErpRole.admissionsCounselor.label, 'Admissions Counselor');
       expect(ErpRole.transportManager.label, 'Transport Manager');
+      expect(ErpRole.vicePrincipal.label, 'Vice Principal');
     });
   });
 }

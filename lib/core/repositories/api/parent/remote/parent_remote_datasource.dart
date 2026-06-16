@@ -4,6 +4,7 @@ import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../../../features/parent/parent_requests.dart';
 import '../../teacher/dto/teacher_responses_dto.dart';
+import '../dto/parent_communication_dto.dart';
 import '../dto/parent_message_send_request_dto.dart';
 import '../dto/parent_leave_submit_request_dto.dart';
 import '../dto/parent_payment_request_dto.dart';
@@ -244,5 +245,52 @@ class ParentRemoteDataSource {
       data: ParentMessageSendRequestDto.fromDomain(request).toJson(),
     );
     return MessageThreadDto.fromJson(_requireData(response));
+  }
+
+  Future<ParentCommunicationInboxResponseDto> fetchCommunicationInbox({
+    required RepositoryQuery query,
+    required String activeChildId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.communicationInbox,
+      queryParameters: {
+        ..._queryParams(query),
+        'activeChildId': activeChildId,
+      },
+    );
+    return ParentCommunicationInboxResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<ParentCommunicationMessageResponseDto> fetchCommunicationMessage({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.communicationMessage(communicationId),
+      queryParameters: _queryParams(query),
+    );
+    return ParentCommunicationMessageResponseDto.fromJson(
+      _responseMap(response),
+    );
+  }
+
+  Future<void> markCommunicationRead({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    await _dio.post<void>(
+      ParentApiPaths.communicationRead(communicationId),
+      queryParameters: _queryParams(query),
+    );
+  }
+
+  Future<void> acknowledgeCommunication({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    await _dio.post<void>(
+      ParentApiPaths.communicationAcknowledge(communicationId),
+      queryParameters: _queryParams(query),
+    );
   }
 }

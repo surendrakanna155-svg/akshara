@@ -14,6 +14,8 @@ final teacherHomeworkAssignmentProvider = StateProvider<String>(
 final teacherHomeworkLoadingProvider = StateProvider<bool>((ref) => false);
 final teacherHomeworkErrorProvider = StateProvider<bool>((ref) => false);
 final teacherHomeworkEmptyProvider = StateProvider<bool>((ref) => false);
+final teacherHomeworkCreatedAssignmentsProvider =
+    StateProvider<List<TeacherHomeworkAssignment>>((ref) => const []);
 
 final teacherHomeworkFutureProvider =
     FutureProvider<List<TeacherHomeworkAssignment>>((ref) async {
@@ -37,9 +39,12 @@ List<TeacherHomeworkAssignment> _assignments(Ref ref) {
       ref.watch(teacherHomeworkFutureProvider).value ??
       const <TeacherHomeworkAssignment>[];
 
-  if (override == null) return base;
+  final created = ref.watch(teacherHomeworkCreatedAssignmentsProvider);
+  final all = [...base, ...created];
+
+  if (override == null) return all;
   return [
-    for (final assignment in base)
+    for (final assignment in all)
       TeacherHomeworkAssignment(
         id: assignment.id,
         title: assignment.title,

@@ -91,6 +91,43 @@ void main() {
       );
     });
 
+    test('financeAdmin blocked from evolution school routes', () {
+      expect(
+        canAccessErpRoute(financeAdmin, RouteNames.principalCommand),
+        isFalse,
+      );
+      expect(
+        canAccessErpRoute(financeAdmin, RouteNames.schoolCompletionHub),
+        isFalse,
+      );
+    });
+
+    test('principal can access evolution school routes', () {
+      final principal =
+          RbacService(UserPermissions.forRole(ErpRole.principal));
+      expect(
+        canAccessErpRoute(principal, RouteNames.principalCommand),
+        isTrue,
+      );
+      expect(
+        canAccessErpRoute(principal, RouteNames.schoolCompletionHub),
+        isTrue,
+      );
+    });
+
+    test('vicePrincipal mirrors principal evolution access', () {
+      final vicePrincipal =
+          RbacService(UserPermissions.forRole(ErpRole.vicePrincipal));
+      expect(
+        canAccessErpRoute(vicePrincipal, RouteNames.principalCommand),
+        isTrue,
+      );
+      expect(
+        canAccessErpRoute(vicePrincipal, RouteNames.schoolCompletionHub),
+        isTrue,
+      );
+    });
+
     test('admissionsCounselor can access admissions but not finance', () {
       expect(
         canAccessErpRoute(counselor, RouteNames.admissionsDashboard),

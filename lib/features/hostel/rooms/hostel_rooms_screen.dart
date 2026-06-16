@@ -42,7 +42,7 @@ class HostelRoomsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageHostel,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add room'),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Add room'),
         ),

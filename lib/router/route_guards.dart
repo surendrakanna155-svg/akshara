@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/security/denied_access_audit.dart';
 import '../core/security/erp_role.dart';
+import '../core/testing/qa_test_keys.dart';
 import '../core/security/permissions.dart';
 import '../core/security/rbac_service.dart';
 import '../features/auth/auth_models.dart';
@@ -177,7 +178,8 @@ class AccessDeniedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      key: QaTestKeys.accessDeniedScreen,
       body: AksharaErrorState(
         message: 'Access Denied',
         icon: Icons.lock_outline,

@@ -27,7 +27,7 @@ class ControlCenterAnalyticsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageControlCenter,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'Control Center analytics'),
           icon: const Icon(Icons.download_outlined, size: 18),
           label: const Text('Export'),
         ),

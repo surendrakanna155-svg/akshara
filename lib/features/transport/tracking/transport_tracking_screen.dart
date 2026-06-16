@@ -90,7 +90,7 @@ class TransportTrackingScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AksharaSpacing.s2),
                     Text(
-                      'No live maps in MVP — architecture ready for Mapbox/Google Maps',
+                      'Telemetry-first view — map provider wiring is future work',
                       style: context.aksharaText.bodySmall.copyWith(
                         color: context.colors.onSurfaceVariant,
                       ),

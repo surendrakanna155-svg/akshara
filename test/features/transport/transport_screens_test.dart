@@ -108,7 +108,7 @@ void main() {
       await pumpTransportScreen(tester, const TransportAllocationScreen());
 
       expect(find.text('Student transport allocation'), findsOneWidget);
-      expect(find.text('Arjun Patel'), findsOneWidget);
+      expect(find.text('Ravi Kumar'), findsOneWidget);
     });
 
     testWidgets('TransportAttendanceScreen renders attendance', (
@@ -126,7 +126,7 @@ void main() {
       await pumpTransportScreen(tester, const TransportTrackingScreen());
 
       expect(find.text('Vehicle telemetry'), findsOneWidget);
-      expect(find.textContaining('Google Maps'), findsWidgets);
+      expect(find.textContaining('Fleet telemetry'), findsWidgets);
     });
 
     testWidgets('TransportReportsScreen renders report catalog', (

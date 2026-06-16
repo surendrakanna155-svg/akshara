@@ -25,21 +25,32 @@ abstract final class RouteNames {
   static const String parentReceipts = '/parent/receipts';
   static const String parentLeave = '/parent/leave';
   static const String parentMessages = '/parent/messages';
+  static const String parentTransport = '/parent/transport';
+  static const String parentPtm = '/parent/ptm';
   static const String parentNotifications = '/parent/notifications';
 
   static String parentReceiptDetail(String receiptId) =>
       '$parentReceipts/$receiptId';
   static String parentConversation(String threadId) =>
       '$parentMessages/$threadId';
+  static String parentCommunicationMessage(String messageId) =>
+      '$parentMessages/comm/$messageId';
 
   // Teacher app (mobile)
   static const String teacher = '/teacher';
   static const String teacherDashboard = '/teacher/dashboard';
+  static const String teacherClassTeacherDashboard =
+      '/teacher/class-teacher-dashboard';
   static const String teacherAttendance = '/teacher/attendance';
   static const String teacherTimetable = '/teacher/timetable';
   static const String teacherHomework = '/teacher/homework';
+  static const String teacherHomeworkCreate = '/teacher/homework/create';
   static const String teacherExams = '/teacher/exams';
   static const String teacherMessages = '/teacher/messages';
+  static const String teacherParentCommunication = '/teacher/parent-communication';
+
+  static String teacherStudentRisk(String sisStudentId) =>
+      '$teacher/student-risk/$sisStudentId';
   static const String teacherLeave = '/teacher/leave';
 
   static String teacherConversation(String threadId) =>
@@ -52,6 +63,8 @@ abstract final class RouteNames {
   static const String studentTimetable = '/student/timetable';
   static const String studentHomework = '/student/homework';
   static const String studentExams = '/student/exams';
+  static const String studentReportCard = '/student/report-card';
+  static const String studentProgress = '/student/progress';
   static const String studentNotices = '/student/notices';
   static const String studentProfile = '/student/profile';
 
@@ -252,6 +265,8 @@ abstract final class RouteNames {
   static const String sisSectionBalance = '/sis/section-balance';
   static const String sisContinuity = '/sis/continuity';
   static const String onboardingHub = '/sis/onboarding';
+  static const String unifiedOnboarding = '/admin/onboarding/unified';
+  static const String backupRestore = '/admin/backup-restore';
 
   static String sisStudentDetail(String studentId) => '$sisStudents/$studentId';
 
@@ -276,6 +291,7 @@ abstract final class RouteNames {
   static const String hrPayroll = '/hr/payroll';
   static const String hrRecruitment = '/hr/recruitment';
   static const String hrPerformance = '/hr/performance';
+  static const String hrReports = '/hr/reports';
   static const String hrSettings = '/hr/settings';
 
   static String hrEmployeeDetail(String employeeId) =>
@@ -290,6 +306,7 @@ abstract final class RouteNames {
     hrPayroll,
     hrRecruitment,
     hrPerformance,
+    hrReports,
     hrSettings,
   ];
   static const String management = '/management';
@@ -518,6 +535,34 @@ abstract final class RouteNames {
     franchise,
     schoolMemories,
     achievementPromotion,
+    setupWizard,
+    dynamicDashboard,
+    dynamicWidgets,
+    dynamicWidgetLayout,
+    dynamicWidgetRuntime,
+    teacherAssistant,
+    principalCommand,
+    growthPlatform,
+    schoolCompletionHub,
+    subjectsManagement,
+    lessonLogs,
+    timetableAutomation,
+    schoolBranding,
+    whatsAppProvider,
+    subjectAssignments,
+    lessonAnalytics,
+    timetableOptimization,
+    substituteManager,
+    teacherReassignment,
+    communicationDelivery,
+    communicationBroadcastAdmin,
+    communicationAnalytics,
+    pilotDashboard,
+    parentActivationDashboard,
+    roomAllocation,
+    syllabusAutomation,
+    academicProgress,
+    timetableIntelligence,
     admissions,
     finance,
     sis,

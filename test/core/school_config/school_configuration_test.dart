@@ -100,6 +100,11 @@ void main() {
         adapted.notices.any((n) => n.title.toLowerCase().contains('transport')),
         isFalse,
       );
+      expect(
+        adapted.notices.any((n) => n.id == 'n3'),
+        isTrue,
+        reason: 'Bus-route notice copy must remain when transport module is off',
+      );
     });
   });
 }

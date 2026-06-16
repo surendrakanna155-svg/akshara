@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/communication/parent_communication_models.dart';
+import '../../core/communication/parent_communication_store.dart';
+import '../../core/communication/teacher_parent_templates.dart';
 import '../../core/repositories/repository_config.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
@@ -21,24 +24,44 @@ class NotificationsNotifier extends Notifier<List<AppNotification>> {
   @override
   List<AppNotification> build() {
     Future.microtask(refresh);
-    return List<AppNotification>.from(_fallbackInbox);
+    return _mergedInbox();
   }
 
   bool get _useApi => ref.read(communicationApiEnabledProvider);
 
   Future<void> refresh() async {
     if (!_useApi) {
-      state = List<AppNotification>.from(_fallbackInbox);
+      state = _mergedInbox();
       return;
     }
     try {
       final items = await ref.read(communicationRepositoryProvider).getNotifications(
             query: ref.read(repositoryQueryProvider),
           );
-      state = items.isEmpty ? List<AppNotification>.from(_fallbackInbox) : items;
+      state = items.isEmpty ? _mergedInbox() : items;
     } catch (_) {
-      state = List<AppNotification>.from(_fallbackInbox);
+      state = _mergedInbox();
     }
+  }
+
+  List<AppNotification> _mergedInbox() {
+    final commNotifications = [
+      for (final record in ParentCommunicationStore.instance.allRecords())
+        if (record.includesInApp)
+          AppNotification(
+            id: 'comm-nt-${record.id}',
+            title: '${record.senderName} · ${record.reason.label}',
+            preview: record.translatedMessage,
+            timestamp: record.sentAt,
+            category: NotificationCategory.academic,
+            isRead: record.deliveryStatus !=
+                    ParentCommunicationDeliveryStatus.delivered &&
+                record.deliveryStatus !=
+                    ParentCommunicationDeliveryStatus.pending,
+            childContext: record.studentName,
+          ),
+    ];
+    return [...commNotifications, ..._fallbackInbox];
   }
 
   Future<void> markRead(String id) async {

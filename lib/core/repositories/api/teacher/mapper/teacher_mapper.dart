@@ -6,6 +6,9 @@ import '../../../../../features/teacher/leave/leave_models.dart';
 import '../../../../../features/teacher/messages/message_models.dart';
 import '../../../../../features/teacher/timetable/timetable_models.dart';
 import '../../../../../features/teacher/teacher_requests.dart';
+import '../../../../communication/parent_communication_models.dart';
+import '../../../../communication/teacher_parent_templates.dart';
+import '../../../../i18n/supported_languages.dart';
 import '../dto/teacher_enum_codec.dart';
 import '../dto/teacher_responses_dto.dart';
 import '../dto/teacher_write_request_dto.dart';
@@ -37,6 +40,7 @@ class TeacherMapper {
             ),
       quickActions: _mapQuickActions(raw['quickActions'] as List<dynamic>? ?? const []),
       aiInsight: _mapAiInsight(raw['aiInsight'] as Map<String, dynamic>? ?? const {}),
+      studentsNeedingAttention: const [],
     );
   }
 
@@ -112,6 +116,99 @@ class TeacherMapper {
       rollNo: raw['rollNo'] as String? ?? '',
       marksObtained: raw['marksObtained'] as int?,
       maxMarks: raw['maxMarks'] as int? ?? 0,
+    );
+  }
+
+  TeacherExamPublishResult toExamPublishResult(Map<String, dynamic> raw) {
+    return TeacherExamPublishResult(
+      examId: raw['examId'] as String? ?? '',
+      examTitle: raw['examTitle'] as String? ?? '',
+      publishedCount: raw['publishedCount'] as int? ?? 0,
+      publishedAtLabel: raw['publishedAtLabel'] as String? ?? '',
+    );
+  }
+
+  ParentCommunicationSendResult toParentCommunicationSendResult(
+    Map<String, dynamic> raw,
+  ) {
+    final recordRaw = raw['record'] as Map<String, dynamic>? ?? raw;
+    return ParentCommunicationSendResult(
+      record: ParentCommunicationRecord(
+        id: recordRaw['id'] as String? ?? '',
+        sisStudentId: recordRaw['sisStudentId'] as String? ?? '',
+        studentName: recordRaw['studentName'] as String? ?? '',
+        senderName: recordRaw['senderName'] as String? ?? '',
+        reason: ParentCommunicationReason.values.firstWhere(
+          (r) => r.name == recordRaw['reason'],
+          orElse: () => ParentCommunicationReason.attendanceLow,
+        ),
+        tone: ParentCommunicationTone.values.firstWhere(
+          (t) => t.name == recordRaw['tone'],
+          orElse: () => ParentCommunicationTone.polite,
+        ),
+        originalMessage: recordRaw['originalMessage'] as String? ?? '',
+        translatedMessage: recordRaw['translatedMessage'] as String? ?? '',
+        targetLanguage: AksharaLanguage.fromCode(
+          recordRaw['targetLanguage'] as String?,
+        ),
+        channels: [
+          for (final channel in recordRaw['channels'] as List<dynamic>? ?? const [])
+            ParentCommunicationChannel.values.firstWhere(
+              (c) => c.name == channel,
+              orElse: () => ParentCommunicationChannel.inApp,
+            ),
+        ],
+        sentAt: DateTime.tryParse(recordRaw['sentAt'] as String? ?? '') ??
+            DateTime.now(),
+        deliveryStatus: ParentCommunicationDeliveryStatus.delivered,
+        parentPhone: recordRaw['parentPhone'] as String?,
+        usedAi: recordRaw['usedAi'] as bool? ?? false,
+        sourceConcernId: recordRaw['sourceConcernId'] as String?,
+      ),
+      whatsAppLaunchUri: raw['whatsAppLaunchUri'] as String?,
+    );
+  }
+
+  SubjectTeacherConcernFlagResult toSubjectConcernFlagResult(
+    Map<String, dynamic> raw,
+  ) {
+    return SubjectTeacherConcernFlagResult(
+      concern: toSubjectConcern(raw['concern'] as Map<String, dynamic>? ?? raw),
+    );
+  }
+
+  List<SubjectTeacherConcern> toSubjectConcerns(List<Map<String, dynamic>> items) {
+    return [for (final item in items) toSubjectConcern(item)];
+  }
+
+  SubjectTeacherConcern toSubjectConcern(Map<String, dynamic> raw) {
+    return SubjectTeacherConcern(
+      id: raw['id'] as String? ?? '',
+      sisStudentId: raw['sisStudentId'] as String? ?? '',
+      studentName: raw['studentName'] as String? ?? '',
+      classLabel: raw['classLabel'] as String? ?? '',
+      flaggedByTeacherId: raw['flaggedByTeacherId'] as String? ?? '',
+      flaggedByTeacherName: raw['flaggedByTeacherName'] as String? ?? '',
+      subject: raw['subject'] as String? ?? '',
+      category: SubjectConcernCategory.values.firstWhere(
+        (c) => c.name == raw['category'],
+        orElse: () => SubjectConcernCategory.other,
+      ),
+      observation: raw['observation'] as String? ?? '',
+      status: SubjectConcernStatus.values.firstWhere(
+        (s) => s.name == raw['status'],
+        orElse: () => SubjectConcernStatus.pendingClassTeacherReview,
+      ),
+      flaggedAt: DateTime.tryParse(raw['flaggedAt'] as String? ?? '') ??
+          DateTime.now(),
+      reviewedAt: raw['reviewedAt'] != null
+          ? DateTime.tryParse(raw['reviewedAt'] as String)
+          : null,
+      resolvedCommunicationId: raw['resolvedCommunicationId'] as String?,
+      auditTrail: [
+        for (final entry in raw['auditTrail'] as List<dynamic>? ?? const [])
+          entry.toString(),
+      ],
     );
   }
 

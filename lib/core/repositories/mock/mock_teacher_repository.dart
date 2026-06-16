@@ -10,6 +10,13 @@ import '../../../shared/semantic_status.dart';
 import '../interfaces/teacher_repository.dart';
 import '../repository_query.dart';
 import 'mock_attendance_sync_store.dart';
+import 'mock_canonical_student_registry.dart';
+import '../../communication/parent_communication_governance.dart';
+import '../../communication/parent_communication_models.dart';
+import '../../communication/parent_communication_store.dart';
+import '../../communication/subject_teacher_concern_store.dart';
+import '../../exams/exam_administration_store.dart';
+import '../../homework/school_homework_store.dart';
 import 'mock_teacher_write_store.dart';
 
 class MockTeacherRepository implements TeacherRepository {
@@ -39,7 +46,7 @@ class MockTeacherRepository implements TeacherRepository {
     required RepositoryQuery query,
   }) async {
     final map = _mockSubmissions();
-    return [
+    final base = [
       TeacherHomeworkAssignment(
         id: 'hw_8a_1',
         title: 'Exercise 5.2 — Linear equations',
@@ -55,32 +62,46 @@ class MockTeacherRepository implements TeacherRepository {
         submissions: _applyHomeworkReviews(map['hw_9b_1'] ?? const []),
       ),
     ];
+    final created = [
+      for (final record in SchoolHomeworkStore.instance.allRecords())
+        SchoolHomeworkStore.instance.toTeacherAssignment(record),
+    ];
+    return [...created, ...base];
   }
 
   @override
   Future<List<TeacherUpcomingExam>> getUpcomingExams({
     required RepositoryQuery query,
-  }) async =>
-      const [
+  }) async {
+    final store = ExamAdministrationStore.instance..ensureSeeded();
+    return [
+      for (final exam in store.upcomingExams())
         TeacherUpcomingExam(
-          id: 'ex_1',
-          title: 'Unit Test — Mathematics',
-          classLabel: '8-A',
-          dateLabel: '12 Jun 2026',
-          maxMarks: 50,
+          id: exam.id,
+          title: exam.title,
+          classLabel: exam.classLabel,
+          dateLabel: exam.dateLabel,
+          maxMarks: exam.maxMarks,
         ),
-        TeacherUpcomingExam(
-          id: 'ex_2',
-          title: 'Term 2 Assessment',
-          classLabel: '9-B',
-          dateLabel: '20 Jun 2026',
-          maxMarks: 80,
-        ),
-      ];
+    ];
+  }
 
   @override
-  Future<List<ExamMarkEntry>> getExamMarks({required RepositoryQuery query}) async =>
-      _mockMarks().map((entry) => _store.updatedMarks[entry.id] ?? entry).toList();
+  Future<List<ExamMarkEntry>> getExamMarks({required RepositoryQuery query}) async {
+    final store = ExamAdministrationStore.instance..ensureSeeded();
+    final examId = store.activeMarksExamId;
+    if (examId == null) return const [];
+    return [
+      for (final mark in store.marksForExam(examId))
+        ExamMarkEntry(
+          id: mark.id,
+          studentName: mark.studentName,
+          rollNo: mark.rollNo,
+          marksObtained: mark.marksObtained,
+          maxMarks: store.examById(examId)!.maxMarks,
+        ),
+    ];
+  }
 
   @override
   Future<TeacherTimetableData> getTimetable({required RepositoryQuery query}) async {
@@ -188,13 +209,134 @@ class MockTeacherRepository implements TeacherRepository {
     required RepositoryQuery query,
     required TeacherExamMarkUpdateRequest request,
   }) async {
-    final existing = _mockMarks().firstWhere(
-      (entry) => entry.id == request.markEntryId,
-      orElse: () => throw StateError('Mark entry not found: ${request.markEntryId}'),
+    final store = ExamAdministrationStore.instance..ensureSeeded();
+    final updated = store.recordMark(
+      markEntryId: request.markEntryId,
+      marksObtained: request.marksObtained,
     );
-    final updated = existing.copyWith(marksObtained: request.marksObtained);
-    _store.updatedMarks[request.markEntryId] = updated;
-    return updated;
+    final exam = store.examById(updated.examId)!;
+    return ExamMarkEntry(
+      id: updated.id,
+      studentName: updated.studentName,
+      rollNo: updated.rollNo,
+      marksObtained: updated.marksObtained,
+      maxMarks: exam.maxMarks,
+    );
+  }
+
+  @override
+  Future<TeacherExamPublishResult> publishExamResults({
+    required RepositoryQuery query,
+    required TeacherExamPublishRequest request,
+  }) async {
+    final store = ExamAdministrationStore.instance..ensureSeeded();
+    final count = store.publishExamResults(request.examId);
+    final exam = store.examById(request.examId)!;
+    return TeacherExamPublishResult(
+      examId: exam.id,
+      examTitle: exam.title,
+      publishedCount: count,
+      publishedAtLabel: 'Just now',
+    );
+  }
+
+  @override
+  Future<ParentCommunicationSendResult> sendParentCommunication({
+    required RepositoryQuery query,
+    required TeacherParentCommunicationSendRequest request,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final student = MockCanonicalStudentRegistry.byId(request.sisStudentId);
+    if (student == null) {
+      throw StateError('Student not found: ${request.sisStudentId}');
+    }
+    ParentCommunicationGovernance.assertCanSend(teachingContext, student);
+
+    final result = ParentCommunicationStore.instance.send(
+      request: ParentCommunicationSendRequest(
+        sisStudentId: request.sisStudentId,
+        reason: request.reason,
+        tone: request.tone,
+        channels: request.channels,
+        customMessage: request.customMessage,
+        useAi: request.useAi,
+        sourceConcernId: request.sourceConcernId,
+      ),
+      senderName: teachingContext.teacherName,
+      parentPhone: student.sisStudentId ==
+              MockCanonicalStudentRegistry.primaryMobileStudentId
+          ? '919876543210'
+          : null,
+      sourceConcernId: request.sourceConcernId,
+    );
+
+    if (request.sourceConcernId != null) {
+      SubjectTeacherConcernStore.instance.markSent(
+        concernId: request.sourceConcernId!,
+        communicationId: result.record.id,
+        classTeacherName: teachingContext.teacherName,
+      );
+    }
+
+    return result;
+  }
+
+  @override
+  Future<SubjectTeacherConcernFlagResult> flagSubjectConcern({
+    required RepositoryQuery query,
+    required TeacherSubjectConcernFlagRequest request,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final student = MockCanonicalStudentRegistry.byId(request.sisStudentId);
+    if (student == null) {
+      throw StateError('Student not found: ${request.sisStudentId}');
+    }
+    ParentCommunicationGovernance.assertCanFlag(teachingContext, student);
+    if (teachingContext.isClassTeacherForStudent(student)) {
+      throw ParentCommunicationGovernanceException(
+        'Class teachers send parent communication directly; escalation is for subject teachers.',
+      );
+    }
+
+    return SubjectTeacherConcernStore.instance.flag(
+      SubjectTeacherConcernFlagRequest(
+        sisStudentId: request.sisStudentId,
+        category: request.category,
+        observation: request.observation,
+        flaggedByTeacherId: teachingContext.teacherId,
+        flaggedByTeacherName: teachingContext.teacherName,
+        subject: teachingContext.primarySubject,
+      ),
+    );
+  }
+
+  @override
+  Future<List<SubjectTeacherConcern>> listPendingConcerns({
+    required RepositoryQuery query,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final classLabel = teachingContext.classTeacherClassLabel;
+    if (classLabel == null) return const [];
+    return SubjectTeacherConcernStore.instance.pendingForClass(classLabel);
+  }
+
+  @override
+  Future<SubjectTeacherConcern> dismissSubjectConcern({
+    required RepositoryQuery query,
+    required String concernId,
+    required TeacherTeachingContext teachingContext,
+    String? note,
+  }) async {
+    if (!teachingContext.isClassTeacher) {
+      throw ParentCommunicationGovernanceException(
+        'Only the class teacher may dismiss escalated concerns.',
+      );
+    }
+    return SubjectTeacherConcernStore.instance.dismiss(
+      concernId: concernId,
+      classTeacherName: teachingContext.teacherName,
+      note: note,
+    );
   }
 
   @override
@@ -352,13 +494,45 @@ List<TeacherAttendanceClass> _mockClasses() {
 
 
 Map<String, List<TeacherAttendanceStudent>> _mockStudentsByClass() {
-  const students8a = [
-    TeacherAttendanceStudent(id: 's1', name: 'Ravi Kumar', rollNo: '01', mark: StudentAttendanceMark.present),
-    TeacherAttendanceStudent(id: 's2', name: 'Ananya Rao', rollNo: '02', mark: StudentAttendanceMark.present),
-    TeacherAttendanceStudent(id: 's3', name: 'Karthik Menon', rollNo: '03', mark: StudentAttendanceMark.late),
-    TeacherAttendanceStudent(id: 's4', name: 'Priya Nair', rollNo: '04', mark: StudentAttendanceMark.absent),
-    TeacherAttendanceStudent(id: 's5', name: 'Arjun Das', rollNo: '05', mark: StudentAttendanceMark.unmarked),
-    TeacherAttendanceStudent(id: 's6', name: 'Meera Iyer', rollNo: '06', mark: StudentAttendanceMark.unmarked),
+  // Contract tests expect stable mock studentIds (s1..s6). We keep those ids
+  // but align the canonical student name ("Ravi Kumar") to s5.
+  final students8a = [
+    TeacherAttendanceStudent(
+      id: 's1',
+      name: 'Arjun Das',
+      rollNo: '05',
+      mark: StudentAttendanceMark.unmarked,
+    ),
+    TeacherAttendanceStudent(
+      id: 's2',
+      name: 'Ananya Rao',
+      rollNo: '02',
+      mark: StudentAttendanceMark.present,
+    ),
+    TeacherAttendanceStudent(
+      id: 's3',
+      name: 'Karthik Menon',
+      rollNo: '03',
+      mark: StudentAttendanceMark.late,
+    ),
+    TeacherAttendanceStudent(
+      id: 's4',
+      name: 'Priya Nair',
+      rollNo: '04',
+      mark: StudentAttendanceMark.absent,
+    ),
+    TeacherAttendanceStudent(
+      id: 's5',
+      name: 'Ravi Kumar',
+      rollNo: '01',
+      mark: StudentAttendanceMark.unmarked,
+    ),
+    TeacherAttendanceStudent(
+      id: 's6',
+      name: 'Meera Iyer',
+      rollNo: '06',
+      mark: StudentAttendanceMark.unmarked,
+    ),
   ];
   return {
     'class-8a-p1': students8a,
@@ -411,18 +585,6 @@ Map<String, List<HomeworkSubmission>> _mockSubmissions() {
       ),
     ],
   };
-}
-
-
-
-
-List<ExamMarkEntry> _mockMarks() {
-  return const [
-    ExamMarkEntry(id: 'm1', studentName: 'Ravi Kumar', rollNo: '01', marksObtained: 42, maxMarks: 50),
-    ExamMarkEntry(id: 'm2', studentName: 'Ananya Rao', rollNo: '02', marksObtained: 45, maxMarks: 50),
-    ExamMarkEntry(id: 'm3', studentName: 'Karthik Menon', rollNo: '03', marksObtained: null, maxMarks: 50),
-    ExamMarkEntry(id: 'm4', studentName: 'Priya Nair', rollNo: '04', marksObtained: 38, maxMarks: 50),
-  ];
 }
 
 

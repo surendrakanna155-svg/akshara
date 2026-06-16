@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/admin/models/admin_nav_models.dart';
+import '../features/admin/screens/admin_hub_screen.dart';
 import '../features/admin/screens/admin_module_placeholder_screen.dart';
 import 'alumni_navigation.dart';
 import 'admissions_navigation.dart';
@@ -23,7 +24,7 @@ bool isAdminErpRoute(String location) {
 
 /// Route builders for ERP module placeholder screens.
 Widget adminHubRouteBuilder(BuildContext context, GoRouterState state) {
-  return const AdminModulePlaceholderScreen(module: AdminModule.admin);
+  return const AdminHubScreen();
 }
 
 Widget admissionsRouteBuilder(BuildContext context, GoRouterState state) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -376,7 +377,7 @@ class _AssignmentForm extends ConsumerWidget {
             ),
             const SizedBox(height: AksharaSpacing.s4),
             OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Bulk assign'),
               icon: const Icon(Icons.upload_file_outlined),
               label: const Text('Bulk assignment template'),
             ),

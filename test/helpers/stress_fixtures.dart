@@ -91,6 +91,7 @@ abstract final class StressFixtures {
       classTeacher: base.classTeacher,
       quickActions: base.quickActions,
       aiInsight: base.aiInsight,
+      studentsNeedingAttention: base.studentsNeedingAttention,
     );
   }
 
@@ -152,6 +153,7 @@ abstract final class StressFixtures {
       classTeacher: null,
       quickActions: base.quickActions,
       aiInsight: base.aiInsight,
+      studentsNeedingAttention: const [],
     );
   }
 

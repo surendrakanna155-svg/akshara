@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
@@ -148,7 +149,7 @@ class _ReportCatalogList extends StatelessWidget {
                 trailing: IconButton(
                   icon: const Icon(Icons.download_outlined),
                   tooltip: 'Download report',
-                  onPressed: () {},
+                  onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'Library report'),
                 ),
               ),
             ),

@@ -1,15 +1,16 @@
 # Akshara ERP — Master Roadmap
 
-**Version:** 2.0  
+**Version:** 2.1  
 **Last updated:** June 2026  
-**Current release:** v18.1 Autonomous QA Platform (`v18.1-autonomous-qa-platform`)  
-**Previous release:** v18.0 Autonomous QA (`v18.0-autonomous-qa`)  
-**Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
-**Feature freeze:** active — **STABILIZATION MODE** (RC lock `40b93c8`; see `docs/AKSHARA_V1_RC_LOCK.md`)  
-**Implementation:** complete — no new milestones until pilot feedback  
+**Current release:** v1.0-preprod (`release/v1.0-preprod`)  
+**Previous release:** v18.1 Autonomous QA Platform (`v18.1-autonomous-qa-platform`)  
+**Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready` · `v1.0-pilot-ready`  
+**Feature freeze:** active — **STABILIZATION MODE** (RC lock; see `docs/AKSHARA_V1_RC_LOCK.md`)  
+**Post-RT hardening:** complete (mock-first); see Post-RT milestone below  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  
-**Production readiness:** 94 / 100 (launch-weighted; live integrations env-dependent)  
-**Quality gates:** `flutter analyze` 0 issues · `flutter test` all passing  
+**Production readiness:** 97 / 100 app layer (live integrations env-dependent)  
+**Quality gates:** `flutter analyze` 0 issues · `flutter test` 1 719+ passing · Patrol 88/88 certified  
+**Documentation SSOT:** `docs/DOCUMENTATION_SYNC_REPORT.md` (June 2026 sync)  
 **Autonomous execution depth:** 3 milestones per session (see `docs/CURSOR_WORKFLOW.md` §11)
 
 ---
@@ -1017,6 +1018,42 @@ Foundation screens, backend routes, and mock repositories for setup wizard, widg
 
 ---
 
+### Post-RT — Red Team Remediation & Operational Hardening (complete)
+
+| Field | Detail |
+|-------|--------|
+| **Branch** | `release/v1.0-preprod` |
+| **Goals** | Close Red Team top-25 findings; wire teacher–parent operational chain; exam publish gate; student risk; unified onboarding; backup architecture |
+| **Report** | `docs/RED_TEAM_REMEDIATION_REPORT.md` |
+| **Architecture** | `docs/ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md` |
+| **Workflows** | `docs/Operations/workflows/` |
+| **Status** | ✅ Complete (mock-first layer; production persistence in progress) |
+
+| Capability | Status | Notes |
+|------------|--------|-------|
+| Exam Administration Publish Workflow | ✅ Implemented | `exam_administration_store.dart` + sync store |
+| Parent Communication Governance | ✅ Implemented | Class-teacher-only send; template-first |
+| Class Teacher Governance | ✅ Implemented | `teacher_assignment_registry.dart` |
+| Subject Teacher Escalation | ✅ Implemented | Concern queue + dashboard banner |
+| Student 360 Risk View | ✅ Implemented | `teacher_student_risk_screen.dart` |
+| Students Requiring Attention Today | ✅ Implemented | Dashboard attention list |
+| Unified Onboarding Wizard | 🔄 In progress | UI + hybrid API; flag off by default |
+| Translation Framework | 🔄 In progress | Parent comm path; app-wide rollout pending |
+| Backup & Restore Architecture | 🔄 In progress | Docs + admin UI stub |
+| Red Team Remediation (#1–#25) | ✅ Complete | Patrol E2E suites created, not all run |
+| Parent Inbox Integration | 🔄 In progress | Mock ✅ · API returns empty |
+| HR/SIS Mapping | 🔄 In progress | Static registry; no API sync |
+| Onboarding Supabase Persistence | 🔄 In progress | Migration exists; `ONBOARDING_API_ENABLED` off |
+| School Config Sync | 🔄 In progress | Local `SharedPreferences` only |
+| Deferred | Academic Assessment Platform, formal QP gen, Assessment AI | `FutureVision.md` §O |
+| Not started | M15 Theme Modernization | `M15_THEME_MODERNIZATION_READINESS.md` |
+
+**Deferred (explicit):** Academic Assessment Platform · Question Paper Generation (new bank-first scope) · Assessment AI — see `docs/ACADEMIC_ASSESSMENT_PLATFORM_DESIGN.md`
+
+**Next visual program:** M15 Theme Modernization — `docs/M15_THEME_MODERNIZATION_READINESS.md` (READY TO BEGIN on dedicated branch)
+
+---
+
 ### v7.7 — Production SaaS Launch Hardening
 
 | Field | Detail |
@@ -1108,6 +1145,7 @@ Every release milestone is **DONE** when all items are checked:
 5. Execute → validate → document → continue (do not stop after one milestone)
 ```
 
-**Next milestone:** v7.8 — Live Integrations Sign-off  
-**Recommended tag:** `v7.7-production-launch-hardening`  
+**Current branch:** `release/v1.0-preprod` — STABILIZATION MODE  
+**Next programs:** Pilot feedback → Live Integrations Sign-off (v7.8) → M15 theme (visual tokens only)  
+**Documentation:** `docs/DOCUMENTATION_SYNC_REPORT.md`  
 **Autonomous execution depth:** 3 milestones per session

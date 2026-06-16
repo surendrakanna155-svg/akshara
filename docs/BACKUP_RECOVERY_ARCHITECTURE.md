@@ -1,5 +1,10 @@
 # Backup & Recovery Architecture — Akshara v1
 
+> **Note (June 2026):** In-app school/tenant export and restore UI is documented in  
+> [`BACKUP_RESTORE_ARCHITECTURE.md`](./BACKUP_RESTORE_ARCHITECTURE.md) and  
+> [`BACKUP_RESTORE_RUNBOOK.md`](./BACKUP_RESTORE_RUNBOOK.md).  
+> **This document** covers infrastructure-layer recovery (Supabase PITR, R2, DevOps).
+
 **Program:** Release Candidate — Backup & Recovery  
 **Date:** June 2026  
 **Scope:** Architecture + operations (backend/DevOps implementation)  
@@ -14,9 +19,9 @@
 | **PostgreSQL (Supabase)** | Automated + PITR | Platform-managed |
 | **Object storage (R2)** | Org export archives | Sprint 3 RBAC doc |
 | **Client audit queue** | Local persistence + upload | Flutter — not a DB backup |
-| **Flutter app** | None required | Stateless client |
+| **Flutter app** | Export UI stub + local prefs | `backup_restore_screen.dart` — see `BACKUP_RESTORE_ARCHITECTURE.md` |
 
-**Gap:** No in-app backup/restore UI — **by design**. Recovery is infrastructure-operated.
+**Gap:** Production object storage and OAuth export connectors not wired — operational recovery remains infrastructure-operated for Postgres.
 
 ---
 

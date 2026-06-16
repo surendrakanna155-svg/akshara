@@ -6,6 +6,8 @@ import '../../../features/teacher/leave/leave_models.dart';
 import '../../../features/teacher/messages/message_models.dart';
 import '../../../features/teacher/teacher_requests.dart';
 import '../../../features/teacher/timetable/timetable_models.dart';
+import '../../communication/parent_communication_governance.dart';
+import '../../communication/parent_communication_models.dart';
 import '../repository_query.dart';
 
 /// Contract for teacher mobile app data access (mock or API).
@@ -48,6 +50,35 @@ abstract class TeacherRepository {
   Future<ExamMarkEntry> updateExamMark({
     required RepositoryQuery query,
     required TeacherExamMarkUpdateRequest request,
+  });
+
+  Future<TeacherExamPublishResult> publishExamResults({
+    required RepositoryQuery query,
+    required TeacherExamPublishRequest request,
+  });
+
+  Future<ParentCommunicationSendResult> sendParentCommunication({
+    required RepositoryQuery query,
+    required TeacherParentCommunicationSendRequest request,
+    required TeacherTeachingContext teachingContext,
+  });
+
+  Future<SubjectTeacherConcernFlagResult> flagSubjectConcern({
+    required RepositoryQuery query,
+    required TeacherSubjectConcernFlagRequest request,
+    required TeacherTeachingContext teachingContext,
+  });
+
+  Future<List<SubjectTeacherConcern>> listPendingConcerns({
+    required RepositoryQuery query,
+    required TeacherTeachingContext teachingContext,
+  });
+
+  Future<SubjectTeacherConcern> dismissSubjectConcern({
+    required RepositoryQuery query,
+    required String concernId,
+    required TeacherTeachingContext teachingContext,
+    String? note,
   });
 
   Future<TeacherLeaveRequest> submitLeaveRequest({

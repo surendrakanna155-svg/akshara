@@ -9,6 +9,7 @@ enum HrScreen {
   payroll,
   recruitment,
   performance,
+  reports,
   settings;
 
   String get label => switch (this) {
@@ -19,6 +20,7 @@ enum HrScreen {
         HrScreen.payroll => 'Payroll',
         HrScreen.recruitment => 'Recruitment',
         HrScreen.performance => 'Performance',
+        HrScreen.reports => 'Reports',
         HrScreen.settings => 'Settings',
       };
 }
@@ -481,4 +483,62 @@ class HrSettingsData {
 
   final List<HrSettingsSection> sections;
   final HrDepartment defaultDepartment;
+}
+
+@immutable
+class HrReportCatalogItem {
+  const HrReportCatalogItem({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.icon,
+  });
+
+  final String id;
+  final String title;
+  final String description;
+  final IconData icon;
+}
+
+@immutable
+class HrReportsData {
+  const HrReportsData({
+    required this.catalog,
+    required this.headlineMetric,
+  });
+
+  final List<HrReportCatalogItem> catalog;
+  final String headlineMetric;
+
+  factory HrReportsData.mock() {
+    return const HrReportsData(
+      headlineMetric: '142 active staff · 96.2% attendance MTD',
+      catalog: [
+        HrReportCatalogItem(
+          id: 'hr_headcount',
+          title: 'Headcount by department',
+          description: 'Active, on-leave, and probation counts',
+          icon: Icons.groups_outlined,
+        ),
+        HrReportCatalogItem(
+          id: 'hr_attendance',
+          title: 'Attendance compliance',
+          description: 'Daily presence and late arrivals',
+          icon: Icons.fact_check_outlined,
+        ),
+        HrReportCatalogItem(
+          id: 'hr_leave',
+          title: 'Leave utilization',
+          description: 'Approved vs pending leave by type',
+          icon: Icons.event_busy_outlined,
+        ),
+        HrReportCatalogItem(
+          id: 'hr_payroll',
+          title: 'Payroll readiness',
+          description: 'Processed vs draft payroll cycles',
+          icon: Icons.payments_outlined,
+        ),
+      ],
+    );
+  }
 }

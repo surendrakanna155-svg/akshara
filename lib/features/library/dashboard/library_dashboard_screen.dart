@@ -40,7 +40,7 @@ class LibraryDashboardScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'Library dashboard'),
           icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
           label: const Text('Scan issue'),
         ),

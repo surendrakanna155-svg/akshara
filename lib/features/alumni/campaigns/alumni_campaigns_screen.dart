@@ -41,7 +41,7 @@ class AlumniCampaignsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAlumni,
         child: FilledButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Create campaign'),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('New campaign'),
         ),

@@ -35,13 +35,13 @@ class MockHostelRepository implements HostelRepository {
   static const _seedStudents = [
     HostelStudent(
       id: 'ho_stu_1',
-      studentName: 'Arjun Patel',
+      studentName: 'Ravi Kumar',
       admissionNumber: 'ADM-2026-0138',
       classLabel: '10',
       block: 'Block A',
       room: 'A-204',
       bed: 'B2',
-      sisStudentId: 'SIS-STU-10421',
+      sisStudentId: 'SIS-STU-10430',
       status: HostelStudentStatus.resident,
       feePending: '₹12,400',
       parentAppLinked: true,
@@ -280,7 +280,7 @@ class MockHostelRepository implements HostelRepository {
     return paginateList(const [
       HostelAttendanceRecord(
         id: 'att_1',
-        studentName: 'Arjun Patel',
+        studentName: 'Ravi Kumar',
         room: 'A-204',
         rollNumber: '10-A-12',
         morning: HostelAttendanceStatus.present,
@@ -289,7 +289,7 @@ class MockHostelRepository implements HostelRepository {
         overallStatus: HostelAttendanceStatus.present,
         remark: '',
         parentNotified: false,
-        sisStudentId: 'SIS-STU-10421',
+        sisStudentId: 'SIS-STU-10430',
       ),
       HostelAttendanceRecord(
         id: 'att_2',
@@ -354,7 +354,7 @@ class MockHostelRepository implements HostelRepository {
       ),
       HostelLeaveRequest(
         id: 'leave_2',
-        studentName: 'Arjun Patel',
+        studentName: 'Ravi Kumar',
         room: 'A-204',
         fromDate: '10 Jun 2026',
         toDate: '12 Jun 2026',
@@ -363,7 +363,7 @@ class MockHostelRepository implements HostelRepository {
         parentContact: 'Vikram Patel · +91 91234 56789',
         status: HostelLeaveStatus.pending,
         gatePassId: null,
-        sisStudentId: 'SIS-STU-10421',
+        sisStudentId: 'SIS-STU-10430',
         parentAppRoute: RouteNames.parentLeave,
       ),
       HostelLeaveRequest(
@@ -448,8 +448,8 @@ class MockHostelRepository implements HostelRepository {
           id: 'vis_1',
           visitorName: 'Vikram Patel',
           relation: 'Father',
-          studentName: 'Arjun Patel',
-          sisStudentId: 'SIS-STU-10421',
+          studentName: 'Ravi Kumar',
+          sisStudentId: 'SIS-STU-10430',
           checkIn: '10:30 AM',
           checkOut: null,
           passId: 'HO-VIS-108',

@@ -114,6 +114,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
                     button: true,
                     label: 'Staff profile',
                     child: InkWell(
+                      key: QaTestKeys.profileButton,
                       onTap: onProfileTap,
                       customBorder: const CircleBorder(),
                       child: CircleAvatar(

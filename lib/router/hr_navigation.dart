@@ -9,6 +9,7 @@ import '../features/hr/leave/hr_leave_screen.dart';
 import '../features/hr/payroll/hr_payroll_screen.dart';
 import '../features/hr/performance/hr_performance_screen.dart';
 import '../features/hr/recruitment/hr_recruitment_screen.dart';
+import '../features/hr/reports/hr_reports_screen.dart';
 import '../features/hr/settings/hr_settings_screen.dart';
 import 'route_names.dart';
 
@@ -50,6 +51,10 @@ Widget hrRecruitmentRouteBuilder(BuildContext context, GoRouterState state) {
 
 Widget hrPerformanceRouteBuilder(BuildContext context, GoRouterState state) {
   return const HrPerformanceScreen();
+}
+
+Widget hrReportsRouteBuilder(BuildContext context, GoRouterState state) {
+  return const HrReportsScreen();
 }
 
 Widget hrSettingsRouteBuilder(BuildContext context, GoRouterState state) {

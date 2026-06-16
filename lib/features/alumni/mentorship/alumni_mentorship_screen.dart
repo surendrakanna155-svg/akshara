@@ -43,7 +43,7 @@ class AlumniMentorshipScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAlumni,
         child: FilledButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add mentorship'),
           icon: const Icon(Icons.handshake_outlined, size: 18),
           label: const Text('Match pair'),
         ),

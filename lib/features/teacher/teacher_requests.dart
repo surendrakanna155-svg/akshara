@@ -1,3 +1,5 @@
+import '../../core/communication/parent_communication_models.dart';
+import '../../core/communication/teacher_parent_templates.dart';
 import 'attendance/attendance_models.dart';
 import 'homework/homework_models.dart';
 
@@ -95,6 +97,49 @@ class TeacherExamMarkUpdateRequest {
   final int marksObtained;
 }
 
+/// Domain request to publish processed exam results to student/parent apps.
+class TeacherExamPublishRequest {
+  const TeacherExamPublishRequest({required this.examId});
+
+  final String examId;
+}
+
+/// Result of publishing exam results.
+class TeacherExamPublishResult {
+  const TeacherExamPublishResult({
+    required this.examId,
+    required this.examTitle,
+    required this.publishedCount,
+    required this.publishedAtLabel,
+  });
+
+  final String examId;
+  final String examTitle;
+  final int publishedCount;
+  final String publishedAtLabel;
+}
+
+/// Domain request to send structured parent communication.
+class TeacherParentCommunicationSendRequest {
+  const TeacherParentCommunicationSendRequest({
+    required this.sisStudentId,
+    required this.reason,
+    required this.tone,
+    required this.channels,
+    this.customMessage,
+    this.useAi = false,
+    this.sourceConcernId,
+  });
+
+  final String sisStudentId;
+  final ParentCommunicationReason reason;
+  final ParentCommunicationTone tone;
+  final Set<ParentCommunicationChannel> channels;
+  final String? customMessage;
+  final bool useAi;
+  final String? sourceConcernId;
+}
+
 /// Domain request to submit a teacher leave application.
 class TeacherLeaveSubmitRequest {
   const TeacherLeaveSubmitRequest({
@@ -123,4 +168,17 @@ class TeacherMessageSendRequest {
   final String subject;
   final String body;
   final String? threadId;
+}
+
+/// Subject teacher escalates concern to class teacher (no direct parent send).
+class TeacherSubjectConcernFlagRequest {
+  const TeacherSubjectConcernFlagRequest({
+    required this.sisStudentId,
+    required this.category,
+    required this.observation,
+  });
+
+  final String sisStudentId;
+  final SubjectConcernCategory category;
+  final String observation;
 }

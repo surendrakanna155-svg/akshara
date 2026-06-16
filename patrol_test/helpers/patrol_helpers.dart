@@ -504,6 +504,131 @@ Future<void> waitForLoadingToClear(
   }
 }
 
+/// Current GoRouter path from the Patrol app container.
+String currentPatrolRoute(PatrolIntegrationTester $) {
+  return _patrolGoRouter($).state.uri.path;
+}
+
+/// Waits until [route] is active (exact or prefix match).
+Future<void> assertPatrolRoute(
+  PatrolIntegrationTester $,
+  String route, {
+  Duration timeout = const Duration(seconds: 20),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    final path = currentPatrolRoute($);
+    if (path == route || path.startsWith('$route/')) {
+      return;
+    }
+    await $.pump(const Duration(milliseconds: 250));
+  }
+  expect(currentPatrolRoute($), route);
+}
+
+/// Asserts mobile persona cannot remain on a forbidden ERP route (redirect home).
+Future<void> assertMobileForbiddenErpRoute(
+  PatrolIntegrationTester $,
+  String forbiddenRoute, {
+  required String expectedHomeRoute,
+  required Key expectedHomeScreenKey,
+}) async {
+  await goToErpRoute($, forbiddenRoute);
+  await $.pumpAndSettle(timeout: const Duration(seconds: 15));
+  final path = currentPatrolRoute($);
+  expect(
+    path == forbiddenRoute || path.startsWith('$forbiddenRoute/'),
+    isFalse,
+    reason: 'Expected redirect away from $forbiddenRoute, still on $path',
+  );
+  await assertPatrolRoute($, expectedHomeRoute);
+  await assertVisibleKey($, expectedHomeScreenKey);
+}
+
+/// Taps a parent dashboard quick action by stable QA key.
+Future<void> tapParentDashboardQuickAction(
+  PatrolIntegrationTester $,
+  String actionId,
+) async {
+  await tapByKey($, QaTestKeys.parentDashboardQuickAction(actionId));
+  await $.pumpAndSettle(timeout: const Duration(seconds: 15));
+}
+
+/// Taps a student dashboard quick action by stable QA key.
+Future<void> tapStudentDashboardQuickAction(
+  PatrolIntegrationTester $,
+  String actionId,
+) async {
+  await tapByKey($, QaTestKeys.studentDashboardQuickAction(actionId));
+  await $.pumpAndSettle(timeout: const Duration(seconds: 15));
+}
+
+/// Returns parent to home dashboard via bottom navigation.
+Future<void> tapParentHome(PatrolIntegrationTester $) async {
+  await tapBottomNav($, 'Home');
+  await assertVisibleKey($, QaTestKeys.parentDashboardScreen);
+}
+
+/// Returns student to home dashboard via bottom navigation.
+Future<void> tapStudentHome(PatrolIntegrationTester $) async {
+  await tapBottomNav($, 'Home');
+  await assertVisibleKey($, QaTestKeys.studentDashboardScreen);
+}
+
+/// Taps a dashboard notice tile (scrolls vertically + horizontally when needed).
+Future<void> tapParentDashboardNotice(
+  PatrolIntegrationTester $,
+  String noticeId, {
+  String? titleFragment,
+}) async {
+  await assertVisibleText($, 'School Notices');
+  await scrollModuleBody($, 'School Notices', times: 4);
+
+  final key = QaTestKeys.parentDashboardNotice(noticeId);
+  final keyFinder = find.byKey(key);
+  final carouselFinder = find.byKey(QaTestKeys.parentNoticeCarousel);
+  final carouselScrollable = find.descendant(
+    of: carouselFinder,
+    matching: find.byType(Scrollable),
+  );
+
+  if (_safeAny($, carouselFinder)) {
+    try {
+      await $.tester.ensureVisible(carouselFinder);
+      await $.pump(const Duration(milliseconds: 300));
+    } catch (_) {
+      await scrollModuleBody($, 'School Notices', times: 2);
+    }
+  }
+
+  if (_safeAny($, carouselScrollable)) {
+    try {
+      await $.tester.scrollUntilVisible(
+        keyFinder,
+        80,
+        scrollable: carouselScrollable,
+      );
+    } catch (_) {
+      for (var i = 0; i < 8; i++) {
+        await $.tester.drag(carouselScrollable.first, const Offset(-280, 0));
+        await $.pump(const Duration(milliseconds: 250));
+      }
+    }
+  }
+
+  await $.tester.ensureVisible(keyFinder);
+  final inkWell = find.descendant(
+    of: keyFinder,
+    matching: find.byType(InkWell),
+  );
+  if (_safeAny($, inkWell)) {
+    await $.tester.tap(inkWell);
+  } else {
+    await $.tester.tap(keyFinder);
+  }
+  await $.pumpAndSettle(timeout: const Duration(seconds: 15));
+}
+
 /// Opens full copilot from the floating dock (QA default access mode).
 Future<void> openCopilotViaFloatingDock(PatrolIntegrationTester $) async {
   await $(QaTestKeys.copilotFloatingDockFab).waitUntilVisible(

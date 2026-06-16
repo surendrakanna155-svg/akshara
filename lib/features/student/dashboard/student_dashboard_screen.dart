@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -35,6 +36,7 @@ class StudentDashboardScreen extends ConsumerWidget {
     final dueCount = data.homeworkDue.length;
 
     return Scaffold(
+      key: QaTestKeys.studentDashboardScreen,
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Home',
@@ -93,6 +95,9 @@ class StudentDashboardScreen extends ConsumerWidget {
                               for (final action
                                   in data.quickActions.where((a) => a.isVisible))
                                 AksharaQuickActionCard(
+                                  key: QaTestKeys.studentDashboardQuickAction(
+                                    action.id,
+                                  ),
                                   icon: action.icon,
                                   label: action.label,
                                   emphasis: action.emphasis,

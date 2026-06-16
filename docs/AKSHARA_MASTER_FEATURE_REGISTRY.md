@@ -1,9 +1,9 @@
 # Akshara Master Feature Registry
 
-**Version:** 1.2  
+**Version:** 1.3  
 **Date:** June 2026  
 **Purpose:** Single source of truth — every planned feature traced to source documents and current implementation status  
-**Baseline:** ERP completion ~91% · QA readiness ~97% · Batch A P1 Closure complete · Future Vision preserved
+**Baseline:** ERP completion ~91% · Post-RT operational layer · QA readiness ~97% · `release/v1.0-preprod`
 
 ---
 
@@ -54,6 +54,8 @@
 | AGENTS | `AGENTS.md` | Agent ownership boundaries |
 | FUTURE | `docs/FUTURE_VISION_MASTER_INDEX.md` | Permanent capability index |
 | PRESERVE | `docs/FUTURE_VISION_PRESERVATION_AUDIT.md` | Preservation audit |
+| SYNC | `docs/DOCUMENTATION_SYNC_REPORT.md` | June 2026 documentation sync |
+| POSTRT | `docs/ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md` | Post-RT architecture |
 
 ---
 
@@ -120,7 +122,27 @@
 | FV-PLAT-12 | Security Hardening | P4 | Shipped | 88 | M12 | Yes | Partial | Platform |
 | FV-PLAT-13 | RLS Enforcement | P4 | Partial | 65 | M12 | Yes | Partial | Platform |
 
-**Status key:** Shipped = classification A + milestone ✅ · Partial = B/D · Design/Spec = architecture doc only · Planned = E/not started
+### Post-RT Operational Hardening Registry (June 2026)
+
+| ID | Feature | Priority | Status | Completion % | Milestone | Test | Prod | Registry module |
+|----|---------|----------|--------|:------------:|-----------|:----:|:----:|-----------------|
+| FV-POST-01 | Exam Administration Publish Workflow | P1 | Shipped | 85 | Post-RT | Yes | No | Teacher / Exams |
+| FV-POST-02 | Parent Communication Governance | P1 | Shipped | 80 | Post-RT | Yes | No | Communication |
+| FV-POST-03 | Class Teacher Governance | P1 | Shipped | 75 | Post-RT | Yes | No | Teacher / HR |
+| FV-POST-04 | Subject Teacher Escalation | P1 | Shipped | 80 | Post-RT | Yes | No | Communication |
+| FV-POST-05 | Student 360 Risk View | P2 | Shipped | 75 | Post-RT | Partial | No | Teacher mobile |
+| FV-POST-06 | Students Requiring Attention Today | P2 | Shipped | 75 | Post-RT | Partial | No | Teacher mobile |
+| FV-POST-07 | Unified Onboarding Wizard | P1 | Partial | 70 | Post-RT | Yes | Partial | Onboarding |
+| FV-POST-08 | Translation Framework | P1 | Partial | 65 | Post-RT | Partial | No | i18n |
+| FV-POST-09 | Backup & Restore Architecture | P2 | Partial | 40 | Post-RT | No | No | Admin |
+| FV-POST-10 | Red Team Remediation | P0 | Shipped | 95 | Post-RT | Yes | Partial | Platform |
+| FV-POST-11 | Parent Inbox Integration | P1 | Partial | 60 | Post-RT | Partial | No | Parent mobile |
+| FV-POST-12 | HR/SIS Teacher Assignment Mapping | P2 | Partial | 35 | Post-RT | No | No | HR / SIS |
+| FV-POST-13 | School Config Remote Sync | P2 | Partial | 30 | Post-RT | Partial | No | Platform |
+| FV-M15-01 | M15 Theme Modernization | P3 | Planned | 5 | M15 | No | No | Theme |
+| FV-DEF-01 | Academic Assessment Platform | P2 | Deferred | 10 | — | No | No | Academic |
+
+**Status key:** Shipped = classification A/B mock-first + unit tests · Partial = persistence or rollout gaps · Deferred = explicit product decision
 
 ---
 

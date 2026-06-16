@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
 import '../../core/repositories/repository_query.dart';
+import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
+import 'copilot_capability_filter.dart';
 import 'copilot_context_provider.dart';
 import 'copilot_models.dart';
 
@@ -74,6 +76,38 @@ class CopilotSendMessageNotifier extends AsyncNotifier<CopilotSendMessageResult?
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final screenContext = ref.read(copilotEffectiveContextProvider);
+      final capabilities = ref.read(schoolCapabilitiesProvider);
+      final blocked = CopilotCapabilityFilter.disabledTopicMessage(
+        userMessage: content.trim(),
+        capabilities: capabilities,
+        module: screenContext?.module,
+      );
+      if (blocked != null) {
+        final now = DateTime.now();
+        final userMessage = CopilotMessage(
+          id: 'msg_user_$now',
+          sessionId: sessionId,
+          role: 'user',
+          content: content.trim(),
+          createdAt: now,
+        );
+        final assistantMessage = CopilotMessage(
+          id: 'msg_assistant_$now',
+          sessionId: sessionId,
+          role: 'assistant',
+          content: blocked,
+          createdAt: now.add(const Duration(milliseconds: 200)),
+          metadata: const {'stub': true, 'capabilityBlocked': true},
+        );
+        ref.invalidate(copilotSessionDetailFutureProvider);
+        ref.invalidate(copilotSessionsFutureProvider);
+        return CopilotSendMessageResult(
+          userMessage: userMessage,
+          assistantMessage: assistantMessage,
+          model: 'akshara-stub',
+          stub: true,
+        );
+      }
       final result = await ref.read(copilotRepositoryProvider).sendMessage(
             query: ref.read(copilotQueryProvider),
             sessionId: sessionId,

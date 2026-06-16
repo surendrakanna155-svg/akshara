@@ -46,6 +46,11 @@ void handleParentDashboardNavigation(
     case 'exams':
     case 'report_card':
       context.go(RouteNames.parentExams);
+    case 'transport':
+      context.go(RouteNames.parentTransport);
+    case 'ptm':
+    case 'parent_teacher_meeting':
+      context.go(RouteNames.parentPtm);
     case 'notices':
       context.go(RouteNames.parentNotices);
     case 'events':
@@ -63,7 +68,11 @@ void handleParentDashboardNavigation(
         context.push(RouteNames.aiAssistant);
       }
     default:
-      if (actionId.startsWith('notice_')) {
+      if (actionId == 'notice_n1' || actionId == 'event_e2') {
+        context.go(RouteNames.parentPtm);
+      } else if (actionId == 'notice_n3') {
+        context.go(RouteNames.parentTransport);
+      } else if (actionId.startsWith('notice_')) {
         context.go(RouteNames.parentNotices);
       } else if (actionId.startsWith('event_')) {
         context.go(RouteNames.parentEvents);

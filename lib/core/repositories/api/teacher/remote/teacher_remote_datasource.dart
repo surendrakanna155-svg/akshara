@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../../../features/teacher/teacher_requests.dart';
+import '../../../../communication/parent_communication_governance.dart';
 import '../dto/teacher_responses_dto.dart';
 import '../dto/teacher_write_request_dto.dart';
 import 'teacher_api_paths.dart';
@@ -159,6 +160,91 @@ class TeacherRemoteDataSource {
       data: TeacherExamMarkUpdateRequestDto.fromDomain(request).toJson(),
     );
     return ExamMarkEntryDto.fromJson(_requireData(response));
+  }
+
+  Future<Map<String, dynamic>> publishExamResults({
+    required RepositoryQuery query,
+    required TeacherExamPublishRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.examPublish(request.examId),
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
+
+  Future<Map<String, dynamic>> sendParentCommunication({
+    required RepositoryQuery query,
+    required TeacherParentCommunicationSendRequest request,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.parentCommunication,
+      queryParameters: _queryParams(query),
+      data: {
+        'sisStudentId': request.sisStudentId,
+        'reason': request.reason.name,
+        'tone': request.tone.name,
+        'channels': request.channels.map((c) => c.name).toList(),
+        'teachingRole': teachingContext.commsRole.name,
+        if (request.customMessage != null) 'customMessage': request.customMessage,
+        'useAi': request.useAi,
+        if (request.sourceConcernId != null)
+          'sourceConcernId': request.sourceConcernId,
+      },
+    );
+    return _requireData(response);
+  }
+
+  Future<Map<String, dynamic>> flagSubjectConcern({
+    required RepositoryQuery query,
+    required TeacherSubjectConcernFlagRequest request,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.parentCommunicationConcerns,
+      queryParameters: _queryParams(query),
+      data: {
+        'sisStudentId': request.sisStudentId,
+        'category': request.category.name,
+        'observation': request.observation,
+        'subject': teachingContext.primarySubject,
+      },
+    );
+    return _requireData(response);
+  }
+
+  Future<List<Map<String, dynamic>>> listPendingConcerns({
+    required RepositoryQuery query,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      TeacherApiPaths.parentCommunicationConcerns,
+      queryParameters: {
+        ..._queryParams(query),
+        'classLabel': teachingContext.classTeacherClassLabel ?? '',
+      },
+    );
+    final data = _requireData(response);
+    final items = data['items'] as List<dynamic>? ?? const [];
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>) item,
+    ];
+  }
+
+  Future<Map<String, dynamic>> dismissSubjectConcern({
+    required RepositoryQuery query,
+    required String concernId,
+    required TeacherTeachingContext teachingContext,
+    String? note,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '${TeacherApiPaths.parentCommunicationConcerns}/$concernId/dismiss',
+      queryParameters: _queryParams(query),
+      data: {if (note != null) 'note': note},
+    );
+    return _requireData(response);
   }
 
   Future<TeacherLeaveRequestDto> submitLeaveRequest({

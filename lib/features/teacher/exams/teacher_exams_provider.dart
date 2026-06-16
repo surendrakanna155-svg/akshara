@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
@@ -100,4 +101,18 @@ Future<void> updateExamMark(WidgetRef ref, String entryId, int marks) async {
     for (final entry in current)
       entry.id == entryId ? entry.copyWith(marksObtained: marks) : entry,
   ];
+}
+
+final teacherActiveExamIdProvider = Provider<String?>((ref) {
+  ExamAdministrationStore.instance.ensureSeeded();
+  return ExamAdministrationStore.instance.activeMarksExamId;
+});
+
+Future<TeacherExamPublishResult?> publishExamResults(
+  WidgetRef ref,
+  String examId,
+) async {
+  return ref.read(publishTeacherExamResultsProvider.notifier).execute(
+        TeacherExamPublishRequest(examId: examId),
+      );
 }

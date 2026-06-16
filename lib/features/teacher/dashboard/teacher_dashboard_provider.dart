@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/communication/parent_communication_governance.dart';
+import '../../../core/communication/teacher_student_risk_service.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
@@ -131,6 +133,7 @@ class TeacherDashboardData {
     required this.classTeacher,
     required this.quickActions,
     required this.aiInsight,
+    required this.studentsNeedingAttention,
   });
 
   final String teacherName;
@@ -145,9 +148,12 @@ class TeacherDashboardData {
   final ClassTeacherInfo? classTeacher;
   final List<TeacherQuickAction> quickActions;
   final TeacherAiInsight aiInsight;
+  final List<StudentAttentionItem> studentsNeedingAttention;
 
   factory TeacherDashboardData.mock() {
-    return const TeacherDashboardData(
+    final context = TeacherTeachingContext.demoClassTeacher();
+    final attention = TeacherStudentRiskService.attentionForClass(context);
+    return TeacherDashboardData(
       teacherName: 'Priya Sharma',
       greetingEyebrow: 'Friday, 5 Jun',
       greetingHeadline: 'Good morning, Priya',
@@ -245,9 +251,12 @@ class TeacherDashboardData {
         ),
       ],
       aiInsight: TeacherAiInsight(
-        message: '3 students in 8-A were absent twice this week — follow up?',
-        actionLabel: 'View class',
+        message: attention.isEmpty
+            ? 'No urgent student alerts today.'
+            : '${attention.length} students in 8-A require attention today.',
+        actionLabel: 'Open class dashboard',
       ),
+      studentsNeedingAttention: attention,
     );
   }
 }

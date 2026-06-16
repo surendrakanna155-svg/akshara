@@ -38,7 +38,7 @@ class ControlCenterCrmScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageControlCenter,
         child: FilledButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add lead'),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('New lead'),
         ),

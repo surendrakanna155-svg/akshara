@@ -1,3 +1,6 @@
+import 'package:akshara_erp/core/communication/parent_communication_store.dart';
+import 'package:akshara_erp/core/i18n/supported_languages.dart';
+import 'package:akshara_erp/core/repositories/mock/mock_canonical_student_registry.dart';
 import 'package:akshara_erp/features/parent/events/parent_events_provider.dart';
 import 'package:akshara_erp/features/parent/events/parent_events_screen.dart';
 import 'package:akshara_erp/features/parent/notices/parent_notices_provider.dart';
@@ -28,6 +31,13 @@ Future<void> pumpParentScreen(WidgetTester tester, Widget screen) async {
 }
 
 void main() {
+  setUp(() {
+    ParentCommunicationStore.instance.setPreferredLanguage(
+      sisStudentId: MockCanonicalStudentRegistry.primaryMobileStudentId,
+      language: AksharaLanguage.english,
+    );
+  });
+
   group('Parent notices, events, and profile screens', () {
     testWidgets('ParentNoticesScreen renders notices list', (tester) async {
       await pumpParentScreen(tester, const ParentNoticesScreen());

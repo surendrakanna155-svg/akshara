@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../shared/widgets/operational_action_feedback.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -102,26 +103,27 @@ class FinanceReportsScreen extends ConsumerWidget {
             children: [
               OutlinedButton.icon(
                 key: QaTestKeys.financeReportExportPdfButton,
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      key: QaTestKeys.financeReportExportSuccessSnackbar,
-                      content: Text(
-                        'Report export queued (${selectedReport.title})',
-                      ),
-                    ),
-                  );
-                },
+                onPressed: () => showAksharaReportExportPreviewSnackBar(
+                  context,
+                  reportName: selectedReport.title,
+                ),
                 icon: const Icon(Icons.picture_as_pdf_outlined),
                 label: const Text('Export PDF'),
               ),
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: () => showAksharaReportExportPreviewSnackBar(
+                  context,
+                  reportName: selectedReport.title,
+                  format: 'Excel',
+                ),
                 icon: const Icon(Icons.table_chart_outlined),
                 label: const Text('Export Excel'),
               ),
               OutlinedButton.icon(
-                onPressed: () {},
+                onPressed: () => showAksharaOperationalPreviewSnackBar(
+                  context,
+                  action: 'Email report',
+                ),
                 icon: const Icon(Icons.email_outlined),
                 label: const Text('Email report'),
               ),

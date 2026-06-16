@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../notifications/notifications_provider.dart';
@@ -36,6 +37,7 @@ class ParentDashboardScreen extends ConsumerWidget {
     final activeChild = ref.watch(parentActiveChildProvider);
 
     return Scaffold(
+      key: QaTestKeys.parentDashboardScreen,
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         title: AksharaChildSelectorChip(
@@ -114,6 +116,9 @@ class ParentDashboardScreen extends ConsumerWidget {
                         children: [
                           for (final action in data.quickActions)
                             AksharaQuickActionCard(
+                              key: QaTestKeys.parentDashboardQuickAction(
+                                action.id,
+                              ),
                               icon: action.icon,
                               label: action.label,
                               onTap: () => _navigate(action.id),

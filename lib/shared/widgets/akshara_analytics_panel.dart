@@ -126,12 +126,13 @@ class AksharaAnalyticsFilterBar extends StatelessWidget {
   }
 }
 
-/// Shows export queued feedback for report screens.
+/// Shows export preview feedback — does not imply a file was generated.
 void showAksharaExportQueuedSnackBar(BuildContext context, {String? label}) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(
-        label ?? 'Export queued — download will start shortly.',
+        label ??
+            'Export preview only — file generation pipeline is not connected yet.',
       ),
       behavior: SnackBarBehavior.floating,
     ),

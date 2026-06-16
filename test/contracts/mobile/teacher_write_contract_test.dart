@@ -101,13 +101,16 @@ void main() {
       final updated = await repo.updateExamMark(
         query: kQuery,
         request: const TeacherExamMarkUpdateRequest(
-          markEntryId: 'm3',
+          markEntryId: 'exam_math_8a_03',
           marksObtained: 40,
         ),
       );
       final marks = await repo.getExamMarks(query: kQuery);
       expect(updated.marksObtained, 40);
-      expect(marks.firstWhere((m) => m.id == 'm3').marksObtained, 40);
+      expect(
+        marks.firstWhere((m) => m.id == 'exam_math_8a_03').marksObtained,
+        40,
+      );
     });
   });
 }

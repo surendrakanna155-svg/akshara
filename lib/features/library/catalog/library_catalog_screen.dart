@@ -42,7 +42,7 @@ class LibraryCatalogScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
         child: FilledButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add book'),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Add book'),
         ),

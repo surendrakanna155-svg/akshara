@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_error_state.dart';
@@ -132,7 +133,7 @@ class _SettingItemTile extends StatelessWidget {
             ? IconButton(
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: 'Edit ${item.label}',
-                onPressed: () {},
+                onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Edit'),
               )
             : null,
       ),

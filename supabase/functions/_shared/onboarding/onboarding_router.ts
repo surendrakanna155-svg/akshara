@@ -11,6 +11,11 @@ import {
   handleStudentImportPreview,
   handleTeacherImportPreview,
 } from "./onboarding_handlers.ts";
+import {
+  handleGetStartupOnboarding,
+  handleGoLiveStartupOnboarding,
+  handleSaveStartupOnboarding,
+} from "./startup_onboarding_handlers.ts";
 
 function matchOnboardingRoute(
   method: string,
@@ -18,6 +23,15 @@ function matchOnboardingRoute(
 ): { handler: (req: Request, config: AppConfig, ...args: string[]) => Promise<Response>; args: string[] } | null {
   if (path === "/onboarding/dashboard" && method === "GET") {
     return { handler: handleOnboardingDashboard, args: [] };
+  }
+  if (path === "/onboarding/startup" && method === "GET") {
+    return { handler: handleGetStartupOnboarding, args: [] };
+  }
+  if (path === "/onboarding/startup" && method === "PUT") {
+    return { handler: handleSaveStartupOnboarding, args: [] };
+  }
+  if (path === "/onboarding/startup/go-live" && method === "POST") {
+    return { handler: handleGoLiveStartupOnboarding, args: [] };
   }
   if (path === "/onboarding/imports" && method === "GET") {
     return { handler: handleListImportJobs, args: [] };

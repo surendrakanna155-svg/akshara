@@ -82,6 +82,16 @@ class ParentDashboardData {
           label: 'Exams',
           icon: Icons.grading_outlined,
         ),
+        DashboardQuickAction(
+          id: 'transport',
+          label: 'Transport',
+          icon: Icons.directions_bus_outlined,
+        ),
+        DashboardQuickAction(
+          id: 'ptm',
+          label: 'PTM',
+          icon: Icons.groups_outlined,
+        ),
       ],
       todaySummary: [
         TodaySummaryItem(
@@ -111,6 +121,11 @@ class ParentDashboardData {
       ],
       notices: [
         DashboardNotice(
+          id: 'n3',
+          title: 'New bus route effective Monday',
+          dateLabel: '1 Jun 2026',
+        ),
+        DashboardNotice(
           id: 'n1',
           title: 'PTM scheduled for 15 June — please confirm your slot',
           dateLabel: '5 Jun 2026',
@@ -120,11 +135,6 @@ class ParentDashboardData {
           id: 'n2',
           title: 'Summer vacation dates announced',
           dateLabel: '3 Jun 2026',
-        ),
-        DashboardNotice(
-          id: 'n3',
-          title: 'New transport route effective Monday',
-          dateLabel: '1 Jun 2026',
         ),
       ],
       events: [

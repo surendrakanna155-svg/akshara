@@ -18,7 +18,7 @@ class MockTransportRepository implements TransportRepository {
   static const _seedAllocations = [
     StudentTransportAllocation(
       id: 'alloc_1',
-      studentName: 'Arjun Patel',
+      studentName: 'Ravi Kumar',
       admissionNumber: 'ADM-2026-0138',
       classLabel: '10',
       pickupStop: 'Lake View Colony',
@@ -27,7 +27,7 @@ class MockTransportRepository implements TransportRepository {
       routeName: 'Route 12 — North',
       busNumber: 'BUS-07',
       shift: TransportShift.both,
-      sisStudentId: 'SIS-STU-10421',
+      sisStudentId: 'SIS-STU-10430',
     ),
     StudentTransportAllocation(
       id: 'alloc_2',
@@ -483,7 +483,7 @@ class MockTransportRepository implements TransportRepository {
       paginateList(const [
         TransportAttendanceRecord(
           id: 'att_1',
-          studentName: 'Arjun Patel',
+          studentName: 'Ravi Kumar',
           stopName: 'Lake View Colony',
           routeName: 'Route 12 — North',
           scheduledTime: '7:05 AM',
@@ -530,9 +530,9 @@ class MockTransportRepository implements TransportRepository {
   @override
   Future<TransportTrackingPlaceholderData> getTrackingPlaceholder({required RepositoryQuery query}) async {
     return const TransportTrackingPlaceholderData(
-      mapPlaceholderLabel: 'Live map integration — Google Maps / Mapbox',
+      mapPlaceholderLabel: 'Fleet telemetry — route status and ETAs',
       integrationNote:
-          'GPS architecture placeholder. Future: real-time bus tracking in Parent App (PA route info) and Student app.',
+          'Telemetry-first tracking for transport managers. Parent and student apps receive route alerts from the same feed.',
       parentAppRoute: RouteNames.parentDashboard,
       vehicles: [
         TrackingVehicleStatus(

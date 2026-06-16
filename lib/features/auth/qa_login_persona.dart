@@ -90,6 +90,7 @@ String homeRouteForStaffErp(ErpRole erpRole) {
     ErpRole.financeAdmin => RouteNames.financeDashboard,
     ErpRole.inventoryManager => RouteNames.inventoryDashboard,
     ErpRole.principal => RouteNames.managementDashboard,
+    ErpRole.vicePrincipal => RouteNames.managementDashboard,
     ErpRole.superAdmin => RouteNames.admin,
     _ => RouteNames.admin,
   };

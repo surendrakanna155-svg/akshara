@@ -6,7 +6,7 @@ import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('studentExams providers', () {
-    test('studentExamsProvider exposes upcoming and results', () async {
+    test('studentExamsProvider exposes upcoming without unpublished results', () async {
       final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
@@ -14,9 +14,9 @@ void main() {
       final data = container.read(studentExamsProvider);
 
       expect(data.upcomingExams, isNotEmpty);
-      expect(data.examResults, isNotEmpty);
-      expect(data.subjectScores, hasLength(4));
-      expect(data.averagePercent, greaterThan(0));
+      expect(data.examResults, isEmpty);
+      expect(data.subjectScores, isEmpty);
+      expect(data.averagePercent, 0);
     });
 
     test('studentExamSectionProvider switches section', () async {

@@ -1,3 +1,5 @@
+import '../../../../../core/communication/parent_communication_models.dart';
+import '../../../../../core/i18n/supported_languages.dart';
 import '../../../../../features/parent/attendance/attendance_models.dart';
 import '../../../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../../../features/parent/events/events_models.dart';
@@ -10,6 +12,7 @@ import '../../../../../features/parent/payment/payment_models.dart';
 import '../../../../../features/parent/profile/profile_models.dart';
 import '../../../../../features/parent/receipts/receipt_models.dart';
 import '../../../../../features/parent/timetable/timetable_models.dart';
+import '../dto/parent_communication_dto.dart';
 import '../dto/parent_enum_codec.dart';
 import '../dto/parent_payment_request_dto.dart';
 import '../dto/parent_responses_dto.dart';
@@ -562,5 +565,75 @@ class ParentMapper {
             amount: item['amount'] as int? ?? 0,
           ),
     ];
+  }
+
+  List<ParentCommunicationInboxItem> toCommunicationInbox(
+    ParentCommunicationInboxResponseDto dto,
+  ) {
+    return [
+      for (final item in dto.items)
+        if (toCommunicationInboxItem(item) case final mapped?) mapped,
+    ];
+  }
+
+  ParentCommunicationInboxItem? toCommunicationInboxItem(
+    Map<String, dynamic> raw,
+  ) {
+    final id = raw['id'] as String? ?? '';
+    if (id.isEmpty) return null;
+    final channelsRaw = raw['channels'] as List<dynamic>? ?? const [];
+    final statusRaw =
+        raw['deliveryStatus'] as String? ?? raw['delivery_status'] as String?;
+    return ParentCommunicationInboxItem(
+      id: id,
+      sisStudentId: raw['sisStudentId'] as String? ??
+          raw['sis_student_id'] as String? ??
+          '',
+      studentName: raw['studentName'] as String? ??
+          raw['student_name'] as String? ??
+          '',
+      senderName: raw['senderName'] as String? ??
+          raw['sender_name'] as String? ??
+          '',
+      reasonLabel: raw['reasonLabel'] as String? ??
+          raw['reason_label'] as String? ??
+          '',
+      originalMessage: raw['originalMessage'] as String? ??
+          raw['original_message'] as String? ??
+          '',
+      translatedMessage: raw['translatedMessage'] as String? ??
+          raw['translated_message'] as String? ??
+          '',
+      targetLanguage: AksharaLanguage.fromCode(
+        raw['targetLanguage'] as String? ?? raw['target_language'] as String?,
+      ),
+      channels: [
+        for (final channel in channelsRaw)
+          ParentCommunicationChannel.values.firstWhere(
+            (c) => c.name == channel,
+            orElse: () => ParentCommunicationChannel.inApp,
+          ),
+      ],
+      sentAt: DateTime.tryParse(
+            raw['sentAt'] as String? ?? raw['sent_at'] as String? ?? '',
+          ) ??
+          DateTime.now(),
+      sentAtLabel: raw['sentAtLabel'] as String? ??
+          raw['sent_at_label'] as String? ??
+          '',
+      deliveryStatus: ParentCommunicationDeliveryStatus.values.firstWhere(
+        (s) => s.name == statusRaw,
+        orElse: () => ParentCommunicationDeliveryStatus.delivered,
+      ),
+      isUnread: raw['isUnread'] as bool? ?? raw['is_unread'] as bool? ?? true,
+      readAt: DateTime.tryParse(
+        raw['readAt'] as String? ?? raw['read_at'] as String? ?? '',
+      ),
+      acknowledgedAt: DateTime.tryParse(
+        raw['acknowledgedAt'] as String? ??
+            raw['acknowledged_at'] as String? ??
+            '',
+      ),
+    );
   }
 }

@@ -39,7 +39,7 @@ class HrDashboardScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageHr,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => context.go(RouteNames.hrReports),
           icon: const Icon(Icons.download_outlined, size: 18),
           label: const Text('Export'),
         ),

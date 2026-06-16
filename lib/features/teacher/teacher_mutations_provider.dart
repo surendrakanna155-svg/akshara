@@ -6,6 +6,8 @@ import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../features/parent/exams/parent_exams_provider.dart';
+import '../../features/student/exams/student_exams_provider.dart';
 import 'attendance/teacher_attendance_provider.dart';
 import 'exams/exam_models.dart';
 import 'exams/teacher_exams_provider.dart';
@@ -45,6 +47,8 @@ Future<T?> _runMutation<T>(
   bool invalidateAttendanceStudents = false,
   bool invalidateHomework = false,
   bool invalidateExamMarks = false,
+  bool invalidateStudentExams = false,
+  bool invalidateParentExams = false,
   bool invalidateLeaveHistory = false,
   bool invalidateMessages = false,
 }) async {
@@ -192,6 +196,40 @@ class UpdateTeacherExamMarkNotifier extends AsyncNotifier<ExamMarkEntry?> {
 final updateTeacherExamMarkProvider =
     AsyncNotifierProvider<UpdateTeacherExamMarkNotifier, ExamMarkEntry?>(
   UpdateTeacherExamMarkNotifier.new,
+);
+
+class PublishTeacherExamResultsNotifier
+    extends AsyncNotifier<TeacherExamPublishResult?> {
+  @override
+  FutureOr<TeacherExamPublishResult?> build() => null;
+
+  Future<TeacherExamPublishResult?> execute(
+    TeacherExamPublishRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final result = await _runMutation(
+        ref,
+        auditAction: 'publishExamResults',
+        entityId: request.examId,
+        invalidateExamMarks: true,
+        action: () => ref.read(teacherRepositoryProvider).publishExamResults(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+      ref.invalidate(studentExamsFutureProvider);
+      ref.invalidate(parentExamsFutureProvider);
+      return result;
+    });
+    return state.valueOrNull;
+  }
+}
+
+final publishTeacherExamResultsProvider =
+    AsyncNotifierProvider<PublishTeacherExamResultsNotifier,
+        TeacherExamPublishResult?>(
+  PublishTeacherExamResultsNotifier.new,
 );
 
 class SubmitTeacherLeaveNotifier extends AsyncNotifier<TeacherLeaveRequest?> {

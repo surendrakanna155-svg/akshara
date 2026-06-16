@@ -29,6 +29,13 @@ void main() {
               },
             ),
             GoRoute(
+              path: RouteNames.teacherClassTeacherDashboard,
+              builder: (_, __) {
+                onRoute(RouteNames.teacherClassTeacherDashboard);
+                return const SizedBox();
+              },
+            ),
+            GoRoute(
               path: RouteNames.teacherAttendance,
               builder: (_, __) {
                 onRoute(RouteNames.teacherAttendance);
@@ -39,6 +46,13 @@ void main() {
               path: RouteNames.teacherHomework,
               builder: (_, __) {
                 onRoute(RouteNames.teacherHomework);
+                return const SizedBox();
+              },
+            ),
+            GoRoute(
+              path: RouteNames.teacherHomeworkCreate,
+              builder: (_, __) {
+                onRoute(RouteNames.teacherHomeworkCreate);
                 return const SizedBox();
               },
             ),
@@ -84,6 +98,16 @@ void main() {
     expect(routes, contains(RouteNames.teacherHomework));
   });
 
+  testWidgets('teacher create_homework routes to create screen', (tester) async {
+    final routes = <String>[];
+    await pumpNavHarness(
+      tester,
+      (context) => handleTeacherNavigation(context, 'create_homework'),
+      routes.add,
+    );
+    expect(routes, contains(RouteNames.teacherHomeworkCreate));
+  });
+
   testWidgets('teacher ai_copilot routes to assistant', (tester) async {
     final routes = <String>[];
     await pumpNavHarness(
@@ -94,9 +118,9 @@ void main() {
     expect(routes, contains(RouteNames.aiAssistant));
   });
 
-  testWidgets('teacher class_teacher_dashboard routes to attendance', (
-    tester,
-  ) async {
+  testWidgets(
+    'teacher class_teacher_dashboard routes to class teacher dashboard',
+    (tester) async {
     final routes = <String>[];
     await pumpNavHarness(
       tester,
@@ -104,6 +128,6 @@ void main() {
           handleTeacherNavigation(context, 'class_teacher_dashboard'),
       routes.add,
     );
-    expect(routes, contains(RouteNames.teacherAttendance));
+    expect(routes, contains(RouteNames.teacherClassTeacherDashboard));
   });
 }

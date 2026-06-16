@@ -57,7 +57,7 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'SIS registry'),
               icon: const Icon(Icons.download_outlined),
               label: const Text('Export'),
             ),

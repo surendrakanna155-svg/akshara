@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 
+import '../../../core/repositories/mock/mock_admissions_sis_bridge.dart';
 import '../../admissions/admissions_models.dart';
 import '../../admissions/fee_handoff/admissions_fee_handoff_provider.dart';
 import '../finance_models.dart';
@@ -48,4 +49,8 @@ void completeFinanceHandoffAssignment(
   ref.read(financeGeneratedAccountsProvider.notifier).update(
         (state) => {...state, handoffId: preview},
       );
+  MockAdmissionsSisBridge.completeFinanceHandoff(
+    handoffId: handoffId,
+    preview: preview,
+  );
 }

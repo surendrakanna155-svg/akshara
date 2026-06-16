@@ -38,7 +38,7 @@ class HostelDashboardScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageHostel,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'Hostel dashboard'),
           icon: const Icon(Icons.download_outlined, size: 18),
           label: const Text('Export'),
         ),

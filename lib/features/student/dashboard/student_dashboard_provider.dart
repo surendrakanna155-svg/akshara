@@ -216,6 +216,18 @@ class StudentDashboardData {
           icon: Icons.assignment_outlined,
           emphasis: StudentKpiTone.warning,
         ),
+        StudentQuickAction(
+          id: 'report_card',
+          label: 'Report Card',
+          icon: Icons.description_outlined,
+          emphasis: StudentKpiTone.primary,
+        ),
+        StudentQuickAction(
+          id: 'progress',
+          label: 'Progress',
+          icon: Icons.trending_up_outlined,
+          emphasis: StudentKpiTone.primary,
+        ),
       ],
       aiInsight: StudentAiInsight(
         message: 'Revise quadratic equations — 15 min today boosts exam readiness',

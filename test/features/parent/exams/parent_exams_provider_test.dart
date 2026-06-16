@@ -6,7 +6,7 @@ import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('parentExamsProvider', () {
-    test('returns mock exams payload', () async {
+    test('returns exams from administration store without published results', () async {
       final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
@@ -16,7 +16,7 @@ void main() {
       expect(data.childName, 'Ravi Kumar');
       expect(data.childClass, '8-A');
       expect(data.upcomingExams, isNotEmpty);
-      expect(data.examResults, isNotEmpty);
+      expect(data.examResults, isEmpty);
     });
 
     test('parentExamSectionProvider defaults to upcoming', () async {

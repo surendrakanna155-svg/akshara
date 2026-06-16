@@ -43,7 +43,7 @@ class ControlCenterSchoolsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageControlCenter,
         child: FilledButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add school'),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Create school'),
         ),

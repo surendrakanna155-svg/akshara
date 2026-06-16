@@ -260,12 +260,38 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 |-------|--------|-----|
 | Release branch | ✅ | `release/v1.0-preprod` |
 | Full regression (Flutter) | ✅ | `FULL_REGRESSION_REPORT.md` |
-| UX stabilization | ✅ | `UX_STABILIZATION_REPORT.md` |
+| UX stabilization | ✅ | `UX_STABILIZATION_FINAL.md` |
 | Workflow verification | ✅ | `WORKFLOW_VERIFICATION_REPORT.md` |
-| Performance review | ✅ | `PERFORMANCE_REVIEW.md` |
+| Performance review | ✅ | `PERFORMANCE_CERTIFICATION_REPORT.md` |
 | Production readiness final | ✅ | `PRODUCTION_READINESS_FINAL.md` |
 | Pilot readiness | ✅ Ready with Conditions | `PILOT_READINESS_REPORT.md` |
-| Final status | ✅ | `AKSHARA_V1_FINAL_STATUS.md` |
+| Patrol certification | ✅ 88/88 | `PATROL_FINAL_CERTIFICATION.md` |
+| Red Team remediation | ✅ | `RED_TEAM_REMEDIATION_REPORT.md` |
+| Documentation sync | ✅ | `DOCUMENTATION_SYNC_REPORT.md` |
+| Final status | ✅ | `AKSHARA_V1_FINAL_SIGNOFF.md` |
+
+---
+
+## Post-RT — Operational Hardening
+
+| Feature | Registry | Status | Implementation |
+|---------|----------|--------|------------------|
+| Exam publish chain | FV-POST-01 | ✅ | `exam_administration_store.dart` |
+| Parent comm governance | FV-POST-02 | ✅ | `parent_communication_governance.dart` |
+| Class teacher governance | FV-POST-03 | ✅ | `teacher_assignment_registry.dart` |
+| Subject teacher escalation | FV-POST-04 | ✅ | `subject_teacher_concern_store.dart` |
+| Student 360 risk | FV-POST-05 | ✅ | `teacher_student_risk_screen.dart` |
+| Attention today list | FV-POST-06 | ✅ | `attentionForClass()` |
+| Unified onboarding | FV-POST-07 | 🔄 | `unified_onboarding_flow_screen.dart` |
+| Translation framework | FV-POST-08 | 🔄 | `translation_service.dart` |
+| Backup architecture | FV-POST-09 | 🔄 | `backup_restore_screen.dart` |
+| Red Team #1–#25 | FV-POST-10 | ✅ | See remediation report |
+| Parent inbox | FV-POST-11 | 🔄 | Mock inbox; API empty |
+| HR/SIS mapping | FV-POST-12 | 🔄 | Static seed registry |
+| School config sync | FV-POST-13 | 🔄 | Local prefs only |
+
+**Architecture:** `docs/ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md`  
+**Workflows:** `docs/Operations/workflows/`
 
 ---
 
@@ -345,14 +371,18 @@ Post–four-milestone program. Full feature list: `docs/FUTURE_VISION_MASTER_IND
 | Item | Reason | Milestone |
 |------|--------|-----------|
 | ERP Exam Admin scope | Product decision | M7 (P3-02) |
+| Academic Assessment Platform | Red Team scope exclusion | FV-DEF-01 |
+| Formal Question Paper / Assessment AI | Depends on assessment platform | FV-DEF-02/03 |
+| M15 Theme Modernization | Not started; readiness complete | FV-M15-01 |
 | First non-education vertical pilot | Ready for staging pilot | M13 ✅ |
 
 ---
 
 ## Related documents
 
-- `docs/FUTURE_VISION_PRESERVATION_AUDIT.md` (new)
-- `docs/FUTURE_VISION_MASTER_INDEX.md` (new — permanent capability index)
+- `docs/DOCUMENTATION_SYNC_REPORT.md` (June 2026 sync)
+- `docs/ArchitectureReview/v1.0-Post-RedTeam-Operational-Hardening.md`
+- `docs/Operations/workflows/` (operational process flows)
 - `docs/FOUR_MILESTONE_EXECUTION_REPORT.md`
 - `docs/PROJECT_BASELINE_STATUS.md`
 - `docs/QA/vision_completion_progress.md`

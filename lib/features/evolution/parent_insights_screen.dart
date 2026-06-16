@@ -118,7 +118,13 @@ class ParentInsightsScreen extends ConsumerWidget {
               children: [
                 Expanded(child: Text('${snapshot.period} · ${snapshot.language}', style: Theme.of(context).textTheme.titleMedium)),
                 if (snapshot.printable)
-                  IconButton(icon: const Icon(Icons.print_outlined), onPressed: () {}),
+                  IconButton(
+                    icon: const Icon(Icons.print_outlined),
+                    onPressed: () => showAksharaReportExportPreviewSnackBar(
+                      context,
+                      reportName: 'Parent insights',
+                    ),
+                  ),
                 if (snapshot.voiceReady) const Icon(Icons.record_voice_over_outlined, size: 20),
               ],
             ),

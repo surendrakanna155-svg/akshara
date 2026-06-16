@@ -7,6 +7,8 @@ import '../../../../features/teacher/messages/message_models.dart';
 import '../../../../features/teacher/teacher_requests.dart';
 import '../../../../features/teacher/timetable/timetable_models.dart';
 import '../../interfaces/teacher_repository.dart';
+import '../../../communication/parent_communication_governance.dart';
+import '../../../communication/parent_communication_models.dart';
 import '../../repository_query.dart';
 import 'mapper/teacher_mapper.dart';
 import 'remote/teacher_remote_datasource.dart';
@@ -125,6 +127,71 @@ class ApiTeacherRepository implements TeacherRepository {
   }) async {
     final dto = await _remote.updateExamMark(query: query, request: request);
     return _mapper.toExamMark(dto);
+  }
+
+  @override
+  Future<TeacherExamPublishResult> publishExamResults({
+    required RepositoryQuery query,
+    required TeacherExamPublishRequest request,
+  }) async {
+    final dto = await _remote.publishExamResults(query: query, request: request);
+    return _mapper.toExamPublishResult(dto);
+  }
+
+  @override
+  Future<ParentCommunicationSendResult> sendParentCommunication({
+    required RepositoryQuery query,
+    required TeacherParentCommunicationSendRequest request,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final dto = await _remote.sendParentCommunication(
+      query: query,
+      request: request,
+      teachingContext: teachingContext,
+    );
+    return _mapper.toParentCommunicationSendResult(dto);
+  }
+
+  @override
+  Future<SubjectTeacherConcernFlagResult> flagSubjectConcern({
+    required RepositoryQuery query,
+    required TeacherSubjectConcernFlagRequest request,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final dto = await _remote.flagSubjectConcern(
+      query: query,
+      request: request,
+      teachingContext: teachingContext,
+    );
+    return _mapper.toSubjectConcernFlagResult(dto);
+  }
+
+  @override
+  Future<List<SubjectTeacherConcern>> listPendingConcerns({
+    required RepositoryQuery query,
+    required TeacherTeachingContext teachingContext,
+  }) async {
+    final dto = await _remote.listPendingConcerns(
+      query: query,
+      teachingContext: teachingContext,
+    );
+    return _mapper.toSubjectConcerns(dto);
+  }
+
+  @override
+  Future<SubjectTeacherConcern> dismissSubjectConcern({
+    required RepositoryQuery query,
+    required String concernId,
+    required TeacherTeachingContext teachingContext,
+    String? note,
+  }) async {
+    final dto = await _remote.dismissSubjectConcern(
+      query: query,
+      concernId: concernId,
+      teachingContext: teachingContext,
+      note: note,
+    );
+    return _mapper.toSubjectConcern(dto);
   }
 
   @override

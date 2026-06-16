@@ -44,6 +44,28 @@ class MockParentMeetingsRepository implements ParentMeetingsRepository {
           'Parent and teacher aligned on improving homework consistency. Weekly check-ins and worksheet tracking agreed.',
       lastUpdatedAt: DateTime(2026, 6, 12, 17, 30),
     ),
+    ParentMeetingRecord(
+      id: 'pm_ravi',
+      studentId: 'SIS-STU-10430',
+      studentName: 'Ravi Kumar',
+      parentName: 'Suresh Kumar',
+      teacherName: 'Mrs. Sharma',
+      meetingAt: DateTime(2026, 6, 15, 14, 0),
+      notes: 'Discuss mid-term performance and transport timing.',
+      actionItems: [
+        MeetingActionItem(
+          id: 'act_ravi_1',
+          title: 'Confirm PTM slot for 15 June',
+          owner: 'Parent',
+          dueDate: DateTime(2026, 6, 14),
+          completed: false,
+        ),
+      ],
+      followUps: const [],
+      aiSummary:
+          'PTM scheduled for 15 June. Focus on mathematics revision plan.',
+      lastUpdatedAt: DateTime(2026, 6, 5, 10, 0),
+    ),
   ];
 
   @override

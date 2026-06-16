@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/environment_provider.dart';
+import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../auth/auth_logout.dart';
 import '../../theme/spacing.dart';
 import '../copilot/copilot_navigation.dart';
 import '../../theme/breakpoints.dart';
@@ -83,10 +86,29 @@ class AdminContentScaffold extends ConsumerWidget {
             onAiCopilotTap: onAiCopilotTap ??
                 () => openCopilotWithCurrentContext(context, ref),
             onProfileTap: onProfileTap ??
-                () => _showPlaceholderSnackBar(
-                      context,
-                      'Profile menu coming soon.',
-                    ),
+                () {
+                  if (ref.read(isQaLoginEnabledProvider)) {
+                    showModalBottomSheet<void>(
+                      context: context,
+                      builder: (sheetContext) => SafeArea(
+                        child: ListTile(
+                          key: QaTestKeys.logoutButton,
+                          leading: const Icon(Icons.logout),
+                          title: const Text('Log out'),
+                          onTap: () {
+                            Navigator.of(sheetContext).pop();
+                            confirmAndLogout(context, ref);
+                          },
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                  _showPlaceholderSnackBar(
+                    context,
+                    'Profile menu coming soon.',
+                  );
+                },
           ),
           if (showFilterBar)
             AdminFilterBar(

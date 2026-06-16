@@ -1,5 +1,13 @@
 import '../../../features/parent/academics/parent_academic_models.dart';
 import 'mock_attendance_sync_store.dart';
+import 'mock_canonical_student_registry.dart';
+import '../../exams/exam_administration_store.dart';
+import '../../communication/parent_communication_models.dart';
+import '../../communication/parent_communication_inbox_fallback.dart';
+import '../../communication/parent_communication_store.dart';
+import '../../homework/school_homework_store.dart';
+import '../../i18n/content_localization.dart';
+import '../../i18n/supported_languages.dart';
 import '../../../features/parent/attendance/attendance_models.dart';
 import '../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../features/parent/events/events_models.dart';
@@ -56,12 +64,51 @@ class MockParentRepository implements ParentRepository {
   }
 
   @override
-  Future<ParentHomeworkData> getHomework({required RepositoryQuery query}) async =>
-      ParentHomeworkData.mock();
+  Future<ParentHomeworkData> getHomework({required RepositoryQuery query}) async {
+    final child = MockCanonicalStudentRegistry.primaryMobileStudent;
+    final language = ParentCommunicationStore.instance
+        .preferredLanguageForStudent(child.sisStudentId);
+    return _localizedHomework(language);
+  }
 
   @override
-  Future<ParentExamsData> getExams({required RepositoryQuery query}) async =>
-      ParentExamsData.mock();
+  Future<ParentExamsData> getExams({required RepositoryQuery query}) async {
+    final child = MockCanonicalStudentRegistry.primaryMobileStudent;
+    final store = ExamAdministrationStore.instance..ensureSeeded();
+    final published = store.resultsForStudent(child.sisStudentId);
+    final upcoming = store.upcomingExams(classLabel: child.classLabel);
+
+    return ParentExamsData(
+      childName: child.studentName,
+      childClass: child.classLabel,
+      unreadNotifications: 2,
+      upcomingExams: [
+        for (final exam in upcoming)
+          ExamScheduleItem(
+            id: exam.id,
+            title: exam.title,
+            subject: exam.subject,
+            dateLabel: exam.dateLabel,
+            timeLabel: exam.timeLabel,
+            venueLabel: exam.venueLabel,
+            syllabusLabel: exam.syllabusLabel,
+            isToday: exam.dateLabel.contains('12 Jun'),
+          ),
+      ],
+      examResults: [
+        for (final result in published)
+          ExamResultItem(
+            id: result.markEntryId,
+            title: result.examTitle,
+            termLabel: result.termLabel,
+            dateLabel: result.dateLabel,
+            scoreObtained: result.scoreObtained,
+            maxScore: result.maxScore,
+            grade: result.grade,
+          ),
+      ],
+    );
+  }
 
   @override
   Future<ParentTimetableData> getTimetable({required RepositoryQuery query}) async =>
@@ -76,8 +123,12 @@ class MockParentRepository implements ParentRepository {
       _mockReceipts();
 
   @override
-  Future<List<ParentNotice>> getNotices({required RepositoryQuery query}) async =>
-      _mockNotices();
+  Future<List<ParentNotice>> getNotices({required RepositoryQuery query}) async {
+    final child = MockCanonicalStudentRegistry.primaryMobileStudent;
+    final language = ParentCommunicationStore.instance
+        .preferredLanguageForStudent(child.sisStudentId);
+    return _localizedNotices(language);
+  }
 
   @override
   Future<ParentEventsData> getEvents({required RepositoryQuery query}) async =>
@@ -94,11 +145,17 @@ class MockParentRepository implements ParentRepository {
     required RepositoryQuery query,
     required String activeChildId,
   }) async {
+    const preferredLanguage = AksharaLanguage.telugu;
+    ParentCommunicationStore.instance.setPreferredLanguage(
+      sisStudentId: MockCanonicalStudentRegistry.primaryMobileStudentId,
+      language: preferredLanguage,
+    );
     return ParentProfileData(
       parentName: 'Suresh Kumar',
       phoneLabel: '+91 98765 43210',
       email: 'suresh.kumar@email.com',
       schoolName: 'Akshara Public School',
+      preferredLanguage: preferredLanguage,
       unreadNotifications: 2,
       children: [
         ParentChildProfile(
@@ -283,6 +340,43 @@ class MockParentRepository implements ParentRepository {
     _store.messageThreads!.insert(0, created);
     return created;
   }
+
+  @override
+  Future<List<ParentCommunicationInboxItem>> getCommunicationInbox({
+    required RepositoryQuery query,
+    required String activeChildId,
+  }) async {
+    final student = _studentForChild(activeChildId);
+    if (student == null) return const [];
+    return ParentCommunicationStore.instance.inboxForStudent(student.sisStudentId);
+  }
+
+  @override
+  Future<ParentCommunicationInboxItem?> getCommunicationMessage({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    return ParentCommunicationStore.instance.inboxItemById(communicationId);
+  }
+
+  @override
+  Future<void> markCommunicationRead({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    ParentCommunicationStore.instance.markRead(communicationId);
+  }
+
+  @override
+  Future<void> acknowledgeCommunication({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    ParentCommunicationStore.instance.markAcknowledged(communicationId);
+  }
+
+  CanonicalStudentRecord? _studentForChild(String activeChildId) =>
+      ParentCommunicationInboxFallback.studentForChild(activeChildId);
 
   Future<void> _ensureLeaveHistory() async {
     _store.leaveRequests ??= List<LeaveRequest>.from(_mockLeaveHistory());
@@ -708,6 +802,53 @@ List<ParentNotice> _mockNotices() {
       isRead: true,
     ),
   ];
+}
+
+List<ParentNotice> _localizedNotices(AksharaLanguage language) {
+  return [
+    for (final notice in _mockNotices())
+      ParentNotice(
+        id: notice.id,
+        title: ContentLocalization.localize(notice.title, language),
+        dateLabel: notice.dateLabel,
+        summary: ContentLocalization.localize(notice.summary, language),
+        category: notice.category,
+        isUrgent: notice.isUrgent,
+        isRead: notice.isRead,
+      ),
+  ];
+}
+
+ParentHomeworkData _localizedHomework(AksharaLanguage language) {
+  final base = ParentHomeworkData.mock();
+  final child = MockCanonicalStudentRegistry.primaryMobileStudent;
+  final storeItems = SchoolHomeworkStore.instance.forStudent(child.sisStudentId);
+  final createdItems = [
+    for (final record in storeItems)
+      SchoolHomeworkStore.instance.toParentItem(
+        record,
+        ContentLocalization.localize(record.title, language),
+      ),
+  ];
+  return ParentHomeworkData(
+    childName: base.childName,
+    childClass: base.childClass,
+    unreadNotifications: base.unreadNotifications,
+    insightMessage:
+        ContentLocalization.localize(base.insightMessage, language),
+    insightActionLabel: base.insightActionLabel,
+    items: [
+      ...createdItems,
+      for (final item in base.items)
+        ParentHomeworkItem(
+          id: item.id,
+          subject: item.subject,
+          title: ContentLocalization.localize(item.title, language),
+          dueLabel: item.dueLabel,
+          status: item.status,
+        ),
+    ],
+  );
 }
 
 

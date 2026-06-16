@@ -123,6 +123,8 @@ void main() {
         find.textContaining('homework solution steps'),
         findsOneWidget,
       );
+      expect(find.text('Reply'), findsWidgets);
+      expect(find.text('Send'), findsOneWidget);
     });
 
     testWidgets('TeacherLeaveScreen renders balance and history', (

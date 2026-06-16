@@ -38,7 +38,7 @@ class TransportDashboardScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageTransport,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'Transport dashboard'),
           icon: const Icon(Icons.download_outlined, size: 18),
           label: const Text('Export'),
         ),

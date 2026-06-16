@@ -5,6 +5,8 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'message_models.dart';
+import '../teacher_requests.dart';
+import '../teacher_mutations_provider.dart';
 import 'teacher_messages_provider.dart';
 
 /// TA-06 conversation thread view.
@@ -47,13 +49,24 @@ class TeacherConversationScreen extends ConsumerWidget {
                       message: 'Conversation not found.',
                       icon: Icons.forum_outlined,
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(AksharaSpacing.s4),
-                      itemCount: thread.messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = thread.messages[index];
-                        return _Bubble(message: msg);
-                      },
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(AksharaSpacing.s4),
+                            itemCount: thread.messages.length,
+                            itemBuilder: (context, index) {
+                              final msg = thread.messages[index];
+                              return _Bubble(message: msg);
+                            },
+                          ),
+                        ),
+                        _ReplyComposer(
+                          threadId: thread.id,
+                          recipient: thread.parentName,
+                          subject: thread.studentName,
+                        ),
+                      ],
                     ),
     );
   }
@@ -100,6 +113,106 @@ class _Bubble extends StatelessWidget {
             style: text.labelSmall.copyWith(color: colors.onSurfaceVariant),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ReplyComposer extends ConsumerStatefulWidget {
+  const _ReplyComposer({
+    required this.threadId,
+    required this.recipient,
+    required this.subject,
+  });
+
+  final String threadId;
+  final String recipient;
+  final String subject;
+
+  @override
+  ConsumerState<_ReplyComposer> createState() => _ReplyComposerState();
+}
+
+class _ReplyComposerState extends ConsumerState<_ReplyComposer> {
+  final _controller = TextEditingController();
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final canSend = !_isSending && _controller.text.trim().isNotEmpty;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: AksharaSpacing.mobileMargin,
+          right: AksharaSpacing.mobileMargin,
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: context.colors.surfaceContainerHigh,
+            border: Border(
+              top: BorderSide(color: context.colors.outlineVariant),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AksharaSpacing.s2,
+              vertical: AksharaSpacing.s3,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    minLines: 1,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Reply',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(width: AksharaSpacing.s2),
+                FilledButton.icon(
+                  onPressed: canSend
+                      ? () async {
+                          setState(() => _isSending = true);
+                          try {
+                            await ref
+                                .read(sendTeacherMessageProvider.notifier)
+                                .execute(
+                                  TeacherMessageSendRequest(
+                                    recipient: widget.recipient,
+                                    subject: widget.subject,
+                                    body: _controller.text.trim(),
+                                    threadId: widget.threadId,
+                                  ),
+                                );
+                            _controller.clear();
+                            if (!context.mounted) return;
+                            setState(() => _isSending = false);
+                          } catch (_) {
+                            if (!context.mounted) return;
+                            setState(() => _isSending = false);
+                          }
+                        }
+                      : null,
+                  icon: const Icon(Icons.send_rounded),
+                  label: Text(_isSending ? 'Sending' : 'Send'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

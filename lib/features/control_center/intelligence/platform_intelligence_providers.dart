@@ -4,6 +4,7 @@ import '../../../core/repositories/repository_providers.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../../control_center/control_center_providers.dart';
 import 'platform_intelligence_models.dart';
 
 final platformIntelligenceCanViewProvider = Provider<bool>((ref) {
@@ -34,9 +35,26 @@ final organizationIntelligenceProvider =
       );
 });
 
-final schoolComparisonSelectionProvider = StateProvider<List<String>>(
-  (ref) => const ['SCH-1001', 'SCH-1003', 'SCH-1004', 'SCH-1005'],
-);
+final schoolComparisonSelectionProvider = Provider<List<String>>((ref) {
+  final schools = ref.watch(controlCenterSchoolsProvider);
+  final tenantSchoolId = ref.watch(tenantContextProvider).schoolId;
+
+  if (schools != null && schools.isNotEmpty) {
+    final ids = schools.map((school) => school.id).take(4).toList();
+    if (tenantSchoolId != null && !ids.contains(tenantSchoolId)) {
+      return [
+        tenantSchoolId,
+        ...ids.where((id) => id != tenantSchoolId),
+      ].take(4).toList(growable: false);
+    }
+    return ids;
+  }
+
+  if (tenantSchoolId != null) {
+    return [tenantSchoolId];
+  }
+  return const ['SCH-1001'];
+});
 
 final schoolComparisonIntelligenceProvider =
     FutureProvider<SchoolComparisonIntelligence>((ref) async {

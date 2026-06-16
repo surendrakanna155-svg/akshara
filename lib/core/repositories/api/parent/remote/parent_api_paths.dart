@@ -14,6 +14,13 @@ abstract final class ParentApiPaths {
   static const String leave = '$base/leave';
   static const String profile = '$base/profile';
   static const String messages = '$base/messages';
+  static const String communicationInbox = '$base/communication/inbox';
+  static String communicationMessage(String communicationId) =>
+      '$base/communication/$communicationId';
+  static String communicationRead(String communicationId) =>
+      '$base/communication/$communicationId/read';
+  static String communicationAcknowledge(String communicationId) =>
+      '$base/communication/$communicationId/acknowledge';
   static const String paymentsInitiate = '$base/payments/initiate';
   static const String paymentsConfirm = '$base/payments/confirm';
 

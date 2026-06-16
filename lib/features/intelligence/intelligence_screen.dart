@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
@@ -565,7 +566,10 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
                 ),
                 if (report.printable)
                   TextButton.icon(
-                    onPressed: () {},
+                    onPressed: () => showAksharaReportExportPreviewSnackBar(
+                      context,
+                      reportName: 'Parent guidance report',
+                    ),
                     icon: const Icon(Icons.print_outlined),
                     label: const Text('Print'),
                   ),

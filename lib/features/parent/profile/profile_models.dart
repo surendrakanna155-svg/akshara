@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/i18n/supported_languages.dart';
+
 /// Linked child account on a parent profile.
 @immutable
 class ParentChildProfile {
@@ -25,6 +27,7 @@ class ParentProfileData {
     required this.email,
     required this.schoolName,
     required this.children,
+    this.preferredLanguage = AksharaLanguage.english,
     this.unreadNotifications = 0,
   });
 
@@ -33,6 +36,7 @@ class ParentProfileData {
   final String email;
   final String schoolName;
   final List<ParentChildProfile> children;
+  final AksharaLanguage preferredLanguage;
   final int unreadNotifications;
 
   int get childrenCount => children.length;

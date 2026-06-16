@@ -76,7 +76,7 @@ void main() {
       await pumpHostelScreen(tester, const HostelStudentsScreen());
 
       expect(find.text('Hostel residents'), findsOneWidget);
-      expect(find.text('Arjun Patel'), findsOneWidget);
+      expect(find.text('Ravi Kumar'), findsOneWidget);
     });
 
     testWidgets('HostelRoomsScreen renders room catalog', (tester) async {

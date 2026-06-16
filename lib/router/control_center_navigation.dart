@@ -16,6 +16,7 @@ import '../features/control_center/subscriptions/control_center_subscriptions_sc
 import '../features/control_center/success/control_center_success_screen.dart';
 import '../features/control_center/support/control_center_support_screen.dart';
 import '../features/control_center/white_label/control_center_white_label_screen.dart';
+import 'route_guards.dart';
 import 'route_names.dart';
 
 String? controlCenterRootRedirect(BuildContext context, GoRouterState state) {
@@ -25,107 +26,109 @@ String? controlCenterRootRedirect(BuildContext context, GoRouterState state) {
   return null;
 }
 
+Widget _controlCenterScreen(Widget child) => ControlCenterGuard(child: child);
+
 Widget controlCenterDashboardRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterDashboardScreen();
+  return _controlCenterScreen(const ControlCenterDashboardScreen());
 }
 
 Widget controlCenterSchoolsRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterSchoolsScreen();
+  return _controlCenterScreen(const ControlCenterSchoolsScreen());
 }
 
 Widget controlCenterIntelligenceRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const PlatformIntelligenceScreen();
+  return _controlCenterScreen(const PlatformIntelligenceScreen());
 }
 
 Widget controlCenterSubscriptionsRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterSubscriptionsScreen();
+  return _controlCenterScreen(const ControlCenterSubscriptionsScreen());
 }
 
 Widget controlCenterBillingRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterBillingScreen();
+  return _controlCenterScreen(const ControlCenterBillingScreen());
 }
 
 Widget controlCenterCrmRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterCrmScreen();
+  return _controlCenterScreen(const ControlCenterCrmScreen());
 }
 
 Widget controlCenterSupportRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterSupportScreen();
+  return _controlCenterScreen(const ControlCenterSupportScreen());
 }
 
 Widget controlCenterSuccessRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterSuccessScreen();
+  return _controlCenterScreen(const ControlCenterSuccessScreen());
 }
 
 Widget controlCenterWhiteLabelRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterWhiteLabelScreen();
+  return _controlCenterScreen(const ControlCenterWhiteLabelScreen());
 }
 
 Widget controlCenterAnalyticsRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterAnalyticsScreen();
+  return _controlCenterScreen(const ControlCenterAnalyticsScreen());
 }
 
 Widget controlCenterMonitoringRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterMonitoringScreen();
+  return _controlCenterScreen(const ControlCenterMonitoringScreen());
 }
 
 Widget controlCenterRolesRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterRolesScreen();
+  return _controlCenterScreen(const ControlCenterRolesScreen());
 }
 
 Widget controlCenterSettingsRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterSettingsScreen();
+  return _controlCenterScreen(const ControlCenterSettingsScreen());
 }
 
 Widget controlCenterProvidersRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterProvidersScreen();
+  return _controlCenterScreen(const ControlCenterProvidersScreen());
 }
 
 Widget controlCenterFeaturesRouteBuilder(
   BuildContext context,
   GoRouterState state,
 ) {
-  return const ControlCenterFeaturesScreen();
+  return _controlCenterScreen(const ControlCenterFeaturesScreen());
 }

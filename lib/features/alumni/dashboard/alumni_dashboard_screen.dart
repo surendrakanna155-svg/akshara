@@ -38,7 +38,7 @@ class AlumniDashboardScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAlumni,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'Alumni dashboard'),
           icon: const Icon(Icons.download_outlined, size: 18),
           label: const Text('Export'),
         ),

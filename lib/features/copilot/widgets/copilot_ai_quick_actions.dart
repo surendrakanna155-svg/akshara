@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../core/school_config/school_configuration_provider.dart';
 import '../copilot_navigation.dart';
 import '../copilot_quick_action.dart';
 import '../copilot_stub_responses.dart';
@@ -80,6 +81,7 @@ Future<void> executeCopilotQuickAction(
   final reply = buildContextAwareStubReply(
     userMessage: prompt,
     screenContext: screenContext,
+    capabilities: ref.read(schoolCapabilitiesProvider),
   );
 
   if (!context.mounted) return;

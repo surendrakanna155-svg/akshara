@@ -13,6 +13,8 @@ import '../../../../features/parent/profile/profile_models.dart';
 import '../../../../features/parent/receipts/receipt_models.dart';
 import '../../../../features/parent/timetable/timetable_models.dart';
 import '../../../../features/teacher/messages/message_models.dart';
+import '../../../communication/parent_communication_inbox_fallback.dart';
+import '../../../communication/parent_communication_models.dart';
 import '../../interfaces/parent_repository.dart';
 import '../../repository_query.dart';
 import 'mapper/parent_mapper.dart';
@@ -223,5 +225,69 @@ class ApiParentRepository implements ParentRepository {
           ),
       ],
     );
+  }
+
+  @override
+  Future<List<ParentCommunicationInboxItem>> getCommunicationInbox({
+    required RepositoryQuery query,
+    required String activeChildId,
+  }) async {
+    try {
+      final dto = await _remote.fetchCommunicationInbox(
+        query: query,
+        activeChildId: activeChildId,
+      );
+      final items = _mapper.toCommunicationInbox(dto);
+      if (items.isNotEmpty) return items;
+    } catch (_) {
+      // Fall through to shared store when API is unavailable.
+    }
+    return ParentCommunicationInboxFallback.inboxForChild(activeChildId);
+  }
+
+  @override
+  Future<ParentCommunicationInboxItem?> getCommunicationMessage({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    try {
+      final dto = await _remote.fetchCommunicationMessage(
+        query: query,
+        communicationId: communicationId,
+      );
+      return _mapper.toCommunicationInboxItem(dto.raw);
+    } catch (_) {
+      return ParentCommunicationInboxFallback.messageById(communicationId);
+    }
+  }
+
+  @override
+  Future<void> markCommunicationRead({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    try {
+      await _remote.markCommunicationRead(
+        query: query,
+        communicationId: communicationId,
+      );
+    } catch (_) {
+      ParentCommunicationInboxFallback.markRead(communicationId);
+    }
+  }
+
+  @override
+  Future<void> acknowledgeCommunication({
+    required RepositoryQuery query,
+    required String communicationId,
+  }) async {
+    try {
+      await _remote.acknowledgeCommunication(
+        query: query,
+        communicationId: communicationId,
+      );
+    } catch (_) {
+      ParentCommunicationInboxFallback.acknowledge(communicationId);
+    }
   }
 }

@@ -28,7 +28,7 @@ class HostelVisitorsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageHostel,
         child: OutlinedButton.icon(
-          onPressed: () {},
+          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Log visitor'),
           icon: const Icon(Icons.person_add_outlined, size: 18),
           label: const Text('Register visitor'),
         ),

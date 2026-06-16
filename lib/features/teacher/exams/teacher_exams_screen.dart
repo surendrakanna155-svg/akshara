@@ -7,6 +7,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'exam_models.dart';
 import 'teacher_exams_provider.dart';
+import '../teacher_mutations_provider.dart';
 
 /// Teacher exams — TA-05.
 class TeacherExamsScreen extends ConsumerWidget {
@@ -124,11 +125,9 @@ class TeacherExamsScreen extends ConsumerWidget {
                                   _UpcomingList(exams: data.upcomingExams),
                                 TeacherExamSection.marksEntry =>
                                   _MarksEntryList(entries: data.markEntries),
-                                TeacherExamSection.results => AksharaInsightCard(
-                                    message:
-                                        'Class average is ${data.classAveragePercent}% for Unit Test — Mathematics.',
-                                    actionLabel: 'View report',
-                                    onAction: () {},
+                                TeacherExamSection.results => _ResultsPanel(
+                                    classAveragePercent:
+                                        data.classAveragePercent,
                                   ),
                               },
                             ],
@@ -138,6 +137,56 @@ class TeacherExamsScreen extends ConsumerWidget {
                     );
                   },
                 ),
+    );
+  }
+}
+
+class _ResultsPanel extends ConsumerWidget {
+  const _ResultsPanel({required this.classAveragePercent});
+
+  final int classAveragePercent;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final examId = ref.watch(teacherActiveExamIdProvider);
+    final publishState = ref.watch(publishTeacherExamResultsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AksharaInsightCard(
+          message:
+              'Class average is $classAveragePercent% for Unit Test — Mathematics.',
+          actionLabel: 'Review marks',
+          onAction: () => ref
+              .read(teacherExamSectionProvider.notifier)
+              .state = TeacherExamSection.marksEntry,
+        ),
+        const SizedBox(height: AksharaSpacing.s3),
+        FilledButton.icon(
+          onPressed: examId == null || publishState.isLoading
+              ? null
+              : () async {
+                  final result = await publishExamResults(ref, examId);
+                  if (!context.mounted || result == null) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Published ${result.publishedCount} results to student and parent apps.',
+                      ),
+                    ),
+                  );
+                },
+          icon: publishState.isLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.publish_outlined),
+          label: const Text('Publish results'),
+        ),
+      ],
     );
   }
 }

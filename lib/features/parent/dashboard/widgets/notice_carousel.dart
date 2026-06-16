@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
@@ -31,21 +32,24 @@ class NoticeCarousel extends StatelessWidget {
     }
 
     return SizedBox(
+      key: QaTestKeys.parentNoticeCarousel,
       height: cardHeight,
-      child: ListView.separated(
+      child: ListView(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.hardEdge,
-        itemCount: notices.length,
-        separatorBuilder: (_, __) => const SizedBox(width: AksharaSpacing.s3),
-        itemBuilder: (context, index) {
-          final notice = notices[index];
-          return NoticeCard(
-            notice: notice,
-            width: cardWidth,
-            height: cardHeight,
-            onTap: onNoticeTap == null ? null : () => onNoticeTap!(notice),
-          );
-        },
+        children: [
+          for (var i = 0; i < notices.length; i++) ...[
+            if (i > 0) const SizedBox(width: AksharaSpacing.s3),
+            NoticeCard(
+              notice: notices[i],
+              width: cardWidth,
+              height: cardHeight,
+              onTap: onNoticeTap == null
+                  ? null
+                  : () => onNoticeTap!(notices[i]),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -77,6 +81,7 @@ class NoticeCard extends StatelessWidget {
           ? 'Urgent notice: ${notice.title}'
           : notice.title,
       child: Material(
+        key: QaTestKeys.parentDashboardNotice(notice.id),
         color: colors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(

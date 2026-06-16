@@ -50,6 +50,20 @@ void main() {
               },
             ),
             GoRoute(
+              path: RouteNames.studentReportCard,
+              builder: (_, __) {
+                onRoute(RouteNames.studentReportCard);
+                return const SizedBox();
+              },
+            ),
+            GoRoute(
+              path: RouteNames.studentProgress,
+              builder: (_, __) {
+                onRoute(RouteNames.studentProgress);
+                return const SizedBox();
+              },
+            ),
+            GoRoute(
               path: RouteNames.aiAssistant,
               builder: (_, __) {
                 onRoute(RouteNames.aiAssistant);
@@ -102,5 +116,25 @@ void main() {
       routes.add,
     );
     expect(routes, contains(RouteNames.studentExams));
+  });
+
+  testWidgets('student report_card routes to report card screen', (tester) async {
+    final routes = <String>[];
+    await pumpNavHarness(
+      tester,
+      (context) => handleStudentNavigation(context, 'report_card'),
+      routes.add,
+    );
+    expect(routes, contains(RouteNames.studentReportCard));
+  });
+
+  testWidgets('student progress routes to progress screen', (tester) async {
+    final routes = <String>[];
+    await pumpNavHarness(
+      tester,
+      (context) => handleStudentNavigation(context, 'progress'),
+      routes.add,
+    );
+    expect(routes, contains(RouteNames.studentProgress));
   });
 }

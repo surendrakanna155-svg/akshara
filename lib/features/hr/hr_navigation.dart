@@ -11,6 +11,7 @@ const List<HrScreen> kHrNavScreens = [
   HrScreen.payroll,
   HrScreen.recruitment,
   HrScreen.performance,
+  HrScreen.reports,
   HrScreen.settings,
 ];
 
@@ -23,6 +24,7 @@ extension HrScreenRoutes on HrScreen {
         HrScreen.payroll => RouteNames.hrPayroll,
         HrScreen.recruitment => RouteNames.hrRecruitment,
         HrScreen.performance => RouteNames.hrPerformance,
+        HrScreen.reports => RouteNames.hrReports,
         HrScreen.settings => RouteNames.hrSettings,
       };
 }
@@ -69,6 +71,9 @@ HrScreen? hrScreenForLocation(String location) {
   }
   if (location == RouteNames.hr || location == RouteNames.hrDashboard) {
     return HrScreen.dashboard;
+  }
+  if (location == RouteNames.hrReports) {
+    return HrScreen.reports;
   }
   if (location.startsWith('${RouteNames.hrEmployees}/')) {
     return HrScreen.employees;

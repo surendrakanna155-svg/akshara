@@ -43,7 +43,7 @@ void main() {
       await container.read(sisStudentsFutureProvider.future);
 
       final students = container.read(sisStudentsProvider);
-      expect(students, hasLength(5));
+      expect(students, hasLength(10));
       expect(students.first.id, startsWith('SIS-STU-'));
     });
 

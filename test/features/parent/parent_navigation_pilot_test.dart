@@ -65,4 +65,100 @@ void main() {
     expect(routes.any((r) => r.contains('/ai-assistant')), isTrue);
     expect(routes.any((r) => r.contains('/copilot')), isFalse);
   });
+
+  testWidgets('parent transport action routes to transport screen', (tester) async {
+    final routes = <String>[];
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        routerConfig: GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => ElevatedButton(
+                onPressed: () =>
+                    handleParentDashboardNavigation(context, 'transport'),
+                child: const Text('tap'),
+              ),
+            ),
+            GoRoute(
+              path: RouteNames.parentTransport,
+              builder: (_, __) {
+                routes.add(RouteNames.parentTransport);
+                return const SizedBox();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('tap'));
+    await tester.pumpAndSettle();
+    expect(routes, contains(RouteNames.parentTransport));
+  });
+
+  testWidgets('parent PTM notice routes to PTM screen', (tester) async {
+    final routes = <String>[];
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        routerConfig: GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => ElevatedButton(
+                onPressed: () =>
+                    handleParentDashboardNavigation(context, 'notice_n1'),
+                child: const Text('tap'),
+              ),
+            ),
+            GoRoute(
+              path: RouteNames.parentPtm,
+              builder: (_, __) {
+                routes.add(RouteNames.parentPtm);
+                return const SizedBox();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('tap'));
+    await tester.pumpAndSettle();
+    expect(routes, contains(RouteNames.parentPtm));
+  });
+
+  testWidgets('parent transport notice routes to transport screen', (tester) async {
+    final routes = <String>[];
+
+    await tester.pumpWidget(
+      MaterialApp.router(
+        routerConfig: GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => ElevatedButton(
+                onPressed: () =>
+                    handleParentDashboardNavigation(context, 'notice_n3'),
+                child: const Text('tap'),
+              ),
+            ),
+            GoRoute(
+              path: RouteNames.parentTransport,
+              builder: (_, __) {
+                routes.add(RouteNames.parentTransport);
+                return const SizedBox();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('tap'));
+    await tester.pumpAndSettle();
+    expect(routes, contains(RouteNames.parentTransport));
+  });
 }

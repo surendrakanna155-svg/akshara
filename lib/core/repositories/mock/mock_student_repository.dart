@@ -8,6 +8,12 @@ import '../../../features/student/profile/profile_models.dart';
 import '../../../features/student/student_requests.dart';
 import '../interfaces/student_repository.dart';
 import '../repository_query.dart';
+import 'mock_canonical_student_registry.dart';
+import '../../homework/school_homework_store.dart';
+import '../../communication/parent_communication_store.dart';
+import '../../exams/exam_administration_store.dart';
+import '../../i18n/content_localization.dart';
+import '../../i18n/supported_languages.dart';
 import 'mock_student_write_store.dart';
 
 class MockStudentRepository implements StudentRepository {
@@ -27,80 +33,105 @@ class MockStudentRepository implements StudentRepository {
   Future<List<StudentHomeworkItem>> getHomeworkItems({
     required RepositoryQuery query,
   }) async {
+    final student = MockCanonicalStudentRegistry.primaryMobileStudent;
+    final language = ParentCommunicationStore.instance
+        .preferredLanguageForStudent(student.sisStudentId);
     final base = _mockItems();
+    final storeRecords = SchoolHomeworkStore.instance.forStudent(student.sisStudentId);
+    final created = [
+      for (final record in storeRecords)
+        SchoolHomeworkStore.instance.toStudentItem(
+          record,
+          ContentLocalization.localize(record.title, language),
+        ),
+    ];
     return [
-      for (final item in base) _store.submittedHomework[item.id] ?? item,
+      ...created,
+      for (final item in base)
+        _localizeHomeworkItem(_store.submittedHomework[item.id] ?? item, language),
     ];
   }
 
   @override
-  Future<StudentExamsData> getExams({required RepositoryQuery query}) async =>
-      const StudentExamsData(
-        studentName: 'Ravi Kumar',
-        classLabel: '8-A',
-        unreadNotifications: 2,
-        averagePercent: 84,
-        upcomingExams: [
+  Future<StudentExamsData> getExams({required RepositoryQuery query}) async {
+    final student = MockCanonicalStudentRegistry.primaryMobileStudent;
+    final store = ExamAdministrationStore.instance..ensureSeeded();
+    final published = store.resultsForStudent(student.sisStudentId);
+    final upcoming = store.upcomingExams(classLabel: student.classLabel);
+
+    final examResults = [
+      for (final result in published)
+        StudentExamResult(
+          id: result.markEntryId,
+          title: result.examTitle,
+          termLabel: result.termLabel,
+          dateLabel: result.dateLabel,
+          scoreObtained: result.scoreObtained,
+          maxScore: result.maxScore,
+          grade: result.grade,
+        ),
+    ];
+
+    final subjectScores = _subjectScoresFromPublished(published);
+    final average = examResults.isEmpty
+        ? 0
+        : ((examResults.fold<int>(0, (sum, item) => sum + item.scoreObtained) /
+                    examResults.fold<int>(0, (sum, item) => sum + item.maxScore)) *
+                100)
+            .round();
+
+    return StudentExamsData(
+      studentName: student.studentName,
+      classLabel: student.classLabel,
+      unreadNotifications: 2,
+      averagePercent: average,
+      upcomingExams: [
+        for (final exam in upcoming)
           StudentUpcomingExam(
-            id: 'ex-1',
-            title: 'Mid-term Mathematics',
-            subject: 'Mathematics',
-            dateLabel: '12 Jun 2026',
-            timeLabel: '9:00 AM',
-            venueLabel: 'Room 203',
+            id: exam.id,
+            title: exam.title,
+            subject: exam.subject,
+            dateLabel: exam.dateLabel,
+            timeLabel: exam.timeLabel,
+            venueLabel: exam.venueLabel,
           ),
-          StudentUpcomingExam(
-            id: 'ex-2',
-            title: 'Science practical assessment',
-            subject: 'Science',
-            dateLabel: '18 Jun 2026',
-            timeLabel: '10:30 AM',
-            venueLabel: 'Lab 2',
-          ),
-        ],
-        examResults: [
-          StudentExamResult(
-            id: 'res-1',
-            title: 'Unit Test — Algebra',
-            termLabel: 'Term 2',
-            dateLabel: '20 May 2026',
-            scoreObtained: 42,
-            maxScore: 50,
-            grade: 'A',
-          ),
-          StudentExamResult(
-            id: 'res-2',
-            title: 'English comprehension',
-            termLabel: 'Term 2',
-            dateLabel: '8 May 2026',
-            scoreObtained: 38,
-            maxScore: 50,
-            grade: 'B+',
-          ),
-        ],
-        subjectScores: [
-          SubjectScore(subject: 'Mathematics', scorePercent: 88, grade: 'A'),
-          SubjectScore(subject: 'Science', scorePercent: 82, grade: 'A'),
-          SubjectScore(subject: 'English', scorePercent: 76, grade: 'B+'),
-          SubjectScore(subject: 'Hindi', scorePercent: 90, grade: 'A+'),
-        ],
-      );
+      ],
+      examResults: examResults,
+      subjectScores: subjectScores,
+    );
+  }
 
   @override
   Future<ParentTimetableData> getTimetable({required RepositoryQuery query}) async =>
       _mockWeekData();
 
   @override
-  Future<List<StudentNotice>> getNotices({required RepositoryQuery query}) async =>
-      _mockNotices();
+  Future<List<StudentNotice>> getNotices({required RepositoryQuery query}) async {
+    final student = MockCanonicalStudentRegistry.primaryMobileStudent;
+    final language = ParentCommunicationStore.instance
+        .preferredLanguageForStudent(student.sisStudentId);
+    return [
+      for (final notice in _mockNotices())
+        StudentNotice(
+          id: notice.id,
+          title: ContentLocalization.localize(notice.title, language),
+          summary: ContentLocalization.localize(notice.summary, language),
+          dateLabel: notice.dateLabel,
+          scope: notice.scope,
+          priority: notice.priority,
+          isRead: notice.isRead,
+        ),
+    ];
+  }
 
   @override
-  Future<StudentProfileData> getProfile({required RepositoryQuery query}) async =>
-      const StudentProfileData(
-        studentName: 'Ravi Kumar',
-        classLabel: '8-A',
-        rollNo: '08',
-        admissionNo: 'AKS-2024-0842',
+  Future<StudentProfileData> getProfile({required RepositoryQuery query}) async {
+    final student = MockCanonicalStudentRegistry.primaryMobileStudent;
+    return StudentProfileData(
+      studentName: student.studentName,
+      classLabel: student.classLabel,
+      rollNo: student.rollNo,
+      admissionNo: student.admissionNumber,
         dateOfBirth: '14 Mar 2012',
         bloodGroup: 'B+',
         schoolName: 'Akshara International School',
@@ -126,6 +157,7 @@ class MockStudentRepository implements StudentRepository {
           AcademicSummaryItem(label: 'Overall grade', value: 'A'),
         ],
       );
+  }
 
   @override
   Future<StudentHomeworkItem> submitHomework({
@@ -151,6 +183,20 @@ class MockStudentRepository implements StudentRepository {
 }
 
 
+
+List<SubjectScore> _subjectScoresFromPublished(List<PublishedExamResult> published) {
+  if (published.isEmpty) return const [];
+  return [
+    for (final result in published)
+      SubjectScore(
+        subject: result.subject,
+        scorePercent: result.maxScore == 0
+            ? 0
+            : ((result.scoreObtained / result.maxScore) * 100).round(),
+        grade: result.grade,
+      ),
+  ];
+}
 
 ParentTimetableData _mockWeekData() {
   final days = <TimetableDay>[
@@ -242,6 +288,20 @@ ParentTimetableData _mockWeekData() {
 
 
 
+
+StudentHomeworkItem _localizeHomeworkItem(
+  StudentHomeworkItem item,
+  AksharaLanguage language,
+) {
+  return StudentHomeworkItem(
+    id: item.id,
+    subject: item.subject,
+    title: ContentLocalization.localize(item.title, language),
+    dueLabel: item.dueLabel,
+    status: item.status,
+    attachmentLabel: item.attachmentLabel,
+  );
+}
 
 List<StudentHomeworkItem> _mockItems() {
   return const [

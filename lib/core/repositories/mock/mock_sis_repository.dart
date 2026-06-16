@@ -8,6 +8,7 @@ import '../paginated_result.dart';
 import '../repository_query.dart';
 import '../../tenant/tenant_mock_scope.dart';
 import 'mock_admissions_sis_bridge.dart';
+import 'mock_alumni_write_store.dart';
 import 'mock_sis_write_store.dart';
 
 class MockSisRepository implements SisRepository {
@@ -75,6 +76,82 @@ class MockSisRepository implements SisRepository {
       email: 'anil.sharma@email.com',
       enrolledAt: 'Jun 2025',
       feeAccountId: 'acct_4',
+    ),
+    SisStudent(
+      id: 'SIS-STU-10430',
+      studentName: 'Ravi Kumar',
+      admissionNumber: 'ADM-2026-0842',
+      classLabel: '8',
+      section: 'A',
+      academicYear: '2026–27',
+      status: SisStudentStatus.active,
+      gender: 'Male',
+      dateOfBirth: '14 Mar 2012',
+      guardianName: 'Suresh Kumar',
+      phone: '+91 98765 43210',
+      email: 'suresh.kumar@email.com',
+      enrolledAt: 'Jan 2026',
+      feeAccountId: 'acct_ravi',
+    ),
+    SisStudent(
+      id: 'SIS-STU-10431',
+      studentName: 'Ananya Rao',
+      admissionNumber: 'ADM-2026-0843',
+      classLabel: '8',
+      section: 'A',
+      academicYear: '2026–27',
+      status: SisStudentStatus.active,
+      gender: 'Female',
+      dateOfBirth: '02 Aug 2012',
+      guardianName: 'Rajesh Rao',
+      phone: '+91 91234 08431',
+      email: 'rajesh.rao@email.com',
+      enrolledAt: 'Jan 2026',
+    ),
+    SisStudent(
+      id: 'SIS-STU-10432',
+      studentName: 'Karthik Menon',
+      admissionNumber: 'ADM-2026-0844',
+      classLabel: '8',
+      section: 'A',
+      academicYear: '2026–27',
+      status: SisStudentStatus.active,
+      gender: 'Male',
+      dateOfBirth: '19 Nov 2012',
+      guardianName: 'Suresh Menon',
+      phone: '+91 91234 08432',
+      email: 'suresh.menon@email.com',
+      enrolledAt: 'Jan 2026',
+    ),
+    SisStudent(
+      id: 'SIS-STU-10433',
+      studentName: 'Priya Nair',
+      admissionNumber: 'ADM-2026-0845',
+      classLabel: '8',
+      section: 'A',
+      academicYear: '2026–27',
+      status: SisStudentStatus.active,
+      gender: 'Female',
+      dateOfBirth: '25 Jul 2012',
+      guardianName: 'Lakshmi Nair',
+      phone: '+91 91234 08433',
+      email: 'lakshmi.nair@email.com',
+      enrolledAt: 'Jan 2026',
+    ),
+    SisStudent(
+      id: 'SIS-STU-10434',
+      studentName: 'Meera Iyer',
+      admissionNumber: 'ADM-2026-0846',
+      classLabel: '8',
+      section: 'A',
+      academicYear: '2026–27',
+      status: SisStudentStatus.active,
+      gender: 'Female',
+      dateOfBirth: '11 May 2012',
+      guardianName: 'Anil Iyer',
+      phone: '+91 91234 08434',
+      email: 'anil.iyer@email.com',
+      enrolledAt: 'Jan 2026',
     ),
     SisStudent(
       id: 'SIS-STU-10410',
@@ -483,6 +560,9 @@ class MockSisRepository implements SisRepository {
       status: request.status,
     );
     _store.students![index] = updated;
+    if (request.status == SisStudentStatus.alumni) {
+      MockAlumniWriteStore.instance.onboardFromSisStudent(updated);
+    }
     return updated;
   }
 
