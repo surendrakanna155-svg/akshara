@@ -48,16 +48,20 @@ Akshara has transitioned from **feature complete** (M1–M13) to **release candi
 
 ---
 
+**Program status: Patrol initial pass complete (55/79). Re-run of 23 failed suites in progress.**
+
+---
+
 ## Validation snapshot
 
 | Gate | Result |
 |------|--------|
 | `flutter analyze` | 0 issues |
-| `flutter test` | **1646** passing (~1 skipped) |
+| `flutter test` | **1683** passing (~1 skipped) |
 | Performance tests | 7/7 |
-| Mobile stress tests | Pass |
-| Patrol workflows | **79** registered (78 full + smoke) |
-| Patrol full run | CI / device farm required |
+| Mobile + vertical stress tests | Pass |
+| Patrol full run (initial) | **55/79** (69.6%) — 6 patched, 17 triage |
+| Patrol certification | **Conditional** — re-run required |
 
 ---
 

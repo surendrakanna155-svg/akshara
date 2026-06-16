@@ -26,13 +26,15 @@ class DirectorKpiRow extends StatelessWidget {
       children: [
         for (final kpi in kpis)
           SizedBox(
-            width: 220,
+            width: 240,
+            height: 132,
             child: AksharaKpiCard(
               value: kpi.value,
               subtitle: kpi.label,
               icon: kpi.icon,
               detail: kpi.detail,
               accent: KpiAccent.primary,
+              style: AksharaKpiCardStyle.filled,
             ),
           ),
       ],
@@ -155,20 +157,34 @@ class DirectorExecutiveSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final text = context.aksharaText;
     return Container(
       key: QaTestKeys.directorExecutiveSummaryCard,
       padding: const EdgeInsets.all(AksharaSpacing.s4),
       decoration: BoxDecoration(
-        color: context.colors.surfaceContainerHighest,
+        color: colors.primaryContainer.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('AI Executive Summary', style: text.titleMedium),
-          const SizedBox(height: AksharaSpacing.s2),
-          Text(summary, style: text.bodyMedium),
+          Row(
+            children: [
+              Icon(Icons.auto_awesome_outlined, color: colors.primary, size: 20),
+              const SizedBox(width: AksharaSpacing.s2),
+              Text(
+                'Executive summary',
+                style: text.titleMedium.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+          Text(
+            summary,
+            style: text.bodyMedium.copyWith(height: 1.45),
+          ),
         ],
       ),
     );

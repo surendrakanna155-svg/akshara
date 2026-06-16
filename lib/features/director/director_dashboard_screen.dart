@@ -28,10 +28,15 @@ class DirectorDashboardScreen extends ConsumerWidget {
         filterTrailing: const DirectorAiAssistantLink(
           screenLabel: 'Director Executive Dashboard',
         ),
-        body: state.when(
-          loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState(message: '$error'),
-          data: (data) => _DashboardBody(data: data),
+        body: KeyedSubtree(
+          key: QaTestKeys.directorDashboardScreen,
+          child: state.when(
+            loading: () => const AksharaLoadingState(),
+            error: (error, _) => AksharaErrorState(message: '$error'),
+            data: (data) => SingleChildScrollView(
+            child: _DashboardBody(data: data),
+          ),
+          ),
         ),
       ),
     );
@@ -46,7 +51,6 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      key: QaTestKeys.directorDashboardScreen,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DirectorKpiRow(kpis: data.kpis),
@@ -59,10 +63,27 @@ class _DashboardBody extends StatelessWidget {
           children: [
             for (final school in data.schoolRows)
               SizedBox(
-                width: 300,
+                width: 320,
                 child: Card(
+                  elevation: 1,
+                  margin: EdgeInsets.zero,
                   child: ListTile(
-                    title: Text(school.schoolName),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AksharaSpacing.s4,
+                      vertical: AksharaSpacing.s2,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.school_outlined,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    title: Text(
+                      school.schoolName,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
                     subtitle: Text(
                       '${school.location} · ${school.students} students · ${school.revenueCr} Cr',
                     ),

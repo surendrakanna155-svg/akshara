@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../management_models.dart';
@@ -36,7 +37,7 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final priorities = _priorities;
+    final priorities = _priorities(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -121,18 +122,32 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
     );
   }
 
-  List<Widget> get _priorities {
+  List<Widget> _priorities(BuildContext context) {
     final items = <Widget>[];
     for (final approval in data.approvalQueue.take(3)) {
       items.add(
         AksharaSurfaceCard(
-          onTap: null,
           child: Row(
             children: [
-              Icon(Icons.pending_actions_outlined, color: Colors.orange.shade700),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: context.colors.primaryContainer,
+                  borderRadius: AksharaRadius.chip,
+                ),
+                child: Icon(
+                  Icons.pending_actions_outlined,
+                  color: context.colors.primary,
+                  size: 22,
+                ),
+              ),
               const SizedBox(width: AksharaSpacing.s3),
               Expanded(
-                child: Text('Approve ${approval.title} · ${approval.amount}'),
+                child: Text(
+                  'Approve ${approval.title} · ${approval.amount}',
+                  style: context.aksharaText.bodyMedium,
+                ),
               ),
             ],
           ),
@@ -145,11 +160,24 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
         AksharaSurfaceCard(
           child: Row(
             children: [
-              Icon(Icons.account_balance_wallet_outlined, color: Colors.red.shade700),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: context.colors.errorContainer,
+                  borderRadius: AksharaRadius.chip,
+                ),
+                child: Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: context.colors.error,
+                  size: 22,
+                ),
+              ),
               const SizedBox(width: AksharaSpacing.s3),
               Expanded(
                 child: Text(
                   'Follow up ${data.feeSnapshot.defaulters} fee defaulters',
+                  style: context.aksharaText.bodyMedium,
                 ),
               ),
             ],

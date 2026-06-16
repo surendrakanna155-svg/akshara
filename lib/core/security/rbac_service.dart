@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/auth_models.dart';
 import '../../features/auth/auth_provider.dart';
+import '../config/environment_provider.dart';
 import '../security/server_permission_provider.dart';
 import 'erp_role.dart';
 import 'permissions.dart';
@@ -44,6 +45,11 @@ final userPermissionsProvider = Provider<UserPermissions?>((ref) {
 
   final claims = auth.claims;
   if (claims != null) {
+    // QA automation builds use full role matrix — avoid stale partial server snapshots.
+    if (ref.read(environmentProvider).enableQaLogin) {
+      return UserPermissions.forRole(claims.erpRole);
+    }
+
     final sync = ref.watch(serverPermissionSyncProvider);
     final snapshot = sync.snapshot;
     if (snapshot != null &&

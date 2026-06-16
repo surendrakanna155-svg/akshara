@@ -274,6 +274,7 @@ class _Sidebar extends StatelessWidget {
           const AksharaSectionHeader(title: 'Assistants'),
           const SizedBox(height: AksharaSpacing.s2),
           DropdownButtonFormField<CopilotAssistantType>(
+            isExpanded: true,
             initialValue: selectedAssistant,
             items: [
               for (final assistant in assistants)

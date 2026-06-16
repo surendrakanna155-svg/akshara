@@ -36,31 +36,42 @@ class MockResourceOptimizationRepository
     required RepositoryQuery query,
     required ResourceOptimizationDomain domain,
   }) async {
-    final response = await _pipeline.complete(
-      AiInferenceRequest(
-        prompt: _buildPrompt(domain: domain, query: query),
-        taskType: aiTaskTypeName(AiInferenceTaskType.resourceOptimization),
-        systemPrompt: 'Akshara ERP resource optimization engine',
-        context: {
-          'module': 'resource_optimization',
-          'domain': domain.name,
-          'schoolId': query.schoolId,
-          'organizationId': query.organizationId,
-          'tenantId': query.tenantId,
-        },
-      ),
-    );
+    try {
+      final response = await _pipeline.complete(
+        AiInferenceRequest(
+          prompt: _buildPrompt(domain: domain, query: query),
+          taskType: aiTaskTypeName(AiInferenceTaskType.resourceOptimization),
+          systemPrompt: 'Akshara ERP resource optimization engine',
+          context: {
+            'module': 'resource_optimization',
+            'domain': domain.name,
+            'schoolId': query.schoolId,
+            'organizationId': query.organizationId,
+            'tenantId': query.tenantId,
+          },
+        ),
+      );
 
-    final parsed = _parseRecommendations(domain, response.content);
-    final base = parsed.isEmpty ? _fallbackRecommendations(domain) : parsed;
-    return base
-        .map(
-          (recommendation) => recommendation.copyWith(
-            applied: _appliedIds.contains(recommendation.id),
-            dismissed: _dismissedIds.contains(recommendation.id),
-          ),
-        )
-        .toList(growable: false);
+      final parsed = _parseRecommendations(domain, response.content);
+      final base = parsed.isEmpty ? _fallbackRecommendations(domain) : parsed;
+      return base
+          .map(
+            (recommendation) => recommendation.copyWith(
+              applied: _appliedIds.contains(recommendation.id),
+              dismissed: _dismissedIds.contains(recommendation.id),
+            ),
+          )
+          .toList(growable: false);
+    } catch (_) {
+      return _fallbackRecommendations(domain)
+          .map(
+            (recommendation) => recommendation.copyWith(
+              applied: _appliedIds.contains(recommendation.id),
+              dismissed: _dismissedIds.contains(recommendation.id),
+            ),
+          )
+          .toList(growable: false);
+    }
   }
 
   @override

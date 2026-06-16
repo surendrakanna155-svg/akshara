@@ -35,6 +35,11 @@ class HeroCard extends StatelessWidget {
       child: Card(
         elevation: AksharaElevation.level1,
         margin: EdgeInsets.zero,
+        color: colors.surfaceContainerLowest,
+        shape: RoundedRectangleBorder(
+          borderRadius: AksharaRadius.card,
+          side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.6)),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           child: Column(

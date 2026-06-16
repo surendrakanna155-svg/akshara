@@ -63,6 +63,7 @@ class AksharaKpiCard extends StatelessWidget {
             value: value,
             label: subtitle,
             accent: accent,
+            icon: icon,
             onTap: onTap,
           ),
         AksharaKpiCardStyle.status => _StatusKpiCard(
@@ -185,12 +186,14 @@ class _FilledKpiTile extends StatelessWidget {
     required this.value,
     required this.label,
     required this.accent,
+    this.icon,
     this.onTap,
   });
 
   final String value;
   final String label;
   final KpiAccent accent;
+  final IconData? icon;
   final VoidCallback? onTap;
 
   @override
@@ -201,38 +204,77 @@ class _FilledKpiTile extends StatelessWidget {
 
     return Material(
       color: accentColors.container,
+      elevation: onTap != null ? 1 : 0,
+      shadowColor: colors.onSurface.withValues(alpha: 0.06),
       borderRadius: AksharaRadius.card,
       child: InkWell(
         onTap: onTap,
         borderRadius: AksharaRadius.card,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AksharaSpacing.s3,
-            vertical: AksharaSpacing.s3,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: text.titleMedium.copyWith(
-                  color: accentColors.foreground,
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.hasBoundedHeight &&
+                constraints.maxHeight < 120;
+            final padding = compact
+                ? const EdgeInsets.symmetric(
+                    horizontal: AksharaSpacing.s3,
+                    vertical: AksharaSpacing.s2,
+                  )
+                : const EdgeInsets.all(AksharaSpacing.s4);
+            final valueStyle = (compact ? text.titleSmall : text.titleLarge)
+                .copyWith(
+              color: accentColors.foreground,
+              fontWeight: FontWeight.w700,
+              height: 1.1,
+            );
+            final labelStyle = (compact ? text.labelSmall : text.labelMedium)
+                .copyWith(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            );
+            final iconSize = compact ? 16.0 : 20.0;
+
+            return Padding(
+              padding: padding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: iconSize, color: accentColors.foreground),
+                        SizedBox(width: compact ? AksharaSpacing.s1 : AksharaSpacing.s2),
+                      ],
+                      Expanded(
+                        child: Text(
+                          value,
+                          style: valueStyle,
+                          maxLines: compact ? 1 : 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (onTap != null && !compact)
+                        Icon(
+                          Icons.chevron_right,
+                          size: 20,
+                          color: colors.onSurfaceVariant,
+                        ),
+                    ],
+                  ),
+                  SizedBox(
+                    height: compact ? AksharaSpacing.s1 : AksharaSpacing.s2,
+                  ),
+                  Text(
+                    label,
+                    style: labelStyle,
+                    maxLines: compact ? 1 : 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              const SizedBox(height: AksharaSpacing.s1),
-              Text(
-                label,
-                style: text.labelSmall.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );

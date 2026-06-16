@@ -73,25 +73,44 @@ class _AdmissionsEnrollmentScreenState
             ref,
             admissionsEnrollmentPrefillFutureProvider,
           ),
-          builder: (_) => Form(
-            key: _formKey,
-            autovalidateMode: form.stepFieldErrors != null
-                ? AutovalidateMode.always
-                : AutovalidateMode.disabled,
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AdmissionsEnrollmentStepIndicator(currentStep: form.currentStep),
-                  const SizedBox(height: AksharaSpacing.s6),
-                  _buildStepContent(form, notifier),
-                  const SizedBox(height: AksharaSpacing.s6),
-                  _buildActions(context, ref, form, notifier),
-                ],
+          builder: (_) {
+            final formHeight =
+                (MediaQuery.sizeOf(context).height * 0.58).clamp(420.0, 720.0);
+            return Form(
+              key: _formKey,
+              autovalidateMode: form.stepFieldErrors != null
+                  ? AutovalidateMode.always
+                  : AutovalidateMode.disabled,
+              child: SizedBox(
+                height: formHeight,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            AdmissionsEnrollmentStepIndicator(
+                              currentStep: form.currentStep,
+                            ),
+                            const SizedBox(height: AksharaSpacing.s6),
+                            _buildStepContent(form, notifier),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.only(top: AksharaSpacing.s4),
+                      child: _buildActions(context, ref, form, notifier),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

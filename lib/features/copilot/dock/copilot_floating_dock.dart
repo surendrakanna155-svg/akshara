@@ -48,11 +48,12 @@ class CopilotFloatingDock extends ConsumerWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AksharaSpacing.s4),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: Duration.zero,
             width: expanded ? (isMobile ? 280 : 360) : 56,
             constraints: BoxConstraints(maxWidth: isMobile ? 280 : 360),
-            child: expanded
-                ? _ExpandedPanel(
+            child: ClipRect(
+              child: expanded
+                  ? _ExpandedPanel(
                     persona: persona,
                     contextSummary: contextSnapshot?.displaySummary ??
                         '${persona.label} · ${copilotModuleForRoute(route)}',
@@ -70,6 +71,7 @@ class CopilotFloatingDock extends ConsumerWidget {
                     onLongPress: () =>
                         handleCopilotAiEntryLongPress(context, ref, Offset.zero),
                   ),
+            ),
           ),
         ),
       ),

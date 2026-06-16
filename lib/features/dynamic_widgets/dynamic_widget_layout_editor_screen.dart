@@ -23,16 +23,22 @@ class _DynamicWidgetLayoutEditorScreenState
   String? _selectedRole;
 
   static const _editableRoles = [
+    ErpRole.superAdmin,
     ErpRole.principal,
     ErpRole.schoolAdmin,
     ErpRole.teacher,
     ErpRole.financeAdmin,
   ];
 
+  String _resolvedLayoutRole(String role) {
+    if (_editableRoles.any((r) => r.name == role)) return role;
+    return ErpRole.principal.name;
+  }
+
   @override
   Widget build(BuildContext context) {
     final String layoutRole =
-        _selectedRole ?? ref.watch(dynamicWidgetRoleProvider);
+        _resolvedLayoutRole(_selectedRole ?? ref.watch(dynamicWidgetRoleProvider));
     final layoutState = ref.watch(roleDashboardLayoutProvider(layoutRole));
     final saveState = ref.watch(saveRoleDashboardLayoutProvider);
     final resetState = ref.watch(resetLayoutToPackDefaultProvider);

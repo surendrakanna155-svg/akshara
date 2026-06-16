@@ -5,7 +5,9 @@ import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
 import '../../admin/admin_shell.dart';
@@ -360,15 +362,30 @@ class _UnifiedRecommendationsTab extends ConsumerWidget {
             ),
             const SizedBox(height: AksharaSpacing.s3),
             for (final item in summary.topRecommendations)
-              Card(
+              Material(
+                elevation: 0,
+                color: context.colors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: AksharaRadius.card,
+                  side: BorderSide(color: context.colors.outlineVariant),
+                ),
                 child: ListTile(
-                  leading: Icon(_iconForRecommendationSource(item.source)),
+                  leading: Icon(
+                    _iconForRecommendationSource(item.source),
+                    color: context.colors.primary,
+                  ),
                   onTap: () =>
                       navigateIntelligenceRecommendation(context, item.source),
-                  title: Text(item.title),
+                  title: Text(
+                    item.title,
+                    style: context.aksharaText.titleSmall,
+                  ),
                   subtitle: Text(
                     '${item.source.label} · Priority ${item.priorityScore}\n'
                     '${item.detail}\n${item.suggestedAction}',
+                    style: context.aksharaText.bodySmall.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                    ),
                   ),
                   isThreeLine: true,
                 ),
@@ -514,16 +531,37 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+
     return SizedBox(
-      width: 160,
-      child: Card(
+      width: 168,
+      child: Material(
+        color: colors.surfaceContainerLow,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: AksharaRadius.card,
+          side: BorderSide(color: colors.outlineVariant),
+        ),
         child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.s3),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: Theme.of(context).textTheme.labelLarge),
-              Text(value, style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                label,
+                style: text.labelMedium.copyWith(color: colors.onSurfaceVariant),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: AksharaSpacing.s2),
+              Text(
+                value,
+                style: text.titleLarge.copyWith(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
         ),

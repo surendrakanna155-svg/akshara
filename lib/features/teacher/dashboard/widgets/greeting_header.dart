@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 
@@ -24,8 +25,17 @@ class GreetingHeader extends StatelessWidget {
     return Semantics(
       header: true,
       label: '$eyebrow. $headline',
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: height),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AksharaSpacing.s4,
+          vertical: AksharaSpacing.s3,
+        ),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerLowest,
+          borderRadius: AksharaRadius.card,
+          border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
