@@ -39,7 +39,7 @@ class ManagementKpiRow extends StatelessWidget {
           SizedBox(
             height: cardHeight,
             child: AksharaKpiCard(
-              key: managementKpiIsDrillable(kpi)
+              drillKey: managementKpiIsDrillable(kpi)
                   ? QaTestKeys.managementKpiDrillButton(kpi.id)
                   : null,
               value: kpi.value,

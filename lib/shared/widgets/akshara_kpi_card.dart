@@ -32,6 +32,7 @@ class AksharaKpiCard extends StatelessWidget {
     this.style = AksharaKpiCardStyle.strip,
     this.detail,
     this.height = 88,
+    this.drillKey,
   });
 
   final String value;
@@ -43,6 +44,8 @@ class AksharaKpiCard extends StatelessWidget {
   final AksharaKpiCardStyle style;
   final String? detail;
   final double height;
+  /// QA / Patrol tap target — placed on the hit-testable surface.
+  final Key? drillKey;
 
   static const double iconBoxSize = 32;
 
@@ -60,6 +63,7 @@ class AksharaKpiCard extends StatelessWidget {
             onTap: onTap,
           ),
         AksharaKpiCardStyle.filled => _FilledKpiTile(
+            drillKey: drillKey,
             value: value,
             label: subtitle,
             accent: accent,
@@ -183,12 +187,15 @@ class _StripKpiCard extends StatelessWidget {
 
 class _FilledKpiTile extends StatelessWidget {
   const _FilledKpiTile({
+    this.drillKey,
     required this.value,
     required this.label,
     required this.accent,
     this.icon,
     this.onTap,
   });
+
+  final Key? drillKey;
 
   final String value;
   final String label;
@@ -203,6 +210,7 @@ class _FilledKpiTile extends StatelessWidget {
     final accentColors = accent.resolve(context);
 
     return Material(
+      key: drillKey,
       color: accentColors.container,
       elevation: onTap != null ? 1 : 0,
       shadowColor: colors.onSurface.withValues(alpha: 0.06),
