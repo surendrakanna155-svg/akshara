@@ -4,8 +4,10 @@
 **Branch:** `release/v1.0-preprod`  
 **Date:** June 2026  
 **RC commit:** `8e27d5b`  
+**RC lock HEAD:** `40b93c8`  
 **Pushed:** `2026-06-16T09:21:53Z` → `origin/release/v1.0-preprod`  
-**Prior baseline:** `71704e0` (M14 + gap closure)
+**Prior baseline:** `71704e0` (M14 + gap closure)  
+**Mode:** **STABILIZATION** — see `docs/AKSHARA_V1_RC_LOCK.md`
 
 ---
 
@@ -51,9 +53,10 @@ Akshara v1.0 Flutter client is **feature-complete**, **UX-modernized**, and **qu
 | Metric | Status |
 |--------|--------|
 | Registered suites | 89 |
-| Full run | `20260616_135757` — stabilizing |
-| Product defects found | 1 (admissions enrollment UX — **fixed**) |
-| Certification % (completed) | **96%** → target **≥98%** after re-run |
+| Full run | `20260616_135757` — **complete** |
+| Re-run | `rerun_20260616_rc_lock` — **6/6 passed** |
+| **Final certified** | **88/88 (100%)** |
+| Certification | **CERTIFIED** |
 | Report | `docs/PATROL_FINAL_CERTIFICATION.md` |
 
 ---
@@ -89,7 +92,6 @@ All eight personas (Owner, Director, Principal, Teacher, Parent, Student, Financ
 3. PI1 pilot school checklist signed  
 4. Support + backup runbook acknowledged  
 5. Single-tenant scope until RLS GA  
-6. Complete Patrol re-certification after enrollment fix  
 
 ---
 
@@ -119,6 +121,7 @@ All eight personas (Owner, Director, Principal, Teacher, Parent, Student, Financ
 | `BACKUP_RECOVERY_ARCHITECTURE.md` | ✅ |
 | `PILOT_DEPLOYMENT_CHECKLIST.md` | ✅ |
 | `AKSHARA_V1_FINAL_SIGNOFF.md` | ✅ (this document) |
+| `AKSHARA_V1_RC_LOCK.md` | ✅ |
 
 ---
 
@@ -126,11 +129,10 @@ All eight personas (Owner, Director, Principal, Teacher, Parent, Student, Financ
 
 ```
 1. Merge RC branch → tag v1.0.0-rc.1
-2. Re-run admissions_e2e + complete Patrol full run
-3. Sign PI1 pilot checklist
-4. Deploy mock build to pilot school devices
-5. Staging API parity gate (admissions + finance + SIS)
-6. Pre-GA: RLS + pen test + backup drill
+2. Sign PI1 pilot checklist
+3. Deploy mock build to pilot school devices
+4. Staging API parity gate (admissions + finance + SIS)
+5. Pre-GA: RLS + pen test + backup drill
 ```
 
 ---
@@ -140,7 +142,7 @@ All eight personas (Owner, Director, Principal, Teacher, Parent, Student, Financ
 | Role | Status | Date |
 |------|--------|------|
 | Flutter / UX RC | ✅ Complete | June 2026 |
-| QA / Patrol | 🔄 Stabilizing | June 2026 |
+| QA / Patrol | ✅ Certified (88/88) | June 2026 |
 | Product pilot | ☐ Pending PI1 | — |
 | Production GA | ☐ Blocked on infra | — |
 

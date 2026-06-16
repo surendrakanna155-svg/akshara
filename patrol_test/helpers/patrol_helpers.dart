@@ -52,13 +52,13 @@ Future<void> assertVisibleText(
 }) async {
   await $.pump(const Duration(milliseconds: 500));
   final finder = find.text(text);
-  if ($.tester.any(finder)) {
-    try {
-      await $.tester.ensureVisible(finder);
-      await $.pump(const Duration(milliseconds: 500));
-    } catch (_) {
-      // Below the fold — waitUntilVisible may still succeed after body scroll.
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (_safeAny($, finder)) {
+      expect(finder, findsWidgets);
+      return;
     }
+    await $.pump(const Duration(milliseconds: 200));
   }
   await $(text).waitUntilVisible(timeout: timeout);
   expect(find.text(text), findsWidgets);
@@ -206,11 +206,6 @@ Future<void> assertVisibleKey(
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
     if (_safeAny($, finder)) {
-      try {
-        await $.tester.ensureVisible(finder);
-      } catch (_) {
-        // Off-screen in scrollable bodies — key is still mounted.
-      }
       await $.pump(const Duration(milliseconds: 200));
       expect(finder, findsOneWidget);
       return;

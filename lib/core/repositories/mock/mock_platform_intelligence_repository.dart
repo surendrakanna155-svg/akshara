@@ -1,15 +1,11 @@
 import '../../../features/control_center/intelligence/platform_intelligence_models.dart';
-import '../../ai/ai_inference_models.dart';
 import '../../ai/ai_inference_pipeline.dart';
 import '../interfaces/platform_intelligence_repository.dart';
 import '../repository_query.dart';
 
 class MockPlatformIntelligenceRepository
     implements PlatformIntelligenceRepository {
-  MockPlatformIntelligenceRepository({AiInferencePipeline? pipeline})
-      : _pipeline = pipeline;
-
-  final AiInferencePipeline? _pipeline;
+  MockPlatformIntelligenceRepository({AiInferencePipeline? pipeline});
 
   static const _ownerKpis = [
     PlatformIntelligenceKpi(
@@ -413,31 +409,8 @@ class MockPlatformIntelligenceRepository
         priority: 'medium',
       ),
     ];
-    if (_pipeline == null) {
-      return fallback;
-    }
-
-    try {
-      final response = await _pipeline.complete(
-        AiInferenceRequest(
-          prompt: 'Generate cross-school trust recommendations as '
-              'id|title|detail|owner|priority for schools ${schoolIds.join(", ")}.',
-          taskType: aiTaskTypeName(AiInferenceTaskType.intelligenceCompute),
-          systemPrompt:
-              'You are an education trust strategy assistant. Keep actions concise and measurable.',
-          context: {
-            'module': 'organization_intelligence',
-            'tenantId': query.tenantId,
-            'organizationId': query.organizationId,
-            'schoolIds': schoolIds.join(','),
-          },
-        ),
-      );
-      final parsed = _parseRecommendations(response.content);
-      return parsed.isEmpty ? fallback : parsed;
-    } catch (_) {
-      return fallback;
-    }
+    // Deterministic trust recommendations for mock/QA — AI parse IDs are unstable in Patrol.
+    return fallback;
   }
 
   @override
@@ -468,33 +441,5 @@ class MockPlatformIntelligenceRepository
         ),
       ],
     );
-  }
-
-  List<CrossSchoolRecommendation> _parseRecommendations(String content) {
-    final lines = content
-        .split('\n')
-        .map((line) => line.trim())
-        .where((line) => line.isNotEmpty)
-        .toList(growable: false);
-    final output = <CrossSchoolRecommendation>[];
-    for (final line in lines) {
-      final parts = line.split('|');
-      if (parts.length < 5) continue;
-      output.add(
-        CrossSchoolRecommendation(
-          id: _sanitizeId(parts[0]),
-          title: parts[1].trim(),
-          detail: parts[2].trim(),
-          owner: parts[3].trim(),
-          priority: parts[4].trim(),
-        ),
-      );
-    }
-    return output;
-  }
-
-  String _sanitizeId(String value) {
-    final id = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
-    return id.isEmpty ? 'trust_recommendation' : id;
   }
 }

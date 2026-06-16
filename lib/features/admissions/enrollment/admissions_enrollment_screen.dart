@@ -64,6 +64,7 @@ class _AdmissionsEnrollmentScreenState
       child: AdmissionsModuleScaffold(
         screen: AdmissionsScreen.enrollment,
         showFilterBar: false,
+        scrollableBody: false,
         body: AdmissionsAsyncBody<EnrollmentFormState>(
           state: viewState,
           loadingLabel: 'Loading enrollment wizard',
@@ -74,40 +75,35 @@ class _AdmissionsEnrollmentScreenState
             admissionsEnrollmentPrefillFutureProvider,
           ),
           builder: (_) {
-            final formHeight =
-                (MediaQuery.sizeOf(context).height * 0.58).clamp(420.0, 720.0);
             return Form(
               key: _formKey,
               autovalidateMode: form.stepFieldErrors != null
                   ? AutovalidateMode.always
                   : AutovalidateMode.disabled,
-              child: SizedBox(
-                height: formHeight,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            AdmissionsEnrollmentStepIndicator(
-                              currentStep: form.currentStep,
-                            ),
-                            const SizedBox(height: AksharaSpacing.s6),
-                            _buildStepContent(form, notifier),
-                          ],
-                        ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _scrollController,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AdmissionsEnrollmentStepIndicator(
+                            currentStep: form.currentStep,
+                          ),
+                          const SizedBox(height: AksharaSpacing.s6),
+                          _buildStepContent(form, notifier),
+                        ],
                       ),
                     ),
-                    const Divider(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.only(top: AksharaSpacing.s4),
-                      child: _buildActions(context, ref, form, notifier),
-                    ),
-                  ],
-                ),
+                  ),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.only(top: AksharaSpacing.s4),
+                    child: _buildActions(context, ref, form, notifier),
+                  ),
+                ],
               ),
             );
           },

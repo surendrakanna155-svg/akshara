@@ -43,14 +43,14 @@ void main() {
       await goToErpRoute($, RouteNames.managementAnalytics);
       await assertVisibleText($, 'Attendance (MTD)');
 
-      await $(QaTestKeys.managementKpiDrillButton('attendance')).scrollTo().tap();
+      await tapByKey($, QaTestKeys.managementKpiDrillButton('attendance'));
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await assertVisibleText($, 'Student Success Intelligence');
 
       await goToErpRoute($, RouteNames.managementAcademics);
       await assertVisibleText($, 'Overall Pass %');
 
-      await $(QaTestKeys.managementKpiDrillButton('pass_rate')).scrollTo().tap();
+      await tapByKey($, QaTestKeys.managementKpiDrillButton('pass_rate'));
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
       await assertVisibleText($, 'Exam & Academic Intelligence');
     },

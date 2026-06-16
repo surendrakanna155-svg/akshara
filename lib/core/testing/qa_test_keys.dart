@@ -684,6 +684,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('platform_intelligence_screen');
   static const trustIntelligenceScreen =
       ValueKey<String>('trust_intelligence_screen');
+  static ValueKey<String> trustRecommendationCard(String id) =>
+      ValueKey<String>('trust_recommendation_$id');
   static const branchScreen = ValueKey<String>('branch_screen');
   static const branchAssignSchoolButton =
       ValueKey<String>('branch_assign_school_button');

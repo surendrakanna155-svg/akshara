@@ -5,7 +5,8 @@
 **Current release:** v18.1 Autonomous QA Platform (`v18.1-autonomous-qa-platform`)  
 **Previous release:** v18.0 Autonomous QA (`v18.0-autonomous-qa`)  
 **Readiness tags:** `v1.0-ops-ready` · `v1.0-customer-ready`  
-**Feature freeze:** active — no new milestones  
+**Feature freeze:** active — **STABILIZATION MODE** (RC lock `40b93c8`; see `docs/AKSHARA_V1_RC_LOCK.md`)  
+**Implementation:** complete — no new milestones until pilot feedback  
 **Production validation:** PASS — see `docs/Operations/Production-Validation-Report.md`  
 **Production readiness:** 94 / 100 (launch-weighted; live integrations env-dependent)  
 **Quality gates:** `flutter analyze` 0 issues · `flutter test` all passing  

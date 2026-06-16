@@ -27,6 +27,9 @@ class _TrustIntelligenceHubScreenState
       vsync: this,
       animationDuration: Duration.zero,
     );
+    _tabs.addListener(() {
+      if (!_tabs.indexIsChanging) setState(() {});
+    });
   }
 
   @override
@@ -220,6 +223,7 @@ class _TrustIntelligenceHubScreenState
         itemBuilder: (context, index) {
           final item = items[index];
           return Card(
+            key: QaTestKeys.trustRecommendationCard(item.id),
             child: ListTile(
               title: Text(item.title),
               subtitle: Text(item.detail),

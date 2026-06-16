@@ -17,6 +17,7 @@ class AdmissionsModuleScaffold extends StatelessWidget {
     this.selectedFilterIndex = 0,
     this.onFilterSelected,
     this.filterTrailing,
+    this.scrollableBody = true,
   });
 
   final AdmissionsScreen screen;
@@ -26,6 +27,7 @@ class AdmissionsModuleScaffold extends StatelessWidget {
   final int selectedFilterIndex;
   final ValueChanged<int>? onFilterSelected;
   final Widget? filterTrailing;
+  final bool scrollableBody;
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +39,14 @@ class AdmissionsModuleScaffold extends StatelessWidget {
       onFilterSelected: onFilterSelected,
       filterTrailing: filterTrailing,
       onMenuTap: adminShellMenuTap(context),
+      scrollableBody: scrollableBody,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: AksharaSpacing.s4),
           AdmissionsSubNav(current: screen),
           const SizedBox(height: AksharaSpacing.s4),
-          body,
+          if (scrollableBody) body else Expanded(child: body),
         ],
       ),
     );

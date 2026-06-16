@@ -31,6 +31,7 @@ class AdminContentScaffold extends ConsumerWidget {
     this.onAiCopilotTap,
     this.onProfileTap,
     this.bottomSpacing = AksharaSpacing.s8,
+    this.scrollableBody = true,
   });
 
   final List<AdminBreadcrumb> breadcrumbs;
@@ -47,6 +48,8 @@ class AdminContentScaffold extends ConsumerWidget {
   final VoidCallback? onAiCopilotTap;
   final VoidCallback? onProfileTap;
   final double bottomSpacing;
+  /// When false, body fills the viewport (for wizards with internal scroll + pinned actions).
+  final bool scrollableBody;
 
   void _showPlaceholderSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -93,18 +96,29 @@ class AdminContentScaffold extends ConsumerWidget {
               trailing: filterTrailing,
             ),
           Expanded(
-            child: SingleChildScrollView(
-              child: AdminLayout.constrainContent(
-                context: context,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    body,
-                    SizedBox(height: bottomSpacing),
-                  ],
-                ),
-              ),
-            ),
+            child: scrollableBody
+                ? SingleChildScrollView(
+                    child: AdminLayout.constrainContent(
+                      context: context,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          body,
+                          SizedBox(height: bottomSpacing),
+                        ],
+                      ),
+                    ),
+                  )
+                : AdminLayout.constrainContent(
+                    context: context,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: body),
+                        SizedBox(height: bottomSpacing),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),

@@ -210,12 +210,12 @@ class _FilledKpiTile extends StatelessWidget {
     final accentColors = accent.resolve(context);
 
     return Material(
-      key: drillKey,
       color: accentColors.container,
       elevation: onTap != null ? 1 : 0,
       shadowColor: colors.onSurface.withValues(alpha: 0.06),
       borderRadius: AksharaRadius.card,
       child: InkWell(
+        key: drillKey,
         onTap: onTap,
         borderRadius: AksharaRadius.card,
         child: LayoutBuilder(
