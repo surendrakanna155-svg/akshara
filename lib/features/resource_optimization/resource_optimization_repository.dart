@@ -53,7 +53,15 @@ class MockResourceOptimizationRepository
       );
 
       final parsed = _parseRecommendations(domain, response.content);
-      final base = parsed.isEmpty ? _fallbackRecommendations(domain) : parsed;
+      final fallback = _fallbackRecommendations(domain);
+      final base = parsed.isEmpty
+          ? fallback
+          : <OptimizationRecommendation>[
+              ...parsed,
+              ...fallback.where(
+                (seed) => !parsed.any((item) => item.id == seed.id),
+              ),
+            ];
       return base
           .map(
             (recommendation) => recommendation.copyWith(

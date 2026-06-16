@@ -16,11 +16,13 @@ void main() {
       await assertVisibleKey($, QaTestKeys.trustIntelligenceScreen);
 
       await tapAppBarTabByIndex($, 5);
+      await $.pumpAndSettle(timeout: const Duration(seconds: 15));
       await waitForLoadingToClear($, timeout: const Duration(seconds: 45));
       await assertVisibleText($, 'Drive fee recovery sprint',
           timeout: const Duration(seconds: 30));
 
       await tapAppBarTabByIndex($, 6);
+      await $.pumpAndSettle(timeout: const Duration(seconds: 15));
       await waitForLoadingToClear($, timeout: const Duration(seconds: 45));
       await assertVisibleText(
         $,

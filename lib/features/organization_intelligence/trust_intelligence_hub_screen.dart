@@ -64,6 +64,7 @@ class _TrustIntelligenceHubScreenState
         key: QaTestKeys.trustIntelligenceScreen,
         child: TabBarView(
           controller: _tabs,
+          physics: const NeverScrollableScrollPhysics(),
           children: [
             _trustTab(ref),
             _comparisonTab(ref),
