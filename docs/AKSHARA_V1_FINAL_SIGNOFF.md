@@ -4,8 +4,8 @@
 **Branch:** `release/v1.0-preprod`  
 **Date:** June 2026  
 **RC commit:** `8e27d5b`  
-**RC lock HEAD:** `40b93c8`  
-**Pushed:** `2026-06-16T09:21:53Z` → `origin/release/v1.0-preprod`  
+**RC lock HEAD:** `376849b`  
+**Pushed:** `2026-06-16T11:15:17Z` → `origin/release/v1.0-preprod`  
 **Prior baseline:** `71704e0` (M14 + gap closure)  
 **Mode:** **STABILIZATION** — see `docs/AKSHARA_V1_RC_LOCK.md`
 
