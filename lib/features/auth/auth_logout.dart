@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/environment_provider.dart';
 import '../../router/route_names.dart';
 import '../../core/testing/qa_test_keys.dart';
 import 'auth_provider.dart';
@@ -38,5 +39,6 @@ Future<void> confirmAndLogout(BuildContext context, WidgetRef ref) async {
     return;
   }
 
-  context.go(RouteNames.login);
+  final qaLoginEnabled = ref.read(isQaLoginEnabledProvider);
+  context.go(qaLoginEnabled ? RouteNames.qaLogin : RouteNames.login);
 }

@@ -918,6 +918,38 @@ abstract final class QaTestKeys {
       ValueKey<String>('organization_builder_preview_screen');
   static const organizationBuilderProvisioningScreen =
       ValueKey<String>('organization_builder_provisioning_screen');
+
+  // FV-PLAT-14 Smart School Configuration
+  static const schoolDiscoveryScreen =
+      ValueKey<String>('school_discovery_screen');
+  static const schoolDiscoveryHubCard =
+      ValueKey<String>('school_discovery_hub_card');
+  static const schoolDiscoveryAppliedSnackbar =
+      ValueKey<String>('school_discovery_applied_snackbar');
+  static const schoolDiscoveryBranchCountSlider =
+      ValueKey<String>('school_discovery_branch_count_slider');
+  static const schoolDiscoveryCapabilityTransport =
+      ValueKey<String>('school_discovery_capability_transport');
+  static const schoolDiscoveryCapabilityHostel =
+      ValueKey<String>('school_discovery_capability_hostel');
+  static const schoolDiscoveryCapabilityLibrary =
+      ValueKey<String>('school_discovery_capability_library');
+  static const schoolDiscoveryCapabilityInventory =
+      ValueKey<String>('school_discovery_capability_inventory');
+  static const schoolDiscoveryCapabilityAlumni =
+      ValueKey<String>('school_discovery_capability_alumni');
+  static const schoolDiscoveryCapabilityHrPayroll =
+      ValueKey<String>('school_discovery_capability_hr_payroll');
+  static const schoolDiscoveryCapabilityMultiBranch =
+      ValueKey<String>('school_discovery_capability_multi_branch');
+  static const schoolDiscoveryCapabilityTrust =
+      ValueKey<String>('school_discovery_capability_trust');
+  static ValueKey<String> schoolDiscoverySchoolTypeOption(String storageKey) =>
+      ValueKey<String>('school_discovery_school_type_$storageKey');
+  static ValueKey<String> schoolDiscoveryCurriculumOption(String storageKey) =>
+      ValueKey<String>('school_discovery_curriculum_$storageKey');
+  static ValueKey<String> schoolDiscoveryOperationsOption(String storageKey) =>
+      ValueKey<String>('school_discovery_operations_$storageKey');
   static const organizationBuilderSchoolSetupLink =
       ValueKey<String>('organization_builder_school_setup_link');
   static const organizationBuilderInterviewBackButton =

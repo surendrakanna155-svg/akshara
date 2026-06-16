@@ -7,6 +7,8 @@ class CreateInventoryProcurementOrderRequest {
     required this.totalAmount,
     required this.requestedBy,
     this.expectedDelivery = 'TBD',
+    this.financePoId,
+    this.poNumber,
   });
 
   final String vendorName;
@@ -14,6 +16,8 @@ class CreateInventoryProcurementOrderRequest {
   final String totalAmount;
   final String requestedBy;
   final String expectedDelivery;
+  final String? financePoId;
+  final String? poNumber;
 }
 
 class CreateInventoryProcurementOrderResult {

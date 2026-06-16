@@ -92,6 +92,7 @@ import 'accommodation_navigation.dart';
 import 'white_label_navigation.dart';
 import 'dynamic_widget_navigation.dart';
 import 'route_names.dart';
+import 'school_config_navigation.dart';
 import 'student_navigation.dart';
 import 'teacher_navigation.dart';
 
@@ -770,6 +771,13 @@ GoRouter createAppRouter({
             name: 'organizationBuilderProvisioning',
             pageBuilder: (context, state) => NoTransitionPage(
               child: organizationBuilderProvisioningRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.schoolDiscovery,
+            name: 'schoolDiscovery',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: schoolDiscoveryRouteBuilder(context, state),
             ),
           ),
           GoRoute(

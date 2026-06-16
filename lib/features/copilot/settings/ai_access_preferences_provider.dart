@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/environment_provider.dart';
 import '../../../core/providers/shared_preferences_provider.dart';
+import '../../../core/security/erp_role.dart';
 import '../../../features/auth/auth_provider.dart';
 import '../../../theme/breakpoints.dart';
 import 'ai_access_mode.dart';
@@ -27,10 +29,42 @@ class AiAccessPreferencesNotifier extends Notifier<AiAccessPreferences> {
   }
 
   AiAccessPreferences _readForUser(String? userId) {
-    if (userId == null) return const AiAccessPreferences();
+    final role = ref.read(authProvider).claims?.erpRole;
+    final roleDefault = _defaultForRole(role);
+    final qaDefault = ref.read(environmentProvider).enableQaLogin
+        ? roleDefault.copyWith(floatingBubbleEnabled: true)
+        : roleDefault;
+    if (userId == null) return qaDefault;
     final storage = ref.read(aiAccessPreferencesStorageProvider);
-    if (storage == null) return const AiAccessPreferences();
-    return storage.readSync(userId);
+    if (storage == null) return qaDefault;
+    final stored = storage.readSync(userId);
+    if (stored.mode == AiAccessMode.auto && roleDefault.mode != AiAccessMode.auto) {
+      return stored.copyWith(mode: roleDefault.mode);
+    }
+    if (ref.read(environmentProvider).enableQaLogin && !stored.floatingBubbleEnabled) {
+      return stored.copyWith(floatingBubbleEnabled: true);
+    }
+    return stored;
+  }
+
+  AiAccessPreferences _defaultForRole(ErpRole? role) {
+    return switch (role) {
+      ErpRole.parent || ErpRole.teacher || ErpRole.student => const AiAccessPreferences(
+          mode: AiAccessMode.bottomNavCenter,
+        ),
+      ErpRole.principal || ErpRole.management => const AiAccessPreferences(
+          mode: AiAccessMode.sidebarEntry,
+        ),
+      ErpRole.financeAdmin || ErpRole.admissionsCounselor => const AiAccessPreferences(
+          mode: AiAccessMode.appBarAction,
+        ),
+      ErpRole.transportManager ||
+      ErpRole.hostelManager ||
+      ErpRole.librarian ||
+      ErpRole.inventoryManager =>
+        const AiAccessPreferences(mode: AiAccessMode.sidebarEntry),
+      _ => const AiAccessPreferences(mode: AiAccessMode.auto),
+    };
   }
 
   Future<void> setMode(AiAccessMode mode) async {

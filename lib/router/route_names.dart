@@ -124,6 +124,7 @@ abstract final class RouteNames {
       '/organization-builder/preview';
   static const String organizationBuilderProvisioning =
       '/organization-builder/provisioning';
+  static const String schoolDiscovery = '/school-config/discovery';
   static const String platformOperations = '/platform-operations';
   static const String platformOperationsAlerts = '/platform-operations/alerts';
   static const String platformOperationsSecurity =
@@ -536,6 +537,7 @@ abstract final class RouteNames {
     organizationBuilderInterview,
     organizationBuilderPreview,
     organizationBuilderProvisioning,
+    schoolDiscovery,
     platformOperations,
     platformOperationsAlerts,
     platformOperationsSecurity,

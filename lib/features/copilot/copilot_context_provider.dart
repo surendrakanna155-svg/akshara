@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/security/erp_role.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
@@ -31,6 +32,7 @@ final copilotEffectiveContextProvider = Provider<CopilotScreenContext?>((ref) {
   if (claims == null) return null;
 
   final tenant = ref.watch(tenantContextProvider);
+  final schoolConfig = ref.watch(schoolConfigurationProvider);
   final persona = copilotPersonaForErpRole(claims.erpRole);
   final activeChildId = claims.erpRole == ErpRole.parent
       ? ref.watch(parentActiveStudentIdProvider)
@@ -48,6 +50,7 @@ final copilotEffectiveContextProvider = Provider<CopilotScreenContext?>((ref) {
     screen: 'AI Copilot',
     suggestedAssistant: defaultAssistantForPersona(persona),
     activeChildId: activeChildId,
+    filters: schoolConfig.copilotMetadata(),
   );
 });
 
@@ -62,6 +65,7 @@ CopilotScreenContext buildCopilotScreenContext(
   final auth = ref.read(authProvider);
   final claims = auth.claims;
   final tenant = ref.read(tenantContextProvider);
+  final schoolConfig = ref.read(schoolConfigurationProvider);
   if (claims == null) {
     return CopilotScreenContext(
       personaRole: CopilotPersonaRole.directorCorrespondent,
@@ -74,7 +78,10 @@ CopilotScreenContext buildCopilotScreenContext(
       route: originRoute,
       screen: screen ?? copilotScreenLabelForRoute(originRoute),
       originRoute: originRoute,
-      filters: filters ?? const {},
+      filters: {
+        ...schoolConfig.copilotMetadata(),
+        ...?filters,
+      },
       kpis: kpis ?? const [],
       records: records ?? const {},
     );
@@ -96,7 +103,10 @@ CopilotScreenContext buildCopilotScreenContext(
     route: originRoute,
     screen: screen ?? copilotScreenLabelForRoute(originRoute),
     originRoute: originRoute,
-    filters: filters ?? const {},
+    filters: {
+      ...schoolConfig.copilotMetadata(),
+      ...?filters,
+    },
     kpis: kpis ?? const [],
     records: records ?? const {},
     activeChildId: activeChildId,

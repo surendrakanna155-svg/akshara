@@ -42,10 +42,38 @@ class CreateProcurementOrderNotifier
     state = await AsyncValue.guard(() async {
       assertManageInventory(ref);
       try {
+        final query = ref.read(repositoryQueryProvider);
+        final financePo = await ref
+            .read(inventoryFinanceRepositoryProvider)
+            .createPurchaseOrder(
+              query: query,
+              request: CreateInventoryPurchaseOrderRequest(
+                vendorId: 'vendor_if_1',
+                poNumber:
+                    request.poNumber ?? _draftPoNumber(DateTime.now()),
+                lines: [
+                  CreateInventoryPurchaseOrderLineRequest(
+                    sku: 'INV-PROC',
+                    description: request.items,
+                    quantity: 1,
+                    unitCostPaise: _parseAmountToPaise(request.totalAmount),
+                  ),
+                ],
+                notes: request.vendorName,
+              ),
+            );
         final result =
             await ref.read(inventoryRepositoryProvider).createProcurementOrder(
-                  query: ref.read(repositoryQueryProvider),
-                  request: request,
+                  query: query,
+                  request: CreateInventoryProcurementOrderRequest(
+                    vendorName: request.vendorName,
+                    items: request.items,
+                    totalAmount: request.totalAmount,
+                    requestedBy: request.requestedBy,
+                    expectedDelivery: request.expectedDelivery,
+                    financePoId: financePo.id,
+                    poNumber: financePo.poNumber,
+                  ),
                 );
         ref.invalidate(inventoryProcurementFutureProvider);
         return result;
@@ -55,6 +83,17 @@ class CreateProcurementOrderNotifier
     });
     return state.valueOrNull;
   }
+}
+
+String _draftPoNumber(DateTime now) {
+  final suffix = (now.millisecondsSinceEpoch % 10000).toString().padLeft(4, '0');
+  return 'PO-2026-$suffix';
+}
+
+int _parseAmountToPaise(String amount) {
+  final digits = amount.replaceAll(RegExp(r'[^\d]'), '');
+  final rupees = int.tryParse(digits) ?? 25000;
+  return rupees * 100;
 }
 
 final createProcurementOrderProvider = AsyncNotifierProvider<

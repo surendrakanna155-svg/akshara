@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/security/permissions.dart';
+import '../../core/school_config/school_capability_registry.dart';
+import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/security/rbac_service.dart';
 import 'models/admin_nav_models.dart';
 import '../../router/route_names.dart';
@@ -189,9 +191,16 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
 /// Permission-filtered navigation destinations for the current session.
 final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
   final rbac = ref.watch(rbacServiceProvider);
+  final capabilities = ref.watch(schoolCapabilitiesProvider);
   return kAllAdminNavDestinations
       .where(
         (destination) => rbac.hasPermission(destination.requiredPermission),
+      )
+      .where(
+        (destination) => SchoolCapabilityRegistry.isAdminModuleEnabled(
+          destination.module,
+          capabilities,
+        ),
       )
       .toList(growable: false);
 });

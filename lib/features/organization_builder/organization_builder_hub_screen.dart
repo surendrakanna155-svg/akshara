@@ -24,6 +24,19 @@ class OrganizationBuilderHubScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Card(
+            key: QaTestKeys.schoolDiscoveryHubCard,
+            child: ListTile(
+              leading: const Icon(Icons.tune_outlined),
+              title: const Text('Smart School Configuration'),
+              subtitle: const Text(
+                'FV-PLAT-14 — configure modules, curriculum, and operations model',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go(RouteNames.schoolDiscovery),
+            ),
+          ),
+          const SizedBox(height: 16),
           const Text(
             'Vertical Packs',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

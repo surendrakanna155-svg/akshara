@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../core/school_config/school_configuration_provider.dart';
+import '../../../core/school_config/school_dashboard_adapter.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../parent_active_child_provider.dart';
 
@@ -309,7 +311,8 @@ final parentDashboardProvider = Provider<ParentDashboardData>((ref) {
     manualError: ref.watch(parentDashboardErrorProvider),
     manualEmpty: ref.watch(parentDashboardEmptyProvider),
   );
-  return data ??
+  final raw = data ??
       ref.watch(parentDashboardFutureProvider).value ??
       ParentDashboardData.mock();
+  return adaptParentDashboard(raw, ref.watch(schoolCapabilitiesProvider));
 });

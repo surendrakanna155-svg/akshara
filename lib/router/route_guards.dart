@@ -93,6 +93,7 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.organizationBuilderPreview: Permission.viewOrganizationBuilder,
   RouteNames.organizationBuilderProvisioning:
       Permission.viewOrganizationBuilder,
+  RouteNames.schoolDiscovery: Permission.viewOrganizationBuilder,
   RouteNames.platformOperations: Permission.viewPlatformOperations,
   RouteNames.platformOperationsAlerts: Permission.viewPlatformOperations,
   RouteNames.platformOperationsSecurity: Permission.viewPlatformOperations,

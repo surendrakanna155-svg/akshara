@@ -1,5 +1,5 @@
 {
-  "generated": "2026-06-13",
+  "generated": "2026-06-16",
   "platform": "patrol-v18.4",
   "bugs": [
     {
@@ -21,16 +21,16 @@
       "id": "PATROL-002",
       "severity": "low",
       "title": "Logout routes to /login instead of /qa-login in QA builds",
-      "route": "/login",
+      "route": "/qa-login",
       "steps": [
         "QA login as Parent",
         "Profile → Log out",
-        "Lands on standard login instead of QA login screen"
+        "Lands on QA automation login screen"
       ],
       "screenshot": "qa/patrol/screenshots/auth/auth_logout_login.marker",
       "logs": "patrol_test/auth/logout_test.dart",
-      "status": "open",
-      "recommendation": "Redirect to RouteNames.qaLogin when isQaLoginEnabledProvider is true"
+      "status": "resolved",
+      "resolution": "confirmAndLogout redirects to RouteNames.qaLogin when isQaLoginEnabledProvider is true (auth_logout.dart)"
     },
     {
       "id": "PATROL-003",
@@ -44,8 +44,9 @@
       ],
       "screenshot": "qa/patrol/screenshots/navigation/nav_erp_drawer.marker",
       "logs": "patrol_test/navigation/navigation_test.dart",
-      "status": "observed",
-      "recommendation": "Patrol journeys use persona-specific anchors with try/catch fallbacks"
+      "status": "by_design",
+      "classification": "B",
+      "recommendation": "Patrol journeys use persona-specific anchors with try/catch fallbacks; not a product defect"
     },
     {
       "id": "PATROL-004",
@@ -58,14 +59,18 @@
       ],
       "screenshot": "test/golden/failures/parent_dashboard_390x844_testImage.png",
       "logs": "flutter test output",
-      "status": "open",
-      "recommendation": "Refresh golden masters after v18.4 UI stabilization"
+      "status": "resolved",
+      "resolution": "Golden masters current; flutter test test/golden/ passes on macOS (@TestOn). Stale failure artifacts under test/golden/failures/ may remain from prior runs."
     }
   ],
   "summary": {
     "critical": 0,
-    "high": 1,
+    "high": 0,
     "medium": 1,
-    "low": 2
+    "low": 1,
+    "open": 0,
+    "resolved": 2,
+    "mitigated": 1,
+    "by_design": 1
   }
 }

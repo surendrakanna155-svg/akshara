@@ -32,12 +32,15 @@ void main() {
           items: 'Chairs x10',
           totalAmount: '₹50,000',
           requestedBy: 'Facilities',
+          financePoId: 'po_if_linked',
+          poNumber: 'PO-2026-TEST',
         ),
       );
 
       final after = await repo.getProcurementOrders(query: query);
       expect(after.total, greaterThan(before.total));
-      expect(order.poNumber, startsWith('PO-2026-'));
+      expect(order.poNumber, 'PO-2026-TEST');
+      expect(order.financePoId, 'po_if_linked');
     });
 
     test('recordProcurementReceiveHandoff marks ordered PO received', () async {
@@ -159,6 +162,56 @@ void main() {
           afterReceive.items.firstWhere((order) => order.id == 'po_4');
       expect(received.status.name, 'received');
       expect(received.approvalHistory.last.action, 'received');
+    });
+
+    test('create + approve + receive handoff works for dynamic PO', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final created = await container
+          .read(createProcurementOrderProvider.notifier)
+          .execute(
+            const CreateInventoryProcurementOrderRequest(
+              vendorName: 'Dynamic Vendor',
+              items: 'QA procurement items',
+              totalAmount: '₹25,000',
+              requestedBy: 'QA Procurement',
+            ),
+          );
+      expect(created, isNotNull);
+      expect(created!.financePoId, startsWith('po_if_'));
+
+      final approveResult = await container
+          .read(approveProcurementHandoffProvider.notifier)
+          .execute(created);
+      expect(approveResult.apCommitmentId, startsWith('ap_if_'));
+
+      final inventoryRepo = container.read(inventoryRepositoryProvider);
+      final afterApprove = await inventoryRepo.getProcurementOrders(
+        query: RepositoryQuery.demo,
+      );
+      final ordered =
+          afterApprove.items.firstWhere((order) => order.id == created.id);
+      expect(ordered.status.name, 'ordered');
+
+      final receiveResult = await container
+          .read(receiveProcurementHandoffProvider.notifier)
+          .execute(ordered);
+      expect(receiveResult.grnId, startsWith('grn_if_'));
+
+      final afterReceive = await inventoryRepo.getProcurementOrders(
+        query: RepositoryQuery.demo,
+      );
+      final received =
+          afterReceive.items.firstWhere((order) => order.id == created.id);
+      expect(received.status.name, 'received');
     });
   });
 }

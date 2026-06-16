@@ -23,7 +23,7 @@ void main() {
       await $(QaTestKeys.logoutConfirmButton).tap();
       await $.pumpAndSettle(timeout: const Duration(seconds: 10));
 
-      expect($('Welcome back'), findsOneWidget);
+      expect($(QaTestKeys.qaLoginScreen), findsOneWidget);
       await capturePatrolScreenshot($, 'auth_logout_login', subdir: 'auth');
     },
   );

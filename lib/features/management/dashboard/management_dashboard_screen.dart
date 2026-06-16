@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/school_config/school_configuration_provider.dart';
+import '../../../core/school_config/school_dashboard_adapter.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/async/erp_async_state.dart';
@@ -120,9 +122,13 @@ class ManagementDashboardScreen extends ConsumerWidget {
     ManagementDashboardData data,
     int filterIndex,
   ) {
+    final configured = adaptManagementDashboard(
+      data,
+      ref.watch(schoolCapabilitiesProvider),
+    );
     final isMobile = AdminLayout.isMobile(context);
     final chartHeight = isMobile ? 240.0 : 300.0;
-    final queuePreview = data.approvalQueue.take(5).toList();
+    final queuePreview = configured.approvalQueue.take(5).toList();
 
     return CopilotContextScope(
       route: RouteNames.managementDashboard,
@@ -130,25 +136,25 @@ class ManagementDashboardScreen extends ConsumerWidget {
       module: 'management',
       filters: {'period': filterLabels[filterIndex]},
       kpis: [
-        for (final kpi in data.kpis)
+        for (final kpi in configured.kpis)
           CopilotKpiSnapshot(id: kpi.id, label: kpi.label, value: kpi.value),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ManagementPrincipalOverviewPanel(data: data),
-          if (data.feeSnapshot.defaulters > 40)
+          ManagementPrincipalOverviewPanel(data: configured),
+          if (configured.feeSnapshot.defaulters > 40)
             AksharaWarningBanner(
               message:
-                  '${data.feeSnapshot.defaulters} fee defaulters with ${data.feeSnapshot.outstanding} outstanding.',
+                  '${configured.feeSnapshot.defaulters} fee defaulters with ${configured.feeSnapshot.outstanding} outstanding.',
               actionLabel: 'View defaulters',
               onAction: () => context.go(RouteNames.financeDefaulters),
             ),
-          if (data.feeSnapshot.defaulters > 40)
+          if (configured.feeSnapshot.defaulters > 40)
             const SizedBox(height: AksharaSpacing.s4),
           ManagementKpiRow(
             desktopColumns: 3,
-            kpis: data.kpis,
+            kpis: configured.kpis,
           ),
           const SizedBox(height: AksharaSpacing.s6),
           if (isMobile) ...[

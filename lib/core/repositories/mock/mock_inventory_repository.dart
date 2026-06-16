@@ -564,14 +564,16 @@ class MockInventoryRepository implements InventoryRepository {
     final id = 'po_${++_poCounter}';
     final order = InventoryProcurementOrder(
       id: id,
-      poNumber: 'PO-2026-${_poCounter.toString().padLeft(4, '0')}',
+      poNumber: request.poNumber ??
+          'PO-2026-${_poCounter.toString().padLeft(4, '0')}',
       vendorName: request.vendorName,
       items: request.items,
       totalAmount: request.totalAmount,
       orderDate: 'Today',
       expectedDelivery: request.expectedDelivery,
       status: InventoryProcurementStatus.draft,
-      financePoId: 'po_if_${_poCounter.toString().padLeft(4, '0')}',
+      financePoId: request.financePoId ??
+          'po_if_${_poCounter.toString().padLeft(4, '0')}',
       requestedBy: request.requestedBy,
       approvalHistory: [
         InventoryProcurementApprovalEntry(
