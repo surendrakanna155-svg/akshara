@@ -3,7 +3,9 @@
 **Program:** Release Candidate — Pilot Ready + Production Ready  
 **Branch:** `release/v1.0-preprod`  
 **Date:** June 2026  
-**Baseline commit:** `71704e0` + RC UX/hardening delta (uncommitted at sign-off draft)
+**RC commit:** `8e27d5b`  
+**Pushed:** `2026-06-16T09:21:53Z` → `origin/release/v1.0-preprod`  
+**Prior baseline:** `71704e0` (M14 + gap closure)
 
 ---
 
