@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../features/copilot/widgets/copilot_bottom_nav_ai_slot.dart';
+import '../../../features/school_completion/school_branding_theme_provider.dart';
 import '../../../router/route_names.dart';
+import '../../auth/qa_visual_switcher.dart';
+import '../../../theme/app_theme.dart';
+import '../../../theme/stitch_palettes.dart';
 import '../../../theme/theme_extensions.dart';
 
 /// Teacher mobile shell with bottom navigation (Home · Classes · Teach · Messages).
@@ -65,9 +69,20 @@ class TeacherShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final path = GoRouterState.of(context).uri.path;
     final selectedIndex = _selectedIndex(path);
+    final whiteLabel = ref.watch(schoolBrandingThemeProvider);
 
-    return Scaffold(
-      body: child,
+    return Theme(
+      data: AksharaAppTheme.stitch(
+        StitchPersonaPalette.classroomCommand,
+        whiteLabel: whiteLabel,
+      ),
+      child: Scaffold(
+      body: Column(
+        children: [
+          const QaPersonaSwitcherBar(),
+          Expanded(child: child),
+        ],
+      ),
       bottomNavigationBar: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
@@ -93,6 +108,7 @@ class TeacherShell extends ConsumerWidget {
           const CopilotBottomNavAiSlot(),
         ],
       ),
+    ),
     );
   }
 }

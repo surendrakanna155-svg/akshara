@@ -6,7 +6,13 @@ import '../../../core/ai/ai_inference_models.dart';
 import '../../../core/ai/ai_inference_pipeline.dart';
 import '../../../core/ai/ai_inference_providers.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
+import '../../../shared/widgets/akshara_glass_surface.dart';
+import '../../../shared/widgets/akshara_scene_illustration.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../theme/mesh_background.dart';
+import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../copilot_context_provider.dart';
@@ -96,6 +102,7 @@ class _CopilotPersonaShellScreenState
     final canOpenFullCopilot = ref.watch(copilotCanUseProvider);
 
     return Scaffold(
+      backgroundColor: context.colors.surfaceContainerLowest,
       appBar: AppBar(
         title: Text(experience.title),
         leading: IconButton(
@@ -103,25 +110,64 @@ class _CopilotPersonaShellScreenState
           onPressed: () => context.pop(),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Material(
-              key: QaTestKeys.copilotPersonaContextBanner,
-              color: context.colors.primaryContainer.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(AksharaSpacing.s2),
-              child: Padding(
+      body: AksharaDashboardCanvas(
+        palette: AksharaMeshPalette.intelligence,
+        watermark: AksharaWatermarkMotif.sparkles,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AksharaGlassSurface(
+                borderRadius: AksharaRadius.glass,
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
+                showSheen: true,
+                enableBlur: false,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const AksharaSceneIllustration(
+                      variant: AksharaSceneVariant.aiAssistant,
+                      size: 72,
+                    ),
+                    const SizedBox(width: AksharaSpacing.s3),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            experience.title,
+                            style: context.aksharaText.titleMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: AksharaSpacing.s1),
+                          Text(
+                            experience.subtitle,
+                            style: context.aksharaText.bodyMedium.copyWith(
+                              color: context.colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AksharaSpacing.s4),
+              AksharaGlassSurface(
+                key: QaTestKeys.copilotPersonaContextBanner,
+                borderRadius: AksharaRadius.card,
                 padding: const EdgeInsets.all(AksharaSpacing.s3),
+                showSheen: false,
+                enableBlur: false,
+                tintColor: context.colors.primaryContainer,
+                opacity: 0.35,
                 child: Text(
                   screenContext?.displaySummary ?? persona.label,
                   style: context.aksharaText.bodySmall,
                 ),
               ),
-            ),
-            const SizedBox(height: AksharaSpacing.s4),
-            Text(experience.subtitle, style: context.aksharaText.bodyMedium),
             const SizedBox(height: AksharaSpacing.s4),
             const AksharaSectionHeader(title: 'Focus areas'),
             Wrap(
@@ -129,7 +175,17 @@ class _CopilotPersonaShellScreenState
               runSpacing: AksharaSpacing.s2,
               children: [
                 for (final area in experience.focusAreas)
-                  Chip(label: Text(area)),
+                  AksharaGlassSurface(
+                    borderRadius: AksharaRadius.chip,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AksharaSpacing.s3,
+                      vertical: AksharaSpacing.s2,
+                    ),
+                    showSheen: false,
+                    enableBlur: false,
+                    shadowLevel: 0,
+                    child: Text(area, style: context.aksharaText.labelMedium),
+                  ),
               ],
             ),
             const SizedBox(height: AksharaSpacing.s4),
@@ -189,18 +245,18 @@ class _CopilotPersonaShellScreenState
             ],
             if (_lastReply != null) ...[
               const SizedBox(height: AksharaSpacing.s4),
-              Material(
+              AksharaGlassSurface(
                 key: QaTestKeys.copilotPersonaReplyPanel,
-                color: context.colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(AksharaSpacing.s3),
-                child: Padding(
-                  padding: const EdgeInsets.all(AksharaSpacing.s3),
-                  child: Text(_lastReply!),
-                ),
+                borderRadius: AksharaRadius.glass,
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
+                showSheen: true,
+                enableBlur: false,
+                child: Text(_lastReply!),
               ),
             ],
           ],
         ),
+      ),
       ),
     );
   }

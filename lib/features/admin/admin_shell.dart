@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/school_completion/school_branding_theme_provider.dart';
 import '../../router/route_guards.dart';
+import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
+import '../../theme/stitch_palettes.dart';
+import '../auth/qa_visual_switcher.dart';
 import 'admin_navigation_rail.dart';
 
 /// Responsive desktop/tablet/mobile shell for the web ERP admin portal.
-class AdminShell extends StatefulWidget {
+class AdminShell extends ConsumerStatefulWidget {
   const AdminShell({
     super.key,
     required this.child,
@@ -15,10 +20,10 @@ class AdminShell extends StatefulWidget {
   final Widget child;
 
   @override
-  State<AdminShell> createState() => _AdminShellState();
+  ConsumerState<AdminShell> createState() => _AdminShellState();
 }
 
-class _AdminShellState extends State<AdminShell> {
+class _AdminShellState extends ConsumerState<AdminShell> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void _openDrawer() => _scaffoldKey.currentState?.openDrawer();
@@ -26,8 +31,20 @@ class _AdminShellState extends State<AdminShell> {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
+    final whiteLabel = ref.watch(schoolBrandingThemeProvider);
+    final stitchTheme = AksharaAppTheme.stitch(
+      StitchPersonaPalette.obsidianEnterprise,
+      whiteLabel: whiteLabel,
+    );
 
-    return LayoutBuilder(
+    return Theme(
+      data: stitchTheme,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const QaPersonaSwitcherBar(),
+          Expanded(
+            child: LayoutBuilder(
       builder: (context, constraints) {
         final breakpoint =
             AksharaBreakpoints.fromWidth(constraints.maxWidth);
@@ -72,6 +89,10 @@ class _AdminShellState extends State<AdminShell> {
             ),
         };
       },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

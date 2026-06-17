@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
+import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_shell.dart';
@@ -42,16 +45,20 @@ class HrModuleScaffold extends StatelessWidget {
       onFilterSelected: onFilterSelected,
       filterTrailing: filterTrailing,
       onMenuTap: adminShellMenuTap(context),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AksharaSpacing.s4),
-          if (showSubNav) ...[
-            HrSubNav(current: screen),
+      body: AksharaDashboardCanvas(
+        palette: AksharaMeshPalette.neutral,
+        watermark: AksharaWatermarkMotif.graduationCap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             const SizedBox(height: AksharaSpacing.s4),
+            if (showSubNav) ...[
+              HrSubNav(current: screen),
+              const SizedBox(height: AksharaSpacing.s4),
+            ],
+            body,
           ],
-          body,
-        ],
+        ),
       ),
     );
   }

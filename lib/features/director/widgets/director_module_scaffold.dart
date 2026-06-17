@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
+import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_shell.dart';
@@ -38,21 +41,25 @@ class DirectorModuleScaffold extends StatelessWidget {
       onFilterSelected: onFilterSelected,
       filterTrailing: filterTrailing,
       onMenuTap: adminShellMenuTap(context),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AksharaSpacing.s4),
-          DirectorSubNav(current: screen),
-          const SizedBox(height: AksharaSpacing.s4),
-          const AksharaWarningBanner(
-            message: kDirectorPrivacyBannerMessage,
-            height: 40,
-            compactMessage: true,
-            semanticLabel: 'Director privacy notice',
-          ),
-          const SizedBox(height: AksharaSpacing.s4),
-          body,
-        ],
+      body: AksharaDashboardCanvas(
+        palette: AksharaMeshPalette.director,
+        watermark: AksharaWatermarkMotif.shield,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AksharaSpacing.s4),
+            DirectorSubNav(current: screen),
+            const SizedBox(height: AksharaSpacing.s4),
+            const AksharaWarningBanner(
+              message: kDirectorPrivacyBannerMessage,
+              height: 40,
+              compactMessage: true,
+              semanticLabel: 'Director privacy notice',
+            ),
+            const SizedBox(height: AksharaSpacing.s4),
+            body,
+          ],
+        ),
       ),
     );
   }

@@ -362,7 +362,7 @@ class AksharaColorTokens {
       surfaceContainerHigh: surfaceContainerHigh,
       surfaceContainer: surfaceContainer,
       surfaceContainerLow: surfaceContainerLow,
-      surfaceContainerLowest: surface,
+      surfaceContainerLowest: isLight ? surface : surfaceContainerLow,
       surfaceBright: surface,
       surfaceDim: surfaceContainerLow,
     );

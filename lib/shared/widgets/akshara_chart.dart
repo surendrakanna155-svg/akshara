@@ -4,6 +4,7 @@ import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import 'akshara_empty_illustration.dart';
+import 'akshara_glass_surface.dart';
 
 /// Premium chart container — executive dashboard card shell.
 class AksharaChartCard extends StatelessWidget {
@@ -48,24 +49,13 @@ class AksharaChartCard extends StatelessWidget {
     return Semantics(
       container: true,
       label: semanticLabel ?? title,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: AksharaRadius.cardBorder,
-          border: Border.all(
-            color: colors.outlineVariant.withValues(alpha: 0.65),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: colors.shadow.withValues(alpha: 0.04),
-              offset: const Offset(0, 1),
-              blurRadius: 3,
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.kpiCardPadding),
-          child: Column(
+      child: AksharaGlassSurface(
+        borderRadius: AksharaRadius.cardBorder,
+        padding: const EdgeInsets.all(AksharaSpacing.kpiCardPadding),
+        showSheen: true,
+        enableBlur: false,
+        shadowLevel: 1,
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
@@ -91,7 +81,6 @@ class AksharaChartCard extends StatelessWidget {
                 legend!,
               ],
             ],
-          ),
         ),
       ),
     );
@@ -162,6 +151,8 @@ class AksharaChartLegend extends StatelessWidget {
                     color: colors.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

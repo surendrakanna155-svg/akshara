@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'color_tokens.dart';
+import 'stitch_palettes.dart';
 import 'elevation.dart';
 import 'locale_typography.dart';
 import 'motion.dart';
@@ -47,13 +48,33 @@ abstract final class AksharaAppTheme {
     );
   }
 
+  /// Stitch-aligned persona theme (M15.5) — colors from reference PNGs / DESIGN.md.
+  static ThemeData stitch(
+    StitchPersonaPalette palette, {
+    WhiteLabelThemeConfig? whiteLabel,
+    Locale? locale,
+  }) {
+    var tokens = AksharaStitchPalettes.tokens(palette);
+    if (whiteLabel?.primary != null) {
+      tokens = tokens.withPrimaryOverride(whiteLabel!.primary!);
+    }
+    return _build(
+      tokens: tokens,
+      brightness: AksharaStitchPalettes.brightness(palette),
+      locale: locale,
+    );
+  }
+
   static ThemeData _build({
     required AksharaColorTokens tokens,
     required Brightness brightness,
     Locale? locale,
   }) {
     final colorScheme = tokens.toColorScheme(brightness: brightness);
-    final aksharaExtension = AksharaThemeExtension.fromTokens(tokens);
+    final aksharaExtension = AksharaThemeExtension.fromTokens(
+      tokens,
+      brightness: brightness,
+    );
     final aksharaText = AksharaLocaleTypography.applyLocale(
       AksharaTextStyles.roboto().applyColorScheme(colorScheme),
       locale,

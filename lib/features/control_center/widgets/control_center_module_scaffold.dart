@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
 import '../../../shared/widgets/akshara_warning_banner.dart';
+import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_shell.dart';
@@ -40,23 +43,27 @@ class ControlCenterModuleScaffold extends StatelessWidget {
       onFilterSelected: onFilterSelected,
       filterTrailing: filterTrailing,
       onMenuTap: adminShellMenuTap(context),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AksharaSpacing.s4),
-          ControlCenterSubNav(current: screen),
-          const SizedBox(height: AksharaSpacing.s4),
-          if (showPiiBanner) ...[
-            const AksharaWarningBanner(
-              message: kControlCenterPiiBannerMessage,
-              height: 40,
-              compactMessage: true,
-              semanticLabel: 'Platform privacy notice',
-            ),
+      body: AksharaDashboardCanvas(
+        palette: AksharaMeshPalette.admin,
+        watermark: AksharaWatermarkMotif.sparkles,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             const SizedBox(height: AksharaSpacing.s4),
+            ControlCenterSubNav(current: screen),
+            const SizedBox(height: AksharaSpacing.s4),
+            if (showPiiBanner) ...[
+              const AksharaWarningBanner(
+                message: kControlCenterPiiBannerMessage,
+                height: 40,
+                compactMessage: true,
+                semanticLabel: 'Platform privacy notice',
+              ),
+              const SizedBox(height: AksharaSpacing.s4),
+            ],
+            body,
           ],
-          body,
-        ],
+        ),
       ),
     );
   }

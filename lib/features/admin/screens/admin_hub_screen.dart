@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
+import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../admin_content_scaffold.dart';
@@ -27,11 +30,14 @@ class AdminHubScreen extends ConsumerWidget {
       breadcrumbs: adminBreadcrumbsForModule(AdminModule.admin),
       showFilterBar: false,
       onMenuTap: adminShellMenuTap(context),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AksharaSpacing.s6),
-          const AksharaSectionHeader(title: 'Admin Hub'),
+      body: AksharaDashboardCanvas(
+        palette: AksharaMeshPalette.admin,
+        watermark: AksharaWatermarkMotif.sparkles,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AksharaSpacing.s6),
+            const AksharaSectionHeader(title: 'Admin Hub'),
           const SizedBox(height: AksharaSpacing.s2),
           Text(
             'Jump to an ERP module you are authorized to access.',
@@ -50,6 +56,7 @@ class AdminHubScreen extends ConsumerWidget {
             ],
           ),
         ],
+        ),
       ),
     );
   }

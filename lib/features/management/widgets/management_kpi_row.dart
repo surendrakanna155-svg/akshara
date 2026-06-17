@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_executive_kpi_card.dart';
 import '../../../shared/widgets/akshara_kpi_card.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../finance/widgets/finance_responsive_grid.dart';
@@ -38,17 +38,21 @@ class ManagementKpiRow extends StatelessWidget {
         for (final kpi in kpis)
           SizedBox(
             height: cardHeight,
-            child: AksharaKpiCard(
-              drillKey: managementKpiIsDrillable(kpi)
-                  ? QaTestKeys.managementKpiDrillButton(kpi.id)
-                  : null,
+            child: AksharaExecutiveKpiCard(
+              label: kpi.label,
               value: kpi.value,
-              subtitle: kpi.label,
               icon: kpi.icon,
               accent: _accent(kpi.accentName),
-              style: AksharaKpiCardStyle.filled,
-              detail: kpi.detail,
-              semanticLabel: '${kpi.label}: ${kpi.value}',
+              width: double.infinity,
+              trendLabel: AksharaKpiPresentation.isTrendDetail(kpi.detail)
+                  ? kpi.detail
+                  : null,
+              trendDirection: kpi.detail != null &&
+                      AksharaKpiPresentation.isTrendDetail(kpi.detail)
+                  ? AksharaKpiPresentation.inferTrendDirection(kpi.detail!)
+                  : null,
+              sparklinePoints:
+                  AksharaExecutiveKpiCard.decorativeSparkline(kpi.id),
               onTap: managementKpiIsDrillable(kpi)
                   ? () => navigateManagementKpiDrill(context, kpi)
                   : null,

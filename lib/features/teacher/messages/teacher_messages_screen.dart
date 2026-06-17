@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../theme/spacing.dart';
@@ -56,15 +57,11 @@ class TeacherMessagesScreen extends ConsumerWidget {
                         ? AksharaSpacing.tabletMargin
                         : AksharaSpacing.mobileMargin;
 
-                    return Align(
-                      alignment: Alignment.topCenter,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: isTablet
-                              ? _tabletMaxContentWidth
-                              : double.infinity,
-                        ),
-                        child: Column(
+                    return MobileDashboardLayout.boundedShellBody(
+                      constraints: constraints,
+                      maxContentWidth:
+                          isTablet ? _tabletMaxContentWidth : null,
+                      child: Column(
                           children: [
                             Padding(
                               padding: EdgeInsets.fromLTRB(
@@ -130,7 +127,6 @@ class TeacherMessagesScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                      ),
                     );
                   },
                 ),

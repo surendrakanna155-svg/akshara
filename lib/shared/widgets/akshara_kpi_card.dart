@@ -418,7 +418,7 @@ class _FilledKpiTile extends StatelessWidget {
       pressedShadowLevel: AksharaMotion.pressedShadow,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final dense = !constraints.hasBoundedHeight ||
+          final dense = constraints.hasBoundedHeight &&
               constraints.maxHeight <= 148;
           final padding = EdgeInsets.all(
             dense ? AksharaSpacing.s3 : AksharaSpacing.kpiCardPadding,

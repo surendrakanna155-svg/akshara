@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
+import '../../../shared/widgets/akshara_executive_kpi_card.dart';
+import '../../../theme/mesh_background.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
+import '../../../shared/widgets/akshara_kpi_card.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -61,11 +66,12 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
         AdminBreadcrumb(label: 'Analytics & Intelligence'),
       ],
       onMenuTap: adminShellMenuTap(context),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final tabHeight =
-              (MediaQuery.sizeOf(context).height * 0.65).clamp(360.0, 720.0);
-          return Column(
+      scrollableBody: false,
+      body: SizedBox.expand(
+        child: AksharaDashboardCanvas(
+          palette: AksharaMeshPalette.intelligence,
+          watermark: AksharaWatermarkMotif.chartTrend,
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TabBar(
@@ -80,8 +86,7 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
                   Tab(text: 'Principal Summary'),
                 ],
               ),
-              SizedBox(
-                height: tabHeight,
+              Expanded(
                 child: TabBarView(
                   controller: _tabs,
                   children: const [
@@ -95,8 +100,8 @@ class _IntelligenceHubScreenState extends ConsumerState<IntelligenceHubScreen>
                 ),
               ),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -123,15 +128,15 @@ class _AnalyticsDashboardTab extends ConsumerWidget {
             spacing: AksharaSpacing.s3,
             runSpacing: AksharaSpacing.s3,
             children: [
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Student risk', value: '${metrics.studentRiskScore}'),
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Attendance risk',
                   value: '${metrics.attendanceRiskScore}'),
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Academic risk',
                   value: '${metrics.academicPerformanceRisk}'),
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Fee collection risk',
                   value: '${metrics.feeCollectionRisk}'),
             ],
@@ -142,16 +147,16 @@ class _AnalyticsDashboardTab extends ConsumerWidget {
             spacing: AksharaSpacing.s3,
             runSpacing: AksharaSpacing.s3,
             children: [
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Admissions conversion',
                   value: '${metrics.admissionConversionRate}%'),
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Teacher workload',
                   value: '${metrics.teacherWorkloadIndex}'),
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Timetable health',
                   value: '${metrics.timetableHealthScore}'),
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Communication engagement',
                   value: '${metrics.communicationEngagementScore}'),
             ],
@@ -185,7 +190,7 @@ class _SchoolHealthTab extends ConsumerWidget {
       data: (health) => ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          _KpiCard(
+          _ExecutiveKpi(
               label: 'School health score',
               value: '${health.schoolHealthScore}'),
           const SizedBox(height: AksharaSpacing.s4),
@@ -193,11 +198,13 @@ class _SchoolHealthTab extends ConsumerWidget {
             spacing: AksharaSpacing.s3,
             runSpacing: AksharaSpacing.s3,
             children: [
-              _KpiCard(label: 'Academic', value: '${health.academicHealth}'),
-              _KpiCard(label: 'Finance', value: '${health.financeHealth}'),
-              _KpiCard(
+              _ExecutiveKpi(
+                  label: 'Academic', value: '${health.academicHealth}'),
+              _ExecutiveKpi(
+                  label: 'Finance', value: '${health.financeHealth}'),
+              _ExecutiveKpi(
                   label: 'Operations', value: '${health.operationsHealth}'),
-              _KpiCard(
+              _ExecutiveKpi(
                   label: 'Engagement', value: '${health.engagementHealth}'),
             ],
           ),
@@ -523,46 +530,19 @@ class _PrincipalSummaryTab extends ConsumerWidget {
   }
 }
 
-class _KpiCard extends StatelessWidget {
-  const _KpiCard({required this.label, required this.value});
+class _ExecutiveKpi extends StatelessWidget {
+  const _ExecutiveKpi({required this.label, required this.value});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.aksharaText;
-
-    return SizedBox(
-      width: 168,
-      child: Material(
-        color: colors.surfaceContainerLow,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: AksharaRadius.card,
-          side: BorderSide(color: colors.outlineVariant),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.s4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: text.kpiLabel.copyWith(color: colors.onSurfaceVariant),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: AksharaSpacing.s2),
-              Text(
-                value,
-                style: text.kpiValue.copyWith(color: colors.onSurface),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return AksharaExecutiveKpiCard(
+      label: label,
+      value: value,
+      accent: KpiAccent.indigo,
+      icon: Icons.auto_graph_outlined,
     );
   }
 }

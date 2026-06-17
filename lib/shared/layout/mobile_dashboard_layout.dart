@@ -23,4 +23,30 @@ abstract final class MobileDashboardLayout {
         horizontalPadding(width),
         AksharaSpacing.s6,
       );
+
+  /// Bounds shell tab bodies so [SingleChildScrollView] scrolls and
+  /// [Column] + [Expanded] layouts do not bottom-overflow.
+  static Widget boundedShellBody({
+    required BoxConstraints constraints,
+    required Widget child,
+    double? maxContentWidth,
+  }) {
+    final contentWidth = maxContentWidth ??
+        (isTablet(constraints.maxWidth)
+            ? tabletMaxContentWidth
+            : constraints.maxWidth);
+
+    return SizedBox(
+      height: constraints.maxHeight,
+      width: constraints.maxWidth,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          width: contentWidth,
+          height: constraints.maxHeight,
+          child: child,
+        ),
+      ),
+    );
+  }
 }

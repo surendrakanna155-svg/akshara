@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../features/copilot/widgets/copilot_bottom_nav_ai_slot.dart';
 import '../../../features/school_completion/school_branding_theme_provider.dart';
 import '../../../router/route_names.dart';
+import '../../auth/qa_visual_switcher.dart';
+import '../../../theme/app_theme.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
+import '../../../theme/stitch_palettes.dart';
 import '../../../theme/theme_extensions.dart';
 
 /// Parent mobile shell with bottom navigation (Home · Attendance · Fees).
@@ -71,9 +74,17 @@ class ParentShell extends ConsumerWidget {
     final selectedIndex = _selectedIndex(path);
     final schoolName = ref.watch(schoolDisplayNameProvider);
 
-    return Scaffold(
+    final whiteLabel = ref.watch(schoolBrandingThemeProvider);
+
+    return Theme(
+      data: AksharaAppTheme.stitch(
+        StitchPersonaPalette.aksharaParent,
+        whiteLabel: whiteLabel,
+      ),
+      child: Scaffold(
       body: Column(
         children: [
+          const QaPersonaSwitcherBar(),
           if (schoolName.isNotEmpty)
             Material(
               color: context.colors.surface,
@@ -152,6 +163,7 @@ class ParentShell extends ConsumerWidget {
           const CopilotBottomNavAiSlot(),
         ],
       ),
+    ),
     );
   }
 }

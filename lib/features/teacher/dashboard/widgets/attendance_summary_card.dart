@@ -190,35 +190,51 @@ class _AttendanceKpiStrip extends StatelessWidget {
       label:
           'Attendance summary: ${summary.classesMarked} of ${summary.classesTotal} classes marked, '
           '$presentRate percent students present',
-      child: Row(
-        children: [
-          Expanded(
-            child: AksharaKpiCard(
-              style: AksharaKpiCardStyle.filled,
-              value: '${summary.classesMarked}/${summary.classesTotal}',
-              subtitle: 'Classes marked',
-              accent: KpiAccent.primary,
-            ),
-          ),
-          const SizedBox(width: AksharaSpacing.s3),
-          Expanded(
-            child: AksharaKpiCard(
-              style: AksharaKpiCardStyle.filled,
-              value: '${summary.studentsPresent}/${summary.studentsTotal}',
-              subtitle: 'Students present',
-              accent: KpiAccent.success,
-            ),
-          ),
-          const SizedBox(width: AksharaSpacing.s3),
-          Expanded(
-            child: AksharaKpiCard(
-              style: AksharaKpiCardStyle.filled,
-              value: '$presentRate%',
-              subtitle: 'Present rate',
-              accent: KpiAccent.neutral,
-            ),
-          ),
-        ],
+      child: Builder(
+        builder: (context) {
+          final narrow = MediaQuery.sizeOf(context).width < 360;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 112,
+                  child: AksharaKpiCard(
+                    style: AksharaKpiCardStyle.filled,
+                    value: '${summary.classesMarked}/${summary.classesTotal}',
+                    subtitle: narrow ? 'Classes' : 'Classes marked',
+                    accent: KpiAccent.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s3),
+              Expanded(
+                child: SizedBox(
+                  height: 112,
+                  child: AksharaKpiCard(
+                    style: AksharaKpiCardStyle.filled,
+                    value:
+                        '${summary.studentsPresent}/${summary.studentsTotal}',
+                    subtitle: narrow ? 'Present' : 'Students present',
+                    accent: KpiAccent.success,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s3),
+              Expanded(
+                child: SizedBox(
+                  height: 112,
+                  child: AksharaKpiCard(
+                    style: AksharaKpiCardStyle.filled,
+                    value: '$presentRate%',
+                    subtitle: narrow ? 'Rate' : 'Present rate',
+                    accent: KpiAccent.neutral,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

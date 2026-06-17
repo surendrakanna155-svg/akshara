@@ -71,7 +71,11 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
   /// AI-native dashboard watermark opacity (3%–8%).
   final double dashboardWatermarkOpacity;
 
-  factory AksharaThemeExtension.fromTokens(AksharaColorTokens tokens) {
+  factory AksharaThemeExtension.fromTokens(
+    AksharaColorTokens tokens, {
+    Brightness brightness = Brightness.light,
+  }) {
+    final isDark = brightness == Brightness.dark;
     return AksharaThemeExtension(
       success: tokens.success,
       onSuccess: tokens.onPrimary,
@@ -96,9 +100,9 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
       bottomNavHeight: AksharaSpacing.bottomNavHeight,
       focusRingWidth: 2,
       focusRingGap: 2,
-      glassOpacity: 0.72,
-      glassBorderOpacity: 0.12,
-      dashboardWatermarkOpacity: 0.05,
+      glassOpacity: isDark ? 0.60 : 0.82,
+      glassBorderOpacity: isDark ? 0.08 : 0.12,
+      dashboardWatermarkOpacity: isDark ? 0.06 : 0.04,
     );
   }
 

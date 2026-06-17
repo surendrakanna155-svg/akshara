@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'student_dashboard_provider.dart';
@@ -66,12 +69,13 @@ class StudentDashboardScreen extends ConsumerWidget {
             final width = constraints.maxWidth;
             final isTablet = MobileDashboardLayout.isTablet(width);
 
-            return Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: MobileDashboardLayout.contentConstraints(width),
-                child: SingleChildScrollView(
-                  padding: MobileDashboardLayout.screenPadding(width),
+            return AksharaDashboardCanvas(
+              palette: AksharaMeshPalette.student,
+              watermark: AksharaWatermarkMotif.sparkles,
+              child: SingleChildScrollView(
+                padding: MobileDashboardLayout.screenPadding(width),
+                child: ConstrainedBox(
+                  constraints: MobileDashboardLayout.contentConstraints(width),
                   child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [

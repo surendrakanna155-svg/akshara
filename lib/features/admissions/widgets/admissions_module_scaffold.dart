@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
+import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_shell.dart';
@@ -40,14 +43,18 @@ class AdmissionsModuleScaffold extends StatelessWidget {
       filterTrailing: filterTrailing,
       onMenuTap: adminShellMenuTap(context),
       scrollableBody: scrollableBody,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AksharaSpacing.s4),
-          AdmissionsSubNav(current: screen),
-          const SizedBox(height: AksharaSpacing.s4),
-          if (scrollableBody) body else Expanded(child: body),
-        ],
+      body: AksharaDashboardCanvas(
+        palette: AksharaMeshPalette.neutral,
+        watermark: AksharaWatermarkMotif.graduationCap,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: AksharaSpacing.s4),
+            AdmissionsSubNav(current: screen),
+            const SizedBox(height: AksharaSpacing.s4),
+            if (scrollableBody) body else Expanded(child: body),
+          ],
+        ),
       ),
     );
   }

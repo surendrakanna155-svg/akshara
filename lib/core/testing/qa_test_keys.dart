@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 abstract final class QaTestKeys {
   static const splash = ValueKey<String>('qa_splash_screen');
   static const qaLoginScreen = ValueKey<String>('qa_login_screen');
+  static const qaPersonaSwitcherBar = ValueKey<String>('qa_persona_switcher_bar');
   static const loginPhoneField = ValueKey<String>('login_phone_field');
   static const loginContinueButton = ValueKey<String>('login_continue_button');
   static const otpField = ValueKey<String>('otp_verification_field');

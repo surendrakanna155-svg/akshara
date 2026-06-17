@@ -18,7 +18,7 @@ class FinanceCollectionTrendChart extends StatelessWidget {
   });
 
   /// Total chart card footprint; drawable bar area is reduced for title and legend.
-  static const double _cardChrome = 116;
+  static const double _cardChrome = 136;
 
   final String title;
   final List<CollectionTrendPoint> points;

@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
+import '../../../shared/widgets/akshara_dashboard_canvas.dart';
+import '../../../shared/widgets/akshara_dashboard_watermark.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/mesh_background.dart';
 import '../../notifications/notifications_provider.dart';
 import '../parent_active_child_provider.dart';
 import '../widgets/parent_child_switcher_sheet.dart';
@@ -60,12 +63,13 @@ class ParentDashboardScreen extends ConsumerWidget {
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            return Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: MobileDashboardLayout.contentConstraints(width),
-                child: SingleChildScrollView(
-                  padding: MobileDashboardLayout.screenPadding(width),
+            return AksharaDashboardCanvas(
+              palette: AksharaMeshPalette.parent,
+              watermark: AksharaWatermarkMotif.graduationCap,
+              child: SingleChildScrollView(
+                padding: MobileDashboardLayout.screenPadding(width),
+                child: ConstrainedBox(
+                  constraints: MobileDashboardLayout.contentConstraints(width),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -194,38 +198,53 @@ class _ChildSummaryKpiRow extends StatelessWidget {
         .length
         .toString();
 
-    return Row(
-      children: [
-        Expanded(
-          child: AksharaKpiCard(
-            value: truncateStressLabel(attendance ?? '—'),
-            subtitle: 'Attendance',
-            accent: KpiAccent.success,
-            icon: Icons.event_available_outlined,
-            style: AksharaKpiCardStyle.filled,
-          ),
-        ),
-        const SizedBox(width: AksharaSpacing.s3),
-        Expanded(
-          child: AksharaKpiCard(
-            value: homeworkCount,
-            subtitle: 'Homework pending',
-            accent: KpiAccent.warning,
-            icon: Icons.assignment_outlined,
-            style: AksharaKpiCardStyle.filled,
-          ),
-        ),
-        const SizedBox(width: AksharaSpacing.s3),
-        Expanded(
-          child: AksharaKpiCard(
-            value: truncateStressLabel(fees ?? '—'),
-            subtitle: 'Fees due',
-            accent: KpiAccent.error,
-            icon: Icons.payments_outlined,
-            style: AksharaKpiCardStyle.filled,
-          ),
-        ),
-      ],
+    return Builder(
+      builder: (context) {
+        final narrow = MediaQuery.sizeOf(context).width < 360;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 112,
+                child: AksharaKpiCard(
+                  value: truncateStressLabel(attendance ?? '—'),
+                  subtitle: 'Attendance',
+                  accent: KpiAccent.success,
+                  icon: Icons.event_available_outlined,
+                  style: AksharaKpiCardStyle.filled,
+                ),
+              ),
+            ),
+            const SizedBox(width: AksharaSpacing.s3),
+            Expanded(
+              child: SizedBox(
+                height: 112,
+                child: AksharaKpiCard(
+                  value: homeworkCount,
+                  subtitle: narrow ? 'Homework' : 'Homework pending',
+                  accent: KpiAccent.warning,
+                  icon: Icons.assignment_outlined,
+                  style: AksharaKpiCardStyle.filled,
+                ),
+              ),
+            ),
+            const SizedBox(width: AksharaSpacing.s3),
+            Expanded(
+              child: SizedBox(
+                height: 112,
+                child: AksharaKpiCard(
+                  value: truncateStressLabel(fees ?? '—'),
+                  subtitle: narrow ? 'Fees' : 'Fees due',
+                  accent: KpiAccent.error,
+                  icon: Icons.payments_outlined,
+                  style: AksharaKpiCardStyle.filled,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
