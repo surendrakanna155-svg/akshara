@@ -6,18 +6,18 @@ Permission approvalPermissionForType(ApprovalRequestType type) =>
     switch (type) {
       ApprovalRequestType.admission => Permission.approveAdmissions,
       ApprovalRequestType.refund => Permission.approveRefunds,
-      ApprovalRequestType.feeConcession ||
-      ApprovalRequestType.feeStructure ||
+      ApprovalRequestType.feeConcession => Permission.approveFeeConcession,
+      ApprovalRequestType.feeStructure => Permission.approveFeeStructure,
       ApprovalRequestType.budget ||
       ApprovalRequestType.expense ||
       ApprovalRequestType.payroll ||
       ApprovalRequestType.vendor ||
       ApprovalRequestType.marketing =>
         Permission.manageFinance,
-      ApprovalRequestType.inventoryPo => Permission.manageInventory,
+      ApprovalRequestType.inventoryPo => Permission.approvePurchaseOrder,
       ApprovalRequestType.examResults => Permission.approveExamResults,
-      ApprovalRequestType.attendanceCorrection ||
-      ApprovalRequestType.studentLeave ||
-      ApprovalRequestType.staffLeave =>
-        Permission.manageManagement,
+      ApprovalRequestType.attendanceCorrection =>
+        Permission.approveAttendanceCorrection,
+      ApprovalRequestType.studentLeave => Permission.approveStudentLeave,
+      ApprovalRequestType.staffLeave => Permission.approveStaffLeave,
     };
