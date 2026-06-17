@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/finance/finance_approval_governance_store.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
@@ -347,6 +348,9 @@ void main() {
       final pending = refunds.items.firstWhere(
         (refund) => refund.status == RefundStatus.pending,
       );
+      FinanceApprovalGovernanceStore.instance
+        ..reset()
+        ..approvedRefundIds.add(pending.id);
       final processed = RefundRequest(
         id: pending.id,
         studentName: pending.studentName,

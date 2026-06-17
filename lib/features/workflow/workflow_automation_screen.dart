@@ -7,6 +7,7 @@ import '../../core/workflow/workflow_models.dart';
 import '../../shared/widgets/widgets.dart';
 import '../management/management_models.dart';
 import '../management/widgets/management_module_scaffold.dart';
+import '../management/approval/approval_center_provider.dart';
 import 'workflow_automation_mutations_provider.dart';
 import 'workflow_automation_providers.dart';
 
@@ -53,6 +54,7 @@ class _WorkflowAutomationScreenState extends ConsumerState<WorkflowAutomationScr
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
+          _StaleApprovalInsightBanner(),
           TabBar(
             controller: _tabs,
             tabs: const <Tab>[
@@ -226,6 +228,27 @@ class _ScheduleTab extends StatelessWidget {
                 ),
         ),
       ],
+    );
+  }
+}
+
+class _StaleApprovalInsightBanner extends ConsumerWidget {
+  const _StaleApprovalInsightBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final staleCount = ref.watch(approvalCenterStalePendingCountProvider);
+    if (staleCount <= 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: MaterialBanner(
+        content: Text(
+          '$staleCount approval${staleCount == 1 ? '' : 's'} pending for more than 48 hours. '
+          'Review in Approval Center.',
+        ),
+        leading: const Icon(Icons.schedule_outlined),
+        actions: const <Widget>[SizedBox.shrink()],
+      ),
     );
   }
 }

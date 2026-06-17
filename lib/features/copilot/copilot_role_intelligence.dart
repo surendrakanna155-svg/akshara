@@ -141,7 +141,8 @@ CopilotPersonaRole copilotPersonaForErpRole(ErpRole role) => switch (role) {
       ErpRole.transportManager ||
       ErpRole.hostelManager ||
       ErpRole.librarian ||
-      ErpRole.inventoryManager =>
+      ErpRole.inventoryManager ||
+      ErpRole.storekeeper =>
         CopilotPersonaRole.hr,
     };
 

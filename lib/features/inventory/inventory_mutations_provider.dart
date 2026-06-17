@@ -2,12 +2,17 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/approvals/adapters/inventory_po_approval_adapter.dart';
+import '../../core/inventory/inventory_po_governance_store.dart';
+import '../../core/config/inventory_po_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
+import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../features/auth/auth_provider.dart';
 import '../finance/inventory_finance/inventory_finance_models.dart';
 import '../finance/inventory_finance/inventory_finance_requests.dart';
 import '../finance/reconciliation/inventory_finance_mutations_provider.dart';
@@ -17,6 +22,21 @@ import 'inventory_requests.dart';
 import 'intelligence/inventory_intelligence_models.dart';
 import 'intelligence/inventory_intelligence_provider.dart';
 
+void assertCreateInventoryPo(Ref ref) {
+  final perms = ref.read(userPermissionsProvider);
+  if (perms == null ||
+      (!perms.has(Permission.createInventoryPo) &&
+          !perms.has(Permission.manageInventory))) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to create purchase orders.',
+        code: 'RBAC_CREATE_INVENTORY_PO',
+      ),
+    );
+  }
+}
+
 void assertManageInventory(Ref ref) {
   final perms = ref.read(userPermissionsProvider);
   if (perms == null || !perms.has(Permission.manageInventory)) {
@@ -25,6 +45,21 @@ void assertManageInventory(Ref ref) {
         type: ApiFailureType.forbidden,
         message: 'You do not have permission to manage inventory.',
         code: 'RBAC_MANAGE_INVENTORY',
+      ),
+    );
+  }
+}
+
+void assertApprovePurchaseOrder(Ref ref) {
+  final perms = ref.read(userPermissionsProvider);
+  if (perms == null ||
+      (!perms.has(Permission.approvePurchaseOrder) &&
+          !perms.has(Permission.manageInventory))) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to approve purchase orders.',
+        code: 'RBAC_APPROVE_PURCHASE_ORDER',
       ),
     );
   }
@@ -40,7 +75,7 @@ class CreateProcurementOrderNotifier
   ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      assertManageInventory(ref);
+      assertCreateInventoryPo(ref);
       try {
         final query = ref.read(repositoryQueryProvider);
         final financePo = await ref
@@ -76,6 +111,28 @@ class CreateProcurementOrderNotifier
                   ),
                 );
         ref.invalidate(inventoryProcurementFutureProvider);
+
+        if (ref.read(inventoryPoApprovalRequiredProvider)) {
+          final auth = ref.read(authProvider);
+          final adapter = InventoryPoApprovalAdapter();
+          await adapter.submitForApproval(
+            service: ref.read(approvalCenterServiceProvider),
+            query: query,
+            orderId: result.id,
+            requesterId: auth.claims?.userId ?? 'storekeeper_demo',
+            requesterName: auth.displayName ?? request.requestedBy,
+            title: 'Approve PO — ${result.poNumber ?? result.id}',
+            summary:
+                '${result.vendorName} · ${result.totalAmount} · ${result.items}',
+            payload: {
+              'poNumber': result.poNumber ?? result.id,
+              'vendorName': result.vendorName,
+              'totalAmount': result.totalAmount,
+              'requestedBy': request.requestedBy,
+            },
+          );
+        }
+
         return result;
       } catch (error) {
         throw ApiFailureException(apiFailureMapper.fromException(error));
@@ -111,7 +168,18 @@ class ApproveProcurementHandoffNotifier
   ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      assertManageInventory(ref);
+      assertApprovePurchaseOrder(ref);
+      if (ref.read(inventoryPoApprovalRequiredProvider) &&
+          !InventoryPoGovernanceStore.instance.isApproved(order.id)) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.forbidden,
+            message:
+                'Purchase order requires principal approval in the Approval Center.',
+            code: 'PO_APPROVAL_REQUIRED',
+          ),
+        );
+      }
       try {
         final query = ref.read(repositoryQueryProvider);
         final financeResult = await ref

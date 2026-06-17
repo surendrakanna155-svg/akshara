@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/approvals/adapters/approval_adapter_registry.dart';
+import '../../../core/approvals/adapters/inventory_po_approval_adapter.dart';
 import '../../../core/approvals/approval_audit.dart';
 import '../../../core/approvals/approval_category.dart';
 import '../../../core/approvals/approval_models.dart';
@@ -17,10 +18,16 @@ import '../../../core/repositories/mock/mock_approval_demo_seed.dart';
 import '../../../core/repositories/mock/mock_approval_repository.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../../../core/notifications/approval_notification_service.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../features/auth/auth_provider.dart';
+import '../../../features/finance/fee_structures/finance_fee_structures_provider.dart';
+import '../../../features/hr/hr_providers.dart';
+import '../../../features/inventory/inventory_providers.dart';
+import '../../../features/parent/attendance/parent_attendance_provider.dart';
 import '../../../features/parent/exams/parent_exams_provider.dart';
+import '../../../features/parent/leave/parent_leave_provider.dart';
 import '../../../features/student/exams/student_exams_provider.dart';
 import '../../../features/teacher/exams/teacher_exams_provider.dart';
 import '../management_models.dart';
@@ -85,6 +92,16 @@ final approvalCenterFilteredListProvider =
 final approvalCenterPendingCountProvider = Provider<int>((ref) {
   final items = ref.watch(approvalCenterListProvider);
   return items.where((a) => a.status == ApprovalStatus.pending).length;
+});
+
+/// Pending approvals older than 48 hours (M-D7 escalation insight).
+final approvalCenterStalePendingCountProvider = Provider<int>((ref) {
+  final items = ref.watch(approvalCenterListProvider);
+  final now = DateTime.now().toUtc();
+  return items.where((a) {
+    if (a.status != ApprovalStatus.pending) return false;
+    return now.difference(a.createdAt.toUtc()).inHours > 48;
+  }).length;
 });
 
 final approvalCenterSelectedProvider = Provider<ApprovalRequest?>((ref) {
@@ -201,6 +218,12 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
         approvalPermissionForType(request.type),
       );
       final (actorId, actorName) = _approvalActor(ref);
+      if (request.type == ApprovalRequestType.inventoryPo) {
+        InventoryPoApprovalAdapter.assertApproverNotCreator(
+          request: request,
+          actorId: actorId,
+        );
+      }
       final result = await ref.read(approvalCenterServiceProvider).approveRequest(
             query: ref.read(repositoryQueryProvider),
             request: ApproveApprovalRequest(
@@ -213,6 +236,7 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
       final query = ref.read(repositoryQueryProvider);
       ApprovalAdapterRegistry.dispatchApproved(query: query, request: result);
       _invalidateAfterApprovalSideEffects(ref, result.type);
+      _recordApprovalNotification(ref, result, approved: true, comment: comment);
       ref.invalidate(approvalCenterFutureProvider);
       ref.invalidate(approvalCenterAuditFutureProvider(request.id));
       return result;
@@ -246,6 +270,12 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
         request: result,
         comment: comment.trim(),
       );
+      _recordApprovalNotification(
+        ref,
+        result,
+        approved: false,
+        comment: comment.trim(),
+      );
       ref.invalidate(approvalCenterFutureProvider);
       ref.invalidate(approvalCenterAuditFutureProvider(request.id));
       return result;
@@ -260,10 +290,39 @@ final resolveApprovalRequestProvider =
 );
 
 void _invalidateAfterApprovalSideEffects(Ref ref, ApprovalRequestType type) {
-  if (type == ApprovalRequestType.examResults) {
-    ref.invalidate(studentExamsFutureProvider);
-    ref.invalidate(parentExamsFutureProvider);
-    ref.invalidate(teacherExamMarksFutureProvider);
-    ref.invalidate(teacherUpcomingExamsFutureProvider);
+  switch (type) {
+    case ApprovalRequestType.examResults:
+      ref.invalidate(studentExamsFutureProvider);
+      ref.invalidate(parentExamsFutureProvider);
+      ref.invalidate(teacherExamMarksFutureProvider);
+      ref.invalidate(teacherUpcomingExamsFutureProvider);
+    case ApprovalRequestType.studentLeave:
+      ref.invalidate(parentLeaveHistoryFutureProvider);
+    case ApprovalRequestType.staffLeave:
+      ref.invalidate(hrLeaveFutureProvider);
+    case ApprovalRequestType.attendanceCorrection:
+      ref.invalidate(parentAttendanceFutureProvider);
+    case ApprovalRequestType.feeStructure:
+    case ApprovalRequestType.feeConcession:
+    case ApprovalRequestType.refund:
+      ref.invalidate(financeFeeStructuresFutureProvider);
+    case ApprovalRequestType.inventoryPo:
+      ref.invalidate(inventoryProcurementFutureProvider);
+    default:
+      break;
   }
+}
+
+void _recordApprovalNotification(
+  Ref ref,
+  ApprovalRequest request, {
+  required bool approved,
+  String? comment,
+}) {
+  if (!ref.read(approvalNotificationsEnabledProvider)) return;
+  ref.read(approvalNotificationServiceProvider).recordDecision(
+        request: request,
+        approved: approved,
+        comment: comment,
+      );
 }

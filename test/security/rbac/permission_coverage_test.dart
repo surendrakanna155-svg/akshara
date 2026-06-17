@@ -28,7 +28,9 @@ void main() {
           entry.permission.name.startsWith('manage') ||
               entry.permission.name.startsWith('approve') ||
               entry.permission.name.startsWith('submit') ||
-              entry.permission.name.startsWith('publish'),
+              entry.permission.name.startsWith('publish') ||
+              entry.permission.name.startsWith('assign') ||
+              entry.permission.name.startsWith('create'),
           isTrue,
           reason: entry.mutationId,
         );

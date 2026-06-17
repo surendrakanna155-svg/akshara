@@ -1,0 +1,21 @@
+# Workflow — Finance concession approval (M-D5)
+# tags: workflow,finance,approval
+# Status: stub — full Patrol validation after emulator gate
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Finance Admin
+- tapOn: "Finance"
+- tapOn: "Discounts"
+- takeScreenshot: workflow_finance_concession_assign
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Principal
+- tapOn: "Approvals"
+- tapOn: "Finance"
+- tapOn: "Approve"
+- takeScreenshot: workflow_principal_concession_approve

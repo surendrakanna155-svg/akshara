@@ -1,0 +1,22 @@
+# Workflow — Inventory PO approval (M-D6)
+# tags: workflow,inventory,approval
+# Status: stub — full Patrol validation after emulator gate
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Storekeeper
+- tapOn: "Inventory"
+- tapOn: "Procurement"
+- tapOn: "Create PO"
+- takeScreenshot: workflow_storekeeper_po_create
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Principal
+- tapOn: "Approvals"
+- tapOn: "Inventory"
+- tapOn: "Approve"
+- takeScreenshot: workflow_principal_po_approve

@@ -1,0 +1,21 @@
+# Workflow — Parent leave approval (M-D4)
+# tags: workflow,leave,parent,approval
+# Status: stub — full Patrol validation after emulator gate
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Parent
+- tapOn: "Leave"
+- tapOn: "Submit"
+- takeScreenshot: workflow_parent_leave_submit
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Principal
+- tapOn: "Approvals"
+- tapOn: "Leave"
+- tapOn: "Approve"
+- takeScreenshot: workflow_principal_student_leave_approve

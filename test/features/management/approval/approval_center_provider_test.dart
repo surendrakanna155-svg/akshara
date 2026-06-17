@@ -305,7 +305,15 @@ void main() {
       );
       expect(
         approvalPermissionForType(ApprovalRequestType.inventoryPo),
-        Permission.manageInventory,
+        Permission.approvePurchaseOrder,
+      );
+      expect(
+        approvalPermissionForType(ApprovalRequestType.studentLeave),
+        Permission.approveStudentLeave,
+      );
+      expect(
+        approvalPermissionForType(ApprovalRequestType.feeStructure),
+        Permission.approveFeeStructure,
       );
     });
 

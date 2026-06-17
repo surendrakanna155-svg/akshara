@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/approvals/adapters/staff_leave_approval_adapter.dart';
 import '../../core/audit/audit_event.dart';
+import '../../core/config/leave_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/interfaces/communication_repository.dart';
@@ -10,6 +12,7 @@ import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../features/auth/auth_provider.dart';
 import 'hr_audit.dart';
 import 'hr_models.dart';
 import 'hr_providers.dart';
@@ -40,11 +43,45 @@ class CreateHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHr(ref);
+      if (!ref.read(rbacServiceProvider).hasPermission(Permission.submitStaffLeave)) {
+        throw ApiFailureException(
+          ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'You do not have permission to submit staff leave.',
+            code: 'RBAC_SUBMITSTAFFLEAVE',
+          ),
+        );
+      }
       try {
         final result = await ref.read(hrRepositoryProvider).createLeaveRequest(
               query: ref.read(repositoryQueryProvider),
               request: request,
             );
+
+        if (ref.read(leaveApprovalRequiredProvider)) {
+          final auth = ref.read(authProvider);
+          final adapter = StaffLeaveApprovalAdapter();
+          await adapter.submitForApproval(
+            service: ref.read(approvalCenterServiceProvider),
+            query: ref.read(repositoryQueryProvider),
+            leaveId: result.id,
+            requesterId: auth.claims?.userId ?? 'hr_demo',
+            requesterName: auth.displayName ?? 'HR Admin',
+            title: '${result.employeeName} — ${result.leaveType.name} leave',
+            summary:
+                '${result.fromDate} – ${result.toDate} · ${result.department.name}',
+            payload: {
+              'employeeId': result.employeeId,
+              'employeeName': result.employeeName,
+              'department': result.department.name,
+              'leaveType': result.leaveType.name,
+              'fromDate': result.fromDate,
+              'toDate': result.toDate,
+              'days': result.days,
+            },
+          );
+        }
+
         ref.invalidate(hrLeaveFutureProvider);
         return result;
       } catch (error) {

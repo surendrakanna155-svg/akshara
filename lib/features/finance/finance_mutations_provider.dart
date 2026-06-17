@@ -3,13 +3,20 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/finance/finance_approval_governance_store.dart';
+import '../../core/approvals/adapters/finance_approval_adapters.dart';
 import '../../core/audit/audit_event.dart';
+import '../../core/config/finance_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/academic/academic_catalog_mutation.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../core/repositories/repository_providers.dart';
+import '../../core/security/permissions.dart';
+import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../features/auth/auth_provider.dart';
 import 'collections/finance_collections_provider.dart';
 import 'discounts/finance_discounts_provider.dart';
 import 'finance_journey_context_provider.dart';
@@ -113,21 +120,56 @@ class CreateFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final catalog = ref.read(academicCatalogProvider);
-      final enriched = catalog == null
+      final approvalRequired = ref.read(financeApprovalRequiredProvider);
+      final enrichedBase = catalog == null
           ? request
           : enrichCreateFeeStructureRequest(request, catalog);
-      return _runMutation(
+      final enriched = approvalRequired
+          ? CreateFeeStructureRequest(
+              name: enrichedBase.name,
+              academicYear: enrichedBase.academicYear,
+              totalAnnual: enrichedBase.totalAnnual,
+              classRange: enrichedBase.classRange,
+              categories: enrichedBase.categories,
+              status: FeeStructureStatus.inactive,
+              installmentOptions: enrichedBase.installmentOptions,
+            )
+          : enrichedBase;
+      final structure = await _runMutation(
         ref,
         assertPermission: () => assertManageFinance(ref),
         auditAction: 'createFeeStructure',
         entityId: 'feeStructure',
-        entityIdForAudit: (structure) => structure.id,
+        entityIdForAudit: (item) => item.id,
         invalidateFeeStructures: true,
         action: () => ref.read(financeRepositoryProvider).createFeeStructure(
               query: ref.read(repositoryQueryProvider),
               request: enriched,
             ),
       );
+
+      if (structure != null && approvalRequired) {
+        final auth = ref.read(authProvider);
+        final adapter = FeeStructureApprovalAdapter();
+        await adapter.submitForApproval(
+          service: ref.read(approvalCenterServiceProvider),
+          query: ref.read(repositoryQueryProvider),
+          feeStructureId: structure.id,
+          requesterId: auth.claims?.userId ?? 'finance_demo',
+          requesterName: auth.displayName ?? 'Finance Admin',
+          title: 'Activate fee structure — ${structure.name}',
+          summary:
+              '${structure.academicYear} · ${structure.classRange} · ${structure.totalAnnual}',
+          payload: {
+            'name': structure.name,
+            'academicYear': structure.academicYear,
+            'classRange': structure.classRange,
+            'totalAnnual': structure.totalAnnual,
+          },
+        );
+      }
+
+      return structure;
     });
     return state.valueOrNull;
   }
@@ -472,18 +514,39 @@ class CreateRefundNotifier extends AsyncNotifier<RefundRequest?> {
   Future<RefundRequest?> execute(CreateRefundRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      return _runMutation(
+      final refund = await _runMutation(
         ref,
         assertPermission: () => assertManageFinance(ref),
         auditAction: 'createRefund',
         entityId: 'refund',
-        entityIdForAudit: (refund) => refund.id,
+        entityIdForAudit: (item) => item.id,
         invalidateRefunds: true,
         action: () => ref.read(financeRepositoryProvider).createRefund(
               query: ref.read(repositoryQueryProvider),
               request: request,
             ),
       );
+
+      if (refund != null && ref.read(financeApprovalRequiredProvider)) {
+        final auth = ref.read(authProvider);
+        final adapter = RefundApprovalAdapter();
+        await adapter.submitForApproval(
+          service: ref.read(approvalCenterServiceProvider),
+          query: ref.read(repositoryQueryProvider),
+          refundId: refund.id,
+          requesterId: auth.claims?.userId ?? 'finance_demo',
+          requesterName: auth.displayName ?? 'Finance Admin',
+          title: 'Refund approval — ${refund.studentName}',
+          summary: '${refund.amount} · ${refund.reason}',
+          payload: {
+            'studentName': refund.studentName,
+            'amount': refund.amount,
+            'reason': refund.reason,
+          },
+        );
+      }
+
+      return refund;
     });
     return state.valueOrNull;
   }
@@ -504,6 +567,17 @@ class ApproveRefundNotifier extends AsyncNotifier<RefundRequest?> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      if (ref.read(financeApprovalRequiredProvider) &&
+          !FinanceApprovalGovernanceStore.instance.approvedRefundIds
+              .contains(refundId)) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'Refund requires principal approval in the Approval Center.',
+            code: 'REFUND_APPROVAL_REQUIRED',
+          ),
+        );
+      }
       return _runMutation(
         ref,
         assertPermission: () => assertApproveRefunds(ref),
@@ -793,4 +867,65 @@ class ExportReceiptPdfNotifier extends AsyncNotifier<Uint8List?> {
 final exportReceiptPdfProvider =
     AsyncNotifierProvider<ExportReceiptPdfNotifier, Uint8List?>(
   ExportReceiptPdfNotifier.new,
+);
+
+/// Assigns a fee concession / scholarship pending principal approval (M-D5).
+class AssignFeeConcessionNotifier extends AsyncNotifier<String?> {
+  @override
+  FutureOr<String?> build() => null;
+
+  Future<String?> execute({
+    required String studentName,
+    required String amount,
+    required String reason,
+    String feeAccountId = '',
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final perms = ref.read(userPermissionsProvider);
+      if (perms == null || !perms.has(Permission.assignScholarship)) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'You do not have permission to assign scholarships.',
+            code: 'RBAC_ASSIGN_SCHOLARSHIP',
+          ),
+        );
+      }
+
+      final concessionId =
+          'concession_${DateTime.now().millisecondsSinceEpoch}';
+      final approvalRequired = ref.read(financeApprovalRequiredProvider);
+
+      if (approvalRequired) {
+        final auth = ref.read(authProvider);
+        final adapter = FeeConcessionApprovalAdapter();
+        await adapter.submitForApproval(
+          service: ref.read(approvalCenterServiceProvider),
+          query: ref.read(repositoryQueryProvider),
+          concessionId: concessionId,
+          requesterId: auth.claims?.userId ?? 'finance_demo',
+          requesterName: auth.displayName ?? 'Finance Admin',
+          title: 'Fee concession — $studentName',
+          summary: '$amount · $reason',
+          payload: {
+            'studentName': studentName,
+            'amount': amount,
+            'reason': reason,
+            'feeAccountId': feeAccountId,
+          },
+        );
+      } else {
+        FinanceApprovalGovernanceStore.instance.applyConcession(concessionId);
+      }
+
+      return concessionId;
+    });
+    return state.valueOrNull;
+  }
+}
+
+final assignFeeConcessionProvider =
+    AsyncNotifierProvider<AssignFeeConcessionNotifier, String?>(
+  AssignFeeConcessionNotifier.new,
 );

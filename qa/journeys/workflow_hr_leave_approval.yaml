@@ -1,0 +1,21 @@
+# Workflow — HR staff leave approval (M-D4)
+# tags: workflow,leave,hr,approval
+# Status: stub — full Patrol validation after emulator gate
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: HR Admin
+- tapOn: "Leave"
+- tapOn: "Create"
+- takeScreenshot: workflow_hr_leave_create
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Principal
+- tapOn: "Approvals"
+- tapOn: "Leave"
+- tapOn: "Approve"
+- takeScreenshot: workflow_principal_staff_leave_approve

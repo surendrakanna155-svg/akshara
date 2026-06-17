@@ -169,6 +169,27 @@ enum Permission {
   approveExamResults,
   publishExamResults,
 
+  // Phase D M-D4 — Attendance & leave governance
+  markAttendance,
+  viewAttendance,
+  submitAttendanceCorrection,
+  approveAttendanceCorrection,
+  correctAttendance,
+  submitStudentLeave,
+  approveStudentLeave,
+  submitStaffLeave,
+  approveStaffLeave,
+
+  // Phase D M-D5 — Finance approval governance
+  assignScholarship,
+  approveFeeConcession,
+  approveFeeStructure,
+  submitFeeStructureForApproval,
+
+  // Phase D M-D6 — Inventory PO governance
+  createInventoryPo,
+  approvePurchaseOrder,
+
   // Phase 15 — Communication Analytics
   viewCommunicationAnalytics,
 

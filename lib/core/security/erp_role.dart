@@ -13,7 +13,8 @@ enum ErpRole {
   transportManager,
   hostelManager,
   librarian,
-  inventoryManager;
+  inventoryManager,
+  storekeeper;
 
   String get label => switch (this) {
         ErpRole.superAdmin => 'Super Admin',
@@ -30,6 +31,7 @@ enum ErpRole {
         ErpRole.hostelManager => 'Hostel Manager',
         ErpRole.librarian => 'Librarian',
         ErpRole.inventoryManager => 'Inventory Manager',
+        ErpRole.storekeeper => 'Storekeeper',
       };
 
   static ErpRole? fromName(String? value) {
@@ -53,5 +55,6 @@ enum ErpRole {
     ErpRole.hostelManager,
     ErpRole.librarian,
     ErpRole.inventoryManager,
+    ErpRole.storekeeper,
   ];
 }

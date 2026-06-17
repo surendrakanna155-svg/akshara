@@ -2,10 +2,15 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/approvals/adapters/student_leave_approval_adapter.dart';
+import '../../core/config/leave_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../core/security/permissions.dart';
+import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../features/auth/auth_provider.dart';
 import 'fees/fees_provider.dart';
 import 'leave/leave_models.dart';
 import 'leave/parent_leave_provider.dart';
@@ -67,17 +72,56 @@ class SubmitParentLeaveNotifier extends AsyncNotifier<LeaveRequest?> {
   Future<LeaveRequest?> execute(ParentLeaveSubmitRequest request) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      return _runMutation(
+      final rbac = ref.read(rbacServiceProvider);
+      if (!rbac.hasPermission(Permission.submitStudentLeave)) {
+        throw ApiFailureException(
+          ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'You do not have permission to submit student leave.',
+            code: 'RBAC_SUBMITSTUDENTLEAVE',
+          ),
+        );
+      }
+
+      final leave = await _runMutation(
         ref,
         auditAction: 'submitLeaveRequest',
         entityId: 'leave',
-        entityIdForAudit: (leave) => leave.id,
+        entityIdForAudit: (item) => item.id,
         invalidateLeaveHistory: true,
         action: () => ref.read(parentRepositoryProvider).submitLeaveRequest(
               query: ref.read(repositoryQueryProvider),
               request: request,
             ),
       );
+
+      if (leave != null && ref.read(leaveApprovalRequiredProvider)) {
+        final auth = ref.read(authProvider);
+        final claims = auth.claims;
+        final adapter = StudentLeaveApprovalAdapter();
+        await adapter.submitForApproval(
+          service: ref.read(approvalCenterServiceProvider),
+          query: ref.read(repositoryQueryProvider),
+          leaveId: leave.id,
+          requesterId: claims?.userId ?? 'parent_demo',
+          requesterName: auth.displayName ?? 'Parent',
+          title: '${leave.childName} — ${leave.type.label}',
+          summary:
+              '${leave.fromDateLabel} to ${leave.toDateLabel} · ${leave.childClass}',
+          payload: {
+            'childId': request.childId,
+            'childName': leave.childName,
+            'classLabel': leave.childClass,
+            'fromDate': leave.fromDateLabel,
+            'toDate': leave.toDateLabel,
+            'leaveType': leave.type.label,
+            'reason': leave.reason,
+            'hasAttachment': leave.hasAttachment,
+          },
+        );
+      }
+
+      return leave;
     });
     return state.valueOrNull;
   }

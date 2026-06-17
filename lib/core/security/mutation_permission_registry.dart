@@ -678,6 +678,51 @@ class MutationPermissionRegistry {
       permission: Permission.publishExamResults,
       kind: 'manage',
     ),
+    // Governance M-D4 — leave & attendance
+    MutationPermissionEntry(
+      moduleId: 'parent',
+      mutationId: 'submitStudentLeaveForApproval',
+      permission: Permission.submitStudentLeave,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'hr',
+      mutationId: 'submitStaffLeaveForApproval',
+      permission: Permission.submitStaffLeave,
+      kind: 'manage',
+    ),
+    // Governance M-D5 — finance approvals
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'createFeeStructure',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'assignFeeConcession',
+      permission: Permission.assignScholarship,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'finance',
+      mutationId: 'createRefund',
+      permission: Permission.manageFinance,
+      kind: 'manage',
+    ),
+    // Governance M-D6 — inventory PO
+    MutationPermissionEntry(
+      moduleId: 'inventory',
+      mutationId: 'createProcurementOrder',
+      permission: Permission.createInventoryPo,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory',
+      mutationId: 'approveProcurementOrder',
+      permission: Permission.approvePurchaseOrder,
+      kind: 'manage',
+    ),
   ];
 
   static List<MutationPermissionEntry> forModule(String moduleId) {

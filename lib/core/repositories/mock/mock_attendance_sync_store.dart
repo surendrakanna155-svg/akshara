@@ -11,6 +11,26 @@ class MockAttendanceSyncStore {
 
   bool get hasTeacherSubmission => lastSubmittedAt != null;
 
+  /// Applied when principal approves an attendance correction (M-D4).
+  int correctionDeltaPresent = 0;
+  String? lastCorrectionNote;
+  String? lastRejectedCorrectionNote;
+
+  void recordCorrectionApproved({
+    required int presentDelta,
+    required String note,
+  }) {
+    presentCount += presentDelta;
+    if (presentCount < 0) presentCount = 0;
+    correctionDeltaPresent = presentDelta;
+    lastCorrectionNote = note;
+    lastRejectedCorrectionNote = null;
+  }
+
+  void recordCorrectionRejected({required String comment}) {
+    lastRejectedCorrectionNote = comment;
+  }
+
   void recordTeacherSubmit({
     required int present,
     required int absent,
@@ -34,5 +54,8 @@ class MockAttendanceSyncStore {
     absentCount = 0;
     lateCount = 0;
     lastSubmittedAt = null;
+    correctionDeltaPresent = 0;
+    lastCorrectionNote = null;
+    lastRejectedCorrectionNote = null;
   }
 }
