@@ -71,6 +71,13 @@ final workflowApiEnabledProvider = Provider<bool>((ref) {
     defaultValue: false,
   );
 });
+final approvalApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'APPROVAL_API_ENABLED',
+    defaultValue: false,
+  );
+});
 final academicTimetableApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(

@@ -11,6 +11,7 @@ import 'api/continuity/hybrid_continuity_repository.dart';
 import 'interfaces/admissions_repository.dart';
 import 'interfaces/academic_operations_repository.dart';
 import 'interfaces/workflow_repository.dart';
+import 'interfaces/approval_repository.dart';
 import 'interfaces/finance_repository.dart';
 import 'interfaces/hostel_repository.dart';
 import 'interfaces/hr_repository.dart';
@@ -91,6 +92,9 @@ import 'mock/mock_alumni_repository.dart';
 import 'mock/mock_academic_operations_repository.dart';
 import 'mock/mock_continuity_repository.dart';
 import 'mock/mock_workflow_repository.dart';
+import 'mock/mock_approval_repository.dart';
+import 'api/approval/api_approval_repository.dart';
+import '../approvals/approval_center_service.dart';
 import 'mock/mock_finance_repository.dart';
 import 'mock/mock_hostel_repository.dart';
 import 'api/inventory_finance/hybrid_inventory_finance_repository.dart';
@@ -188,6 +192,17 @@ final workflowRepositoryProvider = Provider<WorkflowRepository>((ref) {
     );
   }
   return MockWorkflowRepository();
+});
+
+final approvalRepositoryProvider = Provider<ApprovalRepository>((ref) {
+  if (isModuleApiEnabled(ref, approvalApiEnabledProvider)) {
+    return ApiApprovalRepository();
+  }
+  return MockApprovalRepository();
+});
+
+final approvalCenterServiceProvider = Provider<ApprovalCenterService>((ref) {
+  return ApprovalCenterService(ref.read(approvalRepositoryProvider));
 });
 
 final managementRepositoryProvider = Provider<ManagementRepository>((ref) {
