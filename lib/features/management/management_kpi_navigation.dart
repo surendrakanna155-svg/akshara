@@ -13,7 +13,7 @@ String? defaultManagementKpiDrillRoute(String kpiId) => switch (kpiId) {
       'attendance' => RouteNames.studentSuccessIntelligence,
       'pass_rate' => RouteNames.examIntelligence,
       'at_risk' => RouteNames.examIntelligence,
-      'pending_approvals' => RouteNames.managementTasks,
+      'pending_approvals' => RouteNames.managementApprovals,
       _ => null,
     };
 

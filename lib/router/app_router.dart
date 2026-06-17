@@ -1529,6 +1529,13 @@ GoRouter createAppRouter({
                 ),
               ),
               GoRoute(
+                path: 'approvals',
+                name: 'managementApprovals',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: managementApprovalsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: 'workflow-automation',
                 name: 'managementWorkflowAutomation',
                 pageBuilder: (context, state) => NoTransitionPage(

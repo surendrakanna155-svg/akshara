@@ -507,6 +507,18 @@ abstract final class QaTestKeys {
   static const managementApprovalSuccessSnackbar =
       ValueKey<String>('management_approval_success_snackbar');
 
+  static const approvalCenterScreen =
+      ValueKey<String>('approval_center_screen');
+
+  static ValueKey<String> approvalApproveButton(String approvalId) =>
+      ValueKey<String>('approval_approve_$approvalId');
+
+  static ValueKey<String> approvalRejectButton(String approvalId) =>
+      ValueKey<String>('approval_reject_$approvalId');
+
+  static const approvalTypeFilterAcademic =
+      ValueKey<String>('approval_type_filter_academic');
+
   static const managementDashboardExportButton =
       ValueKey<String>('management_dashboard_export_button');
 

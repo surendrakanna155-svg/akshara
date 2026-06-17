@@ -10,6 +10,7 @@ import '../features/management/dashboard/management_dashboard_screen.dart';
 import '../features/management/finance/management_finance_screen.dart';
 import '../features/management/performance/management_performance_screen.dart';
 import '../features/management/settings/management_settings_screen.dart';
+import '../features/management/approval/principal_approval_center_screen.dart';
 import '../features/management/tasks/management_tasks_screen.dart';
 import '../features/workflow/workflow_automation_screen.dart';
 import 'route_names.dart';
@@ -82,6 +83,13 @@ Widget managementTasksRouteBuilder(
   GoRouterState state,
 ) {
   return const ManagementTasksScreen();
+}
+
+Widget managementApprovalsRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const PrincipalApprovalCenterScreen();
 }
 
 Widget managementSettingsRouteBuilder(

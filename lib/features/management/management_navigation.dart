@@ -44,6 +44,9 @@ List<AdminBreadcrumb> managementBreadcrumbs(ManagementScreen screen) {
 }
 
 ManagementScreen? managementScreenForLocation(String location) {
+  if (location == RouteNames.managementApprovals) {
+    return ManagementScreen.tasks;
+  }
   for (final screen in kManagementNavScreens) {
     if (location == screen.route) {
       return screen;

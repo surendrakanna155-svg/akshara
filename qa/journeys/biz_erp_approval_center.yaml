@@ -1,0 +1,21 @@
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      STAFF_PHONE: "9999999999"
+      ERP_ROLE: "Super Admin"
+- runFlow:
+    file: ../maestro/flows/_shared/erp_open_module.yaml
+    env:
+      MODULE_LABEL: Management
+- scrollUntilVisible:
+    element:
+      text: "Tasks"
+    direction: DOWN
+- tapOn: "Tasks"
+- assertVisible: "Approval queue"
+- tapOn:
+    id: "approval_type_filter_academic"
+- assertVisible: "Publish Class 8-A Mathematics results"
+- takeScreenshot: biz_approval_center

@@ -10,7 +10,7 @@ void navigateManagementInsightAction(
   ManagementScreen screen,
 ) {
   final route = switch (screen) {
-    ManagementScreen.dashboard => RouteNames.managementTasks,
+    ManagementScreen.dashboard => RouteNames.managementApprovals,
     ManagementScreen.analytics => RouteNames.studentSuccessIntelligence,
     ManagementScreen.admissions => RouteNames.managementAdmissions,
     ManagementScreen.finance => RouteNames.financeDefaulters,

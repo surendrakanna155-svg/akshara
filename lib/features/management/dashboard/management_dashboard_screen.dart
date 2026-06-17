@@ -222,7 +222,7 @@ class ManagementDashboardScreen extends ConsumerWidget {
             actionLabel: 'View approvals',
             icon: Icons.auto_awesome_outlined,
             semanticLabelPrefix: 'AI management insight',
-            onAction: () => context.go(RouteNames.managementTasks),
+            onAction: () => context.go(RouteNames.managementApprovals),
           ),
         ],
       ),
@@ -281,7 +281,7 @@ class _ApprovalQueuePreview extends StatelessWidget {
               for (final item in items)
                 DataRow(
                   onSelectChanged: (_) =>
-                      context.go(RouteNames.managementTasks),
+                      context.go(RouteNames.managementApprovals),
                   cells: [
                     DataCell(Text(item.title)),
                     DataCell(Text(item.requester)),
@@ -312,7 +312,7 @@ class _ApprovalQueueCard extends StatelessWidget {
       child: Card(
         elevation: 0,
         child: InkWell(
-          onTap: () => context.go(RouteNames.managementTasks),
+          onTap: () => context.go(RouteNames.managementApprovals),
           child: Padding(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             child: Column(

@@ -98,7 +98,7 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
               key: QaTestKeys.principalQuickAction('approvals'),
               icon: Icons.task_alt_outlined,
               label: 'Approvals',
-              onTap: () => context.go(RouteNames.managementTasks),
+              onTap: () => context.go(RouteNames.managementApprovals),
             ),
           ],
         ),
@@ -112,7 +112,7 @@ class ManagementPrincipalOverviewPanel extends StatelessWidget {
               child: AksharaWarningBanner(
                 message: alert,
                 actionLabel: 'Review',
-                onAction: () => context.go(RouteNames.managementTasks),
+                onAction: () => context.go(RouteNames.managementApprovals),
               ),
             ),
           ),
