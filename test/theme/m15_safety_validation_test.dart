@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('M15 Phase 13 — safety markers', () {
     test('design system reached final certification version', () {
-      expect(AksharaM15DesignSystem.version, '15.0.0');
+      expect(AksharaM15DesignSystem.version, '15.5.0');
       expect(AksharaM15DesignSystem.codename, isNotEmpty);
     });
 

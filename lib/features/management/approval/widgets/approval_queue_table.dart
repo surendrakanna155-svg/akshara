@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/approvals/approval_models.dart';
 import '../../../../core/approvals/approval_status.dart';
 import '../../../../core/testing/qa_test_keys.dart';
+import '../../../../core/approvals/approval_permissions.dart';
+import '../../../../shared/widgets/akshara_approve_action.dart';
 import '../../../../shared/widgets/akshara_status_chip.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -182,22 +184,28 @@ class _ApprovalActions extends ConsumerWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FilledButton(
-            key: QaTestKeys.approvalApproveButton(item.id),
-            onPressed: () => approveApprovalRequest(context, ref, item),
-            style: FilledButton.styleFrom(
-              visualDensity: VisualDensity.compact,
+          AksharaApproveAction(
+            permission: approvalPermissionForType(item.type),
+            child: FilledButton(
+              key: QaTestKeys.approvalApproveButton(item.id),
+              onPressed: () => approveApprovalRequest(context, ref, item),
+              style: FilledButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Text('Approve'),
             ),
-            child: const Text('Approve'),
           ),
           const SizedBox(width: AksharaSpacing.s2),
-          OutlinedButton(
-            key: QaTestKeys.approvalRejectButton(item.id),
-            onPressed: () => rejectApprovalRequest(context, ref, item),
-            style: OutlinedButton.styleFrom(
-              visualDensity: VisualDensity.compact,
+          AksharaApproveAction(
+            permission: approvalPermissionForType(item.type),
+            child: OutlinedButton(
+              key: QaTestKeys.approvalRejectButton(item.id),
+              onPressed: () => rejectApprovalRequest(context, ref, item),
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Text('Reject'),
             ),
-            child: const Text('Reject'),
           ),
         ],
       ),

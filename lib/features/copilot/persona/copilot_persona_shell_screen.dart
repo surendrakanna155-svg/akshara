@@ -197,17 +197,20 @@ class _CopilotPersonaShellScreenState
                 label: const Text('Open full ERP Copilot'),
               ),
             const SizedBox(height: AksharaSpacing.s4),
-            SwitchListTile.adaptive(
-              key: QaTestKeys.universalAiAssistantStreamingToggle,
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Streaming reply'),
-              subtitle: const Text('Show loading, then full streamed response'),
-              value: _useStreamingReply,
-              onChanged: (value) {
-                setState(() {
-                  _useStreamingReply = value;
-                });
-              },
+            Material(
+              color: Colors.transparent,
+              child: SwitchListTile.adaptive(
+                key: QaTestKeys.universalAiAssistantStreamingToggle,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Streaming reply'),
+                subtitle: const Text('Show loading, then full streamed response'),
+                value: _useStreamingReply,
+                onChanged: (value) {
+                  setState(() {
+                    _useStreamingReply = value;
+                  });
+                },
+              ),
             ),
             const SizedBox(height: AksharaSpacing.s2),
             const AksharaSectionHeader(title: 'Suggested prompts'),

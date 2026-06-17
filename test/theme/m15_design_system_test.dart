@@ -45,7 +45,7 @@ void main() {
       final ext = theme.extension<AksharaThemeExtension>()!;
       final text = theme.extension<AksharaTextStyles>()!;
 
-      expect(ext.glassOpacity, 0.72);
+      expect(ext.glassOpacity, 0.82);
       expect(ext.dashboardWatermarkOpacity, inInclusiveRange(0.03, 0.08));
       expect(text.kpiValue.fontSize, 32);
       expect(text.displayLarge.fontWeight, FontWeight.w600);
@@ -60,7 +60,7 @@ void main() {
     });
 
     test('M15 design system version is set', () {
-      expect(AksharaM15DesignSystem.version, '15.0.0');
+      expect(AksharaM15DesignSystem.version, '15.5.0');
     });
 
     test('AksharaAccessibility contrast helper is exported', () {

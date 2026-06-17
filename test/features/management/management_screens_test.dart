@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import '../../test_helpers.dart';
+import 'approval/approval_center_test_helpers.dart';
 
 void useViewport(WidgetTester tester, Size size) {
   tester.view.physicalSize = size;
@@ -120,7 +121,7 @@ void main() {
     });
 
     testWidgets('ManagementTasksScreen renders approval queue', (tester) async {
-      await pumpManagementScreen(tester, const ManagementTasksScreen());
+      await pumpApprovalCenter(tester);
 
       expect(find.text('Approval queue'), findsOneWidget);
       expect(find.text('Science lab upgrade — Q3 budget'), findsOneWidget);
@@ -157,9 +158,8 @@ void main() {
 
   group('Management screens — mobile', () {
     testWidgets('ManagementTasksScreen renders on mobile', (tester) async {
-      await pumpManagementScreen(
+      await pumpApprovalCenter(
         tester,
-        const ManagementTasksScreen(),
         viewport: const Size(390, 844),
       );
 

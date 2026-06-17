@@ -13,7 +13,7 @@ class ManagementKpiRow extends StatelessWidget {
     super.key,
     required this.kpis,
     this.desktopColumns = 4,
-    this.cardHeight = 140,
+    this.cardHeight = 172,
   });
 
   final List<ManagementKpi> kpis;

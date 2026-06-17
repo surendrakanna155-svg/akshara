@@ -1,7 +1,10 @@
+import 'package:akshara_erp/features/admin/admin_filter_bar.dart';
 import 'package:akshara_erp/core/approvals/approval_category.dart';
+import 'package:akshara_erp/core/approvals/approval_request_type.dart';
+import 'package:akshara_erp/core/config/environment.dart';
+import 'package:akshara_erp/core/config/environment_provider.dart';
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/management/approval/approval_center_provider.dart';
-import 'package:akshara_erp/features/management/approval/principal_approval_center_screen.dart';
 import 'package:akshara_erp/features/management/tasks/management_tasks_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -10,42 +13,64 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/auth_test_overrides.dart';
 import '../../../helpers/provider_test_overrides.dart';
+import 'package:go_router/go_router.dart';
+
 import '../../../test_helpers.dart';
-
-Future<void> pumpApprovalCenter(
-  WidgetTester tester, {
-  Size viewport = const Size(1440, 900),
-}) async {
-  tester.view.physicalSize = viewport;
-  tester.view.devicePixelRatio = 1.0;
-  addTearDown(() {
-    tester.view.resetPhysicalSize();
-    tester.view.resetDevicePixelRatio();
-  });
-
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: erpWidgetTestOverrides([
-        authStateOverride(erpWidgetTestStaffAuth()),
-      ]),
-      child: MaterialApp(
-        theme: AksharaAppTheme.light(),
-        home: const PrincipalApprovalCenterScreen(),
-      ),
-    ),
-  );
-  await settleRiverpodFutures(tester);
-  await tester.pumpAndSettle();
-}
+import 'approval_center_test_helpers.dart';
 
 void main() {
-  group('Principal Approval Center screen', () {
-    testWidgets('renders approval queue with demo data', (tester) async {
+  group('Principal Approval Center — widget certification', () {
+    testWidgets('approval queue loads with demo items', (tester) async {
       await pumpApprovalCenter(tester);
 
       expect(find.byKey(QaTestKeys.approvalCenterScreen), findsOneWidget);
       expect(find.text('Approval queue'), findsOneWidget);
       expect(find.text('Science lab upgrade — Q3 budget'), findsOneWidget);
+    });
+
+    testWidgets('desktop layout renders DataTable', (tester) async {
+      await pumpApprovalCenter(tester, viewport: const Size(1440, 900));
+
+      expect(find.byType(DataTable), findsOneWidget);
+      expect(find.text('Select a request to review details.'), findsOneWidget);
+    });
+
+    testWidgets('mobile layout renders cards without DataTable', (tester) async {
+      await pumpApprovalCenter(tester, viewport: const Size(390, 844));
+
+      expect(find.byType(DataTable), findsNothing);
+      expect(find.byType(Card), findsWidgets);
+      expect(find.text('Science lab upgrade — Q3 budget'), findsOneWidget);
+    });
+
+    testWidgets('status filter Pending hides approved items', (tester) async {
+      await pumpApprovalCenter(tester);
+
+      expect(find.text('Digital ads — Q3 enrollment'), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AdminFilterBar),
+          matching: find.text('Pending'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Digital ads — Q3 enrollment'), findsNothing);
+      expect(find.text('Science lab upgrade — Q3 budget'), findsOneWidget);
+    });
+
+    testWidgets('category filter Finance hides academic items', (tester) async {
+      await pumpApprovalCenter(tester);
+
+      await tester.tap(find.widgetWithText(FilterChip, 'Finance'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Science lab upgrade — Q3 budget'), findsOneWidget);
+      expect(
+        find.text('Publish Class 8-A Mathematics results'),
+        findsNothing,
+      );
     });
 
     testWidgets('academic filter shows exam results only', (tester) async {
@@ -58,13 +83,32 @@ void main() {
       expect(find.text('Science lab upgrade — Q3 budget'), findsNothing);
     });
 
-    testWidgets('approve button enabled for pending item', (tester) async {
+    testWidgets('detail panel shows request and audit history', (tester) async {
       await pumpApprovalCenter(tester);
 
-      expect(
-        find.byKey(QaTestKeys.approvalApproveButton('appr_000001')),
-        findsWidgets,
+      await tester.tap(find.byKey(QaTestKeys.approvalTypeFilterAcademic));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Publish Class 8-A Mathematics results'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Approval history'), findsOneWidget);
+      expect(find.textContaining('Submitted'), findsWidgets);
+      expect(find.textContaining('Half-yearly exam'), findsOneWidget);
+    });
+
+    testWidgets('RBAC hides approve actions for teacher role', (tester) async {
+      await pumpApprovalCenter(
+        tester,
+        extraOverrides: [
+          authStateOverride(teacherAuthWithoutManagementApprove()),
+        ],
       );
+
+      await tester.tap(find.byKey(QaTestKeys.approvalTypeFilterAcademic));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Approve'), findsNothing);
+      expect(find.text('Reject'), findsNothing);
     });
 
     testWidgets('ManagementTasksScreen delegates to approval center',
@@ -74,11 +118,21 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: erpWidgetTestOverrides([
+            environmentProvider.overrideWith(
+              (ref) => Environment.development.copyWith(enableQaLogin: true),
+            ),
             authStateOverride(erpWidgetTestStaffAuth()),
           ]),
-          child: MaterialApp(
+          child: MaterialApp.router(
             theme: AksharaAppTheme.light(),
-            home: const ManagementTasksScreen(),
+            routerConfig: GoRouter(
+              routes: [
+                GoRoute(
+                  path: '/',
+                  builder: (_, __) => const ManagementTasksScreen(),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -87,15 +141,18 @@ void main() {
 
       expect(find.byKey(QaTestKeys.approvalCenterScreen), findsOneWidget);
     });
+  });
 
-    testWidgets('renders on mobile viewport', (tester) async {
-      await pumpApprovalCenter(
-        tester,
-        viewport: const Size(390, 844),
+  group('ApprovalCategory unit', () {
+    test('matchesType covers all filter buckets', () {
+      expect(
+        ApprovalCategory.academic.matchesType(ApprovalRequestType.examResults),
+        isTrue,
       );
-
-      expect(find.text('Pending'), findsWidgets);
-      expect(find.text('Science lab upgrade — Q3 budget'), findsOneWidget);
+      expect(
+        ApprovalCategory.inventory.matchesType(ApprovalRequestType.budget),
+        isFalse,
+      );
     });
   });
 }

@@ -1,3 +1,4 @@
+import '../../approvals/approval_center_service.dart';
 import '../../approvals/approval_models.dart';
 import '../../approvals/approval_request_type.dart';
 import '../../approvals/approval_requests.dart';
@@ -9,7 +10,8 @@ Future<void> seedMockApprovalDemoIfEmpty({
   required MockApprovalRepository repository,
   required RepositoryQuery query,
 }) async {
-  final pending = await repository.listPending(query: query);
+  final service = ApprovalCenterService(repository);
+  final pending = await service.listPending(query: query);
   if (pending.isNotEmpty) return;
 
   final seeds = <SubmitApprovalRequest>[
@@ -146,17 +148,16 @@ Future<void> seedMockApprovalDemoIfEmpty({
   ];
 
   for (final seed in seeds) {
-    await repository.submit(query: query, request: seed);
+    await service.submitApprovalRequest(query: query, request: seed);
   }
 
-  // Mark historical items as decided for filter demos.
-  final all = await repository.listByFilter(
+  final all = await service.listByFilter(
     query: query,
     filter: const ApprovalListFilter(),
   );
   for (final item in all) {
     if (item.title.startsWith('Digital ads')) {
-      await repository.approve(
+      await service.approveRequest(
         query: query,
         request: ApproveApprovalRequest(
           approvalId: item.id,
@@ -166,7 +167,7 @@ Future<void> seedMockApprovalDemoIfEmpty({
         ),
       );
     } else if (item.title.startsWith('Sports day')) {
-      await repository.reject(
+      await service.rejectRequest(
         query: query,
         request: RejectApprovalRequest(
           approvalId: item.id,

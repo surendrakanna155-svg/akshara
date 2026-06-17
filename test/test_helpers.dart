@@ -1,3 +1,5 @@
+import 'package:akshara_erp/core/config/environment.dart';
+import 'package:akshara_erp/core/config/environment_provider.dart';
 import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/auth/splash_screen.dart';
@@ -36,10 +38,15 @@ Future<void> pumpAksharaRouter(
   SharedPreferences.setMockInitialValues({});
   final resolvedPrefs = prefs ?? await SharedPreferences.getInstance();
 
+  await initProviderTestPrefs();
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         sharedPreferencesProvider.overrideWithValue(resolvedPrefs),
+        environmentProvider.overrideWith(
+          (ref) => Environment.development.copyWith(enableQaLogin: true),
+        ),
         if (authOverride != null) authStateOverride(authOverride),
         ...providerTestOverrides(),
       ],
