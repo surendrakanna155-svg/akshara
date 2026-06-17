@@ -1,6 +1,7 @@
 import '../approvals/approval_audit.dart';
 import '../approvals/approval_exceptions.dart';
 import '../approvals/approval_models.dart';
+import '../approvals/approval_request_type.dart';
 import '../approvals/approval_requests.dart';
 import '../repositories/interfaces/approval_repository.dart';
 import '../repositories/repository_query.dart';
@@ -38,6 +39,20 @@ class ApprovalCenterService {
     return _repository.listAuditEntries(
       query: query,
       approvalRequestId: approvalRequestId,
+    );
+  }
+
+  Future<ApprovalRequest?> findPendingByEntity({
+    required RepositoryQuery query,
+    required ApprovalRequestType type,
+    required String entityType,
+    required String entityId,
+  }) {
+    return _repository.findPendingByEntity(
+      query: query,
+      type: type,
+      entityType: entityType,
+      entityId: entityId,
     );
   }
 

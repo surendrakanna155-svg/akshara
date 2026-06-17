@@ -163,6 +163,12 @@ enum Permission {
   viewStudentSuccessIntelligence,
   viewExamIntelligence,
 
+  // Phase D M-D3 — Exam results governance
+  manageExamMarks,
+  submitExamResults,
+  approveExamResults,
+  publishExamResults,
+
   // Phase 15 — Communication Analytics
   viewCommunicationAnalytics,
 

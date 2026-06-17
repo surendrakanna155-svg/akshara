@@ -4,6 +4,7 @@ import 'package:akshara_erp/core/approvals/approval_permissions.dart';
 import 'package:akshara_erp/core/approvals/approval_request_type.dart';
 import 'package:akshara_erp/core/approvals/approval_status.dart';
 import 'package:akshara_erp/core/errors/api_failure.dart';
+import 'package:akshara_erp/core/exams/exam_administration_store.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_approval_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
@@ -300,12 +301,96 @@ void main() {
       );
       expect(
         approvalPermissionForType(ApprovalRequestType.examResults),
-        Permission.manageManagement,
+        Permission.approveExamResults,
       );
       expect(
         approvalPermissionForType(ApprovalRequestType.inventoryPo),
         Permission.manageInventory,
       );
+    });
+
+    group('M-D3 exam adapter side effects', () {
+      setUp(() {
+        ExamAdministrationStore.instance.reset();
+      });
+
+      test('approve examResults publishes exam session in store', () async {
+        final repo = MockApprovalRepository();
+        final sideEffectContainer = createProviderTestContainer(
+          overrides: [
+            approvalRepositoryProvider.overrideWithValue(repo),
+            authStateOverride(
+              AuthState(
+                status: AuthStatus.authenticated,
+                phoneNumber: '9999999999',
+                displayName: 'Principal Test',
+                role: UserRole.staff,
+                claims: AuthClaims.demoForRole(erpRole: ErpRole.principal),
+              ),
+            ),
+          ],
+        );
+        addTearDown(sideEffectContainer.dispose);
+
+        await sideEffectContainer.read(approvalCenterFutureProvider.future);
+        final pending = sideEffectContainer
+            .read(approvalCenterListProvider)
+            .firstWhere((a) => a.type == ApprovalRequestType.examResults);
+
+        expect(
+          ExamAdministrationStore.instance.examById('exam_math_8a')!.phase,
+          isNot(ExamLifecyclePhase.published),
+        );
+
+        final result = await sideEffectContainer
+            .read(resolveApprovalRequestProvider.notifier)
+            .approve(request: pending);
+
+        expect(result, isNotNull);
+        expect(
+          ExamAdministrationStore.instance.examById('exam_math_8a')!.phase,
+          ExamLifecyclePhase.published,
+        );
+        expect(ExamAdministrationStore.instance.hasPublishedResults, isTrue);
+      });
+
+      test('reject examResults stores principal comment without publishing', () async {
+        final repo = MockApprovalRepository();
+        final sideEffectContainer = createProviderTestContainer(
+          overrides: [
+            approvalRepositoryProvider.overrideWithValue(repo),
+            authStateOverride(
+              AuthState(
+                status: AuthStatus.authenticated,
+                phoneNumber: '9999999999',
+                displayName: 'Principal Test',
+                role: UserRole.staff,
+                claims: AuthClaims.demoForRole(erpRole: ErpRole.principal),
+              ),
+            ),
+          ],
+        );
+        addTearDown(sideEffectContainer.dispose);
+
+        await sideEffectContainer.read(approvalCenterFutureProvider.future);
+        final pending = sideEffectContainer
+            .read(approvalCenterListProvider)
+            .firstWhere((a) => a.type == ApprovalRequestType.examResults);
+
+        final result = await sideEffectContainer
+            .read(resolveApprovalRequestProvider.notifier)
+            .reject(
+              request: pending,
+              comment: 'Verify absentee roll before resubmitting.',
+            );
+
+        expect(result, isNotNull);
+        expect(ExamAdministrationStore.instance.hasPublishedResults, isFalse);
+        expect(
+          ExamAdministrationStore.instance.rejectionCommentFor('exam_math_8a'),
+          'Verify absentee roll before resubmitting.',
+        );
+      });
     });
   });
 }

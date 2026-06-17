@@ -190,6 +190,12 @@ class MutationPermissionRegistry {
     ),
     MutationPermissionEntry(
       moduleId: 'management',
+      mutationId: 'resolveExamResultsApproval',
+      permission: Permission.approveExamResults,
+      kind: 'approve',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'management',
       mutationId: 'updateManagementSettings',
       permission: Permission.manageManagement,
       kind: 'manage',
@@ -657,6 +663,19 @@ class MutationPermissionRegistry {
       moduleId: 'transport',
       mutationId: 'removeStudentTransport',
       permission: Permission.manageTransport,
+      kind: 'manage',
+    ),
+    // Teacher exams (M-D3)
+    MutationPermissionEntry(
+      moduleId: 'teacher',
+      mutationId: 'submitExamResultsForApproval',
+      permission: Permission.submitExamResults,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'teacher',
+      mutationId: 'publishExamResults',
+      permission: Permission.publishExamResults,
       kind: 'manage',
     ),
   ];

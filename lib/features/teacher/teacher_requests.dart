@@ -119,6 +119,28 @@ class TeacherExamPublishResult {
   final String publishedAtLabel;
 }
 
+/// Domain request to submit exam results for principal approval (M-D3).
+class TeacherExamSubmitApprovalRequest {
+  const TeacherExamSubmitApprovalRequest({required this.examId});
+
+  final String examId;
+}
+
+/// Result of submitting exam results for approval.
+class TeacherExamSubmitApprovalResult {
+  const TeacherExamSubmitApprovalResult({
+    required this.examId,
+    required this.approvalId,
+    required this.title,
+    required this.statusLabel,
+  });
+
+  final String examId;
+  final String approvalId;
+  final String title;
+  final String statusLabel;
+}
+
 /// Domain request to send structured parent communication.
 class TeacherParentCommunicationSendRequest {
   const TeacherParentCommunicationSendRequest({

@@ -26,7 +26,9 @@ void main() {
       for (final entry in MutationPermissionRegistry.entries) {
         expect(
           entry.permission.name.startsWith('manage') ||
-              entry.permission.name.startsWith('approve'),
+              entry.permission.name.startsWith('approve') ||
+              entry.permission.name.startsWith('submit') ||
+              entry.permission.name.startsWith('publish'),
           isTrue,
           reason: entry.mutationId,
         );

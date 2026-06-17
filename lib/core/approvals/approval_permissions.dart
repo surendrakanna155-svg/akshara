@@ -15,7 +15,7 @@ Permission approvalPermissionForType(ApprovalRequestType type) =>
       ApprovalRequestType.marketing =>
         Permission.manageFinance,
       ApprovalRequestType.inventoryPo => Permission.manageInventory,
-      ApprovalRequestType.examResults ||
+      ApprovalRequestType.examResults => Permission.approveExamResults,
       ApprovalRequestType.attendanceCorrection ||
       ApprovalRequestType.studentLeave ||
       ApprovalRequestType.staffLeave =>

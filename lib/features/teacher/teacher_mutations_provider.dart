@@ -2,10 +2,15 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/approvals/adapters/exam_results_approval_adapter.dart';
+import '../../core/config/exam_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../core/security/permissions.dart';
+import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../features/auth/auth_provider.dart';
 import '../../features/parent/exams/parent_exams_provider.dart';
 import '../../features/student/exams/student_exams_provider.dart';
 import 'attendance/teacher_attendance_provider.dart';
@@ -208,6 +213,26 @@ class PublishTeacherExamResultsNotifier
   ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      if (ref.read(examApprovalRequiredProvider)) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.forbidden,
+            message:
+                'Direct publish is disabled. Submit results for principal approval.',
+            code: 'EXAM_APPROVAL_REQUIRED',
+          ),
+        );
+      }
+      final rbac = ref.read(rbacServiceProvider);
+      if (!rbac.hasPermission(Permission.publishExamResults)) {
+        throw ApiFailureException(
+          ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'You do not have permission to publish exam results.',
+            code: 'RBAC_PUBLISHEXAMRESULTS',
+          ),
+        );
+      }
       final result = await _runMutation(
         ref,
         auditAction: 'publishExamResults',
@@ -230,6 +255,67 @@ final publishTeacherExamResultsProvider =
     AsyncNotifierProvider<PublishTeacherExamResultsNotifier,
         TeacherExamPublishResult?>(
   PublishTeacherExamResultsNotifier.new,
+);
+
+class SubmitTeacherExamResultsForApprovalNotifier
+    extends AsyncNotifier<TeacherExamSubmitApprovalResult?> {
+  @override
+  FutureOr<TeacherExamSubmitApprovalResult?> build() => null;
+
+  Future<TeacherExamSubmitApprovalResult?> execute(
+    TeacherExamSubmitApprovalRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final rbac = ref.read(rbacServiceProvider);
+      if (!rbac.hasPermission(Permission.submitExamResults)) {
+        throw ApiFailureException(
+          ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'You do not have permission to submit exam results.',
+            code: 'RBAC_SUBMITEXAMRESULTS',
+          ),
+        );
+      }
+
+      final auth = ref.read(authProvider);
+      final claims = auth.claims;
+      final requesterId = claims?.userId ?? 'teacher_demo';
+      final requesterName = auth.displayName ?? 'Teacher';
+
+      final adapter = ExamResultsApprovalAdapter();
+      final approval = await adapter.submitForApproval(
+        service: ref.read(approvalCenterServiceProvider),
+        query: ref.read(repositoryQueryProvider),
+        examId: request.examId,
+        requesterId: requesterId,
+        requesterName: requesterName,
+      );
+
+      await recordTeacherAudit(
+        ref,
+        action: 'submitExamResultsForApproval',
+        entityId: request.examId,
+        metadata: {'approvalId': approval.id},
+      );
+      ref.invalidate(teacherExamMarksFutureProvider);
+      ref.invalidate(teacherUpcomingExamsFutureProvider);
+
+      return TeacherExamSubmitApprovalResult(
+        examId: request.examId,
+        approvalId: approval.id,
+        title: approval.title,
+        statusLabel: approval.status.name,
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final submitTeacherExamResultsForApprovalProvider =
+    AsyncNotifierProvider<SubmitTeacherExamResultsForApprovalNotifier,
+        TeacherExamSubmitApprovalResult?>(
+  SubmitTeacherExamResultsForApprovalNotifier.new,
 );
 
 class SubmitTeacherLeaveNotifier extends AsyncNotifier<TeacherLeaveRequest?> {

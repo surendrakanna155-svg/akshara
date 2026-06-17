@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/approvals/adapters/approval_adapter_registry.dart';
 import '../../../../core/approvals/approval_audit.dart';
 import '../../../../core/approvals/approval_models.dart';
 import '../../../../core/approvals/approval_permissions.dart';
@@ -74,6 +75,11 @@ class ApprovalDetailPanel extends ConsumerWidget {
                 label: _labelize(entry.key),
                 value: '${entry.value ?? '—'}',
               ),
+          ...[
+            for (final entry
+                in ApprovalAdapterRegistry.enrichDetail(request).entries)
+              _InfoLine(label: entry.key, value: entry.value),
+          ],
           const SizedBox(height: AksharaSpacing.s4),
           const AksharaSectionHeader(title: 'Approval history'),
           const SizedBox(height: AksharaSpacing.s2),

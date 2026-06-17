@@ -135,6 +135,7 @@ final class ExamAdministrationStore {
   final Map<String, ExamSession> _exams = {};
   final Map<String, ExamMarkRecord> _marks = {};
   final Map<String, PublishedExamResult> _publishedByMarkId = {};
+  final Map<String, String> _rejectionCommentsByExamId = {};
   bool _seeded = false;
 
   void ensureSeeded() {
@@ -147,6 +148,7 @@ final class ExamAdministrationStore {
     _exams.clear();
     _marks.clear();
     _publishedByMarkId.clear();
+    _rejectionCommentsByExamId.clear();
     _seeded = false;
   }
 
@@ -167,6 +169,20 @@ final class ExamAdministrationStore {
   ExamSession? examById(String examId) {
     ensureSeeded();
     return _exams[examId];
+  }
+
+  String? rejectionCommentFor(String examId) {
+    ensureSeeded();
+    return _rejectionCommentsByExamId[examId];
+  }
+
+  void recordRejectionComment(String examId, String comment) {
+    ensureSeeded();
+    _rejectionCommentsByExamId[examId] = comment;
+  }
+
+  void clearRejectionComment(String examId) {
+    _rejectionCommentsByExamId.remove(examId);
   }
 
   List<ExamSession> allExams() {

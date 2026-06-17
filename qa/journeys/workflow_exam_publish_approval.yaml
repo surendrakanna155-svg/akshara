@@ -1,0 +1,32 @@
+# Workflow — Exam publish approval (M-D3)
+# tags: workflow,exams,approval
+# Status: stub — full Patrol validation after emulator gate
+appId: com.akshara.erp
+---
+# Teacher persona — submit processed exam results for approval
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Teacher
+- tapOn: "Exams"
+- tapOn: "Submit for approval"
+- takeScreenshot: workflow_teacher_exam_submit_approval
+---
+# Principal persona — approve pending exam results
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Principal
+- tapOn: "Approvals"
+- tapOn: "Academic"
+- tapOn: "Approve"
+- takeScreenshot: workflow_principal_exam_approve
+---
+# Parent persona — verify published results visible
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Parent
+- tapOn: "Exams"
+- assertVisible: "Mathematics"
+- takeScreenshot: workflow_parent_exam_results_after_approval

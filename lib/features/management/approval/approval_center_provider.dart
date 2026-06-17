@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/approvals/adapters/approval_adapter_registry.dart';
 import '../../../core/approvals/approval_audit.dart';
 import '../../../core/approvals/approval_category.dart';
 import '../../../core/approvals/approval_models.dart';
+import '../../../core/approvals/approval_request_type.dart';
 import '../../../core/approvals/approval_permissions.dart';
 import '../../../core/approvals/approval_requests.dart';
 import '../../../core/approvals/approval_status.dart';
@@ -18,6 +20,9 @@ import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../features/auth/auth_provider.dart';
+import '../../../features/parent/exams/parent_exams_provider.dart';
+import '../../../features/student/exams/student_exams_provider.dart';
+import '../../../features/teacher/exams/teacher_exams_provider.dart';
 import '../management_models.dart';
 
 // ── Filter state ────────────────────────────────────────────────────────────
@@ -205,6 +210,9 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
               comment: comment,
             ),
           );
+      final query = ref.read(repositoryQueryProvider);
+      ApprovalAdapterRegistry.dispatchApproved(query: query, request: result);
+      _invalidateAfterApprovalSideEffects(ref, result.type);
       ref.invalidate(approvalCenterFutureProvider);
       ref.invalidate(approvalCenterAuditFutureProvider(request.id));
       return result;
@@ -232,6 +240,12 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
               comment: comment.trim(),
             ),
           );
+      final query = ref.read(repositoryQueryProvider);
+      ApprovalAdapterRegistry.dispatchRejected(
+        query: query,
+        request: result,
+        comment: comment.trim(),
+      );
       ref.invalidate(approvalCenterFutureProvider);
       ref.invalidate(approvalCenterAuditFutureProvider(request.id));
       return result;
@@ -244,3 +258,12 @@ final resolveApprovalRequestProvider =
     AsyncNotifierProvider<ResolveApprovalRequestNotifier, ApprovalRequest?>(
   ResolveApprovalRequestNotifier.new,
 );
+
+void _invalidateAfterApprovalSideEffects(Ref ref, ApprovalRequestType type) {
+  if (type == ApprovalRequestType.examResults) {
+    ref.invalidate(studentExamsFutureProvider);
+    ref.invalidate(parentExamsFutureProvider);
+    ref.invalidate(teacherExamMarksFutureProvider);
+    ref.invalidate(teacherUpcomingExamsFutureProvider);
+  }
+}

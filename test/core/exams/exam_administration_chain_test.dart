@@ -1,4 +1,10 @@
+import 'package:akshara_erp/core/approvals/adapters/exam_results_approval_adapter.dart';
+import 'package:akshara_erp/core/approvals/approval_center_service.dart';
+import 'package:akshara_erp/core/approvals/approval_requests.dart';
+import 'package:akshara_erp/core/approvals/approval_request_type.dart';
+import 'package:akshara_erp/core/approvals/approval_status.dart';
 import 'package:akshara_erp/core/exams/exam_administration_store.dart';
+import 'package:akshara_erp/core/repositories/mock/mock_approval_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_canonical_student_registry.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_parent_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_student_repository.dart';
@@ -84,6 +90,50 @@ void main() {
         expect(s.maxScore, p.maxScore);
         expect(s.grade, p.grade);
       }
+    });
+
+    test('approval gate blocks parent visibility until principal approves',
+        () async {
+      final store = ExamAdministrationStore.instance;
+      final teacherRepo = MockTeacherRepository();
+      final parentRepo = MockParentRepository();
+      final approvalRepo = MockApprovalRepository();
+      final service = ApprovalCenterService(approvalRepo);
+      final adapter = ExamResultsApprovalAdapter(store: store);
+
+      await teacherRepo.updateExamMark(
+        query: _query,
+        request: const TeacherExamMarkUpdateRequest(
+          markEntryId: 'exam_math_8a_06',
+          marksObtained: 44,
+        ),
+      );
+
+      final pending = await adapter.submitForApproval(
+        service: service,
+        query: _query,
+        examId: 'exam_math_8a',
+        requesterId: 'teacher_001',
+        requesterName: 'Priya Sharma',
+      );
+      expect(pending.type, ApprovalRequestType.examResults);
+      expect(pending.status, ApprovalStatus.pending);
+
+      final gatedParent = await parentRepo.getExams(query: _query);
+      expect(gatedParent.examResults, isEmpty);
+
+      final approved = await service.approveRequest(
+        query: _query,
+        request: ApproveApprovalRequest(
+          approvalId: pending.id,
+          actorId: 'principal_001',
+          actorName: 'Principal',
+        ),
+      );
+      adapter.onApproved(query: _query, request: approved);
+
+      final afterParent = await parentRepo.getExams(query: _query);
+      expect(afterParent.examResults, isNotEmpty);
     });
   });
 }

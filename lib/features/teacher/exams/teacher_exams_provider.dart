@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/approvals/adapters/exam_results_approval_adapter.dart';
+import '../../../core/approvals/approval_request_type.dart';
+import '../../../core/config/exam_approval_config.dart';
 import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
@@ -108,6 +111,26 @@ final teacherActiveExamIdProvider = Provider<String?>((ref) {
   return ExamAdministrationStore.instance.activeMarksExamId;
 });
 
+final teacherExamRejectionCommentProvider = Provider<String?>((ref) {
+  final examId = ref.watch(teacherActiveExamIdProvider);
+  if (examId == null) return null;
+  return ExamAdministrationStore.instance.rejectionCommentFor(examId);
+});
+
+final teacherExamPendingApprovalProvider = FutureProvider<bool>((ref) async {
+  if (!ref.watch(examApprovalRequiredProvider)) return false;
+  final examId = ref.watch(teacherActiveExamIdProvider);
+  if (examId == null) return false;
+
+  final pending = await ref.read(approvalCenterServiceProvider).findPendingByEntity(
+        query: ref.watch(repositoryQueryProvider),
+        type: ApprovalRequestType.examResults,
+        entityType: ExamResultsApprovalAdapter.entityType,
+        entityId: examId,
+      );
+  return pending != null;
+});
+
 Future<TeacherExamPublishResult?> publishExamResults(
   WidgetRef ref,
   String examId,
@@ -115,4 +138,13 @@ Future<TeacherExamPublishResult?> publishExamResults(
   return ref.read(publishTeacherExamResultsProvider.notifier).execute(
         TeacherExamPublishRequest(examId: examId),
       );
+}
+
+Future<TeacherExamSubmitApprovalResult?> submitExamResultsForApproval(
+  WidgetRef ref,
+  String examId,
+) async {
+  return ref
+      .read(submitTeacherExamResultsForApprovalProvider.notifier)
+      .execute(TeacherExamSubmitApprovalRequest(examId: examId));
 }

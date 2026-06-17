@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/exam_approval_config.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -149,7 +151,12 @@ class _ResultsPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final examId = ref.watch(teacherActiveExamIdProvider);
+    final approvalRequired = ref.watch(examApprovalRequiredProvider);
+    final pendingApproval = ref.watch(teacherExamPendingApprovalProvider);
+    final rejectionComment = ref.watch(teacherExamRejectionCommentProvider);
     final publishState = ref.watch(publishTeacherExamResultsProvider);
+    final submitState = ref.watch(submitTeacherExamResultsForApprovalProvider);
+    final isLoading = publishState.isLoading || submitState.isLoading;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -162,30 +169,79 @@ class _ResultsPanel extends ConsumerWidget {
               .read(teacherExamSectionProvider.notifier)
               .state = TeacherExamSection.marksEntry,
         ),
+        if (rejectionComment != null && rejectionComment.isNotEmpty) ...[
+          const SizedBox(height: AksharaSpacing.s3),
+          Material(
+            color: context.colors.errorContainer,
+            borderRadius: AksharaRadius.card,
+            child: Padding(
+              padding: const EdgeInsets.all(AksharaSpacing.s3),
+              child: Text(
+                'Principal feedback: $rejectionComment',
+                style: context.aksharaText.bodyMedium.copyWith(
+                  color: context.colors.onErrorContainer,
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: AksharaSpacing.s3),
-        FilledButton.icon(
-          onPressed: examId == null || publishState.isLoading
-              ? null
-              : () async {
-                  final result = await publishExamResults(ref, examId);
-                  if (!context.mounted || result == null) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Published ${result.publishedCount} results to student and parent apps.',
+        if (approvalRequired)
+          FilledButton.icon(
+            key: QaTestKeys.examSubmitApprovalButton,
+            onPressed: examId == null ||
+                    isLoading ||
+                    pendingApproval.asData?.value == true
+                ? null
+                : () async {
+                    final result =
+                        await submitExamResultsForApproval(ref, examId);
+                    if (!context.mounted || result == null) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Submitted for approval: ${result.title}',
+                        ),
                       ),
-                    ),
-                  );
-                },
-          icon: publishState.isLoading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.publish_outlined),
-          label: const Text('Publish results'),
-        ),
+                    );
+                  },
+            icon: isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.send_outlined),
+            label: Text(
+              pendingApproval.asData?.value == true
+                  ? 'Pending principal approval'
+                  : 'Submit for approval',
+            ),
+          )
+        else
+          FilledButton.icon(
+            onPressed: examId == null || isLoading
+                ? null
+                : () async {
+                    final result = await publishExamResults(ref, examId);
+                    if (!context.mounted || result == null) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Published ${result.publishedCount} results to student and parent apps.',
+                        ),
+                      ),
+                    );
+                  },
+            icon: isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.publish_outlined),
+            label: const Text('Publish results'),
+          ),
       ],
     );
   }

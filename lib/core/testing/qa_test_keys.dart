@@ -516,6 +516,14 @@ abstract final class QaTestKeys {
   static ValueKey<String> approvalRejectButton(String approvalId) =>
       ValueKey<String>('approval_reject_$approvalId');
 
+  /// Teacher exam submit for approval (M-D3).
+  static const examSubmitApprovalButton =
+      ValueKey<String>('exam_submit_approval_button');
+
+  /// Principal approves exam results in approval center (M-D3).
+  static ValueKey<String> examPrincipalApproveButton(String approvalId) =>
+      ValueKey<String>('exam_principal_approve_$approvalId');
+
   static const approvalTypeFilterAcademic =
       ValueKey<String>('approval_type_filter_academic');
 
