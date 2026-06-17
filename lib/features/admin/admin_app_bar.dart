@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/widgets/akshara_navigation.dart';
+import '../../shared/widgets/akshara_glass_surface.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import 'admin_layout.dart';
@@ -41,34 +43,26 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
     final isMobile = AdminLayout.isMobile(context);
     final isDesktop = AdminLayout.isDesktop(context);
 
-    return Material(
-      color: colors.surface,
-      elevation: 0,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: colors.outlineVariant),
+    return AksharaGlassBar(
+      height: AksharaSpacing.appBarHeightWeb,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isMobile
+                ? AksharaSpacing.mobileMargin
+                : AksharaSpacing.desktopMargin,
           ),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: SizedBox(
-            height: AksharaSpacing.appBarHeightWeb,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isMobile
-                    ? AksharaSpacing.mobileMargin
-                    : AksharaSpacing.desktopMargin,
-              ),
-              child: Row(
-                children: [
+          child: Row(
+            children: [
                   if (isMobile)
-                    IconButton(
+                    AksharaAppBarIconButton(
                       key: QaTestKeys.erpMenuButton,
-                      icon: const Icon(Icons.menu),
+                      icon: Icons.menu,
                       tooltip: 'Open navigation',
                       onPressed: onMenuTap,
                     ),
+                  if (isMobile) const SizedBox(width: AksharaSpacing.s2),
                   Expanded(
                     child: _AdminBreadcrumbs(
                       breadcrumbs: breadcrumbs,
@@ -76,40 +70,49 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
                         color: colors.onSurfaceVariant,
                       ),
                       activeStyle: text.bodySmall.copyWith(
-                        color: colors.onSurface,
+                        color: colors.primary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                   if (isDesktop) ...[
                     const SizedBox(width: AksharaSpacing.s4),
-                    SizedBox(
-                      width: 280,
-                      child: _AdminSearchPlaceholder(onTap: onSearchTap),
+                    AksharaNavSearchField(
+                      hint: 'Search ERP…',
+                      onTap: onSearchTap,
                     ),
                   ],
                   if (!isDesktop)
-                    IconButton(
-                      icon: const Icon(Icons.search),
+                    AksharaAppBarIconButton(
+                      icon: Icons.search,
                       tooltip: 'Search',
                       onPressed: onSearchTap,
                     ),
-                  IconButton(
-                    icon: Badge(
-                      isLabelVisible: unreadNotifications > 0,
-                      label: Text('$unreadNotifications'),
-                      child: const Icon(Icons.notifications_outlined),
-                    ),
+                  const SizedBox(width: AksharaSpacing.s1),
+                  AksharaAppBarIconButton(
+                    icon: Icons.notifications_outlined,
                     tooltip: 'Notifications',
                     onPressed: onNotificationsTap,
+                    child: Badge(
+                      isLabelVisible: unreadNotifications > 0,
+                      label: Text('$unreadNotifications'),
+                      child: Icon(
+                        Icons.notifications_outlined,
+                        size: 22,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
                   ),
-                  if (showAiCopilot)
-                    IconButton(
+                  if (showAiCopilot) ...[
+                    const SizedBox(width: AksharaSpacing.s1),
+                    AksharaAppBarIconButton(
                       key: QaTestKeys.erpCopilotButton,
-                      icon: const Icon(Icons.psychology_outlined),
+                      icon: Icons.psychology_outlined,
                       tooltip: 'AI Copilot',
                       onPressed: onAiCopilotTap,
                     ),
+                  ],
+                  const SizedBox(width: AksharaSpacing.s2),
                   Semantics(
                     button: true,
                     label: 'Staff profile',
@@ -128,9 +131,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
+            ],
           ),
         ),
       ),
@@ -163,7 +164,7 @@ class _AdminBreadcrumbs extends StatelessWidget {
       if (i > 0) {
         children.add(
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s2),
+            padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s1),
             child: Icon(
               Icons.chevron_right,
               size: 16,
@@ -193,46 +194,6 @@ class _AdminBreadcrumbs extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(children: children),
-    );
-  }
-}
-
-class _AdminSearchPlaceholder extends StatelessWidget {
-  const _AdminSearchPlaceholder({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.aksharaText;
-
-    return Semantics(
-      button: true,
-      label: 'Global search',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AksharaSpacing.s3),
-        child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s3),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(AksharaSpacing.s3),
-            border: Border.all(color: colors.outlineVariant),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.search, size: 20, color: colors.onSurfaceVariant),
-              const SizedBox(width: AksharaSpacing.s2),
-              Text(
-                'Search ERP…',
-                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

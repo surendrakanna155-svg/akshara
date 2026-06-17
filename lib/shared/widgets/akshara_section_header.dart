@@ -49,7 +49,11 @@ class AksharaSectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: text.titleMedium.copyWith(color: colors.onSurface),
+            style: text.titleSmall.copyWith(
+              color: colors.onSurface,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
           ),
         ),
         if (trailingLabel != null)

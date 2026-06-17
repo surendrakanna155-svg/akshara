@@ -27,7 +27,7 @@ class DirectorKpiRow extends StatelessWidget {
         for (final kpi in kpis)
           SizedBox(
             width: 240,
-            height: 132,
+            height: 140,
             child: AksharaKpiCard(
               value: kpi.value,
               subtitle: kpi.label,

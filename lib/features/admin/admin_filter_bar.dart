@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/widgets/akshara_navigation.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 
@@ -26,8 +27,11 @@ class AdminFilterBar extends StatelessWidget {
       color: colors.surface,
       child: DecoratedBox(
         decoration: BoxDecoration(
+          color: colors.surfaceContainerLowest,
           border: Border(
-            bottom: BorderSide(color: colors.outlineVariant),
+            bottom: BorderSide(
+              color: colors.outlineVariant.withValues(alpha: 0.65),
+            ),
           ),
         ),
         child: SizedBox(
@@ -37,7 +41,7 @@ class AdminFilterBar extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  Icons.filter_list,
+                  Icons.tune_rounded,
                   size: 20,
                   color: colors.onSurfaceVariant,
                 ),
@@ -49,12 +53,10 @@ class AdminFilterBar extends StatelessWidget {
                     separatorBuilder: (_, __) =>
                         const SizedBox(width: AksharaSpacing.s2),
                     itemBuilder: (context, index) {
-                      final selected = index == selectedIndex;
-                      return FilterChip(
-                        label: Text(filters[index]),
-                        selected: selected,
-                        showCheckmark: false,
-                        onSelected: (_) => onFilterSelected?.call(index),
+                      return AksharaNavFilterChip(
+                        label: filters[index],
+                        selected: index == selectedIndex,
+                        onTap: () => onFilterSelected?.call(index),
                       );
                     },
                   ),

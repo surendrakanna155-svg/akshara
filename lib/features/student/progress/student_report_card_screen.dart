@@ -34,11 +34,11 @@ class StudentReportCardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Term summary', style: context.aksharaText.titleMedium),
+                Text('Term summary', style: context.aksharaText.titleLarge),
                 const SizedBox(height: AksharaSpacing.s2),
                 Text(
                   'Average: ${data.averagePercent.toStringAsFixed(1)}%',
-                  style: context.aksharaText.headlineSmall,
+                  style: context.aksharaText.kpiValue,
                 ),
               ],
             ),

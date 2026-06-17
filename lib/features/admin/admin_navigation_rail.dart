@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../../shared/widgets/akshara_navigation.dart';
 import '../../theme/breakpoints.dart';
+import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import '../copilot/copilot_navigation.dart';
@@ -52,7 +54,6 @@ class AdminNavigationRail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final destinations = ref.watch(adminNavDestinationsProvider);
     final colors = context.colors;
-    final text = context.aksharaText;
     final ext = context.akshara;
     final selectedIndex = _selectedIndex(destinations);
     final width = MediaQuery.sizeOf(context).width;
@@ -70,45 +71,20 @@ class AdminNavigationRail extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(AksharaSpacing.s6),
-                child: Text(
-                  'Akshara ERP',
-                  style: text.titleMedium.copyWith(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
+              const AksharaNavBrandHeader(),
+              Divider(height: 1, color: colors.outlineVariant.withValues(alpha: 0.65)),
               Expanded(
                 child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s2),
                   itemCount: destinations.length,
                   itemBuilder: (context, index) {
                     final destination = destinations[index];
-                    final selected = index == selectedIndex;
-                    return ListTile(
+                    return AksharaNavRailTile(
                       key: QaTestKeys.erpNavModule(destination.module.name),
-                      leading: Icon(
-                        selected ? destination.selectedIcon : destination.icon,
-                        color: selected
-                            ? colors.primary
-                            : colors.onSurfaceVariant,
-                      ),
-                      title: Text(
-                        destination.label,
-                        style: text.labelLarge.copyWith(
-                          color: selected
-                              ? colors.primary
-                              : colors.onSurface,
-                          fontWeight:
-                              selected ? FontWeight.w600 : FontWeight.w500,
-                        ),
-                      ),
-                      selected: selected,
-                      selectedTileColor: colors.primaryContainer.withValues(
-                        alpha: 0.35,
-                      ),
+                      label: destination.label,
+                      icon: destination.icon,
+                      selectedIcon: destination.selectedIcon,
+                      selected: index == selectedIndex,
                       onTap: () => _navigate(context, destination),
                     );
                   },
@@ -125,102 +101,60 @@ class AdminNavigationRail extends ConsumerWidget {
         expanded ? ext.navRailExpandedWidth : ext.navRailCollapsedWidth;
 
     return Material(
-      color: colors.surfaceContainerLow,
-      child: SafeArea(
-        child: SizedBox(
-          width: railWidth,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (expanded)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AksharaSpacing.s4,
-                    AksharaSpacing.s6,
-                    AksharaSpacing.s4,
-                    AksharaSpacing.s4,
+      color: colors.surface,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              color: colors.outlineVariant.withValues(alpha: 0.65),
+            ),
+          ),
+        ),
+        child: SafeArea(
+          child: SizedBox(
+            width: railWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AksharaNavBrandHeader(
+                  compact: !expanded,
+                  padding: expanded
+                      ? const EdgeInsets.fromLTRB(
+                          AksharaSpacing.s4,
+                          AksharaSpacing.s6,
+                          AksharaSpacing.s4,
+                          AksharaSpacing.s4,
+                        )
+                      : const EdgeInsets.only(top: AksharaSpacing.s6),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s1),
+                    itemCount: destinations.length,
+                    itemBuilder: (context, index) {
+                      final destination = destinations[index];
+                      return AksharaNavRailTile(
+                        key: QaTestKeys.erpNavModule(destination.module.name),
+                        label: destination.label,
+                        icon: destination.icon,
+                        selectedIcon: destination.selectedIcon,
+                        selected: index == selectedIndex,
+                        expanded: expanded,
+                        onTap: () => _navigate(context, destination),
+                      );
+                    },
                   ),
-                  child: Text(
-                    'Akshara ERP',
-                    style: text.titleSmall.copyWith(
-                      color: colors.primary,
-                      fontWeight: FontWeight.w700,
+                ),
+                if (showSidebarAi)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AksharaSpacing.s4),
+                    child: _AdminSidebarAiTile(
+                      compact: !expanded,
+                      onNavigate: onDestinationSelected,
                     ),
                   ),
-                )
-              else
-                const SizedBox(height: AksharaSpacing.s6),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: destinations.length,
-                  itemBuilder: (context, index) {
-                    final destination = destinations[index];
-                    final selected = index == selectedIndex;
-                    return Semantics(
-                      selected: selected,
-                      button: true,
-                      child: InkWell(
-                        key: QaTestKeys.erpNavModule(destination.module.name),
-                        onTap: () => _navigate(context, destination),
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal:
-                                expanded ? AksharaSpacing.s4 : AksharaSpacing.s2,
-                            vertical: AksharaSpacing.s3,
-                          ),
-                          child: expanded
-                              ? Row(
-                                  children: [
-                                    Icon(
-                                      selected
-                                          ? destination.selectedIcon
-                                          : destination.icon,
-                                      color: selected
-                                          ? colors.primary
-                                          : colors.onSurfaceVariant,
-                                    ),
-                                    const SizedBox(width: AksharaSpacing.s3),
-                                    Expanded(
-                                      child: Text(
-                                        destination.label,
-                                        style: text.labelLarge.copyWith(
-                                          color: selected
-                                              ? colors.primary
-                                              : colors.onSurface,
-                                          fontWeight: selected
-                                              ? FontWeight.w600
-                                              : FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : Align(
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    selected
-                                        ? destination.selectedIcon
-                                        : destination.icon,
-                                    color: selected
-                                        ? colors.primary
-                                        : colors.onSurfaceVariant,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              if (showSidebarAi)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AksharaSpacing.s4),
-                  child: _AdminSidebarAiTile(
-                    compact: !expanded,
-                    onNavigate: onDestinationSelected,
-                  ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -245,34 +179,50 @@ class _AdminSidebarAiTile extends ConsumerWidget {
     return Semantics(
       button: true,
       label: 'AI Assistant sidebar entry',
-      child: Material(
-        color: colors.surfaceContainerHighest,
-        child: InkWell(
-          key: QaTestKeys.copilotSidebarAiEntry,
-          onTap: () {
-            openAiAssistantFromDock(context, ref);
-            onNavigate?.call();
-          },
-          onLongPress: () =>
-              handleCopilotAiEntryLongPress(context, ref, Offset.zero),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: compact ? AksharaSpacing.s2 : AksharaSpacing.s4,
-              vertical: AksharaSpacing.s3,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? AksharaSpacing.s2 : AksharaSpacing.s3,
+        ),
+        child: Material(
+          color: colors.primaryContainer.withValues(alpha: 0.35),
+          borderRadius: AksharaRadius.chip,
+          child: InkWell(
+            key: QaTestKeys.copilotSidebarAiEntry,
+            onTap: () {
+              openAiAssistantFromDock(context, ref);
+              onNavigate?.call();
+            },
+            onLongPress: () =>
+                handleCopilotAiEntryLongPress(context, ref, Offset.zero),
+            borderRadius: AksharaRadius.chip,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: AksharaRadius.chip,
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.25),
+                ),
+              ),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? AksharaSpacing.s2 : AksharaSpacing.s3,
+                vertical: AksharaSpacing.s3,
+              ),
+              child: compact
+                  ? Icon(Icons.psychology_outlined, color: colors.primary)
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.psychology_outlined, color: colors.primary),
+                        const SizedBox(width: AksharaSpacing.s3),
+                        Text(
+                          'AI Assistant',
+                          style: text.labelLarge.copyWith(
+                            color: colors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
-            child: compact
-                ? Icon(Icons.psychology_outlined, color: colors.primary)
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.psychology_outlined, color: colors.primary),
-                      const SizedBox(width: AksharaSpacing.s3),
-                      Text(
-                        'AI Assistant',
-                        style: text.labelLarge.copyWith(color: colors.primary),
-                      ),
-                    ],
-                  ),
           ),
         ),
       ),

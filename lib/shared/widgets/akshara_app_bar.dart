@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'akshara_navigation.dart';
 
 /// Child selector chip used as the parent dashboard app bar title.
 class AksharaChildSelectorChip extends StatelessWidget {
@@ -142,6 +143,15 @@ class AksharaAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       toolbarHeight: AksharaSpacing.appBarHeightMobile,
       titleSpacing: AksharaSpacing.s4,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Divider(
+          height: 1,
+          color: colors.outlineVariant.withValues(alpha: 0.65),
+        ),
+      ),
       title: title ??
           (titleTrailing != null
               ? Row(
@@ -177,30 +187,44 @@ class AksharaAppBar extends StatelessWidget implements PreferredSizeWidget {
       actions: [
         ...additionalActions,
         if (showAi)
-          IconButton(
-            icon: const Icon(Icons.psychology_outlined),
-            tooltip: aiTooltip,
-            onPressed: onAiTap,
-          ),
-        IconButton(
-          icon: Badge(
-            isLabelVisible: unreadNotifications > 0,
-            label: Text(
-              capNotificationBadgeAt99 && unreadNotifications > 99
-                  ? '99+'
-                  : '$unreadNotifications',
+          Padding(
+            padding: const EdgeInsets.only(right: AksharaSpacing.s1),
+            child: AksharaAppBarIconButton(
+              icon: Icons.psychology_outlined,
+              tooltip: aiTooltip,
+              onPressed: onAiTap,
             ),
-            child: const Icon(Icons.notifications_outlined),
           ),
-          tooltip: 'Notifications',
-          onPressed: onNotificationsTap,
+        Padding(
+          padding: const EdgeInsets.only(right: AksharaSpacing.s1),
+          child: AksharaAppBarIconButton(
+            icon: Icons.notifications_outlined,
+            tooltip: 'Notifications',
+            onPressed: onNotificationsTap,
+            child: Badge(
+              isLabelVisible: unreadNotifications > 0,
+              label: Text(
+                capNotificationBadgeAt99 && unreadNotifications > 99
+                    ? '99+'
+                    : '$unreadNotifications',
+              ),
+              child: Icon(
+                Icons.notifications_outlined,
+                size: 22,
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ),
         ),
         if (showReceiptHistory)
-          IconButton(
-            key: QaTestKeys.receiptHistoryButton,
-            icon: const Icon(Icons.receipt_long_outlined),
-            tooltip: 'Payment history',
-            onPressed: onReceiptHistoryTap,
+          Padding(
+            padding: const EdgeInsets.only(right: AksharaSpacing.s1),
+            child: AksharaAppBarIconButton(
+              key: QaTestKeys.receiptHistoryButton,
+              icon: Icons.receipt_long_outlined,
+              tooltip: 'Payment history',
+              onPressed: onReceiptHistoryTap,
+            ),
           ),
         if (showProfile)
           Padding(

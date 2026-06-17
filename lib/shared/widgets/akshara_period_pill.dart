@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/radius.dart';
+import '../../theme/motion.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import '../semantic_status.dart';
+import 'akshara_interactive_surface.dart';
 
 /// ST-01 schedule period pill (96px card with Now/Next/Later states).
 class AksharaPeriodPill extends StatelessWidget {
@@ -39,23 +40,20 @@ class AksharaPeriodPill extends StatelessWidget {
       button: onTap != null,
       label: semanticLabel ??
           '$timeLabel, $subject with $teacherName, $stateLabel',
-      child: Material(
+      child: AksharaInteractiveSurface(
+        onTap: onTap,
         color: surface.background,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: AksharaRadius.card,
-          side: BorderSide(
+        border: Border.fromBorderSide(
+          BorderSide(
             color: surface.border,
             width: surface.borderWidth,
           ),
         ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AksharaRadius.card,
-          child: SizedBox(
-            width: width,
-            height: pillHeight,
-            child: Padding(
+        restingShadowLevel: onTap == null ? 0 : AksharaMotion.restingShadow,
+        child: SizedBox(
+          width: width,
+          height: pillHeight,
+          child: Padding(
               padding: const EdgeInsets.all(AksharaSpacing.s2),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +98,6 @@ class AksharaPeriodPill extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

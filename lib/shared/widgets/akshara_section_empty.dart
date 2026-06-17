@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'akshara_empty_illustration.dart';
 
 /// Compact empty state for dashboard subsections (not full-screen).
 class AksharaSectionEmpty extends StatelessWidget {
@@ -11,12 +13,14 @@ class AksharaSectionEmpty extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.icon = Icons.inbox_outlined,
+    this.tone = AksharaEmptyTone.neutral,
   });
 
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
   final IconData icon;
+  final AksharaEmptyTone tone;
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +30,14 @@ class AksharaSectionEmpty extends StatelessWidget {
     return Semantics(
       container: true,
       label: message,
-      child: Material(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AksharaSpacing.s2),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(AksharaRadius.md),
+          border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: 0.55),
+          ),
+        ),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AksharaSpacing.s4,
@@ -36,7 +45,11 @@ class AksharaSectionEmpty extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: colors.onSurfaceVariant),
+              AksharaEmptyIllustration(
+                icon: icon,
+                tone: tone,
+                size: AksharaEmptyIllustrationSize.compact,
+              ),
               const SizedBox(width: AksharaSpacing.s3),
               Expanded(
                 child: Text(
@@ -77,6 +90,7 @@ class AksharaSectionError extends StatelessWidget {
       icon: Icons.error_outline,
       actionLabel: 'Retry',
       onAction: onRetry,
+      tone: AksharaEmptyTone.error,
     );
   }
 }

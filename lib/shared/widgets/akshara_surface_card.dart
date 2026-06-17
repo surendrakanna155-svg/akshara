@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/motion.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'akshara_interactive_surface.dart';
 
 /// Standard elevated surface card for dashboards and list rows.
 class AksharaSurfaceCard extends StatelessWidget {
@@ -24,25 +26,16 @@ class AksharaSurfaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final card = Material(
+    final card = AksharaInteractiveSurface(
+      onTap: onTap,
+      semanticLabel: semanticLabel,
       color: colors.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: AksharaRadius.card,
-        side: BorderSide(color: colors.outlineVariant),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AksharaRadius.card,
-        child: Padding(padding: padding, child: child),
-      ),
+      border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.75)),
+      restingShadowLevel: onTap == null ? 0 : AksharaMotion.restingShadow,
+      child: Padding(padding: padding, child: child),
     );
 
-    return Semantics(
-      button: onTap != null,
-      label: semanticLabel,
-      child: margin == null ? card : Padding(padding: margin!, child: card),
-    );
+    return margin == null ? card : Padding(padding: margin!, child: card);
   }
 }
 

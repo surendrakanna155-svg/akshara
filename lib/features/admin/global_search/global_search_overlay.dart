@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
+import '../../../shared/widgets/akshara_motion.dart';
 import '../../../theme/spacing.dart';
 import 'global_search_registry.dart';
 import 'recent_routes_provider.dart';
@@ -13,7 +14,9 @@ Future<void> showGlobalSearchOverlay(BuildContext context, WidgetRef ref) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => GlobalSearchOverlay(ref: ref),
+    builder: (context) => AksharaMotionAppear(
+      child: GlobalSearchOverlay(ref: ref),
+    ),
   );
 }
 
@@ -73,7 +76,6 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
                   decoration: const InputDecoration(
                     hintText: 'Search modules, screens, workflows…',
                     prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
                   ),
                   onChanged: (value) => setState(() => _query = value.trim()),
                 ),

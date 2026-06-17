@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../features/copilot/widgets/copilot_bottom_nav_ai_slot.dart';
 import '../../../features/school_completion/school_branding_theme_provider.dart';
 import '../../../router/route_names.dart';
+import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 
@@ -75,29 +76,50 @@ class ParentShell extends ConsumerWidget {
         children: [
           if (schoolName.isNotEmpty)
             Material(
-              color: context.colors.primaryContainer,
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AksharaSpacing.s4,
-                    vertical: AksharaSpacing.s2,
+              color: context.colors.surface,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: context.colors.outlineVariant.withValues(alpha: 0.65),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.school, size: 18, color: context.colors.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          schoolName,
-                          style: context.aksharaText.labelLarge.copyWith(
-                            color: context.colors.onPrimaryContainer,
-                            fontWeight: FontWeight.w600,
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AksharaSpacing.s4,
+                      vertical: AksharaSpacing.s2,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: context.colors.primaryContainer,
+                            borderRadius: AksharaRadius.chip,
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          child: Icon(
+                            Icons.school_rounded,
+                            size: 16,
+                            color: context.colors.primary,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: AksharaSpacing.s2),
+                        Expanded(
+                          child: Text(
+                            schoolName,
+                            style: context.aksharaText.labelLarge.copyWith(
+                              color: context.colors.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

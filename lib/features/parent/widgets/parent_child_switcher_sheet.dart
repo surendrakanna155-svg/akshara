@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../router/route_names.dart';
+import '../../../shared/widgets/akshara_dialog.dart';
+import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
 import '../../auth/auth_provider.dart';
 import '../parent_active_child_provider.dart';
 import '../profile/parent_profile_provider.dart';
@@ -20,22 +23,23 @@ Future<void> showParentChildSwitcherSheet(BuildContext context, WidgetRef ref) a
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Switch child',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
+            const AksharaBottomSheetHeader(
+              title: 'Switch child',
+              subtitle: 'Select the student profile to view',
             ),
             for (final child in children)
               ListTile(
                 leading: CircleAvatar(
-                  child: Text(child.name.isNotEmpty ? child.name[0] : '?'),
+                  backgroundColor: context.colors.primaryContainer,
+                  child: Text(
+                    child.name.isNotEmpty ? child.name[0] : '?',
+                    style: TextStyle(color: context.colors.primary),
+                  ),
                 ),
                 title: Text(child.name),
                 subtitle: Text('Class ${child.classLabel}'),
                 trailing: auth.selectedChild?.id == child.id
-                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    ? Icon(Icons.check_circle, color: context.colors.primary)
                     : null,
                 onTap: () async {
                   await selectParentActiveChild(ref, child);
@@ -43,7 +47,7 @@ Future<void> showParentChildSwitcherSheet(BuildContext context, WidgetRef ref) a
                   if (context.mounted) Navigator.pop(context);
                 },
               ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AksharaSpacing.s2),
           ],
         ),
       );

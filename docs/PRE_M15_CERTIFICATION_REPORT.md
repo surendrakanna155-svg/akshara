@@ -11,7 +11,7 @@
 
 Akshara is certified for M15 entry on branch `release/v1.0-preprod`. Operational workflows are complete in the mock/API-fallback layer, documentation is synchronized, unit/widget tests are green, and critical Patrol suites pass.
 
-**M15 (Theme Modernization) has NOT started.**  
+**M15 (Theme Modernization):** **CERTIFIED** on `feature/m15-theme` — see `docs/M15_CERTIFICATION_REPORT.md` (Flutter gates green; Phase 9 watermarks deferred; Patrol re-run before merge).  
 **Academic Assessment Platform remains DEFERRED.**
 
 ---

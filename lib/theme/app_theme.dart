@@ -4,46 +4,60 @@ import 'package:flutter/services.dart';
 
 import 'color_tokens.dart';
 import 'elevation.dart';
+import 'locale_typography.dart';
+import 'motion.dart';
+import 'page_transitions.dart';
 import 'radius.dart';
 import 'spacing.dart';
 import 'theme_extensions.dart';
 import 'typography.dart';
 
-/// Builds Material 3 [ThemeData] for the Akshara ERP monorepo.
+/// Builds Material 3 [ThemeData] for the Akshara ERP monorepo — M15 foundation.
 ///
 /// Riverpod providers should call [AksharaAppTheme.light] / [.dark] with an
 /// optional [WhiteLabelThemeConfig] — keep this class free of Riverpod imports.
 abstract final class AksharaAppTheme {
-  /// Default light theme (ship first).
-  static ThemeData light({WhiteLabelThemeConfig? whiteLabel}) {
+  /// M15 premium light theme.
+  static ThemeData light({
+    WhiteLabelThemeConfig? whiteLabel,
+    Locale? locale,
+  }) {
     final tokens = AksharaColorTokens.light(
       primaryOverride: whiteLabel?.primary,
     );
     return _build(
       tokens: tokens,
       brightness: Brightness.light,
+      locale: locale,
     );
   }
 
-  /// Dark theme placeholder (P2).
-  static ThemeData dark({WhiteLabelThemeConfig? whiteLabel}) {
+  /// M15 obsidian dark theme.
+  static ThemeData dark({
+    WhiteLabelThemeConfig? whiteLabel,
+    Locale? locale,
+  }) {
     final tokens = AksharaColorTokens.dark(
       primaryOverride: whiteLabel?.primary,
     );
     return _build(
       tokens: tokens,
       brightness: Brightness.dark,
+      locale: locale,
     );
   }
 
   static ThemeData _build({
     required AksharaColorTokens tokens,
     required Brightness brightness,
+    Locale? locale,
   }) {
     final colorScheme = tokens.toColorScheme(brightness: brightness);
     final aksharaExtension = AksharaThemeExtension.fromTokens(tokens);
-    final aksharaText =
-        AksharaTextStyles.roboto().applyColorScheme(colorScheme);
+    final aksharaText = AksharaLocaleTypography.applyLocale(
+      AksharaTextStyles.roboto().applyColorScheme(colorScheme),
+      locale,
+    );
     final textTheme = aksharaText.toMaterialTextTheme();
 
     return ThemeData(
@@ -132,10 +146,10 @@ abstract final class AksharaAppTheme {
         headingRowColor: WidgetStatePropertyAll(
           aksharaExtension.surfaceContainerHighest,
         ),
-        headingTextStyle: aksharaText.labelSmall.copyWith(
+        headingTextStyle: aksharaText.tableHeader.copyWith(
           color: colorScheme.onSurfaceVariant,
         ),
-        dataTextStyle: aksharaText.bodyLarge,
+        dataTextStyle: aksharaText.tableCell,
         headingRowHeight: 48,
         dataRowMinHeight: 52,
         dataRowMaxHeight: 64,
@@ -148,13 +162,17 @@ abstract final class AksharaAppTheme {
       tabBarTheme: TabBarThemeData(
         labelColor: colorScheme.primary,
         unselectedLabelColor: colorScheme.onSurfaceVariant,
-        labelStyle: aksharaText.labelLarge,
+        labelStyle: aksharaText.labelLarge.copyWith(fontWeight: FontWeight.w600),
         unselectedLabelStyle: aksharaText.labelLarge,
-        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorSize: TabBarIndicatorSize.label,
         indicator: UnderlineTabIndicator(
-          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+          borderRadius: BorderRadius.circular(2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 3),
         ),
-        dividerColor: colorScheme.outlineVariant,
+        dividerColor: colorScheme.outlineVariant.withValues(alpha: 0.65),
+        overlayColor: WidgetStatePropertyAll(
+          colorScheme.primary.withValues(alpha: 0.06),
+        ),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: colorScheme.primary,
@@ -178,11 +196,20 @@ abstract final class AksharaAppTheme {
       ),
       dropdownMenuTheme: DropdownMenuThemeData(
         textStyle: aksharaText.bodyLarge,
+        inputDecorationTheme: _inputDecorationTheme(colorScheme, aksharaText),
         menuStyle: MenuStyle(
           backgroundColor: WidgetStatePropertyAll(colorScheme.surface),
-          elevation: const WidgetStatePropertyAll(AksharaElevation.level2),
+          elevation: const WidgetStatePropertyAll(AksharaElevation.level3),
+          shadowColor: WidgetStatePropertyAll(
+            colorScheme.shadow.withValues(alpha: 0.12),
+          ),
           shape: const WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: AksharaRadius.chipBorder),
+          ),
+          side: WidgetStatePropertyAll(
+            BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.65),
+            ),
           ),
           maximumSize: const WidgetStatePropertyAll(Size(double.infinity, 304)),
         ),
@@ -220,8 +247,8 @@ abstract final class AksharaAppTheme {
           TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
           TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.linux: AksharaFadePageTransitionsBuilder(),
+          TargetPlatform.windows: AksharaFadePageTransitionsBuilder(),
         },
       ),
     );
@@ -257,17 +284,24 @@ abstract final class AksharaAppTheme {
       height: AksharaSpacing.bottomNavHeight,
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
+      elevation: 8,
+      shadowColor: scheme.shadow.withValues(alpha: 0.12),
       indicatorColor: scheme.primaryContainer,
+      indicatorShape: RoundedRectangleBorder(
+        borderRadius: AksharaRadius.chip,
+      ),
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return text.labelMedium.copyWith(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+          color: selected ? scheme.primary : scheme.onSurfaceVariant,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
         );
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+          color: selected ? scheme.primary : scheme.onSurfaceVariant,
           size: 24,
         );
       }),
@@ -284,8 +318,8 @@ abstract final class AksharaAppTheme {
         size: 24,
       ),
       selectedLabelTextStyle: TextStyle(
-        color: scheme.onPrimaryContainer,
-        fontWeight: FontWeight.w500,
+        color: scheme.primary,
+        fontWeight: FontWeight.w600,
         fontSize: 12,
       ),
       unselectedLabelTextStyle: TextStyle(
@@ -326,20 +360,45 @@ abstract final class AksharaAppTheme {
         EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       textStyle: WidgetStatePropertyAll(text.labelLarge),
+      animationDuration: AksharaMotion.fast,
       foregroundColor: WidgetStatePropertyAll(scheme.onPrimary),
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
           return scheme.onSurface.withValues(alpha: 0.12);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return Color.alphaBlend(
+            scheme.onPrimary.withValues(alpha: 0.08),
+            scheme.primary,
+          );
         }
         return scheme.primary;
       }),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: AksharaRadius.button),
       ),
-      elevation: const WidgetStatePropertyAll(0),
-      overlayColor: WidgetStatePropertyAll(
-        scheme.onPrimary.withValues(alpha: 0.08),
-      ),
+      elevation: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return 0;
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return AksharaElevation.level1;
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return AksharaElevation.level1;
+        }
+        return 0;
+      }),
+      shadowColor: WidgetStatePropertyAll(scheme.shadow),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return scheme.onPrimary.withValues(alpha: 0.10);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return scheme.onPrimary.withValues(alpha: 0.06);
+        }
+        return scheme.onPrimary.withValues(alpha: 0.04);
+      }),
     );
   }
 
@@ -353,17 +412,43 @@ abstract final class AksharaAppTheme {
         EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       textStyle: WidgetStatePropertyAll(text.labelLarge),
+      animationDuration: AksharaMotion.fast,
       foregroundColor: WidgetStatePropertyAll(scheme.onPrimaryContainer),
       backgroundColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.disabled)) {
           return scheme.onSurface.withValues(alpha: 0.12);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return Color.alphaBlend(
+            scheme.onPrimaryContainer.withValues(alpha: 0.06),
+            scheme.primaryContainer,
+          );
         }
         return scheme.primaryContainer;
       }),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: AksharaRadius.button),
       ),
-      elevation: const WidgetStatePropertyAll(0),
+      elevation: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return 0;
+        }
+        if (states.contains(WidgetState.pressed) ||
+            states.contains(WidgetState.hovered)) {
+          return AksharaElevation.level1;
+        }
+        return 0;
+      }),
+      shadowColor: WidgetStatePropertyAll(scheme.shadow),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return scheme.onPrimaryContainer.withValues(alpha: 0.10);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return scheme.onPrimaryContainer.withValues(alpha: 0.06);
+        }
+        return scheme.onPrimaryContainer.withValues(alpha: 0.04);
+      }),
     );
   }
 
@@ -377,18 +462,44 @@ abstract final class AksharaAppTheme {
         EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       ),
       textStyle: WidgetStatePropertyAll(text.labelLarge),
+      animationDuration: AksharaMotion.fast,
       foregroundColor: WidgetStatePropertyAll(scheme.primary),
-      backgroundColor: WidgetStatePropertyAll(scheme.surface),
+      backgroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.pressed)) {
+          return scheme.primaryContainer.withValues(alpha: 0.35);
+        }
+        return scheme.surface;
+      }),
       side: WidgetStateProperty.resolveWith((states) {
-        final color = states.contains(WidgetState.disabled)
-            ? scheme.outlineVariant.withValues(alpha: 0.38)
-            : scheme.outlineVariant;
-        return BorderSide(color: color);
+        if (states.contains(WidgetState.disabled)) {
+          return BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.38));
+        }
+        if (states.contains(WidgetState.pressed) ||
+            states.contains(WidgetState.hovered)) {
+          return BorderSide(color: scheme.primary.withValues(alpha: 0.55));
+        }
+        return BorderSide(color: scheme.outlineVariant);
       }),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: AksharaRadius.button),
       ),
-      elevation: const WidgetStatePropertyAll(0),
+      elevation: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return AksharaElevation.level1;
+        }
+        return 0;
+      }),
+      shadowColor: WidgetStatePropertyAll(scheme.shadow),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return scheme.primary.withValues(alpha: 0.08);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return scheme.primary.withValues(alpha: 0.05);
+        }
+        return Colors.transparent;
+      }),
     );
   }
 
@@ -402,10 +513,17 @@ abstract final class AksharaAppTheme {
         EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       ),
       textStyle: WidgetStatePropertyAll(text.labelLarge),
+      animationDuration: AksharaMotion.fast,
       foregroundColor: WidgetStatePropertyAll(scheme.primary),
-      overlayColor: WidgetStatePropertyAll(
-        scheme.primary.withValues(alpha: 0.08),
-      ),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return scheme.primary.withValues(alpha: 0.10);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return scheme.primary.withValues(alpha: 0.06);
+        }
+        return scheme.primary.withValues(alpha: 0.04);
+      }),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: AksharaRadius.button),
       ),
@@ -417,10 +535,23 @@ abstract final class AksharaAppTheme {
       minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
       maximumSize: const WidgetStatePropertyAll(Size(48, 48)),
       iconSize: const WidgetStatePropertyAll(24),
-      foregroundColor: WidgetStatePropertyAll(scheme.onSurfaceVariant),
-      overlayColor: WidgetStatePropertyAll(
-        scheme.onSurface.withValues(alpha: 0.08),
-      ),
+      animationDuration: AksharaMotion.fast,
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.pressed)) {
+          return scheme.primary;
+        }
+        return scheme.onSurfaceVariant;
+      }),
+      overlayColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return scheme.primary.withValues(alpha: 0.10);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return scheme.primary.withValues(alpha: 0.06);
+        }
+        return scheme.onSurface.withValues(alpha: 0.04);
+      }),
       shape: const WidgetStatePropertyAll(CircleBorder()),
     );
   }
@@ -438,20 +569,27 @@ abstract final class AksharaAppTheme {
 
     return InputDecorationTheme(
       filled: true,
-      fillColor: scheme.surface,
+      fillColor: scheme.surfaceContainerLow,
       isDense: false,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AksharaSpacing.s4,
         vertical: AksharaSpacing.s4,
       ),
-      hintStyle: text.bodyLarge.copyWith(color: scheme.onSurfaceVariant),
-      labelStyle: text.bodySmall.copyWith(color: scheme.onSurfaceVariant),
+      floatingLabelStyle: text.labelMedium.copyWith(
+        color: scheme.primary,
+        fontWeight: FontWeight.w500,
+      ),
+      floatingLabelBehavior: FloatingLabelBehavior.auto,
+      hintStyle: text.bodyLarge.copyWith(
+        color: scheme.onSurfaceVariant.withValues(alpha: 0.85),
+      ),
+      labelStyle: text.bodyMedium.copyWith(color: scheme.onSurfaceVariant),
       helperStyle: text.bodySmall.copyWith(color: scheme.onSurfaceVariant),
       errorStyle: text.bodySmall.copyWith(color: scheme.error),
-      border: border(scheme.outlineVariant),
-      enabledBorder: border(scheme.outlineVariant),
+      border: border(scheme.outlineVariant.withValues(alpha: 0.75)),
+      enabledBorder: border(scheme.outlineVariant.withValues(alpha: 0.75)),
       focusedBorder: border(scheme.primary, 2),
-      errorBorder: border(scheme.error, 2),
+      errorBorder: border(scheme.error, 1.5),
       focusedErrorBorder: border(scheme.error, 2),
       disabledBorder: border(scheme.outlineVariant.withValues(alpha: 0.38)),
     );
@@ -500,11 +638,13 @@ abstract final class AksharaAppTheme {
     return CardThemeData(
       color: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      elevation: AksharaElevation.level1,
+      elevation: AksharaElevation.level0,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: AksharaRadius.card,
-        side: BorderSide(color: scheme.outlineVariant),
+        side: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: 0.6),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
     );
@@ -517,9 +657,18 @@ abstract final class AksharaAppTheme {
     return DialogThemeData(
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      elevation: AksharaElevation.level3,
-      shape: RoundedRectangleBorder(borderRadius: AksharaRadius.dialog),
-      titleTextStyle: text.titleLarge.copyWith(color: scheme.onSurface),
+      elevation: AksharaElevation.level4,
+      shadowColor: scheme.shadow.withValues(alpha: 0.16),
+      shape: RoundedRectangleBorder(
+        borderRadius: AksharaRadius.dialog,
+        side: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: 0.55),
+        ),
+      ),
+      titleTextStyle: text.titleLarge.copyWith(
+        color: scheme.onSurface,
+        fontWeight: FontWeight.w600,
+      ),
       contentTextStyle: text.bodyLarge.copyWith(color: scheme.onSurface),
       actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
@@ -532,11 +681,17 @@ abstract final class AksharaAppTheme {
       surfaceTintColor: Colors.transparent,
       elevation: AksharaElevation.level4,
       modalElevation: AksharaElevation.level4,
-      shape: RoundedRectangleBorder(borderRadius: AksharaRadius.bottomSheet),
+      modalBackgroundColor: scheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: AksharaRadius.bottomSheet,
+        side: BorderSide(
+          color: scheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
       clipBehavior: Clip.antiAlias,
       showDragHandle: true,
-      dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.4),
-      dragHandleSize: const Size(36, 4),
+      dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.35),
+      dragHandleSize: const Size(40, 4),
     );
   }
 

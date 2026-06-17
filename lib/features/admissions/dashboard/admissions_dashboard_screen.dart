@@ -56,7 +56,7 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
     AdmissionsDashboardData data,
   ) {
     final isMobile = AdminLayout.isMobile(context);
-    final chartHeight = isMobile ? 280.0 : 320.0;
+    final chartHeight = isMobile ? 296.0 : 320.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

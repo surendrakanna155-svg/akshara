@@ -6,7 +6,7 @@ import 'color_tokens.dart';
 import 'spacing.dart';
 import 'typography.dart';
 
-/// Semantic tokens not covered by stock [ColorScheme], plus layout constants.
+/// Semantic tokens not covered by stock [ColorScheme], plus M15 layout constants.
 @immutable
 class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
   const AksharaThemeExtension({
@@ -16,6 +16,10 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
     required this.warning,
     required this.onWarning,
     required this.warningContainer,
+    required this.indigo,
+    required this.indigoContainer,
+    required this.tertiary,
+    required this.tertiaryContainer,
     required this.surfaceContainerHighest,
     required this.scrim,
     required this.chart1,
@@ -29,6 +33,9 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
     required this.bottomNavHeight,
     required this.focusRingWidth,
     required this.focusRingGap,
+    required this.glassOpacity,
+    required this.glassBorderOpacity,
+    required this.dashboardWatermarkOpacity,
   });
 
   final Color success;
@@ -37,6 +44,10 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
   final Color warning;
   final Color onWarning;
   final Color warningContainer;
+  final Color indigo;
+  final Color indigoContainer;
+  final Color tertiary;
+  final Color tertiaryContainer;
   final Color surfaceContainerHighest;
   final Color scrim;
   final Color chart1;
@@ -51,6 +62,15 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
   final double focusRingWidth;
   final double focusRingGap;
 
+  /// Glass surface fill opacity (Phase 8 — hero sections, dialogs).
+  final double glassOpacity;
+
+  /// Glass border stroke opacity.
+  final double glassBorderOpacity;
+
+  /// AI-native dashboard watermark opacity (3%–8%).
+  final double dashboardWatermarkOpacity;
+
   factory AksharaThemeExtension.fromTokens(AksharaColorTokens tokens) {
     return AksharaThemeExtension(
       success: tokens.success,
@@ -59,6 +79,10 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
       warning: tokens.warning,
       onWarning: tokens.onSurface,
       warningContainer: tokens.warningContainer,
+      indigo: tokens.indigo,
+      indigoContainer: tokens.indigoContainer,
+      tertiary: tokens.tertiary,
+      tertiaryContainer: tokens.tertiaryContainer,
       surfaceContainerHighest: tokens.surfaceContainerHighest,
       scrim: tokens.scrim,
       chart1: tokens.chart1,
@@ -72,6 +96,9 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
       bottomNavHeight: AksharaSpacing.bottomNavHeight,
       focusRingWidth: 2,
       focusRingGap: 2,
+      glassOpacity: 0.72,
+      glassBorderOpacity: 0.12,
+      dashboardWatermarkOpacity: 0.05,
     );
   }
 
@@ -83,6 +110,10 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
     Color? warning,
     Color? onWarning,
     Color? warningContainer,
+    Color? indigo,
+    Color? indigoContainer,
+    Color? tertiary,
+    Color? tertiaryContainer,
     Color? surfaceContainerHighest,
     Color? scrim,
     Color? chart1,
@@ -96,6 +127,9 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
     double? bottomNavHeight,
     double? focusRingWidth,
     double? focusRingGap,
+    double? glassOpacity,
+    double? glassBorderOpacity,
+    double? dashboardWatermarkOpacity,
   }) {
     return AksharaThemeExtension(
       success: success ?? this.success,
@@ -104,6 +138,10 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
       warning: warning ?? this.warning,
       onWarning: onWarning ?? this.onWarning,
       warningContainer: warningContainer ?? this.warningContainer,
+      indigo: indigo ?? this.indigo,
+      indigoContainer: indigoContainer ?? this.indigoContainer,
+      tertiary: tertiary ?? this.tertiary,
+      tertiaryContainer: tertiaryContainer ?? this.tertiaryContainer,
       surfaceContainerHighest:
           surfaceContainerHighest ?? this.surfaceContainerHighest,
       scrim: scrim ?? this.scrim,
@@ -119,6 +157,10 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
       bottomNavHeight: bottomNavHeight ?? this.bottomNavHeight,
       focusRingWidth: focusRingWidth ?? this.focusRingWidth,
       focusRingGap: focusRingGap ?? this.focusRingGap,
+      glassOpacity: glassOpacity ?? this.glassOpacity,
+      glassBorderOpacity: glassBorderOpacity ?? this.glassBorderOpacity,
+      dashboardWatermarkOpacity:
+          dashboardWatermarkOpacity ?? this.dashboardWatermarkOpacity,
     );
   }
 
@@ -140,6 +182,11 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
       onWarning: Color.lerp(onWarning, other.onWarning, t)!,
       warningContainer:
           Color.lerp(warningContainer, other.warningContainer, t)!,
+      indigo: Color.lerp(indigo, other.indigo, t)!,
+      indigoContainer: Color.lerp(indigoContainer, other.indigoContainer, t)!,
+      tertiary: Color.lerp(tertiary, other.tertiary, t)!,
+      tertiaryContainer:
+          Color.lerp(tertiaryContainer, other.tertiaryContainer, t)!,
       surfaceContainerHighest: Color.lerp(
         surfaceContainerHighest,
         other.surfaceContainerHighest,
@@ -173,12 +220,26 @@ class AksharaThemeExtension extends ThemeExtension<AksharaThemeExtension> {
           lerpDouble(focusRingWidth, other.focusRingWidth, t) ?? focusRingWidth,
       focusRingGap:
           lerpDouble(focusRingGap, other.focusRingGap, t) ?? focusRingGap,
+      glassOpacity:
+          lerpDouble(glassOpacity, other.glassOpacity, t) ?? glassOpacity,
+      glassBorderOpacity: lerpDouble(
+            glassBorderOpacity,
+            other.glassBorderOpacity,
+            t,
+          ) ??
+          glassBorderOpacity,
+      dashboardWatermarkOpacity: lerpDouble(
+            dashboardWatermarkOpacity,
+            other.dashboardWatermarkOpacity,
+            t,
+          ) ??
+          dashboardWatermarkOpacity,
     );
   }
 }
 
-/// KPI card accent colors per [DesignSystem.md] §13.
-enum KpiAccent { primary, success, warning, error, neutral }
+/// KPI card accent colors — M15 semantic mapping.
+enum KpiAccent { primary, success, warning, error, neutral, tertiary, indigo }
 
 extension KpiAccentColors on KpiAccent {
   ({Color container, Color foreground}) resolve(BuildContext context) {
@@ -205,6 +266,14 @@ extension KpiAccentColors on KpiAccent {
       KpiAccent.neutral => (
           container: scheme.surfaceContainerLow,
           foreground: scheme.onSurfaceVariant,
+        ),
+      KpiAccent.tertiary => (
+          container: ext.tertiaryContainer,
+          foreground: ext.tertiary,
+        ),
+      KpiAccent.indigo => (
+          container: ext.indigoContainer,
+          foreground: ext.indigo,
         ),
     };
   }

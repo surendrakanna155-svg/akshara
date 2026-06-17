@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../theme/radius.dart';
+import '../../../../shared/widgets/akshara_glass_surface.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 
@@ -25,48 +25,45 @@ class GreetingHeader extends StatelessWidget {
     return Semantics(
       header: true,
       label: '$eyebrow. $headline',
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AksharaSpacing.s4,
-          vertical: AksharaSpacing.s3,
-        ),
-        decoration: BoxDecoration(
-          color: colors.surfaceContainerLowest,
-          borderRadius: AksharaRadius.card,
-          border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    eyebrow,
-                    style: text.bodySmall.copyWith(
-                      color: colors.onSurfaceVariant,
+      child: AksharaGlassHeroBackdrop(
+        height: 120,
+        child: AksharaGlassCard(
+          tintColor: colors.surfaceContainerLowest,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AksharaSpacing.s4,
+            vertical: AksharaSpacing.s3,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      eyebrow,
+                      style: text.bodySmall.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: AksharaSpacing.s1),
-                  Text(
-                    headline,
-                    style: text.headlineSmall.copyWith(
-                      color: colors.onSurface,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: AksharaSpacing.s1),
+                    Text(
+                      headline,
+                      style: text.displaySmall.copyWith(
+                        color: colors.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

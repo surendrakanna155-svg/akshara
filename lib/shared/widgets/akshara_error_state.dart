@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/errors/api_failure.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'akshara_empty_illustration.dart';
+import 'akshara_motion.dart';
 
 /// Recoverable error placeholder with optional retry action.
 class AksharaErrorState extends StatelessWidget {
@@ -14,6 +16,7 @@ class AksharaErrorState extends StatelessWidget {
     this.retryLabel = 'Try again',
     this.errorCode,
     this.failure,
+    this.compact = false,
   });
 
   /// Builds a user-friendly error from a standardized [ApiFailure].
@@ -23,6 +26,7 @@ class AksharaErrorState extends StatelessWidget {
     VoidCallback? onRetry,
     IconData? icon,
     String retryLabel = 'Try again',
+    bool compact = false,
   }) {
     return AksharaErrorState(
       key: key,
@@ -32,6 +36,7 @@ class AksharaErrorState extends StatelessWidget {
       icon: icon ?? _iconForFailure(failure.type),
       retryLabel: retryLabel,
       failure: failure,
+      compact: compact,
     );
   }
 
@@ -39,12 +44,9 @@ class AksharaErrorState extends StatelessWidget {
   final VoidCallback? onRetry;
   final IconData icon;
   final String retryLabel;
-
-  /// Optional machine-readable error code (e.g. `NETWORK`, `FORBIDDEN`).
   final String? errorCode;
-
-  /// Source failure when created via [AksharaErrorState.fromFailure].
   final ApiFailure? failure;
+  final bool compact;
 
   static IconData _iconForFailure(ApiFailureType type) => switch (type) {
         ApiFailureType.network || ApiFailureType.timeout => Icons.wifi_off,
@@ -64,44 +66,54 @@ class AksharaErrorState extends StatelessWidget {
         ? 'Error $errorCode: $message'
         : 'Error: $message';
 
-    return Semantics(
+    final content = AksharaEmptyContent(
+      compact: compact,
+      title: compact ? null : 'Something went wrong',
+      message: message,
+      actionLabel: onRetry != null ? retryLabel : null,
+      onAction: onRetry,
+      illustration: AksharaEmptyIllustration(
+        icon: icon,
+        tone: AksharaEmptyTone.error,
+        size: compact
+            ? AksharaEmptyIllustrationSize.standard
+            : AksharaEmptyIllustrationSize.prominent,
+      ),
+    );
+
+    return AksharaMotionAppear(
+      child: Semantics(
       container: true,
       label: semanticLabel,
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.s6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 48,
-                color: colors.error,
-              ),
-              const SizedBox(height: AksharaSpacing.s3),
-              Text(
-                message,
-                style: text.bodyLarge.copyWith(color: colors.onSurface),
-                textAlign: TextAlign.center,
-              ),
-              if (errorCode != null) ...[
-                const SizedBox(height: AksharaSpacing.s2),
-                Text(
-                  'Error code: $errorCode',
-                  style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
-                  textAlign: TextAlign.center,
+          padding: EdgeInsets.all(compact ? AksharaSpacing.s4 : AksharaSpacing.s6),
+          child: compact
+              ? content
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 380),
+                  child: AksharaEmptyPanel(
+                    tone: AksharaEmptyTone.error,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        content,
+                        if (errorCode != null) ...[
+                          const SizedBox(height: AksharaSpacing.s2),
+                          Text(
+                            'Error code: $errorCode',
+                            style: text.bodySmall.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-              if (onRetry != null) ...[
-                const SizedBox(height: AksharaSpacing.s4),
-                FilledButton(
-                  onPressed: onRetry,
-                  child: Text(retryLabel),
-                ),
-              ],
-            ],
-          ),
         ),
+      ),
       ),
     );
   }

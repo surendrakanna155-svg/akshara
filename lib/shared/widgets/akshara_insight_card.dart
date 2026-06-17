@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'akshara_glass_surface.dart';
+import 'akshara_interactive_surface.dart';
 
 /// AI insight strip shared across parent, teacher, and student dashboards.
 class AksharaInsightCard extends StatelessWidget {
@@ -35,84 +37,87 @@ class AksharaInsightCard extends StatelessWidget {
     return Semantics(
       container: true,
       label: '$semanticLabelPrefix: $message',
-      child: Material(
-        color: colors.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: AksharaRadius.card,
-          side: BorderSide(color: colors.outlineVariant),
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: cardHeight),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  width: accentWidth,
-                  decoration: BoxDecoration(
-                    color: accentColors.foreground,
-                    borderRadius: const BorderRadius.horizontal(
-                      left: Radius.circular(AksharaRadius.md),
+      child: AksharaInteractiveSurface(
+        color: Colors.transparent,
+        border: null,
+        restingShadowLevel: 0,
+        child: AksharaGlassSurface(
+          enableBlur: false,
+          tintColor: accentColors.container,
+          opacity: 0.42,
+          showSheen: true,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: cardHeight),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: accentWidth,
+                    decoration: BoxDecoration(
+                      color: accentColors.foreground,
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(AksharaRadius.md),
+                      ),
                     ),
                   ),
-                ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AksharaSpacing.s4,
-                    vertical: AksharaSpacing.s3,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        icon,
-                        size: 24,
-                        color: accentColors.foreground,
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AksharaSpacing.s4,
+                        vertical: AksharaSpacing.s3,
                       ),
-                      const SizedBox(width: AksharaSpacing.s3),
-                      Expanded(
-                        child: Text(
-                          message,
-                          style: text.bodyMedium.copyWith(
-                            color: colors.onSurface,
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 24,
+                            color: accentColors.foreground,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          const SizedBox(width: AksharaSpacing.s3),
+                          Expanded(
+                            child: Text(
+                              message,
+                              style: text.bodyMedium.copyWith(
+                                color: colors.onSurface,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (onAction != null) ...[
+                            const SizedBox(width: AksharaSpacing.s2),
+                            Flexible(
+                              child: TextButton(
+                                onPressed: onAction,
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AksharaSpacing.s2,
+                                  ),
+                                  minimumSize: const Size(
+                                    AksharaSpacing.minTouchTarget,
+                                    AksharaSpacing.minTouchTarget,
+                                  ),
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  actionLabel,
+                                  style: text.labelLarge.copyWith(
+                                    color: colors.primary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                      if (onAction != null) ...[
-                        const SizedBox(width: AksharaSpacing.s2),
-                        Flexible(
-                          child: TextButton(
-                          onPressed: onAction,
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AksharaSpacing.s2,
-                            ),
-                            minimumSize: const Size(
-                              AksharaSpacing.minTouchTarget,
-                              AksharaSpacing.minTouchTarget,
-                            ),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            actionLabel,
-                            style: text.labelLarge.copyWith(
-                              color: colors.primary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
         ),
       ),
     );

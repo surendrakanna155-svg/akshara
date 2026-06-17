@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
 
 /// Searchable dropdown for form catalogs (classes, sections, etc.).
 class AksharaSearchableDropdown extends StatelessWidget {
@@ -27,6 +28,8 @@ class AksharaSearchableDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    final colors = context.colors;
     final selection = resolveSelection != null
         ? resolveSelection!(value, options)
         : options.contains(value)
@@ -68,9 +71,7 @@ class AksharaSearchableDropdown extends StatelessWidget {
           const SizedBox(height: AksharaSpacing.s1),
           Text(
             errorText!,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.error,
-                ),
+            style: text.bodySmall.copyWith(color: colors.error),
           ),
         ],
       ],

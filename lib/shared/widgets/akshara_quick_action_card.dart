@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/motion.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import '../semantic_status.dart';
+import 'akshara_interactive_surface.dart';
 
 /// Quick action tile shared across teacher and student dashboards.
 class AksharaQuickActionCard extends StatelessWidget {
@@ -56,16 +58,14 @@ class AksharaQuickActionCard extends StatelessWidget {
       button: true,
       label: semanticLabel ?? label,
       enabled: onTap != null,
-      child: Material(
-        color: colors.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: AksharaRadius.card,
-          side: BorderSide(color: borderColor),
-        ),
-        child: InkWell(
+      child: AksharaInteractiveActivator(
+        onActivate: onTap,
+        enabled: onTap != null,
+        child: AksharaInteractiveSurface(
           onTap: onTap,
-          borderRadius: AksharaRadius.card,
+          color: colors.surface,
+          border: Border.all(color: borderColor),
+          restingShadowLevel: AksharaMotion.restingShadow,
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: effectiveMinHeight,

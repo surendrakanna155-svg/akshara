@@ -233,7 +233,7 @@ class _HealthScoreCard extends StatelessWidget {
                   color: tone,
                   backgroundColor: colors.surfaceContainerHighest,
                 ),
-                Text('$score', style: context.aksharaText.headlineSmall),
+                Text('$score', style: context.aksharaText.kpiValue),
               ],
             ),
           ),

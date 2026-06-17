@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'akshara_motion.dart';
+import 'akshara_empty_illustration.dart';
 
 /// Empty collection placeholder with optional action.
 class AksharaEmptyState extends StatelessWidget {
   const AksharaEmptyState({
     super.key,
     required this.message,
+    this.title,
     this.icon = Icons.inbox_outlined,
     this.actionLabel,
     this.onAction,
@@ -15,6 +18,7 @@ class AksharaEmptyState extends StatelessWidget {
   });
 
   final String message;
+  final String? title;
   final IconData icon;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -24,43 +28,43 @@ class AksharaEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.aksharaText;
-    final iconSize = compact ? 32.0 : 48.0;
     final verticalPadding = compact ? AksharaSpacing.s4 : AksharaSpacing.s6;
+    final illustrationSize = compact
+        ? AksharaEmptyIllustrationSize.standard
+        : AksharaEmptyIllustrationSize.prominent;
+    final resolvedTitle = title ?? (compact ? null : 'Nothing here yet');
 
-    return Semantics(
+    final content = AksharaEmptyContent(
+      compact: compact,
+      title: resolvedTitle,
+      message: message,
+      actionLabel: actionLabel,
+      onAction: onAction,
+      illustration: AksharaEmptyIllustration(
+        icon: icon,
+        tone: AksharaEmptyTone.info,
+        size: illustrationSize,
+      ),
+    );
+
+    return AksharaMotionAppear(
+      child: Semantics(
       container: true,
-      label: message,
+      label: resolvedTitle == null ? message : '$resolvedTitle. $message',
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: verticalPadding),
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: iconSize,
-                color: colors.onSurfaceVariant.withValues(alpha: 0.6),
-              ),
-              SizedBox(height: compact ? AksharaSpacing.s2 : AksharaSpacing.s3),
-              Text(
-                message,
-                style: (compact ? text.bodyMedium : text.titleSmall).copyWith(
-                  color: colors.onSurfaceVariant,
+          child: compact
+              ? content
+              : ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: AksharaEmptyPanel(
+                    tone: AksharaEmptyTone.info,
+                    child: content,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              if (actionLabel != null && onAction != null) ...[
-                const SizedBox(height: AksharaSpacing.s3),
-                TextButton(
-                  onPressed: onAction,
-                  child: Text(actionLabel!),
-                ),
-              ],
-            ],
-          ),
         ),
+      ),
       ),
     );
   }

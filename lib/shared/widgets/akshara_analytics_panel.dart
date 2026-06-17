@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import '../../theme/typography.dart';
 import 'akshara_kpi_card.dart';
 
 /// Executive-grade analytics summary row for dashboards and reports.
@@ -95,6 +97,7 @@ class AksharaAnalyticsFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final text = context.aksharaText;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AksharaSpacing.s4),
@@ -106,12 +109,12 @@ class AksharaAnalyticsFilterBar extends StatelessWidget {
               runSpacing: AksharaSpacing.s2,
               children: [
                 for (var i = 0; i < filters.length; i++)
-                  FilterChip(
-                    label: Text(filters[i]),
+                  _AnalyticsFilterChip(
+                    label: filters[i],
                     selected: selectedIndex == i,
-                    onSelected: (_) => onSelected(i),
-                    showCheckmark: false,
-                    selectedColor: colors.primaryContainer,
+                    onTap: () => onSelected(i),
+                    colors: colors,
+                    text: text,
                   ),
               ],
             ),
@@ -121,6 +124,55 @@ class AksharaAnalyticsFilterBar extends StatelessWidget {
             trailing!,
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _AnalyticsFilterChip extends StatelessWidget {
+  const _AnalyticsFilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.colors,
+    required this.text,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final ColorScheme colors;
+  final AksharaTextStyles text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? colors.primaryContainer : colors.surfaceContainerLow,
+      borderRadius: AksharaRadius.chip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AksharaRadius.chip,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AksharaSpacing.s3,
+            vertical: AksharaSpacing.s2,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: AksharaRadius.chip,
+            border: Border.all(
+              color: selected
+                  ? colors.primary.withValues(alpha: 0.55)
+                  : colors.outlineVariant.withValues(alpha: 0.65),
+            ),
+          ),
+          child: Text(
+            label,
+            style: text.labelMedium.copyWith(
+              color: selected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ),
       ),
     );
   }

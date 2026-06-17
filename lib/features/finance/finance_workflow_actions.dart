@@ -6,6 +6,9 @@ import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../../shared/forms/akshara_form_field.dart';
+import '../../shared/widgets/akshara_dialog.dart';
+import '../../shared/widgets/akshara_motion.dart';
 import 'finance_journey_context_provider.dart';
 import 'fee_assignment/finance_fee_assignment_provider.dart';
 import 'finance_models.dart';
@@ -22,6 +25,26 @@ void _showMutationError(BuildContext context, Object error) {
   );
 }
 
+List<Widget> _dialogActions(
+  BuildContext context, {
+  required String confirmLabel,
+  required VoidCallback onConfirm,
+  String cancelLabel = 'Cancel',
+  Key? confirmKey,
+  bool destructive = false,
+}) {
+  return [
+    AksharaDialogActions(
+      cancelLabel: cancelLabel,
+      confirmLabel: confirmLabel,
+      confirmKey: confirmKey,
+      destructive: destructive,
+      onCancel: () => Navigator.of(context).pop(false),
+      onConfirm: onConfirm,
+    ),
+  ];
+}
+
 Future<void> showCreateFeeStructureDialog(
   BuildContext context,
   WidgetRef ref, {
@@ -31,39 +54,33 @@ Future<void> showCreateFeeStructureDialog(
   final totalController = TextEditingController(text: '₹1,85,000');
   final classRangeController = TextEditingController(text: 'Nursery – 12');
 
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAksharaDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Create fee structure'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: totalController,
-              decoration: const InputDecoration(labelText: 'Annual total'),
-            ),
-            TextField(
-              controller: classRangeController,
-              decoration: const InputDecoration(labelText: 'Class range'),
-            ),
-          ],
-        ),
+    builder: (context) => AksharaAlertDialog(
+      title: 'Create fee structure',
+      icon: Icons.receipt_long_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Name',
+            controller: nameController,
+          ),
+          AksharaFormField(
+            label: 'Annual total',
+            controller: totalController,
+          ),
+          AksharaFormField(
+            label: 'Class range',
+            controller: classRangeController,
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Create'),
-        ),
-      ],
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Create',
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
     ),
   );
 
@@ -103,33 +120,28 @@ Future<void> showEditFeeStructureDialog(
   final nameController = TextEditingController(text: structure.name);
   final totalController = TextEditingController(text: structure.totalAnnual);
 
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAksharaDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Edit fee structure'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Edit fee structure',
+      icon: Icons.edit_outlined,
+      content: AksharaDialogFormBody(
         children: [
-          TextField(
+          AksharaFormField(
+            label: 'Name',
             controller: nameController,
-            decoration: const InputDecoration(labelText: 'Name'),
           ),
-          TextField(
+          AksharaFormField(
+            label: 'Annual total',
             controller: totalController,
-            decoration: const InputDecoration(labelText: 'Annual total'),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Save'),
-        ),
-      ],
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Save',
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
     ),
   );
 
@@ -234,37 +246,33 @@ Future<void> showCreateScholarshipDialog(
   final discountController = TextEditingController(text: '10%');
   final eligibilityController = TextEditingController();
 
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAksharaDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Create scholarship'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Create scholarship',
+      icon: Icons.school_outlined,
+      content: AksharaDialogFormBody(
         children: [
-          TextField(
+          AksharaFormField(
+            label: 'Scholarship name',
             controller: nameController,
-            decoration: const InputDecoration(labelText: 'Scholarship name'),
+            required: true,
           ),
-          TextField(
+          AksharaFormField(
+            label: 'Max discount',
             controller: discountController,
-            decoration: const InputDecoration(labelText: 'Max discount'),
           ),
-          TextField(
+          AksharaFormField(
+            label: 'Eligibility',
             controller: eligibilityController,
-            decoration: const InputDecoration(labelText: 'Eligibility'),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Create'),
-        ),
-      ],
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Create',
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
     ),
   );
 
@@ -297,24 +305,20 @@ Future<void> showEditFinanceSettingDialog(
 }) async {
   final valueController = TextEditingController(text: item.value);
 
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAksharaDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text('Edit ${item.label}'),
-      content: TextField(
+    builder: (context) => AksharaAlertDialog(
+      title: 'Edit ${item.label}',
+      icon: Icons.tune_rounded,
+      content: AksharaFormField(
+        label: item.label,
         controller: valueController,
-        decoration: InputDecoration(labelText: item.label),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Save'),
-        ),
-      ],
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Save',
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
     ),
   );
 
@@ -355,51 +359,46 @@ Future<void> showRecordCollectionDialog(
   final amountController = TextEditingController(text: defaultAmount);
   var paymentMethod = 'UPI';
 
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAksharaDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Record collection'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              key: QaTestKeys.financeCollectionInvoiceField,
-              controller: invoiceController,
-              decoration: const InputDecoration(labelText: 'Invoice ID'),
-            ),
-            TextField(
-              key: QaTestKeys.financeCollectionAmountField,
-              controller: amountController,
-              decoration: const InputDecoration(labelText: 'Amount collected'),
-              keyboardType: TextInputType.number,
-            ),
-            DropdownMenu<String>(
-              initialSelection: paymentMethod,
-              label: const Text('Payment method'),
-              dropdownMenuEntries: const [
-                DropdownMenuEntry(value: 'Cash', label: 'Cash'),
-                DropdownMenuEntry(value: 'UPI', label: 'UPI'),
-                DropdownMenuEntry(value: 'Card', label: 'Card'),
-              ],
-              onSelected: (value) {
-                if (value != null) paymentMethod = value;
-              },
-            ),
-          ],
-        ),
+    builder: (context) => AksharaAlertDialog(
+      title: 'Record collection',
+      icon: Icons.payments_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            key: QaTestKeys.financeCollectionInvoiceField,
+            label: 'Invoice ID',
+            controller: invoiceController,
+          ),
+          AksharaFormField(
+            key: QaTestKeys.financeCollectionAmountField,
+            label: 'Amount collected',
+            controller: amountController,
+            keyboardType: TextInputType.number,
+          ),
+          DropdownMenu<String>(
+            initialSelection: paymentMethod,
+            label: const Text('Payment method'),
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: const [
+              DropdownMenuEntry(value: 'Cash', label: 'Cash'),
+              DropdownMenuEntry(value: 'UPI', label: 'UPI'),
+              DropdownMenuEntry(value: 'Card', label: 'Card'),
+            ],
+            onSelected: (value) {
+              if (value != null) paymentMethod = value;
+            },
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          key: QaTestKeys.financeCollectionSubmitButton,
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Record payment'),
-        ),
-      ],
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Record payment',
+        confirmKey: QaTestKeys.financeCollectionSubmitButton,
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
     ),
   );
 
@@ -471,25 +470,16 @@ Future<void> executeCancelInvoice(
   WidgetRef ref, {
   required String invoiceId,
 }) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Cancel invoice'),
-      content: Text('Cancel invoice $invoiceId? This cannot be undone.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Keep'),
-        ),
-        FilledButton(
-          key: QaTestKeys.financeCancelInvoiceConfirmButton,
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Cancel invoice'),
-        ),
-      ],
-    ),
+  final confirmed = await showAksharaConfirmDialog(
+    context,
+    title: 'Cancel invoice',
+    message: 'Cancel invoice $invoiceId? This cannot be undone.',
+    confirmLabel: 'Cancel invoice',
+    cancelLabel: 'Keep',
+    destructive: true,
+    confirmKey: QaTestKeys.financeCancelInvoiceConfirmButton,
   );
-  if (confirmed != true || !context.mounted) return;
+  if (!confirmed || !context.mounted) return;
 
   try {
     final invoice = await ref.read(cancelInvoiceProvider.notifier).execute(
@@ -514,27 +504,17 @@ Future<void> executeCancelCollection(
   required String collectionId,
   required String receiptNumber,
 }) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Cancel collection'),
-      content: Text(
+  final confirmed = await showAksharaConfirmDialog(
+    context,
+    title: 'Cancel collection',
+    message:
         'Cancel receipt $receiptNumber? The payment will be marked refunded.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Keep'),
-        ),
-        FilledButton(
-          key: QaTestKeys.financeCancelCollectionConfirmButton,
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Cancel collection'),
-        ),
-      ],
-    ),
+    confirmLabel: 'Cancel collection',
+    cancelLabel: 'Keep',
+    destructive: true,
+    confirmKey: QaTestKeys.financeCancelCollectionConfirmButton,
   );
-  if (confirmed != true || !context.mounted) return;
+  if (!confirmed || !context.mounted) return;
 
   try {
     final result = await ref.read(cancelCollectionProvider.notifier).execute(

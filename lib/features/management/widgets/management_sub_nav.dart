@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_navigation.dart';
 import '../../../theme/spacing.dart';
-import '../../../theme/theme_extensions.dart';
 import '../management_navigation.dart';
 import '../management_models.dart';
 
@@ -22,7 +22,8 @@ class ManagementSubNav extends StatelessWidget {
         child: Row(
           children: [
             for (final screen in kManagementNavScreens) ...[
-              _ManagementSubNavTab(
+              AksharaModuleSubNavTab(
+                key: QaTestKeys.moduleSubNavTab('management', screen.label),
                 label: screen.label,
                 selected: screen == current,
                 onTap: () {
@@ -35,52 +36,6 @@ class ManagementSubNav extends StatelessWidget {
                 const SizedBox(width: AksharaSpacing.s2),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ManagementSubNavTab extends StatelessWidget {
-  const _ManagementSubNavTab({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.aksharaText;
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: '$label tab',
-      child: Material(
-        key: QaTestKeys.moduleSubNavTab('management', label),
-        color: selected ? colors.primaryContainer : colors.surface,
-        borderRadius: BorderRadius.circular(AksharaSpacing.s3),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(AksharaSpacing.s3),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AksharaSpacing.s4,
-              vertical: AksharaSpacing.s2,
-            ),
-            child: Text(
-              label,
-              style: text.labelLarge.copyWith(
-                color: selected ? colors.primary : colors.onSurfaceVariant,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              ),
-            ),
-          ),
         ),
       ),
     );

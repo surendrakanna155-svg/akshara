@@ -464,7 +464,7 @@ class _PrincipalSummaryTab extends ConsumerWidget {
       data: (summary) => ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          Text(summary.headline, style: Theme.of(context).textTheme.titleLarge),
+          Text(summary.headline, style: context.aksharaText.displaySmall),
           const SizedBox(height: AksharaSpacing.s4),
           const AksharaSectionHeader(title: 'Highlights'),
           for (final item in summary.highlights)
@@ -550,17 +550,14 @@ class _KpiCard extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: text.labelMedium.copyWith(color: colors.onSurfaceVariant),
+                style: text.kpiLabel.copyWith(color: colors.onSurfaceVariant),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AksharaSpacing.s2),
               Text(
                 value,
-                style: text.titleLarge.copyWith(
-                  color: colors.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: text.kpiValue.copyWith(color: colors.onSurface),
               ),
             ],
           ),

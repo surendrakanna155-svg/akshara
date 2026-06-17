@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/motion.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import 'akshara_interactive_surface.dart';
 
 /// Layout variants for [AksharaKpiCard].
 enum AksharaKpiCardStyle {
@@ -19,6 +21,9 @@ enum AksharaKpiCardStyle {
   count,
 }
 
+/// Trend direction for optional KPI delta indicators (visual only).
+enum AksharaKpiTrendDirection { up, down, neutral }
+
 /// Compact KPI metric card used across parent, teacher, and student dashboards.
 class AksharaKpiCard extends StatelessWidget {
   const AksharaKpiCard({
@@ -33,6 +38,7 @@ class AksharaKpiCard extends StatelessWidget {
     this.detail,
     this.height = 88,
     this.drillKey,
+    this.trendDirection,
   });
 
   final String value;
@@ -44,10 +50,10 @@ class AksharaKpiCard extends StatelessWidget {
   final AksharaKpiCardStyle style;
   final String? detail;
   final double height;
-  /// QA / Patrol tap target — placed on the hit-testable surface.
   final Key? drillKey;
+  final AksharaKpiTrendDirection? trendDirection;
 
-  static const double iconBoxSize = 32;
+  static const double iconBoxSize = 36;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +66,8 @@ class AksharaKpiCard extends StatelessWidget {
             subtitle: subtitle,
             accent: accent,
             icon: icon,
+            detail: detail,
+            trendDirection: trendDirection,
             onTap: onTap,
           ),
         AksharaKpiCardStyle.filled => _FilledKpiTile(
@@ -68,6 +76,8 @@ class AksharaKpiCard extends StatelessWidget {
             label: subtitle,
             accent: accent,
             icon: icon,
+            detail: detail,
+            trendDirection: trendDirection,
             onTap: onTap,
           ),
         AksharaKpiCardStyle.status => _StatusKpiCard(
@@ -77,6 +87,7 @@ class AksharaKpiCard extends StatelessWidget {
             accent: accent,
             icon: icon ?? Icons.fact_check_outlined,
             height: height,
+            trendDirection: trendDirection,
             onTap: onTap,
           ),
         AksharaKpiCardStyle.count => _CountKpiCard(
@@ -86,11 +97,175 @@ class AksharaKpiCard extends StatelessWidget {
             accent: accent,
             icon: icon ?? Icons.assignment_outlined,
             height: height,
+            trendDirection: trendDirection,
             onTap: onTap,
           ),
       },
     );
   }
+}
+
+/// Presentation helper — classifies existing [detail] strings for trend chips.
+abstract final class AksharaKpiPresentation {
+  static bool isTrendDetail(String? detail) {
+    if (detail == null || detail.trim().isEmpty) {
+      return false;
+    }
+    final trimmed = detail.trim();
+    if (trimmed.contains('%')) {
+      return true;
+    }
+    if (trimmed.startsWith('+') || trimmed.startsWith('-')) {
+      return RegExp(r'^[\+\-]\d').hasMatch(trimmed);
+    }
+    return trimmed.toLowerCase().contains(' vs ');
+  }
+
+  static AksharaKpiTrendDirection inferTrendDirection(
+    String detail, {
+    AksharaKpiTrendDirection? override,
+  }) {
+    if (override != null) {
+      return override;
+    }
+    final trimmed = detail.trim();
+    if (trimmed.startsWith('+') ||
+        trimmed.toLowerCase().contains('increase') ||
+        trimmed.toLowerCase().contains('up ')) {
+      return AksharaKpiTrendDirection.up;
+    }
+    if (RegExp(r'^-\d').hasMatch(trimmed) ||
+        trimmed.toLowerCase().contains('decrease') ||
+        trimmed.toLowerCase().contains('down ')) {
+      return AksharaKpiTrendDirection.down;
+    }
+    return AksharaKpiTrendDirection.neutral;
+  }
+}
+
+class _KpiIconBadge extends StatelessWidget {
+  const _KpiIconBadge({
+    required this.icon,
+    required this.foreground,
+    required this.background,
+    this.size = AksharaKpiCard.iconBoxSize,
+    this.iconSize = 20,
+  });
+
+  final IconData icon;
+  final Color foreground;
+  final Color background;
+  final double size;
+  final double iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: AksharaRadius.chip,
+      ),
+      child: Icon(icon, size: iconSize, color: foreground),
+    );
+  }
+}
+
+class _KpiTrendChip extends StatelessWidget {
+  const _KpiTrendChip({
+    required this.label,
+    required this.direction,
+  });
+
+  final String label;
+  final AksharaKpiTrendDirection direction;
+
+  @override
+  Widget build(BuildContext context) {
+    final ext = context.akshara;
+    final colors = context.colors;
+    final text = context.aksharaText;
+
+    final (Color bg, Color fg, IconData icon) = switch (direction) {
+      AksharaKpiTrendDirection.up => (
+          ext.successContainer,
+          ext.success,
+          Icons.trending_up_rounded,
+        ),
+      AksharaKpiTrendDirection.down => (
+          colors.errorContainer,
+          colors.error,
+          Icons.trending_down_rounded,
+        ),
+      AksharaKpiTrendDirection.neutral => (
+          colors.surfaceContainerHigh,
+          colors.onSurfaceVariant,
+          Icons.trending_flat_rounded,
+        ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AksharaSpacing.s2,
+        vertical: AksharaSpacing.s1,
+      ),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AksharaRadius.xs),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: fg),
+          const SizedBox(width: AksharaSpacing.s1),
+          Flexible(
+            child: Text(
+              label,
+              style: text.labelSmall.copyWith(
+                color: fg,
+                fontWeight: FontWeight.w600,
+                height: 1.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _KpiAccentStripe extends StatelessWidget {
+  const _KpiAccentStripe({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 4,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: const BorderRadius.horizontal(
+          left: Radius.circular(AksharaRadius.lg),
+        ),
+      ),
+    );
+  }
+}
+
+IconData _defaultIcon(KpiAccent accent) {
+  return switch (accent) {
+    KpiAccent.success => Icons.check_circle_outline,
+    KpiAccent.error => Icons.cancel_outlined,
+    KpiAccent.warning => Icons.schedule,
+    KpiAccent.primary => Icons.insights_outlined,
+    KpiAccent.neutral => Icons.analytics_outlined,
+    KpiAccent.tertiary => Icons.trending_up_outlined,
+    KpiAccent.indigo => Icons.auto_graph_outlined,
+  };
 }
 
 class _StripKpiCard extends StatelessWidget {
@@ -99,6 +274,8 @@ class _StripKpiCard extends StatelessWidget {
     required this.subtitle,
     required this.accent,
     this.icon,
+    this.detail,
+    this.trendDirection,
     this.onTap,
   });
 
@@ -106,6 +283,8 @@ class _StripKpiCard extends StatelessWidget {
   final String subtitle;
   final KpiAccent accent;
   final IconData? icon;
+  final String? detail;
+  final AksharaKpiTrendDirection? trendDirection;
   final VoidCallback? onTap;
 
   @override
@@ -114,74 +293,85 @@ class _StripKpiCard extends StatelessWidget {
     final text = context.aksharaText;
     final accentColors = accent.resolve(context);
     final resolvedIcon = icon ?? _defaultIcon(accent);
+    final showTrend = AksharaKpiPresentation.isTrendDetail(detail);
 
-    return Material(
+    return AksharaInteractiveSurface(
+      onTap: onTap,
+      borderRadius: AksharaRadius.kpiCardBorder,
       color: colors.surface,
-      elevation: 1,
-      shadowColor: colors.onSurface.withValues(alpha: 0.08),
-      shape: RoundedRectangleBorder(
-        borderRadius: AksharaRadius.card,
-        side: BorderSide(color: colors.outlineVariant),
+      border: Border.all(
+        color: colors.outlineVariant.withValues(alpha: 0.65),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AksharaRadius.card,
-        child: SizedBox(
-          height: 88,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AksharaSpacing.s3,
-              vertical: AksharaSpacing.s2,
+      restingShadowLevel: AksharaMotion.restingShadow,
+      child: SizedBox(
+        height: 88,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _KpiAccentStripe(color: accentColors.foreground),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AksharaSpacing.s3,
+                  AksharaSpacing.s2,
+                  AksharaSpacing.s3,
+                  AksharaSpacing.s2,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            subtitle,
+                            style: text.kpiLabel.copyWith(
+                              color: colors.onSurfaceVariant,
+                              fontSize: 12,
+                              height: 1.1,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        _KpiIconBadge(
+                          icon: resolvedIcon,
+                          foreground: accentColors.foreground,
+                          background: accentColors.container,
+                          size: 28,
+                          iconSize: 16,
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Text(
+                      value,
+                      style: text.titleMedium.copyWith(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w600,
+                        height: 1.05,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (showTrend && detail != null) ...[
+                      const SizedBox(height: AksharaSpacing.s1),
+                      _KpiTrendChip(
+                        label: detail!,
+                        direction: AksharaKpiPresentation.inferTrendDirection(
+                          detail!,
+                          override: trendDirection,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: AksharaKpiCard.iconBoxSize,
-                  height: AksharaKpiCard.iconBoxSize,
-                  decoration: BoxDecoration(
-                    color: accentColors.container,
-                    borderRadius: AksharaRadius.chip,
-                  ),
-                  child: Icon(
-                    resolvedIcon,
-                    size: 18,
-                    color: accentColors.foreground,
-                  ),
-                ),
-                const SizedBox(height: AksharaSpacing.s1),
-                Text(
-                  value,
-                  style: text.titleSmall.copyWith(color: colors.onSurface),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  subtitle,
-                  style: text.bodySmall.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
+          ],
         ),
       ),
     );
-  }
-
-  IconData _defaultIcon(KpiAccent accent) {
-    return switch (accent) {
-      KpiAccent.success => Icons.check_circle_outline,
-      KpiAccent.error => Icons.cancel_outlined,
-      KpiAccent.warning => Icons.schedule,
-      KpiAccent.primary => Icons.insights_outlined,
-      KpiAccent.neutral => Icons.analytics_outlined,
-    };
   }
 }
 
@@ -192,15 +382,18 @@ class _FilledKpiTile extends StatelessWidget {
     required this.label,
     required this.accent,
     this.icon,
+    this.detail,
+    this.trendDirection,
     this.onTap,
   });
 
   final Key? drillKey;
-
   final String value;
   final String label;
   final KpiAccent accent;
   final IconData? icon;
+  final String? detail;
+  final AksharaKpiTrendDirection? trendDirection;
   final VoidCallback? onTap;
 
   @override
@@ -208,82 +401,114 @@ class _FilledKpiTile extends StatelessWidget {
     final colors = context.colors;
     final text = context.aksharaText;
     final accentColors = accent.resolve(context);
+    final resolvedIcon = icon ?? _defaultIcon(accent);
+    final showTrend = AksharaKpiPresentation.isTrendDetail(detail);
+    final caption = showTrend ? null : detail;
 
-    return Material(
-      color: accentColors.container,
-      elevation: onTap != null ? 1 : 0,
-      shadowColor: colors.onSurface.withValues(alpha: 0.06),
-      borderRadius: AksharaRadius.card,
-      child: InkWell(
-        key: drillKey,
-        onTap: onTap,
-        borderRadius: AksharaRadius.card,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.hasBoundedHeight &&
-                constraints.maxHeight < 120;
-            final padding = compact
-                ? const EdgeInsets.symmetric(
-                    horizontal: AksharaSpacing.s3,
-                    vertical: AksharaSpacing.s2,
-                  )
-                : const EdgeInsets.all(AksharaSpacing.s4);
-            final valueStyle = (compact ? text.titleSmall : text.titleLarge)
-                .copyWith(
-              color: accentColors.foreground,
-              fontWeight: FontWeight.w700,
-              height: 1.1,
-            );
-            final labelStyle = (compact ? text.labelSmall : text.labelMedium)
-                .copyWith(
-              color: colors.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            );
-            final iconSize = compact ? 16.0 : 20.0;
+    return AksharaInteractiveSurface(
+      drillKey: drillKey,
+      onTap: onTap,
+      borderRadius: AksharaRadius.kpiCardBorder,
+      color: colors.surface,
+      border: Border.all(
+        color: accentColors.foreground.withValues(alpha: 0.12),
+      ),
+      restingShadowLevel: AksharaMotion.restingShadow,
+      hoverShadowLevel: AksharaMotion.hoverShadow,
+      pressedShadowLevel: AksharaMotion.pressedShadow,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final dense = !constraints.hasBoundedHeight ||
+              constraints.maxHeight <= 148;
+          final padding = EdgeInsets.all(
+            dense ? AksharaSpacing.s3 : AksharaSpacing.kpiCardPadding,
+          );
+          final valueStyle = (dense ? text.titleLarge : text.kpiValue).copyWith(
+            color: colors.onSurface,
+            height: 1.05,
+          );
 
-            return Padding(
-              padding: padding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      if (icon != null) ...[
-                        Icon(icon, size: iconSize, color: accentColors.foreground),
-                        SizedBox(width: compact ? AksharaSpacing.s1 : AksharaSpacing.s2),
-                      ],
-                      Expanded(
-                        child: Text(
-                          value,
-                          style: valueStyle,
-                          maxLines: compact ? 1 : 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+          return Padding(
+            padding: padding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _KpiIconBadge(
+                      icon: resolvedIcon,
+                      foreground: accentColors.foreground,
+                      background: accentColors.container,
+                      size: dense ? 32 : AksharaKpiCard.iconBoxSize,
+                      iconSize: dense ? 18 : 20,
+                    ),
+                    const SizedBox(width: AksharaSpacing.s3),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            label,
+                            style: text.kpiLabel.copyWith(
+                              color: colors.onSurfaceVariant,
+                              fontSize: dense ? 12 : 13,
+                            ),
+                            maxLines: dense ? 1 : 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(
+                            height:
+                                dense ? AksharaSpacing.s1 : AksharaSpacing.s2,
+                          ),
+                          Text(
+                            value,
+                            style: valueStyle,
+                            maxLines: dense ? 1 : 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      if (onTap != null && !compact)
-                        Icon(
-                          Icons.chevron_right,
-                          size: 20,
-                          color: colors.onSurfaceVariant,
-                        ),
-                    ],
-                  ),
+                    ),
+                    if (onTap != null && !dense)
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 18,
+                        color:
+                            accentColors.foreground.withValues(alpha: 0.7),
+                      ),
+                  ],
+                ),
+                if (showTrend && detail != null) ...[
                   SizedBox(
-                    height: compact ? AksharaSpacing.s1 : AksharaSpacing.s2,
+                    height: dense ? AksharaSpacing.s1 : AksharaSpacing.s2,
+                  ),
+                  _KpiTrendChip(
+                    label: detail!,
+                    direction: AksharaKpiPresentation.inferTrendDirection(
+                      detail!,
+                      override: trendDirection,
+                    ),
+                  ),
+                ] else if (caption != null && caption.isNotEmpty) ...[
+                  SizedBox(
+                    height: dense ? AksharaSpacing.s1 : AksharaSpacing.s2,
                   ),
                   Text(
-                    label,
-                    style: labelStyle,
-                    maxLines: compact ? 1 : 2,
+                    caption,
+                    style: text.bodySmall.copyWith(
+                      color: colors.onSurfaceVariant,
+                      height: 1.1,
+                    ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-              ),
-            );
-          },
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -297,6 +522,7 @@ class _StatusKpiCard extends StatelessWidget {
     required this.accent,
     required this.icon,
     required this.height,
+    this.trendDirection,
     this.onTap,
   });
 
@@ -306,6 +532,7 @@ class _StatusKpiCard extends StatelessWidget {
   final KpiAccent accent;
   final IconData icon;
   final double height;
+  final AksharaKpiTrendDirection? trendDirection;
   final VoidCallback? onTap;
 
   @override
@@ -313,61 +540,95 @@ class _StatusKpiCard extends StatelessWidget {
     final colors = context.colors;
     final text = context.aksharaText;
     final accentColors = accent.resolve(context);
+    final showTrend = AksharaKpiPresentation.isTrendDetail(detail);
 
-    return Material(
-      color: accentColors.container,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: AksharaRadius.card),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AksharaRadius.card,
-        child: SizedBox(
-          height: height,
-          child: Padding(
-            padding: const EdgeInsets.all(AksharaSpacing.s3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+    return AksharaInteractiveSurface(
+      onTap: onTap,
+      borderRadius: AksharaRadius.kpiCardBorder,
+      color: accentColors.container.withValues(alpha: 0.55),
+      border: Border.all(
+        color: accentColors.foreground.withValues(alpha: 0.14),
+      ),
+      restingShadowLevel: 0,
+      hoverShadowLevel: 1,
+      pressedShadowLevel: 2,
+      child: SizedBox(
+        height: height,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _KpiAccentStripe(color: accentColors.foreground),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AksharaSpacing.s3,
+                  vertical: AksharaSpacing.s2,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, size: 18, color: accentColors.foreground),
-                    const SizedBox(width: AksharaSpacing.s1),
-                    Expanded(
-                      child: Text(
-                        value,
-                        style: text.titleSmall.copyWith(
-                          color: accentColors.foreground,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      label,
+                      style: text.kpiLabel.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 12,
+                        height: 1.1,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: AksharaSpacing.s1),
+                    Text(
+                      value,
+                      style: text.titleMedium.copyWith(
+                        color: accentColors.foreground,
+                        fontWeight: FontWeight.w600,
+                        height: 1.05,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (detail.isNotEmpty) ...[
+                      const SizedBox(height: AksharaSpacing.s1),
+                      if (showTrend)
+                        _KpiTrendChip(
+                          label: detail,
+                          direction:
+                              AksharaKpiPresentation.inferTrendDirection(
+                            detail,
+                            override: trendDirection,
+                          ),
+                        )
+                      else
+                        Text(
+                          detail,
+                          style: text.bodySmall.copyWith(
+                            color: colors.onSurfaceVariant,
+                            height: 1.1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
                   ],
                 ),
-                Text(
-                  label,
-                  style: text.labelSmall.copyWith(
-                    color: colors.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  detail,
-                  style: text.bodySmall.copyWith(
-                    color: colors.onSurfaceVariant,
-                    fontSize: 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+              ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.only(
+                right: AksharaSpacing.s2,
+                top: AksharaSpacing.s2,
+              ),
+              child: _KpiIconBadge(
+                icon: icon,
+                foreground: accentColors.foreground,
+                background: accentColors.container,
+                size: 28,
+                iconSize: 16,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -382,6 +643,7 @@ class _CountKpiCard extends StatelessWidget {
     required this.accent,
     required this.icon,
     required this.height,
+    this.trendDirection,
     this.onTap,
   });
 
@@ -391,6 +653,7 @@ class _CountKpiCard extends StatelessWidget {
   final KpiAccent accent;
   final IconData icon;
   final double height;
+  final AksharaKpiTrendDirection? trendDirection;
   final VoidCallback? onTap;
 
   @override
@@ -398,55 +661,93 @@ class _CountKpiCard extends StatelessWidget {
     final colors = context.colors;
     final text = context.aksharaText;
     final accentColors = accent.resolve(context);
+    final showTrend = AksharaKpiPresentation.isTrendDetail(detail);
 
-    return Material(
-      color: accentColors.container,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: AksharaRadius.card),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AksharaRadius.card,
-        child: SizedBox(
-          height: height,
-          child: Padding(
-            padding: const EdgeInsets.all(AksharaSpacing.s3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+    return AksharaInteractiveSurface(
+      onTap: onTap,
+      borderRadius: AksharaRadius.kpiCardBorder,
+      color: accentColors.container.withValues(alpha: 0.55),
+      border: Border.all(
+        color: accentColors.foreground.withValues(alpha: 0.14),
+      ),
+      restingShadowLevel: 0,
+      hoverShadowLevel: 1,
+      pressedShadowLevel: 2,
+      child: SizedBox(
+        height: height,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _KpiAccentStripe(color: accentColors.foreground),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AksharaSpacing.s3,
+                  vertical: AksharaSpacing.s2,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(icon, size: 18, color: accentColors.foreground),
-                    const SizedBox(width: AksharaSpacing.s1),
+                    Text(
+                      label,
+                      style: text.kpiLabel.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 12,
+                        height: 1.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: AksharaSpacing.s1),
                     Text(
                       '$count',
-                      style: text.titleSmall.copyWith(
+                      style: text.titleLarge.copyWith(
                         color: accentColors.foreground,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
+                        height: 1.05,
                       ),
                     ),
+                    if (detail.isNotEmpty) ...[
+                      const SizedBox(height: AksharaSpacing.s1),
+                      if (showTrend)
+                        _KpiTrendChip(
+                          label: detail,
+                          direction:
+                              AksharaKpiPresentation.inferTrendDirection(
+                            detail,
+                            override: trendDirection,
+                          ),
+                        )
+                      else
+                        Text(
+                          detail,
+                          style: text.bodySmall.copyWith(
+                            color: colors.onSurfaceVariant,
+                            height: 1.1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
                   ],
                 ),
-                Text(
-                  label,
-                  style: text.labelSmall.copyWith(
-                    color: colors.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  detail,
-                  style: text.bodySmall.copyWith(
-                    color: colors.onSurfaceVariant,
-                    fontSize: 11,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+              ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.only(
+                right: AksharaSpacing.s2,
+                top: AksharaSpacing.s2,
+              ),
+              child: _KpiIconBadge(
+                icon: icon,
+                foreground: accentColors.foreground,
+                background: accentColors.container,
+                size: 28,
+                iconSize: 16,
+              ),
+            ),
+          ],
         ),
       ),
     );

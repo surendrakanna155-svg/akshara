@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/akshara_chart.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -23,52 +24,52 @@ class AdmissionsChartPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.aksharaText;
     final ext = context.akshara;
     final chartColors = [ext.chart1, ext.chart2, ext.chart3, ext.chart4];
+    final isEmpty = segments.isEmpty;
 
-    return Semantics(
-      container: true,
-      label: '$title chart with ${segments.length} segments',
-      child: Material(
-        color: colors.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: AksharaRadius.card,
-          side: BorderSide(color: colors.outlineVariant),
+    if (isEmpty) {
+      return AksharaChartCard(
+        title: title,
+        semanticLabel: '$title chart with 0 segments',
+        emptyState: const AksharaChartEmpty(
+          message:
+              'Segment data will appear once admissions activity is recorded.',
+          icon: Icons.donut_large_outlined,
         ),
-        child: SizedBox(
-          height: height,
-          child: Padding(
-            padding: const EdgeInsets.all(AksharaSpacing.s4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  title,
-                  style: text.titleSmall.copyWith(color: colors.onSurface),
-                ),
-                const SizedBox(height: AksharaSpacing.s4),
-                Expanded(
-                  child: chartType == AdmissionsChartType.funnel
-                      ? _FunnelChart(
-                          segments: segments,
-                          colors: chartColors,
-                          text: text,
-                          onSurfaceVariant: colors.onSurfaceVariant,
-                        )
-                      : _DonutLegend(
-                          segments: segments,
-                          colors: chartColors,
-                          text: text,
-                          onSurfaceVariant: colors.onSurfaceVariant,
-                        ),
-                ),
-              ],
-            ),
-          ),
+        child: const SizedBox.shrink(),
+      );
+    }
+
+    return SizedBox(
+      height: height,
+      child: AksharaChartCard(
+        title: title,
+        semanticLabel: '$title chart with ${segments.length} segments',
+        expandBody: true,
+        legend: AksharaChartLegend(
+          items: [
+            for (var i = 0; i < segments.length; i++)
+              AksharaChartLegendItem(
+                color: chartColors[i % chartColors.length],
+                label: segments[i].label,
+                value: chartType == AdmissionsChartType.donut
+                    ? '${segments[i].percent.toStringAsFixed(1)}%'
+                    : segments[i].value.toString(),
+              ),
+          ],
         ),
+        child: chartType == AdmissionsChartType.funnel
+            ? _FunnelChart(
+                segments: segments,
+                colors: chartColors,
+                text: context.aksharaText,
+              )
+            : _DonutLegend(
+                segments: segments,
+                colors: chartColors,
+                text: context.aksharaText,
+              ),
       ),
     );
   }
@@ -81,86 +82,67 @@ class _FunnelChart extends StatelessWidget {
     required this.segments,
     required this.colors,
     required this.text,
-    required this.onSurfaceVariant,
   });
 
   final List<ChartSegment> segments;
   final List<Color> colors;
   final AksharaTextStyles text;
-  final Color onSurfaceVariant;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Column(
       children: [
-        Expanded(
-          flex: 3,
-          child: Column(
-            children: [
-              for (var i = 0; i < segments.length; i++)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final widthFactor =
-                            segments[i].percent / (segments.first.percent);
-                        return Align(
-                          alignment: Alignment.center,
-                          child: Container(
-                            width: constraints.maxWidth * widthFactor,
-                            decoration: BoxDecoration(
-                              color: colors[i % colors.length]
-                                  .withValues(alpha: 0.85),
-                              borderRadius: AksharaRadius.chip,
-                            ),
+        for (var i = 0; i < segments.length; i++)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final widthFactor =
+                      segments[i].percent / (segments.first.percent);
+                  return Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      height: constraints.maxHeight,
+                      width: constraints.maxWidth * widthFactor,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            colors[i % colors.length].withValues(alpha: 0.72),
+                            colors[i % colors.length],
+                          ],
+                        ),
+                        borderRadius: AksharaRadius.kpiCard,
+                        boxShadow: [
+                          BoxShadow(
+                            color: colors[i % colors.length]
+                                .withValues(alpha: 0.12),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                        );
-                      },
+                        ],
+                      ),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AksharaSpacing.s3,
+                      ),
+                      child: Text(
+                        segments[i].label,
+                        style: text.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ),
-            ],
+                  );
+                },
+              ),
+            ),
           ),
-        ),
-        const SizedBox(width: AksharaSpacing.s4),
-        Expanded(
-          flex: 2,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < segments.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: colors[i % colors.length],
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: AksharaSpacing.s2),
-                      Expanded(
-                        child: Text(
-                          '${segments[i].label} · ${segments[i].value}',
-                          style: text.bodySmall.copyWith(
-                            color: onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -171,63 +153,50 @@ class _DonutLegend extends StatelessWidget {
     required this.segments,
     required this.colors,
     required this.text,
-    required this.onSurfaceVariant,
   });
 
   final List<ChartSegment> segments;
   final List<Color> colors;
   final AksharaTextStyles text;
-  final Color onSurfaceVariant;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Row(
       children: [
         Expanded(
           child: AspectRatio(
             aspectRatio: 1,
-            child: CustomPaint(
-              painter: _DonutPainter(
-                segments: segments,
-                colors: colors,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: AksharaSpacing.s4),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < segments.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AksharaSpacing.s1),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: colors[i % colors.length],
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: AksharaSpacing.s2),
-                      Expanded(
-                        child: Text(
-                          '${segments[i].label} ${segments[i].percent.toStringAsFixed(1)}%',
-                          style: text.bodySmall.copyWith(
-                            color: onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  painter: _DonutPainter(
+                    segments: segments,
+                    colors: this.colors,
                   ),
+                  size: Size.infinite,
                 ),
-            ],
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${segments.length}',
+                      style: text.titleMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'sources',
+                      style: text.labelSmall.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -240,29 +209,31 @@ class _DonutPainter extends CustomPainter {
 
   final List<ChartSegment> segments;
   final List<Color> colors;
+  static const _gapRadians = 0.05;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.shortestSide / 2;
-    const stroke = 28.0;
+    const stroke = 26.0;
     var start = -1.5708;
 
     for (var i = 0; i < segments.length; i++) {
-      final sweep = (segments[i].percent / 100) * 6.28318;
+      final rawSweep = (segments[i].percent / 100) * 6.28318;
+      final sweep = (rawSweep - _gapRadians).clamp(0.02, rawSweep);
       final paint = Paint()
         ..color = colors[i % colors.length]
         ..style = PaintingStyle.stroke
         ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.butt;
+        ..strokeCap = StrokeCap.round;
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius - stroke / 2),
-        start,
+        start + _gapRadians / 2,
         sweep,
         false,
         paint,
       );
-      start += sweep;
+      start += rawSweep;
     }
   }
 

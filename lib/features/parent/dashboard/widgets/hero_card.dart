@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/akshara_glass_surface.dart';
 import '../../../../shared/widgets/akshara_status_chip.dart';
-import '../../../../theme/elevation.dart';
 import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
@@ -32,16 +32,9 @@ class HeroCard extends StatelessWidget {
     return Semantics(
       container: true,
       label: '$eyebrow. $headline',
-      child: Card(
-        elevation: AksharaElevation.level1,
-        margin: EdgeInsets.zero,
-        color: colors.surfaceContainerLowest,
-        shape: RoundedRectangleBorder(
-          borderRadius: AksharaRadius.card,
-          side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.6)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AksharaSpacing.s4),
+      child: AksharaGlassHeroBackdrop(
+        child: AksharaGlassCard(
+          tintColor: colors.surfaceContainerLowest,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -63,7 +56,7 @@ class HeroCard extends StatelessWidget {
                         const SizedBox(height: AksharaSpacing.s1),
                         Text(
                           headline,
-                          style: text.headlineSmall.copyWith(
+                          style: text.displaySmall.copyWith(
                             color: colors.onSurface,
                           ),
                           maxLines: 2,

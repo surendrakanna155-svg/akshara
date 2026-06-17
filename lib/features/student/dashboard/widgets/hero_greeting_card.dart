@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../theme/elevation.dart';
-import '../../../../theme/radius.dart';
+import '../../../../shared/widgets/akshara_glass_surface.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 
@@ -26,14 +25,11 @@ class HeroGreetingCard extends StatelessWidget {
     return Semantics(
       header: true,
       label: '$headline $subtitle',
-      child: Card(
-        elevation: AksharaElevation.level1,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: AksharaRadius.card),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: minCardHeight),
-          child: Padding(
-            padding: const EdgeInsets.all(AksharaSpacing.s4),
+      child: AksharaGlassHeroBackdrop(
+        child: AksharaGlassCard(
+          tintColor: colors.surfaceContainerLowest,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: minCardHeight),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -41,9 +37,8 @@ class HeroGreetingCard extends StatelessWidget {
               children: [
                 Text(
                   headline,
-                  style: text.headlineSmall.copyWith(
+                  style: text.displaySmall.copyWith(
                     color: colors.onSurface,
-                    fontWeight: FontWeight.w600,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

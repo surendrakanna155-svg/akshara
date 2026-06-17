@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
 
 /// Virtualized table with a fixed [DataTable] header and [ListView.builder] body.
 ///
@@ -34,7 +35,9 @@ class AksharaVirtualizedDataTable extends StatelessWidget {
     final theme = Theme.of(context);
     final dividerColor = theme.dividerColor;
     final headerStyle = theme.dataTableTheme.headingTextStyle ??
-        theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600);
+        context.aksharaText.tableHeader;
+    final cellStyle = theme.dataTableTheme.dataTextStyle ??
+        context.aksharaText.tableCell;
 
     return Semantics(
       container: true,
@@ -61,12 +64,15 @@ class AksharaVirtualizedDataTable extends StatelessWidget {
                         itemCount: rowCount,
                         itemBuilder: (context, index) {
                           final row = rowBuilder(index);
-                          return _VirtualDataRow(
-                            row: row,
-                            columnCount: columns.length,
-                            minHeight: dataRowMinHeight,
-                            dividerColor: dividerColor,
-                            showCheckboxColumn: showCheckboxColumn,
+                          return DefaultTextStyle(
+                            style: cellStyle,
+                            child: _VirtualDataRow(
+                              row: row,
+                              columnCount: columns.length,
+                              minHeight: dataRowMinHeight,
+                              dividerColor: dividerColor,
+                              showCheckboxColumn: showCheckboxColumn,
+                            ),
                           );
                         },
                       ),
