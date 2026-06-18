@@ -19,28 +19,34 @@ void main() {
       expect(validateTeacherExamMarkInput('40', 50), isNull);
     });
 
-    test('teacherMarksExamOptionsProvider scopes Mathematics marks exams', () {
+    test('teacherMarksExamOptionsProvider scopes marks-entry exams', () async {
       final container = ProviderContainer(overrides: providerTestOverrides());
       addTearDown(container.dispose);
 
-      final options = container.read(teacherMarksExamOptionsProvider);
+      final options =
+          await container.read(teacherMarksExamOptionsProvider.future);
       expect(options, isNotEmpty);
-      expect(options.every((exam) => exam.title.contains('Mathematics') ||
-          exam.classLabel.contains('8')), isTrue);
+      expect(
+        options.every((exam) =>
+            exam.phaseLabel == 'marksEntry' || exam.phaseLabel == 'processed'),
+        isTrue,
+      );
     });
 
-    test('teacherSelectedExamIdProvider switches active marks roster', () {
+    test('teacherSelectedExamIdProvider switches active marks roster', () async {
       final container = ProviderContainer(overrides: providerTestOverrides());
       addTearDown(container.dispose);
 
-      final options = container.read(teacherMarksExamOptionsProvider);
+      final options =
+          await container.read(teacherMarksExamOptionsProvider.future);
       if (options.length < 2) return;
 
       container.read(teacherSelectedExamIdProvider.notifier).state =
           options.last.id;
       expect(container.read(teacherActiveExamIdProvider), options.last.id);
 
-      final marks = container.read(teacherExamMarksForActiveProvider);
+      final marks =
+          await container.read(teacherExamMarksForActiveProvider.future);
       expect(marks, isNotEmpty);
       expect(marks.first.maxMarks, options.last.maxMarks);
     });

@@ -82,23 +82,55 @@ class MockTeacherRepository implements TeacherRepository {
           classLabel: exam.classLabel,
           dateLabel: exam.dateLabel,
           maxMarks: exam.maxMarks,
+          subject: exam.subject,
+          canEnterMarks: exam.phase == ExamLifecyclePhase.marksEntry ||
+              exam.phase == ExamLifecyclePhase.processed,
         ),
     ];
   }
 
   @override
-  Future<List<ExamMarkEntry>> getExamMarks({required RepositoryQuery query}) async {
+  Future<List<TeacherExamSessionOption>> getMarksEntryExams({
+    required RepositoryQuery query,
+  }) async {
     final store = ExamAdministrationStore.instance..ensureSeeded();
-    final examId = store.activeMarksExamId;
-    if (examId == null) return const [];
     return [
-      for (final mark in store.marksForExam(examId))
+      for (final exam in store.allExams())
+        if (exam.phase == ExamLifecyclePhase.marksEntry ||
+            exam.phase == ExamLifecyclePhase.processed)
+          TeacherExamSessionOption(
+            id: exam.id,
+            title: exam.title,
+            classLabel: exam.classLabel,
+            maxMarks: exam.maxMarks,
+            subject: exam.subject,
+            termLabel: exam.termLabel,
+            dateLabel: exam.dateLabel,
+            phaseLabel: exam.phase.name,
+            coordinatorVerified: store.isCoordinatorVerified(exam.id),
+            rejectionComment: store.rejectionCommentFor(exam.id),
+          ),
+    ];
+  }
+
+  @override
+  Future<List<ExamMarkEntry>> getExamMarks({
+    required RepositoryQuery query,
+    String? examId,
+  }) async {
+    final store = ExamAdministrationStore.instance..ensureSeeded();
+    final resolvedId = examId ?? store.activeMarksExamId;
+    if (resolvedId == null) return const [];
+    final exam = store.examById(resolvedId);
+    if (exam == null) return const [];
+    return [
+      for (final mark in store.marksForExam(resolvedId))
         ExamMarkEntry(
           id: mark.id,
           studentName: mark.studentName,
           rollNo: mark.rollNo,
           marksObtained: mark.marksObtained,
-          maxMarks: store.examById(examId)!.maxMarks,
+          maxMarks: exam.maxMarks,
         ),
     ];
   }

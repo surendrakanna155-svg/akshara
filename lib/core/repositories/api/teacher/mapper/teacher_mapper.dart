@@ -104,6 +104,28 @@ class TeacherMapper {
     );
   }
 
+  List<TeacherExamSessionOption> toMarksEntryExams(
+    TeacherMarksEntryExamsResponseDto dto,
+  ) {
+    return [for (final item in dto.items) toMarksEntryExam(item)];
+  }
+
+  TeacherExamSessionOption toMarksEntryExam(TeacherMarksEntryExamDto dto) {
+    final raw = dto.raw;
+    return TeacherExamSessionOption(
+      id: raw['id'] as String? ?? '',
+      title: raw['title'] as String? ?? '',
+      classLabel: raw['classLabel'] as String? ?? '',
+      maxMarks: raw['maxMarks'] as int? ?? 0,
+      subject: raw['subject'] as String? ?? '',
+      termLabel: raw['termLabel'] as String? ?? '',
+      dateLabel: raw['dateLabel'] as String? ?? '',
+      phaseLabel: raw['phaseLabel'] as String? ?? '',
+      coordinatorVerified: raw['coordinatorVerified'] as bool? ?? false,
+      rejectionComment: raw['rejectionComment'] as String?,
+    );
+  }
+
   List<ExamMarkEntry> toExamMarks(TeacherExamMarksResponseDto dto) {
     return [for (final item in dto.items) toExamMark(item)];
   }

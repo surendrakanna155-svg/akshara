@@ -64,12 +64,25 @@ class TeacherRemoteDataSource {
     return TeacherUpcomingExamsResponseDto.fromJson(_responseMap(response));
   }
 
-  Future<TeacherExamMarksResponseDto> fetchExamMarks({
+  Future<TeacherMarksEntryExamsResponseDto> fetchMarksEntryExams({
     required RepositoryQuery query,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
-      TeacherApiPaths.examsMarks,
+      TeacherApiPaths.examsMarksEntry,
       queryParameters: _queryParams(query),
+    );
+    return TeacherMarksEntryExamsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<TeacherExamMarksResponseDto> fetchExamMarks({
+    required RepositoryQuery query,
+    String? examId,
+  }) async {
+    final params = _queryParams(query);
+    if (examId != null) params['examId'] = examId;
+    final response = await _dio.get<Map<String, dynamic>>(
+      TeacherApiPaths.examsMarks,
+      queryParameters: params,
     );
     return TeacherExamMarksResponseDto.fromJson(_responseMap(response));
   }

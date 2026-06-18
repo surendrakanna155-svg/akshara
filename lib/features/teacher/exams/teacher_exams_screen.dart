@@ -289,12 +289,12 @@ class _ResultsPanel extends ConsumerWidget {
   }
 }
 
-class _UpcomingList extends StatelessWidget {
+class _UpcomingList extends ConsumerWidget {
   const _UpcomingList({required this.exams});
   final List<TeacherUpcomingExam> exams;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (exams.isEmpty) {
       return const AksharaEmptyState(
         message: 'No upcoming exams.',
@@ -319,6 +319,18 @@ class _UpcomingList extends StatelessWidget {
               subtitle: Text(
                 '${exams[i].classLabel} · ${exams[i].dateLabel} · Max ${exams[i].maxMarks}',
               ),
+              trailing: exams[i].canEnterMarks
+                  ? const Icon(Icons.edit_note_outlined)
+                  : null,
+              onTap: exams[i].canEnterMarks
+                  ? () {
+                      ref.read(teacherSelectedExamIdProvider.notifier).state =
+                          exams[i].id;
+                      resetTeacherExamMarksOverride(ref);
+                      ref.read(teacherExamSectionProvider.notifier).state =
+                          TeacherExamSection.marksEntry;
+                    }
+                  : null,
             ),
           ),
           if (i < exams.length - 1)
@@ -335,16 +347,20 @@ class _MarksEntryPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final options = ref.watch(teacherMarksExamOptionsProvider);
+    final optionsAsync = ref.watch(teacherMarksExamOptionsProvider);
     final activeExamId = ref.watch(teacherActiveExamIdProvider);
+    final activeExam = ref.watch(teacherActiveExamProvider);
+    final options = optionsAsync.valueOrNull ?? const <TeacherExamSessionOption>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (activeExam != null) _ExamContextHeader(exam: activeExam),
         if (options.length > 1) ...[
+          const SizedBox(height: AksharaSpacing.s3),
           DropdownButtonFormField<String>(
             key: QaTestKeys.teacherExamSelector,
-            initialValue: activeExamId,
+            value: activeExamId,
             decoration: const InputDecoration(
               labelText: 'Exam session',
               isDense: true,
@@ -362,9 +378,45 @@ class _MarksEntryPanel extends ConsumerWidget {
             },
           ),
           const SizedBox(height: AksharaSpacing.s3),
-        ],
+        ] else if (activeExam != null)
+          const SizedBox(height: AksharaSpacing.s3),
         _MarksEntryList(entries: entries),
       ],
+    );
+  }
+}
+
+class _ExamContextHeader extends StatelessWidget {
+  const _ExamContextHeader({required this.exam});
+
+  final TeacherExamSessionOption exam;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    final colors = context.colors;
+
+    return Material(
+      color: colors.primaryContainer,
+      borderRadius: AksharaRadius.card,
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(exam.title, style: text.titleSmall),
+            const SizedBox(height: AksharaSpacing.s1),
+            Text(
+              '${exam.classLabel} · ${exam.subject} · ${exam.termLabel}',
+              style: text.bodySmall.copyWith(color: colors.onPrimaryContainer),
+            ),
+            Text(
+              '${exam.dateLabel} · Max ${exam.maxMarks}',
+              style: text.bodySmall.copyWith(color: colors.onPrimaryContainer),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

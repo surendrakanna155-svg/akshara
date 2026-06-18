@@ -62,8 +62,19 @@ class ApiTeacherRepository implements TeacherRepository {
   }
 
   @override
-  Future<List<ExamMarkEntry>> getExamMarks({required RepositoryQuery query}) async {
-    final dto = await _remote.fetchExamMarks(query: query);
+  Future<List<TeacherExamSessionOption>> getMarksEntryExams({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchMarksEntryExams(query: query);
+    return _mapper.toMarksEntryExams(dto);
+  }
+
+  @override
+  Future<List<ExamMarkEntry>> getExamMarks({
+    required RepositoryQuery query,
+    String? examId,
+  }) async {
+    final dto = await _remote.fetchExamMarks(query: query, examId: examId);
     return _mapper.toExamMarks(dto);
   }
 

@@ -120,6 +120,39 @@ class TeacherUpcomingExamsResponseDto {
   final PaginationDto? pagination;
 }
 
+class TeacherMarksEntryExamDto {
+  const TeacherMarksEntryExamDto({required this.raw});
+
+  factory TeacherMarksEntryExamDto.fromJson(Map<String, dynamic> json) {
+    return TeacherMarksEntryExamDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class TeacherMarksEntryExamsResponseDto {
+  const TeacherMarksEntryExamsResponseDto({
+    required this.items,
+    this.pagination,
+  });
+
+  factory TeacherMarksEntryExamsResponseDto.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return TeacherMarksEntryExamsResponseDto(
+      items: [
+        for (final item in envelope.requireListItems())
+          TeacherMarksEntryExamDto.fromJson(item),
+      ],
+      pagination: envelope.pagination,
+    );
+  }
+
+  final List<TeacherMarksEntryExamDto> items;
+  final PaginationDto? pagination;
+}
+
 class ExamMarkEntryDto {
   const ExamMarkEntryDto({required this.raw});
 

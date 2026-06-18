@@ -18,6 +18,8 @@ class TeacherUpcomingExam {
     required this.classLabel,
     required this.dateLabel,
     required this.maxMarks,
+    this.subject = '',
+    this.canEnterMarks = false,
   });
 
   final String id;
@@ -25,6 +27,8 @@ class TeacherUpcomingExam {
   final String classLabel;
   final String dateLabel;
   final int maxMarks;
+  final String subject;
+  final bool canEnterMarks;
 }
 
 @immutable
@@ -78,12 +82,24 @@ class TeacherExamSessionOption {
     required this.title,
     required this.classLabel,
     required this.maxMarks,
+    this.subject = '',
+    this.termLabel = '',
+    this.dateLabel = '',
+    this.phaseLabel = '',
+    this.coordinatorVerified = false,
+    this.rejectionComment,
   });
 
   final String id;
   final String title;
   final String classLabel;
   final int maxMarks;
+  final String subject;
+  final String termLabel;
+  final String dateLabel;
+  final String phaseLabel;
+  final bool coordinatorVerified;
+  final String? rejectionComment;
 }
 
 @immutable

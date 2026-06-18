@@ -24,7 +24,13 @@ abstract class TeacherRepository {
   Future<List<TeacherUpcomingExam>> getUpcomingExams({
     required RepositoryQuery query,
   });
-  Future<List<ExamMarkEntry>> getExamMarks({required RepositoryQuery query});
+  Future<List<TeacherExamSessionOption>> getMarksEntryExams({
+    required RepositoryQuery query,
+  });
+  Future<List<ExamMarkEntry>> getExamMarks({
+    required RepositoryQuery query,
+    String? examId,
+  });
   Future<TeacherTimetableData> getTimetable({required RepositoryQuery query});
   Future<List<TeacherLeaveRequest>> getLeaveHistory({
     required RepositoryQuery query,
