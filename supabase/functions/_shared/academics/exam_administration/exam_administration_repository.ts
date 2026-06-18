@@ -1,4 +1,4 @@
-import type { TenantQueryClient } from "../tenant_db.ts";
+import type { TenantQueryClient } from "../../tenant_db.ts";
 
 export type ExamPhase =
   | "draft"
@@ -82,6 +82,16 @@ export class ExamMarkNotFoundError extends Error {
   constructor(id: string) {
     super(`Mark entry not found: ${id}`);
     this.name = "ExamMarkNotFoundError";
+  }
+}
+
+/** Raised when a subject teacher touches marks for a class/subject they do not teach (P2). */
+export class ExamScopeForbiddenError extends Error {
+  constructor(
+    message = "You are not assigned to this exam's subject and class.",
+  ) {
+    super(message);
+    this.name = "ExamScopeForbiddenError";
   }
 }
 
@@ -347,6 +357,58 @@ export async function listExamMarks(
      ORDER BY roll_number NULLS LAST, id`,
     [organizationId, schoolId, examId],
   );
+}
+
+export async function getExamMark(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  markEntryId: string,
+): Promise<ExamMarkRow | null> {
+  const rows = await db.queryObject<ExamMarkRow>(
+    `SELECT * FROM exam_mark_entries
+     WHERE organization_id = $1 AND school_id = $2 AND id = $3`,
+    [organizationId, schoolId, markEntryId],
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * P2 — whether a subject teacher is assigned to teach an exam's subject for its
+ * class + section. Bridges the text-based exam_sessions (subject/grade/section_name)
+ * to the UUID-keyed academic structure by name, the same way mark slots are
+ * provisioned (class_name = grade, section_name). Only active assignments count.
+ */
+export async function teacherTeachesExamSession(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  session: ExamSessionRow,
+): Promise<boolean> {
+  const rows = await db.queryObject<{ count: string }>(
+    `SELECT count(*)::text AS count
+     FROM teacher_subject_assignments tsa
+     JOIN academic_subjects subj ON subj.id = tsa.subject_id
+     JOIN classes c ON c.id = tsa.class_id
+     JOIN sections sec ON sec.id = tsa.section_id
+     WHERE tsa.organization_id = $1
+       AND tsa.school_id = $2
+       AND tsa.teacher_user_id = $3
+       AND tsa.status = 'active'
+       AND subj.subject_name = $4
+       AND c.class_name = $5
+       AND sec.section_name = $6`,
+    [
+      organizationId,
+      schoolId,
+      teacherUserId,
+      session.subject,
+      session.grade,
+      session.section_name,
+    ],
+  );
+  return parseInt(rows[0]?.count ?? "0", 10) > 0;
 }
 
 export async function updateExamMark(
