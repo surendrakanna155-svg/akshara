@@ -26,7 +26,8 @@ void assertCreateInventoryPo(Ref ref) {
   final perms = ref.read(userPermissionsProvider);
   if (perms == null ||
       (!perms.has(Permission.createInventoryPo) &&
-          !perms.has(Permission.manageInventory))) {
+          !perms.has(Permission.manageInventory) &&
+          !perms.has(Permission.manageProcurementWorkflow))) {
     throw ApiFailureException(
       const ApiFailure(
         type: ApiFailureType.forbidden,
@@ -54,12 +55,43 @@ void assertApprovePurchaseOrder(Ref ref) {
   final perms = ref.read(userPermissionsProvider);
   if (perms == null ||
       (!perms.has(Permission.approvePurchaseOrder) &&
-          !perms.has(Permission.manageInventory))) {
+          !perms.has(Permission.manageInventory) &&
+          !perms.has(Permission.manageProcurementWorkflow))) {
     throw ApiFailureException(
       const ApiFailure(
         type: ApiFailureType.forbidden,
         message: 'You do not have permission to approve purchase orders.',
         code: 'RBAC_APPROVE_PURCHASE_ORDER',
+      ),
+    );
+  }
+}
+
+void assertAssetLifecycle(Ref ref) {
+  final perms = ref.read(userPermissionsProvider);
+  if (perms == null ||
+      (!perms.has(Permission.manageAssetLifecycle) &&
+          !perms.has(Permission.manageInventory))) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to record asset lifecycle events.',
+        code: 'RBAC_MANAGE_ASSET_LIFECYCLE',
+      ),
+    );
+  }
+}
+
+void assertProcurementWorkflow(Ref ref) {
+  final perms = ref.read(userPermissionsProvider);
+  if (perms == null ||
+      (!perms.has(Permission.manageProcurementWorkflow) &&
+          !perms.has(Permission.manageInventory))) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'You do not have permission to receive procurement goods.',
+        code: 'RBAC_MANAGE_PROCUREMENT_WORKFLOW',
       ),
     );
   }
@@ -214,7 +246,7 @@ class RecordAssetLifecycleEventNotifier
   ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      assertManageInventory(ref);
+      assertAssetLifecycle(ref);
       try {
         final result = await ref
             .read(inventoryRepositoryProvider)
@@ -242,12 +274,12 @@ class ReceiveProcurementHandoffNotifier
   @override
   FutureOr<InventoryFinanceReceiveResult?> build() => null;
 
-  Future<InventoryFinanceReceiveResult> execute(
+  Future<InventoryFinanceReceiveResult?> execute(
     InventoryProcurementOrder order,
   ) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      assertManageInventory(ref);
+      assertProcurementWorkflow(ref);
       try {
         final query = ref.read(repositoryQueryProvider);
         final financeOrder =
@@ -290,7 +322,7 @@ class ReceiveProcurementHandoffNotifier
         throw ApiFailureException(apiFailureMapper.fromException(error));
       }
     });
-    return state.value!;
+    return state.valueOrNull;
   }
 }
 

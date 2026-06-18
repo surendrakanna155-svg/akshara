@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/config/finance_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
@@ -79,6 +80,7 @@ Future<void> showCreateFeeStructureDialog(
       actions: _dialogActions(
         context,
         confirmLabel: 'Create',
+        confirmKey: QaTestKeys.financeCreateFeeStructureSubmitButton,
         onConfirm: () => Navigator.of(context).pop(true),
       ),
     ),
@@ -87,7 +89,7 @@ Future<void> showCreateFeeStructureDialog(
   if (confirmed != true || !context.mounted) return;
 
   try {
-    await ref.read(createFeeStructureProvider.notifier).execute(
+    final created = await ref.read(createFeeStructureProvider.notifier).execute(
           CreateFeeStructureRequest(
             name: nameController.text.trim(),
             academicYear: academicYear,
@@ -103,8 +105,17 @@ Future<void> showCreateFeeStructureDialog(
           ),
         );
     if (!context.mounted) return;
+    final approvalRequired = ref.read(financeApprovalRequiredProvider);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fee structure created')),
+      SnackBar(
+        content: Text(
+          created == null
+              ? 'Fee structure could not be created'
+              : approvalRequired
+                  ? 'Fee structure created and submitted for principal approval (${created.id})'
+                  : 'Fee structure created (${created.id})',
+        ),
+      ),
     );
   } catch (error) {
     if (!context.mounted) return;
@@ -202,6 +213,175 @@ Future<void> executeAssignFeePlan(
     handoffId: handoff.id,
     preview: preview,
   );
+}
+
+Future<void> showCreateRefundDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final feeAccountController = TextEditingController(text: 'acct_1');
+  final studentNameController = TextEditingController(text: 'Arjun Patel');
+  final admissionController = TextEditingController(text: 'ADM-2026-0138');
+  final classController = TextEditingController(text: '10');
+  final amountController = TextEditingController(text: '₹5,000');
+  final reasonController =
+      TextEditingController(text: 'Fee adjustment — duplicate payment');
+  final receiptController = TextEditingController(text: 'RCP-2026-0142');
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Create refund request',
+      icon: Icons.currency_exchange_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Fee account ID',
+            controller: feeAccountController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Student name',
+            controller: studentNameController,
+          ),
+          AksharaFormField(
+            label: 'Admission number',
+            controller: admissionController,
+          ),
+          AksharaFormField(
+            label: 'Class',
+            controller: classController,
+          ),
+          AksharaFormField(
+            label: 'Refund amount',
+            controller: amountController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Reason',
+            controller: reasonController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Original receipt',
+            controller: receiptController,
+          ),
+        ],
+      ),
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Submit',
+        confirmKey: QaTestKeys.financeCreateRefundSubmitButton,
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final created = await ref.read(createRefundProvider.notifier).execute(
+          CreateRefundRequest(
+            feeAccountId: feeAccountController.text.trim(),
+            amount: amountController.text.trim(),
+            reason: reasonController.text.trim(),
+            studentName: studentNameController.text.trim(),
+            admissionNumber: admissionController.text.trim(),
+            classLabel: classController.text.trim(),
+            originalReceipt: receiptController.text.trim(),
+          ),
+        );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.financeRefundCreatedSnackbar,
+        content: Text(
+          created == null
+              ? 'Refund request could not be created'
+              : 'Refund request created for ${created.studentName}',
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
+Future<void> showAssignFeeConcessionDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final studentNameController = TextEditingController(text: 'Arjun Patel');
+  final feeAccountController = TextEditingController(text: 'acct_1');
+  final amountController = TextEditingController(text: '₹15,000');
+  final reasonController =
+      TextEditingController(text: 'Merit scholarship — Term 2');
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Assign fee concession',
+      icon: Icons.school_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Student name',
+            controller: studentNameController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Fee account ID',
+            controller: feeAccountController,
+          ),
+          AksharaFormField(
+            label: 'Concession amount',
+            controller: amountController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Reason',
+            controller: reasonController,
+            required: true,
+          ),
+        ],
+      ),
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Submit for approval',
+        confirmKey: QaTestKeys.financeAssignConcessionSubmitButton,
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final concessionId =
+        await ref.read(assignFeeConcessionProvider.notifier).execute(
+              studentName: studentNameController.text.trim(),
+              feeAccountId: feeAccountController.text.trim(),
+              amount: amountController.text.trim(),
+              reason: reasonController.text.trim(),
+            );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.financeAssignConcessionSuccessSnackbar,
+        content: Text(
+          concessionId == null
+              ? 'Concession could not be submitted'
+              : 'Concession submitted for principal approval ($concessionId)',
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
 }
 
 Future<void> approveSelectedRefund(

@@ -28,9 +28,11 @@ void main() {
           entry.permission.name.startsWith('manage') ||
               entry.permission.name.startsWith('approve') ||
               entry.permission.name.startsWith('submit') ||
+              entry.permission.name.startsWith('verify') ||
               entry.permission.name.startsWith('publish') ||
               entry.permission.name.startsWith('assign') ||
-              entry.permission.name.startsWith('create'),
+              entry.permission.name.startsWith('create') ||
+              entry.permission.name.startsWith('mark'),
           isTrue,
           reason: entry.mutationId,
         );
@@ -205,6 +207,24 @@ void main() {
         );
         expect(entry.moduleId, 'director');
         expect(entry.permission, Permission.manageDirectorPortal);
+      }
+    });
+
+    test('Phase D pilot governance mutations registered', () {
+      for (final spec in [
+        ('teacher', 'submitAttendanceCorrection', Permission.submitAttendanceCorrection),
+        ('teacher', 'submitClassAttendance', Permission.markAttendance),
+        ('parent', 'submitLeaveRequest', Permission.submitStudentLeave),
+        ('management', 'resolveApprovalApprove', Permission.approveStudentLeave),
+        ('inventory', 'recordAssetLifecycleEvent', Permission.manageAssetLifecycle),
+        ('inventory', 'receiveProcurementHandoff', Permission.manageProcurementWorkflow),
+        ('inventory', 'createProcurementOrder', Permission.createInventoryPo),
+        ('inventory', 'approveProcurementHandoff', Permission.approvePurchaseOrder),
+      ]) {
+        final entry = MutationPermissionRegistry.entries.firstWhere(
+          (e) => e.moduleId == spec.$1 && e.mutationId == spec.$2,
+        );
+        expect(entry.permission, spec.$3, reason: spec.$2);
       }
     });
   });

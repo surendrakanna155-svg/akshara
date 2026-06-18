@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/communication/parent_communication_models.dart';
 import '../../../core/communication/teacher_parent_templates.dart';
+import '../../../core/security/permissions.dart';
 import '../../../router/route_names.dart';
+import '../../../router/student360_navigation.dart';
+import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -123,6 +126,15 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
+          AksharaViewAction(
+            permission: Permission.viewStudent360,
+            child: OutlinedButton.icon(
+              onPressed: () => openStudent360(context, sisStudentId),
+              icon: const Icon(Icons.hub_outlined),
+              label: const Text('Open Student 360'),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
           FilledButton(
             onPressed: () => _openComms(
               ref,

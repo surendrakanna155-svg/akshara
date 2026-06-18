@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/exam_approval_config.dart';
+import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
@@ -126,7 +127,7 @@ class TeacherExamsScreen extends ConsumerWidget {
                                 TeacherExamSection.upcoming =>
                                   _UpcomingList(exams: data.upcomingExams),
                                 TeacherExamSection.marksEntry =>
-                                  _MarksEntryList(entries: data.markEntries),
+                                  _MarksEntryPanel(entries: data.markEntries),
                                 TeacherExamSection.results => _ResultsPanel(
                                     classAveragePercent:
                                         data.classAveragePercent,
@@ -154,9 +155,16 @@ class _ResultsPanel extends ConsumerWidget {
     final approvalRequired = ref.watch(examApprovalRequiredProvider);
     final pendingApproval = ref.watch(teacherExamPendingApprovalProvider);
     final rejectionComment = ref.watch(teacherExamRejectionCommentProvider);
+    final coordinatorVerified = ref.watch(teacherExamCoordinatorVerifiedProvider);
+    final examPhase = ref.watch(teacherExamPhaseProvider);
+    final processState = ref.watch(processTeacherExamResultsProvider);
     final publishState = ref.watch(publishTeacherExamResultsProvider);
     final submitState = ref.watch(submitTeacherExamResultsForApprovalProvider);
-    final isLoading = publishState.isLoading || submitState.isLoading;
+    final isLoading = processState.isLoading ||
+        publishState.isLoading ||
+        submitState.isLoading;
+    final isProcessed = examPhase == ExamLifecyclePhase.processed ||
+        examPhase == ExamLifecyclePhase.published;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -186,39 +194,73 @@ class _ResultsPanel extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: AksharaSpacing.s3),
-        if (approvalRequired)
-          FilledButton.icon(
-            key: QaTestKeys.examSubmitApprovalButton,
-            onPressed: examId == null ||
-                    isLoading ||
-                    pendingApproval.asData?.value == true
-                ? null
-                : () async {
-                    final result =
-                        await submitExamResultsForApproval(ref, examId);
-                    if (!context.mounted || result == null) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Submitted for approval: ${result.title}',
+        if (approvalRequired) ...[
+          if (!isProcessed)
+            FilledButton.tonalIcon(
+              key: QaTestKeys.examSubmitVerificationButton,
+              onPressed: examId == null || isLoading
+                  ? null
+                  : () async {
+                      final result =
+                          await processExamResultsForVerification(ref, examId);
+                      if (!context.mounted || result == null) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Submitted for coordinator verification: ${result.examTitle}',
+                          ),
                         ),
-                      ),
-                    );
-                  },
-            icon: isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.send_outlined),
-            label: Text(
-              pendingApproval.asData?.value == true
-                  ? 'Pending principal approval'
-                  : 'Submit for approval',
+                      );
+                    },
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.fact_check_outlined),
+              label: const Text('Submit for verification'),
             ),
-          )
-        else
+          if (isProcessed && !coordinatorVerified)
+            const Padding(
+              padding: EdgeInsets.only(bottom: AksharaSpacing.s2),
+              child: Text(
+                'Awaiting exam coordinator verification before principal approval.',
+              ),
+            ),
+          if (isProcessed && coordinatorVerified)
+            FilledButton.icon(
+              key: QaTestKeys.examSubmitApprovalButton,
+              onPressed: examId == null ||
+                      isLoading ||
+                      pendingApproval.asData?.value == true
+                  ? null
+                  : () async {
+                      final result =
+                          await submitExamResultsForApproval(ref, examId);
+                      if (!context.mounted || result == null) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Submitted for approval: ${result.title}',
+                          ),
+                        ),
+                      );
+                    },
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_outlined),
+              label: Text(
+                pendingApproval.asData?.value == true
+                    ? 'Pending principal approval'
+                    : 'Submit for principal approval',
+              ),
+            ),
+        ] else
           FilledButton.icon(
             onPressed: examId == null || isLoading
                 ? null
@@ -287,13 +329,77 @@ class _UpcomingList extends StatelessWidget {
   }
 }
 
-class _MarksEntryList extends ConsumerWidget {
-  const _MarksEntryList({required this.entries});
+class _MarksEntryPanel extends ConsumerWidget {
+  const _MarksEntryPanel({required this.entries});
   final List<ExamMarkEntry> entries;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (entries.isEmpty) {
+    final options = ref.watch(teacherMarksExamOptionsProvider);
+    final activeExamId = ref.watch(teacherActiveExamIdProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (options.length > 1) ...[
+          DropdownButtonFormField<String>(
+            key: QaTestKeys.teacherExamSelector,
+            initialValue: activeExamId,
+            decoration: const InputDecoration(
+              labelText: 'Exam session',
+              isDense: true,
+            ),
+            items: [
+              for (final exam in options)
+                DropdownMenuItem(
+                  value: exam.id,
+                  child: Text('${exam.classLabel} · ${exam.title}'),
+                ),
+            ],
+            onChanged: (value) {
+              resetTeacherExamMarksOverride(ref);
+              ref.read(teacherSelectedExamIdProvider.notifier).state = value;
+            },
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+        ],
+        _MarksEntryList(entries: entries),
+      ],
+    );
+  }
+}
+
+class _MarksEntryList extends ConsumerStatefulWidget {
+  const _MarksEntryList({required this.entries});
+  final List<ExamMarkEntry> entries;
+
+  @override
+  ConsumerState<_MarksEntryList> createState() => _MarksEntryListState();
+}
+
+class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
+  final Map<String, TextEditingController> _controllers = {};
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  TextEditingController _controllerFor(ExamMarkEntry entry) {
+    return _controllers.putIfAbsent(
+      entry.id,
+      () => TextEditingController(
+        text: entry.marksObtained?.toString() ?? '',
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.entries.isEmpty) {
       return const AksharaEmptyState(
         message: 'No students for marks entry.',
         compact: true,
@@ -302,29 +408,44 @@ class _MarksEntryList extends ConsumerWidget {
 
     return Column(
       children: [
-        for (final entry in entries)
+        for (final entry in widget.entries)
           ListTile(
             title: Text(entry.studentName),
             subtitle: Text('Roll ${entry.rollNo}'),
-            trailing: SizedBox(
-              width: 72,
-              child: TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: '/${entry.maxMarks}',
-                  border: const OutlineInputBorder(),
-                  isDense: true,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 72,
+                  child: TextField(
+                    key: QaTestKeys.teacherExamMarkField(entry.id),
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: '/${entry.maxMarks}',
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    controller: _controllerFor(entry),
+                  ),
                 ),
-                controller: TextEditingController(
-                  text: entry.marksObtained?.toString() ?? '',
+                IconButton(
+                  key: QaTestKeys.teacherExamMarkSaveButton(entry.id),
+                  tooltip: 'Save mark',
+                  onPressed: () {
+                    final error = saveTeacherExamMarkFromInput(
+                      ref,
+                      entry: entry,
+                      raw: _controllerFor(entry).text,
+                    );
+                    if (error != null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(error)),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.save_outlined),
                 ),
-                onSubmitted: (value) {
-                  final marks = int.tryParse(value);
-                  if (marks != null) {
-                    updateExamMark(ref, entry.id, marks);
-                  }
-                },
-              ),
+              ],
             ),
           ),
       ],

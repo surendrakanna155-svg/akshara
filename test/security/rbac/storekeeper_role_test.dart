@@ -17,6 +17,8 @@ void main() {
       expect(storekeeper.has(Permission.createInventoryPo), isTrue);
       expect(storekeeper.has(Permission.approvePurchaseOrder), isFalse);
       expect(storekeeper.has(Permission.manageInventory), isFalse);
+      expect(storekeeper.has(Permission.manageProcurementWorkflow), isFalse);
+      expect(storekeeper.has(Permission.manageAssetLifecycle), isFalse);
     });
 
     test('principal can approve purchase orders', () {

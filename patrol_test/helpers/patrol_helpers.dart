@@ -7,7 +7,9 @@ import 'package:patrol/patrol.dart';
 
 import 'package:akshara_erp/core/providers/router_provider.dart';
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
+import 'package:akshara_erp/features/auth/auth_provider.dart';
 import 'package:akshara_erp/features/auth/qa_login_persona.dart';
+import 'package:akshara_erp/router/route_names.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,6 +23,23 @@ PatrolTesterConfig aksharaPatrolConfig() {
     settleTimeout: Duration(seconds: 30),
     printLogs: false,
   );
+}
+
+/// Clears the active session and signs in as another QA persona (mid-test).
+Future<void> switchQaPersona(
+  PatrolIntegrationTester $,
+  QaLoginPersona persona,
+) async {
+  final scope = find.byType(UncontrolledProviderScope);
+  expect(scope, findsOneWidget);
+  final container =
+      $.tester.widget<UncontrolledProviderScope>(scope).container;
+  await container.read(authProvider.notifier).logout();
+  await $.pumpAndSettle(timeout: const Duration(seconds: 10));
+  _patrolGoRouter($).go(RouteNames.qaLogin);
+  await $.pumpAndSettle(timeout: const Duration(seconds: 15));
+  await waitForQaLogin($);
+  await loginAsQaPersona($, persona);
 }
 
 /// Records screenshot intent for regression tooling.

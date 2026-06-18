@@ -5,6 +5,7 @@ import '../../../core/testing/qa_test_keys.dart';
 import '../../../features/copilot/copilot_context_provider.dart';
 import '../../../features/copilot/copilot_screen_context.dart';
 import '../../../router/route_names.dart';
+import '../../../router/student360_navigation.dart';
 import '../intelligence_provider.dart';
 import 'attendance_intelligence.dart';
 import 'attendance_intelligence_provider.dart';
@@ -286,6 +287,8 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
               '${profile.className} · ${profile.primarySignal}\n${profile.recommendedAction}',
             ),
             isThreeLine: true,
+            trailing: const Icon(Icons.hub_outlined),
+            onTap: () => openStudent360(context, profile.studentId),
           ),
       ],
     );

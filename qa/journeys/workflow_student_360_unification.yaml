@@ -1,0 +1,25 @@
+# Workflow — Student 360 unification (Phase C)
+# tags: workflow,student360,sis,teacher
+# Status: executable — Patrol pilot_closure_workflows_e2e_test.dart
+appId: com.akshara.erp
+---
+# SIS persona opens unified Student 360 from profile
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Academic Admin
+- tapOn: "SIS"
+- tapOn: "Student 360"
+- assertVisible: "Attendance"
+- assertVisible: "Communication"
+- takeScreenshot: workflow_sis_student_360_tabs
+---
+# Teacher persona opens Student 360 from class roster
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Teacher
+- tapOn: "Class"
+- tapOn: "Student 360"
+- assertVisible: "Homework"
+- takeScreenshot: workflow_teacher_student_360_tabs

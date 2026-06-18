@@ -1,124 +1,71 @@
 {
-  "version": "1.0",
-  "mission": "overnight-autonomous-build",
+  "version": "1.5",
+  "mission": "week-5-parallel-delivery",
   "max_parallel": 4,
   "tasks": [
     {
-      "id": "TASK-A1",
+      "id": "W5-A-M-A5",
       "agent": "A",
-      "title": "Admissions mock handoff polish (if needed by HR/SIS deps)",
+      "title": "M-A5 Exam publication governance completion",
       "depends_on": [],
+      "status": "completed",
       "files": [
-        "lib/core/repositories/mock/mock_admissions_repository.dart",
-        "lib/core/repositories/interfaces/admissions_repository.dart"
+        "lib/core/exams/exam_administration_store.dart",
+        "lib/core/approvals/adapters/exam_results_approval_adapter.dart",
+        "lib/core/security/permissions.dart",
+        "lib/features/academics/exam_admin/exam_marks_entry_provider.dart",
+        "lib/features/academics/exam_admin/exam_marks_entry_screen.dart",
+        "lib/features/teacher/exams/teacher_exams_screen.dart",
+        "lib/features/teacher/teacher_mutations_provider.dart",
+        "lib/features/teacher/teacher_audit.dart",
+        "lib/core/audit/audit_event.dart",
+        "test/integration/approval/exam_approval_adapter_integration_test.dart"
       ],
-      "acceptance": "Contract tests pass; no file overlap with other in_progress tasks"
+      "acceptance": "Teacher verify → coordinator review → principal approval → publish chain certified"
     },
     {
-      "id": "TASK-B1",
+      "id": "W5-B-PHASE-C",
       "agent": "B",
-      "title": "Finance export stub or pilot-hide for report buttons",
+      "title": "Phase C Student360 tabbed unification",
       "depends_on": [],
+      "status": "completed",
       "files": [
+        "lib/features/student_360/student_360_screen.dart",
+        "lib/core/repositories/mock/mock_student_360_repository.dart",
+        "test/features/student_360/student_360_screen_test.dart"
+      ],
+      "acceptance": "Student360 tabs for attendance, marks, homework, fees, communication"
+    },
+    {
+      "id": "W5-C-PHASE-E",
+      "agent": "C",
+      "title": "Phase E finance exports + audit register",
+      "depends_on": [],
+      "status": "completed",
+      "files": [
+        "lib/core/reports/akshara_report_export_service.dart",
+        "lib/core/reports/finance_audit_register_service.dart",
         "lib/features/finance/reports/finance_reports_screen.dart",
-        "lib/features/finance/finance_workflow_actions.dart"
+        "test/core/reports/finance_audit_register_test.dart",
+        "test/core/reports/akshara_report_export_csv_test.dart"
       ],
-      "acceptance": "Widget test or Patrol anchor stable; analyze clean"
+      "acceptance": "Excel CSV export + finance audit register PDF"
     },
     {
-      "id": "TASK-C1",
-      "agent": "C",
-      "title": "HR mutations provider MVP (create leave request)",
-      "depends_on": [],
-      "files": [
-        "lib/features/hr/hr_mutations_provider.dart",
-        "lib/features/hr/leave/hr_leave_screen.dart",
-        "lib/core/testing/qa_test_keys.dart"
-      ],
-      "acceptance": "Provider unit test + mock repo write"
-    },
-    {
-      "id": "TASK-C2",
-      "agent": "C",
-      "title": "Teacher→parent attendance mock sync",
-      "depends_on": [],
-      "files": [
-        "lib/core/repositories/mock/mock_parent_repository.dart",
-        "lib/core/repositories/mock/mock_teacher_repository.dart",
-        "test/integration/teacher/teacher_attendance_e2e_integration_test.dart"
-      ],
-      "acceptance": "Integration test: submit updates parent KPI"
-    },
-    {
-      "id": "TASK-D1",
+      "id": "W5-D-CERT",
       "agent": "D",
-      "title": "Inventory mutation MVP (create PO draft)",
-      "depends_on": [],
+      "title": "Week 5 certification + pilot readiness",
+      "depends_on": ["W5-A-M-A5", "W5-B-PHASE-C", "W5-C-PHASE-E"],
+      "status": "completed",
       "files": [
-        "lib/features/inventory/inventory_mutations_provider.dart",
-        "lib/features/inventory/procurement/inventory_procurement_screen.dart",
-        "lib/core/testing/qa_test_keys.dart"
+        "qa/journeys/workflow_exam_publish_approval.yaml",
+        "qa/journeys/workflow_student_360_unification.yaml",
+        "qa/journeys/workflow_finance_audit_register.yaml",
+        "qa/agents/work_manifest.json",
+        "docs/WEEK5_EXECUTION_REPORT.md",
+        "docs/ORCHESTRATOR_AGENT.md"
       ],
-      "acceptance": "Provider test + mock write"
-    },
-    {
-      "id": "TASK-D2",
-      "agent": "D",
-      "title": "Transport mutation MVP (save route draft)",
-      "depends_on": [],
-      "files": [
-        "lib/features/transport/transport_mutations_provider.dart",
-        "lib/features/transport/routes/transport_routes_screen.dart",
-        "lib/core/testing/qa_test_keys.dart"
-      ],
-      "acceptance": "Provider test + mock write"
-    },
-    {
-      "id": "TASK-E1",
-      "agent": "E",
-      "title": "Patrol smoke for HR leave submit",
-      "depends_on": ["TASK-C1"],
-      "files": [
-        "patrol_test/workflows/hr_leave_e2e_test.dart",
-        "patrol_test/helpers/hr_journey_helpers.dart"
-      ],
-      "acceptance": "Patrol green on device/emulator"
-    },
-    {
-      "id": "TASK-E2",
-      "agent": "E",
-      "title": "Patrol smoke inventory PO + transport route",
-      "depends_on": ["TASK-D1", "TASK-D2"],
-      "files": [
-        "patrol_test/workflows/inventory_po_e2e_test.dart",
-        "patrol_test/workflows/transport_route_e2e_test.dart",
-        "patrol_test/helpers/inventory_journey_helpers.dart",
-        "patrol_test/helpers/transport_journey_helpers.dart"
-      ],
-      "acceptance": "Patrol green"
-    },
-    {
-      "id": "TASK-E3",
-      "agent": "E",
-      "title": "RBAC deny tests admissions clerk + finance staff",
-      "depends_on": ["TASK-C1", "TASK-D1"],
-      "files": [
-        "test/features/admissions/admissions_write_tests.dart",
-        "test/features/finance/finance_write_tests.dart"
-      ],
-      "acceptance": "flutter test paths pass"
-    },
-    {
-      "id": "TASK-G1",
-      "agent": "G",
-      "title": "Full regression gate",
-      "depends_on": ["TASK-E1", "TASK-E2", "TASK-E3", "TASK-C2", "TASK-B1"],
-      "files": [
-        "docs/QA/overnight_progress.md",
-        "docs/QA/overnight_summary.md",
-        "qa/patrol/run_erp_coverage.sh"
-      ],
-      "acceptance": "flutter analyze; flutter test; ERP_COVERAGE_MODE=full Patrol 22/22"
+      "acceptance": "flutter analyze 0 errors; flutter test green; ~70% readiness; pilot assessment"
     }
   ]
 }

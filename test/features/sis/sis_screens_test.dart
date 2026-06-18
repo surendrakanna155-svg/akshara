@@ -106,9 +106,13 @@ void main() {
       expect(find.text('Arjun Patel'), findsWidgets);
       expect(find.text('Parent details'), findsOneWidget);
       expect(find.text('Fee account summary'), findsOneWidget);
-      expect(find.text('Timeline'), findsOneWidget);
+      expect(find.text('Student 360 dossier'), findsOneWidget);
       expect(find.byKey(QaTestKeys.sisEditProfileButton), findsOneWidget);
+      expect(find.byKey(QaTestKeys.sisOpenStudent360Button('SIS-STU-10421')),
+          findsOneWidget);
       expect(find.byKey(QaTestKeys.sisUploadDocumentButton), findsOneWidget);
+      expect(find.text('Timeline'), findsNothing);
+      expect(find.text('Academic history'), findsNothing);
     });
 
     testWidgets('SisAcademicAssignmentScreen renders assignment form', (

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/config/leave_approval_config.dart';
+import '../../management/approval/approval_center_navigation.dart';
+import '../../../core/approvals/approval_category.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -306,6 +309,7 @@ class _LeaveTable extends StatelessWidget {
                         isMutating: isMutating,
                         onApprove: onApprove,
                         onReject: onReject,
+                        compact: true,
                       ),
                     ),
                   ],
@@ -373,24 +377,36 @@ class _LeaveCard extends StatelessWidget {
   }
 }
 
-class _LeaveActionButtons extends StatelessWidget {
+class _LeaveActionButtons extends ConsumerWidget {
   const _LeaveActionButtons({
     required this.request,
     required this.isMutating,
     required this.onApprove,
     required this.onReject,
+    this.compact = false,
   });
 
   final HrLeaveRequest request;
   final bool isMutating;
   final Future<void> Function(HrLeaveRequest request) onApprove;
   final Future<void> Function(HrLeaveRequest request) onReject;
+  final bool compact;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (request.status != HrLeaveStatus.pending) {
       return const Text('—');
     }
+
+    if (ref.watch(leaveApprovalRequiredProvider)) {
+      return ApprovalCenterRedirectBanner(
+        message:
+            'Staff leave is approved by the principal in the unified Approval Center.',
+        category: ApprovalCategory.leave,
+        compact: compact,
+      );
+    }
+
     return AksharaManageAction(
       permission: Permission.manageHr,
       child: Row(

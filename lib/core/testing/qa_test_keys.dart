@@ -143,6 +143,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('finance_assign_concession_button');
   static const financeAssignConcessionSubmitButton =
       ValueKey<String>('finance_assign_concession_submit_button');
+  static const financeAssignConcessionSuccessSnackbar =
+      ValueKey<String>('finance_assign_concession_success_snackbar');
   static const financeCreateFeeStructureSubmitButton =
       ValueKey<String>('finance_create_fee_structure_submit_button');
 
@@ -162,6 +164,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('parent_attendance_correction_button');
   static const parentAttendanceCorrectionSubmitButton =
       ValueKey<String>('parent_attendance_correction_submit_button');
+  static const parentAttendanceCorrectionSuccessSnackbar =
+      ValueKey<String>('parent_attendance_correction_success_snackbar');
 
   static const sisPromotionSourceYearField =
       ValueKey<String>('sis_promotion_source_year');

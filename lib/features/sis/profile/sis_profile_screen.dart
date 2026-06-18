@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/student360_navigation.dart';
 import '../../../shared/widgets/akshara_manage_action.dart';
+import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
@@ -77,20 +79,17 @@ class SisStudentProfileScreen extends ConsumerWidget {
           style: context.aksharaText.bodyMedium,
         ),
         const SizedBox(height: AksharaSpacing.s3),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: AksharaManageAction(
-            permission: Permission.manageSis,
-            child: OutlinedButton.icon(
-              key: QaTestKeys.sisEditProfileButton,
-              onPressed: () => showSisProfileEditSheet(
-                context,
-                ref,
-                profile: profile,
-              ),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit Profile'),
+        AksharaManageAction(
+          permission: Permission.manageSis,
+          child: OutlinedButton.icon(
+            key: QaTestKeys.sisEditProfileButton,
+            onPressed: () => showSisProfileEditSheet(
+              context,
+              ref,
+              profile: profile,
             ),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Edit Profile'),
           ),
         ),
         const SizedBox(height: AksharaSpacing.s4),
@@ -128,6 +127,8 @@ class SisStudentProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: AksharaSpacing.s4),
+        _Student360DossierCard(studentId: student.id),
         const SizedBox(height: AksharaSpacing.s6),
         if (isMobile) ...[
           _DetailSection(
@@ -140,10 +141,6 @@ class SisStudentProfileScreen extends ConsumerWidget {
               child: _FeeSummary(account: profile.feeAccount!),
             ),
           _DetailSection(
-            title: 'Academic history',
-            child: _AcademicHistory(entries: profile.academicHistory),
-          ),
-          _DetailSection(
             title: 'Documents',
             child: _DocumentsList(
               documents: profile.documents,
@@ -153,10 +150,6 @@ class SisStudentProfileScreen extends ConsumerWidget {
                 profile: profile,
               ),
             ),
-          ),
-          _DetailSection(
-            title: 'Timeline',
-            child: _Timeline(events: profile.timeline),
           ),
         ] else
           Row(
@@ -185,32 +178,16 @@ class SisStudentProfileScreen extends ConsumerWidget {
               const SizedBox(width: AksharaSpacing.s6),
               Expanded(
                 flex: 3,
-                child: Column(
-                  children: [
-                    _DetailSection(
-                      title: 'Academic history',
-                      child: _AcademicHistory(entries: profile.academicHistory),
+                child: _DetailSection(
+                  title: 'Documents',
+                  child: _DocumentsList(
+                    documents: profile.documents,
+                    onUploadDocument: () => showSisDocumentUploadDialog(
+                      context,
+                      ref,
+                      profile: profile,
                     ),
-                    _DetailSection(
-                      title: 'Attendance summary',
-                      child: _AttendanceSummary(summary: profile.attendance),
-                    ),
-                    _DetailSection(
-                      title: 'Documents',
-                      child: _DocumentsList(
-                        documents: profile.documents,
-                        onUploadDocument: () => showSisDocumentUploadDialog(
-                          context,
-                          ref,
-                          profile: profile,
-                        ),
-                      ),
-                    ),
-                    _DetailSection(
-                      title: 'Timeline',
-                      child: _Timeline(events: profile.timeline),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -226,6 +203,44 @@ class SisStudentProfileScreen extends ConsumerWidget {
         SisStudentStatus.exited => 'Exited',
         SisStudentStatus.alumni => 'Alumni',
       };
+}
+
+class _Student360DossierCard extends StatelessWidget {
+  const _Student360DossierCard({required this.studentId});
+
+  final String studentId;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Student 360 dossier', style: text.titleMedium),
+            const SizedBox(height: AksharaSpacing.s2),
+            Text(
+              'Attendance, academics, homework, fees, behaviour, transport, '
+              'and communication live in the unified Student 360 view.',
+              style: text.bodyMedium,
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            AksharaViewAction(
+              permission: Permission.viewStudent360,
+              child: FilledButton.icon(
+                key: QaTestKeys.sisOpenStudent360Button(studentId),
+                onPressed: () => openStudent360(context, studentId),
+                icon: const Icon(Icons.hub_outlined),
+                label: const Text('Open Student 360'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _DetailSection extends StatelessWidget {
@@ -323,51 +338,6 @@ class _FeeSummary extends StatelessWidget {
   }
 }
 
-class _AttendanceSummary extends StatelessWidget {
-  const _AttendanceSummary({required this.summary});
-
-  final SisAttendanceSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = context.aksharaText;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${summary.presentPercent} present (${summary.periodLabel})',
-          style: text.bodyMedium,
-        ),
-        Text('Absent days: ${summary.absentDays}', style: text.bodyMedium),
-        Text('Late arrivals: ${summary.lateDays}', style: text.bodyMedium),
-      ],
-    );
-  }
-}
-
-class _AcademicHistory extends StatelessWidget {
-  const _AcademicHistory({required this.entries});
-
-  final List<SisAcademicHistoryEntry> entries;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      child: Column(
-        children: [
-          for (final entry in entries)
-            ListTile(
-              title: Text(
-                  '${entry.academicYear} · Class ${entry.classLabel}-${entry.section}'),
-              subtitle: Text(entry.result),
-              dense: true,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _DocumentsList extends StatelessWidget {
   const _DocumentsList({
     required this.documents,
@@ -405,33 +375,6 @@ class _DocumentsList extends StatelessWidget {
               dense: true,
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _Timeline extends StatelessWidget {
-  const _Timeline({required this.events});
-
-  final List<SisTimelineEvent> events;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Student timeline, ${events.length} events',
-      child: Material(
-        child: Column(
-          children: [
-            for (final event in events)
-              ListTile(
-                leading: const Icon(Icons.circle, size: 8),
-                title: Text(event.title),
-                subtitle: Text('${event.dateLabel} · ${event.detail}'),
-                dense: true,
-              ),
-          ],
-        ),
       ),
     );
   }

@@ -12,6 +12,9 @@ class Student360Profile {
     required this.achievements,
     required this.risk,
     required this.parentInformation,
+    this.behaviour = const {},
+    this.transport = const {},
+    this.documents = const {},
   });
 
   final Map<String, dynamic> identity;
@@ -26,6 +29,9 @@ class Student360Profile {
   final Map<String, dynamic> achievements;
   final Map<String, dynamic> risk;
   final Map<String, dynamic> parentInformation;
+  final Map<String, dynamic> behaviour;
+  final Map<String, dynamic> transport;
+  final Map<String, dynamic> documents;
 }
 
 class StudentTimelineEvent {

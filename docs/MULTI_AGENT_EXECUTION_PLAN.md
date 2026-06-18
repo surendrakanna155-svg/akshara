@@ -1,13 +1,80 @@
 # Akshara ERP — Multi-Agent Execution Plan
 
-**Version:** 1.0  
+**Version:** 1.2  
 **Date:** 2026-06-17  
 **Branch:** `feature/m15-theme`  
 **Baseline operational readiness:** ~42% (94 deduplicated backlog items)  
 **Pilot target (Phases A–E + D adapters):** ~68%  
 **Status:** Planning only — **no implementation authorized by this document**
 
-**Companion docs:** [`OPERATIONAL_GAP_MASTER_TRACKER.md`](./OPERATIONAL_GAP_MASTER_TRACKER.md) · [`OPERATIONAL_REMEDIATION_ROADMAP.md`](./OPERATIONAL_REMEDIATION_ROADMAP.md) · [`PHASE_A_EXECUTION_PLAN.md`](./PHASE_A_EXECUTION_PLAN.md) · [`PHASE_D_EXECUTION_PLAN.md`](./PHASE_D_EXECUTION_PLAN.md)
+**Companion docs:** [`OPERATIONAL_GAP_MASTER_TRACKER.md`](./OPERATIONAL_GAP_MASTER_TRACKER.md) · [`OPERATIONAL_REMEDIATION_ROADMAP.md`](./OPERATIONAL_REMEDIATION_ROADMAP.md) · [`PHASE_A_EXECUTION_PLAN.md`](./PHASE_A_EXECUTION_PLAN.md) · [`PHASE_D_EXECUTION_PLAN.md`](./PHASE_D_EXECUTION_PLAN.md) · [`ORCHESTRATOR_AGENT.md`](./ORCHESTRATOR_AGENT.md)
+
+---
+
+## Future Architecture Constraint
+
+**Authoritative definition:** [`ORCHESTRATOR_AGENT.md`](./ORCHESTRATOR_AGENT.md) — **CORE PRODUCT ARCHITECTURE PRINCIPLE**
+
+Akshara ERP evolves toward **`USER → ROLE → WORKSPACE → TASK`**, not **`USER → MODULE → 100 MENUS`**. This constraint applies to **all agents and workstreams** but **does not alter** the critical path, sprint order, or milestone sequencing in this document.
+
+### What agents must do now
+
+| Rule | Application |
+|------|-------------|
+| **Ship current milestones first** | M-D4 → M-D5 → M-D6 → M-D7, then Phase A → B → C → E per §3–§13 — **unchanged** |
+| **Design forward-compatible** | New screens, dashboards, approvals, Student 360, Marketing, Finance, Inventory, and Teacher flows group by **workspace intent** even when module folders are used today |
+| **Avoid menu sprawl** | Do not add a new ERP root menu per feature; add tasks inside the persona’s workspace model |
+| **Permissions** | Prefer workspace-scoped gates; Governance Agent batches additive RBAC with workspace labels in mind |
+| **Approvals** | Domain agents submit via `ApprovalCenterService`; inbox filters should remain type/workspace-groupable (M-D2/M-D7) |
+| **Mobile** | Student Ops + Academic agents: teacher/parent shells are workspace-first on phone |
+| **Copilot** | Task and workspace context over full module enumeration |
+
+### Dynamic Role Assignment Engine
+
+**Authoritative definition:** [`ORCHESTRATOR_AGENT.md`](./ORCHESTRATOR_AGENT.md) — **CORE PRODUCT ARCHITECTURE PRINCIPLE → Dynamic Role Assignment Engine**
+
+Roles are **assigned at runtime** by Principal, HR, or Management — not hardcoded per app persona. When roles change, permissions, workspaces, dashboards, navigation, and Copilot context must update **without code changes or app releases**.
+
+**Target chain:**
+
+```
+User → Assigned Roles → Permissions → Workspaces → Tasks → Dashboards
+```
+
+**Agent rules:**
+
+| Rule | Application |
+|------|-------------|
+| **No fixed dashboards** | Do not build `if (role == teacher)` dashboard forks; derive UI from assigned role set |
+| **Workspace generation** | Nav and workspace shells are role-driven; Inventory Workspace appears only when Inventory Manager (or equivalent) is assigned |
+| **RBAC additive** | Governance Agent: permissions map to **roles**, not to static user types; sync on login/refresh/resume |
+| **Approvals** | Approval Center visibility follows role-derived permissions (M-D2/M-D7); support multi-hat principals and teachers |
+| **HR as assigner** | HR module (when built) is role-assignment source of truth — coordinate with Agent D on permission sync |
+| **Copilot** | Pass assigned roles + active workspace into context; never assume single persona per user |
+
+**Systems that must align with dynamic roles (future-facing — no new phase):**
+
+Student 360 · Teacher Workspace · Principal Workspace · Approval Center · Marketing Platform · Inventory · Finance · Transport · HR · AI Copilot
+
+**Execution sequence unchanged:** M-D4 → M-D5 → M-D6 → M-D7 → Phase A → Phase B → Phase C → Phase E. Dynamic roles inform **design** of modules in those phases; they do not add a prerequisite milestone or delay governance.
+
+### Workstream → workspace mapping (future-facing tags)
+
+| Workstream | Primary workspaces | Milestones tagged |
+|------------|-------------------|-------------------|
+| **WS1 Governance** | Principal Workspace (Approval Center) | M-D4–M-D7 `WORKSPACE-AWARE` |
+| **WS2 Academics** | Exam Coordinator · Teacher Workspace | Phase A `WORKSPACE-TARGET` |
+| **WS3 Student Ops** | Class Teacher · Student 360 (in-workspace dossier) | Phase B, C `WORKSPACE-TARGET` |
+| **WS4 Finance** | Finance Workspace (Principal + Accountant) | Phase E `WORKSPACE-TARGET` |
+| **WS5 Operations** | Inventory · Procurement · Transport | Phase F, G `WORKSPACE-TARGET` |
+| **WS6 Growth** | Marketing Workspace | Phase H `WORKSPACE-TARGET` |
+| **WS7 Compliance** | Workspace-scoped report exports | Phase I `WORKSPACE-TARGET` |
+
+### Explicit non-goals (this program)
+
+- No new roadmap phase for “Workspace Platform” or “Dynamic Role Engine”
+- No delay to M-D4 or governance track for shell refactor
+- No re-architecture of completed M-D1–M-D3 deliverables unless a later workspace milestone explicitly schedules it
 
 ---
 
@@ -650,6 +717,7 @@ This plan aligns with `.cursor/skills/multi-agent-coordinator/SKILL.md`:
 
 | Document | Relationship |
 |----------|--------------|
+| [`ORCHESTRATOR_AGENT.md`](./ORCHESTRATOR_AGENT.md) | SSOT for execution order + **CORE PRODUCT ARCHITECTURE PRINCIPLE** |
 | [`OPERATIONAL_GAP_MASTER_TRACKER.md`](./OPERATIONAL_GAP_MASTER_TRACKER.md) | Source backlog (94 items) |
 | [`OPERATIONAL_REMEDIATION_ROADMAP.md`](./OPERATIONAL_REMEDIATION_ROADMAP.md) | Phase ordering and readiness deltas |
 | [`PHASE_A_EXECUTION_PLAN.md`](./PHASE_A_EXECUTION_PLAN.md) | Academic Agent milestone detail |
@@ -665,4 +733,6 @@ This plan aligns with `.cursor/skills/multi-agent-coordinator/SKILL.md`:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.2 | 2026-06-17 | Added Dynamic Role Assignment Engine under Future Architecture Constraint |
+| 1.1 | 2026-06-17 | Added Future Architecture Constraint — references ORCHESTRATOR_AGENT.md workspace principle |
 | 1.0 | 2026-06-17 | Initial multi-agent execution plan from operational audit synthesis |

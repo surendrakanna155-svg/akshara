@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/theme_extensions.dart';
@@ -39,7 +40,37 @@ class FinanceExecutiveDashboardScreen extends ConsumerWidget {
               onSelected: (index) =>
                   ref.read(_financeExecutivePeriodProvider.notifier).state = index,
               trailing: OutlinedButton.icon(
-                onPressed: () => showAksharaExportQueuedSnackBar(context),
+                onPressed: () async {
+                  final service = ref.read(aksharaReportExportServiceProvider);
+                  final bytes = await service.buildTabularReportPdf(
+                    reportTitle: 'Finance Executive Dashboard',
+                    moduleLabel: 'Finance · Executive',
+                    generatedAtLabel: DateTime.now().toIso8601String(),
+                    rows: [
+                      MapEntry(
+                        'Collection health',
+                        '${snapshot.collectionHealthScore}',
+                      ),
+                      MapEntry(
+                        'Outstanding',
+                        '${snapshot.outstandingCollections}',
+                      ),
+                      MapEntry(
+                        'Expected collections',
+                        '${snapshot.expectedCollections}',
+                      ),
+                      MapEntry(
+                        'Risk students',
+                        '${snapshot.riskStudents.length}',
+                      ),
+                    ],
+                  );
+                  if (!context.mounted) return;
+                  await service.previewPdf(
+                    documentName: 'finance_executive_dashboard.pdf',
+                    bytes: bytes,
+                  );
+                },
                 icon: const Icon(Icons.download_outlined, size: 18),
                 label: const Text('Export'),
               ),

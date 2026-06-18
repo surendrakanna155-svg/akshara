@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../core/reports/finance_audit_register_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/operational_action_feedback.dart';
@@ -111,21 +113,100 @@ class FinanceReportsScreen extends ConsumerWidget {
             children: [
               OutlinedButton.icon(
                 key: QaTestKeys.financeReportExportPdfButton,
-                onPressed: () => showAksharaReportExportPreviewSnackBar(
-                  context,
-                  reportName: selectedReport.title,
-                ),
+                onPressed: () async {
+                  final service = ref.read(aksharaReportExportServiceProvider);
+                  final bytes = await service.buildTabularReportPdf(
+                    reportTitle: selectedReport.title,
+                    moduleLabel: 'Finance · ${selectedReport.type.name}',
+                    generatedAtLabel: DateTime.now().toIso8601String(),
+                    rows: [
+                      MapEntry('Report ID', selectedReport.id),
+                      MapEntry('Last generated', selectedReport.lastGenerated),
+                      MapEntry('Description', selectedReport.description),
+                    ],
+                  );
+                  if (!context.mounted) return;
+                  await service.previewPdf(
+                    documentName: '${selectedReport.id}.pdf',
+                    bytes: bytes,
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      key: QaTestKeys.financeReportExportSuccessSnackbar,
+                      content: Text('${selectedReport.title} PDF ready'),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.picture_as_pdf_outlined),
                 label: const Text('Export PDF'),
               ),
               OutlinedButton.icon(
-                onPressed: () => showAksharaReportExportPreviewSnackBar(
-                  context,
-                  reportName: selectedReport.title,
-                  format: 'Excel',
-                ),
+                key: QaTestKeys.financeReportExportExcelButton,
+                onPressed: () async {
+                  final service = ref.read(aksharaReportExportServiceProvider);
+                  final csv = service.buildTabularReportCsv(
+                    reportTitle: selectedReport.title,
+                    rows: [
+                      MapEntry('Report ID', selectedReport.id),
+                      MapEntry('Last generated', selectedReport.lastGenerated),
+                      MapEntry('Description', selectedReport.description),
+                      MapEntry('Type', selectedReport.type.name),
+                    ],
+                  );
+                  if (!context.mounted) return;
+                  await service.shareTabularCsv(
+                    filename: '${selectedReport.id}.csv',
+                    reportTitle: selectedReport.title,
+                    rows: [
+                      MapEntry('Report ID', selectedReport.id),
+                      MapEntry('Last generated', selectedReport.lastGenerated),
+                      MapEntry('Description', selectedReport.description),
+                      MapEntry('Type', selectedReport.type.name),
+                    ],
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      key: QaTestKeys.financeReportExportSuccessSnackbar,
+                      content: Text(
+                        '${selectedReport.title} Excel CSV ready (${csv.split('\n').length - 1} rows)',
+                      ),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.table_chart_outlined),
                 label: const Text('Export Excel'),
+              ),
+              OutlinedButton.icon(
+                key: QaTestKeys.financeAuditRegisterExportButton,
+                onPressed: () async {
+                  final events =
+                      await ref.read(financeAuditRegisterEventsProvider.future);
+                  final registerService =
+                      ref.read(financeAuditRegisterServiceProvider);
+                  final exportService =
+                      ref.read(aksharaReportExportServiceProvider);
+                  final bytes = await registerService.buildRegisterPdf(
+                    events: events,
+                    generatedAtLabel: DateTime.now().toIso8601String(),
+                  );
+                  if (!context.mounted) return;
+                  await exportService.previewPdf(
+                    documentName: 'finance_audit_register.pdf',
+                    bytes: bytes,
+                  );
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Finance audit register ready (${events.length} entries)',
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Audit register'),
               ),
               OutlinedButton.icon(
                 onPressed: () => showAksharaOperationalPreviewSnackBar(

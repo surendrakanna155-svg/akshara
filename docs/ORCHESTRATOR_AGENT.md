@@ -1,8 +1,8 @@
 # Akshara ERP — Orchestrator Agent
 
-**Version:** 1.9  
+**Version:** 2.0  
 **Last updated:** 2026-06-18  
-**Branch:** `feature/m15-theme` — F1 certified · F2 certified · F3 certified · F4 certified · **F5 certified**  
+**Branch:** `feature/m15-theme` — F1 certified · F2 certified · F3 certified · F4 certified · **F5 certified** · **PRE-CLAUDE FREEZE**  
 **Purpose:** Single source of truth for program execution order, agent ownership, gates, and stop rules.  
 **Authority:** Supersedes ad-hoc session prompts. Every orchestrator session **must read this file first**, then the linked milestone docs.
 
@@ -837,10 +837,48 @@ Each session ends with:
 
 ---
 
-## 16. Change log
+## 16. PRE-CLAUDE FREEZE CHECKPOINT
+
+**Date:** 2026-06-18  
+**Status:** 🔒 **FROZEN** — Cursor development paused; awaiting Claude audit  
+**Handoff:** [`docs/CLAUDE_HANDOFF.md`](./CLAUDE_HANDOFF.md) · [`docs/PRE_CLAUDE_HANDOFF_REPORT.md`](./PRE_CLAUDE_HANDOFF_REPORT.md)
+
+| Field | Value |
+|-------|-------|
+| **Current readiness (production API)** | **~89%** |
+| **Current readiness (mock/UAT)** | **~72%+** |
+| **Current branch** | `feature/m15-theme` |
+| **Freeze tag** | `pre-claude-audit-v1` |
+| **Backup branch** | `backup/pre-claude-audit` |
+| **Last completed backend phase** | **F5** Attendance API |
+| **Last certified backend phase** | **F5** (`PHASE_F5_FINAL_CERTIFICATION.md`) |
+| **Last certified Patrol batch** | **Batch 02** (14/14) |
+| **Patrol in progress** | **Batch 02b** — implemented, cert pending (1 pass / 1 fail / 2 not run) |
+| **Certified Patrol journeys** | **116** |
+
+### Active blockers
+
+| ID | Blocker | Type |
+|----|---------|------|
+| B-01 | Batch 02b — `Attendance correction — Ravi Kumar` not in principal inbox | App / test — **needs RCA** |
+| B-02 | Android emulator flash-close / adb offline | Infrastructure |
+| B-03 | F6/F7 not started | Program — **locked** |
+
+### Stop rules (freeze)
+
+- ❌ Do **not** start **F6**
+- ❌ Do **not** start **F7**
+- ❌ Do **not** start **Batch 03**
+- ❌ Do **not** implement new features
+- ✅ Claude audit only
+
+---
+
+## 17. Change log
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 2.0 | 2026-06-18 | PRE-CLAUDE FREEZE — tag `pre-claude-audit-v1`, backup `backup/pre-claude-audit`, handoff docs |
 | 1.9 | 2026-06-18 | F5 Attendance API certified (`PHASE_F5_FINAL_CERTIFICATION.md`); production API ~89%; F6 locked |
 | 1.8 | 2026-06-17 | F4 Exam Administration API certified (`PHASE_F4_FINAL_CERTIFICATION.md`); production API ~81%; F5 locked |
 | 1.7 | 2026-06-17 | F3 SIS + Student 360 API certified (`PHASE_F3_FINAL_CERTIFICATION.md`); production API ~71%; F4 locked |

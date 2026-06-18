@@ -211,5 +211,100 @@ void main() {
 
       expect(result, isNotNull);
     });
+
+    test('createRefund succeeds with finance admin role', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final created = await container.read(createRefundProvider.notifier).execute(
+            const CreateRefundRequest(
+              feeAccountId: 'acct_1',
+              amount: '₹2,500',
+              reason: 'Duplicate payment',
+              studentName: 'Arjun Patel',
+              admissionNumber: 'ADM-2026-0138',
+              classLabel: '10',
+              originalReceipt: 'RCP-TEST-001',
+            ),
+          );
+
+      expect(created, isNotNull);
+      expect(created!.status, RefundStatus.pending);
+      expect(created.amount, '₹2,500');
+    });
+
+    test('createRefund fails when manageFinance permission missing', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(createRefundProvider.notifier).execute(
+            const CreateRefundRequest(
+              feeAccountId: 'acct_1',
+              amount: '₹1,000',
+              reason: 'Test',
+            ),
+          );
+
+      expect(container.read(createRefundProvider).hasError, isTrue);
+    });
+
+    test('assignFeeConcession succeeds with finance admin role', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final concessionId = await container
+          .read(assignFeeConcessionProvider.notifier)
+          .execute(
+            studentName: 'Arjun Patel',
+            amount: '₹15,000',
+            reason: 'Merit scholarship',
+            feeAccountId: 'acct_1',
+          );
+
+      expect(concessionId, isNotNull);
+      expect(concessionId, startsWith('concession_'));
+    });
+
+    test('assignFeeConcession fails when assignScholarship permission missing',
+        () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(assignFeeConcessionProvider.notifier).execute(
+            studentName: 'Test Student',
+            amount: '₹5,000',
+            reason: 'Test',
+          );
+
+      expect(container.read(assignFeeConcessionProvider).hasError, isTrue);
+    });
   });
 }

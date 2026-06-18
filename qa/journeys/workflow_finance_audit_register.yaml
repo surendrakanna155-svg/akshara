@@ -1,0 +1,24 @@
+# Workflow — Finance audit register export (Phase E)
+# tags: workflow,finance,audit,export
+# Status: Patrol — patrol_batch1_p0_expansion_e2e_test.dart (batch1: finance audit register export)
+appId: com.akshara.erp
+---
+# Finance admin exports audit register PDF
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Finance Admin
+- tapOn: "Finance"
+- tapOn: "Reports"
+- tapOn: "Audit register"
+- takeScreenshot: workflow_finance_audit_register_export
+---
+# Cashier validates collection flow
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Finance Admin
+- tapOn: "Finance"
+- tapOn: "Collections"
+- assertVisible: "Record payment"
+- takeScreenshot: workflow_finance_cashier_collections

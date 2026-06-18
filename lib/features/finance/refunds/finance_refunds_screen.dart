@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/config/finance_approval_config.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
+import '../../management/approval/approval_center_navigation.dart';
+import '../../../core/approvals/approval_category.dart';
+import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -39,6 +44,15 @@ class FinanceRefundsScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(financeRefundsFilterProvider.notifier).state = index,
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageFinance,
+        child: FilledButton.icon(
+          key: QaTestKeys.financeCreateRefundButton,
+          onPressed: () => showCreateRefundDialog(context, ref),
+          icon: const Icon(Icons.add),
+          label: const Text('Create refund'),
+        ),
+      ),
       body: FinanceAsyncBody<PaginatedResult<RefundRequest>>(
         state: viewState,
         loadingLabel: 'Loading refund requests',
@@ -97,7 +111,7 @@ class FinanceRefundsScreen extends ConsumerWidget {
           ],
           if (selected != null) ...[
             const SizedBox(height: AksharaSpacing.s4),
-            _RefundDetailPanel(refund: selected, widgetRef: widgetRef),
+            _RefundDetailPanel(refund: selected),
           ],
         ],
       );
@@ -131,7 +145,7 @@ class FinanceRefundsScreen extends ConsumerWidget {
                   message: 'Select a refund request.',
                   icon: Icons.currency_exchange_outlined,
                 )
-              : _RefundDetailPanel(refund: selected, widgetRef: widgetRef),
+              : _RefundDetailPanel(refund: selected),
         ),
       ],
     );
@@ -191,15 +205,17 @@ class _RefundListTile extends StatelessWidget {
   }
 }
 
-class _RefundDetailPanel extends StatelessWidget {
-  const _RefundDetailPanel({required this.refund, required this.widgetRef});
+class _RefundDetailPanel extends ConsumerWidget {
+  const _RefundDetailPanel({required this.refund});
 
   final RefundRequest refund;
-  final WidgetRef widgetRef;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
+    final approvalRequired = ref.watch(financeApprovalRequiredProvider);
+    final showApprovalCenter = approvalRequired &&
+        refund.status == RefundStatus.pending;
 
     return Semantics(
       container: true,
@@ -246,41 +262,48 @@ class _RefundDetailPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          Row(
-            children: [
-              Expanded(
-                child: AksharaApproveAction(
-                  permission: Permission.approveRefunds,
-                  child: OutlinedButton(
-                    onPressed: refund.status == RefundStatus.pending
-                        ? () => rejectSelectedRefund(
-                              context,
-                              widgetRef,
-                              refund: refund,
-                            )
-                        : null,
-                    child: const Text('Reject'),
+          if (showApprovalCenter)
+            const ApprovalCenterRedirectBanner(
+              message:
+                  'Refund decisions are made in the Principal Approval Center.',
+              category: ApprovalCategory.finance,
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: AksharaApproveAction(
+                    permission: Permission.approveRefunds,
+                    child: OutlinedButton(
+                      onPressed: refund.status == RefundStatus.pending
+                          ? () => rejectSelectedRefund(
+                                context,
+                                ref,
+                                refund: refund,
+                              )
+                          : null,
+                      child: const Text('Reject'),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: AksharaSpacing.s3),
-              Expanded(
-                child: AksharaApproveAction(
-                  permission: Permission.approveRefunds,
-                  child: FilledButton(
-                    onPressed: refund.status == RefundStatus.pending
-                        ? () => approveSelectedRefund(
-                              context,
-                              widgetRef,
-                              refund: refund,
-                            )
-                        : null,
-                    child: const Text('Approve'),
+                const SizedBox(width: AksharaSpacing.s3),
+                Expanded(
+                  child: AksharaApproveAction(
+                    permission: Permission.approveRefunds,
+                    child: FilledButton(
+                      onPressed: refund.status == RefundStatus.pending
+                          ? () => approveSelectedRefund(
+                                context,
+                                ref,
+                                refund: refund,
+                              )
+                          : null,
+                      child: const Text('Approve'),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

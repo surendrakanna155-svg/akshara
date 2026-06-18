@@ -1,6 +1,6 @@
 # Workflow — Parent leave approval (M-D4)
 # tags: workflow,leave,parent,approval
-# Status: stub — full Patrol validation after emulator gate
+# Status: executable — Patrol pilot_closure_workflows_e2e_test.dart
 appId: com.akshara.erp
 ---
 - runFlow:

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -93,7 +95,38 @@ class FinanceDiscountsScreen extends ConsumerWidget {
         else
           _DiscountRulesTable(rules: data.rules),
         const SizedBox(height: AksharaSpacing.s6),
-        const AksharaSectionHeader(title: 'Student assignments'),
+        if (isMobile) ...[
+          const AksharaSectionHeader(title: 'Student assignments'),
+          const SizedBox(height: AksharaSpacing.s3),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AksharaViewAction(
+              permission: Permission.assignScholarship,
+              child: FilledButton.icon(
+                key: QaTestKeys.financeAssignConcessionButton,
+                onPressed: () => showAssignFeeConcessionDialog(context, ref),
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                label: const Text('Assign concession'),
+              ),
+            ),
+          ),
+        ] else
+          Row(
+            children: [
+              const Expanded(
+                child: AksharaSectionHeader(title: 'Student assignments'),
+              ),
+              AksharaViewAction(
+                permission: Permission.assignScholarship,
+                child: FilledButton.icon(
+                  key: QaTestKeys.financeAssignConcessionButton,
+                  onPressed: () => showAssignFeeConcessionDialog(context, ref),
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: const Text('Assign concession'),
+                ),
+              ),
+            ],
+          ),
         const SizedBox(height: AksharaSpacing.s3),
         if (isMobile)
           Column(

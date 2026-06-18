@@ -1,6 +1,6 @@
 # Workflow — Exam publish approval (M-A5)
 # tags: workflow,exams,approval,governance
-# Status: executable — Patrol pilot_closure_workflows_e2e_test.dart
+# Status: executable — Patrol batch2b test 4 (principal approve → parent results)
 appId: com.akshara.erp
 ---
 # Teacher persona — submit marks for coordinator verification

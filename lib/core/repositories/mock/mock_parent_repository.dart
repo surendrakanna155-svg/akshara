@@ -207,12 +207,7 @@ class MockParentRepository implements ParentRepository {
           isComplete: true,
         ),
         LeaveTimelineStep(
-          label: 'Class teacher review',
-          dateLabel: 'Pending',
-          isComplete: false,
-        ),
-        LeaveTimelineStep(
-          label: 'School approval',
+          label: 'Principal review',
           dateLabel: 'Pending',
           isComplete: false,
         ),
@@ -260,21 +255,78 @@ class MockParentRepository implements ParentRepository {
   Future<ParentAcademicSummary> getAcademicSummary({
     required RepositoryQuery query,
     required String studentId,
-  }) async =>
-      ParentAcademicSummary(
-        studentId: studentId,
-        attendanceSummary: const {'ratePercent': 92, 'presentDays': 23, 'totalDays': 25},
-        performanceSummary: const {'overallGrade': 'A', 'trend': 'improving'},
-        strengths: const ['Regular attendance', 'Strong in Mathematics'],
-        weaknesses: const ['Science lab reports pending'],
-        homeworkStatus: const {'submitted': 8, 'pending': 2, 'completionRate': 80},
-        examReadiness: const {'readinessScore': 85, 'recommendation': 'On track for unit tests'},
-        teacherRecommendations: const [
-          'Review homework daily',
-          'Practice science diagrams',
-        ],
-        generatedAt: DateTime.now().toIso8601String(),
-      );
+  }) async {
+    final sync = MockAttendanceSyncStore.instance;
+    final examStore = ExamAdministrationStore.instance..ensureSeeded();
+    final published = examStore.resultsForStudent(studentId);
+
+    final Map<String, Object?> attendanceSummary;
+    if (sync.hasTeacherSubmission) {
+      final total = sync.presentCount + sync.absentCount + sync.lateCount;
+      final rate = total == 0
+          ? 0
+          : ((sync.presentCount / total) * 100).round();
+      attendanceSummary = {
+        'ratePercent': rate,
+        'presentDays': sync.presentCount,
+        'totalDays': total,
+      };
+    } else {
+      attendanceSummary = const {
+        'ratePercent': 92,
+        'presentDays': 23,
+        'totalDays': 25,
+      };
+    }
+
+    String overallGrade = '—';
+    String trend = 'stable';
+    final strengths = <String>['Regular attendance'];
+    final weaknesses = <String>[];
+
+    if (published.isNotEmpty) {
+      final grades = published.map((r) => r.grade).toList();
+      overallGrade = grades.first;
+      final avgPercent = published
+              .map((r) => (r.scoreObtained / r.maxScore) * 100)
+              .fold<double>(0, (sum, v) => sum + v) /
+          published.length;
+      trend = avgPercent >= 75 ? 'improving' : 'needs attention';
+      strengths.add('Published results: ${published.length} exam(s)');
+      for (final result in published) {
+        if (result.grade == 'C' || result.grade == 'D' || result.grade == 'F') {
+          weaknesses.add('Review ${result.subject} (${result.grade})');
+        }
+      }
+    } else {
+      weaknesses.add('Awaiting published exam results');
+    }
+
+    return ParentAcademicSummary(
+      studentId: studentId,
+      attendanceSummary: attendanceSummary,
+      performanceSummary: {'overallGrade': overallGrade, 'trend': trend},
+      strengths: strengths,
+      weaknesses: weaknesses.isEmpty
+          ? const ['Science lab reports pending']
+          : weaknesses,
+      homeworkStatus: const {'submitted': 8, 'pending': 2, 'completionRate': 80},
+      examReadiness: published.isNotEmpty
+          ? {
+              'readinessScore': 85,
+              'recommendation': 'Results published for ${published.length} exam(s)',
+            }
+          : const {
+              'readinessScore': 70,
+              'recommendation': 'On track — results pending publication',
+            },
+      teacherRecommendations: const [
+        'Review homework daily',
+        'Practice science diagrams',
+      ],
+      generatedAt: DateTime.now().toIso8601String(),
+    );
+  }
 
   @override
   Future<String> getPrintableReport({

@@ -19,6 +19,12 @@ class SchoolCompletionHubScreen extends StatelessWidget {
             onTap: () => context.push(RouteNames.subjectsManagement),
           ),
           ListTile(
+            leading: const Icon(Icons.assignment_outlined),
+            title: const Text('Exam Administration'),
+            subtitle: const Text('Schedule exams, open marks entry, publish chain'),
+            onTap: () => context.push(RouteNames.examAdministration),
+          ),
+          ListTile(
             leading: const Icon(Icons.history_edu_outlined),
             title: const Text('Lesson Logs'),
             subtitle: const Text('Record daily lesson outcomes'),

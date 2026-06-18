@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
+import '../../../router/student360_navigation.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -101,7 +102,8 @@ class TeacherClassTeacherDashboardScreen extends ConsumerWidget {
                       title: Text(item.studentName),
                       subtitle: Text(item.summary),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push(
+                      onTap: () => openStudent360(context, item.sisStudentId),
+                      onLongPress: () => context.push(
                         RouteNames.teacherStudentRisk(item.sisStudentId),
                       ),
                     ),

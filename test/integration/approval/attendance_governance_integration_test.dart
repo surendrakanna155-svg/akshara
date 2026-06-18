@@ -101,6 +101,12 @@ void main() {
 
       final leave = MockParentWriteStore.instance.leaveRequests!.first;
       expect(leave.status, LeaveStatus.approved);
+      expect(
+        leave.timeline.any(
+          (step) => step.label == 'Principal approval' && step.isComplete,
+        ),
+        isTrue,
+      );
     });
 
     test('staff leave reject stores principal comment', () async {

@@ -59,6 +59,33 @@ class ExamMarkEntry {
   }
 }
 
+/// Validates teacher marks input (0…max inclusive).
+String? validateTeacherExamMarkInput(String raw, int maxMarks) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return 'Enter marks';
+  final parsed = int.tryParse(trimmed);
+  if (parsed == null) return 'Enter a valid number';
+  if (parsed < 0 || parsed > maxMarks) {
+    return 'Marks must be between 0 and $maxMarks';
+  }
+  return null;
+}
+
+@immutable
+class TeacherExamSessionOption {
+  const TeacherExamSessionOption({
+    required this.id,
+    required this.title,
+    required this.classLabel,
+    required this.maxMarks,
+  });
+
+  final String id;
+  final String title;
+  final String classLabel;
+  final int maxMarks;
+}
+
 @immutable
 class TeacherExamsData {
   const TeacherExamsData({

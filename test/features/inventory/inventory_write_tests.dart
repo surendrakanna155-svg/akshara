@@ -153,7 +153,8 @@ void main() {
       final receiveResult = await container
           .read(receiveProcurementHandoffProvider.notifier)
           .execute(ordered);
-      expect(receiveResult.grnId, startsWith('grn_if_'));
+      expect(receiveResult, isNotNull);
+      expect(receiveResult!.grnId, startsWith('grn_if_'));
 
       final afterReceive = await inventoryRepo.getProcurementOrders(
         query: RepositoryQuery.demo,
@@ -204,7 +205,8 @@ void main() {
       final receiveResult = await container
           .read(receiveProcurementHandoffProvider.notifier)
           .execute(ordered);
-      expect(receiveResult.grnId, startsWith('grn_if_'));
+      expect(receiveResult, isNotNull);
+      expect(receiveResult!.grnId, startsWith('grn_if_'));
 
       final afterReceive = await inventoryRepo.getProcurementOrders(
         query: RepositoryQuery.demo,

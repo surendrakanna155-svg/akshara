@@ -174,10 +174,17 @@ Future<void> submitProcurementReceiveHandoff(
   if (confirmed != true || !context.mounted) return;
 
   try {
-    final result = await ref
-        .read(receiveProcurementHandoffProvider.notifier)
-        .execute(order);
+    await ref.read(receiveProcurementHandoffProvider.notifier).execute(order);
     if (!context.mounted) return;
+    final receiveState = ref.read(receiveProcurementHandoffProvider);
+    if (receiveState.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${receiveState.error}')),
+      );
+      return;
+    }
+    final result = receiveState.value;
+    if (result == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         key: QaTestKeys.inventoryPoReceiveHandoffSuccessSnackbar,

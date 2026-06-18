@@ -1,6 +1,6 @@
 # Workflow — Finance concession approval (M-D5)
 # tags: workflow,finance,approval
-# Status: stub — full Patrol validation after emulator gate
+# Status: executable — Patrol batch2 tests 4, 11
 appId: com.akshara.erp
 ---
 - runFlow:

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/approvals/adapters/exam_results_approval_adapter.dart';
@@ -14,6 +16,63 @@ import 'exam_models.dart';
 final teacherExamSectionProvider = StateProvider<TeacherExamSection>(
   (ref) => TeacherExamSection.upcoming,
 );
+
+/// Demo teacher subject scope for marks-entry exam selector (M-A4).
+const _teacherExamSubjectScope = 'Mathematics';
+
+final teacherSelectedExamIdProvider = StateProvider<String?>((ref) => null);
+
+final teacherMarksExamOptionsProvider = Provider<List<TeacherExamSessionOption>>(
+  (ref) {
+    ExamAdministrationStore.instance.ensureSeeded();
+    return ExamAdministrationStore.instance
+        .allExams()
+        .where(
+          (exam) =>
+              exam.subject == _teacherExamSubjectScope &&
+              (exam.phase == ExamLifecyclePhase.marksEntry ||
+                  exam.phase == ExamLifecyclePhase.processed),
+        )
+        .map(
+          (exam) => TeacherExamSessionOption(
+            id: exam.id,
+            title: exam.title,
+            classLabel: exam.classLabel,
+            maxMarks: exam.maxMarks,
+          ),
+        )
+        .toList(growable: false);
+  },
+);
+
+final teacherActiveExamIdProvider = Provider<String?>((ref) {
+  final selected = ref.watch(teacherSelectedExamIdProvider);
+  final options = ref.watch(teacherMarksExamOptionsProvider);
+  if (selected != null && options.any((exam) => exam.id == selected)) {
+    return selected;
+  }
+  if (options.isNotEmpty) return options.first.id;
+  ExamAdministrationStore.instance.ensureSeeded();
+  return ExamAdministrationStore.instance.activeMarksExamId;
+});
+
+final teacherExamMarksForActiveProvider = Provider<List<ExamMarkEntry>>((ref) {
+  final examId = ref.watch(teacherActiveExamIdProvider);
+  if (examId == null) return const [];
+  ExamAdministrationStore.instance.ensureSeeded();
+  final exam = ExamAdministrationStore.instance.examById(examId);
+  if (exam == null) return const [];
+  return [
+    for (final mark in ExamAdministrationStore.instance.marksForExam(examId))
+      ExamMarkEntry(
+        id: mark.id,
+        studentName: mark.studentName,
+        rollNo: mark.rollNo,
+        marksObtained: mark.marksObtained,
+        maxMarks: exam.maxMarks,
+      ),
+  ];
+});
 
 final teacherExamsLoadingProvider = StateProvider<bool>((ref) => false);
 final teacherExamsErrorProvider = StateProvider<bool>((ref) => false);
@@ -37,6 +96,8 @@ final _teacherExamMarksProvider = StateProvider<List<ExamMarkEntry>?>((ref) => n
 List<ExamMarkEntry> _marks(Ref ref) {
   final override = ref.watch(_teacherExamMarksProvider);
   if (override != null) return override;
+  final scoped = ref.watch(teacherExamMarksForActiveProvider);
+  if (scoped.isNotEmpty) return scoped;
   return watchRepositoryFuture(
     ref,
     ref.watch(teacherExamMarksFutureProvider),
@@ -97,24 +158,51 @@ Future<void> updateExamMark(WidgetRef ref, String entryId, int marks) async {
       );
   if (updated == null) return;
 
-  final current = ref.read(_teacherExamMarksProvider) ??
-      ref.read(teacherExamMarksFutureProvider).value ??
-      const <ExamMarkEntry>[];
+  List<ExamMarkEntry> current = ref.read(teacherExamMarksForActiveProvider);
+  final override = ref.read(_teacherExamMarksProvider);
+  if (override != null) current = override;
+
   ref.read(_teacherExamMarksProvider.notifier).state = [
     for (final entry in current)
       entry.id == entryId ? entry.copyWith(marksObtained: marks) : entry,
   ];
+  ref.invalidate(teacherExamMarksForActiveProvider);
 }
 
-final teacherActiveExamIdProvider = Provider<String?>((ref) {
-  ExamAdministrationStore.instance.ensureSeeded();
-  return ExamAdministrationStore.instance.activeMarksExamId;
-});
+void resetTeacherExamMarksOverride(WidgetRef ref) {
+  ref.read(_teacherExamMarksProvider.notifier).state = null;
+}
+
+String? saveTeacherExamMarkFromInput(
+  WidgetRef ref, {
+  required ExamMarkEntry entry,
+  required String raw,
+}) {
+  final error = validateTeacherExamMarkInput(raw, entry.maxMarks);
+  if (error != null) return error;
+  final marks = int.parse(raw.trim());
+  unawaited(updateExamMark(ref, entry.id, marks));
+  return null;
+}
 
 final teacherExamRejectionCommentProvider = Provider<String?>((ref) {
   final examId = ref.watch(teacherActiveExamIdProvider);
   if (examId == null) return null;
   return ExamAdministrationStore.instance.rejectionCommentFor(examId);
+});
+
+final teacherExamCoordinatorVerifiedProvider = Provider<bool>((ref) {
+  final examId = ref.watch(teacherActiveExamIdProvider);
+  if (examId == null) return false;
+  ref.watch(teacherExamMarksFutureProvider);
+  return ExamAdministrationStore.instance.isCoordinatorVerified(examId);
+});
+
+final teacherExamPhaseProvider = Provider<ExamLifecyclePhase?>((ref) {
+  final examId = ref.watch(teacherActiveExamIdProvider);
+  if (examId == null) return null;
+  ref.watch(teacherExamMarksFutureProvider);
+  return ExamAdministrationStore.instance.examById(examId)?.phase;
 });
 
 final teacherExamPendingApprovalProvider = FutureProvider<bool>((ref) async {
@@ -137,6 +225,15 @@ Future<TeacherExamPublishResult?> publishExamResults(
 ) async {
   return ref.read(publishTeacherExamResultsProvider.notifier).execute(
         TeacherExamPublishRequest(examId: examId),
+      );
+}
+
+Future<TeacherExamProcessResultsResult?> processExamResultsForVerification(
+  WidgetRef ref,
+  String examId,
+) async {
+  return ref.read(processTeacherExamResultsProvider.notifier).execute(
+        TeacherExamProcessResultsRequest(examId: examId),
       );
 }
 

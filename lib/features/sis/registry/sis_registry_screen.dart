@@ -5,6 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
+import '../../../router/student360_navigation.dart';
+import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -57,7 +60,34 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
-              onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'SIS registry'),
+              key: QaTestKeys.sisRegistryExportButton,
+              onPressed: students.isEmpty
+                  ? null
+                  : () async {
+                      final service =
+                          ref.read(aksharaReportExportServiceProvider);
+                      final rows = [
+                        for (final student in students)
+                          MapEntry(
+                            student.admissionNumber,
+                            '${student.studentName} · ${student.classLabel}-${student.section} · ${student.status.name}',
+                          ),
+                      ];
+                      await service.shareTabularCsv(
+                        filename: 'sis_registry.csv',
+                        reportTitle: 'SIS Student Registry',
+                        rows: rows,
+                      );
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          key: QaTestKeys.sisRegistryExportSuccessSnackbar,
+                          content: Text(
+                            'SIS registry CSV ready (${students.length} students)',
+                          ),
+                        ),
+                      );
+                    },
               icon: const Icon(Icons.download_outlined),
               label: const Text('Export'),
             ),
@@ -160,11 +190,26 @@ class _StudentRegistryTable extends StatelessWidget {
             DataCell(Text(student.section)),
             DataCell(_StudentStatusChip(status: student.status)),
             DataCell(
-              TextButton(
-                onPressed: () => context.go(
-                  RouteNames.sisStudentDetail(student.id),
-                ),
-                child: const Text('View'),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  switch (value) {
+                    case 'profile':
+                      context.go(RouteNames.sisStudentDetail(student.id));
+                    case 'student360':
+                      openStudent360(context, student.id);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'profile',
+                    child: Text('View profile'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'student360',
+                    child: Text('Student 360'),
+                  ),
+                ],
+                child: const Text('Actions'),
               ),
             ),
           ],
