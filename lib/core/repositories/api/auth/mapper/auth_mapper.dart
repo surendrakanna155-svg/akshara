@@ -4,6 +4,7 @@ import '../../../../security/erp_role.dart';
 import '../../../../security/permissions.dart';
 import '../../../../security/server_permission_models.dart';
 import '../dto/auth_login_dto.dart';
+import '../../../../security/server_permission_models.dart';
 import '../dto/auth_permissions_dto.dart';
 import '../dto/auth_tokens_dto.dart';
 import '../dto/auth_user_dto.dart';
@@ -94,8 +95,9 @@ class AuthMapper {
     required String userId,
     String? tenantId,
     int version = 1,
+    DateTime? syncedAt,
   }) {
-    final now = DateTime.now();
+    final now = syncedAt ?? DateTime.now();
     return ServerPermissionPolicy(
       version: version,
       grants: [
@@ -111,6 +113,30 @@ class AuthMapper {
       syncedAt: now,
       tenantId: tenantId,
       userId: userId,
+    );
+  }
+
+  ServerPermissionPolicy toPermissionPolicyFromDto({
+    required AuthPermissionsDto dto,
+    required String userId,
+    String? tenantId,
+  }) {
+    return toPermissionPolicy(
+      permissions: toServerPermissions(dto),
+      userId: userId,
+      tenantId: tenantId,
+      version: dto.permissionsVersion ?? 1,
+      syncedAt: dto.syncedAt,
+    );
+  }
+
+  ServerPermissionPolicy toPermissionPolicyFromVerification({
+    required AuthVerificationResult result,
+  }) {
+    return toPermissionPolicy(
+      permissions: result.permissions,
+      userId: result.user.id,
+      tenantId: result.user.tenantId,
     );
   }
 

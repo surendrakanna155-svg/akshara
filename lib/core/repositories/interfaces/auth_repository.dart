@@ -1,6 +1,7 @@
 import '../../../features/auth/auth_token_models.dart';
 import '../../security/erp_role.dart';
 import '../../security/permissions.dart';
+import '../../security/server_permission_models.dart';
 
 /// OTP login session started after identifier submission.
 class AuthSession {
@@ -89,7 +90,19 @@ abstract class AuthRepository {
 
   Future<void> logout();
 
+  /// Revokes a single session server-side (admin or self-service).
+  Future<void> revokeSession(String sessionId, {String? reason});
+
+  /// Revokes all active sessions for the current user.
+  Future<void> logoutAllSessions();
+
   Future<AuthUser> getCurrentUser();
 
   Future<List<ServerPermission>> getPermissions();
+
+  /// Fetches server RBAC policy including permissions version metadata.
+  Future<ServerPermissionPolicy> fetchPermissionPolicy({
+    required String userId,
+    String? tenantId,
+  });
 }

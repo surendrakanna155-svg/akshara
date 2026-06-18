@@ -12,6 +12,7 @@ import '../repositories/mock/mock_auth_repository.dart';
 import '../repositories/repository_config.dart';
 import '../security/server_permission_models.dart';
 import '../security/server_permission_provider.dart';
+import '../security/permission_sync_service.dart';
 
 export '../repositories/api/auth/api_auth_repository.dart'
     show AuthRepositoryAuditHook;
@@ -45,6 +46,9 @@ final apiAuthRepositoryProvider = Provider<ApiAuthRepository>((ref) {
   );
 });
 
+/// Auth repository — API when [isAuthApiEnabled]; mock otherwise.
+///
+/// When `ENABLE_API_MODE=true`, this provider never silently falls back to mock.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   if (isAuthApiEnabled(ref)) {
     return ref.read(apiAuthRepositoryProvider);
@@ -65,37 +69,27 @@ Future<void> loadCachedServerPermissions(Ref ref) async {
       ServerPermissionSyncState(snapshot: cached);
 }
 
-/// Fetches permissions from auth server and caches locally.
+/// Caches permissions from OTP verification before optional network re-sync.
+Future<void> applyVerificationPermissions(
+  Ref ref, {
+  required AuthVerificationResult result,
+}) async {
+  if (!isAuthApiEnabled(ref) || result.permissions.isEmpty) return;
+  final policy = const AuthMapper().toPermissionPolicyFromVerification(
+    result: result,
+  );
+  await cacheServerPermissionPolicy(ref, policy: policy);
+}
+
+/// Fetches permissions from auth server and caches locally (F1 RBAC sync).
 Future<void> syncAuthPermissions(
   Ref ref, {
   required String userId,
   String? tenantId,
 }) async {
-  if (!isAuthApiEnabled(ref)) return;
-
-  ref.read(serverPermissionSyncProvider.notifier).state =
-      ref.read(serverPermissionSyncProvider).copyWith(
-            isSyncing: true,
-            clearError: true,
-          );
-
-  try {
-    final permissions = await ref.read(authRepositoryProvider).getPermissions();
-    final policy = const AuthMapper().toPermissionPolicy(
-      permissions: permissions,
-      userId: userId,
-      tenantId: tenantId,
-    );
-    await cacheServerPermissionPolicy(ref, policy: policy);
-  } on Object catch (error) {
-    ref.read(serverPermissionSyncProvider.notifier).state =
-        ref.read(serverPermissionSyncProvider).copyWith(
-              isSyncing: false,
-              lastSyncError: error.toString(),
-            );
-    return;
-  }
-
-  ref.read(serverPermissionSyncProvider.notifier).state =
-      ref.read(serverPermissionSyncProvider).copyWith(isSyncing: false);
+  await syncAuthPermissionsFromServer(
+    ref,
+    userId: userId,
+    tenantId: tenantId,
+  );
 }

@@ -4,6 +4,9 @@ import '../config/environment_provider.dart';
 
 /// Per-module API feature flags — enable independently when endpoints are ready.
 ///
+/// F1 Auth + RBAC: `--dart-define=ENABLE_API_MODE=true` (auth defaults on via
+/// `AUTH_API_ENABLED`, default true when API mode is enabled).
+///
 /// Phase 5: set `--dart-define=ENABLE_API_MODE=true` and
 /// `--dart-define=PHASE5_API_ENABLED=true` (requires Phase 4 flags for dependencies).
 ///
@@ -131,6 +134,15 @@ final educationApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
     'EDUCATION_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
+/// Exam administration API — set `--dart-define=EXAM_API_ENABLED=true` with API mode.
+final examApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'EXAM_API_ENABLED',
     defaultValue: false,
   );
 });

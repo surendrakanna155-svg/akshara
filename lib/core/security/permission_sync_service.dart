@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_repository_providers.dart';
-import '../repositories/api/auth/mapper/auth_mapper.dart';
 import '../repositories/interfaces/auth_repository.dart';
 import 'permission_cache_service.dart';
 import 'server_permission_models.dart';
@@ -30,14 +29,11 @@ class PermissionSyncService {
   PermissionSyncService({
     required PermissionCacheService cacheService,
     required AuthRepository authRepository,
-    required AuthMapper mapper,
   })  : _cacheService = cacheService,
-        _authRepository = authRepository,
-        _mapper = mapper;
+        _authRepository = authRepository;
 
   final PermissionCacheService _cacheService;
   final AuthRepository _authRepository;
-  final AuthMapper _mapper;
 
   Future<PermissionSyncResult> fetchAndCache({
     required String userId,
@@ -45,14 +41,9 @@ class PermissionSyncService {
     Duration ttl = kDefaultPermissionCacheTtl,
   }) async {
     try {
-      final permissions = await _authRepository.getPermissions();
-      final cached = await _cacheService.read();
-      final baseVersion = cached?.policy.version ?? 0;
-      final policy = _mapper.toPermissionPolicy(
-        permissions: permissions,
+      final policy = await _authRepository.fetchPermissionPolicy(
         userId: userId,
         tenantId: tenantId,
-        version: baseVersion,
       );
       final snapshot = await _cacheService.savePolicy(policy, ttl: ttl);
       return PermissionSyncResult.success(snapshot);
@@ -66,7 +57,6 @@ final permissionSyncServiceProvider = Provider<PermissionSyncService>((ref) {
   return PermissionSyncService(
     cacheService: ref.watch(permissionCacheServiceProvider),
     authRepository: ref.watch(authRepositoryProvider),
-    mapper: const AuthMapper(),
   );
 });
 

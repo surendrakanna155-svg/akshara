@@ -1,6 +1,7 @@
 import '../../../audit/audit_event.dart';
 import '../../interfaces/auth_repository.dart';
 import '../../../../../features/auth/auth_token_models.dart';
+import '../../../security/server_permission_models.dart';
 import 'mapper/auth_mapper.dart';
 import 'remote/auth_remote_datasource.dart';
 
@@ -84,6 +85,16 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> revokeSession(String sessionId, {String? reason}) async {
+    await _remote.revokeSession(sessionId: sessionId);
+  }
+
+  @override
+  Future<void> logoutAllSessions() async {
+    await _remote.logoutAllSessions();
+  }
+
+  @override
   Future<AuthUser> getCurrentUser() async {
     final dto = await _remote.fetchCurrentUser();
     return _mapper.toUser(dto);
@@ -93,5 +104,18 @@ class ApiAuthRepository implements AuthRepository {
   Future<List<ServerPermission>> getPermissions() async {
     final dto = await _remote.fetchPermissions();
     return _mapper.toServerPermissions(dto);
+  }
+
+  @override
+  Future<ServerPermissionPolicy> fetchPermissionPolicy({
+    required String userId,
+    String? tenantId,
+  }) async {
+    final dto = await _remote.fetchPermissions();
+    return _mapper.toPermissionPolicyFromDto(
+      dto: dto,
+      userId: userId,
+      tenantId: tenantId,
+    );
   }
 }

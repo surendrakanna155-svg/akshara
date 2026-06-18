@@ -328,6 +328,7 @@ class AuthNotifier extends Notifier<AuthState> {
     _scheduleRefresh(result.tokens);
 
     if (isAuthApiEnabled(ref)) {
+      await applyVerificationPermissions(ref, result: result);
       await syncAuthPermissions(
         ref,
         userId: user.id,
@@ -389,6 +390,24 @@ class AuthNotifier extends Notifier<AuthState> {
     _scheduleRefresh(result.tokens);
 
     if (isAuthApiEnabled(ref)) {
+      await applyVerificationPermissions(
+        ref,
+        result: AuthVerificationResult(
+          tokens: result.tokens,
+          user: AuthUser(
+            id: result.claims.userId,
+            displayName: result.displayName,
+            erpRole: result.claims.erpRole,
+            tenantId: result.claims.tenantId,
+            schoolId: result.claims.schoolId,
+            organizationId: result.claims.organizationId,
+          ),
+          permissions: [
+            for (final permission in result.claims.permissions)
+              ServerPermission(permission: permission),
+          ],
+        ),
+      );
       await syncAuthPermissions(
         ref,
         userId: result.claims.userId,

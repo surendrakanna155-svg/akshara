@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/auth_models.dart';
 import '../../features/auth/auth_provider.dart';
+import '../auth/auth_repository_providers.dart';
 import '../config/environment_provider.dart';
 import '../security/server_permission_provider.dart';
 import 'erp_role.dart';
@@ -59,6 +60,21 @@ final userPermissionsProvider = Provider<UserPermissions?>((ref) {
       return UserPermissions(
         role: claims.erpRole,
         permissionSet: PermissionSet.from(snapshot.policy.effectivePermissions),
+      );
+    }
+
+    if (claims.permissions.isNotEmpty) {
+      return UserPermissions.fromClaims(
+        role: claims.erpRole,
+        explicitPermissions: claims.permissions,
+      );
+    }
+
+    // F1 fail-closed: API mode without synced permissions denies mutations.
+    if (isAuthApiEnabled(ref)) {
+      return UserPermissions(
+        role: claims.erpRole,
+        permissionSet: const PermissionSet({}),
       );
     }
 

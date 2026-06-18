@@ -11,7 +11,12 @@ import 'jwt_decoder.dart';
 import 'token_refresh_service.dart';
 
 export 'auth_repository_providers.dart'
-    show authRepositoryProvider, isAuthApiEnabled, syncAuthPermissions, loadCachedServerPermissions;
+    show
+        authRepositoryProvider,
+        isAuthApiEnabled,
+        syncAuthPermissions,
+        loadCachedServerPermissions,
+        applyVerificationPermissions;
 export '../repositories/repository_config.dart' show authApiEnabledProvider;
 
 final jwtDecoderProvider = Provider<JwtDecoder>((ref) => jwtDecoder);

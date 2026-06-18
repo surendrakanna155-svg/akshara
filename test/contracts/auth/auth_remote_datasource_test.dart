@@ -26,6 +26,10 @@ void main() {
             );
           case AuthApiPaths.logout:
             return const {'data': {'success': true}};
+          case AuthApiPaths.revokeSession:
+            return const {'data': {'success': true}};
+          case AuthApiPaths.logoutAllSessions:
+            return const {'data': {'success': true}};
           case AuthApiPaths.me:
             return _fixtures.userEnvelope(role: ErpRole.financeAdmin);
           case AuthApiPaths.permissions:
@@ -74,6 +78,14 @@ void main() {
 
     test('logout completes without error', () async {
       await expectLater(remote.logout(), completes);
+    });
+
+    test('revokeSession and logoutAllSessions complete without error', () async {
+      await expectLater(
+        remote.revokeSession(sessionId: 'session_001'),
+        completes,
+      );
+      await expectLater(remote.logoutAllSessions(), completes);
     });
   });
 }

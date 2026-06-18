@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/repositories/api/auth/dto/auth_permissions_dto.dart';
 import 'package:akshara_erp/core/repositories/api/auth/api_auth_repository.dart';
 import 'package:akshara_erp/core/repositories/api/auth/dto/auth_login_dto.dart';
 import 'package:akshara_erp/core/repositories/api/auth/dto/auth_permissions_dto.dart';
@@ -76,6 +77,18 @@ void main() {
       );
       expect(mapped.length, 2);
       expect(mapped.first.permission, Permission.viewFinance);
+    });
+
+    test('permissions DTO mapping includes version metadata', () {
+      final dto = AuthPermissionsDto.fromJson(_fixtures.permissionsEnvelope());
+      expect(dto.permissionsVersion, 3);
+      expect(dto.syncedAt, isNotNull);
+      final policy = _mapper.toPermissionPolicyFromDto(
+        dto: dto,
+        userId: 'staff_api_001',
+        tenantId: 'tenant_demo_001',
+      );
+      expect(policy.version, 3);
     });
 
     test('mock login accepts valid email', () async {

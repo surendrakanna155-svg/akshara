@@ -86,12 +86,15 @@ class AuthFixtureBuilder {
       Permission.viewFinance,
       Permission.manageFinance,
     ],
+    int permissionsVersion = 3,
   }) {
     return envelope({
       'permissions': [
         for (final permission in permissions)
           {'permission': permission.name, 'source': 'server'},
       ],
+      'permissionsVersion': permissionsVersion,
+      'syncedAt': DateTime.now().toIso8601String(),
     });
   }
 

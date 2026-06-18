@@ -1,22 +1,126 @@
 # Akshara ERP — Orchestrator Agent
 
-**Version:** 1.2  
-**Last updated:** 2026-06-17  
-**Branch:** `feature/m15-theme` — Governance Foundation complete  
+**Version:** 1.5  
+**Last updated:** 2026-06-18  
+**Branch:** `feature/m15-theme` — F1 certified · F2 locked  
 **Purpose:** Single source of truth for program execution order, agent ownership, gates, and stop rules.  
 **Authority:** Supersedes ad-hoc session prompts. Every orchestrator session **must read this file first**, then the linked milestone docs.
 
 **Companion docs (read order):**
 
 1. `docs/ORCHESTRATOR_AGENT.md` ← **this file**
-2. `docs/OPERATIONAL_GAP_MASTER_TRACKER.md` — 94-gap backlog
-3. `docs/OPERATIONAL_REMEDIATION_ROADMAP.md` — phase sequencing
-4. `docs/PHASE_D_EXECUTION_PLAN.md` — active governance track
-5. [`GOVERNANCE_COMPLETION_REPORT.md`](./GOVERNANCE_COMPLETION_REPORT.md) — Phase D complete; parallel plan
-6. Latest certification report (`PHASE_D_M7_FINAL_CERTIFICATION.md`)
-7. `AGENTS.md` — Cursor agent A–G ownership
-8. `docs/CURSOR_WORKFLOW.md` — session lifecycle
-9. `docs/MULTI_AGENT_EXECUTION_PLAN.md` — parallel workstreams + future architecture constraints
+2. [`docs/BACKEND_ARCHITECTURE_DECISION.md`](./BACKEND_ARCHITECTURE_DECISION.md) — **LOCKED** backend stack
+3. [`docs/PRODUCTION_BACKEND_ROADMAP.md`](./PRODUCTION_BACKEND_ROADMAP.md) — F1–F7 API program
+4. [`docs/PRE_PRODUCTION_GAP_REPORT.md`](./PRE_PRODUCTION_GAP_REPORT.md) — Class A/B gaps
+5. `docs/OPERATIONAL_GAP_MASTER_TRACKER.md` — 94-gap backlog
+6. `docs/OPERATIONAL_REMEDIATION_ROADMAP.md` — client phase sequencing
+7. [`GOVERNANCE_COMPLETION_REPORT.md`](./GOVERNANCE_COMPLETION_REPORT.md) — Phase D complete
+8. Latest certification report (`PHASE_F1_FINAL_CERTIFICATION.md`, `FINAL_PILOT_CLOSURE_REPORT.md`)
+9. `AGENTS.md` — Cursor agent A–G ownership
+10. `docs/CURSOR_WORKFLOW.md` — session lifecycle
+11. `docs/MULTI_AGENT_EXECUTION_PLAN.md` — parallel workstreams
+
+---
+
+## BACKEND ARCHITECTURE — LOCKED
+
+**Status:** 🔒 **LOCKED** as of 2026-06-18  
+**Decision record:** [`docs/BACKEND_ARCHITECTURE_DECISION.md`](./BACKEND_ARCHITECTURE_DECISION.md)  
+**Rule:** No alternate primary backend (Firebase, greenfield Django/NestJS monolith) without Program Director re-baseline.
+
+### Official platform
+
+| Layer | Technology |
+|-------|------------|
+| **Platform** | **Supabase** (managed hosting) |
+| **Database** | **PostgreSQL** 15+ with Row-Level Security (RLS) |
+| **API surface** | **Edge Functions** (TypeScript/Deno) — REST matching Flutter `*_api_paths.dart` |
+| **Auth** | Supabase Auth + custom OTP/JWT claims (`tenant_id`, `school_id`, `scope`, permissions) |
+| **Tenant isolation** | `erp_tenant` role + `withTenantContext()` — RLS authoritative |
+| **Future extraction** | NestJS microservices for AI, payments, heavy reporting — **not** day-one replacement |
+
+### Rejected / deferred
+
+| Option | Status |
+|--------|--------|
+| Firebase (primary) | ❌ Rejected |
+| Django + PostgreSQL (greenfield) | ⏸ Deferred |
+| NestJS + PostgreSQL (full monolith day one) | ⏸ Deferred — extract per-domain when Edge limits hit |
+
+### Client contract (unchanged)
+
+Flutter remains **REST/Dio + `ApiEnvelopeDto` + JWT + `X-Tenant-Id` / `X-School-Id`**. Backend work implements existing contracts; **no client paradigm shift**.
+
+---
+
+## Production Backend Program (F1–F7)
+
+**Authority:** [`docs/PRODUCTION_BACKEND_ROADMAP.md`](./PRODUCTION_BACKEND_ROADMAP.md)  
+**Goal:** Close Class A gaps for **first real school** with live backend (`ENABLE_API_MODE=true`).  
+**Estimated calendar:** 10–14 weeks (2 backend engineers + Agent A client wiring).  
+**Client UI / governance adapters:** unchanged — repository + API layer only.
+
+### Phase map
+
+| Phase | Name | Class A items | Duration | Readiness Δ | Cumulative (API path) |
+|-------|------|---------------|----------|-------------|------------------------|
+| **F1** | Auth + RBAC | A1, A10 | 1.5–2 wks | +8% | **~53%** ✅ |
+| **F2** | Approval API | A2 | 3–4 wks | +12% | **~65%** |
+| **F3** | SIS + Student 360 | A8 | 1.5–2 wks | +6% | **~71%** |
+| **F4** | Exams | A3 | 3–4 wks | +10% | **~81%** |
+| **F5** | Attendance | A4, A5 | 2.5–3.5 wks | +8% | **~89%** |
+| **F6** | Audit / event upload | A9 | 1 wk | +3% | **~92%** |
+| **F7** | Remaining production APIs | A6, A7 + API-mode gates | 2–3 wks | +8% | **~100%** Class A |
+
+### Critical path (production backend)
+
+```mermaid
+flowchart LR
+  F1[F1 Auth + RBAC ✅]
+  F2[F2 Approval API]
+  F3[F3 SIS + 360]
+  F4[F4 Exams]
+  F5[F5 Attendance]
+  F6[F6 Audit Upload]
+  F7[F7 GO gate]
+  F1 --> F2
+  F2 --> F3
+  F2 --> F4
+  F3 --> F5
+  F4 --> F5
+  F1 --> F6
+  F5 --> F7
+  F6 --> F7
+```
+
+**Serial dependencies:**
+
+1. **F1** — blocks all authenticated API calls  
+2. **F2** — unlocks exam publish, leave, attendance correction, finance concession approve paths  
+3. **F4** — publish requires F2 approval resolution  
+4. **F5** — attendance correction approve hooks F2  
+5. **F7** — `ENABLE_API_MODE=true` + contract parity + Patrol on staging API
+
+**Parallel opportunities (after F1):**
+
+| Track | Parallel with |
+|-------|---------------|
+| F3 SIS/360 reads | F2 |
+| F6 Audit upload | F4, F5 |
+| F4 exam CRUD (pre-publish) | F2 |
+| F7 finance/leave orchestration | F5 (both need F2) |
+
+### Agent ownership (backend program)
+
+| Phase | Primary | Supporting |
+|-------|---------|------------|
+| F1 | Backend (Supabase) + Agent **D** | Agent A (client auth repo), Agent E (integration tests) |
+| F2 | Backend + Agent **A** | Agent D (RBAC), Agent E (approval integration) |
+| F3–F7 | Backend + Agent **A** | Agent E (contracts), Agent G (release gate) |
+
+### Real-school GO (backend)
+
+All criteria in `PRODUCTION_BACKEND_ROADMAP.md` § Real-school GO — including F1–F7 complete, tenant isolation probes green, Patrol 9/9 on staging API, no `ApiNotConnectedException` on Class A paths.
 
 ---
 
@@ -135,7 +239,7 @@ The following systems **must** be built so role assignment drives visibility and
 | HR | Staff role assignment is source of truth for ERP roles |
 | AI Copilot | Context = assigned roles + active workspace + current task |
 
-**Current program note:** M-D4–M-D7 and Phases A–E ship on existing RBAC patterns; new work must remain **forward-compatible** with dynamic assignment (additive permissions, workspace-groupable approvals, no fixed teacher/principal dashboard forks).
+**Current program note:** Client governance (M-D1–M-D7) and pilot closure are complete on mock. **Active program is F1–F7 production backend.** New client work must remain **forward-compatible** with dynamic assignment and locked REST contracts.
 
 ### Design constraint for all new work
 
@@ -174,13 +278,15 @@ Whenever **new screens, dashboards, approvals, Student 360, Marketing, Finance, 
 
 | Dimension | State |
 |-----------|--------|
-| **Program phase** | Governance Foundation (Phase D) — **✅ COMPLETE** |
+| **Program phase (client)** | Governance Foundation (Phase D) — **✅ COMPLETE** · Pilot closure **9/9** Patrol |
+| **Program phase (backend)** | **Production Backend Program F1–F7** — **F1 ✅ certified** · F2 locked |
+| **Backend architecture** | 🔒 **LOCKED** — Supabase + PostgreSQL + Edge Functions |
 | **Visual / theme** | M15 + M15.5 UI complete (not operational scope) |
 | **Operational audit** | Complete — 94 gaps tracked |
-| **Backend API** | Stub/mock-first; production APIs lag domain work |
-| **Pilot viable** | **No** — requires Phases A + B + C + D + E minimum |
-| **Parallel domain work** | **Unlocked** — Phase A / B / C / E ready for parallel execution (not auto-started) |
-| **Last push** | Governance Foundation M-D4–M-D7 (pending push) |
+| **Mock / UAT pilot** | **GO** — `ENABLE_API_MODE=false`, 1949+ unit tests |
+| **First real school (live API)** | **NO-GO** until F1–F7 Class A complete |
+| **Parallel domain work (client)** | Phases A–E largely complete on mock; no new client modules without authorization |
+| **Active mission** | **Await F2 authorization** (Approval API) |
 
 ### What is working today (operational)
 
@@ -198,39 +304,87 @@ Whenever **new screens, dashboards, approvals, Student 360, Marketing, Finance, 
 | Parent attendance calendar (mock) | ✅ Built | Disputes → WhatsApp only |
 | Admissions approval | ✅ Built | Siloed — pattern reference only |
 
-### What is explicitly NOT started
+### Domain phase status (post Week 5)
 
 | Track | Status |
 |-------|--------|
-| Phase A (Exams & Academic Governance) | ⛔ Unlocked — **not started** |
-| Phase B (Attendance Governance UI) | ⛔ Unlocked — **not started** |
-| Phase C (Student 360) | ⛔ Unlocked — **not started** |
-| Phase E (Finance operations UI) | ⛔ Unlocked — **not started** |
-| Phase F/G/H/I (Inventory ops, Transport, Marketing) | ⛔ Locked / partial |
-| Multi-agent parallel execution | ⛔ Prepared — see [`GOVERNANCE_COMPLETION_REPORT.md`](./GOVERNANCE_COMPLETION_REPORT.md) |
+| Phase A | **M-A5 complete** — exam publication governance certified |
+| Phase B | Teacher + parent correction UI complete |
+| Phase C | Student360 tabbed dossier · nav unified |
+| Phase D (Governance) | **100%** certified |
+| Phase E | Finance ops ~82% — CSV export + audit register |
+
+| **Overall operational (mock)** | **~72%** (pilot target ~68% **met**) |
+| **Production API path** | **~45%** — Class A workflows API-incomplete |
+
+| **Milestone** | **Pilot closure — ✅ COMPLETE** |
+| **Next** | **F1 Auth + RBAC** (production backend program) |
+
+**Test gate:** `flutter test` **1949 passed**, 1 skipped · Patrol pilot closure **9/9**.
+
+See [`WEEK5_EXECUTION_REPORT.md`](./WEEK5_EXECUTION_REPORT.md) for Pilot Readiness Assessment.
+
+### Domain phase status (post Week 4) — superseded
+
+| Track | Status |
+|-------|--------|
+| Phase A | M-A4 complete — **M-A5 next** |
+| Phase B | Teacher + parent correction UI complete |
+| Phase C | Nav wire complete — dossier domains pending |
+| Phase D (Governance) | **100%** certified |
+| Phase E | Finance ops ~80% — export service started |
+
+| **Overall operational** | **~64%** (pilot target ~68%) |
+
+| **Milestone** | **Week 4 — ✅ COMPLETE** |
+| **Next** | Week 5: M-A5 · export Excel · Patrol FULL |
+
+**Test gate:** `flutter test` **1925 passed**, 1 skipped.
 
 ---
 
 ## 2. Current readiness %
 
-Readiness figures come from `OPERATIONAL_REMEDIATION_ROADMAP.md` baseline, adjusted for certified governance progress.
+Readiness is tracked on **two baselines** — mock/UAT pilot vs production API path. Sources: `OPERATIONAL_REMEDIATION_ROADMAP.md`, `PRE_PRODUCTION_GAP_REPORT.md`, `PRODUCTION_BACKEND_ROADMAP.md`.
 
-| Metric | Baseline (pre-Phase D) | **Current (2026-06-17)** | Pilot target (A–E + D) |
-|--------|------------------------|--------------------------|-------------------------|
-| **Overall operational** | 42% | **~52%** | ~68% |
+### Mock / UAT pilot (client-complete)
+
+| Metric | Baseline (pre-Phase D) | **Current (2026-06-18)** | Pilot target |
+|--------|------------------------|--------------------------|--------------|
+| **Overall operational** | 42% | **~72%** | ~68% ✅ |
 | **Management / Principal** | 50% | **~75%** | 75% |
-| **Cross-module governance** | 30% | **~70%** | 70% |
-| **Academics & Exams** | 25% | **~32%** | 65% |
-| **Attendance** | 40% | **~48%** | 70% |
+| **Cross-module governance** | 30% | **~85%** | 70% |
+| **Academics & Exams** | 25% | **~68%** | 65% |
+| **Attendance** | 40% | **~62%** | 70% |
+| **Student 360** | 35% | **~62%** | 70% |
+| **Finance (ops)** | 70% | **~82%** | 85% |
 | **Governance Foundation (Phase D)** | 0% | **100%** (7/7 milestones) | 100% |
 
-**How current overall (~52%) is derived:**
+### Production API path (real-school)
 
-- Baseline **42%** for most modules (P0 gaps in Phases A–E still open).
-- **+6%** Unified approval inbox with 8 adapter types (exam, leave×2, attendance stub, finance×3, inventory PO).
-- **+4%** Principal RBAC matrix, maker-checker, notification/audit stubs (M-D4–M-D7).
+| Metric | **Current (2026-06-18)** | After F7 (target) |
+|--------|--------------------------|-------------------|
+| **Overall production API** | **~53%** | **≥92%** (Class A GO) |
+| **Auth + RBAC (F1)** | **100%** client cert | 100% |
+| **Approval API (F2)** | 0% (stub) | 100% |
+| **SIS + Student 360 (F3)** | ~40% partial | 100% |
+| **Exams (F4)** | 0% (stub + local persistence) | 100% |
+| **Attendance (F5)** | 0% (no API) | 100% |
+| **Audit upload (F6)** | ~50% (queue only) | 100% |
+| **Leave + finance orchestration (F7)** | ~35% partial | 100% |
 
-**Test gate (Governance complete):** `flutter analyze` 0 errors · `flutter test` **1904 passed**, 1 skipped.
+**How mock overall (~72%) is derived:**
+
+- Governance Foundation complete (M-D1–M-D7) + 8 approval adapters.
+- Pilot closure Patrol **9/9** · exam persistence restart-safe on device.
+- P0 pilot gaps closed per `FINAL_PILOT_CLOSURE_REPORT.md`.
+
+**How production API (~45%) is derived:**
+
+- `ENABLE_API_MODE=false` default · 0 of 8 pilot-critical workflows API-complete end-to-end.
+- Governance side effects in in-memory stores · exam data device-local without server sync.
+
+**Test gate:** `flutter analyze` 0 errors · `flutter test` **1949 passed**, 1 skipped.
 
 ---
 
@@ -266,11 +420,28 @@ Readiness figures come from `OPERATIONAL_REMEDIATION_ROADMAP.md` baseline, adjus
 
 | Field | Value |
 |-------|-------|
-| **Milestone** | **None — Governance Foundation complete** |
-| **Phase** | Phase D — **✅ COMPLETE** |
-| **Status** | **Awaiting Program Director authorization for parallel Phase A/B/C/E** |
-| **Next authorized step** | Review [`GOVERNANCE_COMPLETION_REPORT.md`](./GOVERNANCE_COMPLETION_REPORT.md) §4 parallel plan |
-| **Do not auto-start** | Academics, Student360, Finance Phase E, multi-agent execution |
+| **Milestone** | **F1 — Auth + RBAC** — **✅ CERTIFIED** |
+| **Status** | See [`PHASE_F1_FINAL_CERTIFICATION.md`](./PHASE_F1_FINAL_CERTIFICATION.md) |
+| **Readiness delta** | Production API **~45% → ~53%** |
+| **Next authorized step** | **F2 — Approval API** (await Program Director authorization) |
+| **Do not auto-start** | F2–F7 without explicit authorization |
+
+### Previously active: F1 implementation (now complete)
+
+| Field | Value |
+|-------|-------|
+| **Milestone** | Pilot closure + Governance Foundation — **✅ COMPLETE** |
+| **Pilot verdict** | **Mock/UAT GO (~72%)** |
+| **Evidence** | [`FINAL_PILOT_CLOSURE_REPORT.md`](./FINAL_PILOT_CLOSURE_REPORT.md) · Patrol 9/9 |
+| **Client changes** | Maintenance only until F1 staging auth ready for integration |
+
+### Previously active: Week 5 / Week 4 (now complete)
+
+| Field | Value |
+|-------|-------|
+| **Milestone** | **Week 4 parallel delivery — ✅ COMPLETE** |
+| **Status** | See [`WEEK4_EXECUTION_REPORT.md`](./WEEK4_EXECUTION_REPORT.md) |
+| **Next authorized step** | Week 5: M-A5 · Excel export · Patrol FULL |
 
 ### Previously active: M-D4 (now complete)
 
@@ -432,19 +603,13 @@ Parallel development and downstream phases unlock only when conditions below are
 
 | Unlock | Condition | Verification |
 |--------|-----------|--------------|
-| **M-D4 implementation** | Program Director approves `M-D4_ANALYSIS.md` + `M-D4_EXECUTION_PLAN.md` | Explicit authorization in session prompt |
-| **M-D5 start** | M-D4 certified + pushed | `PHASE_D_M4_FINAL_CERTIFICATION.md` |
-| **M-D6 start** | M-D5 certified + pushed | M-D5 cert doc |
-| **M-D7 start** | M-D6 certified + pushed | M-D6 cert doc |
-| **Phase A parallel** | **M-D7 certified** (Governance Foundation complete) | Phase D gate checklist 100% |
-| **Phase B parallel** | M-D7 + M-D4 attendance adapter registered | Integration test green |
-| **Phase E parallel** | M-D7 + M-D5 finance adapters | Integration test green |
-| **Phase C wire-only** | Orchestrator explicit approval | SIS→360 nav without full Phase A |
-| **Multi-agent parallel (5 agents)** | M-D7 + orchestrator session with manifest | `MULTI_AGENT_EXECUTION_PLAN.md` §4 |
-| **Pilot school go-live** | Phases A + B + C + D + E complete; ~68% readiness | `PilotSchoolChecklist.md` |
+| **F1 backend start** | Backend architecture LOCKED + Program Director authorization | `BACKEND_ARCHITECTURE_DECISION.md` |
+| **F2 start** | F1 certified on staging | Auth integration tests + permission sync |
+| **F3–F7 start** | Prior F-phase certified | Per `PRODUCTION_BACKEND_ROADMAP.md` dependencies |
+| **Real-school go-live** | F1–F7 complete + Class A gates | `PRODUCTION_BACKEND_ROADMAP.md` § GO criteria |
 
-**Currently unlocked:** M-D4 implementation (pending authorization only).  
-**Currently locked:** Everything else listed above.
+**Currently unlocked:** None (F1 complete — await F2 authorization).  
+**Currently locked:** F2–F7 · new client feature modules · Marketing · Transport GPS.
 
 ---
 
@@ -548,24 +713,21 @@ Orchestrator and sub-agents **stop immediately** when any condition applies.
 | **STOP-02** | Analysis-only session scope (e.g. M-D4 analysis) | STOP after docs — **no code, no commit** |
 | **STOP-03** | Unauthorized scope detected (Phase A, Marketing, Inventory, Student360, multi-agent) | STOP — report scope violation |
 | **STOP-04** | `flutter analyze` or `flutter test` fails after fix attempt | STOP — BLOCKED report to Agent G |
-| **STOP-05** | P0 blocker — backend/API unavailable for required cert | STOP — mark BLOCKED |
+| **STOP-05** | P0 blocker — staging Supabase unavailable for F-phase cert | STOP — mark BLOCKED |
 | **STOP-06** | Human decision required — security regression, tenant breach, data loss, ambiguous spec | STOP — escalate |
 | **STOP-07** | Cross-agent file conflict on shared infrastructure | STOP — sequential merge required |
 | **STOP-08** | Execution depth reached (default 3 milestones per `CURSOR_WORKFLOW.md`) | STOP — combined summary |
 
 ### Default session scope guardrails
 
+**Authorized now:**
+
+- Documentation updates for F1 certification  
+- Maintenance fixes on F1 paths only (no F2 scope)  
+
 **Do NOT start unless explicitly authorized:**
 
-- Phase A · Phase B · Phase C · Phase E · Phase F · Phase G · Phase H  
-- Multi-agent parallel execution  
-- Marketing · Inventory · Student360 · Attendance implementation (Phase B UI)  
-
-**Authorized now (Governance Foundation only):**
-
-- M-D4 implementation (after approval)  
-- M-D4 analysis ✅ complete  
-- Documentation for orchestrator / governance  
+- **F2 — Approval API** and F3–F7  
 
 ---
 
@@ -573,13 +735,13 @@ Orchestrator and sub-agents **stop immediately** when any condition applies.
 
 Parallel work is **disabled** until Governance Foundation (M-D7) is certified.
 
-### 12.1 Current mode: **SERIAL GOVERNANCE**
+### 12.1 Current mode: **SERIAL BACKEND (F1–F7)**
 
 ```
-Orchestrator → M-D4 → certify → push → M-D5 → … → M-D7 → unlock parallel
+Orchestrator → F1 Auth+RBAC → certify → F2 Approval → … → F7 GO gate
 ```
 
-Only one governance milestone in flight. No domain phase coding.
+One F-phase in flight. Client feature coding frozen unless F-phase requires Agent A repository wiring.
 
 ### 12.2 Future mode: **CONTROLLED PARALLEL** (after M-D7)
 
@@ -621,13 +783,13 @@ Per `.cursor/rules/emulator-validation-workflow.mdc`:
 ### Start of session
 
 ```
-1. Read docs/ORCHESTRATOR_AGENT.md          (this file)
-2. Confirm active milestone + authorization
-3. Read active M-D{N}_ANALYSIS + EXECUTION_PLAN
-4. Read latest PHASE_D_M{N-1}_FINAL_CERTIFICATION
-5. Assign agents per §6
+1. Read docs/ORCHESTRATOR_AGENT.md              (this file)
+2. Read docs/BACKEND_ARCHITECTURE_DECISION.md   (LOCKED stack)
+3. Confirm active F-phase + authorization       (F1 active)
+4. Read docs/PRODUCTION_BACKEND_ROADMAP.md      (active F-section)
+5. Assign agents per §6 + Production Backend Program table
 6. Execute ONLY authorized scope
-7. Run gates per §9
+7. Run gates per §9 (+ backend integration tests for F-phases)
 8. Certify → push report → STOP per §11
 ```
 
@@ -653,11 +815,11 @@ Each session ends with:
 | Type | Adapter | Status |
 |------|---------|--------|
 | `examResults` | `ExamResultsApprovalAdapter` | ✅ M-D3 |
-| `studentLeave` | `StudentLeaveApprovalAdapter` | ⛔ M-D4 |
-| `staffLeave` | `StaffLeaveApprovalAdapter` | ⛔ M-D4 |
-| `attendanceCorrection` | `AttendanceCorrectionApprovalAdapter` | ⛔ M-D4 stub |
-| `feeConcession` / `refund` / `feeStructure` | Finance adapters | ⛔ M-D5 |
-| `inventoryPo` | PO adapter | ⛔ M-D6 |
+| `studentLeave` | `StudentLeaveApprovalAdapter` | ✅ M-D4 |
+| `staffLeave` | `StaffLeaveApprovalAdapter` | ✅ M-D4 |
+| `attendanceCorrection` | `AttendanceCorrectionApprovalAdapter` | ✅ M-D4 |
+| `feeConcession` / `refund` / `feeStructure` | Finance adapters | ✅ M-D5 |
+| `inventoryPo` | PO adapter | ✅ M-D6 |
 
 ---
 
@@ -665,13 +827,13 @@ Each session ends with:
 
 | Event | Update |
 |-------|--------|
-| Milestone certified + pushed | §3 Completed, §4 Active, §2 Readiness, §14 registry |
-| New analysis authorized | §4 Active milestone docs |
-| M-D7 complete | §8 unlock Phase A/B/E; §12 enable parallel |
-| Gap tracker version bump | §2 readiness baseline footnote |
+| F-phase certified | §4 Active, §2 production API readiness, Production Backend Program table |
+| Backend architecture change | Requires Program Director re-baseline — update LOCKED section + `BACKEND_ARCHITECTURE_DECISION.md` |
+| Client milestone certified | §3 Completed, §2 mock readiness |
+| Real-school GO | §1 status, §8 unlock conditions |
 
 **Maintainer:** Orchestrator Agent (Agent F + G on certification)  
-**Next review trigger:** M-D4 certification or Program Director re-baseline
+**Next review trigger:** F1 certification or Program Director re-baseline
 
 ---
 
@@ -679,6 +841,9 @@ Each session ends with:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.5 | 2026-06-18 | F1 Auth + RBAC certified (`PHASE_F1_FINAL_CERTIFICATION.md`); production API ~53%; F2 locked |
+| 1.4 | 2026-06-18 | Backend architecture LOCKED; Production Backend Program F1–F7; F1 active |
+| 1.3 | 2026-06-17 | Week 5 complete; pilot readiness ~70% |
 | 1.2 | 2026-06-17 | Added Dynamic Role Assignment Engine under CORE PRODUCT ARCHITECTURE PRINCIPLE |
 | 1.1 | 2026-06-17 | Added CORE PRODUCT ARCHITECTURE PRINCIPLE (USER→ROLE→WORKSPACE→TASK); milestone workspace tags |
 | 1.0 | 2026-06-17 | Initial orchestrator SSOT — post M-D3 push @ `44ba25b`; M-D4 analysis complete |

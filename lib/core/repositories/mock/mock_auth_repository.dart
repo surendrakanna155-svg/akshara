@@ -1,6 +1,7 @@
 import '../../../features/auth/auth_token_models.dart';
 import '../../auth/jwt_decoder.dart';
 import '../../security/erp_role.dart';
+import '../../security/server_permission_models.dart';
 import '../interfaces/auth_repository.dart';
 
 /// Mock auth repository for development and contract tests.
@@ -93,6 +94,12 @@ class MockAuthRepository implements AuthRepository {
   Future<void> logout() async {}
 
   @override
+  Future<void> revokeSession(String sessionId, {String? reason}) async {}
+
+  @override
+  Future<void> logoutAllSessions() async {}
+
+  @override
   Future<AuthUser> getCurrentUser() async {
     return AuthUser(
       id: 'staff_mock_user',
@@ -106,6 +113,21 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<List<ServerPermission>> getPermissions() async => const [];
+
+  @override
+  Future<ServerPermissionPolicy> fetchPermissionPolicy({
+    required String userId,
+    String? tenantId,
+  }) async {
+    return ServerPermissionPolicy(
+      version: 1,
+      grants: const [],
+      revocations: const [],
+      syncedAt: DateTime.now(),
+      tenantId: tenantId,
+      userId: userId,
+    );
+  }
 
   bool _isValidIdentifier(String raw, String type) {
     final value = raw.trim();
