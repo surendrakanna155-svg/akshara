@@ -5,6 +5,10 @@ import {
   RefundNotFoundError,
   approveRefund,
 } from "../finance/finance_refunds_repository.ts";
+import {
+  publishExamResults,
+  recordExamRejection,
+} from "../academics/exam_administration/exam_administration_repository.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
 import { insertDomainEffect } from "./approval_repository.ts";
 
@@ -34,11 +38,33 @@ export async function applyApprovalTypeHandler(
 
   switch (request.type) {
     case "examResults":
-      effectPayload = {
-        ...effectPayload,
-        published: effectAction === "approved",
-        examSessionId: request.entity_id,
-      };
+      if (effectAction === "approved") {
+        const publishedCount = await publishExamResults(
+          db,
+          organizationId,
+          schoolId,
+          request.entity_id,
+        );
+        effectPayload = {
+          ...effectPayload,
+          published: true,
+          examSessionId: request.entity_id,
+          publishedCount,
+        };
+      } else {
+        await recordExamRejection(
+          db,
+          organizationId,
+          schoolId,
+          request.entity_id,
+          comment ?? "Rejected",
+        );
+        effectPayload = {
+          ...effectPayload,
+          published: false,
+          examSessionId: request.entity_id,
+        };
+      }
       break;
 
     case "studentLeave":

@@ -147,13 +147,11 @@ class _MarksEntryBody extends ConsumerWidget {
                 '$entered / ${marks.length} marks entered · Max ${exam.maxMarks}',
                 style: text.bodyMedium,
               ),
-              if (ExamAdministrationStore.instance
-                      .rejectionCommentFor(exam.id) !=
-                  null) ...[
+              if (exam.rejectionComment != null) ...[
                 const SizedBox(height: AksharaSpacing.s2),
                 AksharaWarningBanner(
                   message:
-                      'Principal rejected publication: ${ExamAdministrationStore.instance.rejectionCommentFor(exam.id)}',
+                      'Principal rejected publication: ${exam.rejectionComment}',
                 ),
               ],
             ],
@@ -187,8 +185,7 @@ class _MarksEntryBody extends ConsumerWidget {
                   ),
                 ),
               if (exam.phase == ExamLifecyclePhase.processed &&
-                  !ExamAdministrationStore.instance
-                      .isCoordinatorVerified(exam.id))
+                  !exam.coordinatorVerified)
                 AksharaViewAction(
                   permission: Permission.verifyExamResults,
                   child: FilledButton.tonal(
@@ -199,8 +196,7 @@ class _MarksEntryBody extends ConsumerWidget {
                 ),
               if (approvalRequired &&
                   exam.phase == ExamLifecyclePhase.processed &&
-                  ExamAdministrationStore.instance
-                      .isCoordinatorVerified(exam.id))
+                  exam.coordinatorVerified)
                 AksharaViewAction(
                   permission: Permission.submitExamResults,
                   child: FilledButton(
@@ -212,8 +208,7 @@ class _MarksEntryBody extends ConsumerWidget {
               if (approvalRequired &&
                   (exam.phase == ExamLifecyclePhase.processed ||
                       exam.phase == ExamLifecyclePhase.marksEntry) &&
-                  !ExamAdministrationStore.instance
-                      .isCoordinatorVerified(exam.id))
+                  !exam.coordinatorVerified)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s2),
                   child: Text(

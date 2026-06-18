@@ -1,87 +1,102 @@
 import '../../../exams/exam_administration_requests.dart';
 import '../../../exams/exam_administration_store.dart';
-import '../api_exception.dart';
 import '../../interfaces/exam_administration_repository.dart';
 import '../../repository_query.dart';
+import 'mapper/exam_mapper.dart';
+import 'remote/exam_remote_datasource.dart';
 
-/// API stub — throws until backend exam administration endpoints ship.
+/// API implementation of [ExamAdministrationRepository] — enabled via [examApiEnabledProvider].
 class ApiExamAdministrationRepository implements ExamAdministrationRepository {
-  Never _notConnected(String method) {
-    throw ApiNotConnectedException('ExamAdministrationRepository', method);
-  }
+  ApiExamAdministrationRepository({
+    required ExamRemoteDataSource remote,
+  }) : _remote = remote;
+
+  final ExamRemoteDataSource _remote;
 
   @override
   Future<List<ExamSession>> listExams({required RepositoryQuery query}) =>
-      _notConnected('listExams');
+      _remote.fetchExams(query: query);
 
   @override
   Future<ExamSession?> getExam({
     required RepositoryQuery query,
     required String examId,
   }) =>
-      _notConnected('getExam');
+      _remote.fetchExam(query: query, examId: examId);
 
   @override
   Future<ExamSession> createExam({
     required RepositoryQuery query,
     required CreateExamAdministrationRequest request,
   }) =>
-      _notConnected('createExam');
+      _remote.createExam(query: query, request: request);
 
   @override
   Future<ExamSession> scheduleExam({
     required RepositoryQuery query,
     required String examId,
   }) =>
-      _notConnected('scheduleExam');
+      _remote.scheduleExam(query: query, examId: examId);
 
   @override
   Future<ExamSession> openMarksEntry({
     required RepositoryQuery query,
     required String examId,
   }) =>
-      _notConnected('openMarksEntry');
+      _remote.openMarksEntry(query: query, examId: examId);
 
   @override
   Future<ExamSession> processResults({
     required RepositoryQuery query,
     required String examId,
   }) =>
-      _notConnected('processResults');
+      _remote.processResults(query: query, examId: examId);
 
   @override
   Future<void> verifyCoordinatorResults({
     required RepositoryQuery query,
     required String examId,
     required String verifiedBy,
-  }) =>
-      _notConnected('verifyCoordinatorResults');
+  }) async {
+    await _remote.verifyCoordinatorResults(
+      query: query,
+      examId: examId,
+      verifiedBy: verifiedBy,
+    );
+  }
 
   @override
   Future<int> publishResults({
     required RepositoryQuery query,
     required String examId,
   }) =>
-      _notConnected('publishResults');
+      _remote.publishResults(
+        query: query,
+        examId: examId,
+        requireApproval: false,
+      );
 
   @override
   Future<List<ExamMarkRecord>> listMarks({
     required RepositoryQuery query,
     required String examId,
   }) =>
-      _notConnected('listMarks');
+      _remote.fetchMarks(query: query, examId: examId);
 
   @override
   Future<ExamMarkRecord> updateMark({
     required RepositoryQuery query,
     required UpdateExamMarkRequest request,
   }) =>
-      _notConnected('updateMark');
+      _remote.updateMark(query: query, request: request);
 
   @override
   Future<List<PublishedExamResult>> listPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,
   }) =>
-      _notConnected('listPublishedResultsForStudent');
+      _remote.fetchPublishedResultsForStudent(
+        query: query,
+        sisStudentId: sisStudentId,
+      );
 }

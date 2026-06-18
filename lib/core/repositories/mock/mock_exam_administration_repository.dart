@@ -12,7 +12,7 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
 
   @override
   Future<List<ExamSession>> listExams({required RepositoryQuery query}) async {
-    return _store.allExams();
+    return _store.allExams().map(_enrichSession).toList(growable: false);
   }
 
   @override
@@ -20,7 +20,15 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
     required RepositoryQuery query,
     required String examId,
   }) async {
-    return _store.examById(examId);
+    final exam = _store.examById(examId);
+    return exam == null ? null : _enrichSession(exam);
+  }
+
+  ExamSession _enrichSession(ExamSession exam) {
+    return exam.copyWith(
+      coordinatorVerified: _store.isCoordinatorVerified(exam.id),
+      rejectionComment: _store.rejectionCommentFor(exam.id),
+    );
   }
 
   @override

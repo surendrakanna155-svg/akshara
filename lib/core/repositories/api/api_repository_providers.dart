@@ -57,6 +57,8 @@ import 'onboarding/remote/onboarding_remote_datasource.dart';
 import 'startup_onboarding/api_startup_onboarding_repository.dart';
 import 'startup_onboarding/hybrid_startup_onboarding_repository.dart';
 import 'startup_onboarding/remote/startup_onboarding_remote_datasource.dart';
+import 'exam_administration/api_exam_administration_repository.dart';
+import 'exam_administration/remote/exam_remote_datasource.dart';
 import 'education/api_education_repository.dart';
 import 'education/remote/education_remote_datasource.dart';
 import 'intelligence/api_intelligence_repository.dart';
@@ -558,5 +560,16 @@ final approvalRemoteDataSourceProvider = Provider<ApprovalRemoteDataSource>(
 final apiApprovalRepositoryProvider = Provider<ApiApprovalRepository>(
   (ref) => ApiApprovalRepository(
     remote: ref.watch(approvalRemoteDataSourceProvider),
+  ),
+);
+
+final examRemoteDataSourceProvider = Provider<ExamRemoteDataSource>(
+  (ref) => ExamRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiExamAdministrationRepositoryProvider =
+    Provider<ApiExamAdministrationRepository>(
+  (ref) => ApiExamAdministrationRepository(
+    remote: ref.watch(examRemoteDataSourceProvider),
   ),
 );

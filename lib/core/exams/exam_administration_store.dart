@@ -27,6 +27,8 @@ class ExamSession {
     required this.maxMarks,
     required this.phase,
     this.examType = EduExamType.unitTest,
+    this.coordinatorVerified = false,
+    this.rejectionComment,
   });
 
   final String id;
@@ -42,6 +44,8 @@ class ExamSession {
   final int maxMarks;
   final ExamLifecyclePhase phase;
   final EduExamType examType;
+  final bool coordinatorVerified;
+  final String? rejectionComment;
 
   String get classLabel => '$grade-$section';
 
@@ -53,6 +57,8 @@ class ExamSession {
   ExamSession copyWith({
     ExamLifecyclePhase? phase,
     EduExamType? examType,
+    bool? coordinatorVerified,
+    String? rejectionComment,
   }) {
     return ExamSession(
       id: id,
@@ -68,6 +74,8 @@ class ExamSession {
       maxMarks: maxMarks,
       phase: phase ?? this.phase,
       examType: examType ?? this.examType,
+      coordinatorVerified: coordinatorVerified ?? this.coordinatorVerified,
+      rejectionComment: rejectionComment ?? this.rejectionComment,
     );
   }
 }

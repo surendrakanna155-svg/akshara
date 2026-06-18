@@ -113,6 +113,28 @@ export async function findPendingByEntity(
   return { ...row, payload: parsePayload(row.payload) };
 }
 
+export async function findApprovedByEntity(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  type: string,
+  entityType: string,
+  entityId: string,
+): Promise<ApprovalRequestRow | null> {
+  const rows = await db.queryObject<ApprovalRequestRow>(
+    `SELECT * FROM approval_requests
+     WHERE organization_id = $1 AND school_id = $2
+       AND type = $3 AND entity_type = $4 AND entity_id = $5
+       AND status = 'approved'
+     ORDER BY decided_at DESC NULLS LAST, updated_at DESC
+     LIMIT 1`,
+    [organizationId, schoolId, type, entityType, entityId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return { ...row, payload: parsePayload(row.payload) };
+}
+
 export async function listApprovals(
   db: TenantQueryClient,
   organizationId: string,

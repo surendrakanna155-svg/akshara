@@ -16,6 +16,7 @@ import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, 
 import { routeAdmissions } from "../_shared/admissions/admissions_router.ts";
 import { routeFinance } from "../_shared/finance/finance_router.ts";
 import { routeSis } from "../_shared/sis/sis_router.ts";
+import { routeExamAdministration } from "../_shared/academics/exam_administration/exam_administration_router.ts";
 import { routeAcademic } from "../_shared/academic/academic_router.ts";
 import { routeTimetable } from "../_shared/timetable/timetable_router.ts";
 import { routeTransport } from "../_shared/transport/transport_router.ts";
@@ -72,6 +73,7 @@ async function routeModuleRequest(
     routeAdmissions,
     routeFinance,
     routeSis,
+    routeExamAdministration,
     routeAcademic,
     routeTimetable,
     routeTransport,

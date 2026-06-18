@@ -1,5 +1,7 @@
 import '../../errors/api_failure.dart';
 import '../../exams/exam_administration_store.dart';
+import '../../repositories/interfaces/exam_administration_repository.dart';
+import '../../repositories/mock/mock_exam_administration_repository.dart';
 import '../../repositories/repository_query.dart';
 import '../approval_center_service.dart';
 import '../approval_models.dart';
@@ -7,11 +9,15 @@ import '../approval_request_type.dart';
 import '../approval_requests.dart';
 import 'approval_type_adapter.dart';
 
-/// Connects exam publication to the unified approval center (M-D3).
+/// Connects exam publication to the unified approval center (M-D3 / F4).
 class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
-  ExamResultsApprovalAdapter({ExamAdministrationStore? store})
-      : _store = store ?? ExamAdministrationStore.instance;
+  ExamResultsApprovalAdapter({
+    ExamAdministrationRepository? repository,
+    ExamAdministrationStore? store,
+  })  : _repository = repository ?? MockExamAdministrationRepository(store: store),
+        _store = store ?? ExamAdministrationStore.instance;
 
+  final ExamAdministrationRepository _repository;
   final ExamAdministrationStore _store;
 
   static const entityType = 'exam_session';
@@ -24,8 +30,7 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
     required String requesterId,
     required String requesterName,
   }) async {
-    _store.ensureSeeded();
-    final exam = _store.examById(examId);
+    final exam = await _repository.getExam(query: query, examId: examId);
     if (exam == null) {
       throw ApiFailureException(
         ApiFailure(
@@ -45,26 +50,26 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
       );
     }
 
-    _ensureProcessed(examId);
-    _ensureCoordinatorVerified(examId);
+    await _ensureProcessed(query, examId, exam);
+    await _ensureCoordinatorVerified(query, examId, exam);
     _store.clearRejectionComment(examId);
 
-    final refreshed = _store.examById(examId)!;
-    final marks = _store.marksForExam(examId);
+    final refreshed = await _repository.getExam(query: query, examId: examId);
+    final marks = await _repository.listMarks(query: query, examId: examId);
     final entered = marks.where((m) => m.marksObtained != null).length;
 
     return service.submitApprovalRequest(
       query: query,
       request: SubmitApprovalRequest(
         type: ApprovalRequestType.examResults,
-        title: 'Publish ${refreshed.classLabel} ${refreshed.subject} results',
+        title: 'Publish ${refreshed!.classLabel} ${refreshed.subject} results',
         summary:
             '${refreshed.title} — $entered/${marks.length} marks entered',
         requesterId: requesterId,
         requesterName: requesterName,
         entityType: entityType,
         entityId: examId,
-        payload: buildSubmitPayload(examId),
+        payload: await buildSubmitPayload(query, examId),
       ),
     );
   }
@@ -107,7 +112,6 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
   @override
   Map<String, String> enrichDetail(ApprovalRequest request) {
     if (request.type != ApprovalRequestType.examResults) return const {};
-    _store.ensureSeeded();
     final exam = _store.examById(request.entityId);
     if (exam == null) {
       return const {'Status': 'Exam session not found in store'};
@@ -131,12 +135,14 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
   }
 
   /// Shared payload for submit + detail enrichment.
-  Map<String, Object?> buildSubmitPayload(String examId) {
-    _store.ensureSeeded();
-    final exam = _store.examById(examId);
+  Future<Map<String, Object?>> buildSubmitPayload(
+    RepositoryQuery query,
+    String examId,
+  ) async {
+    final exam = await _repository.getExam(query: query, examId: examId);
     if (exam == null) return const {};
 
-    final marks = _store.marksForExam(examId);
+    final marks = await _repository.listMarks(query: query, examId: examId);
     final entered = marks.where((m) => m.marksObtained != null).length;
 
     return {
@@ -147,12 +153,16 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
       'marksEntered': entered,
       'marksTotal': marks.length,
       'phase': exam.phase.name,
-      'coordinatorVerified': _store.isCoordinatorVerified(examId),
+      'coordinatorVerified': exam.coordinatorVerified,
     };
   }
 
-  void _ensureCoordinatorVerified(String examId) {
-    if (_store.isCoordinatorVerified(examId)) return;
+  Future<void> _ensureCoordinatorVerified(
+    RepositoryQuery query,
+    String examId,
+    ExamSession exam,
+  ) async {
+    if (exam.coordinatorVerified || _store.isCoordinatorVerified(examId)) return;
     throw ApiFailureException(
       ApiFailure(
         type: ApiFailureType.unknown,
@@ -163,14 +173,19 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
     );
   }
 
-  void _ensureProcessed(String examId) {
-    final exam = _store.examById(examId)!;
+  Future<void> _ensureProcessed(
+    RepositoryQuery query,
+    String examId,
+    ExamSession exam,
+  ) async {
     if (exam.phase == ExamLifecyclePhase.processed) return;
 
     if (exam.phase == ExamLifecyclePhase.marksEntry ||
         exam.phase == ExamLifecyclePhase.scheduled) {
       try {
-        _store.processResults(examId);
+        await _repository.processResults(query: query, examId: examId);
+      } on ApiFailureException {
+        rethrow;
       } on StateError catch (e) {
         throw ApiFailureException(
           ApiFailure(

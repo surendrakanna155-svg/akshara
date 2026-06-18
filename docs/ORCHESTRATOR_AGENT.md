@@ -286,7 +286,7 @@ Whenever **new screens, dashboards, approvals, Student 360, Marketing, Finance, 
 | **Mock / UAT pilot** | **GO** — `ENABLE_API_MODE=false`, 1949+ unit tests |
 | **First real school (live API)** | **NO-GO** until F1–F7 Class A complete |
 | **Parallel domain work (client)** | Phases A–E largely complete on mock; no new client modules without authorization |
-| **Active mission** | **Await F4 authorization** (Exams API) |
+| **Active mission** | **F4 ✅ certified** — await F5 authorization (Attendance correction API) |
 
 ### What is working today (operational)
 
@@ -364,11 +364,11 @@ Readiness is tracked on **two baselines** — mock/UAT pilot vs production API p
 
 | Metric | **Current (2026-06-18)** | After F7 (target) |
 |--------|--------------------------|-------------------|
-| **Overall production API** | **~71%** | **≥92%** (Class A GO) |
+| **Overall production API** | **~81%** | **≥92%** (Class A GO) |
 | **Auth + RBAC (F1)** | **100%** client cert | 100% |
 | **Approval API (F2)** | **100%** client + Edge | 100% |
 | **SIS + Student 360 (F3)** | **100%** F3 scope | 100% |
-| **Exams (F4)** | 0% (stub + local persistence) | 100% |
+| **Exams (F4)** | **100%** (server lifecycle + Flutter API gate) | 100% |
 | **Attendance (F5)** | 0% (no API) | 100% |
 | **Audit upload (F6)** | ~50% (queue only) | 100% |
 | **Leave + finance orchestration (F7)** | ~35% partial | 100% |
@@ -841,6 +841,7 @@ Each session ends with:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.8 | 2026-06-17 | F4 Exam Administration API certified (`PHASE_F4_FINAL_CERTIFICATION.md`); production API ~81%; F5 locked |
 | 1.7 | 2026-06-17 | F3 SIS + Student 360 API certified (`PHASE_F3_FINAL_CERTIFICATION.md`); production API ~71%; F4 locked |
 | 1.6 | 2026-06-17 | F2 Approval API certified (`PHASE_F2_FINAL_CERTIFICATION.md`); production API ~65%; F3 locked |
 | 1.5 | 2026-06-18 | F1 Auth + RBAC certified (`PHASE_F1_FINAL_CERTIFICATION.md`); production API ~53%; F2 locked |

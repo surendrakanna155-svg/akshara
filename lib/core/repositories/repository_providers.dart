@@ -206,6 +206,9 @@ final approvalRepositoryProvider = Provider<ApprovalRepository>((ref) {
 
 final examAdministrationRepositoryProvider =
     Provider<ExamAdministrationRepository>((ref) {
+  if (isModuleApiEnabled(ref, examApiEnabledProvider)) {
+    return ref.read(apiExamAdministrationRepositoryProvider);
+  }
   return MockExamAdministrationRepository();
 });
 
