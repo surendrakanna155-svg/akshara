@@ -69,4 +69,38 @@ class ApprovalFixtureBuilder {
       occurredAt: DateTime.utc(2026, 6, 17),
     );
   }
+
+  Map<String, dynamic> requestEnvelope(ApprovalRequest request) {
+    return {
+      'data': {
+        'id': request.id,
+        'type': request.type.name,
+        'status': request.status.name,
+        'title': request.title,
+        'summary': request.summary,
+        'requesterId': request.requesterId,
+        'requesterName': request.requesterName,
+        'entityType': request.entityType,
+        'entityId': request.entityId,
+        'payload': request.payload,
+        'createdAt': request.createdAt.toIso8601String(),
+        'decidedAt': request.decidedAt?.toIso8601String(),
+        'decidedById': request.decidedById,
+        'decidedByName': request.decidedByName,
+        'decisionComment': request.decisionComment,
+        'tenantId': request.tenantId,
+        'schoolId': request.schoolId,
+      },
+    };
+  }
+
+  Map<String, dynamic> listEnvelope(List<ApprovalRequest> items) {
+    return {
+      'data': {
+        'items': [
+          for (final item in items) requestEnvelope(item)['data'] as Map<String, dynamic>,
+        ],
+      },
+    };
+  }
 }

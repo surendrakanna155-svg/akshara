@@ -93,7 +93,6 @@ import 'mock/mock_academic_operations_repository.dart';
 import 'mock/mock_continuity_repository.dart';
 import 'mock/mock_workflow_repository.dart';
 import 'mock/mock_approval_repository.dart';
-import 'api/approval/api_approval_repository.dart';
 import '../approvals/approval_center_service.dart';
 import 'mock/mock_finance_repository.dart';
 import 'mock/mock_hostel_repository.dart';
@@ -196,7 +195,7 @@ final workflowRepositoryProvider = Provider<WorkflowRepository>((ref) {
 
 final approvalRepositoryProvider = Provider<ApprovalRepository>((ref) {
   if (isModuleApiEnabled(ref, approvalApiEnabledProvider)) {
-    return ApiApprovalRepository();
+    return ref.read(apiApprovalRepositoryProvider);
   }
   return MockApprovalRepository();
 });

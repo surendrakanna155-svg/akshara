@@ -29,6 +29,7 @@ import { routeControlCenter } from "../_shared/control_center/control_center_rou
 import { routeParent } from "../_shared/parent/parent_router.ts";
 import { routeTeacher } from "../_shared/teacher/teacher_router.ts";
 import { routeStudent } from "../_shared/student/student_router.ts";
+import { routeApproval } from "../_shared/approval/approval_router.ts";
 import { routeAudit } from "../_shared/audit/audit_router.ts";
 import { routePayment } from "../_shared/payment/payment_router.ts";
 import { routeCommunication } from "../_shared/communication/communication_router.ts";
@@ -67,6 +68,7 @@ async function routeModuleRequest(
   path: string,
 ): Promise<Response> {
   const moduleRouters = [
+    routeApproval,
     routeAdmissions,
     routeFinance,
     routeSis,

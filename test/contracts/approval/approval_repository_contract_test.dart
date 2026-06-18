@@ -1,13 +1,15 @@
 import 'package:akshara_erp/core/approvals/approval_audit.dart';
 import 'package:akshara_erp/core/approvals/approval_exceptions.dart';
 import 'package:akshara_erp/core/approvals/approval_status.dart';
-import 'package:akshara_erp/core/repositories/api/api_exception.dart';
 import 'package:akshara_erp/core/repositories/api/approval/api_approval_repository.dart';
+import 'package:akshara_erp/core/repositories/api/approval/remote/approval_api_paths.dart';
+import 'package:akshara_erp/core/repositories/api/approval/remote/approval_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/interfaces/approval_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_approval_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../helpers/fake_dio_interceptor.dart';
 import 'approval_fixture_builder.dart';
 
 const _query = RepositoryQuery.demo;
@@ -16,14 +18,15 @@ final _fixtures = ApprovalFixtureBuilder();
 void main() {
   group('Approval repository contract', () {
     late MockApprovalRepository mockRepo;
-    late ApiApprovalRepository apiRepo;
 
     setUp(() {
       mockRepo = MockApprovalRepository()..reset();
-      apiRepo = ApiApprovalRepository();
     });
 
     test('mock and api implement ApprovalRepository', () {
+      final apiRepo = ApiApprovalRepository(
+        remote: ApprovalRemoteDataSource(createFakeDio((_) => {'data': {}})),
+      );
       expect(mockRepo, isA<ApprovalRepository>());
       expect(apiRepo, isA<ApprovalRepository>());
     });
@@ -193,11 +196,73 @@ void main() {
       expect(audit.first.action, ApprovalAuditAction.submitted);
     });
 
-    test('api repository throws ApiNotConnectedException', () async {
-      expect(
-        () => apiRepo.listPending(query: _query),
-        throwsA(isA<ApiNotConnectedException>()),
+    test('ApiApprovalRepository returns mock-equivalent via fake Dio', () async {
+      final submit = _fixtures.submitRequest();
+      final created = await mockRepo.submit(query: _query, request: submit);
+      final approved = await mockRepo.approve(
+        query: _query,
+        request: _fixtures.approveRequest(created.id),
       );
+
+      final dio = createFakeDio((options) {
+        if (options.path == ApprovalApiPaths.pending) {
+          return _fixtures.listEnvelope([created]);
+        }
+        if (options.path == ApprovalApiPaths.base && options.method == 'GET') {
+          return _fixtures.listEnvelope([created]);
+        }
+        if (options.path == ApprovalApiPaths.detail(created.id)) {
+          return _fixtures.requestEnvelope(approved);
+        }
+        if (options.path == ApprovalApiPaths.approve(created.id)) {
+          return _fixtures.requestEnvelope(approved);
+        }
+        if (options.path == ApprovalApiPaths.entity) {
+          return _fixtures.requestEnvelope(created);
+        }
+        if (options.path == ApprovalApiPaths.auditTrail(created.id)) {
+          return {
+            'data': {
+              'items': [
+                {
+                  'id': 'audit_001',
+                  'approvalRequestId': created.id,
+                  'action': 'submitted',
+                  'actorId': submit.requesterId,
+                  'actorName': submit.requesterName,
+                  'occurredAt': created.createdAt.toIso8601String(),
+                },
+                {
+                  'id': 'audit_002',
+                  'approvalRequestId': created.id,
+                  'action': 'approved',
+                  'actorId': 'principal_001',
+                  'actorName': 'Dr. Rao',
+                  'occurredAt': approved.decidedAt!.toIso8601String(),
+                },
+              ],
+            },
+          };
+        }
+        return {'data': {}};
+      });
+
+      final api = ApiApprovalRepository(
+        remote: ApprovalRemoteDataSource(dio),
+      );
+
+      final pending = await api.listPending(query: _query);
+      expect(pending.length, 1);
+      expect(pending.first.id, created.id);
+
+      final byId = await api.getById(query: _query, approvalId: created.id);
+      expect(byId?.status, ApprovalStatus.approved);
+
+      final audit = await api.listAuditEntries(
+        query: _query,
+        approvalRequestId: created.id,
+      );
+      expect(audit.length, 2);
     });
   });
 }

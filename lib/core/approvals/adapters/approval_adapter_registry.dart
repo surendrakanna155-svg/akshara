@@ -30,7 +30,9 @@ class ApprovalAdapterRegistry {
   static void dispatchApproved({
     required RepositoryQuery query,
     required ApprovalRequest request,
+    bool skipDomainEffects = false,
   }) {
+    if (skipDomainEffects) return;
     adapterFor(request.type)?.onApproved(query: query, request: request);
   }
 
@@ -38,7 +40,9 @@ class ApprovalAdapterRegistry {
     required RepositoryQuery query,
     required ApprovalRequest request,
     required String comment,
+    bool skipDomainEffects = false,
   }) {
+    if (skipDomainEffects) return;
     adapterFor(request.type)?.onRejected(
           query: query,
           request: request,

@@ -3,6 +3,7 @@ import '../approvals/approval_exceptions.dart';
 import '../approvals/approval_models.dart';
 import '../approvals/approval_request_type.dart';
 import '../approvals/approval_requests.dart';
+import '../repositories/api/approval/api_approval_repository.dart';
 import '../repositories/interfaces/approval_repository.dart';
 import '../repositories/repository_query.dart';
 
@@ -11,6 +12,8 @@ class ApprovalCenterService {
   ApprovalCenterService(this._repository);
 
   final ApprovalRepository _repository;
+
+  bool get _serverManagesAudit => _repository is ApiApprovalRepository;
 
   Future<List<ApprovalRequest>> listPending({
     required RepositoryQuery query,
@@ -72,14 +75,16 @@ class ApprovalCenterService {
     }
 
     final created = await _repository.submit(query: query, request: request);
-    await _recordAudit(
-      query: query,
-      approvalRequestId: created.id,
-      action: ApprovalAuditAction.submitted,
-      actorId: request.requesterId,
-      actorName: request.requesterName,
-      comment: null,
-    );
+    if (!_serverManagesAudit) {
+      await _recordAudit(
+        query: query,
+        approvalRequestId: created.id,
+        action: ApprovalAuditAction.submitted,
+        actorId: request.requesterId,
+        actorName: request.requesterName,
+        comment: null,
+      );
+    }
     return created;
   }
 
@@ -88,14 +93,16 @@ class ApprovalCenterService {
     required ApproveApprovalRequest request,
   }) async {
     final updated = await _repository.approve(query: query, request: request);
-    await _recordAudit(
-      query: query,
-      approvalRequestId: updated.id,
-      action: ApprovalAuditAction.approved,
-      actorId: request.actorId,
-      actorName: request.actorName,
-      comment: request.comment,
-    );
+    if (!_serverManagesAudit) {
+      await _recordAudit(
+        query: query,
+        approvalRequestId: updated.id,
+        action: ApprovalAuditAction.approved,
+        actorId: request.actorId,
+        actorName: request.actorName,
+        comment: request.comment,
+      );
+    }
     return updated;
   }
 
@@ -107,14 +114,16 @@ class ApprovalCenterService {
       throw ApprovalRejectCommentRequiredException(request.approvalId);
     }
     final updated = await _repository.reject(query: query, request: request);
-    await _recordAudit(
-      query: query,
-      approvalRequestId: updated.id,
-      action: ApprovalAuditAction.rejected,
-      actorId: request.actorId,
-      actorName: request.actorName,
-      comment: request.comment.trim(),
-    );
+    if (!_serverManagesAudit) {
+      await _recordAudit(
+        query: query,
+        approvalRequestId: updated.id,
+        action: ApprovalAuditAction.rejected,
+        actorId: request.actorId,
+        actorName: request.actorName,
+        comment: request.comment.trim(),
+      );
+    }
     return updated;
   }
 
@@ -123,14 +132,16 @@ class ApprovalCenterService {
     required CancelApprovalRequest request,
   }) async {
     final updated = await _repository.cancel(query: query, request: request);
-    await _recordAudit(
-      query: query,
-      approvalRequestId: updated.id,
-      action: ApprovalAuditAction.cancelled,
-      actorId: request.actorId,
-      actorName: request.actorName,
-      comment: request.comment,
-    );
+    if (!_serverManagesAudit) {
+      await _recordAudit(
+        query: query,
+        approvalRequestId: updated.id,
+        action: ApprovalAuditAction.cancelled,
+        actorId: request.actorId,
+        actorName: request.actorName,
+        comment: request.comment,
+      );
+    }
     return updated;
   }
 

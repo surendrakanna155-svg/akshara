@@ -46,6 +46,8 @@ import 'copilot/api_copilot_repository.dart';
 import 'copilot/remote/copilot_remote_datasource.dart';
 import 'timetable/api_timetable_repository.dart';
 import 'timetable/remote/timetable_remote_datasource.dart';
+import 'approval/api_approval_repository.dart';
+import 'approval/remote/approval_remote_datasource.dart';
 import 'analytics/api_analytics_intelligence_repository.dart';
 import 'analytics/remote/analytics_intelligence_remote_datasource.dart';
 import 'communication/api_communication_repository.dart';
@@ -546,5 +548,15 @@ final apiWhiteLabelPlatformRepositoryProvider =
     Provider<ApiWhiteLabelPlatformRepository>(
   (ref) => ApiWhiteLabelPlatformRepository(
     remote: ref.watch(whiteLabelRemoteDataSourceProvider),
+  ),
+);
+
+final approvalRemoteDataSourceProvider = Provider<ApprovalRemoteDataSource>(
+  (ref) => ApprovalRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiApprovalRepositoryProvider = Provider<ApiApprovalRepository>(
+  (ref) => ApiApprovalRepository(
+    remote: ref.watch(approvalRemoteDataSourceProvider),
   ),
 );

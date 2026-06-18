@@ -16,6 +16,7 @@ import '../../../core/errors/api_failure.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/mock/mock_approval_demo_seed.dart';
 import '../../../core/repositories/mock/mock_approval_repository.dart';
+import '../../../core/repositories/repository_config.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/notifications/approval_notification_service.dart';
@@ -194,6 +195,9 @@ void assertApprovalPermission(Ref ref, Permission permission) {
   }
 }
 
+bool _skipApprovalDomainEffects(Ref ref) =>
+    isModuleApiEnabled(ref, approvalApiEnabledProvider);
+
 (String actorId, String actorName) _approvalActor(Ref ref) {
   final auth = ref.read(authProvider);
   final claims = auth.claims;
@@ -234,7 +238,11 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
             ),
           );
       final query = ref.read(repositoryQueryProvider);
-      ApprovalAdapterRegistry.dispatchApproved(query: query, request: result);
+      ApprovalAdapterRegistry.dispatchApproved(
+        query: query,
+        request: result,
+        skipDomainEffects: _skipApprovalDomainEffects(ref),
+      );
       _invalidateAfterApprovalSideEffects(ref, result.type);
       _recordApprovalNotification(ref, result, approved: true, comment: comment);
       ref.invalidate(approvalCenterFutureProvider);
@@ -269,6 +277,7 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
         query: query,
         request: result,
         comment: comment.trim(),
+        skipDomainEffects: _skipApprovalDomainEffects(ref),
       );
       _recordApprovalNotification(
         ref,
