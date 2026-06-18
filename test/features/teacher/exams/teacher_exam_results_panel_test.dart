@@ -3,8 +3,10 @@ import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
+import 'package:akshara_erp/core/teaching/teacher_assignment_registry.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
+import 'package:akshara_erp/features/teacher/communication/teacher_teaching_context_provider.dart';
 import 'package:akshara_erp/features/teacher/exams/teacher_exams_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +38,12 @@ void main() {
         repositoryQueryProvider.overrideWithValue(RepositoryQuery.demo),
         userPermissionsProvider.overrideWithValue(
           UserPermissions.forRole(ErpRole.teacher),
+        ),
+        teacherTeachingContextOverrideProvider.overrideWith(
+          (ref) => TeacherAssignmentRegistry.resolveContext(
+            teacherId: TeacherAssignmentRegistry.priyaSharmaId,
+            teacherName: 'Priya Sharma',
+          ),
         ),
       ],
       child: MaterialApp(

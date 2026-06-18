@@ -23,9 +23,11 @@ abstract class TeacherRepository {
   });
   Future<List<TeacherUpcomingExam>> getUpcomingExams({
     required RepositoryQuery query,
+    TeacherTeachingContext? teachingContext,
   });
   Future<List<TeacherExamSessionOption>> getMarksEntryExams({
     required RepositoryQuery query,
+    TeacherTeachingContext? teachingContext,
   });
   Future<List<ExamMarkEntry>> getExamMarks({
     required RepositoryQuery query,

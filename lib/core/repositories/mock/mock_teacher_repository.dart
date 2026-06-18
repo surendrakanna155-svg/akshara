@@ -12,6 +12,7 @@ import '../repository_query.dart';
 import 'mock_attendance_sync_store.dart';
 import 'mock_canonical_student_registry.dart';
 import '../../communication/parent_communication_governance.dart';
+import '../../teaching/teacher_assignment_registry.dart';
 import '../../communication/parent_communication_models.dart';
 import '../../communication/parent_communication_store.dart';
 import '../../communication/subject_teacher_concern_store.dart';
@@ -72,32 +73,49 @@ class MockTeacherRepository implements TeacherRepository {
   @override
   Future<List<TeacherUpcomingExam>> getUpcomingExams({
     required RepositoryQuery query,
+    TeacherTeachingContext? teachingContext,
   }) async {
     final store = ExamAdministrationStore.instance..ensureSeeded();
     return [
       for (final exam in store.upcomingExams())
-        TeacherUpcomingExam(
-          id: exam.id,
-          title: exam.title,
-          classLabel: exam.classLabel,
-          dateLabel: exam.dateLabel,
-          maxMarks: exam.maxMarks,
-          subject: exam.subject,
-          canEnterMarks: exam.phase == ExamLifecyclePhase.marksEntry ||
-              exam.phase == ExamLifecyclePhase.processed,
-        ),
+        if (_teaches(teachingContext, exam))
+          TeacherUpcomingExam(
+            id: exam.id,
+            title: exam.title,
+            classLabel: exam.classLabel,
+            dateLabel: exam.dateLabel,
+            maxMarks: exam.maxMarks,
+            subject: exam.subject,
+            canEnterMarks: exam.phase == ExamLifecyclePhase.marksEntry ||
+                exam.phase == ExamLifecyclePhase.processed,
+          ),
     ];
+  }
+
+  /// Scopes an exam to the teacher's subject assignments. When no teaching
+  /// context is supplied (e.g. contract/integration probes) nothing is hidden.
+  bool _teaches(TeacherTeachingContext? context, ExamSession exam) {
+    if (context == null) return true;
+    return TeacherAssignmentRegistry.teachesSubjectClass(
+      teacherId: context.teacherId,
+      teacherName: context.teacherName,
+      subject: exam.subject,
+      grade: exam.grade,
+      section: exam.section,
+    );
   }
 
   @override
   Future<List<TeacherExamSessionOption>> getMarksEntryExams({
     required RepositoryQuery query,
+    TeacherTeachingContext? teachingContext,
   }) async {
     final store = ExamAdministrationStore.instance..ensureSeeded();
     return [
       for (final exam in store.allExams())
-        if (exam.phase == ExamLifecyclePhase.marksEntry ||
-            exam.phase == ExamLifecyclePhase.processed)
+        if ((exam.phase == ExamLifecyclePhase.marksEntry ||
+                exam.phase == ExamLifecyclePhase.processed) &&
+            _teaches(teachingContext, exam))
           TeacherExamSessionOption(
             id: exam.id,
             title: exam.title,

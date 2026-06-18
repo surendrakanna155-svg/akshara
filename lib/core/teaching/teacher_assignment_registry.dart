@@ -90,6 +90,31 @@ abstract final class TeacherAssignmentRegistry {
     return null;
   }
 
+  /// Whether the teacher (resolved by [teacherId], falling back to
+  /// [teacherName]) is assigned to teach [subject] for [grade]/[section].
+  ///
+  /// Used to scope a subject teacher's exam lists to only the class-sections
+  /// they actually teach — a Science teacher across 8-A/8-B/10-A sees exactly
+  /// those Science sessions, not every exam in the school. Class-teacher status
+  /// is intentionally ignored: marks entry follows the *subject* assignment, so
+  /// the class teacher of 8-A still only enters marks for the subjects they
+  /// teach. Fails open (returns `true`) for an unknown teacher so an
+  /// unrecognised context never silently hides everything.
+  static bool teachesSubjectClass({
+    String? teacherId,
+    String? teacherName,
+    required String subject,
+    required String grade,
+    required String section,
+  }) {
+    final record = (teacherId != null ? byTeacherId(teacherId) : null) ??
+        (teacherName != null ? byTeacherName(teacherName) : null);
+    if (record == null) return true;
+    return record.subjectAssignments.any(
+      (a) => a.subject == subject && a.grade == grade && a.section == section,
+    );
+  }
+
   static TeacherAssignmentRecord? byTeacherName(String teacherName) {
     final normalized = teacherName.trim().toLowerCase();
     for (final record in assignments) {

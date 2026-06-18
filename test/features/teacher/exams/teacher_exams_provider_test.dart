@@ -1,10 +1,24 @@
 import 'package:akshara_erp/core/exams/exam_administration_store.dart';
+import 'package:akshara_erp/core/teaching/teacher_assignment_registry.dart';
+import 'package:akshara_erp/features/teacher/communication/teacher_teaching_context_provider.dart';
 import 'package:akshara_erp/features/teacher/exams/exam_models.dart';
 import 'package:akshara_erp/features/teacher/exams/teacher_exams_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/provider_test_overrides.dart';
+
+/// Default persona for these tests: Priya Sharma (Maths 8-A + 9-B). Pinning the
+/// teaching context keeps exam scoping deterministic without auth/prefs setup.
+final _priyaContext = teacherTeachingContextOverrideProvider.overrideWith(
+  (ref) => TeacherAssignmentRegistry.resolveContext(
+    teacherId: TeacherAssignmentRegistry.priyaSharmaId,
+    teacherName: 'Priya Sharma',
+  ),
+);
+
+ProviderContainer _container() =>
+    createMobileProviderTestContainer(overrides: [_priyaContext]);
 
 Future<void> _awaitTeacherExams(ProviderContainer container) async {
   await container.read(teacherUpcomingExamsFutureProvider.future);
@@ -15,19 +29,22 @@ Future<void> _awaitTeacherExams(ProviderContainer container) async {
 void main() {
   group('teacherExams providers', () {
     test('teacherExamsProvider exposes upcoming exams and marks', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       await _awaitTeacherExams(container);
       final data = container.read(teacherExamsProvider);
 
-      expect(data.upcomingExams, hasLength(2));
+      // Scoped to Priya's assignments: the seeded Maths 8-A session shows;
+      // Mr. Patel's Science 8-A session does not.
+      expect(data.upcomingExams, hasLength(1));
+      expect(data.upcomingExams.single.subject, 'Mathematics');
       expect(data.markEntries, isNotEmpty);
       expect(data.classAveragePercent, greaterThan(0));
     });
 
     test('teacherExamSectionProvider switches active section', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       container.read(teacherExamSectionProvider.notifier).state =
@@ -38,7 +55,7 @@ void main() {
     });
 
     test('teacherExamsEmptyProvider clears exam data', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       container.read(teacherExamsEmptyProvider.notifier).state = true;
@@ -50,7 +67,7 @@ void main() {
     });
 
     test('mark entries include pending marks for entry', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       await _awaitTeacherExams(container);
@@ -69,7 +86,7 @@ void main() {
     });
 
     test('getMarksEntryExams returns only marksEntry/processed exams', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       final options =
@@ -85,7 +102,7 @@ void main() {
     });
 
     test('marks entry exams include exam setup context', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       final options =
@@ -101,7 +118,7 @@ void main() {
     });
 
     test('upcoming exams include canEnterMarks flag', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       final exams =
@@ -113,7 +130,7 @@ void main() {
     });
 
     test('getExamMarks with examId returns marks for that exam', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       final options =
@@ -129,35 +146,36 @@ void main() {
     });
 
     test('admin-created exam appears in teacher marks entry', () async {
+      // Created for a class-section the persona (Priya) actually teaches.
       final store = ExamAdministrationStore.instance..ensureSeeded();
       final created = store.createExam(
-        title: 'Midterm — Science',
-        subject: 'Science',
+        title: 'Midterm — Mathematics',
+        subject: 'Mathematics',
         grade: '8',
         section: 'A',
         termLabel: 'Term 2',
         dateLabel: '20 Jun 2026',
         timeLabel: '10:00 AM',
-        venueLabel: 'Lab 1',
-        syllabusLabel: 'Optics, Heat',
+        venueLabel: 'Room 8A',
+        syllabusLabel: 'Mensuration',
         maxMarks: 100,
       );
       store.scheduleExam(created.id);
       store.openMarksEntry(created.id);
 
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       final options =
           await container.read(teacherMarksExamOptionsProvider.future);
       final match = options.where((o) => o.id == created.id);
       expect(match, hasLength(1));
-      expect(match.first.subject, 'Science');
+      expect(match.first.subject, 'Mathematics');
       expect(match.first.termLabel, 'Term 2');
     });
 
     test('teacherActiveExamProvider exposes enriched exam context', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       await container.read(teacherMarksExamOptionsProvider.future);
@@ -168,7 +186,7 @@ void main() {
     });
 
     test('teacherExamPhaseProvider derives from repository data', () async {
-      final container = createMobileProviderTestContainer();
+      final container = _container();
       addTearDown(container.dispose);
 
       await container.read(teacherMarksExamOptionsProvider.future);

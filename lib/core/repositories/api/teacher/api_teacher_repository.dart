@@ -56,7 +56,9 @@ class ApiTeacherRepository implements TeacherRepository {
   @override
   Future<List<TeacherUpcomingExam>> getUpcomingExams({
     required RepositoryQuery query,
+    TeacherTeachingContext? teachingContext,
   }) async {
+    // Scoping to the teacher's assignments is enforced server-side.
     final dto = await _remote.fetchUpcomingExams(query: query);
     return _mapper.toUpcomingExams(dto);
   }
@@ -64,7 +66,9 @@ class ApiTeacherRepository implements TeacherRepository {
   @override
   Future<List<TeacherExamSessionOption>> getMarksEntryExams({
     required RepositoryQuery query,
+    TeacherTeachingContext? teachingContext,
   }) async {
+    // Scoping to the teacher's assignments is enforced server-side.
     final dto = await _remote.fetchMarksEntryExams(query: query);
     return _mapper.toMarksEntryExams(dto);
   }

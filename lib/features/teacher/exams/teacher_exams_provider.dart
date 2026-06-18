@@ -10,6 +10,7 @@ import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../academics/exam_admin/exam_administration_provider.dart';
+import '../communication/teacher_teaching_context_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
 import 'exam_models.dart';
@@ -28,6 +29,7 @@ final teacherMarksExamOptionsProvider =
   ref.watch(examAdminRefreshTickProvider);
   return ref.read(teacherRepositoryProvider).getMarksEntryExams(
         query: ref.watch(repositoryQueryProvider),
+        teachingContext: ref.watch(resolvedTeacherTeachingContextProvider),
       );
 });
 
@@ -74,6 +76,7 @@ final teacherUpcomingExamsFutureProvider =
   ref.watch(examAdminRefreshTickProvider);
   return ref.read(teacherRepositoryProvider).getUpcomingExams(
         query: ref.watch(repositoryQueryProvider),
+        teachingContext: ref.watch(resolvedTeacherTeachingContextProvider),
       );
 });
 
