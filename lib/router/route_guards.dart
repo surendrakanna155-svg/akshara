@@ -62,6 +62,7 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.growthPlatform: Permission.viewGrowthPlatform,
   RouteNames.schoolCompletionHub: Permission.viewSubjects,
   RouteNames.subjectsManagement: Permission.viewSubjects,
+  RouteNames.examAdministration: Permission.viewExams,
   RouteNames.lessonLogs: Permission.viewLessonLogs,
   RouteNames.timetableAutomation: Permission.manageTimetableAutomation,
   RouteNames.schoolBranding: Permission.viewSchoolBranding,

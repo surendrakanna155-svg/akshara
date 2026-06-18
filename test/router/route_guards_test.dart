@@ -49,6 +49,10 @@ void main() {
         erpRoutePermissionFor(RouteNames.whiteLabel),
         Permission.viewWhiteLabelPlatform,
       );
+      expect(
+        erpRoutePermissionFor(RouteNames.examAdministration),
+        Permission.viewExams,
+      );
       expect(erpRoutePermissionFor(RouteNames.parentDashboard), isNull);
     });
   });
@@ -111,6 +115,10 @@ void main() {
       );
       expect(
         canAccessErpRoute(principal, RouteNames.schoolCompletionHub),
+        isTrue,
+      );
+      expect(
+        canAccessErpRoute(principal, RouteNames.examAdministration),
         isTrue,
       );
     });

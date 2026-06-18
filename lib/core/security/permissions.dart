@@ -164,8 +164,11 @@ enum Permission {
   viewExamIntelligence,
 
   // Phase D M-D3 — Exam results governance
+  viewExams,
+  manageExams,
   manageExamMarks,
   submitExamResults,
+  verifyExamResults,
   approveExamResults,
   publishExamResults,
 

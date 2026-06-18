@@ -45,9 +45,18 @@ void main() {
       }
     }
 
+    Future<void> prepareForPrincipalSubmit(String examId) async {
+      await completeMarks(examId);
+      await teacherRepo.processExamResults(
+        query: _query,
+        request: TeacherExamProcessResultsRequest(examId: examId),
+      );
+      store.markCoordinatorVerified(examId, verifiedBy: 'Coordinator');
+    }
+
     test('teacher submit → principal approve → parent sees published results',
         () async {
-      await completeMarks('exam_math_8a');
+      await prepareForPrincipalSubmit('exam_math_8a');
 
       final beforeParent = await parentRepo.getExams(query: _query);
       expect(beforeParent.examResults, isEmpty);
@@ -85,7 +94,7 @@ void main() {
 
     test('reject keeps parent results empty and stores teacher-visible comment',
         () async {
-      await completeMarks('exam_math_8a');
+      await prepareForPrincipalSubmit('exam_math_8a');
 
       final pending = await adapter.submitForApproval(
         service: service,

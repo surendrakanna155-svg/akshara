@@ -1,4 +1,6 @@
+import '../../features/education/education_models.dart';
 import '../repositories/mock/mock_canonical_student_registry.dart';
+import 'exam_administration_persistence.dart';
 
 /// Lifecycle phases for the exam administration chain.
 enum ExamLifecyclePhase {
@@ -24,6 +26,7 @@ class ExamSession {
     required this.syllabusLabel,
     required this.maxMarks,
     required this.phase,
+    this.examType = EduExamType.unitTest,
   });
 
   final String id;
@@ -38,6 +41,7 @@ class ExamSession {
   final String syllabusLabel;
   final int maxMarks;
   final ExamLifecyclePhase phase;
+  final EduExamType examType;
 
   String get classLabel => '$grade-$section';
 
@@ -46,7 +50,10 @@ class ExamSession {
       phase == ExamLifecyclePhase.marksEntry ||
       phase == ExamLifecyclePhase.processed;
 
-  ExamSession copyWith({ExamLifecyclePhase? phase}) {
+  ExamSession copyWith({
+    ExamLifecyclePhase? phase,
+    EduExamType? examType,
+  }) {
     return ExamSession(
       id: id,
       title: title,
@@ -60,6 +67,7 @@ class ExamSession {
       syllabusLabel: syllabusLabel,
       maxMarks: maxMarks,
       phase: phase ?? this.phase,
+      examType: examType ?? this.examType,
     );
   }
 }
@@ -136,20 +144,113 @@ final class ExamAdministrationStore {
   final Map<String, ExamMarkRecord> _marks = {};
   final Map<String, PublishedExamResult> _publishedByMarkId = {};
   final Map<String, String> _rejectionCommentsByExamId = {};
+  final Map<String, String> _coordinatorVerifiedByExamId = {};
   bool _seeded = false;
+  ExamAdministrationPersistence? _persistence;
+
+  /// Attaches durable storage (mock pilot persistence — P0-EXAM-004).
+  void attachPersistence(ExamAdministrationPersistence persistence) {
+    _persistence = persistence;
+  }
 
   void ensureSeeded() {
     if (_seeded) return;
+    final snapshot = _persistence?.loadSnapshot();
+    if (snapshot != null) {
+      _importSnapshot(snapshot);
+      _seeded = true;
+      return;
+    }
     _seeded = true;
     _seedDefaultExams();
+    _persist();
   }
 
-  void reset() {
+  void reset({bool clearPersistence = true}) {
     _exams.clear();
     _marks.clear();
     _publishedByMarkId.clear();
     _rejectionCommentsByExamId.clear();
+    _coordinatorVerifiedByExamId.clear();
     _seeded = false;
+    if (clearPersistence) {
+      _persistence?.clear();
+    }
+  }
+
+  Map<String, dynamic> exportSnapshot() {
+    ensureSeeded();
+    return {
+      'version': 1,
+      'exams': [
+        for (final exam in _exams.values) _examToJson(exam),
+      ],
+      'marks': [
+        for (final mark in _marks.values) _markToJson(mark),
+      ],
+      'published': [
+        for (final result in _publishedByMarkId.values) _publishedToJson(result),
+      ],
+      'rejectionComments': Map<String, String>.from(_rejectionCommentsByExamId),
+      'coordinatorVerified': Map<String, String>.from(_coordinatorVerifiedByExamId),
+    };
+  }
+
+  void _importSnapshot(Map<String, dynamic> snapshot) {
+    _exams.clear();
+    _marks.clear();
+    _publishedByMarkId.clear();
+    _rejectionCommentsByExamId.clear();
+    _coordinatorVerifiedByExamId.clear();
+
+    final exams = snapshot['exams'];
+    if (exams is List) {
+      for (final raw in exams) {
+        if (raw is Map) {
+          final exam = _examFromJson(Map<String, dynamic>.from(raw));
+          _exams[exam.id] = exam;
+        }
+      }
+    }
+
+    final marks = snapshot['marks'];
+    if (marks is List) {
+      for (final raw in marks) {
+        if (raw is Map) {
+          final mark = _markFromJson(Map<String, dynamic>.from(raw));
+          _marks[mark.id] = mark;
+        }
+      }
+    }
+
+    final published = snapshot['published'];
+    if (published is List) {
+      for (final raw in published) {
+        if (raw is Map) {
+          final result = _publishedFromJson(Map<String, dynamic>.from(raw));
+          _publishedByMarkId[result.markEntryId] = result;
+        }
+      }
+    }
+
+    final rejection = snapshot['rejectionComments'];
+    if (rejection is Map) {
+      _rejectionCommentsByExamId.addAll(
+        rejection.map((k, v) => MapEntry('$k', '$v')),
+      );
+    }
+
+    final verified = snapshot['coordinatorVerified'];
+    if (verified is Map) {
+      _coordinatorVerifiedByExamId.addAll(
+        verified.map((k, v) => MapEntry('$k', '$v')),
+      );
+    }
+  }
+
+  void _persist() {
+    if (_persistence == null || !_seeded) return;
+    _persistence!.saveSnapshot(exportSnapshot());
   }
 
   bool get hasPublishedResults => _publishedByMarkId.isNotEmpty;
@@ -179,10 +280,42 @@ final class ExamAdministrationStore {
   void recordRejectionComment(String examId, String comment) {
     ensureSeeded();
     _rejectionCommentsByExamId[examId] = comment;
+    _persist();
   }
 
   void clearRejectionComment(String examId) {
     _rejectionCommentsByExamId.remove(examId);
+    _persist();
+  }
+
+  bool isCoordinatorVerified(String examId) {
+    ensureSeeded();
+    return _coordinatorVerifiedByExamId.containsKey(examId);
+  }
+
+  String? coordinatorVerifierFor(String examId) {
+    ensureSeeded();
+    return _coordinatorVerifiedByExamId[examId];
+  }
+
+  void markCoordinatorVerified(String examId, {required String verifiedBy}) {
+    ensureSeeded();
+    final exam = _exams[examId];
+    if (exam == null) {
+      throw StateError('Exam not found: $examId');
+    }
+    if (exam.phase != ExamLifecyclePhase.processed) {
+      throw StateError(
+        'Exam must be processed before coordinator verification (current: ${exam.phase.name})',
+      );
+    }
+    _coordinatorVerifiedByExamId[examId] = verifiedBy;
+    _persist();
+  }
+
+  void clearCoordinatorVerification(String examId) {
+    _coordinatorVerifiedByExamId.remove(examId);
+    _persist();
   }
 
   List<ExamSession> allExams() {
@@ -231,6 +364,7 @@ final class ExamAdministrationStore {
     required String venueLabel,
     required String syllabusLabel,
     required int maxMarks,
+    EduExamType examType = EduExamType.unitTest,
   }) {
     ensureSeeded();
     final id = 'exam_${_exams.length + 1}';
@@ -247,8 +381,10 @@ final class ExamAdministrationStore {
       syllabusLabel: syllabusLabel,
       maxMarks: maxMarks,
       phase: ExamLifecyclePhase.draft,
+      examType: examType,
     );
     _exams[id] = exam;
+    _persist();
     return exam;
   }
 
@@ -261,6 +397,7 @@ final class ExamAdministrationStore {
     final scheduled = exam.copyWith(phase: ExamLifecyclePhase.scheduled);
     _exams[examId] = scheduled;
     _provisionMarkSlots(scheduled);
+    _persist();
     return scheduled;
   }
 
@@ -273,6 +410,7 @@ final class ExamAdministrationStore {
     final open = exam.copyWith(phase: ExamLifecyclePhase.marksEntry);
     _exams[examId] = open;
     _provisionMarkSlots(open);
+    _persist();
     return open;
   }
 
@@ -290,6 +428,8 @@ final class ExamAdministrationStore {
     }
     final updated = existing.copyWith(marksObtained: marksObtained);
     _marks[markEntryId] = updated;
+    clearCoordinatorVerification(existing.examId);
+    _persist();
     return updated;
   }
 
@@ -308,6 +448,7 @@ final class ExamAdministrationStore {
     }
     final processed = exam.copyWith(phase: ExamLifecyclePhase.processed);
     _exams[examId] = processed;
+    _persist();
     return processed;
   }
 
@@ -349,6 +490,7 @@ final class ExamAdministrationStore {
     }
 
     _exams[examId] = exam.copyWith(phase: ExamLifecyclePhase.published);
+    _persist();
     return publishedCount;
   }
 
@@ -394,6 +536,7 @@ final class ExamAdministrationStore {
       syllabusLabel: 'Algebra, Linear Equations',
       maxMarks: 50,
       phase: ExamLifecyclePhase.marksEntry,
+      examType: EduExamType.unitTest,
     );
     _provisionMarkSlots(_exams[mathExamId]!);
 
@@ -427,6 +570,7 @@ final class ExamAdministrationStore {
       syllabusLabel: 'Cell Structure, Nutrition',
       maxMarks: 50,
       phase: ExamLifecyclePhase.scheduled,
+      examType: EduExamType.unitTest,
     );
   }
 
@@ -437,5 +581,91 @@ final class ExamAdministrationStore {
     if (percent >= 60) return 'B';
     if (percent >= 50) return 'C';
     return 'D';
+  }
+
+  static Map<String, dynamic> _examToJson(ExamSession exam) => {
+        'id': exam.id,
+        'title': exam.title,
+        'subject': exam.subject,
+        'grade': exam.grade,
+        'section': exam.section,
+        'termLabel': exam.termLabel,
+        'dateLabel': exam.dateLabel,
+        'timeLabel': exam.timeLabel,
+        'venueLabel': exam.venueLabel,
+        'syllabusLabel': exam.syllabusLabel,
+        'maxMarks': exam.maxMarks,
+        'phase': exam.phase.name,
+        'examType': exam.examType.name,
+      };
+
+  static ExamSession _examFromJson(Map<String, dynamic> json) {
+    return ExamSession(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      subject: json['subject'] as String,
+      grade: json['grade'] as String,
+      section: json['section'] as String,
+      termLabel: json['termLabel'] as String,
+      dateLabel: json['dateLabel'] as String,
+      timeLabel: json['timeLabel'] as String,
+      venueLabel: json['venueLabel'] as String,
+      syllabusLabel: json['syllabusLabel'] as String,
+      maxMarks: json['maxMarks'] as int,
+      phase: ExamLifecyclePhase.values.byName(json['phase'] as String),
+      examType: EduExamType.values.byName(json['examType'] as String),
+    );
+  }
+
+  static Map<String, dynamic> _markToJson(ExamMarkRecord mark) => {
+        'id': mark.id,
+        'examId': mark.examId,
+        'sisStudentId': mark.sisStudentId,
+        'studentName': mark.studentName,
+        'rollNo': mark.rollNo,
+        'marksObtained': mark.marksObtained,
+        'published': mark.published,
+      };
+
+  static ExamMarkRecord _markFromJson(Map<String, dynamic> json) {
+    return ExamMarkRecord(
+      id: json['id'] as String,
+      examId: json['examId'] as String,
+      sisStudentId: json['sisStudentId'] as String,
+      studentName: json['studentName'] as String,
+      rollNo: json['rollNo'] as String,
+      marksObtained: json['marksObtained'] as int?,
+      published: json['published'] as bool? ?? false,
+    );
+  }
+
+  static Map<String, dynamic> _publishedToJson(PublishedExamResult result) => {
+        'markEntryId': result.markEntryId,
+        'sisStudentId': result.sisStudentId,
+        'studentName': result.studentName,
+        'examId': result.examId,
+        'examTitle': result.examTitle,
+        'termLabel': result.termLabel,
+        'dateLabel': result.dateLabel,
+        'scoreObtained': result.scoreObtained,
+        'maxScore': result.maxScore,
+        'grade': result.grade,
+        'subject': result.subject,
+      };
+
+  static PublishedExamResult _publishedFromJson(Map<String, dynamic> json) {
+    return PublishedExamResult(
+      markEntryId: json['markEntryId'] as String,
+      sisStudentId: json['sisStudentId'] as String,
+      studentName: json['studentName'] as String,
+      examId: json['examId'] as String,
+      examTitle: json['examTitle'] as String,
+      termLabel: json['termLabel'] as String,
+      dateLabel: json['dateLabel'] as String,
+      scoreObtained: json['scoreObtained'] as int,
+      maxScore: json['maxScore'] as int,
+      grade: json['grade'] as String,
+      subject: json['subject'] as String,
+    );
   }
 }

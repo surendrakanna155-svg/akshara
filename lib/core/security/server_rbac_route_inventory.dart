@@ -69,6 +69,7 @@ abstract final class ServerRbacRouteInventory {
     'viewExamIntelligence',
     'manageExamMarks',
     'submitExamResults',
+    'verifyExamResults',
     'approveExamResults',
     'publishExamResults',
     'viewStudent360',

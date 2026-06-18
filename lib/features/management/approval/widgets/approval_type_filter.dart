@@ -42,6 +42,10 @@ class ApprovalTypeFilter extends ConsumerWidget {
 
   Key? _chipKey(ApprovalCategory category) => switch (category) {
         ApprovalCategory.academic => QaTestKeys.approvalTypeFilterAcademic,
+        ApprovalCategory.attendance => QaTestKeys.approvalTypeFilterAttendance,
+        ApprovalCategory.leave => QaTestKeys.approvalTypeFilterLeave,
+        ApprovalCategory.finance => QaTestKeys.approvalTypeFilterFinance,
+        ApprovalCategory.inventory => QaTestKeys.approvalTypeFilterInventory,
         _ => null,
       };
 }

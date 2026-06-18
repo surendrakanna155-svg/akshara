@@ -34,6 +34,8 @@ void main() {
 
     test('submit → approve → adapter publishes exam session', () async {
       await completeMarks('exam_math_8a');
+      store.processResults('exam_math_8a');
+      store.markCoordinatorVerified('exam_math_8a', verifiedBy: 'Coordinator');
 
       final pending = await adapter.submitForApproval(
         service: service,
@@ -63,6 +65,8 @@ void main() {
 
     test('reject keeps exam unpublished and stores principal comment', () async {
       await completeMarks('exam_math_8a');
+      store.processResults('exam_math_8a');
+      store.markCoordinatorVerified('exam_math_8a', verifiedBy: 'Coordinator');
 
       final pending = await adapter.submitForApproval(
         service: service,
@@ -91,6 +95,55 @@ void main() {
       expect(
         store.rejectionCommentFor('exam_math_8a'),
         'Recheck absent codes before resubmitting.',
+      );
+      expect(store.isCoordinatorVerified('exam_math_8a'), isFalse);
+    });
+
+    test('blocks principal submission until coordinator verifies', () async {
+      await completeMarks('exam_math_8a');
+      store.processResults('exam_math_8a');
+
+      expect(
+        () => adapter.submitForApproval(
+          service: service,
+          query: _query,
+          examId: 'exam_math_8a',
+          requesterId: 'teacher_001',
+          requesterName: 'Priya Sharma',
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
+
+    test('teacher verify → coordinator verify → principal approve chain', () async {
+      await completeMarks('exam_math_8a');
+      store.processResults('exam_math_8a');
+      expect(store.examById('exam_math_8a')!.phase, ExamLifecyclePhase.processed);
+
+      store.markCoordinatorVerified('exam_math_8a', verifiedBy: 'Vice Principal');
+      expect(store.isCoordinatorVerified('exam_math_8a'), isTrue);
+
+      final pending = await adapter.submitForApproval(
+        service: service,
+        query: _query,
+        examId: 'exam_math_8a',
+        requesterId: 'teacher_001',
+        requesterName: 'Priya Sharma',
+      );
+
+      final approved = await service.approveRequest(
+        query: _query,
+        request: ApproveApprovalRequest(
+          approvalId: pending.id,
+          actorId: 'principal_001',
+          actorName: 'Principal',
+        ),
+      );
+      adapter.onApproved(query: _query, request: approved);
+
+      expect(
+        store.examById('exam_math_8a')!.phase,
+        ExamLifecyclePhase.published,
       );
     });
   });

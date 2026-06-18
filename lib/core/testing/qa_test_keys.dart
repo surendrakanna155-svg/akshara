@@ -87,6 +87,10 @@ abstract final class QaTestKeys {
 
   static const sisRegistrySearchField =
       ValueKey<String>('sis_registry_search_field');
+  static const sisRegistryExportButton =
+      ValueKey<String>('sis_registry_export_button');
+  static const sisRegistryExportSuccessSnackbar =
+      ValueKey<String>('sis_registry_export_success_snackbar');
 
   static const sisEditProfileButton =
       ValueKey<String>('sis_edit_profile_button');
@@ -103,6 +107,61 @@ abstract final class QaTestKeys {
       ValueKey<String>(
         'sis_registry_student_${normalizeSubNavLabel(studentName)}',
       );
+
+  static ValueKey<String> sisOpenStudent360Button(String studentId) =>
+      ValueKey<String>('sis_open_student_360_$studentId');
+
+  static const financeCreateRefundButton =
+      ValueKey<String>('finance_create_refund_button');
+  static const financeCreateRefundSubmitButton =
+      ValueKey<String>('finance_create_refund_submit_button');
+  static const financeRefundCreatedSnackbar =
+      ValueKey<String>('finance_refund_created_snackbar');
+
+  static const examAdminCreateButton =
+      ValueKey<String>('exam_admin_create_button');
+  static const examAdminCreateSubmitButton =
+      ValueKey<String>('exam_admin_create_submit_button');
+  static ValueKey<String> examAdminScheduleButton(String examId) =>
+      ValueKey<String>('exam_admin_schedule_$examId');
+  static ValueKey<String> examAdminOpenMarksButton(String examId) =>
+      ValueKey<String>('exam_admin_open_marks_$examId');
+  static ValueKey<String> examAdminEnterMarksButton(String examId) =>
+      ValueKey<String>('exam_admin_enter_marks_$examId');
+  static ValueKey<String> examAdminProcessResultsButton(String examId) =>
+      ValueKey<String>('exam_admin_process_results_$examId');
+  static ValueKey<String> examAdminSubmitApprovalButton(String examId) =>
+      ValueKey<String>('exam_admin_submit_approval_$examId');
+  static ValueKey<String> examAdminVerifyCoordinatorButton(String examId) =>
+      ValueKey<String>('exam_admin_verify_coordinator_$examId');
+  static ValueKey<String> examAdminMarkField(String markId) =>
+      ValueKey<String>('exam_admin_mark_field_$markId');
+  static ValueKey<String> examAdminMarkSaveButton(String markId) =>
+      ValueKey<String>('exam_admin_mark_save_$markId');
+
+  static const financeAssignConcessionButton =
+      ValueKey<String>('finance_assign_concession_button');
+  static const financeAssignConcessionSubmitButton =
+      ValueKey<String>('finance_assign_concession_submit_button');
+  static const financeCreateFeeStructureSubmitButton =
+      ValueKey<String>('finance_create_fee_structure_submit_button');
+
+  static const teacherAttendanceCorrectionButton =
+      ValueKey<String>('teacher_attendance_correction_button');
+  static const teacherAttendanceCorrectionSubmitButton =
+      ValueKey<String>('teacher_attendance_correction_submit_button');
+
+  static ValueKey<String> teacherExamMarkField(String markId) =>
+      ValueKey<String>('teacher_exam_mark_field_$markId');
+  static ValueKey<String> teacherExamMarkSaveButton(String markId) =>
+      ValueKey<String>('teacher_exam_mark_save_$markId');
+  static const teacherExamSelector =
+      ValueKey<String>('teacher_exam_selector');
+
+  static const parentAttendanceCorrectionButton =
+      ValueKey<String>('parent_attendance_correction_button');
+  static const parentAttendanceCorrectionSubmitButton =
+      ValueKey<String>('parent_attendance_correction_submit_button');
 
   static const sisPromotionSourceYearField =
       ValueKey<String>('sis_promotion_source_year');
@@ -520,12 +579,47 @@ abstract final class QaTestKeys {
   static const examSubmitApprovalButton =
       ValueKey<String>('exam_submit_approval_button');
 
+  /// Teacher exam submit for coordinator verification (M-A5).
+  static const examSubmitVerificationButton =
+      ValueKey<String>('exam_submit_verification_button');
+
+  /// Student 360 tab bar (Phase C).
+  static const student360TabBar = ValueKey<String>('student_360_tab_bar');
+  static const student360ExportButton =
+      ValueKey<String>('student_360_export_button');
+  static const student360ExportSuccessSnackbar =
+      ValueKey<String>('student_360_export_success_snackbar');
+  static ValueKey<String> examMarksExportButton(String examId) =>
+      ValueKey<String>('exam_marks_export_$examId');
+
+  /// Finance audit register export (Phase E).
+  static const financeAuditRegisterExportButton =
+      ValueKey<String>('finance_audit_register_export_button');
+
+  static const financeReportExportExcelButton =
+      ValueKey<String>('finance_report_export_excel_button');
+
   /// Principal approves exam results in approval center (M-D3).
   static ValueKey<String> examPrincipalApproveButton(String approvalId) =>
       ValueKey<String>('exam_principal_approve_$approvalId');
 
   static const approvalTypeFilterAcademic =
       ValueKey<String>('approval_type_filter_academic');
+
+  static const approvalTypeFilterAttendance =
+      ValueKey<String>('approval_type_filter_attendance');
+
+  static const approvalTypeFilterLeave =
+      ValueKey<String>('approval_type_filter_leave');
+
+  static const approvalTypeFilterFinance =
+      ValueKey<String>('approval_type_filter_finance');
+
+  static const approvalTypeFilterInventory =
+      ValueKey<String>('approval_type_filter_inventory');
+
+  static const openApprovalCenterButton =
+      ValueKey<String>('open_approval_center_button');
 
   static const managementDashboardExportButton =
       ValueKey<String>('management_dashboard_export_button');

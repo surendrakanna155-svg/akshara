@@ -1,15 +1,36 @@
-# Workflow — Exam publish approval (M-D3)
-# tags: workflow,exams,approval
-# Status: stub — full Patrol validation after emulator gate
+# Workflow — Exam publish approval (M-A5)
+# tags: workflow,exams,approval,governance
+# Status: executable — Patrol pilot_closure_workflows_e2e_test.dart
 appId: com.akshara.erp
 ---
-# Teacher persona — submit processed exam results for approval
+# Teacher persona — submit marks for coordinator verification
 - runFlow:
     file: ../maestro/flows/_shared/mobile_demo_login.yaml
     env:
       ACCOUNT_CHIP: Teacher
 - tapOn: "Exams"
-- tapOn: "Submit for approval"
+- tapOn: "Results"
+- tapOn: "Submit for verification"
+- takeScreenshot: workflow_teacher_exam_submit_verification
+---
+# Coordinator persona — verify processed results on ERP marks screen
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Vice Principal
+- tapOn: "Exam administration"
+- tapOn: "Enter marks"
+- tapOn: "Verify & forward to principal"
+- takeScreenshot: workflow_coordinator_exam_verify
+---
+# Teacher persona — submit verified results for principal approval
+- runFlow:
+    file: ../maestro/flows/_shared/mobile_demo_login.yaml
+    env:
+      ACCOUNT_CHIP: Teacher
+- tapOn: "Exams"
+- tapOn: "Results"
+- tapOn: "Submit for principal approval"
 - takeScreenshot: workflow_teacher_exam_submit_approval
 ---
 # Principal persona — approve pending exam results

@@ -532,19 +532,25 @@ class MutationPermissionRegistry {
     MutationPermissionEntry(
       moduleId: 'inventory',
       mutationId: 'createProcurementOrder',
-      permission: Permission.manageInventory,
+      permission: Permission.createInventoryPo,
       kind: 'manage',
     ),
     MutationPermissionEntry(
       moduleId: 'inventory',
       mutationId: 'approveProcurementHandoff',
-      permission: Permission.manageInventory,
+      permission: Permission.approvePurchaseOrder,
       kind: 'manage',
     ),
     MutationPermissionEntry(
       moduleId: 'inventory',
       mutationId: 'receiveProcurementHandoff',
-      permission: Permission.manageInventory,
+      permission: Permission.manageProcurementWorkflow,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'inventory',
+      mutationId: 'recordAssetLifecycleEvent',
+      permission: Permission.manageAssetLifecycle,
       kind: 'manage',
     ),
     MutationPermissionEntry(
@@ -668,6 +674,12 @@ class MutationPermissionRegistry {
     // Teacher exams (M-D3)
     MutationPermissionEntry(
       moduleId: 'teacher',
+      mutationId: 'processExamResults',
+      permission: Permission.submitExamResults,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'teacher',
       mutationId: 'submitExamResultsForApproval',
       permission: Permission.submitExamResults,
       kind: 'manage',
@@ -710,18 +722,91 @@ class MutationPermissionRegistry {
       permission: Permission.manageFinance,
       kind: 'manage',
     ),
-    // Governance M-D6 — inventory PO
+    // Phase A M-A2 — exam administration
     MutationPermissionEntry(
-      moduleId: 'inventory',
-      mutationId: 'createProcurementOrder',
-      permission: Permission.createInventoryPo,
+      moduleId: 'academics',
+      mutationId: 'createExam',
+      permission: Permission.manageExams,
       kind: 'manage',
     ),
     MutationPermissionEntry(
-      moduleId: 'inventory',
-      mutationId: 'approveProcurementOrder',
-      permission: Permission.approvePurchaseOrder,
+      moduleId: 'academics',
+      mutationId: 'scheduleExam',
+      permission: Permission.manageExams,
       kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'academics',
+      mutationId: 'openExamMarksEntry',
+      permission: Permission.manageExams,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'academics',
+      mutationId: 'updateExamMark',
+      permission: Permission.manageExamMarks,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'academics',
+      mutationId: 'processExamResults',
+      permission: Permission.manageExams,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'academics',
+      mutationId: 'verifyCoordinatorResults',
+      permission: Permission.verifyExamResults,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'academics',
+      mutationId: 'submitExamResultsForApproval',
+      permission: Permission.submitExamResults,
+      kind: 'manage',
+    ),
+    // Phase B — attendance correction scaffold
+    MutationPermissionEntry(
+      moduleId: 'attendance',
+      mutationId: 'createAttendanceCorrection',
+      permission: Permission.submitAttendanceCorrection,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'attendance',
+      mutationId: 'submitAttendanceCorrection',
+      permission: Permission.submitAttendanceCorrection,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'teacher',
+      mutationId: 'submitAttendanceCorrection',
+      permission: Permission.submitAttendanceCorrection,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'teacher',
+      mutationId: 'submitClassAttendance',
+      permission: Permission.markAttendance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'parent',
+      mutationId: 'submitLeaveRequest',
+      permission: Permission.submitStudentLeave,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'management',
+      mutationId: 'resolveApprovalApprove',
+      permission: Permission.approveStudentLeave,
+      kind: 'approve',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'management',
+      mutationId: 'resolveApprovalReject',
+      permission: Permission.approveStudentLeave,
+      kind: 'approve',
     ),
   ];
 

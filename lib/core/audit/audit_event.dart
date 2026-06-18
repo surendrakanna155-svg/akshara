@@ -84,6 +84,13 @@ enum AuditEventType {
   leaveRequestRejected,
   receiptPdfExported,
 
+  // Phase A M-A5 — Exam results governance
+  examMarkUpdated,
+  examResultsSubmittedForVerification,
+  examResultsCoordinatorVerified,
+  examResultsSubmittedForApproval,
+  examResultsPublished,
+
   transportStudentAssigned,
   transportStudentTransferred,
   transportStudentRemoved,

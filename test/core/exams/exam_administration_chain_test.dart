@@ -109,6 +109,9 @@ void main() {
         ),
       );
 
+      store.processResults('exam_math_8a');
+      store.markCoordinatorVerified('exam_math_8a', verifiedBy: 'Coordinator');
+
       final pending = await adapter.submitForApproval(
         service: service,
         query: _query,

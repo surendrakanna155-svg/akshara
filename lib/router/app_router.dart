@@ -80,6 +80,7 @@ import 'branch_navigation.dart';
 import 'franchise_navigation.dart';
 import 'evolution_navigation.dart';
 import 'school_completion_navigation.dart';
+import '../features/academics/exam_admin/exam_admin_navigation.dart';
 import 'management_navigation.dart';
 import 'hostel_navigation.dart';
 import 'hr_navigation.dart';
@@ -673,6 +674,22 @@ GoRouter createAppRouter({
             pageBuilder: (context, state) => NoTransitionPage(
               child: subjectsManagementRouteBuilder(context, state),
             ),
+          ),
+          GoRoute(
+            path: RouteNames.examAdministration,
+            name: 'examAdministration',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: examAdministrationRouteBuilder(context, state),
+            ),
+            routes: [
+              GoRoute(
+                path: ':examId/marks',
+                name: 'examAdministrationMarks',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: examMarksEntryRouteBuilder(context, state),
+                ),
+              ),
+            ],
           ),
           GoRoute(
             path: RouteNames.lessonLogs,

@@ -1,0 +1,14 @@
+# Workflow — ERP exam administration (M-A2/M-A3)
+# tags: workflow,exams,academics
+# Status: executable — Patrol pilot_closure_workflows_e2e_test.dart
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/staff_demo_login.yaml
+    env:
+      ERP_ROLE: Principal
+- tapOn: "School Completion"
+- tapOn: "Exam Administration"
+- takeScreenshot: workflow_exam_admin_list
+- tapOn: "Enter marks"
+- takeScreenshot: workflow_exam_marks_entry

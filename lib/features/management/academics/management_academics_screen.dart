@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
@@ -106,6 +108,15 @@ class ManagementAcademicsScreen extends ConsumerWidget {
             context,
             ManagementScreen.academics,
           ),
+        ),
+        const SizedBox(height: AksharaSpacing.s4),
+        AksharaInsightCard(
+          message:
+              'Schedule exams, open marks entry, and govern publication from ERP Exam Administration.',
+          actionLabel: 'Open exam administration',
+          icon: Icons.assignment_outlined,
+          semanticLabelPrefix: 'Exam administration shortcut',
+          onAction: () => context.push(RouteNames.examAdministration),
         ),
       ],
     );

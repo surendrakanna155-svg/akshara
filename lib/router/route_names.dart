@@ -105,6 +105,9 @@ abstract final class RouteNames {
   static const String growthPlatform = '/growth';
   static const String schoolCompletionHub = '/school/completion';
   static const String subjectsManagement = '/school/subjects';
+  static const String examAdministration = '/school/exam-administration';
+  static String examAdministrationMarksPath(String examId) =>
+      '$examAdministration/$examId/marks';
   static const String lessonLogs = '/school/lesson-logs';
   static const String timetableAutomation = '/school/timetables/automate';
   static const String schoolBranding = '/school/branding';
@@ -320,6 +323,8 @@ abstract final class RouteNames {
   static const String managementPerformance = '/management/performance';
   static const String managementTasks = '/management/tasks';
   static const String managementApprovals = '/management/approvals';
+  static const String managementAttendanceCorrections =
+      '/management/attendance-corrections';
   static const String managementWorkflowAutomation =
       '/management/workflow-automation';
   static const String managementSettings = '/management/settings';
@@ -336,6 +341,7 @@ abstract final class RouteNames {
     managementPerformance,
     managementTasks,
     managementApprovals,
+    managementAttendanceCorrections,
     managementWorkflowAutomation,
     managementSettings,
   ];
@@ -547,6 +553,7 @@ abstract final class RouteNames {
     growthPlatform,
     schoolCompletionHub,
     subjectsManagement,
+    examAdministration,
     lessonLogs,
     timetableAutomation,
     schoolBranding,

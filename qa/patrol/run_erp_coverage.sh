@@ -134,6 +134,8 @@ ALL_TARGETS=(
   # Post-M13 QA expansion — batch 1
   "patrol_test/workflows/finance_filters_e2e_test.dart"
   "patrol_test/workflows/finance_exports_e2e_test.dart"
+  "patrol_test/workflows/pilot_closure_workflows_e2e_test.dart"
+  "patrol_test/workflows/patrol_batch1_p0_expansion_e2e_test.dart"
   "patrol_test/workflows/admissions_exports_e2e_test.dart"
   "patrol_test/workflows/management_actions_e2e_test.dart"
   "patrol_test/workflows/sis_filters_e2e_test.dart"

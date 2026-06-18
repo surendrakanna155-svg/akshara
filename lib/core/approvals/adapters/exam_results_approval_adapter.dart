@@ -46,6 +46,7 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
     }
 
     _ensureProcessed(examId);
+    _ensureCoordinatorVerified(examId);
     _store.clearRejectionComment(examId);
 
     final refreshed = _store.examById(examId)!;
@@ -100,6 +101,7 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
     }
 
     _store.recordRejectionComment(request.entityId, comment);
+    _store.clearCoordinatorVerification(request.entityId);
   }
 
   @override
@@ -124,6 +126,7 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
       'Term': exam.termLabel,
       'Marks completion': '$entered/$total ($completion)',
       'Phase': exam.phase.name,
+      'Coordinator verified': _store.isCoordinatorVerified(exam.id) ? 'Yes' : 'No',
     };
   }
 
@@ -144,7 +147,20 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
       'marksEntered': entered,
       'marksTotal': marks.length,
       'phase': exam.phase.name,
+      'coordinatorVerified': _store.isCoordinatorVerified(examId),
     };
+  }
+
+  void _ensureCoordinatorVerified(String examId) {
+    if (_store.isCoordinatorVerified(examId)) return;
+    throw ApiFailureException(
+      ApiFailure(
+        type: ApiFailureType.unknown,
+        message:
+            'Exam results must be verified by the exam coordinator before principal approval.',
+        code: 'EXAM_COORDINATOR_VERIFICATION_REQUIRED',
+      ),
+    );
   }
 
   void _ensureProcessed(String examId) {

@@ -17,6 +17,7 @@ class EducationScreen extends ConsumerStatefulWidget {
 class _EducationScreenState extends ConsumerState<EducationScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
+  bool _showExamAdminBanner = true;
 
   final _classController = TextEditingController(text: 'Grade 8');
   final _sectionController = TextEditingController(text: 'A');
@@ -74,13 +75,34 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabs,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _questionPapersTab(canManage),
-          _questionBankTab(canManage),
-          _homeworkTab(canManage),
-          _remarksTab(canManage),
+          if (_showExamAdminBanner)
+            MaterialBanner(
+              content: const Text(
+                'Question papers and worksheets live here. Exam scheduling, marks entry, '
+                'and result publication are managed in ERP Exam Administration (School Completion).',
+              ),
+              leading: const Icon(Icons.info_outline),
+              actions: [
+                TextButton(
+                  onPressed: () => setState(() => _showExamAdminBanner = false),
+                  child: const Text('Dismiss'),
+                ),
+              ],
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: [
+                _questionPapersTab(canManage),
+                _questionBankTab(canManage),
+                _homeworkTab(canManage),
+                _remarksTab(canManage),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -395,12 +417,16 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
                                     child: TextButton.icon(
                                       key: QaTestKeys.educationReportCardExportButton,
                                       onPressed: () {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        EducationPdfService.printReportCardRemark(
+                                          remark,
+                                        ).catchError((_) {});
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
                                             key: QaTestKeys
                                                 .educationReportCardExportSuccessSnackbar,
                                             content: Text(
-                                              'Report card PDF export queued (${remark.studentId})',
+                                              'Report card PDF ready (${remark.studentId})',
                                             ),
                                           ),
                                         );

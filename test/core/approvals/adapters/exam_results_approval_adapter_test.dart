@@ -37,8 +37,14 @@ void main() {
       }
     }
 
+    Future<void> prepareForPrincipalSubmit(String examId) async {
+      await completeAllMarks(examId);
+      store.processResults(examId);
+      store.markCoordinatorVerified(examId, verifiedBy: 'Coordinator');
+    }
+
     test('submit builds examResults approval with exam_session entity', () async {
-      await completeAllMarks('exam_math_8a');
+      await prepareForPrincipalSubmit('exam_math_8a');
 
       final approval = await adapter.submitForApproval(
         service: service,
@@ -69,7 +75,7 @@ void main() {
     });
 
     test('submit deduplicates pending request for same exam', () async {
-      await completeAllMarks('exam_math_8a');
+      await prepareForPrincipalSubmit('exam_math_8a');
 
       final first = await adapter.submitForApproval(
         service: service,
@@ -90,8 +96,7 @@ void main() {
     });
 
     test('onApproved publishes results to store', () async {
-      await completeAllMarks('exam_math_8a');
-      store.processResults('exam_math_8a');
+      await prepareForPrincipalSubmit('exam_math_8a');
 
       final approval = await adapter.submitForApproval(
         service: service,
@@ -116,7 +121,7 @@ void main() {
     });
 
     test('onRejected records comment and keeps exam unpublished', () async {
-      await completeAllMarks('exam_math_8a');
+      await prepareForPrincipalSubmit('exam_math_8a');
       final approval = await adapter.submitForApproval(
         service: service,
         query: _query,
@@ -145,7 +150,7 @@ void main() {
     });
 
     test('enrichDetail includes marks completion', () async {
-      await completeAllMarks('exam_math_8a');
+      await prepareForPrincipalSubmit('exam_math_8a');
       final approval = await adapter.submitForApproval(
         service: service,
         query: _query,
