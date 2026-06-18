@@ -134,6 +134,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('exam_admin_submit_approval_$examId');
   static ValueKey<String> examAdminVerifyCoordinatorButton(String examId) =>
       ValueKey<String>('exam_admin_verify_coordinator_$examId');
+  static ValueKey<String> examAdminApprovalStatusChip(String examId) =>
+      ValueKey<String>('exam_admin_approval_status_$examId');
   static ValueKey<String> examAdminMarkField(String markId) =>
       ValueKey<String>('exam_admin_mark_field_$markId');
   static ValueKey<String> examAdminMarkSaveButton(String markId) =>

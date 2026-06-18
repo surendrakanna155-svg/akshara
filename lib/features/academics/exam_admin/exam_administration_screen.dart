@@ -148,6 +148,7 @@ class _ExamSessionCard extends ConsumerWidget {
               style: text.bodySmall,
             ),
             Text(exam.venueLabel, style: text.bodySmall),
+            _ExamApprovalStatusRow(exam: exam),
             const SizedBox(height: AksharaSpacing.s3),
             ExamLifecycleActions(exam: exam),
           ],
@@ -156,6 +157,62 @@ class _ExamSessionCard extends ConsumerWidget {
     );
   }
 }
+
+/// Approve → publish status surfaced on each exam card so coordinators and
+/// principals see what an exam is waiting on without leaving the workspace.
+/// Hidden for early phases (draft/scheduled/marks-in-progress) where the phase
+/// chip already says everything.
+class _ExamApprovalStatusRow extends StatelessWidget {
+  const _ExamApprovalStatusRow({required this.exam});
+
+  final ExamSession exam;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = examApprovalStatus(exam);
+    if (status == ExamApprovalStatus.none ||
+        status == ExamApprovalStatus.marksInProgress) {
+      return const SizedBox.shrink();
+    }
+
+    final colors = context.colors;
+    final text = context.aksharaText;
+    final rejection = exam.rejectionComment;
+    final showFeedback = status == ExamApprovalStatus.returned &&
+        rejection != null &&
+        rejection.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AksharaSpacing.s3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AksharaStatusChip(
+            key: QaTestKeys.examAdminApprovalStatusChip(exam.id),
+            label: examApprovalStatusLabel(status),
+            tone: _approvalStatusTone(status),
+          ),
+          if (showFeedback) ...[
+            const SizedBox(height: AksharaSpacing.s2),
+            Text(
+              'Principal feedback: $rejection',
+              style: text.bodySmall.copyWith(color: colors.error),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+KpiAccent _approvalStatusTone(ExamApprovalStatus status) => switch (status) {
+      ExamApprovalStatus.published => KpiAccent.success,
+      ExamApprovalStatus.returned => KpiAccent.error,
+      ExamApprovalStatus.awaitingApproval => KpiAccent.warning,
+      ExamApprovalStatus.awaitingVerification => KpiAccent.warning,
+      ExamApprovalStatus.marksInProgress => KpiAccent.neutral,
+      ExamApprovalStatus.none => KpiAccent.neutral,
+    };
 
 /// Compact "current exam settings" bar — shows the school's grading style and
 /// rank visibility at a glance, and opens the Exam Settings sheet on tap.
