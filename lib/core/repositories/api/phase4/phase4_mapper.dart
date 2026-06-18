@@ -25,8 +25,16 @@ class Phase4Mapper {
 
   static Student360Profile student360FromApi(Map<String, dynamic> json) {
     final profile = json['profile'] as Map<String, dynamic>? ?? json;
+    final identity = Map<String, dynamic>.from(profile['identity'] as Map? ?? {});
+    final displayName = identity['displayName'] as String? ??
+        identity['name'] as String? ??
+        '';
+    if (displayName.isNotEmpty) {
+      identity['displayName'] = displayName;
+      identity['name'] = displayName;
+    }
     return Student360Profile(
-      identity: Map<String, dynamic>.from(profile['identity'] as Map? ?? {}),
+      identity: identity,
       admissions: Map<String, dynamic>.from(profile['admissions'] as Map? ?? {}),
       attendance: Map<String, dynamic>.from(profile['attendance'] as Map? ?? {}),
       marks: Map<String, dynamic>.from(profile['marks'] as Map? ?? {}),
@@ -38,6 +46,9 @@ class Phase4Mapper {
       achievements: Map<String, dynamic>.from(profile['achievements'] as Map? ?? {}),
       risk: Map<String, dynamic>.from(profile['risk'] as Map? ?? {}),
       parentInformation: Map<String, dynamic>.from(profile['parentInformation'] as Map? ?? {}),
+      behaviour: Map<String, dynamic>.from(profile['behaviour'] as Map? ?? {}),
+      transport: Map<String, dynamic>.from(profile['transport'] as Map? ?? {}),
+      documents: Map<String, dynamic>.from(profile['documents'] as Map? ?? {}),
     );
   }
 

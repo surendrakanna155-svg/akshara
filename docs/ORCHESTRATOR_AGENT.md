@@ -1,8 +1,8 @@
 # Akshara ERP — Orchestrator Agent
 
-**Version:** 1.6  
+**Version:** 1.7  
 **Last updated:** 2026-06-17  
-**Branch:** `feature/m15-theme` — F1 certified · F2 certified  
+**Branch:** `feature/m15-theme` — F1 certified · F2 certified · F3 certified  
 **Purpose:** Single source of truth for program execution order, agent ownership, gates, and stop rules.  
 **Authority:** Supersedes ad-hoc session prompts. Every orchestrator session **must read this file first**, then the linked milestone docs.
 
@@ -15,7 +15,7 @@
 5. `docs/OPERATIONAL_GAP_MASTER_TRACKER.md` — 94-gap backlog
 6. `docs/OPERATIONAL_REMEDIATION_ROADMAP.md` — client phase sequencing
 7. [`GOVERNANCE_COMPLETION_REPORT.md`](./GOVERNANCE_COMPLETION_REPORT.md) — Phase D complete
-8. Latest certification report (`PHASE_F2_FINAL_CERTIFICATION.md`, `PHASE_F1_FINAL_CERTIFICATION.md`, `FINAL_PILOT_CLOSURE_REPORT.md`)
+8. Latest certification report (`PHASE_F3_FINAL_CERTIFICATION.md`, `PHASE_F2_FINAL_CERTIFICATION.md`, `PHASE_F1_FINAL_CERTIFICATION.md`, `FINAL_PILOT_CLOSURE_REPORT.md`)
 9. `AGENTS.md` — Cursor agent A–G ownership
 10. `docs/CURSOR_WORKFLOW.md` — session lifecycle
 11. `docs/MULTI_AGENT_EXECUTION_PLAN.md` — parallel workstreams
@@ -66,7 +66,7 @@ Flutter remains **REST/Dio + `ApiEnvelopeDto` + JWT + `X-Tenant-Id` / `X-School-
 |-------|------|---------------|----------|-------------|------------------------|
 | **F1** | Auth + RBAC | A1, A10 | 1.5–2 wks | +8% | **~53%** ✅ |
 | **F2** | Approval API | A2 | 3–4 wks | +12% | **~65%** ✅ |
-| **F3** | SIS + Student 360 | A8 | 1.5–2 wks | +6% | **~71%** |
+| **F3** | SIS + Student 360 | A8 | 1.5–2 wks | +6% | **~71%** ✅ |
 | **F4** | Exams | A3 | 3–4 wks | +10% | **~81%** |
 | **F5** | Attendance | A4, A5 | 2.5–3.5 wks | +8% | **~89%** |
 | **F6** | Audit / event upload | A9 | 1 wk | +3% | **~92%** |
@@ -286,7 +286,7 @@ Whenever **new screens, dashboards, approvals, Student 360, Marketing, Finance, 
 | **Mock / UAT pilot** | **GO** — `ENABLE_API_MODE=false`, 1949+ unit tests |
 | **First real school (live API)** | **NO-GO** until F1–F7 Class A complete |
 | **Parallel domain work (client)** | Phases A–E largely complete on mock; no new client modules without authorization |
-| **Active mission** | **Await F3 authorization** (SIS / 360 reads) |
+| **Active mission** | **Await F4 authorization** (Exams API) |
 
 ### What is working today (operational)
 
@@ -364,10 +364,10 @@ Readiness is tracked on **two baselines** — mock/UAT pilot vs production API p
 
 | Metric | **Current (2026-06-18)** | After F7 (target) |
 |--------|--------------------------|-------------------|
-| **Overall production API** | **~65%** | **≥92%** (Class A GO) |
+| **Overall production API** | **~71%** | **≥92%** (Class A GO) |
 | **Auth + RBAC (F1)** | **100%** client cert | 100% |
 | **Approval API (F2)** | **100%** client + Edge | 100% |
-| **SIS + Student 360 (F3)** | ~40% partial | 100% |
+| **SIS + Student 360 (F3)** | **100%** F3 scope | 100% |
 | **Exams (F4)** | 0% (stub + local persistence) | 100% |
 | **Attendance (F5)** | 0% (no API) | 100% |
 | **Audit upload (F6)** | ~50% (queue only) | 100% |
@@ -422,9 +422,9 @@ Readiness is tracked on **two baselines** — mock/UAT pilot vs production API p
 |-------|-------|
 | **Milestone** | **F1 — Auth + RBAC** — **✅ CERTIFIED** |
 | **Status** | See [`PHASE_F1_FINAL_CERTIFICATION.md`](./PHASE_F1_FINAL_CERTIFICATION.md) |
-| **Readiness delta** | Production API **~53% → ~65%** (F2 Approval API) |
-| **Next authorized step** | **F3 — SIS / 360 reads** (await Program Director authorization) |
-| **Do not auto-start** | F3–F7 without explicit authorization |
+| **Readiness delta** | Production API **~65% → ~71%** (F3 SIS + Student 360 API) |
+| **Next authorized step** | **F4 — Exams API** (await Program Director authorization) |
+| **Do not auto-start** | F4–F7 without explicit authorization |
 
 ### Previously active: F1 implementation (now complete)
 
@@ -608,8 +608,8 @@ Parallel development and downstream phases unlock only when conditions below are
 | **F3–F7 start** | Prior F-phase certified | Per `PRODUCTION_BACKEND_ROADMAP.md` dependencies |
 | **Real-school go-live** | F1–F7 complete + Class A gates | `PRODUCTION_BACKEND_ROADMAP.md` § GO criteria |
 
-**Currently unlocked:** None (F2 complete — await F3 authorization).  
-**Currently locked:** F3–F7 · new client feature modules · Marketing · Transport GPS.
+**Currently unlocked:** None (F3 complete — await F4 authorization).  
+**Currently locked:** F4–F7 · new client feature modules · Marketing · Transport GPS.
 
 ---
 
@@ -841,6 +841,7 @@ Each session ends with:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.7 | 2026-06-17 | F3 SIS + Student 360 API certified (`PHASE_F3_FINAL_CERTIFICATION.md`); production API ~71%; F4 locked |
 | 1.6 | 2026-06-17 | F2 Approval API certified (`PHASE_F2_FINAL_CERTIFICATION.md`); production API ~65%; F3 locked |
 | 1.5 | 2026-06-18 | F1 Auth + RBAC certified (`PHASE_F1_FINAL_CERTIFICATION.md`); production API ~53%; F2 locked |
 | 1.4 | 2026-06-18 | Backend architecture LOCKED; Production Backend Program F1–F7; F1 active |

@@ -312,7 +312,7 @@ class SisMapper {
           lateDays: 0,
           periodLabel: '',
         ),
-        documents: const [],
+        documents: _mapDocuments(raw['documents'] as List<dynamic>? ?? const []),
         timeline: [
           if (student.enrolledAt.isNotEmpty)
             SisTimelineEvent(

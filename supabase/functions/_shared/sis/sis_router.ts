@@ -15,6 +15,10 @@ import {
   handleUpdateStudentStatus,
 } from "./sis_handlers.ts";
 import {
+  handleListStudentDocuments,
+  handleUploadStudentDocument,
+} from "./sis_document_handlers.ts";
+import {
   handleGetStudent360Profile,
   handleGetStudentTimeline,
 } from "./sis_student_360_handlers.ts";
@@ -58,13 +62,23 @@ export function matchSisRoute(
     return { handler: handleUpdateStudentStatus, args: [statusMatch[1]!] };
   }
 
+  const documentsMatch = path.match(/^\/sis\/students\/([^/]+)\/documents$/);
+  if (documentsMatch) {
+    if (method === "GET") {
+      return { handler: handleListStudentDocuments, args: [documentsMatch[1]!] };
+    }
+    if (method === "POST") {
+      return { handler: handleUploadStudentDocument, args: [documentsMatch[1]!] };
+    }
+  }
+
   const profile360Match = path.match(/^\/sis\/students\/([^/]+)\/360$/);
-  if (profile360Match && method === "GET" && UUID_SEGMENT.test(profile360Match[1]!)) {
+  if (profile360Match && method === "GET") {
     return { handler: handleGetStudent360Profile, args: [profile360Match[1]!] };
   }
 
   const timelineMatch = path.match(/^\/sis\/students\/([^/]+)\/timeline$/);
-  if (timelineMatch && method === "GET" && UUID_SEGMENT.test(timelineMatch[1]!)) {
+  if (timelineMatch && method === "GET") {
     return { handler: handleGetStudentTimeline, args: [timelineMatch[1]!] };
   }
 

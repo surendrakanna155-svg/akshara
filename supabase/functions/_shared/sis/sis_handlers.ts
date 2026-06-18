@@ -34,6 +34,11 @@ import {
   updateStudentStatus,
   ValidationError,
 } from "./sis_students_repository.ts";
+import {
+  loadStudentDetailByIdOrCode,
+  loadStudentDocumentsByIdOrCode,
+} from "./sis_student_lookup.ts";
+import { resolveStudentId } from "./sis_student_resolver.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
@@ -55,7 +60,11 @@ function parseListFilters(url: URL): StudentListFilters {
     academicYear: get("academicYear", "academic_year"),
     className: get("className", "class_name"),
     sectionName: get("sectionName", "section_name"),
-    status: get("status", "status"),
+    status: (() => {
+      const raw = get("status", "status");
+      if (raw === "prospect") return "inactive";
+      return raw;
+    })(),
   };
 }
 
@@ -214,13 +223,19 @@ export async function handleGetStudent(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const detail = await runTenant(config, auth.claims, (db) =>
-      getStudent(db, orgId, schoolId, studentId)
-    );
-    if (!detail) {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const detail = await loadStudentDetailByIdOrCode(db, orgId, schoolId, studentId);
+      if (!detail) return null;
+      const documents = await loadStudentDocumentsByIdOrCode(db, orgId, schoolId, studentId);
+      return { detail, documents };
+    });
+    if (!result) {
       return errorEnvelope("NOT_FOUND", `Student not found: ${studentId}`, 404);
     }
-    return jsonResponse(envelope(studentDetailToApi(detail)));
+    return jsonResponse(envelope({
+      ...studentDetailToApi(result.detail),
+      documents: result.documents,
+    }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
@@ -317,8 +332,10 @@ export async function handleUpdateStudent(
 
   try {
     const detail = await runTenant(config, auth.claims, async (db) => {
-      const updated = await updateStudent(db, orgId, schoolId, studentId, parseUpdateStudentInput(body));
-      await emitMutationAudit(db, auth.claims, sisAudit.studentUpdated(studentId), req);
+      const resolved = await resolveStudentId(db, orgId, schoolId, studentId);
+      if (!resolved) throw new StudentNotFoundError(studentId);
+      const updated = await updateStudent(db, orgId, schoolId, resolved, parseUpdateStudentInput(body));
+      await emitMutationAudit(db, auth.claims, sisAudit.studentUpdated(resolved), req);
       return updated;
     });
     return jsonResponse(envelope(studentDetailToApi(detail)));
@@ -361,8 +378,10 @@ export async function handleUpdateStudentStatus(
 
   try {
     const detail = await runTenant(config, auth.claims, async (db) => {
-      const updated = await updateStudentStatus(db, orgId, schoolId, studentId, { status });
-      await emitMutationAudit(db, auth.claims, sisAudit.studentStatusUpdated(studentId, status), req);
+      const resolved = await resolveStudentId(db, orgId, schoolId, studentId);
+      if (!resolved) throw new StudentNotFoundError(studentId);
+      const updated = await updateStudentStatus(db, orgId, schoolId, resolved, { status });
+      await emitMutationAudit(db, auth.claims, sisAudit.studentStatusUpdated(resolved, status), req);
       return updated;
     });
     return jsonResponse(envelope(studentDetailToApi(detail)));

@@ -36,6 +36,8 @@ import 'interfaces/education_repository.dart';
 import 'interfaces/intelligence_repository.dart';
 import 'interfaces/homework_intelligence_repository.dart';
 import 'interfaces/student_360_repository.dart';
+import 'interfaces/exam_administration_repository.dart';
+import 'interfaces/attendance_correction_repository.dart';
 import 'interfaces/employee_repository.dart';
 import 'interfaces/inventory_distribution_repository.dart';
 import 'interfaces/phase5_repositories.dart';
@@ -69,6 +71,8 @@ import 'mock/mock_education_repository.dart';
 import 'mock/mock_intelligence_repository.dart';
 import 'mock/mock_homework_intelligence_repository.dart';
 import 'mock/mock_student_360_repository.dart';
+import 'mock/mock_exam_administration_repository.dart';
+import 'mock/mock_attendance_correction_repository.dart';
 import 'mock/mock_employee_repository.dart';
 import 'mock/mock_inventory_distribution_repository.dart';
 import 'mock/mock_phase5_repositories.dart';
@@ -198,6 +202,16 @@ final approvalRepositoryProvider = Provider<ApprovalRepository>((ref) {
     return ref.read(apiApprovalRepositoryProvider);
   }
   return MockApprovalRepository();
+});
+
+final examAdministrationRepositoryProvider =
+    Provider<ExamAdministrationRepository>((ref) {
+  return MockExamAdministrationRepository();
+});
+
+final attendanceCorrectionRepositoryProvider =
+    Provider<AttendanceCorrectionRepository>((ref) {
+  return MockAttendanceCorrectionRepository();
 });
 
 final approvalCenterServiceProvider = Provider<ApprovalCenterService>((ref) {

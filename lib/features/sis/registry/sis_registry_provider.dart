@@ -59,8 +59,10 @@ final sisStudentsQueryProvider = Provider<RepositoryQuery>((ref) {
   switch (filterIndex) {
     case 1:
       params['status'] = 'active';
+      break;
     case 2:
       params['status'] = 'inactive';
+      break;
     default:
       if (filterIndex >= sisRegistryBaseFilterCount) {
         final classes = ref.watch(sisRegistryClassFilterOptionsProvider);

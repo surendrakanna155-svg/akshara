@@ -1,4 +1,5 @@
 import 'package:akshara_erp/core/repositories/api/sis/api_sis_repository.dart';
+import 'package:akshara_erp/core/repositories/api/sis/dto/sis_enum_codec.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/sis_academic_assignment_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/sis_conversion_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/sis_dashboard_dto.dart';
@@ -76,6 +77,52 @@ void main() {
       expect(mapped.student.id, mockProfile.student.id);
       expect(mapped.parent.guardianName, mockProfile.parent.guardianName);
       expect(mapped.documents.length, mockProfile.documents.length);
+    });
+
+    test('getStudentProfile maps nested server envelope with documents', () async {
+      final mockProfile = await mockRepo.getStudentProfile(
+        query: kQuery,
+        studentId: 'SIS-STU-10421',
+      );
+      final mapped = _mapper.toStudentProfile(
+        SisStudentProfileDto.fromJson(
+          _fixtures.envelope({
+            'student': {
+              'id': mockProfile.student.id,
+              'studentCode': mockProfile.student.id,
+              'displayName': mockProfile.student.studentName,
+              'status': SisEnumCodec.studentStatusToApi(mockProfile.student.status),
+            },
+            'profile': {
+              'admissionNumber': mockProfile.student.admissionNumber,
+            },
+            'currentEnrollment': {
+              'className': mockProfile.student.classLabel,
+              'sectionName': mockProfile.student.section,
+              'isCurrent': true,
+            },
+            'guardians': [
+              {
+                'displayName': mockProfile.parent.guardianName,
+                'relationship': mockProfile.parent.relationship,
+                'phone': mockProfile.parent.phone,
+                'email': mockProfile.parent.email,
+              },
+            ],
+            'documents': [
+              for (final document in mockProfile.documents)
+                {
+                  'type': document.type,
+                  'status': document.status,
+                  'uploadedAt': document.uploadedAt,
+                },
+            ],
+          }),
+        ),
+      );
+
+      expect(mapped.documents.length, mockProfile.documents.length);
+      expect(mapped.documents.first.type, mockProfile.documents.first.type);
     });
 
     test('getAcademicAssignment DTO mapping matches mock output', () async {
