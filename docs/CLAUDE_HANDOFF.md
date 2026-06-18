@@ -1,7 +1,7 @@
 # Claude Audit Handoff
 
 **Date:** 2026-06-18  
-**Tag:** `pre-claude-audit-v1`  
+**Tag:** `pre-claude-audit-v1` @ `70194d6`  
 **Branch:** `feature/m15-theme`  
 **Backup:** `backup/pre-claude-audit`
 

@@ -11,10 +11,11 @@
 | Field | Value |
 |-------|-------|
 | **Current branch** | `feature/m15-theme` |
-| **Current commit (tagged)** | `pre-claude-audit-v1` — see tag message for hash |
+| **Current commit (tagged)** | `70194d6` — *Pre-Claude audit freeze checkpoint* |
+| **Tag** | `pre-claude-audit-v1` |
 | **Latest pushed commit (pre-freeze)** | `47f6d47` — *Phase F5 — Attendance correction API with approval-gated mark apply.* |
 | **Backup branch** | `backup/pre-claude-audit` |
-| **Uncommitted at freeze** | Patrol Batch 01/02/02b suites, QA orchestrator docs, UI backlog, `switchQaPersona` fix, finance/parent Patrol fixes — **included in checkpoint commit** |
+| **Uncommitted at freeze** | None — all Patrol Batch 01/02/02b work included in `70194d6` |
 
 ---
 
