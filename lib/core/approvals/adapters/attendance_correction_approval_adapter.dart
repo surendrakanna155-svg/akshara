@@ -1,3 +1,7 @@
+import '../../attendance/attendance_correction_models.dart';
+import '../../attendance/attendance_correction_store.dart';
+import '../../repositories/interfaces/attendance_correction_repository.dart';
+import '../../repositories/mock/mock_attendance_correction_repository.dart';
 import '../../repositories/mock/mock_attendance_sync_store.dart';
 import '../../repositories/repository_query.dart';
 import '../approval_center_service.dart';
@@ -6,12 +10,21 @@ import '../approval_request_type.dart';
 import '../approval_requests.dart';
 import 'approval_type_adapter.dart';
 
-/// Attendance correction approval adapter — mock side effects until Phase B (M-D4).
+/// Attendance correction approval adapter — F2/F5 integration.
 class AttendanceCorrectionApprovalAdapter implements ApprovalTypeAdapter {
-  AttendanceCorrectionApprovalAdapter({MockAttendanceSyncStore? store})
-      : _store = store ?? MockAttendanceSyncStore.instance;
+  AttendanceCorrectionApprovalAdapter({
+    AttendanceCorrectionRepository? repository,
+    MockAttendanceSyncStore? store,
+    AttendanceCorrectionStore? correctionStore,
+  })  : _repository = repository ??
+            MockAttendanceCorrectionRepository(store: correctionStore),
+        _store = store ?? MockAttendanceSyncStore.instance,
+        _correctionStore =
+            correctionStore ?? AttendanceCorrectionStore.instance;
 
+  final AttendanceCorrectionRepository _repository;
   final MockAttendanceSyncStore _store;
+  final AttendanceCorrectionStore _correctionStore;
 
   static const entityType = 'attendance_day';
 
@@ -54,6 +67,16 @@ class AttendanceCorrectionApprovalAdapter implements ApprovalTypeAdapter {
       presentDelta: delta,
       note: request.decisionComment ?? 'Attendance correction approved',
     );
+    _correctionStore.updateStatus(
+      id: request.entityId,
+      status: AttendanceCorrectionStatus.approved,
+    );
+    // ignore: discarded_futures
+    _repository.updateStatus(
+      query: query,
+      correctionId: request.entityId,
+      status: AttendanceCorrectionStatus.approved,
+    );
   }
 
   @override
@@ -64,6 +87,16 @@ class AttendanceCorrectionApprovalAdapter implements ApprovalTypeAdapter {
   }) {
     if (request.type != ApprovalRequestType.attendanceCorrection) return;
     _store.recordCorrectionRejected(comment: comment);
+    _correctionStore.updateStatus(
+      id: request.entityId,
+      status: AttendanceCorrectionStatus.rejected,
+    );
+    // ignore: discarded_futures
+    _repository.updateStatus(
+      query: query,
+      correctionId: request.entityId,
+      status: AttendanceCorrectionStatus.rejected,
+    );
   }
 
   @override

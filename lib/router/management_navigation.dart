@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/academic/timetable/timetable_hub_screen.dart';
+import '../features/management/attendance/attendance_corrections_admin_screen.dart';
 import '../features/management/intelligence/intelligence_hub_screen.dart';
 import '../features/management/academics/management_academics_screen.dart';
 import '../features/management/admissions/management_admissions_screen.dart';
@@ -104,4 +105,11 @@ Widget managementWorkflowAutomationRouteBuilder(
   GoRouterState state,
 ) {
   return const WorkflowAutomationScreen();
+}
+
+Widget managementAttendanceCorrectionsRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const AttendanceCorrectionsAdminScreen();
 }

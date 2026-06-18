@@ -141,6 +141,26 @@ class TeacherExamSubmitApprovalResult {
   final String statusLabel;
 }
 
+/// Domain request to process exam marks for coordinator verification (M-A5).
+class TeacherExamProcessResultsRequest {
+  const TeacherExamProcessResultsRequest({required this.examId});
+
+  final String examId;
+}
+
+/// Result of processing exam marks for verification.
+class TeacherExamProcessResultsResult {
+  const TeacherExamProcessResultsResult({
+    required this.examId,
+    required this.examTitle,
+    required this.phaseLabel,
+  });
+
+  final String examId;
+  final String examTitle;
+  final String phaseLabel;
+}
+
 /// Domain request to send structured parent communication.
 class TeacherParentCommunicationSendRequest {
   const TeacherParentCommunicationSendRequest({
@@ -203,4 +223,39 @@ class TeacherSubjectConcernFlagRequest {
   final String sisStudentId;
   final SubjectConcernCategory category;
   final String observation;
+}
+
+/// Request to correct attendance after class submission (Phase B).
+class TeacherAttendanceCorrectionRequest {
+  const TeacherAttendanceCorrectionRequest({
+    required this.sisStudentId,
+    required this.studentName,
+    required this.classLabel,
+    required this.section,
+    required this.dateLabel,
+    required this.fromMark,
+    required this.toMark,
+    required this.reason,
+    this.presentDelta = 1,
+  });
+
+  final String sisStudentId;
+  final String studentName;
+  final String classLabel;
+  final String section;
+  final String dateLabel;
+  final String fromMark;
+  final String toMark;
+  final String reason;
+  final int presentDelta;
+}
+
+class TeacherAttendanceCorrectionResult {
+  const TeacherAttendanceCorrectionResult({
+    required this.correctionId,
+    required this.approvalId,
+  });
+
+  final String correctionId;
+  final String approvalId;
 }

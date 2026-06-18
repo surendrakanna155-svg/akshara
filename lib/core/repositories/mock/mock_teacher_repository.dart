@@ -225,6 +225,20 @@ class MockTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<TeacherExamProcessResultsResult> processExamResults({
+    required RepositoryQuery query,
+    required TeacherExamProcessResultsRequest request,
+  }) async {
+    final store = ExamAdministrationStore.instance..ensureSeeded();
+    final exam = store.processResults(request.examId);
+    return TeacherExamProcessResultsResult(
+      examId: exam.id,
+      examTitle: exam.title,
+      phaseLabel: exam.phase.name,
+    );
+  }
+
+  @override
   Future<TeacherExamPublishResult> publishExamResults({
     required RepositoryQuery query,
     required TeacherExamPublishRequest request,

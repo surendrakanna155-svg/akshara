@@ -11,10 +11,12 @@ class StudentAttendanceRow extends StatelessWidget {
     super.key,
     required this.student,
     required this.onMarkChanged,
+    this.enabled = true,
   });
 
   final TeacherAttendanceStudent student;
   final ValueChanged<StudentAttendanceMark> onMarkChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -51,21 +53,27 @@ class StudentAttendanceRow extends StatelessWidget {
                 label: 'P',
                 selected: student.mark == StudentAttendanceMark.present,
                 tone: KpiAccent.success,
-                onTap: () => onMarkChanged(StudentAttendanceMark.present),
+                onTap: enabled
+                    ? () => onMarkChanged(StudentAttendanceMark.present)
+                    : null,
               ),
               const SizedBox(width: AksharaSpacing.s1),
               _MarkChip(
                 label: 'A',
                 selected: student.mark == StudentAttendanceMark.absent,
                 tone: KpiAccent.error,
-                onTap: () => onMarkChanged(StudentAttendanceMark.absent),
+                onTap: enabled
+                    ? () => onMarkChanged(StudentAttendanceMark.absent)
+                    : null,
               ),
               const SizedBox(width: AksharaSpacing.s1),
               _MarkChip(
                 label: 'L',
                 selected: student.mark == StudentAttendanceMark.late,
                 tone: KpiAccent.warning,
-                onTap: () => onMarkChanged(StudentAttendanceMark.late),
+                onTap: enabled
+                    ? () => onMarkChanged(StudentAttendanceMark.late)
+                    : null,
               ),
             ],
           ),
@@ -86,7 +94,7 @@ class _MarkChip extends StatelessWidget {
   final String label;
   final bool selected;
   final KpiAccent tone;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -97,10 +105,13 @@ class _MarkChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AksharaSpacing.s2),
-        child: AksharaStatusChip(
+        child: Opacity(
+          opacity: onTap == null ? 0.45 : 1,
+          child: AksharaStatusChip(
           label: label,
           tone: selected ? tone : KpiAccent.neutral,
           size: AksharaStatusChipSize.compact,
+        ),
         ),
       ),
     );

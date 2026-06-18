@@ -5,6 +5,18 @@ import '../../core/audit/audit_provider.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../auth/auth_provider.dart';
 
+AuditEventType _auditTypeForTeacherAction(String action) {
+  return switch (action) {
+    'updateExamMark' => AuditEventType.examMarkUpdated,
+    'processExamResults' || 'submitExamResultsForVerification' =>
+      AuditEventType.examResultsSubmittedForVerification,
+    'submitExamResultsForApproval' =>
+      AuditEventType.examResultsSubmittedForApproval,
+    'publishExamResults' => AuditEventType.examResultsPublished,
+    _ => AuditEventType.enrollmentSubmitted,
+  };
+}
+
 /// Records a teacher mobile workflow audit event with session context.
 Future<void> recordTeacherAudit(
   Ref ref, {
@@ -15,7 +27,7 @@ Future<void> recordTeacherAudit(
   final auth = ref.read(authProvider);
   return recordAuditEvent(
     ref,
-    type: AuditEventType.enrollmentSubmitted,
+    type: _auditTypeForTeacherAction(action),
     userId: auth.claims?.userId,
     tenantId: ref.read(tenantContextProvider).tenantId,
     schoolId: auth.claims?.schoolId,

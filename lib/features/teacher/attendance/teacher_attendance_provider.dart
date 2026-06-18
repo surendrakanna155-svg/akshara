@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/attendance/attendance_sync_bridge.dart';
 import '../../../core/providers/repository_future.dart';
+import '../../../core/repositories/mock/mock_attendance_sync_store.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../teacher_mutations_provider.dart';
@@ -16,6 +18,20 @@ final teacherAttendanceErrorProvider = StateProvider<bool>((ref) => false);
 final teacherAttendanceEmptyProvider = StateProvider<bool>((ref) => false);
 final teacherAttendanceDraftSavedProvider = StateProvider<String?>((ref) => null);
 final teacherAttendanceSubmittedProvider = StateProvider<bool>((ref) => false);
+
+final attendanceSyncRevisionProvider = StateProvider<int>((ref) => 0);
+
+final _attendanceSyncBridgeProvider = Provider<void>((ref) {
+  onMockAttendanceSyncChanged = () {
+    ref.read(attendanceSyncRevisionProvider.notifier).state =
+        MockAttendanceSyncStore.revision;
+  };
+  ref.onDispose(() {
+    if (onMockAttendanceSyncChanged != null) {
+      onMockAttendanceSyncChanged = null;
+    }
+  });
+});
 
 final teacherAttendanceClassesFutureProvider =
     FutureProvider<List<TeacherAttendanceClass>>((ref) async {
@@ -41,6 +57,8 @@ Map<String, List<TeacherAttendanceStudent>> _studentsMap(Ref ref) {
 }
 
 final teacherAttendanceProvider = Provider<TeacherAttendanceData>((ref) {
+  ref.watch(_attendanceSyncBridgeProvider);
+  ref.watch(attendanceSyncRevisionProvider);
   if (ref.watch(teacherAttendanceEmptyProvider)) {
     return const TeacherAttendanceData(
       classes: [],
@@ -69,7 +87,8 @@ final teacherAttendanceProvider = Provider<TeacherAttendanceData>((ref) {
     selectedClassId: classId,
     unreadNotifications: 1,
     draftSavedAt: ref.watch(teacherAttendanceDraftSavedProvider),
-    isSubmitted: ref.watch(teacherAttendanceSubmittedProvider),
+    isSubmitted: ref.watch(teacherAttendanceSubmittedProvider) ||
+        MockAttendanceSyncStore.instance.hasTeacherSubmission,
   );
 });
 
@@ -78,6 +97,7 @@ void updateStudentMark(
   required String studentId,
   required StudentAttendanceMark mark,
 }) {
+  if (ref.read(teacherAttendanceProvider).isSubmitted) return;
   final classId = ref.read(teacherAttendanceClassProvider);
   final map = Map<String, List<TeacherAttendanceStudent>>.from(
     ref.read(_teacherAttendanceStudentsProvider) ??
@@ -94,6 +114,7 @@ void updateStudentMark(
 }
 
 void applyBulkMark(WidgetRef ref, StudentAttendanceMark mark) {
+  if (ref.read(teacherAttendanceProvider).isSubmitted) return;
   final classId = ref.read(teacherAttendanceClassProvider);
   final map = Map<String, List<TeacherAttendanceStudent>>.from(
     ref.read(_teacherAttendanceStudentsProvider) ??

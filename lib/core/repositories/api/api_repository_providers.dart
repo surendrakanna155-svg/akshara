@@ -57,6 +57,8 @@ import 'onboarding/remote/onboarding_remote_datasource.dart';
 import 'startup_onboarding/api_startup_onboarding_repository.dart';
 import 'startup_onboarding/hybrid_startup_onboarding_repository.dart';
 import 'startup_onboarding/remote/startup_onboarding_remote_datasource.dart';
+import 'attendance/api_attendance_correction_repository.dart';
+import 'attendance/remote/attendance_correction_remote_datasource.dart';
 import 'exam_administration/api_exam_administration_repository.dart';
 import 'exam_administration/remote/exam_remote_datasource.dart';
 import 'education/api_education_repository.dart';
@@ -571,5 +573,17 @@ final apiExamAdministrationRepositoryProvider =
     Provider<ApiExamAdministrationRepository>(
   (ref) => ApiExamAdministrationRepository(
     remote: ref.watch(examRemoteDataSourceProvider),
+  ),
+);
+
+final attendanceCorrectionRemoteDataSourceProvider =
+    Provider<AttendanceCorrectionRemoteDataSource>(
+  (ref) => AttendanceCorrectionRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiAttendanceCorrectionRepositoryProvider =
+    Provider<ApiAttendanceCorrectionRepository>(
+  (ref) => ApiAttendanceCorrectionRepository(
+    remote: ref.watch(attendanceCorrectionRemoteDataSourceProvider),
   ),
 );

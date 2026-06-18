@@ -52,6 +52,11 @@ abstract class TeacherRepository {
     required TeacherExamMarkUpdateRequest request,
   });
 
+  Future<TeacherExamProcessResultsResult> processExamResults({
+    required RepositoryQuery query,
+    required TeacherExamProcessResultsRequest request,
+  });
+
   Future<TeacherExamPublishResult> publishExamResults({
     required RepositoryQuery query,
     required TeacherExamPublishRequest request,

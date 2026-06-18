@@ -162,6 +162,17 @@ class TeacherRemoteDataSource {
     return ExamMarkEntryDto.fromJson(_requireData(response));
   }
 
+  Future<Map<String, dynamic>> processExamResults({
+    required RepositoryQuery query,
+    required TeacherExamProcessResultsRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.examProcess(request.examId),
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
+
   Future<Map<String, dynamic>> publishExamResults({
     required RepositoryQuery query,
     required TeacherExamPublishRequest request,

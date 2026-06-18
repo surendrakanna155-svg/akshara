@@ -1,0 +1,11 @@
+# Workflow — Teacher attendance correction (Phase B)
+# tags: workflow,attendance,teacher
+# Status: executable — Patrol pilot_closure_workflows_e2e_test.dart
+appId: com.akshara.erp
+---
+- runFlow:
+    file: ../maestro/flows/_shared/teacher_demo_login.yaml
+- tapOn: "Mark Attendance"
+- takeScreenshot: workflow_teacher_attendance_marked
+- tapOn: "Request correction"
+- takeScreenshot: workflow_teacher_attendance_correction_dialog

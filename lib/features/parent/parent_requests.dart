@@ -60,3 +60,34 @@ class ParentMessageSendRequest {
   final String body;
   final String? threadId;
 }
+
+/// Parent request to dispute / correct recorded attendance.
+class ParentAttendanceCorrectionRequest {
+  const ParentAttendanceCorrectionRequest({
+    required this.childName,
+    required this.classLabel,
+    required this.dateLabel,
+    required this.fromMark,
+    required this.toMark,
+    required this.reason,
+    this.sisStudentId = 'SIS-STU-RAVI-001',
+  });
+
+  final String sisStudentId;
+  final String childName;
+  final String classLabel;
+  final String dateLabel;
+  final String fromMark;
+  final String toMark;
+  final String reason;
+}
+
+class ParentAttendanceCorrectionResult {
+  const ParentAttendanceCorrectionResult({
+    required this.correctionId,
+    required this.approvalId,
+  });
+
+  final String correctionId;
+  final String approvalId;
+}

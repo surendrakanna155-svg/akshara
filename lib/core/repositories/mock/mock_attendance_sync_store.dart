@@ -1,8 +1,13 @@
 /// Cross-persona attendance sync for mock QA journeys (teacher submit → parent KPI).
+import '../../attendance/attendance_sync_bridge.dart';
+
 class MockAttendanceSyncStore {
   MockAttendanceSyncStore._();
 
   static final MockAttendanceSyncStore instance = MockAttendanceSyncStore._();
+
+  /// Bumped when submission or correction state changes (Riverpod invalidation).
+  static int revision = 0;
 
   int presentCount = 0;
   int absentCount = 0;
@@ -25,10 +30,14 @@ class MockAttendanceSyncStore {
     correctionDeltaPresent = presentDelta;
     lastCorrectionNote = note;
     lastRejectedCorrectionNote = null;
+    revision++;
+    notifyMockAttendanceSyncChanged();
   }
 
   void recordCorrectionRejected({required String comment}) {
     lastRejectedCorrectionNote = comment;
+    revision++;
+    notifyMockAttendanceSyncChanged();
   }
 
   void recordTeacherSubmit({
@@ -40,6 +49,8 @@ class MockAttendanceSyncStore {
     absentCount = absent;
     lateCount = late;
     lastSubmittedAt = DateTime.now();
+    revision++;
+    notifyMockAttendanceSyncChanged();
   }
 
   int attendancePercent({String? grade, String? section}) {
@@ -57,5 +68,6 @@ class MockAttendanceSyncStore {
     correctionDeltaPresent = 0;
     lastCorrectionNote = null;
     lastRejectedCorrectionNote = null;
+    revision = 0;
   }
 }

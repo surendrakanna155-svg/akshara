@@ -130,6 +130,15 @@ class ApiTeacherRepository implements TeacherRepository {
   }
 
   @override
+  Future<TeacherExamProcessResultsResult> processExamResults({
+    required RepositoryQuery query,
+    required TeacherExamProcessResultsRequest request,
+  }) async {
+    final dto = await _remote.processExamResults(query: query, request: request);
+    return _mapper.toExamProcessResultsResult(dto);
+  }
+
+  @override
   Future<TeacherExamPublishResult> publishExamResults({
     required RepositoryQuery query,
     required TeacherExamPublishRequest request,

@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/repositories/mock/mock_attendance_sync_store.dart';
 import 'package:akshara_erp/features/teacher/attendance/attendance_models.dart';
 import 'package:akshara_erp/features/teacher/attendance/teacher_attendance_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,6 +78,25 @@ void main() {
         data.students.any((s) => s.mark == StudentAttendanceMark.present),
         isTrue,
       );
+    });
+
+    test('isSubmitted reflects teacher submission in sync store', () async {
+      MockAttendanceSyncStore.instance.reset();
+      final container = createMobileProviderTestContainer();
+      addTearDown(() {
+        MockAttendanceSyncStore.instance.reset();
+        container.dispose();
+      });
+
+      await _awaitTeacherAttendance(container);
+      expect(container.read(teacherAttendanceProvider).isSubmitted, isFalse);
+
+      MockAttendanceSyncStore.instance.recordTeacherSubmit(
+        present: 10,
+        absent: 2,
+        late: 1,
+      );
+      expect(container.read(teacherAttendanceProvider).isSubmitted, isTrue);
     });
   });
 }

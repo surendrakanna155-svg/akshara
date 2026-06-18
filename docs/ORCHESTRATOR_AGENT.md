@@ -1,8 +1,8 @@
 # Akshara ERP — Orchestrator Agent
 
-**Version:** 1.7  
-**Last updated:** 2026-06-17  
-**Branch:** `feature/m15-theme` — F1 certified · F2 certified · F3 certified  
+**Version:** 1.9  
+**Last updated:** 2026-06-18  
+**Branch:** `feature/m15-theme` — F1 certified · F2 certified · F3 certified · F4 certified · **F5 certified**  
 **Purpose:** Single source of truth for program execution order, agent ownership, gates, and stop rules.  
 **Authority:** Supersedes ad-hoc session prompts. Every orchestrator session **must read this file first**, then the linked milestone docs.
 
@@ -67,8 +67,8 @@ Flutter remains **REST/Dio + `ApiEnvelopeDto` + JWT + `X-Tenant-Id` / `X-School-
 | **F1** | Auth + RBAC | A1, A10 | 1.5–2 wks | +8% | **~53%** ✅ |
 | **F2** | Approval API | A2 | 3–4 wks | +12% | **~65%** ✅ |
 | **F3** | SIS + Student 360 | A8 | 1.5–2 wks | +6% | **~71%** ✅ |
-| **F4** | Exams | A3 | 3–4 wks | +10% | **~81%** |
-| **F5** | Attendance | A4, A5 | 2.5–3.5 wks | +8% | **~89%** |
+| **F4** | Exams | A3 | 3–4 wks | +10% | **~81%** ✅ |
+| **F5** | Attendance | A4, A5 | 2.5–3.5 wks | +8% | **~89%** ✅ |
 | **F6** | Audit / event upload | A9 | 1 wk | +3% | **~92%** |
 | **F7** | Remaining production APIs | A6, A7 + API-mode gates | 2–3 wks | +8% | **~100%** Class A |
 
@@ -286,7 +286,7 @@ Whenever **new screens, dashboards, approvals, Student 360, Marketing, Finance, 
 | **Mock / UAT pilot** | **GO** — `ENABLE_API_MODE=false`, 1949+ unit tests |
 | **First real school (live API)** | **NO-GO** until F1–F7 Class A complete |
 | **Parallel domain work (client)** | Phases A–E largely complete on mock; no new client modules without authorization |
-| **Active mission** | **F4 ✅ certified** — await F5 authorization (Attendance correction API) |
+| **Active mission** | **F5 ✅ certified** — await F6 authorization (Audit / event upload API) |
 
 ### What is working today (operational)
 
@@ -364,12 +364,12 @@ Readiness is tracked on **two baselines** — mock/UAT pilot vs production API p
 
 | Metric | **Current (2026-06-18)** | After F7 (target) |
 |--------|--------------------------|-------------------|
-| **Overall production API** | **~81%** | **≥92%** (Class A GO) |
+| **Overall production API** | **~89%** | **≥92%** (Class A GO) |
 | **Auth + RBAC (F1)** | **100%** client cert | 100% |
 | **Approval API (F2)** | **100%** client + Edge | 100% |
 | **SIS + Student 360 (F3)** | **100%** F3 scope | 100% |
 | **Exams (F4)** | **100%** (server lifecycle + Flutter API gate) | 100% |
-| **Attendance (F5)** | 0% (no API) | 100% |
+| **Attendance (F5)** | **100%** (corrections API + F2 apply hook + Flutter gate) | 100% |
 | **Audit upload (F6)** | ~50% (queue only) | 100% |
 | **Leave + finance orchestration (F7)** | ~35% partial | 100% |
 
@@ -841,6 +841,7 @@ Each session ends with:
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.9 | 2026-06-18 | F5 Attendance API certified (`PHASE_F5_FINAL_CERTIFICATION.md`); production API ~89%; F6 locked |
 | 1.8 | 2026-06-17 | F4 Exam Administration API certified (`PHASE_F4_FINAL_CERTIFICATION.md`); production API ~81%; F5 locked |
 | 1.7 | 2026-06-17 | F3 SIS + Student 360 API certified (`PHASE_F3_FINAL_CERTIFICATION.md`); production API ~71%; F4 locked |
 | 1.6 | 2026-06-17 | F2 Approval API certified (`PHASE_F2_FINAL_CERTIFICATION.md`); production API ~65%; F3 locked |

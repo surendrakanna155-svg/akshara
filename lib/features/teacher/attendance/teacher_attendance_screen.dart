@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'attendance_models.dart';
 import 'teacher_attendance_provider.dart';
+import 'teacher_attendance_workflow.dart';
 import 'widgets/class_selector_strip.dart';
 import 'widgets/student_attendance_row.dart';
 
@@ -109,6 +112,20 @@ class _AttendanceBody extends ConsumerWidget {
                           key: QaTestKeys.teacherAttendanceSubmittedBanner,
                           message: 'Attendance submitted successfully.',
                         ),
+                        const SizedBox(height: AksharaSpacing.s2),
+                        AksharaViewAction(
+                          permission: Permission.submitAttendanceCorrection,
+                          child: OutlinedButton.icon(
+                            key: QaTestKeys.teacherAttendanceCorrectionButton,
+                            onPressed: () => showAttendanceCorrectionDialog(
+                              context,
+                              ref,
+                              data: data,
+                            ),
+                            icon: const Icon(Icons.edit_calendar_outlined),
+                            label: const Text('Request correction'),
+                          ),
+                        ),
                       ],
                       const SizedBox(height: AksharaSpacing.s3),
                       Row(
@@ -149,6 +166,7 @@ class _AttendanceBody extends ConsumerWidget {
                       final student = data.students[index];
                       return StudentAttendanceRow(
                         student: student,
+                        enabled: !data.isSubmitted,
                         onMarkChanged: (mark) => updateStudentMark(
                           ref,
                           studentId: student.id,

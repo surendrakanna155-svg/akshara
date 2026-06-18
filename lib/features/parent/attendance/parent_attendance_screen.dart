@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/utils/whatsapp_launcher.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -12,6 +13,7 @@ import 'attendance_models.dart';
 import 'attendance_month_selector.dart';
 import 'attendance_summary_card.dart';
 import 'parent_attendance_provider.dart';
+import 'parent_attendance_workflow.dart';
 
 /// Parent attendance — PA-02 `PA-02-ParentAttendance-M`.
 class ParentAttendanceScreen extends ConsumerStatefulWidget {
@@ -220,30 +222,45 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
   }
 
   void _showDayDetailSheet(BuildContext context, AttendanceDayLog log) {
-    final teacherPhone = ref.read(parentAttendanceProvider).classTeacherPhone;
+    final attendance = ref.read(parentAttendanceProvider);
+    final teacherPhone = attendance.classTeacherPhone;
+    final hostContext = context;
+    final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) => _DayDetailSheet(
         log: log,
+        hostContext: hostContext,
+        scaffoldMessenger: messenger,
         classTeacherPhone: teacherPhone,
+        childName: attendance.childName,
+        childClass: attendance.childClass,
       ),
     );
   }
 }
 
-class _DayDetailSheet extends StatelessWidget {
+class _DayDetailSheet extends ConsumerWidget {
   const _DayDetailSheet({
     required this.log,
+    required this.hostContext,
+    required this.scaffoldMessenger,
+    required this.childName,
+    required this.childClass,
     this.classTeacherPhone,
   });
 
   final AttendanceDayLog log;
+  final BuildContext hostContext;
+  final ScaffoldMessengerState scaffoldMessenger;
+  final String childName;
+  final String childClass;
   final String? classTeacherPhone;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = context.aksharaText;
     final statusStyle = log.status.resolve(context);
@@ -277,6 +294,28 @@ class _DayDetailSheet extends StatelessWidget {
             log.detailBody,
             style: text.bodyLarge.copyWith(color: colors.onSurface),
           ),
+          if (log.status == AttendanceDayStatus.absent) ...[
+            const SizedBox(height: AksharaSpacing.s4),
+            OutlinedButton.icon(
+              key: QaTestKeys.parentAttendanceCorrectionButton,
+              onPressed: () {
+                Navigator.of(context).pop();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!hostContext.mounted) return;
+                  showParentAttendanceCorrectionDialog(
+                    hostContext,
+                    ref,
+                    scaffoldMessenger: scaffoldMessenger,
+                    log: log,
+                    childName: childName,
+                    childClass: childClass,
+                  );
+                });
+              },
+              icon: const Icon(Icons.edit_calendar_outlined),
+              label: const Text('Request correction'),
+            ),
+          ],
           if (log.detailNote != null) ...[
             const SizedBox(height: AksharaSpacing.s4),
             Text(

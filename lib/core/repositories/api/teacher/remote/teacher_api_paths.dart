@@ -23,4 +23,5 @@ abstract final class TeacherApiPaths {
   static String examMark(String markEntryId) => '$base/exams/marks/$markEntryId';
 
   static String examPublish(String examId) => '$base/exams/$examId/publish';
+  static String examProcess(String examId) => '$base/exams/$examId/process';
 }

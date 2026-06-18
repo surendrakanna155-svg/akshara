@@ -9,6 +9,10 @@ import {
   publishExamResults,
   recordExamRejection,
 } from "../academics/exam_administration/exam_administration_repository.ts";
+import {
+  applyAttendanceCorrection,
+  updateAttendanceCorrectionStatus,
+} from "../attendance/attendance_correction_repository.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
 import { insertDomainEffect } from "./approval_repository.ts";
 
@@ -84,11 +88,34 @@ export async function applyApprovalTypeHandler(
       break;
 
     case "attendanceCorrection":
-      effectPayload = {
-        ...effectPayload,
-        correctionStatus: effectAction === "approved" ? "applied" : "denied",
-        correctionId: request.entity_id,
-      };
+      if (effectAction === "approved") {
+        const applied = await applyAttendanceCorrection(
+          db,
+          organizationId,
+          schoolId,
+          request.entity_id,
+        );
+        effectPayload = {
+          ...effectPayload,
+          correctionStatus: "applied",
+          correctionId: request.entity_id,
+          presentDelta: applied.present_delta,
+        };
+      } else {
+        await updateAttendanceCorrectionStatus(
+          db,
+          organizationId,
+          schoolId,
+          request.entity_id,
+          "rejected",
+        );
+        effectPayload = {
+          ...effectPayload,
+          correctionStatus: "denied",
+          correctionId: request.entity_id,
+          comment: comment ?? null,
+        };
+      }
       break;
 
     case "feeConcession":

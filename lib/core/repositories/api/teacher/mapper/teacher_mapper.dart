@@ -119,6 +119,16 @@ class TeacherMapper {
     );
   }
 
+  TeacherExamProcessResultsResult toExamProcessResultsResult(
+    Map<String, dynamic> raw,
+  ) {
+    return TeacherExamProcessResultsResult(
+      examId: raw['examId'] as String? ?? '',
+      examTitle: raw['examTitle'] as String? ?? '',
+      phaseLabel: raw['phaseLabel'] as String? ?? 'processed',
+    );
+  }
+
   TeacherExamPublishResult toExamPublishResult(Map<String, dynamic> raw) {
     return TeacherExamPublishResult(
       examId: raw['examId'] as String? ?? '',

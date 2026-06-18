@@ -1553,6 +1553,16 @@ GoRouter createAppRouter({
                 ),
               ),
               GoRoute(
+                path: 'attendance-corrections',
+                name: 'managementAttendanceCorrections',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: managementAttendanceCorrectionsRouteBuilder(
+                    context,
+                    state,
+                  ),
+                ),
+              ),
+              GoRoute(
                 path: 'workflow-automation',
                 name: 'managementWorkflowAutomation',
                 pageBuilder: (context, state) => NoTransitionPage(

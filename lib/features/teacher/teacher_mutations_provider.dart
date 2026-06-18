@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/approvals/adapters/attendance_correction_approval_adapter.dart';
 import '../../core/approvals/adapters/exam_results_approval_adapter.dart';
+import '../../core/attendance/attendance_correction_models.dart';
 import '../../core/config/exam_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
@@ -257,6 +259,50 @@ final publishTeacherExamResultsProvider =
   PublishTeacherExamResultsNotifier.new,
 );
 
+class ProcessTeacherExamResultsNotifier
+    extends AsyncNotifier<TeacherExamProcessResultsResult?> {
+  @override
+  FutureOr<TeacherExamProcessResultsResult?> build() => null;
+
+  Future<TeacherExamProcessResultsResult?> execute(
+    TeacherExamProcessResultsRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final rbac = ref.read(rbacServiceProvider);
+      if (!rbac.hasPermission(Permission.submitExamResults)) {
+        throw ApiFailureException(
+          ApiFailure(
+            type: ApiFailureType.forbidden,
+            message:
+                'You do not have permission to submit exam results for verification.',
+            code: 'RBAC_SUBMITEXAMRESULTS',
+          ),
+        );
+      }
+      final result = await _runMutation(
+        ref,
+        auditAction: 'processExamResults',
+        entityId: request.examId,
+        invalidateExamMarks: true,
+        action: () => ref.read(teacherRepositoryProvider).processExamResults(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+      ref.invalidate(teacherUpcomingExamsFutureProvider);
+      return result;
+    });
+    return state.valueOrNull;
+  }
+}
+
+final processTeacherExamResultsProvider =
+    AsyncNotifierProvider<ProcessTeacherExamResultsNotifier,
+        TeacherExamProcessResultsResult?>(
+  ProcessTeacherExamResultsNotifier.new,
+);
+
 class SubmitTeacherExamResultsForApprovalNotifier
     extends AsyncNotifier<TeacherExamSubmitApprovalResult?> {
   @override
@@ -316,6 +362,97 @@ final submitTeacherExamResultsForApprovalProvider =
     AsyncNotifierProvider<SubmitTeacherExamResultsForApprovalNotifier,
         TeacherExamSubmitApprovalResult?>(
   SubmitTeacherExamResultsForApprovalNotifier.new,
+);
+
+class SubmitAttendanceCorrectionNotifier
+    extends AsyncNotifier<TeacherAttendanceCorrectionResult?> {
+  @override
+  FutureOr<TeacherAttendanceCorrectionResult?> build() => null;
+
+  Future<TeacherAttendanceCorrectionResult?> execute(
+    TeacherAttendanceCorrectionRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final rbac = ref.read(rbacServiceProvider);
+      if (!rbac.hasPermission(Permission.submitAttendanceCorrection)) {
+        throw ApiFailureException(
+          ApiFailure(
+            type: ApiFailureType.forbidden,
+            message:
+                'You do not have permission to submit attendance corrections.',
+            code: 'RBAC_SUBMITATTENDANCECORRECTION',
+          ),
+        );
+      }
+
+      final auth = ref.read(authProvider);
+      final requesterId = auth.claims?.userId ?? 'teacher_demo';
+      final requesterName = auth.displayName ?? 'Teacher';
+
+      final correction = await ref
+          .read(attendanceCorrectionRepositoryProvider)
+          .createCorrection(
+            query: ref.read(repositoryQueryProvider),
+            request: CreateAttendanceCorrectionRequest(
+              sisStudentId: request.sisStudentId,
+              studentName: request.studentName,
+              classLabel: request.classLabel,
+              section: request.section,
+              dateLabel: request.dateLabel,
+              fromMark: request.fromMark,
+              toMark: request.toMark,
+              reason: request.reason,
+              requesterId: requesterId,
+              requesterName: requesterName,
+              requesterRole: 'teacher',
+              presentDelta: request.presentDelta,
+            ),
+          );
+
+      final adapter = AttendanceCorrectionApprovalAdapter();
+      final approval = await adapter.submitForApproval(
+        service: ref.read(approvalCenterServiceProvider),
+        query: ref.read(repositoryQueryProvider),
+        entityId: correction.id,
+        requesterId: requesterId,
+        requesterName: requesterName,
+        title: 'Attendance correction — ${request.studentName}',
+        summary:
+            '${request.classLabel}-${request.section} · ${request.fromMark} → ${request.toMark}',
+        payload: {
+          'classLabel': request.classLabel,
+          'section': request.section,
+          'date': request.dateLabel,
+          'fromMark': request.fromMark,
+          'toMark': request.toMark,
+          'studentsAffected': 1,
+          'presentDelta': request.presentDelta,
+          'requesterRole': 'teacher',
+          'studentName': request.studentName,
+          'reason': request.reason,
+        },
+      );
+
+      await recordTeacherAudit(
+        ref,
+        action: 'submitAttendanceCorrection',
+        entityId: correction.id,
+        metadata: {'approvalId': approval.id},
+      );
+
+      return TeacherAttendanceCorrectionResult(
+        correctionId: correction.id,
+        approvalId: approval.id,
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final submitAttendanceCorrectionProvider = AsyncNotifierProvider<
+    SubmitAttendanceCorrectionNotifier, TeacherAttendanceCorrectionResult?>(
+  SubmitAttendanceCorrectionNotifier.new,
 );
 
 class SubmitTeacherLeaveNotifier extends AsyncNotifier<TeacherLeaveRequest?> {

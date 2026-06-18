@@ -214,6 +214,9 @@ final examAdministrationRepositoryProvider =
 
 final attendanceCorrectionRepositoryProvider =
     Provider<AttendanceCorrectionRepository>((ref) {
+  if (isModuleApiEnabled(ref, attendanceApiEnabledProvider)) {
+    return ref.read(apiAttendanceCorrectionRepositoryProvider);
+  }
   return MockAttendanceCorrectionRepository();
 });
 

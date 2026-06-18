@@ -138,6 +138,15 @@ final educationApiEnabledProvider = Provider<bool>((ref) {
   );
 });
 
+/// Attendance API — set `--dart-define=ATTENDANCE_API_ENABLED=true` with API mode.
+final attendanceApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment(
+    'ATTENDANCE_API_ENABLED',
+    defaultValue: false,
+  );
+});
+
 /// Exam administration API — set `--dart-define=EXAM_API_ENABLED=true` with API mode.
 final examApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
