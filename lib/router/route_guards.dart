@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/config/school_build_scope.dart';
 import '../core/security/denied_access_audit.dart';
 import '../core/security/erp_role.dart';
 import '../core/testing/qa_test_keys.dart';
@@ -153,6 +154,9 @@ Permission? erpRoutePermissionFor(String location) {
 }
 
 /// Whether [location] is allowed for the given [RbacService].
+///
+/// This is pure RBAC (permission-based). The school-build module hide is
+/// enforced separately in [ErpRouteGuard] so permission wiring stays testable.
 bool canAccessErpRoute(RbacService rbac, String location) {
   if (!isAdminErpRoute(location)) return true;
 
@@ -334,6 +338,12 @@ class ErpRouteGuard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
     final rbac = ref.watch(rbacServiceProvider);
+
+    // Modules hidden for the school-only build are blocked regardless of
+    // permission. Reversible via SchoolBuildScope (hide now, delete later).
+    if (SchoolBuildScope.isRouteHidden(location)) {
+      return const AccessDeniedScreen();
+    }
 
     if (!canAccessErpRoute(rbac, location)) {
       final permission = erpRoutePermissionFor(location);

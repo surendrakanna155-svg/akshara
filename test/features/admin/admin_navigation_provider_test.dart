@@ -13,7 +13,11 @@ void main() {
   final defaultCapabilities = SchoolConfiguration.demoDefault().capabilities;
 
   group('adminNavDestinationsProvider', () {
-    test('superAdmin sees all ERP module groups', () {
+    test('superAdmin sees all school-build ERP module groups', () {
+      // School build (SchoolBuildScope): non-school verticals (healthcare,
+      // salon, restaurant, accommodation, industry), white-label and the
+      // experimental extras (org builder, platform ops, dynamic widgets) are
+      // hidden. Multi-school management (control center, director) is kept.
       final container = ProviderContainer(
         overrides: [
           schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
@@ -25,7 +29,7 @@ void main() {
       addTearDown(container.dispose);
 
       final destinations = container.read(adminNavDestinationsProvider);
-      expect(destinations, hasLength(22));
+      expect(destinations, hasLength(13));
       expect(
         destinations.map((d) => d.route).toList(),
         [
@@ -42,17 +46,16 @@ void main() {
           RouteNames.alumniDashboard,
           RouteNames.controlCenterDashboard,
           RouteNames.directorDashboard,
-          RouteNames.organizationBuilder,
-          RouteNames.platformOperations,
-          RouteNames.industry,
-          RouteNames.healthcare,
-          RouteNames.salon,
-          RouteNames.restaurant,
-          RouteNames.accommodation,
-          RouteNames.whiteLabel,
-          RouteNames.dynamicWidgets,
         ],
       );
+
+      // Hidden modules are absent from the school build.
+      final routes = destinations.map((d) => d.route).toSet();
+      expect(routes, isNot(contains(RouteNames.salon)));
+      expect(routes, isNot(contains(RouteNames.healthcare)));
+      expect(routes, isNot(contains(RouteNames.whiteLabel)));
+      expect(routes, isNot(contains(RouteNames.organizationBuilder)));
+      expect(routes, isNot(contains(RouteNames.dynamicWidgets)));
     });
 
     test('financeAdmin sees finance and admin hub only', () {

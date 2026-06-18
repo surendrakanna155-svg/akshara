@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/school_build_scope.dart';
 import '../../core/security/permissions.dart';
 import '../../core/school_config/school_capability_registry.dart';
 import '../../core/school_config/school_configuration_provider.dart';
@@ -193,6 +194,9 @@ final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
   final rbac = ref.watch(rbacServiceProvider);
   final capabilities = ref.watch(schoolCapabilitiesProvider);
   return kAllAdminNavDestinations
+      .where(
+        (destination) => !SchoolBuildScope.isModuleHidden(destination.module),
+      )
       .where(
         (destination) => rbac.hasPermission(destination.requiredPermission),
       )

@@ -1,0 +1,94 @@
+import 'package:akshara_erp/core/config/school_build_scope.dart';
+import 'package:akshara_erp/features/admin/models/admin_nav_models.dart';
+import 'package:akshara_erp/router/route_names.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('SchoolBuildScope (hide non-school + experimental modules)', () {
+    test('non-school verticals are hidden modules', () {
+      for (final module in [
+        AdminModule.healthcare,
+        AdminModule.salon,
+        AdminModule.restaurant,
+        AdminModule.accommodation,
+        AdminModule.industry,
+        AdminModule.whiteLabel,
+        AdminModule.organizationBuilder,
+        AdminModule.platformOperations,
+        AdminModule.dynamicWidgets,
+      ]) {
+        expect(
+          SchoolBuildScope.isModuleHidden(module),
+          isTrue,
+          reason: '$module should be hidden in the school build',
+        );
+      }
+    });
+
+    test('core school modules and kept multi-school modules are NOT hidden', () {
+      for (final module in [
+        AdminModule.admin,
+        AdminModule.admissions,
+        AdminModule.finance,
+        AdminModule.sis,
+        AdminModule.hr,
+        AdminModule.management,
+        AdminModule.transport,
+        AdminModule.hostel,
+        AdminModule.library,
+        AdminModule.inventory,
+        AdminModule.alumni,
+        AdminModule.controlCenter, // multi-school: KEPT
+        AdminModule.director, // multi-school: KEPT
+      ]) {
+        expect(
+          SchoolBuildScope.isModuleHidden(module),
+          isFalse,
+          reason: '$module must stay visible in the school build',
+        );
+      }
+    });
+
+    test('hidden routes (incl. nested sub-routes) are blocked', () {
+      for (final route in [
+        RouteNames.salon,
+        '${RouteNames.salon}/customers',
+        RouteNames.healthcare,
+        RouteNames.restaurant,
+        RouteNames.accommodation,
+        RouteNames.whiteLabel,
+        RouteNames.franchise,
+        RouteNames.organizationBuilder,
+        RouteNames.platformOperations,
+        RouteNames.dynamicWidgets,
+        RouteNames.resourceOptimization,
+        RouteNames.schoolMemories,
+        RouteNames.growthPlatform,
+        RouteNames.principalCommand,
+      ]) {
+        expect(
+          SchoolBuildScope.isRouteHidden(route),
+          isTrue,
+          reason: '$route should be hidden in the school build',
+        );
+      }
+    });
+
+    test('kept school + multi-school routes are NOT blocked', () {
+      for (final route in [
+        RouteNames.financeDashboard,
+        RouteNames.sisDashboard,
+        RouteNames.controlCenterDashboard,
+        RouteNames.directorDashboard,
+        RouteNames.multiSchoolPortfolio,
+        RouteNames.operationsHub, // real ops hub (shares viewOperationsHub)
+      ]) {
+        expect(
+          SchoolBuildScope.isRouteHidden(route),
+          isFalse,
+          reason: '$route must remain reachable in the school build',
+        );
+      }
+    });
+  });
+}
