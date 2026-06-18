@@ -1,6 +1,7 @@
 import '../../features/education/education_models.dart';
 import '../repositories/mock/mock_canonical_student_registry.dart';
 import 'exam_administration_persistence.dart';
+import 'exam_grading.dart';
 
 /// Lifecycle phases for the exam administration chain.
 enum ExamLifecyclePhase {
@@ -156,6 +157,19 @@ final class ExamAdministrationStore {
   bool _seeded = false;
   ExamAdministrationPersistence? _persistence;
 
+  /// Per-school grading & report settings applied at publish time.
+  /// Defaults to the standard scale so behaviour is unchanged until a school
+  /// configures its board style (see [ExamReportSettings]).
+  ExamReportSettings _reportSettings = ExamReportSettings.standard();
+
+  /// Current report settings (grading scale + rank visibility + term hints).
+  ExamReportSettings get reportSettings => _reportSettings;
+
+  /// Applies a school's chosen grading scale / rank visibility / term hints.
+  void configureReportSettings(ExamReportSettings settings) {
+    _reportSettings = settings;
+  }
+
   /// Attaches durable storage (mock pilot persistence — P0-EXAM-004).
   void attachPersistence(ExamAdministrationPersistence persistence) {
     _persistence = persistence;
@@ -180,6 +194,7 @@ final class ExamAdministrationStore {
     _publishedByMarkId.clear();
     _rejectionCommentsByExamId.clear();
     _coordinatorVerifiedByExamId.clear();
+    _reportSettings = ExamReportSettings.standard();
     _seeded = false;
     if (clearPersistence) {
       _persistence?.clear();
@@ -491,7 +506,7 @@ final class ExamAdministrationStore {
         dateLabel: exam.dateLabel,
         scoreObtained: score,
         maxScore: exam.maxMarks,
-        grade: _gradeForPercent(percent),
+        grade: _reportSettings.gradingScale.gradeFor(percent),
         subject: exam.subject,
       );
       publishedCount++;
@@ -580,15 +595,6 @@ final class ExamAdministrationStore {
       phase: ExamLifecyclePhase.scheduled,
       examType: EduExamType.unitTest,
     );
-  }
-
-  static String _gradeForPercent(double percent) {
-    if (percent >= 90) return 'A+';
-    if (percent >= 80) return 'A';
-    if (percent >= 70) return 'B+';
-    if (percent >= 60) return 'B';
-    if (percent >= 50) return 'C';
-    return 'D';
   }
 
   static Map<String, dynamic> _examToJson(ExamSession exam) => {
