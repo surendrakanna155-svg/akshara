@@ -14,8 +14,10 @@ import '../../../../shared/widgets/akshara_dialog.dart';
 import '../../../../shared/widgets/akshara_motion.dart';
 import '../../../../theme/spacing.dart';
 import '../exam_administration_provider.dart';
+import '../exam_settings_provider.dart';
 
 Future<void> showExamCreateDialog(BuildContext context, WidgetRef ref) async {
+  final suggestedTerms = ref.read(examReportSettingsProvider).suggestedTerms;
   final titleController = TextEditingController();
   final termController = TextEditingController(text: 'Term 2');
   final dateController = TextEditingController(text: '15 Mar 2026');
@@ -127,6 +129,19 @@ Future<void> showExamCreateDialog(BuildContext context, WidgetRef ref) async {
               label: 'Academic term',
               controller: termController,
             ),
+            if (suggestedTerms.isNotEmpty)
+              Wrap(
+                spacing: AksharaSpacing.s2,
+                children: [
+                  for (final term in suggestedTerms)
+                    ActionChip(
+                      key: ValueKey('exam_term_chip_$term'),
+                      label: Text(term),
+                      onPressed: () =>
+                          setState(() => termController.text = term),
+                    ),
+                ],
+              ),
             AksharaFormField(
               label: 'Exam date',
               controller: dateController,

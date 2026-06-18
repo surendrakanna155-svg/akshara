@@ -10,8 +10,10 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'exam_admin_models.dart';
 import 'exam_administration_provider.dart';
+import 'exam_settings_provider.dart';
 import 'widgets/exam_create_dialog.dart';
 import 'widgets/exam_lifecycle_actions.dart';
+import 'widgets/exam_settings_sheet.dart';
 
 /// ERP exam scheduling and lifecycle administration.
 class ExamAdministrationScreen extends ConsumerWidget {
@@ -27,6 +29,14 @@ class ExamAdministrationScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Exam Administration'),
+        actions: [
+          IconButton(
+            key: const Key('exam_settings_button'),
+            icon: const Icon(Icons.tune),
+            tooltip: 'Exam settings',
+            onPressed: () => showExamSettingsSheet(context),
+          ),
+        ],
       ),
       floatingActionButton: AksharaManageAction(
         permission: Permission.manageExams,
@@ -40,6 +50,7 @@ class ExamAdministrationScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const _ExamSettingsSummaryBar(),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(
@@ -140,6 +151,46 @@ class _ExamSessionCard extends ConsumerWidget {
             const SizedBox(height: AksharaSpacing.s3),
             ExamLifecycleActions(exam: exam),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact "current exam settings" bar — shows the school's grading style and
+/// rank visibility at a glance, and opens the Exam Settings sheet on tap.
+class _ExamSettingsSummaryBar extends ConsumerWidget {
+  const _ExamSettingsSummaryBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(examReportSettingsProvider);
+    final text = context.aksharaText;
+    final colors = context.colors;
+
+    return Material(
+      color: colors.surfaceContainerHighest,
+      child: InkWell(
+        onTap: () => showExamSettingsSheet(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AksharaSpacing.s4,
+            vertical: AksharaSpacing.s2,
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.tune, size: 18, color: colors.onSurfaceVariant),
+              const SizedBox(width: AksharaSpacing.s2),
+              Expanded(
+                child: Text(
+                  'Grading: ${settings.gradingScale.name}  ·  '
+                  'Rank: ${settings.showRankToParents ? 'shown to parents' : 'hidden'}',
+                  style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+                ),
+              ),
+              Text('Change', style: text.labelSmall.copyWith(color: colors.primary)),
+            ],
+          ),
         ),
       ),
     );

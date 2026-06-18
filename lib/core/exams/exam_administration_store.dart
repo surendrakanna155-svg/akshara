@@ -167,7 +167,9 @@ final class ExamAdministrationStore {
 
   /// Applies a school's chosen grading scale / rank visibility / term hints.
   void configureReportSettings(ExamReportSettings settings) {
+    ensureSeeded();
     _reportSettings = settings;
+    _persist();
   }
 
   /// Attaches durable storage (mock pilot persistence — P0-EXAM-004).
@@ -216,6 +218,7 @@ final class ExamAdministrationStore {
       ],
       'rejectionComments': Map<String, String>.from(_rejectionCommentsByExamId),
       'coordinatorVerified': Map<String, String>.from(_coordinatorVerifiedByExamId),
+      'reportSettings': _reportSettingsToJson(_reportSettings),
     };
   }
 
@@ -269,6 +272,11 @@ final class ExamAdministrationStore {
         verified.map((k, v) => MapEntry('$k', '$v')),
       );
     }
+
+    final reportSettings = snapshot['reportSettings'];
+    _reportSettings = reportSettings is Map
+        ? _reportSettingsFromJson(Map<String, dynamic>.from(reportSettings))
+        : ExamReportSettings.standard();
   }
 
   void _persist() {
@@ -594,6 +602,29 @@ final class ExamAdministrationStore {
       maxMarks: 50,
       phase: ExamLifecyclePhase.scheduled,
       examType: EduExamType.unitTest,
+    );
+  }
+
+  static Map<String, dynamic> _reportSettingsToJson(ExamReportSettings s) => {
+        'gradingScale': s.gradingScale.name,
+        'showRankToParents': s.showRankToParents,
+        'suggestedTerms': s.suggestedTerms,
+      };
+
+  static ExamReportSettings _reportSettingsFromJson(Map<String, dynamic> json) {
+    final scaleName = json['gradingScale'] as String?;
+    final scale = ExamGradingScale.presets.firstWhere(
+      (s) => s.name == scaleName,
+      orElse: () => ExamGradingScale.standard,
+    );
+    final terms = (json['suggestedTerms'] as List?)
+            ?.map((e) => '$e')
+            .toList(growable: false) ??
+        const <String>[];
+    return ExamReportSettings(
+      gradingScale: scale,
+      showRankToParents: json['showRankToParents'] as bool? ?? false,
+      suggestedTerms: terms,
     );
   }
 
