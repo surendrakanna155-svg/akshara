@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 
-import '../../../../../features/academic/timetable/timetable_models.dart';
+import '../../../../../features/academics/timetable/timetable_models.dart';
 import '../../../repository_query.dart';
 import '../dto/timetable_dto.dart';
 import 'timetable_api_paths.dart';

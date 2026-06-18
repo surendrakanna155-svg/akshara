@@ -1,7 +1,7 @@
 import 'package:akshara_erp/core/repositories/mock/mock_school_completion_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_timetable_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
-import 'package:akshara_erp/features/academic/timetable/timetable_models.dart';
+import 'package:akshara_erp/features/academics/timetable/timetable_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -1,4 +1,4 @@
-import '../../../features/academic/timetable/timetable_models.dart';
+import '../../../features/academics/timetable/timetable_models.dart';
 import '../repository_query.dart';
 
 abstract class TimetableRepository {

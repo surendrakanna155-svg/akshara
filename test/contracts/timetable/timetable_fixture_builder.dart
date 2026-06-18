@@ -1,4 +1,4 @@
-import 'package:akshara_erp/features/academic/timetable/timetable_models.dart';
+import 'package:akshara_erp/features/academics/timetable/timetable_models.dart';
 
 class TimetableFixtureBuilder {
   Map<String, dynamic> envelope(Map<String, dynamic> data) {

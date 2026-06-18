@@ -1,6 +1,6 @@
 import '../../interfaces/timetable_repository.dart';
 import '../../repository_query.dart';
-import '../../../../features/academic/timetable/timetable_models.dart';
+import '../../../../features/academics/timetable/timetable_models.dart';
 import 'dto/timetable_dto.dart';
 import 'mapper/timetable_mapper.dart';
 import 'remote/timetable_remote_datasource.dart';

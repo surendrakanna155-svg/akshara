@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/academic/timetable/timetable_hub_screen.dart';
+import '../features/academics/timetable/timetable_hub_screen.dart';
 import '../features/management/attendance/attendance_corrections_admin_screen.dart';
 import '../features/management/intelligence/intelligence_hub_screen.dart';
 import '../features/management/academics/management_academics_screen.dart';

@@ -1,4 +1,4 @@
-import '../../../../../features/academic/timetable/timetable_models.dart';
+import '../../../../../features/academics/timetable/timetable_models.dart';
 import '../dto/timetable_dto.dart';
 
 class TimetableMapper {

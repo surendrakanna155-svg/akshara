@@ -1,6 +1,6 @@
 import '../../interfaces/timetable_repository.dart';
 import '../../repository_query.dart';
-import '../../../../features/academic/timetable/timetable_models.dart';
+import '../../../../features/academics/timetable/timetable_models.dart';
 import 'api_timetable_repository.dart';
 
 class HybridTimetableRepository implements TimetableRepository {
