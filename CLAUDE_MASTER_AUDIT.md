@@ -70,6 +70,16 @@ finance suites 67 pass; PDF generation verified.
 Carry-over: live Razorpay server path exists but is exercised only in
 CI/staging; the in-app experience runs on the mock loop.
 
+## ✅ ATTENDANCE = CLOSED
+Teacher marks attendance → updates the parent KPI AND now the student view
+(student was previously static; merge centralized in
+MockAttendanceSyncStore.mergedMonth, used by both). Correction flow (submit →
+principal approve, gated on approveAttendanceCorrection — Batch 2) updates the
+sync store. Certified: app analyze 0 errors; attendance suites 16 pass (incl. F5
+correction submit→approve integration).
+Carry-over: aggregate class counts drive the single-primary-student mock;
+per-student daily records are a backend (F-series) concern.
+
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
 - Exam **separation of duties** (approver ≠ verifier): verifier id now recorded; enforcement check pending. Batch 6 (governance).
