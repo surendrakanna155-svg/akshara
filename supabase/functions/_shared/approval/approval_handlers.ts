@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { approvalPermissionForType } from "./approval_permissions.ts";
+import { isClassTeacherForClass } from "../academic/teacher_assignments_repository.ts";
 import {
   approvalAuditToApi,
   approvalRequestToApi,
@@ -296,6 +297,34 @@ async function handleDecision(
     if (perm) {
       const permDenied = requirePermission(auth.claims, perm);
       if (permDenied) return permDenied;
+    }
+    // Student leave: a teacher (no management oversight) may only decide leaves
+    // for their OWN class. Principals/management (viewManagement) are unscoped.
+    if (
+      row.type === "studentLeave" &&
+      !auth.claims.permissions.includes("viewManagement")
+    ) {
+      const classLabel = String(row.payload?.classLabel ?? "");
+      const dash = classLabel.indexOf("-");
+      const className = dash >= 0 ? classLabel.substring(0, dash) : classLabel;
+      const sectionName = dash >= 0 ? classLabel.substring(dash + 1) : "";
+      const allowed = await runTenant(config, auth.claims, (db) =>
+        isClassTeacherForClass(
+          db,
+          organizationIdFromClaims(auth.claims),
+          schoolIdFromClaims(auth.claims),
+          auth.claims.sub,
+          className,
+          sectionName,
+        )
+      );
+      if (!allowed) {
+        return errorEnvelope(
+          "FORBIDDEN",
+          "Only the class teacher of this class may decide this leave.",
+          403,
+        );
+      }
     }
   }
 

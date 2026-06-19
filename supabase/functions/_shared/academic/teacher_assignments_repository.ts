@@ -162,6 +162,35 @@ async function assertTeacherMembership(
   }
 }
 
+/**
+ * Whether [teacherUserId] is the class teacher of [className]/[sectionName]
+ * (text-matched, e.g. grade "8", section "A"). Used to scope a class teacher to
+ * their own class for student-leave approval.
+ */
+export async function isClassTeacherForClass(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  className: string,
+  sectionName: string,
+): Promise<boolean> {
+  const rows = await db.queryObject<{ count: string }>(
+    `SELECT count(*)::text AS count
+     FROM teacher_assignments ta
+     JOIN sections sec ON sec.id = ta.section_id
+     JOIN classes c ON c.id = sec.class_id
+     WHERE ta.organization_id = $1
+       AND ta.school_id = $2
+       AND ta.teacher_id = $3
+       AND ta.role = 'class_teacher'
+       AND c.class_name = $4
+       AND sec.section_name = $5`,
+    [organizationId, schoolId, teacherUserId, className, sectionName],
+  );
+  return parseInt(rows[0]?.count ?? "0", 10) > 0;
+}
+
 export async function listTeacherAssignments(
   db: TenantQueryClient,
   organizationId: string,
