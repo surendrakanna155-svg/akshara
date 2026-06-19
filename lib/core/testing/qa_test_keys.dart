@@ -173,6 +173,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('teacher_exam_remark_field');
   static const teacherExamRemarkSaveButton =
       ValueKey<String>('teacher_exam_remark_save_button');
+  static ValueKey<String> teacherExamRemarkButton(String markId) =>
+      ValueKey<String>('teacher_exam_remark_$markId');
 
   static const parentAttendanceCorrectionButton =
       ValueKey<String>('parent_attendance_correction_button');

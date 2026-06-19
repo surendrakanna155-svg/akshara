@@ -449,6 +449,54 @@ class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
     );
   }
 
+  Future<void> _openRemarkDialog(
+    BuildContext context,
+    String examId,
+    ExamMarkEntry entry,
+  ) async {
+    var text = teacherExamRemarkText(ref, examId, entry.sisStudentId) ?? '';
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Remark · ${entry.studentName}'),
+        content: TextFormField(
+          key: QaTestKeys.teacherExamRemarkField,
+          initialValue: text,
+          maxLines: 3,
+          onChanged: (value) => text = value,
+          decoration: const InputDecoration(
+            hintText: 'Write a remark for this student',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.teacherExamRemarkSaveButton,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (saved == true) {
+      await saveTeacherExamRemark(
+        ref,
+        examId: examId,
+        sisStudentId: entry.sisStudentId,
+        text: text,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Remark saved for ${entry.studentName}')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.entries.isEmpty) {
@@ -457,6 +505,10 @@ class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
         compact: true,
       );
     }
+
+    final isClassTeacher =
+        ref.watch(teacherIsClassTeacherForActiveExamProvider);
+    final examId = ref.watch(teacherActiveExamIdProvider);
 
     return Column(
       children: [
@@ -467,6 +519,14 @@ class _MarksEntryListState extends ConsumerState<_MarksEntryList> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (isClassTeacher && examId != null)
+                  IconButton(
+                    key: QaTestKeys.teacherExamRemarkButton(entry.id),
+                    tooltip: 'Remark',
+                    icon: const Icon(Icons.rate_review_outlined),
+                    onPressed: () =>
+                        _openRemarkDialog(context, examId, entry),
+                  ),
                 SizedBox(
                   width: 72,
                   child: TextField(
