@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../parent/exams/report_card_screen.dart';
 import 'exam_models.dart';
+import 'report_card_provider.dart';
 import 'student_exams_provider.dart';
 import 'widgets/exam_result_row.dart';
 import 'widgets/subject_score_row.dart';
@@ -233,6 +236,20 @@ class _ResultsSection extends StatelessWidget {
         for (var i = 0; i < results.length; i++) ...[
           ExamResultRow(result: results[i]),
           if (i < results.length - 1) const SizedBox(height: AksharaSpacing.s2),
+        ],
+        if (results.isNotEmpty) ...[
+          const SizedBox(height: AksharaSpacing.s3),
+          FilledButton.tonalIcon(
+            key: QaTestKeys.studentReportCardButton,
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    ReportCardScreen(provider: studentReportCardProvider),
+              ),
+            ),
+            icon: const Icon(Icons.assignment_outlined),
+            label: const Text('View report card'),
+          ),
         ],
         const SizedBox(height: AksharaSpacing.s4),
         const AksharaSectionHeader(

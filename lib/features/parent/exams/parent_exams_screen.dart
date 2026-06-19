@@ -7,6 +7,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'exam_models.dart';
 import 'parent_exams_provider.dart';
+import 'report_card_provider.dart';
 import 'report_card_screen.dart';
 import 'widgets/exam_result_row.dart';
 import 'widgets/upcoming_exam_card.dart';
@@ -276,7 +277,8 @@ class _SectionContent extends StatelessWidget {
             key: QaTestKeys.parentReportCardButton,
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
-                builder: (_) => const ReportCardScreen(),
+                builder: (_) =>
+                    ReportCardScreen(provider: parentReportCardProvider),
               ),
             ),
             icon: const Icon(Icons.assignment_outlined),
