@@ -36,6 +36,8 @@ class ParentHomeworkItem {
     required this.title,
     required this.dueLabel,
     required this.status,
+    this.reviewGrade,
+    this.reviewComment,
   });
 
   final String id;
@@ -43,6 +45,12 @@ class ParentHomeworkItem {
   final String title;
   final String dueLabel;
   final ParentHomeworkStatus status;
+
+  /// Teacher's grade + comment once reviewed (null otherwise).
+  final String? reviewGrade;
+  final String? reviewComment;
+
+  bool get isReviewed => reviewGrade != null;
 }
 
 /// Parent homework screen payload with KPI-friendly helpers.

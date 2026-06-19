@@ -252,6 +252,17 @@ class MockTeacherRepository implements TeacherRepository {
       comment: request.comment.trim().isEmpty ? null : request.comment.trim(),
     );
     _store.reviewedSubmissions[request.submissionId] = reviewed;
+    // Share the grade/comment back to the student & parent (submission id is
+    // "<homeworkId>_<sisStudentId>").
+    final lastUnderscore = request.submissionId.lastIndexOf('_');
+    if (lastUnderscore > 0) {
+      SchoolHomeworkStore.instance.recordReview(
+        homeworkId: request.submissionId.substring(0, lastUnderscore),
+        sisStudentId: request.submissionId.substring(lastUnderscore + 1),
+        grade: request.grade,
+        comment: request.comment.trim().isEmpty ? null : request.comment.trim(),
+      );
+    }
     return TeacherHomeworkReviewResult(submission: reviewed);
   }
 
@@ -517,6 +528,13 @@ class MockTeacherRepository implements TeacherRepository {
   HomeworkSubmission _findSubmission(String submissionId) {
     for (final submissions in _mockSubmissions().values) {
       for (final submission in submissions) {
+        if (submission.id == submissionId) return submission;
+      }
+    }
+    // Also search teacher-created homework (shared store).
+    for (final record in SchoolHomeworkStore.instance.allRecords()) {
+      for (final submission
+          in SchoolHomeworkStore.instance.toTeacherAssignment(record).submissions) {
         if (submission.id == submissionId) return submission;
       }
     }

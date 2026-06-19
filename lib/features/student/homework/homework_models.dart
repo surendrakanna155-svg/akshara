@@ -30,6 +30,8 @@ class StudentHomeworkItem {
     required this.status,
     this.attachmentLabel,
     this.submittedLabel,
+    this.reviewGrade,
+    this.reviewComment,
   });
 
   final String id;
@@ -40,7 +42,12 @@ class StudentHomeworkItem {
   final String? attachmentLabel;
   final String? submittedLabel;
 
+  /// Teacher's grade + comment once the submission is reviewed (null otherwise).
+  final String? reviewGrade;
+  final String? reviewComment;
+
   bool get hasAttachment => attachmentLabel != null;
+  bool get isReviewed => reviewGrade != null;
 }
 
 @immutable

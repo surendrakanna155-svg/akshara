@@ -885,6 +885,7 @@ ParentHomeworkData _localizedHomework(AksharaLanguage language) {
       SchoolHomeworkStore.instance.toParentItem(
         record,
         ContentLocalization.localize(record.title, language),
+        sisStudentId: child.sisStudentId,
       ),
   ];
   return ParentHomeworkData(

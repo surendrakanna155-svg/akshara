@@ -66,6 +66,7 @@ final class SchoolHomeworkStore {
 
   void reset() {
     _records.clear();
+    _reviews.clear();
     _idSeq = 0;
   }
 
@@ -115,6 +116,29 @@ final class SchoolHomeworkStore {
     );
   }
 
+  // --- Teacher review/grade per (homework, student), shared to parent/student ---
+
+  final Map<String, ({String grade, String? comment})> _reviews = {};
+
+  String _reviewKey(String homeworkId, String sisStudentId) =>
+      '$homeworkId|$sisStudentId';
+
+  void recordReview({
+    required String homeworkId,
+    required String sisStudentId,
+    required String grade,
+    String? comment,
+  }) {
+    _reviews[_reviewKey(homeworkId, sisStudentId)] =
+        (grade: grade, comment: comment);
+  }
+
+  ({String grade, String? comment})? reviewFor(
+    String homeworkId,
+    String sisStudentId,
+  ) =>
+      _reviews[_reviewKey(homeworkId, sisStudentId)];
+
   int completionPercentForStudent(String sisStudentId) {
     final items = forStudent(sisStudentId);
     if (items.isEmpty) return -1;
@@ -156,8 +180,11 @@ final class SchoolHomeworkStore {
 
   ParentHomeworkItem toParentItem(
     SchoolHomeworkRecord record,
-    String localizedTitle,
-  ) {
+    String localizedTitle, {
+    String? sisStudentId,
+  }) {
+    final review =
+        sisStudentId == null ? null : reviewFor(record.id, sisStudentId);
     return ParentHomeworkItem(
       id: record.id,
       subject: record.subject,
@@ -168,13 +195,18 @@ final class SchoolHomeworkStore {
         SchoolHomeworkStatus.overdue => ParentHomeworkStatus.overdue,
         SchoolHomeworkStatus.pending => ParentHomeworkStatus.pending,
       },
+      reviewGrade: review?.grade,
+      reviewComment: review?.comment,
     );
   }
 
   StudentHomeworkItem toStudentItem(
     SchoolHomeworkRecord record,
-    String localizedTitle,
-  ) {
+    String localizedTitle, {
+    String? sisStudentId,
+  }) {
+    final review =
+        sisStudentId == null ? null : reviewFor(record.id, sisStudentId);
     return StudentHomeworkItem(
       id: record.id,
       subject: record.subject,
@@ -186,6 +218,8 @@ final class SchoolHomeworkStore {
         SchoolHomeworkStatus.pending => StudentHomeworkStatus.pending,
       },
       attachmentLabel: null,
+      reviewGrade: review?.grade,
+      reviewComment: review?.comment,
     );
   }
 

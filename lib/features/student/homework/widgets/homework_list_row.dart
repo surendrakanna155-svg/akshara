@@ -68,6 +68,14 @@ class HomeworkListRow extends StatelessWidget {
                   color: colors.onSurfaceVariant,
                 ),
               ),
+              if (item.isReviewed) ...[
+                const SizedBox(height: AksharaSpacing.s1),
+                Text(
+                  'Reviewed · Grade ${item.reviewGrade}'
+                  '${(item.reviewComment ?? '').isNotEmpty ? ' — ${item.reviewComment}' : ''}',
+                  style: text.bodySmall.copyWith(color: colors.primary),
+                ),
+              ],
               if (item.hasAttachment) ...[
                 const SizedBox(height: AksharaSpacing.s2),
                 Row(

@@ -49,6 +49,7 @@ class MockStudentRepository implements StudentRepository {
         SchoolHomeworkStore.instance.toStudentItem(
           record,
           ContentLocalization.localize(record.title, language),
+          sisStudentId: student.sisStudentId,
         ),
     ];
     return [
