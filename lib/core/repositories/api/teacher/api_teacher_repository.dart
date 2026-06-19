@@ -33,7 +33,9 @@ class ApiTeacherRepository implements TeacherRepository {
   @override
   Future<List<TeacherAttendanceClass>> getAttendanceClasses({
     required RepositoryQuery query,
+    TeacherTeachingContext? teachingContext,
   }) async {
+    // Server scopes attendance classes to the class teacher.
     final dto = await _remote.fetchAttendanceClasses(query: query);
     return _mapper.toAttendanceClasses(dto);
   }

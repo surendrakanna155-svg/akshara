@@ -15,6 +15,7 @@ abstract class TeacherRepository {
   Future<TeacherDashboardData> getDashboard({required RepositoryQuery query});
   Future<List<TeacherAttendanceClass>> getAttendanceClasses({
     required RepositoryQuery query,
+    TeacherTeachingContext? teachingContext,
   });
   Future<Map<String, List<TeacherAttendanceStudent>>>
       getAttendanceStudentsByClass({required RepositoryQuery query});

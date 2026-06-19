@@ -29,8 +29,18 @@ class MockTeacherRepository implements TeacherRepository {
   @override
   Future<List<TeacherAttendanceClass>> getAttendanceClasses({
     required RepositoryQuery query,
-  }) async =>
-      _mockClasses();
+    TeacherTeachingContext? teachingContext,
+  }) async {
+    // Attendance is the class teacher's job: only their own class's sessions.
+    // A non-class-teacher gets none. (No context supplied = unscoped, for probes.)
+    if (teachingContext == null) return _mockClasses();
+    if (!teachingContext.isClassTeacher) return const [];
+    final classLabel = teachingContext.classTeacherClassLabel;
+    return [
+      for (final c in _mockClasses())
+        if (c.label == classLabel) c,
+    ];
+  }
 
   @override
   Future<Map<String, List<TeacherAttendanceStudent>>>

@@ -5,6 +5,7 @@ import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/mock/mock_attendance_sync_store.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../communication/teacher_teaching_context_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
 import 'attendance_models.dart';
@@ -37,6 +38,7 @@ final teacherAttendanceClassesFutureProvider =
     FutureProvider<List<TeacherAttendanceClass>>((ref) async {
   return ref.read(teacherRepositoryProvider).getAttendanceClasses(
         query: ref.watch(repositoryQueryProvider),
+        teachingContext: ref.watch(resolvedTeacherTeachingContextProvider),
       );
 });
 
