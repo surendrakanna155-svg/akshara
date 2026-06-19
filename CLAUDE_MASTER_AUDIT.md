@@ -38,6 +38,14 @@ Audited authz parity; **no fixes needed** — finance was built correctly:
 - Certified: 76 finance deno tests pass.
 - Carry-over (minor parity, not a hole): client has `approveFeeStructure` but fee-structure changes are gated by `manageFinance` with no approval flow server-side — wiring a fee-structure approval type is a feature, deferred.
 
+## Exam domain — feature completion (Slices 1–6)
+Closed end-to-end: grading engine → workspace hub → marks wiring → approve/publish
+→ parent/student results → **report card with class rank** (parent + student;
+rank shown per `showRankToParents`; attendance line from the shared attendance
+store). Full exam Flutter suite green (84). Deferred by design:
+- **Report card remark** — no data model/entry yet; needs a product decision (who writes it, where stored).
+- **PDF export** — owner explicitly deferred ("downloadable PDF later").
+
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
 - Exam **separation of duties** (approver ≠ verifier): verifier id now recorded; enforcement check pending. Batch 6 (governance).
