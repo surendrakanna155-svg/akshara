@@ -61,6 +61,15 @@ card complete and certified.
 - Deferred by owner: nothing blocking. (Future extension: principal / vice-
   principal remarks — schema already allows those author roles.)
 
+## ✅ FEES & PAYMENTS = CLOSED
+Payment loop now works end-to-end: a confirmed payment marks the installment
+paid, lowers the amount due, updates progress, and adds a receipt to history
+(was previously static). Receipt PDF download/share added (real PDF). Report
+card PDF reused from exams. Certified: app analyze 0 errors; fees/payments/
+finance suites 67 pass; PDF generation verified.
+Carry-over: live Razorpay server path exists but is exercised only in
+CI/staging; the in-app experience runs on the mock loop.
+
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
 - Exam **separation of duties** (approver ≠ verifier): verifier id now recorded; enforcement check pending. Batch 6 (governance).
