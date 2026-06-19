@@ -10,6 +10,7 @@ import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
 import '../../admin/admin_shell.dart';
 import '../../admin/models/admin_nav_models.dart';
+import 'substitutions/daily_substitutions_screen.dart';
 import 'timetable_editor_tab.dart';
 import 'timetable_models.dart';
 import 'timetable_provider.dart';
@@ -116,6 +117,21 @@ class _TimetableDashboardTab extends ConsumerWidget {
               _KpiCard(label: 'Gaps', value: '${summary.gapCount}'),
               _KpiCard(label: 'Overloaded', value: '${summary.overloadedTeacherCount}'),
             ],
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.swap_horiz_outlined),
+              title: const Text("Today's timetable & cover"),
+              subtitle:
+                  const Text('Auto-fill periods when a teacher is on leave'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const DailySubstitutionsScreen(),
+                ),
+              ),
+            ),
           ),
         ],
       ),
