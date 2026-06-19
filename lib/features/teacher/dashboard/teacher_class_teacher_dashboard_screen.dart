@@ -10,6 +10,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../communication/teacher_teaching_context_provider.dart';
 import '../dashboard/teacher_dashboard_provider.dart';
+import '../leave_approvals/teacher_leave_approvals_screen.dart';
 
 /// TA-01 class teacher dashboard (dedicated overview).
 class TeacherClassTeacherDashboardScreen extends ConsumerWidget {
@@ -137,6 +138,15 @@ class TeacherClassTeacherDashboardScreen extends ConsumerWidget {
                       label: 'Parent comms',
                       onTap: () =>
                           context.go(RouteNames.teacherParentCommunication),
+                    ),
+                    AksharaQuickActionCard(
+                      icon: Icons.event_available_outlined,
+                      label: 'Leave requests',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const TeacherLeaveApprovalsScreen(),
+                        ),
+                      ),
                     ),
                   ],
                 ),

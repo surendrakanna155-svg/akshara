@@ -599,6 +599,9 @@ class RolePermissionMatrix {
       Permission.markAttendance,
       Permission.viewAttendance,
       Permission.submitAttendanceCorrection,
+      // Class teacher approves student leave for their own class (scoped at the
+      // action layer to the class-teacher's class).
+      Permission.approveStudentLeave,
       Permission.viewStudent360,
       Permission.viewEmployees,
       Permission.viewAchievementPromotion,
