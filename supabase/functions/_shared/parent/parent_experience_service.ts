@@ -158,7 +158,10 @@ export async function buildParentExperienceHub(
     academics: {
       homeworkSubmitted: Number(homework.submitted ?? 0),
       homeworkTotal: Number(homework.total ?? 0),
-      recentExams: examItems.slice(0, 5),
+      recentExams: examItems.slice(0, 5).map((e) => ({
+        title: e.examTitle,
+        avgPct: e.avgPct,
+      })),
     },
     attendance: {
       present,

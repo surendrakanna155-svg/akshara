@@ -32,7 +32,7 @@ function matchTransportRoute(
     "/transport/occupancy-metrics": handleOccupancyMetrics,
   };
 
-  const handler = routes[path];
+  const handler = routes[path] as (typeof routes)[string] | undefined;
   return handler ? { handler } : null;
 }
 

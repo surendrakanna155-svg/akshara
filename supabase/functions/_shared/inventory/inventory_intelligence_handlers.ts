@@ -136,7 +136,7 @@ export async function handleRecordAssetLifecycleEvent(
 
   let body: Record<string, unknown>;
   try {
-    body = await readJson(req);
+    body = await readJson(req) ?? {};
   } catch {
     return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 400);
   }
@@ -185,7 +185,7 @@ export async function handleRecordAssetLifecycleEvent(
       );
       return created;
     });
-    return jsonResponse(envelope(event), 201);
+    return jsonResponse(envelope(event), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse();

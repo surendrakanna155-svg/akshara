@@ -32,6 +32,12 @@ jobs:
           restore-keys: |
             deno-${{ runner.os }}-
 
+      - name: Type-check full edge graph
+        # Type-checks every module reachable from the deployed api entrypoint —
+        # not just test-reachable files. Catches "wired but never compiled"
+        # modules (e.g. broken import paths) that `deno test` alone misses.
+        run: deno check supabase/functions/api/index.ts
+
       - name: Deno unit tests
         run: deno test --allow-env --allow-read supabase/functions/_shared/
 

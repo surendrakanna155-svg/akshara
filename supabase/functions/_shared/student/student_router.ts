@@ -26,7 +26,7 @@ function matchStudentRoute(
     "/student/profile": handleProfile,
   };
 
-  const handler = routes[path];
+  const handler = routes[path] as (typeof routes)[string] | undefined;
   return handler ? { handler } : null;
 }
 

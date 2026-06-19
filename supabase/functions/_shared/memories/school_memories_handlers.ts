@@ -131,6 +131,9 @@ export async function handleCreateMemoryEvent(req: Request, config: AppConfig): 
     description?: string;
     visibility?: string;
   }>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+  }
   if (!body.title || !body.category) {
     return errorEnvelope("VALIDATION_ERROR", "title and category are required", 400);
   }
@@ -216,6 +219,9 @@ export async function handleMemoryUploadPresign(
     filename?: string;
     mediaType?: string;
   }>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+  }
   if (!body.filename) {
     return errorEnvelope("VALIDATION_ERROR", "filename is required", 400);
   }
@@ -270,6 +276,9 @@ export async function handleMemoryUploadConfirm(
     title?: string;
     mediaType?: string;
   }>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+  }
   if (!body.albumId || !body.storagePath || !body.title) {
     return errorEnvelope("VALIDATION_ERROR", "albumId, storagePath, title required", 400);
   }

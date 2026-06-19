@@ -32,7 +32,7 @@ function matchTeacherRoute(
     "/teacher/messages": handleMessages,
   };
 
-  const handler = routes[path];
+  const handler = routes[path] as (typeof routes)[string] | undefined;
   return handler ? { handler } : null;
 }
 

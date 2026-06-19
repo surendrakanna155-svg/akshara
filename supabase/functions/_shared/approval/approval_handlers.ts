@@ -282,7 +282,7 @@ async function handleDecision(
 
   const body = await readJson<Record<string, unknown>>(req) ?? {};
   const actorId = optionalStr(body, "actor_id", "actorId") ?? auth.claims.sub;
-  const actorName = optionalStr(body, "actor_name", "actorName") ?? auth.claims.name ?? "Approver";
+  const actorName = optionalStr(body, "actor_name", "actorName") ?? "Approver";
   const comment = optionalStr(body, "comment", "comment") ?? null;
 
   if (status !== "cancelled") {

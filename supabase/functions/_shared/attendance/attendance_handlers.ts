@@ -26,6 +26,8 @@ import {
   listAttendanceSessions,
 } from "./attendance_sessions_repository.ts";
 
+type AuthedClaims = Parameters<typeof requirePermission>[0];
+
 function requireAttendanceRead(
   claims: Parameters<typeof requirePermission>[0],
 ): Response | null {
@@ -57,9 +59,7 @@ async function withAuth<T>(
   req: Request,
   config: AppConfig,
   readOnly: boolean,
-  handler: (
-    claims: NonNullable<Awaited<ReturnType<typeof authenticateRequest>>["claims"]>,
-  ) => Promise<T>,
+  handler: (claims: AuthedClaims) => Promise<T>,
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
@@ -80,7 +80,7 @@ async function withAuth<T>(
   }
 }
 
-function tenantIds(claims: { organizationId: string; schoolId: string }) {
+function tenantIds(claims: AuthedClaims) {
   return {
     organizationId: organizationIdFromClaims(claims),
     schoolId: schoolIdFromClaims(claims),
@@ -176,7 +176,7 @@ export async function handleCreateAttendanceCorrection(
         fromMark: String(body.fromMark ?? body.from_mark ?? ""),
         toMark: String(body.toMark ?? body.to_mark ?? ""),
         reason: String(body.reason ?? ""),
-        requesterId: String(body.requesterId ?? body.requester_id ?? claims.userId),
+        requesterId: String(body.requesterId ?? body.requester_id ?? claims.sub),
         requesterName: String(body.requesterName ?? body.requester_name ?? "Requester"),
         requesterRole: String(body.requesterRole ?? body.requester_role ?? "teacher"),
         presentDelta: Number(body.presentDelta ?? body.present_delta ?? 1) || 1,
@@ -193,6 +193,9 @@ export async function handleUpdateAttendanceCorrectionStatus(
 ): Promise<Response> {
   return await withAuth(req, config, false, async (claims) => {
     const body = await readJson<Record<string, unknown>>(req);
+    if (!body) {
+      return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+    }
     const status = String(body?.status ?? "").trim() as AttendanceCorrectionStatus;
     if (!status) throw new AttendanceValidationError("status is required");
 

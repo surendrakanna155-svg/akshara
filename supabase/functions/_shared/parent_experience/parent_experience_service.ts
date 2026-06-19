@@ -29,7 +29,7 @@ export async function generateParentAcademicSummary(
     [orgId, schoolId, studentId],
   );
 
-  const homework = await db.queryObject<{ pending: string; submitted: string }>(
+  const homework = await db.queryObject<{ submitted: string; total: string }>(
     `SELECT count(*) FILTER (WHERE status = 'submitted')::text AS submitted,
             count(*)::text AS total
      FROM homework_submissions

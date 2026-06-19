@@ -61,7 +61,7 @@ function matchInventoryRoute(
     "/inventory/reports": handleReports,
   };
 
-  const handler = routes[path];
+  const handler = routes[path] as (typeof routes)[string] | undefined;
   return handler ? { handler } : null;
 }
 

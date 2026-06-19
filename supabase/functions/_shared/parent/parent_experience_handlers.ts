@@ -68,6 +68,9 @@ export async function handleParentAcknowledge(
     acknowledgementType?: string;
     notes?: string;
   }>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+  }
   if (!body.studentId || !body.distributionId) {
     return errorEnvelope("VALIDATION_ERROR", "studentId and distributionId are required", 400);
   }

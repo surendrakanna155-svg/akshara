@@ -3,8 +3,8 @@ import { applyApprovalTypeHandler } from "./approval_type_handlers.ts";
 import {
   decideApproval,
   type DecideApprovalInput,
-  type ApprovalRequestRow,
 } from "./approval_repository.ts";
+import type { ApprovalRequestRow } from "./approval_types.ts";
 
 export interface OrchestrateDecisionInput {
   approvalId: string;

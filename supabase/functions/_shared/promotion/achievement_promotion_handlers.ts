@@ -81,6 +81,9 @@ export async function handleCreatePromotion(req: Request, config: AppConfig): Pr
     title?: string;
     description?: string;
   }>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+  }
   if (!body.achievementType || !body.title) {
     return errorEnvelope("VALIDATION_ERROR", "achievementType and title are required", 400);
   }
@@ -208,6 +211,9 @@ export async function handleTrackPromotion(
   if (denied) return denied;
 
   const body = await readJson<{ metric?: string }>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+  }
   const metric = body.metric as "views" | "shares" | "downloads" | undefined;
   if (!metric || !["views", "shares", "downloads"].includes(metric)) {
     return errorEnvelope("VALIDATION_ERROR", "metric must be views, shares, or downloads", 400);

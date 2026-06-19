@@ -54,11 +54,11 @@ function matchControlCenterRoute(
   };
 
   if (method === "GET") {
-    const handler = getRoutes[path];
+    const handler = getRoutes[path] as (typeof getRoutes)[string] | undefined;
     return handler ? { handler } : null;
   }
   if (method === "POST" || method === "PUT") {
-    const handler = postRoutes[path];
+    const handler = postRoutes[path] as (typeof postRoutes)[string] | undefined;
     return handler ? { handler } : null;
   }
   return null;
