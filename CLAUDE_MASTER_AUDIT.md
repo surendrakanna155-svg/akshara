@@ -120,6 +120,22 @@ Remaining areas are a **different kind of work** (no clean broken loop to close)
   work (read views + staff CRUD), with an intentional live-tracking placeholder
   (future). No broken parent/student loop.
 
+## ✅ #1 LEAVE BY CLASS TEACHER = DONE (app + server)
+Student leave is now the class teacher's job (not principal). App: class-teacher
+dashboard "Leave requests" lists their own class's pending leaves with
+approve/reject (scoped via classTeacherOwnsLeave); reuses the approval pipeline
+so the parent sees the decision; principal keeps visibility. Server: registered
+approveStudentLeave (was uncatalogued → would 403 everyone) + granted to
+oversight roles + teacher; approval handler scopes a teacher to their own class
+(isClassTeacherForClass), principals/management unscoped. Certified: app analyze
+0 err, RBAC/approval suites 151 pass; edge deno check 0 err, +1 scope test.
+Follow-up: sibling approve perms (approveStaffLeave, approveAttendanceCorrection)
+are also uncatalogued server-side — register when those domains are hardened.
+
+## Next (in progress)
+- #2 Attendance marking scoped to the class teacher.
+- #3 Timetable: daily schedule → auto-substitute (rules) → coordinator review.
+
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
 - Exam **separation of duties** (approver ≠ verifier): verifier id now recorded; enforcement check pending. Batch 6 (governance).
