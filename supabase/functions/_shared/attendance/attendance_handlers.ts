@@ -42,6 +42,14 @@ function requireAttendanceWrite(
     requireSchoolOperationalScope(claims);
 }
 
+/** Deciding a correction's status is an approval action — not plain manageSis. */
+function requireAttendanceApprove(
+  claims: Parameters<typeof requirePermission>[0],
+): Response | null {
+  return requirePermission(claims, "approveAttendanceCorrection") ??
+    requireSchoolOperationalScope(claims);
+}
+
 function mapAttendanceError(error: unknown): Response {
   if (error instanceof AttendanceCorrectionNotFoundError) {
     return errorEnvelope("ATTENDANCE_CORRECTION_NOT_FOUND", error.message, 404);
@@ -191,16 +199,25 @@ export async function handleUpdateAttendanceCorrectionStatus(
   config: AppConfig,
   correctionId: string,
 ): Promise<Response> {
-  return await withAuth(req, config, false, async (claims) => {
-    const body = await readJson<Record<string, unknown>>(req);
-    if (!body) {
-      return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
-    }
-    const status = String(body?.status ?? "").trim() as AttendanceCorrectionStatus;
-    if (!status) throw new AttendanceValidationError("status is required");
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  // Approving/rejecting a correction is a governance decision — gate on the
+  // approve permission, not plain manageSis (closes an approval-bypass).
+  const denied = requireAttendanceApprove(auth.claims);
+  if (denied) return denied;
 
-    const { organizationId, schoolId } = tenantIds(claims);
-    const row = await withTenantContext(config, claims, (db) =>
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
+  }
+  const status = String(body.status ?? "").trim() as AttendanceCorrectionStatus;
+  if (!status) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "status is required", 422);
+  }
+
+  const { organizationId, schoolId } = tenantIds(auth.claims);
+  try {
+    const row = await withTenantContext(config, auth.claims, (db) =>
       updateAttendanceCorrectionStatus(
         db,
         organizationId,
@@ -209,6 +226,11 @@ export async function handleUpdateAttendanceCorrectionStatus(
         status,
       )
     );
-    return correctionToApi(row);
-  });
+    return jsonResponse(envelope(correctionToApi(row)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
+    return mapAttendanceError(error);
+  }
 }
