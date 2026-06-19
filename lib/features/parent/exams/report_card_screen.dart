@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/exams/exam_report_card.dart';
+import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'widgets/report_card_view.dart';
+
+/// School name for report-card branding (placeholder until school profile wired).
+const String _reportCardSchoolName = 'Akshara Vidyalaya';
 
 /// In-app report card (Slice 6). Reused by parent and student apps — each passes
 /// the provider that builds the card for its own student.
@@ -20,7 +25,23 @@ class ReportCardScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
-      appBar: AppBar(title: const Text('Report card')),
+      appBar: AppBar(
+        title: const Text('Report card'),
+        actions: [
+          if (card != null)
+            IconButton(
+              key: QaTestKeys.reportCardShareButton,
+              tooltip: 'Export / share PDF',
+              icon: const Icon(Icons.ios_share_outlined),
+              onPressed: () => ref
+                  .read(aksharaReportExportServiceProvider)
+                  .shareReportCardPdf(
+                    card: card,
+                    schoolName: _reportCardSchoolName,
+                  ),
+            ),
+        ],
+      ),
       body: card == null
           ? const AksharaEmptyState(
               icon: Icons.assignment_outlined,
