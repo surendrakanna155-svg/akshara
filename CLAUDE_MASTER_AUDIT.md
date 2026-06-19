@@ -46,32 +46,20 @@ store). Full exam Flutter suite green (84). Deferred by design:
 - **Report card remark** — no data model/entry yet; needs a product decision (who writes it, where stored).
 - **PDF export** — owner explicitly deferred ("downloadable PDF later").
 
-## IN PROGRESS — Exam remark + PDF (resume here)
-Goal: per-(student, exam session) remark (class-teacher authored, audit trail,
-viewable parent/student/principal, API+mock parity, in report card) + PDF report
-card export. Then mark EXAM DOMAIN = CLOSED (100%).
-
-- [x] **A. Remark model + mock store + report-card integration** — `ExamRemark`
-  (+audit trail) in `lib/core/exams/exam_remark.dart`; store `upsertRemark`/
-  `remarkFor`/`remarksForExam` (+persistence); report card surfaces it;
-  `sisStudentId` added to teacher `ExamMarkEntry` (mock+api parity). Committed `7f561fc`.
-- [~] **B. Class-teacher authoring UI** — providers DONE
-  (`teacherIsClassTeacherForActiveExamProvider`, `saveTeacherExamRemark`,
-  `teacherExamRemarkText` in teacher_exams_provider). TODO: remark button + dialog
-  per student row in `_MarksEntryList` (teacher_exams_screen), gated to class
-  teacher; widget test.
-- [ ] **C. Server parity** — `exam_remarks` table migration (RLS school + parent/
-  student read scope) + repository + handler (`/academics/exams/:id/remarks` GET +
-  PUT) + authz: write requires class-teacher of the exam's section (reuse the P2
-  pattern; gate `manageExamMarks` + class-teacher assignment); Deno test.
-- [ ] **D. PDF export** — branding/logo, student details, class/section, subject
-  marks, grades, total, %, rank (only if showRankToParents), attendance %,
-  class-teacher remark, principal-signature + school-seal placeholders. Parent +
-  student share. Use existing `AksharaReportExportService` (dart `printing`/`pdf`
-  already in deps — see exam_marks export). Consistent across grading scales.
-- [ ] **E. Certify**: flutter analyze; affected tests; exam domain suite; verify
-  PDF generation (non-empty bytes test); update this file → EXAM DOMAIN CLOSED 100%.
-- [ ] **F. Next batch (non-exam)** after closure.
+## ✅ EXAM DOMAIN = CLOSED (100%)
+All slices (1–6) + server authz hardening + per-exam-session remarks + PDF report
+card complete and certified.
+- Remarks: per (student, exam session), class-teacher authored, audit trail,
+  shown on report card; app + server parity; only the class teacher may write.
+- PDF report card (parent + student share): branding/logo placeholder, student
+  details, class/section, subject marks, grades, total, %, rank (only when the
+  school enables it), attendance %, class-teacher remark, principal-signature +
+  school-seal placeholders; identical layout across grading systems.
+- Certified: flutter analyze 0 errors; exam Flutter suite 94 pass; PDF generation
+  verified (valid PDF); full edge `deno check` 0 errors; exam/approval server
+  tests 12 pass.
+- Deferred by owner: nothing blocking. (Future extension: principal / vice-
+  principal remarks — schema already allows those author roles.)
 
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
