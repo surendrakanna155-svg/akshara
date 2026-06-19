@@ -144,9 +144,12 @@ attendance marking endpoints (mirror leave) when the backend goes live.
 - [x] Stage 2: coordinator review screen ("Today's timetable & cover" from the
   Smart Timetable hub) — mark a teacher on leave → auto-fill → Substitute/Needs-
   cover badges → reassign via picker. MockDailyTimetableStore + tests (8 total).
-- [ ] Stage 3: wire on-leave from approved HR staff-leave for today + teacher
-  daily view ("you're covering 8-A P1") + a daily prepare-today trigger.
-  (Truly-automatic morning run = scheduled job when backend is live.)
+- [x] Stage 3a: teacher "Today's classes" view (teacherTodayScheduleProvider +
+  screen + dashboard entry) shows the teacher's day incl. "Covering X" subs. Test.
+- [ ] Stage 3b (remaining): auto-detect on-leave from APPROVED HR staff-leave for
+  today (so coordinators needn't toggle manually) + a true scheduled morning run
+  (needs live backend). Today the coordinator toggles on-leave → auto-substitute
+  → teacher sees cover; that's the full loop minus auto-trigger.
 
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
