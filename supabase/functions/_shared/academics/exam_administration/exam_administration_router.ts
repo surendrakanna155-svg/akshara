@@ -4,6 +4,7 @@ import {
   handleCreateExam,
   handleGetExam,
   handleListExamMarks,
+  handleListExamRemarks,
   handleListExams,
   handleListPublishedResultsForStudent,
   handleOpenMarksEntry,
@@ -11,6 +12,7 @@ import {
   handlePublishExamResults,
   handleScheduleExam,
   handleUpdateExamMark,
+  handleUpsertExamRemark,
   handleVerifyCoordinator,
 } from "./exam_administration_handlers.ts";
 
@@ -43,6 +45,16 @@ export function matchExamAdministrationRoute(
     return { handler: handleUpdateExamMark, args: [markMatch[1]!] };
   }
 
+  const remarkMatch = path.match(
+    /^\/academics\/exams\/([^/]+)\/remarks\/([^/]+)$/,
+  );
+  if (remarkMatch && method === "PUT") {
+    return {
+      handler: handleUpsertExamRemark,
+      args: [remarkMatch[1]!, remarkMatch[2]!],
+    };
+  }
+
   const examMatch = path.match(/^\/academics\/exams\/([^/]+)$/);
   if (examMatch && method === "GET") {
     return { handler: handleGetExam, args: [examMatch[1]!] };
@@ -56,6 +68,7 @@ export function matchExamAdministrationRoute(
     { suffix: "/schedule", method: "POST", handler: handleScheduleExam },
     { suffix: "/open-marks", method: "POST", handler: handleOpenMarksEntry },
     { suffix: "/marks", method: "GET", handler: handleListExamMarks },
+    { suffix: "/remarks", method: "GET", handler: handleListExamRemarks },
     { suffix: "/process", method: "POST", handler: handleProcessExamResults },
     {
       suffix: "/verify-coordinator",

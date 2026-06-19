@@ -578,6 +578,135 @@ export async function listPublishedResultsForStudent(
   }));
 }
 
+// --- Exam-session remarks (class-teacher authored, audit trail) ---
+
+export interface ExamRemarkRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  exam_id: string;
+  student_id: string;
+  text: string;
+  author_id: string | null;
+  author_name: string;
+  author_role: string;
+  history: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
+export function examRemarkToApi(row: ExamRemarkRow): Record<string, unknown> {
+  return {
+    examId: row.exam_id,
+    sisStudentId: row.student_id,
+    text: row.text,
+    authorId: row.author_id,
+    authorName: row.author_name,
+    authorRole: row.author_role,
+    history: row.history ?? [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function listExamRemarks(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+): Promise<ExamRemarkRow[]> {
+  return await db.queryObject<ExamRemarkRow>(
+    `SELECT * FROM exam_remarks
+     WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3
+     ORDER BY student_id`,
+    [organizationId, schoolId, examId],
+  );
+}
+
+/** Creates or edits a (student, exam session) remark, appending to the audit trail. */
+export async function upsertExamRemark(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: {
+    examId: string;
+    studentId: string;
+    text: string;
+    authorId: string;
+    authorName: string;
+    authorRole?: string;
+  },
+): Promise<ExamRemarkRow> {
+  const id = `${input.examId}|${input.studentId}`;
+  const authorRole = input.authorRole ?? "classTeacher";
+  const revision = JSON.stringify({
+    text: input.text,
+    authorId: input.authorId,
+    authorName: input.authorName,
+    authorRole,
+  });
+  const rows = await db.queryObject<ExamRemarkRow>(
+    `INSERT INTO exam_remarks (
+       id, organization_id, school_id, exam_id, student_id, text,
+       author_id, author_name, author_role,
+       history
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6, $7, $8, $9,
+       jsonb_build_array(($10::jsonb) || jsonb_build_object('timestamp', timezone('utc', now())::text))
+     )
+     ON CONFLICT (organization_id, school_id, id) DO UPDATE SET
+       text = EXCLUDED.text,
+       author_id = EXCLUDED.author_id,
+       author_name = EXCLUDED.author_name,
+       author_role = EXCLUDED.author_role,
+       updated_at = timezone('utc', now()),
+       history = exam_remarks.history
+         || jsonb_build_array(($10::jsonb) || jsonb_build_object('timestamp', timezone('utc', now())::text))
+     RETURNING *`,
+    [
+      id,
+      organizationId,
+      schoolId,
+      input.examId,
+      input.studentId,
+      input.text,
+      input.authorId,
+      input.authorName,
+      authorRole,
+      revision,
+    ],
+  );
+  return rows[0]!;
+}
+
+/**
+ * Whether [teacherUserId] is the class teacher of the exam's class+section.
+ * Class-teacher status is the authority to author remarks (P2-style scope, but
+ * keyed on the class_teacher assignment role).
+ */
+export async function isClassTeacherForExam(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  teacherUserId: string,
+  session: ExamSessionRow,
+): Promise<boolean> {
+  const rows = await db.queryObject<{ count: string }>(
+    `SELECT count(*)::text AS count
+     FROM teacher_assignments ta
+     JOIN sections sec ON sec.id = ta.section_id
+     JOIN classes c ON c.id = sec.class_id
+     WHERE ta.organization_id = $1
+       AND ta.school_id = $2
+       AND ta.teacher_id = $3
+       AND ta.role = 'class_teacher'
+       AND c.class_name = $4
+       AND sec.section_name = $5`,
+    [organizationId, schoolId, teacherUserId, session.grade, session.section_name],
+  );
+  return parseInt(rows[0]?.count ?? "0", 10) > 0;
+}
+
 export async function recordExamRejection(
   db: TenantQueryClient,
   organizationId: string,

@@ -8,6 +8,7 @@ import {
 } from "./exam_administration_handlers.ts";
 import {
   type ExamSessionRow,
+  isClassTeacherForExam,
   teacherTeachesExamSession,
 } from "./exam_administration_repository.ts";
 
@@ -165,6 +166,64 @@ Deno.test("P2 — plain teacher is scoped; oversight roles are not", () => {
   assertEquals(isSubjectTeacherScoped(claims(["manageExamMarks"])), true);
   assertEquals(
     isSubjectTeacherScoped(claims(["manageExamMarks", "verifyExamResults"])),
+    false,
+  );
+});
+
+// Remark authoring: only the class teacher of the exam's section qualifies.
+class ClassTeacherDb {
+  constructor(
+    private readonly rows: Array<
+      { teacherId: string; grade: string; section: string }
+    >,
+  ) {}
+
+  queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("teacher_assignments") && sql.includes("class_teacher")) {
+      const [, , teacherId, grade, section] = args as string[];
+      const match = this.rows.some((r) =>
+        r.teacherId === teacherId && r.grade === grade && r.section === section
+      );
+      return Promise.resolve([{ count: match ? "1" : "0" }] as unknown as T[]);
+    }
+    return Promise.resolve([] as T[]);
+  }
+
+  queryCount(): Promise<number> {
+    return Promise.resolve(0);
+  }
+}
+
+function classTeacherDb(
+  rows: Array<{ teacherId: string; grade: string; section: string }>,
+): TenantQueryClient {
+  return new ClassTeacherDb(rows) as unknown as TenantQueryClient;
+}
+
+Deno.test("remark authz — only the class teacher of the section may author", async () => {
+  const assigned = classTeacherDb([
+    { teacherId: TEACHER, grade: "8", section: "A" },
+  ]);
+
+  // Class teacher of 8-A → allowed for an 8-A exam.
+  assertEquals(
+    await isClassTeacherForExam(assigned, ORG, SCHOOL, TEACHER, session()),
+    true,
+  );
+  // Same teacher is not the class teacher of 8-B.
+  assertEquals(
+    await isClassTeacherForExam(
+      assigned,
+      ORG,
+      SCHOOL,
+      TEACHER,
+      session({ section_name: "B" }),
+    ),
+    false,
+  );
+  // No class-teacher assignment at all.
+  assertEquals(
+    await isClassTeacherForExam(classTeacherDb([]), ORG, SCHOOL, TEACHER, session()),
     false,
   );
 });

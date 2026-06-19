@@ -20,9 +20,12 @@ import {
   ExamNotFoundError,
   ExamScopeForbiddenError,
   ExamValidationError,
+  examRemarkToApi,
   getExamMark,
   getExamSession,
+  isClassTeacherForExam,
   listExamMarks,
+  listExamRemarks,
   listExamSessions,
   listPublishedResultsForStudent,
   openMarksEntry,
@@ -31,6 +34,7 @@ import {
   scheduleExamSession,
   teacherTeachesExamSession,
   updateExamMark,
+  upsertExamRemark,
   verifyCoordinatorResults,
 } from "./exam_administration_repository.ts";
 
@@ -366,6 +370,64 @@ export async function handlePublishExamResults(
       publishExamResults(db, organizationId, schoolId, examId)
     );
     return { examId, publishedCount };
+  });
+}
+
+export async function handleListExamRemarks(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      listExamRemarks(db, organizationId, schoolId, examId)
+    );
+    return rows.map(examRemarkToApi);
+  });
+}
+
+export async function handleUpsertExamRemark(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+  studentId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "manageExamMarks", async (claims) => {
+    const body = await readJson<Record<string, unknown>>(req);
+    if (!body) throw new ExamValidationError("JSON body required");
+    const text = String(body.text ?? "").trim();
+
+    const { organizationId, schoolId } = tenantIds(claims);
+    return await withTenantContext(config, claims, async (db) => {
+      const session = await getExamSession(db, organizationId, schoolId, examId);
+      if (!session) throw new ExamNotFoundError(examId);
+      // Only the class teacher of the exam's class may author the remark
+      // (admins holding manageExams may override).
+      const isAdmin = claims.permissions.includes("manageExams");
+      if (
+        !isAdmin &&
+        !(await isClassTeacherForExam(
+          db,
+          organizationId,
+          schoolId,
+          claims.sub,
+          session,
+        ))
+      ) {
+        throw new ExamScopeForbiddenError(
+          "Only the class teacher may author this remark.",
+        );
+      }
+      const row = await upsertExamRemark(db, organizationId, schoolId, {
+        examId,
+        studentId,
+        text,
+        authorId: claims.sub,
+        authorName: String(body.authorName ?? body.author_name ?? claims.sub),
+      });
+      return examRemarkToApi(row);
+    });
   });
 }
 
