@@ -11,7 +11,7 @@ Legend: ✅ done & certified · 🟡 in progress · ⬜ not started
 |---|--------|--------|---------------|
 | — | **Exams** (P1 granular perms + P2 teacher scoping, server) | ✅ | deno authz 5/5; flutter exam 70/70; analyze 0 err |
 | 0 | **Cross-cutting safety net** | ✅ | full edge graph `deno check` 0 err; CI gate added; deno unit 491 pass (only live-DB self-test skipped locally) |
-| 1 | Finance (invoices/collections/refunds/concessions) | ⬜ | |
+| 1 | Finance (invoices/collections/refunds/concessions) | ✅ | already hardened; verified — 76 finance deno tests pass; granular approve perms + self-approve block + scope confirmed |
 | 2 | SIS & Attendance | ⬜ | (attendance handler type bugs already fixed in Batch 0) |
 | 3 | Admissions | ⬜ | |
 | 4 | HR / Staff | ⬜ | |
@@ -27,6 +27,14 @@ Legend: ✅ done & certified · 🟡 in progress · ⬜ not started
   - ~35 `body` null-guards added across memories / parent_experience / promotion / attendance / inventory_intelligence handlers.
   - inventory_intelligence: `jsonResponse(..., 201)` → `{ status: 201 }`; `readJson` null coalesce.
   - parent_experience services: two row/return shape mismatches corrected.
+
+## Batch 1 — Finance (findings)
+Audited authz parity; **no fixes needed** — finance was built correctly:
+- read = `viewFinance`, write = `manageFinance` (split confirmed across invoices, collections, fee structures).
+- refund approval = `approveRefunds` (dedicated handler) ; concession = `approveFeeConcession` (generic approval). Per-type granular approve perms enforced in `approval_handlers` via `approvalPermissionForType`.
+- self-approval blocked (`ApprovalSelfApproveDeniedError`); school/org scope enforced + tested.
+- Certified: 76 finance deno tests pass.
+- Carry-over (minor parity, not a hole): client has `approveFeeStructure` but fee-structure changes are gated by `manageFinance` with no approval flow server-side — wiring a fee-structure approval type is a feature, deferred.
 
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
