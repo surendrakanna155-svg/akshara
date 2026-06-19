@@ -87,6 +87,16 @@ Existing pieces confirmed: teacher→parent concern inbox (read/acknowledge,
 governance-gated), parent/student notices, language localization. Certified:
 app analyze 0 errors; communication/notices/messages suites 17 pass.
 
+## ✅ ADMISSIONS = CLOSED (already complete — verified, no fixes)
+Full chain works end-to-end and is store-backed: lead → application → documents
+→ approve → fee handoff ("Ready for fee setup") → SIS conversion queue (via
+MockAdmissionsSisBridge). approveAdmission creates the handoff; submitEnrollment
+queues the SIS conversion; admissions→finance bridge persists fee assignment.
+Server authz certified earlier (Batch 3: approveAdmissions / manageAdmissions /
+viewAdmissions). Certified: admissions feature + integration (e2e journey,
+admissions→finance e2e) + SIS-bridge + write-contract suites all green (~78);
+app analyze 0 errors. No code changes required.
+
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
 - Exam **separation of duties** (approver ≠ verifier): verifier id now recorded; enforcement check pending. Batch 6 (governance).
