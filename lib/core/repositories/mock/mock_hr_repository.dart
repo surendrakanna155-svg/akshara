@@ -430,6 +430,21 @@ class MockHrRepository implements HrRepository {
       return List.from(store.leaveRequests!);
     }
     store.leaveRequests = List<HrLeaveRequest>.of([
+        // Approved leave spanning the current demo window so the timetable
+        // auto-cover is visible "today" without any manual marking.
+        const HrLeaveRequest(
+          id: 'lv_req_cover_demo',
+          employeeId: 'HR-EMP-103',
+          employeeName: 'Mr. Patel',
+          department: HrDepartment.academics,
+          leaveType: HrLeaveType.sick,
+          fromDate: '2026-06-15',
+          toDate: '2026-06-30',
+          days: 12,
+          status: HrLeaveStatus.approved,
+          approver: 'Rajesh Iyer',
+          reason: 'Medical leave',
+        ),
         const HrLeaveRequest(
           id: 'lv_req_1',
           employeeId: 'HR-EMP-108',

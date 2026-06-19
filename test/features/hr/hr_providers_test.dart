@@ -102,7 +102,7 @@ void main() {
       final data = container.read(hrLeaveProvider);
 
       expect(data, isNotNull);
-      expect(data!.requests, hasLength(5));
+      expect(data!.requests, hasLength(6));
     });
 
     test('hrPayrollProvider returns payroll data', () async {

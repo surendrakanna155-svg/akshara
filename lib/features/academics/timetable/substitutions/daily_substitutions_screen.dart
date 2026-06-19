@@ -16,7 +16,7 @@ class DailySubstitutionsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final grid = ref.watch(dailySubstitutionGridProvider);
-    final onLeave = ref.watch(teachersOnLeaveProvider);
+    final onLeave = ref.watch(teachersOnLeaveForSelectedDateProvider);
     final colors = context.colors;
     final text = context.aksharaText;
 
@@ -26,24 +26,50 @@ class DailySubstitutionsScreen extends ConsumerWidget {
       if (!periodIds.contains(p.periodId)) periodIds.add(p.periodId);
     }
 
+    final date = ref.watch(selectedTimetableDateProvider);
+    final onLeaveNames = [
+      for (final t in MockDailyTimetableStore.teachers)
+        if (onLeave.contains(t.id)) t.name,
+    ];
+
     return Scaffold(
       backgroundColor: colors.surfaceContainerLow,
-      appBar: AppBar(title: const Text("Today's timetable & cover")),
+      appBar: AppBar(title: const Text('Timetable & cover')),
       body: ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          Text('Mark a teacher on leave', style: text.titleSmall),
-          const SizedBox(height: AksharaSpacing.s2),
-          Wrap(
-            spacing: AksharaSpacing.s2,
+          Row(
             children: [
-              for (final t in MockDailyTimetableStore.teachers)
-                FilterChip(
-                  label: Text(t.name),
-                  selected: onLeave.contains(t.id),
-                  onSelected: (v) => setTeacherOnLeave(ref, t.id, v),
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => stepSelectedDate(ref, -1),
+              ),
+              Expanded(
+                child: Text(
+                  '${date.day}/${date.month}/${date.year}',
+                  textAlign: TextAlign.center,
+                  style: text.titleSmall,
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => stepSelectedDate(ref, 1),
+              ),
             ],
+          ),
+          const SizedBox(height: AksharaSpacing.s2),
+          Material(
+            color: colors.surfaceContainerHighest,
+            borderRadius: AksharaRadius.card,
+            child: Padding(
+              padding: const EdgeInsets.all(AksharaSpacing.s3),
+              child: Text(
+                onLeaveNames.isEmpty
+                    ? 'No teachers on approved leave this day — full timetable runs as scheduled.'
+                    : 'On approved leave: ${onLeaveNames.join(', ')}. Their classes are auto-covered below.',
+                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
           for (final pid in periodIds) ...[

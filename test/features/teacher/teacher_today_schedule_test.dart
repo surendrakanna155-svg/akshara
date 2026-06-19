@@ -11,8 +11,7 @@ void main() {
 
   test("a covering teacher sees the assigned class in today's schedule", () {
     // Priya on leave → Rao covers her 8-A Period 1 Maths.
-    MockDailyTimetableStore.instance.setOnLeave('HR-EMP-101', true);
-    MockDailyTimetableStore.instance.prepareToday();
+    MockDailyTimetableStore.instance.applyLeave({'HR-EMP-101'});
 
     final container = createMobileProviderTestContainer(overrides: [
       teacherTeachingContextOverrideProvider.overrideWith(

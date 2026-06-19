@@ -1,8 +1,32 @@
+import '../../features/hr/hr_models.dart';
 import 'daily_timetable_engine.dart';
 
-/// Holds today's class grid, who's on leave, and the resolved (substituted)
-/// timetable. Seeded with a small school grid so the auto-substitution is
-/// demonstrable end-to-end.
+/// Teachers (employeeIds) with APPROVED leave covering [date]. This is what
+/// drives substitution — no one marks attendance/leave on the timetable
+/// manually; an approved leave automatically reflects on those dates.
+Set<String> teachersOnLeaveForDate(
+  List<HrLeaveRequest> leaveRequests,
+  DateTime date,
+) {
+  final day = DateTime(date.year, date.month, date.day);
+  final onLeave = <String>{};
+  for (final r in leaveRequests) {
+    if (r.status != HrLeaveStatus.approved) continue;
+    final from = DateTime.tryParse(r.fromDate);
+    final to = DateTime.tryParse(r.toDate);
+    if (from == null || to == null) continue;
+    final start = DateTime(from.year, from.month, from.day);
+    final end = DateTime(to.year, to.month, to.day);
+    if (!day.isBefore(start) && !day.isAfter(end)) {
+      onLeave.add(r.employeeId);
+    }
+  }
+  return onLeave;
+}
+
+/// Holds the FIXED class grid (set occasionally, not daily) and resolves the
+/// substituted timetable for whoever is on leave. Coordinator overrides are
+/// kept durably and re-applied on every recompute.
 class MockDailyTimetableStore {
   MockDailyTimetableStore._();
   static final MockDailyTimetableStore instance = MockDailyTimetableStore._();
@@ -36,52 +60,55 @@ class MockDailyTimetableStore {
             teacherId: 'HR-EMP-101', teacherName: 'Priya Sharma'),
       ];
 
-  final Set<String> _onLeave = {};
+  Set<String> _onLeave = {};
+  final Map<String, TimetableTeacher> _overrides = {}; // 'periodId|classLabel'
   List<ScheduledPeriod>? _resolved;
 
   Set<String> get onLeave => Set.unmodifiable(_onLeave);
 
-  void setOnLeave(String teacherId, bool isOnLeave) {
-    if (isOnLeave) {
-      _onLeave.add(teacherId);
-    } else {
-      _onLeave.remove(teacherId);
-    }
-    _resolved = null; // recompute on next read
+  /// Set the full on-leave set (e.g. derived from approved leave for a date).
+  void applyLeave(Set<String> teacherIdsOnLeave) {
+    _onLeave = {...teacherIdsOnLeave};
+    _resolved = null;
   }
 
-  /// Runs the substitution rules for today and caches the result.
-  List<ScheduledPeriod> prepareToday() {
-    final resolved = DailyTimetableEngine.assignSubstitutes(
+  List<ScheduledPeriod> _recompute() {
+    var grid = DailyTimetableEngine.assignSubstitutes(
       grid: _seedGrid(),
       teacherIdsOnLeave: _onLeave,
       teachers: teachers,
     );
-    _resolved = resolved;
-    return resolved;
+    for (final entry in _overrides.entries) {
+      final parts = entry.key.split('|');
+      grid = DailyTimetableEngine.overrideAssignment(
+        grid: grid,
+        periodId: parts[0],
+        classLabel: parts[1],
+        teacher: entry.value,
+      );
+    }
+    _resolved = grid;
+    return grid;
   }
 
-  List<ScheduledPeriod> resolved() => _resolved ?? prepareToday();
+  List<ScheduledPeriod> resolved() => _resolved ?? _recompute();
 
   void overrideAssignment({
     required String periodId,
     required String classLabel,
     required TimetableTeacher teacher,
   }) {
-    _resolved = DailyTimetableEngine.overrideAssignment(
-      grid: resolved(),
-      periodId: periodId,
-      classLabel: classLabel,
-      teacher: teacher,
-    );
+    _overrides['$periodId|$classLabel'] = teacher;
+    _resolved = null;
   }
 
-  /// Today's periods for one teacher (including periods they're covering).
+  /// Today's periods for one teacher (including classes they're covering).
   List<ScheduledPeriod> forTeacher(String teacherId) =>
       resolved().where((p) => p.teacherId == teacherId).toList();
 
   void reset() {
-    _onLeave.clear();
+    _onLeave = {};
+    _overrides.clear();
     _resolved = null;
   }
 }
