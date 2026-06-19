@@ -11,6 +11,7 @@ import '../../../theme/theme_extensions.dart';
 import '../communication/teacher_teaching_context_provider.dart';
 import '../dashboard/teacher_dashboard_provider.dart';
 import '../leave_approvals/teacher_leave_approvals_screen.dart';
+import '../timetable/teacher_today_screen.dart';
 
 /// TA-01 class teacher dashboard (dedicated overview).
 class TeacherClassTeacherDashboardScreen extends ConsumerWidget {
@@ -145,6 +146,15 @@ class TeacherClassTeacherDashboardScreen extends ConsumerWidget {
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const TeacherLeaveApprovalsScreen(),
+                        ),
+                      ),
+                    ),
+                    AksharaQuickActionCard(
+                      icon: Icons.today_outlined,
+                      label: "Today's classes",
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const TeacherTodayScreen(),
                         ),
                       ),
                     ),
