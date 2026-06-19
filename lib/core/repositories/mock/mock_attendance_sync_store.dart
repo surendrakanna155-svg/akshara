@@ -1,4 +1,6 @@
-/// Cross-persona attendance sync for mock QA journeys (teacher submit → parent KPI).
+/// Cross-persona attendance sync for mock QA journeys (teacher submit → parent
+/// and student KPI).
+import '../../../features/parent/attendance/attendance_models.dart';
 import '../../attendance/attendance_sync_bridge.dart';
 
 class MockAttendanceSyncStore {
@@ -58,6 +60,31 @@ class MockAttendanceSyncStore {
     final total = presentCount + absentCount + lateCount;
     if (total == 0) return -1;
     return ((presentCount / total) * 100).round();
+  }
+
+  /// Applies the latest teacher submission to a base month so parent AND student
+  /// views reflect what the teacher actually marked. No submission → base as-is.
+  AttendanceMonthData mergedMonth(AttendanceMonthData base) {
+    if (!hasTeacherSubmission) return base;
+    final total = presentCount + absentCount + lateCount;
+    final percent = total == 0
+        ? base.kpi.attendancePercent
+        : ((presentCount / total) * 100).round();
+    return AttendanceMonthData(
+      month: base.month,
+      childName: base.childName,
+      childClass: base.childClass,
+      kpi: AttendanceKpiMetrics(
+        attendancePercent: percent,
+        absentDays: absentCount,
+        lateDays: lateCount,
+      ),
+      calendarDays: base.calendarDays,
+      recentLogs: base.recentLogs,
+      warningBannerMessage: base.warningBannerMessage,
+      unreadNotifications: base.unreadNotifications,
+      classTeacherPhone: base.classTeacherPhone,
+    );
   }
 
   void reset() {

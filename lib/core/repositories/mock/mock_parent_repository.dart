@@ -39,29 +39,7 @@ class MockParentRepository implements ParentRepository {
     required DateTime month,
   }) async {
     final base = AttendanceMonthData.mock(month: month);
-    final sync = MockAttendanceSyncStore.instance;
-    if (!sync.hasTeacherSubmission) {
-      return base;
-    }
-    final total = sync.presentCount + sync.absentCount + sync.lateCount;
-    final percent = total == 0
-        ? base.kpi.attendancePercent
-        : ((sync.presentCount / total) * 100).round();
-    return AttendanceMonthData(
-      month: base.month,
-      childName: base.childName,
-      childClass: base.childClass,
-      kpi: AttendanceKpiMetrics(
-        attendancePercent: percent,
-        absentDays: sync.absentCount,
-        lateDays: sync.lateCount,
-      ),
-      calendarDays: base.calendarDays,
-      recentLogs: base.recentLogs,
-      warningBannerMessage: base.warningBannerMessage,
-      unreadNotifications: base.unreadNotifications,
-      classTeacherPhone: base.classTeacherPhone,
-    );
+    return MockAttendanceSyncStore.instance.mergedMonth(base);
   }
 
   @override

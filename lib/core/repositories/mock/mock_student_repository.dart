@@ -1,5 +1,6 @@
 import '../../../features/parent/attendance/attendance_models.dart';
 import '../../../features/parent/timetable/timetable_models.dart';
+import 'mock_attendance_sync_store.dart';
 import '../../../features/student/dashboard/student_dashboard_provider.dart';
 import '../../../features/student/exams/exam_models.dart';
 import '../../../features/student/homework/homework_models.dart';
@@ -26,8 +27,12 @@ class MockStudentRepository implements StudentRepository {
   Future<AttendanceMonthData> getAttendance({
     required RepositoryQuery query,
     required DateTime month,
-  }) async =>
-      AttendanceMonthData.mock(month: month);
+  }) async {
+    // Same teacher-submission sync the parent view uses, so the student sees
+    // their real attendance once the teacher marks it.
+    final base = AttendanceMonthData.mock(month: month);
+    return MockAttendanceSyncStore.instance.mergedMonth(base);
+  }
 
   @override
   Future<List<StudentHomeworkItem>> getHomeworkItems({
