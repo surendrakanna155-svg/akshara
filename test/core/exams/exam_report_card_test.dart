@@ -40,6 +40,17 @@ void main() {
     expect(card.overallGrade, isNotEmpty);
   });
 
+  test('passes through caller-supplied attendance percent', () {
+    store.publishExamResults('exam_math_8a');
+    final card = ExamReportCardBuilder.build(
+      store,
+      sisStudentId: ravi,
+      termLabel: term,
+      attendancePercent: 95,
+    );
+    expect(card!.attendancePercent, 95);
+  });
+
   test('computes 1-based class rank by term total percentage', () {
     store.publishExamResults('exam_math_8a');
 

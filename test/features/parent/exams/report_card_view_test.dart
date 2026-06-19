@@ -25,6 +25,7 @@ ExamReportCard card({required bool rankShown}) => ExamReportCard(
       rank: 2,
       classSize: 9,
       rankShown: rankShown,
+      attendancePercent: 92,
     );
 
 Widget host(ExamReportCard c) => MaterialApp(
@@ -43,6 +44,7 @@ void main() {
     expect(find.text('42/50'), findsWidgets); // subject + total
     expect(find.text('Total'), findsOneWidget);
     expect(find.text('84%'), findsWidgets);
+    expect(find.text('Attendance: 92%'), findsOneWidget);
   });
 
   testWidgets('hides rank when the school setting is off', (tester) async {

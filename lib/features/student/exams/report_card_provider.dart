@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/exams/exam_report_card.dart';
+import '../../../core/repositories/mock/mock_attendance_sync_store.dart';
 import '../../../core/repositories/mock/mock_canonical_student_registry.dart';
 import 'student_exams_provider.dart';
 
@@ -18,5 +19,6 @@ final studentReportCardProvider = Provider<ExamReportCard?>((ref) {
     store,
     sisStudentId: studentId,
     termLabel: term,
+    attendancePercent: MockAttendanceSyncStore.instance.attendancePercent(),
   );
 });

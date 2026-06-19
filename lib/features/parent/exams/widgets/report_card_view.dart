@@ -37,6 +37,12 @@ class ReportCardView extends StatelessWidget {
                   style: text.bodySmall
                       .copyWith(color: colors.onPrimaryContainer),
                 ),
+                if (card.attendancePercent != null)
+                  Text(
+                    'Attendance: ${card.attendancePercent}%',
+                    style: text.bodySmall
+                        .copyWith(color: colors.onPrimaryContainer),
+                  ),
                 if (card.rankShown) ...[
                   const SizedBox(height: AksharaSpacing.s2),
                   AksharaStatusChip(

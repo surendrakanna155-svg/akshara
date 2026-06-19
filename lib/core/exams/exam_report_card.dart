@@ -39,6 +39,7 @@ class ExamReportCard {
     required this.rank,
     required this.classSize,
     required this.rankShown,
+    this.attendancePercent,
   });
 
   final String sisStudentId;
@@ -59,6 +60,10 @@ class ExamReportCard {
   /// Whether [rank] may be shown to parents/students (per school setting).
   final bool rankShown;
 
+  /// Term attendance %, supplied by the caller (kept out of core to avoid
+  /// coupling the exam engine to the attendance domain). Null when unavailable.
+  final int? attendancePercent;
+
   int get overallPercent =>
       totalMax == 0 ? 0 : ((totalScore / totalMax) * 100).round();
 }
@@ -71,6 +76,7 @@ abstract final class ExamReportCardBuilder {
     ExamAdministrationStore store, {
     required String sisStudentId,
     required String termLabel,
+    int? attendancePercent,
   }) {
     final mine = store
         .resultsForStudent(sisStudentId)
@@ -115,6 +121,7 @@ abstract final class ExamReportCardBuilder {
       rank: rank,
       classSize: classSize,
       rankShown: settings.showRankToParents,
+      attendancePercent: attendancePercent,
     );
   }
 
