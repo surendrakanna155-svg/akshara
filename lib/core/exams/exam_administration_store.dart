@@ -532,6 +532,13 @@ final class ExamAdministrationStore {
         .toList(growable: false);
   }
 
+  /// All published results across students — used to compute class rank for the
+  /// report card (Slice 6).
+  List<PublishedExamResult> allPublishedResults() {
+    ensureSeeded();
+    return _publishedByMarkId.values.toList(growable: false);
+  }
+
   PublishedExamResult? resultForMarkEntry(String markEntryId) {
     ensureSeeded();
     return _publishedByMarkId[markEntryId];

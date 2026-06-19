@@ -1,0 +1,155 @@
+import '../repositories/mock/mock_canonical_student_registry.dart';
+import 'exam_administration_store.dart';
+
+/// One subject line on a report card.
+class ReportCardSubjectLine {
+  const ReportCardSubjectLine({
+    required this.subject,
+    required this.examTitle,
+    required this.score,
+    required this.maxScore,
+    required this.grade,
+  });
+
+  final String subject;
+  final String examTitle;
+  final int score;
+  final int maxScore;
+  final String grade;
+
+  int get percent =>
+      maxScore == 0 ? 0 : ((score / maxScore) * 100).round();
+}
+
+/// Per-student, per-term report card built from published exam results.
+///
+/// Rank is **always computed** (class position by term total %), but
+/// [rankShown] reflects the school's `showRankToParents` setting — the UI must
+/// only surface [rank] to parents/students when [rankShown] is true.
+class ExamReportCard {
+  const ExamReportCard({
+    required this.sisStudentId,
+    required this.studentName,
+    required this.classLabel,
+    required this.termLabel,
+    required this.subjects,
+    required this.totalScore,
+    required this.totalMax,
+    required this.overallGrade,
+    required this.rank,
+    required this.classSize,
+    required this.rankShown,
+  });
+
+  final String sisStudentId;
+  final String studentName;
+  final String classLabel;
+  final String termLabel;
+  final List<ReportCardSubjectLine> subjects;
+  final int totalScore;
+  final int totalMax;
+  final String overallGrade;
+
+  /// 1-based class rank by term total percentage (always computed).
+  final int rank;
+
+  /// Number of classmates (including this student) with results this term.
+  final int classSize;
+
+  /// Whether [rank] may be shown to parents/students (per school setting).
+  final bool rankShown;
+
+  int get overallPercent =>
+      totalMax == 0 ? 0 : ((totalScore / totalMax) * 100).round();
+}
+
+/// Builds [ExamReportCard]s from the published results in the store.
+abstract final class ExamReportCardBuilder {
+  /// Returns the report card for [sisStudentId] in [termLabel], or null when the
+  /// student has no published results for that term.
+  static ExamReportCard? build(
+    ExamAdministrationStore store, {
+    required String sisStudentId,
+    required String termLabel,
+  }) {
+    final mine = store
+        .resultsForStudent(sisStudentId)
+        .where((r) => r.termLabel == termLabel)
+        .toList();
+    if (mine.isEmpty) return null;
+
+    final student = MockCanonicalStudentRegistry.byId(sisStudentId);
+    final classLabel = student?.classLabel ?? '';
+    final studentName =
+        student?.studentName ?? mine.first.studentName;
+    final settings = store.reportSettings;
+
+    final subjects = [
+      for (final r in mine)
+        ReportCardSubjectLine(
+          subject: r.subject,
+          examTitle: r.examTitle,
+          score: r.scoreObtained,
+          maxScore: r.maxScore,
+          grade: r.grade,
+        ),
+    ];
+    final totalScore = mine.fold<int>(0, (sum, r) => sum + r.scoreObtained);
+    final totalMax = mine.fold<int>(0, (sum, r) => sum + r.maxScore);
+    final overallPercent =
+        totalMax == 0 ? 0.0 : (totalScore / totalMax) * 100.0;
+    final overallGrade = settings.gradingScale.gradeFor(overallPercent);
+
+    final (rank, classSize) =
+        _classRank(store, sisStudentId, classLabel, termLabel, overallPercent);
+
+    return ExamReportCard(
+      sisStudentId: sisStudentId,
+      studentName: studentName,
+      classLabel: classLabel,
+      termLabel: termLabel,
+      subjects: subjects,
+      totalScore: totalScore,
+      totalMax: totalMax,
+      overallGrade: overallGrade,
+      rank: rank,
+      classSize: classSize,
+      rankShown: settings.showRankToParents,
+    );
+  }
+
+  /// 1-based rank within the student's class by term total %, plus class size.
+  static (int, int) _classRank(
+    ExamAdministrationStore store,
+    String sisStudentId,
+    String classLabel,
+    String termLabel,
+    double myPercent,
+  ) {
+    final scoreByStudent = <String, int>{};
+    final maxByStudent = <String, int>{};
+    for (final r in store.allPublishedResults()) {
+      if (r.termLabel != termLabel) continue;
+      final s = MockCanonicalStudentRegistry.byId(r.sisStudentId);
+      if ((s?.classLabel ?? '') != classLabel) continue;
+      scoreByStudent[r.sisStudentId] =
+          (scoreByStudent[r.sisStudentId] ?? 0) + r.scoreObtained;
+      maxByStudent[r.sisStudentId] =
+          (maxByStudent[r.sisStudentId] ?? 0) + r.maxScore;
+    }
+
+    if (scoreByStudent.isEmpty) return (1, 1);
+
+    final percents = <String, double>{
+      for (final id in scoreByStudent.keys)
+        id: (maxByStudent[id] ?? 0) == 0
+            ? 0.0
+            : (scoreByStudent[id]! / maxByStudent[id]!) * 100.0,
+    };
+    final myPct = percents[sisStudentId] ?? myPercent;
+    // Rank = 1 + number of classmates strictly ahead (ties share the better rank).
+    final ahead =
+        percents.values.where((p) => p > myPct + 1e-9).length;
+    return (ahead + 1, percents.length);
+  }
+}

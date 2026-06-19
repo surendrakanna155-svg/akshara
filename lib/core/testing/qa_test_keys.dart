@@ -161,6 +161,10 @@ abstract final class QaTestKeys {
       ValueKey<String>('teacher_exam_mark_save_$markId');
   static const teacherExamSelector =
       ValueKey<String>('teacher_exam_selector');
+  static const parentReportCardButton =
+      ValueKey<String>('parent_report_card_button');
+  static const reportCardRankChip =
+      ValueKey<String>('report_card_rank_chip');
 
   static const parentAttendanceCorrectionButton =
       ValueKey<String>('parent_attendance_correction_button');
