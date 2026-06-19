@@ -106,6 +106,20 @@ analyze 0 errors; homework suites 13 pass.
 Carry-over: full per-student "reviewed" lifecycle status (vs the additive
 grade/comment line) would need a status-enum change across both apps — deferred.
 
+## Everyday loops — status after the closing sweep
+Closed & tested: Exams, Fees & Payments, Attendance, Messages & Notices,
+Admissions, Homework, plus **Leave** (parent requests → principal approves →
+parent sees approved/rejected; verified — `applyDecision` updates the parent's
+own list; approval integration suites green).
+
+Remaining areas are a **different kind of work** (no clean broken loop to close):
+- **Timetable** — persona views render static weekly schedules (functional); a
+  big integration would wire the academics scheduler/editor → teacher/student/
+  parent grids. Large project, not a one-gap fix.
+- **Transport / Library / Hostel / Inventory** — admin/operational modules that
+  work (read views + staff CRUD), with an intentional live-tracking placeholder
+  (future). No broken parent/student loop.
+
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
 - Exam **separation of duties** (approver ≠ verifier): verifier id now recorded; enforcement check pending. Batch 6 (governance).
