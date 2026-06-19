@@ -80,6 +80,13 @@ correction submit→approve integration).
 Carry-over: aggregate class counts drive the single-primary-student mock;
 per-student daily records are a backend (F-series) concern.
 
+## ✅ MESSAGES & NOTICES = CLOSED
+School broadcast → now reaches the targeted audience's notices (parents and/or
+students), newest first, on top of the standing notices (was static before).
+Existing pieces confirmed: teacher→parent concern inbox (read/acknowledge,
+governance-gated), parent/student notices, language localization. Certified:
+app analyze 0 errors; communication/notices/messages suites 17 pass.
+
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
 - Exam **separation of duties** (approver ≠ verifier): verifier id now recorded; enforcement check pending. Batch 6 (governance).
