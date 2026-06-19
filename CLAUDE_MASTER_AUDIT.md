@@ -97,6 +97,15 @@ viewAdmissions). Certified: admissions feature + integration (e2e journey,
 admissions→finance e2e) + SIS-bridge + write-contract suites all green (~78);
 app analyze 0 errors. No code changes required.
 
+## ✅ HOMEWORK = CLOSED
+Loop complete: teacher assigns → student sees → student submits → teacher
+reviews → grade + comment now reach the student AND parent (was teacher-side
+only). Shared SchoolHomeworkStore records review per (homework, student);
+student/parent items show a "Reviewed · Grade X — comment" line. Certified: app
+analyze 0 errors; homework suites 13 pass.
+Carry-over: full per-student "reviewed" lifecycle status (vs the additive
+grade/comment line) would need a status-enum change across both apps — deferred.
+
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
 - Exam **separation of duties** (approver ≠ verifier): verifier id now recorded; enforcement check pending. Batch 6 (governance).
