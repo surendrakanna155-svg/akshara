@@ -76,6 +76,36 @@ class ReportCardView extends StatelessWidget {
             ],
           ),
         ),
+        if ((card.remark ?? '').isNotEmpty) ...[
+          const SizedBox(height: AksharaSpacing.s4),
+          AksharaSectionHeader(title: 'Class teacher remark', fixedHeight: false),
+          const SizedBox(height: AksharaSpacing.s2),
+          Material(
+            key: QaTestKeys.reportCardRemark,
+            color: colors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: AksharaRadius.card,
+              side: BorderSide(color: colors.outlineVariant),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(card.remark!, style: text.bodyMedium),
+                  if ((card.remarkAuthorName ?? '').isNotEmpty) ...[
+                    const SizedBox(height: AksharaSpacing.s2),
+                    Text(
+                      '— ${card.remarkAuthorName}',
+                      style: text.bodySmall
+                          .copyWith(color: colors.onSurfaceVariant),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }

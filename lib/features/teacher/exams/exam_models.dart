@@ -35,6 +35,7 @@ class TeacherUpcomingExam {
 class ExamMarkEntry {
   const ExamMarkEntry({
     required this.id,
+    this.sisStudentId = '',
     required this.studentName,
     required this.rollNo,
     required this.marksObtained,
@@ -42,6 +43,7 @@ class ExamMarkEntry {
   });
 
   final String id;
+  final String sisStudentId;
   final String studentName;
   final String rollNo;
   final int? marksObtained;
@@ -50,6 +52,7 @@ class ExamMarkEntry {
   ExamMarkEntry copyWith({int? marksObtained}) {
     return ExamMarkEntry(
       id: id,
+      sisStudentId: sisStudentId,
       studentName: studentName,
       rollNo: rollNo,
       marksObtained: marksObtained ?? this.marksObtained,

@@ -200,6 +200,42 @@ final teacherExamCoordinatorVerifiedProvider = Provider<bool>((ref) {
   return exam?.coordinatorVerified ?? false;
 });
 
+/// Whether the current teacher is the class teacher of the active exam's class —
+/// the primary author of exam-session remarks.
+final teacherIsClassTeacherForActiveExamProvider = Provider<bool>((ref) {
+  final exam = ref.watch(teacherActiveExamProvider);
+  if (exam == null) return false;
+  final ctx = ref.watch(resolvedTeacherTeachingContextProvider);
+  return ctx.isClassTeacher && ctx.classTeacherClassLabel == exam.classLabel;
+});
+
+String? teacherExamRemarkText(
+  WidgetRef ref,
+  String examId,
+  String sisStudentId,
+) {
+  ref.watch(teacherExamRefreshTickProvider);
+  return ExamAdministrationStore.instance.remarkFor(examId, sisStudentId)?.text;
+}
+
+/// Class teacher creates/edits a student's remark for an exam session.
+Future<void> saveTeacherExamRemark(
+  WidgetRef ref, {
+  required String examId,
+  required String sisStudentId,
+  required String text,
+}) async {
+  final ctx = ref.read(resolvedTeacherTeachingContextProvider);
+  ExamAdministrationStore.instance.upsertRemark(
+    examId: examId,
+    sisStudentId: sisStudentId,
+    text: text.trim(),
+    authorId: ctx.teacherId,
+    authorName: ctx.teacherName,
+  );
+  ref.read(teacherExamRefreshTickProvider.notifier).state++;
+}
+
 final teacherExamPhaseProvider = Provider<ExamLifecyclePhase?>((ref) {
   final exam = ref.watch(teacherActiveExamProvider);
   if (exam == null) return null;

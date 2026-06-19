@@ -68,6 +68,49 @@ void main() {
     expect(raviCard.classSize, greaterThanOrEqualTo(2));
   });
 
+  test('report card includes the class-teacher remark for the term', () {
+    store.publishExamResults('exam_math_8a');
+    store.upsertRemark(
+      examId: 'exam_math_8a',
+      sisStudentId: ravi,
+      text: 'Strong improvement in algebra.',
+      authorId: 'HR-EMP-101',
+      authorName: 'Priya Sharma',
+      timestamp: '2026-06-19T00:00:00Z',
+    );
+
+    final card =
+        ExamReportCardBuilder.build(store, sisStudentId: ravi, termLabel: term)!;
+    expect(card.remark, 'Strong improvement in algebra.');
+    expect(card.remarkAuthorName, 'Priya Sharma');
+  });
+
+  test('editing a remark preserves createdAt and grows the audit trail', () {
+    store.upsertRemark(
+      examId: 'exam_math_8a',
+      sisStudentId: ravi,
+      text: 'Needs more practice.',
+      authorId: 'HR-EMP-101',
+      authorName: 'Priya Sharma',
+      timestamp: '2026-06-19T00:00:00Z',
+    );
+    final updated = store.upsertRemark(
+      examId: 'exam_math_8a',
+      sisStudentId: ravi,
+      text: 'Much improved this term.',
+      authorId: 'HR-EMP-101',
+      authorName: 'Priya Sharma',
+      timestamp: '2026-06-19T01:00:00Z',
+    );
+
+    expect(updated.text, 'Much improved this term.');
+    expect(updated.createdAt, '2026-06-19T00:00:00Z');
+    expect(updated.updatedAt, '2026-06-19T01:00:00Z');
+    expect(updated.history, hasLength(2));
+    expect(updated.history.first.text, 'Needs more practice.');
+    expect(updated.history.last.text, 'Much improved this term.');
+  });
+
   test('rank is always computed but rankShown follows the school setting', () {
     // Default scale hides rank from parents.
     store.publishExamResults('exam_math_8a');

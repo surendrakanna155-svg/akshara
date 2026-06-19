@@ -2,6 +2,7 @@ import '../../features/education/education_models.dart';
 import '../repositories/mock/mock_canonical_student_registry.dart';
 import 'exam_administration_persistence.dart';
 import 'exam_grading.dart';
+import 'exam_remark.dart';
 
 /// Lifecycle phases for the exam administration chain.
 enum ExamLifecyclePhase {
@@ -154,6 +155,7 @@ final class ExamAdministrationStore {
   final Map<String, PublishedExamResult> _publishedByMarkId = {};
   final Map<String, String> _rejectionCommentsByExamId = {};
   final Map<String, String> _coordinatorVerifiedByExamId = {};
+  final Map<String, ExamRemark> _remarksByKey = {};
   bool _seeded = false;
   ExamAdministrationPersistence? _persistence;
 
@@ -196,6 +198,7 @@ final class ExamAdministrationStore {
     _publishedByMarkId.clear();
     _rejectionCommentsByExamId.clear();
     _coordinatorVerifiedByExamId.clear();
+    _remarksByKey.clear();
     _reportSettings = ExamReportSettings.standard();
     _seeded = false;
     if (clearPersistence) {
@@ -219,6 +222,7 @@ final class ExamAdministrationStore {
       'rejectionComments': Map<String, String>.from(_rejectionCommentsByExamId),
       'coordinatorVerified': Map<String, String>.from(_coordinatorVerifiedByExamId),
       'reportSettings': _reportSettingsToJson(_reportSettings),
+      'remarks': [for (final r in _remarksByKey.values) r.toJson()],
     };
   }
 
@@ -228,6 +232,18 @@ final class ExamAdministrationStore {
     _publishedByMarkId.clear();
     _rejectionCommentsByExamId.clear();
     _coordinatorVerifiedByExamId.clear();
+    _remarksByKey.clear();
+
+    final remarks = snapshot['remarks'];
+    if (remarks is List) {
+      for (final raw in remarks) {
+        if (raw is Map) {
+          final remark = ExamRemark.fromJson(Map<String, dynamic>.from(raw));
+          _remarksByKey[_remarkKey(remark.examId, remark.sisStudentId)] =
+              remark;
+        }
+      }
+    }
 
     final exams = snapshot['exams'];
     if (exams is List) {
@@ -542,6 +558,61 @@ final class ExamAdministrationStore {
   PublishedExamResult? resultForMarkEntry(String markEntryId) {
     ensureSeeded();
     return _publishedByMarkId[markEntryId];
+  }
+
+  // --- Exam-session remarks (one per student per exam session) ---
+
+  String _remarkKey(String examId, String sisStudentId) =>
+      '$examId|$sisStudentId';
+
+  ExamRemark? remarkFor(String examId, String sisStudentId) {
+    ensureSeeded();
+    return _remarksByKey[_remarkKey(examId, sisStudentId)];
+  }
+
+  List<ExamRemark> remarksForExam(String examId) {
+    ensureSeeded();
+    return _remarksByKey.values
+        .where((r) => r.examId == examId)
+        .toList(growable: false);
+  }
+
+  /// Creates or edits the remark for a (student, exam session). Appends to the
+  /// audit trail and bumps updatedAt. [timestamp] is injectable for tests.
+  ExamRemark upsertRemark({
+    required String examId,
+    required String sisStudentId,
+    required String text,
+    required String authorId,
+    required String authorName,
+    ExamRemarkAuthorRole authorRole = ExamRemarkAuthorRole.classTeacher,
+    String? timestamp,
+  }) {
+    ensureSeeded();
+    final now = timestamp ?? DateTime.now().toUtc().toIso8601String();
+    final key = _remarkKey(examId, sisStudentId);
+    final existing = _remarksByKey[key];
+    final revision = ExamRemarkRevision(
+      text: text,
+      authorId: authorId,
+      authorName: authorName,
+      authorRole: authorRole,
+      timestamp: now,
+    );
+    final remark = ExamRemark(
+      examId: examId,
+      sisStudentId: sisStudentId,
+      text: text,
+      authorId: authorId,
+      authorName: authorName,
+      authorRole: authorRole,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+      history: [...?existing?.history, revision],
+    );
+    _remarksByKey[key] = remark;
+    _persist();
+    return remark;
   }
 
   void _provisionMarkSlots(ExamSession exam) {

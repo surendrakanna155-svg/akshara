@@ -145,6 +145,7 @@ class MockTeacherRepository implements TeacherRepository {
       for (final mark in store.marksForExam(resolvedId))
         ExamMarkEntry(
           id: mark.id,
+          sisStudentId: mark.sisStudentId,
           studentName: mark.studentName,
           rollNo: mark.rollNo,
           marksObtained: mark.marksObtained,

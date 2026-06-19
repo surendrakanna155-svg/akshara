@@ -1,5 +1,6 @@
 import '../repositories/mock/mock_canonical_student_registry.dart';
 import 'exam_administration_store.dart';
+import 'exam_remark.dart';
 
 /// One subject line on a report card.
 class ReportCardSubjectLine {
@@ -40,6 +41,8 @@ class ExamReportCard {
     required this.classSize,
     required this.rankShown,
     this.attendancePercent,
+    this.remark,
+    this.remarkAuthorName,
   });
 
   final String sisStudentId;
@@ -63,6 +66,10 @@ class ExamReportCard {
   /// Term attendance %, supplied by the caller (kept out of core to avoid
   /// coupling the exam engine to the attendance domain). Null when unavailable.
   final int? attendancePercent;
+
+  /// Class-teacher remark for this report card (from the term's exam session).
+  final String? remark;
+  final String? remarkAuthorName;
 
   int get overallPercent =>
       totalMax == 0 ? 0 : ((totalScore / totalMax) * 100).round();
@@ -109,6 +116,18 @@ abstract final class ExamReportCardBuilder {
     final (rank, classSize) =
         _classRank(store, sisStudentId, classLabel, termLabel, overallPercent);
 
+    // Class-teacher remark for this report card: the most recently updated
+    // remark across the term's exam sessions (one per student per exam session).
+    ExamRemark? termRemark;
+    for (final r in mine) {
+      final rem = store.remarkFor(r.examId, sisStudentId);
+      if (rem == null) continue;
+      if (termRemark == null ||
+          rem.updatedAt.compareTo(termRemark.updatedAt) > 0) {
+        termRemark = rem;
+      }
+    }
+
     return ExamReportCard(
       sisStudentId: sisStudentId,
       studentName: studentName,
@@ -122,6 +141,8 @@ abstract final class ExamReportCardBuilder {
       classSize: classSize,
       rankShown: settings.showRankToParents,
       attendancePercent: attendancePercent,
+      remark: termRemark?.text,
+      remarkAuthorName: termRemark?.authorName,
     );
   }
 

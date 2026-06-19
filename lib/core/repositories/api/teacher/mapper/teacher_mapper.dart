@@ -134,6 +134,7 @@ class TeacherMapper {
     final raw = dto.raw;
     return ExamMarkEntry(
       id: raw['id'] as String? ?? '',
+      sisStudentId: raw['sisStudentId'] as String? ?? '',
       studentName: raw['studentName'] as String? ?? '',
       rollNo: raw['rollNo'] as String? ?? '',
       marksObtained: raw['marksObtained'] as int?,
