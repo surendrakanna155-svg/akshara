@@ -193,7 +193,7 @@ void main() {
       expect((await repo.getEmployees(query: query)).total, 8);
       expect((await repo.getEmployeeDetail(query: query, employeeId: 'HR-EMP-101')), isNotNull);
       expect((await repo.getAttendance(query: query)).records, hasLength(6));
-      expect((await repo.getLeave(query: query)).requests, hasLength(5));
+      expect((await repo.getLeave(query: query)).requests, hasLength(6));
       expect((await repo.getPayroll(query: query)).entries, hasLength(4));
       expect((await repo.getRecruitment(query: query)).candidates, hasLength(5));
       expect((await repo.getPerformance(query: query)).reviews, hasLength(4));
