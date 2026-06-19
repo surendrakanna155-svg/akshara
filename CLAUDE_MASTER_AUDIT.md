@@ -132,9 +132,19 @@ oversight roles + teacher; approval handler scopes a teacher to their own class
 Follow-up: sibling approve perms (approveStaffLeave, approveAttendanceCorrection)
 are also uncatalogued server-side — register when those domains are hardened.
 
-## Next (in progress)
-- #2 Attendance marking scoped to the class teacher.
-- #3 Timetable: daily schedule → auto-substitute (rules) → coordinator review.
+## ✅ #2 ATTENDANCE BY CLASS TEACHER = DONE (app)
+getAttendanceClasses scoped to the class teacher's own class (non-class-teacher
+sees none). Tests green. Follow-up: server-side class-teacher scoping for
+attendance marking endpoints (mirror leave) when the backend goes live.
+
+## 🚧 #3 TIMETABLE auto-substitute — staged
+- [x] Stage 1: rule-based substitution engine (DailyTimetableEngine) + tests —
+  cover-by-free-teacher, subject preference, no double-booking, unfilled,
+  coordinator override. No AI (plain rules), deterministic.
+- [ ] Stage 2: coordinator/principal review screen (see auto-subs, change them).
+- [ ] Stage 3: wire to real staff-leave data + a daily "prepare today" step +
+  teacher daily view. (Truly-automatic morning run = scheduled job when backend
+  is live; in-app simulated via prepare-today.)
 
 ## Known carry-overs (tracked, not blocking)
 - Exam **denormalized read-model** (`teacher_entities`) lacks `teacher_id` → teacher row-scoping needs a schema change (authoritative `exam_mark_entries` path IS scoped). Fold into Slice 5 / Batch 2.
