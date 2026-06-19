@@ -1,5 +1,6 @@
 import 'package:akshara_erp/core/exams/exam_report_card.dart';
 import 'package:akshara_erp/core/reports/akshara_report_export_service.dart';
+import 'package:akshara_erp/features/parent/receipts/receipt_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 ExamReportCard sampleCard({
@@ -58,6 +59,26 @@ void main() {
       card: sampleCard(rankShown: false, remark: null),
       schoolName: 'Akshara Vidyalaya',
     );
+    expect(bytes, isNotEmpty);
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
+
+  test('buildReceiptPdf produces a valid PDF', () async {
+    const receipt = FeeReceipt(
+      id: 'rcpt_term_2',
+      receiptNumber: 'APS-2026-TERM_2',
+      title: 'Term 2 — Fee payment',
+      dateLabel: 'Just now',
+      amount: 4200,
+      paymentMethod: 'UPI',
+      statusLabel: 'Paid',
+      childName: 'Ravi Kumar',
+      childClass: '8-A',
+      category: 'Tuition',
+      lineItems: [ReceiptLineItem(label: 'Term 2', amount: 4200)],
+      schoolName: 'Akshara Vidyalaya',
+    );
+    final bytes = await service.buildReceiptPdf(receipt: receipt);
     expect(bytes, isNotEmpty);
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
   });

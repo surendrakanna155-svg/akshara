@@ -6,11 +6,72 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../features/parent/receipts/receipt_models.dart';
 import '../exams/exam_report_card.dart';
 
 /// Shared PDF/CSV export scaffold (P0-FIN-003 / RPT-018).
 class AksharaReportExportService {
   const AksharaReportExportService();
+
+  /// Builds a fee-receipt PDF (school branding placeholder, payer details, line
+  /// items, total, payment method, status).
+  Future<Uint8List> buildReceiptPdf({required FeeReceipt receipt}) async {
+    final document = pw.Document();
+    document.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(28),
+        build: (context) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            pw.Text(receipt.schoolName,
+                style:
+                    pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 2),
+            pw.Text('Fee Receipt', style: const pw.TextStyle(fontSize: 12)),
+            pw.Divider(color: PdfColors.grey400),
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text('Receipt No: ${receipt.receiptNumber}',
+                    style: const pw.TextStyle(fontSize: 10)),
+                pw.Text(receipt.dateLabel,
+                    style: const pw.TextStyle(fontSize: 10)),
+              ],
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text('${receipt.childName} · ${receipt.childClass}',
+                style: const pw.TextStyle(fontSize: 10)),
+            pw.SizedBox(height: 14),
+            pw.TableHelper.fromTextArray(
+              headers: const ['Item', 'Amount'],
+              data: [
+                for (final line in receipt.lineItems)
+                  [line.label, '${line.amount}'],
+                ['Total', '${receipt.amount}'],
+              ],
+              border: pw.TableBorder.all(color: PdfColors.grey400),
+              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              cellAlignments: const {1: pw.Alignment.centerRight},
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text('Payment method: ${receipt.paymentMethod}',
+                style: const pw.TextStyle(fontSize: 10)),
+            pw.Text('Status: ${receipt.statusLabel}',
+                style: const pw.TextStyle(fontSize: 10)),
+          ],
+        ),
+      ),
+    );
+    return document.save();
+  }
+
+  Future<void> shareReceiptPdf({required FeeReceipt receipt}) async {
+    final bytes = await buildReceiptPdf(receipt: receipt);
+    final name = 'receipt_${receipt.receiptNumber}.pdf'.replaceAll(' ', '_');
+    await Printing.sharePdf(bytes: bytes, filename: name);
+  }
 
   /// Builds a printable report-card PDF. Layout is identical across grading
   /// systems (it renders the already-computed grade strings). Rank is included

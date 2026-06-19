@@ -13,6 +13,7 @@ import '../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../features/parent/events/events_models.dart';
 import '../../../features/parent/exams/exam_models.dart';
 import '../../../features/parent/fees/fees_provider.dart';
+import 'mock_fee_store.dart';
 import '../../../features/parent/homework/homework_models.dart';
 import '../../../features/parent/leave/leave_models.dart';
 import '../../../features/parent/notices/notices_models.dart';
@@ -115,12 +116,22 @@ class MockParentRepository implements ParentRepository {
       _parentTimetableWeekData();
 
   @override
-  Future<ParentFeesData> getFees({required RepositoryQuery query}) async =>
-      ParentFeesData.mock();
+  Future<ParentFeesData> getFees({required RepositoryQuery query}) async {
+    MockFeeStore.instance.ensureSeeded(
+      seedFees: ParentFeesData.mock(),
+      seedReceipts: _mockReceipts(),
+    );
+    return MockFeeStore.instance.feesData();
+  }
 
   @override
-  Future<List<FeeReceipt>> getReceipts({required RepositoryQuery query}) async =>
-      _mockReceipts();
+  Future<List<FeeReceipt>> getReceipts({required RepositoryQuery query}) async {
+    MockFeeStore.instance.ensureSeeded(
+      seedFees: ParentFeesData.mock(),
+      seedReceipts: _mockReceipts(),
+    );
+    return MockFeeStore.instance.receipts();
+  }
 
   @override
   Future<List<ParentNotice>> getNotices({required RepositoryQuery query}) async {
@@ -242,6 +253,17 @@ class MockParentRepository implements ParentRepository {
     if (intent == null) {
       throw StateError('Payment intent not found: ${request.paymentIntentId}');
     }
+    // Close the loop: mark the installment paid, drop the amount due, and add a
+    // receipt to history.
+    MockFeeStore.instance.ensureSeeded(
+      seedFees: ParentFeesData.mock(),
+      seedReceipts: _mockReceipts(),
+    );
+    MockFeeStore.instance.recordPayment(
+      installmentId: intent.installmentId,
+      amount: intent.amount,
+      paymentMethodLabel: intent.paymentMethod.label,
+    );
     return PaymentConfirmationResult(
       receiptId: 'rcpt_${intent.installmentId}',
       receiptNumber: 'APS-2026-${intent.installmentId.toUpperCase()}',

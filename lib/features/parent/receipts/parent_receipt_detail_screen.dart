@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
@@ -59,8 +60,16 @@ class ParentReceiptDetailScreen extends ConsumerWidget {
                     )
                   : _ReceiptDetailBody(
                       receipt: receipt,
-                      onDownload: onDownload,
-                      onShare: onShare,
+                      // Default to generating/sharing a receipt PDF when the
+                      // caller doesn't supply its own handler.
+                      onDownload: onDownload ??
+                          (r) => ref
+                              .read(aksharaReportExportServiceProvider)
+                              .shareReceiptPdf(receipt: r),
+                      onShare: onShare ??
+                          (r) => ref
+                              .read(aksharaReportExportServiceProvider)
+                              .shareReceiptPdf(receipt: r),
                     ),
     );
   }
