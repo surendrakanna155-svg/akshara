@@ -12,6 +12,7 @@ import '../repository_query.dart';
 import 'mock_canonical_student_registry.dart';
 import '../../homework/school_homework_store.dart';
 import '../../communication/parent_communication_store.dart';
+import '../../communication/school_broadcast_store.dart';
 import '../../exams/exam_administration_store.dart';
 import '../../i18n/content_localization.dart';
 import '../../i18n/supported_languages.dart';
@@ -116,6 +117,7 @@ class MockStudentRepository implements StudentRepository {
     final language = ParentCommunicationStore.instance
         .preferredLanguageForStudent(student.sisStudentId);
     return [
+      ...SchoolBroadcastStore.instance.studentNotices(),
       for (final notice in _mockNotices())
         StudentNotice(
           id: notice.id,

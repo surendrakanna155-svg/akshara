@@ -1,4 +1,5 @@
 import '../../../features/notifications/notifications_models.dart';
+import '../../communication/school_broadcast_store.dart';
 import '../interfaces/communication_repository.dart';
 import '../repository_query.dart';
 
@@ -117,6 +118,12 @@ class MockCommunicationRepository implements CommunicationRepository {
     required BroadcastRequest request,
   }) async {
     final sentAt = DateTime.now();
+    // Surface the announcement to the targeted audience's notices.
+    SchoolBroadcastStore.instance.add(
+      title: request.title,
+      body: request.body,
+      audience: request.audience,
+    );
     final result = BroadcastResult(
       broadcastId: 'broadcast-${sentAt.millisecondsSinceEpoch}',
       recipientCount: 42,

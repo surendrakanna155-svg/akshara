@@ -5,6 +5,7 @@ import '../../exams/exam_administration_store.dart';
 import '../../communication/parent_communication_models.dart';
 import '../../communication/parent_communication_inbox_fallback.dart';
 import '../../communication/parent_communication_store.dart';
+import '../../communication/school_broadcast_store.dart';
 import '../../homework/school_homework_store.dart';
 import '../../i18n/content_localization.dart';
 import '../../i18n/supported_languages.dart';
@@ -116,7 +117,11 @@ class MockParentRepository implements ParentRepository {
     final child = MockCanonicalStudentRegistry.primaryMobileStudent;
     final language = ParentCommunicationStore.instance
         .preferredLanguageForStudent(child.sisStudentId);
-    return _localizedNotices(language);
+    // Newest school broadcasts to parents appear above the standing notices.
+    return [
+      ...SchoolBroadcastStore.instance.parentNotices(),
+      ..._localizedNotices(language),
+    ];
   }
 
   @override
