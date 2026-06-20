@@ -31,6 +31,6 @@ function extractProbeNames(source: string): string[] {
   return names;
 }
 
-Deno.test("tenant isolation probe count includes v7.6 probes (219)", () => {
-  assertEquals(extractProbeNames(probesSource).length, 219);
+Deno.test("tenant isolation probe count includes v7.6 probes (220)", () => {
+  assertEquals(extractProbeNames(probesSource).length, 220);
 });

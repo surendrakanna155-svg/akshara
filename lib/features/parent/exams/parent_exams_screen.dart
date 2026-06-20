@@ -11,6 +11,7 @@ import 'report_card_provider.dart';
 import 'report_card_screen.dart';
 import 'widgets/exam_result_row.dart';
 import 'widgets/upcoming_exam_card.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent exams module — PA-06 `PA-06-ParentExams-M`.
 class ParentExamsScreen extends ConsumerWidget {
@@ -25,8 +26,8 @@ class ParentExamsScreen extends ConsumerWidget {
   final void Function(ExamScheduleItem item)? onUpcomingExamTap;
   final void Function(ExamResultItem item)? onExamResultTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

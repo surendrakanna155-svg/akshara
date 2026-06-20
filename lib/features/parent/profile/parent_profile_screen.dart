@@ -16,6 +16,7 @@ import 'parent_profile_provider.dart';
 import 'profile_models.dart';
 import 'widgets/profile_child_row.dart';
 import 'widgets/profile_info_row.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent profile — PA-09.
 class ParentProfileScreen extends ConsumerWidget {
@@ -32,8 +33,8 @@ class ParentProfileScreen extends ConsumerWidget {
   final VoidCallback? onReceiptsTap;
   final VoidCallback? onLeaveTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -11,6 +11,7 @@ import 'report_card_provider.dart';
 import 'student_exams_provider.dart';
 import 'widgets/exam_result_row.dart';
 import 'widgets/subject_score_row.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Student exams and results — ST-05.
 class StudentExamsScreen extends ConsumerWidget {
@@ -18,8 +19,8 @@ class StudentExamsScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

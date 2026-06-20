@@ -14,6 +14,7 @@ import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import 'auth_models.dart';
 import 'auth_provider.dart';
+import '../../theme/breakpoints.dart';
 
 /// OTP verification step after P-03 login (mock).
 class OtpVerificationScreen extends ConsumerStatefulWidget {
@@ -26,7 +27,7 @@ class OtpVerificationScreen extends ConsumerStatefulWidget {
   final String phoneNumber;
   final UserRole? role;
 
-  static const double _tabletBreakpoint = 768;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
   static const double _maxFormWidth = 400;
 
   @override

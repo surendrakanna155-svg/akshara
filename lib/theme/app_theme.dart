@@ -321,8 +321,11 @@ abstract final class AksharaAppTheme {
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
+        // Selected icon sits INSIDE the primaryContainer indicator pill, so it
+        // must use onPrimaryContainer for contrast (primary-on-primaryContainer
+        // was the washed-out highlight bug). Matches the drawer theme below.
         return IconThemeData(
-          color: selected ? scheme.primary : scheme.onSurfaceVariant,
+          color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
           size: 24,
         );
       }),

@@ -10,6 +10,7 @@ import 'parent_payment_provider.dart';
 import 'payment_models.dart';
 import 'widgets/payment_breakdown_card.dart';
 import 'widgets/payment_method_selector.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent fee payment flow — PA-10.
 class ParentPaymentScreen extends ConsumerStatefulWidget {
@@ -26,8 +27,8 @@ class ParentPaymentScreen extends ConsumerStatefulWidget {
   final void Function(String receiptId)? onViewReceipt;
   final VoidCallback? onBackToFees;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   ConsumerState<ParentPaymentScreen> createState() =>

@@ -75,6 +75,13 @@ class SchoolCompletionHubScreen extends StatelessWidget {
             onTap: () => context.push(RouteNames.teacherReassignment),
           ),
           ListTile(
+            leading: const Icon(Icons.person_pin_outlined),
+            title: const Text('Class Teachers'),
+            subtitle:
+                const Text('Set one class teacher per section (takes attendance)'),
+            onTap: () => context.push(RouteNames.classTeacherAssignments),
+          ),
+          ListTile(
             leading: const Icon(Icons.send_outlined),
             title: const Text('Communication Delivery'),
             subtitle: const Text('Template delivery analytics'),

@@ -5,6 +5,7 @@ import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../student_dashboard_provider.dart';
+import '../../../../theme/breakpoints.dart';
 
 /// ST-01 horizontal timetable strip with [SchedulePeriod] pills.
 class DailyScheduleStrip extends StatelessWidget {
@@ -13,7 +14,7 @@ class DailyScheduleStrip extends StatelessWidget {
     required this.periods,
     this.onFullScheduleTap,
     this.onPeriodTap,
-    this.largeMobileBreakpoint = 428,
+    this.largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth,
   });
 
   final List<SchedulePeriod> periods;

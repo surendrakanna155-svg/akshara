@@ -1000,6 +1000,24 @@ abstract final class QaTestKeys {
         'admin_hub_module_${normalizeSubNavLabel(moduleLabel)}',
       );
 
+  static const workspaceSwitcher = ValueKey<String>('workspace_switcher');
+  static ValueKey<String> workspaceSwitcherChip(String shortTitle) =>
+      ValueKey<String>(
+        'workspace_switcher_chip_${normalizeSubNavLabel(shortTitle)}',
+      );
+  static const workspaceSwitcherButton =
+      ValueKey<String>('workspace_switcher_button');
+  static ValueKey<String> workspaceSwitcherSheetItem(String shortTitle) =>
+      ValueKey<String>(
+        'workspace_switcher_sheet_${normalizeSubNavLabel(shortTitle)}',
+      );
+
+  // --- Persona bottom-nav "More" overflow (UX Batch 2) ---
+  static const moreNavTab = ValueKey<String>('more_nav_tab');
+  static const moreNavSheet = ValueKey<String>('more_nav_sheet');
+  static ValueKey<String> moreNavSheetItem(String label) =>
+      ValueKey<String>('more_nav_sheet_item_${normalizeSubNavLabel(label)}');
+
   static const accessDeniedScreen =
       ValueKey<String>('access_denied_screen');
 
@@ -1425,6 +1443,23 @@ abstract final class QaTestKeys {
       ValueKey<String>(
         'erp_subnav_${module}_${normalizeSubNavLabel(tabLabel)}',
       );
+
+  /// Overflow ("More") button shown by [AksharaModuleSubNav] on phones when a
+  /// module has more sub-screens than fit inline.
+  static ValueKey<String> moduleSubNavMore(String module) =>
+      ValueKey<String>('erp_subnav_${module}_more');
+
+  /// The bottom sheet [AksharaModuleSubNav] opens for its overflow screens.
+  static ValueKey<String> moduleSubNavSheet(String module) =>
+      ValueKey<String>('erp_subnav_${module}_sheet');
+
+  /// Admin bottom-nav (phone) module tab — distinct from the drawer rail's
+  /// [erpNavModule] key so both can coexist on mobile without collision.
+  static ValueKey<String> adminBottomNavModule(String module) =>
+      ValueKey<String>('admin_bottom_nav_$module');
+
+  /// Admin bottom-nav (phone) "More" tab that opens the full module drawer.
+  static const adminBottomNavMore = ValueKey<String>('admin_bottom_nav_more');
 
   static ValueKey<String> qaPersonaButton(String label) =>
       ValueKey<String>('qa_persona_$label');

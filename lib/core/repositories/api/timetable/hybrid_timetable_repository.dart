@@ -70,4 +70,11 @@ class HybridTimetableRepository implements TimetableRepository {
     required MoveTimetablePeriodRequest request,
   }) =>
       _api.movePeriod(query: query, request: request);
+
+  @override
+  Future<TimetablePeriod> reassignPeriodTeacher({
+    required RepositoryQuery query,
+    required ReassignPeriodTeacherRequest request,
+  }) =>
+      _api.reassignPeriodTeacher(query: query, request: request);
 }

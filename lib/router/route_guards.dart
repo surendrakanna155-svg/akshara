@@ -73,6 +73,7 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.timetableOptimization: Permission.viewTimetableOptimization,
   RouteNames.substituteManager: Permission.manageAcademicTimetable,
   RouteNames.teacherReassignment: Permission.manageAcademicTimetable,
+  RouteNames.classTeacherAssignments: Permission.manageAcademicTimetable,
   RouteNames.communicationDelivery: Permission.viewCommunicationDelivery,
   RouteNames.communicationBroadcastAdmin: Permission.manageCommunication,
   RouteNames.communicationAnalytics: Permission.viewCommunicationAnalytics,
@@ -229,8 +230,9 @@ class RoleGuard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final role = ref.watch(rbacServiceProvider).role;
-    if (role == null || !allowedRoles.contains(role)) {
+    // Multi-role: any of the user's held roles satisfying the gate is enough.
+    final roles = ref.watch(rbacServiceProvider).roles;
+    if (!roles.any(allowedRoles.contains)) {
       return fallback;
     }
     return child;
@@ -375,7 +377,7 @@ class ControlCenterGuard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rbac = ref.watch(rbacServiceProvider);
-    if (rbac.role != ErpRole.superAdmin ||
+    if (!rbac.hasRole(ErpRole.superAdmin) ||
         !rbac.hasPermission(Permission.viewControlCenter)) {
       return const AccessDeniedScreen();
     }

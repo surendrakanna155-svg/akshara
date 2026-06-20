@@ -5,6 +5,7 @@ import '../../../../theme/radius.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../teacher_dashboard_provider.dart';
+import '../../../../theme/breakpoints.dart';
 
 /// TA-01 pending tasks grid — 2 tiles per row on mobile.
 class PendingTasksSection extends StatelessWidget {
@@ -12,8 +13,8 @@ class PendingTasksSection extends StatelessWidget {
     super.key,
     required this.tasks,
     this.onTaskTap,
-    this.largeMobileBreakpoint = 428,
-    this.tabletBreakpoint = 768,
+    this.largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth,
+    this.tabletBreakpoint = AksharaBreakpoints.tabletMinWidth,
   });
 
   final List<PendingTask> tasks;

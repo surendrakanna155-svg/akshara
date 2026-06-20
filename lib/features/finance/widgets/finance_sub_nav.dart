@@ -3,11 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_navigation.dart';
-import '../../../theme/spacing.dart';
 import '../finance_navigation.dart';
 import '../finance_models.dart';
 
-/// Horizontal sub-navigation for Finance Phase 1 screens.
+/// Sub-navigation for Finance Phase 1 screens (collapses to "More" on phones).
 class FinanceSubNav extends StatelessWidget {
   const FinanceSubNav({
     super.key,
@@ -18,32 +17,24 @@ class FinanceSubNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Finance module navigation',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final screen in kFinanceNavScreens) ...[
-              AksharaModuleSubNavTab(
-                key: QaTestKeys.moduleSubNavTab('finance', screen.label),
-                label: screen.label,
-                selected: screen == current ||
-                    (current == FinanceScreen.collectionDetail &&
-                        screen == FinanceScreen.collections),
-                onTap: () {
-                  if (screen != current) {
-                    context.go(screen.route);
-                  }
-                },
-              ),
-              if (screen != kFinanceNavScreens.last)
-                const SizedBox(width: AksharaSpacing.s2),
-            ],
-          ],
-        ),
-      ),
+    return AksharaModuleSubNav(
+      moduleKey: 'finance',
+      semanticsLabel: 'Finance module navigation',
+      items: [
+        for (final screen in kFinanceNavScreens)
+          AksharaModuleSubNavItem(
+            itemKey: QaTestKeys.moduleSubNavTab('finance', screen.label),
+            label: screen.label,
+            selected: screen == current ||
+                (current == FinanceScreen.collectionDetail &&
+                    screen == FinanceScreen.collections),
+            onTap: () {
+              if (screen != current) {
+                context.go(screen.route);
+              }
+            },
+          ),
+      ],
     );
   }
 }

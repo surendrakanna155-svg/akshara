@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/breakpoints.dart';
 import '../../theme/spacing.dart';
 
 /// Shared responsive layout helpers for persona mobile dashboards.
+///
+/// Thresholds forward to [AksharaBreakpoints] — the single source of truth —
+/// so persona screens and the admin shell never reflow at different widths.
 abstract final class MobileDashboardLayout {
-  static const double tabletBreakpoint = 768;
-  static const double largeMobileBreakpoint = 428;
-  static const double tabletMaxContentWidth = 480;
+  static const double tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double largeMobileBreakpoint =
+      AksharaBreakpoints.largeMobileMinWidth;
+  static const double tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
 
-  static bool isTablet(double width) => width >= tabletBreakpoint;
+  static bool isTablet(double width) => AksharaBreakpoints.isTabletUp(width);
 
   static double horizontalPadding(double width) =>
       isTablet(width) ? AksharaSpacing.tabletMargin : AksharaSpacing.mobileMargin;

@@ -121,4 +121,13 @@ class ApiTimetableRepository implements TimetableRepository {
     final dto = await _remote.movePeriod(query: query, request: request);
     return _mapper.toPeriod(dto);
   }
+
+  @override
+  Future<TimetablePeriod> reassignPeriodTeacher({
+    required RepositoryQuery query,
+    required ReassignPeriodTeacherRequest request,
+  }) async {
+    final dto = await _remote.reassignPeriodTeacher(query: query, request: request);
+    return _mapper.toPeriod(dto);
+  }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/school_completion/branding_screen.dart';
+import '../features/school_completion/class_teacher_assignment_screen.dart';
 import '../features/school_completion/communication_analytics_screen.dart';
 import '../features/school_completion/communication_delivery_screen.dart';
 import '../features/communication/broadcast_admin_screen.dart';
@@ -71,6 +72,11 @@ Widget substituteManagerRouteBuilder(
 Widget teacherReassignmentRouteBuilder(
     BuildContext context, GoRouterState state) {
   return const TeacherReassignmentScreen();
+}
+
+Widget classTeacherAssignmentsRouteBuilder(
+    BuildContext context, GoRouterState state) {
+  return const ClassTeacherAssignmentScreen();
 }
 
 Widget communicationDeliveryRouteBuilder(

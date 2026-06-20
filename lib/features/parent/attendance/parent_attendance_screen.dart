@@ -14,6 +14,7 @@ import 'attendance_month_selector.dart';
 import 'attendance_summary_card.dart';
 import 'parent_attendance_provider.dart';
 import 'parent_attendance_workflow.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent attendance — PA-02 `PA-02-ParentAttendance-M`.
 class ParentAttendanceScreen extends ConsumerStatefulWidget {
@@ -26,9 +27,9 @@ class ParentAttendanceScreen extends ConsumerStatefulWidget {
   final VoidCallback? onNotificationsTap;
   final void Function(String destination)? onAcademicsNavigate;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
-  static const double _largeMobileBreakpoint = 428;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth;
 
   @override
   ConsumerState<ParentAttendanceScreen> createState() =>

@@ -46,4 +46,9 @@ abstract class TimetableRepository {
     required RepositoryQuery query,
     required MoveTimetablePeriodRequest request,
   });
+
+  Future<TimetablePeriod> reassignPeriodTeacher({
+    required RepositoryQuery query,
+    required ReassignPeriodTeacherRequest request,
+  });
 }

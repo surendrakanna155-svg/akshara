@@ -8,6 +8,7 @@ import '../dashboard/widgets/notice_carousel.dart';
 import 'notices_models.dart';
 import 'parent_notices_provider.dart';
 import 'widgets/notices_filter_bar.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent school notices — PA-07.
 class ParentNoticesScreen extends ConsumerWidget {
@@ -20,8 +21,8 @@ class ParentNoticesScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
   final void Function(ParentNotice notice)? onNoticeTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

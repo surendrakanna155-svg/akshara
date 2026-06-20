@@ -4,6 +4,7 @@ import '../../../../shared/semantic_status.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../student_dashboard_provider.dart';
+import '../../../../theme/breakpoints.dart';
 
 /// ST-01 attendance KPI compact card (173×88 on mobile).
 class AttendanceKpiCard extends StatelessWidget {
@@ -11,7 +12,7 @@ class AttendanceKpiCard extends StatelessWidget {
     super.key,
     required this.kpi,
     this.onTap,
-    this.largeMobileBreakpoint = 428,
+    this.largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth,
   });
 
   final AttendanceKpi kpi;

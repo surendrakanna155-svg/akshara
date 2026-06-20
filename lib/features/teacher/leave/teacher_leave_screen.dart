@@ -7,6 +7,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'leave_models.dart';
 import 'teacher_leave_provider.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Teacher leave requests — TA-07.
 class TeacherLeaveScreen extends ConsumerWidget {
@@ -14,8 +15,8 @@ class TeacherLeaveScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

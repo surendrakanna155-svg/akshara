@@ -7,6 +7,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../parent/timetable/widgets/day_selector_strip.dart';
 import '../../parent/timetable/widgets/timetable_period_row.dart';
 import 'student_timetable_provider.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Student weekly timetable — ST-03.
 class StudentTimetableScreen extends ConsumerWidget {
@@ -14,8 +15,8 @@ class StudentTimetableScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

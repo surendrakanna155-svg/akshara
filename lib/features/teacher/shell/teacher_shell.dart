@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../features/copilot/widgets/copilot_bottom_nav_ai_slot.dart';
 import '../../../features/school_completion/school_branding_theme_provider.dart';
 import '../../../router/route_names.dart';
+import '../../../shared/navigation/persona_nav.dart';
 import '../../auth/qa_visual_switcher.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/stitch_palettes.dart';
-import '../../../theme/theme_extensions.dart';
 
 /// Teacher mobile shell with bottom navigation (Home · Classes · Teach · Messages).
 class TeacherShell extends ConsumerWidget {
@@ -19,56 +17,57 @@ class TeacherShell extends ConsumerWidget {
 
   final Widget child;
 
-  static const _destinations = <_TeacherNavDestination>[
-    _TeacherNavDestination(
-      route: RouteNames.teacherDashboard,
-      actionId: 'home',
-      label: 'Home',
-      icon: Icons.home_outlined,
-      selectedIcon: Icons.home,
-    ),
-    _TeacherNavDestination(
-      route: RouteNames.teacherAttendance,
-      actionId: 'mark_attendance',
-      label: 'Classes',
-      icon: Icons.class_outlined,
-      selectedIcon: Icons.class_,
-    ),
-    _TeacherNavDestination(
-      route: RouteNames.teacherHomework,
-      actionId: 'homework',
-      label: 'Teach',
-      icon: Icons.edit_note_outlined,
-      selectedIcon: Icons.edit_note,
-    ),
-    _TeacherNavDestination(
-      route: RouteNames.teacherMessages,
-      actionId: 'messages',
-      label: 'Messages',
-      icon: Icons.chat_bubble_outline,
-      selectedIcon: Icons.chat_bubble,
-    ),
-  ];
-
-  int _selectedIndex(String location) {
-    if (location.startsWith(RouteNames.teacherAttendance) ||
-        location.startsWith(RouteNames.teacherTimetable)) {
-      return 1;
-    }
-    if (location.startsWith(RouteNames.teacherHomework) ||
-        location.startsWith(RouteNames.teacherExams)) {
-      return 2;
-    }
-    if (location.startsWith(RouteNames.teacherMessages)) {
-      return 3;
-    }
-    return 0;
-  }
+  /// ≤4 primary tabs + a shared "More" tab (Timetable, Leave, Parent Concerns).
+  static const navSpec = PersonaNavSpec(
+    primary: [
+      PersonaNavDestination(
+        route: RouteNames.teacherDashboard,
+        label: 'Home',
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home,
+      ),
+      PersonaNavDestination(
+        route: RouteNames.teacherAttendance,
+        label: 'Classes',
+        icon: Icons.class_outlined,
+        selectedIcon: Icons.class_,
+        matchPrefixes: [RouteNames.teacherClassTeacherDashboard],
+      ),
+      PersonaNavDestination(
+        route: RouteNames.teacherHomework,
+        label: 'Teach',
+        icon: Icons.edit_note_outlined,
+        selectedIcon: Icons.edit_note,
+        matchPrefixes: [RouteNames.teacherExams],
+      ),
+      PersonaNavDestination(
+        route: RouteNames.teacherMessages,
+        label: 'Messages',
+        icon: Icons.chat_bubble_outline,
+        selectedIcon: Icons.chat_bubble,
+      ),
+    ],
+    more: [
+      MoreNavDestination(
+        route: RouteNames.teacherTimetable,
+        label: 'Timetable',
+        icon: Icons.calendar_view_week_outlined,
+      ),
+      MoreNavDestination(
+        route: RouteNames.teacherLeave,
+        label: 'Leave',
+        icon: Icons.event_busy_outlined,
+      ),
+      MoreNavDestination(
+        route: RouteNames.teacherParentCommunication,
+        label: 'Parent Concerns',
+        icon: Icons.forum_outlined,
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final path = GoRouterState.of(context).uri.path;
-    final selectedIndex = _selectedIndex(path);
     final whiteLabel = ref.watch(schoolBrandingThemeProvider);
 
     return Theme(
@@ -83,48 +82,8 @@ class TeacherShell extends ConsumerWidget {
           Expanded(child: child),
         ],
       ),
-      bottomNavigationBar: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.bottomCenter,
-        children: [
-          NavigationBar(
-            height: context.akshara.bottomNavHeight,
-            selectedIndex: selectedIndex,
-            onDestinationSelected: (index) {
-              final destination = _destinations[index];
-              if (destination.route != null && destination.route != path) {
-                context.go(destination.route!);
-              }
-            },
-            destinations: [
-              for (final d in _destinations)
-                NavigationDestination(
-                  icon: Icon(d.icon),
-                  selectedIcon: Icon(d.selectedIcon),
-                  label: d.label,
-                ),
-            ],
-          ),
-          const CopilotBottomNavAiSlot(),
-        ],
-      ),
+      bottomNavigationBar: const PersonaBottomNav(spec: navSpec),
     ),
     );
   }
-}
-
-class _TeacherNavDestination {
-  const _TeacherNavDestination({
-    required this.actionId,
-    required this.label,
-    required this.icon,
-    required this.selectedIcon,
-    this.route,
-  });
-
-  final String? route;
-  final String actionId;
-  final String label;
-  final IconData icon;
-  final IconData selectedIcon;
 }

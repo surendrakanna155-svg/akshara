@@ -12,12 +12,13 @@ import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'staff_login_provider.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Production staff ERP login — email or mobile with OTP.
 class StaffLoginScreen extends ConsumerStatefulWidget {
   const StaffLoginScreen({super.key});
 
-  static const double _tabletBreakpoint = 768;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
   static const double _maxFormWidth = 420;
 
   @override

@@ -209,6 +209,9 @@ const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
 const SCHOOL_B = "a2000000-0000-4000-8000-000000000002";
 const STAFF_A = "a3000000-0000-4000-8000-000000000001";
+// A second teacher in the SAME school — used to prove teacher_entities is now
+// scoped per-teacher (not just per-school).
+const STAFF_A2_SAME_SCHOOL = "a3000000-0000-4000-8000-000000000005";
 const PARENT = "a3000000-0000-4000-8000-000000000003";
 const STUDENT_USER = "a3000000-0000-4000-8000-000000000004";
 const STUDENT_A = "a4000000-0000-4000-8000-000000000001";
@@ -310,9 +313,9 @@ function studentClaims(): AccessTokenClaims {
   };
 }
 
-function teacherClaims(schoolId: string): AccessTokenClaims {
+function teacherClaims(schoolId: string, userId: string = STAFF_A): AccessTokenClaims {
   return {
-    sub: STAFF_A,
+    sub: userId,
     tenant_id: ORG,
     organization_id: ORG,
     school_id: schoolId,
@@ -1811,6 +1814,10 @@ export async function runEnforcedIsolationProbes(
   tasks.push(() => runWithClaims(teacherClaims(SCHOOL_A), async (db) => {
     const n = await count(db, TEACHER_PROBE_DETAIL_SQL, [TEACHER_PROBE_SCHOOL_A]);
     return { name: "teacher_a_sees_own_teacher_probe", pass: n === 1, detail: `visible_teacher_probe=${n}` };
+  }));
+  tasks.push(() => runWithClaims(teacherClaims(SCHOOL_A, STAFF_A2_SAME_SCHOOL), async (db) => {
+    const n = await count(db, TEACHER_PROBE_DETAIL_SQL, [TEACHER_PROBE_SCHOOL_A]);
+    return { name: "teacher_b_cannot_see_other_teacher_probe_same_school", pass: n === 0, detail: `visible_other_teacher_probe=${n}` };
   }));
 
   tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {

@@ -10,6 +10,7 @@ import 'fees_provider.dart';
 import 'installment_timeline.dart';
 import 'pay_now_bottom_bar.dart';
 import 'payment_history_card.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent fees overview — PA-03 `PA-03-ParentFees-M`.
 class ParentFeesScreen extends ConsumerWidget {
@@ -32,8 +33,8 @@ class ParentFeesScreen extends ConsumerWidget {
   final VoidCallback? onOpenReceipts;
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

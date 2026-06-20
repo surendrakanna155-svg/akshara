@@ -4,6 +4,7 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import 'akshara_navigation.dart';
+import 'workspace_switcher.dart';
 
 /// Child selector chip used as the parent dashboard app bar title.
 class AksharaChildSelectorChip extends StatelessWidget {
@@ -185,6 +186,9 @@ class AksharaAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ],
                 )),
       actions: [
+        // Cross-shell workspace switcher — auto-hides unless the user holds >1
+        // workspace, so single-role personas never see it.
+        const WorkspaceSwitcherButton(),
         ...additionalActions,
         if (showAi)
           Padding(

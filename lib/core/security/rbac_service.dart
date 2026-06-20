@@ -18,7 +18,14 @@ class RbacService {
 
   bool get isAuthenticated => _permissions != null;
 
-  ErpRole? get role => _permissions?.role;
+  /// All roles the user holds (primary first). Empty when unauthenticated.
+  List<ErpRole> get roles => _permissions?.roles ?? const <ErpRole>[];
+
+  /// Primary (first) role — backward-compatible single-role accessor.
+  ErpRole? get role => _permissions?.roles.first;
+
+  /// Whether the user holds [role] among their roles.
+  bool hasRole(ErpRole role) => _permissions?.hasRole(role) ?? false;
 
   PermissionSet get permissions =>
       _permissions?.permissionSet ?? const PermissionSet({});
@@ -48,7 +55,7 @@ final userPermissionsProvider = Provider<UserPermissions?>((ref) {
   if (claims != null) {
     // QA automation builds use full role matrix — avoid stale partial server snapshots.
     if (ref.read(environmentProvider).enableQaLogin) {
-      return UserPermissions.forRole(claims.erpRole);
+      return UserPermissions.forRoles(claims.erpRoles);
     }
 
     final sync = ref.watch(serverPermissionSyncProvider);
@@ -58,14 +65,14 @@ final userPermissionsProvider = Provider<UserPermissions?>((ref) {
         snapshot.policy.userId == claims.userId &&
         snapshot.policy.effectivePermissions.isNotEmpty) {
       return UserPermissions(
-        role: claims.erpRole,
+        roles: claims.erpRoles,
         permissionSet: PermissionSet.from(snapshot.policy.effectivePermissions),
       );
     }
 
     if (claims.permissions.isNotEmpty) {
       return UserPermissions.fromClaims(
-        role: claims.erpRole,
+        roles: claims.erpRoles,
         explicitPermissions: claims.permissions,
       );
     }
@@ -73,13 +80,13 @@ final userPermissionsProvider = Provider<UserPermissions?>((ref) {
     // F1 fail-closed: API mode without synced permissions denies mutations.
     if (isAuthApiEnabled(ref)) {
       return UserPermissions(
-        role: claims.erpRole,
+        roles: claims.erpRoles,
         permissionSet: const PermissionSet({}),
       );
     }
 
     return UserPermissions.fromClaims(
-      role: claims.erpRole,
+      roles: claims.erpRoles,
       explicitPermissions: claims.permissions,
     );
   }

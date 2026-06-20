@@ -38,6 +38,19 @@ export class ApprovalSelfApproveDeniedError extends Error {
   }
 }
 
+/**
+ * Separation of duties: whoever VERIFIED an exam's results (coordinator) may not
+ * also APPROVE/publish them. Keeps the verify and approve steps in different hands.
+ */
+export class ApprovalSeparationOfDutiesError extends Error {
+  constructor(public readonly approvalId: string) {
+    super(
+      `Exam results verifier cannot also approve/publish them: ${approvalId}`,
+    );
+    this.name = "ApprovalSeparationOfDutiesError";
+  }
+}
+
 export interface SubmitApprovalInput {
   type: string;
   title: string;
@@ -323,6 +336,20 @@ export async function decideApproval(
     current.requester_id === input.actorId
   ) {
     throw new ApprovalSelfApproveDeniedError(input.approvalId);
+  }
+
+  // Separation of duties for exam results: the coordinator who verified the
+  // session may not also approve/publish it. entity_id is the exam_session id.
+  if (input.status === "approved" && current.type === "examResults") {
+    const verifierRows = await db.queryObject<{ coordinator_verified_by: string | null }>(
+      `SELECT coordinator_verified_by FROM exam_sessions
+       WHERE organization_id = $1 AND school_id = $2 AND id = $3`,
+      [organizationId, schoolId, current.entity_id],
+    );
+    const verifier = verifierRows[0]?.coordinator_verified_by ?? null;
+    if (verifier && verifier === input.actorId) {
+      throw new ApprovalSeparationOfDutiesError(input.approvalId);
+    }
   }
 
   const rows = await db.queryObject<ApprovalRequestRow>(

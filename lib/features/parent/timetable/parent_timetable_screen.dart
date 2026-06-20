@@ -7,6 +7,7 @@ import '../../../theme/theme_extensions.dart';
 import 'parent_timetable_provider.dart';
 import 'widgets/day_selector_strip.dart';
 import 'widgets/timetable_period_row.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent timetable — PA-04.
 class ParentTimetableScreen extends ConsumerWidget {
@@ -17,8 +18,8 @@ class ParentTimetableScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

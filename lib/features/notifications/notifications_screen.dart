@@ -6,13 +6,14 @@ import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import 'notifications_models.dart';
 import 'notifications_provider.dart';
+import '../../theme/breakpoints.dart';
 
 /// Parent notification inbox — NT-01 mobile pattern.
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
   static const double _rowHeight = 80;
 
   @override

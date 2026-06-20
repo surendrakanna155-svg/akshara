@@ -10,7 +10,8 @@ enum QaLoginPersona {
   student,
   finance,
   inventory,
-  superAdmin;
+  superAdmin,
+  multiHat;
 
   String get buttonLabel => switch (this) {
         QaLoginPersona.principal => 'Principal',
@@ -20,6 +21,7 @@ enum QaLoginPersona {
         QaLoginPersona.finance => 'Finance',
         QaLoginPersona.inventory => 'Inventory',
         QaLoginPersona.superAdmin => 'Super Admin',
+        QaLoginPersona.multiHat => 'Teacher + Inventory',
       };
 
   UserRole get userRole => switch (this) {
@@ -37,6 +39,17 @@ enum QaLoginPersona {
         QaLoginPersona.teacher => ErpRole.teacher,
         QaLoginPersona.parent => ErpRole.parent,
         QaLoginPersona.student => ErpRole.student,
+        // Primary (first) role — staff-shell so the switcher's home is the hub.
+        QaLoginPersona.multiHat => ErpRole.inventoryManager,
+      };
+
+  /// All roles the persona holds — multi-hat personas return several.
+  List<ErpRole> get erpRoles => switch (this) {
+        QaLoginPersona.multiHat => const [
+            ErpRole.inventoryManager,
+            ErpRole.teacher,
+          ],
+        _ => [erpRole ?? ErpRole.parent],
       };
 
   String get demoPhone => switch (this) {
@@ -47,6 +60,7 @@ enum QaLoginPersona {
         QaLoginPersona.finance => '9999999991',
         QaLoginPersona.inventory => '9999999992',
         QaLoginPersona.superAdmin => '9999999999',
+        QaLoginPersona.multiHat => '9000000050',
       };
 
   String get displayName => switch (this) {
@@ -57,6 +71,7 @@ enum QaLoginPersona {
         QaLoginPersona.finance => 'QA Finance',
         QaLoginPersona.inventory => 'QA Inventory',
         QaLoginPersona.superAdmin => 'QA Super Admin',
+        QaLoginPersona.multiHat => 'QA Surendra',
       };
 
   /// Dashboard anchor text Maestro can wait for after login.
@@ -68,6 +83,7 @@ enum QaLoginPersona {
         QaLoginPersona.finance => 'Fee Collected (MTD)',
         QaLoginPersona.inventory => 'Total Assets',
         QaLoginPersona.superAdmin => 'Admin Hub',
+        QaLoginPersona.multiHat => 'Your workspaces',
       };
 }
 
@@ -81,6 +97,8 @@ String homeRouteForQaPersona(QaLoginPersona persona) {
     QaLoginPersona.finance => RouteNames.financeDashboard,
     QaLoginPersona.inventory => RouteNames.inventoryDashboard,
     QaLoginPersona.superAdmin => RouteNames.admin,
+    // Multi-hat lands on the Admin Hub where the workspace switcher lives.
+    QaLoginPersona.multiHat => RouteNames.admin,
   };
 }
 

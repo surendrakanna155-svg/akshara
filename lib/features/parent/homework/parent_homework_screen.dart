@@ -8,6 +8,7 @@ import 'homework_models.dart';
 import 'parent_homework_provider.dart';
 import 'widgets/homework_filter_bar.dart';
 import 'widgets/homework_list_row.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent homework module screen — PA-05.
 class ParentHomeworkScreen extends ConsumerWidget {
@@ -18,8 +19,8 @@ class ParentHomeworkScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

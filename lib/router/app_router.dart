@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/security/erp_role.dart';
 import '../features/auth/auth_models.dart';
 import '../features/auth/qa_login_persona.dart';
 import '../features/auth/login_screen.dart';
@@ -752,6 +753,13 @@ GoRouter createAppRouter({
             name: 'teacherReassignment',
             pageBuilder: (context, state) => NoTransitionPage(
               child: teacherReassignmentRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.classTeacherAssignments,
+            name: 'classTeacherAssignments',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: classTeacherAssignmentsRouteBuilder(context, state),
             ),
           ),
           GoRoute(
@@ -2262,8 +2270,13 @@ bool _canAccessRoute(AuthState auth, String location) {
     UserRole.parent => location.startsWith('/parent'),
     UserRole.teacher => location.startsWith('/teacher'),
     UserRole.student => location.startsWith('/student'),
-    UserRole.staff =>
-      location.startsWith('/teacher') || canAccessAdminErpShell(auth),
+    // Cross-shell fix (UX Batch 1, Step 5): admin ERP routes are already handled
+    // above. Here (non-admin routes) a staff user may enter /teacher ONLY if they
+    // actually hold the teacher role (a multi-hat user such as Teacher +
+    // Inventory Manager). A non-teaching staff member (e.g. a librarian) — and
+    // staff in general — can no longer reach teacher/parent/student shells.
+    UserRole.staff => location.startsWith('/teacher') &&
+        (auth.claims?.hasRole(ErpRole.teacher) ?? false),
     null => false,
   };
 }

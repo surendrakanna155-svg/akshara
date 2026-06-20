@@ -6,6 +6,7 @@ import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import '../semantic_status.dart';
 import 'akshara_interactive_surface.dart';
+import '../../theme/breakpoints.dart';
 
 /// Quick action tile shared across teacher and student dashboards.
 class AksharaQuickActionCard extends StatelessWidget {
@@ -120,7 +121,7 @@ class AksharaQuickActionGrid extends StatelessWidget {
   const AksharaQuickActionGrid({
     super.key,
     required this.children,
-    this.tabletBreakpoint = 768,
+    this.tabletBreakpoint = AksharaBreakpoints.tabletMinWidth,
     this.mobileItemSpacing = AksharaSpacing.s2,
   });
 
@@ -169,7 +170,7 @@ class AksharaQuickActionRow extends StatelessWidget {
   const AksharaQuickActionRow({
     super.key,
     required this.children,
-    this.largeMobileBreakpoint = 428,
+    this.largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth,
     this.semanticLabel = 'Quick actions',
   });
 

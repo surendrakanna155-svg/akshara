@@ -9,6 +9,16 @@ class RolePermissionMatrix {
     return PermissionSet.from(_permissionsForRole[role] ?? const {});
   }
 
+  /// Union of the default permissions across every role in [roles].
+  /// A multi-hat user (e.g. Teacher + Inventory Manager) gets both sets.
+  static PermissionSet permissionsForRoles(Iterable<ErpRole> roles) {
+    final union = <Permission>{};
+    for (final role in roles) {
+      union.addAll(_permissionsForRole[role] ?? const {});
+    }
+    return PermissionSet.from(union);
+  }
+
   static const Map<ErpRole, Set<Permission>> _permissionsForRole = {
     ErpRole.superAdmin: {
       Permission.viewAdminHub,
@@ -185,13 +195,8 @@ class RolePermissionMatrix {
       Permission.manageMultiSchoolOperations,
       Permission.viewOrganizationBuilder,
       Permission.manageOrganizationBuilder,
-      Permission.viewPlatformOperations,
-      Permission.viewIndustryFramework,
-      Permission.viewHealthcare,
-      Permission.viewSalonBusiness,
-      Permission.viewRestaurantHospitality,
-      Permission.viewAccommodation,
-      Permission.viewWhiteLabelPlatform,
+      // Non-school verticals / platform / white-label removed (UX Batch 1,
+      // Step 3 — least privilege; superAdmin remains the platform owner).
       Permission.viewAlumni,
       Permission.manageAlumni,
       Permission.viewOnboarding,
@@ -532,20 +537,10 @@ class RolePermissionMatrix {
       Permission.manageMultiSchoolOperations,
       Permission.viewOrganizationBuilder,
       Permission.manageOrganizationBuilder,
-      Permission.viewPlatformOperations,
-      Permission.managePlatformOperations,
-      Permission.viewIndustryFramework,
-      Permission.manageIndustryFramework,
-      Permission.viewHealthcare,
-      Permission.manageHealthcare,
-      Permission.viewSalonBusiness,
-      Permission.manageSalonBusiness,
-      Permission.viewRestaurantHospitality,
-      Permission.manageRestaurantHospitality,
-      Permission.viewAccommodation,
-      Permission.manageAccommodation,
-      Permission.viewWhiteLabelPlatform,
-      Permission.manageWhiteLabelPlatform,
+      // Non-school verticals / platform / white-label removed (UX Batch 1, Step 3
+      // — least privilege; a school role never administers Salon/Restaurant/
+      // Healthcare/Accommodation/Industry/WhiteLabel/PlatformOps). superAdmin
+      // remains the platform/multi-industry owner.
     },
     ErpRole.financeAdmin: {
       Permission.viewAdminHub,

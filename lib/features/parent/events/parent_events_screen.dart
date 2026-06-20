@@ -7,6 +7,7 @@ import '../../../theme/theme_extensions.dart';
 import '../dashboard/widgets/event_card.dart';
 import 'events_models.dart';
 import 'parent_events_provider.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent school events — PA-08.
 class ParentEventsScreen extends ConsumerWidget {
@@ -19,8 +20,8 @@ class ParentEventsScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
   final void Function(ParentEvent event)? onEventTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

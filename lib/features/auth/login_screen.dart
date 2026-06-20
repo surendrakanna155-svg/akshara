@@ -12,12 +12,13 @@ import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 import 'auth_models.dart';
 import 'auth_provider.dart';
+import '../../theme/breakpoints.dart';
 
 /// P-03 Login — phone OTP with production API or explicit testing mode.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
-  static const double _tabletBreakpoint = 768;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
   static const double _maxFormWidth = 400;
 
   @override

@@ -8,6 +8,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'message_models.dart';
 import 'teacher_messages_provider.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Teacher messages inbox — TA-06.
 class TeacherMessagesScreen extends ConsumerWidget {
@@ -20,8 +21,8 @@ class TeacherMessagesScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
   final void Function(MessageThread thread)? onThreadTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

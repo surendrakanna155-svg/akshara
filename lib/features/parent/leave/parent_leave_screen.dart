@@ -8,6 +8,7 @@ import 'leave_models.dart';
 import 'parent_leave_provider.dart';
 import 'widgets/leave_apply_form.dart';
 import 'widgets/leave_request_row.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent leave requests — PA-12.
 class ParentLeaveScreen extends ConsumerWidget {
@@ -18,8 +19,8 @@ class ParentLeaveScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_navigation.dart';
-import '../../../theme/spacing.dart';
 import '../inventory_navigation.dart';
 import '../inventory_models.dart';
 
@@ -14,30 +13,22 @@ class InventorySubNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Inventory module navigation',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final screen in kInventoryNavScreens) ...[
-              AksharaModuleSubNavTab(
-                key: QaTestKeys.moduleSubNavTab('inventory', screen.label),
-                label: screen.label,
-                selected: screen == current,
-                onTap: () {
-                  if (screen != current) {
-                    context.go(screen.route);
-                  }
-                },
-              ),
-              if (screen != kInventoryNavScreens.last)
-                const SizedBox(width: AksharaSpacing.s2),
-            ],
-          ],
-        ),
-      ),
+    return AksharaModuleSubNav(
+      moduleKey: 'inventory',
+      semanticsLabel: 'Inventory module navigation',
+      items: [
+        for (final screen in kInventoryNavScreens)
+          AksharaModuleSubNavItem(
+            itemKey: QaTestKeys.moduleSubNavTab('inventory', screen.label),
+            label: screen.label,
+            selected: screen == current,
+            onTap: () {
+              if (screen != current) {
+                context.go(screen.route);
+              }
+            },
+          ),
+      ],
     );
   }
 }

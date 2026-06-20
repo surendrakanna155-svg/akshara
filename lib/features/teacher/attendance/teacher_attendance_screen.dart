@@ -12,6 +12,7 @@ import 'teacher_attendance_provider.dart';
 import 'teacher_attendance_workflow.dart';
 import 'widgets/class_selector_strip.dart';
 import 'widgets/student_attendance_row.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Teacher attendance marking — TA-02.
 class TeacherAttendanceScreen extends ConsumerWidget {
@@ -19,8 +20,8 @@ class TeacherAttendanceScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

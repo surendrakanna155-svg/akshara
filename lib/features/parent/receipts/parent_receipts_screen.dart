@@ -8,6 +8,7 @@ import 'parent_receipts_provider.dart';
 import 'receipt_models.dart';
 import 'widgets/receipt_filter_bar.dart';
 import 'widgets/receipt_list_row.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Parent fee receipts list — PA-11.
 class ParentReceiptsScreen extends ConsumerWidget {
@@ -20,8 +21,8 @@ class ParentReceiptsScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
   final void Function(FeeReceipt receipt)? onReceiptTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

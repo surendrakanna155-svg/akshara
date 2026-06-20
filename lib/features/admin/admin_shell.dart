@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
 import '../../theme/stitch_palettes.dart';
 import '../auth/qa_visual_switcher.dart';
+import 'admin_bottom_nav.dart';
 import 'admin_navigation_rail.dart';
 
 /// Responsive desktop/tablet/mobile shell for the web ERP admin portal.
@@ -65,6 +66,10 @@ class _AdminShellState extends ConsumerState<AdminShell> {
               body: _AdminShellBody(
                 onMenuTap: _openDrawer,
                 child: ErpRouteGuard(child: widget.child),
+              ),
+              bottomNavigationBar: AdminBottomNav(
+                currentLocation: location,
+                onMore: _openDrawer,
               ),
             ),
           LayoutBreakpoint.tablet => Row(

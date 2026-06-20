@@ -21,6 +21,7 @@ import {
   ApprovalNotFoundError,
   ApprovalRejectCommentRequiredError,
   ApprovalSelfApproveDeniedError,
+  ApprovalSeparationOfDutiesError,
   findPendingByEntity,
   getApprovalById,
   insertAuditEntry,
@@ -53,6 +54,9 @@ function mapApprovalError(error: unknown): Response | null {
     return errorEnvelope("VALIDATION_ERROR", error.message, 422);
   }
   if (error instanceof ApprovalSelfApproveDeniedError) {
+    return errorEnvelope("FORBIDDEN", error.message, 403);
+  }
+  if (error instanceof ApprovalSeparationOfDutiesError) {
     return errorEnvelope("FORBIDDEN", error.message, 403);
   }
   return null;

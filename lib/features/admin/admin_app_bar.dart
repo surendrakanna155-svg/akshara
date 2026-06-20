@@ -6,6 +6,7 @@ import '../../shared/widgets/akshara_navigation.dart';
 import '../../shared/widgets/akshara_glass_surface.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
+import '../../shared/widgets/workspace_switcher.dart';
 import 'admin_layout.dart';
 import 'models/admin_nav_models.dart';
 
@@ -75,6 +76,9 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
                       ),
                     ),
                   ),
+                  // Self-spacing: the button adds its own padding only when
+                  // visible (multi-hat). Hidden → zero footprint, no layout shift.
+                  const WorkspaceSwitcherButton(),
                   if (isDesktop) ...[
                     const SizedBox(width: AksharaSpacing.s4),
                     AksharaNavSearchField(

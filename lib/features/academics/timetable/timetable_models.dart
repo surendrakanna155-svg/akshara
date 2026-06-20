@@ -180,3 +180,14 @@ class MoveTimetablePeriodRequest {
   final int targetPeriodNumber;
   final String? roomLabel;
 }
+
+@immutable
+class ReassignPeriodTeacherRequest {
+  const ReassignPeriodTeacherRequest({
+    required this.periodId,
+    required this.teacherId,
+  });
+
+  final String periodId;
+  final String teacherId;
+}

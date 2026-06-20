@@ -19,6 +19,34 @@ void main() {
       expect(service.hasPermission(Permission.viewAdmissions), isFalse);
     });
 
+    test('multi-role unions permissions across all held roles', () {
+      // Surendra: Teacher + Inventory Manager → both permission sets.
+      final service = RbacService(
+        UserPermissions.forRoles([ErpRole.teacher, ErpRole.inventoryManager]),
+      );
+      // From the teacher hat:
+      expect(service.hasPermission(Permission.markAttendance), isTrue);
+      expect(service.hasPermission(Permission.manageExamMarks), isTrue);
+      // From the inventory-manager hat:
+      expect(service.hasPermission(Permission.manageInventory), isTrue);
+      expect(service.hasPermission(Permission.createInventoryPo), isTrue);
+      // Neither hat grants control center:
+      expect(service.hasPermission(Permission.viewControlCenter), isFalse);
+      // Holds both roles; primary is the first.
+      expect(service.hasRole(ErpRole.teacher), isTrue);
+      expect(service.hasRole(ErpRole.inventoryManager), isTrue);
+      expect(service.role, ErpRole.teacher);
+      expect(service.roles.length, 2);
+    });
+
+    test('single role does NOT leak the other hat\'s permissions', () {
+      final teacherOnly = RbacService(UserPermissions.forRole(ErpRole.teacher));
+      expect(teacherOnly.hasPermission(Permission.manageInventory), isFalse);
+      final inventoryOnly =
+          RbacService(UserPermissions.forRole(ErpRole.inventoryManager));
+      expect(inventoryOnly.hasPermission(Permission.markAttendance), isFalse);
+    });
+
     test('hasAnyPermission and hasAllPermissions', () {
       final service = RbacService(
         UserPermissions.forRole(ErpRole.principal),
@@ -87,6 +115,32 @@ void main() {
       expect(container.read(canViewFinanceProvider), isTrue);
       expect(container.read(canViewControlCenterProvider), isFalse);
       expect(container.read(canManageAdmissionsProvider), isFalse);
+    });
+
+    test('multi-role claims resolve a unioned permission set', () {
+      final container = ProviderContainer(
+        overrides: [
+          authStateOverride(
+            AuthState(
+              status: AuthStatus.authenticated,
+              phoneNumber: '9000000099',
+              displayName: 'Surendra',
+              role: UserRole.staff,
+              claims: AuthClaims.demoForRole(
+                erpRoles: [ErpRole.teacher, ErpRole.inventoryManager],
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final rbac = container.read(rbacServiceProvider);
+      // Teacher hat + Inventory hat both resolve through the provider:
+      expect(rbac.hasPermission(Permission.markAttendance), isTrue);
+      expect(container.read(canViewInventoryProvider), isTrue);
+      expect(rbac.roles.length, 2);
+      expect(container.read(canViewControlCenterProvider), isFalse);
     });
   });
 }

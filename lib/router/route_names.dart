@@ -117,6 +117,8 @@ abstract final class RouteNames {
   static const String timetableOptimization = '/school/timetables/optimize';
   static const String substituteManager = '/school/timetables/substitute';
   static const String teacherReassignment = '/school/timetables/reassign';
+  static const String classTeacherAssignments =
+      '/school/timetables/class-teachers';
   static const String communicationDelivery = '/school/communications/delivery';
   static const String communicationBroadcastAdmin =
       '/school/communications/broadcast-admin';
@@ -563,6 +565,7 @@ abstract final class RouteNames {
     timetableOptimization,
     substituteManager,
     teacherReassignment,
+    classTeacherAssignments,
     communicationDelivery,
     communicationBroadcastAdmin,
     communicationAnalytics,

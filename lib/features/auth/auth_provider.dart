@@ -430,11 +430,10 @@ class AuthNotifier extends Notifier<AuthState> {
     final role = persona.userRole;
 
     if (role == UserRole.staff) {
-      final erpRole = persona.erpRole ?? ErpRole.superAdmin;
       await signInStaff(
         phoneNumber: phone,
         displayName: persona.displayName,
-        erpRole: erpRole,
+        erpRoles: persona.erpRoles,
       );
       return;
     }
@@ -465,16 +464,21 @@ class AuthNotifier extends Notifier<AuthState> {
     required String phoneNumber,
     required String displayName,
     ErpRole? erpRole,
+    List<ErpRole>? erpRoles,
   }) async {
     if (ref.read(environmentProvider).disableDemoAuth &&
         !ref.read(isQaLoginEnabledProvider)) {
       throw StateError('Mock staff sign-in is disabled in production builds');
     }
 
-    final ErpRole resolvedErpRole =
-        erpRole ?? ref.read(staffErpRoleProvider);
-    await _storage.writeStaffErpRolePreference(resolvedErpRole);
-    ref.read(staffErpRoleProvider.notifier).state = resolvedErpRole;
+    // Multi-role: a user may hold several hats (e.g. Teacher + Inventory
+    // Manager). The first is primary; the single staff preference tracks it.
+    final List<ErpRole> resolvedRoles = (erpRoles != null && erpRoles.isNotEmpty)
+        ? erpRoles
+        : <ErpRole>[erpRole ?? ref.read(staffErpRoleProvider)];
+    final ErpRole primaryRole = resolvedRoles.first;
+    await _storage.writeStaffErpRolePreference(primaryRole);
+    ref.read(staffErpRoleProvider.notifier).state = primaryRole;
 
     await ref.read(serverPermissionCacheProvider).clear();
     ref.read(serverPermissionSyncProvider.notifier).state =
@@ -486,7 +490,7 @@ class AuthNotifier extends Notifier<AuthState> {
       displayName: displayName,
       role: UserRole.staff,
       claims: AuthClaims.demoForRole(
-        erpRole: resolvedErpRole,
+        erpRoles: resolvedRoles,
         userId: 'user_${_normalizePhone(phoneNumber)}',
       ),
     );

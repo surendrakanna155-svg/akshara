@@ -11,6 +11,7 @@ import '../../../theme/theme_extensions.dart';
 import 'exam_models.dart';
 import 'teacher_exams_provider.dart';
 import '../teacher_mutations_provider.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Teacher exams — TA-05.
 class TeacherExamsScreen extends ConsumerWidget {
@@ -18,8 +19,8 @@ class TeacherExamsScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

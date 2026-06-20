@@ -5,24 +5,59 @@ import '../../core/security/permissions.dart';
 import '../../core/tenant/tenant_context.dart';
 
 /// Mock JWT claims persisted with the auth session (v1.6).
+///
+/// Multi-role: a user can hold several [ErpRole]s at once (e.g. Teacher +
+/// Inventory Manager). [erpRoles] is the source of truth, ordered with the
+/// primary role first. The legacy single-role API ([erpRole] getter, the
+/// `erpRole:` constructor/copyWith/demoForRole params) keeps working and maps to
+/// the primary role, so existing call sites are unaffected.
 @immutable
 class AuthClaims {
-  const AuthClaims({
+  AuthClaims({
     required this.userId,
-    required this.erpRole,
+    ErpRole? erpRole,
+    List<ErpRole>? erpRoles,
     required this.tenantId,
     this.schoolId,
     this.organizationId,
     this.permissions = const [],
     this.accessTokenExpiresAt,
-  });
+  })  : assert(
+          erpRole != null || (erpRoles != null && erpRoles.isNotEmpty),
+          'Provide erpRole or a non-empty erpRoles',
+        ),
+        erpRoles = _normalizeRoles(erpRole, erpRoles);
 
   final String userId;
-  final ErpRole erpRole;
+
+  /// All roles the user holds, primary first. Never empty.
+  final List<ErpRole> erpRoles;
+
+  /// Primary (first) role — backward-compatible single-role accessor.
+  ErpRole get erpRole => erpRoles.first;
+
+  /// Whether the user holds [role] among their roles.
+  bool hasRole(ErpRole role) => erpRoles.contains(role);
+
+  /// Whether the user holds more than one role (drives the workspace switcher).
+  bool get isMultiRole => erpRoles.length > 1;
+
   final String tenantId;
   final String? schoolId;
   final String? organizationId;
   final List<Permission> permissions;
+
+  /// Dedupes [single]/[many] into an ordered, non-empty role list (primary first).
+  static List<ErpRole> _normalizeRoles(ErpRole? single, List<ErpRole>? many) {
+    final source = (many != null && many.isNotEmpty)
+        ? many
+        : (single != null ? <ErpRole>[single] : const <ErpRole>[]);
+    final out = <ErpRole>[];
+    for (final r in source) {
+      if (!out.contains(r)) out.add(r);
+    }
+    return List.unmodifiable(out);
+  }
 
   /// Access token expiry from the auth server (mock until backend connects).
   final DateTime? accessTokenExpiresAt;
@@ -40,14 +75,18 @@ class AuthClaims {
   }
 
   factory AuthClaims.demoForRole({
-    required ErpRole erpRole,
+    ErpRole? erpRole,
+    Iterable<ErpRole>? erpRoles,
     String? userId,
     Iterable<Permission>? permissions,
     DateTime? accessTokenExpiresAt,
   }) {
+    final roles = (erpRoles != null && erpRoles.isNotEmpty)
+        ? erpRoles.toList(growable: false)
+        : <ErpRole>[erpRole ?? ErpRole.parent];
     return AuthClaims(
-      userId: userId ?? 'user_demo_${erpRole.name}',
-      erpRole: erpRole,
+      userId: userId ?? 'user_demo_${roles.first.name}',
+      erpRoles: roles,
       tenantId: TenantContext.demo.tenantId,
       schoolId: TenantContext.demo.schoolId,
       organizationId: TenantContext.demo.organizationId,
@@ -70,9 +109,22 @@ class AuthClaims {
       }
     }
 
+    // Multi-role: prefer the `roles` array; fall back to the legacy `role` key.
+    final roleNames = (json['roles'] as List<dynamic>?)?.cast<String>();
+    final roles = <ErpRole>[];
+    if (roleNames != null) {
+      for (final name in roleNames) {
+        final r = ErpRole.fromName(name);
+        if (r != null && !roles.contains(r)) roles.add(r);
+      }
+    }
+    if (roles.isEmpty) {
+      roles.add(ErpRole.fromName(json['role'] as String?) ?? ErpRole.parent);
+    }
+
     return AuthClaims(
       userId: json['userId'] as String? ?? '',
-      erpRole: ErpRole.fromName(json['role'] as String?) ?? ErpRole.parent,
+      erpRoles: roles,
       tenantId: json['tenantId'] as String? ?? TenantContext.demo.tenantId,
       schoolId: json['schoolId'] as String?,
       organizationId: json['organizationId'] as String?,
@@ -85,7 +137,9 @@ class AuthClaims {
 
   Map<String, dynamic> toJson() => {
         'userId': userId,
+        // `role` (primary) kept for backward-compatible readers; `roles` is authoritative.
         'role': erpRole.name,
+        'roles': erpRoles.map((r) => r.name).toList(),
         'tenantId': tenantId,
         if (schoolId != null) 'schoolId': schoolId,
         if (organizationId != null) 'organizationId': organizationId,
@@ -96,11 +150,12 @@ class AuthClaims {
       };
 
   bool get isValid =>
-      userId.isNotEmpty && tenantId.isNotEmpty && ErpRole.fromName(erpRole.name) != null;
+      userId.isNotEmpty && tenantId.isNotEmpty && erpRoles.isNotEmpty;
 
   AuthClaims copyWith({
     String? userId,
     ErpRole? erpRole,
+    List<ErpRole>? erpRoles,
     String? tenantId,
     String? schoolId,
     String? organizationId,
@@ -109,7 +164,7 @@ class AuthClaims {
   }) {
     return AuthClaims(
       userId: userId ?? this.userId,
-      erpRole: erpRole ?? this.erpRole,
+      erpRoles: erpRoles ?? (erpRole != null ? <ErpRole>[erpRole] : this.erpRoles),
       tenantId: tenantId ?? this.tenantId,
       schoolId: schoolId ?? this.schoolId,
       organizationId: organizationId ?? this.organizationId,
@@ -124,7 +179,7 @@ class AuthClaims {
       identical(this, other) ||
       other is AuthClaims &&
           userId == other.userId &&
-          erpRole == other.erpRole &&
+          listEquals(erpRoles, other.erpRoles) &&
           tenantId == other.tenantId &&
           schoolId == other.schoolId &&
           organizationId == other.organizationId &&
@@ -134,7 +189,7 @@ class AuthClaims {
   @override
   int get hashCode => Object.hash(
         userId,
-        erpRole,
+        Object.hashAll(erpRoles),
         tenantId,
         schoolId,
         organizationId,

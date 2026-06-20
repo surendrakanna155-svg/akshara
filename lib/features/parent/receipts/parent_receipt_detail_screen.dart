@@ -10,6 +10,7 @@ import '../../../theme/theme_extensions.dart';
 import '../fees/fees_provider.dart';
 import 'parent_receipts_provider.dart';
 import 'receipt_models.dart';
+import '../../../theme/breakpoints.dart';
 
 /// PA-11 receipt detail with download and share actions.
 class ParentReceiptDetailScreen extends ConsumerWidget {
@@ -26,8 +27,8 @@ class ParentReceiptDetailScreen extends ConsumerWidget {
   final void Function(FeeReceipt receipt)? onDownload;
   final void Function(FeeReceipt receipt)? onShare;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

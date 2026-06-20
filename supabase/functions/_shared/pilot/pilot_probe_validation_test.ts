@@ -36,6 +36,6 @@ Deno.test("Pilot 7.1 isolation probes are registered", () => {
   }
 });
 
-Deno.test("tenant isolation probe count reaches v7.6 target (219)", () => {
-  assertEquals(extractProbeNames(probesSource).length, 219);
+Deno.test("tenant isolation probe count reaches v7.6 target (220)", () => {
+  assertEquals(extractProbeNames(probesSource).length, 220);
 });

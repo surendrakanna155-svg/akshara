@@ -6,6 +6,7 @@ import '../../core/security/permissions.dart';
 import '../../core/school_config/school_capability_registry.dart';
 import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/security/rbac_service.dart';
+import '../../core/workspace/workspace_providers.dart';
 import 'models/admin_nav_models.dart';
 import '../../router/route_names.dart';
 
@@ -205,6 +206,24 @@ final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
           destination.module,
           capabilities,
         ),
+      )
+      .toList(growable: false);
+});
+
+/// Navigation destinations scoped to the user's **active workspace** — the
+/// USER → ROLE → WORKSPACE → TASK model. A finance admin sees only the Finance
+/// workspace's modules; a multi-hat user sees only the active hat's modules.
+/// The Admin-Hub root card is always available as the workspace landing.
+final workspaceScopedNavDestinationsProvider =
+    Provider<List<AdminNavDestination>>((ref) {
+  final all = ref.watch(adminNavDestinationsProvider);
+  final workspace = ref.watch(activeWorkspaceProvider);
+  if (workspace == null) return all;
+  return all
+      .where(
+        (destination) =>
+            destination.module == AdminModule.admin ||
+            workspace.containsModule(destination.module),
       )
       .toList(growable: false);
 });

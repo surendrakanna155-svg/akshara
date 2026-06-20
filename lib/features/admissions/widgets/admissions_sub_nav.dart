@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_navigation.dart';
-import '../../../theme/spacing.dart';
 import '../admissions_navigation.dart';
 
 /// Horizontal sub-navigation for Admissions Phase 1 screens.
@@ -17,30 +16,22 @@ class AdmissionsSubNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Admissions module navigation',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final screen in kAdmissionsNavScreens) ...[
-              AksharaModuleSubNavTab(
-                key: QaTestKeys.moduleSubNavTab('admissions', screen.label),
-                label: screen.label,
-                selected: screen == current,
-                onTap: () {
-                  if (screen != current) {
-                    context.go(screen.route);
-                  }
-                },
-              ),
-              if (screen != kAdmissionsNavScreens.last)
-                const SizedBox(width: AksharaSpacing.s2),
-            ],
-          ],
-        ),
-      ),
+    return AksharaModuleSubNav(
+      moduleKey: 'admissions',
+      semanticsLabel: 'Admissions module navigation',
+      items: [
+        for (final screen in kAdmissionsNavScreens)
+          AksharaModuleSubNavItem(
+            itemKey: QaTestKeys.moduleSubNavTab('admissions', screen.label),
+            label: screen.label,
+            selected: screen == current,
+            onTap: () {
+              if (screen != current) {
+                context.go(screen.route);
+              }
+            },
+          ),
+      ],
     );
   }
 }

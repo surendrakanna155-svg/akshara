@@ -10,6 +10,7 @@ import '../../parent/attendance/attendance_models.dart';
 import '../../parent/attendance/attendance_month_selector.dart';
 import '../../parent/attendance/attendance_summary_card.dart';
 import 'student_attendance_provider.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Student monthly attendance — ST-02.
 class StudentAttendanceScreen extends ConsumerStatefulWidget {
@@ -17,8 +18,8 @@ class StudentAttendanceScreen extends ConsumerStatefulWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
   @override
   ConsumerState<StudentAttendanceScreen> createState() =>
       _StudentAttendanceScreenState();

@@ -15,6 +15,7 @@ import 'widgets/daily_schedule_strip.dart';
 import 'widgets/exam_reminder_card.dart';
 import 'widgets/hero_greeting_card.dart';
 import 'widgets/homework_due_list.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Student home dashboard — ST-01 `ST-01-StudentDashboard-M`.
 class StudentDashboardScreen extends ConsumerWidget {
@@ -26,7 +27,7 @@ class StudentDashboardScreen extends ConsumerWidget {
   /// Route handler; receives action ids from ST-01 prototype map.
   final void Function(String actionId)? onNavigate;
 
-  static const double _largeMobileBreakpoint = 428;
+  static const double _largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -208,7 +209,7 @@ class _StatusKpiRow extends StatelessWidget {
     required this.homeworkLabel,
     required this.onAttendanceTap,
     required this.onHomeworkKpiTap,
-    this.largeMobileBreakpoint = 428,
+    this.largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth,
   });
 
   final AttendanceKpi attendanceKpi;

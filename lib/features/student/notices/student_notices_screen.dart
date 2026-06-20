@@ -7,6 +7,7 @@ import '../../../theme/theme_extensions.dart';
 import 'student_notices_provider.dart';
 import 'widgets/notice_list_row.dart';
 import 'widgets/notices_filter_bar.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Student school and class notices — ST-06.
 class StudentNoticesScreen extends ConsumerWidget {
@@ -14,8 +15,8 @@ class StudentNoticesScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

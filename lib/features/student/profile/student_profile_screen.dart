@@ -8,6 +8,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../parent/profile/widgets/profile_info_row.dart';
 import 'profile_models.dart';
 import 'student_profile_provider.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Student profile — ST-07.
 class StudentProfileScreen extends ConsumerWidget {
@@ -20,8 +21,8 @@ class StudentProfileScreen extends ConsumerWidget {
   final VoidCallback? onNotificationsTap;
   final VoidCallback? onSettingsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

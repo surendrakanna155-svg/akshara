@@ -2,6 +2,7 @@
 /// and which teachers are on leave, it assigns a free teacher to each uncovered
 /// period. Deterministic and explainable — same inputs always give the same
 /// result. A coordinator/principal can override any assignment afterward.
+library;
 
 /// A teacher available to be scheduled / used as a substitute.
 class TimetableTeacher {

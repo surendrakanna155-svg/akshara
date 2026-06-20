@@ -12,7 +12,7 @@ import '../../helpers/auth_test_overrides.dart';
 void main() {
   group('tenantContextProvider', () {
     test('uses claims tenant when authenticated', () {
-      const claims = AuthClaims(
+      final claims = AuthClaims(
         userId: 'user_99',
         erpRole: ErpRole.superAdmin,
         tenantId: 'tenant_prod_42',
@@ -23,7 +23,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           authStateOverride(
-            const AuthState(
+            AuthState(
               status: AuthStatus.authenticated,
               phoneNumber: '9876543210',
               displayName: 'Staff',

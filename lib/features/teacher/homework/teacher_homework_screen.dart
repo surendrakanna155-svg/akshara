@@ -7,6 +7,7 @@ import '../../../theme/theme_extensions.dart';
 import 'homework_models.dart';
 import 'teacher_homework_provider.dart';
 import 'widgets/homework_submission_row.dart';
+import '../../../theme/breakpoints.dart';
 
 /// Teacher homework review — TA-04.
 class TeacherHomeworkScreen extends ConsumerWidget {
@@ -14,8 +15,8 @@ class TeacherHomeworkScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
-  static const double _tabletBreakpoint = 768;
-  static const double _tabletMaxContentWidth = 480;
+  static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
+  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

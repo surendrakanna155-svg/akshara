@@ -23,16 +23,18 @@ void main() {
       }
     });
 
-    test('super admin school admin and management can access routes', () {
-      for (final role in [
-        ErpRole.superAdmin,
-        ErpRole.schoolAdmin,
-        ErpRole.management,
-      ]) {
+    test('super admin can access; school roles cannot (least privilege)', () {
+      expect(
+        canAccessErpRoute(
+            RbacService(UserPermissions.forRole(ErpRole.superAdmin)),
+            RouteNames.platformOperations),
+        isTrue,
+      );
+      for (final role in [ErpRole.schoolAdmin, ErpRole.management]) {
         final rbac = RbacService(UserPermissions.forRole(role));
         expect(
           canAccessErpRoute(rbac, RouteNames.platformOperations),
-          isTrue,
+          isFalse,
         );
       }
     });

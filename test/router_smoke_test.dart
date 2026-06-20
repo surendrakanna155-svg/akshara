@@ -1,4 +1,5 @@
 import 'package:akshara_erp/core/security/erp_role.dart';
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/auth/auth_claims.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/auth/login_screen.dart';
@@ -37,6 +38,17 @@ AuthState get _parentAuth => const AuthState(
       phoneNumber: '9876543210',
       displayName: 'Ravi Kumar',
       role: UserRole.parent,
+    );
+
+// Multi-hat staff: Inventory Manager (primary) + Teacher — the cross-shell case.
+AuthState get _multiHatAuth => AuthState(
+      status: AuthStatus.authenticated,
+      phoneNumber: '9000000050',
+      displayName: 'Surendra',
+      role: UserRole.staff,
+      claims: AuthClaims.demoForRole(
+        erpRoles: const [ErpRole.inventoryManager, ErpRole.teacher],
+      ),
     );
 
 void main() {
@@ -347,6 +359,135 @@ void main() {
         RouteNames.controlCenterDashboard,
       );
       expect(find.text('Access Denied'), findsOneWidget);
+    });
+
+    testWidgets('multi-hat startup lands where the switcher is reachable', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final router = createAppRouter(readAuth: () => _multiHatAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: _multiHatAuth,
+        settleSplash: true,
+      );
+      await tester.pumpAndSettle();
+
+      // Wherever a multi-hat user lands at startup, the switcher is present.
+      expect(find.byKey(QaTestKeys.workspaceSwitcherButton), findsOneWidget);
+    });
+
+    testWidgets('multi-hat user switches admin → teacher workspace from chrome', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final router = createAppRouter(readAuth: () => _multiHatAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: _multiHatAuth,
+        settleSplash: true,
+      );
+      router.go(RouteNames.admin);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(QaTestKeys.workspaceSwitcherButton));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(QaTestKeys.workspaceSwitcherSheetItem('Teaching')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.teacherDashboard,
+      );
+    });
+
+    testWidgets('multi-hat user switches BACK teacher → inventory from chrome', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final router = createAppRouter(readAuth: () => _multiHatAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: _multiHatAuth,
+        settleSplash: true,
+      );
+      router.go(RouteNames.teacherDashboard);
+      await tester.pumpAndSettle();
+
+      // The switcher is reachable from the TEACHER shell too (the gap we fixed).
+      expect(find.byKey(QaTestKeys.workspaceSwitcherButton), findsOneWidget);
+
+      await tester.tap(find.byKey(QaTestKeys.workspaceSwitcherButton));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(QaTestKeys.workspaceSwitcherSheetItem('Inventory')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.inventoryDashboard,
+      );
+    });
+
+    testWidgets('blocks non-teaching staff from teacher routes (cross-shell)', (
+      tester,
+    ) async {
+      final router = createAppRouter(readAuth: () => _financeStaffAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: _financeStaffAuth,
+      );
+      router.go(RouteNames.teacherDashboard);
+      await tester.pumpAndSettle();
+
+      // A finance staffer (no teaching role) is bounced away from /teacher.
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        isNot(RouteNames.teacherDashboard),
+      );
+    });
+
+    testWidgets('allows multi-hat staff (holds teacher role) into /teacher', (
+      tester,
+    ) async {
+      final router = createAppRouter(readAuth: () => _multiHatAuth);
+      await pumpAksharaRouter(
+        tester,
+        router: router,
+        authOverride: _multiHatAuth,
+      );
+      router.go(RouteNames.teacherDashboard);
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        RouteNames.teacherDashboard,
+      );
     });
 
     testWidgets('blocks student from teacher routes', (tester) async {

@@ -127,6 +127,21 @@ class TimetableRemoteDataSource {
     return TimetablePeriodDto.fromJson(parseTimetableEnvelope(_responseMap(response)));
   }
 
+  Future<TimetablePeriodDto> reassignPeriodTeacher({
+    required RepositoryQuery query,
+    required ReassignPeriodTeacherRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TimetableApiPaths.reassignPeriodTeacher,
+      queryParameters: _queryParams(query),
+      data: {
+        'periodId': request.periodId,
+        'teacherId': request.teacherId,
+      },
+    );
+    return TimetablePeriodDto.fromJson(parseTimetableEnvelope(_responseMap(response)));
+  }
+
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
     return response.data ?? const {};
   }

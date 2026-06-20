@@ -2,6 +2,8 @@ import 'package:akshara_erp/core/providers/shared_preferences_provider.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/features/auth/auth_claims.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
+import 'package:akshara_erp/features/admin/admin_bottom_nav.dart';
 import 'package:akshara_erp/features/admin/admin_navigation_rail.dart';
 import 'package:akshara_erp/features/admin/admin_shell.dart';
 import 'package:akshara_erp/features/admin/models/admin_nav_models.dart';
@@ -108,16 +110,36 @@ void main() {
       expect(find.byType(NavigationRail), findsNothing);
     });
 
-    testWidgets('mobile uses drawer navigation', (tester) async {
+    testWidgets('mobile shows a bottom nav with a reachable module drawer',
+        (tester) async {
       await pumpAdminShell(tester, viewport: const Size(390, 844));
 
+      // No Material NavigationRail on phones; admin now gets a bottom nav
+      // (parity with the consumer apps — MOBILE_FIRST_AUDIT #3).
       expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(AdminBottomNav), findsOneWidget);
+      expect(find.byKey(QaTestKeys.adminBottomNavMore), findsOneWidget);
+
+      // Both the app-bar menu and the More tab open the full module drawer.
       expect(find.byIcon(Icons.menu), findsOneWidget);
 
+      // Admissions is one of the (≤4) bottom-nav tabs → visible once.
+      expect(find.text('Admissions'), findsOneWidget);
+
+      // Opening the drawer surfaces the full module list, so Admissions now
+      // appears in both the bottom nav and the drawer rail.
       await tester.tap(find.byIcon(Icons.menu));
       await tester.pumpAndSettle();
+      expect(find.text('Admissions'), findsNWidgets(2));
+    });
 
-      expect(find.text('Admissions'), findsOneWidget);
+    testWidgets('tablet and desktop do not show the mobile bottom nav',
+        (tester) async {
+      await pumpAdminShell(tester, viewport: const Size(1024, 768));
+      expect(find.byType(AdminBottomNav), findsNothing);
+
+      await pumpAdminShell(tester, viewport: const Size(1440, 900));
+      expect(find.byType(AdminBottomNav), findsNothing);
     });
   });
 }

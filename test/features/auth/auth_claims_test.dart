@@ -14,17 +14,57 @@ void main() {
     });
 
     test('round-trips through JSON', () {
-      final original = const AuthClaims(
+      final original = AuthClaims(
         userId: 'user_1',
         erpRole: ErpRole.principal,
         tenantId: 'tenant_1',
         schoolId: 'school_1',
         organizationId: 'org_1',
-        permissions: [Permission.viewFinance],
+        permissions: const [Permission.viewFinance],
       );
 
       final restored = AuthClaims.fromJson(original.toJson());
       expect(restored, original);
+    });
+
+    test('multi-role: holds several roles, primary first', () {
+      final claims = AuthClaims.demoForRole(
+        erpRoles: [ErpRole.teacher, ErpRole.inventoryManager],
+      );
+      expect(claims.erpRoles, [ErpRole.teacher, ErpRole.inventoryManager]);
+      expect(claims.erpRole, ErpRole.teacher); // primary
+      expect(claims.hasRole(ErpRole.inventoryManager), isTrue);
+      expect(claims.isMultiRole, isTrue);
+    });
+
+    test('multi-role round-trips through JSON (roles array)', () {
+      final original = AuthClaims(
+        userId: 'surendra',
+        erpRoles: const [ErpRole.teacher, ErpRole.inventoryManager],
+        tenantId: 'tenant_1',
+        schoolId: 'school_1',
+      );
+      final restored = AuthClaims.fromJson(original.toJson());
+      expect(restored, original);
+      expect(restored.erpRoles, [ErpRole.teacher, ErpRole.inventoryManager]);
+    });
+
+    test('legacy single-role JSON (role key) still parses', () {
+      final claims = AuthClaims.fromJson({
+        'userId': 'u1',
+        'role': 'principal',
+        'tenantId': 't1',
+      });
+      expect(claims.erpRoles, [ErpRole.principal]);
+      expect(claims.erpRole, ErpRole.principal);
+      expect(claims.isMultiRole, isFalse);
+    });
+
+    test('duplicate roles are deduped, order preserved', () {
+      final claims = AuthClaims.demoForRole(
+        erpRoles: [ErpRole.teacher, ErpRole.teacher, ErpRole.inventoryManager],
+      );
+      expect(claims.erpRoles, [ErpRole.teacher, ErpRole.inventoryManager]);
     });
 
     test('fromJson ignores unknown permission names', () {

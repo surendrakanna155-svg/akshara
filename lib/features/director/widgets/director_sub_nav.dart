@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_navigation.dart';
-import '../../../theme/spacing.dart';
 import '../director_navigation.dart';
 
 class DirectorSubNav extends StatelessWidget {
@@ -13,30 +12,22 @@ class DirectorSubNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      label: 'Director module navigation',
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final screen in kDirectorNavScreens) ...[
-              AksharaModuleSubNavTab(
-                key: QaTestKeys.moduleSubNavTab('director', screen.label),
-                label: screen.label,
-                selected: screen == current,
-                onTap: () {
-                  if (screen != current) {
-                    context.go(screen.route);
-                  }
-                },
-              ),
-              if (screen != kDirectorNavScreens.last)
-                const SizedBox(width: AksharaSpacing.s2),
-            ],
-          ],
-        ),
-      ),
+    return AksharaModuleSubNav(
+      moduleKey: 'director',
+      semanticsLabel: 'Director module navigation',
+      items: [
+        for (final screen in kDirectorNavScreens)
+          AksharaModuleSubNavItem(
+            itemKey: QaTestKeys.moduleSubNavTab('director', screen.label),
+            label: screen.label,
+            selected: screen == current,
+            onTap: () {
+              if (screen != current) {
+                context.go(screen.route);
+              }
+            },
+          ),
+      ],
     );
   }
 }

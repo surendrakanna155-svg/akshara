@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/repository_providers.dart';
+import '../../../core/timetable/timetable_generation_inputs.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import 'timetable_models.dart';
@@ -14,7 +15,7 @@ final timetableEditorDetailProvider = FutureProvider.family<TimetableDetail, Str
       );
 });
 
-/// v15.3 — Drag-and-drop timetable period editor.
+/// v15.3 — Drag-and-drop timetable period editor with teacher reassignment.
 class TimetableEditorTab extends ConsumerStatefulWidget {
   const TimetableEditorTab({super.key});
 
@@ -24,6 +25,12 @@ class TimetableEditorTab extends ConsumerStatefulWidget {
 
 class _TimetableEditorTabState extends ConsumerState<TimetableEditorTab> {
   List<TimetablePeriod>? _periods;
+  final Map<String, String> _teacherDirectory = mockTimetableTeacherDirectory();
+
+  String _teacherName(String? id) {
+    if (id == null || id.isEmpty) return 'Unassigned';
+    return _teacherDirectory[id] ?? id;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +47,7 @@ class _TimetableEditorTabState extends ConsumerState<TimetableEditorTab> {
       data: (detail) {
         _periods ??= List<TimetablePeriod>.from(detail.periods);
         final periods = _periods!;
+        final periodsPerDay = detail.timetable.periodsPerDay;
         if (periods.isEmpty) {
           return const AksharaEmptyState(message: 'No periods to edit.');
         }
@@ -55,8 +63,8 @@ class _TimetableEditorTabState extends ConsumerState<TimetableEditorTab> {
                     periods.insert(newIndex, item);
                   });
                   final moved = periods[newIndex.clamp(0, periods.length - 1)];
-                  final targetPeriod = (newIndex % 6) + 1;
-                  final targetDay = (newIndex ~/ 6) + 1;
+                  final targetPeriod = (newIndex % periodsPerDay) + 1;
+                  final targetDay = (newIndex ~/ periodsPerDay) + 1;
                   await ref.read(timetableRepositoryProvider).movePeriod(
                         query: ref.read(timetableQueryProvider),
                         request: MoveTimetablePeriodRequest(
@@ -74,14 +82,44 @@ class _TimetableEditorTabState extends ConsumerState<TimetableEditorTab> {
               key: ValueKey(period.id),
               leading: const Icon(Icons.drag_handle),
               title: Text('${period.subjectLabel} · Day ${period.dayOfWeek} P${period.periodNumber}'),
-              subtitle: Text('Room ${period.roomLabel}'),
-              trailing: period.roomLabel.toLowerCase().contains('lab')
-                  ? const Chip(label: Text('Lab'))
-                  : null,
+              subtitle: Text('${_teacherName(period.teacherId)} · Room ${period.roomLabel}'),
+              trailing: canManage
+                  ? PopupMenuButton<String>(
+                      tooltip: 'Change teacher',
+                      icon: const Icon(Icons.person_outline),
+                      onSelected: (teacherId) =>
+                          _reassign(period, teacherId, index),
+                      itemBuilder: (_) => [
+                        for (final entry in _teacherDirectory.entries)
+                          PopupMenuItem(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          ),
+                      ],
+                    )
+                  : (period.roomLabel.toLowerCase().contains('lab')
+                      ? const Chip(label: Text('Lab'))
+                      : null),
             );
           },
         );
       },
     );
+  }
+
+  Future<void> _reassign(
+      TimetablePeriod period, String teacherId, int index) async {
+    final updated = await ref
+        .read(timetableRepositoryProvider)
+        .reassignPeriodTeacher(
+          query: ref.read(timetableQueryProvider),
+          request: ReassignPeriodTeacherRequest(
+            periodId: period.id,
+            teacherId: teacherId,
+          ),
+        );
+    if (!mounted) return;
+    setState(() => _periods![index] = updated);
+    ref.invalidate(timetableConflictsProvider);
   }
 }

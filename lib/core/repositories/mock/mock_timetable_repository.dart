@@ -1,4 +1,7 @@
 import '../../../features/academics/timetable/timetable_models.dart';
+import '../../school_config/school_configuration_models.dart';
+import '../../timetable/timetable_generation_inputs.dart';
+import '../../timetable/timetable_generator.dart';
 import '../interfaces/timetable_repository.dart';
 import '../repository_query.dart';
 
@@ -144,24 +147,71 @@ class MockTimetableRepository implements TimetableRepository {
     );
   }
 
+  /// Real rule-based generation: builds a clash-free weekly grid for every
+  /// configured section at once (so no teacher or room is double-booked across
+  /// sections), reserving period 1 for each section's class teacher. The mock
+  /// uses a CBSE template; the live backend supplies the school's actual
+  /// curriculum and teacher-subject assignments. A roomy 8×6 grid is used so the
+  /// full curriculum fits.
   @override
   Future<List<TimetableEntry>> generate({
     required RepositoryQuery query,
     required GenerateTimetableRequest request,
   }) async {
-    final entry = TimetableEntry(
-      id: 'tt_mock_${_timetables.length + 1}',
-      academicYearId: request.academicYearId,
-      sectionId: request.sectionId ?? 'mock-section-5-A',
-      status: TimetableStatus.draft,
-      version: 1,
-      periodsPerDay: request.periodsPerDay,
-      daysPerWeek: request.daysPerWeek,
-      updatedAt: DateTime.now(),
+    const periodsPerDay = 8;
+    const daysPerWeek = 6;
+    final inputs =
+        buildMockGenerationInputs(curriculum: SchoolCurriculum.cbse);
+    final result = generateTimetable(
+      classes: inputs.classes,
+      teachers: inputs.teachers,
+      periodsPerDay: periodsPerDay,
+      daysPerWeek: daysPerWeek,
     );
-    _timetables.insert(0, entry);
-    _periods[entry.id] = _buildPeriods(entry.id);
-    return [entry];
+
+    final generated = <TimetableEntry>[];
+    final now = DateTime.now();
+    for (final section in inputs.sections) {
+      final sectionId = 'mock-section-${section.classLabel}';
+      final existing = _timetables.indexWhere((t) => t.sectionId == sectionId);
+      final id = existing >= 0
+          ? _timetables[existing].id
+          : 'tt_mock_${_timetables.length + generated.length + 1}';
+
+      final entry = TimetableEntry(
+        id: id,
+        academicYearId: request.academicYearId,
+        sectionId: sectionId,
+        status: TimetableStatus.draft,
+        version: existing >= 0 ? _timetables[existing].version + 1 : 1,
+        periodsPerDay: periodsPerDay,
+        daysPerWeek: daysPerWeek,
+        updatedAt: now,
+      );
+
+      _periods[id] = [
+        for (final g in result.forClass(section.classLabel))
+          TimetablePeriod(
+            id: 'period_${id}_${g.day}_${g.period}',
+            timetableId: id,
+            dayOfWeek: g.day,
+            periodNumber: g.period,
+            subjectLabel: g.subject,
+            roomLabel: g.room ?? 'Class Room',
+            teacherId: (g.teacherId == null || g.teacherId!.isEmpty)
+                ? null
+                : g.teacherId,
+          ),
+      ];
+
+      if (existing >= 0) {
+        _timetables[existing] = entry;
+      } else {
+        _timetables.insert(0, entry);
+      }
+      generated.add(entry);
+    }
+    return generated;
   }
 
   @override
@@ -229,6 +279,30 @@ class MockTimetableRepository implements TimetableRepository {
         subjectLabel: current.subjectLabel,
         roomLabel: request.roomLabel ?? current.roomLabel,
         teacherId: current.teacherId,
+      );
+      entry.value[index] = updated;
+      return updated;
+    }
+    throw StateError('Period not found');
+  }
+
+  @override
+  Future<TimetablePeriod> reassignPeriodTeacher({
+    required RepositoryQuery query,
+    required ReassignPeriodTeacherRequest request,
+  }) async {
+    for (final entry in _periods.entries) {
+      final index = entry.value.indexWhere((p) => p.id == request.periodId);
+      if (index < 0) continue;
+      final current = entry.value[index];
+      final updated = TimetablePeriod(
+        id: current.id,
+        timetableId: current.timetableId,
+        dayOfWeek: current.dayOfWeek,
+        periodNumber: current.periodNumber,
+        subjectLabel: current.subjectLabel,
+        roomLabel: current.roomLabel,
+        teacherId: request.teacherId,
       );
       entry.value[index] = updated;
       return updated;
