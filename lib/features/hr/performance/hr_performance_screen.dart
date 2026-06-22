@@ -176,7 +176,6 @@ class _ReviewsTable extends StatelessWidget {
             rows: [
               for (final review in reviews)
                 DataRow(
-                  onSelectChanged: (_) {},
                   cells: [
                     DataCell(Text(review.employeeName)),
                     DataCell(Text(review.department.name)),

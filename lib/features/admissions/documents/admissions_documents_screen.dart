@@ -132,7 +132,6 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
                 onSelect: (doc) => ref
                     .read(admissionsSelectedDocumentIdProvider.notifier)
                     .state = doc.id,
-                onVerify: (_) {},
               ),
               const SizedBox(height: AksharaSpacing.s4),
               if (checklist.isNotEmpty)
@@ -165,7 +164,6 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
                       onSelect: (doc) => ref
                           .read(admissionsSelectedDocumentIdProvider.notifier)
                           .state = doc.id,
-                      onVerify: (_) {},
                     ),
                   ),
                   const SizedBox(width: AksharaSpacing.s4),

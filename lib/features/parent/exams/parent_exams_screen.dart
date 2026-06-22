@@ -48,7 +48,6 @@ class ParentExamsScreen extends ConsumerWidget {
         unreadNotifications: data.unreadNotifications,
         showAi: false,
         trailingPadding: true,
-        onAiTap: () {},
         onNotificationsTap: onNotificationsTap,
       ),
       body: _buildStatefulBody(

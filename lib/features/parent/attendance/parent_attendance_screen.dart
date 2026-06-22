@@ -61,7 +61,6 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
         unreadNotifications: data.unreadNotifications,
         showAi: false,
         trailingPadding: true,
-        onAiTap: () {},
         onNotificationsTap: widget.onNotificationsTap,
       ),
       body: isLoading

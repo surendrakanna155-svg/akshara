@@ -124,7 +124,6 @@ class _DriversTable extends StatelessWidget {
       rowBuilder: (index) {
         final driver = drivers[index];
         return DataRow(
-          onSelectChanged: (_) {},
           cells: [
             DataCell(Text(driver.name)),
             DataCell(Text(driver.licenseNumber)),

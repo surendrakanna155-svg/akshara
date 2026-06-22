@@ -155,7 +155,6 @@ class _VehiclesTable extends StatelessWidget {
       rowBuilder: (index) {
         final vehicle = vehicles[index];
         return DataRow(
-          onSelectChanged: (_) {},
           cells: [
             DataCell(Text(vehicle.busNumber)),
             DataCell(Text(vehicle.registration)),

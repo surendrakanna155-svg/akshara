@@ -168,7 +168,6 @@ class _AttendanceTable extends StatelessWidget {
             rows: [
               for (final record in records)
                 DataRow(
-                  onSelectChanged: (_) {},
                   cells: [
                     DataCell(Text(record.employeeName)),
                     DataCell(Text(record.department.name)),

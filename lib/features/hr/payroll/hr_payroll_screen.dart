@@ -220,7 +220,6 @@ class _PayrollEntriesTable extends StatelessWidget {
             rows: [
               for (final entry in entries)
                 DataRow(
-                  onSelectChanged: (_) {},
                   cells: [
                     DataCell(Text(entry.employeeName)),
                     DataCell(Text(entry.department.name)),

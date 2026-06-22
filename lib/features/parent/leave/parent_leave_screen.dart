@@ -38,7 +38,6 @@ class ParentLeaveScreen extends ConsumerWidget {
         unreadNotifications: data.unreadNotifications,
         showAi: false,
         trailingPadding: true,
-        onAiTap: () {},
         onNotificationsTap: onNotificationsTap,
       ),
       body: isLoading

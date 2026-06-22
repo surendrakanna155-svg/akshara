@@ -2689,6 +2689,5 @@ Widget studentNoticesRouteBuilder(BuildContext context, GoRouterState state) {
 Widget studentProfileRouteBuilder(BuildContext context, GoRouterState state) {
   return StudentProfileScreen(
     onNotificationsTap: _studentNotificationsTap(context),
-    onSettingsTap: () {},
   );
 }

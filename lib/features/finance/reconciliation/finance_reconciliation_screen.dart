@@ -58,9 +58,7 @@ class _FinanceReconciliationScreenState
   Widget build(BuildContext context) {
     return FinanceModuleScaffold(
       screen: FinanceScreen.reconciliation,
-      filters: const [],
-      selectedFilterIndex: 0,
-      onFilterSelected: (_) {},
+      showFilterBar: false,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

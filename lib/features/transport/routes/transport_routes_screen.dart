@@ -152,7 +152,6 @@ class _RoutesTable extends ConsumerWidget {
       rowBuilder: (index) {
         final route = routes[index];
         return DataRow(
-          onSelectChanged: (_) {},
           cells: [
             DataCell(Text(route.name)),
             DataCell(Text('${route.stopCount}')),

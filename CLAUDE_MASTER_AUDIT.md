@@ -314,8 +314,10 @@ for production code health, and every step is certified at the production bar
 (2026-06-18), re-verified against current code first.
 
 **Audit-vs-current deltas found (2026-06-22):** several report items are already
-done — `academic/`→`academics/` merge complete; **0** dead-action `onPressed: () {}`
-buttons remain (report's §E already closed). **Batch 4 (Dashboard modernization):
+done — `academic/`→`academics/` merge complete. (§E dead-actions were *thought*
+closed because the narrow `onPressed/onTap/onAction: () {}` patterns were clean —
+but a custom-param-name sweep later found a real cluster; closed for good in
+**Batch 5E** below.) **Batch 4 (Dashboard modernization):
 in-scope *visual* work is already done** via the Premium-School-OS Phase B rollout
 (consumer dashboards, app-wide AI bar, workspace landings); the OWNER_DASHBOARD_AUDIT's
 remaining items (export wiring, KPI drill-down, write actions, notification center)
@@ -507,6 +509,44 @@ school tenant). A single independent school never sees them; real chains do.
 `SchoolBuildScope` updated. Default is single-school (`false`), so today's behaviour
 is "hidden for everyone" until a real chain org is flagged by the backend — matching
 "a single independent school never sees them."
+
+### ✅ 5E — Dead-action cleanup (report §E, re-opened) = DONE & CERTIFIED (2026-06-22)
+§E was previously marked closed on the strength of a narrow grep
+(`onPressed/onTap/onAction: () {}` = 0). A **custom-param-name** sweep
+(`<anyParam>: (…) {}`) re-opened it: **19 genuinely dead handlers** under
+non-standard param names, all now removed/suppressed so each surface shows its
+honest state:
+- **`onAiTap: () {}` ×6** (parent attendance/notices/homework/exams/events/leave) —
+  `AksharaAppBar.onAiTap` is optional and the AI button only renders `if (showAi)`;
+  all six pass `showAi: false`, so the arg was dead **and** the button never showed.
+  Removed the dead lines.
+- **`onSelectChanged: (_) {}` ×9** (transport attendance/drivers/vehicles/routes;
+  hr attendance/recruitment/payroll/performance/leave) — in
+  `AksharaVirtualizedDataTable` a non-null `onSelectChanged` wires the row's
+  `InkWell.onTap`, so every row showed a **tap ripple + looked interactive but did
+  nothing** (no checkbox column was set). Removed → rows are honestly
+  non-interactive display rows.
+- **`onVerify: (_) {}` ×2** (admissions documents, mobile + desktop layouts) —
+  rendered a dead per-row **"Verify"** button; real verification is the **wired**
+  checklist Approve/Reject (`runApproveDocument`/`runRejectDocument`). Removed the
+  dead arg → the redundant per-row button (`if (onVerify != null)`) is suppressed.
+- **`onFilterSelected: (_) {}` ×1** (finance reconciliation) — the screen uses a
+  `TabBar`, not the filter bar, and passed `filters: const []` with a no-op handler.
+  `FinanceModuleScaffold.showFilterBar` **defaults true**, so simply dropping the
+  filter args would have fallen back to the scaffold's **default chips with a null
+  handler** (creating 3 *new* dead chips). Correct fix: **`showFilterBar: false`** to
+  suppress the bar entirely; removed the now-unused filter args.
+- **`onSettingsTap: () {}` ×1** (student profile, via `app_router.dart`) — drove a
+  visible **chevron + `Semantics(button: true)`** "App settings — coming soon"
+  `ListTile` that went nowhere. Made the affordance conditional on a real handler:
+  chevron + button-semantics only render when `onSettingsTap != null`; otherwise it's
+  a plain informational "coming soon" row (no ripple, not announced as a button).
+  Dropped the `onSettingsTap: () {}` from the route builder (defaults null).
+  (Parent profile never passed `onSettingsTap`, so its insight-card CTA was already
+  suppressed — no change needed.)
+- **Certified:** `flutter analyze` **0 errors**; full suite **2195 pass** / 1 skip /
+  0 fail (behavior-only suppression; no new tests, no golden churn — none of the
+  removed affordances had test coverage). §E now closed against the broader pattern.
 
 ### Remaining Batch-5 items — assessed against current code (honest risk notes)
 - **phase4/phase5 fold-in (report A1) — DEFERRED as low-value/some-risk.** Re-check

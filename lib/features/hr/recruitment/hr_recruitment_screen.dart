@@ -171,7 +171,6 @@ class _CandidatesTable extends StatelessWidget {
             rows: [
               for (final candidate in candidates)
                 DataRow(
-                  onSelectChanged: (_) {},
                   cells: [
                     DataCell(Text(candidate.name)),
                     DataCell(Text(candidate.role)),

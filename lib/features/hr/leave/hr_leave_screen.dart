@@ -294,7 +294,6 @@ class _LeaveTable extends StatelessWidget {
             rows: [
               for (final request in requests)
                 DataRow(
-                  onSelectChanged: (_) {},
                   cells: [
                     DataCell(Text(request.employeeName)),
                     DataCell(Text(request.leaveType.name)),

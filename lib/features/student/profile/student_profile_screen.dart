@@ -152,8 +152,10 @@ class StudentProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AksharaSpacing.s2),
                     Semantics(
-                      button: true,
-                      label: 'App settings, coming soon',
+                      button: onSettingsTap != null,
+                      label: onSettingsTap != null
+                          ? 'App settings'
+                          : 'App settings, coming soon',
                       child: ListTile(
                         shape: RoundedRectangleBorder(
                           borderRadius: AksharaRadius.card,
@@ -176,10 +178,12 @@ class StudentProfileScreen extends ConsumerWidget {
                             color: context.colors.onSurfaceVariant,
                           ),
                         ),
-                        trailing: Icon(
-                          Icons.chevron_right,
-                          color: context.colors.onSurfaceVariant,
-                        ),
+                        trailing: onSettingsTap == null
+                            ? null
+                            : Icon(
+                                Icons.chevron_right,
+                                color: context.colors.onSurfaceVariant,
+                              ),
                         onTap: onSettingsTap,
                       ),
                     ),
