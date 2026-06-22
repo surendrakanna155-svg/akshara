@@ -13,7 +13,6 @@ void main() {
         AdminModule.accommodation,
         AdminModule.industry,
         AdminModule.whiteLabel,
-        AdminModule.organizationBuilder,
         AdminModule.platformOperations,
         AdminModule.dynamicWidgets,
       ]) {
@@ -23,6 +22,16 @@ void main() {
           reason: '$module should be hidden in the school build',
         );
       }
+    });
+
+    test('chain-gated modules are NOT SchoolBuildScope-hidden (gated at runtime)',
+        () {
+      // M3: organization-builder is no longer build-hidden — it is gated by
+      // chain status (ChainScope), so chain orgs can reach it.
+      expect(
+        SchoolBuildScope.isModuleHidden(AdminModule.organizationBuilder),
+        isFalse,
+      );
     });
 
     test('core school modules and kept multi-school modules are NOT hidden', () {
@@ -57,8 +66,6 @@ void main() {
         RouteNames.restaurant,
         RouteNames.accommodation,
         RouteNames.whiteLabel,
-        RouteNames.franchise,
-        RouteNames.organizationBuilder,
         RouteNames.platformOperations,
         RouteNames.dynamicWidgets,
         RouteNames.resourceOptimization,
@@ -87,6 +94,23 @@ void main() {
           SchoolBuildScope.isRouteHidden(route),
           isFalse,
           reason: '$route must remain reachable in the school build',
+        );
+      }
+    });
+
+    test('chain-gated routes are NOT SchoolBuildScope-hidden (gated at runtime)',
+        () {
+      // M3: these are gated by chain status (ChainScope) at runtime, not by the
+      // static school-build switch — so chain orgs can reach them.
+      for (final route in [
+        RouteNames.franchise,
+        RouteNames.organizationBuilder,
+        '${RouteNames.organizationBuilder}/interview',
+      ]) {
+        expect(
+          SchoolBuildScope.isRouteHidden(route),
+          isFalse,
+          reason: '$route is chain-gated, not build-hidden',
         );
       }
     });

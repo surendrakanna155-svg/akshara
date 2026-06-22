@@ -1,4 +1,4 @@
-import '../../../../../features/control_center/control_center_models.dart';
+import '../../../../../features/platform/control_center/control_center_models.dart';
 import '../dto/control_center_enum_codec.dart';
 import '../dto/control_center_responses_dto.dart';
 

@@ -1,4 +1,4 @@
-import '../../../features/platform_operations/platform_operations_models.dart';
+import '../../../features/platform/platform_operations/platform_operations_models.dart';
 import '../../ai/ai_inference_models.dart';
 import '../../ai/ai_inference_pipeline.dart';
 import '../interfaces/platform_operations_repository.dart';

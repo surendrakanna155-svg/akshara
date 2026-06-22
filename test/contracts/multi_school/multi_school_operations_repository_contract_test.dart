@@ -3,7 +3,7 @@ import 'package:akshara_erp/core/repositories/api/multi_school/remote/multi_scho
 import 'package:akshara_erp/core/repositories/interfaces/multi_school_operations_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_multi_school_operations_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
-import 'package:akshara_erp/features/multi_school/multi_school_models.dart';
+import 'package:akshara_erp/features/platform/multi_school/multi_school_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1,7 +1,7 @@
 import '../../interfaces/control_center_repository.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
-import '../../../../features/control_center/control_center_models.dart';
+import '../../../../features/platform/control_center/control_center_models.dart';
 import 'mapper/control_center_mapper.dart';
 import 'remote/control_center_remote_datasource.dart';
 

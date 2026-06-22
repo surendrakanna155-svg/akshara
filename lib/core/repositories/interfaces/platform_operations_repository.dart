@@ -1,4 +1,4 @@
-import '../../../features/platform_operations/platform_operations_models.dart';
+import '../../../features/platform/platform_operations/platform_operations_models.dart';
 import '../repository_query.dart';
 
 abstract class PlatformOperationsRepository {

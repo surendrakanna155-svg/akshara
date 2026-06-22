@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/config/chain_scope.dart';
 import 'package:akshara_erp/core/school_config/school_configuration_models.dart';
 import 'package:akshara_erp/core/school_config/school_configuration_provider.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
@@ -21,6 +22,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
+          isChainOrgProvider.overrideWithValue(false),
           userPermissionsProvider.overrideWithValue(
             UserPermissions.forRole(ErpRole.superAdmin),
           ),
@@ -62,6 +64,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
+          isChainOrgProvider.overrideWithValue(false),
           userPermissionsProvider.overrideWithValue(
             UserPermissions.forRole(ErpRole.financeAdmin),
           ),
@@ -82,6 +85,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
+          isChainOrgProvider.overrideWithValue(false),
           userPermissionsProvider.overrideWithValue(
             UserPermissions.forRole(ErpRole.admissionsCounselor),
           ),
@@ -101,6 +105,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
+          isChainOrgProvider.overrideWithValue(false),
           userPermissionsProvider.overrideWithValue(
             UserPermissions.forRole(ErpRole.principal),
           ),
@@ -115,6 +120,41 @@ void main() {
       expect(routes, contains(RouteNames.sisDashboard));
       expect(routes, contains(RouteNames.managementDashboard));
       expect(routes, isNot(contains(RouteNames.controlCenterDashboard)));
+    });
+
+    test('chain org surfaces the organization-builder module (M3 gate)', () {
+      final container = ProviderContainer(
+        overrides: [
+          schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+          isChainOrgProvider.overrideWithValue(true),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final routes =
+          container.read(adminNavDestinationsProvider).map((d) => d.route);
+      expect(routes, contains(RouteNames.organizationBuilder));
+    });
+
+    test('independent school hides the organization-builder module (M3 gate)',
+        () {
+      final container = ProviderContainer(
+        overrides: [
+          schoolCapabilitiesProvider.overrideWithValue(defaultCapabilities),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+          isChainOrgProvider.overrideWithValue(false),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final routes =
+          container.read(adminNavDestinationsProvider).map((d) => d.route);
+      expect(routes, isNot(contains(RouteNames.organizationBuilder)));
     });
   });
 

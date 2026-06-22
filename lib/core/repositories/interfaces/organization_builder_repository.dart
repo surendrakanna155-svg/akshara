@@ -1,4 +1,4 @@
-import '../../../features/organization_builder/organization_builder_models.dart';
+import '../../../features/platform/organization_builder/organization_builder_models.dart';
 import '../repository_query.dart';
 
 abstract class OrganizationBuilderRepository {

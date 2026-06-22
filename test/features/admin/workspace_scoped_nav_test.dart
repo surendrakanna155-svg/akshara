@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/config/chain_scope.dart';
 import 'package:akshara_erp/core/school_config/school_configuration_models.dart';
 import 'package:akshara_erp/core/school_config/school_configuration_provider.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
@@ -17,6 +18,7 @@ void main() {
     final c = ProviderContainer(
       overrides: [
         schoolCapabilitiesProvider.overrideWithValue(caps),
+        isChainOrgProvider.overrideWithValue(false),
         userPermissionsProvider
             .overrideWithValue(UserPermissions.forRoles(roles)),
         if (active != null)

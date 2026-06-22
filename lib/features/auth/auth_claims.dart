@@ -22,6 +22,7 @@ class AuthClaims {
     this.organizationId,
     this.permissions = const [],
     this.accessTokenExpiresAt,
+    this.isChainOrganization = false,
   })  : assert(
           erpRole != null || (erpRoles != null && erpRoles.isNotEmpty),
           'Provide erpRole or a non-empty erpRoles',
@@ -46,6 +47,12 @@ class AuthClaims {
   final String? schoolId;
   final String? organizationId;
   final List<Permission> permissions;
+
+  /// Whether the signed-in org is a CHAIN (a multi-school tenant). Single
+  /// independent schools are not chains. Drives the M3 chain-flag gate that
+  /// surfaces franchise / multi-school / organization-builder modules only for
+  /// real chains (see [ChainScope]). Backend supplies this; defaults to `false`.
+  final bool isChainOrganization;
 
   /// Dedupes [single]/[many] into an ordered, non-empty role list (primary first).
   static List<ErpRole> _normalizeRoles(ErpRole? single, List<ErpRole>? many) {
@@ -80,6 +87,7 @@ class AuthClaims {
     String? userId,
     Iterable<Permission>? permissions,
     DateTime? accessTokenExpiresAt,
+    bool isChainOrganization = false,
   }) {
     final roles = (erpRoles != null && erpRoles.isNotEmpty)
         ? erpRoles.toList(growable: false)
@@ -92,6 +100,7 @@ class AuthClaims {
       organizationId: TenantContext.demo.organizationId,
       permissions: permissions?.toList(growable: false) ?? const [],
       accessTokenExpiresAt: accessTokenExpiresAt,
+      isChainOrganization: isChainOrganization,
     );
   }
 
@@ -132,6 +141,7 @@ class AuthClaims {
       accessTokenExpiresAt: DateTime.tryParse(
         json['accessTokenExpiresAt'] as String? ?? '',
       ),
+      isChainOrganization: json['isChainOrganization'] as bool? ?? false,
     );
   }
 
@@ -147,6 +157,7 @@ class AuthClaims {
           'permissions': permissions.map((p) => p.name).toList(),
         if (accessTokenExpiresAt != null)
           'accessTokenExpiresAt': accessTokenExpiresAt!.toIso8601String(),
+        if (isChainOrganization) 'isChainOrganization': true,
       };
 
   bool get isValid =>
@@ -161,6 +172,7 @@ class AuthClaims {
     String? organizationId,
     List<Permission>? permissions,
     DateTime? accessTokenExpiresAt,
+    bool? isChainOrganization,
   }) {
     return AuthClaims(
       userId: userId ?? this.userId,
@@ -171,6 +183,7 @@ class AuthClaims {
       permissions: permissions ?? this.permissions,
       accessTokenExpiresAt:
           accessTokenExpiresAt ?? this.accessTokenExpiresAt,
+      isChainOrganization: isChainOrganization ?? this.isChainOrganization,
     );
   }
 
@@ -184,7 +197,8 @@ class AuthClaims {
           schoolId == other.schoolId &&
           organizationId == other.organizationId &&
           listEquals(permissions, other.permissions) &&
-          accessTokenExpiresAt == other.accessTokenExpiresAt;
+          accessTokenExpiresAt == other.accessTokenExpiresAt &&
+          isChainOrganization == other.isChainOrganization;
 
   @override
   int get hashCode => Object.hash(
@@ -195,5 +209,6 @@ class AuthClaims {
         organizationId,
         permissions,
         accessTokenExpiresAt,
+        isChainOrganization,
       );
 }

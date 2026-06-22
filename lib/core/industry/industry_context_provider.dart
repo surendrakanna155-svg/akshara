@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/dynamic_widgets/dynamic_widget_providers.dart';
-import '../../features/organization_builder/organization_builder_models.dart';
-import '../../features/organization_builder/organization_builder_providers.dart';
+import '../../features/platform/organization_builder/organization_builder_models.dart';
+import '../../features/platform/organization_builder/organization_builder_providers.dart';
 import 'industry_type.dart';
 
 /// Manual override for active industry (takes precedence over org profile).

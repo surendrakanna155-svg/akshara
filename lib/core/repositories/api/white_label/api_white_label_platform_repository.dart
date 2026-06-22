@@ -1,4 +1,4 @@
-import '../../../../features/white_label/white_label_models.dart';
+import '../../../../features/platform/white_label/white_label_models.dart';
 import '../../interfaces/white_label_platform_repository.dart';
 import '../../repository_query.dart';
 import 'remote/white_label_remote_datasource.dart';

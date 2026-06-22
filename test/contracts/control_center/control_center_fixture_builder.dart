@@ -1,5 +1,5 @@
 import 'package:akshara_erp/core/repositories/api/control_center/dto/control_center_enum_codec.dart';
-import 'package:akshara_erp/features/control_center/control_center_models.dart';
+import 'package:akshara_erp/features/platform/control_center/control_center_models.dart';
 
 /// Builds API-shaped JSON envelopes from Control Center domain models for contract tests.
 class ControlCenterFixtureBuilder {

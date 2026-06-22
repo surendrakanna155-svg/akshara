@@ -2,7 +2,7 @@ import 'package:akshara_erp/core/repositories/api/platform_intelligence/api_plat
 import 'package:akshara_erp/core/repositories/api/platform_intelligence/remote/platform_intelligence_api_paths.dart';
 import 'package:akshara_erp/core/repositories/api/platform_intelligence/remote/platform_intelligence_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
-import 'package:akshara_erp/features/control_center/intelligence/platform_intelligence_providers.dart';
+import 'package:akshara_erp/features/platform/control_center/intelligence/platform_intelligence_providers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/fake_dio_interceptor.dart';

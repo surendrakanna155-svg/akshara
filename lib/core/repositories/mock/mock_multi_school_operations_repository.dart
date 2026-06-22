@@ -1,4 +1,4 @@
-import '../../../features/multi_school/multi_school_models.dart';
+import '../../../features/platform/multi_school/multi_school_models.dart';
 import '../interfaces/multi_school_operations_repository.dart';
 import '../repository_query.dart';
 

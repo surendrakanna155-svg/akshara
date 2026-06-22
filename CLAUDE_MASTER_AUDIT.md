@@ -370,8 +370,8 @@ flows) over the whole app and closed the real findings:
   no unauthenticated-reachable route. Several OWNER_DASHBOARD_AUDIT gaps were
   confirmed **already wired** (MG-08 settings save, FY/Q filter→repo requery, main
   executive KPI drill-down, Management/HR/Finance-exec exports).
-- **M3 — DECIDED 2026-06-22 (see "M3 — OWNER DECISION RECORDED" below): gate behind a
-  chain flag; implement in the C4 org/tenant merge.** (original finding kept for context:)
+- **M3 — ✅ DONE 2026-06-22 in Batch 5d (see "M3 — DONE & CERTIFIED" below): gated
+  behind a chain flag (`ChainScope` + `isChainOrgProvider`).** (original finding kept for context:)
   `principal`/`vicePrincipal`
   (and `schoolAdmin`) hold `viewFranchiseOperations`/`viewMultiSchoolOperations`/
   `viewOrganizationBuilder`, so a *single-school* principal can reach franchise /
@@ -460,14 +460,53 @@ preserved).
   0 fail (same count — tests relocated, not added). No golden churn (route/screen
   visuals unchanged; golden images are name-keyed, not path-keyed).
 
-### ✅ M3 — OWNER DECISION RECORDED (2026-06-22): **gate franchise/multi-school/org-builder behind a chain flag.**
+### ✅ 5d — Org/tenant tier (report C4): 7 folders → one `platform/` module + M3 chain gate = DONE & CERTIFIED (2026-06-22)
+Collapsed the biggest fragmentation cluster into one admin-only `platform/`
+module, using subfolders (nothing deleted; all `git mv`, history preserved):
+- `multi_school`, `branch`, `franchise`, `white_label`, `platform_operations`,
+  `organization_builder`, `control_center` → **`lib/features/platform/<name>/`**
+  (7→1). Test folders mirrored to `test/features/platform/<name>/`.
+- **Depth-aware import fixes.** The 6 flat folders (+ control_center's top-level
+  files) all moved depth-2→depth-3, so every escaping `../` import went +1.
+  control_center's subfolder (depth-3) files were fixed surgically: single-`../`
+  (self) and `../../control_center/` (self-ref, auto-tracks) left untouched;
+  `../../<sibling-feature>` and `../../../<lib-dir>` bumped +1.
+- **External importers** (core repos: control_center/platform_intelligence/multi_school/
+  white_label/platform_operations/organization_builder mock+api+interface+mapper+dto;
+  repository_providers; 7 routers; tests; integration/contract suites) fixed by one
+  substring sub per folder, `features/X/`→`features/platform/X/`, which covers both
+  relative **and** `package:` import forms. The `intelligence/trust/` cross-link
+  (`../../control_center/intelligence/platform_intelligence_*`) re-pointed to
+  `../../platform/control_center/intelligence/...`. No cross-imports existed among
+  the 7. Route paths/names + QA keys **unchanged** — zero user-facing churn.
+- **M3 chain-flag gate (implemented here).** franchise / multi-school /
+  organization-builder now surface **only when the active org is a chain**:
+  - New `AuthClaims.isChainOrganization` (backend-supplied; default `false` =
+    single independent school) → `isChainOrgProvider` (`lib/core/config/chain_scope.dart`).
+  - `ChainScope` holds the chain-only route prefixes (franchise, multi-school
+    portfolio/onboarding, organization-builder + children, school-config discovery)
+    and chain-only admin modules (organization-builder). Enforced in `ErpRouteGuard`
+    (blocks the route regardless of permission, like `SchoolBuildScope.isRouteHidden`)
+    and `adminNavDestinationsProvider` (hides the nav entry).
+  - `SchoolBuildScope` no longer hides franchise/organization-builder (moved to the
+    runtime chain gate so real chains can reach them); white-label + platform-ops
+    stay shelved there per report §B. **Role permissions unchanged** — gating is at
+    the route/nav layer, so a single-school principal keeps the perm but can't reach
+    the route; a chain principal can.
+- **Certified:** `flutter analyze` **0 errors**; full suite **2195 pass** / 1 skip /
+  0 fail (+10: new `chain_scope_test.dart` + chain nav/route cases; updated
+  `school_build_scope_test.dart` + `admin_navigation_provider_test.dart` +
+  `workspace_scoped_nav_test.dart`). No golden churn.
+
+### ✅ M3 — DONE & CERTIFIED (2026-06-22, in Batch 5d): gate franchise/multi-school/org-builder behind a chain flag.
 Owner chose: keep the franchise / multi-school / org-builder screens, but only
 surface/permit them when the school's org is actually part of a **chain** (multi-
-school tenant). A single independent school never sees them; real chains do. This
-is **not yet implemented** — it folds into the **C4 org/tenant merge** (the natural
-place to add the chain-scope gate to those routes/perms). Until C4 lands, the
-existing perms stay as-is (principal/VP/schoolAdmin still hold them) — tracked, not
-a silent gap.
+school tenant). A single independent school never sees them; real chains do.
+**Implemented in Batch 5d (see above):** `AuthClaims.isChainOrganization` →
+`isChainOrgProvider` → `ChainScope` gate in `ErpRouteGuard` + `adminNavDestinationsProvider`;
+`SchoolBuildScope` updated. Default is single-school (`false`), so today's behaviour
+is "hidden for everyone" until a real chain org is flagged by the backend — matching
+"a single independent school never sees them."
 
 ### Remaining Batch-5 items — assessed against current code (honest risk notes)
 - **phase4/phase5 fold-in (report A1) — DEFERRED as low-value/some-risk.** Re-check
@@ -489,9 +528,10 @@ a silent gap.
   = maintenance win but destroys planned value; needs owner's product call. The
   report's safe path is a disabled feature flag (reversible).
 - **Bigger merges** — intelligence hubs (C3) = ✅ DONE (5c); AI surface (C5) = ✅
-  DONE (5b); **org/tenant tier (C4)** = next, High complexity (7→1, ~30 screens,
-  incl. the M3 chain-flag gate); reduce real user-facing duplication; pursue
-  carefully + certified.
+  DONE (5b); org/tenant tier (C4) = ✅ DONE (5d, incl. the M3 chain-flag gate).
+  All report merges (C1–C5) now complete; remaining Batch-5 items are the
+  deferred/owner-decision ones above (phase fold-in, vertical/SaaS shelving,
+  clarity renames).
 
 ## ✅ UX Batch 1 — Workspace Architecture Enforcement = DONE & CERTIFIED (2026-06-20)
 All 5 steps complete. Certified end-to-end: `flutter analyze` **0 errors**; full

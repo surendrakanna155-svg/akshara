@@ -2,7 +2,7 @@ import '../../interfaces/platform_intelligence_repository.dart';
 import '../../repository_query.dart';
 import '../../../ai/ai_inference_models.dart';
 import '../../../ai/ai_inference_pipeline.dart';
-import '../../../../features/control_center/intelligence/platform_intelligence_models.dart';
+import '../../../../features/platform/control_center/intelligence/platform_intelligence_models.dart';
 import 'mapper/platform_intelligence_mapper.dart';
 import 'remote/platform_intelligence_remote_datasource.dart';
 

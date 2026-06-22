@@ -1,4 +1,4 @@
-import '../../../features/white_label/white_label_models.dart';
+import '../../../features/platform/white_label/white_label_models.dart';
 import '../repository_query.dart';
 
 abstract class WhiteLabelPlatformRepository {

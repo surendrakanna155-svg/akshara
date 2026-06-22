@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/control_center/analytics/control_center_analytics_screen.dart';
-import '../features/control_center/billing/control_center_billing_screen.dart';
-import '../features/control_center/crm/control_center_crm_screen.dart';
-import '../features/control_center/dashboard/control_center_dashboard_screen.dart';
-import '../features/control_center/intelligence/platform_intelligence_screen.dart';
-import '../features/control_center/features/control_center_features_screen.dart';
-import '../features/control_center/monitoring/control_center_monitoring_screen.dart';
-import '../features/control_center/providers/control_center_providers_screen.dart';
-import '../features/control_center/roles/control_center_roles_screen.dart';
-import '../features/control_center/schools/control_center_schools_screen.dart';
-import '../features/control_center/settings/control_center_settings_screen.dart';
-import '../features/control_center/subscriptions/control_center_subscriptions_screen.dart';
-import '../features/control_center/success/control_center_success_screen.dart';
-import '../features/control_center/support/control_center_support_screen.dart';
-import '../features/control_center/white_label/control_center_white_label_screen.dart';
+import '../features/platform/control_center/analytics/control_center_analytics_screen.dart';
+import '../features/platform/control_center/billing/control_center_billing_screen.dart';
+import '../features/platform/control_center/crm/control_center_crm_screen.dart';
+import '../features/platform/control_center/dashboard/control_center_dashboard_screen.dart';
+import '../features/platform/control_center/intelligence/platform_intelligence_screen.dart';
+import '../features/platform/control_center/features/control_center_features_screen.dart';
+import '../features/platform/control_center/monitoring/control_center_monitoring_screen.dart';
+import '../features/platform/control_center/providers/control_center_providers_screen.dart';
+import '../features/platform/control_center/roles/control_center_roles_screen.dart';
+import '../features/platform/control_center/schools/control_center_schools_screen.dart';
+import '../features/platform/control_center/settings/control_center_settings_screen.dart';
+import '../features/platform/control_center/subscriptions/control_center_subscriptions_screen.dart';
+import '../features/platform/control_center/success/control_center_success_screen.dart';
+import '../features/platform/control_center/support/control_center_support_screen.dart';
+import '../features/platform/control_center/white_label/control_center_white_label_screen.dart';
 import 'route_guards.dart';
 import 'route_names.dart';
 

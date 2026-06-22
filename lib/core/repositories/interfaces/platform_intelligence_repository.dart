@@ -1,4 +1,4 @@
-import '../../../features/control_center/intelligence/platform_intelligence_models.dart';
+import '../../../features/platform/control_center/intelligence/platform_intelligence_models.dart';
 import '../repository_query.dart';
 
 abstract class PlatformIntelligenceRepository {

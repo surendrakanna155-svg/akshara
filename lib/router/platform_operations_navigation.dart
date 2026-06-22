@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/platform_operations/platform_operations_hub_screen.dart';
+import '../features/platform/platform_operations/platform_operations_hub_screen.dart';
 
 int _initialTabFromRoute(GoRouterState state) {
   final tabParam = state.uri.queryParameters['tab'];

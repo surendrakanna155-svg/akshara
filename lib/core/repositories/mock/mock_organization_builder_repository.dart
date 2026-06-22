@@ -1,4 +1,4 @@
-import '../../../features/organization_builder/organization_builder_models.dart';
+import '../../../features/platform/organization_builder/organization_builder_models.dart';
 import '../../ai/ai_inference_models.dart';
 import '../../ai/ai_inference_pipeline.dart';
 import '../interfaces/organization_builder_repository.dart';

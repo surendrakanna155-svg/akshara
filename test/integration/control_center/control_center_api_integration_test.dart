@@ -3,7 +3,7 @@ import 'package:akshara_erp/core/repositories/api/control_center/remote/control_
 import 'package:akshara_erp/core/repositories/api/control_center/remote/control_center_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_control_center_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
-import 'package:akshara_erp/features/control_center/control_center_providers.dart';
+import 'package:akshara_erp/features/platform/control_center/control_center_providers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../contracts/control_center/control_center_fixture_builder.dart';

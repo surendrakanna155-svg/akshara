@@ -11,7 +11,7 @@ import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
-import 'package:akshara_erp/features/organization_builder/organization_builder_models.dart';
+import 'package:akshara_erp/features/platform/organization_builder/organization_builder_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1,4 +1,4 @@
-import '../../../../features/platform_operations/platform_operations_models.dart';
+import '../../../../features/platform/platform_operations/platform_operations_models.dart';
 import '../../interfaces/platform_operations_repository.dart';
 import '../../repository_query.dart';
 import 'remote/platform_operations_remote_datasource.dart';

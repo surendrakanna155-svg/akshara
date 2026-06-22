@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/chain_scope.dart';
 import '../../core/config/school_build_scope.dart';
 import '../../core/security/permissions.dart';
 import '../../core/school_config/school_capability_registry.dart';
@@ -194,9 +195,15 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
 final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
   final rbac = ref.watch(rbacServiceProvider);
   final capabilities = ref.watch(schoolCapabilitiesProvider);
+  final isChainOrg = ref.watch(isChainOrgProvider);
   return kAllAdminNavDestinations
       .where(
         (destination) => !SchoolBuildScope.isModuleHidden(destination.module),
+      )
+      .where(
+        // Chain-only modules (M3) appear only for chain orgs.
+        (destination) =>
+            isChainOrg || !ChainScope.isChainOnlyModule(destination.module),
       )
       .where(
         (destination) => rbac.hasPermission(destination.requiredPermission),

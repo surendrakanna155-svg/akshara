@@ -29,15 +29,20 @@ abstract final class SchoolBuildScope {
     // SaaS / white-label
     AdminModule.whiteLabel,
     // Experimental / "big-company" extras
-    AdminModule.organizationBuilder,
     AdminModule.platformOperations,
     AdminModule.dynamicWidgets,
+    // NOTE: organizationBuilder is no longer hidden here — it is now gated by
+    // chain status at runtime (M3, see ChainScope), so real chains can see it.
   };
 
   /// Route prefixes blocked in the school build (covers nested sub-routes).
   ///
-  /// KEPT (deliberately not listed): multi-school portfolio, branches, control
-  /// center, director, school-config discovery, real onboarding.
+  /// KEPT (deliberately not listed): branches, control center, director, real
+  /// onboarding.
+  ///
+  /// CHAIN-GATED elsewhere (not here): franchise, multi-school portfolio/
+  /// onboarding, organization-builder and school-config discovery now surface
+  /// only for chain orgs at runtime — see [ChainScope] (M3, 2026-06-22).
   static const Set<String> hiddenRoutePrefixes = {
     // Non-school verticals (parent prefix covers all sub-routes)
     RouteNames.industry, // also /industry/framework
@@ -47,9 +52,7 @@ abstract final class SchoolBuildScope {
     RouteNames.accommodation,
     // SaaS / white-label
     RouteNames.whiteLabel,
-    RouteNames.franchise,
     // Experimental / "big-company" extras
-    RouteNames.organizationBuilder, // also interview/preview/provisioning
     RouteNames.platformOperations,
     RouteNames.dynamicWidgets, // also /dynamic-widgets/layout|runtime
     RouteNames.dynamicDashboard,

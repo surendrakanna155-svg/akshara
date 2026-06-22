@@ -4,8 +4,8 @@ import '../../../core/repositories/repository_providers.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/tenant/tenant_provider.dart';
-import '../../control_center/intelligence/platform_intelligence_models.dart';
-import '../../control_center/intelligence/platform_intelligence_providers.dart';
+import '../../platform/control_center/intelligence/platform_intelligence_models.dart';
+import '../../platform/control_center/intelligence/platform_intelligence_providers.dart';
 
 final trustIntelligenceCanViewProvider = Provider<bool>((ref) {
   return ref

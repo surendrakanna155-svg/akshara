@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../features/control_center/control_center_models.dart';
+import '../../../features/platform/control_center/control_center_models.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/control_center_repository.dart';
 import '../paginated_result.dart';

@@ -57,11 +57,13 @@ Each recommendation lists: **Benefit · Risk · Complexity · Suggested replacem
 - **Risk:** Med — providers cross modules; needs careful re-wiring.
 - **Complexity:** Med.
 
-### C4. Org/tenant management: `multi_school` + `branch` + `franchise` + `white_label` + `platform_operations` + `organization_builder` + `control_center` → one `platform/` (admin-only) module
+### C4. Org/tenant management: `multi_school` + `branch` + `franchise` + `white_label` + `platform_operations` + `organization_builder` + `control_center` → one `platform/` (admin-only) module — ✅ DONE (Batch 5d)
 - **What:** Seven folders all doing "manage organisations/tenants/branding."
 - **Benefit:** Collapses the biggest fragmentation cluster (~30+ screens) into one admin module — and most of it can be shelved per §B until there's a SaaS customer.
 - **Risk:** Med — `control_center` is the richest (15 screens) and partly real; keep its useful parts.
 - **Complexity:** High.
+- **DONE (Batch 5d):** All 7 folders `git mv`'d into `lib/features/platform/{multi_school,branch,franchise,white_label,platform_operations,organization_builder,control_center}/` (subfolders preserve history; nothing deleted). Internal relative-import depths fixed per-depth; external importers + `package:` imports rewritten `features/X/` → `features/platform/X/`; `intelligence/trust/` cross-link re-pointed at `platform/control_center/`. Test folders mirrored to `test/features/platform/`. No cross-imports existed among the 7. Certified: `flutter analyze` 0 errors + full suite green.
+- **M3 chain-flag gate (shipped with 5d):** franchise / multi-school / organization-builder now surface **only when the active org is a chain** (multi-school tenant); a single independent school never sees them. New `AuthClaims.isChainOrganization` (backend-supplied, default `false`) → `isChainOrgProvider` → `ChainScope` (route + admin-module gate) enforced in `ErpRouteGuard` and `adminNavDestinationsProvider`. `SchoolBuildScope` no longer hides franchise/org-builder (moved to the runtime chain gate); white-label + platform-ops stay shelved there per §B. Role permissions unchanged. Covered by `chain_scope_test.dart` + nav/route tests.
 
 ### C5. AI surface: `copilot/` + `ai_content/` (+ `inventory_copilot_screen`)
 - **What:** copilot = assistant dock/persona shell (3); ai_content = content-generation (1); plus a stray inventory copilot screen.
@@ -99,7 +101,7 @@ Each recommendation lists: **Benefit · Risk · Complexity · Suggested replacem
 | Merge academic→academics | 2→1 | 3 | Low | 🟢 Quick win |
 | Merge inventory_distribution | 2→1 | 2 | Low | 🟢 Quick win |
 | Merge intelligence hubs | 4→1 | ~7 | Med | ✅ DONE (Batch 5c) |
-| Merge org/tenant tier | 7→1 | ~30 | High | 🟡 |
+| Merge org/tenant tier | 7→1 | ~30 | High | ✅ DONE (Batch 5d) + M3 chain gate |
 | Merge AI surface | 3→1 | ~5 | Low–Med | 🟡 |
 | Fix dead-action buttons | many | ~28 | Low | 🟢 Quick win |
 

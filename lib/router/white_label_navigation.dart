@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/white_label/branding_profiles_screen.dart';
-import '../features/white_label/deployment_profiles_screen.dart';
-import '../features/white_label/logo_management_screen.dart';
-import '../features/white_label/theme_management_screen.dart';
-import '../features/white_label/white_label_hub_screen.dart';
+import '../features/platform/white_label/branding_profiles_screen.dart';
+import '../features/platform/white_label/deployment_profiles_screen.dart';
+import '../features/platform/white_label/logo_management_screen.dart';
+import '../features/platform/white_label/theme_management_screen.dart';
+import '../features/platform/white_label/white_label_hub_screen.dart';
 
 Widget whiteLabelHubRouteBuilder(BuildContext context, GoRouterState state) =>
     const WhiteLabelHubScreen();

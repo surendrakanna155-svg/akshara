@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../admin/admin_layout.dart';
-import '../../control_center/intelligence/platform_intelligence_models.dart';
-import '../../control_center/intelligence/platform_intelligence_providers.dart';
+import '../../platform/control_center/intelligence/platform_intelligence_models.dart';
+import '../../platform/control_center/intelligence/platform_intelligence_providers.dart';
 import 'trust_intelligence_providers.dart';
 
 class TrustIntelligenceHubScreen extends ConsumerStatefulWidget {

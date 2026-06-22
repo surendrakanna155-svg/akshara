@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/organization_builder/organization_builder_hub_screen.dart';
-import '../features/organization_builder/organization_builder_interview_screen.dart';
-import '../features/organization_builder/organization_builder_preview_screen.dart';
-import '../features/organization_builder/organization_provisioning_screen.dart';
+import '../features/platform/organization_builder/organization_builder_hub_screen.dart';
+import '../features/platform/organization_builder/organization_builder_interview_screen.dart';
+import '../features/platform/organization_builder/organization_builder_preview_screen.dart';
+import '../features/platform/organization_builder/organization_provisioning_screen.dart';
 
 Widget organizationBuilderHubRouteBuilder(
   BuildContext context,

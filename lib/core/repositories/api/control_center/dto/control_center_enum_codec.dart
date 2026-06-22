@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../../features/control_center/control_center_models.dart';
+import '../../../../../features/platform/control_center/control_center_models.dart';
 
 /// Parses Control Center API enum strings and presentation helpers.
 abstract final class ControlCenterEnumCodec {

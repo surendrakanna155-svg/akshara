@@ -1,4 +1,4 @@
-import '../../../../features/organization_builder/organization_builder_models.dart';
+import '../../../../features/platform/organization_builder/organization_builder_models.dart';
 import '../../interfaces/organization_builder_repository.dart';
 import '../../repository_query.dart';
 import 'remote/organization_builder_remote_datasource.dart';

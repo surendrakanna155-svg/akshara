@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/config/chain_scope.dart';
 import '../core/config/school_build_scope.dart';
 import '../core/security/denied_access_audit.dart';
 import '../core/security/erp_role.dart';
@@ -354,6 +355,14 @@ class ErpRouteGuard extends ConsumerWidget {
     // Modules hidden for the school-only build are blocked regardless of
     // permission. Reversible via SchoolBuildScope (hide now, delete later).
     if (SchoolBuildScope.isRouteHidden(location)) {
+      return const AccessDeniedScreen();
+    }
+
+    // Chain-only modules (franchise / multi-school / organization-builder) are
+    // blocked for single independent schools regardless of permission. They
+    // surface only when the active org is a chain (M3, 2026-06-22).
+    if (ChainScope.isChainOnlyRoute(location) &&
+        !ref.watch(isChainOrgProvider)) {
       return const AccessDeniedScreen();
     }
 

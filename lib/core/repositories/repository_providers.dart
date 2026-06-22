@@ -121,8 +121,8 @@ import 'mock/mock_parent_meetings_repository.dart';
 import 'mock/mock_teacher_repository.dart';
 import 'mock/mock_student_repository.dart';
 import '../../features/parent_meetings/parent_meetings_repository.dart';
-import '../../features/branch/branch_repository.dart';
-import '../../features/franchise/franchise_repository.dart';
+import '../../features/platform/branch/branch_repository.dart';
+import '../../features/platform/franchise/franchise_repository.dart';
 import 'repository_config.dart';
 
 final financeRepositoryProvider = Provider<FinanceRepository>((ref) {
