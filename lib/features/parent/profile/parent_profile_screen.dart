@@ -176,6 +176,14 @@ class ParentProfileScreen extends ConsumerWidget {
                                 value: 'Choose how AI appears in the app',
                                 onTap: () => context.push(RouteNames.aiAssistantSettings),
                               ),
+                              const SizedBox(height: AksharaSpacing.s2),
+                              ProfileInfoRow(
+                                key: QaTestKeys.appearanceSettingsLink,
+                                icon: Icons.brightness_6_outlined,
+                                label: 'Appearance',
+                                value: 'Light, dark, or match your device',
+                                onTap: () => context.push(RouteNames.appearanceSettings),
+                              ),
                               const SizedBox(height: AksharaSpacing.s4),
                               AksharaInsightCard(
                                 message:

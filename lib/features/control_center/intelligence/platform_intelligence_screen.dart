@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/widgets.dart';
+import '../../admin/admin_layout.dart';
 import '../../copilot/copilot_context_provider.dart';
 import '../../copilot/copilot_screen_context.dart';
 import '../control_center_models.dart';
@@ -179,28 +181,42 @@ class _PlatformIntelligenceScreenState
     return data.when(
       data: (value) => ListView(
         children: [
-          DataTable(
-            columns: const [
-              DataColumn(label: Text('School')),
-              DataColumn(label: Text('Students')),
-              DataColumn(label: Text('Revenue')),
-              DataColumn(label: Text('Growth')),
-              DataColumn(label: Text('Risk')),
-            ],
-            rows: [
-              for (final row in value.rows)
-                DataRow(
-                  cells: [
-                    DataCell(Text(row.schoolName)),
-                    DataCell(Text('${row.studentCount}')),
-                    DataCell(
-                        Text('INR ${row.revenueLakhs.toStringAsFixed(1)}L')),
-                    DataCell(Text('${row.growthPercent}%')),
-                    DataCell(Text('${row.riskScore}')),
-                  ],
-                ),
-            ],
-          ),
+          if (AdminLayout.useCardLayout(context))
+            for (final row in value.rows) ...[
+              AksharaKeyValueCard(
+                title: row.schoolName,
+                entries: [
+                  ('Students', '${row.studentCount}'),
+                  ('Revenue', 'INR ${row.revenueLakhs.toStringAsFixed(1)}L'),
+                  ('Growth', '${row.growthPercent}%'),
+                  ('Risk', '${row.riskScore}'),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ]
+          else
+            DataTable(
+              columns: const [
+                DataColumn(label: Text('School')),
+                DataColumn(label: Text('Students')),
+                DataColumn(label: Text('Revenue')),
+                DataColumn(label: Text('Growth')),
+                DataColumn(label: Text('Risk')),
+              ],
+              rows: [
+                for (final row in value.rows)
+                  DataRow(
+                    cells: [
+                      DataCell(Text(row.schoolName)),
+                      DataCell(Text('${row.studentCount}')),
+                      DataCell(
+                          Text('INR ${row.revenueLakhs.toStringAsFixed(1)}L')),
+                      DataCell(Text('${row.growthPercent}%')),
+                      DataCell(Text('${row.riskScore}')),
+                    ],
+                  ),
+              ],
+            ),
           const SizedBox(height: 12),
           ...value.benchmarks.map((insight) => ListTile(
               title: Text(insight.title), subtitle: Text(insight.detail))),

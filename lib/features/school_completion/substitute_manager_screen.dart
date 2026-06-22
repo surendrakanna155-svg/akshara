@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
+import '../admin/admin_layout.dart';
 import 'school_completion_models.dart';
 import 'school_completion_mutations_provider.dart';
 import 'school_completion_providers.dart';
@@ -130,105 +132,100 @@ class _SubstituteManagerScreenState
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Stepper(
-                    currentStep: _selectedSlot == null
-                        ? 0
-                        : _selectedTeacher == null
-                            ? 1
-                            : 2,
-                    controlsBuilder: (context, _) => const SizedBox.shrink(),
-                    steps: [
-                      Step(
-                        isActive: true,
-                        title: const Text('Select slot'),
-                        content: Text(
-                          _selectedSlot == null
-                              ? 'Choose one open timetable slot from the table.'
-                              : '${_selectedSlot!.className} ${_selectedSlot!.sectionName} • ${_selectedSlot!.subjectName} • ${_selectedSlot!.dayOfWeek} ${_selectedSlot!.periodLabel}',
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AksharaStepIndicator(
+                        stepLabels: const [
+                          'Select slot',
+                          'Select teacher',
+                          'Confirm and notify',
+                        ],
+                        currentIndex: _selectedSlot == null
+                            ? 0
+                            : _selectedTeacher == null
+                                ? 1
+                                : 2,
                       ),
-                      Step(
-                        isActive: _selectedSlot != null,
-                        title: const Text('Select teacher'),
-                        content: Text(
-                          _selectedTeacher == null
-                              ? 'Pick an available teacher with matching subject and free period.'
-                              : '${_selectedTeacher!.teacherName} selected (${_selectedTeacher!.freePeriods} free periods).',
-                        ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _selectedSlot == null
+                            ? 'Choose one open timetable slot from the table.'
+                            : '${_selectedSlot!.className} ${_selectedSlot!.sectionName} • ${_selectedSlot!.subjectName} • ${_selectedSlot!.dayOfWeek} ${_selectedSlot!.periodLabel}',
                       ),
-                      Step(
-                        isActive: _selectedTeacher != null,
-                        title: const Text('Confirm and notify'),
-                        content: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SwitchListTile(
-                              value: _notifySubstituteTeacher,
-                              onChanged: (value) => setState(
-                                  () => _notifySubstituteTeacher = value),
-                              title: const Text('Notify substitute teacher'),
-                            ),
-                            SwitchListTile(
-                              value: _notifyClassIncharge,
-                              onChanged: (value) =>
-                                  setState(() => _notifyClassIncharge = value),
-                              title: const Text('Notify class incharge'),
-                            ),
-                            SwitchListTile(
-                              value: _notifyStudents,
-                              onChanged: (value) =>
-                                  setState(() => _notifyStudents = value),
-                              title: const Text('Notify students'),
-                            ),
-                            const SizedBox(height: 8),
-                            FilledButton.icon(
-                              key: QaTestKeys.substituteAssignButton,
-                              onPressed: _selectedSlot == null ||
-                                      _selectedTeacher == null ||
-                                      assigning
-                                  ? null
-                                  : () async {
-                                      final messenger =
-                                          ScaffoldMessenger.of(context);
-                                      final result = await ref
-                                          .read(
-                                              assignSubstituteProvider.notifier)
-                                          .execute(
-                                            AssignSubstituteRequest(
-                                              slotId: _selectedSlot!.slotId,
-                                              substituteTeacherId:
-                                                  _selectedTeacher!.teacherId,
-                                              notifySubstituteTeacher:
-                                                  _notifySubstituteTeacher,
-                                              notifyClassIncharge:
-                                                  _notifyClassIncharge,
-                                              notifyStudents: _notifyStudents,
-                                            ),
-                                          );
-                                      if (!mounted || result == null) return;
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          key: QaTestKeys
-                                              .substituteAssignSuccessSnackbar,
-                                          content: Text(result.message),
+                      const SizedBox(height: 12),
+                      Text(
+                        _selectedTeacher == null
+                            ? 'Pick an available teacher with matching subject and free period.'
+                            : '${_selectedTeacher!.teacherName} selected (${_selectedTeacher!.freePeriods} free periods).',
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        value: _notifySubstituteTeacher,
+                        onChanged: (value) =>
+                            setState(() => _notifySubstituteTeacher = value),
+                        title: const Text('Notify substitute teacher'),
+                      ),
+                      SwitchListTile(
+                        value: _notifyClassIncharge,
+                        onChanged: (value) =>
+                            setState(() => _notifyClassIncharge = value),
+                        title: const Text('Notify class incharge'),
+                      ),
+                      SwitchListTile(
+                        value: _notifyStudents,
+                        onChanged: (value) =>
+                            setState(() => _notifyStudents = value),
+                        title: const Text('Notify students'),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          key: QaTestKeys.substituteAssignButton,
+                          onPressed: _selectedSlot == null ||
+                                  _selectedTeacher == null ||
+                                  assigning
+                              ? null
+                              : () async {
+                                  final messenger =
+                                      ScaffoldMessenger.of(context);
+                                  final result = await ref
+                                      .read(assignSubstituteProvider.notifier)
+                                      .execute(
+                                        AssignSubstituteRequest(
+                                          slotId: _selectedSlot!.slotId,
+                                          substituteTeacherId:
+                                              _selectedTeacher!.teacherId,
+                                          notifySubstituteTeacher:
+                                              _notifySubstituteTeacher,
+                                          notifyClassIncharge:
+                                              _notifyClassIncharge,
+                                          notifyStudents: _notifyStudents,
                                         ),
                                       );
-                                      setState(() {
-                                        _selectedSlot = null;
-                                        _selectedTeacher = null;
-                                      });
-                                    },
-                              icon: assigning
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.check_circle_outline),
-                              label: const Text('Assign substitute'),
-                            ),
-                          ],
+                                  if (!mounted || result == null) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      key: QaTestKeys
+                                          .substituteAssignSuccessSnackbar,
+                                      content: Text(result.message),
+                                    ),
+                                  );
+                                  setState(() {
+                                    _selectedSlot = null;
+                                    _selectedTeacher = null;
+                                  });
+                                },
+                          icon: assigning
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
+                                )
+                              : const Icon(Icons.check_circle_outline),
+                          label: const Text('Assign substitute'),
                         ),
                       ),
                     ],
@@ -322,6 +319,33 @@ class _OpenSlotsTable extends StatelessWidget {
           padding: EdgeInsets.all(16),
           child: Text('No open timetable slots for the selected filter.'),
         ),
+      );
+    }
+
+    if (AdminLayout.useCardLayout(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final slot in slots) ...[
+            AksharaKeyValueCard(
+              title: '${slot.className} · ${slot.sectionName}',
+              trailing: OutlinedButton(
+                key: ValueKey('substitute_slot_${slot.slotId}'),
+                onPressed: () => onSelect(slot),
+                child: Text(
+                  selectedSlot?.slotId == slot.slotId ? 'Selected' : 'Select',
+                ),
+              ),
+              entries: [
+                ('Subject', slot.subjectName),
+                ('Day', slot.dayOfWeek),
+                ('Period', slot.periodLabel),
+                ('Original teacher', slot.originalTeacherName),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
       );
     }
 

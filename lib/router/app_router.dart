@@ -71,12 +71,12 @@ import 'admin_navigation.dart';
 import 'route_guards.dart';
 import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
+import '../features/settings/appearance_settings_screen.dart';
 import 'copilot_navigation.dart';
 import 'education_navigation.dart';
 import 'intelligence_navigation.dart';
 import 'phase4_navigation.dart';
 import 'phase5_navigation.dart';
-import 'organization_intelligence_navigation.dart';
 import 'branch_navigation.dart';
 import 'franchise_navigation.dart';
 import 'evolution_navigation.dart';
@@ -192,6 +192,11 @@ GoRouter createAppRouter({
         name: 'aiAssistantSettings',
         builder: (context, state) =>
             aiAssistantSettingsRouteBuilder(context, state),
+      ),
+      GoRoute(
+        path: RouteNames.appearanceSettings,
+        name: 'appearanceSettings',
+        builder: (context, state) => const AppearanceSettingsScreen(),
       ),
       GoRoute(
         path: RouteNames.aiAssistant,
@@ -2249,16 +2254,24 @@ bool _isAiAssistantRoute(String location) {
       location.startsWith('${RouteNames.aiAssistant}/');
 }
 
+/// Shared, persona-agnostic settings reachable by any authenticated user
+/// (e.g. Appearance / theme). Not an admin ERP route — authorized on
+/// authentication alone, like AI Assistant settings.
+bool _isSharedSettingsRoute(String location) {
+  return location == RouteNames.appearanceSettings;
+}
+
 bool _isProtectedRoute(String location) {
   return location.startsWith('/parent') ||
       location.startsWith('/teacher') ||
       location.startsWith('/student') ||
       _isAiAssistantRoute(location) ||
+      _isSharedSettingsRoute(location) ||
       isAdminErpRoute(location);
 }
 
 bool _canAccessRoute(AuthState auth, String location) {
-  if (_isAiAssistantRoute(location)) {
+  if (_isAiAssistantRoute(location) || _isSharedSettingsRoute(location)) {
     return auth.isAuthenticated;
   }
 

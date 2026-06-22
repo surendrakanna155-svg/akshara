@@ -2,16 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/layout/mobile_dashboard_layout.dart';
-import '../../../shared/widgets/akshara_dashboard_canvas.dart';
-import '../../../shared/widgets/akshara_dashboard_watermark.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
-import '../../../theme/theme_extensions.dart';
 import 'teacher_dashboard_provider.dart';
 import 'widgets/attendance_summary_card.dart';
 import 'widgets/class_teacher_card.dart';
-import 'widgets/greeting_header.dart';
 import 'widgets/pending_tasks_section.dart';
 import 'widgets/today_schedule_card.dart';
 
@@ -33,7 +28,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
     final isEmpty = ref.watch(teacherDashboardEmptyProvider);
 
     return Scaffold(
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Dashboard',
         titleTrailing: AksharaContextChip(
@@ -59,9 +54,8 @@ class TeacherDashboardScreen extends ConsumerWidget {
             final width = constraints.maxWidth;
             final isTablet = MobileDashboardLayout.isTablet(width);
 
-            return AksharaDashboardCanvas(
-              palette: AksharaMeshPalette.teacher,
-              watermark: AksharaWatermarkMotif.bookStack,
+            return AksharaPremiumBackground(
+              motif: AksharaMotif.book,
               child: SingleChildScrollView(
                 padding: MobileDashboardLayout.screenPadding(width),
                 child: ConstrainedBox(
@@ -69,9 +63,10 @@ class TeacherDashboardScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      GreetingHeader(
+                      AksharaGradientHero(
                         eyebrow: data.greetingEyebrow,
                         headline: data.greetingHeadline,
+                        motif: AksharaMotif.book,
                       ),
                       const SizedBox(height: AksharaSpacing.s4),
                       AttendanceSummaryCard(
@@ -153,7 +148,7 @@ class _MobileBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AksharaSpacing.s4),
-        AksharaInsightCard(
+        AksharaAiSuggestionBar(
           message: data.aiInsight.message,
           actionLabel: data.aiInsight.actionLabel,
           onAction: () => onNavigate('class_teacher_dashboard'),
@@ -215,7 +210,7 @@ class _TabletSplitBody extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AksharaSpacing.s4),
-        AksharaInsightCard(
+        AksharaAiSuggestionBar(
           message: data.aiInsight.message,
           actionLabel: data.aiInsight.actionLabel,
           onAction: () => onNavigate('class_teacher_dashboard'),

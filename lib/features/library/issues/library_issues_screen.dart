@@ -123,7 +123,7 @@ class _IssuesTable extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final issue in issues) ...[

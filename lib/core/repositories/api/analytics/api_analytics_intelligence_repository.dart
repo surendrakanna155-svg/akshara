@@ -1,6 +1,6 @@
 import '../../interfaces/analytics_intelligence_repository.dart';
 import '../../repository_query.dart';
-import '../../../../features/management/intelligence/intelligence_models.dart';
+import '../../../../features/intelligence/management/intelligence_models.dart';
 import 'dto/analytics_intelligence_dto.dart';
 import 'mapper/analytics_intelligence_mapper.dart';
 import 'remote/analytics_intelligence_remote_datasource.dart';

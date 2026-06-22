@@ -116,7 +116,7 @@ class _ActivityList extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = context.aksharaText;
 
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final item in items) ...[

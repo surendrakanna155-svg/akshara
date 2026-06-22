@@ -24,6 +24,16 @@ enum AksharaKpiCardStyle {
 /// Trend direction for optional KPI delta indicators (visual only).
 enum AksharaKpiTrendDirection { up, down, neutral }
 
+/// Grows a fixed KPI-card height with the user's text-scale so large
+/// accessibility text and tall Indic (Noto) scripts get headroom instead of
+/// clipping. Clamped at 1.6× so very large scales don't make cards absurdly
+/// tall — beyond that the existing `maxLines:1 + ellipsis` degrades gracefully.
+/// At the default 1.0 scale the height is unchanged (zero golden churn).
+double _scaledKpiHeight(BuildContext context, double base) {
+  final scale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.6);
+  return base * scale;
+}
+
 /// Compact KPI metric card used across parent, teacher, and student dashboards.
 class AksharaKpiCard extends StatelessWidget {
   const AksharaKpiCard({
@@ -304,7 +314,7 @@ class _StripKpiCard extends StatelessWidget {
       ),
       restingShadowLevel: AksharaMotion.restingShadow,
       child: SizedBox(
-        height: 88,
+        height: _scaledKpiHeight(context, 88),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -553,7 +563,7 @@ class _StatusKpiCard extends StatelessWidget {
       hoverShadowLevel: 1,
       pressedShadowLevel: 2,
       child: SizedBox(
-        height: height,
+        height: _scaledKpiHeight(context, height),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -674,7 +684,7 @@ class _CountKpiCard extends StatelessWidget {
       hoverShadowLevel: 1,
       pressedShadowLevel: 2,
       child: SizedBox(
-        height: height,
+        height: _scaledKpiHeight(context, height),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

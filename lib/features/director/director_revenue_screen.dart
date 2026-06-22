@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
+import '../admin/admin_layout.dart';
 import '../copilot/copilot_context_provider.dart';
+import 'director_models.dart';
 import 'director_navigation.dart';
 import 'director_providers.dart';
 import 'widgets/director_module_scaffold.dart';
@@ -57,28 +60,88 @@ class DirectorRevenueScreen extends ConsumerWidget {
               const SizedBox(height: AksharaSpacing.s4),
               const AksharaSectionHeader(title: 'School Revenue Table'),
               const SizedBox(height: AksharaSpacing.s3),
-              AksharaVirtualizedDataTable(
-                columns: const [
-                  DataColumn(label: Text('School')),
-                  DataColumn(label: Text('Revenue')),
-                  DataColumn(label: Text('Students')),
-                  DataColumn(label: Text('Fee Collection %')),
-                  DataColumn(label: Text('Health')),
-                ],
-                rowCount: revenue.revenueBySchool.length,
-                rowBuilder: (index) {
-                  final school = revenue.revenueBySchool[index];
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(school.schoolName)),
-                      DataCell(
-                          Text('${school.revenueCr.toStringAsFixed(1)} Cr')),
-                      DataCell(Text('${school.students}')),
-                      DataCell(Text('${school.feeCollectionPercent}%')),
-                      DataCell(Text('${school.healthScore}')),
-                    ],
-                  );
-                },
+              _RevenueTable(schools: revenue.revenueBySchool),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RevenueTable extends StatelessWidget {
+  const _RevenueTable({required this.schools});
+
+  final List<DirectorSchoolRow> schools;
+
+  @override
+  Widget build(BuildContext context) {
+    // Phones + portrait tablets collapse to stacked cards; landscape/desktop
+    // keep the data table.
+    if (AdminLayout.useCardLayout(context)) {
+      return Column(
+        children: [
+          for (final school in schools) ...[
+            _RevenueCard(school: school),
+            const SizedBox(height: AksharaSpacing.s3),
+          ],
+        ],
+      );
+    }
+
+    return AksharaVirtualizedDataTable(
+      columns: const [
+        DataColumn(label: Text('School')),
+        DataColumn(label: Text('Revenue')),
+        DataColumn(label: Text('Students')),
+        DataColumn(label: Text('Fee Collection %')),
+        DataColumn(label: Text('Health')),
+      ],
+      rowCount: schools.length,
+      rowBuilder: (index) {
+        final school = schools[index];
+        return DataRow(
+          cells: [
+            DataCell(Text(school.schoolName)),
+            DataCell(Text('${school.revenueCr.toStringAsFixed(1)} Cr')),
+            DataCell(Text('${school.students}')),
+            DataCell(Text('${school.feeCollectionPercent}%')),
+            DataCell(Text('${school.healthScore}')),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RevenueCard extends StatelessWidget {
+  const _RevenueCard({required this.school});
+
+  final DirectorSchoolRow school;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    return Semantics(
+      label: 'School ${school.schoolName} revenue',
+      child: Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(school.schoolName, style: text.titleSmall),
+              const SizedBox(height: AksharaSpacing.s1),
+              Text(
+                'Revenue ${school.revenueCr.toStringAsFixed(1)} Cr · '
+                '${school.students} students',
+                style: text.bodySmall,
+              ),
+              Text(
+                'Fee collection ${school.feeCollectionPercent}% · '
+                'Health ${school.healthScore}',
+                style: text.bodySmall,
               ),
             ],
           ),

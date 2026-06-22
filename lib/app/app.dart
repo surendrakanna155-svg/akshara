@@ -5,6 +5,7 @@ import '../core/constants/app_constants.dart';
 import '../core/providers/router_provider.dart';
 import '../features/school_completion/school_branding_theme_provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_mode_provider.dart';
 
 /// Root widget: Material 3 theme + GoRouter via Riverpod.
 class AksharaApp extends ConsumerWidget {
@@ -15,13 +16,14 @@ class AksharaApp extends ConsumerWidget {
     final router = ref.watch(goRouterProvider);
     final whiteLabel = ref.watch(schoolBrandingThemeProvider);
     final appTitle = ref.watch(schoolDisplayNameProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: appTitle.isNotEmpty ? appTitle : AppConstants.appTitle,
       debugShowCheckedModeBanner: false,
       theme: AksharaAppTheme.light(whiteLabel: whiteLabel),
       darkTheme: AksharaAppTheme.dark(whiteLabel: whiteLabel),
-      themeMode: ThemeMode.light,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }

@@ -105,7 +105,7 @@ class _EventsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final event in events) ...[

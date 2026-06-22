@@ -249,7 +249,7 @@ class _ApprovalQueuePreview extends StatelessWidget {
       );
     }
 
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final item in items) ...[

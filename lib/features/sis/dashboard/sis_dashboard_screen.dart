@@ -87,7 +87,7 @@ class SisDashboardScreen extends ConsumerWidget {
             message: data.aiInsight,
             actionLabel: 'Open conversion',
             semanticLabelPrefix: 'AI SIS insight',
-            onAction: () {},
+            onAction: null,
           ),
         ] else
           Row(
@@ -143,7 +143,7 @@ class SisDashboardScreen extends ConsumerWidget {
                       message: data.aiInsight,
                       actionLabel: 'Open conversion',
                       semanticLabelPrefix: 'AI SIS insight',
-                      onAction: () {},
+                      onAction: null,
                     ),
                   ],
                 ),

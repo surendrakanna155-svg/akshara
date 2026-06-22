@@ -219,7 +219,7 @@ class _SubjectPerformanceSection extends StatelessWidget {
       );
     }
 
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final row in rows) ...[

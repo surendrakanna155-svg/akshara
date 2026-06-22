@@ -5,7 +5,6 @@ import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/forms/forms.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../../../theme/spacing.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_journey_context_provider.dart';
@@ -14,7 +13,6 @@ import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_enrollment_provider.dart';
 import 'enrollment_validation.dart';
 import 'widgets/admissions_enrollment_form_steps.dart';
-import 'widgets/admissions_enrollment_step_indicator.dart';
 
 /// AD-05 — Student Enrollment multi-step wizard.
 class AdmissionsEnrollmentScreen extends ConsumerStatefulWidget {
@@ -75,36 +73,27 @@ class _AdmissionsEnrollmentScreenState
             admissionsEnrollmentPrefillFutureProvider,
           ),
           builder: (_) {
-            return Form(
-              key: _formKey,
+            final isFirst = form.currentStep == EnrollmentStep.studentProfile;
+            return AksharaMultiStepForm(
+              stepLabels: [
+                for (final step in EnrollmentStep.values) step.label,
+              ],
+              currentIndex:
+                  EnrollmentStep.values.indexOf(form.currentStep),
+              formKey: _formKey,
+              scrollController: _scrollController,
               autovalidateMode: form.stepFieldErrors != null
                   ? AutovalidateMode.always
                   : AutovalidateMode.disabled,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: _scrollController,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AdmissionsEnrollmentStepIndicator(
-                            currentStep: form.currentStep,
-                          ),
-                          const SizedBox(height: AksharaSpacing.s6),
-                          _buildStepContent(form, notifier),
-                        ],
-                      ),
+              leading: isFirst
+                  ? null
+                  : OutlinedButton(
+                      onPressed:
+                          form.isSubmitting ? null : notifier.previousStep,
+                      child: const Text('Back'),
                     ),
-                  ),
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.only(top: AksharaSpacing.s4),
-                    child: _buildActions(context, ref, form, notifier),
-                  ),
-                ],
-              ),
+              trailing: _buildPrimaryAction(context, ref, form, notifier),
+              child: _buildStepContent(form, notifier),
             );
           },
         ),
@@ -137,47 +126,37 @@ class _AdmissionsEnrollmentScreenState
     };
   }
 
-  Widget _buildActions(
+  Widget _buildPrimaryAction(
     BuildContext context,
     WidgetRef ref,
     EnrollmentFormState form,
     EnrollmentFormNotifier notifier,
   ) {
-    final isFirst = form.currentStep == EnrollmentStep.studentProfile;
     final isLast = form.currentStep == EnrollmentStep.reviewSubmit;
 
-    return Row(
-      children: [
-        if (!isFirst)
-          OutlinedButton(
-            onPressed: form.isSubmitting ? null : notifier.previousStep,
-            child: const Text('Back'),
-          ),
-        const Spacer(),
-        if (!isLast)
-          FilledButton(
-            key: QaTestKeys.enrollmentContinueButton,
-            onPressed: form.isSubmitting ? null : () => _continue(notifier),
-            child: const Text('Continue'),
-          )
-        else
-          AksharaManageAction(
-            permission: Permission.manageAdmissions,
-            child: FilledButton(
-              key: QaTestKeys.enrollmentSubmitButton,
-              onPressed: form.isSubmitting || form.isSubmitted
-                  ? null
-                  : () => _submitEnrollment(context, ref, notifier),
-              child: form.isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(form.isSubmitted ? 'Submitted' : 'Submit enrollment'),
-            ),
-          ),
-      ],
+    if (!isLast) {
+      return FilledButton(
+        key: QaTestKeys.enrollmentContinueButton,
+        onPressed: form.isSubmitting ? null : () => _continue(notifier),
+        child: const Text('Continue'),
+      );
+    }
+
+    return AksharaManageAction(
+      permission: Permission.manageAdmissions,
+      child: FilledButton(
+        key: QaTestKeys.enrollmentSubmitButton,
+        onPressed: form.isSubmitting || form.isSubmitted
+            ? null
+            : () => _submitEnrollment(context, ref, notifier),
+        child: form.isSubmitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Text(form.isSubmitted ? 'Submitted' : 'Submit enrollment'),
+      ),
     );
   }
 

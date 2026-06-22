@@ -259,7 +259,7 @@ class _FinanceDrillLinks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final link in links) ...[

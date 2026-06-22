@@ -1,6 +1,6 @@
 import '../../../../features/employee/employee_models.dart';
-import '../../../../features/homework_intelligence/homework_intelligence_models.dart';
-import '../../../../features/inventory_distribution/inventory_distribution_models.dart';
+import '../../../../features/intelligence/homework/homework_intelligence_models.dart';
+import '../../../../features/inventory/distribution/inventory_distribution_models.dart';
 import '../../../../features/student_360/student_360_models.dart';
 
 class Phase4Mapper {

@@ -108,7 +108,7 @@ class LibraryResourcesScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s3),
         _ResourcesTable(resources: resources),
         const SizedBox(height: AksharaSpacing.s6),
-        if (AdminLayout.isMobile(context))
+        if (AdminLayout.useCardLayout(context))
           AksharaInsightCard(
             message: data.integrationNote,
             actionLabel: 'Student app',
@@ -153,7 +153,7 @@ class _ResourcesTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final resource in resources) ...[

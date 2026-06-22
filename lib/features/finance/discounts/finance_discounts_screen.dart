@@ -43,6 +43,7 @@ class FinanceDiscountsScreen extends ConsumerWidget {
     required DiscountsDashboardData data,
   }) {
     final isMobile = AdminLayout.isMobile(context);
+    final useCards = AdminLayout.useCardLayout(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,7 +70,7 @@ class FinanceDiscountsScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: AksharaSpacing.s3),
-        if (isMobile)
+        if (useCards)
           Column(
             children: [
               for (final scholarship in data.scholarships) ...[
@@ -83,7 +84,7 @@ class FinanceDiscountsScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Discount rules'),
         const SizedBox(height: AksharaSpacing.s3),
-        if (isMobile)
+        if (useCards)
           Column(
             children: [
               for (final rule in data.rules) ...[
@@ -128,7 +129,7 @@ class FinanceDiscountsScreen extends ConsumerWidget {
             ],
           ),
         const SizedBox(height: AksharaSpacing.s3),
-        if (isMobile)
+        if (useCards)
           Column(
             children: [
               for (final assignment in data.assignments) ...[
@@ -145,7 +146,7 @@ class FinanceDiscountsScreen extends ConsumerWidget {
           actionLabel: 'View impact report',
           icon: Icons.savings_outlined,
           semanticLabelPrefix: 'Discount impact summary',
-          onAction: () {},
+          onAction: null,
         ),
       ],
     );

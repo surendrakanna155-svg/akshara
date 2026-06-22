@@ -54,7 +54,7 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
     CollectionDetail detail,
   ) {
     final payment = detail.payment;
-    final isMobile = AdminLayout.isMobile(context);
+    final useCards = AdminLayout.useCardLayout(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -73,7 +73,7 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Payment timeline'),
         const SizedBox(height: AksharaSpacing.s3),
-        if (isMobile)
+        if (useCards)
           Column(
             children: [
               for (final entry in detail.paymentTimeline) ...[
@@ -87,7 +87,7 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Installment history'),
         const SizedBox(height: AksharaSpacing.s3),
-        if (isMobile)
+        if (useCards)
           Column(
             children: [
               for (final installment in detail.installmentHistory) ...[
@@ -135,7 +135,7 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
           actionLabel: 'View fee account',
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI collection insight',
-          onAction: () {},
+          onAction: null,
         ),
       ],
     );
@@ -307,14 +307,17 @@ class _ReceiptLinkTile extends StatelessWidget {
     final colors = context.colors;
     final text = context.aksharaText;
 
+    // Receipt detail is display-only on the admin screen: the receipt's
+    // `parentReceiptRoute` lives in the parent shell, so navigating there from
+    // admin would be bounced by the cross-shell guard. Presented as a static
+    // labeled row (no fake tap affordance) until an admin receipt view exists.
     return Semantics(
-      button: true,
       label: 'Receipt ${link.receiptNumber}, ${link.amount}',
       child: Material(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AksharaSpacing.s3),
         child: InkWell(
-          onTap: () {},
+          onTap: null,
           borderRadius: BorderRadius.circular(AksharaSpacing.s3),
           child: Padding(
             padding: const EdgeInsets.all(AksharaSpacing.s4),

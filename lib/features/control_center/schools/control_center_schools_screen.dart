@@ -92,7 +92,7 @@ class ControlCenterSchoolsScreen extends ConsumerWidget {
       children: [
         const AksharaSectionHeader(title: 'Schools registry'),
         const SizedBox(height: AksharaSpacing.s3),
-        if (AdminLayout.isMobile(context))
+        if (AdminLayout.useCardLayout(context))
           Column(
             children: [
               for (final school in schools) ...[

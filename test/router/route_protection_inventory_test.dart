@@ -107,5 +107,48 @@ void main() {
         expect(erpRoutePermissionFor('$prefix/dashboard'), isNotNull);
       }
     });
+
+    // Regression: a specific child route nested under a broader parent must
+    // resolve to its OWN (more specific) permission, not the parent's. The
+    // earlier insertion-order first-match returned the weaker parent permission
+    // (e.g. /finance/intelligence -> viewFinance), letting a role that only
+    // holds the parent perm reach the child = privilege escalation.
+    test('nested child routes resolve to their specific permission', () {
+      final cases = <String, Permission>{
+        RouteNames.financeIntelligence: Permission.viewFinanceIntelligence,
+        RouteNames.financeExecutiveDashboard:
+            Permission.viewFinanceExecutiveDashboard,
+        RouteNames.inventoryCopilot: Permission.viewInventoryIntelligence,
+        RouteNames.inventoryLifecycle: Permission.viewInventoryIntelligence,
+        RouteNames.teacherEffectiveness: Permission.viewTeacherEffectiveness,
+        RouteNames.inventoryDistribution:
+            Permission.viewInventoryDistribution,
+      };
+      cases.forEach((route, expected) {
+        expect(erpRoutePermissionFor(route), expected,
+            reason: '$route must require $expected, not its parent permission');
+      });
+    });
+
+    // A role that holds only the broad parent permission must NOT reach a
+    // child route that requires a distinct, narrower permission.
+    test('parent-only permission does not unlock specific child routes', () {
+      for (final role in roles) {
+        final perms = UserPermissions.forRole(role);
+        final rbac = RbacService(perms);
+        if (perms.has(Permission.viewFinance) &&
+            !perms.has(Permission.viewFinanceIntelligence)) {
+          expect(canAccessErpRoute(rbac, RouteNames.financeIntelligence), false,
+              reason:
+                  '$role holds viewFinance but not viewFinanceIntelligence');
+        }
+        if (perms.has(Permission.viewInventory) &&
+            !perms.has(Permission.viewInventoryIntelligence)) {
+          expect(canAccessErpRoute(rbac, RouteNames.inventoryCopilot), false,
+              reason:
+                  '$role holds viewInventory but not viewInventoryIntelligence');
+        }
+      }
+    });
   });
 }

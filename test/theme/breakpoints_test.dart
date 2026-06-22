@@ -48,6 +48,22 @@ void main() {
       expect(AksharaBreakpoints.isNarrowMobile(360), isFalse);
     });
 
+    test('useCardLayout collapses tables on phones and portrait tablets only',
+        () {
+      // Phones: always cards, regardless of orientation.
+      expect(AksharaBreakpoints.useCardLayout(390, 844), isTrue);
+      expect(AksharaBreakpoints.useCardLayout(390, 320), isTrue);
+      // Tablet portrait (height >= width): cards.
+      expect(AksharaBreakpoints.useCardLayout(834, 1194), isTrue);
+      // Tablet landscape (width > height): keep the table.
+      expect(AksharaBreakpoints.useCardLayout(1194, 834), isFalse);
+      // Square tablet counts as portrait (height >= width).
+      expect(AksharaBreakpoints.useCardLayout(900, 900), isTrue);
+      // Desktop: always the full table.
+      expect(AksharaBreakpoints.useCardLayout(1440, 900), isFalse);
+      expect(AksharaBreakpoints.useCardLayout(1440, 2000), isFalse);
+    });
+
     test('MobileDashboardLayout forwards to the canonical thresholds', () {
       expect(
         MobileDashboardLayout.tabletBreakpoint,

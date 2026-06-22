@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
+import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
 import 'organization_builder_models.dart';
 import 'organization_builder_mutations_provider.dart';
@@ -86,60 +87,45 @@ class _OrganizationBuilderInterviewScreenState
       appBar: AppBar(
         title: Text('Interview — ${pack?.name ?? 'Organization'}'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Stepper(
-              currentStep: _step,
-              controlsBuilder: (_, __) => const SizedBox.shrink(),
-              steps: List.generate(_kInterviewStepCount, (index) {
-                return Step(
-                  title: Text(_stepTitle(pack?.type, index)),
-                  isActive: _step == index,
-                  content: _stepContent(index, draftState),
-                );
-              }),
-            ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: AksharaMultiStepForm(
+            stepLabels: [
+              for (var i = 0; i < _kInterviewStepCount; i++)
+                _stepTitle(pack?.type, i),
+            ],
+            currentIndex: _step,
+            leading: _step > 0
+                ? TextButton(
+                    key: QaTestKeys.organizationBuilderInterviewBackButton,
+                    onPressed: saveState.isLoading
+                        ? null
+                        : () => setState(() => _step -= 1),
+                    child: const Text('Back'),
+                  )
+                : null,
+            trailing: _step < _kInterviewStepCount - 1
+                ? FilledButton(
+                    key: QaTestKeys.organizationBuilderInterviewContinueButton,
+                    onPressed: saveState.isLoading ? null : _continue,
+                    child: saveState.isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Continue'),
+                  )
+                : FilledButton.icon(
+                    key: QaTestKeys.organizationBuilderInterviewPreviewButton,
+                    onPressed: saveState.isLoading ? null : _goToPreview,
+                    icon: const Icon(Icons.preview_outlined),
+                    label: const Text('Generate preview'),
+                  ),
+            child: _stepContent(_step, draftState),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  if (_step > 0)
-                    TextButton(
-                      key: QaTestKeys.organizationBuilderInterviewBackButton,
-                      onPressed: saveState.isLoading
-                          ? null
-                          : () => setState(() => _step -= 1),
-                      child: const Text('Back'),
-                    ),
-                  const Spacer(),
-                  if (_step < _kInterviewStepCount - 1)
-                    FilledButton(
-                      key: QaTestKeys.organizationBuilderInterviewContinueButton,
-                      onPressed: saveState.isLoading ? null : _continue,
-                      child: saveState.isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Continue'),
-                    ),
-                  if (_step == _kInterviewStepCount - 1)
-                    FilledButton.icon(
-                      key: QaTestKeys.organizationBuilderInterviewPreviewButton,
-                      onPressed: saveState.isLoading ? null : _goToPreview,
-                      icon: const Icon(Icons.preview_outlined),
-                      label: const Text('Generate preview'),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -1,4 +1,4 @@
-import '../../../../../features/management/intelligence/intelligence_models.dart';
+import '../../../../../features/intelligence/management/intelligence_models.dart';
 import '../dto/analytics_intelligence_dto.dart';
 
 class AnalyticsIntelligenceMapper {

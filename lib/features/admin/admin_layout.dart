@@ -21,6 +21,15 @@ abstract final class AdminLayout {
   static bool isDesktop(BuildContext context) =>
       breakpointOf(context) == LayoutBreakpoint.desktop;
 
+  /// True when wide table/`Wrap` layouts should collapse to a stacked card
+  /// layout: every phone **plus portrait tablets** (a dense `DataTable` still
+  /// overflows horizontally on a portrait tablet). Desktops and landscape
+  /// tablets keep the full table. Mirrors [AksharaBreakpoints.useCardLayout].
+  static bool useCardLayout(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return AksharaBreakpoints.useCardLayout(size.width, size.height);
+  }
+
   /// Horizontal padding for admin body sections per breakpoint.
   static EdgeInsets contentPadding(BuildContext context) {
     return switch (breakpointOf(context)) {

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../../theme/theme_extensions.dart';
+import '../copilot/widgets/copilot_bottom_nav_ai_slot.dart';
 import 'admin_navigation_provider.dart';
 import 'models/admin_nav_models.dart';
 
@@ -59,33 +60,44 @@ class AdminBottomNav extends ConsumerWidget {
         visible.indexWhere((d) => _matches(d, currentLocation));
     final selectedIndex = selectedVisible >= 0 ? selectedVisible : 0;
 
-    return NavigationBar(
-      height: context.akshara.bottomNavHeight,
-      selectedIndex: selectedIndex,
-      onDestinationSelected: (index) {
-        if (index == visible.length) {
-          onMore();
-          return;
-        }
-        final destination = visible[index];
-        if (!_matches(destination, currentLocation)) {
-          context.go(destination.route);
-        }
-      },
-      destinations: [
-        for (final d in visible)
-          NavigationDestination(
-            key: QaTestKeys.adminBottomNavModule(d.module.name),
-            icon: Icon(d.icon),
-            selectedIcon: Icon(d.selectedIcon),
-            label: d.label,
-          ),
-        const NavigationDestination(
-          key: QaTestKeys.adminBottomNavMore,
-          icon: Icon(Icons.grid_view_outlined),
-          selectedIcon: Icon(Icons.grid_view_rounded),
-          label: 'More',
+    // Stack + floating AI slot mirrors the persona shells (PersonaBottomNav), so
+    // staff get the same raised center AI-center button. The slot self-gates on
+    // the AI-access pref + mobile breakpoint, and routes staff to the full ERP
+    // copilot.
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        NavigationBar(
+          height: context.akshara.bottomNavHeight,
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (index) {
+            if (index == visible.length) {
+              onMore();
+              return;
+            }
+            final destination = visible[index];
+            if (!_matches(destination, currentLocation)) {
+              context.go(destination.route);
+            }
+          },
+          destinations: [
+            for (final d in visible)
+              NavigationDestination(
+                key: QaTestKeys.adminBottomNavModule(d.module.name),
+                icon: Icon(d.icon),
+                selectedIcon: Icon(d.selectedIcon),
+                label: d.label,
+              ),
+            const NavigationDestination(
+              key: QaTestKeys.adminBottomNavMore,
+              icon: Icon(Icons.grid_view_outlined),
+              selectedIcon: Icon(Icons.grid_view_rounded),
+              label: 'More',
+            ),
+          ],
         ),
+        const CopilotBottomNavAiSlot(),
       ],
     );
   }

@@ -1,4 +1,4 @@
-import '../../../features/inventory_distribution/inventory_distribution_models.dart';
+import '../../../features/inventory/distribution/inventory_distribution_models.dart';
 import '../../../features/phase5/phase5_models.dart';
 import '../interfaces/inventory_distribution_repository.dart';
 import '../repository_query.dart';

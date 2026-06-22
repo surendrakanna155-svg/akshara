@@ -140,7 +140,7 @@ class _FinesTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final fine in fines) ...[

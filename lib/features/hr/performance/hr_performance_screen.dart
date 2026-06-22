@@ -130,7 +130,7 @@ class HrPerformanceScreen extends ConsumerWidget {
           actionLabel: 'View Management',
           icon: Icons.leaderboard_outlined,
           semanticLabelPrefix: 'Management performance link',
-          onAction: () {},
+          onAction: null,
         ),
       ],
     );
@@ -144,7 +144,7 @@ class _ReviewsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final review in reviews) ...[

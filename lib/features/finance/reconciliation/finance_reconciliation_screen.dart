@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/akshara_key_value_card.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
+import '../../admin/admin_layout.dart';
 import '../../../theme/theme_extensions.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
@@ -92,7 +94,8 @@ class _OverviewTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewState = ref.watch(financeReconciliationDashboardViewStateProvider);
+    final viewState =
+        ref.watch(financeReconciliationDashboardViewStateProvider);
 
     return FinanceAsyncBody<InventoryFinanceReconciliationDashboard>(
       state: viewState,
@@ -205,8 +208,10 @@ class _GoodsReceiptsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final listState = ref.watch(financeReconciliationGoodsReceiptsViewStateProvider);
-    final detailAsync = ref.watch(financeReconciliationGoodsReceiptDetailFutureProvider);
+    final listState =
+        ref.watch(financeReconciliationGoodsReceiptsViewStateProvider);
+    final detailAsync =
+        ref.watch(financeReconciliationGoodsReceiptDetailFutureProvider);
     final selectedId = ref.watch(financeSelectedGoodsReceiptIdProvider);
 
     return Row(
@@ -316,34 +321,61 @@ class _PostingsTab extends ConsumerWidget {
       emptyMessage: 'No inventory finance postings yet.',
       emptyIcon: Icons.post_add_outlined,
       onRetry: () => retryFinanceReconciliation(ref),
-      builder: (result) => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          columns: const [
-            DataColumn(label: Text('PO')),
-            DataColumn(label: Text('Vendor')),
-            DataColumn(label: Text('AP commitment')),
-            DataColumn(label: Text('Amount')),
-            DataColumn(label: Text('Status')),
-            DataColumn(label: Text('Posted')),
-          ],
-          rows: [
-            for (final posting in result.items)
-              DataRow(cells: [
-                DataCell(Text(posting.poNumber)),
-                DataCell(Text(posting.vendorName)),
-                DataCell(Text(posting.commitmentNumber)),
-                DataCell(Text(posting.amount)),
-                DataCell(Text(posting.postingStatus)),
-                DataCell(Text(
-                  posting.postedAt == null
-                      ? '—'
-                      : _formatDate(posting.postedAt!),
-                )),
-              ]),
-          ],
-        ),
-      ),
+      builder: (result) {
+        if (AdminLayout.useCardLayout(context)) {
+          return ListView.separated(
+            itemCount: result.items.length,
+            separatorBuilder: (_, __) =>
+                const SizedBox(height: AksharaSpacing.s3),
+            itemBuilder: (context, index) {
+              final posting = result.items[index];
+              return AksharaKeyValueCard(
+                title: posting.poNumber,
+                entries: [
+                  ('Vendor', posting.vendorName),
+                  ('AP commitment', posting.commitmentNumber),
+                  ('Amount', posting.amount),
+                  ('Status', posting.postingStatus),
+                  (
+                    'Posted',
+                    posting.postedAt == null
+                        ? '—'
+                        : _formatDate(posting.postedAt!),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            columns: const [
+              DataColumn(label: Text('PO')),
+              DataColumn(label: Text('Vendor')),
+              DataColumn(label: Text('AP commitment')),
+              DataColumn(label: Text('Amount')),
+              DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Posted')),
+            ],
+            rows: [
+              for (final posting in result.items)
+                DataRow(cells: [
+                  DataCell(Text(posting.poNumber)),
+                  DataCell(Text(posting.vendorName)),
+                  DataCell(Text(posting.commitmentNumber)),
+                  DataCell(Text(posting.amount)),
+                  DataCell(Text(posting.postingStatus)),
+                  DataCell(Text(
+                    posting.postedAt == null
+                        ? '—'
+                        : _formatDate(posting.postedAt!),
+                  )),
+                ]),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -353,7 +385,8 @@ class _VendorsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vendorsState = ref.watch(financeReconciliationVendorsViewStateProvider);
+    final vendorsState =
+        ref.watch(financeReconciliationVendorsViewStateProvider);
     final transactionsAsync =
         ref.watch(financeReconciliationVendorTransactionsFutureProvider);
     final selectedVendorId = ref.watch(financeSelectedVendorIdProvider);
@@ -483,8 +516,18 @@ String _formatDate(DateTime date) {
 
 String _monthLabel(int month) {
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return months[month - 1];
 }

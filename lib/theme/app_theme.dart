@@ -8,6 +8,7 @@ import 'elevation.dart';
 import 'locale_typography.dart';
 import 'motion.dart';
 import 'page_transitions.dart';
+import 'premium_tokens.dart';
 import 'radius.dart';
 import 'spacing.dart';
 import 'theme_extensions.dart';
@@ -96,6 +97,9 @@ abstract final class AksharaAppTheme {
       extensions: <ThemeExtension<dynamic>>[
         aksharaExtension,
         aksharaText,
+        brightness == Brightness.dark
+            ? AksharaPremiumTokens.dark()
+            : AksharaPremiumTokens.light(),
       ],
       appBarTheme: _appBarTheme(colorScheme, aksharaText),
       navigationBarTheme: _navigationBarTheme(colorScheme, aksharaText),

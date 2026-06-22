@@ -126,7 +126,7 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (AdminLayout.isMobile(context))
+                  if (AdminLayout.useCardLayout(context))
                     Column(
                       children: [
                         for (final student in students) ...[

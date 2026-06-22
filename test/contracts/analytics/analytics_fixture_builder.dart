@@ -1,4 +1,4 @@
-import 'package:akshara_erp/features/management/intelligence/intelligence_models.dart';
+import 'package:akshara_erp/features/intelligence/management/intelligence_models.dart';
 
 class AnalyticsIntelligenceFixtureBuilder {
   Map<String, dynamic> dashboardEnvelope(IntelligenceDashboardMetrics metrics) {

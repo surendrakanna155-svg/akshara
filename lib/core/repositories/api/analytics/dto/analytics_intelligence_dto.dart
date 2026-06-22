@@ -1,4 +1,4 @@
-import '../../../../../features/management/intelligence/intelligence_models.dart';
+import '../../../../../features/intelligence/management/intelligence_models.dart';
 
 Map<String, dynamic> parseAnalyticsEnvelope(Map<String, dynamic> json) {
   final data = json['data'];

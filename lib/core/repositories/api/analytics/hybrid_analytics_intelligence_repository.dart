@@ -1,6 +1,6 @@
 import '../../interfaces/analytics_intelligence_repository.dart';
 import '../../repository_query.dart';
-import '../../../../features/management/intelligence/intelligence_models.dart';
+import '../../../../features/intelligence/management/intelligence_models.dart';
 import 'api_analytics_intelligence_repository.dart';
 
 class HybridAnalyticsIntelligenceRepository implements AnalyticsIntelligenceRepository {

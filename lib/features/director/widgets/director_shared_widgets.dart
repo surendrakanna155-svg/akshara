@@ -7,6 +7,7 @@ import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../admin/admin_layout.dart';
 import '../../copilot/copilot_context_provider.dart';
 import '../../copilot/copilot_models.dart';
 import '../../copilot/copilot_provider.dart';
@@ -20,6 +21,20 @@ class DirectorKpiRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // On phones the fixed 240-wide tiles float left and look stranded, so they
+    // stretch full-width in a column. Tablet/desktop keep the inline wrap.
+    if (AdminLayout.useCardLayout(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final kpi in kpis) ...[
+            SizedBox(height: 140, child: _kpiCard(kpi)),
+            const SizedBox(height: AksharaSpacing.s3),
+          ],
+        ],
+      );
+    }
+
     return Wrap(
       spacing: AksharaSpacing.s3,
       runSpacing: AksharaSpacing.s3,
@@ -28,18 +43,20 @@ class DirectorKpiRow extends StatelessWidget {
           SizedBox(
             width: 240,
             height: 140,
-            child: AksharaKpiCard(
-              value: kpi.value,
-              subtitle: kpi.label,
-              icon: kpi.icon,
-              detail: kpi.detail,
-              accent: KpiAccent.primary,
-              style: AksharaKpiCardStyle.filled,
-            ),
+            child: _kpiCard(kpi),
           ),
       ],
     );
   }
+
+  Widget _kpiCard(DirectorKpi kpi) => AksharaKpiCard(
+        value: kpi.value,
+        subtitle: kpi.label,
+        icon: kpi.icon,
+        detail: kpi.detail,
+        accent: KpiAccent.primary,
+        style: AksharaKpiCardStyle.filled,
+      );
 }
 
 class DirectorSchoolStatusChip extends StatelessWidget {
@@ -91,6 +108,17 @@ class DirectorAiAssistantLink extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The full labelled button is ~200px wide and overflows the phone filter
+    // bar (which also hosts the collapsed "Filters" trigger), so on phones it
+    // becomes a compact icon button with the label moved to a tooltip.
+    if (AdminLayout.useCardLayout(context)) {
+      return IconButton.filled(
+        key: buttonKey,
+        onPressed: () => _openDirectorCopilot(context, ref),
+        icon: const Icon(Icons.smart_toy_outlined, size: 18),
+        tooltip: 'Director AI Assistant',
+      );
+    }
     return FilledButton.icon(
       key: buttonKey,
       onPressed: () => _openDirectorCopilot(context, ref),

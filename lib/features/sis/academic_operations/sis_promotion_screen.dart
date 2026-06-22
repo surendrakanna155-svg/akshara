@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/forms/forms.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../sis_models.dart';
@@ -46,17 +47,15 @@ class _SisPromotionScreenState extends ConsumerState<SisPromotionScreen> {
             children: [
               Text('Promotion wizard', style: context.aksharaText.titleLarge),
               const SizedBox(height: AksharaSpacing.s3),
-              Wrap(
-                spacing: AksharaSpacing.s2,
-                children: [
-                  for (var i = 1; i <= 5; i++)
-                    Chip(
-                      label: Text('Step $i'),
-                      backgroundColor: _step == i
-                          ? context.colors.primaryContainer
-                          : context.colors.surfaceContainerHighest,
-                    ),
+              AksharaStepIndicator(
+                stepLabels: const [
+                  'Years',
+                  'Mapping',
+                  'Preview',
+                  'Approval',
+                  'Execute',
                 ],
+                currentIndex: _step - 1,
               ),
               const SizedBox(height: AksharaSpacing.s4),
               if (_step == 1) _buildYearStep(sourceYear, targetYear),

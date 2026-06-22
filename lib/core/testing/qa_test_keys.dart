@@ -757,6 +757,12 @@ abstract final class QaTestKeys {
   static const aiAssistantSettingsLink =
       ValueKey<String>('ai_assistant_settings_link');
 
+  static ValueKey<String> appearanceModeOption(String modeKey) =>
+      ValueKey<String>('appearance_mode_$modeKey');
+
+  static const appearanceSettingsLink =
+      ValueKey<String>('appearance_settings_link');
+
   static ValueKey<String> atRiskStudentRow(String studentId) =>
       ValueKey<String>('at_risk_student_$studentId');
 
@@ -1140,6 +1146,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('school_discovery_hub_card');
   static const schoolDiscoveryAppliedSnackbar =
       ValueKey<String>('school_discovery_applied_snackbar');
+  static const schoolDiscoveryContinueButton =
+      ValueKey<String>('school_discovery_continue_button');
   static const schoolDiscoveryBranchCountSlider =
       ValueKey<String>('school_discovery_branch_count_slider');
   static const schoolDiscoveryCapabilityTransport =
@@ -1460,6 +1468,16 @@ abstract final class QaTestKeys {
 
   /// Admin bottom-nav (phone) "More" tab that opens the full module drawer.
   static const adminBottomNavMore = ValueKey<String>('admin_bottom_nav_more');
+
+  /// Mobile "Filters" trigger that opens the filter bottom sheet (phones only;
+  /// tablet/desktop keep the inline chip row).
+  static const adminFilterTrigger =
+      ValueKey<String>('admin_filter_trigger');
+
+  /// The filter bottom sheet itself (mobile), plus one key per option row.
+  static const adminFilterSheet = ValueKey<String>('admin_filter_sheet');
+  static ValueKey<String> adminFilterSheetOption(String label) =>
+      ValueKey<String>('admin_filter_sheet_option_$label');
 
   static ValueKey<String> qaPersonaButton(String label) =>
       ValueKey<String>('qa_persona_$label');

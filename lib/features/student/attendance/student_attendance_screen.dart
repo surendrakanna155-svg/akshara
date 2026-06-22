@@ -157,7 +157,7 @@ class _StudentAttendanceScreenState
                       actionLabel: insight.actionLabel,
                       icon: Icons.insights_outlined,
                       semanticLabelPrefix: 'AI attendance insight',
-                      onAction: () {},
+                      onAction: null,
                     ),
                   ],
                 ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/widgets.dart';
+import '../../../../theme/spacing.dart';
+import '../../../admin/admin_layout.dart';
 import '../../admissions_models.dart';
 import '../../widgets/admissions_application_status_chip.dart';
 
@@ -64,6 +67,29 @@ class AdmissionsApplicationReportTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (AdminLayout.useCardLayout(context)) {
+      return Semantics(
+        container: true,
+        label: 'Application status report',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final row in rows) ...[
+              AksharaKeyValueCard(
+                titleWidget:
+                    AdmissionsApplicationStatusChip(status: row.status),
+                entries: [
+                  ('Count', '${row.count}'),
+                  ('Share', '${row.percent.toStringAsFixed(1)}%'),
+                ],
+              ),
+              const SizedBox(height: AksharaSpacing.s3),
+            ],
+          ],
+        ),
+      );
+    }
+
     return Semantics(
       container: true,
       label: 'Application status report',
@@ -109,6 +135,28 @@ class _ReportTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (AdminLayout.useCardLayout(context)) {
+      return Semantics(
+        container: true,
+        label: semanticLabel,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final row in rows) ...[
+              AksharaKeyValueCard(
+                title: row.isNotEmpty ? row.first : '',
+                entries: [
+                  for (var i = 1; i < columns.length && i < row.length; i++)
+                    (columns[i], row[i]),
+                ],
+              ),
+              const SizedBox(height: AksharaSpacing.s3),
+            ],
+          ],
+        ),
+      );
+    }
+
     return Semantics(
       container: true,
       label: semanticLabel,

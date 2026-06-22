@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
+import '../admin/admin_layout.dart';
 import 'school_completion_models.dart';
 import 'school_completion_mutations_provider.dart';
 import 'school_completion_providers.dart';
@@ -130,117 +132,110 @@ class _TeacherReassignmentScreenState
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Stepper(
-                    currentStep: _selectedSlotIds.isEmpty
-                        ? 0
-                        : _selectedTargetTeacher == null
-                            ? 1
-                            : 2,
-                    controlsBuilder: (context, _) => const SizedBox.shrink(),
-                    steps: [
-                      Step(
-                        isActive: true,
-                        title: const Text('Select periods'),
-                        content: Text(
-                          _selectedSlotIds.isEmpty
-                              ? 'Choose one or more timetable periods from source teacher.'
-                              : '${_selectedSlotIds.length} periods selected.',
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AksharaStepIndicator(
+                        stepLabels: const [
+                          'Select periods',
+                          'Select target teacher',
+                          'Confirm reassignment',
+                        ],
+                        currentIndex: _selectedSlotIds.isEmpty
+                            ? 0
+                            : _selectedTargetTeacher == null
+                                ? 1
+                                : 2,
                       ),
-                      Step(
-                        isActive: _selectedSlotIds.isNotEmpty,
-                        title: const Text('Select target teacher'),
-                        content: Text(
-                          _selectedTargetTeacher == null
-                              ? 'Pick the teacher who will take selected periods.'
-                              : '${_selectedTargetTeacher!.teacherName} selected as target teacher.',
-                        ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _selectedSlotIds.isEmpty
+                            ? 'Choose one or more timetable periods from source teacher.'
+                            : '${_selectedSlotIds.length} periods selected.',
                       ),
-                      Step(
-                        isActive: _selectedTargetTeacher != null,
-                        title: const Text('Confirm reassignment'),
-                        content: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              selectedSlots.isEmpty
-                                  ? 'No periods selected yet.'
-                                  : 'Selected: ${selectedSlots.map((slot) => '${slot.dayOfWeek} ${slot.periodLabel}').join(', ')}',
-                            ),
-                            const SizedBox(height: 8),
-                            SwitchListTile(
-                              value: _notifySourceTeacher,
-                              onChanged: (value) =>
-                                  setState(() => _notifySourceTeacher = value),
-                              title: const Text('Notify source teacher'),
-                            ),
-                            SwitchListTile(
-                              value: _notifyTargetTeacher,
-                              onChanged: (value) =>
-                                  setState(() => _notifyTargetTeacher = value),
-                              title: const Text('Notify target teacher'),
-                            ),
-                            SwitchListTile(
-                              value: _notifyStudents,
-                              onChanged: (value) =>
-                                  setState(() => _notifyStudents = value),
-                              title: const Text('Notify students'),
-                            ),
-                            const SizedBox(height: 8),
-                            FilledButton.icon(
-                              key: QaTestKeys.teacherReassignmentSubmitButton,
-                              onPressed: _sourceTeacherId == null ||
-                                      _selectedSlotIds.isEmpty ||
-                                      _selectedTargetTeacher == null ||
-                                      submitting
-                                  ? null
-                                  : () async {
-                                      final messenger =
-                                          ScaffoldMessenger.of(context);
-                                      final result = await ref
-                                          .read(
-                                              reassignTeacherProvider.notifier)
-                                          .execute(
-                                            ReassignTeacherRequest(
-                                              academicYearId: _academicYearId,
-                                              sourceTeacherId:
-                                                  _sourceTeacherId!,
-                                              targetTeacherId:
-                                                  _selectedTargetTeacher!
-                                                      .teacherId,
-                                              slotIds: _selectedSlotIds.toList(
-                                                  growable: false),
-                                              notifySourceTeacher:
-                                                  _notifySourceTeacher,
-                                              notifyTargetTeacher:
-                                                  _notifyTargetTeacher,
-                                              notifyStudents: _notifyStudents,
-                                            ),
-                                          );
-                                      if (!mounted || result == null) return;
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          key: QaTestKeys
-                                              .teacherReassignmentSuccessSnackbar,
-                                          content: Text(result.message),
+                      const SizedBox(height: 12),
+                      Text(
+                        _selectedTargetTeacher == null
+                            ? 'Pick the teacher who will take selected periods.'
+                            : '${_selectedTargetTeacher!.teacherName} selected as target teacher.',
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        selectedSlots.isEmpty
+                            ? 'No periods selected yet.'
+                            : 'Selected: ${selectedSlots.map((slot) => '${slot.dayOfWeek} ${slot.periodLabel}').join(', ')}',
+                      ),
+                      const SizedBox(height: 8),
+                      SwitchListTile(
+                        value: _notifySourceTeacher,
+                        onChanged: (value) =>
+                            setState(() => _notifySourceTeacher = value),
+                        title: const Text('Notify source teacher'),
+                      ),
+                      SwitchListTile(
+                        value: _notifyTargetTeacher,
+                        onChanged: (value) =>
+                            setState(() => _notifyTargetTeacher = value),
+                        title: const Text('Notify target teacher'),
+                      ),
+                      SwitchListTile(
+                        value: _notifyStudents,
+                        onChanged: (value) =>
+                            setState(() => _notifyStudents = value),
+                        title: const Text('Notify students'),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          key: QaTestKeys.teacherReassignmentSubmitButton,
+                          onPressed: _sourceTeacherId == null ||
+                                  _selectedSlotIds.isEmpty ||
+                                  _selectedTargetTeacher == null ||
+                                  submitting
+                              ? null
+                              : () async {
+                                  final messenger =
+                                      ScaffoldMessenger.of(context);
+                                  final result = await ref
+                                      .read(reassignTeacherProvider.notifier)
+                                      .execute(
+                                        ReassignTeacherRequest(
+                                          academicYearId: _academicYearId,
+                                          sourceTeacherId: _sourceTeacherId!,
+                                          targetTeacherId:
+                                              _selectedTargetTeacher!.teacherId,
+                                          slotIds: _selectedSlotIds.toList(
+                                              growable: false),
+                                          notifySourceTeacher:
+                                              _notifySourceTeacher,
+                                          notifyTargetTeacher:
+                                              _notifyTargetTeacher,
+                                          notifyStudents: _notifyStudents,
                                         ),
                                       );
-                                      setState(() {
-                                        _selectedSlotIds.clear();
-                                        _selectedTargetTeacher = null;
-                                      });
-                                    },
-                              icon: submitting
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.compare_arrows_outlined),
-                              label: const Text('Reassign teacher'),
-                            ),
-                          ],
+                                  if (!mounted || result == null) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      key: QaTestKeys
+                                          .teacherReassignmentSuccessSnackbar,
+                                      content: Text(result.message),
+                                    ),
+                                  );
+                                  setState(() {
+                                    _selectedSlotIds.clear();
+                                    _selectedTargetTeacher = null;
+                                  });
+                                },
+                          icon: submitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
+                                )
+                              : const Icon(Icons.compare_arrows_outlined),
+                          label: const Text('Reassign teacher'),
                         ),
                       ),
                     ],
@@ -276,6 +271,30 @@ class _ReassignmentSlotsTable extends StatelessWidget {
         ),
       );
     }
+    if (AdminLayout.useCardLayout(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final slot in slots) ...[
+            AksharaKeyValueCard(
+              title: '${slot.className} · ${slot.sectionName}',
+              trailing: Checkbox(
+                key: ValueKey('teacher_reassignment_slot_${slot.slotId}'),
+                value: selectedSlotIds.contains(slot.slotId),
+                onChanged: (value) => onToggle(slot.slotId, value ?? false),
+              ),
+              entries: [
+                ('Subject', slot.subjectName),
+                ('Day', slot.dayOfWeek),
+                ('Period', slot.periodLabel),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
+      );
+    }
+
     return Card(
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,

@@ -81,7 +81,7 @@ class ControlCenterSupportScreen extends ConsumerWidget {
       children: [
         const AksharaSectionHeader(title: 'Support tickets'),
         const SizedBox(height: AksharaSpacing.s3),
-        if (AdminLayout.isMobile(context))
+        if (AdminLayout.useCardLayout(context))
           Column(
             children: [
               for (final ticket in tickets) ...[

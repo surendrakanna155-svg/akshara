@@ -66,4 +66,15 @@ abstract final class AksharaBreakpoints {
 
   /// True for the narrowest phones, where the tightest fallbacks apply.
   static bool isNarrowMobile(double width) => width < narrowMobileMaxWidth;
+
+  /// True when wide table/`Wrap` layouts should collapse to a stacked card
+  /// layout: every phone, **plus tablets held in portrait** (where a dense
+  /// `DataTable` still overflows into a horizontal scroll). Desktops and
+  /// landscape tablets keep the full table. Orientation-based on purpose — the
+  /// width tiers above stay untouched.
+  static bool useCardLayout(double width, double height) {
+    if (isMobile(width)) return true;
+    if (!isTablet(width)) return false; // desktop keeps tables
+    return height >= width; // tablet portrait
+  }
 }

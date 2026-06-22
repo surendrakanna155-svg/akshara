@@ -118,7 +118,7 @@ class _VisitorsTable extends StatelessWidget {
       return const Text('No records');
     }
 
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final visitor in visitors) ...[

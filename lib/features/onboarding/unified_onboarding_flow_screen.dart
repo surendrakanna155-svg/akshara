@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/supported_languages.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import 'unified_onboarding_models.dart';
@@ -30,9 +31,12 @@ class _UnifiedOnboardingFlowScreenState
       body: ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          LinearProgressIndicator(
-            value: (UnifiedOnboardingStep.values.indexOf(state.currentStep) + 1) /
-                UnifiedOnboardingStep.values.length,
+          AksharaStepIndicator(
+            stepLabels: [
+              for (final step in UnifiedOnboardingStep.values) step.label,
+            ],
+            currentIndex:
+                UnifiedOnboardingStep.values.indexOf(state.currentStep),
           ),
           if (state.isLoading) ...[
             const SizedBox(height: AksharaSpacing.s2),

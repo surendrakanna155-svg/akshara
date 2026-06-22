@@ -146,12 +146,22 @@ Permission? erpRoutePermissionFor(String location) {
   if (location.startsWith('${RouteNames.employee360}/')) {
     return Permission.viewEmployeeIntelligence;
   }
+  // Longest-prefix match: a specific child route (e.g. /finance/intelligence)
+  // must resolve to its own permission, not the broader parent (/finance).
+  // Insertion-order first-match would return the weaker parent permission and
+  // let a role that only holds the parent perm reach the child — a privilege
+  // escalation. Pick the most specific (longest) matching key instead.
+  Permission? best;
+  int bestLength = -1;
   for (final entry in kErpRouteViewPermissions.entries) {
     if (location == entry.key || location.startsWith('${entry.key}/')) {
-      return entry.value;
+      if (entry.key.length > bestLength) {
+        bestLength = entry.key.length;
+        best = entry.value;
+      }
     }
   }
-  return null;
+  return best;
 }
 
 /// Whether [location] is allowed for the given [RbacService].

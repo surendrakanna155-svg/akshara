@@ -3,17 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
-import '../../../shared/widgets/akshara_dashboard_canvas.dart';
-import '../../../shared/widgets/akshara_dashboard_watermark.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
-import '../../../theme/theme_extensions.dart';
 import 'student_dashboard_provider.dart';
 import 'widgets/attendance_kpi_card.dart';
 import 'widgets/daily_schedule_strip.dart';
 import 'widgets/exam_reminder_card.dart';
-import 'widgets/hero_greeting_card.dart';
 import 'widgets/homework_due_list.dart';
 import '../../../theme/breakpoints.dart';
 
@@ -27,7 +22,8 @@ class StudentDashboardScreen extends ConsumerWidget {
   /// Route handler; receives action ids from ST-01 prototype map.
   final void Function(String actionId)? onNavigate;
 
-  static const double _largeMobileBreakpoint = AksharaBreakpoints.largeMobileMinWidth;
+  static const double _largeMobileBreakpoint =
+      AksharaBreakpoints.largeMobileMinWidth;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,13 +31,14 @@ class StudentDashboardScreen extends ConsumerWidget {
     final isLoading = ref.watch(studentDashboardLoadingProvider);
     final hasError = ref.watch(studentDashboardErrorProvider);
     final isEmpty = ref.watch(studentDashboardEmptyProvider);
-    final overdueCount =
-        data.homeworkDue.where((h) => h.status == HomeworkStatus.overdue).length;
+    final overdueCount = data.homeworkDue
+        .where((h) => h.status == HomeworkStatus.overdue)
+        .length;
     final dueCount = data.homeworkDue.length;
 
     return Scaffold(
       key: QaTestKeys.studentDashboardScreen,
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Home',
         titleTrailing: AksharaContextChip(
@@ -70,129 +67,125 @@ class StudentDashboardScreen extends ConsumerWidget {
             final width = constraints.maxWidth;
             final isTablet = MobileDashboardLayout.isTablet(width);
 
-            return AksharaDashboardCanvas(
-              palette: AksharaMeshPalette.student,
-              watermark: AksharaWatermarkMotif.sparkles,
+            return AksharaPremiumBackground(
+              motif: AksharaMotif.growth,
               child: SingleChildScrollView(
                 padding: MobileDashboardLayout.screenPadding(width),
                 child: ConstrainedBox(
                   constraints: MobileDashboardLayout.contentConstraints(width),
                   child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AksharaGradientHero(
+                        eyebrow: data.greetingSubtitle,
+                        headline: data.greetingHeadline,
+                        motif: AksharaMotif.growth,
+                      ),
+                      const SizedBox(height: AksharaSpacing.s4),
+                      DailyScheduleStrip(
+                        periods: data.todaySchedule,
+                        largeMobileBreakpoint: _largeMobileBreakpoint,
+                        onFullScheduleTap: () =>
+                            _navigate(onNavigate, 'full_schedule'),
+                        onPeriodTap: (period) =>
+                            _navigate(onNavigate, 'period_${period.id}'),
+                      ),
+                      const SizedBox(height: AksharaSpacing.s4),
+                      AksharaQuickActionRow(
+                        largeMobileBreakpoint: _largeMobileBreakpoint,
                         children: [
-                          HeroGreetingCard(
-                            headline: data.greetingHeadline,
-                            subtitle: data.greetingSubtitle,
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          DailyScheduleStrip(
-                            periods: data.todaySchedule,
-                            largeMobileBreakpoint: _largeMobileBreakpoint,
-                            onFullScheduleTap: () =>
-                                _navigate(onNavigate, 'full_schedule'),
-                            onPeriodTap: (period) =>
-                                _navigate(onNavigate, 'period_${period.id}'),
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          AksharaQuickActionRow(
-                            largeMobileBreakpoint: _largeMobileBreakpoint,
-                            children: [
-                              for (final action
-                                  in data.quickActions.where((a) => a.isVisible))
-                                AksharaQuickActionCard(
-                                  key: QaTestKeys.studentDashboardQuickAction(
-                                    action.id,
-                                  ),
-                                  icon: action.icon,
-                                  label: action.label,
-                                  emphasis: action.emphasis,
-                                  labelFontWeight: FontWeight.w600,
-                                  horizontalPadding: AksharaSpacing.s3,
-                                  verticalPadding: AksharaSpacing.s4,
-                                  onTap: () =>
-                                      _navigate(onNavigate, action.id),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          _StatusKpiRow(
-                            attendanceKpi: data.attendanceKpi,
-                            homeworkCount: dueCount,
-                            homeworkLabel: overdueCount > 0
-                                ? 'HW due · $overdueCount overdue'
-                                : 'HW due',
-                            largeMobileBreakpoint: _largeMobileBreakpoint,
-                            onAttendanceTap: () =>
-                                _navigate(onNavigate, 'attendance'),
-                            onHomeworkKpiTap: () =>
-                                _navigate(onNavigate, 'homework_list'),
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          ExamReminderCard(
-                            reminder: data.examReminder,
-                            onTap: () => _navigate(
-                              onNavigate,
-                              'exam_${data.examReminder.id}',
+                          for (final action
+                              in data.quickActions.where((a) => a.isVisible))
+                            AksharaQuickActionCard(
+                              key: QaTestKeys.studentDashboardQuickAction(
+                                action.id,
+                              ),
+                              icon: action.icon,
+                              label: action.label,
+                              emphasis: action.emphasis,
+                              labelFontWeight: FontWeight.w600,
+                              horizontalPadding: AksharaSpacing.s3,
+                              verticalPadding: AksharaSpacing.s4,
+                              onTap: () => _navigate(onNavigate, action.id),
                             ),
-                          ),
-                          const SizedBox(height: AksharaSpacing.s4),
-                          if (isTablet)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: HomeworkDueList(
-                                    items: data.homeworkDue,
-                                    onSeeAllTap: () => _navigate(
-                                      onNavigate,
-                                      'homework_list',
-                                    ),
-                                    onItemTap: (item) => _navigate(
-                                      onNavigate,
-                                      'homework_${item.id}',
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: AksharaSpacing.s4),
-                                Expanded(
-                                  child: AksharaInsightCard(
-                                    message: data.aiInsight.message,
-                                    actionLabel: data.aiInsight.actionLabel,
-                                    icon: Icons.auto_stories_outlined,
-                                    semanticLabelPrefix: 'AI study insight',
-                                    onAction: () => _navigate(
-                                      onNavigate,
-                                      'ai_quiz',
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          else ...[
-                            HomeworkDueList(
-                              items: data.homeworkDue,
-                              onSeeAllTap: () =>
-                                  _navigate(onNavigate, 'homework_list'),
-                              onItemTap: (item) =>
-                                  _navigate(onNavigate, 'homework_${item.id}'),
-                            ),
-                            const SizedBox(height: AksharaSpacing.s4),
-                            AksharaInsightCard(
-                              message: data.aiInsight.message,
-                              actionLabel: data.aiInsight.actionLabel,
-                              icon: Icons.auto_stories_outlined,
-                              semanticLabelPrefix: 'AI study insight',
-                              onAction: () =>
-                                  _navigate(onNavigate, 'ai_quiz'),
-                            ),
-                          ],
                         ],
                       ),
-                    ),
+                      const SizedBox(height: AksharaSpacing.s4),
+                      _StatusKpiRow(
+                        attendanceKpi: data.attendanceKpi,
+                        homeworkCount: dueCount,
+                        homeworkLabel: overdueCount > 0
+                            ? 'HW due · $overdueCount overdue'
+                            : 'HW due',
+                        largeMobileBreakpoint: _largeMobileBreakpoint,
+                        onAttendanceTap: () =>
+                            _navigate(onNavigate, 'attendance'),
+                        onHomeworkKpiTap: () =>
+                            _navigate(onNavigate, 'homework_list'),
+                      ),
+                      const SizedBox(height: AksharaSpacing.s4),
+                      ExamReminderCard(
+                        reminder: data.examReminder,
+                        onTap: () => _navigate(
+                          onNavigate,
+                          'exam_${data.examReminder.id}',
+                        ),
+                      ),
+                      const SizedBox(height: AksharaSpacing.s4),
+                      if (isTablet)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: HomeworkDueList(
+                                items: data.homeworkDue,
+                                onSeeAllTap: () => _navigate(
+                                  onNavigate,
+                                  'homework_list',
+                                ),
+                                onItemTap: (item) => _navigate(
+                                  onNavigate,
+                                  'homework_${item.id}',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AksharaSpacing.s4),
+                            Expanded(
+                              child: AksharaAiSuggestionBar(
+                                message: data.aiInsight.message,
+                                actionLabel: data.aiInsight.actionLabel,
+                                semanticLabelPrefix: 'AI study insight',
+                                onAction: () => _navigate(
+                                  onNavigate,
+                                  'ai_quiz',
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else ...[
+                        HomeworkDueList(
+                          items: data.homeworkDue,
+                          onSeeAllTap: () =>
+                              _navigate(onNavigate, 'homework_list'),
+                          onItemTap: (item) =>
+                              _navigate(onNavigate, 'homework_${item.id}'),
+                        ),
+                        const SizedBox(height: AksharaSpacing.s4),
+                        AksharaAiSuggestionBar(
+                          message: data.aiInsight.message,
+                          actionLabel: data.aiInsight.actionLabel,
+                          semanticLabelPrefix: 'AI study insight',
+                          onAction: () => _navigate(onNavigate, 'ai_quiz'),
+                        ),
+                      ],
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

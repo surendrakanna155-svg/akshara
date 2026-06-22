@@ -4,7 +4,7 @@ import 'package:akshara_erp/core/repositories/api/phase4/phase4_remote_datasourc
 import 'package:akshara_erp/core/repositories/interfaces/inventory_distribution_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_inventory_distribution_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
-import 'package:akshara_erp/features/inventory_distribution/inventory_distribution_models.dart';
+import 'package:akshara_erp/features/inventory/distribution/inventory_distribution_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 

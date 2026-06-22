@@ -1,7 +1,7 @@
 import 'package:akshara_erp/features/finance/dashboard/finance_dashboard_provider.dart';
 import 'package:akshara_erp/features/inventory/inventory_providers.dart';
 import 'package:akshara_erp/features/management/management_providers.dart';
-import 'package:akshara_erp/features/management/intelligence/intelligence_provider.dart';
+import 'package:akshara_erp/features/intelligence/management/intelligence_provider.dart';
 import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_provider.dart';
 import 'package:akshara_erp/features/student/dashboard/student_dashboard_provider.dart';
 import 'package:akshara_erp/features/teacher/dashboard/teacher_dashboard_provider.dart';
@@ -56,6 +56,7 @@ Future<void> pumpGoldenDashboard(
   required Widget screen,
   required Size viewport,
   List<Override> extraOverrides = const [],
+  bool dark = false,
 }) async {
   suppressGoldenOverflowErrors();
   useGoldenViewport(tester, viewport);
@@ -70,7 +71,7 @@ Future<void> pumpGoldenDashboard(
         ...providerTestOverrides(extraOverrides),
       ],
       child: MaterialApp(
-        theme: AksharaAppTheme.light(),
+        theme: dark ? AksharaAppTheme.dark() : AksharaAppTheme.light(),
         debugShowCheckedModeBanner: false,
         home: screen,
       ),
@@ -90,6 +91,7 @@ Future<void> pumpGoldenErpScreen(
   required Widget screen,
   required Size viewport,
   List<Override> extraOverrides = const [],
+  bool dark = false,
 }) async {
   suppressGoldenOverflowErrors();
   useGoldenViewport(tester, viewport);
@@ -117,7 +119,7 @@ Future<void> pumpGoldenErpScreen(
         ...extraOverrides,
       ]),
       child: MaterialApp.router(
-        theme: AksharaAppTheme.light(),
+        theme: dark ? AksharaAppTheme.dark() : AksharaAppTheme.light(),
         debugShowCheckedModeBanner: false,
         routerConfig: router,
       ),

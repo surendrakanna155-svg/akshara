@@ -106,7 +106,7 @@ class ParentHomeworkScreen extends ConsumerWidget {
                               AksharaInsightCard(
                                 message: data.insightMessage,
                                 actionLabel: data.insightActionLabel,
-                                onAction: () {},
+                                onAction: null,
                               ),
                             ],
                           ),

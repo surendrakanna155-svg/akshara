@@ -42,7 +42,7 @@ class SisEnrollmentQueue extends StatelessWidget {
 
     final displayItems = compact ? pending.take(3).toList() : pending;
 
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final item in displayItems) ...[

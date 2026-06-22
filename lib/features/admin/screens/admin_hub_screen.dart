@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
-import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_dashboard_canvas.dart';
 import '../../../shared/widgets/akshara_dashboard_watermark.dart';
+import '../../../shared/widgets/premium/akshara_line_art.dart';
+import '../../../shared/widgets/premium/akshara_workspace_landing.dart';
 import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -14,6 +15,7 @@ import '../admin_content_scaffold.dart';
 import '../admin_navigation_provider.dart';
 import '../admin_shell.dart';
 import '../models/admin_nav_models.dart';
+import '../workspace_landing_config.dart';
 import '../../../shared/widgets/workspace_switcher.dart';
 
 /// Functional ERP hub — shows the active workspace's modules only
@@ -34,6 +36,8 @@ class AdminHubScreen extends ConsumerWidget {
     final subtitle = hasMultiple
         ? 'You are in your ${workspace?.shortTitle ?? ''} workspace. Switch hats anytime.'
         : 'Jump to a module you are authorized to access.';
+    final landing =
+        workspace == null ? null : kWorkspaceLandingConfig[workspace.id];
 
     return AdminContentScaffold(
       key: QaTestKeys.adminHubScreen,
@@ -51,8 +55,13 @@ class AdminHubScreen extends ConsumerWidget {
               const WorkspaceSwitcher(),
               const SizedBox(height: AksharaSpacing.s6),
             ],
-            AksharaSectionHeader(title: title),
-            const SizedBox(height: AksharaSpacing.s2),
+            AksharaWorkspaceLanding(
+              workspaceName: title,
+              motif: landing?.motif ?? AksharaMotif.graduationCap,
+              eyebrow: landing?.eyebrow ?? 'WORKSPACE',
+              stats: landing?.stats ?? const <AksharaWorkspaceStat>[],
+            ),
+            const SizedBox(height: AksharaSpacing.s4),
             Text(
               subtitle,
               style: context.aksharaText.bodyMedium,
@@ -132,7 +141,7 @@ class _ModuleCard extends StatelessWidget {
                     Text(
                       'Open',
                       style: context.aksharaText.labelSmall
-                          ?.copyWith(color: colors.primary),
+                          .copyWith(color: colors.primary),
                     ),
                     Icon(Icons.arrow_forward_rounded,
                         size: 14, color: colors.primary),

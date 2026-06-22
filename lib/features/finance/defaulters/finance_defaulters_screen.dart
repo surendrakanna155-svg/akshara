@@ -55,7 +55,7 @@ class FinanceDefaultersScreen extends ConsumerWidget {
     required DefaultersDashboardData data,
     required List<DefaulterRecord> defaulters,
   }) {
-    final isMobile = AdminLayout.isMobile(context);
+    final useCards = AdminLayout.useCardLayout(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -98,7 +98,7 @@ class FinanceDefaultersScreen extends ConsumerWidget {
             message: 'No defaulters match the selected aging filter.',
             icon: Icons.people_outline,
           )
-        else if (isMobile)
+        else if (useCards)
           Column(
             children: [
               for (final record in defaulters) ...[
@@ -115,7 +115,7 @@ class FinanceDefaultersScreen extends ConsumerWidget {
           actionLabel: data.aiActionLabel,
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI defaulter risk insight',
-          onAction: () {},
+          onAction: null,
         ),
       ],
     );

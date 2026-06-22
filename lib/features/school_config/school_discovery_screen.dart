@@ -6,6 +6,7 @@ import '../../core/school_config/school_capability_registry.dart';
 import '../../core/school_config/school_configuration_models.dart';
 import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/forms/forms.dart';
 import '../../theme/spacing.dart';
 
 /// FV-PLAT-14 — guided school discovery wizard.
@@ -36,171 +37,176 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
     _branchCount = current.branchCount;
   }
 
+  static const _stepLabels = <String>[
+    'School type',
+    'Curriculum',
+    'Capabilities',
+    'Operations model',
+    'Review',
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final isLast = _step == _stepLabels.length - 1;
     return Scaffold(
       key: QaTestKeys.schoolDiscoveryScreen,
       appBar: AppBar(
         title: const Text('Smart School Configuration'),
       ),
-      body: Stepper(
-        currentStep: _step,
-        onStepContinue: _onContinue,
-        onStepCancel: _step > 0 ? () => setState(() => _step -= 1) : null,
-        steps: [
-          Step(
-            title: const Text('School type'),
-            isActive: _step >= 0,
-            content: _choiceColumn(
-              SchoolType.values,
-              _schoolType,
-              (value) => setState(() => _schoolType = value),
-              (value) => value.label,
-              (value) =>
-                  QaTestKeys.schoolDiscoverySchoolTypeOption(value.storageKey),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: AksharaMultiStepForm(
+            stepLabels: _stepLabels,
+            currentIndex: _step,
+            leading: _step > 0
+                ? OutlinedButton(
+                    onPressed: () => setState(() => _step -= 1),
+                    child: const Text('Back'),
+                  )
+                : null,
+            trailing: FilledButton(
+              key: QaTestKeys.schoolDiscoveryContinueButton,
+              onPressed: _onContinue,
+              child: Text(isLast ? 'Apply configuration' : 'Continue'),
             ),
+            child: _buildStepContent(),
           ),
-          Step(
-            title: const Text('Curriculum'),
-            isActive: _step >= 1,
-            content: _choiceColumn(
-              SchoolCurriculum.values,
-              _curriculum,
-              (value) => setState(() => _curriculum = value),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepContent() {
+    return switch (_step) {
+      0 => _choiceColumn(
+          SchoolType.values,
+          _schoolType,
+          (value) => setState(() => _schoolType = value),
+          (value) => value.label,
+          (value) =>
+              QaTestKeys.schoolDiscoverySchoolTypeOption(value.storageKey),
+        ),
+      1 => _choiceColumn(
+          SchoolCurriculum.values,
+          _curriculum,
+          (value) => setState(() => _curriculum = value),
+          (value) => value.label,
+          (value) => QaTestKeys.schoolDiscoveryCurriculumOption(
+            value.storageKey,
+          ),
+        ),
+      2 => Column(
+          children: [
+            _capabilitySwitch(
+              'Transport',
+              _capabilities.transport,
+              (value) => setState(
+                () => _capabilities = _capabilities.copyWith(transport: value),
+              ),
+              QaTestKeys.schoolDiscoveryCapabilityTransport,
+            ),
+            _capabilitySwitch(
+              'Hostel',
+              _capabilities.hostel,
+              (value) => setState(
+                () => _capabilities = _capabilities.copyWith(hostel: value),
+              ),
+              QaTestKeys.schoolDiscoveryCapabilityHostel,
+            ),
+            _capabilitySwitch(
+              'Library',
+              _capabilities.library,
+              (value) => setState(
+                () => _capabilities = _capabilities.copyWith(library: value),
+              ),
+              QaTestKeys.schoolDiscoveryCapabilityLibrary,
+            ),
+            _capabilitySwitch(
+              'Inventory',
+              _capabilities.inventory,
+              (value) => setState(
+                () => _capabilities = _capabilities.copyWith(inventory: value),
+              ),
+              QaTestKeys.schoolDiscoveryCapabilityInventory,
+            ),
+            _capabilitySwitch(
+              'Alumni',
+              _capabilities.alumni,
+              (value) => setState(
+                () => _capabilities = _capabilities.copyWith(alumni: value),
+              ),
+              QaTestKeys.schoolDiscoveryCapabilityAlumni,
+            ),
+            _capabilitySwitch(
+              'HR Payroll',
+              _capabilities.hrPayroll,
+              (value) => setState(
+                () => _capabilities = _capabilities.copyWith(hrPayroll: value),
+              ),
+              QaTestKeys.schoolDiscoveryCapabilityHrPayroll,
+            ),
+            _capabilitySwitch(
+              'Multi-Branch',
+              _capabilities.multiBranch,
+              (value) => setState(
+                () =>
+                    _capabilities = _capabilities.copyWith(multiBranch: value),
+              ),
+              QaTestKeys.schoolDiscoveryCapabilityMultiBranch,
+            ),
+            _capabilitySwitch(
+              'Trust / Organization',
+              _capabilities.trustOrganization,
+              (value) => setState(
+                () => _capabilities = _capabilities.copyWith(
+                  trustOrganization: value,
+                ),
+              ),
+              QaTestKeys.schoolDiscoveryCapabilityTrust,
+            ),
+          ],
+        ),
+      3 => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _choiceColumn(
+              SchoolOperationsModel.values,
+              _operationsModel,
+              (value) => setState(() => _operationsModel = value),
               (value) => value.label,
-              (value) => QaTestKeys.schoolDiscoveryCurriculumOption(
+              (value) => QaTestKeys.schoolDiscoveryOperationsOption(
                 value.storageKey,
               ),
             ),
-          ),
-          Step(
-            title: const Text('Capabilities'),
-            isActive: _step >= 2,
-            content: Column(
-              children: [
-                _capabilitySwitch(
-                  'Transport',
-                  _capabilities.transport,
-                  (value) => setState(
-                    () =>
-                        _capabilities = _capabilities.copyWith(transport: value),
-                  ),
-                  QaTestKeys.schoolDiscoveryCapabilityTransport,
-                ),
-                _capabilitySwitch(
-                  'Hostel',
-                  _capabilities.hostel,
-                  (value) => setState(
-                    () => _capabilities = _capabilities.copyWith(hostel: value),
-                  ),
-                  QaTestKeys.schoolDiscoveryCapabilityHostel,
-                ),
-                _capabilitySwitch(
-                  'Library',
-                  _capabilities.library,
-                  (value) => setState(
-                    () => _capabilities = _capabilities.copyWith(library: value),
-                  ),
-                  QaTestKeys.schoolDiscoveryCapabilityLibrary,
-                ),
-                _capabilitySwitch(
-                  'Inventory',
-                  _capabilities.inventory,
-                  (value) => setState(
-                    () =>
-                        _capabilities = _capabilities.copyWith(inventory: value),
-                  ),
-                  QaTestKeys.schoolDiscoveryCapabilityInventory,
-                ),
-                _capabilitySwitch(
-                  'Alumni',
-                  _capabilities.alumni,
-                  (value) => setState(
-                    () => _capabilities = _capabilities.copyWith(alumni: value),
-                  ),
-                  QaTestKeys.schoolDiscoveryCapabilityAlumni,
-                ),
-                _capabilitySwitch(
-                  'HR Payroll',
-                  _capabilities.hrPayroll,
-                  (value) => setState(
-                    () =>
-                        _capabilities = _capabilities.copyWith(hrPayroll: value),
-                  ),
-                  QaTestKeys.schoolDiscoveryCapabilityHrPayroll,
-                ),
-                _capabilitySwitch(
-                  'Multi-Branch',
-                  _capabilities.multiBranch,
-                  (value) => setState(
-                    () => _capabilities =
-                        _capabilities.copyWith(multiBranch: value),
-                  ),
-                  QaTestKeys.schoolDiscoveryCapabilityMultiBranch,
-                ),
-                _capabilitySwitch(
-                  'Trust / Organization',
-                  _capabilities.trustOrganization,
-                  (value) => setState(
-                    () => _capabilities = _capabilities.copyWith(
-                      trustOrganization: value,
-                    ),
-                  ),
-                  QaTestKeys.schoolDiscoveryCapabilityTrust,
-                ),
-              ],
+            const SizedBox(height: AksharaSpacing.s4),
+            Text('Branch count: $_branchCount'),
+            Slider(
+              key: QaTestKeys.schoolDiscoveryBranchCountSlider,
+              value: _branchCount.toDouble(),
+              min: 1,
+              max: 20,
+              divisions: 19,
+              label: '$_branchCount',
+              onChanged: (value) =>
+                  setState(() => _branchCount = value.round()),
             ),
-          ),
-          Step(
-            title: const Text('Operations model'),
-            isActive: _step >= 3,
-            content: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _choiceColumn(
-                  SchoolOperationsModel.values,
-                  _operationsModel,
-                  (value) => setState(() => _operationsModel = value),
-                  (value) => value.label,
-                  (value) => QaTestKeys.schoolDiscoveryOperationsOption(
-                    value.storageKey,
-                  ),
-                ),
-                const SizedBox(height: AksharaSpacing.s4),
-                Text('Branch count: $_branchCount'),
-                Slider(
-                  key: QaTestKeys.schoolDiscoveryBranchCountSlider,
-                  value: _branchCount.toDouble(),
-                  min: 1,
-                  max: 20,
-                  divisions: 19,
-                  label: '$_branchCount',
-                  onChanged: (value) =>
-                      setState(() => _branchCount = value.round()),
-                ),
-              ],
+          ],
+        ),
+      _ => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('School type: ${_schoolType.label}'),
+            Text('Curriculum: ${_curriculum.label}'),
+            Text('Operations: ${_operationsModel.label}'),
+            Text('Branches: $_branchCount'),
+            const SizedBox(height: AksharaSpacing.s3),
+            Text(
+              'Enabled modules: ${SchoolCapabilityRegistry.enabledModuleIds(_capabilities).join(', ')}',
             ),
-          ),
-          Step(
-            title: const Text('Review'),
-            isActive: _step >= 4,
-            content: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('School type: ${_schoolType.label}'),
-                Text('Curriculum: ${_curriculum.label}'),
-                Text('Operations: ${_operationsModel.label}'),
-                Text('Branches: $_branchCount'),
-                const SizedBox(height: AksharaSpacing.s3),
-                Text(
-                  'Enabled modules: ${SchoolCapabilityRegistry.enabledModuleIds(_capabilities).join(', ')}',
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+    };
   }
 
   Widget _choiceColumn<T>(

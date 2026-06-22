@@ -19,4 +19,11 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
   Consolidation → Navigation Simplification → Mobile UX Modernization → Screen
   Consolidation. Full spec: [docs/FUTURE_VISION_AI_SCHOOL_BUILDER.md](docs/FUTURE_VISION_AI_SCHOOL_BUILDER.md)
 
+- [ ] (2026-06-20) **Notifications, posters & holiday calendar.** Three gaps found in
+  audit: (1) real push notifications — backend ready but phone app not connected to
+  Firebase; (2) principal broadcasts are text-only, need poster/greeting image support;
+  (3) no holiday calendar — principal can't mark a date as holiday/festival or notify
+  everyone. Suggested order: push → posters → holiday calendar. Full plan:
+  [docs/NOTIFICATIONS_POSTERS_HOLIDAYS_PLAN.md](docs/NOTIFICATIONS_POSTERS_HOLIDAYS_PLAN.md)
+
 ## Done

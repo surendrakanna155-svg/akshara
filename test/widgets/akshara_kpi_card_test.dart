@@ -62,6 +62,63 @@ void main() {
       expect(find.byIcon(Icons.trending_up_rounded), findsNothing);
     });
 
+    testWidgets('strip height grows with text scale (no clip at 1.5x)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AksharaAppTheme.light(),
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
+            child: const Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 200,
+                  child: AksharaKpiCard(
+                    value: '94%',
+                    subtitle: 'Attendance',
+                    accent: KpiAccent.success,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // No overflow exception was thrown during layout/paint.
+      expect(tester.takeException(), isNull);
+      // The strip card grew past its 88px base to make room for the larger text.
+      expect(
+        tester.getSize(find.byType(AksharaKpiCard)).height,
+        greaterThan(88),
+      );
+    });
+
+    testWidgets('strip height stays 88 at default text scale', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AksharaAppTheme.light(),
+          home: const Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 200,
+                child: AksharaKpiCard(
+                  value: '94%',
+                  subtitle: 'Attendance',
+                  accent: KpiAccent.success,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // 88px inner SizedBox + 1px border each side. The point: unchanged at
+      // the default scale, so no golden churn.
+      expect(tester.getSize(find.byType(AksharaKpiCard)).height, 90);
+    });
+
     test('AksharaKpiPresentation classifies trend strings', () {
       expect(
         AksharaKpiPresentation.isTrendDetail('+9% vs last month'),

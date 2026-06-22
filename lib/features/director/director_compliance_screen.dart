@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
+import '../admin/admin_layout.dart';
 import '../copilot/copilot_context_provider.dart';
 import 'director_models.dart';
 import 'director_mutations_provider.dart';
@@ -38,6 +41,25 @@ class DirectorComplianceScreen extends ConsumerWidget {
                 message: 'No compliance actions pending.',
               );
             }
+            // Phones + portrait tablets collapse the 7-column table into stacked
+            // cards; landscape/desktop keep the data table. Both paths share the
+            // same acknowledge action so the QA key + snackbar are identical.
+            if (AdminLayout.useCardLayout(context)) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final item in items) ...[
+                    _ComplianceCard(
+                      item: item,
+                      canManage: canManage,
+                      onAcknowledge: () => _acknowledge(context, ref, item),
+                    ),
+                    const SizedBox(height: AksharaSpacing.s3),
+                  ],
+                ],
+              );
+            }
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -86,26 +108,86 @@ class DirectorComplianceScreen extends ConsumerWidget {
               ? const Icon(Icons.check_circle, color: Colors.green)
               : TextButton(
                   key: QaTestKeys.directorComplianceAcknowledgeButton(item.id),
-                  onPressed: canManage
-                      ? () async {
-                          await ref
-                              .read(directorMutationsProvider.notifier)
-                              .acknowledgeCompliance(complianceId: item.id);
-                          ref.invalidate(directorComplianceProvider);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              key: QaTestKeys
-                                  .directorComplianceAcknowledgedSnackbar,
-                              content: Text('Compliance item acknowledged.'),
-                            ),
-                          );
-                        }
-                      : null,
+                  onPressed:
+                      canManage ? () => _acknowledge(context, ref, item) : null,
                   child: const Text('Acknowledge'),
                 ),
         ),
       ],
+    );
+  }
+
+  Future<void> _acknowledge(
+    BuildContext context,
+    WidgetRef ref,
+    DirectorComplianceItem item,
+  ) async {
+    await ref
+        .read(directorMutationsProvider.notifier)
+        .acknowledgeCompliance(complianceId: item.id);
+    ref.invalidate(directorComplianceProvider);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        key: QaTestKeys.directorComplianceAcknowledgedSnackbar,
+        content: Text('Compliance item acknowledged.'),
+      ),
+    );
+  }
+}
+
+class _ComplianceCard extends StatelessWidget {
+  const _ComplianceCard({
+    required this.item,
+    required this.canManage,
+    required this.onAcknowledge,
+  });
+
+  final DirectorComplianceItem item;
+  final bool canManage;
+  final VoidCallback onAcknowledge;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    final due = item.dueDate.toIso8601String().split('T').first;
+    return Semantics(
+      label: 'Compliance ${item.requirement} for ${item.schoolName}',
+      child: Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(item.schoolName, style: text.titleSmall),
+                  ),
+                  DirectorComplianceStatusChip(status: item.status),
+                ],
+              ),
+              const SizedBox(height: AksharaSpacing.s1),
+              Text('${item.category} · ${item.requirement}',
+                  style: text.bodySmall),
+              Text('Due $due · Owner ${item.owner}', style: text.bodySmall),
+              const SizedBox(height: AksharaSpacing.s2),
+              Align(
+                alignment: Alignment.centerRight,
+                child: item.acknowledged
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : TextButton(
+                        key: QaTestKeys.directorComplianceAcknowledgeButton(
+                            item.id),
+                        onPressed: canManage ? onAcknowledge : null,
+                        child: const Text('Acknowledge'),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

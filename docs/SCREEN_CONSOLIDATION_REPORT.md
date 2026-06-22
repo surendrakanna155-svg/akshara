@@ -98,7 +98,7 @@ Each recommendation lists: **Benefit · Risk · Complexity · Suggested replacem
 | Shelve SaaS/org tier | ~6 | ~30 | Med | 🟠 Owner decision |
 | Merge academic→academics | 2→1 | 3 | Low | 🟢 Quick win |
 | Merge inventory_distribution | 2→1 | 2 | Low | 🟢 Quick win |
-| Merge intelligence hubs | 4→1 | ~7 | Med | 🟡 |
+| Merge intelligence hubs | 4→1 | ~7 | Med | ✅ DONE (Batch 5c) |
 | Merge org/tenant tier | 7→1 | ~30 | High | 🟡 |
 | Merge AI surface | 3→1 | ~5 | Low–Med | 🟡 |
 | Fix dead-action buttons | many | ~28 | Low | 🟢 Quick win |

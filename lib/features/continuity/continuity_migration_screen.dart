@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/forms/forms.dart';
 import '../../theme/spacing.dart';
 import '../sis/sis_models.dart';
 import '../sis/widgets/sis_module_scaffold.dart';
@@ -14,6 +15,13 @@ class ContinuityMigrationScreen extends ConsumerStatefulWidget {
   ConsumerState<ContinuityMigrationScreen> createState() =>
       _ContinuityMigrationScreenState();
 }
+
+/// (label, helper) for each migration step, used by the shared step indicator.
+const _continuitySteps = <(String, String)>[
+  ('Scope', 'Teacher, timetable, parent communication'),
+  ('Preview', 'Validate impact before executing'),
+  ('Execute', 'Apply migration and audit trail'),
+];
 
 class _ContinuityMigrationScreenState
     extends ConsumerState<ContinuityMigrationScreen> {
@@ -38,23 +46,14 @@ class _ContinuityMigrationScreenState
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: AksharaSpacing.s3),
-              Stepper(
-                currentStep: _step,
-                controlsBuilder: (_, __) => const SizedBox.shrink(),
-                steps: const [
-                  Step(
-                    title: Text('Scope'),
-                    content: Text('Teacher, timetable, parent communication'),
-                  ),
-                  Step(
-                    title: Text('Preview'),
-                    content: Text('Validate impact before executing'),
-                  ),
-                  Step(
-                    title: Text('Execute'),
-                    content: Text('Apply migration and audit trail'),
-                  ),
-                ],
+              AksharaStepIndicator(
+                stepLabels: [for (final s in _continuitySteps) s.$1],
+                currentIndex: _step,
+              ),
+              const SizedBox(height: AksharaSpacing.s2),
+              Text(
+                _continuitySteps[_step].$2,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: AksharaSpacing.s2),
               if (preview.valueOrNull != null)

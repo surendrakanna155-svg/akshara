@@ -152,7 +152,7 @@ class HrLeaveScreen extends ConsumerWidget {
           actionLabel: 'View settings',
           icon: Icons.approval_outlined,
           semanticLabelPrefix: 'Leave workflow integration',
-          onAction: () {},
+          onAction: null,
         ),
       ],
     );
@@ -256,7 +256,7 @@ class _LeaveTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final request in requests) ...[

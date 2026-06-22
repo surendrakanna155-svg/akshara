@@ -136,6 +136,19 @@ class _ManagementSettingsScreenState
             onTap: () => context.push(RouteNames.aiAssistantSettings),
           ),
         ),
+        const SizedBox(height: AksharaSpacing.s6),
+        const AksharaSectionHeader(title: 'Appearance'),
+        Card(
+          elevation: 0,
+          child: ListTile(
+            key: QaTestKeys.appearanceSettingsLink,
+            leading: const Icon(Icons.brightness_6_outlined),
+            title: const Text('Appearance'),
+            subtitle: const Text('Light, dark, or match your device'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push(RouteNames.appearanceSettings),
+          ),
+        ),
       ],
     );
   }

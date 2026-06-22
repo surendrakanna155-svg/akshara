@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/academics/timetable/timetable_hub_screen.dart';
 import '../features/management/attendance/attendance_corrections_admin_screen.dart';
-import '../features/management/intelligence/intelligence_hub_screen.dart';
+import '../features/intelligence/management/intelligence_hub_screen.dart';
 import '../features/management/academics/management_academics_screen.dart';
 import '../features/management/admissions/management_admissions_screen.dart';
 import '../features/management/analytics/management_analytics_screen.dart';

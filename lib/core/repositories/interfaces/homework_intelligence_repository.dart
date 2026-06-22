@@ -1,4 +1,4 @@
-import '../../../features/homework_intelligence/homework_intelligence_models.dart';
+import '../../../features/intelligence/homework/homework_intelligence_models.dart';
 import '../repository_query.dart';
 
 abstract class HomeworkIntelligenceRepository {

@@ -6,7 +6,9 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
+import '../admin/admin_layout.dart';
 import '../copilot/copilot_context_provider.dart';
+import 'director_models.dart';
 import 'director_mutations_provider.dart';
 import 'director_navigation.dart';
 import 'director_providers.dart';
@@ -50,30 +52,31 @@ class _DirectorReportsScreenState extends ConsumerState<DirectorReportsScreen> {
             children: [
               const AksharaSectionHeader(title: 'Strategic report catalog'),
               const SizedBox(height: AksharaSpacing.s3),
-              Wrap(
-                spacing: AksharaSpacing.s3,
-                runSpacing: AksharaSpacing.s3,
-                children: [
-                  for (final report in reports)
-                    SizedBox(
-                      width: 360,
-                      child: Card(
-                        child: ListTile(
-                          title: Text(report.title),
-                          subtitle: Text(report.description),
-                          trailing: TextButton(
-                            key: QaTestKeys.directorReportExportButton(
-                                report.id),
-                            onPressed: canManage
-                                ? () => _exportReport(context, report.id)
-                                : null,
-                            child: const Text('Export'),
-                          ),
-                        ),
+              // Phones stretch each report card full-width (the fixed 360 width
+              // overflows the ~358px phone content column); tablet/desktop keep
+              // the wrapped grid.
+              if (AdminLayout.useCardLayout(context))
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final report in reports) ...[
+                      _reportCard(context, report, canManage),
+                      const SizedBox(height: AksharaSpacing.s3),
+                    ],
+                  ],
+                )
+              else
+                Wrap(
+                  spacing: AksharaSpacing.s3,
+                  runSpacing: AksharaSpacing.s3,
+                  children: [
+                    for (final report in reports)
+                      SizedBox(
+                        width: 360,
+                        child: _reportCard(context, report, canManage),
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
               const SizedBox(height: AksharaSpacing.s5),
               Row(
                 children: [
@@ -98,6 +101,24 @@ class _DirectorReportsScreenState extends ConsumerState<DirectorReportsScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _reportCard(
+    BuildContext context,
+    DirectorReportItem report,
+    bool canManage,
+  ) {
+    return Card(
+      child: ListTile(
+        title: Text(report.title),
+        subtitle: Text(report.description),
+        trailing: TextButton(
+          key: QaTestKeys.directorReportExportButton(report.id),
+          onPressed: canManage ? () => _exportReport(context, report.id) : null,
+          child: const Text('Export'),
         ),
       ),
     );

@@ -65,7 +65,7 @@ class FinanceOfflinePaymentsScreen extends ConsumerWidget {
                 children: [
                   const AksharaSectionHeader(title: 'Offline payment records'),
                   const SizedBox(height: AksharaSpacing.s3),
-                  if (AdminLayout.isMobile(context))
+                  if (AdminLayout.useCardLayout(context))
                     Column(
                       children: [
                         for (final payment in payments) ...[

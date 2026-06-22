@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
+import '../admin/admin_layout.dart';
 import '../copilot/copilot_context_provider.dart';
 import 'director_models.dart';
 import 'director_navigation.dart';
@@ -50,6 +51,9 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Phones stretch each health card full-width in a column; tablet/desktop
+    // keep the fixed-width wrapped grid.
+    final isMobile = AdminLayout.isMobile(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -57,45 +61,66 @@ class _DashboardBody extends StatelessWidget {
         const SizedBox(height: AksharaSpacing.s5),
         const AksharaSectionHeader(title: 'School portfolio health'),
         const SizedBox(height: AksharaSpacing.s3),
-        Wrap(
-          spacing: AksharaSpacing.s3,
-          runSpacing: AksharaSpacing.s3,
-          children: [
-            for (final school in data.schoolRows)
-              SizedBox(
-                width: 320,
-                child: Card(
-                  elevation: 1,
-                  margin: EdgeInsets.zero,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AksharaSpacing.s4,
-                      vertical: AksharaSpacing.s2,
-                    ),
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(
-                        Icons.school_outlined,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                    title: Text(
-                      school.schoolName,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    subtitle: Text(
-                      '${school.location} · ${school.students} students · ${school.revenueCr} Cr',
-                    ),
-                    trailing: DirectorSchoolStatusChip(status: school.status),
-                  ),
+        if (isMobile)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final school in data.schoolRows) ...[
+                _SchoolHealthCard(school: school),
+                const SizedBox(height: AksharaSpacing.s3),
+              ],
+            ],
+          )
+        else
+          Wrap(
+            spacing: AksharaSpacing.s3,
+            runSpacing: AksharaSpacing.s3,
+            children: [
+              for (final school in data.schoolRows)
+                SizedBox(
+                  width: 320,
+                  child: _SchoolHealthCard(school: school),
                 ),
-              ),
-          ],
-        ),
+            ],
+          ),
         const SizedBox(height: AksharaSpacing.s5),
         DirectorExecutiveSummaryCard(summary: data.executiveSummary),
       ],
+    );
+  }
+}
+
+class _SchoolHealthCard extends StatelessWidget {
+  const _SchoolHealthCard({required this.school});
+
+  final DirectorSchoolRow school;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 1,
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AksharaSpacing.s4,
+          vertical: AksharaSpacing.s2,
+        ),
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          child: Icon(
+            Icons.school_outlined,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+          ),
+        ),
+        title: Text(
+          school.schoolName,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        subtitle: Text(
+          '${school.location} · ${school.students} students · ${school.revenueCr} Cr',
+        ),
+        trailing: DirectorSchoolStatusChip(status: school.status),
+      ),
     );
   }
 }

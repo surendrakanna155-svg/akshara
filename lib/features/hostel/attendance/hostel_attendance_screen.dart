@@ -90,7 +90,7 @@ class HostelAttendanceScreen extends ConsumerWidget {
             message:
                 '${missing.length} student(s) missing — parent notification sent via Parent App',
             actionLabel: 'Notify parents',
-            onAction: () {},
+            onAction: null,
           ),
         if (missing.isNotEmpty) const SizedBox(height: AksharaSpacing.s4),
         const AksharaSectionHeader(title: 'Hostel attendance roster'),
@@ -118,7 +118,7 @@ class _AttendanceTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AdminLayout.isMobile(context)) {
+    if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
           for (final record in records) ...[

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/widgets.dart';
+import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
+import '../admin/admin_layout.dart';
 import '../copilot/copilot_context_provider.dart';
 import 'director_models.dart';
 import 'director_navigation.dart';
@@ -50,6 +53,19 @@ class _SchoolsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Phones + portrait tablets collapse the 8-column table into stacked cards
+    // (B.4e card-fallback target); landscape/desktop keep the data table.
+    if (AdminLayout.useCardLayout(context)) {
+      return Column(
+        children: [
+          for (final school in schools) ...[
+            _SchoolCard(school: school),
+            const SizedBox(height: AksharaSpacing.s3),
+          ],
+        ],
+      );
+    }
+
     return AksharaVirtualizedDataTable(
       columns: const [
         DataColumn(label: Text('School')),
@@ -77,6 +93,54 @@ class _SchoolsTable extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _SchoolCard extends StatelessWidget {
+  const _SchoolCard({required this.school});
+
+  final DirectorSchoolRow school;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    return Semantics(
+      label: 'School ${school.schoolName}, ${school.location}',
+      child: Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(school.schoolName, style: text.titleSmall),
+                  ),
+                  DirectorSchoolStatusChip(status: school.status),
+                ],
+              ),
+              const SizedBox(height: AksharaSpacing.s1),
+              Text(
+                '${school.location} · ${school.students} students',
+                style: text.bodySmall,
+              ),
+              Text(
+                'Revenue ${school.revenueCr.toStringAsFixed(1)} Cr · '
+                'Admissions QTD ${school.admissionsQtd}',
+                style: text.bodySmall,
+              ),
+              Text(
+                'Fee collection ${school.feeCollectionPercent}% · '
+                'Health ${school.healthScore}',
+                style: text.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

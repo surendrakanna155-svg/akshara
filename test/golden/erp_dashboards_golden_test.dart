@@ -4,7 +4,7 @@ library;
 import 'package:akshara_erp/features/finance/dashboard/finance_dashboard_screen.dart';
 import 'package:akshara_erp/features/inventory/dashboard/inventory_dashboard_screen.dart';
 import 'package:akshara_erp/features/management/dashboard/management_dashboard_screen.dart';
-import 'package:akshara_erp/features/management/intelligence/intelligence_hub_screen.dart';
+import 'package:akshara_erp/features/intelligence/management/intelligence_hub_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

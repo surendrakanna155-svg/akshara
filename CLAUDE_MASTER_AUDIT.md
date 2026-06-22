@@ -19,6 +19,480 @@ Legend: ✅ done & certified · 🟡 in progress · ⬜ not started
 > 3 Mobile-first · 4 Dashboard modernization · 5 Screen consolidation.
 > Per batch: Audit → Plan → Implement → Test → Certify → update this file.
 
+## 🎨 VISUAL DESIGN SYSTEM — APPROVED DIRECTION (2026-06-20)
+Owner reviewed the live app (real-font renders) and judged it "generic ERP/
+government portal." Decision: adopt a **"Premium School OS"** visual system —
+Akshara must feel like a premium modern product, not a traditional ERP. Full spec:
+**`docs/design/VISUAL_DESIGN_SYSTEM.md`**; owner-approved concept renders:
+`docs/design/mockups/parent_home_light.png` + `parent_home_dark.png`.
+- **Theme decision:** **Premium Light = default**, **Dark Premium = mode toggle**
+  (build light first, dark after).
+- **Core language:** soft gradient canvas · white/dark cards w/ hairline border +
+  soft indigo-tinted shadow · indigo→violet brand gradient · status-only color ·
+  **subtle monoline line-art illustrations (5–15% opacity)** per module ·
+  greeting-hero dashboards · AI suggestion bar + center docked AI action ·
+  illustrated empty states · branded workspace landings. Token-driven so the
+  future **AI School Builder** can emit per-school themes (color + motif pack +
+  workspace set; light/dark per user).
+- **Status:** Rollout = Phase A (tokens in `lib/theme/` light-first + shared
+  primitives + Parent-home reference screen, certified) → Phase B (dashboards/
+  workspaces; folds in Batch 3b mobile work + Batch 4 modernization) → Phase C
+  (dark toggle). This system governs Batch 4 Dashboard modernization and informs
+  the paused Batch 3b sweep.
+
+### ✅ Phase A — Foundation + Parent-home reference = DONE & CERTIFIED (2026-06-20)
+Built the reusable premium layer and applied it to **Parent Home only** (the
+visual benchmark for the platform); no other screen touched.
+- **Tokens:** `lib/theme/premium_tokens.dart` — `AksharaPremiumTokens`
+  ThemeExtension (brand indigo→violet gradient, hero/AI/canvas gradients, soft +
+  lifted tinted shadows, premium surface/border, line-art stroke/opacity) for
+  **light + dark**, registered in `app_theme.dart`; `context.premium` accessor.
+  `withBrand()` is the AI-School-Builder per-school theming hook.
+- **Primitives** (`lib/shared/widgets/premium/`, barrel-exported):
+  `AksharaLineArt` + `AksharaMotif` (9 monoline motifs — cap/book/chart/growth/
+  bus/bookshelf/campus/message/nodes/spark), `AksharaPremiumBackground` (soft
+  gradient canvas + faint motif), `AksharaGradientHero` (greeting hero + pills +
+  motif), `AksharaPremiumKpiCard`, `AksharaAiSuggestionBar`,
+  `AksharaPremiumEmptyState`, `AksharaWorkspaceLanding`, `AksharaMountFade`.
+- **Parent Home** rewired to the premium look: gradient hero, premium KPI row,
+  premium academic card with gradient progress bar, AI suggestion bar, soft
+  canvas. QA keys preserved. Live render verified (real fonts) — premium, not
+  ERP/portal. (Entrance `AksharaMountFade` kept in the library but not wired onto
+  Parent Home yet — golden/test-timing safety; revisit in Phase B.)
+- **AI School Builder / school-type compatibility (design-only, verified):**
+  every premium component is data-driven (KPI/hero/workspace stats + motif passed
+  in) and the brand is overridable via `withBrand()`, so the builder can emit
+  per-school-type dashboards/KPIs/workspaces (IIT/NEET Foundation, Residential,
+  Semi-Residential, Corporate, Small, Day) with **no structural change**. Not
+  built — only enabled. (`docs/FUTURE_VISION_AI_SCHOOL_BUILDER.md` §1–4.)
+- **Certified:** `flutter analyze` **0 errors** (new code clean; only pre-existing
+  warnings in workspace_switcher/glass remain); parent goldens regenerated; full
+  Flutter suite **2157 pass** (1 staging-only skip). Bugs caught & fixed in
+  certification: a Stack-collapse + an infinite-height (unbounded Stack) + three
+  text-overflow cases (hero pills, KPI row, academic header) surfaced only at 2×
+  text scale / long-data stress.
+- **STOP per owner:** Parent Home is the approved reference; do NOT roll to other
+  screens until owner reviews the live Parent Home. **(Owner approved 2026-06-20 →
+  Phase B rollout underway.)**
+
+### 🟡 Phase B — Platform rollout (IN PROGRESS)
+- **B.1 — Consumer dashboards = DONE & CERTIFIED.** Teacher + Student dashboards
+  rewired to the premium look (gradient canvas + `AksharaGradientHero` + premium
+  AI bar; teacher motif=book, student motif=growth). Robustness fixes: AI bar
+  action button made `Flexible` (overflow at narrow/tablet + long data). Full
+  suite **2157 pass**; consumer goldens regenerated.
+- **B.2 — App-wide AI surface = DONE & CERTIFIED.** Instead of swapping 57 call
+  sites, **retrofitted `AksharaInsightCard` to render the premium
+  `AksharaAiSuggestionBar`** — every AI insight across the app (finance, HR,
+  library, hostel, transport, inventory, management, director, alumni, SIS,
+  admissions, parent/student/teacher sub-screens…) now shows the consistent
+  brand-gradient AI bar with **zero call-site churn**. All premium widgets made
+  defensive (`premiumOrNull ?? light()`) so bare-theme tests don't crash. Admin
+  dashboards keep their breadcrumb chrome (correct for a web ERP — gradient heros
+  are for consumer greeting screens only). Full suite **2157 pass**; all goldens
+  regenerated.
+- **B.3 — Workspace landing pages = DONE & CERTIFIED.** Wired the prebuilt
+  `AksharaWorkspaceLanding` hero into the admin hub
+  (`admin_hub_screen.dart`): brand-gradient banner with workspace name +
+  line-art motif + 2–3 curated headline stats, above the module grid. Per-
+  workspace config (motif + eyebrow + stats) lives in
+  `lib/features/admin/workspace_landing_config.dart` — curated demo figures for
+  all 7 staff workspaces (Administration, Finance, Front Office, Inventory,
+  Transport, Hostel, Library); name-only fallback for any without a config.
+  Fixed a latent overflow in the shared primitive (stats `Row`→`Wrap`, so it
+  reflows on phones instead of overflowing). Full suite **2157 pass**, analyze
+  0 err; only the `workspace_switcher` golden regenerated.
+- **B.4 — Fold in paused Batch 3b mobile sweep = DONE & CERTIFIED (all 5 sub-batches).**
+  Decisions: table sweep done in one pass (all ~67 widgets isMobile→useCardLayout
+  + 9 unguarded tables get card fallback); shared wizard = build primitive +
+  adopt one flow (migrate the other 6 later). Order: a) AI notch, b) bottom-sheet
+  filters, c) Director responsive, d) shared wizard primitive, e) table sweep.
+  - **B.4a — AI-center notch in admin/staff mobile nav = DONE & CERTIFIED.** The
+    persona shells already floated the `CopilotBottomNavAiSlot`; the admin shell's
+    `AdminBottomNav` did not. Wrapped its `NavigationBar` in the same
+    `Stack(clipBehavior: Clip.none)` + slot, so staff get the raised center AI
+    button (self-gates on AI-access pref + mobile breakpoint; routes staff to the
+    full ERP copilot). Full suite **2157 pass**, analyze 0 err, no golden churn
+    (slot gated off in default golden state).
+  - **B.4b — Bottom-sheet filters = DONE & CERTIFIED.** `AdminFilterBar` (rendered
+    centrally by `AdminContentScaffold`, so one fix covers every module using
+    `showFilterBar`) now branches on `AdminLayout.isMobile`: tablet/desktop keep the
+    inline chip strip (extracted verbatim to `_InlineChips`); phones collapse to a
+    compact "Filters" pill (`_MobileTrigger`) showing the active filter, which opens
+    a drag-handle `showModalBottomSheet` (`_FilterSheet`) with options stacked +
+    check on the active one. Same `filters`/`selectedIndex`/`onFilterSelected`
+    contract — zero caller changes. Added 3 qa keys + `admin_filter_bar_test.dart`
+    (3 cases: desktop inline, phone trigger, sheet-select fires callback). Certified:
+    analyze 0 err, full suite **2160 pass** (+3 new). Golden delta = the **8 mobile
+    filter-bar goldens** only (390/428 for approval_center, finance/management/
+    inventory dashboards) — proven isolated: the pre-regen run mismatched only those
+    8; 834/desktop goldens were untouched (isMobile gate). Regenerated just the 2
+    affected test files.
+  - **B.4c — Director portal responsive = DONE & CERTIFIED.** Fixed every phone
+    breakage in `lib/features/director/`: (1) **content-card Wraps** now stretch
+    full-width on phones (gate `AdminLayout.isMobile`, portrait tablets keep the
+    grid) — `DirectorKpiRow` (was 240×140 floating tiles), dashboard school cards
+    (320), and reports cards (**360 → overflowed the ~358px phone column**, now
+    full-width via extracted `_reportCard`). (2) **3 unguarded DataTables** get a
+    card fallback (gate `AdminLayout.useCardLayout` = phones **+** portrait tablets,
+    the B.4e end-state so no double-touch): `_SchoolCard` (schools, 8 cols),
+    `_RevenueCard` (revenue, 5 cols), `_ComplianceCard` (compliance, 7 cols — keeps
+    the Acknowledge button + its qa key + snackbar via a shared `_acknowledge`
+    handler used by both table row and card). (3) **Bonus fix surfaced by the phone
+    shot:** the filter-bar trailing `DirectorAiAssistantLink` (~200px labelled
+    button) overflowed the mobile filter bar by 24px next to the B.4b "Filters"
+    pill — now collapses to a compact `IconButton.filled` (label → tooltip) on
+    phones. Certified: analyze 0 err, full suite **2160 pass** / 1 skip / 0 fail
+    (2 finance tests flaked once under full-suite concurrency, pass in isolation +
+    on clean re-run — untouched by B.4c). No director golden coverage exists, so no
+    golden churn. Screenshots (schools + compliance @390) verified the card
+    fallbacks + non-overflowing AI icon.
+  - **B.4d — Shared multi-step wizard primitive = DONE & CERTIFIED.** Built two
+    shared primitives in `lib/shared/forms/` (barrel-exported): (1)
+    **`AksharaStepIndicator`** (`stepLabels` + `currentIndex`, no enum coupling) —
+    generalizes the old `AdmissionsEnrollmentStepIndicator`. **Responsive:**
+    tablet/desktop keep the full numbered-circles + connectors + labels row;
+    **phones** collapse to a compact `Step N of M` eyebrow + current-step title +
+    `Next: …` hint + a thin `LinearProgressIndicator` (the 4-label circle row is
+    too cramped at ~358px). (2) **`AksharaMultiStepForm`** — the wizard chrome
+    every flow repeats: optional `Form(formKey, autovalidateMode)` → scrollable
+    `[indicator + content]` in an `Expanded` → `Divider` → footer
+    `Row(leading? · Spacer · trailing)`. Host keeps state/validation/scroll.
+    **Adopted in admissions enrollment ONLY** (B.4d scope): rewired
+    `admissions_enrollment_screen.dart` onto `AksharaMultiStepForm` (passes
+    `EnrollmentStep` labels + index, the `_formKey`/`_scrollController`, Back as
+    `leading`, Continue/Submit as `trailing` via `_buildPrimaryAction`); deleted
+    the superseded `admissions_enrollment_step_indicator.dart` (nothing else
+    referenced it) + dropped the now-unused `spacing` import. Other 6 wizard flows
+    migrate later. Coverage: `akshara_step_indicator_test.dart` (desktop full row /
+    phone compact + progress value / last-step no-Next + full bar) +
+    `akshara_multi_step_form_test.dart` (indicator+content+trailing render,
+    leading optional, Form-wrap on/off). Certified: analyze 0 err, full suite
+    **2167 pass** / 1 staging skip / 0 fail (existing enrollment "renders wizard
+    steps" + "advances to parent step" tests stay green — behavior unchanged). No
+    enrollment golden coverage exists, so no golden churn. Screenshots @390 +
+    @1200 verified the compact mobile indicator vs the full desktop circle row.
+  - **B.4e — Tables→cards full sweep = DONE & CERTIFIED.** Two parts. **Part A
+    (66 files):** migrated every already-responsive table from the phone-only
+    `AdmissionsLayout.isMobile` gate to `AdminLayout.useCardLayout` (phones **+**
+    portrait tablets), so a dense table no longer overflows a portrait iPad. The
+    table gate was always the **direct** `if (AdminLayout.isMobile(context))`
+    (often inside a dedicated `_XxxTable` widget); the local-var
+    `final isMobile = …` is for charts/maps/grid-columns and was deliberately left
+    phone-only. Scoped perl swap of the guard form handled the direct sites; 4
+    files whose table is gated via a local var were fixed by hand
+    (finance defaulters/collection_detail/discounts → added/renamed a `useCards`
+    var, keeping `isMobile` for discounts' header-stacking; hostel/mess menu).
+    **Part B (6 unguarded tables):** added a card fallback to the tables that had
+    none — admissions reports (source/counselor/status), control-center platform
+    intelligence + org trust-intelligence (school comparison), finance
+    reconciliation (AP postings), and school-completion substitute-manager +
+    teacher-reassignment (row actions preserved: the Select button + its
+    `ValueKey`, and the reassignment Checkbox + key, moved into the card's
+    `trailing`). Built one shared **`AksharaKeyValueCard`**
+    (`lib/shared/widgets/`, barrel-exported): hairline-bordered card, title (string
+    or widget e.g. a status chip) + optional trailing action, then `label · value`
+    lines — used by all 6 so the fallbacks are consistent. **Why low churn:** the
+    swap only changes behavior at portrait-tablet width (at mobile width both flags
+    are already true; at desktop both false), so mobile/desktop goldens are
+    untouched. Golden delta = the **4 portrait-tablet (834×1194) goldens** that
+    legitimately flip to cards (finance/inventory/management dashboards +
+    approval_center); regenerated only those two test files. Certified: analyze
+    **0 err**, full suite **2167 pass** / 1 staging skip / 0 fail. Screenshots
+    verified the finance dashboard card fallback @834 + the shared card look.
+- **B.4 = COMPLETE** — all 5 sub-batches (a–e) done & certified.
+
+### ✅ Phase C — Dark-mode toggle = DONE & CERTIFIED (2026-06-22)
+Akshara now has a working Settings-only Light/Dark/System switch. Groundwork that
+already existed: `AksharaAppTheme.dark()` (M15 obsidian) + premium dark tokens
+(`AksharaPremiumTokens.dark()`); `app.dart` already passed `darkTheme:`, but
+`themeMode:` was **hardcoded `ThemeMode.light`** (now wired to the pref). All 4
+steps complete:
+- **C.1 — Theme-mode preference = DONE & CERTIFIED.** Built device-level (not
+  per-user) appearance persistence: `lib/theme/theme_mode_storage.dart`
+  (`ThemeModePreferenceStorage` — stable `light`/`dark`/`system` storage strings,
+  defaults Light) + `lib/theme/theme_mode_provider.dart` (`themeModeProvider`
+  Notifier + `themeModePreferenceStorageProvider`). Wired `app.dart` `themeMode:`
+  to `ref.watch(themeModeProvider)`. **Robustness vs the mirrored AI-access
+  pattern:** the storage provider reads SharedPreferences directly inside a
+  `try/StateError` (not `ref.exists`), because the theme is watched at the very
+  top of `MaterialApp` build — earlier than any other prefs consumer — so an
+  `exists` gate spuriously returned null on first launch. Bare widget tests
+  (no prefs override) still default to Light, so existing AksharaApp tests are
+  unaffected. Coverage: `test/theme/theme_mode_preference_test.dart` (7 — enum
+  round-trip, storage default/persist, provider initial-from-prefs + setThemeMode
+  persists). analyze 0 err.
+- **C.2 — Toggle UI = DONE & CERTIFIED. Owner decision: SETTINGS-ONLY** (no
+  app-bar quick toggle). Built `lib/features/settings/appearance_settings_screen.dart`
+  — a premium Light/Dark/System selector (selected card = primaryContainer +
+  check) wired to `themeModeProvider`; route `RouteNames.appearanceSettings`
+  (`/settings/appearance`) registered in `app_router.dart`. Guard: new
+  `_isSharedSettingsRoute` (persona-agnostic, authorized on authentication alone
+  like AI-assistant settings) added to `_isProtectedRoute` + `_canAccessRoute`;
+  NOT an admin ERP route, so the route-protection-inventory test is unaffected.
+  "Appearance" link added to **parent profile, student profile, and management
+  settings** (mirroring the AI Assistant link placement). QA keys
+  `appearanceSettingsLink` + `appearanceModeOption(mode)`. **Known gap:** teacher
+  persona has no dedicated profile/settings screen, so no link there yet (the
+  pref is device-global; revisit if a teacher profile is added). Coverage:
+  `test/features/settings/appearance_settings_screen_test.dart` (3). Certified:
+  analyze 0 err (only 2 pre-existing `prefer_const` infos on teacher
+  NoTransitionPage routes); affected suites (router, app startup, parent/student
+  profile, settings, theme) **148 pass**. Full-suite + dark renders deferred to C.4.
+- **C.3 — Dark-correctness sweep = DONE & CERTIFIED — NO FIXES NEEDED.** Expected
+  to be "the big/risky part", but the app was built theme-first so the literal
+  sweep came up essentially empty. Comprehensive grep across **all** of `lib`:
+  almost every `Color(0x…)` lives in the theme/token files (the source of truth,
+  with dark variants); the only feature-screen `Colors.white` (admissions chart
+  segment label) is text on a saturated colored bar — correct in both themes;
+  premium-widget whites (`akshara_ai_suggestion_bar`, `akshara_workspace_landing`)
+  are white-on-brand-gradient — correct; all `BoxShadow`s are theme-color-tinted
+  (primary/segment/foreground · alpha), not raw black; named colors
+  (green/red/orange/grey) are intentional status indicators; AppBar
+  `systemOverlayStyle` already switches on `scheme.brightness` so status-bar icons
+  adapt. **Verified by rendering, not just grep:** added `test/golden/
+  dark_mode_render_test.dart` (reuses the golden harness with a new `dark:` flag on
+  `pumpGoldenDashboard`/`pumpGoldenErpScreen`, default false = zero impact on
+  existing goldens) and visually inspected 6 dark renders — parent/student/teacher
+  dashboards (390), admin hub/workspace landing + finance dashboard (834), and the
+  new Appearance screen. All show dark canvas, preserved brand gradients + line-art,
+  readable status colors, **no white patches / no invisible text**.
+- **C.4 — Certify = DONE.** `flutter analyze` **0 errors** (36 warnings + 68 infos
+  all pre-existing in untouched files; none in any Phase-C file). Full Flutter
+  suite **2183 pass** / 1 staging-only skip / 0 fail (+16 vs prior 2167: 7
+  theme-mode + 3 appearance-screen + 6 dark-golden). The 6 dark renders are kept as
+  committed dark goldens (the "few dark goldens" C.4 called for), locking in
+  dark-correctness against future regressions.
+- **Note:** UX Batch 3b (mobile-first sweep) was **PAUSED** pending this visual
+  direction (F1 breakpoint helper + #7 KPI text-scale heights already landed &
+  green; #8/#5/#9/#10/#4 pending). With Phase C done, it can resume folded into the
+  visual rollout so screens are swept and restyled in one pass, not twice.
+
+### ✅ UX Batch 3b — Mobile-first carry-over = DONE & CERTIFIED (2026-06-22)
+On audit, the only carry-over still open was **#9 (shared multi-step wizard)** —
+B.4d built the `AksharaStepIndicator` + `AksharaMultiStepForm` primitives and
+adopted them in admissions enrollment only, leaving the *other wizard flows* to
+migrate later. (#4 AI slot, #5 Director responsive, #8 tablet tables, #10
+bottom-sheet filters, #7 card heights were all already done in 3a/B.4.) Found and
+migrated **8 remaining wizard flows** off bespoke chrome (mostly Flutter's raw
+`Stepper`, cramped/non-premium on phones) onto the shared responsive primitive:
+- **Full `AksharaMultiStepForm`** (true Back/Next forms, one active step + pinned
+  footer, bounded-height): `multi_school/school_onboarding_wizard_screen`,
+  `school_config/school_discovery_screen`, `evolution/setup_wizard_screen`
+  (dynamic steps), `organization_builder/organization_builder_interview_screen`
+  (7-step).
+- **`AksharaStepIndicator` only** (screens where the stepper was just a progress
+  display, or that live in an existing scroll body — swap the indicator, keep the
+  flow): `continuity/continuity_migration_screen`,
+  `school_completion/substitute_manager_screen` +
+  `teacher_reassignment_screen` (native `Stepper`→indicator + plain step blocks,
+  all qa keys/notify switches/assign buttons preserved),
+  `sis/academic_operations/sis_promotion_screen` (bare "Step 1–5" chips → named
+  responsive indicator), `onboarding/unified_onboarding_flow_screen` (9-step;
+  bare `LinearProgressIndicator` → indicator).
+- **Test fixes:** two `school_completion` tests used a bare `MaterialApp` (no
+  `AksharaAppTheme`) — added the theme so the indicator's `context.aksharaText`
+  resolves (same precedent as the Phase C appearance screen). Added qa key
+  `schoolDiscoveryContinueButton`.
+- **Result:** every multi-step flow in the app now shares ONE wizard look that is
+  responsive by construction (numbered-circle row on tablet/desktop, compact
+  "Step N of M" + progress bar on phones). No more raw `Stepper` in feature
+  screens.
+- **Certified:** `flutter analyze` **0 errors** (only pre-existing infos remain,
+  incl. 3 `DropdownButtonFormField(value:)` deprecations in untouched
+  unified_onboarding code); full Flutter suite **2183 pass** / 1 staging skip / 0
+  fail (no regressions; the migrated-screen widget tests pumpAndSettle the real
+  screens at 800px + 1440px, proving the bounded-height `Expanded` is correct).
+  Render screenshots @390 + @1200 verified the compact-vs-full indicator and the
+  pinned footer (temp goldens, not committed). **UX Batch 3 (3a + 3b) = COMPLETE.**
+
+## 🟡 UX Batch 5 — Screen Consolidation (IN PROGRESS, 2026-06-22)
+Goal reframed by owner (2026-06-22): the bar is **stable, production-ready, no
+leaks/gaps, complete the full work** — NOT demo polish. Consolidation is pursued
+for production code health, and every step is certified at the production bar
+(analyze 0 err + full suite green). Driven by `docs/SCREEN_CONSOLIDATION_REPORT.md`
+(2026-06-18), re-verified against current code first.
+
+**Audit-vs-current deltas found (2026-06-22):** several report items are already
+done — `academic/`→`academics/` merge complete; **0** dead-action `onPressed: () {}`
+buttons remain (report's §E already closed). **Batch 4 (Dashboard modernization):
+in-scope *visual* work is already done** via the Premium-School-OS Phase B rollout
+(consumer dashboards, app-wide AI bar, workspace landings); the OWNER_DASHBOARD_AUDIT's
+remaining items (export wiring, KPI drill-down, write actions, notification center)
+are **functional features**, tracked separately — not visual/consolidation work.
+
+### ✅ 5a — `inventory_distribution/` → `inventory/distribution/` = DONE & CERTIFIED (2026-06-22)
+Merged the standalone `inventory_distribution/` feature folder (4 files:
+distribution + replacement screens, models, mutations provider) into
+`inventory/distribution/` (it now sits beside inventory's other subfolders —
+procurement/assets/vendors/…). 52→51 feature folders. `git mv` (history
+preserved); fixed relative-import depth in the 3 moved files (`../../`→`../../../`,
+`../phase4`→`../../phase4`) + the moved test files' `test_helpers` import; updated
+all 8 external import sites (mock/api/interface repos, `phase4_navigation.dart`,
+2 widget tests, 1 contract test) from `features/inventory_distribution/` to
+`features/inventory/distribution/`. Route paths (`/inventory/distribution`) + qa
+keys already read "inventory/distribution" — unchanged. **Certified:** flutter
+analyze **0 errors**, full suite **2183 pass** / 1 skip / 0 fail.
+
+### ✅ 5-HARDENING — Production leak/gap hunt + fixes = DONE & CERTIFIED (2026-06-22)
+Owner reframed the goal to **stable, production-ready, close every leak/gap**. Ran
+a parallel audit (authorization/routing leaks · dead/stub actions · half-wired
+flows) over the whole app and closed the real findings:
+- **🔴 HIGH — privilege escalation in `erpRoutePermissionFor` (route_guards.dart) =
+  FIXED.** The route→permission resolver iterated `kErpRouteViewPermissions` in
+  insertion order and returned the **first** prefix match, so a specific child
+  route resolved to its broader parent's (weaker) permission: `/finance/intelligence`
+  → `viewFinance` (not `viewFinanceIntelligence`), `/finance/executive` →
+  `viewFinance`, `/inventory/copilot` + `/inventory/lifecycle` → `viewInventory`
+  (not `viewInventoryIntelligence`), `/intelligence/teacher-effectiveness` →
+  `viewStudentRisk` (not `viewTeacherEffectiveness`). Roles holding only the broad
+  perm (principal/VP/management/storekeeper) wrongly reached the specific screens.
+  Fixed to **longest-prefix match** (most-specific key wins); also closes the
+  latent `/inventory/distribution` case. Regression tests added to
+  `route_protection_inventory_test.dart`: (a) the 6 nested routes resolve to their
+  specific permission, (b) a role with only the parent perm cannot reach the child.
+- **Dead/stub UI controls (audit §E follow-through) = FIXED (15 controls).** 13 AI-
+  insight cards passed `onAction: () {}` → a visible, labeled, tappable button that
+  no-ops (`AksharaInsightCard` renders the CTA only when `onAction != null`); set to
+  `onAction: null` so the dead CTA is suppressed and only the honest insight text
+  shows (control_center/success, hostel/attendance, sis/dashboard ×2, student/
+  attendance, parent/homework, admissions/dashboard, admissions/documents, hr/
+  performance, hr/leave, finance/collection_detail, finance/discounts, finance/
+  defaulters). Admissions follow-ups table dead row-action (`onAction: (_) {}`)
+  dropped → IconButton renders in its honest disabled state. Finance receipt-link
+  tile was a fake button (`onTap: () {}` + `Semantics(button:true)`) whose only
+  target `parentReceiptRoute` is a **parent-shell** route that the cross-shell guard
+  would bounce from admin — converted to a static display row (no admin receipt view
+  exists yet).
+- **Verified SAFE (no leak):** out-of-scope verticals fully locked down (no school
+  role holds healthcare/salon/restaurant/accommodation/whiteLabel/industry/platformOps
+  perms — superAdmin only); cross-shell entry blocked; Control Center double-gated;
+  no unauthenticated-reachable route. Several OWNER_DASHBOARD_AUDIT gaps were
+  confirmed **already wired** (MG-08 settings save, FY/Q filter→repo requery, main
+  executive KPI drill-down, Management/HR/Finance-exec exports).
+- **M3 — DECIDED 2026-06-22 (see "M3 — OWNER DECISION RECORDED" below): gate behind a
+  chain flag; implement in the C4 org/tenant merge.** (original finding kept for context:)
+  `principal`/`vicePrincipal`
+  (and `schoolAdmin`) hold `viewFranchiseOperations`/`viewMultiSchoolOperations`/
+  `viewOrganizationBuilder`, so a *single-school* principal can reach franchise /
+  multi-school / org-builder screens. Code comments mark this as intentional for
+  chains — needs owner's call on whether single-school principals should manage
+  franchises. Also minor: a few export buttons show an honest "preview only — pipeline
+  not connected" snackbar (by-design pilot behavior), and ~18 operational Add/Edit
+  buttons show "recorded in preview mode (no server write)" — both truthful, not dead.
+- **Certified:** flutter analyze **0 errors**, full suite **2185 pass** / 1 skip / 0
+  fail (+2 route-protection regression tests; no golden churn — affected screens lack
+  golden coverage).
+
+### ✅ 5b — AI surface (report C5): fold `ai_content/` → `copilot/content/` = DONE & CERTIFIED (2026-06-22)
+Consolidated the AI surface into the single copilot AI module. **Scope correction
+from the report:** C5 also proposed moving `inventory_copilot_screen` as a "stray
+AI screen that duplicates the copilot surface" — on inspection it does **NOT**
+duplicate the copilot chat; it's a distinct inventory **forecasting** screen wired
+to `inventory_intelligence_provider` and living beside it in
+`inventory/intelligence/`. Moving it would *fragment* inventory intelligence
+(split screen from its provider), so it was **left in place** (same judgment as the
+phase4/phase5 deferral). The real, defensible C5 work done:
+- `git mv` the 4 `lib/features/ai_content/*.dart` files → `lib/features/copilot/content/`
+  (history preserved); `ai_content/` folder removed (52→51 top-level feature folders
+  net for 5b; one fewer). Fixed relative-import depth in the moved files
+  (`../../core/`→`../../../core/`, `../../shared/`→`../../../shared/`); sibling
+  imports unchanged.
+- Moved the route builder `aiContentRouteBuilder` from the `phase5_navigation.dart`
+  grab-bag into `lib/router/copilot_navigation.dart` (AI routes now live with the AI
+  module's nav), dropping the now-unused `ai_content` import from phase5_navigation.
+  `app_router.dart` already imports `copilot_navigation.dart` (line 75) so the
+  builder resolves with **no app_router change**. Route name/path (`/ai-content`),
+  the route-guard entry (`runAiCopilot`), and all QA keys are **unchanged** — zero
+  user-facing churn.
+- `git mv` the 2 test files → `test/features/copilot/content/`; updated their
+  `package:` import paths.
+- **Deferred (intentional, same reasoning as phase4/phase5):** a cosmetic
+  `copilot/`→`ai/` folder rename (~64 import sites) — high-touch, zero functional
+  benefit, nonzero regression risk; the module name "copilot" is accurate. Available
+  if owner wants pure clarity later.
+- **Certified:** `flutter analyze` **0 errors** (only pre-existing test-file lint
+  remains); full suite **2185 pass** / 1 skip / 0 fail (same count — tests relocated,
+  not added). No golden churn (no goldens for these screens).
+
+### ✅ 5c — Intelligence hubs (report C3): 4 folders → one `intelligence/` module = DONE & CERTIFIED (2026-06-22)
+Collapsed the four scattered analytics folders into the single canonical
+`intelligence/` module, using subfolders to avoid filename collisions (both the
+old `intelligence/` root **and** `management/intelligence/` had
+`intelligence_models.dart` + `intelligence_provider.dart`, so a flat merge was
+impossible). New structure:
+- `organization_intelligence/` (2 files: trust hub screen + providers) → **`intelligence/trust/`**
+- `homework_intelligence/` (2 files) → **`intelligence/homework/`**
+- `management/intelligence/` (4 files) → **`intelligence/management/`**
+
+50→48 top-level feature folders (organization_intelligence + homework_intelligence
+removed; management/intelligence was a sub-folder). All `git mv` (history
+preserved).
+- **Depth-aware import fixes.** `trust/` + `homework/` moved depth-2→depth-3, so
+  their internal relative imports went +1 level (`../../core/`→`../../../core/`,
+  `../control_center/`→`../../control_center/`, `../phase4/`→`../../phase4/`, etc.).
+  `management/intelligence/`→`intelligence/management/` is depth-preserving (both
+  exactly 2 levels under `features/`) **and** uses no single-`../` parent refs, so
+  its files needed **zero** forced edits; only normalized its now-self-referential
+  `../../intelligence/operations|unified/` paths to `../operations|unified/` for
+  clean code (same target, verified by certify).
+- **External importers** (core repos: analytics/homework/phase4 mock+api+interface
+  +mapper+dto; routers; tests; golden helpers) fixed by 3 path subs that work for
+  both relative **and** `package:` import forms (only the `features/X/` segment
+  changes): `features/management/intelligence/`→`features/intelligence/management/`,
+  `features/organization_intelligence/`→`features/intelligence/trust/`,
+  `features/homework_intelligence/`→`features/intelligence/homework/`. Route
+  paths/names + QA keys (`trustIntelligenceScreen`, etc.) are **unchanged** — zero
+  user-facing churn.
+- **Router fold (mirrors 5b):** the stray 1-route
+  `lib/router/organization_intelligence_navigation.dart` was folded into
+  `intelligence_navigation.dart` (`organizationIntelligenceRouteBuilder` now lives
+  with the other intelligence builders) and deleted; dropped its
+  `app_router.dart` import (the builder resolves from the already-imported
+  intelligence nav). Left in place by design: the homework route builder
+  (in the `phase4_navigation.dart` grab-bag — deferred per report) and the
+  management-intelligence builder (in `management_navigation.dart`) — moving those
+  is cosmetic, not a fold of a dedicated stray file.
+- **Tests** moved to mirror source: trust hub test → `test/features/intelligence/trust/`,
+  the 2 management-intel tests → `test/features/intelligence/management/`; fixed the
+  trust test's `../../test_helpers.dart`→`../../../test_helpers.dart` (also depth +1).
+- **Certified:** `flutter analyze` **0 errors**; full suite **2185 pass** / 1 skip /
+  0 fail (same count — tests relocated, not added). No golden churn (route/screen
+  visuals unchanged; golden images are name-keyed, not path-keyed).
+
+### ✅ M3 — OWNER DECISION RECORDED (2026-06-22): **gate franchise/multi-school/org-builder behind a chain flag.**
+Owner chose: keep the franchise / multi-school / org-builder screens, but only
+surface/permit them when the school's org is actually part of a **chain** (multi-
+school tenant). A single independent school never sees them; real chains do. This
+is **not yet implemented** — it folds into the **C4 org/tenant merge** (the natural
+place to add the chain-scope gate to those routes/perms). Until C4 lands, the
+existing perms stay as-is (principal/VP/schoolAdmin still hold them) — tracked, not
+a silent gap.
+
+### Remaining Batch-5 items — assessed against current code (honest risk notes)
+- **phase4/phase5 fold-in (report A1) — DEFERRED as low-value/some-risk.** Re-check
+  shows `phase4_navigation.dart`/`phase5_navigation.dart` are *router-builder
+  collections* for modules that **have no nav files of their own**, so "fold into
+  owning modules" would *fragment* into ~10 tiny nav files (worse, not better).
+  `phase5` also backs `core/security/phase5_staging_route_manifest.dart` (a
+  server-route RBAC regression guard with a passing readiness test). The names are
+  ugly but functionally correct + well-tested; a pure rename is high-touch
+  (~27 files incl. a security manifest) for **zero functional benefit** and nonzero
+  regression risk → not a good production trade. Left as-is intentionally.
+- **D2 promotion-name collision / D1 student→student_app** — pure clarity renames,
+  no functional gap; low priority.
+- **Shelve `verticals/` (restaurant/salon/healthcare/accommodation) + SaaS/org tier
+  — OWNER BUSINESS DECISION, not done autonomously.** These are real built product
+  lines tied to the multi-vertical / AI-School-Builder future. School roles already
+  had their vertical view-perms stripped (Batch 1 V4), so they are **not reachable
+  by school personas** (not an active leak — just dead-for-school surface). Removing
+  = maintenance win but destroys planned value; needs owner's product call. The
+  report's safe path is a disabled feature flag (reversible).
+- **Bigger merges** — intelligence hubs (C3) = ✅ DONE (5c); AI surface (C5) = ✅
+  DONE (5b); **org/tenant tier (C4)** = next, High complexity (7→1, ~30 screens,
+  incl. the M3 chain-flag gate); reduce real user-facing duplication; pursue
+  carefully + certified.
+
 ## ✅ UX Batch 1 — Workspace Architecture Enforcement = DONE & CERTIFIED (2026-06-20)
 All 5 steps complete. Certified end-to-end: `flutter analyze` **0 errors**; full
 Flutter suite **2112 pass** (1 staging-only skip); +19 new tests across the steps.

@@ -109,9 +109,9 @@ class _MenuGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = context.aksharaText;
-    final isMobile = AdminLayout.isMobile(context);
+    final useCards = AdminLayout.useCardLayout(context);
 
-    if (isMobile) {
+    if (useCards) {
       return Column(
         children: [
           for (final menu in menus) ...[

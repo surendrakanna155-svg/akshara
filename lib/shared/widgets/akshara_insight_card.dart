@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/radius.dart';
-import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
-import 'akshara_glass_surface.dart';
-import 'akshara_interactive_surface.dart';
+import 'premium/akshara_ai_suggestion_bar.dart';
 
-/// AI insight strip shared across parent, teacher, and student dashboards.
+/// AI insight strip shared across parent, teacher, student, and ERP dashboards.
+///
+/// Phase B (Premium School OS rollout): this now renders the premium
+/// [AksharaAiSuggestionBar] — a brand-gradient "intelligent product" surface —
+/// so every AI insight across the app shares one consistent premium look. The
+/// constructor keeps its original parameters for source compatibility with the
+/// ~57 call sites; [accent] and [icon] are retained for API compatibility but
+/// the premium bar uses the canonical brand gradient + spark badge.
 class AksharaInsightCard extends StatelessWidget {
   const AksharaInsightCard({
     super.key,
@@ -16,6 +20,7 @@ class AksharaInsightCard extends StatelessWidget {
     this.accent = KpiAccent.primary,
     this.icon = Icons.psychology_outlined,
     this.semanticLabelPrefix = 'AI insight',
+    this.eyebrow = 'AKSHARA SUGGESTS',
   });
 
   final String message;
@@ -24,102 +29,16 @@ class AksharaInsightCard extends StatelessWidget {
   final KpiAccent accent;
   final IconData icon;
   final String semanticLabelPrefix;
-
-  static const double cardHeight = 88;
-  static const double accentWidth = 4;
+  final String eyebrow;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.aksharaText;
-    final accentColors = accent.resolve(context);
-
-    return Semantics(
-      container: true,
-      label: '$semanticLabelPrefix: $message',
-      child: AksharaInteractiveSurface(
-        color: Colors.transparent,
-        border: null,
-        restingShadowLevel: 0,
-        child: AksharaGlassSurface(
-          enableBlur: false,
-          tintColor: accentColors.container,
-          opacity: 0.42,
-          showSheen: true,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: cardHeight),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: accentWidth,
-                    decoration: BoxDecoration(
-                      color: accentColors.foreground,
-                      borderRadius: const BorderRadius.horizontal(
-                        left: Radius.circular(AksharaRadius.md),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AksharaSpacing.s4,
-                        vertical: AksharaSpacing.s3,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            icon,
-                            size: 24,
-                            color: accentColors.foreground,
-                          ),
-                          const SizedBox(width: AksharaSpacing.s3),
-                          Expanded(
-                            child: Text(
-                              message,
-                              style: text.bodyMedium.copyWith(
-                                color: colors.onSurface,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (onAction != null) ...[
-                            const SizedBox(width: AksharaSpacing.s2),
-                            Flexible(
-                              child: TextButton(
-                                onPressed: onAction,
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: AksharaSpacing.s2,
-                                  ),
-                                  minimumSize: const Size(
-                                    AksharaSpacing.minTouchTarget,
-                                    AksharaSpacing.minTouchTarget,
-                                  ),
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: Text(
-                                  actionLabel,
-                                  style: text.labelLarge.copyWith(
-                                    color: colors.primary,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return AksharaAiSuggestionBar(
+      message: message,
+      eyebrow: eyebrow,
+      actionLabel: actionLabel.isEmpty ? null : actionLabel,
+      onAction: onAction,
+      semanticLabelPrefix: semanticLabelPrefix,
     );
   }
 }

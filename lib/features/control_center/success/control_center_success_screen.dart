@@ -73,7 +73,7 @@ class ControlCenterSuccessScreen extends ConsumerWidget {
           style: text.bodyMedium,
         ),
         const SizedBox(height: AksharaSpacing.s6),
-        if (AdminLayout.isMobile(context))
+        if (AdminLayout.useCardLayout(context))
           Column(
             children: [
               for (final school in data.schools) ...[
@@ -90,7 +90,7 @@ class ControlCenterSuccessScreen extends ConsumerWidget {
           actionLabel: 'Assign CS owner',
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI churn risk insight',
-          onAction: () {},
+          onAction: null,
         ),
       ],
     );

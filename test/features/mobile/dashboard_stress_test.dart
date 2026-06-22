@@ -1,7 +1,7 @@
 import 'package:akshara_erp/features/finance/dashboard/finance_dashboard_screen.dart';
 import 'package:akshara_erp/features/inventory/dashboard/inventory_dashboard_screen.dart';
 import 'package:akshara_erp/features/management/dashboard/management_dashboard_screen.dart';
-import 'package:akshara_erp/features/management/intelligence/intelligence_hub_screen.dart';
+import 'package:akshara_erp/features/intelligence/management/intelligence_hub_screen.dart';
 import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_provider.dart';
 import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_screen.dart';
 import 'package:akshara_erp/features/student/dashboard/student_dashboard_provider.dart';

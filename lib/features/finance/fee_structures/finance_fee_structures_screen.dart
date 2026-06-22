@@ -81,7 +81,7 @@ class FinanceFeeStructuresScreen extends ConsumerWidget {
                 retryFinanceFuture(ref, financeFeeStructuresFutureProvider),
             builder: (result) {
               final structures = result.items;
-              if (AdminLayout.isMobile(context)) {
+              if (AdminLayout.useCardLayout(context)) {
                 return Column(
                   children: [
                     for (final structure in structures) ...[

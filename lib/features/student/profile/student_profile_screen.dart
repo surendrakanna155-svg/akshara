@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -140,6 +143,14 @@ class StudentProfileScreen extends ConsumerWidget {
                       fixedHeight: false,
                       spacingBelow: AksharaSpacing.s3,
                     ),
+                    ProfileInfoRow(
+                      key: QaTestKeys.appearanceSettingsLink,
+                      icon: Icons.brightness_6_outlined,
+                      label: 'Appearance',
+                      value: 'Light, dark, or match your device',
+                      onTap: () => context.push(RouteNames.appearanceSettings),
+                    ),
+                    const SizedBox(height: AksharaSpacing.s2),
                     Semantics(
                       button: true,
                       label: 'App settings, coming soon',

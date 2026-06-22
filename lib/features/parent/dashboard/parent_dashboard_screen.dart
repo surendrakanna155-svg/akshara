@@ -3,20 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
-import '../../../shared/widgets/akshara_dashboard_canvas.dart';
-import '../../../shared/widgets/akshara_dashboard_watermark.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../../../theme/mesh_background.dart';
 import '../../notifications/notifications_provider.dart';
 import '../parent_active_child_provider.dart';
 import '../widgets/parent_child_switcher_sheet.dart';
 import '../academics/parent_academic_models.dart';
 import '../academics/parent_academic_provider.dart';
+import '../../../theme/premium_tokens.dart';
+import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'parent_dashboard_provider.dart';
 import 'widgets/event_card.dart';
-import 'widgets/hero_card.dart';
 import 'widgets/notice_carousel.dart';
 
 /// Parent home dashboard — PA-01 `PA-01-ParentDashboard-M`.
@@ -41,7 +39,7 @@ class ParentDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       key: QaTestKeys.parentDashboardScreen,
-      backgroundColor: context.colors.surfaceContainerLow,
+      backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         title: AksharaChildSelectorChip(
           name: activeChild?.name ?? data.childName,
@@ -63,9 +61,8 @@ class ParentDashboardScreen extends ConsumerWidget {
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            return AksharaDashboardCanvas(
-              palette: AksharaMeshPalette.parent,
-              watermark: AksharaWatermarkMotif.graduationCap,
+            return AksharaPremiumBackground(
+              motif: AksharaMotif.graduationCap,
               child: SingleChildScrollView(
                 padding: MobileDashboardLayout.screenPadding(width),
                 child: ConstrainedBox(
@@ -73,11 +70,18 @@ class ParentDashboardScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      HeroCard(
+                      AksharaGradientHero(
                         eyebrow: data.greetingEyebrow,
                         headline: data.greetingHeadline,
-                        schoolName: data.schoolName,
-                        statusChips: data.statusChips,
+                        motif: AksharaMotif.graduationCap,
+                        pills: [
+                          for (final chip in data.statusChips)
+                            AksharaHeroPill(
+                              label: chip.label,
+                              tone: _accentForTone(chip.tone),
+                            ),
+                        ],
+                        trailing: _SchoolBadge(schoolName: data.schoolName),
                       ),
                       const SizedBox(height: AksharaSpacing.s4),
                       _ChildSummaryKpiRow(
@@ -108,7 +112,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                       ),
                       if (data.aiInsight.message.isNotEmpty) ...[
                         const SizedBox(height: AksharaSpacing.s4),
-                        AksharaInsightCard(
+                        AksharaAiSuggestionBar(
                           message: data.aiInsight.message,
                           actionLabel: data.aiInsight.actionLabel,
                           onAction: () => _navigate('experience_hub'),
@@ -174,6 +178,44 @@ class ParentDashboardScreen extends ConsumerWidget {
   }
 }
 
+KpiAccent _accentForTone(DashboardChipTone tone) {
+  return switch (tone) {
+    DashboardChipTone.primary => KpiAccent.primary,
+    DashboardChipTone.success => KpiAccent.success,
+    DashboardChipTone.warning => KpiAccent.warning,
+    DashboardChipTone.error => KpiAccent.error,
+  };
+}
+
+/// Soft rounded school badge for the hero trailing slot.
+class _SchoolBadge extends StatelessWidget {
+  const _SchoolBadge({required this.schoolName});
+
+  final String schoolName;
+
+  @override
+  Widget build(BuildContext context) {
+    final premium = context.premium;
+    return Semantics(
+      label: schoolName,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: premium.premiumSurface.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(AksharaRadius.lg),
+          border: Border.all(color: premium.premiumBorder),
+        ),
+        child: Icon(
+          Icons.school_outlined,
+          size: 22,
+          color: premium.brandStart,
+        ),
+      ),
+    );
+  }
+}
+
 class _ChildSummaryKpiRow extends StatelessWidget {
   const _ChildSummaryKpiRow({
     required this.chips,
@@ -201,48 +243,40 @@ class _ChildSummaryKpiRow extends StatelessWidget {
     return Builder(
       builder: (context) {
         final narrow = MediaQuery.sizeOf(context).width < 360;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: 112,
-                child: AksharaKpiCard(
+        // IntrinsicHeight bounds the row to its tallest card so the stretched
+        // children get equal, finite heights inside the scroll view.
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: AksharaPremiumKpiCard(
                   value: truncateStressLabel(attendance ?? '—'),
-                  subtitle: 'Attendance',
+                  label: 'Attendance',
                   accent: KpiAccent.success,
                   icon: Icons.event_available_outlined,
-                  style: AksharaKpiCardStyle.filled,
                 ),
               ),
-            ),
-            const SizedBox(width: AksharaSpacing.s3),
-            Expanded(
-              child: SizedBox(
-                height: 112,
-                child: AksharaKpiCard(
+              const SizedBox(width: AksharaSpacing.s3),
+              Expanded(
+                child: AksharaPremiumKpiCard(
                   value: homeworkCount,
-                  subtitle: narrow ? 'Homework' : 'Homework pending',
+                  label: narrow ? 'Homework' : 'Homework pending',
                   accent: KpiAccent.warning,
                   icon: Icons.assignment_outlined,
-                  style: AksharaKpiCardStyle.filled,
                 ),
               ),
-            ),
-            const SizedBox(width: AksharaSpacing.s3),
-            Expanded(
-              child: SizedBox(
-                height: 112,
-                child: AksharaKpiCard(
+              const SizedBox(width: AksharaSpacing.s3),
+              Expanded(
+                child: AksharaPremiumKpiCard(
                   value: truncateStressLabel(fees ?? '—'),
-                  subtitle: narrow ? 'Fees' : 'Fees due',
+                  label: narrow ? 'Fees' : 'Fees due',
                   accent: KpiAccent.error,
                   icon: Icons.payments_outlined,
-                  style: AksharaKpiCardStyle.filled,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -261,49 +295,122 @@ class _AcademicHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = context.aksharaText;
+    final colors = context.colors;
+    final premium = context.premium;
     final attendance = summary.attendanceSummary['ratePercent'] ?? '—';
     final grade = summary.performanceSummary['overallGrade'] ?? '—';
     final homework = summary.homeworkStatus['completionRate'] ?? '—';
+    final homeworkFraction = (double.tryParse('$homework') ?? 0) / 100.0;
 
-    return AksharaSurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Academic progress', style: text.titleSmall),
-          const SizedBox(height: AksharaSpacing.s3),
-          Row(
-            children: [
-              Expanded(child: _stat(context, 'Attendance', '$attendance%')),
-              Expanded(child: _stat(context, 'Grade', '$grade')),
-              Expanded(child: _stat(context, 'Homework', '$homework%')),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: premium.premiumSurface,
+        borderRadius: BorderRadius.circular(AksharaRadius.xxl),
+        border: Border.all(color: premium.premiumBorder),
+        boxShadow: premium.softShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Academic progress',
+                    style: text.titleMedium.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Flexible(child: _ReportLink(onTap: onViewReport)),
+              ],
+            ),
+            const SizedBox(height: AksharaSpacing.s4),
+            Row(
+              children: [
+                Expanded(child: _stat(context, 'Attendance', '$attendance%')),
+                Expanded(child: _stat(context, 'Grade', '$grade')),
+                Expanded(child: _stat(context, 'Homework', '$homework%')),
+              ],
+            ),
+            const SizedBox(height: AksharaSpacing.s4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AksharaRadius.xs),
+              child: LinearProgressIndicator(
+                value: homeworkFraction.clamp(0.0, 1.0),
+                minHeight: 9,
+                backgroundColor: colors.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation<Color>(premium.brandStart),
+              ),
+            ),
+            if (summary.strengths.isNotEmpty) ...[
+              const SizedBox(height: AksharaSpacing.s3),
+              Text(
+                'Strength: ${summary.strengths.first}',
+                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+              ),
             ],
-          ),
-          if (summary.strengths.isNotEmpty) ...[
-            const SizedBox(height: AksharaSpacing.s3),
-            Text(
-              'Strength: ${summary.strengths.first}',
-              style: text.bodySmall,
-            ),
           ],
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: onViewReport,
-              child: const Text('Full report'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _stat(BuildContext context, String label, String value) {
     final text = context.aksharaText;
+    final colors = context.colors;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: text.titleMedium),
-        Text(label, style: text.bodySmall),
+        Text(
+          value,
+          style: text.titleLarge.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          label,
+          style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ],
+    );
+  }
+}
+
+class _ReportLink extends StatelessWidget {
+  const _ReportLink({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    final premium = context.premium;
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s2),
+        minimumSize: const Size(0, AksharaSpacing.minTouchTarget),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(
+        'Full report →',
+        style: text.labelLarge.copyWith(
+          color: premium.brandStart,
+          fontWeight: FontWeight.w700,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }

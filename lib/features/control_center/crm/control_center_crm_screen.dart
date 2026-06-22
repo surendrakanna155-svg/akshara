@@ -96,7 +96,7 @@ class ControlCenterCrmScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Active deals'),
         const SizedBox(height: AksharaSpacing.s3),
-        if (AdminLayout.isMobile(context))
+        if (AdminLayout.useCardLayout(context))
           Column(
             children: [
               for (final deal in data.deals) ...[

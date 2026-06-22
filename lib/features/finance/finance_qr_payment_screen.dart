@@ -68,7 +68,7 @@ class _FinanceQrPaymentScreenState
         children: [
           Text('QR Payment', style: context.aksharaText.headlineSmall),
           const SizedBox(height: AksharaSpacing.s4),
-          if (AdminLayout.isMobile(context))
+          if (AdminLayout.useCardLayout(context))
             _buildForm(isBusy)
           else
             Row(
@@ -78,7 +78,7 @@ class _FinanceQrPaymentScreenState
                 Expanded(child: _buildSessionCard(activeSession, isBusy)),
               ],
             ),
-          if (AdminLayout.isMobile(context)) ...[
+          if (AdminLayout.useCardLayout(context)) ...[
             const SizedBox(height: AksharaSpacing.s4),
             _buildSessionCard(activeSession, isBusy),
           ],

@@ -107,7 +107,6 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s3),
         AdmissionsFollowupsTable(
           followUps: data.followUps,
-          onAction: (_) {},
         ),
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Counselor leaderboard'),
@@ -117,7 +116,7 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
         AksharaInsightCard(
           message: data.aiInsight,
           actionLabel: data.aiActionLabel,
-          onAction: () {},
+          onAction: null,
           semanticLabelPrefix: 'Admissions AI insight',
         ),
       ],

@@ -49,7 +49,7 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
               message:
                   '${summary.missing} required document(s) missing across active applications.',
               actionLabel: 'View missing',
-              onAction: () {},
+              onAction: null,
               compactMessage: true,
               horizontalPaddingOnly: true,
               semanticLabel: '${summary.missing} documents missing',
