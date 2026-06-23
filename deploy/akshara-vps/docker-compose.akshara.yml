@@ -1,5 +1,6 @@
-# Akshara isolated self-host (lean Supabase) — VPS 46.28.44.46, all localhost-only.
-# Stage 1-3 checkpoint: Postgres only. Stage 4 adds postgrest + rest-gateway + edge.
+# Akshara isolated lean self-host (Supabase) — VPS 46.28.44.46, ALL localhost-only.
+# Live Stage 4 stack: Postgres + PostgREST + nginx rest-gateway + Deno edge.
+# Real env (.env.akshara, postgrest.env) live ONLY on the VPS, chmod 600 — never committed.
 name: akshara
 services:
   akshara-postgres:
@@ -9,17 +10,50 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - akshara_pgdata:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5433:5432"
+    volumes: [akshara_pgdata:/var/lib/postgresql/data]
+    ports: ["127.0.0.1:5433:5432"]
     networks: [akshara-net]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 12
+
+  akshara-postgrest:
+    image: public.ecr.aws/supabase/postgrest:v14.5
+    container_name: akshara-postgrest
+    restart: unless-stopped
+    env_file: postgrest.env
+    depends_on:
+      akshara-postgres: { condition: service_healthy }
+    networks: [akshara-net]            # internal only — no host port
+
+  akshara-rest-gateway:
+    image: nginx:alpine
+    container_name: akshara-rest-gateway
+    restart: unless-stopped
+    volumes: ["./gateway.conf:/etc/nginx/conf.d/default.conf:ro"]
+    depends_on: [akshara-postgrest]
+    networks: [akshara-net]            # internal only — no host port
+
+  akshara-edge:
+    image: denoland/deno:alpine
+    container_name: akshara-edge
+    restart: unless-stopped
+    working_dir: /app
+    command: ["run","-A","--no-lock","api/index.ts"]
+    env_file: .env.akshara
+    environment: { DENO_DIR: /deno-dir }
+    volumes:
+      - ./functions:/app:ro
+      - akshara_deno_cache:/deno-dir
+    depends_on:
+      akshara-postgres: { condition: service_healthy }
+    ports: ["127.0.0.1:3000:8000"]
+    networks: [akshara-net]
+
 networks:
   akshara-net: { name: akshara-net, driver: bridge }
 volumes:
   akshara_pgdata: { name: akshara_pgdata }
+  akshara_deno_cache: { name: akshara_deno_cache }

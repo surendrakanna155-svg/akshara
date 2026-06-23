@@ -23,3 +23,16 @@ isolated from Velora / n8n / MySQL / Redis (all untouched).
 ## Stage 4 (next) — lean runtime
 - Retire NestJS scaffold; deploy Deno edge (functions/api) + PostgREST + nginx
   rest-gateway; backfill supabase_migrations ledger; mint JWT/service_role/anon keys.
+
+## Stage 4 — lean runtime LIVE (verified)
+Stack on akshara-net (localhost-only): akshara-postgres + akshara-postgrest +
+akshara-rest-gateway (nginx) + akshara-edge (Deno `functions/api`). NestJS scaffold removed.
+- Edge: denoland/deno:alpine, `run -A --no-lock api/index.ts`, Deno.serve :8000 -> host 127.0.0.1:3000.
+- PostgREST connects as `authenticator`; gateway maps /rest/v1/* -> postgrest:3000.
+- Keys: HS256 service_role/anon JWTs signed with PGRST_JWT_SECRET; app JWT_SECRET separate.
+- Migration ledger backfilled (98 rows). authenticator + erp_tenant passwords set.
+- Verified: /health ok; /health/ready database:true; PostgREST returns seeded org;
+  auth login(dev OTP)->verify-otp->/auth/me (schoolAdmin, tenant scoped); /auth/permissions 200;
+  GET /sis/students returns staging student via erp_tenant RLS; no-token -> 401.
+- Host-exposed: ONLY 127.0.0.1:3000 (edge) + 127.0.0.1:5433 (pg). Nothing public.
+- NOT done: public exposure (Nginx vhost + subdomain + SSL) — deferred, needs DNS + email.
