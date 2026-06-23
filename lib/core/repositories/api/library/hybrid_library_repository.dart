@@ -77,5 +77,15 @@ class HybridLibraryRepository implements LibraryRepository {
         apiCall: () => _api.returnLibraryBook(query: query, request: request),
         mockCall: () => _mock.returnLibraryBook(query: query, request: request),
       );
+
+  @override
+  Future<LibraryBook> addLibraryBook({
+    required RepositoryQuery query,
+    required AddLibraryBookRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.addLibraryBook(query: query, request: request),
+        mockCall: () => _mock.addLibraryBook(query: query, request: request),
+      );
 }
 

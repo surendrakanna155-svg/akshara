@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure.dart';
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/forms/akshara_form_field.dart';
+import '../../shared/widgets/akshara_dialog.dart';
+import '../../shared/widgets/akshara_motion.dart';
 import 'library_models.dart';
 import 'library_mutations_provider.dart';
 import 'library_requests.dart';
+
+void _showLibraryMutationError(BuildContext context, Object error) {
+  final failure = error is ApiFailureException
+      ? error.failure
+      : apiFailureMapper.fromException(error);
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(failure.message)),
+  );
+}
 
 Future<void> showIssueLibraryBookDialog(
   BuildContext context,
@@ -164,3 +178,98 @@ Future<void> returnLibraryIssue(
   LibraryIssueRecord issue,
 ) =>
     showReturnLibraryBookDialog(context, ref, initialIssueId: issue.id);
+
+Future<void> showAddLibraryBookDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final isbnController = TextEditingController();
+  final titleController = TextEditingController();
+  final authorController = TextEditingController();
+  final categoryController = TextEditingController(text: 'General');
+  final copiesController = TextEditingController(text: '1');
+  final shelfController = TextEditingController();
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Add book',
+      icon: Icons.menu_book_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'ISBN',
+            controller: isbnController,
+            required: true,
+            hint: 'e.g. 978-0-07-802563-1',
+          ),
+          AksharaFormField(
+            label: 'Title',
+            controller: titleController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Author',
+            controller: authorController,
+          ),
+          AksharaFormField(
+            label: 'Category',
+            controller: categoryController,
+            hint: 'e.g. Science, Fiction',
+          ),
+          AksharaFormField(
+            label: 'Total copies',
+            controller: copiesController,
+            keyboardType: TextInputType.number,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Shelf',
+            controller: shelfController,
+            hint: 'e.g. SCI-12',
+          ),
+        ],
+      ),
+      actions: [
+        AksharaDialogActions(
+          confirmLabel: 'Add book',
+          confirmKey: QaTestKeys.libraryAddBookDialogSubmitButton,
+          onCancel: () => Navigator.of(context).pop(false),
+          onConfirm: () {
+            if (isbnController.text.trim().isEmpty ||
+                titleController.text.trim().isEmpty) {
+              return;
+            }
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final book = await ref.read(addLibraryBookProvider.notifier).execute(
+          AddLibraryBookRequest(
+            isbn: isbnController.text.trim(),
+            title: titleController.text.trim(),
+            author: authorController.text.trim(),
+            category: categoryController.text.trim(),
+            totalCopies: int.tryParse(copiesController.text.trim()) ?? 1,
+            shelf: shelfController.text.trim(),
+          ),
+        );
+    if (!context.mounted || book == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.libraryAddBookSuccessSnackbar,
+        content: Text('Added "${book.title}" to the catalog'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showLibraryMutationError(context, error);
+  }
+}

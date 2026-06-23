@@ -21,4 +21,8 @@ abstract class LibraryRepository {
     required RepositoryQuery query,
     required ReturnLibraryBookRequest request,
   });
+  Future<LibraryBook> addLibraryBook({
+    required RepositoryQuery query,
+    required AddLibraryBookRequest request,
+  });
 }

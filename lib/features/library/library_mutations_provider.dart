@@ -89,3 +89,33 @@ final returnLibraryBookProvider =
     AsyncNotifierProvider<ReturnLibraryBookNotifier, LibraryReturnRecord?>(
   ReturnLibraryBookNotifier.new,
 );
+
+class AddLibraryBookNotifier extends AsyncNotifier<LibraryBook?> {
+  @override
+  FutureOr<LibraryBook?> build() => null;
+
+  Future<LibraryBook?> execute(AddLibraryBookRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageLibrary(ref);
+      try {
+        final result = await ref.read(libraryRepositoryProvider).addLibraryBook(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(libraryCatalogFutureProvider)
+          ..invalidate(libraryDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final addLibraryBookProvider =
+    AsyncNotifierProvider<AddLibraryBookNotifier, LibraryBook?>(
+  AddLibraryBookNotifier.new,
+);

@@ -21,6 +21,7 @@ class MockLibraryRepository implements LibraryRepository {
   final List<LibraryMember> _members;
   int _issueCounter = 5;
   int _returnCounter = 5;
+  int _bookCounter = 6;
 
   static const _seedIssues = [
     LibraryIssueRecord(
@@ -669,5 +670,38 @@ class MockLibraryRepository implements LibraryRepository {
     );
 
     return returnRecord;
+  }
+
+  @override
+  Future<LibraryBook> addLibraryBook({
+    required RepositoryQuery query,
+    required AddLibraryBookRequest request,
+  }) async {
+    final isbn = request.isbn.trim();
+    final title = request.title.trim();
+    if (isbn.isEmpty || title.isEmpty) {
+      throw StateError('ISBN and title are required');
+    }
+    if (request.totalCopies <= 0) {
+      throw StateError('A book must have at least one copy');
+    }
+    if (_books.any((book) => book.isbn == isbn)) {
+      throw StateError('A book with ISBN $isbn already exists');
+    }
+
+    _bookCounter += 1;
+    final book = LibraryBook(
+      id: 'bk_$_bookCounter',
+      isbn: isbn,
+      title: title,
+      author: request.author.trim(),
+      category: request.category.trim(),
+      totalCopies: request.totalCopies,
+      availableCopies: request.totalCopies,
+      shelf: request.shelf.trim(),
+      status: LibraryBookStatus.available,
+    );
+    _books.insert(0, book);
+    return book;
   }
 }

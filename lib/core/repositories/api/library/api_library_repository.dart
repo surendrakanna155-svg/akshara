@@ -84,4 +84,12 @@ class ApiLibraryRepository implements LibraryRepository {
   }) async {
     throw ApiNotConnectedException('LibraryRepository', 'returnLibraryBook');
   }
+
+  @override
+  Future<LibraryBook> addLibraryBook({
+    required RepositoryQuery query,
+    required AddLibraryBookRequest request,
+  }) async {
+    throw ApiNotConnectedException('LibraryRepository', 'addLibraryBook');
+  }
 }

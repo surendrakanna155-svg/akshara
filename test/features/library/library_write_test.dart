@@ -58,6 +58,49 @@ void main() {
       expect(record.bookTitle, 'The Great Gatsby');
       expect(record.fineAmount, '₹0');
     });
+
+    test('addLibraryBook adds an available book to the catalog', () async {
+      final repo = MockLibraryRepository();
+      final before = await repo.getCatalog(query: query);
+
+      final book = await repo.addLibraryBook(
+        query: query,
+        request: const AddLibraryBookRequest(
+          isbn: '978-1-23-456789-0',
+          title: 'Clean Architecture',
+          author: 'Robert C. Martin',
+          category: 'Computer Science',
+          totalCopies: 4,
+          shelf: 'CS-21',
+        ),
+      );
+
+      final after = await repo.getCatalog(query: query);
+      expect(after.total, before.total + 1);
+      expect(book.status, LibraryBookStatus.available);
+      expect(book.availableCopies, 4);
+      expect(after.items.any((b) => b.id == book.id), isTrue);
+    });
+
+    test('addLibraryBook rejects a duplicate ISBN', () async {
+      final repo = MockLibraryRepository();
+      final existing = (await repo.getCatalog(query: query)).items.first;
+
+      expect(
+        () => repo.addLibraryBook(
+          query: query,
+          request: AddLibraryBookRequest(
+            isbn: existing.isbn,
+            title: existing.title,
+            author: existing.author,
+            category: existing.category,
+            totalCopies: existing.totalCopies,
+            shelf: existing.shelf,
+          ),
+        ),
+        throwsStateError,
+      );
+    });
   });
 
   group('Library RBAC mutations', () {
@@ -104,6 +147,60 @@ void main() {
       expect(
         container.read(returnLibraryBookProvider).value?.bookTitle,
         'Effective Java',
+      );
+    });
+
+    test('addLibraryBook fails without manageLibrary', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(addLibraryBookProvider.notifier).execute(
+            const AddLibraryBookRequest(
+              isbn: '978-1-23-456789-1',
+              title: 'Blocked Book',
+              author: 'Anon',
+              category: 'General',
+              totalCopies: 1,
+              shelf: 'GEN-1',
+            ),
+          );
+
+      expect(container.read(addLibraryBookProvider).hasError, isTrue);
+    });
+
+    test('addLibraryBook succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(addLibraryBookProvider.notifier).execute(
+            const AddLibraryBookRequest(
+              isbn: '978-1-23-456789-2',
+              title: 'Allowed Book',
+              author: 'Anon',
+              category: 'General',
+              totalCopies: 2,
+              shelf: 'GEN-2',
+            ),
+          );
+
+      expect(container.read(addLibraryBookProvider).hasValue, isTrue);
+      expect(
+        container.read(addLibraryBookProvider).value?.status,
+        LibraryBookStatus.available,
       );
     });
   });
