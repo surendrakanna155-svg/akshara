@@ -46,6 +46,11 @@ class EducationRemoteDataSource {
         'questionText': item.questionText,
         if (item.answerText != null) 'answerText': item.answerText,
         'options': item.options,
+        'programTrack': EducationMapper.programTrackToApi(item.programTrack),
+        if (item.cognitiveLevel != null)
+          'cognitiveLevel': EducationMapper.cognitiveLevelToApi(item.cognitiveLevel!),
+        if (item.syllabusChapterId != null) 'syllabusChapterId': item.syllabusChapterId,
+        if (item.sourceReference != null) 'sourceReference': item.sourceReference,
       },
     );
     return _envelopeData(response);
@@ -78,6 +83,8 @@ class EducationRemoteDataSource {
         'difficulty': EducationMapper.difficultyToApi(request.difficulty),
         'totalMarks': request.totalMarks,
         'examType': EducationMapper.examTypeToApi(request.examType),
+        'programTrack': EducationMapper.programTrackToApi(request.programTrack),
+        'allowAiGapFill': request.allowAiGapFill,
       },
     );
     return _envelopeData(response);
@@ -112,6 +119,60 @@ class EducationRemoteDataSource {
     final response = await _dio.get<Map<String, dynamic>>(
       EducationApiPaths.questionPaperExport(paperId),
       queryParameters: _queryParams(query),
+    );
+    return _envelopeData(response);
+  }
+
+  Future<Map<String, dynamic>> submitQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      EducationApiPaths.questionPaperSubmit(paperId),
+      queryParameters: _queryParams(query),
+    );
+    return _envelopeData(response);
+  }
+
+  Future<Map<String, dynamic>> reviewQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+    required String decision,
+    String? comments,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      EducationApiPaths.questionPaperReview(paperId),
+      queryParameters: _queryParams(query),
+      data: {
+        'decision': decision,
+        if (comments != null && comments.trim().isNotEmpty) 'comments': comments.trim(),
+      },
+    );
+    return _envelopeData(response);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchPaperReviews({
+    required RepositoryQuery query,
+    required String paperId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      EducationApiPaths.questionPaperReviews(paperId),
+      queryParameters: _queryParams(query),
+    );
+    final data = _envelopeData(response);
+    return (data['items'] as List<dynamic>? ?? const []).cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> moderatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    required String decision,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      EducationApiPaths.questionPaperItemModerate(paperId, itemId),
+      queryParameters: _queryParams(query),
+      data: {'decision': decision},
     );
     return _envelopeData(response);
   }

@@ -7,6 +7,11 @@ abstract final class EducationApiPaths {
   static String questionPaper(String id) => '$questionPapers/$id';
   static String questionPaperPublish(String id) => '$questionPapers/$id/publish';
   static String questionPaperExport(String id) => '$questionPapers/$id/export';
+  static String questionPaperSubmit(String id) => '$questionPapers/$id/submit';
+  static String questionPaperReview(String id) => '$questionPapers/$id/review';
+  static String questionPaperReviews(String id) => '$questionPapers/$id/reviews';
+  static String questionPaperItemModerate(String paperId, String itemId) =>
+      '$questionPapers/$paperId/items/$itemId/moderate';
   static const String homework = '/education/homework';
   static const String homeworkGenerate = '/education/homework/generate';
   static String homeworkItem(String id) => '$homework/$id';

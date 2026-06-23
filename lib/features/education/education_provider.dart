@@ -68,6 +68,28 @@ final educationSelectedPaperProvider = FutureProvider<QuestionPaperDetail?>((ref
       );
 });
 
+/// Full detail (paper + items) for a given paper id, used by the detail screen.
+final paperDetailProvider =
+    FutureProvider.family<QuestionPaperDetail, String>((ref, paperId) async {
+  return ref.read(educationRepositoryProvider).getQuestionPaper(
+        query: ref.watch(educationQueryProvider),
+        paperId: paperId,
+      );
+});
+
+/// Reviews trail for a given paper (governance history).
+final paperReviewsProvider =
+    FutureProvider.family<List<PaperReview>, String>((ref, paperId) async {
+  return ref.read(educationRepositoryProvider).listPaperReviews(
+        query: ref.watch(educationQueryProvider),
+        paperId: paperId,
+      );
+});
+
+/// Holds the most recent generation result so the screen can surface the
+/// "N marks unfilled" banner and the AI-candidate moderation prompt.
+final lastGeneratedPaperProvider = StateProvider<QuestionPaperDetail?>((ref) => null);
+
 final educationMutationsProvider =
     AsyncNotifierProvider<EducationMutationsNotifier, void>(EducationMutationsNotifier.new);
 
@@ -83,6 +105,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
             query: ref.read(educationQueryProvider),
             request: request,
           );
+      ref.read(lastGeneratedPaperProvider.notifier).state = detail;
       ref.invalidate(questionPapersListProvider);
       state = const AsyncData(null);
       return detail;
@@ -92,16 +115,91 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
     }
   }
 
-  Future<void> publishPaper(String paperId) async {
+  Future<QuestionPaperSummary> publishPaper(String paperId) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    try {
       assertManageEducation(ref);
-      await ref.read(educationRepositoryProvider).publishQuestionPaper(
+      final paper = await ref.read(educationRepositoryProvider).publishQuestionPaper(
             query: ref.read(educationQueryProvider),
             paperId: paperId,
           );
-      ref.invalidate(questionPapersListProvider);
-    });
+      _invalidatePaper(paperId);
+      state = const AsyncData(null);
+      return paper;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<QuestionPaperSummary> submitPaper(String paperId) async {
+    state = const AsyncLoading();
+    try {
+      assertManageEducation(ref);
+      final paper = await ref.read(educationRepositoryProvider).submitQuestionPaper(
+            query: ref.read(educationQueryProvider),
+            paperId: paperId,
+          );
+      _invalidatePaper(paperId);
+      state = const AsyncData(null);
+      return paper;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<QuestionPaperSummary> reviewPaper(
+    String paperId,
+    String decision, {
+    String? comments,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      assertManageEducation(ref);
+      final paper = await ref.read(educationRepositoryProvider).reviewQuestionPaper(
+            query: ref.read(educationQueryProvider),
+            paperId: paperId,
+            decision: decision,
+            comments: comments,
+          );
+      _invalidatePaper(paperId);
+      state = const AsyncData(null);
+      return paper;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<QuestionPaperItem> moderateItem(
+    String paperId,
+    String itemId,
+    String decision,
+  ) async {
+    state = const AsyncLoading();
+    try {
+      assertManageEducation(ref);
+      final item = await ref.read(educationRepositoryProvider).moderatePaperItem(
+            query: ref.read(educationQueryProvider),
+            paperId: paperId,
+            itemId: itemId,
+            decision: decision,
+          );
+      _invalidatePaper(paperId);
+      state = const AsyncData(null);
+      return item;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  void _invalidatePaper(String paperId) {
+    ref.invalidate(questionPapersListProvider);
+    ref.invalidate(educationSelectedPaperProvider);
+    ref.invalidate(paperDetailProvider(paperId));
+    ref.invalidate(paperReviewsProvider(paperId));
   }
 
   Future<HomeworkAssignment> generateHomework(GenerateHomeworkRequest request) async {

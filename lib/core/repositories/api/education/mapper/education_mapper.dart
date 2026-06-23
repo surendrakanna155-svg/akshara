@@ -80,6 +80,42 @@ class EducationMapper {
 
   static String remarkLanguageToApi(EduRemarkLanguage value) => value.name;
 
+  static EduProgramTrack programTrackFromApi(String value) => switch (value) {
+        'jee_foundation' => EduProgramTrack.jeeFoundation,
+        'neet_foundation' => EduProgramTrack.neetFoundation,
+        'ntse' => EduProgramTrack.ntse,
+        'olympiad' => EduProgramTrack.olympiad,
+        _ => EduProgramTrack.board,
+      };
+
+  static String programTrackToApi(EduProgramTrack value) => switch (value) {
+        EduProgramTrack.jeeFoundation => 'jee_foundation',
+        EduProgramTrack.neetFoundation => 'neet_foundation',
+        EduProgramTrack.ntse => 'ntse',
+        EduProgramTrack.olympiad => 'olympiad',
+        EduProgramTrack.board => 'board',
+      };
+
+  static EduCognitiveLevel? cognitiveLevelFromApi(String? value) => switch (value) {
+        'remember' => EduCognitiveLevel.remember,
+        'understand' => EduCognitiveLevel.understand,
+        'apply' => EduCognitiveLevel.apply,
+        'analyze' => EduCognitiveLevel.analyze,
+        'hots' => EduCognitiveLevel.hots,
+        _ => null,
+      };
+
+  static String cognitiveLevelToApi(EduCognitiveLevel value) => value.name;
+
+  static EduPaperReviewStatus paperReviewStatusFromApi(String value) => switch (value) {
+        'submitted' => EduPaperReviewStatus.submitted,
+        'changes_requested' => EduPaperReviewStatus.changesRequested,
+        'approved' => EduPaperReviewStatus.approved,
+        'published' => EduPaperReviewStatus.published,
+        'archived' => EduPaperReviewStatus.archived,
+        _ => EduPaperReviewStatus.draft,
+      };
+
   static QuestionBankItem questionBankFromApi(Map<String, dynamic> json) {
     return QuestionBankItem(
       id: json['id'] as String,
@@ -95,6 +131,11 @@ class EducationMapper {
           .map((e) => e.toString())
           .toList(),
       status: json['status'] as String? ?? 'active',
+      programTrack: programTrackFromApi(json['programTrack'] as String? ?? 'board'),
+      cognitiveLevel: cognitiveLevelFromApi(json['cognitiveLevel'] as String?),
+      syllabusChapterId: json['syllabusChapterId'] as String?,
+      sourceReference: json['sourceReference'] as String?,
+      reviewStatus: json['reviewStatus'] as String? ?? 'approved',
     );
   }
 
@@ -109,6 +150,8 @@ class EducationMapper {
       totalMarks: (json['totalMarks'] as num).toInt(),
       difficulty: difficultyFromApi(json['difficulty'] as String? ?? 'mixed'),
       status: json['status'] as String? ?? 'draft',
+      reviewStatus: paperReviewStatusFromApi(json['reviewStatus'] as String? ?? 'draft'),
+      programTrack: programTrackFromApi(json['programTrack'] as String? ?? 'board'),
       bankReuseCount: json['bankReuseCount'] as int?,
       aiGeneratedCount: json['aiGeneratedCount'] as int?,
     );
@@ -116,6 +159,7 @@ class EducationMapper {
 
   static QuestionPaperItem paperItemFromApi(Map<String, dynamic> json) {
     return QuestionPaperItem(
+      id: json['id'] as String?,
       questionNumber: (json['questionNumber'] as num).toInt(),
       questionType: questionTypeFromApi(json['questionType'] as String? ?? 'mcq'),
       marks: (json['marks'] as num).toInt(),
@@ -125,6 +169,28 @@ class EducationMapper {
           .map((e) => e.toString())
           .toList(),
       source: json['source'] as String? ?? 'bank',
+      reviewStatus: json['reviewStatus'] as String? ?? 'approved',
+    );
+  }
+
+  static PaperGap paperGapFromApi(Map<String, dynamic> json) {
+    return PaperGap(
+      questionType: questionTypeFromApi(json['questionType'] as String? ?? 'mcq'),
+      difficulty: json['difficulty'] as String? ?? 'medium',
+      marks: (json['marks'] as num?)?.toInt() ?? 0,
+      chapter: json['chapter'] as String? ?? '',
+    );
+  }
+
+  static PaperReview paperReviewFromApi(Map<String, dynamic> json) {
+    return PaperReview(
+      id: json['id'] as String,
+      roundNumber: (json['roundNumber'] as num?)?.toInt() ?? 1,
+      status: json['status'] as String? ?? 'submitted',
+      comments: json['comments'] as String?,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
     );
   }
 

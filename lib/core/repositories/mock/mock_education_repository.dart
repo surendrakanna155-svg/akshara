@@ -69,11 +69,53 @@ class MockEducationRepository implements EducationRepository {
   final List<QuestionPaperDetail> _papers = [];
   final List<HomeworkAssignment> _homework = [];
   final List<ReportCardRemark> _remarks = [];
+  final Map<String, List<PaperReview>> _paperReviews = {};
   int _id = 100;
 
   String _nextId(String prefix) {
     _id += 1;
     return '${prefix}_$_id';
+  }
+
+  QuestionPaperSummary _withReviewStatus(
+    QuestionPaperSummary current,
+    EduPaperReviewStatus reviewStatus, {
+    String? status,
+  }) {
+    return QuestionPaperSummary(
+      id: current.id,
+      title: current.title,
+      className: current.className,
+      sectionName: current.sectionName,
+      subjectName: current.subjectName,
+      examType: current.examType,
+      totalMarks: current.totalMarks,
+      difficulty: current.difficulty,
+      status: status ?? current.status,
+      reviewStatus: reviewStatus,
+      programTrack: current.programTrack,
+      bankReuseCount: current.bankReuseCount,
+      aiGeneratedCount: current.aiGeneratedCount,
+    );
+  }
+
+  QuestionPaperDetail _replacePaper(
+    QuestionPaperDetail current, {
+    QuestionPaperSummary? paper,
+    List<QuestionPaperItem>? items,
+  }) {
+    final updated = QuestionPaperDetail(
+      paper: paper ?? current.paper,
+      items: items ?? current.items,
+      blueprint: current.blueprint,
+      answerKey: current.answerKey,
+      aiCandidateCount: current.aiCandidateCount,
+      unfilledGapCount: current.unfilledGapCount,
+      gaps: current.gaps,
+    );
+    final index = _papers.indexWhere((p) => p.paper.id == current.paper.id);
+    if (index >= 0) _papers[index] = updated;
+    return updated;
   }
 
   @override
@@ -131,10 +173,13 @@ class MockEducationRepository implements EducationRepository {
         .where((b) => b.subjectName == request.subjectName)
         .take(2)
         .toList();
-    final aiCount = request.totalMarks > 10 ? 2 : 1;
+    // AI candidates are only offered for unfilled slots when gap-fill is enabled.
+    final aiCount = request.allowAiGapFill ? (request.totalMarks > 10 ? 2 : 1) : 0;
+    final paperId = _nextId('paper');
     final items = <QuestionPaperItem>[
       ...bankItems.asMap().entries.map(
             (e) => QuestionPaperItem(
+              id: '${paperId}_item_${e.key + 1}',
               questionNumber: e.key + 1,
               questionType: e.value.questionType,
               marks: e.value.marks,
@@ -147,19 +192,34 @@ class MockEducationRepository implements EducationRepository {
       ...List.generate(
         aiCount,
         (i) => QuestionPaperItem(
+          id: '${paperId}_item_${bankItems.length + i + 1}',
           questionNumber: bankItems.length + i + 1,
           questionType: EduQuestionType.longAnswer,
           marks: 5,
           questionText:
-              'AI generated: ${request.subjectName} — ${request.chapters.firstOrNull ?? "General"}',
-          answerText: 'Sample model answer.',
-          source: 'ai_generated',
+              'AI candidate: ${request.subjectName} — ${request.chapters.firstOrNull ?? "General"}',
+          answerText: 'Proposed model answer (awaiting moderation).',
+          source: 'ai_candidate',
+          reviewStatus: 'pending',
         ),
       ),
     ];
 
+    // When AI is disabled, leave the would-be slots as reported gaps.
+    final gaps = request.allowAiGapFill
+        ? const <PaperGap>[]
+        : List.generate(
+            request.totalMarks > 10 ? 2 : 1,
+            (i) => PaperGap(
+              questionType: EduQuestionType.longAnswer,
+              difficulty: 'medium',
+              marks: 5,
+              chapter: request.chapters.firstOrNull ?? 'General',
+            ),
+          );
+
     final paper = QuestionPaperSummary(
-      id: _nextId('paper'),
+      id: paperId,
       title:
           '${request.className} — ${request.subjectName} ${request.examType.name}',
       className: request.className,
@@ -169,6 +229,8 @@ class MockEducationRepository implements EducationRepository {
       totalMarks: request.totalMarks,
       difficulty: request.difficulty,
       status: 'draft',
+      reviewStatus: EduPaperReviewStatus.draft,
+      programTrack: request.programTrack,
       bankReuseCount: bankItems.length,
       aiGeneratedCount: aiCount,
     );
@@ -187,6 +249,9 @@ class MockEducationRepository implements EducationRepository {
                 'marks': q.marks,
               })
           .toList(),
+      aiCandidateCount: aiCount,
+      unfilledGapCount: gaps.length,
+      gaps: gaps,
     );
     _papers.add(detail);
     return detail;
@@ -205,28 +270,98 @@ class MockEducationRepository implements EducationRepository {
     required RepositoryQuery query,
     required String paperId,
   }) async {
-    final index = _papers.indexWhere((p) => p.paper.id == paperId);
-    final current = _papers[index];
-    final published = QuestionPaperSummary(
-      id: current.paper.id,
-      title: current.paper.title,
-      className: current.paper.className,
-      sectionName: current.paper.sectionName,
-      subjectName: current.paper.subjectName,
-      examType: current.paper.examType,
-      totalMarks: current.paper.totalMarks,
-      difficulty: current.paper.difficulty,
+    final current = _papers.firstWhere((p) => p.paper.id == paperId);
+    // Mirror the backend publish gate: pending AI candidates block publish, and
+    // once a review is in flight the paper must reach 'approved' first.
+    if (current.pendingAiItems.isNotEmpty) {
+      throw StateError(
+        'Paper has ${current.pendingAiItems.length} AI candidate(s) awaiting moderation',
+      );
+    }
+    final hasReviews = (_paperReviews[paperId] ?? const []).isNotEmpty;
+    if (hasReviews && current.paper.reviewStatus != EduPaperReviewStatus.approved) {
+      throw StateError('Paper must be approved before it can be published');
+    }
+    final published = _withReviewStatus(
+      current.paper,
+      EduPaperReviewStatus.published,
       status: 'published',
-      bankReuseCount: current.paper.bankReuseCount,
-      aiGeneratedCount: current.paper.aiGeneratedCount,
     );
-    _papers[index] = QuestionPaperDetail(
-      paper: published,
-      items: current.items,
-      blueprint: current.blueprint,
-      answerKey: current.answerKey,
-    );
+    _replacePaper(current, paper: published);
     return published;
+  }
+
+  @override
+  Future<QuestionPaperSummary> submitQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+  }) async {
+    final current = _papers.firstWhere((p) => p.paper.id == paperId);
+    final submitted = _withReviewStatus(current.paper, EduPaperReviewStatus.submitted);
+    _replacePaper(current, paper: submitted);
+    final reviews = _paperReviews.putIfAbsent(paperId, () => []);
+    reviews.add(PaperReview(
+      id: _nextId('review'),
+      roundNumber: reviews.length + 1,
+      status: 'submitted',
+    ));
+    return submitted;
+  }
+
+  @override
+  Future<QuestionPaperSummary> reviewQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+    required String decision,
+    String? comments,
+  }) async {
+    final current = _papers.firstWhere((p) => p.paper.id == paperId);
+    final reviewStatus = decision == 'approved'
+        ? EduPaperReviewStatus.approved
+        : EduPaperReviewStatus.changesRequested;
+    final reviewed = _withReviewStatus(current.paper, reviewStatus);
+    _replacePaper(current, paper: reviewed);
+    final reviews = _paperReviews.putIfAbsent(paperId, () => []);
+    reviews.add(PaperReview(
+      id: _nextId('review'),
+      roundNumber: reviews.length + 1,
+      status: decision,
+      comments: comments,
+    ));
+    return reviewed;
+  }
+
+  @override
+  Future<List<PaperReview>> listPaperReviews({
+    required RepositoryQuery query,
+    required String paperId,
+  }) async =>
+      List<PaperReview>.unmodifiable(_paperReviews[paperId] ?? const []);
+
+  @override
+  Future<QuestionPaperItem> moderatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    required String decision,
+  }) async {
+    final current = _papers.firstWhere((p) => p.paper.id == paperId);
+    final items = current.items.map((item) {
+      if (item.id != itemId) return item;
+      return QuestionPaperItem(
+        id: item.id,
+        questionNumber: item.questionNumber,
+        questionType: item.questionType,
+        marks: item.marks,
+        questionText: item.questionText,
+        answerText: item.answerText,
+        options: item.options,
+        source: item.source,
+        reviewStatus: decision == 'approved' ? 'approved' : 'rejected',
+      );
+    }).toList();
+    _replacePaper(current, items: items);
+    return items.firstWhere((item) => item.id == itemId);
   }
 
   @override

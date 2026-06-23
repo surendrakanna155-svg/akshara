@@ -606,6 +606,31 @@ abstract final class QaTestKeys {
   static const educationReportCardExportSuccessSnackbar =
       ValueKey<String>('education_report_card_export_success_snackbar');
 
+  // Batch 8c — Question Intelligence UI.
+  static const educationAddBankItemButton =
+      ValueKey<String>('education_add_bank_item_button');
+
+  static const educationSaveBankItemButton =
+      ValueKey<String>('education_save_bank_item_button');
+
+  static const educationUnfilledMarksBanner =
+      ValueKey<String>('education_unfilled_marks_banner');
+
+  static const educationSubmitPaperButton =
+      ValueKey<String>('education_submit_paper_button');
+
+  static const educationReviewApproveButton =
+      ValueKey<String>('education_review_approve_button');
+
+  static const educationReviewChangesButton =
+      ValueKey<String>('education_review_changes_button');
+
+  static ValueKey<String> educationModerateApproveButton(String itemId) =>
+      ValueKey<String>('education_moderate_approve_$itemId');
+
+  static ValueKey<String> educationModerateRejectButton(String itemId) =>
+      ValueKey<String>('education_moderate_reject_$itemId');
+
   static ValueKey<String> managementApproveButton(String approvalId) =>
       ValueKey<String>('management_approve_$approvalId');
 

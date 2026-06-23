@@ -32,6 +32,33 @@ abstract class EducationRepository {
     required String paperId,
   });
 
+  /// Submit a draft (or changes-requested) paper for review.
+  Future<QuestionPaperSummary> submitQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+  });
+
+  /// Reviewer decision on a submitted paper: 'approved' | 'changes_requested'.
+  Future<QuestionPaperSummary> reviewQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+    required String decision,
+    String? comments,
+  });
+
+  Future<List<PaperReview>> listPaperReviews({
+    required RepositoryQuery query,
+    required String paperId,
+  });
+
+  /// Moderate an AI-candidate paper item: 'approved' | 'rejected'.
+  Future<QuestionPaperItem> moderatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    required String decision,
+  });
+
   Future<Map<String, dynamic>> exportQuestionPaper({
     required RepositoryQuery query,
     required String paperId,

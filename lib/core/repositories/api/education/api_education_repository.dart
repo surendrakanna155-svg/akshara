@@ -68,6 +68,60 @@ class ApiEducationRepository implements EducationRepository {
   }
 
   @override
+  Future<QuestionPaperSummary> submitQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+  }) async {
+    final data = await _remote.submitQuestionPaper(query: query, paperId: paperId);
+    return EducationMapper.paperSummaryFromApi(
+      Map<String, dynamic>.from(data['paper'] as Map),
+    );
+  }
+
+  @override
+  Future<QuestionPaperSummary> reviewQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+    required String decision,
+    String? comments,
+  }) async {
+    final data = await _remote.reviewQuestionPaper(
+      query: query,
+      paperId: paperId,
+      decision: decision,
+      comments: comments,
+    );
+    return EducationMapper.paperSummaryFromApi(
+      Map<String, dynamic>.from(data['paper'] as Map),
+    );
+  }
+
+  @override
+  Future<List<PaperReview>> listPaperReviews({
+    required RepositoryQuery query,
+    required String paperId,
+  }) async {
+    final rows = await _remote.fetchPaperReviews(query: query, paperId: paperId);
+    return rows.map(EducationMapper.paperReviewFromApi).toList();
+  }
+
+  @override
+  Future<QuestionPaperItem> moderatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    required String decision,
+  }) async {
+    final row = await _remote.moderatePaperItem(
+      query: query,
+      paperId: paperId,
+      itemId: itemId,
+      decision: decision,
+    );
+    return EducationMapper.paperItemFromApi(row);
+  }
+
+  @override
   Future<Map<String, dynamic>> exportQuestionPaper({
     required RepositoryQuery query,
     required String paperId,
@@ -149,9 +203,8 @@ class ApiEducationRepository implements EducationRepository {
   }
 
   QuestionPaperDetail _paperDetailFromGenerateResponse(Map<String, dynamic> data) {
-    final paper = EducationMapper.paperSummaryFromApi(
-      Map<String, dynamic>.from(data['paper'] as Map),
-    );
+    final paperJson = Map<String, dynamic>.from(data['paper'] as Map);
+    final paper = EducationMapper.paperSummaryFromApi(paperJson);
     final summary = QuestionPaperSummary(
       id: paper.id,
       title: paper.title,
@@ -162,6 +215,8 @@ class ApiEducationRepository implements EducationRepository {
       totalMarks: paper.totalMarks,
       difficulty: paper.difficulty,
       status: paper.status,
+      reviewStatus: paper.reviewStatus,
+      programTrack: paper.programTrack,
       bankReuseCount: data['bankReuseCount'] as int?,
       aiGeneratedCount: data['aiGeneratedCount'] as int?,
     );
@@ -169,19 +224,24 @@ class ApiEducationRepository implements EducationRepository {
         .cast<Map<String, dynamic>>()
         .map(EducationMapper.paperItemFromApi)
         .toList();
+    final gaps = (data['gaps'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(EducationMapper.paperGapFromApi)
+        .toList();
     return QuestionPaperDetail(
       paper: summary,
       items: items,
-      blueprint: Map<String, dynamic>.from(summary.id == paper.id
-          ? (data['paper'] as Map)['blueprint'] as Map? ?? const {}
-          : const {}),
-      answerKey: (data['paper'] as Map?)?['answerKey'] is List
+      blueprint: Map<String, dynamic>.from(paperJson['blueprint'] as Map? ?? const {}),
+      answerKey: paperJson['answerKey'] is List
           ? List<Map<String, dynamic>>.from(
-              ((data['paper'] as Map)['answerKey'] as List).map(
+              (paperJson['answerKey'] as List).map(
                 (e) => Map<String, dynamic>.from(e as Map),
               ),
             )
           : const [],
+      aiCandidateCount: data['aiCandidateCount'] as int? ?? 0,
+      unfilledGapCount: data['unfilledGapCount'] as int? ?? 0,
+      gaps: gaps,
     );
   }
 

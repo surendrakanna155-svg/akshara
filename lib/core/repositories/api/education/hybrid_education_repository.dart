@@ -51,6 +51,48 @@ class HybridEducationRepository implements EducationRepository {
       _api.publishQuestionPaper(query: query, paperId: paperId);
 
   @override
+  Future<QuestionPaperSummary> submitQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+  }) =>
+      _api.submitQuestionPaper(query: query, paperId: paperId);
+
+  @override
+  Future<QuestionPaperSummary> reviewQuestionPaper({
+    required RepositoryQuery query,
+    required String paperId,
+    required String decision,
+    String? comments,
+  }) =>
+      _api.reviewQuestionPaper(
+        query: query,
+        paperId: paperId,
+        decision: decision,
+        comments: comments,
+      );
+
+  @override
+  Future<List<PaperReview>> listPaperReviews({
+    required RepositoryQuery query,
+    required String paperId,
+  }) =>
+      _api.listPaperReviews(query: query, paperId: paperId);
+
+  @override
+  Future<QuestionPaperItem> moderatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    required String decision,
+  }) =>
+      _api.moderatePaperItem(
+        query: query,
+        paperId: paperId,
+        itemId: itemId,
+        decision: decision,
+      );
+
+  @override
   Future<Map<String, dynamic>> exportQuestionPaper({
     required RepositoryQuery query,
     required String paperId,

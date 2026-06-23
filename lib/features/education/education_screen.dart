@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
 import '../../core/testing/qa_test_keys.dart';
+import 'education_bank_item_form.dart';
 import 'education_models.dart';
 import 'education_pdf_service.dart';
 import 'education_provider.dart';
+import 'education_question_paper_detail_screen.dart';
 
 class EducationScreen extends ConsumerStatefulWidget {
   const EducationScreen({super.key});
@@ -30,6 +32,8 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
 
   EduDifficulty _difficulty = EduDifficulty.mixed;
   EduExamType _examType = EduExamType.unitTest;
+  EduProgramTrack _programTrack = EduProgramTrack.board;
+  bool _allowAiGapFill = true;
   EduHomeworkType _homeworkType = EduHomeworkType.homework;
   EduRemarkType _remarkType = EduRemarkType.classTeacher;
   EduRemarkLanguage _remarkLanguage = EduRemarkLanguage.english;
@@ -110,6 +114,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
 
   Widget _questionPapersTab(bool canManage) {
     final papers = ref.watch(questionPapersListProvider);
+    final lastGenerated = ref.watch(lastGeneratedPaperProvider);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -128,73 +133,34 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
           _dropdown('Exam type', _examType.name, EduExamType.values, (v) {
             setState(() => _examType = v);
           }),
+          _dropdown('Program track', _programTrack.name, EduProgramTrack.values, (v) {
+            setState(() => _programTrack = v);
+          }),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Allow AI gap-fill'),
+            subtitle: const Text(
+              'Bank-first. Slots the bank cannot cover are offered to AI as '
+              'moderation candidates (never auto-published).',
+            ),
+            value: _allowAiGapFill,
+            onChanged: (v) => setState(() => _allowAiGapFill = v),
+          ),
           FilledButton(
-            onPressed: () async {
-              final detail = await ref.read(educationMutationsProvider.notifier).generatePaper(
-                    GenerateQuestionPaperRequest(
-                      academicYearLabel: _yearLabelController.text.trim(),
-                      className: _classController.text.trim(),
-                      sectionName: _sectionController.text.trim(),
-                      subjectName: _subjectController.text.trim(),
-                      chapters: _chaptersController.text
-                          .split(',')
-                          .map((c) => c.trim())
-                          .where((c) => c.isNotEmpty)
-                          .toList(),
-                      difficulty: _difficulty,
-                      totalMarks: int.tryParse(_marksController.text) ?? 50,
-                      examType: _examType,
-                    ),
-                  );
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Generated ${detail.items.length} questions '
-                    '(bank: ${detail.paper.bankReuseCount ?? 0}, '
-                    'AI: ${detail.paper.aiGeneratedCount ?? 0})',
-                  ),
-                ),
-              );
-            },
+            onPressed: () => _generatePaper(),
             child: const Text('Generate paper'),
           ),
+          if (lastGenerated != null) ...[
+            const SizedBox(height: 12),
+            _generationResultBanner(lastGenerated),
+          ],
           const Divider(height: 32),
         ],
         papers.when(
           data: (items) => items.isEmpty
               ? const Text('No question papers yet.')
               : Column(
-                  children: items
-                      .map(
-                        (paper) => Card(
-                          child: ListTile(
-                            title: Text(paper.title),
-                            subtitle: Text(
-                              '${paper.status} • ${paper.totalMarks} marks • '
-                              'bank ${paper.bankReuseCount ?? 0} / AI ${paper.aiGeneratedCount ?? 0}',
-                            ),
-                            trailing: canManage
-                                ? Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.print_outlined),
-                                        onPressed: () => _printPaper(paper.id),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.publish_outlined),
-                                        onPressed: () => ref
-                                            .read(educationMutationsProvider.notifier)
-                                            .publishPaper(paper.id),
-                                      ),
-                                    ],
-                                  )
-                                : null,
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  children: items.map((paper) => _paperCard(paper, canManage)).toList(),
                 ),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Text('Error: $e'),
@@ -202,6 +168,121 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
       ],
     );
   }
+
+  Future<void> _generatePaper() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final detail = await ref.read(educationMutationsProvider.notifier).generatePaper(
+            GenerateQuestionPaperRequest(
+              academicYearLabel: _yearLabelController.text.trim(),
+              className: _classController.text.trim(),
+              sectionName: _sectionController.text.trim(),
+              subjectName: _subjectController.text.trim(),
+              chapters: _chaptersController.text
+                  .split(',')
+                  .map((c) => c.trim())
+                  .where((c) => c.isNotEmpty)
+                  .toList(),
+              difficulty: _difficulty,
+              totalMarks: int.tryParse(_marksController.text) ?? 50,
+              examType: _examType,
+              programTrack: _programTrack,
+              allowAiGapFill: _allowAiGapFill,
+            ),
+          );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Generated ${detail.items.length} questions '
+            '(bank: ${detail.paper.bankReuseCount ?? 0}, '
+            'AI candidates: ${detail.aiCandidateCount})',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
+  Widget _generationResultBanner(QuestionPaperDetail detail) {
+    final hasIssues = detail.unfilledGapCount > 0 || detail.aiCandidateCount > 0;
+    final color = detail.unfilledGapCount > 0
+        ? Colors.orange
+        : (detail.aiCandidateCount > 0 ? Colors.deepPurple : Colors.green);
+    final lines = <String>[
+      if (detail.unfilledMarks > 0)
+        '${detail.unfilledMarks} marks unfilled across ${detail.unfilledGapCount} slot(s) — '
+            'add bank questions or enable AI gap-fill.',
+      if (detail.aiCandidateCount > 0)
+        '${detail.aiCandidateCount} AI candidate(s) need moderation before publishing.',
+      if (!hasIssues) 'Fully covered by the bank — ready to submit.',
+    ];
+    return Container(
+      key: detail.unfilledGapCount > 0 ? QaTestKeys.educationUnfilledMarksBanner : null,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(detail.paper.title,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          ...lines.map((l) => Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('• $l'),
+              )),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.tonal(
+              onPressed: () => _openPaper(detail.paper.id),
+              child: const Text('Review & moderate'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paperCard(QuestionPaperSummary paper, bool canManage) {
+    return Card(
+      child: ListTile(
+        title: Text(paper.title),
+        subtitle: Text(
+          '${_reviewStatusLabel(paper.reviewStatus)} • ${paper.totalMarks} marks • '
+          'bank ${paper.bankReuseCount ?? 0} / AI ${paper.aiGeneratedCount ?? 0}',
+        ),
+        trailing: canManage
+            ? IconButton(
+                icon: const Icon(Icons.print_outlined),
+                onPressed: () => _printPaper(paper.id),
+              )
+            : null,
+        onTap: () => _openPaper(paper.id),
+      ),
+    );
+  }
+
+  void _openPaper(String paperId) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => QuestionPaperDetailScreen(paperId: paperId),
+      ),
+    );
+  }
+
+  String _reviewStatusLabel(EduPaperReviewStatus status) => switch (status) {
+        EduPaperReviewStatus.draft => 'Draft',
+        EduPaperReviewStatus.submitted => 'Submitted',
+        EduPaperReviewStatus.changesRequested => 'Changes requested',
+        EduPaperReviewStatus.approved => 'Approved',
+        EduPaperReviewStatus.published => 'Published',
+        EduPaperReviewStatus.archived => 'Archived',
+      };
 
   Future<void> _printPaper(String paperId) async {
     final detail = await ref.read(educationRepositoryProvider).getQuestionPaper(
@@ -238,32 +319,35 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
           error: (e, _) => Text('Error: $e'),
         ),
         if (canManage)
-          FilledButton(
-            onPressed: () async {
-              await ref.read(educationRepositoryProvider).createQuestionBankItem(
-                    query: ref.read(educationQueryProvider),
-                    item: QuestionBankItem(
-                      id: '',
-                      subjectName: _subjectController.text.trim(),
-                      chapter: _chaptersController.text.split(',').first.trim(),
-                      topic: _topicController.text.trim(),
-                      difficulty: _difficulty == EduDifficulty.mixed
-                          ? EduDifficulty.medium
-                          : _difficulty,
-                      questionType: EduQuestionType.mcq,
-                      marks: 2,
-                      questionText:
-                          'Sample MCQ for ${_subjectController.text.trim()}',
-                      answerText: 'Option B',
-                      options: const ['A', 'B', 'C', 'D'],
-                    ),
-                  );
-              ref.invalidate(questionBankListProvider);
-            },
-            child: const Text('Add sample bank item'),
+          FilledButton.icon(
+            key: QaTestKeys.educationAddBankItemButton,
+            icon: const Icon(Icons.add),
+            onPressed: () => _addBankItem(),
+            label: const Text('Add question'),
           ),
       ],
     );
+  }
+
+  Future<void> _addBankItem() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final item = await showAddBankItemSheet(
+      context,
+      initialSubject: _subjectController.text.trim(),
+    );
+    if (item == null) return;
+    try {
+      await ref.read(educationRepositoryProvider).createQuestionBankItem(
+            query: ref.read(educationQueryProvider),
+            item: item,
+          );
+      ref.invalidate(questionBankListProvider);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Question added to bank')),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
   }
 
   Widget _homeworkTab(bool canManage) {
