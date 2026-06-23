@@ -155,6 +155,17 @@ abstract class FinanceRepository {
     required UpdateScholarshipRequest request,
   });
 
+  Future<DiscountRule> createDiscountRule({
+    required RepositoryQuery query,
+    required CreateDiscountRuleRequest request,
+  });
+
+  Future<DiscountRule> updateDiscountRule({
+    required RepositoryQuery query,
+    required String ruleId,
+    required UpdateDiscountRuleRequest request,
+  });
+
   Future<FinanceSettingsData> updateSettings({
     required RepositoryQuery query,
     required UpdateFinanceSettingsRequest request,

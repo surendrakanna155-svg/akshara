@@ -479,6 +479,165 @@ Future<void> showCreateScholarshipDialog(
   }
 }
 
+Future<void> showCreateDiscountRuleDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final nameController = TextEditingController();
+  final discountController = TextEditingController(text: '10%');
+  final appliesToController = TextEditingController();
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Add discount rule',
+      icon: Icons.percent_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Rule name',
+            controller: nameController,
+            required: true,
+            hint: 'e.g. Early bird payment',
+          ),
+          AksharaFormField(
+            label: 'Discount',
+            controller: discountController,
+            hint: 'e.g. 5% or Up to 40%',
+          ),
+          AksharaFormField(
+            label: 'Applies to',
+            controller: appliesToController,
+            hint: 'e.g. Annual fee — paid before 30 Apr',
+          ),
+        ],
+      ),
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Create',
+        confirmKey: QaTestKeys.financeDiscountRuleCreateSubmitButton,
+        onConfirm: () {
+          if (nameController.text.trim().isEmpty) return;
+          Navigator.of(context).pop(true);
+        },
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    await ref.read(createDiscountRuleProvider.notifier).execute(
+          CreateDiscountRuleRequest(
+            name: nameController.text.trim(),
+            discountPercent: discountController.text.trim(),
+            appliesTo: appliesToController.text.trim(),
+          ),
+        );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Discount rule created (pending approval)')),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
+Future<void> showEditDiscountRuleDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required DiscountRule rule,
+}) async {
+  final nameController = TextEditingController(text: rule.name);
+  final discountController = TextEditingController(text: rule.discountPercent);
+  final appliesToController = TextEditingController(text: rule.appliesTo);
+  var status = rule.status;
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Edit discount rule',
+      icon: Icons.edit_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Rule name',
+            controller: nameController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Discount',
+            controller: discountController,
+          ),
+          AksharaFormField(
+            label: 'Applies to',
+            controller: appliesToController,
+          ),
+          DropdownMenu<DiscountApprovalStatus>(
+            initialSelection: status,
+            label: const Text('Status'),
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: const [
+              DropdownMenuEntry(
+                value: DiscountApprovalStatus.pending,
+                label: 'Pending',
+              ),
+              DropdownMenuEntry(
+                value: DiscountApprovalStatus.approved,
+                label: 'Approved',
+              ),
+              DropdownMenuEntry(
+                value: DiscountApprovalStatus.active,
+                label: 'Active',
+              ),
+              DropdownMenuEntry(
+                value: DiscountApprovalStatus.rejected,
+                label: 'Rejected',
+              ),
+            ],
+            onSelected: (value) {
+              if (value != null) status = value;
+            },
+          ),
+        ],
+      ),
+      actions: _dialogActions(
+        context,
+        confirmLabel: 'Save',
+        confirmKey: QaTestKeys.financeDiscountRuleEditSubmitButton,
+        onConfirm: () {
+          if (nameController.text.trim().isEmpty) return;
+          Navigator.of(context).pop(true);
+        },
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    await ref.read(updateDiscountRuleProvider.notifier).execute(
+          ruleId: rule.id,
+          request: UpdateDiscountRuleRequest(
+            name: nameController.text.trim(),
+            discountPercent: discountController.text.trim(),
+            appliesTo: appliesToController.text.trim(),
+            status: status,
+          ),
+        );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Discount rule updated')),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, error);
+  }
+}
+
 Future<void> showEditFinanceSettingDialog(
   BuildContext context,
   WidgetRef ref, {

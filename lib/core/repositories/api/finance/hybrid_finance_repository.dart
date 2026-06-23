@@ -287,6 +287,21 @@ class HybridFinanceRepository implements FinanceRepository {
       );
 
   @override
+  Future<DiscountRule> createDiscountRule({
+    required RepositoryQuery query,
+    required CreateDiscountRuleRequest request,
+  }) =>
+      _api.createDiscountRule(query: query, request: request);
+
+  @override
+  Future<DiscountRule> updateDiscountRule({
+    required RepositoryQuery query,
+    required String ruleId,
+    required UpdateDiscountRuleRequest request,
+  }) =>
+      _api.updateDiscountRule(query: query, ruleId: ruleId, request: request);
+
+  @override
   Future<FinanceSettingsData> updateSettings({
     required RepositoryQuery query,
     required UpdateFinanceSettingsRequest request,

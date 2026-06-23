@@ -1319,6 +1319,43 @@ class MockFinanceRepository implements FinanceRepository {
   }
 
   @override
+  Future<DiscountRule> createDiscountRule({
+    required RepositoryQuery query,
+    required CreateDiscountRuleRequest request,
+  }) async {
+    final rule = DiscountRule(
+      id: _store.nextId('rule_'),
+      name: request.name,
+      discountPercent: request.discountPercent,
+      appliesTo: request.appliesTo,
+      status: DiscountApprovalStatus.pending,
+    );
+    _store.discountRules.insert(0, rule);
+    return rule;
+  }
+
+  @override
+  Future<DiscountRule> updateDiscountRule({
+    required RepositoryQuery query,
+    required String ruleId,
+    required UpdateDiscountRuleRequest request,
+  }) async {
+    final index =
+        _store.discountRules.indexWhere((item) => item.id == ruleId);
+    if (index < 0) throw StateError('Discount rule not found: $ruleId');
+    final current = _store.discountRules[index];
+    final updated = DiscountRule(
+      id: current.id,
+      name: request.name ?? current.name,
+      discountPercent: request.discountPercent ?? current.discountPercent,
+      appliesTo: request.appliesTo ?? current.appliesTo,
+      status: request.status ?? current.status,
+    );
+    _store.discountRules[index] = updated;
+    return updated;
+  }
+
+  @override
   Future<FinanceSettingsData> updateSettings({
     required RepositoryQuery query,
     required UpdateFinanceSettingsRequest request,
@@ -1411,6 +1448,7 @@ class _FinanceMutableStore {
         studentAccounts = List.of(_seedStudentAccounts),
         refundRequests = List.of(_seedRefundRequests),
         scholarships = List.of(_seedScholarships),
+        discountRules = List.of(_seedDiscountRules),
         invoices = List.of(_seedInvoices),
         payments = List.of(_seedPayments),
         offlinePayments = List.of(_seedOfflinePayments),
@@ -1428,6 +1466,7 @@ class _FinanceMutableStore {
   List<StudentFeeAccount> studentAccounts;
   List<RefundRequest> refundRequests;
   List<ScholarshipCatalogItem> scholarships;
+  List<DiscountRule> discountRules;
   List<FinanceInvoice> invoices;
   List<CollectionPayment> payments;
   List<OfflinePaymentRecord> offlinePayments;
@@ -1503,29 +1542,7 @@ class _FinanceMutableStore {
           ),
         ],
         scholarships: scholarships,
-        rules: const [
-          DiscountRule(
-            id: 'rule_1',
-            name: 'Early bird payment',
-            discountPercent: '5%',
-            appliesTo: 'Annual fee — paid before 30 Apr',
-            status: DiscountApprovalStatus.active,
-          ),
-          DiscountRule(
-            id: 'rule_2',
-            name: 'Staff child waiver',
-            discountPercent: '50%',
-            appliesTo: 'Tuition component only',
-            status: DiscountApprovalStatus.active,
-          ),
-          DiscountRule(
-            id: 'rule_3',
-            name: 'Need-based aid',
-            discountPercent: 'Up to 40%',
-            appliesTo: 'Management approval required',
-            status: DiscountApprovalStatus.pending,
-          ),
-        ],
+        rules: List.unmodifiable(discountRules),
         assignments: const [
           StudentDiscountAssignment(
             id: 'asgn_1',
@@ -1816,6 +1833,30 @@ class _FinanceMutableStore {
       originalReceipt: 'RCP-2026-8839',
       collectionId: 'col_3',
       invoiceId: 'inv_1',
+    ),
+  ];
+
+  static final List<DiscountRule> _seedDiscountRules = [
+    const DiscountRule(
+      id: 'rule_1',
+      name: 'Early bird payment',
+      discountPercent: '5%',
+      appliesTo: 'Annual fee — paid before 30 Apr',
+      status: DiscountApprovalStatus.active,
+    ),
+    const DiscountRule(
+      id: 'rule_2',
+      name: 'Staff child waiver',
+      discountPercent: '50%',
+      appliesTo: 'Tuition component only',
+      status: DiscountApprovalStatus.active,
+    ),
+    const DiscountRule(
+      id: 'rule_3',
+      name: 'Need-based aid',
+      discountPercent: 'Up to 40%',
+      appliesTo: 'Management approval required',
+      status: DiscountApprovalStatus.pending,
     ),
   ];
 

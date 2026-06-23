@@ -12,7 +12,6 @@ import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/academic/academic_catalog_mutation.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
-import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
@@ -688,6 +687,67 @@ class UpdateScholarshipNotifier extends AsyncNotifier<ScholarshipCatalogItem?> {
 final updateScholarshipProvider =
     AsyncNotifierProvider<UpdateScholarshipNotifier, ScholarshipCatalogItem?>(
   UpdateScholarshipNotifier.new,
+);
+
+class CreateDiscountRuleNotifier extends AsyncNotifier<DiscountRule?> {
+  @override
+  FutureOr<DiscountRule?> build() => null;
+
+  Future<DiscountRule?> execute(CreateDiscountRuleRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'createDiscountRule',
+        entityId: 'discount_rule',
+        entityIdForAudit: (rule) => rule.id,
+        invalidateDiscounts: true,
+        action: () => ref.read(financeRepositoryProvider).createDiscountRule(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final createDiscountRuleProvider =
+    AsyncNotifierProvider<CreateDiscountRuleNotifier, DiscountRule?>(
+  CreateDiscountRuleNotifier.new,
+);
+
+class UpdateDiscountRuleNotifier extends AsyncNotifier<DiscountRule?> {
+  @override
+  FutureOr<DiscountRule?> build() => null;
+
+  Future<DiscountRule?> execute({
+    required String ruleId,
+    required UpdateDiscountRuleRequest request,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageFinance(ref),
+        auditAction: 'updateDiscountRule',
+        entityId: ruleId,
+        invalidateDiscounts: true,
+        action: () => ref.read(financeRepositoryProvider).updateDiscountRule(
+              query: ref.read(repositoryQueryProvider),
+              ruleId: ruleId,
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final updateDiscountRuleProvider =
+    AsyncNotifierProvider<UpdateDiscountRuleNotifier, DiscountRule?>(
+  UpdateDiscountRuleNotifier.new,
 );
 
 class UpdateFinanceSettingsNotifier

@@ -82,19 +82,45 @@ class FinanceDiscountsScreen extends ConsumerWidget {
         else
           _ScholarshipCatalogTable(scholarships: data.scholarships),
         const SizedBox(height: AksharaSpacing.s6),
-        const AksharaSectionHeader(title: 'Discount rules'),
+        Row(
+          children: [
+            const Expanded(
+              child: AksharaSectionHeader(title: 'Discount rules'),
+            ),
+            AksharaManageAction(
+              permission: Permission.manageFinance,
+              child: FilledButton.icon(
+                key: QaTestKeys.financeDiscountRuleAddButton,
+                onPressed: () => showCreateDiscountRuleDialog(context, ref),
+                icon: const Icon(Icons.add),
+                label: const Text('Add rule'),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: AksharaSpacing.s3),
         if (useCards)
           Column(
             children: [
               for (final rule in data.rules) ...[
-                _DiscountRuleMobileCard(rule: rule),
+                _DiscountRuleMobileCard(
+                  rule: rule,
+                  onEdit: () => showEditDiscountRuleDialog(
+                    context,
+                    ref,
+                    rule: rule,
+                  ),
+                ),
                 const SizedBox(height: AksharaSpacing.s3),
               ],
             ],
           )
         else
-          _DiscountRulesTable(rules: data.rules),
+          _DiscountRulesTable(
+            rules: data.rules,
+            onEditRule: (rule) =>
+                showEditDiscountRuleDialog(context, ref, rule: rule),
+          ),
         const SizedBox(height: AksharaSpacing.s6),
         if (isMobile) ...[
           const AksharaSectionHeader(title: 'Student assignments'),
@@ -195,9 +221,10 @@ class _ScholarshipCatalogTable extends StatelessWidget {
 }
 
 class _DiscountRulesTable extends StatelessWidget {
-  const _DiscountRulesTable({required this.rules});
+  const _DiscountRulesTable({required this.rules, this.onEditRule});
 
   final List<DiscountRule> rules;
+  final void Function(DiscountRule rule)? onEditRule;
 
   @override
   Widget build(BuildContext context) {
@@ -215,6 +242,7 @@ class _DiscountRulesTable extends StatelessWidget {
             DataColumn(label: Text('Discount')),
             DataColumn(label: Text('Applies to')),
             DataColumn(label: Text('Status')),
+            DataColumn(label: Text('')),
           ],
           rows: [
             for (final rule in rules)
@@ -224,6 +252,19 @@ class _DiscountRulesTable extends StatelessWidget {
                   DataCell(Text(rule.discountPercent)),
                   DataCell(Text(rule.appliesTo)),
                   DataCell(_DiscountStatusChip(status: rule.status)),
+                  DataCell(
+                    AksharaManageAction(
+                      permission: Permission.manageFinance,
+                      child: IconButton(
+                        key: QaTestKeys.financeDiscountRuleEditButton(rule.id),
+                        icon: const Icon(Icons.edit_outlined),
+                        tooltip: 'Edit rule',
+                        onPressed: onEditRule == null
+                            ? null
+                            : () => onEditRule!(rule),
+                      ),
+                    ),
+                  ),
                 ],
               ),
           ],
@@ -316,9 +357,10 @@ class _ScholarshipMobileCard extends StatelessWidget {
 }
 
 class _DiscountRuleMobileCard extends StatelessWidget {
-  const _DiscountRuleMobileCard({required this.rule});
+  const _DiscountRuleMobileCard({required this.rule, this.onEdit});
 
   final DiscountRule rule;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -336,7 +378,21 @@ class _DiscountRuleMobileCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(rule.name, style: text.titleSmall),
+            Row(
+              children: [
+                Expanded(child: Text(rule.name, style: text.titleSmall)),
+                AksharaManageAction(
+                  permission: Permission.manageFinance,
+                  child: IconButton(
+                    key: QaTestKeys.financeDiscountRuleEditButton(rule.id),
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: 'Edit rule',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onEdit,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: AksharaSpacing.s2),
             Text(
               '${rule.discountPercent} · ${rule.appliesTo}',

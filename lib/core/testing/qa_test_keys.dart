@@ -788,6 +788,18 @@ abstract final class QaTestKeys {
   static const teacherProfileSettingsLink =
       ValueKey<String>('teacher_profile_settings_link');
 
+  static const financeDiscountRuleAddButton =
+      ValueKey<String>('finance_discount_rule_add_button');
+
+  static const financeDiscountRuleCreateSubmitButton =
+      ValueKey<String>('finance_discount_rule_create_submit_button');
+
+  static const financeDiscountRuleEditSubmitButton =
+      ValueKey<String>('finance_discount_rule_edit_submit_button');
+
+  static ValueKey<String> financeDiscountRuleEditButton(String ruleId) =>
+      ValueKey<String>('finance_discount_rule_edit_button_$ruleId');
+
   static const subjectAddButton =
       ValueKey<String>('subject_add_button');
 

@@ -244,6 +244,34 @@ class UpdateScholarshipRequest {
   final String? eligibility;
 }
 
+/// Create a discount rule (e.g. "Early bird payment — 5% off annual fee").
+class CreateDiscountRuleRequest {
+  const CreateDiscountRuleRequest({
+    required this.name,
+    required this.discountPercent,
+    required this.appliesTo,
+  });
+
+  final String name;
+  final String discountPercent;
+  final String appliesTo;
+}
+
+/// Edit an existing discount rule; null fields are left unchanged.
+class UpdateDiscountRuleRequest {
+  const UpdateDiscountRuleRequest({
+    this.name,
+    this.discountPercent,
+    this.appliesTo,
+    this.status,
+  });
+
+  final String? name;
+  final String? discountPercent;
+  final String? appliesTo;
+  final DiscountApprovalStatus? status;
+}
+
 /// Single setting value update within a section.
 class FinanceSettingUpdate {
   const FinanceSettingUpdate({
