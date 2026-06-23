@@ -87,6 +87,17 @@ class HrLeaveRequestDto {
   final Map<String, dynamic> raw;
 }
 
+class HrPayrollRunDto {
+  const HrPayrollRunDto({required this.raw});
+
+  factory HrPayrollRunDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return HrPayrollRunDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
 class HrPayrollResponseDto {
   const HrPayrollResponseDto({required this.raw});
 

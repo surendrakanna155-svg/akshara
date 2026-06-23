@@ -3,7 +3,7 @@ import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/hr/hr_models.dart';
 import '../../../../features/hr/hr_requests.dart';
-import '../api_exception.dart';
+import 'dto/hr_enum_codec.dart';
 import 'mapper/hr_mapper.dart';
 import 'remote/hr_remote_datasource.dart';
 
@@ -90,7 +90,21 @@ class ApiHrRepository implements HrRepository {
     required RepositoryQuery query,
     required CreateHrLeaveRequest request,
   }) async {
-    throw ApiNotConnectedException('HrRepository', 'createLeaveRequest');
+    final dto = await _remote.createLeaveRequest(
+      query: query,
+      data: {
+        'employeeId': request.employeeId,
+        'employeeName': request.employeeName,
+        'department': HrEnumCodec.departmentToApi(request.department),
+        'leaveType': HrEnumCodec.leaveTypeToApi(request.leaveType),
+        'fromDate': request.fromDate,
+        'toDate': request.toDate,
+        'days': request.days,
+        'reason': request.reason,
+        'approver': request.approver,
+      },
+    );
+    return _mapper.toLeaveRequest(dto);
   }
 
   @override
@@ -126,7 +140,14 @@ class ApiHrRepository implements HrRepository {
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,
   }) async {
-    throw ApiNotConnectedException('HrRepository', 'processPayrollRun');
+    final dto = await _remote.processPayrollRun(
+      query: query,
+      data: {
+        'runId': request.runId,
+        if (request.processedOn != null) 'processedOn': request.processedOn,
+      },
+    );
+    return _mapper.toPayrollRun(dto);
   }
 
   @override
@@ -134,7 +155,20 @@ class ApiHrRepository implements HrRepository {
     required RepositoryQuery query,
     required CreateHrEmployeeRequest request,
   }) async {
-    throw ApiNotConnectedException('HrRepository', 'createEmployee');
+    final dto = await _remote.createEmployee(
+      query: query,
+      data: {
+        'name': request.name,
+        'employeeCode': request.employeeCode,
+        'department': HrEnumCodec.departmentToApi(request.department),
+        'role': HrEnumCodec.employeeRoleToApi(request.role),
+        'designation': request.designation,
+        'email': request.email,
+        'phone': request.phone,
+        'joinDate': request.joinDate,
+      },
+    );
+    return _mapper.toEmployee(dto);
   }
 
   @override
@@ -142,7 +176,17 @@ class ApiHrRepository implements HrRepository {
     required RepositoryQuery query,
     required UpdateHrEmployeeRequest request,
   }) async {
-    throw ApiNotConnectedException('HrRepository', 'updateEmployee');
+    final dto = await _remote.updateEmployee(
+      query: query,
+      employeeId: request.employeeId,
+      data: {
+        'name': request.name,
+        'designation': request.designation,
+        'phone': request.phone,
+        'department': HrEnumCodec.departmentToApi(request.department),
+      },
+    );
+    return _mapper.toEmployee(dto);
   }
 
   @override
@@ -150,6 +194,11 @@ class ApiHrRepository implements HrRepository {
     required RepositoryQuery query,
     required SetHrEmployeeStatusRequest request,
   }) async {
-    throw ApiNotConnectedException('HrRepository', 'setEmployeeStatus');
+    final dto = await _remote.setEmployeeStatus(
+      query: query,
+      employeeId: request.employeeId,
+      status: HrEnumCodec.employeeStatusToApi(request.status),
+    );
+    return _mapper.toEmployee(dto);
   }
 }

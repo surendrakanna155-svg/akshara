@@ -10,10 +10,13 @@ abstract final class HrApiPaths {
   static const String recruitment = '$base/recruitment';
   static const String performance = '$base/performance';
   static const String settings = '$base/settings';
+  static const String payrollRun = '$payroll/run';
   static String approveLeave(String leaveRequestId) =>
       '$base/leave/$leaveRequestId/approve';
   static String rejectLeave(String leaveRequestId) =>
       '$base/leave/$leaveRequestId/reject';
 
   static String employeeDetail(String employeeId) => '$base/employees/$employeeId';
+  static String employeeStatus(String employeeId) =>
+      '$base/employees/$employeeId/status';
 }

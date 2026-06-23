@@ -108,6 +108,10 @@ class HrMapper {
     return _mapLeaveRequest(dto.raw);
   }
 
+  HrPayrollRun toPayrollRun(HrPayrollRunDto dto) {
+    return _mapPayrollRun(dto.raw);
+  }
+
   HrPayrollData toPayroll(HrPayrollResponseDto dto) {
     final raw = dto.raw;
     return HrPayrollData(
@@ -315,17 +319,25 @@ class HrMapper {
   List<HrPayrollRun> _mapPayrollRuns(List<dynamic> items) {
     return [
       for (final item in items)
-        if (item is Map<String, dynamic>)
-          HrPayrollRun(
-            id: item['id'] as String? ?? '',
-            period: item['period'] as String? ?? '',
-            employeeCount: item['employeeCount'] as int? ?? 0,
-            grossAmount: item['grossAmount'] as String? ?? '',
-            netAmount: item['netAmount'] as String? ?? '',
-            status: HrEnumCodec.parsePayrollStatus(item['status'] as String?),
-            processedOn: item['processedOn'] as String? ?? '',
-          ),
+        if (item is Map<String, dynamic>) _mapPayrollRun(item),
     ];
+  }
+
+  HrPayrollRun _mapPayrollRun(Map<String, dynamic> item) {
+    return HrPayrollRun(
+      id: item['id'] as String? ?? '',
+      period: item['period'] as String? ?? '',
+      employeeCount: item['employeeCount'] as int? ?? 0,
+      grossAmount: _asText(item['grossAmount']),
+      netAmount: _asText(item['netAmount']),
+      status: HrEnumCodec.parsePayrollStatus(item['status'] as String?),
+      processedOn: item['processedOn'] as String? ?? '',
+    );
+  }
+
+  String _asText(dynamic value) {
+    if (value == null) return '';
+    return '$value';
   }
 
   List<HrPayrollEntry> _mapPayrollEntries(List<dynamic> items) {

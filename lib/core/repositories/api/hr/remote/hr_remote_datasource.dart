@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
 import '../dto/hr_responses_dto.dart';
 import 'hr_api_paths.dart';
 
@@ -127,6 +128,71 @@ class HrRemoteDataSource {
     return HrLeaveRequestDto.fromJson(_responseMap(response));
   }
 
+  Future<HrLeaveRequestDto> createLeaveRequest({
+    required RepositoryQuery query,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.leave,
+      queryParameters: _queryParams(query),
+      data: data,
+    );
+    // HrLeaveRequestDto.fromJson unwraps the {data, error} envelope internally.
+    return HrLeaveRequestDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrPayrollRunDto> processPayrollRun({
+    required RepositoryQuery query,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.payrollRun,
+      queryParameters: _queryParams(query),
+      data: data,
+    );
+    // HrPayrollRunDto.fromJson unwraps the {data, error} envelope internally.
+    return HrPayrollRunDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrEmployeeDto> createEmployee({
+    required RepositoryQuery query,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.employees,
+      queryParameters: _queryParams(query),
+      data: data,
+    );
+    // HrEmployeeDto.fromJson does NOT unwrap — pass the unwrapped data map.
+    return HrEmployeeDto.fromJson(_writeData(response));
+  }
+
+  Future<HrEmployeeDto> updateEmployee({
+    required RepositoryQuery query,
+    required String employeeId,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      HrApiPaths.employeeDetail(employeeId),
+      queryParameters: _queryParams(query),
+      data: data,
+    );
+    return HrEmployeeDto.fromJson(_writeData(response));
+  }
+
+  Future<HrEmployeeDto> setEmployeeStatus({
+    required RepositoryQuery query,
+    required String employeeId,
+    required String status,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      HrApiPaths.employeeStatus(employeeId),
+      queryParameters: _queryParams(query),
+      data: {'status': status},
+    );
+    return HrEmployeeDto.fromJson(_writeData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
@@ -134,6 +200,12 @@ class HrRemoteDataSource {
       if (query.organizationId != null) 'organizationId': query.organizationId,
       ...query.paginationQueryParams(),
     };
+  }
+
+  /// Unwraps the `{data, error}` envelope returned by write endpoints whose
+  /// DTO factories do not unwrap it themselves (e.g. [HrEmployeeDto]).
+  Map<String, dynamic> _writeData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
