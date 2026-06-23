@@ -10,14 +10,18 @@ final class MockAlumniWriteStore {
 
   final List<AlumniRecord> graduates = [];
   final List<AlumniEvent> events = [];
+  final List<AlumniCampaign> campaigns = [];
   int _sequence = 100;
   int _eventSequence = 100;
+  int _campaignSequence = 100;
 
   void reset() {
     graduates.clear();
     events.clear();
+    campaigns.clear();
     _sequence = 100;
     _eventSequence = 100;
+    _campaignSequence = 100;
   }
 
   bool hasGraduateForSisStudent(String sisStudentId) {
@@ -105,5 +109,31 @@ final class MockAlumniWriteStore {
     );
     events.insert(0, event);
     return event;
+  }
+
+  /// Sets up a new fundraising campaign. New campaigns start in draft with no
+  /// funds raised and no donors.
+  AlumniCampaign createCampaign(CreateAlumniCampaignRequest request) {
+    final name = request.name.trim();
+    if (name.isEmpty) {
+      throw StateError('Campaign name is required');
+    }
+
+    final campaign = AlumniCampaign(
+      id: 'camp_new_${++_campaignSequence}',
+      name: name,
+      goalAmount: request.goalAmount.trim().isEmpty
+          ? '—'
+          : request.goalAmount.trim(),
+      raisedAmount: '₹0',
+      donorCount: 0,
+      deadline: request.deadline.trim().isEmpty ? '—' : request.deadline.trim(),
+      status: AlumniCampaignStatus.draft,
+      financeAccountCode: request.financeAccountCode.trim().isEmpty
+          ? 'FN-ALM-PENDING'
+          : request.financeAccountCode.trim(),
+    );
+    campaigns.insert(0, campaign);
+    return campaign;
   }
 }

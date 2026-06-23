@@ -84,3 +84,33 @@ final createAlumniEventProvider =
     AsyncNotifierProvider<CreateAlumniEventNotifier, AlumniEvent?>(
   CreateAlumniEventNotifier.new,
 );
+
+class CreateAlumniCampaignNotifier extends AsyncNotifier<AlumniCampaign?> {
+  @override
+  FutureOr<AlumniCampaign?> build() => null;
+
+  Future<AlumniCampaign?> execute(CreateAlumniCampaignRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageAlumni(ref);
+      try {
+        final result = await ref.read(alumniRepositoryProvider).createCampaign(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(alumniCampaignsFutureProvider)
+          ..invalidate(alumniDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final createAlumniCampaignProvider =
+    AsyncNotifierProvider<CreateAlumniCampaignNotifier, AlumniCampaign?>(
+  CreateAlumniCampaignNotifier.new,
+);

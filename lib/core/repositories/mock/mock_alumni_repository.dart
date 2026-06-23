@@ -372,52 +372,59 @@ class MockAlumniRepository implements AlumniRepository {
         ),
       ], query);
 
+  static const _seedCampaigns = [
+    AlumniCampaign(
+      id: 'camp_1',
+      name: 'Library Fund 2026',
+      goalAmount: '₹10L',
+      raisedAmount: '₹6.2L',
+      donorCount: 48,
+      deadline: '31 Dec 2026',
+      status: AlumniCampaignStatus.active,
+      financeAccountCode: 'FN-ALM-LIB-2026',
+    ),
+    AlumniCampaign(
+      id: 'camp_2',
+      name: 'Scholarship Drive',
+      goalAmount: '₹25L',
+      raisedAmount: '₹12.4L',
+      donorCount: 62,
+      deadline: '30 Sep 2026',
+      status: AlumniCampaignStatus.active,
+      financeAccountCode: 'FN-ALM-SCH-2026',
+    ),
+    AlumniCampaign(
+      id: 'camp_3',
+      name: 'Sports Complex Renovation',
+      goalAmount: '₹50L',
+      raisedAmount: '₹8.0L',
+      donorCount: 22,
+      deadline: '31 Mar 2027',
+      status: AlumniCampaignStatus.active,
+      financeAccountCode: 'FN-ALM-SPT-2027',
+    ),
+    AlumniCampaign(
+      id: 'camp_4',
+      name: 'Class of 2020 Memorial Fund',
+      goalAmount: '₹5L',
+      raisedAmount: '₹5L',
+      donorCount: 35,
+      deadline: '31 Dec 2025',
+      status: AlumniCampaignStatus.completed,
+      financeAccountCode: 'FN-ALM-MEM-2025',
+    ),
+  ];
+
+  List<AlumniCampaign> get _allCampaigns => [
+        ...MockAlumniWriteStore.instance.campaigns,
+        ..._seedCampaigns,
+      ];
+
   @override
   Future<PaginatedResult<AlumniCampaign>> getCampaigns({
     required RepositoryQuery query,
   }) async =>
-      paginateList(const [
-        AlumniCampaign(
-          id: 'camp_1',
-          name: 'Library Fund 2026',
-          goalAmount: '₹10L',
-          raisedAmount: '₹6.2L',
-          donorCount: 48,
-          deadline: '31 Dec 2026',
-          status: AlumniCampaignStatus.active,
-          financeAccountCode: 'FN-ALM-LIB-2026',
-        ),
-        AlumniCampaign(
-          id: 'camp_2',
-          name: 'Scholarship Drive',
-          goalAmount: '₹25L',
-          raisedAmount: '₹12.4L',
-          donorCount: 62,
-          deadline: '30 Sep 2026',
-          status: AlumniCampaignStatus.active,
-          financeAccountCode: 'FN-ALM-SCH-2026',
-        ),
-        AlumniCampaign(
-          id: 'camp_3',
-          name: 'Sports Complex Renovation',
-          goalAmount: '₹50L',
-          raisedAmount: '₹8.0L',
-          donorCount: 22,
-          deadline: '31 Mar 2027',
-          status: AlumniCampaignStatus.active,
-          financeAccountCode: 'FN-ALM-SPT-2027',
-        ),
-        AlumniCampaign(
-          id: 'camp_4',
-          name: 'Class of 2020 Memorial Fund',
-          goalAmount: '₹5L',
-          raisedAmount: '₹5L',
-          donorCount: 35,
-          deadline: '31 Dec 2025',
-          status: AlumniCampaignStatus.completed,
-          financeAccountCode: 'FN-ALM-MEM-2025',
-        ),
-      ], query);
+      paginateList(_allCampaigns, query);
 
   @override
   Future<PaginatedResult<MentorshipPair>> getMentorshipPairs({
@@ -652,5 +659,13 @@ class MockAlumniRepository implements AlumniRepository {
     required CreateAlumniEventRequest request,
   }) async {
     return MockAlumniWriteStore.instance.createEvent(request);
+  }
+
+  @override
+  Future<AlumniCampaign> createCampaign({
+    required RepositoryQuery query,
+    required CreateAlumniCampaignRequest request,
+  }) async {
+    return MockAlumniWriteStore.instance.createCampaign(request);
   }
 }

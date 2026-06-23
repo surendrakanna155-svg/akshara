@@ -22,4 +22,8 @@ abstract class AlumniRepository {
     required RepositoryQuery query,
     required CreateAlumniEventRequest request,
   });
+  Future<AlumniCampaign> createCampaign({
+    required RepositoryQuery query,
+    required CreateAlumniCampaignRequest request,
+  });
 }

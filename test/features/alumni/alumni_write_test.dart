@@ -108,6 +108,45 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('createCampaign inserts a draft, zero-raised campaign', () async {
+      final repo = MockAlumniRepository();
+      final before = await repo.getCampaigns(query: query);
+
+      final campaign = await repo.createCampaign(
+        query: query,
+        request: const CreateAlumniCampaignRequest(
+          name: 'Robotics Lab Fund 2026',
+          goalAmount: '₹15L',
+          deadline: '31 Dec 2026',
+          financeAccountCode: 'FN-ALM-ROB-2026',
+        ),
+      );
+
+      final after = await repo.getCampaigns(query: query);
+      expect(after.total, before.total + 1);
+      expect(campaign.status, AlumniCampaignStatus.draft);
+      expect(campaign.raisedAmount, '₹0');
+      expect(campaign.donorCount, 0);
+      expect(after.items.any((c) => c.id == campaign.id), isTrue);
+    });
+
+    test('createCampaign rejects an empty name', () async {
+      final repo = MockAlumniRepository();
+
+      expect(
+        () => repo.createCampaign(
+          query: query,
+          request: const CreateAlumniCampaignRequest(
+            name: '  ',
+            goalAmount: '',
+            deadline: '',
+            financeAccountCode: '',
+          ),
+        ),
+        throwsStateError,
+      );
+    });
   });
 
   group('Alumni RBAC mutations', () {
@@ -216,6 +255,56 @@ void main() {
       expect(
         container.read(createAlumniEventProvider).value?.status,
         AlumniEventStatus.upcoming,
+      );
+    });
+
+    test('createCampaign fails without manageAlumni', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(createAlumniCampaignProvider.notifier).execute(
+            const CreateAlumniCampaignRequest(
+              name: 'Blocked Campaign',
+              goalAmount: '',
+              deadline: '',
+              financeAccountCode: '',
+            ),
+          );
+
+      expect(container.read(createAlumniCampaignProvider).hasError, isTrue);
+    });
+
+    test('createCampaign succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(createAlumniCampaignProvider.notifier).execute(
+            const CreateAlumniCampaignRequest(
+              name: 'Allowed Campaign',
+              goalAmount: '₹5L',
+              deadline: '30 Nov 2026',
+              financeAccountCode: 'FN-ALM-NEW-2026',
+            ),
+          );
+
+      expect(container.read(createAlumniCampaignProvider).hasValue, isTrue);
+      expect(
+        container.read(createAlumniCampaignProvider).value?.status,
+        AlumniCampaignStatus.draft,
       );
     });
   });

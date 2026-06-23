@@ -118,4 +118,12 @@ class ApiAlumniRepository implements AlumniRepository {
   }) async {
     throw ApiNotConnectedException('AlumniRepository', 'createEvent');
   }
+
+  @override
+  Future<AlumniCampaign> createCampaign({
+    required RepositoryQuery query,
+    required CreateAlumniCampaignRequest request,
+  }) async {
+    throw ApiNotConnectedException('AlumniRepository', 'createCampaign');
+  }
 }

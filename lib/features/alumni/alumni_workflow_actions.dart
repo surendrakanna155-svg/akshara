@@ -201,3 +201,81 @@ Future<void> showCreateEventDialog(
     _showAlumniMutationError(context, error);
   }
 }
+
+Future<void> showCreateCampaignDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final nameController = TextEditingController();
+  final goalController = TextEditingController();
+  final deadlineController = TextEditingController();
+  final accountController = TextEditingController();
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Create campaign',
+      icon: Icons.campaign_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Campaign name',
+            controller: nameController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Goal amount',
+            controller: goalController,
+            hint: 'e.g. ₹10L',
+          ),
+          AksharaFormField(
+            label: 'Deadline',
+            controller: deadlineController,
+            hint: 'e.g. 31 Dec 2026',
+          ),
+          AksharaFormField(
+            label: 'Finance account code',
+            controller: accountController,
+            hint: 'e.g. FN-ALM-LIB-2026',
+          ),
+        ],
+      ),
+      actions: [
+        AksharaDialogActions(
+          confirmLabel: 'Create campaign',
+          confirmKey: QaTestKeys.alumniCreateCampaignDialogSubmitButton,
+          onCancel: () => Navigator.of(context).pop(false),
+          onConfirm: () {
+            if (nameController.text.trim().isEmpty) return;
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final campaign =
+        await ref.read(createAlumniCampaignProvider.notifier).execute(
+              CreateAlumniCampaignRequest(
+                name: nameController.text.trim(),
+                goalAmount: goalController.text.trim(),
+                deadline: deadlineController.text.trim(),
+                financeAccountCode: accountController.text.trim(),
+              ),
+            );
+    if (!context.mounted || campaign == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.alumniCreateCampaignSuccessSnackbar,
+        content: Text('Created campaign ${campaign.name}'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showAlumniMutationError(context, error);
+  }
+}

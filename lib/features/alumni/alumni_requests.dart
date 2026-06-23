@@ -33,3 +33,17 @@ class CreateAlumniEventRequest {
   final String capacity;
   final String organizer;
 }
+
+class CreateAlumniCampaignRequest {
+  const CreateAlumniCampaignRequest({
+    required this.name,
+    required this.goalAmount,
+    required this.deadline,
+    required this.financeAccountCode,
+  });
+
+  final String name;
+  final String goalAmount;
+  final String deadline;
+  final String financeAccountCode;
+}
