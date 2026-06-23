@@ -26,4 +26,8 @@ abstract class AlumniRepository {
     required RepositoryQuery query,
     required CreateAlumniCampaignRequest request,
   });
+  Future<MentorshipPair> addMentorshipPair({
+    required RepositoryQuery query,
+    required AddMentorshipPairRequest request,
+  });
 }

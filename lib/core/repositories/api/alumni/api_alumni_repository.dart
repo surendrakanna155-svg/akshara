@@ -126,4 +126,12 @@ class ApiAlumniRepository implements AlumniRepository {
   }) async {
     throw ApiNotConnectedException('AlumniRepository', 'createCampaign');
   }
+
+  @override
+  Future<MentorshipPair> addMentorshipPair({
+    required RepositoryQuery query,
+    required AddMentorshipPairRequest request,
+  }) async {
+    throw ApiNotConnectedException('AlumniRepository', 'addMentorshipPair');
+  }
 }

@@ -114,3 +114,34 @@ final createAlumniCampaignProvider =
     AsyncNotifierProvider<CreateAlumniCampaignNotifier, AlumniCampaign?>(
   CreateAlumniCampaignNotifier.new,
 );
+
+class AddMentorshipPairNotifier extends AsyncNotifier<MentorshipPair?> {
+  @override
+  FutureOr<MentorshipPair?> build() => null;
+
+  Future<MentorshipPair?> execute(AddMentorshipPairRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageAlumni(ref);
+      try {
+        final result =
+            await ref.read(alumniRepositoryProvider).addMentorshipPair(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        ref
+          ..invalidate(alumniMentorshipFutureProvider)
+          ..invalidate(alumniDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final addMentorshipPairProvider =
+    AsyncNotifierProvider<AddMentorshipPairNotifier, MentorshipPair?>(
+  AddMentorshipPairNotifier.new,
+);

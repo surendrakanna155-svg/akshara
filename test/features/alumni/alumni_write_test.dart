@@ -147,6 +147,46 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('addMentorshipPair inserts a pending, zero-session pair', () async {
+      final repo = MockAlumniRepository();
+      final before = await repo.getMentorshipPairs(query: query);
+
+      final pair = await repo.addMentorshipPair(
+        query: query,
+        request: const AddMentorshipPairRequest(
+          mentorName: 'Kavya Iyer',
+          mentorAlumniId: 'ALM-005',
+          menteeName: 'Rahul Verma',
+          menteeBatch: 'Class 12 (2026)',
+          focusArea: 'Product management',
+        ),
+      );
+
+      final after = await repo.getMentorshipPairs(query: query);
+      expect(after.total, before.total + 1);
+      expect(pair.status, MentorshipStatus.pending);
+      expect(pair.sessionsCompleted, 0);
+      expect(after.items.any((p) => p.id == pair.id), isTrue);
+    });
+
+    test('addMentorshipPair rejects an empty mentee name', () async {
+      final repo = MockAlumniRepository();
+
+      expect(
+        () => repo.addMentorshipPair(
+          query: query,
+          request: const AddMentorshipPairRequest(
+            mentorName: 'Kavya Iyer',
+            mentorAlumniId: 'ALM-005',
+            menteeName: '  ',
+            menteeBatch: '',
+            focusArea: '',
+          ),
+        ),
+        throwsStateError,
+      );
+    });
   });
 
   group('Alumni RBAC mutations', () {
@@ -305,6 +345,58 @@ void main() {
       expect(
         container.read(createAlumniCampaignProvider).value?.status,
         AlumniCampaignStatus.draft,
+      );
+    });
+
+    test('addMentorshipPair fails without manageAlumni', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(addMentorshipPairProvider.notifier).execute(
+            const AddMentorshipPairRequest(
+              mentorName: 'Blocked Mentor',
+              mentorAlumniId: '',
+              menteeName: 'Blocked Mentee',
+              menteeBatch: '',
+              focusArea: '',
+            ),
+          );
+
+      expect(container.read(addMentorshipPairProvider).hasError, isTrue);
+    });
+
+    test('addMentorshipPair succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(addMentorshipPairProvider.notifier).execute(
+            const AddMentorshipPairRequest(
+              mentorName: 'Allowed Mentor',
+              mentorAlumniId: 'ALM-001',
+              menteeName: 'Allowed Mentee',
+              menteeBatch: 'Class 11 (2026)',
+              focusArea: 'Careers',
+            ),
+          );
+
+      expect(container.read(addMentorshipPairProvider).hasValue, isTrue);
+      expect(
+        container.read(addMentorshipPairProvider).value?.status,
+        MentorshipStatus.pending,
       );
     });
   });

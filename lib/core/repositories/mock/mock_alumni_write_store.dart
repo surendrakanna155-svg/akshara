@@ -11,17 +11,21 @@ final class MockAlumniWriteStore {
   final List<AlumniRecord> graduates = [];
   final List<AlumniEvent> events = [];
   final List<AlumniCampaign> campaigns = [];
+  final List<MentorshipPair> mentorshipPairs = [];
   int _sequence = 100;
   int _eventSequence = 100;
   int _campaignSequence = 100;
+  int _mentorshipSequence = 100;
 
   void reset() {
     graduates.clear();
     events.clear();
     campaigns.clear();
+    mentorshipPairs.clear();
     _sequence = 100;
     _eventSequence = 100;
     _campaignSequence = 100;
+    _mentorshipSequence = 100;
   }
 
   bool hasGraduateForSisStudent(String sisStudentId) {
@@ -135,5 +139,32 @@ final class MockAlumniWriteStore {
     );
     campaigns.insert(0, campaign);
     return campaign;
+  }
+
+  /// Matches a mentor with a mentee. New pairs start pending with no sessions
+  /// completed.
+  MentorshipPair addMentorshipPair(AddMentorshipPairRequest request) {
+    final mentorName = request.mentorName.trim();
+    final menteeName = request.menteeName.trim();
+    if (mentorName.isEmpty || menteeName.isEmpty) {
+      throw StateError('Mentor and mentee names are required');
+    }
+
+    final pair = MentorshipPair(
+      id: 'mnt_new_${++_mentorshipSequence}',
+      mentorName: mentorName,
+      mentorAlumniId: request.mentorAlumniId.trim().isEmpty
+          ? '—'
+          : request.mentorAlumniId.trim(),
+      menteeName: menteeName,
+      menteeBatch:
+          request.menteeBatch.trim().isEmpty ? '—' : request.menteeBatch.trim(),
+      focusArea:
+          request.focusArea.trim().isEmpty ? '—' : request.focusArea.trim(),
+      status: MentorshipStatus.pending,
+      sessionsCompleted: 0,
+    );
+    mentorshipPairs.insert(0, pair);
+    return pair;
   }
 }

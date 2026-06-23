@@ -5,6 +5,7 @@ import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -12,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../alumni_models.dart';
 import '../alumni_providers.dart';
+import '../alumni_workflow_actions.dart';
 import '../widgets/alumni_module_scaffold.dart';
 
 /// AL-07 — Mentorship.
@@ -43,7 +45,8 @@ class AlumniMentorshipScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAlumni,
         child: FilledButton.icon(
-          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add mentorship'),
+          key: QaTestKeys.alumniAddMentorshipButton,
+          onPressed: () => showAddMentorshipDialog(context, ref),
           icon: const Icon(Icons.handshake_outlined, size: 18),
           label: const Text('Match pair'),
         ),

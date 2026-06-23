@@ -47,3 +47,19 @@ class CreateAlumniCampaignRequest {
   final String deadline;
   final String financeAccountCode;
 }
+
+class AddMentorshipPairRequest {
+  const AddMentorshipPairRequest({
+    required this.mentorName,
+    required this.mentorAlumniId,
+    required this.menteeName,
+    required this.menteeBatch,
+    required this.focusArea,
+  });
+
+  final String mentorName;
+  final String mentorAlumniId;
+  final String menteeName;
+  final String menteeBatch;
+  final String focusArea;
+}

@@ -279,3 +279,90 @@ Future<void> showCreateCampaignDialog(
     _showAlumniMutationError(context, error);
   }
 }
+
+Future<void> showAddMentorshipDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final mentorNameController = TextEditingController();
+  final mentorIdController = TextEditingController();
+  final menteeNameController = TextEditingController();
+  final menteeBatchController = TextEditingController();
+  final focusController = TextEditingController();
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Match mentorship pair',
+      icon: Icons.handshake_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Mentor name',
+            controller: mentorNameController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Mentor alumni ID',
+            controller: mentorIdController,
+            hint: 'e.g. ALM-001',
+          ),
+          AksharaFormField(
+            label: 'Mentee name',
+            controller: menteeNameController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Mentee batch',
+            controller: menteeBatchController,
+            hint: 'e.g. Class 11 (2026)',
+          ),
+          AksharaFormField(
+            label: 'Focus area',
+            controller: focusController,
+            hint: 'e.g. Software engineering careers',
+          ),
+        ],
+      ),
+      actions: [
+        AksharaDialogActions(
+          confirmLabel: 'Match pair',
+          confirmKey: QaTestKeys.alumniAddMentorshipDialogSubmitButton,
+          onCancel: () => Navigator.of(context).pop(false),
+          onConfirm: () {
+            if (mentorNameController.text.trim().isEmpty ||
+                menteeNameController.text.trim().isEmpty) {
+              return;
+            }
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final pair = await ref.read(addMentorshipPairProvider.notifier).execute(
+          AddMentorshipPairRequest(
+            mentorName: mentorNameController.text.trim(),
+            mentorAlumniId: mentorIdController.text.trim(),
+            menteeName: menteeNameController.text.trim(),
+            menteeBatch: menteeBatchController.text.trim(),
+            focusArea: focusController.text.trim(),
+          ),
+        );
+    if (!context.mounted || pair == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.alumniAddMentorshipSuccessSnackbar,
+        content: Text('Matched ${pair.mentorName} with ${pair.menteeName}'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showAlumniMutationError(context, error);
+  }
+}

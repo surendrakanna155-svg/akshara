@@ -426,52 +426,59 @@ class MockAlumniRepository implements AlumniRepository {
   }) async =>
       paginateList(_allCampaigns, query);
 
+  static const _seedMentorshipPairs = [
+    MentorshipPair(
+      id: 'mnt_1',
+      mentorName: 'Arjun Patel',
+      mentorAlumniId: 'ALM-001',
+      menteeName: 'Vikram Singh',
+      menteeBatch: 'Class 11 (2026)',
+      focusArea: 'Software engineering careers',
+      status: MentorshipStatus.active,
+      sessionsCompleted: 4,
+    ),
+    MentorshipPair(
+      id: 'mnt_2',
+      mentorName: 'Kavya Iyer',
+      mentorAlumniId: 'ALM-005',
+      menteeName: 'Sneha Nair',
+      menteeBatch: 'Class 12 (2025)',
+      focusArea: 'Product management & startups',
+      status: MentorshipStatus.active,
+      sessionsCompleted: 6,
+    ),
+    MentorshipPair(
+      id: 'mnt_3',
+      mentorName: 'Priya Sharma',
+      mentorAlumniId: 'ALM-002',
+      menteeName: 'Aditya Rao',
+      menteeBatch: 'Class 11 (2026)',
+      focusArea: 'Finance & CA pathway',
+      status: MentorshipStatus.pending,
+      sessionsCompleted: 0,
+    ),
+    MentorshipPair(
+      id: 'mnt_4',
+      mentorName: 'Arjun Patel',
+      mentorAlumniId: 'ALM-001',
+      menteeName: 'Meera Joshi',
+      menteeBatch: 'Class 10 (2027)',
+      focusArea: 'STEM Olympiad preparation',
+      status: MentorshipStatus.completed,
+      sessionsCompleted: 8,
+    ),
+  ];
+
+  List<MentorshipPair> get _allMentorshipPairs => [
+        ...MockAlumniWriteStore.instance.mentorshipPairs,
+        ..._seedMentorshipPairs,
+      ];
+
   @override
   Future<PaginatedResult<MentorshipPair>> getMentorshipPairs({
     required RepositoryQuery query,
   }) async =>
-      paginateList(const [
-        MentorshipPair(
-          id: 'mnt_1',
-          mentorName: 'Arjun Patel',
-          mentorAlumniId: 'ALM-001',
-          menteeName: 'Vikram Singh',
-          menteeBatch: 'Class 11 (2026)',
-          focusArea: 'Software engineering careers',
-          status: MentorshipStatus.active,
-          sessionsCompleted: 4,
-        ),
-        MentorshipPair(
-          id: 'mnt_2',
-          mentorName: 'Kavya Iyer',
-          mentorAlumniId: 'ALM-005',
-          menteeName: 'Sneha Nair',
-          menteeBatch: 'Class 12 (2025)',
-          focusArea: 'Product management & startups',
-          status: MentorshipStatus.active,
-          sessionsCompleted: 6,
-        ),
-        MentorshipPair(
-          id: 'mnt_3',
-          mentorName: 'Priya Sharma',
-          mentorAlumniId: 'ALM-002',
-          menteeName: 'Aditya Rao',
-          menteeBatch: 'Class 11 (2026)',
-          focusArea: 'Finance & CA pathway',
-          status: MentorshipStatus.pending,
-          sessionsCompleted: 0,
-        ),
-        MentorshipPair(
-          id: 'mnt_4',
-          mentorName: 'Arjun Patel',
-          mentorAlumniId: 'ALM-001',
-          menteeName: 'Meera Joshi',
-          menteeBatch: 'Class 10 (2027)',
-          focusArea: 'STEM Olympiad preparation',
-          status: MentorshipStatus.completed,
-          sessionsCompleted: 8,
-        ),
-      ], query);
+      paginateList(_allMentorshipPairs, query);
 
   @override
   Future<AlumniReportsData> getReports({required RepositoryQuery query}) async {
@@ -667,5 +674,13 @@ class MockAlumniRepository implements AlumniRepository {
     required CreateAlumniCampaignRequest request,
   }) async {
     return MockAlumniWriteStore.instance.createCampaign(request);
+  }
+
+  @override
+  Future<MentorshipPair> addMentorshipPair({
+    required RepositoryQuery query,
+    required AddMentorshipPairRequest request,
+  }) async {
+    return MockAlumniWriteStore.instance.addMentorshipPair(request);
   }
 }
