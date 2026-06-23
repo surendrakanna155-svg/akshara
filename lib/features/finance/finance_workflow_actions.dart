@@ -8,10 +8,12 @@ import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../../shared/forms/akshara_form_field.dart';
+import '../../shared/forms/akshara_searchable_dropdown.dart';
 import '../../shared/widgets/akshara_dialog.dart';
 import '../../shared/widgets/akshara_motion.dart';
 import 'finance_journey_context_provider.dart';
 import 'fee_assignment/finance_fee_assignment_provider.dart';
+import 'invoices/finance_invoices_provider.dart';
 import 'finance_models.dart';
 import 'finance_mutations_provider.dart';
 import 'finance_requests.dart';
@@ -533,9 +535,30 @@ Future<void> showRecordCollectionDialog(
   String defaultAmount = '5000',
 }) async {
   final journeyInvoice = ref.read(financeLastInvoiceIdProvider);
-  final invoiceController = TextEditingController(
-    text: journeyInvoice ?? defaultInvoiceId,
-  );
+  final invoices = ref.read(financeInvoicesProvider);
+
+  // Build picker options (label <-> id) from the loaded invoices so the cashier
+  // selects a real invoice instead of typing a raw ID. Falls back to a
+  // free-text field if no invoices are loaded (e.g. empty/offline repo).
+  final labelById = <String, String>{
+    for (final inv in invoices)
+      inv.id: '${inv.invoiceNumber} · ${inv.termLabel} · '
+          '${inv.outstandingAmount} due',
+  };
+  final idByLabel = {for (final e in labelById.entries) e.value: e.key};
+  final usePicker = invoices.isNotEmpty;
+
+  final preferredId =
+      (journeyInvoice != null && labelById.containsKey(journeyInvoice))
+          ? journeyInvoice
+          : (labelById.containsKey(defaultInvoiceId)
+              ? defaultInvoiceId
+              : (invoices.isNotEmpty
+                  ? invoices.first.id
+                  : (journeyInvoice ?? defaultInvoiceId)));
+
+  var selectedInvoiceId = preferredId;
+  final invoiceController = TextEditingController(text: preferredId);
   final amountController = TextEditingController(text: defaultAmount);
   var paymentMethod = 'UPI';
 
@@ -547,11 +570,23 @@ Future<void> showRecordCollectionDialog(
       scrollable: true,
       content: AksharaDialogFormBody(
         children: [
-          AksharaFormField(
-            key: QaTestKeys.financeCollectionInvoiceField,
-            label: 'Invoice ID',
-            controller: invoiceController,
-          ),
+          if (usePicker)
+            AksharaSearchableDropdown(
+              key: QaTestKeys.financeCollectionInvoiceField,
+              label: 'Invoice',
+              value: labelById[selectedInvoiceId] ?? labelById.values.first,
+              options: labelById.values.toList(),
+              onChanged: (label) {
+                final id = idByLabel[label];
+                if (id != null) selectedInvoiceId = id;
+              },
+            )
+          else
+            AksharaFormField(
+              key: QaTestKeys.financeCollectionInvoiceField,
+              label: 'Invoice ID',
+              controller: invoiceController,
+            ),
           AksharaFormField(
             key: QaTestKeys.financeCollectionAmountField,
             label: 'Amount collected',
@@ -584,10 +619,13 @@ Future<void> showRecordCollectionDialog(
 
   if (confirmed != true || !context.mounted) return;
 
+  final invoiceId =
+      usePicker ? selectedInvoiceId : invoiceController.text.trim();
+
   try {
     final result = await ref.read(createCollectionProvider.notifier).execute(
           CreateCollectionRequest(
-            invoiceId: invoiceController.text.trim(),
+            invoiceId: invoiceId,
             amountCollected: amountController.text.trim(),
             paymentMethod: paymentMethod,
             collectionDate: 'Today',

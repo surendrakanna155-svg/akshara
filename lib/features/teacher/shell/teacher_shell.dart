@@ -65,6 +65,11 @@ class TeacherShell extends ConsumerWidget {
         icon: Icons.forum_outlined,
       ),
       MoreNavDestination(
+        route: RouteNames.teacherProfile,
+        label: 'Profile',
+        icon: Icons.person_outline,
+      ),
+      MoreNavDestination(
         route: RouteNames.teacherSettings,
         label: 'Settings',
         icon: Icons.settings_outlined,

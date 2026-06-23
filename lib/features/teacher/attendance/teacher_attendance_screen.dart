@@ -57,13 +57,39 @@ class TeacherAttendanceScreen extends ConsumerWidget {
   }
 }
 
-class _AttendanceBody extends ConsumerWidget {
+class _AttendanceBody extends ConsumerStatefulWidget {
   const _AttendanceBody({required this.data});
 
   final TeacherAttendanceData data;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AttendanceBody> createState() => _AttendanceBodyState();
+}
+
+class _AttendanceBodyState extends ConsumerState<_AttendanceBody> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<TeacherAttendanceStudent> get _visibleStudents {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return widget.data.students;
+    return widget.data.students
+        .where((s) =>
+            s.name.toLowerCase().contains(q) ||
+            s.rollNo.toLowerCase().contains(q))
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.data;
+    final visibleStudents = _visibleStudents;
     return LayoutBuilder(
       builder: (context, constraints) {
         final isTablet = constraints.maxWidth >=
@@ -152,30 +178,62 @@ class _AttendanceBody extends ConsumerWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: AksharaSpacing.s3),
+                      TextField(
+                        key: QaTestKeys.teacherAttendanceSearchField,
+                        controller: _searchController,
+                        onChanged: (value) => setState(() => _query = value),
+                        decoration: InputDecoration(
+                          hintText: 'Search by name or roll number',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: _query.isEmpty
+                              ? null
+                              : IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  tooltip: 'Clear search',
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() => _query = '');
+                                  },
+                                ),
+                          isDense: true,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Expanded(
-                  child: ListView.separated(
-                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    itemCount: data.students.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: context.colors.outlineVariant,
-                    ),
-                    itemBuilder: (context, index) {
-                      final student = data.students[index];
-                      return StudentAttendanceRow(
-                        student: student,
-                        enabled: !data.isSubmitted,
-                        onMarkChanged: (mark) => updateStudentMark(
-                          ref,
-                          studentId: student.id,
-                          mark: mark,
+                  child: visibleStudents.isEmpty
+                      ? const Center(
+                          child: SingleChildScrollView(
+                            child: AksharaEmptyState(
+                              message: 'No students match your search.',
+                              icon: Icons.search_off_outlined,
+                              compact: true,
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: horizontalPadding),
+                          itemCount: visibleStudents.length,
+                          separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            color: context.colors.outlineVariant,
+                          ),
+                          itemBuilder: (context, index) {
+                            final student = visibleStudents[index];
+                            return StudentAttendanceRow(
+                              student: student,
+                              enabled: !data.isSubmitted,
+                              onMarkChanged: (mark) => updateStudentMark(
+                                ref,
+                                studentId: student.id,
+                                mark: mark,
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
                 _AttendanceActionBar(
                   horizontalPadding: horizontalPadding,

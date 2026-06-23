@@ -251,6 +251,9 @@ abstract final class QaTestKeys {
   static const teacherAttendanceSubmitButton =
       ValueKey<String>('teacher_attendance_submit_button');
 
+  static const teacherAttendanceSearchField =
+      ValueKey<String>('teacher_attendance_search_field');
+
   // --- Finance E2E journey ---
   static ValueKey<String> financeHandoffQueueRow(String studentName) =>
       ValueKey<String>(
@@ -778,6 +781,27 @@ abstract final class QaTestKeys {
 
   static const teacherSettingsScreen =
       ValueKey<String>('teacher_settings_screen');
+
+  static const teacherProfileScreen =
+      ValueKey<String>('teacher_profile_screen');
+
+  static const teacherProfileSettingsLink =
+      ValueKey<String>('teacher_profile_settings_link');
+
+  static const subjectAddButton =
+      ValueKey<String>('subject_add_button');
+
+  static const subjectCreateSubmitButton =
+      ValueKey<String>('subject_create_submit_button');
+
+  static const subjectEditSubmitButton =
+      ValueKey<String>('subject_edit_submit_button');
+
+  static ValueKey<String> subjectRow(String subjectId) =>
+      ValueKey<String>('subject_row_$subjectId');
+
+  static ValueKey<String> subjectEditButton(String subjectId) =>
+      ValueKey<String>('subject_edit_button_$subjectId');
 
   static ValueKey<String> atRiskStudentRow(String studentId) =>
       ValueKey<String>('at_risk_student_$studentId');

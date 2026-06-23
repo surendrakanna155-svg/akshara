@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/repositories/repository_providers.dart';
+import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
+import 'subject_form_dialogs.dart';
 
 class SubjectsScreen extends ConsumerWidget {
   const SubjectsScreen({super.key});
@@ -15,14 +16,8 @@ class SubjectsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Subject Management')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await ref.read(schoolCompletionRepositoryProvider).createSubject(
-                query: ref.read(schoolCompletionQueryProvider),
-                subjectCode: 'NEW',
-                subjectName: 'New Subject',
-              );
-          ref.invalidate(subjectsProvider);
-        },
+        key: QaTestKeys.subjectAddButton,
+        onPressed: () => showCreateSubjectDialog(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Add subject'),
       ),
@@ -34,9 +29,23 @@ class SubjectsScreen extends ConsumerWidget {
                 itemBuilder: (context, index) {
                   final s = items[index];
                   return ListTile(
+                    key: QaTestKeys.subjectRow(s.id),
                     title: Text(s.subjectName),
                     subtitle: Text('${s.subjectCode} · ${s.category} · ${s.status}'),
-                    trailing: Text('${s.gradeLabels.length} grades'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('${s.gradeLabels.length} grades'),
+                        IconButton(
+                          key: QaTestKeys.subjectEditButton(s.id),
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Edit subject',
+                          onPressed: () =>
+                              showEditSubjectDialog(context, ref, subject: s),
+                        ),
+                      ],
+                    ),
+                    onTap: () => showEditSubjectDialog(context, ref, subject: s),
                   );
                 },
               ),
