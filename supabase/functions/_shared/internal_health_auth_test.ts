@@ -10,10 +10,22 @@ const baseConfig: AppConfig = {
   otpTtlSeconds: 300,
   otpMaxAttempts: 3,
   otpDevMode: false,
+  otpPilotPhones: [],
+  otpRateWindowSeconds: 3600,
+  otpMaxRequestsPerPhone: 5,
+  otpMaxRequestsPerIp: 20,
+  otpResendCooldownSeconds: 60,
+  smsProvider: "fast2sms",
+  smsApiKey: null,
+  smsFast2smsRoute: "q",
+  smsFast2smsSenderId: null,
+  smsFast2smsMessageId: null,
   supabaseUrl: "https://example.supabase.co",
   supabaseServiceRoleKey: "service-role-key",
+  publicStorageBaseUrl: null,
   erpTenantDatabaseUrl: null,
   internalHealthToken: "test-internal-token",
+  backupMaxAgeHours: 26,
 };
 
 Deno.test("internal health allows matching token header", () => {

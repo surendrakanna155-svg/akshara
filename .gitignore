@@ -46,3 +46,7 @@ patrol_test/test_bundle.dart
 # Coverage
 coverage/
 lcov.info
+
+# Local tool / CLI state (never commit)
+.claude/
+supabase/.branches/

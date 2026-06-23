@@ -1,4 +1,5 @@
 import type { AppConfig } from "./config.ts";
+import { createServiceClient } from "./db.ts";
 import { createStorageAdmin } from "./storage/storage_service.ts";
 import type { AccessTokenClaims } from "./jwt.ts";
 import { envelope, errorEnvelope, jsonResponse } from "./http.ts";
@@ -249,4 +250,126 @@ export async function handleProviderHealth(req: Request, config: AppConfig): Pro
     }),
     { status: status === "ok" ? 200 : 503 },
   );
+}
+
+interface BackupRunRow {
+  status: string;
+  kind: string;
+  artifact_bytes: number | null;
+  sha256: string | null;
+  offsite: boolean | null;
+  offsite_location: string | null;
+  finished_at: string | null;
+  created_at: string;
+  error: string | null;
+}
+
+interface RestoreDrillRow {
+  status: string;
+  tables_checked: number | null;
+  rows_sampled: number | null;
+  mismatch: string | null;
+  finished_at: string | null;
+  created_at: string;
+}
+
+/**
+ * Backup freshness probe (Batch 7). Reads the ops backup ledger via the
+ * service-role connection (it bypasses the no-policy RLS on ops_* tables) and
+ * reports degraded (503) when there is no successful backup within
+ * `backupMaxAgeHours`, or the most recent run failed. `offsite=false` is a
+ * warning surfaced in the body but does NOT flip status (a local backup still
+ * protects against most data loss).
+ */
+export async function handleBackupHealth(req: Request, config: AppConfig): Promise<Response> {
+  const denied = requireInternalHealthAccess(req, config);
+  if (denied) return denied;
+
+  try {
+    const client = createServiceClient(config);
+
+    const { data: latestSuccess, error: e1 } = await client
+      .from("ops_backup_runs")
+      .select("status,kind,artifact_bytes,sha256,offsite,offsite_location,finished_at,created_at,error")
+      .eq("status", "success")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<BackupRunRow>();
+
+    const { data: latestAny, error: e2 } = await client
+      .from("ops_backup_runs")
+      .select("status,kind,finished_at,created_at,error")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<BackupRunRow>();
+
+    if (e1 || e2) {
+      return jsonResponse(
+        envelope({ status: "degraded", reason: "ledger_unreadable", error: (e1 ?? e2)?.message }),
+        { status: 503 },
+      );
+    }
+
+    const now = Date.now();
+    let ageHours: number | null = null;
+    if (latestSuccess?.created_at) {
+      const ref = latestSuccess.finished_at ?? latestSuccess.created_at;
+      ageHours = Math.round(((now - new Date(ref).getTime()) / 3_600_000) * 10) / 10;
+    }
+
+    const lastRunFailed = latestAny?.status === "failed";
+    const noBackup = !latestSuccess;
+    const stale = ageHours !== null && ageHours > config.backupMaxAgeHours;
+    const healthy = !noBackup && !stale;
+
+    const { data: drill } = await client
+      .from("ops_restore_drills")
+      .select("status,tables_checked,rows_sampled,mismatch,finished_at,created_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<RestoreDrillRow>();
+
+    const reason = noBackup ? "no_successful_backup" : stale ? "backup_stale" : null;
+
+    return jsonResponse(
+      envelope({
+        status: healthy ? "ok" : "degraded",
+        reason,
+        maxAgeHours: config.backupMaxAgeHours,
+        lastBackup: latestSuccess
+          ? {
+            kind: latestSuccess.kind,
+            ageHours,
+            bytes: latestSuccess.artifact_bytes,
+            sha256: latestSuccess.sha256,
+            offsite: latestSuccess.offsite ?? false,
+            offsiteLocation: latestSuccess.offsite_location,
+            finishedAt: latestSuccess.finished_at,
+          }
+          : null,
+        lastRunFailed,
+        lastRunError: lastRunFailed ? latestAny?.error ?? null : null,
+        offsiteWarning: latestSuccess ? !(latestSuccess.offsite ?? false) : null,
+        lastDrill: drill
+          ? {
+            status: drill.status,
+            tablesChecked: drill.tables_checked,
+            rowsSampled: drill.rows_sampled,
+            mismatch: drill.mismatch,
+            finishedAt: drill.finished_at,
+          }
+          : null,
+      }),
+      { status: healthy ? 200 : 503 },
+    );
+  } catch (error) {
+    return jsonResponse(
+      envelope({
+        status: "degraded",
+        reason: "probe_error",
+        error: error instanceof Error ? error.message : "Backup probe failed",
+      }),
+      { status: 503 },
+    );
+  }
 }

@@ -32,10 +32,24 @@ export interface AppConfig {
   smsFast2smsMessageId: string | null;
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
+  /**
+   * Public origin (scheme+host) the APP can reach storage at, e.g.
+   * https://akshara.veloraunisexsalon.com. Signed upload/download URLs are
+   * generated against the internal `supabaseUrl` (gateway) for server-to-server
+   * calls, then their origin is rewritten to THIS before being returned to the
+   * device (which cannot reach the internal gateway host). Null => return the
+   * internal URL unchanged (lean/local dev).
+   */
+  publicStorageBaseUrl: string | null;
   /** Non-bypass Postgres URL for `erp_tenant` role (TD-P0-01). */
   erpTenantDatabaseUrl: string | null;
   /** Token for `/health/tenant-access` and `/health/operations` (v7.7). */
   internalHealthToken: string | null;
+  /**
+   * Max age (hours) of the latest successful DB backup before `/health/backup`
+   * reports degraded (503). Default 26h covers a nightly cadence + slack.
+   */
+  backupMaxAgeHours: number;
 }
 
 /** Parse a comma/space separated phone allowlist into normalized E.164-ish strings. */
@@ -101,7 +115,12 @@ export function loadConfig(): AppConfig {
     smsFast2smsMessageId: Deno.env.get("FAST2SMS_MESSAGE_ID") ?? null,
     supabaseUrl,
     supabaseServiceRoleKey,
+    publicStorageBaseUrl: Deno.env.get("PUBLIC_STORAGE_BASE_URL") ?? null,
     erpTenantDatabaseUrl: Deno.env.get("ERP_TENANT_DATABASE_URL") ?? null,
     internalHealthToken: Deno.env.get("INTERNAL_HEALTH_TOKEN") ?? null,
+    backupMaxAgeHours: parseInt(
+      Deno.env.get("BACKUP_MAX_AGE_HOURS") ?? "26",
+      10,
+    ),
   };
 }

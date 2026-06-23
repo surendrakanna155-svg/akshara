@@ -1,7 +1,7 @@
 import { assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
 
 const MIGRATION_PATH = new URL(
-  "../../../migrations/20260615000000_academic_foundation.sql",
+  "../../../migrations/20260614790000_academic_foundation.sql",
   import.meta.url,
 );
 

@@ -52,8 +52,24 @@ services:
     ports: ["127.0.0.1:3000:8000"]
     networks: [akshara-net]
 
+  # Supabase Storage (Batch 7). Self-host on local disk volume; service manages
+  # its own storage.* schema. One-time setup (role password, schema ownership,
+  # grants, bucket) is in storage/README.md. Host port lets the public Nginx
+  # vhost route /storage/v1/* here so devices can PUT/GET signed-URL media.
+  akshara-storage:
+    image: supabase/storage-api:v1.19.3
+    container_name: akshara-storage
+    restart: unless-stopped
+    env_file: storage.env
+    volumes: [akshara_storage_data:/var/lib/storage]
+    depends_on:
+      akshara-postgres: { condition: service_healthy }
+    ports: ["127.0.0.1:5000:5000"]
+    networks: [akshara-net]
+
 networks:
   akshara-net: { name: akshara-net, driver: bridge }
 volumes:
   akshara_pgdata: { name: akshara_pgdata }
   akshara_deno_cache: { name: akshara_deno_cache }
+  akshara_storage_data: { name: akshara_storage_data }

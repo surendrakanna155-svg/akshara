@@ -17,7 +17,7 @@ import {
 } from "./academic_years_repository.ts";
 
 const MIGRATION_PATH = new URL(
-  "../../../migrations/20260615000000_academic_foundation.sql",
+  "../../../migrations/20260614790000_academic_foundation.sql",
   import.meta.url,
 );
 

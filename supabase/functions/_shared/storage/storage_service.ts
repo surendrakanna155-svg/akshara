@@ -11,6 +11,25 @@ export function createStorageAdmin(config: AppConfig) {
   });
 }
 
+/**
+ * Signed URLs are generated against the internal gateway origin (supabaseUrl)
+ * but must be handed to the device as a PUBLIC origin it can reach. Rewrites the
+ * origin to `publicStorageBaseUrl` while preserving the path + token query.
+ * No-op when the public base is not configured (lean/local).
+ */
+export function toPublicStorageUrl(config: AppConfig, url: string): string {
+  if (!config.publicStorageBaseUrl) return url;
+  try {
+    const src = new URL(url);
+    const base = new URL(config.publicStorageBaseUrl);
+    src.protocol = base.protocol;
+    src.host = base.host;
+    return src.toString();
+  } catch {
+    return url;
+  }
+}
+
 export function buildMemoryStoragePath(
   organizationId: string,
   schoolId: string,
@@ -35,7 +54,7 @@ export async function createMemoryUploadUrl(
     throw new Error(error?.message ?? "Failed to create upload URL");
   }
   return {
-    signedUrl: data.signedUrl,
+    signedUrl: toPublicStorageUrl(config, data.signedUrl),
     token: data.token,
     path: storagePath,
   };
@@ -53,7 +72,7 @@ export async function createMemoryDownloadUrl(
   if (error || !data?.signedUrl) {
     throw new Error(error?.message ?? "Failed to create download URL");
   }
-  return data.signedUrl;
+  return toPublicStorageUrl(config, data.signedUrl);
 }
 
 export async function createMemoryShareUrl(

@@ -12,7 +12,7 @@ import {
   handleRevokeSession,
   handleVerifyOtp,
 } from "../_shared/auth_handlers.ts";
-import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, handleProviderHealth } from "../_shared/tenant_handlers.ts";
+import { handleTenantAccessHealth, handleOperationsHealth, handleStorageHealth, handleProviderHealth, handleBackupHealth } from "../_shared/tenant_handlers.ts";
 import { routeAdmissions } from "../_shared/admissions/admissions_router.ts";
 import { routeFinance } from "../_shared/finance/finance_router.ts";
 import { routeSis } from "../_shared/sis/sis_router.ts";
@@ -54,6 +54,7 @@ import { routePrincipalCommand } from "../_shared/principal_command/principal_co
 import { routeGrowth } from "../_shared/growth/growth_router.ts";
 import { routeSchoolCompletion } from "../_shared/school_completion/school_completion_router.ts";
 import { routeParentExperience } from "../_shared/parent_experience/parent_experience_router.ts";
+import { routeDirector } from "../_shared/director/director_router.ts";
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 
 const corsHeaders = {
@@ -101,6 +102,7 @@ async function routeModuleRequest(
     routeGrowth,
     routeSchoolCompletion,
     routeParentExperience,
+    routeDirector,
     routeAnalytics,
     routeEducation,
     routeIntelligence,
@@ -125,20 +127,58 @@ async function routeModuleRequest(
   );
 }
 
+/**
+ * One structured JSON log line per request (Batch 7 observability). Captured by
+ * `docker logs akshara-edge`. Carries method/path/status/duration + a correlation
+ * id for tracing. Deliberately logs NO request/response bodies, tokens, or query
+ * strings, so secrets never leak into logs. Level: 50 server error, 40 client 4xx,
+ * 30 ok.
+ */
+function logRequest(
+  fields: {
+    method: string;
+    path: string;
+    status: number;
+    durationMs: number;
+    correlationId: string;
+    clientIp: string | null;
+    error?: string;
+  },
+): void {
+  const level = fields.status >= 500 ? 50 : fields.status >= 400 ? 40 : 30;
+  console.log(JSON.stringify({
+    level,
+    time: new Date().toISOString(),
+    type: "request",
+    service: "akshara-api",
+    ...fields,
+  }));
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  const startedAt = Date.now();
+  const correlationId = req.headers.get("x-correlation-id") ?? crypto.randomUUID();
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
   let config;
   try {
     config = loadConfig();
   } catch (error) {
-    return errorEnvelope(
-      "CONFIG_ERROR",
-      error instanceof Error ? error.message : "Configuration error",
-      500,
-    );
+    const message = error instanceof Error ? error.message : "Configuration error";
+    logRequest({
+      method: req.method.toUpperCase(),
+      path: routePath(req),
+      status: 500,
+      durationMs: Date.now() - startedAt,
+      correlationId,
+      clientIp,
+      error: message,
+    });
+    return errorEnvelope("CONFIG_ERROR", message, 500);
   }
 
   const path = routePath(req);
@@ -159,6 +199,8 @@ Deno.serve(async (req) => {
       response = await handleStorageHealth(req, config);
     } else if (method === "GET" && path === "/health/providers") {
       response = await handleProviderHealth(req, config);
+    } else if (method === "GET" && path === "/health/backup") {
+      response = await handleBackupHealth(req, config);
     } else if (method === "POST" && path === "/auth/login") {
       response = await handleLogin(req, config);
     } else if (method === "POST" && path === "/auth/verify-otp") {
@@ -185,12 +227,27 @@ Deno.serve(async (req) => {
     for (const [key, value] of Object.entries(corsHeaders)) {
       headers.set(key, value);
     }
+    headers.set("x-correlation-id", correlationId);
+    logRequest({
+      method,
+      path,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+      correlationId,
+      clientIp,
+    });
     return new Response(response.body, { status: response.status, headers });
   } catch (error) {
-    return errorEnvelope(
-      "SERVER_ERROR",
-      error instanceof Error ? error.message : "Unexpected error",
-      500,
-    );
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    logRequest({
+      method,
+      path,
+      status: 500,
+      durationMs: Date.now() - startedAt,
+      correlationId,
+      clientIp,
+      error: message,
+    });
+    return errorEnvelope("SERVER_ERROR", message, 500);
   }
 });
