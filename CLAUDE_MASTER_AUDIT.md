@@ -78,7 +78,7 @@ visual benchmark for the platform); no other screen touched.
   screens until owner reviews the live Parent Home. **(Owner approved 2026-06-20 →
   Phase B rollout underway.)**
 
-### 🟡 Phase B — Platform rollout (IN PROGRESS)
+### ✅ Phase B — Platform rollout = DONE & CERTIFIED (all sub-batches B.1–B.4)
 - **B.1 — Consumer dashboards = DONE & CERTIFIED.** Teacher + Student dashboards
   rewired to the premium look (gradient canvas + `AksharaGradientHero` + premium
   AI bar; teacher motif=book, student motif=growth). Robustness fixes: AI bar
@@ -798,7 +798,7 @@ Owner decisions honoured: Admin NavigationRail left as-is (admin mobile → Batc
 
 ---
 
-## 🟡 UX Batch 3 — Mobile-first (IN PROGRESS) — split into 3a + 3b
+## ✅ UX Batch 3 — Mobile-first = DONE & CERTIFIED (3a + 3b complete) — split into 3a + 3b
 Goal: bring the admin shell to the same phone-quality bar the consumer apps
 already meet, and close the remaining MOBILE_FIRST_AUDIT items (#1/#2 were done
 in Batch 2). Owner-approved plan: **3a = Steps 1–2** (breakpoints + admin mobile
