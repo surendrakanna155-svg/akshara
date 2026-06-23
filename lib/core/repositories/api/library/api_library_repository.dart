@@ -1,4 +1,3 @@
-import '../api_exception.dart';
 import '../../interfaces/library_repository.dart';
 import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
@@ -74,7 +73,8 @@ class ApiLibraryRepository implements LibraryRepository {
     required RepositoryQuery query,
     required IssueLibraryBookRequest request,
   }) async {
-    throw ApiNotConnectedException('LibraryRepository', 'issueLibraryBook');
+    final dto = await _remote.issueBook(query: query, request: request);
+    return _mapper.toIssueRecord(dto);
   }
 
   @override
@@ -82,7 +82,8 @@ class ApiLibraryRepository implements LibraryRepository {
     required RepositoryQuery query,
     required ReturnLibraryBookRequest request,
   }) async {
-    throw ApiNotConnectedException('LibraryRepository', 'returnLibraryBook');
+    final dto = await _remote.returnBook(query: query, request: request);
+    return _mapper.toReturnRecord(dto);
   }
 
   @override
@@ -90,7 +91,8 @@ class ApiLibraryRepository implements LibraryRepository {
     required RepositoryQuery query,
     required AddLibraryBookRequest request,
   }) async {
-    throw ApiNotConnectedException('LibraryRepository', 'addLibraryBook');
+    final dto = await _remote.addBook(query: query, request: request);
+    return _mapper.toBook(dto);
   }
 
   @override
@@ -98,6 +100,7 @@ class ApiLibraryRepository implements LibraryRepository {
     required RepositoryQuery query,
     required AddLibraryResourceRequest request,
   }) async {
-    throw ApiNotConnectedException('LibraryRepository', 'addDigitalResource');
+    final raw = await _remote.addDigitalResource(query: query, request: request);
+    return _mapper.toDigitalResource(raw);
   }
 }

@@ -209,19 +209,22 @@ class LibraryMapper {
     ];
   }
 
+  LibraryDigitalResource toDigitalResource(Map<String, dynamic> item) {
+    return LibraryDigitalResource(
+      id: item['id'] as String? ?? '',
+      title: item['title'] as String? ?? '',
+      type: LibraryEnumCodec.parseResourceType(item['type'] as String?),
+      classAccess: item['classAccess'] as String? ?? '',
+      downloads: item['downloads'] as int? ?? 0,
+      studentAppVisible: item['studentAppVisible'] as bool? ?? false,
+      teacherAppVisible: item['teacherAppVisible'] as bool? ?? false,
+    );
+  }
+
   List<LibraryDigitalResource> _mapDigitalResources(List<dynamic> items) {
     return [
       for (final item in items)
-        if (item is Map<String, dynamic>)
-          LibraryDigitalResource(
-            id: item['id'] as String? ?? '',
-            title: item['title'] as String? ?? '',
-            type: LibraryEnumCodec.parseResourceType(item['type'] as String?),
-            classAccess: item['classAccess'] as String? ?? '',
-            downloads: item['downloads'] as int? ?? 0,
-            studentAppVisible: item['studentAppVisible'] as bool? ?? false,
-            teacherAppVisible: item['teacherAppVisible'] as bool? ?? false,
-          ),
+        if (item is Map<String, dynamic>) toDigitalResource(item),
     ];
   }
 

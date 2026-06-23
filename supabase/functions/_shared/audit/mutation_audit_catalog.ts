@@ -46,6 +46,31 @@ function workflow(
   };
 }
 
+/**
+ * Generic audit/domain-event spec for module entity-store writes (Batch 5:
+ * library/transport/hostel/hr/alumni). `eventType` is a dotted slug such as
+ * `"library.book.added"` reused for both the audit row and the domain event;
+ * `sourceModule` is its first segment. Avoids hand-maintaining a bespoke
+ * factory per CRUD verb for the secondary modules.
+ */
+export function moduleEntityAudit(
+  eventType: string,
+  entityType: string,
+  entityId: string,
+  metadata: Record<string, unknown> = {},
+): MutationAuditSpec {
+  const sourceModule = eventType.split(".")[0] || "module";
+  return {
+    ...workflow(eventType, entityType, entityId, metadata),
+    domain: {
+      eventType,
+      payload: { entityId, ...metadata },
+      sourceModule,
+      idempotencyKey: `${eventType}:${entityId}`,
+    },
+  };
+}
+
 // ─── Admissions ─────────────────────────────────────────────────────────────
 
 export const admissionsAudit = {

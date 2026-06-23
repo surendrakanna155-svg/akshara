@@ -10,26 +10,43 @@ import {
   handleReports,
   handleReturns,
 } from "./library_handlers.ts";
+import {
+  handleAddBook,
+  handleAddDigitalResource,
+  handleIssueBook,
+  handleReturnBook,
+} from "./library_write_handlers.ts";
 
-function matchLibraryRoute(
-  method: string,
-  path: string,
-): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
-  if (method !== "GET") return null;
+type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
 
-  const routes: Record<string, (req: Request, config: AppConfig) => Promise<Response>> = {
-    "/library/dashboard": handleDashboard,
-    "/library/catalog": handleCatalog,
-    "/library/issues": handleIssues,
-    "/library/returns": handleReturns,
-    "/library/members": handleMembers,
-    "/library/fines": handleFines,
-    "/library/digital-resources": handleDigitalResources,
-    "/library/reports": handleReports,
-  };
+function matchLibraryRoute(method: string, path: string): { handler: RouteHandler } | null {
+  if (method === "GET") {
+    const routes: Record<string, RouteHandler> = {
+      "/library/dashboard": handleDashboard,
+      "/library/catalog": handleCatalog,
+      "/library/issues": handleIssues,
+      "/library/returns": handleReturns,
+      "/library/members": handleMembers,
+      "/library/fines": handleFines,
+      "/library/digital-resources": handleDigitalResources,
+      "/library/reports": handleReports,
+    };
+    const handler = routes[path] as RouteHandler | undefined;
+    return handler ? { handler } : null;
+  }
 
-  const handler = routes[path] as (typeof routes)[string] | undefined;
-  return handler ? { handler } : null;
+  if (method === "POST") {
+    const routes: Record<string, RouteHandler> = {
+      "/library/catalog": handleAddBook,
+      "/library/issues": handleIssueBook,
+      "/library/returns": handleReturnBook,
+      "/library/digital-resources": handleAddDigitalResource,
+    };
+    const handler = routes[path] as RouteHandler | undefined;
+    return handler ? { handler } : null;
+  }
+
+  return null;
 }
 
 export async function routeLibrary(
