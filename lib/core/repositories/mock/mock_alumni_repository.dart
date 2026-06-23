@@ -267,52 +267,59 @@ class MockAlumniRepository implements AlumniRepository {
     );
   }
 
+  static const _seedEvents = [
+    AlumniEvent(
+      id: 'evt_1',
+      title: 'Annual Alumni Reunion 2026',
+      date: '15 Aug 2026',
+      venue: 'Akshara Main Campus',
+      registrations: 156,
+      capacity: 200,
+      status: AlumniEventStatus.upcoming,
+      organizer: 'Alumni Association',
+    ),
+    AlumniEvent(
+      id: 'evt_2',
+      title: 'Career Fair — Tech & Finance',
+      date: '22 Jun 2026',
+      venue: 'Auditorium Block A',
+      registrations: 89,
+      capacity: 120,
+      status: AlumniEventStatus.upcoming,
+      organizer: 'Career Services',
+    ),
+    AlumniEvent(
+      id: 'evt_3',
+      title: 'Graduation Ceremony 2025',
+      date: '28 Mar 2025',
+      venue: 'Sports Complex',
+      registrations: 320,
+      capacity: 350,
+      status: AlumniEventStatus.completed,
+      organizer: 'Academic Office',
+    ),
+    AlumniEvent(
+      id: 'evt_4',
+      title: 'Mentorship Kickoff Workshop',
+      date: '5 Jun 2026',
+      venue: 'Conference Hall B',
+      registrations: 42,
+      capacity: 50,
+      status: AlumniEventStatus.ongoing,
+      organizer: 'Alumni Mentorship Program',
+    ),
+  ];
+
+  List<AlumniEvent> get _allEvents => [
+        ...MockAlumniWriteStore.instance.events,
+        ..._seedEvents,
+      ];
+
   @override
   Future<PaginatedResult<AlumniEvent>> getEvents({
     required RepositoryQuery query,
   }) async =>
-      paginateList(const [
-        AlumniEvent(
-          id: 'evt_1',
-          title: 'Annual Alumni Reunion 2026',
-          date: '15 Aug 2026',
-          venue: 'Akshara Main Campus',
-          registrations: 156,
-          capacity: 200,
-          status: AlumniEventStatus.upcoming,
-          organizer: 'Alumni Association',
-        ),
-        AlumniEvent(
-          id: 'evt_2',
-          title: 'Career Fair — Tech & Finance',
-          date: '22 Jun 2026',
-          venue: 'Auditorium Block A',
-          registrations: 89,
-          capacity: 120,
-          status: AlumniEventStatus.upcoming,
-          organizer: 'Career Services',
-        ),
-        AlumniEvent(
-          id: 'evt_3',
-          title: 'Graduation Ceremony 2025',
-          date: '28 Mar 2025',
-          venue: 'Sports Complex',
-          registrations: 320,
-          capacity: 350,
-          status: AlumniEventStatus.completed,
-          organizer: 'Academic Office',
-        ),
-        AlumniEvent(
-          id: 'evt_4',
-          title: 'Mentorship Kickoff Workshop',
-          date: '5 Jun 2026',
-          venue: 'Conference Hall B',
-          registrations: 42,
-          capacity: 50,
-          status: AlumniEventStatus.ongoing,
-          organizer: 'Alumni Mentorship Program',
-        ),
-      ], query);
+      paginateList(_allEvents, query);
 
   @override
   Future<PaginatedResult<AlumniDonation>> getDonations({
@@ -637,5 +644,13 @@ class MockAlumniRepository implements AlumniRepository {
     required AddAlumniRequest request,
   }) async {
     return MockAlumniWriteStore.instance.addManualAlumni(request);
+  }
+
+  @override
+  Future<AlumniEvent> createEvent({
+    required RepositoryQuery query,
+    required CreateAlumniEventRequest request,
+  }) async {
+    return MockAlumniWriteStore.instance.createEvent(request);
   }
 }

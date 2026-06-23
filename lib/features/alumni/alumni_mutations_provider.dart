@@ -54,3 +54,33 @@ final addAlumniProvider =
     AsyncNotifierProvider<AddAlumniNotifier, AlumniRecord?>(
   AddAlumniNotifier.new,
 );
+
+class CreateAlumniEventNotifier extends AsyncNotifier<AlumniEvent?> {
+  @override
+  FutureOr<AlumniEvent?> build() => null;
+
+  Future<AlumniEvent?> execute(CreateAlumniEventRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageAlumni(ref);
+      try {
+        final result = await ref.read(alumniRepositoryProvider).createEvent(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(alumniEventsFutureProvider)
+          ..invalidate(alumniDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final createAlumniEventProvider =
+    AsyncNotifierProvider<CreateAlumniEventNotifier, AlumniEvent?>(
+  CreateAlumniEventNotifier.new,
+);

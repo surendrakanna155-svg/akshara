@@ -17,3 +17,19 @@ class AddAlumniRequest {
   final String email;
   final String phone;
 }
+
+class CreateAlumniEventRequest {
+  const CreateAlumniEventRequest({
+    required this.title,
+    required this.date,
+    required this.venue,
+    required this.capacity,
+    required this.organizer,
+  });
+
+  final String title;
+  final String date;
+  final String venue;
+  final String capacity;
+  final String organizer;
+}

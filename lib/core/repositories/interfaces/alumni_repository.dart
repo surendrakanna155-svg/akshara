@@ -18,4 +18,8 @@ abstract class AlumniRepository {
     required RepositoryQuery query,
     required AddAlumniRequest request,
   });
+  Future<AlumniEvent> createEvent({
+    required RepositoryQuery query,
+    required CreateAlumniEventRequest request,
+  });
 }

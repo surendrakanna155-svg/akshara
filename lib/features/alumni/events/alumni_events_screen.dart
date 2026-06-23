@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
-
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../alumni_models.dart';
 import '../alumni_providers.dart';
+import '../alumni_workflow_actions.dart';
 import '../widgets/alumni_module_scaffold.dart';
 
 /// AL-04 — Events.
@@ -41,7 +42,8 @@ class AlumniEventsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAlumni,
         child: FilledButton.icon(
-          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Create event'),
+          key: QaTestKeys.alumniCreateEventButton,
+          onPressed: () => showCreateEventDialog(context, ref),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('New event'),
         ),

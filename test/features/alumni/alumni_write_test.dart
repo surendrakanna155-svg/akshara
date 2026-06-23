@@ -67,6 +67,47 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('createEvent inserts an upcoming, zero-RSVP event', () async {
+      final repo = MockAlumniRepository();
+      final before = await repo.getEvents(query: query);
+
+      final event = await repo.createEvent(
+        query: query,
+        request: const CreateAlumniEventRequest(
+          title: 'Founders Day Meet 2026',
+          date: '12 Sep 2026',
+          venue: 'Innovation Hall',
+          capacity: '150',
+          organizer: 'Alumni Association',
+        ),
+      );
+
+      final after = await repo.getEvents(query: query);
+      expect(after.total, before.total + 1);
+      expect(event.status, AlumniEventStatus.upcoming);
+      expect(event.registrations, 0);
+      expect(event.capacity, 150);
+      expect(after.items.any((e) => e.id == event.id), isTrue);
+    });
+
+    test('createEvent rejects an empty title', () async {
+      final repo = MockAlumniRepository();
+
+      expect(
+        () => repo.createEvent(
+          query: query,
+          request: const CreateAlumniEventRequest(
+            title: '  ',
+            date: '',
+            venue: '',
+            capacity: '',
+            organizer: '',
+          ),
+        ),
+        throwsStateError,
+      );
+    });
   });
 
   group('Alumni RBAC mutations', () {
@@ -123,6 +164,58 @@ void main() {
       expect(
         container.read(addAlumniProvider).value?.engagementStatus,
         AlumniEngagementStatus.active,
+      );
+    });
+
+    test('createEvent fails without manageAlumni', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(createAlumniEventProvider.notifier).execute(
+            const CreateAlumniEventRequest(
+              title: 'Blocked Event',
+              date: '',
+              venue: '',
+              capacity: '',
+              organizer: '',
+            ),
+          );
+
+      expect(container.read(createAlumniEventProvider).hasError, isTrue);
+    });
+
+    test('createEvent succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(createAlumniEventProvider.notifier).execute(
+            const CreateAlumniEventRequest(
+              title: 'Allowed Event',
+              date: '1 Oct 2026',
+              venue: 'Hall A',
+              capacity: '80',
+              organizer: 'Alumni Association',
+            ),
+          );
+
+      expect(container.read(createAlumniEventProvider).hasValue, isTrue);
+      expect(
+        container.read(createAlumniEventProvider).value?.status,
+        AlumniEventStatus.upcoming,
       );
     });
   });

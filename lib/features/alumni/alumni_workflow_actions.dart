@@ -116,3 +116,88 @@ Future<void> showAddAlumniDialog(
     _showAlumniMutationError(context, error);
   }
 }
+
+Future<void> showCreateEventDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final titleController = TextEditingController();
+  final dateController = TextEditingController();
+  final venueController = TextEditingController();
+  final capacityController = TextEditingController();
+  final organizerController = TextEditingController();
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Create event',
+      icon: Icons.event_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Event title',
+            controller: titleController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Date',
+            controller: dateController,
+            hint: 'e.g. 15 Aug 2026',
+          ),
+          AksharaFormField(
+            label: 'Venue',
+            controller: venueController,
+            hint: 'e.g. Akshara Main Campus',
+          ),
+          AksharaFormField(
+            label: 'Capacity',
+            controller: capacityController,
+            keyboardType: TextInputType.number,
+            hint: 'e.g. 200',
+          ),
+          AksharaFormField(
+            label: 'Organizer',
+            controller: organizerController,
+            hint: 'e.g. Alumni Association',
+          ),
+        ],
+      ),
+      actions: [
+        AksharaDialogActions(
+          confirmLabel: 'Create event',
+          confirmKey: QaTestKeys.alumniCreateEventDialogSubmitButton,
+          onCancel: () => Navigator.of(context).pop(false),
+          onConfirm: () {
+            if (titleController.text.trim().isEmpty) return;
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final event = await ref.read(createAlumniEventProvider.notifier).execute(
+          CreateAlumniEventRequest(
+            title: titleController.text.trim(),
+            date: dateController.text.trim(),
+            venue: venueController.text.trim(),
+            capacity: capacityController.text.trim(),
+            organizer: organizerController.text.trim(),
+          ),
+        );
+    if (!context.mounted || event == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.alumniCreateEventSuccessSnackbar,
+        content: Text('Scheduled ${event.title}'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showAlumniMutationError(context, error);
+  }
+}

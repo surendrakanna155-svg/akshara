@@ -9,11 +9,15 @@ final class MockAlumniWriteStore {
   static final MockAlumniWriteStore instance = MockAlumniWriteStore._();
 
   final List<AlumniRecord> graduates = [];
+  final List<AlumniEvent> events = [];
   int _sequence = 100;
+  int _eventSequence = 100;
 
   void reset() {
     graduates.clear();
+    events.clear();
     _sequence = 100;
+    _eventSequence = 100;
   }
 
   bool hasGraduateForSisStudent(String sisStudentId) {
@@ -77,5 +81,29 @@ final class MockAlumniWriteStore {
     );
     graduates.insert(0, record);
     return record;
+  }
+
+  /// Schedules a new alumni event. New events start with no registrations and
+  /// an upcoming status.
+  AlumniEvent createEvent(CreateAlumniEventRequest request) {
+    final title = request.title.trim();
+    if (title.isEmpty) {
+      throw StateError('Event title is required');
+    }
+
+    final event = AlumniEvent(
+      id: 'evt_new_${++_eventSequence}',
+      title: title,
+      date: request.date.trim().isEmpty ? '—' : request.date.trim(),
+      venue: request.venue.trim().isEmpty ? '—' : request.venue.trim(),
+      registrations: 0,
+      capacity: int.tryParse(request.capacity.trim()) ?? 0,
+      status: AlumniEventStatus.upcoming,
+      organizer: request.organizer.trim().isEmpty
+          ? 'Alumni Association'
+          : request.organizer.trim(),
+    );
+    events.insert(0, event);
+    return event;
   }
 }
