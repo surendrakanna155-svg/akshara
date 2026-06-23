@@ -367,12 +367,64 @@ export function createParentScopedReadHandlers(
     }
   }
 
+  async function handleFinanceReceipts(
+    req: Request,
+    config: AppConfig,
+    errorMessage: string,
+  ): Promise<Response> {
+    const auth = await authenticateRequest(req, config);
+    if (!auth.ok) return auth.response;
+
+    const denied = requireRead(auth.claims);
+    if (denied) return denied;
+
+    const url = new URL(req.url);
+    const studentIdResult = resolveParentStudentId(auth.claims, url);
+    if (studentIdResult instanceof Response) return studentIdResult;
+
+    const pagination = parsePagination(url);
+    const orgId = organizationIdFromClaims(auth.claims);
+    const schoolId = schoolIdFromClaims(auth.claims);
+
+    try {
+      const result = await runTenant(config, auth.claims, async (db) => {
+        const { overlayReceiptsFromFinance } = await import(
+          "../pilot/pilot_operations_repository.ts"
+        );
+        return await overlayReceiptsFromFinance(
+          db,
+          orgId,
+          schoolId,
+          studentIdResult,
+          pagination,
+        );
+      });
+      return jsonResponse(
+        envelope(
+          listEnvelope(result.items, {
+            page: result.page,
+            pageSize: result.pageSize,
+            total: result.total,
+            hasMore: result.hasMore,
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof TenantDbNotConfiguredError) {
+        return tenantDbNotConfiguredResponse(error);
+      }
+      console.error("parent finance receipts error:", error);
+      return errorEnvelope("INTERNAL_ERROR", errorMessage, 500);
+    }
+  }
+
   return {
     handleSnapshot,
     handleAttendanceSnapshot,
     handleTimetableSnapshot,
     handleList,
     handleDetail,
+    handleFinanceReceipts,
   };
 }
 

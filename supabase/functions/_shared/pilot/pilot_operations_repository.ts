@@ -705,8 +705,20 @@ export async function overlayFeesSnapshotFromFinance(
      LIMIT 12`,
     [orgId, schoolId, studentId],
   );
+  // Correct child identity from real records (seed snapshot may be stale), mirroring
+  // the exam/receipt overlays so the parent never sees another child's name.
+  let childName = snapshot.childName;
+  let childClass = snapshot.childClass;
+  try {
+    const context = await loadStudentParentSnapshotContext(db, orgId, schoolId, studentId);
+    if (context.childName) childName = context.childName;
+    if (context.childClass) childClass = context.childClass;
+  } catch {
+    // keep snapshot identity on any lookup failure
+  }
+
   if (rows.length === 0) {
-    return snapshot;
+    return { ...snapshot, childName, childClass };
   }
 
   const installments = rows.map((row, index) => ({
@@ -723,9 +735,124 @@ export async function overlayFeesSnapshotFromFinance(
 
   return {
     ...snapshot,
+    childName,
+    childClass,
     summaryLabel: hasOutstanding ? "Outstanding fees" : "Fees",
     totalDue,
     installments,
+  };
+}
+
+const RECEIPT_STATUS_LABELS: Record<string, string> = {
+  completed: "Paid",
+  cancelled: "Cancelled",
+  partially_refunded: "Partially refunded",
+  refunded: "Refunded",
+  draft: "Draft",
+};
+
+export interface FinanceReceiptsPage {
+  items: Record<string, unknown>[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+/**
+ * List the child's REAL fee receipts (from finance_receipts → finance_collections)
+ * shaped exactly as the parent/student receipts list expects. Replaces the stale
+ * `parent_entities` seed cache so a collection recorded by the office actually
+ * surfaces as a receipt in the parent app. Returns an empty page when the child
+ * has no receipts yet (RLS restricts visibility to the caller's own children).
+ */
+export async function overlayReceiptsFromFinance(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+  pagination: { page: number; pageSize: number },
+): Promise<FinanceReceiptsPage> {
+  const pageSize = Math.min(100, Math.max(1, pagination.pageSize));
+  const page = Math.max(1, pagination.page);
+  const offset = (page - 1) * pageSize;
+
+  const countRows = await db.queryObject<{ total: string }>(
+    `SELECT count(*)::text AS total
+       FROM finance_receipts r
+       JOIN finance_collections c ON c.id = r.collection_id
+      WHERE r.organization_id = $1 AND r.school_id = $2 AND c.student_id = $3`,
+    [orgId, schoolId, studentId],
+  );
+  const total = parseInt(countRows[0]?.total ?? "0", 10);
+
+  let childName = "Student";
+  let childClass = "";
+  try {
+    const context = await loadStudentParentSnapshotContext(db, orgId, schoolId, studentId);
+    if (context.childName) childName = String(context.childName);
+    if (context.childClass) childClass = String(context.childClass);
+  } catch {
+    // fall back to defaults on any lookup failure
+  }
+
+  const schoolRows = await db.queryObject<{ name: string }>(
+    `SELECT name FROM schools WHERE id = $1 LIMIT 1`,
+    [schoolId],
+  );
+  const schoolName = schoolRows[0]?.name ?? "Akshara Public School";
+
+  const rows = await db.queryObject<{
+    id: string;
+    receipt_number: string;
+    date_label: string;
+    amount: string;
+    payment_method: string;
+    collection_status: string;
+    invoice_number: string;
+  }>(
+    `SELECT r.id,
+            r.receipt_number,
+            to_char(r.receipt_date, 'DD Mon YYYY') AS date_label,
+            r.amount::text AS amount,
+            c.payment_method,
+            c.collection_status,
+            i.invoice_number
+       FROM finance_receipts r
+       JOIN finance_collections c ON c.id = r.collection_id
+       JOIN finance_invoices i ON i.id = c.invoice_id
+      WHERE r.organization_id = $1 AND r.school_id = $2 AND c.student_id = $3
+      ORDER BY r.receipt_date DESC, r.created_at DESC, r.id DESC
+      LIMIT $4 OFFSET $5`,
+    [orgId, schoolId, studentId, pageSize, offset],
+  );
+
+  const items = rows.map((row) => {
+    const amount = Math.round(parseFloat(row.amount));
+    const statusLabel = RECEIPT_STATUS_LABELS[row.collection_status] ??
+      row.collection_status;
+    return {
+      id: row.id,
+      receiptNumber: row.receipt_number,
+      title: `Fee payment · ${row.invoice_number}`,
+      dateLabel: row.date_label,
+      amount,
+      paymentMethod: row.payment_method,
+      statusLabel,
+      childName,
+      childClass,
+      category: "Fees",
+      lineItems: [{ label: `Invoice ${row.invoice_number}`, amount }],
+      schoolName,
+    } as Record<string, unknown>;
+  });
+
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    hasMore: offset + rows.length < total,
   };
 }
 

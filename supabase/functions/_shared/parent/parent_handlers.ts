@@ -2,8 +2,14 @@ import type { AppConfig } from "../config.ts";
 import { createParentScopedReadHandlers } from "../entity_read/mobile_read_handlers.ts";
 import { parentStore } from "./parent_read_repository.ts";
 
-const { handleSnapshot, handleAttendanceSnapshot, handleTimetableSnapshot, handleList, handleDetail } =
-  createParentScopedReadHandlers(parentStore);
+const {
+  handleSnapshot,
+  handleAttendanceSnapshot,
+  handleTimetableSnapshot,
+  handleList,
+  handleDetail,
+  handleFinanceReceipts,
+} = createParentScopedReadHandlers(parentStore);
 
 export async function handleDashboard(req: Request, config: AppConfig): Promise<Response> {
   return await handleSnapshot(req, config, "snapshot_dashboard", "Failed to load parent dashboard");
@@ -30,7 +36,9 @@ export async function handleFees(req: Request, config: AppConfig): Promise<Respo
 }
 
 export async function handleReceipts(req: Request, config: AppConfig): Promise<Response> {
-  return await handleList(req, config, "receipt", "Failed to load parent receipts");
+  // Real fee receipts from finance_receipts (not the stale parent_entities cache),
+  // so a collection recorded by the office actually reaches the parent app.
+  return await handleFinanceReceipts(req, config, "Failed to load parent receipts");
 }
 
 export async function handleNotices(req: Request, config: AppConfig): Promise<Response> {
