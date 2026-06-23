@@ -52,6 +52,7 @@ abstract final class RouteNames {
   static String teacherStudentRisk(String sisStudentId) =>
       '$teacher/student-risk/$sisStudentId';
   static const String teacherLeave = '/teacher/leave';
+  static const String teacherSettings = '/teacher/settings';
 
   static String teacherConversation(String threadId) =>
       '$teacherMessages/$threadId';

@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-/// Homework completion states shown in the parent module.
-enum ParentHomeworkStatus { pending, submitted, overdue }
+/// Homework completion states shown in the parent module. Mirrors the per-student
+/// lifecycle: pending → submitted → reviewed (terminal), overdue = unsubmitted +
+/// past due. `reviewed` is set once the teacher grades this child's submission.
+enum ParentHomeworkStatus { pending, submitted, reviewed, overdue }
 
 /// Parent-facing homework filter options.
 enum HomeworkFilter { all, pending, submitted, overdue }
@@ -22,9 +24,15 @@ extension ParentHomeworkStatusX on ParentHomeworkStatus {
     return switch (this) {
       ParentHomeworkStatus.pending => 'Pending',
       ParentHomeworkStatus.submitted => 'Submitted',
+      ParentHomeworkStatus.reviewed => 'Reviewed',
       ParentHomeworkStatus.overdue => 'Overdue',
     };
   }
+
+  /// Handed in (graded or not) — `reviewed` is a terminal sub-state of submitted.
+  bool get isSubmitted =>
+      this == ParentHomeworkStatus.submitted ||
+      this == ParentHomeworkStatus.reviewed;
 }
 
 /// Single homework row model for parent homework list.
@@ -74,8 +82,10 @@ class ParentHomeworkData {
 
   int get pendingCount =>
       items.where((item) => item.status == ParentHomeworkStatus.pending).length;
-  int get submittedCount => items
-      .where((item) => item.status == ParentHomeworkStatus.submitted)
+  int get submittedCount =>
+      items.where((item) => item.status.isSubmitted).length;
+  int get reviewedCount => items
+      .where((item) => item.status == ParentHomeworkStatus.reviewed)
       .length;
   int get overdueCount =>
       items.where((item) => item.status == ParentHomeworkStatus.overdue).length;

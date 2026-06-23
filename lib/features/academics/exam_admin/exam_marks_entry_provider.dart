@@ -7,8 +7,10 @@ import '../../../core/config/exam_approval_config.dart';
 import '../../../core/errors/api_failure.dart';
 import '../../../core/exams/exam_administration_requests.dart';
 import '../../../core/exams/exam_administration_store.dart';
+import '../../../core/exams/exam_remark.dart';
 import '../../../core/repositories/interfaces/exam_administration_repository.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../core/security/erp_role.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/tenant/tenant_provider.dart';
@@ -193,4 +195,67 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
     if (state.hasError) throw state.error!;
     return count;
   }
+}
+
+/// The leadership remark author role for the current user, or null when they are
+/// neither principal nor vice-principal. A user holding both resolves to
+/// principal (the senior role).
+final examLeadershipRemarkRoleProvider =
+    Provider<ExamRemarkAuthorRole?>((ref) {
+  final rbac = ref.watch(rbacServiceProvider);
+  if (rbac.hasRole(ErpRole.principal)) return ExamRemarkAuthorRole.principal;
+  if (rbac.hasRole(ErpRole.vicePrincipal)) {
+    return ExamRemarkAuthorRole.vicePrincipal;
+  }
+  return null;
+});
+
+/// Whether the current user may author the leadership (principal/VP) remark.
+final canAuthorLeadershipExamRemarkProvider = Provider<bool>((ref) {
+  return ref.watch(examLeadershipRemarkRoleProvider) != null;
+});
+
+/// Current leadership remark text for a (student, exam session), if any.
+String? leadershipExamRemarkText(
+  WidgetRef ref,
+  String examId,
+  String sisStudentId,
+) {
+  ref.watch(examAdminRefreshTickProvider);
+  return ExamAdministrationStore.instance
+      .remarkFor(examId, sisStudentId, leadership: true)
+      ?.text;
+}
+
+/// Principal / vice-principal creates or edits the leadership remark for a
+/// (student, exam session). Throws when the user holds neither leadership role.
+Future<void> saveLeadershipExamRemark(
+  WidgetRef ref, {
+  required String examId,
+  required String sisStudentId,
+  required String text,
+}) async {
+  final role = ref.read(examLeadershipRemarkRoleProvider);
+  if (role == null) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'Only the principal or vice-principal may add this remark.',
+        code: 'RBAC_LEADERSHIP_EXAM_REMARK',
+      ),
+    );
+  }
+  final auth = ref.read(authProvider);
+  final roleLabel = role == ExamRemarkAuthorRole.principal
+      ? 'Principal'
+      : 'Vice Principal';
+  ExamAdministrationStore.instance.upsertRemark(
+    examId: examId,
+    sisStudentId: sisStudentId,
+    text: text.trim(),
+    authorId: auth.claims?.userId ?? 'leadership',
+    authorName: auth.displayName ?? roleLabel,
+    authorRole: role,
+  );
+  ref.read(examAdminRefreshTickProvider.notifier).state++;
 }

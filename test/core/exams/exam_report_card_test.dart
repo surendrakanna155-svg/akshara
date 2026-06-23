@@ -1,4 +1,5 @@
 import 'package:akshara_erp/core/exams/exam_administration_store.dart';
+import 'package:akshara_erp/core/exams/exam_remark.dart';
 import 'package:akshara_erp/core/exams/exam_report_card.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -83,6 +84,81 @@ void main() {
         ExamReportCardBuilder.build(store, sisStudentId: ravi, termLabel: term)!;
     expect(card.remark, 'Strong improvement in algebra.');
     expect(card.remarkAuthorName, 'Priya Sharma');
+  });
+
+  test('report card carries class-teacher and leadership remarks in separate '
+      'slots without overwriting each other', () {
+    store.publishExamResults('exam_math_8a');
+    // Class teacher writes the primary remark.
+    store.upsertRemark(
+      examId: 'exam_math_8a',
+      sisStudentId: ravi,
+      text: 'Strong improvement in algebra.',
+      authorId: 'HR-EMP-101',
+      authorName: 'Priya Sharma',
+      timestamp: '2026-06-19T00:00:00Z',
+    );
+    // Principal adds a leadership remark — a different slot, not an overwrite.
+    store.upsertRemark(
+      examId: 'exam_math_8a',
+      sisStudentId: ravi,
+      text: 'Keep up the consistent effort.',
+      authorId: 'HR-EMP-001',
+      authorName: 'Anand Rao',
+      authorRole: ExamRemarkAuthorRole.principal,
+      timestamp: '2026-06-19T02:00:00Z',
+    );
+
+    // Both slots survive independently in the store.
+    expect(
+      store.remarkFor('exam_math_8a', ravi)?.text,
+      'Strong improvement in algebra.',
+    );
+    expect(
+      store.remarkFor('exam_math_8a', ravi, leadership: true)?.text,
+      'Keep up the consistent effort.',
+    );
+
+    final card =
+        ExamReportCardBuilder.build(store, sisStudentId: ravi, termLabel: term)!;
+    expect(card.remark, 'Strong improvement in algebra.');
+    expect(card.remarkAuthorName, 'Priya Sharma');
+    expect(card.remarkAuthorRole, ExamRemarkAuthorRole.classTeacher);
+    expect(card.leadershipRemark, 'Keep up the consistent effort.');
+    expect(card.leadershipRemarkAuthorName, 'Anand Rao');
+    expect(card.leadershipRemarkAuthorRole, ExamRemarkAuthorRole.principal);
+  });
+
+  test('a vice-principal remark uses the same leadership slot as the principal',
+      () {
+    store.upsertRemark(
+      examId: 'exam_math_8a',
+      sisStudentId: ravi,
+      text: 'Initial principal note.',
+      authorId: 'HR-EMP-001',
+      authorName: 'Anand Rao',
+      authorRole: ExamRemarkAuthorRole.principal,
+      timestamp: '2026-06-19T00:00:00Z',
+    );
+    final updated = store.upsertRemark(
+      examId: 'exam_math_8a',
+      sisStudentId: ravi,
+      text: 'Reviewed by VP.',
+      authorId: 'HR-EMP-002',
+      authorName: 'Meera Iyer',
+      authorRole: ExamRemarkAuthorRole.vicePrincipal,
+      timestamp: '2026-06-19T01:00:00Z',
+    );
+
+    expect(updated.text, 'Reviewed by VP.');
+    expect(updated.createdAt, '2026-06-19T00:00:00Z'); // same slot, preserved
+    expect(updated.history, hasLength(2));
+    expect(
+      store.remarkFor('exam_math_8a', ravi, leadership: true)?.authorRole,
+      ExamRemarkAuthorRole.vicePrincipal,
+    );
+    // The class-teacher slot is untouched (empty).
+    expect(store.remarkFor('exam_math_8a', ravi), isNull);
   });
 
   test('editing a remark preserves createdAt and grows the audit trail', () {

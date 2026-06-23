@@ -173,6 +173,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('report_card_rank_chip');
   static const reportCardRemark =
       ValueKey<String>('report_card_remark');
+  static const reportCardLeadershipRemark =
+      ValueKey<String>('report_card_leadership_remark');
   static const reportCardShareButton =
       ValueKey<String>('report_card_share_button');
   static const teacherExamRemarkField =
@@ -181,6 +183,17 @@ abstract final class QaTestKeys {
       ValueKey<String>('teacher_exam_remark_save_button');
   static ValueKey<String> teacherExamRemarkButton(String markId) =>
       ValueKey<String>('teacher_exam_remark_$markId');
+
+  // Leadership (principal / vice-principal) exam remark, authored from the
+  // exam marks-entry screen.
+  static const examLeadershipRemarkField =
+      ValueKey<String>('exam_leadership_remark_field');
+  static const examLeadershipRemarkSaveButton =
+      ValueKey<String>('exam_leadership_remark_save_button');
+  static ValueKey<String> examLeadershipRemarkButton(String markId) =>
+      ValueKey<String>('exam_leadership_remark_$markId');
+  static ValueKey<String> examAdminReviewRemarksButton(String examId) =>
+      ValueKey<String>('exam_admin_review_remarks_$examId');
 
   static const parentAttendanceCorrectionButton =
       ValueKey<String>('parent_attendance_correction_button');
@@ -762,6 +775,9 @@ abstract final class QaTestKeys {
 
   static const appearanceSettingsLink =
       ValueKey<String>('appearance_settings_link');
+
+  static const teacherSettingsScreen =
+      ValueKey<String>('teacher_settings_screen');
 
   static ValueKey<String> atRiskStudentRow(String studentId) =>
       ValueKey<String>('at_risk_student_$studentId');

@@ -1,4 +1,4 @@
-import '../../../../../features/student/student_requests.dart';
+import '../../../../../features/student_app/student_requests.dart';
 
 class StudentHomeworkSubmitRequestDto {
   const StudentHomeworkSubmitRequestDto({required this.raw});

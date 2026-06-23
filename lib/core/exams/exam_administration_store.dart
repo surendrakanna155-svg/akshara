@@ -239,8 +239,11 @@ final class ExamAdministrationStore {
       for (final raw in remarks) {
         if (raw is Map) {
           final remark = ExamRemark.fromJson(Map<String, dynamic>.from(raw));
-          _remarksByKey[_remarkKey(remark.examId, remark.sisStudentId)] =
-              remark;
+          _remarksByKey[_remarkKey(
+            remark.examId,
+            remark.sisStudentId,
+            leadership: remark.authorRole.isLeadership,
+          )] = remark;
         }
       }
     }
@@ -560,14 +563,27 @@ final class ExamAdministrationStore {
     return _publishedByMarkId[markEntryId];
   }
 
-  // --- Exam-session remarks (one per student per exam session) ---
+  // --- Exam-session remarks ---
+  // Two independent slots per (student, exam session): the class-teacher remark
+  // and the leadership (principal / vice-principal) remark, so both can be shown
+  // on the same report card without overwriting each other.
 
-  String _remarkKey(String examId, String sisStudentId) =>
-      '$examId|$sisStudentId';
+  String _remarkKey(
+    String examId,
+    String sisStudentId, {
+    bool leadership = false,
+  }) =>
+      '$examId|$sisStudentId|${leadership ? 'leadership' : 'teacher'}';
 
-  ExamRemark? remarkFor(String examId, String sisStudentId) {
+  /// The remark for a (student, exam session) in the requested slot. Defaults to
+  /// the class-teacher slot; pass [leadership] true for the principal/VP remark.
+  ExamRemark? remarkFor(
+    String examId,
+    String sisStudentId, {
+    bool leadership = false,
+  }) {
     ensureSeeded();
-    return _remarksByKey[_remarkKey(examId, sisStudentId)];
+    return _remarksByKey[_remarkKey(examId, sisStudentId, leadership: leadership)];
   }
 
   List<ExamRemark> remarksForExam(String examId) {
@@ -590,7 +606,11 @@ final class ExamAdministrationStore {
   }) {
     ensureSeeded();
     final now = timestamp ?? DateTime.now().toUtc().toIso8601String();
-    final key = _remarkKey(examId, sisStudentId);
+    final key = _remarkKey(
+      examId,
+      sisStudentId,
+      leadership: authorRole.isLeadership,
+    );
     final existing = _remarksByKey[key];
     final revision = ExamRemarkRevision(
       text: text,

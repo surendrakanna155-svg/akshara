@@ -3,9 +3,9 @@ import 'package:akshara_erp/core/repositories/api/student/remote/student_api_pat
 import 'package:akshara_erp/core/repositories/api/student/remote/student_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_student_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
-import 'package:akshara_erp/features/student/dashboard/student_dashboard_provider.dart';
-import 'package:akshara_erp/features/student/homework/homework_models.dart';
-import 'package:akshara_erp/features/student/student_requests.dart';
+import 'package:akshara_erp/features/student_app/dashboard/student_dashboard_provider.dart';
+import 'package:akshara_erp/features/student_app/homework/homework_models.dart';
+import 'package:akshara_erp/features/student_app/student_requests.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 

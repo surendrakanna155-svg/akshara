@@ -1,6 +1,6 @@
 import '../repositories/mock/mock_canonical_student_registry.dart';
 import '../../features/parent/homework/homework_models.dart';
-import '../../features/student/homework/homework_models.dart';
+import '../../features/student_app/homework/homework_models.dart';
 import '../../features/teacher/homework/homework_models.dart';
 
 /// Canonical homework assignment authored by a teacher — shared across personas.
@@ -190,11 +190,16 @@ final class SchoolHomeworkStore {
       subject: record.subject,
       title: localizedTitle,
       dueLabel: record.dueLabel,
-      status: switch (record.status) {
-        SchoolHomeworkStatus.submitted => ParentHomeworkStatus.submitted,
-        SchoolHomeworkStatus.overdue => ParentHomeworkStatus.overdue,
-        SchoolHomeworkStatus.pending => ParentHomeworkStatus.pending,
-      },
+      // A per-student review is the terminal lifecycle state: once the teacher
+      // grades this child's work it reads "Reviewed", regardless of the coarse
+      // class-level submission status. Only the reviewed student flips.
+      status: review != null
+          ? ParentHomeworkStatus.reviewed
+          : switch (record.status) {
+              SchoolHomeworkStatus.submitted => ParentHomeworkStatus.submitted,
+              SchoolHomeworkStatus.overdue => ParentHomeworkStatus.overdue,
+              SchoolHomeworkStatus.pending => ParentHomeworkStatus.pending,
+            },
       reviewGrade: review?.grade,
       reviewComment: review?.comment,
     );
@@ -212,11 +217,15 @@ final class SchoolHomeworkStore {
       subject: record.subject,
       title: localizedTitle,
       dueLabel: record.dueLabel,
-      status: switch (record.status) {
-        SchoolHomeworkStatus.submitted => StudentHomeworkStatus.submitted,
-        SchoolHomeworkStatus.overdue => StudentHomeworkStatus.overdue,
-        SchoolHomeworkStatus.pending => StudentHomeworkStatus.pending,
-      },
+      // Terminal "Reviewed" state once the teacher grades this student's work
+      // (per-student, so classmates stay at submitted/pending until graded).
+      status: review != null
+          ? StudentHomeworkStatus.reviewed
+          : switch (record.status) {
+              SchoolHomeworkStatus.submitted => StudentHomeworkStatus.submitted,
+              SchoolHomeworkStatus.overdue => StudentHomeworkStatus.overdue,
+              SchoolHomeworkStatus.pending => StudentHomeworkStatus.pending,
+            },
       attachmentLabel: null,
       reviewGrade: review?.grade,
       reviewComment: review?.comment,

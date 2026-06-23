@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
-import '../../../../../features/student/student_requests.dart';
+import '../../../../../features/student_app/student_requests.dart';
 import '../dto/student_homework_submit_request_dto.dart';
 import '../dto/student_responses_dto.dart';
 import 'student_api_paths.dart';

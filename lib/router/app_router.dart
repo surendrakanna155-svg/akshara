@@ -37,16 +37,16 @@ import '../features/parent/shell/parent_shell.dart';
 import '../features/parent/ptm/parent_ptm_screen.dart';
 import '../features/parent/transport/parent_transport_screen.dart';
 import '../features/parent/timetable/parent_timetable_screen.dart';
-import '../features/student/progress/student_progress_screen.dart';
-import '../features/student/progress/student_report_card_screen.dart';
-import '../features/student/attendance/student_attendance_screen.dart';
-import '../features/student/dashboard/student_dashboard_screen.dart';
-import '../features/student/exams/student_exams_screen.dart';
-import '../features/student/homework/student_homework_screen.dart';
-import '../features/student/notices/student_notices_screen.dart';
-import '../features/student/profile/student_profile_screen.dart';
-import '../features/student/shell/student_shell.dart';
-import '../features/student/timetable/student_timetable_screen.dart';
+import '../features/student_app/progress/student_progress_screen.dart';
+import '../features/student_app/progress/student_report_card_screen.dart';
+import '../features/student_app/attendance/student_attendance_screen.dart';
+import '../features/student_app/dashboard/student_dashboard_screen.dart';
+import '../features/student_app/exams/student_exams_screen.dart';
+import '../features/student_app/homework/student_homework_screen.dart';
+import '../features/student_app/notices/student_notices_screen.dart';
+import '../features/student_app/profile/student_profile_screen.dart';
+import '../features/student_app/shell/student_shell.dart';
+import '../features/student_app/timetable/student_timetable_screen.dart';
 import '../features/teacher/attendance/teacher_attendance_screen.dart';
 import '../features/teacher/dashboard/teacher_dashboard_screen.dart';
 import '../features/teacher/dashboard/teacher_class_teacher_dashboard_screen.dart';
@@ -56,6 +56,7 @@ import '../features/teacher/exams/teacher_exams_screen.dart';
 import '../features/teacher/homework/teacher_homework_screen.dart';
 import '../features/teacher/homework/teacher_homework_create_screen.dart';
 import '../features/teacher/leave/teacher_leave_screen.dart';
+import '../features/teacher/settings/teacher_settings_screen.dart';
 import '../features/teacher/messages/teacher_conversation_screen.dart';
 import '../features/teacher/messages/teacher_messages_screen.dart';
 import '../features/teacher/shell/teacher_shell.dart';
@@ -443,6 +444,13 @@ GoRouter createAppRouter({
             name: 'teacherLeave',
             pageBuilder: (context, state) => NoTransitionPage(
               child: teacherLeaveRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherSettings,
+            name: 'teacherSettings',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: TeacherSettingsScreen(),
             ),
           ),
           GoRoute(

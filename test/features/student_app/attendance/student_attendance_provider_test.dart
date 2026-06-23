@@ -1,4 +1,4 @@
-import 'package:akshara_erp/features/student/attendance/student_attendance_provider.dart';
+import 'package:akshara_erp/features/student_app/attendance/student_attendance_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/provider_test_overrides.dart';

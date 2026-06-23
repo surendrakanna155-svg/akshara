@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../../features/parent/attendance/attendance_models.dart';
 import '../../../../../features/parent/timetable/timetable_models.dart';
-import '../../../../../features/student/dashboard/student_dashboard_provider.dart';
-import '../../../../../features/student/homework/homework_models.dart';
-import '../../../../../features/student/notices/notices_models.dart';
+import '../../../../../features/student_app/dashboard/student_dashboard_provider.dart';
+import '../../../../../features/student_app/homework/homework_models.dart';
+import '../../../../../features/student_app/notices/notices_models.dart';
 import '../../../../../shared/semantic_status.dart';
 
 /// Parses Student mobile API enum strings and presentation helpers.

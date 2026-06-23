@@ -14,7 +14,7 @@ import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../features/parent/exams/parent_exams_provider.dart';
-import '../../features/student/exams/student_exams_provider.dart';
+import '../../features/student_app/exams/student_exams_provider.dart';
 import 'attendance/teacher_attendance_provider.dart';
 import 'exams/exam_models.dart';
 import 'exams/teacher_exams_provider.dart';

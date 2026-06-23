@@ -1,4 +1,4 @@
-import 'package:akshara_erp/features/student/profile/student_profile_provider.dart';
+import 'package:akshara_erp/features/student_app/profile/student_profile_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/provider_test_overrides.dart';

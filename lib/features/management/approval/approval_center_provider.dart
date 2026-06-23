@@ -29,7 +29,7 @@ import '../../../features/inventory/inventory_providers.dart';
 import '../../../features/parent/attendance/parent_attendance_provider.dart';
 import '../../../features/parent/exams/parent_exams_provider.dart';
 import '../../../features/parent/leave/parent_leave_provider.dart';
-import '../../../features/student/exams/student_exams_provider.dart';
+import '../../../features/student_app/exams/student_exams_provider.dart';
 import '../../../features/teacher/exams/teacher_exams_provider.dart';
 import '../management_models.dart';
 

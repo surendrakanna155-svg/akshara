@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/exams/exam_remark.dart';
 import '../../../../core/exams/exam_report_card.dart';
 import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/widgets/widgets.dart';
@@ -76,36 +77,77 @@ class ReportCardView extends StatelessWidget {
             ],
           ),
         ),
-        if ((card.remark ?? '').isNotEmpty) ...[
-          const SizedBox(height: AksharaSpacing.s4),
-          AksharaSectionHeader(title: 'Class teacher remark', fixedHeight: false),
-          const SizedBox(height: AksharaSpacing.s2),
-          Material(
-            key: QaTestKeys.reportCardRemark,
-            color: colors.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: AksharaRadius.card,
-              side: BorderSide(color: colors.outlineVariant),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(AksharaSpacing.s4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(card.remark!, style: text.bodyMedium),
-                  if ((card.remarkAuthorName ?? '').isNotEmpty) ...[
-                    const SizedBox(height: AksharaSpacing.s2),
-                    Text(
-                      '— ${card.remarkAuthorName}',
-                      style: text.bodySmall
-                          .copyWith(color: colors.onSurfaceVariant),
-                    ),
-                  ],
+        if ((card.remark ?? '').isNotEmpty)
+          _RemarkBlock(
+            blockKey: QaTestKeys.reportCardRemark,
+            title: (card.remarkAuthorRole ?? ExamRemarkAuthorRole.classTeacher)
+                .reportCardRemarkTitle,
+            text: card.remark!,
+            authorName: card.remarkAuthorName,
+          ),
+        if ((card.leadershipRemark ?? '').isNotEmpty)
+          _RemarkBlock(
+            blockKey: QaTestKeys.reportCardLeadershipRemark,
+            title: (card.leadershipRemarkAuthorRole ??
+                    ExamRemarkAuthorRole.principal)
+                .reportCardRemarkTitle,
+            text: card.leadershipRemark!,
+            authorName: card.leadershipRemarkAuthorName,
+          ),
+      ],
+    );
+  }
+}
+
+class _RemarkBlock extends StatelessWidget {
+  const _RemarkBlock({
+    required this.blockKey,
+    required this.title,
+    required this.text,
+    this.authorName,
+  });
+
+  final Key blockKey;
+  final String title;
+  final String text;
+  final String? authorName;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = context.aksharaText;
+    final colors = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: AksharaSpacing.s4),
+        AksharaSectionHeader(title: title, fixedHeight: false),
+        const SizedBox(height: AksharaSpacing.s2),
+        Material(
+          key: blockKey,
+          color: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: AksharaRadius.card,
+            side: BorderSide(color: colors.outlineVariant),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(text, style: textTheme.bodyMedium),
+                if ((authorName ?? '').isNotEmpty) ...[
+                  const SizedBox(height: AksharaSpacing.s2),
+                  Text(
+                    '— $authorName',
+                    style: textTheme.bodySmall
+                        .copyWith(color: colors.onSurfaceVariant),
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
-        ],
+        ),
       ],
     );
   }

@@ -1,11 +1,11 @@
 import 'package:akshara_erp/core/repositories/api/student/dto/student_enum_codec.dart';
 import 'package:akshara_erp/features/parent/attendance/attendance_models.dart';
 import 'package:akshara_erp/features/parent/timetable/timetable_models.dart';
-import 'package:akshara_erp/features/student/dashboard/student_dashboard_provider.dart';
-import 'package:akshara_erp/features/student/exams/exam_models.dart';
-import 'package:akshara_erp/features/student/homework/homework_models.dart';
-import 'package:akshara_erp/features/student/notices/notices_models.dart';
-import 'package:akshara_erp/features/student/profile/profile_models.dart';
+import 'package:akshara_erp/features/student_app/dashboard/student_dashboard_provider.dart';
+import 'package:akshara_erp/features/student_app/exams/exam_models.dart';
+import 'package:akshara_erp/features/student_app/homework/homework_models.dart';
+import 'package:akshara_erp/features/student_app/notices/notices_models.dart';
+import 'package:akshara_erp/features/student_app/profile/profile_models.dart';
 
 /// Builds API-shaped JSON envelopes from Student domain models for contract tests.
 class StudentFixtureBuilder {

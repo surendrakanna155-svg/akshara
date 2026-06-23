@@ -372,9 +372,64 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
     }
   }
 
+  Future<void> _openLeadershipRemarkDialog() async {
+    var text = leadershipExamRemarkText(
+          ref,
+          widget.exam.id,
+          widget.mark.sisStudentId,
+        ) ??
+        '';
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Leadership remark · ${widget.mark.studentName}'),
+        content: TextFormField(
+          key: QaTestKeys.examLeadershipRemarkField,
+          initialValue: text,
+          maxLines: 3,
+          onChanged: (value) => text = value,
+          decoration: const InputDecoration(
+            hintText: 'Principal / vice-principal remark for this student',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.examLeadershipRemarkSaveButton,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    try {
+      await saveLeadershipExamRemark(
+        ref,
+        examId: widget.exam.id,
+        sisStudentId: widget.mark.sisStudentId,
+        text: text,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Remark saved for ${widget.mark.studentName}')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = context.aksharaText;
+    final canRemark = ref.watch(canAuthorLeadershipExamRemarkProvider);
 
     return Card(
       elevation: 0,
@@ -389,6 +444,13 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
             Expanded(
               child: Text(widget.mark.studentName, style: text.bodyLarge),
             ),
+            if (canRemark)
+              IconButton(
+                key: QaTestKeys.examLeadershipRemarkButton(widget.mark.id),
+                tooltip: 'Leadership remark',
+                icon: const Icon(Icons.rate_review_outlined),
+                onPressed: _openLeadershipRemarkDialog,
+              ),
             SizedBox(
               width: 88,
               child: TextField(

@@ -10,6 +10,7 @@ import '../../../../shared/widgets/akshara_view_action.dart';
 import '../../../../theme/spacing.dart';
 import '../exam_admin_navigation.dart';
 import '../exam_administration_provider.dart';
+import '../exam_marks_entry_provider.dart';
 
 class ExamLifecycleActions extends ConsumerWidget {
   const ExamLifecycleActions({super.key, required this.exam});
@@ -51,6 +52,15 @@ class ExamLifecycleActions extends ConsumerWidget {
               onPressed: () => openExamMarksEntry(context, exam.id),
               child: const Text('Enter marks'),
             ),
+          ),
+        // After publication, leadership can still open the student list to add
+        // or edit a principal/vice-principal remark on the report card.
+        if (exam.phase == ExamLifecyclePhase.published &&
+            ref.watch(canAuthorLeadershipExamRemarkProvider))
+          OutlinedButton(
+            key: QaTestKeys.examAdminReviewRemarksButton(exam.id),
+            onPressed: () => openExamMarksEntry(context, exam.id),
+            child: const Text('Student remarks'),
           ),
       ],
     );

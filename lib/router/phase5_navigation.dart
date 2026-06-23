@@ -5,7 +5,7 @@ import '../features/employee/employee_360_screen.dart';
 import '../features/memories/school_memories_screen.dart';
 import '../features/operations/operations_hub_screen.dart';
 import '../features/parent/experience/parent_experience_hub_screen.dart';
-import '../features/promotion/achievement_promotion_screen.dart';
+import '../features/achievement_promotion/achievement_promotion_screen.dart';
 import '../features/resource_optimization/resource_optimization_screen.dart';
 import 'route_names.dart';
 

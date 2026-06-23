@@ -80,7 +80,7 @@ class HomeworkListRow extends StatelessWidget {
                         if (item.isReviewed) ...[
                           const SizedBox(height: AksharaSpacing.s1),
                           Text(
-                            'Reviewed · Grade ${item.reviewGrade}'
+                            'Grade ${item.reviewGrade}'
                             '${(item.reviewComment ?? '').isNotEmpty ? ' — ${item.reviewComment}' : ''}',
                             style: text.bodySmall.copyWith(color: colors.primary),
                             maxLines: 2,
@@ -109,6 +109,7 @@ class HomeworkListRow extends StatelessWidget {
     return switch (status) {
       ParentHomeworkStatus.pending => KpiAccent.warning,
       ParentHomeworkStatus.submitted => KpiAccent.success,
+      ParentHomeworkStatus.reviewed => KpiAccent.primary,
       ParentHomeworkStatus.overdue => KpiAccent.error,
     };
   }

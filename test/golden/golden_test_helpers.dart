@@ -3,7 +3,7 @@ import 'package:akshara_erp/features/inventory/inventory_providers.dart';
 import 'package:akshara_erp/features/management/management_providers.dart';
 import 'package:akshara_erp/features/intelligence/management/intelligence_provider.dart';
 import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_provider.dart';
-import 'package:akshara_erp/features/student/dashboard/student_dashboard_provider.dart';
+import 'package:akshara_erp/features/student_app/dashboard/student_dashboard_provider.dart';
 import 'package:akshara_erp/features/teacher/dashboard/teacher_dashboard_provider.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';

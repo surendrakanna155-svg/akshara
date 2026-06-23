@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../features/parent/receipts/receipt_models.dart';
+import '../exams/exam_remark.dart';
 import '../exams/exam_report_card.dart';
 
 /// Shared PDF/CSV export scaffold (P0-FIN-003 / RPT-018).
@@ -164,28 +165,22 @@ class AksharaReportExportService {
                 3: pw.Alignment.center,
               },
             ),
-            if ((card.remark ?? '').isNotEmpty) ...[
-              pw.SizedBox(height: 14),
-              pw.Text('Class teacher remark',
-                  style: pw.TextStyle(
-                      fontSize: 11, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 4),
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.all(8),
-                decoration:
-                    pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
-                child: pw.Text(card.remark!,
-                    style: const pw.TextStyle(fontSize: 10)),
+            if ((card.remark ?? '').isNotEmpty)
+              ..._remarkBlock(
+                title: (card.remarkAuthorRole ??
+                        ExamRemarkAuthorRole.classTeacher)
+                    .reportCardRemarkTitle,
+                text: card.remark!,
+                authorName: card.remarkAuthorName,
               ),
-              if ((card.remarkAuthorName ?? '').isNotEmpty)
-                pw.Padding(
-                  padding: const pw.EdgeInsets.only(top: 2),
-                  child: pw.Text('— ${card.remarkAuthorName}',
-                      style: const pw.TextStyle(
-                          fontSize: 9, color: PdfColors.grey700)),
-                ),
-            ],
+            if ((card.leadershipRemark ?? '').isNotEmpty)
+              ..._remarkBlock(
+                title: (card.leadershipRemarkAuthorRole ??
+                        ExamRemarkAuthorRole.principal)
+                    .reportCardRemarkTitle,
+                text: card.leadershipRemark!,
+                authorName: card.leadershipRemarkAuthorName,
+              ),
             pw.Spacer(),
             // Signature + seal placeholders.
             pw.Row(
@@ -206,6 +201,34 @@ class AksharaReportExportService {
       ),
     );
     return document.save();
+  }
+
+  /// A titled report-card remark block (text box + optional author byline).
+  List<pw.Widget> _remarkBlock({
+    required String title,
+    required String text,
+    String? authorName,
+  }) {
+    return [
+      pw.SizedBox(height: 14),
+      pw.Text(title,
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+      pw.SizedBox(height: 4),
+      pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.all(8),
+        decoration:
+            pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
+        child: pw.Text(text, style: const pw.TextStyle(fontSize: 10)),
+      ),
+      if ((authorName ?? '').isNotEmpty)
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 2),
+          child: pw.Text('— $authorName',
+              style:
+                  const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+        ),
+    ];
   }
 
   /// Builds and opens the OS share sheet for a report card PDF.

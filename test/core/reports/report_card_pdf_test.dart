@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/exams/exam_remark.dart';
 import 'package:akshara_erp/core/exams/exam_report_card.dart';
 import 'package:akshara_erp/core/reports/akshara_report_export_service.dart';
 import 'package:akshara_erp/features/parent/receipts/receipt_models.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 ExamReportCard sampleCard({
   bool rankShown = true,
   String? remark = 'Strong improvement this term.',
+  String? leadershipRemark = 'Commended by the principal.',
 }) =>
     ExamReportCard(
       sisStudentId: 'SIS-STU-10430',
@@ -37,6 +39,13 @@ ExamReportCard sampleCard({
       attendancePercent: 92,
       remark: remark,
       remarkAuthorName: remark == null ? null : 'Priya Sharma',
+      remarkAuthorRole:
+          remark == null ? null : ExamRemarkAuthorRole.classTeacher,
+      leadershipRemark: leadershipRemark,
+      leadershipRemarkAuthorName:
+          leadershipRemark == null ? null : 'Anand Rao',
+      leadershipRemarkAuthorRole:
+          leadershipRemark == null ? null : ExamRemarkAuthorRole.principal,
     );
 
 void main() {
@@ -56,7 +65,7 @@ void main() {
 
   test('generates when rank is hidden and there is no remark', () async {
     final bytes = await service.buildReportCardPdf(
-      card: sampleCard(rankShown: false, remark: null),
+      card: sampleCard(rankShown: false, remark: null, leadershipRemark: null),
       schoolName: 'Akshara Vidyalaya',
     );
     expect(bytes, isNotEmpty);

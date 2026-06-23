@@ -1,4 +1,4 @@
-import 'package:akshara_erp/features/student/timetable/student_timetable_provider.dart';
+import 'package:akshara_erp/features/student_app/timetable/student_timetable_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/provider_test_overrides.dart';

@@ -1,5 +1,5 @@
 import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_screen.dart';
-import 'package:akshara_erp/features/student/dashboard/student_dashboard_screen.dart';
+import 'package:akshara_erp/features/student_app/dashboard/student_dashboard_screen.dart';
 import 'package:akshara_erp/features/teacher/dashboard/teacher_dashboard_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';

@@ -46,7 +46,7 @@ final parentHomeworkItemsProvider = Provider<List<ParentHomeworkItem>>((ref) {
         .where((item) => item.status == ParentHomeworkStatus.pending)
         .toList(growable: false),
     HomeworkFilter.submitted => baseItems
-        .where((item) => item.status == ParentHomeworkStatus.submitted)
+        .where((item) => item.status.isSubmitted)
         .toList(growable: false),
     HomeworkFilter.overdue => baseItems
         .where((item) => item.status == ParentHomeworkStatus.overdue)

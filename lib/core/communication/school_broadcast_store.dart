@@ -1,5 +1,5 @@
 import '../../features/parent/notices/notices_models.dart';
-import '../../features/student/notices/notices_models.dart';
+import '../../features/student_app/notices/notices_models.dart';
 
 class _Broadcast {
   const _Broadcast({

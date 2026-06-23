@@ -43,6 +43,10 @@ class ExamReportCard {
     this.attendancePercent,
     this.remark,
     this.remarkAuthorName,
+    this.remarkAuthorRole,
+    this.leadershipRemark,
+    this.leadershipRemarkAuthorName,
+    this.leadershipRemarkAuthorRole,
   });
 
   final String sisStudentId;
@@ -70,6 +74,13 @@ class ExamReportCard {
   /// Class-teacher remark for this report card (from the term's exam session).
   final String? remark;
   final String? remarkAuthorName;
+  final ExamRemarkAuthorRole? remarkAuthorRole;
+
+  /// Leadership (principal / vice-principal) remark — a separate slot from the
+  /// class-teacher remark, so a report card may carry both.
+  final String? leadershipRemark;
+  final String? leadershipRemarkAuthorName;
+  final ExamRemarkAuthorRole? leadershipRemarkAuthorRole;
 
   int get overallPercent =>
       totalMax == 0 ? 0 : ((totalScore / totalMax) * 100).round();
@@ -116,15 +127,23 @@ abstract final class ExamReportCardBuilder {
     final (rank, classSize) =
         _classRank(store, sisStudentId, classLabel, termLabel, overallPercent);
 
-    // Class-teacher remark for this report card: the most recently updated
-    // remark across the term's exam sessions (one per student per exam session).
+    // Remarks for this report card: the most recently updated remark in each
+    // slot across the term's exam sessions. The class-teacher and leadership
+    // (principal/VP) slots are tracked independently so both can be shown.
     ExamRemark? termRemark;
+    ExamRemark? leadershipRemark;
     for (final r in mine) {
-      final rem = store.remarkFor(r.examId, sisStudentId);
-      if (rem == null) continue;
-      if (termRemark == null ||
-          rem.updatedAt.compareTo(termRemark.updatedAt) > 0) {
-        termRemark = rem;
+      final teacherRem = store.remarkFor(r.examId, sisStudentId);
+      if (teacherRem != null &&
+          (termRemark == null ||
+              teacherRem.updatedAt.compareTo(termRemark.updatedAt) > 0)) {
+        termRemark = teacherRem;
+      }
+      final leadRem = store.remarkFor(r.examId, sisStudentId, leadership: true);
+      if (leadRem != null &&
+          (leadershipRemark == null ||
+              leadRem.updatedAt.compareTo(leadershipRemark.updatedAt) > 0)) {
+        leadershipRemark = leadRem;
       }
     }
 
@@ -143,6 +162,10 @@ abstract final class ExamReportCardBuilder {
       attendancePercent: attendancePercent,
       remark: termRemark?.text,
       remarkAuthorName: termRemark?.authorName,
+      remarkAuthorRole: termRemark?.authorRole,
+      leadershipRemark: leadershipRemark?.text,
+      leadershipRemarkAuthorName: leadershipRemark?.authorName,
+      leadershipRemarkAuthorRole: leadershipRemark?.authorRole,
     );
   }
 

@@ -17,7 +17,8 @@ class TeacherShell extends ConsumerWidget {
 
   final Widget child;
 
-  /// ≤4 primary tabs + a shared "More" tab (Timetable, Leave, Parent Concerns).
+  /// ≤4 primary tabs + a shared "More" tab (Timetable, Leave, Parent Concerns,
+  /// Settings).
   static const navSpec = PersonaNavSpec(
     primary: [
       PersonaNavDestination(
@@ -62,6 +63,11 @@ class TeacherShell extends ConsumerWidget {
         route: RouteNames.teacherParentCommunication,
         label: 'Parent Concerns',
         icon: Icons.forum_outlined,
+      ),
+      MoreNavDestination(
+        route: RouteNames.teacherSettings,
+        label: 'Settings',
+        icon: Icons.settings_outlined,
       ),
     ],
   );

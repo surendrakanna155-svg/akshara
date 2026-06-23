@@ -1,5 +1,5 @@
-import 'package:akshara_erp/features/student/exams/exam_models.dart';
-import 'package:akshara_erp/features/student/exams/student_exams_provider.dart';
+import 'package:akshara_erp/features/student_app/exams/exam_models.dart';
+import 'package:akshara_erp/features/student_app/exams/student_exams_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/provider_test_overrides.dart';

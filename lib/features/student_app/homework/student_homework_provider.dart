@@ -48,7 +48,7 @@ final studentHomeworkItemsProvider = Provider<List<StudentHomeworkItem>>((ref) {
         )
         .toList(growable: false),
     StudentHomeworkFilter.submitted => items
-        .where((i) => i.status == StudentHomeworkStatus.submitted)
+        .where((i) => i.status.isSubmitted)
         .toList(growable: false),
   };
 });

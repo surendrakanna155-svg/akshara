@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 
-enum StudentHomeworkStatus { pending, submitted, overdue }
+/// Per-student homework lifecycle: pending → submitted → reviewed (terminal),
+/// with overdue as the unsubmitted-and-past-due branch. `reviewed` is set once
+/// the teacher grades *this* student's submission, so two students on the same
+/// assignment can sit at different stages.
+enum StudentHomeworkStatus { pending, submitted, reviewed, overdue }
 
 enum StudentHomeworkFilter { all, pending, submitted }
 
@@ -8,8 +12,15 @@ extension StudentHomeworkStatusX on StudentHomeworkStatus {
   String get label => switch (this) {
         StudentHomeworkStatus.pending => 'Pending',
         StudentHomeworkStatus.submitted => 'Submitted',
+        StudentHomeworkStatus.reviewed => 'Reviewed',
         StudentHomeworkStatus.overdue => 'Overdue',
       };
+
+  /// A submission that has been handed in (whether or not it is graded yet).
+  /// `reviewed` is a terminal sub-state of submitted, so it counts here too.
+  bool get isSubmitted =>
+      this == StudentHomeworkStatus.submitted ||
+      this == StudentHomeworkStatus.reviewed;
 }
 
 extension StudentHomeworkFilterX on StudentHomeworkFilter {
@@ -66,8 +77,9 @@ class StudentHomeworkData {
 
   int get pendingCount =>
       items.where((i) => i.status == StudentHomeworkStatus.pending).length;
-  int get submittedCount =>
-      items.where((i) => i.status == StudentHomeworkStatus.submitted).length;
+  int get submittedCount => items.where((i) => i.status.isSubmitted).length;
+  int get reviewedCount =>
+      items.where((i) => i.status == StudentHomeworkStatus.reviewed).length;
   int get overdueCount =>
       items.where((i) => i.status == StudentHomeworkStatus.overdue).length;
 }

@@ -1,7 +1,7 @@
 @TestOn('mac-os')
 library;
 
-import 'package:akshara_erp/features/student/dashboard/student_dashboard_screen.dart';
+import 'package:akshara_erp/features/student_app/dashboard/student_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

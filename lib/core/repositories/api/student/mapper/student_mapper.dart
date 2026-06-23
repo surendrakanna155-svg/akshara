@@ -1,10 +1,10 @@
 import '../../../../../features/parent/attendance/attendance_models.dart';
 import '../../../../../features/parent/timetable/timetable_models.dart';
-import '../../../../../features/student/dashboard/student_dashboard_provider.dart';
-import '../../../../../features/student/exams/exam_models.dart';
-import '../../../../../features/student/homework/homework_models.dart';
-import '../../../../../features/student/notices/notices_models.dart';
-import '../../../../../features/student/profile/profile_models.dart';
+import '../../../../../features/student_app/dashboard/student_dashboard_provider.dart';
+import '../../../../../features/student_app/exams/exam_models.dart';
+import '../../../../../features/student_app/homework/homework_models.dart';
+import '../../../../../features/student_app/notices/notices_models.dart';
+import '../../../../../features/student_app/profile/profile_models.dart';
 import '../dto/student_enum_codec.dart';
 import '../dto/student_homework_submit_request_dto.dart';
 import '../dto/student_responses_dto.dart';

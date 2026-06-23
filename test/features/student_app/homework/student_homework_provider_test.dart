@@ -1,5 +1,5 @@
-import 'package:akshara_erp/features/student/homework/homework_models.dart';
-import 'package:akshara_erp/features/student/homework/student_homework_provider.dart';
+import 'package:akshara_erp/features/student_app/homework/homework_models.dart';
+import 'package:akshara_erp/features/student_app/homework/student_homework_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/provider_test_overrides.dart';

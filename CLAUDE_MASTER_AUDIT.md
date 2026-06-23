@@ -7,11 +7,14 @@ Legend: ✅ done & certified · 🟡 in progress · ⬜ not started
 
 ---
 
-# 🟡 ACTIVE PHASE — WORKSPACE & UX CONSOLIDATION
+# ✅ WORKSPACE & UX CONSOLIDATION = COMPLETE (all batches 1–5, 2026-06-23)
 
 > ERP Hardening + Domain Certification = **COMPLETE** (everything below the divider).
-> New phase goal: make Akshara feel **simple, modern, fast, beautiful, premium —
+> Phase goal was: make Akshara feel **simple, modern, fast, beautiful, premium —
 > demo-grade so schools buy on sight.** NOT adding features/modules/domains.
+> **STATUS: all 5 batches done & certified; the two final items were owner decisions,
+> now made (verticals shelved behind a disabled flag; phase4/5 fold-in skipped).
+> No open Flutter-side audit work remains — next work is backend-dependent (mocks).**
 > Audit-driven (WORKSPACE_ARCHITECTURE_AUDIT, MASTER_RECOMMENDATION_REPORT,
 > UI_UX_AUDIT_REPORT, MOBILE_FIRST_AUDIT, SCREEN_CONSOLIDATION_REPORT,
 > REAL_WORLD_SCHOOL_AUDIT, PROJECT_HEALTH_AUDIT, IDEAS_BACKLOG).
@@ -232,13 +235,36 @@ steps complete:
   NOT an admin ERP route, so the route-protection-inventory test is unaffected.
   "Appearance" link added to **parent profile, student profile, and management
   settings** (mirroring the AI Assistant link placement). QA keys
-  `appearanceSettingsLink` + `appearanceModeOption(mode)`. **Known gap:** teacher
-  persona has no dedicated profile/settings screen, so no link there yet (the
-  pref is device-global; revisit if a teacher profile is added). Coverage:
+  `appearanceSettingsLink` + `appearanceModeOption(mode)`. **~~Known gap~~ →
+  CLOSED 2026-06-22 (see "C.2 follow-up — teacher settings" below):** teacher
+  persona had no dedicated profile/settings screen, so no Appearance link there —
+  now fixed. Coverage:
   `test/features/settings/appearance_settings_screen_test.dart` (3). Certified:
   analyze 0 err (only 2 pre-existing `prefer_const` infos on teacher
   NoTransitionPage routes); affected suites (router, app startup, parent/student
   profile, settings, theme) **148 pass**. Full-suite + dark renders deferred to C.4.
+- **C.2 follow-up — teacher settings entry point = DONE & CERTIFIED (2026-06-22).**
+  Closed the C.2 known gap: the teacher persona was the one shell with no
+  profile/settings screen, so the device-global Light/Dark/System toggle was
+  unreachable from it. Added a dedicated **`TeacherSettingsScreen`**
+  (`lib/features/teacher/settings/`) — a clean Preferences screen mirroring the
+  parent/student pattern (AI Assistant + Appearance `ProfileInfoRow`s reusing the
+  shared `aiAssistantSettingsLink` / `appearanceSettingsLink` QA keys, pushing the
+  shared `/settings/ai-assistant` + `/settings/appearance` routes). Wired as
+  `RouteNames.teacherSettings` (`/teacher/settings`) inside the teacher `ShellRoute`
+  and surfaced as a **"Settings" entry in the teacher More tab** (`TeacherShell.navSpec`).
+  No guard change needed: `/teacher/settings` is a `/teacher`-prefixed route, so the
+  existing persona guard authorizes it for the teacher role (and multi-hat staff who
+  hold it); the pushed appearance/AI routes are already shared-settings routes. New
+  QA key `teacherSettingsScreen`. Coverage:
+  `test/features/teacher/settings/teacher_settings_screen_test.dart` (3 — both links
+  render with their keys; tapping each navigates to the shared settings route).
+  **Certified:** `flutter analyze` **0 errors** (104 pre-existing warnings/infos in
+  untouched files, incl. the 2 known teacher `NoTransitionPage` `prefer_const` infos);
+  full Flutter suite **2198 pass** / 1 staging skip / 0 fail (+3). No golden churn
+  (no goldens for the teacher shell's More screens). Note: this is a settings entry
+  point, not a full teacher *profile* (no teacher profile data model exists yet);
+  add profile fields if/when a teacher profile is built.
 - **C.3 — Dark-correctness sweep = DONE & CERTIFIED — NO FIXES NEEDED.** Expected
   to be "the big/risky part", but the app was built theme-first so the literal
   sweep came up essentially empty. Comprehensive grep across **all** of `lib`:
@@ -306,7 +332,7 @@ migrated **8 remaining wizard flows** off bespoke chrome (mostly Flutter's raw
   Render screenshots @390 + @1200 verified the compact-vs-full indicator and the
   pinned footer (temp goldens, not committed). **UX Batch 3 (3a + 3b) = COMPLETE.**
 
-## 🟡 UX Batch 5 — Screen Consolidation (IN PROGRESS, 2026-06-22)
+## ✅ UX Batch 5 — Screen Consolidation = DONE & CERTIFIED (completed 2026-06-23)
 Goal reframed by owner (2026-06-22): the bar is **stable, production-ready, no
 leaks/gaps, complete the full work** — NOT demo polish. Consolidation is pursued
 for production code health, and every step is certified at the production bar
@@ -549,29 +575,83 @@ honest state:
   removed affordances had test coverage). §E now closed against the broader pattern.
 
 ### Remaining Batch-5 items — assessed against current code (honest risk notes)
-- **phase4/phase5 fold-in (report A1) — DEFERRED as low-value/some-risk.** Re-check
-  shows `phase4_navigation.dart`/`phase5_navigation.dart` are *router-builder
+- **phase4/phase5 fold-in (report A1) — ✅ CLOSED: owner decided SKIP (2026-06-23).**
+  Re-check shows `phase4_navigation.dart`/`phase5_navigation.dart` are *router-builder
   collections* for modules that **have no nav files of their own**, so "fold into
   owning modules" would *fragment* into ~10 tiny nav files (worse, not better).
   `phase5` also backs `core/security/phase5_staging_route_manifest.dart` (a
   server-route RBAC regression guard with a passing readiness test). The names are
   ugly but functionally correct + well-tested; a pure rename is high-touch
   (~27 files incl. a security manifest) for **zero functional benefit** and nonzero
-  regression risk → not a good production trade. Left as-is intentionally.
-- **D2 promotion-name collision / D1 student→student_app** — pure clarity renames,
-  no functional gap; low priority.
+  regression risk → not a good production trade. **Owner reviewed the net-negative
+  assessment and chose to skip the fold-in permanently** — left as-is by decision,
+  no longer an open item.
+### ✅ D1 + D2 clarity renames = DONE & CERTIFIED (2026-06-23)
+The two pure-clarity folder renames are now done (the third, `copilot/`→`ai/`, is
+**declined** — see below). Both were route/QA-key-preserving (persona route paths
+and keys are unchanged), depth-preserving (`features/X/` → `features/Y/`, same
+level, so internal `../../core/` imports stay valid), and every external reference
+was a `package:` import — so each was a clean `git mv` + one substring swap, the
+same pattern as 5a–5d.
+- **D1 — `features/student/` → `features/student_app/`** (32 import sites + the
+  `test/features/student/` folder). Disambiguates the student-facing **app** from
+  `student_360/` and the SIS student-records domain. Route paths (`/student/*`),
+  the `RouteNames.student` persona constant, and all QA keys are unchanged →
+  **zero user-facing churn**. No `../student/` sibling-relative imports existed, so
+  no hand edits — pure substring swap.
+- **D2 — `features/promotion/` → `features/achievement_promotion/`** (1 external
+  importer: `phase5_navigation.dart`). The folder is **achievement / marketing
+  promotion** (`AchievementPromotionScreen`, `PromotionImageGenerator`), which
+  collided in name with **grade promotion** (`sis_promotion_screen`,
+  `promotion_readiness_*`). Renamed to match the classes it already holds; route
+  `/promotions` (`achievementPromotion`) is unchanged.
+- **`copilot/`→`ai/` (report C5 cosmetic tail) — DECLINED, not deferred.** Unlike
+  D1/D2 this is **not** a clarity win: "copilot" is the accurate, specific product
+  name; "ai" is strictly vaguer. It would also churn the `/copilot` + `/inventory/
+  copilot` routes and the `runAiCopilot` guard for negative clarity value. Renaming
+  accurate code to a vaguer name fails the production-code-health bar, so it's
+  intentionally left as `copilot/`.
+- **Certified:** `flutter analyze` **0 errors** (105 issues, all pre-existing — no
+  new lint); full Flutter suite **2208 pass** / 1 staging skip / 0 fail (no
+  regressions; goldens are name-keyed not path-keyed, so no golden churn).
 - **Shelve `verticals/` (restaurant/salon/healthcare/accommodation) + SaaS/org tier
-  — OWNER BUSINESS DECISION, not done autonomously.** These are real built product
-  lines tied to the multi-vertical / AI-School-Builder future. School roles already
-  had their vertical view-perms stripped (Batch 1 V4), so they are **not reachable
-  by school personas** (not an active leak — just dead-for-school surface). Removing
-  = maintenance win but destroys planned value; needs owner's product call. The
-  report's safe path is a disabled feature flag (reversible).
+  — ✅ CLOSED: owner chose SHELVE BEHIND A DISABLED FLAG (2026-06-23).** These are
+  real built product lines tied to the multi-vertical / AI-School-Builder future, so
+  the owner chose the reversible "hide, don't delete" path over removal. **No code
+  change was needed — this is already the implemented state:**
+  - `lib/features/verticals/` (healthcare/salon/restaurant/accommodation) and
+    `lib/features/industry/` remain in the repo untouched.
+  - `SchoolBuildScope` (master flag `enabled = true`, reversible) hides every vertical
+    + SaaS/white-label/platform-ops module from admin nav (`isModuleHidden`, wired in
+    `admin_navigation_provider.dart`) **and** blocks their routes
+    (`isRouteHidden` → `AccessDeniedScreen` in `route_guards.dart`). Verified the
+    `startsWith` guard covers all sub-routes (`/healthcare/*`, `/salon/*`,
+    `/restaurant/*`, `/accommodation/*`, `/industry/*`).
+  - School roles also hold no vertical view-perms (Batch 1 V4), so it's not even a
+    latent permission leak — it's locked at the perm, nav, **and** route layers.
+  - Reversal path is one line: flip `SchoolBuildScope.enabled = false` to bring
+    everything back, or drop a single entry to revive just one module. (Org/tenant
+    chain tier — franchise/multi-school/org-builder — is separately gated by the
+    runtime `ChainScope` chain flag, default off; see 5d/M3.)
+  - Decision is therefore satisfied with the existing flag; nothing further to build.
 - **Bigger merges** — intelligence hubs (C3) = ✅ DONE (5c); AI surface (C5) = ✅
   DONE (5b); org/tenant tier (C4) = ✅ DONE (5d, incl. the M3 chain-flag gate).
-  All report merges (C1–C5) now complete; remaining Batch-5 items are the
-  deferred/owner-decision ones above (phase fold-in, vertical/SaaS shelving,
-  clarity renames).
+  All report merges (C1–C5) now complete. Clarity renames D1/D2 = ✅ DONE (above);
+  `copilot/`→`ai/` = declined (above). The two final owner-gated items are now
+  **both resolved (2026-06-23): phase4/phase5 fold-in = SKIP** (owner accepted the
+  net-negative assessment) and **shelving `verticals/` + SaaS/org tier = SHELVE
+  BEHIND DISABLED FLAG** (already the implemented state via `SchoolBuildScope` /
+  `ChainScope` — no code change needed).
+
+### ✅ Batch 5 / Flutter-side audit = COMPLETE (2026-06-23)
+With both owner-gated items closed above, there is **no open Flutter-side audit
+work**. All report merges (C1–C5), clarity renames (D1/D2), the dead-action sweep
+(5E), and the production leak/gap hunt (5-HARDENING) are done & certified; the two
+remaining items were owner decisions, now both made and recorded. The only work
+that remains for the product is **backend-dependent** (the app still runs on mocks
+— see PROJECT_CONTEXT / "no production backend yet"), which is out of scope for the
+Flutter-only audit. Last certified state: `flutter analyze` **0 errors**, full
+suite **2208 pass** / 1 staging skip / 0 fail.
 
 ## ✅ UX Batch 1 — Workspace Architecture Enforcement = DONE & CERTIFIED (2026-06-20)
 All 5 steps complete. Certified end-to-end: `flutter analyze` **0 errors**; full
@@ -818,8 +898,55 @@ card complete and certified.
 - Certified: flutter analyze 0 errors; exam Flutter suite 94 pass; PDF generation
   verified (valid PDF); full edge `deno check` 0 errors; exam/approval server
   tests 12 pass.
-- Deferred by owner: nothing blocking. (Future extension: principal / vice-
-  principal remarks — schema already allows those author roles.)
+- Deferred by owner: nothing blocking. ~~(Future extension: principal / vice-
+  principal remarks — schema already allows those author roles.)~~ **→ DONE &
+  CERTIFIED 2026-06-23 (see "#16 PRINCIPAL/VP EXAM REMARKS" below).**
+
+## ✅ #16 PRINCIPAL/VP EXAM REMARKS = DONE & CERTIFIED (2026-06-23, Flutter-only, mock-backed)
+Closed the exam-domain "future extension": the principal / vice-principal can now
+author a report-card remark, distinct from the class-teacher remark, with **no
+schema change** — the `ExamRemarkAuthorRole` model already permitted those roles.
+Real report cards carry *both* a class-teacher line and a leadership line, so the
+design uses **two independent remark slots** per (student, exam session) rather
+than one author overwriting another.
+- **Store (`exam_administration_store.dart`):** `_remarkKey` now carries a slot
+  suffix (`teacher` | `leadership`); `remarkFor(examId, sis, {leadership})` reads a
+  slot; `upsertRemark` derives the slot from `authorRole.isLeadership`
+  (principal/VP → leadership, everyone else → teacher). Snapshot import re-keys by
+  the author role's slot. The class-teacher path is unchanged (slot defaults to
+  teacher), so all existing remark tests + the teacher authoring screen are
+  untouched.
+- **Model (`exam_remark.dart`):** added `ExamRemarkAuthorRoleX` extension
+  (`isLeadership`, `reportCardRemarkTitle` → "Class teacher remark" / "Principal's
+  remark" / "Vice Principal's remark").
+- **Report card (`exam_report_card.dart`):** `ExamReportCard` gained
+  `remarkAuthorRole` + `leadershipRemark`/`leadershipRemarkAuthorName`/
+  `leadershipRemarkAuthorRole`; the builder tracks the most-recent remark **per
+  slot** across the term's sessions.
+- **Display:** in-app `ReportCardView` and the PDF export both render the
+  class-teacher and leadership remarks as separate titled blocks (role-aware
+  titles), via a shared `_RemarkBlock` widget / `_remarkBlock` PDF helper. New QA
+  key `reportCardLeadershipRemark`.
+- **Authoring surface:** principal/VP hold `manageExamMarks`, so they already reach
+  the exam **marks-entry** screen. Added a per-student "Leadership remark" icon
+  button to each row, **role-gated** by `canAuthorLeadershipExamRemarkProvider`
+  (principal *or* vice-principal; resolves to principal when both are held) — a
+  coordinator/teacher sees no button. The dialog mirrors the teacher's; saving
+  stamps the author's role via `saveLeadershipExamRemark` (author id/name from the
+  auth session, role from `examLeadershipRemarkRoleProvider`). Post-publish the
+  student list stays reachable for leadership via a new "Student remarks" button in
+  `ExamLifecycleActions` (published phase only), so a remark can still be added/
+  edited after results are out. New QA keys `examLeadershipRemark{Field,SaveButton,
+  Button}` + `examAdminReviewRemarksButton`.
+- **Coverage (+5):** report-card builder — leadership + teacher slots coexist
+  without overwrite; VP shares the leadership slot (createdAt preserved, teacher
+  slot stays empty). `ReportCardView` renders both blocks with role titles. Marks-
+  entry screen — principal authors a leadership remark end-to-end (persists in the
+  leadership slot); non-leadership staff see no button. PDF test extended to carry
+  the leadership remark.
+- **Certified:** `flutter analyze` **0 errors** (no new lint — working tree 105
+  issues, all pre-existing, vs 123 on HEAD); full Flutter suite **2208 pass** / 1
+  staging skip / 0 fail (+5).
 
 ## ✅ FEES & PAYMENTS = CLOSED
 Payment loop now works end-to-end: a confirmed payment marks the installment
@@ -863,8 +990,25 @@ reviews → grade + comment now reach the student AND parent (was teacher-side
 only). Shared SchoolHomeworkStore records review per (homework, student);
 student/parent items show a "Reviewed · Grade X — comment" line. Certified: app
 analyze 0 errors; homework suites 13 pass.
-Carry-over: full per-student "reviewed" lifecycle status (vs the additive
-grade/comment line) would need a status-enum change across both apps — deferred.
+~~Carry-over: full per-student "reviewed" lifecycle status (vs the additive
+grade/comment line) would need a status-enum change across both apps — deferred.~~
+**→ DONE & CERTIFIED 2026-06-22 (per-student reviewed lifecycle):** added
+`reviewed` as a first-class terminal value to `StudentHomeworkStatus` +
+`ParentHomeworkStatus` (lifecycle: pending → submitted → reviewed; overdue =
+unsubmitted+past-due). The store now derives status **per (homework, student)** —
+`toStudentItem`/`toParentItem` return `reviewed` when a review exists for *that*
+student, so classmates on the same assignment stay at submitted/pending until
+each is graded. `reviewed` is a sub-state of submitted: new `status.isSubmitted`
+helper backs the KPI `submittedCount` and the "Submitted" filter (both now include
+reviewed); added `reviewedCount`. Both list rows render a distinct "Reviewed" pill
+(student: primary-tint; parent: `KpiAccent.primary`) and the grade line dropped its
+now-redundant "Reviewed · " prefix (→ "Grade A — comment"). API enum codecs are
+`.name`-based so the new value round-trips with no contract change. Coverage:
+extended `homework_review_loop_test` (status→reviewed end-to-end + per-student
+isolation: classmate does not flip) + new `homework_status_lifecycle_test` (label/
+isSubmitted/count semantics for both personas). Certified: analyze **0 errors**;
+full suite **2203 pass** / 1 staging skip / 0 fail (+5). No golden churn (mock
+data carries no reviewed items, so default renders are unchanged).
 
 ## Everyday loops — status after the closing sweep
 Closed & tested: Exams, Fees & Payments, Attendance, Messages & Notices,

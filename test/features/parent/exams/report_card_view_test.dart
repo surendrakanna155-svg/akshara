@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/exams/exam_remark.dart';
 import 'package:akshara_erp/core/exams/exam_report_card.dart';
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/parent/exams/widgets/report_card_view.dart';
@@ -60,5 +61,48 @@ void main() {
 
     expect(find.byKey(QaTestKeys.reportCardRankChip), findsOneWidget);
     expect(find.text('Rank 2 of 9'), findsOneWidget);
+  });
+
+  testWidgets('renders class-teacher and principal remarks as distinct blocks',
+      (tester) async {
+    const c = ExamReportCard(
+      sisStudentId: 'SIS-STU-10430',
+      studentName: 'Ravi Kumar',
+      classLabel: '8-A',
+      termLabel: 'Term 2',
+      subjects: const [
+        ReportCardSubjectLine(
+          subject: 'Mathematics',
+          examTitle: 'Unit Test — Mathematics',
+          score: 42,
+          maxScore: 50,
+          grade: 'A',
+        ),
+      ],
+      totalScore: 42,
+      totalMax: 50,
+      overallGrade: 'A',
+      rank: 2,
+      classSize: 9,
+      rankShown: false,
+      remark: 'Strong improvement in algebra.',
+      remarkAuthorName: 'Priya Sharma',
+      remarkAuthorRole: ExamRemarkAuthorRole.classTeacher,
+      leadershipRemark: 'Keep up the consistent effort.',
+      leadershipRemarkAuthorName: 'Anand Rao',
+      leadershipRemarkAuthorRole: ExamRemarkAuthorRole.principal,
+    );
+
+    await tester.pumpWidget(host(c));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(QaTestKeys.reportCardRemark), findsOneWidget);
+    expect(find.byKey(QaTestKeys.reportCardLeadershipRemark), findsOneWidget);
+    expect(find.text('Class teacher remark'), findsOneWidget);
+    expect(find.text("Principal's remark"), findsOneWidget);
+    expect(find.text('Strong improvement in algebra.'), findsOneWidget);
+    expect(find.text('Keep up the consistent effort.'), findsOneWidget);
+    expect(find.text('— Priya Sharma'), findsOneWidget);
+    expect(find.text('— Anand Rao'), findsOneWidget);
   });
 }

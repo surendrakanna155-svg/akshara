@@ -1,5 +1,5 @@
 import 'package:akshara_erp/features/parent/shell/parent_shell.dart';
-import 'package:akshara_erp/features/student/shell/student_shell.dart';
+import 'package:akshara_erp/features/student_app/shell/student_shell.dart';
 import 'package:akshara_erp/features/teacher/shell/teacher_shell.dart';
 import 'package:akshara_erp/router/route_names.dart';
 import 'package:akshara_erp/shared/navigation/persona_nav.dart';

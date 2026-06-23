@@ -1,5 +1,5 @@
-/// Who authored an exam-session remark. Class teacher is the primary author;
-/// principal/vice-principal are reserved for the future extension.
+/// Who authored an exam-session remark. The class teacher writes the primary
+/// remark; the principal / vice-principal write a separate leadership remark.
 enum ExamRemarkAuthorRole { classTeacher, principal, vicePrincipal }
 
 ExamRemarkAuthorRole examRemarkAuthorRoleFromName(String? name) {
@@ -7,6 +7,21 @@ ExamRemarkAuthorRole examRemarkAuthorRoleFromName(String? name) {
     (r) => r.name == name,
     orElse: () => ExamRemarkAuthorRole.classTeacher,
   );
+}
+
+extension ExamRemarkAuthorRoleX on ExamRemarkAuthorRole {
+  /// Principal/vice-principal remarks share one "leadership" slot, distinct from
+  /// the class-teacher slot, so both can appear on the same report card.
+  bool get isLeadership =>
+      this == ExamRemarkAuthorRole.principal ||
+      this == ExamRemarkAuthorRole.vicePrincipal;
+
+  /// Section title used for this author's remark on the report card.
+  String get reportCardRemarkTitle => switch (this) {
+        ExamRemarkAuthorRole.classTeacher => 'Class teacher remark',
+        ExamRemarkAuthorRole.principal => "Principal's remark",
+        ExamRemarkAuthorRole.vicePrincipal => "Vice Principal's remark",
+      };
 }
 
 /// One entry in a remark's audit trail.
