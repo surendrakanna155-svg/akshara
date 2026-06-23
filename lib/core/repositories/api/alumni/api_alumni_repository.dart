@@ -3,7 +3,6 @@ import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/alumni/alumni_models.dart';
 import '../../../../features/alumni/alumni_requests.dart';
-import '../api_exception.dart';
 import 'mapper/alumni_mapper.dart';
 import 'remote/alumni_remote_datasource.dart';
 
@@ -108,7 +107,8 @@ class ApiAlumniRepository implements AlumniRepository {
     required RepositoryQuery query,
     required AddAlumniRequest request,
   }) async {
-    throw ApiNotConnectedException('AlumniRepository', 'addAlumni');
+    final dto = await _remote.addAlumni(query: query, request: request);
+    return _mapper.toRecord(dto);
   }
 
   @override
@@ -116,7 +116,8 @@ class ApiAlumniRepository implements AlumniRepository {
     required RepositoryQuery query,
     required CreateAlumniEventRequest request,
   }) async {
-    throw ApiNotConnectedException('AlumniRepository', 'createEvent');
+    final dto = await _remote.createEvent(query: query, request: request);
+    return _mapper.toEvent(dto);
   }
 
   @override
@@ -124,7 +125,8 @@ class ApiAlumniRepository implements AlumniRepository {
     required RepositoryQuery query,
     required CreateAlumniCampaignRequest request,
   }) async {
-    throw ApiNotConnectedException('AlumniRepository', 'createCampaign');
+    final dto = await _remote.createCampaign(query: query, request: request);
+    return _mapper.toCampaign(dto);
   }
 
   @override
@@ -132,6 +134,7 @@ class ApiAlumniRepository implements AlumniRepository {
     required RepositoryQuery query,
     required AddMentorshipPairRequest request,
   }) async {
-    throw ApiNotConnectedException('AlumniRepository', 'addMentorshipPair');
+    final dto = await _remote.addMentorshipPair(query: query, request: request);
+    return _mapper.toMentorshipPair(dto);
   }
 }

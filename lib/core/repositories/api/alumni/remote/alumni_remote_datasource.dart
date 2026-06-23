@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
+import '../../../../../features/alumni/alumni_requests.dart';
 import '../dto/alumni_responses_dto.dart';
 import 'alumni_api_paths.dart';
 
@@ -101,12 +103,90 @@ class AlumniRemoteDataSource {
     return AlumniSettingsResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<AlumniRecordDto> addAlumni({
+    required RepositoryQuery query,
+    required AddAlumniRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AlumniApiPaths.registry,
+      queryParameters: _queryParams(query),
+      data: {
+        'name': request.name,
+        'batchYear': request.batchYear,
+        'program': request.program,
+        'currentRole': request.currentRole,
+        'city': request.city,
+        'email': request.email,
+        'phone': request.phone,
+      },
+    );
+    return AlumniRecordDto.fromJson(_writeData(response));
+  }
+
+  Future<AlumniEventDto> createEvent({
+    required RepositoryQuery query,
+    required CreateAlumniEventRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AlumniApiPaths.events,
+      queryParameters: _queryParams(query),
+      data: {
+        'title': request.title,
+        'date': request.date,
+        'venue': request.venue,
+        'capacity': request.capacity,
+        'organizer': request.organizer,
+      },
+    );
+    return AlumniEventDto.fromJson(_writeData(response));
+  }
+
+  Future<AlumniCampaignDto> createCampaign({
+    required RepositoryQuery query,
+    required CreateAlumniCampaignRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AlumniApiPaths.campaigns,
+      queryParameters: _queryParams(query),
+      data: {
+        'name': request.name,
+        'goalAmount': request.goalAmount,
+        'deadline': request.deadline,
+        'financeAccountCode': request.financeAccountCode,
+      },
+    );
+    return AlumniCampaignDto.fromJson(_writeData(response));
+  }
+
+  Future<MentorshipPairDto> addMentorshipPair({
+    required RepositoryQuery query,
+    required AddMentorshipPairRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AlumniApiPaths.mentorship,
+      queryParameters: _queryParams(query),
+      data: {
+        'mentorName': request.mentorName,
+        'mentorAlumniId': request.mentorAlumniId,
+        'menteeName': request.menteeName,
+        'menteeBatch': request.menteeBatch,
+        'focusArea': request.focusArea,
+      },
+    );
+    return MentorshipPairDto.fromJson(_writeData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
       if (query.schoolId != null) 'schoolId': query.schoolId,
       if (query.organizationId != null) 'organizationId': query.organizationId,
     };
+  }
+
+  /// Unwraps the `{data, error}` envelope returned by write endpoints.
+  Map<String, dynamic> _writeData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
