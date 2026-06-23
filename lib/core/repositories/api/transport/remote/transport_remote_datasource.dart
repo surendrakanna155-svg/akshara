@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../../../../features/transport/transport_requests.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
+import '../dto/transport_enum_codec.dart';
 import '../dto/transport_responses_dto.dart';
 import 'transport_api_paths.dart';
 
@@ -110,6 +113,80 @@ class TransportRemoteDataSource {
     return OccupancyMetricsDto.fromJson(_responseMap(response));
   }
 
+  Future<TransportRouteDto> createRoute({
+    required RepositoryQuery query,
+    required CreateTransportRouteRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TransportApiPaths.routes,
+      queryParameters: _queryParams(query),
+      data: {
+        'name': request.name,
+        'distanceKm': request.distanceKm,
+        'amDeparture': request.amDeparture,
+        'pmDeparture': request.pmDeparture,
+        'shift': TransportEnumCodec.shiftToApi(request.shift),
+      },
+    );
+    return TransportRouteDto.fromJson(_writeData(response));
+  }
+
+  Future<TransportRouteDto> activateRoute({
+    required RepositoryQuery query,
+    required ActivateTransportRouteRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TransportApiPaths.activateRoute(request.routeId),
+      queryParameters: _queryParams(query),
+      data: const <String, dynamic>{},
+    );
+    return TransportRouteDto.fromJson(_writeData(response));
+  }
+
+  Future<TransportAllocationDto> assignStudentTransport({
+    required RepositoryQuery query,
+    required AssignStudentTransportRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TransportApiPaths.allocations,
+      queryParameters: _queryParams(query),
+      data: {
+        'allocationId': request.allocationId,
+        'routeId': request.routeId,
+        'pickupStop': request.pickupStop,
+        'dropStop': request.dropStop,
+      },
+    );
+    return TransportAllocationDto.fromJson(_writeData(response));
+  }
+
+  Future<TransportAllocationDto> transferStudentTransport({
+    required RepositoryQuery query,
+    required TransferStudentTransportRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TransportApiPaths.transferAllocation(request.allocationId),
+      queryParameters: _queryParams(query),
+      data: {
+        'targetRouteId': request.targetRouteId,
+        'pickupStop': request.pickupStop,
+        'dropStop': request.dropStop,
+      },
+    );
+    return TransportAllocationDto.fromJson(_writeData(response));
+  }
+
+  Future<TransportAllocationDto> removeStudentTransport({
+    required RepositoryQuery query,
+    required RemoveStudentTransportRequest request,
+  }) async {
+    final response = await _dio.delete<Map<String, dynamic>>(
+      TransportApiPaths.allocation(request.allocationId),
+      queryParameters: _queryParams(query),
+    );
+    return TransportAllocationDto.fromJson(_writeData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
@@ -117,6 +194,11 @@ class TransportRemoteDataSource {
       if (query.organizationId != null) 'organizationId': query.organizationId,
       ...query.paginationQueryParams(),
     };
+  }
+
+  /// Unwraps the `{data, error}` envelope returned by write endpoints.
+  Map<String, dynamic> _writeData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {

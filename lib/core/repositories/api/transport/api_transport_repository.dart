@@ -4,7 +4,6 @@ import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/transport/transport_models.dart';
 import '../../../../features/transport/transport_requests.dart';
-import '../api_exception.dart';
 import 'mapper/transport_mapper.dart';
 import 'remote/transport_remote_datasource.dart';
 
@@ -109,7 +108,8 @@ class ApiTransportRepository implements TransportRepository {
     required RepositoryQuery query,
     required CreateTransportRouteRequest request,
   }) async {
-    throw ApiNotConnectedException('TransportRepository', 'createRoute');
+    final dto = await _remote.createRoute(query: query, request: request);
+    return _mapper.toRoute(dto);
   }
 
   @override
@@ -117,7 +117,8 @@ class ApiTransportRepository implements TransportRepository {
     required RepositoryQuery query,
     required ActivateTransportRouteRequest request,
   }) async {
-    throw ApiNotConnectedException('TransportRepository', 'activateRoute');
+    final dto = await _remote.activateRoute(query: query, request: request);
+    return _mapper.toRoute(dto);
   }
 
   @override
@@ -125,7 +126,8 @@ class ApiTransportRepository implements TransportRepository {
     required RepositoryQuery query,
     required AssignStudentTransportRequest request,
   }) async {
-    throw ApiNotConnectedException('TransportRepository', 'assignStudentTransport');
+    final dto = await _remote.assignStudentTransport(query: query, request: request);
+    return _mapper.toAllocation(dto);
   }
 
   @override
@@ -133,7 +135,8 @@ class ApiTransportRepository implements TransportRepository {
     required RepositoryQuery query,
     required TransferStudentTransportRequest request,
   }) async {
-    throw ApiNotConnectedException('TransportRepository', 'transferStudentTransport');
+    final dto = await _remote.transferStudentTransport(query: query, request: request);
+    return _mapper.toAllocation(dto);
   }
 
   @override
@@ -141,6 +144,7 @@ class ApiTransportRepository implements TransportRepository {
     required RepositoryQuery query,
     required RemoveStudentTransportRequest request,
   }) async {
-    throw ApiNotConnectedException('TransportRepository', 'removeStudentTransport');
+    final dto = await _remote.removeStudentTransport(query: query, request: request);
+    return _mapper.toAllocation(dto);
   }
 }
