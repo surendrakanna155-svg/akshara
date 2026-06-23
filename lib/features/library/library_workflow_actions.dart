@@ -273,3 +273,110 @@ Future<void> showAddLibraryBookDialog(
     _showLibraryMutationError(context, error);
   }
 }
+
+String _libraryResourceTypeLabel(LibraryResourceType type) => switch (type) {
+      LibraryResourceType.ebook => 'E-book',
+      LibraryResourceType.pdf => 'PDF',
+      LibraryResourceType.link => 'Link',
+      LibraryResourceType.video => 'Video',
+    };
+
+Future<void> showAddLibraryResourceDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final titleController = TextEditingController();
+  final classAccessController = TextEditingController(text: 'All classes');
+  var type = LibraryResourceType.pdf;
+  var studentAppVisible = true;
+  var teacherAppVisible = true;
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AksharaAlertDialog(
+        title: 'Add resource',
+        icon: Icons.upload_outlined,
+        scrollable: true,
+        content: AksharaDialogFormBody(
+          children: [
+            AksharaFormField(
+              label: 'Title',
+              controller: titleController,
+              required: true,
+              hint: 'e.g. NCERT Maths Class 9 (PDF)',
+            ),
+            DropdownMenu<LibraryResourceType>(
+              initialSelection: type,
+              label: const Text('Type'),
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                for (final option in LibraryResourceType.values)
+                  DropdownMenuEntry(
+                    value: option,
+                    label: _libraryResourceTypeLabel(option),
+                  ),
+              ],
+              onSelected: (value) {
+                if (value != null) setState(() => type = value);
+              },
+            ),
+            AksharaFormField(
+              label: 'Class access',
+              controller: classAccessController,
+              hint: 'e.g. Class 8–10 or Staff only',
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Visible in Student App'),
+              value: studentAppVisible,
+              onChanged: (value) => setState(() => studentAppVisible = value),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Visible in Teacher App'),
+              value: teacherAppVisible,
+              onChanged: (value) => setState(() => teacherAppVisible = value),
+            ),
+          ],
+        ),
+        actions: [
+          AksharaDialogActions(
+            confirmLabel: 'Add resource',
+            confirmKey: QaTestKeys.libraryAddResourceDialogSubmitButton,
+            onCancel: () => Navigator.of(context).pop(false),
+            onConfirm: () {
+              if (titleController.text.trim().isEmpty) return;
+              Navigator.of(context).pop(true);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final resource =
+        await ref.read(addLibraryResourceProvider.notifier).execute(
+              AddLibraryResourceRequest(
+                title: titleController.text.trim(),
+                type: type,
+                classAccess: classAccessController.text.trim(),
+                studentAppVisible: studentAppVisible,
+                teacherAppVisible: teacherAppVisible,
+              ),
+            );
+    if (!context.mounted || resource == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.libraryAddResourceSuccessSnackbar,
+        content: Text('Added "${resource.title}" to digital resources'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showLibraryMutationError(context, error);
+  }
+}

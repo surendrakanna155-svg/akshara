@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../library_models.dart';
 import '../library_providers.dart';
+import '../library_workflow_actions.dart';
 import '../widgets/library_module_scaffold.dart';
 
 /// LB-07 — Digital Resources.
@@ -41,7 +43,8 @@ class LibraryResourcesScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
         child: FilledButton.icon(
-          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add resource'),
+          key: QaTestKeys.libraryAddResourceButton,
+          onPressed: () => showAddLibraryResourceDialog(context, ref),
           icon: const Icon(Icons.upload_outlined, size: 18),
           label: const Text('Upload'),
         ),

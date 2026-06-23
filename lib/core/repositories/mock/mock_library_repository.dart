@@ -13,15 +13,18 @@ class MockLibraryRepository implements LibraryRepository {
       : _books = List<LibraryBook>.from(_seedBooks),
         _issues = List<LibraryIssueRecord>.from(_seedIssues),
         _returns = List<LibraryReturnRecord>.from(_seedReturns),
-        _members = List<LibraryMember>.from(_seedMembers);
+        _members = List<LibraryMember>.from(_seedMembers),
+        _resources = List<LibraryDigitalResource>.from(_seedResources);
 
   final List<LibraryBook> _books;
   final List<LibraryIssueRecord> _issues;
   final List<LibraryReturnRecord> _returns;
   final List<LibraryMember> _members;
+  final List<LibraryDigitalResource> _resources;
   int _issueCounter = 5;
   int _returnCounter = 5;
   int _bookCounter = 6;
+  int _resourceCounter = 5;
 
   static const _seedIssues = [
     LibraryIssueRecord(
@@ -393,60 +396,62 @@ class MockLibraryRepository implements LibraryRepository {
 
   @override
   Future<LibraryDigitalResourcesData> getDigitalResources({required RepositoryQuery query}) async {
-    return const LibraryDigitalResourcesData(
+    return LibraryDigitalResourcesData(
       studentAppRoute: RouteNames.studentDashboard,
       teacherAppRoute: RouteNames.teacherDashboard,
       integrationNote:
           'Digital resources visible in Student App (My Books) and Teacher App (Resource shelf). Class-level access rules enforced.',
-      resources: [
-        LibraryDigitalResource(
-          id: 'dig_1',
-          title: 'NCERT Science Class 10 (PDF)',
-          type: LibraryResourceType.pdf,
-          classAccess: 'Class 10',
-          downloads: 842,
-          studentAppVisible: true,
-          teacherAppVisible: true,
-        ),
-        LibraryDigitalResource(
-          id: 'dig_2',
-          title: 'Oxford Learner\'s Dictionary',
-          type: LibraryResourceType.ebook,
-          classAccess: 'All classes',
-          downloads: 1204,
-          studentAppVisible: true,
-          teacherAppVisible: true,
-        ),
-        LibraryDigitalResource(
-          id: 'dig_3',
-          title: 'Khan Academy — Algebra',
-          type: LibraryResourceType.link,
-          classAccess: 'Class 8–10',
-          downloads: 567,
-          studentAppVisible: true,
-          teacherAppVisible: true,
-        ),
-        LibraryDigitalResource(
-          id: 'dig_4',
-          title: 'Staff Policy Handbook',
-          type: LibraryResourceType.pdf,
-          classAccess: 'Staff only',
-          downloads: 48,
-          studentAppVisible: false,
-          teacherAppVisible: true,
-        ),
-        LibraryDigitalResource(
-          id: 'dig_5',
-          title: 'Science Lab Safety Video',
-          type: LibraryResourceType.video,
-          classAccess: 'Class 9–12',
-          downloads: 312,
-          studentAppVisible: true,
-          teacherAppVisible: true,
-        ),
-      ],
+      resources: List<LibraryDigitalResource>.unmodifiable(_resources),
     );
   }
+
+  static const List<LibraryDigitalResource> _seedResources = [
+    LibraryDigitalResource(
+      id: 'dig_1',
+      title: 'NCERT Science Class 10 (PDF)',
+      type: LibraryResourceType.pdf,
+      classAccess: 'Class 10',
+      downloads: 842,
+      studentAppVisible: true,
+      teacherAppVisible: true,
+    ),
+    LibraryDigitalResource(
+      id: 'dig_2',
+      title: 'Oxford Learner\'s Dictionary',
+      type: LibraryResourceType.ebook,
+      classAccess: 'All classes',
+      downloads: 1204,
+      studentAppVisible: true,
+      teacherAppVisible: true,
+    ),
+    LibraryDigitalResource(
+      id: 'dig_3',
+      title: 'Khan Academy — Algebra',
+      type: LibraryResourceType.link,
+      classAccess: 'Class 8–10',
+      downloads: 567,
+      studentAppVisible: true,
+      teacherAppVisible: true,
+    ),
+    LibraryDigitalResource(
+      id: 'dig_4',
+      title: 'Staff Policy Handbook',
+      type: LibraryResourceType.pdf,
+      classAccess: 'Staff only',
+      downloads: 48,
+      studentAppVisible: false,
+      teacherAppVisible: true,
+    ),
+    LibraryDigitalResource(
+      id: 'dig_5',
+      title: 'Science Lab Safety Video',
+      type: LibraryResourceType.video,
+      classAccess: 'Class 9–12',
+      downloads: 312,
+      studentAppVisible: true,
+      teacherAppVisible: true,
+    ),
+  ];
 
   @override
   Future<LibraryReportsData> getReports({required RepositoryQuery query}) async {
@@ -703,5 +708,30 @@ class MockLibraryRepository implements LibraryRepository {
     );
     _books.insert(0, book);
     return book;
+  }
+
+  @override
+  Future<LibraryDigitalResource> addDigitalResource({
+    required RepositoryQuery query,
+    required AddLibraryResourceRequest request,
+  }) async {
+    final title = request.title.trim();
+    if (title.isEmpty) {
+      throw StateError('Resource title is required');
+    }
+
+    _resourceCounter += 1;
+    final resource = LibraryDigitalResource(
+      id: 'dig_$_resourceCounter',
+      title: title,
+      type: request.type,
+      classAccess:
+          request.classAccess.trim().isEmpty ? 'All classes' : request.classAccess.trim(),
+      downloads: 0,
+      studentAppVisible: request.studentAppVisible,
+      teacherAppVisible: request.teacherAppVisible,
+    );
+    _resources.insert(0, resource);
+    return resource;
   }
 }

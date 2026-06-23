@@ -25,4 +25,8 @@ abstract class LibraryRepository {
     required RepositoryQuery query,
     required AddLibraryBookRequest request,
   });
+  Future<LibraryDigitalResource> addDigitalResource({
+    required RepositoryQuery query,
+    required AddLibraryResourceRequest request,
+  });
 }

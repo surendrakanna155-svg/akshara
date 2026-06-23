@@ -101,6 +101,28 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('addDigitalResource adds a zero-download resource', () async {
+      final repo = MockLibraryRepository();
+      final before = await repo.getDigitalResources(query: query);
+
+      final resource = await repo.addDigitalResource(
+        query: query,
+        request: const AddLibraryResourceRequest(
+          title: 'NCERT Maths Class 9 (PDF)',
+          type: LibraryResourceType.pdf,
+          classAccess: 'Class 9',
+          studentAppVisible: true,
+          teacherAppVisible: false,
+        ),
+      );
+
+      final after = await repo.getDigitalResources(query: query);
+      expect(after.resources.length, before.resources.length + 1);
+      expect(resource.downloads, 0);
+      expect(resource.teacherAppVisible, isFalse);
+      expect(after.resources.any((r) => r.id == resource.id), isTrue);
+    });
   });
 
   group('Library RBAC mutations', () {
@@ -201,6 +223,58 @@ void main() {
       expect(
         container.read(addLibraryBookProvider).value?.status,
         LibraryBookStatus.available,
+      );
+    });
+
+    test('addDigitalResource fails without manageLibrary', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(addLibraryResourceProvider.notifier).execute(
+            const AddLibraryResourceRequest(
+              title: 'Blocked Resource',
+              type: LibraryResourceType.link,
+              classAccess: 'All classes',
+              studentAppVisible: true,
+              teacherAppVisible: true,
+            ),
+          );
+
+      expect(container.read(addLibraryResourceProvider).hasError, isTrue);
+    });
+
+    test('addDigitalResource succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(addLibraryResourceProvider.notifier).execute(
+            const AddLibraryResourceRequest(
+              title: 'Allowed Resource',
+              type: LibraryResourceType.video,
+              classAccess: 'Class 10',
+              studentAppVisible: true,
+              teacherAppVisible: true,
+            ),
+          );
+
+      expect(container.read(addLibraryResourceProvider).hasValue, isTrue);
+      expect(
+        container.read(addLibraryResourceProvider).value?.downloads,
+        0,
       );
     });
   });

@@ -119,3 +119,35 @@ final addLibraryBookProvider =
     AsyncNotifierProvider<AddLibraryBookNotifier, LibraryBook?>(
   AddLibraryBookNotifier.new,
 );
+
+class AddLibraryResourceNotifier extends AsyncNotifier<LibraryDigitalResource?> {
+  @override
+  FutureOr<LibraryDigitalResource?> build() => null;
+
+  Future<LibraryDigitalResource?> execute(
+      AddLibraryResourceRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageLibrary(ref);
+      try {
+        final result =
+            await ref.read(libraryRepositoryProvider).addDigitalResource(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        ref
+          ..invalidate(libraryResourcesFutureProvider)
+          ..invalidate(libraryDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final addLibraryResourceProvider =
+    AsyncNotifierProvider<AddLibraryResourceNotifier, LibraryDigitalResource?>(
+  AddLibraryResourceNotifier.new,
+);

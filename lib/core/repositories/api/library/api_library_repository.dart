@@ -92,4 +92,12 @@ class ApiLibraryRepository implements LibraryRepository {
   }) async {
     throw ApiNotConnectedException('LibraryRepository', 'addLibraryBook');
   }
+
+  @override
+  Future<LibraryDigitalResource> addDigitalResource({
+    required RepositoryQuery query,
+    required AddLibraryResourceRequest request,
+  }) async {
+    throw ApiNotConnectedException('LibraryRepository', 'addDigitalResource');
+  }
 }
