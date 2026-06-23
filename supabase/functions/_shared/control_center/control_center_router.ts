@@ -23,6 +23,10 @@ import {
   handleSetFeatureEnablement,
   handleUpsertPlatformProvider,
 } from "./platform_providers_handlers.ts";
+import {
+  handleCreateLead,
+  handleCreateSchool,
+} from "./control_center_write_handlers.ts";
 
 function matchControlCenterRoute(
   method: string,
@@ -51,6 +55,8 @@ function matchControlCenterRoute(
     "/control-center/providers": handleUpsertPlatformProvider,
     "/control-center/features": handleSetFeatureEnablement,
     "/control-center/vault/rotate": handleRotateVaultSecret,
+    "/control-center/schools": handleCreateSchool,
+    "/control-center/crm-pipeline": handleCreateLead,
   };
 
   if (method === "GET") {

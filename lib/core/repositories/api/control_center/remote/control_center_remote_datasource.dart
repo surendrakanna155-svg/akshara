@@ -177,6 +177,30 @@ class ControlCenterRemoteDataSource {
     );
   }
 
+  Future<PlatformSchoolDto> createSchool({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ControlCenterApiPaths.schools,
+      queryParameters: _queryParams(query),
+      data: body,
+    );
+    return PlatformSchoolDto.fromJson(_writeData(response));
+  }
+
+  Future<Map<String, dynamic>> createLead({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ControlCenterApiPaths.crmPipeline,
+      queryParameters: _queryParams(query),
+      data: body,
+    );
+    return _writeData(response);
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
@@ -187,5 +211,10 @@ class ControlCenterRemoteDataSource {
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
     return response.data ?? const {};
+  }
+
+  /// Unwraps the `{data, error}` envelope returned by write endpoints.
+  Map<String, dynamic> _writeData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 }

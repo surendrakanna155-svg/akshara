@@ -3,7 +3,6 @@ import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/platform/control_center/control_center_models.dart';
 import '../../../../features/platform/control_center/control_center_requests.dart';
-import '../api_exception.dart';
 import 'mapper/control_center_mapper.dart';
 import 'remote/control_center_remote_datasource.dart';
 
@@ -199,7 +198,16 @@ class ApiControlCenterRepository implements ControlCenterRepository {
     required RepositoryQuery query,
     required CreateSchoolRequest request,
   }) async {
-    throw ApiNotConnectedException('ControlCenterRepository', 'createSchool');
+    final dto = await _remote.createSchool(
+      query: query,
+      body: {
+        'name': request.name,
+        'plan': request.plan,
+        'region': request.region,
+        'studentCount': request.studentCount,
+      },
+    );
+    return _mapper.toSchool(dto);
   }
 
   @override
@@ -207,6 +215,15 @@ class ApiControlCenterRepository implements ControlCenterRepository {
     required RepositoryQuery query,
     required CreateCrmLeadRequest request,
   }) async {
-    throw ApiNotConnectedException('ControlCenterRepository', 'createLead');
+    final raw = await _remote.createLead(
+      query: query,
+      body: {
+        'schoolName': request.schoolName,
+        'contactName': request.contactName,
+        'owner': request.owner,
+        'estimatedMrr': request.estimatedMrr,
+      },
+    );
+    return _mapper.toDeal(raw);
   }
 }

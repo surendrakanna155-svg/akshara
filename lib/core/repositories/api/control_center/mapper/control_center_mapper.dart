@@ -89,6 +89,18 @@ class ControlCenterMapper {
     );
   }
 
+  CrmDeal toDeal(Map<String, dynamic> raw) {
+    return CrmDeal(
+      id: raw['id'] as String? ?? '',
+      schoolName: raw['schoolName'] as String? ?? '',
+      contactName: raw['contactName'] as String? ?? '',
+      stage: ControlCenterEnumCodec.parseCrmStage(raw['stage'] as String?),
+      estimatedMrrLakhs: (raw['estimatedMrrLakhs'] as num?)?.toDouble() ?? 0,
+      owner: raw['owner'] as String? ?? '',
+      lastActivity: raw['lastActivity'] as String? ?? '',
+    );
+  }
+
   List<SupportTicket> toSupportTickets(SupportTicketsResponseDto dto) {
     return [for (final item in dto.items) toSupportTicket(item)];
   }

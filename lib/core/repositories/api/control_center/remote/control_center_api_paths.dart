@@ -3,6 +3,8 @@ abstract final class ControlCenterApiPaths {
   static const String base = '/control-center';
 
   static const String dashboard = '$base/dashboard';
+
+  /// GET lists platform schools; POST onboards a new school.
   static const String schools = '$base/schools';
   static const String subscriptions = '$base/subscriptions';
   static const String billing = '$base/billing';
