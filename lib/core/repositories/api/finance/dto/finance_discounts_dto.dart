@@ -10,3 +10,15 @@ class DiscountsDashboardDto {
 
   final Map<String, dynamic> raw;
 }
+
+/// A single discount-rule resource (already unwrapped from the envelope by the
+/// remote datasource).
+class DiscountRuleDto {
+  const DiscountRuleDto({required this.raw});
+
+  factory DiscountRuleDto.fromJson(Map<String, dynamic> json) {
+    return DiscountRuleDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}

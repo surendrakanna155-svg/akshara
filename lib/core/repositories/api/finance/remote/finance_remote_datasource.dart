@@ -10,6 +10,7 @@ import '../dto/confirm_qr_payment_request_dto.dart';
 import '../dto/create_fee_structure_request_dto.dart';
 import '../dto/create_refund_request_dto.dart';
 import '../dto/create_scholarship_request_dto.dart';
+import '../dto/create_discount_rule_request_dto.dart';
 import '../dto/create_collection_request_dto.dart';
 import '../dto/create_qr_payment_session_request_dto.dart';
 import '../dto/finance_collections_dto.dart';
@@ -31,6 +32,7 @@ import '../dto/qr_payment_session_dto.dart';
 import '../dto/update_fee_structure_request_dto.dart';
 import '../dto/update_finance_settings_request_dto.dart';
 import '../dto/update_scholarship_request_dto.dart';
+import '../dto/update_discount_rule_request_dto.dart';
 import '../dto/update_student_account_request_dto.dart';
 import '../mapper/finance_mapper.dart';
 import 'finance_api_paths.dart';
@@ -427,6 +429,35 @@ class FinanceRemoteDataSource {
     );
     return _mapper.toScholarship(
       ScholarshipDto.fromJson(_requireData(response)),
+    );
+  }
+
+  Future<DiscountRule> createDiscountRule({
+    required RepositoryQuery query,
+    required CreateDiscountRuleRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.discounts,
+      queryParameters: _queryParams(query),
+      data: CreateDiscountRuleRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toDiscountRule(
+      DiscountRuleDto.fromJson(_requireData(response)),
+    );
+  }
+
+  Future<DiscountRule> updateDiscountRule({
+    required RepositoryQuery query,
+    required String ruleId,
+    required UpdateDiscountRuleRequest request,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      FinanceApiPaths.discount(ruleId),
+      queryParameters: _queryParams(query),
+      data: UpdateDiscountRuleRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toDiscountRule(
+      DiscountRuleDto.fromJson(_requireData(response)),
     );
   }
 

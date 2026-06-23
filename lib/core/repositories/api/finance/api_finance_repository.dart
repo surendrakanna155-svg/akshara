@@ -436,17 +436,12 @@ class ApiFinanceRepository implements FinanceRepository {
         request: request,
       );
 
-  // TODO(backend): wire discount-rule writes to the finance API once the
-  // server endpoints exist. UI + mock are complete; only the remote datasource
-  // + DTO mapping remain. Not reachable until API mode is enabled.
   @override
   Future<DiscountRule> createDiscountRule({
     required RepositoryQuery query,
     required CreateDiscountRuleRequest request,
   }) =>
-      throw UnimplementedError(
-        'createDiscountRule: pending finance backend wiring',
-      );
+      _remote.createDiscountRule(query: query, request: request);
 
   @override
   Future<DiscountRule> updateDiscountRule({
@@ -454,8 +449,10 @@ class ApiFinanceRepository implements FinanceRepository {
     required String ruleId,
     required UpdateDiscountRuleRequest request,
   }) =>
-      throw UnimplementedError(
-        'updateDiscountRule: pending finance backend wiring',
+      _remote.updateDiscountRule(
+        query: query,
+        ruleId: ruleId,
+        request: request,
       );
 
   @override

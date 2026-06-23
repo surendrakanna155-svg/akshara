@@ -690,20 +690,29 @@ class FinanceMapper {
     );
   }
 
+  DiscountRule toDiscountRule(DiscountRuleDto dto) => _mapDiscountRule(dto.raw);
+
   List<DiscountRule> _mapDiscountRules(List<dynamic> items) {
     return [
       for (final item in items)
-        if (item is Map<String, dynamic>)
-          DiscountRule(
-            id: item['id'] as String? ?? '',
-            name: item['name'] as String? ?? '',
-            discountPercent: item['discountPercent'] as String? ?? '',
-            appliesTo: item['appliesTo'] as String? ?? '',
-            status: FinanceEnumCodec.parseDiscountApprovalStatus(
-              item['status'] as String?,
-            ),
-          ),
+        if (item is Map<String, dynamic>) _mapDiscountRule(item),
     ];
+  }
+
+  DiscountRule _mapDiscountRule(Map<String, dynamic> item) {
+    return DiscountRule(
+      id: item['id'] as String? ?? '',
+      name: item['name'] as String? ?? '',
+      discountPercent: item['discountPercent'] as String? ??
+          item['discount_percent']?.toString() ??
+          '',
+      appliesTo: item['appliesTo'] as String? ??
+          item['applies_to'] as String? ??
+          '',
+      status: FinanceEnumCodec.parseDiscountApprovalStatus(
+        item['status'] as String?,
+      ),
+    );
   }
 
   List<StudentDiscountAssignment> _mapDiscountAssignments(

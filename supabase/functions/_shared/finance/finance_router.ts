@@ -49,6 +49,10 @@ import {
   handleListRefunds,
   handleRejectRefund,
 } from "./finance_refunds_handlers.ts";
+import {
+  handleCreateDiscountRule,
+  handleUpdateDiscountRule,
+} from "./finance_discounts_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -208,6 +212,15 @@ export function matchFinanceRoute(
   const refundMatch = path.match(/^\/finance\/refunds\/([^/]+)$/);
   if (refundMatch && method === "GET") {
     return { handler: handleGetRefund, args: [refundMatch[1]!] };
+  }
+
+  if (path === "/finance/discounts" && method === "POST") {
+    return { handler: handleCreateDiscountRule, args: [] };
+  }
+
+  const discountMatch = path.match(/^\/finance\/discounts\/([^/]+)$/);
+  if (discountMatch && method === "PUT") {
+    return { handler: handleUpdateDiscountRule, args: [discountMatch[1]!] };
   }
 
   return null;

@@ -137,6 +137,14 @@ class FinanceEnumCodec {
         _ => DiscountApprovalStatus.pending,
       };
 
+  static String discountApprovalStatusToApi(DiscountApprovalStatus status) =>
+      switch (status) {
+        DiscountApprovalStatus.pending => 'pending',
+        DiscountApprovalStatus.approved => 'approved',
+        DiscountApprovalStatus.rejected => 'rejected',
+        DiscountApprovalStatus.active => 'active',
+      };
+
   static ScholarshipType parseScholarshipType(String? raw) => switch (raw) {
         'merit' => ScholarshipType.merit,
         'need_based' || 'needBased' => ScholarshipType.needBased,

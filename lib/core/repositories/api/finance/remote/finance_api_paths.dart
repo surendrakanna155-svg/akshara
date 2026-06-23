@@ -37,6 +37,7 @@ abstract final class FinanceApiPaths {
   static String refundApprove(String id) => '${refund(id)}/approve';
   static String refundReject(String id) => '${refund(id)}/reject';
   static String scholarship(String id) => '$scholarships/$id';
+  static String discount(String id) => '$discounts/$id';
   static const String invoices = '$base/invoices';
 
   static String invoice(String id) => '$invoices/$id';
