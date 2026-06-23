@@ -82,7 +82,6 @@ import 'interfaces/timetable_repository.dart';
 import 'interfaces/analytics_intelligence_repository.dart';
 import 'api/timetable/hybrid_timetable_repository.dart';
 import 'api/analytics/hybrid_analytics_intelligence_repository.dart';
-import 'api/director/api_director_repository.dart';
 import 'api/director/hybrid_director_repository.dart';
 import 'api/hostel/hybrid_hostel_repository.dart';
 import 'api/hr/hybrid_hr_repository.dart';
@@ -357,7 +356,7 @@ final franchiseRepositoryProvider = Provider<FranchiseRepository>((ref) {
 final directorRepositoryProvider = Provider<DirectorRepository>((ref) {
   if (isModuleApiEnabled(ref, directorApiEnabledProvider)) {
     return HybridDirectorRepository(
-      api: const ApiDirectorRepository(),
+      api: ref.read(apiDirectorRepositoryProvider),
       mock: MockDirectorRepository(
         pipeline: ref.watch(aiInferencePipelineProvider),
       ),
