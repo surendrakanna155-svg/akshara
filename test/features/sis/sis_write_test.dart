@@ -1,7 +1,9 @@
 import 'package:akshara_erp/core/repositories/api/sis/remote/sis_api_paths.dart';
+import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
+import 'package:akshara_erp/core/tenant/tenant_provider.dart';
 import 'package:akshara_erp/features/sis/sis_mutations_provider.dart';
 import 'package:akshara_erp/features/sis/sis_requests.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,6 +102,83 @@ void main() {
       expect(updated, isNotNull);
       expect(updated!.classLabel, '12');
       expect(updated.section, 'B');
+    });
+
+    test('bulkAcademicAssignment assigns every listed student', () async {
+      final container = createProviderTestContainer(
+        overrides: [
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.schoolAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final assigned = await container
+          .read(bulkAcademicAssignmentProvider.notifier)
+          .execute(
+            const BulkAcademicAssignmentRequest(
+              studentIds: ['SIS-STU-10421', 'SIS-STU-10418', 'SIS-STU-10415'],
+              classLabel: '9',
+              section: 'C',
+              academicYear: '2026–27',
+            ),
+          );
+
+      expect(assigned, 3);
+
+      final students = await container.read(sisRepositoryProvider).getStudents(
+            query: container.read(repositoryQueryProvider),
+          );
+      for (final id in ['SIS-STU-10421', 'SIS-STU-10418', 'SIS-STU-10415']) {
+        final student = students.items.firstWhere((s) => s.id == id);
+        expect(student.classLabel, '9');
+        expect(student.section, 'C');
+      }
+    });
+
+    test('bulkAcademicAssignment rejects an empty selection', () async {
+      final container = createProviderTestContainer(
+        overrides: [
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.schoolAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(bulkAcademicAssignmentProvider.notifier).execute(
+            const BulkAcademicAssignmentRequest(
+              studentIds: [],
+              classLabel: '9',
+              section: 'C',
+              academicYear: '2026–27',
+            ),
+          );
+
+      expect(container.read(bulkAcademicAssignmentProvider).hasError, isTrue);
+    });
+
+    test('bulkAcademicAssignment fails without manageSis', () async {
+      final container = createProviderTestContainer(
+        overrides: [
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.management),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(bulkAcademicAssignmentProvider.notifier).execute(
+            const BulkAcademicAssignmentRequest(
+              studentIds: ['SIS-STU-10421'],
+              classLabel: '9',
+              section: 'C',
+              academicYear: '2026–27',
+            ),
+          );
+
+      expect(container.read(bulkAcademicAssignmentProvider).hasError, isTrue);
     });
 
     test('convertAdmissionsEnrollment returns preview', () async {

@@ -103,6 +103,13 @@ abstract final class QaTestKeys {
   static const sisDocumentUploadSuccessSnackbar =
       ValueKey<String>('sis_document_upload_success_snackbar');
 
+  static const sisBulkAssignButton =
+      ValueKey<String>('sis_bulk_assign_button');
+  static const sisBulkAssignDialogSubmitButton =
+      ValueKey<String>('sis_bulk_assign_dialog_submit_button');
+  static const sisBulkAssignSuccessSnackbar =
+      ValueKey<String>('sis_bulk_assign_success_snackbar');
+
   static ValueKey<String> sisRegistryStudentRow(String studentName) =>
       ValueKey<String>(
         'sis_registry_student_${normalizeSubNavLabel(studentName)}',

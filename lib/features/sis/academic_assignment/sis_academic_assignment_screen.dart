@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_manage_action.dart';
@@ -125,6 +125,7 @@ class _SisAcademicAssignmentScreenState
                           SisStudentStatus.transferred,
                           'Marked for transfer',
                         ),
+                        onBulkAssign: () => _bulkAssign(students),
                       ),
                     ],
                   ],
@@ -179,6 +180,7 @@ class _SisAcademicAssignmentScreenState
                               SisStudentStatus.transferred,
                               'Marked for transfer',
                             ),
+                            onBulkAssign: () => _bulkAssign(students),
                           ),
                   ),
                 ],
@@ -206,6 +208,58 @@ class _SisAcademicAssignmentScreenState
       SnackBar(
         content: Text(
           'Assigned ${updated.studentName} to Class ${updated.classLabel}-${updated.section}',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _bulkAssign(List<SisStudent> students) async {
+    if (students.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No students available to assign.')),
+      );
+      return;
+    }
+
+    final count = students.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bulk assign students'),
+        content: Text(
+          'Assign all $count listed students to Class $_classLabel-$_section '
+          'for $_academicYear? This updates every student in the list.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.sisBulkAssignDialogSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Assign all'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final assigned =
+        await ref.read(bulkAcademicAssignmentProvider.notifier).execute(
+              BulkAcademicAssignmentRequest(
+                studentIds: [for (final student in students) student.id],
+                classLabel: _classLabel,
+                section: _section,
+                academicYear: _academicYear,
+              ),
+            );
+    if (!mounted || assigned == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.sisBulkAssignSuccessSnackbar,
+        content: Text(
+          'Assigned $assigned students to Class $_classLabel-$_section',
         ),
       ),
     );
@@ -279,6 +333,7 @@ class _AssignmentForm extends ConsumerWidget {
     required this.onSaveAssignment,
     required this.onPromote,
     required this.onTransfer,
+    required this.onBulkAssign,
   });
 
   final SisStudent student;
@@ -294,6 +349,7 @@ class _AssignmentForm extends ConsumerWidget {
   final VoidCallback onSaveAssignment;
   final VoidCallback onPromote;
   final VoidCallback onTransfer;
+  final VoidCallback onBulkAssign;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -376,10 +432,14 @@ class _AssignmentForm extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AksharaSpacing.s4),
-            OutlinedButton.icon(
-              onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Bulk assign'),
-              icon: const Icon(Icons.upload_file_outlined),
-              label: const Text('Bulk assignment template'),
+            AksharaManageAction(
+              permission: Permission.manageSis,
+              child: OutlinedButton.icon(
+                key: QaTestKeys.sisBulkAssignButton,
+                onPressed: onBulkAssign,
+                icon: const Icon(Icons.groups_outlined),
+                label: const Text('Bulk assign to this class'),
+              ),
             ),
           ],
         ),

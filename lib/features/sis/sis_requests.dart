@@ -97,6 +97,22 @@ class AcademicAssignmentRequest {
   final String? sectionId;
 }
 
+/// Domain request to assign many students to the same class, section, and
+/// academic year in a single operation.
+class BulkAcademicAssignmentRequest {
+  const BulkAcademicAssignmentRequest({
+    required this.studentIds,
+    required this.classLabel,
+    required this.section,
+    required this.academicYear,
+  });
+
+  final List<String> studentIds;
+  final String classLabel;
+  final String section;
+  final String academicYear;
+}
+
 /// Domain request to convert an admissions enrollment into a SIS student.
 class AdmissionsConversionRequest {
   const AdmissionsConversionRequest({

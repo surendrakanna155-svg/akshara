@@ -207,6 +207,57 @@ final assignAcademicAssignmentProvider =
   AssignAcademicAssignmentNotifier.new,
 );
 
+/// Assigns many students to the same class/section/academic year, reusing the
+/// single-student assignment path per student. Returns the number assigned.
+class BulkAcademicAssignmentNotifier extends AsyncNotifier<int?> {
+  @override
+  FutureOr<int?> build() => null;
+
+  Future<int?> execute(BulkAcademicAssignmentRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageSis(ref);
+      if (request.studentIds.isEmpty) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.unknown,
+            message: 'Select at least one student to bulk assign.',
+            code: 'SIS_BULK_ASSIGN_EMPTY',
+          ),
+        );
+      }
+      try {
+        final catalog = ref.read(academicCatalogProvider);
+        final repo = ref.read(sisRepositoryProvider);
+        final query = ref.read(repositoryQueryProvider);
+        for (final studentId in request.studentIds) {
+          final single = AcademicAssignmentRequest(
+            studentId: studentId,
+            classLabel: request.classLabel,
+            section: request.section,
+            academicYear: request.academicYear,
+          );
+          final enriched = catalog == null
+              ? single
+              : enrichAcademicAssignmentRequest(single, catalog);
+          await repo.assignAcademicAssignment(query: query, request: enriched);
+        }
+        _invalidateSisReads(ref, students: true, dashboard: true);
+        return request.studentIds.length;
+      } catch (error) {
+        if (error is ApiFailureException) rethrow;
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final bulkAcademicAssignmentProvider =
+    AsyncNotifierProvider<BulkAcademicAssignmentNotifier, int?>(
+  BulkAcademicAssignmentNotifier.new,
+);
+
 class ConvertAdmissionsEnrollmentNotifier
     extends AsyncNotifier<SisConversionPreview?> {
   @override

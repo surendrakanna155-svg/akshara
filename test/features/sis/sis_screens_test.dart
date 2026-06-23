@@ -122,7 +122,7 @@ void main() {
 
       expect(find.text('Academic assignment'), findsOneWidget);
       expect(find.text('Save assignment'), findsOneWidget);
-      expect(find.text('Bulk assignment template'), findsOneWidget);
+      expect(find.text('Bulk assign to this class'), findsOneWidget);
     });
 
     testWidgets('SisAdmissionsConversionScreen renders conversion queue', (
