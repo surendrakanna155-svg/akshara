@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/security/permissions.dart';
+import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../../../admin/admin_layout.dart';
 import '../control_center_models.dart';
 import '../control_center_providers.dart';
+import '../control_center_workflow_actions.dart';
 import '../widgets/control_center_module_scaffold.dart';
 import '../widgets/control_center_segment_panel.dart';
 
@@ -38,7 +40,8 @@ class ControlCenterCrmScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageControlCenter,
         child: FilledButton.icon(
-          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add lead'),
+          key: QaTestKeys.controlCenterCreateLeadButton,
+          onPressed: () => showCreateLeadDialog(context, ref),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('New lead'),
         ),

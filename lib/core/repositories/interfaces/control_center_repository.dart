@@ -1,4 +1,5 @@
 import '../../../features/platform/control_center/control_center_models.dart';
+import '../../../features/platform/control_center/control_center_requests.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 
@@ -33,5 +34,15 @@ abstract class ControlCenterRepository {
     required String schoolId,
     required String featureKey,
     required bool enabled,
+  });
+
+  Future<PlatformSchool> createSchool({
+    required RepositoryQuery query,
+    required CreateSchoolRequest request,
+  });
+
+  Future<CrmDeal> createLead({
+    required RepositoryQuery query,
+    required CreateCrmLeadRequest request,
   });
 }

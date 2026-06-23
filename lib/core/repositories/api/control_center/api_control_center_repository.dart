@@ -2,6 +2,8 @@ import '../../interfaces/control_center_repository.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/platform/control_center/control_center_models.dart';
+import '../../../../features/platform/control_center/control_center_requests.dart';
+import '../api_exception.dart';
 import 'mapper/control_center_mapper.dart';
 import 'remote/control_center_remote_datasource.dart';
 
@@ -191,4 +193,20 @@ class ApiControlCenterRepository implements ControlCenterRepository {
         query: query,
         body: {'schoolId': schoolId, 'featureKey': featureKey, 'enabled': enabled},
       );
+
+  @override
+  Future<PlatformSchool> createSchool({
+    required RepositoryQuery query,
+    required CreateSchoolRequest request,
+  }) async {
+    throw ApiNotConnectedException('ControlCenterRepository', 'createSchool');
+  }
+
+  @override
+  Future<CrmDeal> createLead({
+    required RepositoryQuery query,
+    required CreateCrmLeadRequest request,
+  }) async {
+    throw ApiNotConnectedException('ControlCenterRepository', 'createLead');
+  }
 }

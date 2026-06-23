@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/platform/control_center/control_center_models.dart';
+import '../../../features/platform/control_center/control_center_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/control_center_repository.dart';
 import '../paginated_result.dart';
 import '../pagination_helpers.dart';
 import '../repository_query.dart';
+import 'mock_control_center_write_store.dart';
 
 class MockControlCenterRepository implements ControlCenterRepository {
   static const _schoolGrowthTrend = [
@@ -226,11 +228,16 @@ class MockControlCenterRepository implements ControlCenterRepository {
     );
   }
 
+  List<PlatformSchool> get _allSchools => [
+        ...MockControlCenterWriteStore.instance.schools,
+        ..._schools,
+      ];
+
   @override
   Future<PaginatedResult<PlatformSchool>> getSchools({
     required RepositoryQuery query,
   }) async =>
-      paginateList(_schools, query);
+      paginateList(_allSchools, query);
 
   @override
   Future<ControlCenterSubscriptionsData> getSubscriptions({required RepositoryQuery query}) async {
@@ -309,50 +316,56 @@ class MockControlCenterRepository implements ControlCenterRepository {
     );
   }
 
+  static const _seedDeals = [
+    CrmDeal(
+      id: 'DEAL-301',
+      schoolName: 'Lotus Valley School',
+      contactName: 'Rajesh Mehta',
+      stage: CrmPipelineStage.proposal,
+      estimatedMrrLakhs: 3.5,
+      owner: 'Anita Sales',
+      lastActivity: '2026-06-04',
+    ),
+    CrmDeal(
+      id: 'DEAL-302',
+      schoolName: 'Oakridge International',
+      contactName: 'Sunita Rao',
+      stage: CrmPipelineStage.demo,
+      estimatedMrrLakhs: 6.0,
+      owner: 'Vikram Sales',
+      lastActivity: '2026-06-05',
+    ),
+    CrmDeal(
+      id: 'DEAL-303',
+      schoolName: 'Cambridge Public School',
+      contactName: 'David Fernandes',
+      stage: CrmPipelineStage.negotiation,
+      estimatedMrrLakhs: 2.2,
+      owner: 'Anita Sales',
+      lastActivity: '2026-06-03',
+    ),
+    CrmDeal(
+      id: 'DEAL-304',
+      schoolName: 'St. Mary\'s Academy',
+      contactName: 'Fr. Thomas',
+      stage: CrmPipelineStage.won,
+      estimatedMrrLakhs: 4.8,
+      owner: 'Vikram Sales',
+      lastActivity: '2026-06-01',
+    ),
+  ];
+
   @override
   Future<ControlCenterCrmData> getCrmPipeline({required RepositoryQuery query}) async {
-    return const ControlCenterCrmData(
-      deals: [
-        CrmDeal(
-          id: 'DEAL-301',
-          schoolName: 'Lotus Valley School',
-          contactName: 'Rajesh Mehta',
-          stage: CrmPipelineStage.proposal,
-          estimatedMrrLakhs: 3.5,
-          owner: 'Anita Sales',
-          lastActivity: '2026-06-04',
-        ),
-        CrmDeal(
-          id: 'DEAL-302',
-          schoolName: 'Oakridge International',
-          contactName: 'Sunita Rao',
-          stage: CrmPipelineStage.demo,
-          estimatedMrrLakhs: 6.0,
-          owner: 'Vikram Sales',
-          lastActivity: '2026-06-05',
-        ),
-        CrmDeal(
-          id: 'DEAL-303',
-          schoolName: 'Cambridge Public School',
-          contactName: 'David Fernandes',
-          stage: CrmPipelineStage.negotiation,
-          estimatedMrrLakhs: 2.2,
-          owner: 'Anita Sales',
-          lastActivity: '2026-06-03',
-        ),
-        CrmDeal(
-          id: 'DEAL-304',
-          schoolName: 'St. Mary\'s Academy',
-          contactName: 'Fr. Thomas',
-          stage: CrmPipelineStage.won,
-          estimatedMrrLakhs: 4.8,
-          owner: 'Vikram Sales',
-          lastActivity: '2026-06-01',
-        ),
-      ],
+    final deals = [
+      ...MockControlCenterWriteStore.instance.deals,
+      ..._seedDeals,
+    ];
+    return ControlCenterCrmData(
+      deals: deals,
       pipelineValueLakhs: 28.4,
       winRatePercent: 32,
-      stageDistribution: [
+      stageDistribution: const [
         ControlCenterSegment(label: 'Lead', value: 8, percent: 18),
         ControlCenterSegment(label: 'Demo', value: 12, percent: 27),
         ControlCenterSegment(label: 'Proposal', value: 10, percent: 22),
@@ -718,4 +731,20 @@ class MockControlCenterRepository implements ControlCenterRepository {
     required String featureKey,
     required bool enabled,
   }) async {}
+
+  @override
+  Future<PlatformSchool> createSchool({
+    required RepositoryQuery query,
+    required CreateSchoolRequest request,
+  }) async {
+    return MockControlCenterWriteStore.instance.createSchool(request);
+  }
+
+  @override
+  Future<CrmDeal> createLead({
+    required RepositoryQuery query,
+    required CreateCrmLeadRequest request,
+  }) async {
+    return MockControlCenterWriteStore.instance.createLead(request);
+  }
 }
