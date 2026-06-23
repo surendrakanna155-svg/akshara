@@ -1,6 +1,7 @@
 import { buildStubAssistantReply } from "./copilot_prompt_orchestrator.ts";
 import type { CopilotContextBundle } from "./copilot_context_engine.ts";
 import type { CopilotAssistantType } from "./copilot_types.ts";
+import { callClaude, claudeModel, type ClaudeMessage } from "../ai/anthropic_client.ts";
 
 export interface CopilotGenerationInput {
   systemPrompt: string;
@@ -17,6 +18,17 @@ export interface CopilotGenerationResult {
   stub: boolean;
 }
 
+const COPILOT_MAX_TOKENS = 1024;
+
+const REFUSAL_REPLY =
+  "I can't help with that request. I'm Akshara's read-only operational " +
+  "assistant — ask me about the school data you have access to and I'll summarize it.";
+
+/**
+ * Generate a copilot reply via Claude. Falls back to the deterministic
+ * read-only stub when no ANTHROPIC_API_KEY is configured, so the copilot stays
+ * safe and functional before the live key is provisioned.
+ */
 export async function generateCopilotResponse(
   input: CopilotGenerationInput,
 ): Promise<CopilotGenerationResult> {
@@ -32,42 +44,22 @@ export async function generateCopilotResponse(
     };
   }
 
-  const messages = [
-    { role: "system", content: input.systemPrompt },
+  const messages: ClaudeMessage[] = [
     ...input.history.map((m) => ({ role: m.role, content: m.content })),
-    { role: "user", content: input.userMessage },
+    { role: "user" as const, content: input.userMessage },
   ];
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${input.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: Deno.env.get("OPENAI_MODEL") ?? "gpt-4o-mini",
-      temperature: 0.2,
-      messages,
-    }),
+  const result = await callClaude({
+    apiKey: input.apiKey,
+    model: claudeModel(),
+    maxTokens: COPILOT_MAX_TOKENS,
+    system: input.systemPrompt,
+    messages,
   });
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`OpenAI request failed: ${response.status} ${body.slice(0, 200)}`);
-  }
-
-  const payload = await response.json() as {
-    choices?: Array<{ message?: { content?: string } }>;
-    model?: string;
-  };
-  const content = payload.choices?.[0]?.message?.content?.trim();
-  if (!content) {
-    throw new Error("OpenAI returned empty completion");
-  }
-
   return {
-    content,
-    model: payload.model ?? "openai",
+    content: result.refused ? REFUSAL_REPLY : result.text,
+    model: result.model,
     stub: false,
   };
 }

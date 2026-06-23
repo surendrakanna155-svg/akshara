@@ -154,7 +154,7 @@ export function buildStubAssistantReply(
   }
 
   lines.push(
-    "_Configure OPENAI_API_KEY on the API function for live LLM responses. No mutations were performed._",
+    "_Configure ANTHROPIC_API_KEY on the API function for live AI responses. No mutations were performed._",
   );
   return lines.join("\n");
 }

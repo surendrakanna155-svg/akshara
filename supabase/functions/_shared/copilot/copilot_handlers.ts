@@ -11,7 +11,8 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { loadCopilotContext } from "./copilot_context_engine.ts";
-import { generateCopilotResponse } from "./copilot_openai_client.ts";
+import { generateCopilotResponse } from "./copilot_llm_client.ts";
+import { anthropicApiKey } from "../ai/anthropic_client.ts";
 import { buildSystemPrompt } from "./copilot_prompt_orchestrator.ts";
 import {
   appendCopilotMessage,
@@ -281,7 +282,7 @@ export async function handleSendMessage(
         userMessage: content,
         assistantType: session.assistant_type as CopilotAssistantType,
         context,
-        apiKey: Deno.env.get("OPENAI_API_KEY"),
+        apiKey: anthropicApiKey(),
       });
 
       const assistantMessage = await appendCopilotMessage(

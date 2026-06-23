@@ -49,4 +49,14 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
   (currently log-only). (4) **Backend error tracking/metrics** — wire a Sentry DSN (app-side
   adapters exist) and/or Prometheus+Grafana; deferred (vendor accounts).
 
+- **Batch 8b — Question-paper AI (gated on the question bank).** Batch 8 made the
+  copilot and parent insights real via Claude (see
+  [docs/LIVE_BACKEND_BATCH8_REAL_AI.md](docs/LIVE_BACKEND_BATCH8_REAL_AI.md)) and
+  built a reusable Claude client. Question-paper AI was deferred: there is no
+  question-bank schema/data yet, and the foundation plan mandates bank-first,
+  constrained AI gap-fill last. Sequence: build the bank + deterministic blueprint
+  engine first, then wire constrained AI generation (teacher approval required) on
+  top of the shared Claude client. Plan:
+  [docs/plans/QUESTION_PAPER_FOUNDATION_MASTER_PLAN.md](docs/plans/QUESTION_PAPER_FOUNDATION_MASTER_PLAN.md)
+
 ## Done
