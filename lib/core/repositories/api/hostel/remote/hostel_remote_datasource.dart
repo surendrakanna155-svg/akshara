@@ -1,6 +1,9 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../../../../features/hostel/hostel_requests.dart';
+import '../../admissions/dto/api_envelope_dto.dart';
+import '../dto/hostel_enum_codec.dart';
 import '../dto/hostel_responses_dto.dart';
 import 'hostel_api_paths.dart';
 
@@ -100,12 +103,94 @@ class HostelRemoteDataSource {
     return HostelOccupancyMetricsDto.fromJson(_responseMap(response));
   }
 
+  Future<HostelStudentDto> admitStudent({
+    required RepositoryQuery query,
+    required AdmitHostelStudentRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HostelApiPaths.students,
+      queryParameters: _queryParams(query),
+      data: {
+        'sisStudentId': request.sisStudentId,
+        'studentName': request.studentName,
+        'admissionNumber': request.admissionNumber,
+        'classLabel': request.classLabel,
+      },
+    );
+    return HostelStudentDto.fromJson(_writeData(response));
+  }
+
+  Future<HostelStudentDto> assignRoom({
+    required RepositoryQuery query,
+    required AssignHostelRoomRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HostelApiPaths.assignRoom(request.hostelStudentId),
+      queryParameters: _queryParams(query),
+      data: {'roomId': request.roomId, 'bed': request.bed},
+    );
+    return HostelStudentDto.fromJson(_writeData(response));
+  }
+
+  Future<HostelStudentDto> checkoutStudent({
+    required RepositoryQuery query,
+    required CheckoutHostelStudentRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HostelApiPaths.checkout(request.hostelStudentId),
+      queryParameters: _queryParams(query),
+      data: const <String, dynamic>{},
+    );
+    return HostelStudentDto.fromJson(_writeData(response));
+  }
+
+  Future<HostelRoomDto> createRoom({
+    required RepositoryQuery query,
+    required CreateHostelRoomRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HostelApiPaths.rooms,
+      queryParameters: _queryParams(query),
+      data: {
+        'block': request.block,
+        'roomNumber': request.roomNumber,
+        'floor': request.floor,
+        'type': HostelEnumCodec.roomTypeToApi(request.type),
+        'totalBeds': request.totalBeds,
+        'facilities': request.facilities,
+      },
+    );
+    return HostelRoomDto.fromJson(_writeData(response));
+  }
+
+  Future<HostelVisitorDto> logVisitor({
+    required RepositoryQuery query,
+    required LogVisitorRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HostelApiPaths.visitors,
+      queryParameters: _queryParams(query),
+      data: {
+        'visitorName': request.visitorName,
+        'relation': request.relation,
+        'studentName': request.studentName,
+        'sisStudentId': request.sisStudentId,
+      },
+    );
+    return HostelVisitorDto.fromJson(_writeData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,
       if (query.schoolId != null) 'schoolId': query.schoolId,
       if (query.organizationId != null) 'organizationId': query.organizationId,
     };
+  }
+
+  /// Unwraps the `{data, error}` envelope returned by write endpoints.
+  Map<String, dynamic> _writeData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {

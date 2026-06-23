@@ -126,6 +126,16 @@ class HostelMessResponseDto {
   final Map<String, dynamic> raw;
 }
 
+class HostelVisitorDto {
+  const HostelVisitorDto({required this.raw});
+
+  factory HostelVisitorDto.fromJson(Map<String, dynamic> json) {
+    return HostelVisitorDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
 class HostelVisitorsResponseDto {
   const HostelVisitorsResponseDto({required this.raw});
 

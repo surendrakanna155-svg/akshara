@@ -11,27 +11,56 @@ import {
   handleStudents,
   handleVisitors,
 } from "./hostel_handlers.ts";
+import {
+  handleAdmitStudent,
+  handleAssignRoom,
+  handleCheckoutStudent,
+  handleCreateRoom,
+  handleLogVisitor,
+} from "./hostel_write_handlers.ts";
 
-function matchHostelRoute(
-  method: string,
-  path: string,
-): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
-  if (method !== "GET") return null;
+type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
 
-  const routes: Record<string, (req: Request, config: AppConfig) => Promise<Response>> = {
-    "/hostel/dashboard": handleDashboard,
-    "/hostel/students": handleStudents,
-    "/hostel/rooms": handleRooms,
-    "/hostel/attendance": handleAttendance,
-    "/hostel/leave": handleLeave,
-    "/hostel/mess": handleMess,
-    "/hostel/visitors": handleVisitors,
-    "/hostel/reports": handleReports,
-    "/hostel/occupancy-metrics": handleOccupancyMetrics,
-  };
+function matchHostelRoute(method: string, path: string): { handler: RouteHandler } | null {
+  if (method === "GET") {
+    const routes: Record<string, RouteHandler> = {
+      "/hostel/dashboard": handleDashboard,
+      "/hostel/students": handleStudents,
+      "/hostel/rooms": handleRooms,
+      "/hostel/attendance": handleAttendance,
+      "/hostel/leave": handleLeave,
+      "/hostel/mess": handleMess,
+      "/hostel/visitors": handleVisitors,
+      "/hostel/reports": handleReports,
+      "/hostel/occupancy-metrics": handleOccupancyMetrics,
+    };
+    const handler = routes[path] as RouteHandler | undefined;
+    return handler ? { handler } : null;
+  }
 
-  const handler = routes[path] as (typeof routes)[string] | undefined;
-  return handler ? { handler } : null;
+  if (method === "POST") {
+    const staticRoutes: Record<string, RouteHandler> = {
+      "/hostel/students": handleAdmitStudent,
+      "/hostel/rooms": handleCreateRoom,
+      "/hostel/visitors": handleLogVisitor,
+    };
+    const staticHandler = staticRoutes[path] as RouteHandler | undefined;
+    if (staticHandler) return { handler: staticHandler };
+
+    const roomMatch = path.match(/^\/hostel\/students\/([^/]+)\/room$/);
+    if (roomMatch) {
+      return { handler: handleAssignRoom(roomMatch[1]!) };
+    }
+
+    const checkoutMatch = path.match(/^\/hostel\/students\/([^/]+)\/checkout$/);
+    if (checkoutMatch) {
+      return { handler: handleCheckoutStudent(checkoutMatch[1]!) };
+    }
+
+    return null;
+  }
+
+  return null;
 }
 
 export async function routeHostel(

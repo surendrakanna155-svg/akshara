@@ -1,4 +1,3 @@
-import '../api_exception.dart';
 import '../../interfaces/hostel_repository.dart';
 import '../../pagination_helpers.dart';
 import '../../paginated_result.dart';
@@ -84,7 +83,8 @@ class ApiHostelRepository implements HostelRepository {
     required RepositoryQuery query,
     required AdmitHostelStudentRequest request,
   }) async {
-    throw ApiNotConnectedException('HostelRepository', 'admitHostelStudent');
+    final dto = await _remote.admitStudent(query: query, request: request);
+    return _mapper.toStudent(dto);
   }
 
   @override
@@ -92,7 +92,8 @@ class ApiHostelRepository implements HostelRepository {
     required RepositoryQuery query,
     required AssignHostelRoomRequest request,
   }) async {
-    throw ApiNotConnectedException('HostelRepository', 'assignHostelRoom');
+    final dto = await _remote.assignRoom(query: query, request: request);
+    return _mapper.toStudent(dto);
   }
 
   @override
@@ -100,7 +101,8 @@ class ApiHostelRepository implements HostelRepository {
     required RepositoryQuery query,
     required CheckoutHostelStudentRequest request,
   }) async {
-    throw ApiNotConnectedException('HostelRepository', 'checkoutHostelStudent');
+    final dto = await _remote.checkoutStudent(query: query, request: request);
+    return _mapper.toStudent(dto);
   }
 
   @override
@@ -108,7 +110,8 @@ class ApiHostelRepository implements HostelRepository {
     required RepositoryQuery query,
     required CreateHostelRoomRequest request,
   }) async {
-    throw ApiNotConnectedException('HostelRepository', 'createHostelRoom');
+    final dto = await _remote.createRoom(query: query, request: request);
+    return _mapper.toRoom(dto);
   }
 
   @override
@@ -116,6 +119,7 @@ class ApiHostelRepository implements HostelRepository {
     required RepositoryQuery query,
     required LogVisitorRequest request,
   }) async {
-    throw ApiNotConnectedException('HostelRepository', 'logVisitor');
+    final dto = await _remote.logVisitor(query: query, request: request);
+    return _mapper.toVisitor(dto);
   }
 }

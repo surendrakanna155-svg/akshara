@@ -257,24 +257,29 @@ class HostelMapper {
     ];
   }
 
+  HostelVisitor toVisitor(HostelVisitorDto dto) => _mapVisitor(dto.raw);
+
   List<HostelVisitor> _mapVisitors(List<dynamic> items) {
     return [
       for (final item in items)
-        if (item is Map<String, dynamic>)
-          HostelVisitor(
-            id: item['id'] as String? ?? '',
-            visitorName: item['visitorName'] as String? ?? '',
-            relation: item['relation'] as String? ?? '',
-            studentName: item['studentName'] as String? ?? '',
-            sisStudentId: item['sisStudentId'] as String? ?? '',
-            checkIn: item['checkIn'] as String? ?? '',
-            checkOut: item['checkOut'] as String?,
-            passId: item['passId'] as String? ?? '',
-            status: HostelEnumCodec.parseVisitorStatus(
-              item['status'] as String?,
-            ),
-          ),
+        if (item is Map<String, dynamic>) _mapVisitor(item),
     ];
+  }
+
+  HostelVisitor _mapVisitor(Map<String, dynamic> item) {
+    return HostelVisitor(
+      id: item['id'] as String? ?? '',
+      visitorName: item['visitorName'] as String? ?? '',
+      relation: item['relation'] as String? ?? '',
+      studentName: item['studentName'] as String? ?? '',
+      sisStudentId: item['sisStudentId'] as String? ?? '',
+      checkIn: item['checkIn'] as String? ?? '',
+      checkOut: item['checkOut'] as String?,
+      passId: item['passId'] as String? ?? '',
+      status: HostelEnumCodec.parseVisitorStatus(
+        item['status'] as String?,
+      ),
+    );
   }
 
   List<HostelReportCatalogItem> _mapReportCatalog(List<dynamic> items) {
