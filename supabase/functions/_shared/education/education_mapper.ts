@@ -5,6 +5,7 @@ import type {
 import type {
   QuestionBankItemRow,
   QuestionPaperItemRow,
+  QuestionPaperReviewRow,
   QuestionPaperRow,
 } from "./education_types.ts";
 
@@ -21,6 +22,15 @@ export function questionBankToApi(row: QuestionBankItemRow) {
     answerText: row.answer_text,
     options: row.options,
     status: row.status,
+    source: row.source,
+    sourceReference: row.source_reference,
+    programTrack: row.program_track,
+    jeeQuestionType: row.jee_question_type,
+    cognitiveLevel: row.cognitive_level,
+    syllabusChapterId: row.syllabus_chapter_id,
+    syllabusTopicId: row.syllabus_topic_id,
+    learningOutcome: row.learning_outcome,
+    reviewStatus: row.review_status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -40,8 +50,14 @@ export function questionPaperToApi(row: QuestionPaperRow) {
     examType: row.exam_type,
     title: row.title,
     status: row.status,
+    programTrack: row.program_track,
+    reviewStatus: row.review_status,
     blueprint: row.blueprint,
     answerKey: row.answer_key,
+    submittedBy: row.submitted_by,
+    submittedAt: row.submitted_at,
+    approvedBy: row.approved_by,
+    approvedAt: row.approved_at,
     publishedAt: row.published_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -59,6 +75,19 @@ export function questionPaperItemToApi(row: QuestionPaperItemRow, index: number)
     answerText: row.answer_text,
     options: row.options,
     source: row.source,
+    reviewStatus: row.review_status,
+  };
+}
+
+export function questionPaperReviewToApi(row: QuestionPaperReviewRow) {
+  return {
+    id: row.id,
+    paperId: row.paper_id,
+    roundNumber: row.round_number,
+    status: row.status,
+    reviewerUserId: row.reviewer_user_id,
+    comments: row.comments,
+    createdAt: row.created_at,
   };
 }
 

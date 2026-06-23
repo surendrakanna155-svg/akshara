@@ -15,6 +15,7 @@ import {
   paperExportDocument,
   questionBankToApi,
   questionPaperItemToApi,
+  questionPaperReviewToApi,
   questionPaperToApi,
   reportRemarkToApi,
 } from "./education_mapper.ts";
@@ -29,12 +30,16 @@ import {
   getQuestionPaperWithItems,
   importQuestionBankItems,
   listHomeworkAssignments,
+  listPaperReviews,
   listQuestionBankItems,
   listQuestionPapers,
   listReportRemarks,
+  moderatePaperItem,
   publishHomeworkAssignment,
   publishQuestionPaper,
   publishReportRemark,
+  reviewQuestionPaper,
+  submitQuestionPaper,
   updateReportRemark,
 } from "./education_repository.ts";
 import {
@@ -43,9 +48,12 @@ import {
   type RemarkInputs,
 } from "./education_generator.ts";
 import type {
+  EduCognitiveLevel,
   EduDifficulty,
   EduExamType,
   EduHomeworkType,
+  EduProgramTrack,
+  EduQuestionSource,
   EduQuestionType,
   EduRemarkLanguage,
   EduRemarkType,
@@ -143,6 +151,14 @@ export async function handleCreateQuestionBank(req: Request, config: AppConfig):
     questionText: string;
     answerText?: string;
     options?: string[];
+    source?: EduQuestionSource;
+    sourceReference?: string;
+    programTrack?: EduProgramTrack;
+    jeeQuestionType?: string;
+    cognitiveLevel?: EduCognitiveLevel;
+    syllabusChapterId?: string;
+    syllabusTopicId?: string;
+    learningOutcome?: string;
   }>(req);
   if (!body?.subjectName || !body.chapter || !body.questionText) {
     return errorEnvelope("VALIDATION_ERROR", "subjectName, chapter, and questionText are required", 422);
@@ -183,6 +199,14 @@ export async function handleImportQuestionBank(req: Request, config: AppConfig):
     questionText: string;
     answerText?: string;
     options?: string[];
+    source?: EduQuestionSource;
+    sourceReference?: string;
+    programTrack?: EduProgramTrack;
+    jeeQuestionType?: string;
+    cognitiveLevel?: EduCognitiveLevel;
+    syllabusChapterId?: string;
+    syllabusTopicId?: string;
+    learningOutcome?: string;
   }> }>(req);
   if (!body?.items?.length) {
     return errorEnvelope("VALIDATION_ERROR", "items array is required", 422);
@@ -192,23 +216,25 @@ export async function handleImportQuestionBank(req: Request, config: AppConfig):
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const rows = await runTenant(config, auth.claims, async (db) => {
+    const result = await runTenant(config, auth.claims, async (db) => {
       const imported = await importQuestionBankItems(db, orgId, schoolId, {
         items: body.items.map((item) => ({
           ...item,
+          source: item.source ?? "import",
           createdBy: auth.claims.sub,
         })),
         createdBy: auth.claims.sub,
       });
-      for (const row of imported) {
+      for (const row of imported.created) {
         await emitMutationAudit(db, auth.claims, educationAudit.questionBankCreated(row.id), req);
       }
       return imported;
     });
 
     return jsonResponse(envelope({
-      imported: rows.length,
-      items: rows.map(questionBankToApi),
+      imported: result.created.length,
+      skippedDuplicates: result.skippedDuplicates,
+      items: result.created.map(questionBankToApi),
     }), { status: 201 });
   } catch (error) {
     return handleEducationError(error);
@@ -319,6 +345,7 @@ export async function handleGenerateQuestionPaper(req: Request, config: AppConfi
         difficulty: body.difficulty,
         totalMarks: body.totalMarks,
         examType: body.examType,
+        programTrack: generated.programTrack,
         title: generated.title,
         blueprint: generated.blueprint,
         answerKey: generated.answerKey,
@@ -331,6 +358,7 @@ export async function handleGenerateQuestionPaper(req: Request, config: AppConfi
           answerText: item.answerText,
           options: item.options,
           source: item.source,
+          reviewStatus: item.reviewStatus,
         })),
       });
       await emitMutationAudit(
@@ -347,6 +375,9 @@ export async function handleGenerateQuestionPaper(req: Request, config: AppConfi
       items: result.saved.items.map((item, i) => questionPaperItemToApi(item, i)),
       bankReuseCount: result.generated.bankReuseCount,
       aiGeneratedCount: result.generated.aiGeneratedCount,
+      aiCandidateCount: result.generated.aiCandidateCount,
+      unfilledGapCount: result.generated.unfilledGapCount,
+      gaps: result.generated.gaps,
     }), { status: 201 });
   } catch (error) {
     return handleEducationError(error);
@@ -389,15 +420,182 @@ export async function handlePublishQuestionPaper(
   if (denied) return denied;
 
   try {
-    const row = await runTenant(config, auth.claims, async (db) => {
-      const published = await publishQuestionPaper(db, id);
-      if (!published) return null;
-      await emitMutationAudit(db, auth.claims, educationAudit.questionPaperPublished(id), req);
-      return published;
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const outcome = await publishQuestionPaper(db, id);
+      if (outcome.ok) {
+        await emitMutationAudit(db, auth.claims, educationAudit.questionPaperPublished(id), req);
+      }
+      return outcome;
     });
-    if (!row) return errorEnvelope("NOT_FOUND", "Question paper not found", 404);
 
-    return jsonResponse(envelope(questionPaperToApi(row)));
+    if (!result.ok) {
+      if (result.reason === "not_found") {
+        return errorEnvelope("NOT_FOUND", "Question paper not found", 404);
+      }
+      if (result.reason === "not_approved") {
+        return errorEnvelope(
+          "PAPER_NOT_APPROVED",
+          "Paper must be approved before it can be published",
+          409,
+        );
+      }
+      return errorEnvelope(
+        "PAPER_HAS_PENDING_ITEMS",
+        `Paper has ${result.pendingItems} AI candidate(s) awaiting moderation`,
+        409,
+      );
+    }
+
+    return jsonResponse(envelope(questionPaperToApi(result.paper)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+// ─── Paper review / approval governance (Batch 8b) ───────────────────────────
+
+export async function handleSubmitQuestionPaper(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const submitted = await submitQuestionPaper(db, orgId, schoolId, id, auth.claims.sub);
+      if (!submitted) return null;
+      await emitMutationAudit(db, auth.claims, educationAudit.questionPaperSubmitted(id), req);
+      return submitted;
+    });
+    if (!result) {
+      return errorEnvelope(
+        "PAPER_NOT_SUBMITTABLE",
+        "Paper not found or not in a draft/changes-requested state",
+        409,
+      );
+    }
+
+    return jsonResponse(envelope({
+      paper: questionPaperToApi(result.paper),
+      review: questionPaperReviewToApi(result.review),
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleReviewQuestionPaper(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{ decision: "approved" | "changes_requested"; comments?: string }>(req);
+  if (body?.decision !== "approved" && body?.decision !== "changes_requested") {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "decision must be 'approved' or 'changes_requested'",
+      422,
+    );
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const reviewed = await reviewQuestionPaper(
+        db, orgId, schoolId, id, body.decision, auth.claims.sub, body.comments ?? null,
+      );
+      if (!reviewed) return null;
+      await emitMutationAudit(
+        db, auth.claims, educationAudit.questionPaperReviewed(id, body.decision), req,
+      );
+      return reviewed;
+    });
+    if (!result) {
+      return errorEnvelope(
+        "PAPER_NOT_REVIEWABLE",
+        "Paper not found or not in a submitted state",
+        409,
+      );
+    }
+
+    return jsonResponse(envelope({
+      paper: questionPaperToApi(result.paper),
+      review: questionPaperReviewToApi(result.review),
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleListPaperReviews(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationRead(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const reviews = await runTenant(config, auth.claims, (db) => listPaperReviews(db, id));
+    return jsonResponse(envelope({ items: reviews.map(questionPaperReviewToApi) }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleModeratePaperItem(
+  req: Request,
+  config: AppConfig,
+  paperId: string,
+  itemId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{ decision: "approved" | "rejected" }>(req);
+  if (body?.decision !== "approved" && body?.decision !== "rejected") {
+    return errorEnvelope("VALIDATION_ERROR", "decision must be 'approved' or 'rejected'", 422);
+  }
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const moderated = await moderatePaperItem(db, paperId, itemId, body.decision);
+      if (!moderated) return null;
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        educationAudit.questionPaperItemModerated(paperId, itemId, body.decision),
+        req,
+      );
+      return moderated;
+    });
+    if (!row) {
+      return errorEnvelope(
+        "ITEM_NOT_MODERATABLE",
+        "Item not found or not awaiting moderation",
+        409,
+      );
+    }
+
+    return jsonResponse(envelope(questionPaperItemToApi(row, row.sort_order)));
   } catch (error) {
     return handleEducationError(error);
   }

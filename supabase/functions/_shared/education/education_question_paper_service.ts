@@ -1,120 +1,172 @@
-import {
-  balanceDifficultyMix,
-  buildPaperBlueprint,
-  defaultQuestionTypeMix,
-  generateStubQuestion,
-  type GeneratedQuestion,
-} from "./education_generator.ts";
-import {
-  listQuestionBankItems,
-  type QuestionBankListFilters,
-} from "./education_repository.ts";
+// Paper generation orchestration (Batch 8b) — bank-first, constrained AI.
+//
+// Pipeline:
+//   1. Load APPROVED, active bank questions for the subject/track/chapters.
+//   2. Deterministic blueprint solver fills the plan bank-first (exact match).
+//   3. Gaps the bank cannot cover go to constrained Claude as moderation
+//      candidates (source='ai_candidate', review_status='pending') — only when
+//      enabled and a key is configured. Otherwise gaps are reported, not faked.
+//   4. The paper is always created as review_status='draft'. It cannot be
+//      published until it is approved AND has no pending AI candidates (gate
+//      lives in the repository / publish handler).
+//
+// No placeholder/stub question text is ever written into a paper here — that
+// was the old behaviour this batch removes.
+
+import { buildPaperBlueprint } from "./education_generator.ts";
+import { solveBlueprint } from "./education_blueprint_solver.ts";
+import { generateAiCandidatesForGaps } from "./education_ai_question_gapfill.ts";
+import { anthropicApiKey } from "../ai/anthropic_client.ts";
+import { listQuestionBankItems, type QuestionBankListFilters } from "./education_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type {
-  EduDifficulty,
   EduExamType,
+  EduPaperItemSource,
+  EduProgramTrack,
   EduQuestionType,
+  EduReviewStatus,
   GenerateQuestionPaperInput,
   QuestionBankItemRow,
 } from "./education_types.ts";
 
-export interface PaperGenerationItem extends GeneratedQuestion {
+export interface PaperGenerationItem {
   bankItemId?: string;
-  source: "bank" | "ai_generated";
+  source: EduPaperItemSource;
+  reviewStatus: EduReviewStatus;
+  questionType: EduQuestionType;
+  marks: number;
+  questionText: string;
+  answerText: string;
+  options: string[];
+}
+
+export interface PaperGap {
+  questionType: EduQuestionType;
+  difficulty: string;
+  marks: number;
+  chapter: string;
 }
 
 export interface PaperGenerationResult {
   title: string;
+  programTrack: EduProgramTrack;
+  reviewStatus: "draft";
   blueprint: Record<string, unknown>;
   answerKey: Array<{ questionNumber: number; answer: string; marks: number }>;
   items: PaperGenerationItem[];
   bankReuseCount: number;
+  /** Count of AI moderation candidates (also surfaced as aiGeneratedCount). */
+  aiCandidateCount: number;
   aiGeneratedCount: number;
+  /** Blueprint slots left unfilled (bank empty + AI off/declined). */
+  unfilledGapCount: number;
+  gaps: PaperGap[];
 }
 
 function examTypeLabel(examType: EduExamType): string {
   return examType.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function marksPerQuestion(totalMarks: number, count: number): number {
-  const base = Math.max(1, Math.floor(totalMarks / Math.max(count, 1)));
-  return base;
-}
-
-function pickBankItems(
-  bankItems: QuestionBankItemRow[],
-  neededMarks: number,
-): { picked: QuestionBankItemRow[]; remainingMarks: number } {
-  const picked: QuestionBankItemRow[] = [];
-  let remaining = neededMarks;
-  for (const item of bankItems) {
-    if (remaining <= 0) break;
-    if (item.marks <= remaining) {
-      picked.push(item);
-      remaining -= item.marks;
-    }
-  }
-  return { picked, remainingMarks: remaining };
+/** Stable bank ordering so the solver is fully deterministic. */
+function sortBank(items: QuestionBankItemRow[]): QuestionBankItemRow[] {
+  return [...items].sort((a, b) => {
+    if (a.chapter !== b.chapter) return a.chapter.localeCompare(b.chapter);
+    if (a.marks !== b.marks) return a.marks - b.marks;
+    return a.id.localeCompare(b.id);
+  });
 }
 
 export async function generateQuestionPaper(
   client: TenantQueryClient,
   input: GenerateQuestionPaperInput,
 ): Promise<PaperGenerationResult> {
-  const questionTypes = input.questionTypeMix
-    ? (Object.keys(input.questionTypeMix) as EduQuestionType[])
-    : defaultQuestionTypeMix();
-
-  const targetCount = Math.max(4, Math.min(20, Math.ceil(input.totalMarks / 5)));
-  const marksEach = marksPerQuestion(input.totalMarks, targetCount);
+  const programTrack: EduProgramTrack = input.programTrack ?? "board";
 
   const filters: QuestionBankListFilters = {
     subjectName: input.subjectName,
     chapters: input.chapters,
     difficulty: input.difficulty === "mixed" ? undefined : input.difficulty,
     status: "active",
+    reviewStatus: "approved",
+    programTrack,
     page: 1,
     pageSize: 100,
   };
 
   const bankPage = await listQuestionBankItems(client, filters);
-  const { picked, remainingMarks } = pickBankItems(bankPage.items, input.totalMarks);
+  const bank = sortBank(bankPage.items);
 
-  const items: PaperGenerationItem[] = picked.map((row) => ({
-    bankItemId: row.id,
-    source: "bank" as const,
-    questionType: row.question_type as EduQuestionType,
-    marks: row.marks,
-    questionText: row.question_text,
-    answerText: row.answer_text ?? "",
-    options: Array.isArray(row.options) ? row.options as string[] : [],
-  }));
+  const solution = solveBlueprint(
+    {
+      subjectName: input.subjectName,
+      totalMarks: input.totalMarks,
+      difficulty: input.difficulty,
+      chapters: input.chapters,
+      questionTypeMix: input.questionTypeMix,
+    },
+    bank,
+  );
 
-  let aiCount = 0;
-  let remaining = remainingMarks;
-  let typeIndex = 0;
-  const chapters = input.chapters.length > 0 ? input.chapters : ["General"];
-  const difficultyMix = input.difficulty === "mixed"
-    ? balanceDifficultyMix(targetCount + 5)
-    : Array.from({ length: targetCount + 5 }, () => input.difficulty);
-
-  while (remaining > 0 && items.length < targetCount + 5) {
-    const chapter = chapters[items.length % chapters.length]!;
-    const qType = questionTypes[typeIndex % questionTypes.length]!;
-    typeIndex += 1;
-    const marks = Math.min(remaining, marksEach);
-    const difficulty = difficultyMix[items.length] ?? "medium";
-    const generated = generateStubQuestion(
-      input.subjectName,
-      chapter,
-      difficulty,
-      qType,
-      marks,
-    );
-    items.push({ ...generated, source: "ai_generated" });
-    remaining -= marks;
-    aiCount += 1;
+  // index → item, so the paper reads in blueprint-plan order.
+  const byIndex = new Map<number, PaperGenerationItem>();
+  for (const { slot, bankItem } of solution.selected) {
+    byIndex.set(slot.index, {
+      bankItemId: bankItem.id,
+      source: "bank",
+      reviewStatus: "approved",
+      questionType: bankItem.question_type as EduQuestionType,
+      marks: slot.marks,
+      questionText: bankItem.question_text,
+      answerText: bankItem.answer_text ?? "",
+      options: Array.isArray(bankItem.options) ? bankItem.options as string[] : [],
+    });
   }
+
+  let aiCandidateCount = 0;
+  const allowAi = input.allowAiGapFill !== false;
+  const apiKey = anthropicApiKey();
+  if (allowAi && apiKey && solution.gaps.length > 0) {
+    const candidates = await generateAiCandidatesForGaps(
+      solution.gaps,
+      {
+        subjectName: input.subjectName,
+        className: input.className,
+        programTrack,
+        examType: input.examType,
+        chapters: input.chapters,
+      },
+      apiKey,
+    );
+    for (const c of candidates) {
+      byIndex.set(c.slotIndex, {
+        source: "ai_candidate",
+        reviewStatus: "pending",
+        questionType: c.questionType,
+        marks: c.marks,
+        questionText: c.questionText,
+        answerText: c.answerText,
+        options: c.options,
+      });
+      aiCandidateCount++;
+    }
+  }
+
+  // Compact to plan order; any slot still missing stays an unfilled gap.
+  const items: PaperGenerationItem[] = solution.slots
+    .map((slot) => byIndex.get(slot.index))
+    .filter((item): item is PaperGenerationItem => item !== undefined);
+
+  const filledIndexes = new Set(
+    solution.slots.filter((s) => byIndex.has(s.index)).map((s) => s.index),
+  );
+  const gaps: PaperGap[] = solution.slots
+    .filter((s) => !filledIndexes.has(s.index))
+    .map((s) => ({
+      questionType: s.questionType,
+      difficulty: s.difficulty,
+      marks: s.marks,
+      chapter: s.chapter,
+    }));
 
   const title =
     `${input.className}${input.sectionName ? ` ${input.sectionName}` : ""} — ` +
@@ -126,8 +178,10 @@ export async function generateQuestionPaper(
     marks: item.marks,
   }));
 
+  const placedMarks = items.reduce((sum, item) => sum + item.marks, 0);
   const blueprint = {
     examType: input.examType,
+    programTrack,
     ...buildPaperBlueprint(
       input.totalMarks,
       items.map((item) => ({
@@ -138,14 +192,24 @@ export async function generateQuestionPaper(
       input.chapters,
     ),
     difficultyMode: input.difficulty,
+    placedMarks,
+    bankReuseCount: solution.selected.length,
+    aiCandidateCount,
+    unfilledGapCount: gaps.length,
+    pendingApproval: aiCandidateCount > 0,
   };
 
   return {
     title,
+    programTrack,
+    reviewStatus: "draft",
     blueprint,
     answerKey,
     items,
-    bankReuseCount: picked.length,
-    aiGeneratedCount: aiCount,
+    bankReuseCount: solution.selected.length,
+    aiCandidateCount,
+    aiGeneratedCount: aiCandidateCount,
+    unfilledGapCount: gaps.length,
+    gaps,
   };
 }

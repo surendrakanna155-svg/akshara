@@ -488,6 +488,41 @@ export const educationAudit = {
       idempotencyKey: `education.question_paper.published:${paperId}`,
     },
   }),
+  questionPaperSubmitted: (paperId: string): MutationAuditSpec => ({
+    ...workflow("questionPaperSubmitted", "question_paper", paperId, { paperId }),
+    domain: {
+      eventType: "education.question_paper.submitted",
+      payload: { paperId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_paper.submitted:${paperId}`,
+    },
+  }),
+  questionPaperReviewed: (paperId: string, decision: string): MutationAuditSpec => ({
+    ...workflow("questionPaperReviewed", "question_paper", paperId, { paperId, decision }),
+    domain: {
+      eventType: "education.question_paper.reviewed",
+      payload: { paperId, decision },
+      sourceModule: "education",
+      idempotencyKey: `education.question_paper.reviewed:${paperId}:${decision}`,
+    },
+  }),
+  questionPaperItemModerated: (
+    paperId: string,
+    itemId: string,
+    decision: string,
+  ): MutationAuditSpec => ({
+    ...workflow("questionPaperItemModerated", "question_paper_item", itemId, {
+      paperId,
+      itemId,
+      decision,
+    }),
+    domain: {
+      eventType: "education.question_paper_item.moderated",
+      payload: { paperId, itemId, decision },
+      sourceModule: "education",
+      idempotencyKey: `education.question_paper_item.moderated:${itemId}:${decision}`,
+    },
+  }),
   homeworkGenerated: (assignmentId: string): MutationAuditSpec => ({
     ...workflow("homeworkGenerated", "homework_assignment", assignmentId, { assignmentId }),
     domain: {

@@ -13,12 +13,16 @@ import {
   handleGetQuestionPaper,
   handleImportQuestionBank,
   handleListHomework,
+  handleListPaperReviews,
   handleListQuestionBank,
   handleListQuestionPapers,
   handleListReportRemarks,
+  handleModeratePaperItem,
   handlePublishHomework,
   handlePublishQuestionPaper,
   handlePublishReportRemark,
+  handleReviewQuestionPaper,
+  handleSubmitQuestionPaper,
   handleUpdateReportRemark,
 } from "./education_handlers.ts";
 
@@ -65,6 +69,34 @@ export function matchEducationRoute(
   const paperPublishMatch = path.match(/^\/education\/question-papers\/([^/]+)\/publish$/);
   if (paperPublishMatch && method === "POST" && UUID_SEGMENT.test(paperPublishMatch[1]!)) {
     return { handler: handlePublishQuestionPaper, args: [paperPublishMatch[1]!] };
+  }
+
+  const paperSubmitMatch = path.match(/^\/education\/question-papers\/([^/]+)\/submit$/);
+  if (paperSubmitMatch && method === "POST" && UUID_SEGMENT.test(paperSubmitMatch[1]!)) {
+    return { handler: handleSubmitQuestionPaper, args: [paperSubmitMatch[1]!] };
+  }
+
+  const paperReviewMatch = path.match(/^\/education\/question-papers\/([^/]+)\/review$/);
+  if (paperReviewMatch && method === "POST" && UUID_SEGMENT.test(paperReviewMatch[1]!)) {
+    return { handler: handleReviewQuestionPaper, args: [paperReviewMatch[1]!] };
+  }
+
+  const paperReviewsMatch = path.match(/^\/education\/question-papers\/([^/]+)\/reviews$/);
+  if (paperReviewsMatch && method === "GET" && UUID_SEGMENT.test(paperReviewsMatch[1]!)) {
+    return { handler: handleListPaperReviews, args: [paperReviewsMatch[1]!] };
+  }
+
+  const itemModerateMatch = path.match(
+    /^\/education\/question-papers\/([^/]+)\/items\/([^/]+)\/moderate$/,
+  );
+  if (
+    itemModerateMatch && method === "POST" &&
+    UUID_SEGMENT.test(itemModerateMatch[1]!) && UUID_SEGMENT.test(itemModerateMatch[2]!)
+  ) {
+    return {
+      handler: handleModeratePaperItem,
+      args: [itemModerateMatch[1]!, itemModerateMatch[2]!],
+    };
   }
 
   const paperMatch = path.match(/^\/education\/question-papers\/([^/]+)$/);
