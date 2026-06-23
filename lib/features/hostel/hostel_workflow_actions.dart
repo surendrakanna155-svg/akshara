@@ -338,3 +338,84 @@ Future<void> showCreateHostelRoomDialog(
     _showHostelMutationError(context, error);
   }
 }
+
+Future<void> showLogVisitorDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final visitorNameController = TextEditingController();
+  final relationController = TextEditingController();
+  final studentNameController = TextEditingController();
+  final sisIdController = TextEditingController();
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Log visitor',
+      icon: Icons.person_add_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Visitor name',
+            controller: visitorNameController,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Relation',
+            controller: relationController,
+            hint: 'e.g. Father',
+          ),
+          AksharaFormField(
+            label: 'Student name',
+            controller: studentNameController,
+            required: true,
+            hint: 'Resident being visited',
+          ),
+          AksharaFormField(
+            label: 'SIS student ID',
+            controller: sisIdController,
+            hint: 'e.g. SIS-STU-10430',
+          ),
+        ],
+      ),
+      actions: [
+        AksharaDialogActions(
+          confirmLabel: 'Register visitor',
+          confirmKey: QaTestKeys.hostelLogVisitorDialogSubmitButton,
+          onCancel: () => Navigator.of(context).pop(false),
+          onConfirm: () {
+            if (visitorNameController.text.trim().isEmpty ||
+                studentNameController.text.trim().isEmpty) {
+              return;
+            }
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final visitor = await ref.read(logVisitorProvider.notifier).execute(
+          LogVisitorRequest(
+            visitorName: visitorNameController.text.trim(),
+            relation: relationController.text.trim(),
+            studentName: studentNameController.text.trim(),
+            sisStudentId: sisIdController.text.trim(),
+          ),
+        );
+    if (!context.mounted || visitor == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hostelLogVisitorSuccessSnackbar,
+        content: Text('Issued ${visitor.passId} to ${visitor.visitorName}'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showHostelMutationError(context, error);
+  }
+}

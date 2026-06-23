@@ -110,4 +110,12 @@ class ApiHostelRepository implements HostelRepository {
   }) async {
     throw ApiNotConnectedException('HostelRepository', 'createHostelRoom');
   }
+
+  @override
+  Future<HostelVisitor> logVisitor({
+    required RepositoryQuery query,
+    required LogVisitorRequest request,
+  }) async {
+    throw ApiNotConnectedException('HostelRepository', 'logVisitor');
+  }
 }

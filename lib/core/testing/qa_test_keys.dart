@@ -943,6 +943,15 @@ abstract final class QaTestKeys {
   static const hostelCreateRoomSuccessSnackbar =
       ValueKey<String>('hostel_create_room_success_snackbar');
 
+  static const hostelLogVisitorButton =
+      ValueKey<String>('hostel_log_visitor_button');
+
+  static const hostelLogVisitorDialogSubmitButton =
+      ValueKey<String>('hostel_log_visitor_dialog_submit_button');
+
+  static const hostelLogVisitorSuccessSnackbar =
+      ValueKey<String>('hostel_log_visitor_success_snackbar');
+
   static ValueKey<String> hostelAssignStudentButton(String studentId) =>
       ValueKey<String>('hostel_assign_student_$studentId');
 

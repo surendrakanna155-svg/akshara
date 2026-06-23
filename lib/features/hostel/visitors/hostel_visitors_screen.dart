@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../hostel_models.dart';
 import '../hostel_providers.dart';
+import '../hostel_workflow_actions.dart';
 import '../widgets/hostel_module_scaffold.dart';
 
 /// HO-07 — Visitors.
@@ -28,7 +30,8 @@ class HostelVisitorsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageHostel,
         child: OutlinedButton.icon(
-          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Log visitor'),
+          key: QaTestKeys.hostelLogVisitorButton,
+          onPressed: () => showLogVisitorDialog(context, ref),
           icon: const Icon(Icons.person_add_outlined, size: 18),
           label: const Text('Register visitor'),
         ),

@@ -30,4 +30,8 @@ abstract class HostelRepository {
     required RepositoryQuery query,
     required CreateHostelRoomRequest request,
   });
+  Future<HostelVisitor> logVisitor({
+    required RepositoryQuery query,
+    required LogVisitorRequest request,
+  });
 }

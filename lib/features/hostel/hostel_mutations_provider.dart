@@ -150,3 +150,33 @@ final createHostelRoomProvider =
     AsyncNotifierProvider<CreateHostelRoomNotifier, HostelRoom?>(
   CreateHostelRoomNotifier.new,
 );
+
+class LogVisitorNotifier extends AsyncNotifier<HostelVisitor?> {
+  @override
+  FutureOr<HostelVisitor?> build() => null;
+
+  Future<HostelVisitor?> execute(LogVisitorRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHostel(ref);
+      try {
+        final result = await ref.read(hostelRepositoryProvider).logVisitor(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(hostelVisitorsFutureProvider)
+          ..invalidate(hostelDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final logVisitorProvider =
+    AsyncNotifierProvider<LogVisitorNotifier, HostelVisitor?>(
+  LogVisitorNotifier.new,
+);

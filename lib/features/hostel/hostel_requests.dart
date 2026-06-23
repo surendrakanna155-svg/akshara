@@ -49,3 +49,17 @@ class CreateHostelRoomRequest {
   final int totalBeds;
   final String facilities;
 }
+
+class LogVisitorRequest {
+  const LogVisitorRequest({
+    required this.visitorName,
+    required this.relation,
+    required this.studentName,
+    required this.sisStudentId,
+  });
+
+  final String visitorName;
+  final String relation;
+  final String studentName;
+  final String sisStudentId;
+}

@@ -138,6 +138,61 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('logVisitor adds an active visitor with an issued pass', () async {
+      final repo = MockHostelRepository();
+      final before = await repo.getVisitors(query: query);
+
+      final visitor = await repo.logVisitor(
+        query: query,
+        request: const LogVisitorRequest(
+          visitorName: 'Lakshmi Rao',
+          relation: 'Mother',
+          studentName: 'Ravi Kumar',
+          sisStudentId: 'SIS-STU-10430',
+        ),
+      );
+
+      final after = await repo.getVisitors(query: query);
+      expect(after.activeVisitors.length, before.activeVisitors.length + 1);
+      expect(visitor.status, HostelVisitorStatus.active);
+      expect(visitor.checkOut, isNull);
+      expect(visitor.passId, isNotEmpty);
+      expect(after.activeVisitors.any((v) => v.id == visitor.id), isTrue);
+    });
+
+    test('logVisitor defaults a blank relation', () async {
+      final repo = MockHostelRepository();
+
+      final visitor = await repo.logVisitor(
+        query: query,
+        request: const LogVisitorRequest(
+          visitorName: 'Unknown Guest',
+          relation: '',
+          studentName: 'Emma Thomas',
+          sisStudentId: '',
+        ),
+      );
+
+      expect(visitor.relation, '—');
+    });
+
+    test('logVisitor rejects an empty visitor name', () async {
+      final repo = MockHostelRepository();
+
+      expect(
+        () => repo.logVisitor(
+          query: query,
+          request: const LogVisitorRequest(
+            visitorName: '  ',
+            relation: 'Father',
+            studentName: 'Ravi Kumar',
+            sisStudentId: '',
+          ),
+        ),
+        throwsStateError,
+      );
+    });
   });
 
   group('Hostel RBAC mutations', () {
@@ -236,6 +291,56 @@ void main() {
       expect(
         container.read(createHostelRoomProvider).value?.status,
         HostelRoomStatus.vacant,
+      );
+    });
+
+    test('logVisitor fails without manageHostel', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(logVisitorProvider.notifier).execute(
+            const LogVisitorRequest(
+              visitorName: 'Blocked Visitor',
+              relation: 'Father',
+              studentName: 'Ravi Kumar',
+              sisStudentId: '',
+            ),
+          );
+
+      expect(container.read(logVisitorProvider).hasError, isTrue);
+    });
+
+    test('logVisitor succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(logVisitorProvider.notifier).execute(
+            const LogVisitorRequest(
+              visitorName: 'Allowed Visitor',
+              relation: 'Mother',
+              studentName: 'Emma Thomas',
+              sisStudentId: 'SIS-STU-10418',
+            ),
+          );
+
+      expect(container.read(logVisitorProvider).hasValue, isTrue);
+      expect(
+        container.read(logVisitorProvider).value?.status,
+        HostelVisitorStatus.active,
       );
     });
   });

@@ -11,12 +11,15 @@ import '../repository_query.dart';
 class MockHostelRepository implements HostelRepository {
   MockHostelRepository()
       : _students = List<HostelStudent>.from(_seedStudents),
-        _rooms = List<HostelRoom>.from(_seedRooms);
+        _rooms = List<HostelRoom>.from(_seedRooms),
+        _activeVisitors = List<HostelVisitor>.from(_seedActiveVisitors);
 
   final List<HostelStudent> _students;
   final List<HostelRoom> _rooms;
+  final List<HostelVisitor> _activeVisitors;
   int _studentCounter = 5;
   int _roomCounter = 5;
+  int _visitorCounter = 200;
 
   HostelOccupancyMetrics get _occupancyMetrics {
     final totalBeds = _rooms.fold<int>(0, (sum, room) => sum + room.totalBeds);
@@ -441,57 +444,61 @@ class MockHostelRepository implements HostelRepository {
     );
   }
 
+  static const _seedActiveVisitors = [
+    HostelVisitor(
+      id: 'vis_1',
+      visitorName: 'Vikram Patel',
+      relation: 'Father',
+      studentName: 'Ravi Kumar',
+      sisStudentId: 'SIS-STU-10430',
+      checkIn: '10:30 AM',
+      checkOut: null,
+      passId: 'HO-VIS-108',
+      status: HostelVisitorStatus.active,
+    ),
+    HostelVisitor(
+      id: 'vis_2',
+      visitorName: 'Sarah Thomas',
+      relation: 'Mother',
+      studentName: 'Emma Thomas',
+      sisStudentId: 'SIS-STU-10418',
+      checkIn: '11:15 AM',
+      checkOut: null,
+      passId: 'HO-VIS-109',
+      status: HostelVisitorStatus.active,
+    ),
+  ];
+
+  static const _seedVisitorLog = [
+    HostelVisitor(
+      id: 'vis_3',
+      visitorName: 'Rajesh Reddy',
+      relation: 'Father',
+      studentName: 'Ananya Reddy',
+      sisStudentId: 'SIS-STU-10422',
+      checkIn: '9:00 AM',
+      checkOut: '11:45 AM',
+      passId: 'HO-VIS-105',
+      status: HostelVisitorStatus.checkedOut,
+    ),
+    HostelVisitor(
+      id: 'vis_4',
+      visitorName: 'Amit Sharma',
+      relation: 'Father',
+      studentName: 'Priya Sharma',
+      sisStudentId: 'SIS-STU-10415',
+      checkIn: '4 Jun 2026',
+      checkOut: '4 Jun 2026',
+      passId: 'HO-VIS-098',
+      status: HostelVisitorStatus.expired,
+    ),
+  ];
+
   @override
   Future<HostelVisitorsData> getVisitors({required RepositoryQuery query}) async {
-    return const HostelVisitorsData(
-      activeVisitors: [
-        HostelVisitor(
-          id: 'vis_1',
-          visitorName: 'Vikram Patel',
-          relation: 'Father',
-          studentName: 'Ravi Kumar',
-          sisStudentId: 'SIS-STU-10430',
-          checkIn: '10:30 AM',
-          checkOut: null,
-          passId: 'HO-VIS-108',
-          status: HostelVisitorStatus.active,
-        ),
-        HostelVisitor(
-          id: 'vis_2',
-          visitorName: 'Sarah Thomas',
-          relation: 'Mother',
-          studentName: 'Emma Thomas',
-          sisStudentId: 'SIS-STU-10418',
-          checkIn: '11:15 AM',
-          checkOut: null,
-          passId: 'HO-VIS-109',
-          status: HostelVisitorStatus.active,
-        ),
-      ],
-      visitorLog: [
-        HostelVisitor(
-          id: 'vis_3',
-          visitorName: 'Rajesh Reddy',
-          relation: 'Father',
-          studentName: 'Ananya Reddy',
-          sisStudentId: 'SIS-STU-10422',
-          checkIn: '9:00 AM',
-          checkOut: '11:45 AM',
-          passId: 'HO-VIS-105',
-          status: HostelVisitorStatus.checkedOut,
-        ),
-        HostelVisitor(
-          id: 'vis_4',
-          visitorName: 'Amit Sharma',
-          relation: 'Father',
-          studentName: 'Priya Sharma',
-          sisStudentId: 'SIS-STU-10415',
-          checkIn: '4 Jun 2026',
-          checkOut: '4 Jun 2026',
-          passId: 'HO-VIS-098',
-          status: HostelVisitorStatus.expired,
-        ),
-      ],
+    return HostelVisitorsData(
+      activeVisitors: List<HostelVisitor>.unmodifiable(_activeVisitors),
+      visitorLog: _seedVisitorLog,
       qrPlaceholderLabel: 'QR visitor pass preview (120×120)',
       parentAppRoute: RouteNames.parentDashboard,
     );
@@ -772,5 +779,40 @@ class MockHostelRepository implements HostelRepository {
     );
     _rooms.insert(0, room);
     return room;
+  }
+
+  @override
+  Future<HostelVisitor> logVisitor({
+    required RepositoryQuery query,
+    required LogVisitorRequest request,
+  }) async {
+    final visitorName = request.visitorName.trim();
+    final studentName = request.studentName.trim();
+    if (visitorName.isEmpty || studentName.isEmpty) {
+      throw StateError('Visitor name and student name are required');
+    }
+
+    _visitorCounter += 1;
+    final visitor = HostelVisitor(
+      id: 'vis_new_$_visitorCounter',
+      visitorName: visitorName,
+      relation: request.relation.trim().isEmpty ? '—' : request.relation.trim(),
+      studentName: studentName,
+      sisStudentId: request.sisStudentId.trim(),
+      checkIn: _formatCheckIn(),
+      checkOut: null,
+      passId: 'HO-VIS-$_visitorCounter',
+      status: HostelVisitorStatus.active,
+    );
+    _activeVisitors.insert(0, visitor);
+    return visitor;
+  }
+
+  static String _formatCheckIn() {
+    final now = DateTime.now();
+    final hour12 = now.hour % 12 == 0 ? 12 : now.hour % 12;
+    final minute = now.minute.toString().padLeft(2, '0');
+    final period = now.hour < 12 ? 'AM' : 'PM';
+    return '$hour12:$minute $period';
   }
 }
