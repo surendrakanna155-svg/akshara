@@ -26,4 +26,8 @@ abstract class HostelRepository {
     required RepositoryQuery query,
     required CheckoutHostelStudentRequest request,
   });
+  Future<HostelRoom> createHostelRoom({
+    required RepositoryQuery query,
+    required CreateHostelRoomRequest request,
+  });
 }

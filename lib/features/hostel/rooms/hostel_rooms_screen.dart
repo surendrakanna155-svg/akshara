@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -10,6 +11,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../hostel_models.dart';
 import '../hostel_providers.dart';
+import '../hostel_workflow_actions.dart';
 import '../widgets/hostel_kpi_row.dart';
 import '../widgets/hostel_module_scaffold.dart';
 
@@ -42,7 +44,8 @@ class HostelRoomsScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageHostel,
         child: OutlinedButton.icon(
-          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add room'),
+          key: QaTestKeys.hostelAddRoomButton,
+          onPressed: () => showCreateHostelRoomDialog(context, ref),
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Add room'),
         ),

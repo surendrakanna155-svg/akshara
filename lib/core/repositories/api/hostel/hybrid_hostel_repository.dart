@@ -94,5 +94,15 @@ class HybridHostelRepository implements HostelRepository {
         mockCall: () =>
             _mock.checkoutHostelStudent(query: query, request: request),
       );
+
+  @override
+  Future<HostelRoom> createHostelRoom({
+    required RepositoryQuery query,
+    required CreateHostelRoomRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.createHostelRoom(query: query, request: request),
+        mockCall: () => _mock.createHostelRoom(query: query, request: request),
+      );
 }
 

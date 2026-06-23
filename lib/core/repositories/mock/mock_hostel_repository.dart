@@ -16,6 +16,7 @@ class MockHostelRepository implements HostelRepository {
   final List<HostelStudent> _students;
   final List<HostelRoom> _rooms;
   int _studentCounter = 5;
+  int _roomCounter = 5;
 
   HostelOccupancyMetrics get _occupancyMetrics {
     final totalBeds = _rooms.fold<int>(0, (sum, room) => sum + room.totalBeds);
@@ -733,5 +734,43 @@ class MockHostelRepository implements HostelRepository {
     );
     _students[studentIndex] = checkedOut;
     return checkedOut;
+  }
+
+  @override
+  Future<HostelRoom> createHostelRoom({
+    required RepositoryQuery query,
+    required CreateHostelRoomRequest request,
+  }) async {
+    final block = request.block.trim();
+    final roomNumber = request.roomNumber.trim();
+    if (block.isEmpty || roomNumber.isEmpty) {
+      throw StateError('Block and room number are required');
+    }
+    if (request.totalBeds <= 0) {
+      throw StateError('A room must have at least one bed');
+    }
+    final duplicate = _rooms.any(
+      (room) =>
+          room.block.toLowerCase() == block.toLowerCase() &&
+          room.roomNumber.toLowerCase() == roomNumber.toLowerCase(),
+    );
+    if (duplicate) {
+      throw StateError('Room $block $roomNumber already exists');
+    }
+
+    _roomCounter += 1;
+    final room = HostelRoom(
+      id: 'room_$_roomCounter',
+      block: block,
+      roomNumber: roomNumber,
+      floor: request.floor,
+      type: request.type,
+      totalBeds: request.totalBeds,
+      occupiedBeds: 0,
+      status: HostelRoomStatus.vacant,
+      facilities: request.facilities.trim(),
+    );
+    _rooms.insert(0, room);
+    return room;
   }
 }

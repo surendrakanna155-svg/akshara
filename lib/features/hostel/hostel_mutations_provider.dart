@@ -119,3 +119,34 @@ final checkoutHostelStudentProvider =
     AsyncNotifierProvider<CheckoutHostelStudentNotifier, HostelStudent?>(
   CheckoutHostelStudentNotifier.new,
 );
+
+class CreateHostelRoomNotifier extends AsyncNotifier<HostelRoom?> {
+  @override
+  FutureOr<HostelRoom?> build() => null;
+
+  Future<HostelRoom?> execute(CreateHostelRoomRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHostel(ref);
+      try {
+        final result = await ref.read(hostelRepositoryProvider).createHostelRoom(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(hostelRoomsFutureProvider)
+          ..invalidate(hostelDashboardFutureProvider)
+          ..invalidate(hostelReportsFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final createHostelRoomProvider =
+    AsyncNotifierProvider<CreateHostelRoomNotifier, HostelRoom?>(
+  CreateHostelRoomNotifier.new,
+);

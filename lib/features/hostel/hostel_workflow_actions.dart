@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure.dart';
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/forms/akshara_form_field.dart';
+import '../../shared/widgets/akshara_dialog.dart';
+import '../../shared/widgets/akshara_motion.dart';
 import 'hostel_models.dart';
 import 'hostel_mutations_provider.dart';
 import 'hostel_requests.dart';
+
+void _showHostelMutationError(BuildContext context, Object error) {
+  final failure = error is ApiFailureException
+      ? error.failure
+      : apiFailureMapper.fromException(error);
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(failure.message)),
+  );
+}
+
+String _hostelRoomTypeLabel(HostelRoomType type) => switch (type) {
+      HostelRoomType.standard => 'Standard',
+      HostelRoomType.ac => 'AC',
+      HostelRoomType.dormitory => 'Dormitory',
+      HostelRoomType.staff => 'Staff',
+    };
 
 Future<void> showAdmitHostelStudentDialog(
   BuildContext context,
@@ -210,3 +231,110 @@ Future<void> transferHostelStudentRoom(
   HostelStudent student,
 ) =>
     showAssignHostelRoomDialog(context, ref, student: student);
+
+Future<void> showCreateHostelRoomDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final blockController = TextEditingController(text: 'A');
+  final roomNumberController = TextEditingController();
+  final floorController = TextEditingController(text: '1');
+  final bedsController = TextEditingController(text: '2');
+  final facilitiesController = TextEditingController();
+  var type = HostelRoomType.standard;
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Add room',
+      icon: Icons.meeting_room_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Block',
+            controller: blockController,
+            required: true,
+            hint: 'e.g. A',
+          ),
+          AksharaFormField(
+            label: 'Room number',
+            controller: roomNumberController,
+            required: true,
+            hint: 'e.g. 204',
+          ),
+          AksharaFormField(
+            label: 'Floor',
+            controller: floorController,
+            keyboardType: TextInputType.number,
+          ),
+          DropdownMenu<HostelRoomType>(
+            initialSelection: type,
+            label: const Text('Type'),
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              for (final option in HostelRoomType.values)
+                DropdownMenuEntry(
+                  value: option,
+                  label: _hostelRoomTypeLabel(option),
+                ),
+            ],
+            onSelected: (value) {
+              if (value != null) type = value;
+            },
+          ),
+          AksharaFormField(
+            label: 'Total beds',
+            controller: bedsController,
+            keyboardType: TextInputType.number,
+            required: true,
+          ),
+          AksharaFormField(
+            label: 'Facilities',
+            controller: facilitiesController,
+            hint: 'e.g. Study desk, attached bath',
+          ),
+        ],
+      ),
+      actions: [
+        AksharaDialogActions(
+          confirmLabel: 'Create',
+          confirmKey: QaTestKeys.hostelCreateRoomDialogSubmitButton,
+          onCancel: () => Navigator.of(context).pop(false),
+          onConfirm: () {
+            if (blockController.text.trim().isEmpty ||
+                roomNumberController.text.trim().isEmpty) {
+              return;
+            }
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final room = await ref.read(createHostelRoomProvider.notifier).execute(
+          CreateHostelRoomRequest(
+            block: blockController.text.trim(),
+            roomNumber: roomNumberController.text.trim(),
+            floor: int.tryParse(floorController.text.trim()) ?? 1,
+            type: type,
+            totalBeds: int.tryParse(bedsController.text.trim()) ?? 1,
+            facilities: facilitiesController.text.trim(),
+          ),
+        );
+    if (!context.mounted || room == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hostelCreateRoomSuccessSnackbar,
+        content: Text('Room ${room.block} ${room.roomNumber} added'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showHostelMutationError(context, error);
+  }
+}

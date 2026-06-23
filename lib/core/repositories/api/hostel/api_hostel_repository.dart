@@ -102,4 +102,12 @@ class ApiHostelRepository implements HostelRepository {
   }) async {
     throw ApiNotConnectedException('HostelRepository', 'checkoutHostelStudent');
   }
+
+  @override
+  Future<HostelRoom> createHostelRoom({
+    required RepositoryQuery query,
+    required CreateHostelRoomRequest request,
+  }) async {
+    throw ApiNotConnectedException('HostelRepository', 'createHostelRoom');
+  }
 }

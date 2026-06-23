@@ -94,6 +94,50 @@ void main() {
           .firstWhere((s) => s.id == 'ho_stu_1');
       expect(student.room, 'B-401');
     });
+
+    test('createHostelRoom adds a vacant room to the catalog', () async {
+      final repo = MockHostelRepository();
+      final countBefore = (await repo.getRooms(query: query)).items.length;
+
+      final room = await repo.createHostelRoom(
+        query: query,
+        request: const CreateHostelRoomRequest(
+          block: 'D',
+          roomNumber: '101',
+          floor: 1,
+          type: HostelRoomType.ac,
+          totalBeds: 3,
+          facilities: 'AC, study desk',
+        ),
+      );
+
+      final roomsAfter = await repo.getRooms(query: query);
+      expect(roomsAfter.items.length, countBefore + 1);
+      expect(room.status, HostelRoomStatus.vacant);
+      expect(room.occupiedBeds, 0);
+      expect(room.totalBeds, 3);
+      expect(roomsAfter.items.any((r) => r.id == room.id), isTrue);
+    });
+
+    test('createHostelRoom rejects a duplicate block + room number', () async {
+      final repo = MockHostelRepository();
+      final existing = (await repo.getRooms(query: query)).items.first;
+
+      expect(
+        () => repo.createHostelRoom(
+          query: query,
+          request: CreateHostelRoomRequest(
+            block: existing.block,
+            roomNumber: existing.roomNumber,
+            floor: existing.floor,
+            type: existing.type,
+            totalBeds: existing.totalBeds,
+            facilities: existing.facilities,
+          ),
+        ),
+        throwsStateError,
+      );
+    });
   });
 
   group('Hostel RBAC mutations', () {
@@ -138,6 +182,60 @@ void main() {
       expect(
         container.read(checkoutHostelStudentProvider).value?.status,
         HostelStudentStatus.checkedOut,
+      );
+    });
+
+    test('createHostelRoom fails without manageHostel', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(createHostelRoomProvider.notifier).execute(
+            const CreateHostelRoomRequest(
+              block: 'D',
+              roomNumber: '102',
+              floor: 1,
+              type: HostelRoomType.standard,
+              totalBeds: 2,
+              facilities: 'Study desk',
+            ),
+          );
+
+      expect(container.read(createHostelRoomProvider).hasError, isTrue);
+    });
+
+    test('createHostelRoom succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(createHostelRoomProvider.notifier).execute(
+            const CreateHostelRoomRequest(
+              block: 'D',
+              roomNumber: '103',
+              floor: 1,
+              type: HostelRoomType.standard,
+              totalBeds: 2,
+              facilities: 'Study desk',
+            ),
+          );
+
+      expect(container.read(createHostelRoomProvider).hasValue, isTrue);
+      expect(
+        container.read(createHostelRoomProvider).value?.status,
+        HostelRoomStatus.vacant,
       );
     });
   });
