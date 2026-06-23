@@ -1,4 +1,5 @@
 import '../../../features/alumni/alumni_models.dart';
+import '../../../features/alumni/alumni_requests.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
 
@@ -13,4 +14,8 @@ abstract class AlumniRepository {
   Future<PaginatedResult<MentorshipPair>> getMentorshipPairs({required RepositoryQuery query});
   Future<AlumniReportsData> getReports({required RepositoryQuery query});
   Future<AlumniSettingsData> getSettings({required RepositoryQuery query});
+  Future<AlumniRecord> addAlumni({
+    required RepositoryQuery query,
+    required AddAlumniRequest request,
+  });
 }

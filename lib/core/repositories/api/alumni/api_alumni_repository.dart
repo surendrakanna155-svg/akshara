@@ -2,6 +2,8 @@ import '../../interfaces/alumni_repository.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/alumni/alumni_models.dart';
+import '../../../../features/alumni/alumni_requests.dart';
+import '../api_exception.dart';
 import 'mapper/alumni_mapper.dart';
 import 'remote/alumni_remote_datasource.dart';
 
@@ -99,5 +101,13 @@ class ApiAlumniRepository implements AlumniRepository {
   Future<AlumniSettingsData> getSettings({required RepositoryQuery query}) async {
     final dto = await _remote.fetchSettings(query: query);
     return _mapper.toSettings(dto);
+  }
+
+  @override
+  Future<AlumniRecord> addAlumni({
+    required RepositoryQuery query,
+    required AddAlumniRequest request,
+  }) async {
+    throw ApiNotConnectedException('AlumniRepository', 'addAlumni');
   }
 }

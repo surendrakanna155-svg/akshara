@@ -857,6 +857,14 @@ abstract final class QaTestKeys {
   static const libraryAddResourceSuccessSnackbar =
       ValueKey<String>('library_add_resource_success_snackbar');
 
+  static const alumniAddButton = ValueKey<String>('alumni_add_button');
+
+  static const alumniAddDialogSubmitButton =
+      ValueKey<String>('alumni_add_dialog_submit_button');
+
+  static const alumniAddSuccessSnackbar =
+      ValueKey<String>('alumni_add_success_snackbar');
+
   static const hostelAdmitStudentButton =
       ValueKey<String>('hostel_admit_student_button');
 

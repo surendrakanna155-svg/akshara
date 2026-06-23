@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
@@ -12,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../alumni_models.dart';
 import '../alumni_providers.dart';
+import '../alumni_workflow_actions.dart';
 import '../widgets/alumni_module_scaffold.dart';
 
 /// AL-02 — Alumni Registry.
@@ -43,7 +45,8 @@ class AlumniRegistryScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAlumni,
         child: FilledButton.icon(
-          onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Add alumni'),
+          key: QaTestKeys.alumniAddButton,
+          onPressed: () => showAddAlumniDialog(context, ref),
           icon: const Icon(Icons.person_add_outlined, size: 18),
           label: const Text('Add alumni'),
         ),

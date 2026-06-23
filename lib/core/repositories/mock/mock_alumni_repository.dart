@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../features/alumni/alumni_models.dart';
+import '../../../features/alumni/alumni_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/alumni_repository.dart';
 import '../paginated_result.dart';
@@ -628,5 +629,13 @@ class MockAlumniRepository implements AlumniRepository {
         ),
       ],
     );
+  }
+
+  @override
+  Future<AlumniRecord> addAlumni({
+    required RepositoryQuery query,
+    required AddAlumniRequest request,
+  }) async {
+    return MockAlumniWriteStore.instance.addManualAlumni(request);
   }
 }
