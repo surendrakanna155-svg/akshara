@@ -127,7 +127,67 @@ class InventoryRemoteDataSource {
     return _requireData(response);
   }
 
+  /// POST /inventory/procurement/orders — returns the created purchase order
+  /// (envelope `data` is the PO object).
+  Future<Map<String, dynamic>> createProcurementOrder({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryApiPaths.procurementOrders,
+      queryParameters: _queryParams(query),
+      data: body,
+    );
+    return _writeData(response);
+  }
+
+  /// POST /inventory/procurement/orders/{id}/approve — envelope `data` is
+  /// `{ purchaseOrder, apCommitmentId, financePostingId }`.
+  Future<Map<String, dynamic>> approveProcurementOrder({
+    required RepositoryQuery query,
+    required String orderId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryApiPaths.approveProcurementOrder(orderId),
+      queryParameters: _queryParams(query),
+    );
+    return _writeData(response);
+  }
+
+  /// POST /inventory/procurement/orders/{id}/receive — envelope `data` is the
+  /// GRN summary `{ grnId, grnNumber }`. Caller must supply received lines.
+  Future<Map<String, dynamic>> receiveProcurementOrder({
+    required RepositoryQuery query,
+    required String orderId,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryApiPaths.receiveProcurementOrder(orderId),
+      queryParameters: _queryParams(query),
+      data: body,
+    );
+    return _writeData(response);
+  }
+
+  /// GET /inventory/procurement/orders/{id} — envelope `data` is
+  /// `{ purchaseOrder, lines }`.
+  Future<Map<String, dynamic>> fetchProcurementOrderDetail({
+    required RepositoryQuery query,
+    required String orderId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryApiPaths.procurementOrderDetail(orderId),
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
+
   Map<String, dynamic> _requireData(Response<Map<String, dynamic>> response) {
+    return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
+  }
+
+  /// Unwraps the `{data, error}` envelope returned by write endpoints.
+  Map<String, dynamic> _writeData(Response<Map<String, dynamic>> response) {
     return ApiEnvelopeDto.fromJson(_responseMap(response)).requireData();
   }
 

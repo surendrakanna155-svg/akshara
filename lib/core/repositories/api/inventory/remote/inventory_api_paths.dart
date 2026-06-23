@@ -17,4 +17,16 @@ abstract final class InventoryApiPaths {
 
   static String intelligenceProcurementAdvance(String purchaseOrderId) =>
       '$base/intelligence/procurement-workflow/$purchaseOrderId/advance';
+
+  // Procurement order write endpoints (backed by inventory_finance_router.ts).
+  static const String procurementOrders = '$base/procurement/orders';
+
+  static String procurementOrderDetail(String id) =>
+      '$base/procurement/orders/$id';
+
+  static String approveProcurementOrder(String id) =>
+      '$base/procurement/orders/$id/approve';
+
+  static String receiveProcurementOrder(String id) =>
+      '$base/procurement/orders/$id/receive';
 }

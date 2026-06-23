@@ -5,7 +5,6 @@ import '../../repository_query.dart';
 import '../../../../features/inventory/inventory_models.dart';
 import '../../../../features/inventory/inventory_requests.dart';
 import '../../../../features/inventory/intelligence/inventory_intelligence_models.dart';
-import '../api_exception.dart';
 import 'mapper/inventory_intelligence_mapper.dart';
 import 'mapper/inventory_mapper.dart';
 import 'remote/inventory_remote_datasource.dart';
@@ -127,8 +126,44 @@ class ApiInventoryRepository implements InventoryRepository {
     required RepositoryQuery query,
     required CreateInventoryProcurementOrderRequest request,
   }) async {
-    throw ApiNotConnectedException(
-        'InventoryRepository', 'createProcurementOrder');
+    // The server (POST /inventory/procurement/orders) requires a vendorId,
+    // a poNumber, and structured lines [{sku, description, quantity,
+    // unitCost}]. The app request carries free-text vendorName/items and a
+    // total amount, so we translate it into a single synthetic line whose
+    // unit cost is the requested total.
+    final poNumber = request.poNumber?.trim().isNotEmpty == true
+        ? request.poNumber!.trim()
+        : 'PO-${DateTime.now().millisecondsSinceEpoch}';
+    final unitCost = _parseAmount(request.totalAmount);
+    final description =
+        request.items.trim().isEmpty ? 'Procurement item' : request.items.trim();
+    final row = await _remote.createProcurementOrder(
+      query: query,
+      body: {
+        'vendorId': request.vendorName.trim(),
+        'poNumber': poNumber,
+        'lines': [
+          {
+            'sku': 'GEN-${poNumber.toUpperCase()}',
+            'description': description,
+            'quantity': 1,
+            'unitCost': unitCost,
+          },
+        ],
+      },
+    );
+    return _mapper.toProcurementOrderFromServerRow(
+      row,
+      context: {
+        'vendorName': request.vendorName,
+        'items': request.items,
+        'totalAmount': request.totalAmount,
+        'expectedDelivery': request.expectedDelivery,
+        'requestedBy': request.requestedBy,
+        'financePoId': request.financePoId,
+        'poNumber': poNumber,
+      },
+    );
   }
 
   @override
@@ -136,8 +171,18 @@ class ApiInventoryRepository implements InventoryRepository {
     required RepositoryQuery query,
     required String orderId,
   }) async {
-    throw ApiNotConnectedException(
-        'InventoryRepository', 'approveProcurementOrder');
+    // Envelope data is { purchaseOrder, apCommitmentId, financePostingId }.
+    final data = await _remote.approveProcurementOrder(
+      query: query,
+      orderId: orderId,
+    );
+    final po = data['purchaseOrder'] as Map<String, dynamic>? ?? const {};
+    return _mapper.toProcurementOrderFromServerRow(
+      po,
+      context: {
+        'financePoId': data['apCommitmentId'] as String?,
+      },
+    );
   }
 
   @override
@@ -145,9 +190,42 @@ class ApiInventoryRepository implements InventoryRepository {
     required RepositoryQuery query,
     required String orderId,
   }) async {
-    throw ApiNotConnectedException(
-      'InventoryRepository',
-      'recordProcurementReceiveHandoff',
+    // The receive endpoint requires line-level received quantities, which the
+    // handoff action does not carry. We fully receive every outstanding line
+    // by reading the PO detail first, then post the receipt. The receive
+    // response only returns the GRN summary, so we re-fetch the PO detail to
+    // return the updated order.
+    final detail = await _remote.fetchProcurementOrderDetail(
+      query: query,
+      orderId: orderId,
     );
+    final lines = (detail['lines'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map((line) {
+      final quantity = (line['quantity'] as num?)?.toInt() ?? 0;
+      final received = (line['quantityReceived'] as num?)?.toInt() ?? 0;
+      return {
+        'purchaseOrderLineId': line['id'] as String? ?? '',
+        'quantityReceived': quantity - received,
+      };
+    }).where((line) => (line['quantityReceived'] as int) > 0).toList();
+
+    await _remote.receiveProcurementOrder(
+      query: query,
+      orderId: orderId,
+      body: {'lines': lines},
+    );
+
+    final updated = await _remote.fetchProcurementOrderDetail(
+      query: query,
+      orderId: orderId,
+    );
+    final po = updated['purchaseOrder'] as Map<String, dynamic>? ?? const {};
+    return _mapper.toProcurementOrderFromServerRow(po);
+  }
+
+  double _parseAmount(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.]'), '');
+    return double.tryParse(cleaned) ?? 0;
   }
 }

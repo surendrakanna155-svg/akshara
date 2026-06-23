@@ -138,6 +138,41 @@ class InventoryMapper {
     );
   }
 
+  /// Adapts the procurement-order row returned by the inventory finance write
+  /// endpoints (`poToApi` shape: `id`, `poNumber`, `vendorId`, `status`,
+  /// `totalAmount` as a number, `currency`, `createdAt`) into the app's
+  /// [InventoryProcurementOrder].
+  ///
+  /// The server PO row omits several presentation-only fields the app model
+  /// carries (`vendorName`, `items`, `expectedDelivery`, `financePoId`,
+  /// `requestedBy`). When known (e.g. from the originating create request) they
+  /// are supplied via the optional [context] map and merged here; otherwise
+  /// they fall back to a safe default.
+  InventoryProcurementOrder toProcurementOrderFromServerRow(
+    Map<String, dynamic> row, {
+    Map<String, String?> context = const {},
+  }) {
+    final totalAmountRaw = row['totalAmount'];
+    final totalAmount = totalAmountRaw is num
+        ? totalAmountRaw.toString()
+        : (totalAmountRaw as String? ?? context['totalAmount'] ?? '');
+    final createdAt = row['createdAt'] as String? ?? '';
+    return InventoryProcurementOrder(
+      id: row['id'] as String? ?? '',
+      poNumber: row['poNumber'] as String? ?? context['poNumber'] ?? '',
+      vendorName: context['vendorName'] ?? row['vendorId'] as String? ?? '',
+      items: context['items'] ?? '',
+      totalAmount: totalAmount,
+      orderDate: context['orderDate'] ?? createdAt,
+      expectedDelivery: context['expectedDelivery'] ?? '',
+      status: InventoryEnumCodec.parsePurchaseOrderStatus(
+        row['status'] as String?,
+      ),
+      financePoId: context['financePoId'] ?? '',
+      requestedBy: context['requestedBy'] ?? '',
+    );
+  }
+
   List<InventoryVendor> toVendors(InventoryVendorsResponseDto dto) {
     return [for (final item in dto.items) toVendor(item)];
   }

@@ -52,6 +52,20 @@ abstract final class InventoryEnumCodec {
   static String procurementStatusToApi(InventoryProcurementStatus status) =>
       status.name;
 
+  /// Maps the procurement-order lifecycle status emitted by the inventory
+  /// finance backend (`draft`, `approved`, `partially_received`, `received`,
+  /// `cancelled`) onto the app's [InventoryProcurementStatus] enum.
+  static InventoryProcurementStatus parsePurchaseOrderStatus(String? value) {
+    return switch (value) {
+      'draft' => InventoryProcurementStatus.draft,
+      'approved' || 'partially_received' || 'ordered' =>
+        InventoryProcurementStatus.ordered,
+      'received' => InventoryProcurementStatus.received,
+      'cancelled' => InventoryProcurementStatus.cancelled,
+      _ => InventoryProcurementStatus.draft,
+    };
+  }
+
   static InventoryVendorStatus parseVendorStatus(String? value) {
     return InventoryVendorStatus.values.firstWhere(
       (status) => status.name == value,
