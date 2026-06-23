@@ -127,19 +127,31 @@ export function createParentScopedReadHandlers(
           studentIdResult,
           entityType,
         );
-        if (entityType !== "snapshot_fees") {
-          return resolved;
+        if (entityType === "snapshot_fees") {
+          const { overlayFeesSnapshotFromFinance } = await import(
+            "../pilot/pilot_operations_repository.ts"
+          );
+          return await overlayFeesSnapshotFromFinance(
+            db,
+            orgId,
+            schoolId,
+            studentIdResult,
+            resolved,
+          );
         }
-        const { overlayFeesSnapshotFromFinance } = await import(
-          "../pilot/pilot_operations_repository.ts"
-        );
-        return await overlayFeesSnapshotFromFinance(
-          db,
-          orgId,
-          schoolId,
-          studentIdResult,
-          resolved,
-        );
+        if (entityType === "snapshot_exams") {
+          const { overlayExamsSnapshotFromResults } = await import(
+            "../pilot/pilot_operations_repository.ts"
+          );
+          return await overlayExamsSnapshotFromResults(
+            db,
+            orgId,
+            schoolId,
+            studentIdResult,
+            resolved,
+          );
+        }
+        return resolved;
       });
       return jsonResponse(envelope(snapshot));
     } catch (error) {
@@ -395,9 +407,22 @@ export function createStudentScopedReadHandlers(
     const studentId = studentIdFromClaims(auth.claims);
 
     try {
-      const snapshot = await runTenant(config, auth.claims, async (db) =>
-        await store.getSnapshot(db, orgId, schoolId, studentId, entityType)
-      );
+      const snapshot = await runTenant(config, auth.claims, async (db) => {
+        const resolved = await store.getSnapshot(db, orgId, schoolId, studentId, entityType);
+        if (entityType === "snapshot_exams") {
+          const { overlayExamsSnapshotFromResults } = await import(
+            "../pilot/pilot_operations_repository.ts"
+          );
+          return await overlayExamsSnapshotFromResults(
+            db,
+            orgId,
+            schoolId,
+            studentId,
+            resolved as Record<string, unknown>,
+          );
+        }
+        return resolved;
+      });
       return jsonResponse(envelope(snapshot));
     } catch (error) {
       if (error instanceof TenantDbNotConfiguredError) {

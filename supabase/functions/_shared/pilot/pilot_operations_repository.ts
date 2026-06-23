@@ -728,3 +728,50 @@ export async function overlayFeesSnapshotFromFinance(
     installments,
   };
 }
+
+/**
+ * Overlay the parent/student "exams" snapshot with the child's REAL published
+ * exam results (and correct child identity). Mirrors the attendance/fees
+ * overlays so published marks reach the parent durably instead of stale seed
+ * snapshot data. Returns the snapshot untouched (minus identity fix) when no
+ * results are published yet.
+ */
+export async function overlayExamsSnapshotFromResults(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+  snapshot: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  // Correct child identity from real records (seed snapshot may be stale).
+  let childName = snapshot.childName;
+  let childClass = snapshot.childClass;
+  try {
+    const context = await loadStudentParentSnapshotContext(db, orgId, schoolId, studentId);
+    if (context.childName) childName = context.childName;
+    if (context.childClass) childClass = context.childClass;
+  } catch {
+    // keep snapshot identity on any lookup failure
+  }
+
+  const { listPublishedResultsForStudent } = await import(
+    "../academics/exam_administration/exam_administration_repository.ts"
+  );
+  const published = await listPublishedResultsForStudent(db, orgId, schoolId, studentId);
+
+  if (published.length === 0) {
+    return { ...snapshot, childName, childClass };
+  }
+
+  const examResults = published.map((r) => ({
+    id: String(r.markEntryId ?? ""),
+    title: String(r.subject ?? r.examTitle ?? ""),
+    termLabel: String(r.termLabel ?? ""),
+    dateLabel: String(r.dateLabel ?? ""),
+    scoreObtained: Number(r.scoreObtained ?? 0),
+    maxScore: Number(r.maxScore ?? 0),
+    grade: String(r.grade ?? ""),
+  }));
+
+  return { ...snapshot, childName, childClass, examResults };
+}
