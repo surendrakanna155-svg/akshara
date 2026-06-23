@@ -20,6 +20,8 @@ import { setRequestContext } from "./request_context.ts";
 import { createServiceClient, type UserRow } from "./db.ts";
 import { resolveStudentLoginTargetWithClient } from "./auth_login_helpers.ts";
 import { envelope, errorEnvelope, jsonResponse, readJson } from "./http.ts";
+import { isSmsConfigured, sendOtpSms, type SmsConfig } from "./sms_provider.ts";
+import { evaluateOtpRateLimit } from "./otp_rate_limit.ts";
 
 interface LoginBody {
   identifier?: string;
@@ -57,6 +59,33 @@ function normalizePhone(identifier: string, type?: string): string {
 
 function generateOtp(): string {
   return `${Math.floor(100000 + Math.random() * 900000)}`;
+}
+
+/** Best-effort source IP from proxy headers (Nginx sets X-Forwarded-For). */
+function clientIp(req: Request): string | null {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return req.headers.get("x-real-ip");
+}
+
+function smsConfigFrom(config: AppConfig): SmsConfig {
+  return {
+    provider: config.smsProvider,
+    apiKey: config.smsApiKey,
+    fast2smsRoute: config.smsFast2smsRoute,
+    fast2smsSenderId: config.smsFast2smsSenderId,
+    fast2smsMessageId: config.smsFast2smsMessageId,
+  };
+}
+
+/**
+ * A phone gets the OTP in the response (no SMS) when it is explicitly
+ * allowlisted, or when global dev mode is on outside production.
+ */
+function canReturnOtpInResponse(config: AppConfig, phone: string): boolean {
+  if (config.otpPilotPhones.includes(phone)) return true;
+  if (config.otpDevMode && config.environment !== "production") return true;
+  return false;
 }
 
 function buildUserPayload(
@@ -210,36 +239,108 @@ export async function handleLogin(req: Request, config: AppConfig): Promise<Resp
     }
   }
 
+  // --- Rate limiting (per phone + per IP, sliding window) ---
+  const ip = clientIp(req);
+  const windowStartIso = new Date(
+    Date.now() - config.otpRateWindowSeconds * 1000,
+  ).toISOString();
+
+  const { data: recentPhone } = await client
+    .from("otp_requests")
+    .select("created_at")
+    .eq("phone", phone)
+    .gte("created_at", windowStartIso);
+
+  let ipCount = 0;
+  if (ip) {
+    const { count } = await client
+      .from("otp_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("ip_address", ip)
+      .gte("created_at", windowStartIso);
+    ipCount = count ?? 0;
+  }
+
+  const decision = evaluateOtpRateLimit(
+    (recentPhone ?? []).map((r) => new Date(r.created_at as string).getTime()),
+    ipCount,
+    {
+      windowSeconds: config.otpRateWindowSeconds,
+      maxPerPhone: config.otpMaxRequestsPerPhone,
+      maxPerIp: config.otpMaxRequestsPerIp,
+      resendCooldownSeconds: config.otpResendCooldownSeconds,
+    },
+    Date.now(),
+  );
+  if (!decision.allowed) {
+    const headers: Record<string, string> = {};
+    if (decision.retryAfterSeconds) {
+      headers["Retry-After"] = String(decision.retryAfterSeconds);
+    }
+    return jsonResponse(
+      {
+        data: null,
+        error: {
+          code: decision.code ?? "OTP_RATE_LIMITED",
+          message: "Too many OTP requests. Please wait before trying again.",
+        },
+      },
+      { status: 429, headers },
+    );
+  }
+
   const otp = generateOtp();
   const otpHash = await hashToken(otp);
   const expiresAt = expiresAtIso(config.otpTtlSeconds);
+
+  const returnOtp = canReturnOtpInResponse(config, phone);
+  const deliveryChannel = returnOtp ? "response" : "sms";
 
   const { error } = await client.from("otp_requests").insert({
     phone,
     otp_hash: otpHash,
     organization_slug: null,
     expires_at: expiresAt,
+    ip_address: ip,
+    delivery_channel: deliveryChannel,
     ...otpMeta,
   });
   if (error) {
     return errorEnvelope("SERVER_ERROR", error.message, 500);
   }
 
-  if (!config.otpDevMode && config.environment === "production") {
-    const smsConfigured = Boolean(Deno.env.get("SMS_PROVIDER_API_KEY"));
-    if (!smsConfigured) {
-      return errorEnvelope("SMS_NOT_CONFIGURED", "SMS provider is not configured", 503);
-    }
+  // --- Delivery ---
+  // Pilot/dev numbers receive the code in the response (no SMS spend).
+  if (returnOtp) {
+    return jsonResponse(
+      envelope({
+        success: true,
+        message: "OTP issued (pilot/dev: returned in response, not by SMS).",
+        otp,
+        sessionId: crypto.randomUUID(),
+      }),
+    );
   }
 
-  const message = config.otpDevMode
-    ? `OTP sent (dev mode). Use code ${otp} for ${phone}.`
-    : "OTP sent successfully.";
+  // Everyone else: real SMS. No code is ever leaked in the response.
+  const smsConfig = smsConfigFrom(config);
+  if (!isSmsConfigured(smsConfig)) {
+    return errorEnvelope("SMS_NOT_CONFIGURED", "SMS provider is not configured", 503);
+  }
+
+  const sent = await sendOtpSms(smsConfig, phone, otp);
+  if (!sent.ok) {
+    return errorEnvelope(
+      sent.code ?? "SMS_SEND_FAILED",
+      sent.detail ?? "Failed to send OTP SMS",
+      502,
+    );
+  }
 
   return jsonResponse(
     envelope({
       success: true,
-      message,
+      message: "OTP sent successfully.",
       sessionId: crypto.randomUUID(),
     }),
   );
