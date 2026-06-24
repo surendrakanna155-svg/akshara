@@ -166,6 +166,210 @@ export async function handleCreateLeaveRequest(req: Request, config: AppConfig):
 }
 
 /**
+ * Flips a single leave request's status inside the `snapshot_leave` snapshot
+ * (requests live under the `requests` array) and recomputes `pendingCount`.
+ * Shared by approve/reject. Returns the updated request, or throws when absent.
+ */
+async function decideLeaveRequest(
+  req: Request,
+  config: AppConfig,
+  leaveRequestId: string,
+  status: "approved" | "rejected",
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const comment = str(body, "comment") ?? "";
+
+    let updated: Record<string, unknown> | null = null;
+    await writeStore.mutateSnapshot(
+      db,
+      organizationId,
+      schoolId,
+      "snapshot_leave",
+      (current) => {
+        const requests = Array.isArray(current.requests)
+          ? current.requests as Array<Record<string, unknown>>
+          : [];
+        const index = requests.findIndex((r) => String(r.id ?? "") === leaveRequestId);
+        if (index < 0) return current;
+        updated = { ...requests[index], status, decisionComment: comment };
+        const nextRequests = [...requests];
+        nextRequests[index] = updated;
+        const pendingCount = nextRequests.filter(
+          (r) => String(r.status ?? "") === "pending",
+        ).length;
+        return { ...current, requests: nextRequests, pendingCount };
+      },
+    );
+
+    if (updated === null) {
+      throw new WriteNotFoundError(`Leave request not found: ${leaveRequestId}`);
+    }
+
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit(`hr.leave_request.${status}`, "hr_leave_request", leaveRequestId, {
+        status,
+      }),
+      request,
+    );
+    return { payload: updated, status: 200 };
+  });
+}
+
+/** POST /hr/leave/{id}/approve — approve a pending leave request. */
+export async function handleApproveLeaveRequest(
+  req: Request,
+  config: AppConfig,
+  leaveRequestId: string,
+): Promise<Response> {
+  return await decideLeaveRequest(req, config, leaveRequestId, "approved");
+}
+
+/** POST /hr/leave/{id}/reject — reject a pending leave request. */
+export async function handleRejectLeaveRequest(
+  req: Request,
+  config: AppConfig,
+  leaveRequestId: string,
+): Promise<Response> {
+  return await decideLeaveRequest(req, config, leaveRequestId, "rejected");
+}
+
+/**
+ * POST /hr/performance — create a performance review (entity_type 'review').
+ */
+export async function handleCreatePerformanceReview(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const id = crypto.randomUUID();
+    const payload: Record<string, unknown> = {
+      id,
+      employeeId: requireStr(body, "employeeId", "employee_id"),
+      employeeName: str(body, "employeeName", "employee_name") ?? "",
+      department: str(body, "department") ?? "academics",
+      cycle: str(body, "cycle") ?? "",
+      reviewer: str(body, "reviewer") ?? "",
+      rating: intOr(body, 0, "rating"),
+      status: str(body, "status") ?? "draft",
+      summary: str(body, "summary") ?? "",
+      reviewDate: str(body, "reviewDate", "review_date") ?? isoDate(new Date()),
+    };
+    const saved = await writeStore.insert(db, organizationId, schoolId, "review", id, payload);
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.performance_review.created", "hr_performance_review", id, {
+        employeeId: payload.employeeId,
+      }),
+      request,
+    );
+    return { payload: saved, status: 201 };
+  });
+}
+
+/** PUT /hr/performance/{id} — update an existing performance review. */
+export async function handleUpdatePerformanceReview(
+  req: Request,
+  config: AppConfig,
+  reviewId: string,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const existing = await writeStore.find(db, organizationId, schoolId, "review", reviewId);
+    if (!existing) {
+      throw new WriteNotFoundError(`Performance review not found: ${reviewId}`);
+    }
+    const next: Record<string, unknown> = {
+      ...existing,
+      cycle: str(body, "cycle") ?? existing.cycle,
+      reviewer: str(body, "reviewer") ?? existing.reviewer,
+      rating: "rating" in body ? intOr(body, intOr(existing, 0, "rating"), "rating") : existing.rating,
+      status: str(body, "status") ?? existing.status,
+      summary: str(body, "summary") ?? existing.summary,
+    };
+    const saved = await writeStore.replace(db, organizationId, schoolId, "review", reviewId, next);
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.performance_review.updated", "hr_performance_review", reviewId, {}),
+      request,
+    );
+    return { payload: saved ?? next, status: 200 };
+  });
+}
+
+/**
+ * POST /hr/recruitment — open a recruitment requisition (entity_type 'opening').
+ */
+export async function handleCreateRecruitmentOpening(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const id = crypto.randomUUID();
+    const payload: Record<string, unknown> = {
+      id,
+      title: requireStr(body, "title"),
+      department: str(body, "department") ?? "academics",
+      role: str(body, "role") ?? "staff",
+      openings: Math.max(1, intOr(body, 1, "openings")),
+      applicants: 0,
+      status: str(body, "status") ?? "open",
+      postedDate: str(body, "postedDate", "posted_date") ?? isoDate(new Date()),
+    };
+    const saved = await writeStore.insert(db, organizationId, schoolId, "opening", id, payload);
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.recruitment_opening.created", "hr_recruitment_opening", id, {
+        title: payload.title,
+      }),
+      request,
+    );
+    return { payload: saved, status: 201 };
+  });
+}
+
+/** PUT /hr/recruitment/{id} — update a recruitment requisition. */
+export async function handleUpdateRecruitmentOpening(
+  req: Request,
+  config: AppConfig,
+  openingId: string,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const existing = await writeStore.find(db, organizationId, schoolId, "opening", openingId);
+    if (!existing) {
+      throw new WriteNotFoundError(`Recruitment opening not found: ${openingId}`);
+    }
+    const next: Record<string, unknown> = {
+      ...existing,
+      title: str(body, "title") ?? existing.title,
+      openings: "openings" in body
+        ? Math.max(1, intOr(body, intOr(existing, 1, "openings"), "openings"))
+        : existing.openings,
+      applicants: "applicants" in body
+        ? intOr(body, intOr(existing, 0, "applicants"), "applicants")
+        : existing.applicants,
+      status: str(body, "status") ?? existing.status,
+    };
+    const saved = await writeStore.replace(db, organizationId, schoolId, "opening", openingId, next);
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.recruitment_opening.updated", "hr_recruitment_opening", openingId, {}),
+      request,
+    );
+    return { payload: saved ?? next, status: 200 };
+  });
+}
+
+/**
  * POST /hr/payroll/run — process a payroll run. Runs live inside the
  * `snapshot_payroll` snapshot under the `runs` array, so this marks the
  * matching run processed (or appends one when absent).

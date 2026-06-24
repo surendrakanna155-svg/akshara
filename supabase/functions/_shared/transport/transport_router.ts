@@ -16,6 +16,7 @@ import {
   handleActivateRoute,
   handleAssignStudentTransport,
   handleCreateRoute,
+  handleRecordAttendance,
   handleRemoveStudentTransport,
   handleTransferStudentTransport,
 } from "./transport_write_handlers.ts";
@@ -47,6 +48,11 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     if (path === "/transport/allocations") {
       return { handler: handleAssignStudentTransport };
     }
+    // --- A6 writes (AgentC) ---
+    if (path === "/transport/attendance") {
+      return { handler: handleRecordAttendance };
+    }
+    // --- end A6 writes (AgentC) ---
     if (/^\/transport\/routes\/[^/]+\/activate$/.test(path)) {
       return { handler: handleActivateRoute };
     }

@@ -13,8 +13,19 @@ import {
   applyAttendanceCorrection,
   updateAttendanceCorrectionStatus,
 } from "../attendance/attendance_correction_repository.ts";
+import { flipHostelLeaveStatus } from "../hostel/hostel_write_handlers.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
 import { insertDomainEffect } from "./approval_repository.ts";
+
+/**
+ * `entity_type` values that mark a leave approval as a hostel leave/gate-pass,
+ * so the decision flips the hostel leave row (not just records an effect).
+ */
+const HOSTEL_LEAVE_ENTITY_TYPES = new Set([
+  "hostel_leave",
+  "hostel_leave_request",
+  "hostel_gate_pass",
+]);
 
 export type DomainEffectAction = "approved" | "rejected";
 
@@ -72,20 +83,31 @@ export async function applyApprovalTypeHandler(
       break;
 
     case "studentLeave":
+    case "staffLeave": {
+      const leaveStatus = effectAction === "approved" ? "approved" : "rejected";
       effectPayload = {
         ...effectPayload,
-        leaveStatus: effectAction === "approved" ? "approved" : "rejected",
+        leaveStatus,
         leaveId: request.entity_id,
       };
+      // A hostel leave/gate-pass is approved through the same studentLeave type;
+      // flip the underlying hostel_entities row so its status reflects the
+      // decision (previously only the approval effect was recorded).
+      if (HOSTEL_LEAVE_ENTITY_TYPES.has(request.entity_type)) {
+        const flipped = await flipHostelLeaveStatus(
+          db,
+          organizationId,
+          schoolId,
+          request.entity_id,
+          leaveStatus,
+        );
+        effectPayload = {
+          ...effectPayload,
+          hostelLeaveUpdated: flipped !== null,
+        };
+      }
       break;
-
-    case "staffLeave":
-      effectPayload = {
-        ...effectPayload,
-        leaveStatus: effectAction === "approved" ? "approved" : "rejected",
-        leaveId: request.entity_id,
-      };
-      break;
+    }
 
     case "attendanceCorrection":
       if (effectAction === "approved") {
