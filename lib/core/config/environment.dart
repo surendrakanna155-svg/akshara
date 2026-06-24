@@ -56,9 +56,14 @@ class Environment {
     disableDemoAuth: true,
   );
 
+  // Live backend: the public Akshara edge API on the VPS. Routes are served at
+  // the ROOT (no `/v1` suffix). Overridable via `--dart-define=API_BASE_URL`.
+  // `enableApiMode` stays false here so unit/Patrol tests that build the
+  // production env keep running on mocks; the live release turns it on via
+  // `config/live_release.json` (see scripts/build_release.sh).
   static const production = Environment(
     name: EnvironmentName.production,
-    apiBaseUrl: 'https://api.aksharaerp.com/v1',
+    apiBaseUrl: 'https://akshara.veloraunisexsalon.com',
     enableApiMode: false,
     enableLogging: false,
     requireTls: true,

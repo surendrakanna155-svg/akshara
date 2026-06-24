@@ -13,37 +13,24 @@ export PATH="${ROOT}/scripts/ios:${PATH}"
 
 TARGET="${1:-all}"
 
-# Staging pilot configuration — see docs/Operations/Deployment-Guide.md
-STAGING_API_BASE="https://oeicxjpewrumkfgyqnnj.supabase.co/functions/v1/api"
+# A1: live-as-default. All API mode / module flags / live URL live in ONE
+# reviewable source of truth, consumed by --dart-define-from-file. Edit flags
+# there, not here. Override with RELEASE_CONFIG=path/to.json if ever needed.
+RELEASE_CONFIG="${RELEASE_CONFIG:-config/live_release.json}"
+if [[ ! -f "${RELEASE_CONFIG}" ]]; then
+  echo "ERROR: release config not found: ${RELEASE_CONFIG}" >&2
+  exit 1
+fi
+API_BASE="$(grep -o '"API_BASE_URL"[^,]*' "${RELEASE_CONFIG}" | sed 's/.*: *"\(.*\)"/\1/')"
 
 DART_DEFINES=(
-  "--dart-define=APP_ENV=staging"
-  "--dart-define=API_BASE_URL=${STAGING_API_BASE}"
-  "--dart-define=ENABLE_API_MODE=true"
-  "--dart-define=AUTH_API_ENABLED=true"
-  "--dart-define=AUTH_API_ENABLED=true"
-  "--dart-define=ADMISSIONS_API_ENABLED=true"
-  "--dart-define=FINANCE_API_ENABLED=true"
-  "--dart-define=SIS_API_ENABLED=true"
-  "--dart-define=ACADEMIC_API_ENABLED=true"
-  "--dart-define=ACADEMIC_TIMETABLE_API_ENABLED=true"
-  "--dart-define=ANALYTICS_INTELLIGENCE_API_ENABLED=true"
-  "--dart-define=AI_COPILOT_ENABLED=true"
-  "--dart-define=PAYMENT_API_ENABLED=true"
-  "--dart-define=COMMUNICATION_API_ENABLED=true"
-  "--dart-define=AUDIT_API_ENABLED=true"
-  "--dart-define=ONBOARDING_API_ENABLED=true"
-  "--dart-define=PARENT_API_ENABLED=true"
-  "--dart-define=TEACHER_API_ENABLED=true"
-  "--dart-define=STUDENT_API_ENABLED=true"
-  "--dart-define=PHASE5_API_ENABLED=true"
-  "--dart-define=INVENTORY_FINANCE_API_ENABLED=true"
-  "--dart-define=SCHOOL_COMPLETION_API_ENABLED=true"
+  "--dart-define-from-file=${RELEASE_CONFIG}"
 )
 
 echo "==> Akshara release build (v$(grep '^version:' pubspec.yaml | awk '{print $2}'))"
 echo "==> Target: ${TARGET}"
-echo "==> API: ${STAGING_API_BASE}"
+echo "==> Config: ${RELEASE_CONFIG} (APP_ENV=production, live API mode)"
+echo "==> API: ${API_BASE}"
 
 build_apk() {
   echo "==> Building release APK..."
