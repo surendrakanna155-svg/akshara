@@ -95,7 +95,10 @@ export async function handleSaveDashboardLayout(req: Request, config: AppConfig)
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
-  const dashboardKey = body.dashboardKey ?? "default";
+  // dashboardKey can come from the body or, for role-scoped paths
+  // (/widgets/layouts/:role), the query param injected by the router.
+  const dashboardKey = body.dashboardKey ??
+    new URL(req.url).searchParams.get("dashboardKey") ?? "default";
 
   try {
     const id = await withTenantContext(config, auth.claims, async (db) => {
@@ -111,6 +114,44 @@ export async function handleSaveDashboardLayout(req: Request, config: AppConfig)
       return rows[0]!.id;
     });
     return jsonResponse(envelope({ id, dashboardKey, layout: body.layout }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("WIDGET_PLATFORM_ERROR", String(error), 500);
+  }
+}
+
+/**
+ * Resets a role's saved layout back to the pack default by clearing any tenant
+ * override for that dashboard key, then returns the default layout. Used by the
+ * client's `/widgets/layouts/:role/reset` call.
+ */
+export async function handleResetRoleLayout(
+  req: Request,
+  config: AppConfig,
+  role: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "manageDynamicWidgets") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    await withTenantContext(config, auth.claims, async (db) => {
+      await db.queryObject(
+        `DELETE FROM dashboard_layouts
+         WHERE organization_id = $1 AND school_id = $2
+           AND dashboard_key = $3
+           AND (owner_user_id = $4 OR owner_user_id IS NULL)`,
+        [orgId, schoolId, role, auth.claims.sub],
+      );
+    });
+    return jsonResponse(
+      envelope({ id: null, dashboardKey: role, layout: DEFAULT_WIDGET_LAYOUT }),
+    );
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("WIDGET_PLATFORM_ERROR", String(error), 500);

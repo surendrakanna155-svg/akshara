@@ -29,7 +29,7 @@ export async function loadStudentSignals(
     hw_submitted: number;
     hw_total: number;
     avg_marks_pct: number;
-    comm_gaps: number;
+    behavior_incidents: number;
   }>(
     `SELECT
        s.id AS student_id,
@@ -41,7 +41,7 @@ export async function loadStudentSignals(
        coalesce(hw.submitted, 0)::int AS hw_submitted,
        coalesce(hw.total, 0)::int AS hw_total,
        coalesce(marks.avg_pct, 70)::int AS avg_marks_pct,
-       coalesce(comm.gaps, 0)::int AS comm_gaps
+       coalesce(conduct.incident_count, 0)::int AS behavior_incidents
      FROM students s
      LEFT JOIN LATERAL (
        SELECT class_name, section_name
@@ -71,8 +71,14 @@ export async function loadStudentSignals(
        WHERE em.student_id = s.id AND em.organization_id = $1 AND em.school_id = $2
      ) marks ON true
      LEFT JOIN LATERAL (
-       SELECT 0::int AS gaps
-     ) comm ON true
+       -- behavior_incidents: real source = student_conduct_incidents
+       -- (count unresolved incidents on file for this student).
+       SELECT count(*)::int AS incident_count
+       FROM student_conduct_incidents sci
+       WHERE sci.student_id = s.id
+         AND sci.organization_id = $1 AND sci.school_id = $2
+         AND sci.status IN ('open', 'escalated')
+     ) conduct ON true
      WHERE s.organization_id = $1 AND s.school_id = $2 AND s.status = 'active'
      ORDER BY s.display_name`,
     [organizationId, schoolId],
@@ -93,8 +99,16 @@ export async function loadStudentSignals(
       attendance_percent: attendancePercent,
       homework_completion_rate: homeworkCompletionRate,
       average_marks_percent: row.avg_marks_pct,
-      communication_gaps: row.comm_gaps,
-      behavior_incidents: row.comm_gaps > 2 ? 1 : 0,
+      // communication_gaps: no reliable source on the live schema yet — parent
+      // communication is logged as sent drafts (intel_communication_drafts), not
+      // as "pending/failed" gaps. Left at 0 until a delivery-status source exists;
+      // this signal carries only a 0.1 weight in the deterministic formula.
+      communication_gaps: 0,
+      // behavior_incidents: real count of unresolved conduct incidents on file.
+      behavior_incidents: row.behavior_incidents,
+      // timetable_missed_sessions: period-level timetable attendance is not tracked
+      // (attendance_records are day-level), so this is a coarse proxy derived from
+      // day-level absences until per-period attendance exists.
       timetable_missed_sessions: row.absent_count > 5 ? 2 : 0,
     };
   });

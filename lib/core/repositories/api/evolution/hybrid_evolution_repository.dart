@@ -3,13 +3,21 @@ import '../../repository_query.dart';
 import '../../../../features/dynamic_widgets/dynamic_widget_models.dart';
 import '../../../../features/evolution/evolution_models.dart';
 import '../../../../features/evolution/evolution_requests.dart';
+import '../../mock/mock_evolution_repository.dart';
 import 'api_evolution_repository.dart';
 
-/// Routes all evolution operations to [ApiEvolutionRepository].
+/// Routes all evolution operations to [ApiEvolutionRepository], with a mock
+/// fallback for the role dashboard layout so a missing/incompatible server
+/// layout never hard-errors the dynamic dashboard.
 class HybridEvolutionRepository implements EvolutionRepository {
-  HybridEvolutionRepository({required ApiEvolutionRepository api}) : _api = api;
+  HybridEvolutionRepository({
+    required ApiEvolutionRepository api,
+    MockEvolutionRepository? fallback,
+  })  : _api = api,
+        _fallback = fallback ?? MockEvolutionRepository();
 
   final ApiEvolutionRepository _api;
+  final MockEvolutionRepository _fallback;
 
   @override
   Future<SetupWizardSession> createSetupWizard({
@@ -241,8 +249,21 @@ class HybridEvolutionRepository implements EvolutionRepository {
   Future<RoleDashboardLayout> getRoleDashboardLayout({
     required RepositoryQuery query,
     required String role,
-  }) =>
-      _api.getRoleDashboardLayout(query: query, role: role);
+  }) async {
+    try {
+      final live = await _api.getRoleDashboardLayout(query: query, role: role);
+      // A reachable-but-empty layout (no widgets) means the server has no
+      // role-scoped layout configured yet — fall back to the mock default so
+      // the dashboard still renders something useful.
+      if (live.widgets.isEmpty) {
+        return _fallback.getRoleDashboardLayout(query: query, role: role);
+      }
+      return live;
+    } catch (_) {
+      // Missing route / network / backend off — never hard-error the dashboard.
+      return _fallback.getRoleDashboardLayout(query: query, role: role);
+    }
+  }
 
   @override
   Future<RoleDashboardLayout> saveRoleDashboardLayout({
