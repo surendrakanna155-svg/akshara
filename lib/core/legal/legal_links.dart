@@ -10,8 +10,11 @@ import 'package:url_launcher/url_launcher.dart';
 /// hosted page, [hasPrivacyPolicyUrl] is false and the in-app link is hidden so
 /// users never hit a dead placeholder.
 abstract final class LegalLinks {
-  /// TODO(owner): replace with the hosted Privacy Policy URL before release.
-  static const String privacyPolicyUrl = 'https://example.com/akshara/privacy';
+  /// Hosted Privacy Policy (served by the VPS nginx vhost; see
+  /// docs/legal/PRIVACY_POLICY.md). The same URL must be entered in the Play
+  /// Console "Privacy Policy" field.
+  static const String privacyPolicyUrl =
+      'https://akshara.veloraunisexsalon.com/privacy';
 
   /// The placeholder value above; used to detect an unconfigured URL.
   static const String _placeholderPrivacyPolicyUrl =
