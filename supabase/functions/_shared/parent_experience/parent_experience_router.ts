@@ -37,7 +37,11 @@ export async function routeParentExperience(
     return handleGetParentActivation(req, config);
   }
 
-  return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
+  // This sub-router does NOT own every /parent/experience/* path — e.g.
+  // /parent/experience/acknowledge and /parent/experience/hub are handled by
+  // routeParent (registered after this one). Return null so the router chain
+  // continues; the global handler emits the 404 if nobody claims the path.
+  return null;
 }
 
 async function handleGetParentSummary(req: Request, config: AppConfig): Promise<Response> {
