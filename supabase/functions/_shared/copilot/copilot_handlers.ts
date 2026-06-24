@@ -155,7 +155,9 @@ export async function handleCreateSession(req: Request, config: AppConfig): Prom
         schoolIdFromClaims(auth.claims)!,
         auth.claims.sub,
         assistantType as CopilotAssistantType,
-        body?.title,
+        // ai_copilot_sessions.title is NOT NULL; the client may omit it, so
+        // fall back to the assistant's label instead of inserting NULL (500).
+        body?.title?.trim() || definition.label,
       );
       await recordServerAuditEvent(db, auth.claims, {
         eventType: "aiCopilotSessionCreated",

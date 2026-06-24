@@ -37,9 +37,15 @@
 |---|---|---|
 | Parent | write — book-distribution acknowledge | Route/auth/validation **proven** (reaches handler, returns `400 studentId+distributionId required`). Completing it needs a seeded book-distribution for the child. Not a defect; deferred to feature E2E. |
 
-## REQUIRES CREDENTIALS / OWNER (not part of this auth cert, tracked separately)
-- `ANTHROPIC_API_KEY` on the edge → copilot/parent-insights run in safe-fallback until set (verified: `AI_PROVIDER` set, no key).
-- Firebase project (push), S3/R2 (offsite backup) — future waves.
+## AI status (corrected)
+- **AI is LIVE via OpenRouter** — the edge has `AI_PROVIDER=openrouter` + `OPENROUTER_API_KEY` set (the owner configured it). The provider-flexible client resolves the key DB-first then env. No Anthropic key needed; an earlier note here wrongly said "safe-fallback / no key" (it only checked for an Anthropic key).
+- Copilot verified live after fixing a session-create bug (below): `POST /copilot/sessions` → 201, `POST /…/messages` → 200 with a generated assistant reply.
+
+## REQUIRES CREDENTIALS / OWNER (future waves)
+- Firebase project (push notifications), S3/R2 (offsite backup).
+
+## SECOND BUG FOUND & FIXED (copilot)
+- `ai_copilot_sessions.title` is `NOT NULL`, but the create-session handler inserted `NULL` when the client omitted a title → **500 on every titleless session create**. Fixed: default the title to the assistant's label. Deployed + verified (201). Also noted: the `assistant_type` CHECK allows only `admissions/finance/sis/academic/communication`, so any future `principal`/`teacher` copilot type would 500 (handler-vs-DB mismatch) — flagged for a follow-up.
 
 ## FOUND & FIXED DURING CERTIFICATION (1)
 - **Parent-experience router shadowing bug** (pre-existing): `routeParentExperience` (registered before `routeParent`) returned a hard 404 for any unmatched `/parent/experience/*`, making `/parent/experience/acknowledge` and `/parent/experience/hub` unreachable. **Fixed** (return `null` to continue the chain), redeployed to the edge, re-verified (acknowledge now reaches its handler). Commit `01d405c`.
