@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../../tenant_handlers.ts";
 import { findApprovedByEntity } from "../../approval/approval_repository.ts";
+import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../../sms_provider.ts";
 import {
   createExamSession,
   examMarkToApi,
@@ -118,6 +119,54 @@ function tenantIds(claims: ExamClaims) {
     organizationId: organizationIdFromClaims(claims),
     schoolId: schoolIdFromClaims(claims),
   };
+}
+
+/**
+ * Best-effort transactional SMS to each student's guardian after exam results
+ * are published. Mirrors the fee-receipt hook: gated by `transactionalSmsEnabled`
+ * + a configured SMS provider; every failure is logged and swallowed so it can
+ * never affect the publish response.
+ */
+async function notifyParentsOfResults(
+  config: AppConfig,
+  claims: ExamClaims,
+  examId: string,
+): Promise<void> {
+  if (!config.transactionalSmsEnabled) return;
+  const smsConfig: SmsConfig = {
+    provider: config.smsProvider,
+    apiKey: config.smsApiKey,
+    fast2smsRoute: config.smsFast2smsRoute,
+    fast2smsSenderId: config.smsFast2smsSenderId,
+    fast2smsMessageId: config.smsFast2smsMessageId,
+  };
+  if (!isSmsConfigured(smsConfig)) return;
+  try {
+    const targets = await withTenantContext(config, claims, (db) =>
+      db.queryObject<{ phone: string; name: string; exam_title: string }>(
+        `SELECT u.phone AS phone, s.display_name AS name, es.title AS exam_title
+           FROM exam_mark_entries m
+           JOIN exam_sessions es ON es.id = m.exam_id
+            AND es.organization_id = m.organization_id
+            AND es.school_id = m.school_id
+           JOIN students s ON s.id = m.student_id
+           JOIN student_guardians sg ON sg.student_id = s.id
+           JOIN users u ON u.id = sg.guardian_user_id
+          WHERE m.exam_id = $1 AND m.published = true AND u.phone IS NOT NULL`,
+        [examId],
+      ));
+    for (const target of targets) {
+      if (!target.phone) continue;
+      const msg =
+        `Akshara: Results for ${target.exam_title} are now published for ${target.name}. View them in the app.`;
+      const result = await sendTransactionalSms(smsConfig, target.phone, msg);
+      if (!result.ok) {
+        console.error(`results SMS not sent (${result.code}): ${result.detail}`);
+      }
+    }
+  } catch (error) {
+    console.error("results SMS error:", error instanceof Error ? error.message : error);
+  }
 }
 
 export async function handleListExams(
@@ -369,6 +418,7 @@ export async function handlePublishExamResults(
     const publishedCount = await withTenantContext(config, claims, (db) =>
       publishExamResults(db, organizationId, schoolId, examId)
     );
+    await notifyParentsOfResults(config, claims, examId);
     return { examId, publishedCount };
   });
 }
