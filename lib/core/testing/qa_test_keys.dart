@@ -833,6 +833,9 @@ abstract final class QaTestKeys {
   static const appearanceSettingsLink =
       ValueKey<String>('appearance_settings_link');
 
+  static const schoolConfigSettingsLink =
+      ValueKey<String>('school_config_settings_link');
+
   static const teacherSettingsScreen =
       ValueKey<String>('teacher_settings_screen');
 

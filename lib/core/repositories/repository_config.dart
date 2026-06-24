@@ -264,6 +264,14 @@ final schoolCompletionApiEnabledProvider = Provider<bool>((ref) {
       defaultValue: false);
 });
 
+/// B1 — per-school capability gating persists to the tenant-authoritative
+/// `/school-config` endpoint. Default off; enabled in `config/live_release.json`.
+final schoolConfigApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('SCHOOL_CONFIG_API_ENABLED',
+      defaultValue: false);
+});
+
 final multiSchoolOperationsApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
@@ -372,6 +380,7 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(analyticsIntelligenceApiEnabledProvider) ||
       ref.watch(evolutionApiEnabledProvider) ||
       ref.watch(schoolCompletionApiEnabledProvider) ||
+      ref.watch(schoolConfigApiEnabledProvider) ||
       ref.watch(multiSchoolOperationsApiEnabledProvider) ||
       ref.watch(organizationBuilderApiEnabledProvider) ||
       ref.watch(platformOperationsApiEnabledProvider) ||

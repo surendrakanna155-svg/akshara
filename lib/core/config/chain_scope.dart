@@ -27,7 +27,10 @@ abstract final class ChainScope {
     RouteNames.multiSchoolPortfolio,
     RouteNames.multiSchoolOnboarding,
     RouteNames.organizationBuilder, // also interview/preview/provisioning
-    RouteNames.schoolDiscovery, // org-builder school discovery
+    // B1: school-discovery is the per-school capability wizard ("feels built
+    // for my school") — every single school admin/principal needs it, so it is
+    // NOT chain-only. It surfaces from Management → Settings; the org-builder
+    // hub still links to it for chains.
   };
 
   /// Admin-hub modules that require a chain org to appear in navigation.

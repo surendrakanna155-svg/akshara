@@ -19,7 +19,6 @@ void main() {
         RouteNames.organizationBuilder,
         RouteNames.organizationBuilderInterview, // nested sub-route
         RouteNames.organizationBuilderProvisioning,
-        RouteNames.schoolDiscovery,
         '${RouteNames.franchise}/anything', // arbitrary sub-route
       ]) {
         expect(
@@ -39,6 +38,9 @@ void main() {
         RouteNames.whiteLabel, // SaaS tier, gated by SchoolBuildScope instead
         RouteNames.platformOperations,
         RouteNames.admin,
+        // B1: school-discovery is the per-school capability wizard, reachable
+        // by every single school admin/principal — no longer chain-gated.
+        RouteNames.schoolDiscovery,
       ]) {
         expect(
           ChainScope.isChainOnlyRoute(route),

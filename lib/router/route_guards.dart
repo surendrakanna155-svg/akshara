@@ -6,11 +6,15 @@ import 'package:go_router/go_router.dart';
 
 import '../core/config/chain_scope.dart';
 import '../core/config/school_build_scope.dart';
+import '../core/school_config/school_capability_registry.dart';
+import '../core/school_config/school_configuration_models.dart';
+import '../core/school_config/school_configuration_provider.dart';
 import '../core/security/denied_access_audit.dart';
 import '../core/security/erp_role.dart';
 import '../core/testing/qa_test_keys.dart';
 import '../core/security/permissions.dart';
 import '../core/security/rbac_service.dart';
+import '../features/admin/models/admin_nav_models.dart';
 import '../features/auth/auth_models.dart';
 import '../features/auth/auth_provider.dart';
 import '../shared/widgets/akshara_error_state.dart';
@@ -98,7 +102,7 @@ const Map<String, Permission> kErpRouteViewPermissions = {
   RouteNames.organizationBuilderPreview: Permission.viewOrganizationBuilder,
   RouteNames.organizationBuilderProvisioning:
       Permission.viewOrganizationBuilder,
-  RouteNames.schoolDiscovery: Permission.viewOrganizationBuilder,
+  RouteNames.schoolDiscovery: Permission.viewSchoolSetup,
   RouteNames.platformOperations: Permission.viewPlatformOperations,
   RouteNames.platformOperationsAlerts: Permission.viewPlatformOperations,
   RouteNames.platformOperationsSecurity: Permission.viewPlatformOperations,
@@ -163,6 +167,50 @@ Permission? erpRoutePermissionFor(String location) {
     }
   }
   return best;
+}
+
+/// Maps a gated ERP route prefix to the [AdminModule] whose [SchoolCapabilities]
+/// flag governs it. A school that turned a module off in the Smart School
+/// Discovery wizard must not be able to deep-link past the hidden nav entry —
+/// [ErpRouteGuard] resolves this to a capability check (B1). Only the
+/// capability-bearing modules appear here; everything else is always allowed.
+const Map<String, AdminModule> kErpRouteCapabilityModules = {
+  RouteNames.transport: AdminModule.transport,
+  RouteNames.hostel: AdminModule.hostel,
+  RouteNames.library: AdminModule.library,
+  RouteNames.inventory: AdminModule.inventory,
+  RouteNames.inventoryDistribution: AdminModule.inventory,
+  RouteNames.inventoryReplacements: AdminModule.inventory,
+  RouteNames.alumni: AdminModule.alumni,
+  RouteNames.hr: AdminModule.hr,
+  RouteNames.director: AdminModule.director,
+  RouteNames.controlCenter: AdminModule.controlCenter,
+};
+
+/// Resolves the capability-gating [AdminModule] for [location] (longest match).
+AdminModule? erpRouteCapabilityModuleFor(String location) {
+  AdminModule? best;
+  int bestLength = -1;
+  for (final entry in kErpRouteCapabilityModules.entries) {
+    if (location == entry.key || location.startsWith('${entry.key}/')) {
+      if (entry.key.length > bestLength) {
+        bestLength = entry.key.length;
+        best = entry.value;
+      }
+    }
+  }
+  return best;
+}
+
+/// Whether [location] is permitted under the school's enabled [capabilities].
+/// Routes for modules the school disabled are blocked regardless of permission.
+bool isRouteEnabledForCapabilities(
+  String location,
+  SchoolCapabilities capabilities,
+) {
+  final module = erpRouteCapabilityModuleFor(location);
+  if (module == null) return true;
+  return SchoolCapabilityRegistry.isAdminModuleEnabled(module, capabilities);
 }
 
 /// Whether [location] is allowed for the given [RbacService].
@@ -363,6 +411,16 @@ class ErpRouteGuard extends ConsumerWidget {
     // surface only when the active org is a chain (M3, 2026-06-22).
     if (ChainScope.isChainOnlyRoute(location) &&
         !ref.watch(isChainOrgProvider)) {
+      return const AccessDeniedScreen();
+    }
+
+    // Per-school capability gating (B1): a module the school disabled in the
+    // Smart School Discovery wizard is not deep-linkable, even by URL. Mirrors
+    // the nav filtering in adminNavDestinationsProvider.
+    if (!isRouteEnabledForCapabilities(
+      location,
+      ref.watch(schoolCapabilitiesProvider),
+    )) {
       return const AccessDeniedScreen();
     }
 
