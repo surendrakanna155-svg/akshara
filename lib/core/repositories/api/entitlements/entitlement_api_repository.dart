@@ -34,4 +34,48 @@ class EntitlementApiRepository {
     if (raw is! Map<String, dynamic>) return null;
     return ResolvedSubscription.fromJson(raw);
   }
+
+  // ─── SuperAdmin plan assignment (managePlatformSubscriptions) ──────────────
+
+  /// Lists every organization with its current plan (`GET /platform/subscriptions`).
+  Future<List<OrganizationPlanAssignment>> fetchAssignableOrganizations() async {
+    final response =
+        await _dio.get<Map<String, dynamic>>('/platform/subscriptions');
+    final data = ApiEnvelopeDto.fromJson(response.data ?? const {}).requireData();
+    final raw = data['organizations'];
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((e) =>
+            OrganizationPlanAssignment.fromJson(e.cast<String, dynamic>()))
+        .toList(growable: false);
+  }
+
+  /// Assigns/changes an organization's plan
+  /// (`PUT /platform/organizations/{id}/subscription`). No payment is taken.
+  Future<OrganizationPlanAssignment> assignSubscription({
+    required String organizationId,
+    required String planSlug,
+    String? status,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/platform/organizations/$organizationId/subscription',
+      data: {
+        'planSlug': planSlug,
+        if (status != null) 'status': status,
+      },
+    );
+    final data = ApiEnvelopeDto.fromJson(response.data ?? const {}).requireData();
+    final raw = data['organization'];
+    if (raw is Map<String, dynamic>) {
+      return OrganizationPlanAssignment.fromJson(raw);
+    }
+    return OrganizationPlanAssignment(
+      organizationId: organizationId,
+      organizationName: '',
+      organizationSlug: '',
+      planSlug: planSlug,
+      status: status ?? (planSlug == 'trial' ? 'trial' : 'active'),
+    );
+  }
 }

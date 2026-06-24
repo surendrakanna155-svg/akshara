@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/entitlements/entitlement_models.dart';
 import '../../core/entitlements/entitlement_provider.dart';
+import '../../core/entitlements/subscription_admin_provider.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../core/widgets/whatsapp_contact_button.dart';
+import '../../router/route_names.dart';
 import '../../shared/widgets/akshara_surface_card.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -60,9 +63,21 @@ class PlanEntitlementsScreen extends ConsumerWidget {
         .where((e) => !subscription.allows(e.slug))
         .length;
 
+    final canAssign = ref.watch(canAssignOrganizationPlansProvider);
+
     return Scaffold(
       key: QaTestKeys.planEntitlementsScreen,
-      appBar: AppBar(title: const Text('Plan & Entitlements')),
+      appBar: AppBar(
+        title: const Text('Plan & Entitlements'),
+        actions: [
+          if (canAssign)
+            IconButton(
+              tooltip: 'Assign organization plans',
+              icon: const Icon(Icons.admin_panel_settings_outlined),
+              onPressed: () => context.go(RouteNames.planAssignment),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),

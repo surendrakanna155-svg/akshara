@@ -174,6 +174,57 @@ export async function getOrgSubscription(
   };
 }
 
+export interface OrganizationAssignmentRow {
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  planSlug: string;
+  status: string;
+}
+
+/**
+ * Lists every organization with its current plan/status (SECURITY DEFINER —
+ * platform-level, drives the assign screen). Caller must already be gated on
+ * `managePlatformSubscriptions`.
+ */
+export async function listAssignableOrganizations(
+  db: TenantQueryClient,
+): Promise<OrganizationAssignmentRow[]> {
+  const rows = await db.queryObject<{
+    organization_id: string;
+    organization_name: string;
+    organization_slug: string;
+    plan_slug: string;
+    status: string;
+  }>(`SELECT * FROM list_subscription_assignments()`);
+  return rows.map((r) => ({
+    organizationId: r.organization_id,
+    organizationName: r.organization_name,
+    organizationSlug: r.organization_slug,
+    planSlug: r.plan_slug,
+    status: r.status,
+  }));
+}
+
+/**
+ * Assigns/changes an organization's plan (SECURITY DEFINER upsert). Caller must
+ * already be gated on `managePlatformSubscriptions`. No payment is taken.
+ */
+export async function assignOrganizationSubscription(
+  db: TenantQueryClient,
+  params: {
+    organizationId: string;
+    planSlug: string;
+    status: string;
+    actorId: string;
+  },
+): Promise<void> {
+  await db.queryObject(
+    `SELECT assign_organization_subscription($1, $2, $3, $4)`,
+    [params.organizationId, params.planSlug, params.status, params.actorId],
+  );
+}
+
 /** The school's capability JSONB (flag → bool), or null if unconfigured. */
 export async function getSchoolCapabilities(
   db: TenantQueryClient,

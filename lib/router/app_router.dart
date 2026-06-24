@@ -66,6 +66,7 @@ import '../features/copilot/dock/copilot_dock_host.dart';
 import '../features/admin/admin_shell.dart';
 import '../features/admin/backup/backup_restore_screen.dart';
 import '../features/entitlements/plan_entitlements_screen.dart';
+import '../features/entitlements/organization_plan_assignment_screen.dart';
 import '../features/onboarding/unified_onboarding_flow_screen.dart';
 import '../features/onboarding/student_onboarding_screen.dart';
 import '../core/repositories/repository_providers.dart';
@@ -522,6 +523,13 @@ GoRouter createAppRouter({
             name: 'planEntitlements',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: PlanEntitlementsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.planAssignment,
+            name: 'planAssignment',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: OrganizationPlanAssignmentScreen(),
             ),
           ),
           GoRoute(

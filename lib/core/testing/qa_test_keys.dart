@@ -1348,6 +1348,16 @@ abstract final class QaTestKeys {
       ValueKey<String>('plan_trial_remaining_label');
   static const planUpgradeWhatsappButton =
       ValueKey<String>('plan_upgrade_whatsapp_button');
+  static const planAssignmentScreen =
+      ValueKey<String>('plan_assignment_screen');
+  static const planAssignmentOrgDropdown =
+      ValueKey<String>('plan_assignment_org_dropdown');
+  static const planAssignmentCurrentPlan =
+      ValueKey<String>('plan_assignment_current_plan');
+  static const planAssignmentPlanDropdown =
+      ValueKey<String>('plan_assignment_plan_dropdown');
+  static const planAssignmentSaveButton =
+      ValueKey<String>('plan_assignment_save_button');
   static const schoolDiscoveryHubCard =
       ValueKey<String>('school_discovery_hub_card');
   static const schoolDiscoveryAppliedSnackbar =

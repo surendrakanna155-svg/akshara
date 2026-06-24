@@ -141,6 +141,53 @@ class SubscriptionPlan {
   }
 }
 
+/// One organization row for the superAdmin plan-assignment screen
+/// (`GET /platform/subscriptions`). Read-only listing — no billing data.
+@immutable
+class OrganizationPlanAssignment {
+  const OrganizationPlanAssignment({
+    required this.organizationId,
+    required this.organizationName,
+    required this.organizationSlug,
+    required this.planSlug,
+    required this.status,
+  });
+
+  final String organizationId;
+  final String organizationName;
+  final String organizationSlug;
+  final String planSlug;
+  final String status;
+
+  OrganizationPlanAssignment copyWith({String? planSlug, String? status}) {
+    return OrganizationPlanAssignment(
+      organizationId: organizationId,
+      organizationName: organizationName,
+      organizationSlug: organizationSlug,
+      planSlug: planSlug ?? this.planSlug,
+      status: status ?? this.status,
+    );
+  }
+
+  factory OrganizationPlanAssignment.fromJson(Map<String, dynamic> json) {
+    return OrganizationPlanAssignment(
+      organizationId: json['organizationId'] as String? ??
+          json['organization_id'] as String? ??
+          '',
+      organizationName: json['organizationName'] as String? ??
+          json['organization_name'] as String? ??
+          '',
+      organizationSlug: json['organizationSlug'] as String? ??
+          json['organization_slug'] as String? ??
+          '',
+      planSlug: json['planSlug'] as String? ??
+          json['plan_slug'] as String? ??
+          'trial',
+      status: json['status'] as String? ?? 'trial',
+    );
+  }
+}
+
 /// The resolved subscription for the current org (`GET /subscription`):
 /// plan summary, status, plan-allowed entitlement slugs, limits and usage.
 @immutable

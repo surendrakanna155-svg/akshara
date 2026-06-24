@@ -1,5 +1,6 @@
 import 'package:akshara_erp/core/entitlements/entitlement_models.dart';
 import 'package:akshara_erp/core/entitlements/entitlement_provider.dart';
+import 'package:akshara_erp/core/entitlements/subscription_admin_provider.dart';
 import 'package:akshara_erp/core/repositories/repository_config.dart';
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/entitlements/plan_badge.dart';
@@ -54,6 +55,7 @@ Future<void> _pumpScreen(WidgetTester tester, ResolvedSubscription sub) async {
     ProviderScope(
       overrides: [
         subscriptionProvider.overrideWith(() => _FakeSubscriptionNotifier(sub)),
+        canAssignOrganizationPlansProvider.overrideWithValue(false),
       ],
       child: MaterialApp(
         theme: AksharaAppTheme.light(),

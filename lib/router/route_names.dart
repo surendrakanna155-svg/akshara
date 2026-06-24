@@ -277,6 +277,7 @@ abstract final class RouteNames {
   static const String studentOnboarding = '/admin/onboarding/students';
   static const String backupRestore = '/admin/backup-restore';
   static const String planEntitlements = '/admin/plan';
+  static const String planAssignment = '/admin/plan/assign';
 
   static String sisStudentDetail(String studentId) => '$sisStudents/$studentId';
 
@@ -533,6 +534,7 @@ abstract final class RouteNames {
   static const List<String> adminErpRoutes = [
     admin,
     planEntitlements,
+    planAssignment,
     copilot,
     education,
     intelligence,

@@ -1226,3 +1226,28 @@ export const schoolCompletionAudit = {
     },
   }),
 };
+
+// ─── Subscription / Entitlement (B2) ─────────────────────────────────────────
+
+export const subscriptionAudit = {
+  /**
+   * A superAdmin assigned/changed an organization's plan (no payment). Keyed off
+   * a per-event id so every assignment is recorded (the org has one row that is
+   * updated in place, so there is no per-change row id to key on).
+   */
+  planAssigned: (
+    organizationId: string,
+    planSlug: string,
+    status: string,
+    eventId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("subscriptionPlanAssigned", "organization_subscription",
+      organizationId, { organizationId, planSlug, status }),
+    domain: {
+      eventType: "subscription.plan.assigned",
+      payload: { organizationId, planSlug, status },
+      sourceModule: "entitlements",
+      idempotencyKey: `subscription.plan.assigned:${eventId}`,
+    },
+  }),
+};
