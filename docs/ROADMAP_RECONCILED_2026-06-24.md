@@ -205,7 +205,7 @@ status doc · memory updated. Then start a fresh session for the next batch.
 - [ ] **O5** Firebase setup → push notifications
 
 ### P1 — Revenue & Pilot Success (engineering, in order)
-- [~] **B1** Admissions CRM — **PENDING PRODUCTION CERTIFICATION.** Code-complete + local-E2E-certified (11/11), analyze clean, tests green, committed c91b941. NOT Fully Complete until VPS deploy + real production migration + live smoke pass — see `docs/B1_VPS_DEPLOY_RUNBOOK.md`. (Blocked on VPS access this session.)
+- [x] **B1** Admissions CRM — **PRODUCTION CERTIFIED** (2026-06-24). Lead-management loop (assign/stage/follow-up/note/timeline/WhatsApp+call logging) live on the VPS: migration `20260716000000` applied to `akshara_db`, 5 edge files deployed, live smoke **11/11** (real auth + real production DB), audit events confirmed. See `docs/B1_ADMISSIONS_CRM_CERTIFICATION.md` + `docs/B1_VPS_DEPLOY_RUNBOOK.md`.
 - [ ] **B2** Capability Gating — finalize tier/package definitions → tiered pricing live (quick win)
 - [ ] **B3** Parent Insights — surface in parent UI + polish (quick win, already live)
 - [ ] **B4** AI Admissions Assistant — wire live Copilot `admissions` persona to funnel/CRM data + next-best-action
@@ -224,4 +224,4 @@ status doc · memory updated. Then start a fresh session for the next batch.
 ### P4 — Long-Term Expansion
 - [ ] **B12** Verticals (unfreeze after pilot validation + first paying schools)
 
-> Current: **B1 is Pending Production Certification** — finish via `docs/B1_VPS_DEPLOY_RUNBOOK.md` (VPS deploy + prod migration + live smoke) before it is Fully Complete. Do NOT start B2 until B1 is VPS-certified.
+> Current: **B1 is Production Certified (2026-06-24).** Next: **B2 — Capability Gating (entitlement layer)**, spec approved + scope-locked in `docs/B2_CAPABILITY_GATING_SPEC.md`. Per owner, run a targeted B2 pre-flight review (validate spec vs current code · confirm no overlap with school capability flags · confirm migration ordering · produce implementation plan) before B2 execution.

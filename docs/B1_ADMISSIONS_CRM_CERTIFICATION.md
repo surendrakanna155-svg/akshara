@@ -50,17 +50,28 @@ live mode and the timeline/history shown to users was hard-coded fixture data.
 | Tests green | ✅ admissions + contract + integration suites pass (one pre-existing, unrelated SIS-count failure on baseline) |
 | Deno type-check | ✅ router/handlers/repository/mapper/audit |
 
-## Live VPS deployment — PENDING (access-blocked)
+## Live VPS production certification — ✅ DONE (2026-06-24)
 
-The end-to-end certification above ran against a **local instance of the same
-self-hosted backend** (real Deno edge + real Postgres + real RLS + real JWT auth).
-Deploying to the production VPS (`46.28.44.46` / `akshara.veloraunisexsalon.com`)
-could **not** be completed this session: SSH key auth is not authorized from here
-(`Permission denied (publickey,password)`), so the migration could not be applied
-and the edge could not be redeployed to the live host.
+Deployed and certified on the production VPS (`46.28.44.46` / `akshara.veloraunisexsalon.com`,
+stack dir `/opt/akshara`) over an authenticated SSH control-master session:
 
-To finish on the live VPS (owner/authorized operator):
-1. Apply the migration to `akshara_db` (`20260716000000_admissions_crm_activities_followups.sql`).
-2. Redeploy the `akshara-edge` container with the updated `functions/`.
-3. Certify: `API_BASE_URL=https://akshara.veloraunisexsalon.com scripts/admissions_crm_b1_smoke.sh`
-   (use an allowlisted pilot phone via `ADMIN_PHONE`).
+1. **Backup first:** `akshara-backup.sh manual` → `akshara_db_20260624T133840Z_manual.dump.enc`.
+2. **Migration:** `20260716000000_admissions_crm_activities_followups.sql` applied to `akshara_db`
+   as `supabase_admin` (`ON_ERROR_STOP`), recorded in `supabase_migrations.schema_migrations`.
+   Verified on the live DB: both tables `rls=t force=t policies=1 erp_insert=t`.
+3. **Edge:** the 5 B1 files synced into `/opt/akshara/functions/` and `akshara-edge` recreated.
+4. **Live smoke** (real auth via pilot phone + real production DB):
+   `API_BASE_URL=https://akshara.veloraunisexsalon.com scripts/admissions_crm_b1_smoke.sh`
+   → **`Results: 11 passed, 0 failed`** (assign→stage→follow-up→note→WhatsApp→call→timeline
+   read-back; parent assign 403; cross-school 404).
+5. **Audit verified** on the live DB: `admissions.lead.{assigned,created,follow_up_added,
+   note_added×3,stage_changed}` domain events recorded. Smoke test lead removed (cascade).
+
+**Deploy note (for future deploys):** the compose `postgres` service interpolates
+`${POSTGRES_DB}`/`${POSTGRES_PASSWORD}` from compose's env, and there is no default `.env`
+in `/opt/akshara` — so **always run compose with `--env-file .env.akshara`**. Running a plain
+`docker compose up` recreates `akshara-postgres` with an empty `POSTGRES_DB`, which fails its
+`pg_isready` healthcheck (data is safe on the `akshara_pgdata` volume; fix = recreate postgres
+with `--env-file .env.akshara`). This was hit and fully resolved during this deploy.
+
+**Status: B1 = Production Certified.**
