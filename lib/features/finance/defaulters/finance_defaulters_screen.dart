@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
 import '../../../shared/widgets/akshara_kpi_card.dart';
@@ -115,7 +117,7 @@ class FinanceDefaultersScreen extends ConsumerWidget {
           actionLabel: data.aiActionLabel,
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI defaulter risk insight',
-          onAction: null,
+          onAction: () => context.go(RouteNames.financeStudentAccounts),
         ),
       ],
     );

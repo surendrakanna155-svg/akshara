@@ -30,6 +30,22 @@ class OnboardingImportJobDto {
   final Map<String, dynamic> raw;
 }
 
+class OnboardingGenerateDto {
+  const OnboardingGenerateDto({required this.job, required this.generatedCount});
+
+  factory OnboardingGenerateDto.fromJson(Map<String, dynamic> json) {
+    final data = ApiEnvelopeDto.fromJson(json).requireData();
+    final job = (data['job'] as Map<String, dynamic>?) ?? const {};
+    return OnboardingGenerateDto(
+      job: job,
+      generatedCount: data['generatedCount'] as int? ?? 0,
+    );
+  }
+
+  final Map<String, dynamic> job;
+  final int generatedCount;
+}
+
 class OnboardingInviteDto {
   const OnboardingInviteDto({required this.raw});
 

@@ -26,6 +26,14 @@ abstract class OnboardingRepository {
     required String jobId,
   });
 
+  /// Path 2 — generate editable placeholder students from class/section
+  /// structure only. No parent users are created (placeholders cannot login).
+  Future<OnboardingImportJob> generatePlaceholderStudents({
+    required RepositoryQuery query,
+    required String academicYear,
+    required List<ClassSectionStructure> classes,
+  });
+
   Future<List<OnboardingImportJob>> listImportJobs({required RepositoryQuery query});
 
   Future<OnboardingInvite> createInvite({

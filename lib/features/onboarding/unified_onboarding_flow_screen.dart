@@ -49,7 +49,7 @@ class _UnifiedOnboardingFlowScreenState
             AksharaInsightCard(
               message: state.goLiveValidationErrors.join('\n'),
               actionLabel: 'Fix issues',
-              onAction: null,
+              onAction: () => notifier.setStep(_firstIncompleteStep(state)),
             ),
           ],
           const SizedBox(height: AksharaSpacing.s4),
@@ -98,6 +98,34 @@ class _UnifiedOnboardingFlowScreenState
       ),
     );
   }
+}
+
+/// Maps go-live validation gaps to the earliest wizard step that fixes them,
+/// so "Fix issues" jumps the user straight to the first incomplete section.
+UnifiedOnboardingStep _firstIncompleteStep(UnifiedOnboardingState state) {
+  if (state.schoolName.trim().isEmpty ||
+      state.address.trim().isEmpty ||
+      (state.contactPhone.trim().isEmpty &&
+          state.contactEmail.trim().isEmpty) ||
+      state.academicYear.trim().isEmpty) {
+    return UnifiedOnboardingStep.schoolProfile;
+  }
+  if (state.board.trim().isEmpty && state.curriculum.trim().isEmpty) {
+    return UnifiedOnboardingStep.curriculum;
+  }
+  if (state.classes.isEmpty || state.sections.isEmpty) {
+    return UnifiedOnboardingStep.academicStructure;
+  }
+  if (state.feeModel.trim().isEmpty || state.feeCategories.isEmpty) {
+    return UnifiedOnboardingStep.fees;
+  }
+  if (state.themePrimary.trim().isEmpty) {
+    return UnifiedOnboardingStep.branding;
+  }
+  if (state.defaultLanguage.trim().isEmpty) {
+    return UnifiedOnboardingStep.language;
+  }
+  return UnifiedOnboardingStep.schoolProfile;
 }
 
 class _StepBody extends StatelessWidget {

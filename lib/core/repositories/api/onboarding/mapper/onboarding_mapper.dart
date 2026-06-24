@@ -39,6 +39,22 @@ class OnboardingMapper {
 
   OnboardingImportJob toJob(OnboardingImportJobDto dto) => _toJob(dto.raw);
 
+  OnboardingImportJob toGeneratedJob(OnboardingGenerateDto dto) {
+    final base = _toJob(dto.job);
+    return OnboardingImportJob(
+      id: base.id,
+      importType: base.importType,
+      status: base.status,
+      fileName: base.fileName,
+      totalRows: base.totalRows,
+      validRows: base.validRows,
+      invalidRows: base.invalidRows,
+      duplicateRows: base.duplicateRows,
+      committedRows: base.committedRows,
+      generatedCount: dto.generatedCount,
+    );
+  }
+
   List<OnboardingInvite> toInvites(OnboardingInvitesListDto dto) {
     return [for (final item in dto.items) _toInvite(item)];
   }

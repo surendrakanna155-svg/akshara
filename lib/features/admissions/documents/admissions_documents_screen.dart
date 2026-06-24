@@ -49,7 +49,21 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
               message:
                   '${summary.missing} required document(s) missing across active applications.',
               actionLabel: 'View missing',
-              onAction: null,
+              onAction: () {
+                final docs = ref.read(admissionsDocumentsProvider);
+                final firstMissing = docs
+                    .cast<StudentDocumentRecord?>()
+                    .firstWhere(
+                      (doc) =>
+                          doc?.status == DocumentVerificationStatus.missing,
+                      orElse: () => null,
+                    );
+                if (firstMissing != null) {
+                  ref
+                      .read(admissionsSelectedDocumentIdProvider.notifier)
+                      .state = firstMissing.id;
+                }
+              },
               compactMessage: true,
               horizontalPaddingOnly: true,
               semanticLabel: '${summary.missing} documents missing',

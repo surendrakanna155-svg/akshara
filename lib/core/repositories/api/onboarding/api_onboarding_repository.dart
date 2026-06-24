@@ -67,6 +67,20 @@ class ApiOnboardingRepository implements OnboardingRepository {
   }
 
   @override
+  Future<OnboardingImportJob> generatePlaceholderStudents({
+    required RepositoryQuery query,
+    required String academicYear,
+    required List<ClassSectionStructure> classes,
+  }) async {
+    final dto = await _remote.generatePlaceholderStudents(
+      query: query,
+      academicYear: academicYear,
+      classes: [for (final c in classes) c.toJson()],
+    );
+    return _mapper.toGeneratedJob(dto);
+  }
+
+  @override
   Future<List<OnboardingImportJob>> listImportJobs({required RepositoryQuery query}) async {
     final dashboard = await getDashboard(query: query);
     return dashboard.recentJobs;

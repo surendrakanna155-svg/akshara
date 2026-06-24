@@ -39,6 +39,7 @@ class HostelAttendanceScreen extends ConsumerWidget {
           ref.read(hostelAttendanceFilterProvider.notifier).state = index,
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
@@ -49,7 +50,8 @@ class HostelAttendanceScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
@@ -89,8 +91,10 @@ class HostelAttendanceScreen extends ConsumerWidget {
           AksharaWarningBanner(
             message:
                 '${missing.length} student(s) missing — parent notification sent via Parent App',
-            actionLabel: 'Notify parents',
-            onAction: null,
+            actionLabel: 'Review absentees',
+            onAction: () => ref
+                .read(hostelAttendanceFilterProvider.notifier)
+                .state = filterLabels.indexOf('Absent'),
           ),
         if (missing.isNotEmpty) const SizedBox(height: AksharaSpacing.s4),
         const AksharaSectionHeader(title: 'Hostel attendance roster'),

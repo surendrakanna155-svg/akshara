@@ -1,8 +1,13 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   createImportedStudent,
+  createPlaceholderStudent,
   ensureSchoolMembership,
   findDuplicateStudent,
+  findStudentByAadhaarHash,
+  hashAadhaar,
+  isValidAadhaar,
+  normalizeAadhaar,
   normalizeImportPhone,
   rollbackImportedStudent,
   type StudentImportRow,
@@ -48,9 +53,18 @@ export interface ImportPreviewRow {
 }
 
 const IMPORT_PHONE_PATTERN = /^\+?\d{10,15}$/;
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function isValidImportPhone(phone: string): boolean {
   return IMPORT_PHONE_PATTERN.test(phone.replace(/\s+/g, ""));
+}
+
+/** True when value is yyyy-mm-dd AND a real calendar date. */
+export function isValidIsoDate(value: string): boolean {
+  if (!ISO_DATE_PATTERN.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value;
 }
 
 /** Parses one CSV line respecting double-quoted fields (commas inside quotes). */
@@ -90,6 +104,13 @@ export function parseStudentImportRow(
   const parentName = String(raw.parentName ?? raw.parent_name ?? "").trim();
   const parentPhone = String(raw.parentPhone ?? raw.parent_phone ?? "").trim();
   const studentPhone = String(raw.studentPhone ?? raw.student_phone ?? "").trim();
+  const motherName = String(raw.motherName ?? raw.mother_name ?? "").trim();
+  const gender = String(raw.gender ?? "").trim();
+  const dob = String(
+    raw.dob ?? raw.dateOfBirth ?? raw.date_of_birth ?? "",
+  ).trim();
+  const aadhaarRaw = String(raw.aadhaar ?? raw.aadhaar_number ?? raw.aadhaarNumber ?? "")
+    .trim();
 
   if (!studentName) errors.push("studentName is required");
   if (!admissionNumber) errors.push("admissionNumber is required");
@@ -104,6 +125,12 @@ export function parseStudentImportRow(
   if (studentPhone && !isValidImportPhone(studentPhone)) {
     errors.push("studentPhone must be 10–15 digits (optional + prefix)");
   }
+  if (aadhaarRaw && !isValidAadhaar(aadhaarRaw)) {
+    errors.push("aadhaar must be 12 digits");
+  }
+  if (dob && !isValidIsoDate(dob)) {
+    errors.push("dob must be a valid date (yyyy-mm-dd)");
+  }
 
   if (errors.length) return { errors };
 
@@ -117,9 +144,11 @@ export function parseStudentImportRow(
       parentName,
       parentPhone,
       studentPhone: studentPhone || undefined,
-      gender: String(raw.gender ?? "").trim() || undefined,
-      dateOfBirth: String(raw.dateOfBirth ?? raw.date_of_birth ?? "").trim() || undefined,
+      gender: gender || undefined,
+      dateOfBirth: dob || undefined,
       rollNumber: String(raw.rollNumber ?? raw.roll_number ?? "").trim() || undefined,
+      motherName: motherName || undefined,
+      aadhaar: aadhaarRaw ? normalizeAadhaar(aadhaarRaw) : undefined,
     },
     errors,
   };
@@ -190,6 +219,8 @@ export async function createImportPreview(
   let valid = 0;
   let invalid = 0;
   let duplicate = 0;
+  // Aadhaar hashes already seen earlier in THIS file → in-file dup detection.
+  const seenAadhaarHashes = new Map<string, number>();
 
   for (let i = 0; i < rawRows.length; i++) {
     const raw = rawRows[i]!;
@@ -200,18 +231,47 @@ export async function createImportPreview(
 
     let status = "valid";
     let matchedEntityId: string | null = null;
+    const errors = [...parsed.errors];
 
     if (parsed.errors.length) {
       status = "invalid";
       invalid++;
     } else if (importType === "student" && parsed.row) {
+      const studentRow = parsed.row as StudentImportRow;
       matchedEntityId = await findDuplicateStudent(
         db,
         organizationId,
         schoolId,
-        (parsed.row as StudentImportRow).admissionNumber,
+        studentRow.admissionNumber,
       );
-      if (matchedEntityId) {
+
+      // Aadhaar dedupe: within this file AND against existing students.
+      if (!matchedEntityId && studentRow.aadhaar) {
+        const hash = await hashAadhaar(studentRow.aadhaar);
+        if (seenAadhaarHashes.has(hash)) {
+          matchedEntityId = null;
+          errors.push("duplicate Aadhaar");
+        } else {
+          const existing = await findStudentByAadhaarHash(
+            db,
+            organizationId,
+            schoolId,
+            hash,
+          );
+          if (existing) {
+            matchedEntityId = existing;
+            errors.push("duplicate Aadhaar");
+          } else {
+            seenAadhaarHashes.set(hash, rowNumber);
+          }
+        }
+      }
+
+      if (errors.length && errors.includes("duplicate Aadhaar") && !matchedEntityId) {
+        // In-file duplicate (no DB match): treat as duplicate row.
+        status = "duplicate";
+        duplicate++;
+      } else if (matchedEntityId) {
         status = "duplicate";
         duplicate++;
       } else {
@@ -232,7 +292,7 @@ export async function createImportPreview(
         rowNumber,
         JSON.stringify(raw),
         status,
-        JSON.stringify(parsed.errors),
+        JSON.stringify(errors),
         matchedEntityId,
       ],
     );
@@ -241,7 +301,7 @@ export async function createImportPreview(
       rowNumber,
       status,
       payload: raw,
-      errors: parsed.errors,
+      errors,
       matchedEntityId,
     });
   }
@@ -382,7 +442,7 @@ export async function rollbackImportJob(
 
   for (const row of rows) {
     if (!row.created_entity_id) continue;
-    if (job.import_type === "student") {
+    if (job.import_type === "student" || job.import_type === "student_placeholder") {
       await rollbackImportedStudent(
         db,
         organizationId,
@@ -403,6 +463,130 @@ export async function rollbackImportJob(
     [jobId],
   );
   return updated[0]!;
+}
+
+export interface PlaceholderSectionInput {
+  sectionLabel: string;
+  studentCount: number;
+}
+
+export interface PlaceholderClassInput {
+  classLabel: string;
+  sections: PlaceholderSectionInput[];
+}
+
+export interface GeneratePlaceholderInput {
+  academicYear: string;
+  classes: PlaceholderClassInput[];
+}
+
+/**
+ * Generates placeholder students (is_placeholder = true, no parent user) using
+ * the existing import-job machinery so the whole batch is rollbackable via
+ * rollbackImportJob. Idempotent per (school, academicYear, classLabel,
+ * sectionLabel, roll): re-running creates no duplicate students.
+ *
+ * The job is created with import_type = 'student_placeholder' and marked
+ * 'committed'. Each newly-created placeholder gets a committed import_row whose
+ * created_entity_id is the student id, so rollback removes exactly those.
+ */
+export async function generatePlaceholderStudents(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  createdBy: string,
+  input: GeneratePlaceholderInput,
+): Promise<{ job: ImportJobRow; generatedCount: number }> {
+  const academicYear = input.academicYear.trim();
+  if (!academicYear) throw new Error("PLACEHOLDER_ACADEMIC_YEAR_REQUIRED");
+  if (!Array.isArray(input.classes) || input.classes.length === 0) {
+    throw new Error("PLACEHOLDER_CLASSES_REQUIRED");
+  }
+
+  // Total requested rows (for total_rows accounting).
+  let totalRequested = 0;
+  for (const cls of input.classes) {
+    for (const section of cls.sections ?? []) {
+      const count = Number(section.studentCount) || 0;
+      if (count < 0) throw new Error("PLACEHOLDER_COUNT_INVALID");
+      totalRequested += count;
+    }
+  }
+
+  const jobRows = await db.queryObject<ImportJobRow>(
+    `INSERT INTO onboarding_import_jobs (
+       organization_id, school_id, import_type, status, file_name,
+       total_rows, created_by
+     ) VALUES ($1, $2, 'student_placeholder', 'committed', $3, $4, $5)
+     RETURNING *`,
+    [
+      organizationId,
+      schoolId,
+      `placeholders_${academicYear}.generated`,
+      totalRequested,
+      createdBy,
+    ],
+  );
+  const job = jobRows[0]!;
+
+  let generatedCount = 0;
+  let rowNumber = 0;
+  for (const cls of input.classes) {
+    const classLabel = String(cls.classLabel ?? "").trim();
+    if (!classLabel) throw new Error("PLACEHOLDER_CLASS_LABEL_REQUIRED");
+    for (const section of cls.sections ?? []) {
+      const sectionLabel = String(section.sectionLabel ?? "").trim();
+      if (!sectionLabel) throw new Error("PLACEHOLDER_SECTION_LABEL_REQUIRED");
+      const count = Number(section.studentCount) || 0;
+      for (let n = 1; n <= count; n++) {
+        rowNumber++;
+        const { studentId, created } = await createPlaceholderStudent(
+          db,
+          organizationId,
+          schoolId,
+          academicYear,
+          classLabel,
+          sectionLabel,
+          n,
+        );
+        if (created) generatedCount++;
+        await db.queryObject(
+          `INSERT INTO onboarding_import_rows (
+             job_id, organization_id, school_id, row_number, payload, status,
+             errors, created_entity_id
+           ) VALUES ($1, $2, $3, $4, $5::jsonb, $6, '[]'::jsonb, $7)`,
+          [
+            job.id,
+            organizationId,
+            schoolId,
+            rowNumber,
+            JSON.stringify({ classLabel, sectionLabel, academicYear, roll: n }),
+            // Only newly-created placeholders are rolled back; pre-existing ones
+            // are skipped so rollback never deletes data this run didn't create.
+            created ? "committed" : "duplicate",
+            created ? studentId : null,
+          ],
+        );
+      }
+    }
+  }
+
+  const updated = await db.queryObject<ImportJobRow>(
+    `UPDATE onboarding_import_jobs
+     SET valid_rows = $2, committed_rows = $2,
+         duplicate_rows = $3,
+         report = report || $4::jsonb,
+         updated_at = timezone('utc', now())
+     WHERE id = $1 RETURNING *`,
+    [
+      job.id,
+      generatedCount,
+      totalRequested - generatedCount,
+      JSON.stringify({ generatedCount, academicYear }),
+    ],
+  );
+
+  return { job: updated[0]!, generatedCount };
 }
 
 export async function getImportJob(

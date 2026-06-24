@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
 import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
@@ -135,7 +137,7 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
           actionLabel: 'View fee account',
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI collection insight',
-          onAction: null,
+          onAction: () => context.go(RouteNames.financeStudentAccounts),
         ),
       ],
     );

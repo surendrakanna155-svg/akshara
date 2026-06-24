@@ -66,6 +66,7 @@ import '../features/copilot/dock/copilot_dock_host.dart';
 import '../features/admin/admin_shell.dart';
 import '../features/admin/backup/backup_restore_screen.dart';
 import '../features/onboarding/unified_onboarding_flow_screen.dart';
+import '../features/onboarding/student_onboarding_screen.dart';
 import '../core/repositories/repository_providers.dart';
 import '../core/tenant/tenant_provider.dart';
 import '../core/testing/qa_test_keys.dart';
@@ -499,6 +500,13 @@ GoRouter createAppRouter({
             name: 'unifiedOnboarding',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: UnifiedOnboardingFlowScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.studentOnboarding,
+            name: 'studentOnboarding',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: StudentOnboardingScreen(),
             ),
           ),
           GoRoute(
