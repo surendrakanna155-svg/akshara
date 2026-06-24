@@ -21,13 +21,15 @@ class ControlCenterProvidersScreen extends ConsumerStatefulWidget {
 
 class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProvidersScreen> {
   final _credential = TextEditingController();
+  final _model = TextEditingController();
   String _category = 'ai';
-  String _providerName = 'openai';
+  String _providerName = 'openrouter';
   bool _saving = false;
 
   @override
   void dispose() {
     _credential.dispose();
+    _model.dispose();
     super.dispose();
   }
 
@@ -119,14 +121,26 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
           initialValue: _providerName,
           decoration: const InputDecoration(labelText: 'Provider'),
           items: const [
-            DropdownMenuItem(value: 'openai', child: Text('OpenAI')),
-            DropdownMenuItem(value: 'claude', child: Text('Claude')),
-            DropdownMenuItem(value: 'gemini', child: Text('Gemini')),
+            DropdownMenuItem(value: 'openrouter', child: Text('OpenRouter (Claude/GPT/Gemini)')),
+            DropdownMenuItem(value: 'anthropic', child: Text('Anthropic (Claude direct)')),
             DropdownMenuItem(value: 'msg91', child: Text('MSG91')),
             DropdownMenuItem(value: 'gupshup', child: Text('Gupshup')),
           ],
-          onChanged: (v) => setState(() => _providerName = v ?? 'openai'),
+          onChanged: (v) => setState(() => _providerName = v ?? 'openrouter'),
         ),
+        if (_category == 'ai')
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: TextField(
+              controller: _model,
+              decoration: InputDecoration(
+                labelText: 'Model (optional)',
+                helperText: _providerName == 'openrouter'
+                    ? 'Default: anthropic/claude-sonnet-4-6 · e.g. anthropic/claude-opus-4-8, openai/gpt-4o-mini'
+                    : 'Default: claude-opus-4-8 · e.g. claude-sonnet-4-6',
+              ),
+            ),
+          ),
         TextField(
           controller: _credential,
           obscureText: true,
@@ -147,6 +161,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
+      final model = _model.text.trim();
       await ref.read(controlCenterRepositoryProvider).saveProvider(
             query: ref.read(repositoryQueryProvider),
             providerCategory: _category,
@@ -154,6 +169,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
             credential: _credential.text.trim().isEmpty ? null : _credential.text.trim(),
             isActive: true,
             isPrimary: true,
+            config: _category == 'ai' && model.isNotEmpty ? {'model': model} : null,
           );
       _credential.clear();
       ref.invalidate(controlCenterProvidersDataProvider);

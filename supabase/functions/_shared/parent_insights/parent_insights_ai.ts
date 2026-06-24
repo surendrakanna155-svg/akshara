@@ -8,7 +8,7 @@
 // Any failure (no key, refusal, bad JSON, transport error) returns the original
 // deterministic snapshot unchanged — enrichment is strictly additive and safe.
 
-import { callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import type { ParentInsightSnapshot } from "./parent_insights_service.ts";
 
 const ENRICH_MAX_TOKENS = 900;
@@ -72,6 +72,7 @@ function parseJsonObject(text: string): EnrichedFields | null {
 export async function enrichParentInsightWithClaude(
   snapshot: ParentInsightSnapshot,
   apiKey?: string,
+  opts?: { provider?: AiProvider; model?: string },
 ): Promise<ParentInsightSnapshot> {
   if (!apiKey) return snapshot;
 
@@ -93,7 +94,8 @@ export async function enrichParentInsightWithClaude(
   try {
     const result = await callClaude({
       apiKey,
-      model: claudeModel(),
+      provider: opts?.provider,
+      model: opts?.model ?? claudeModel(),
       maxTokens: ENRICH_MAX_TOKENS,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],

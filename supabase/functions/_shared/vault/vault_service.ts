@@ -26,7 +26,7 @@ export interface ProviderConfigRow {
 }
 
 const SUPPORTED_PROVIDERS = {
-  ai: ["openai", "claude", "gemini", "stub"],
+  ai: ["anthropic", "claude", "openrouter", "openai", "gemini", "stub"],
   whatsapp: ["msg91", "gupshup", "stub"],
   sms: ["msg91", "stub"],
 } as const;

@@ -20,6 +20,7 @@ import {
   reportRemarkToApi,
 } from "./education_mapper.ts";
 import { generateQuestionPaper } from "./education_question_paper_service.ts";
+import { resolveAiConfig } from "../ai/ai_settings.ts";
 import {
   archiveQuestionBankItem,
   createHomeworkAssignment,
@@ -334,7 +335,8 @@ export async function handleGenerateQuestionPaper(req: Request, config: AppConfi
 
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
-      const generated = await generateQuestionPaper(db, body);
+      const ai = await resolveAiConfig(db, orgId);
+      const generated = await generateQuestionPaper(db, body, ai);
       const saved = await createQuestionPaper(db, orgId, schoolId, {
         academicYearId: body.academicYearId,
         academicYearLabel: body.academicYearLabel,

@@ -12,7 +12,7 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { loadCopilotContext } from "./copilot_context_engine.ts";
 import { generateCopilotResponse } from "./copilot_llm_client.ts";
-import { aiApiKey } from "../ai/anthropic_client.ts";
+import { resolveAiConfig } from "../ai/ai_settings.ts";
 import { buildSystemPrompt } from "./copilot_prompt_orchestrator.ts";
 import {
   appendCopilotMessage,
@@ -271,6 +271,7 @@ export async function handleSendMessage(
         content,
       );
 
+      const ai = await resolveAiConfig(db, orgId);
       const generation = await generateCopilotResponse({
         systemPrompt,
         history: priorMessages
@@ -282,7 +283,9 @@ export async function handleSendMessage(
         userMessage: content,
         assistantType: session.assistant_type as CopilotAssistantType,
         context,
-        apiKey: aiApiKey(),
+        apiKey: ai.apiKey,
+        provider: ai.provider,
+        model: ai.model,
       });
 
       const assistantMessage = await appendCopilotMessage(

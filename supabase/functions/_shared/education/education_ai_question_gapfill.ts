@@ -12,7 +12,7 @@
 // (or zero) candidates — never a fabricated or malformed question. No student
 // data is ever sent; the prompt carries class-level syllabus scope only.
 
-import { callClaude, claudeModel } from "../ai/anthropic_client.ts";
+import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
 import { computeQuestionFingerprint } from "./education_fingerprint.ts";
 import type { BlueprintSlot } from "./education_blueprint_solver.ts";
 import {
@@ -176,6 +176,7 @@ export async function generateAiCandidatesForGaps(
   gaps: BlueprintSlot[],
   scope: GapFillScope,
   apiKey?: string,
+  opts?: { provider?: AiProvider; model?: string },
 ): Promise<AiQuestionCandidate[]> {
   if (!apiKey || gaps.length === 0) return [];
 
@@ -185,7 +186,8 @@ export async function generateAiCandidatesForGaps(
   try {
     const result = await callClaude({
       apiKey,
-      model: claudeModel(),
+      provider: opts?.provider,
+      model: opts?.model ?? claudeModel(),
       maxTokens: GAPFILL_MAX_TOKENS,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: buildUserMessage(batch, scope) }],

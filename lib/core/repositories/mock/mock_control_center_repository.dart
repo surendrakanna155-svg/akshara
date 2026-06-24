@@ -722,6 +722,7 @@ class MockControlCenterRepository implements ControlCenterRepository {
     String? credential,
     bool isActive = true,
     bool isPrimary = false,
+    Map<String, dynamic>? config,
   }) async {}
 
   @override

@@ -1,7 +1,12 @@
 import { buildStubAssistantReply } from "./copilot_prompt_orchestrator.ts";
 import type { CopilotContextBundle } from "./copilot_context_engine.ts";
 import type { CopilotAssistantType } from "./copilot_types.ts";
-import { callClaude, claudeModel, type ClaudeMessage } from "../ai/anthropic_client.ts";
+import {
+  type AiProvider,
+  callClaude,
+  claudeModel,
+  type ClaudeMessage,
+} from "../ai/anthropic_client.ts";
 
 export interface CopilotGenerationInput {
   systemPrompt: string;
@@ -10,6 +15,9 @@ export interface CopilotGenerationInput {
   assistantType: CopilotAssistantType;
   context: CopilotContextBundle;
   apiKey?: string | null;
+  /** Provider + model from the resolved AI config; default to env when unset. */
+  provider?: AiProvider;
+  model?: string;
 }
 
 export interface CopilotGenerationResult {
@@ -51,7 +59,8 @@ export async function generateCopilotResponse(
 
   const result = await callClaude({
     apiKey: input.apiKey,
-    model: claudeModel(),
+    provider: input.provider,
+    model: input.model ?? claudeModel(),
     maxTokens: COPILOT_MAX_TOKENS,
     system: input.systemPrompt,
     messages,

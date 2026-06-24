@@ -15,7 +15,7 @@ import {
   type InsightPeriod,
 } from "./parent_insights_service.ts";
 import { enrichParentInsightWithClaude } from "./parent_insights_ai.ts";
-import { aiApiKey } from "../ai/anthropic_client.ts";
+import { resolveAiConfig } from "../ai/ai_settings.ts";
 
 export async function handleGenerateParentInsights(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
@@ -53,7 +53,12 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
       }
 
       const baseSnapshot = await generateParentInsightSnapshot(db, body.studentId, period, language);
-      const snapshot = await enrichParentInsightWithClaude(baseSnapshot, aiApiKey());
+      const ai = await resolveAiConfig(db, orgId);
+      const snapshot = await enrichParentInsightWithClaude(
+        baseSnapshot,
+        ai.apiKey,
+        { provider: ai.provider, model: ai.model },
+      );
       const rows = await db.queryObject<{ id: string }>(
         `INSERT INTO parent_insight_snapshots (
            organization_id, school_id, student_id, period, language,

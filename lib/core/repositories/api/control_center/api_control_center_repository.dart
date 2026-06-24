@@ -169,6 +169,7 @@ class ApiControlCenterRepository implements ControlCenterRepository {
     String? credential,
     bool isActive = true,
     bool isPrimary = false,
+    Map<String, dynamic>? config,
   }) =>
       _remote.upsertProviderRaw(
         query: query,
@@ -178,6 +179,7 @@ class ApiControlCenterRepository implements ControlCenterRepository {
           if (credential != null) 'credential': credential,
           'isActive': isActive,
           'isPrimary': isPrimary,
+          if (config != null) 'config': config,
         },
       );
 

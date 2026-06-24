@@ -16,7 +16,8 @@
 import { buildPaperBlueprint } from "./education_generator.ts";
 import { solveBlueprint } from "./education_blueprint_solver.ts";
 import { generateAiCandidatesForGaps } from "./education_ai_question_gapfill.ts";
-import { aiApiKey } from "../ai/anthropic_client.ts";
+import { aiApiKey, aiProvider, claudeModel } from "../ai/anthropic_client.ts";
+import type { AiRuntimeConfig } from "../ai/ai_settings.ts";
 import { listQuestionBankItems, type QuestionBankListFilters } from "./education_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type {
@@ -79,6 +80,7 @@ function sortBank(items: QuestionBankItemRow[]): QuestionBankItemRow[] {
 export async function generateQuestionPaper(
   client: TenantQueryClient,
   input: GenerateQuestionPaperInput,
+  ai?: AiRuntimeConfig,
 ): Promise<PaperGenerationResult> {
   const programTrack: EduProgramTrack = input.programTrack ?? "board";
 
@@ -124,8 +126,10 @@ export async function generateQuestionPaper(
 
   let aiCandidateCount = 0;
   const allowAi = input.allowAiGapFill !== false;
-  const apiKey = aiApiKey();
-  if (allowAi && apiKey && solution.gaps.length > 0) {
+  // Admin-saved panel config (provider/model/key) wins; else env fallback.
+  const aiConfig: AiRuntimeConfig = ai ??
+    { provider: aiProvider(), model: claudeModel(), apiKey: aiApiKey(), source: "env" };
+  if (allowAi && aiConfig.apiKey && solution.gaps.length > 0) {
     const candidates = await generateAiCandidatesForGaps(
       solution.gaps,
       {
@@ -135,7 +139,8 @@ export async function generateQuestionPaper(
         examType: input.examType,
         chapters: input.chapters,
       },
-      apiKey,
+      aiConfig.apiKey,
+      { provider: aiConfig.provider, model: aiConfig.model },
     );
     for (const c of candidates) {
       byIndex.set(c.slotIndex, {
