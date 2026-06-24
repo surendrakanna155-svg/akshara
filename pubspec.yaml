@@ -28,6 +28,22 @@ dev_dependencies:
   patrol: ^4.6.1
   integration_test:
     sdk: flutter
+  # Generates Android (legacy + adaptive) launcher icons from the branded
+  # source PNGs in assets/branding/. Regenerate after changing the source art:
+  #   flutter pub run flutter_launcher_icons
+  flutter_launcher_icons: ^0.14.1
+
+# Launcher icon configuration. Run `flutter pub run flutter_launcher_icons`
+# to (re)generate the mipmap resources under android/app/src/main/res/.
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: false
+  image_path: "assets/branding/app_icon.png"
+  min_sdk_android: 24
+  remove_alpha_ios: true
+  # Adaptive icon (Android 8.0+): brand background + transparent foreground.
+  adaptive_icon_background: "#1565C0"
+  adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
 
 flutter:
   uses-material-design: true

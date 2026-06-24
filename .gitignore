@@ -22,6 +22,11 @@ Thumbs.db
 *.pem
 credentials.json
 
+# Android release signing (never commit the keystore or its passwords)
+android/key.properties
+*.keystore
+*.jks
+
 # Supabase CLI local state
 supabase/.temp/
 

@@ -1,0 +1,35 @@
+# Akshara ERP — release signing template.
+#
+# OWNER ACTION REQUIRED (do NOT commit the real file):
+#   1. Generate an upload keystore once (store it somewhere safe + backed up):
+#
+#        keytool -genkey -v \
+#          -keystore ~/akshara-upload-keystore.jks \
+#          -storetype JKS \
+#          -keyalg RSA -keysize 2048 -validity 10000 \
+#          -alias akshara-upload
+#
+#   2. Copy this file to android/key.properties and fill in the four values
+#      below. android/key.properties is git-ignored and must never be committed.
+#
+#   3. Run `flutter build appbundle --release` — Gradle will pick up the
+#      release signing config automatically. If key.properties is absent the
+#      build falls back to debug signing (fine for local dev, NOT for Play).
+#
+# When uploading the very first build to the Play Console, enrol in Play App
+# Signing so Google manages the final app-signing key and this stays the
+# "upload" key (rotatable if ever lost).
+
+# Password for the keystore file.
+storePassword=CHANGE_ME
+
+# Password for the key entry (often the same as storePassword).
+keyPassword=CHANGE_ME
+
+# Alias used when the key was generated (e.g. akshara-upload).
+keyAlias=akshara-upload
+
+# Path to the .jks/.keystore file. Relative paths resolve against android/app/.
+# An absolute path (e.g. /Users/you/akshara-upload-keystore.jks) is recommended
+# so the secret keystore lives OUTSIDE the repository.
+storeFile=/ABSOLUTE/PATH/TO/akshara-upload-keystore.jks

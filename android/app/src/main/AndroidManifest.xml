@@ -1,5 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required: the app talks to the Akshara backend over HTTPS for auth,
+         attendance, fees, exams, etc. Without it no network calls work. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+ (API 33) runtime permission for showing push/local
+         notifications. Declared now for the upcoming push work; on lower API
+         levels it is ignored, and the prompt is only shown when notifications
+         are first requested at runtime. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Akshara ERP"
         android:name="${applicationName}"

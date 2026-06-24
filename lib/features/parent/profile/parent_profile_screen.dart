@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/legal/legal_links.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
@@ -35,6 +36,18 @@ class ParentProfileScreen extends ConsumerWidget {
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
   static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+
+  Future<void> _openPrivacyPolicy(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final opened = await LegalLinks.openPrivacyPolicy();
+    if (!opened) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Privacy policy is not available right now.'),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -183,6 +196,18 @@ class ParentProfileScreen extends ConsumerWidget {
                                 label: 'Appearance',
                                 value: 'Light, dark, or match your device',
                                 onTap: () => context.push(RouteNames.appearanceSettings),
+                              ),
+                              const SizedBox(height: AksharaSpacing.s4),
+                              const AksharaSectionHeader(
+                                title: 'Legal',
+                                fixedHeight: false,
+                                spacingBelow: AksharaSpacing.s3,
+                              ),
+                              ProfileInfoRow(
+                                icon: Icons.privacy_tip_outlined,
+                                label: 'Privacy Policy',
+                                value: 'How we handle your family\'s data',
+                                onTap: () => _openPrivacyPolicy(context),
                               ),
                               const SizedBox(height: AksharaSpacing.s4),
                               AksharaInsightCard(
