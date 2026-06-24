@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
 import '../../core/repositories/repository_query.dart';
+import '../../core/entitlements/entitlement_provider.dart';
 import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
@@ -81,6 +82,7 @@ class CopilotSendMessageNotifier extends AsyncNotifier<CopilotSendMessageResult?
         userMessage: content.trim(),
         capabilities: capabilities,
         module: screenContext?.module,
+        planCeiling: ref.read(planCapabilityCeilingProvider),
       );
       if (blocked != null) {
         final now = DateTime.now();

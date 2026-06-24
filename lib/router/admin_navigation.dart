@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/admin/models/admin_nav_models.dart';
 import '../features/admin/screens/admin_hub_screen.dart';
 import '../features/admin/screens/admin_module_placeholder_screen.dart';
+import '../features/entitlements/entitlement_module_gate.dart';
 import 'alumni_navigation.dart';
 import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
@@ -36,7 +37,10 @@ Widget financeRouteBuilder(BuildContext context, GoRouterState state) {
 }
 
 Widget hrRouteBuilder(BuildContext context, GoRouterState state) {
-  return hrDashboardRouteBuilder(context, state);
+  return EntitlementModuleGate(
+    module: AdminModule.hr,
+    child: hrDashboardRouteBuilder(context, state),
+  );
 }
 
 Widget managementRouteBuilder(BuildContext context, GoRouterState state) {
@@ -44,25 +48,41 @@ Widget managementRouteBuilder(BuildContext context, GoRouterState state) {
 }
 
 Widget transportRouteBuilder(BuildContext context, GoRouterState state) {
-  return transportDashboardRouteBuilder(context, state);
+  return EntitlementModuleGate(
+    module: AdminModule.transport,
+    child: transportDashboardRouteBuilder(context, state),
+  );
 }
 
 Widget hostelRouteBuilder(BuildContext context, GoRouterState state) {
-  return hostelDashboardRouteBuilder(context, state);
+  return EntitlementModuleGate(
+    module: AdminModule.hostel,
+    child: hostelDashboardRouteBuilder(context, state),
+  );
 }
 
 Widget inventoryRouteBuilder(BuildContext context, GoRouterState state) {
-  return inventoryDashboardRouteBuilder(context, state);
+  return EntitlementModuleGate(
+    module: AdminModule.inventory,
+    child: inventoryDashboardRouteBuilder(context, state),
+  );
 }
 
 Widget libraryRouteBuilder(BuildContext context, GoRouterState state) {
-  return libraryDashboardRouteBuilder(context, state);
+  return EntitlementModuleGate(
+    module: AdminModule.library,
+    child: libraryDashboardRouteBuilder(context, state),
+  );
 }
 
+// Control Center stays ungated (owner decision — overlaps core management).
 Widget controlCenterRouteBuilder(BuildContext context, GoRouterState state) {
   return controlCenterDashboardRouteBuilder(context, state);
 }
 
 Widget alumniRouteBuilder(BuildContext context, GoRouterState state) {
-  return alumniDashboardRouteBuilder(context, state);
+  return EntitlementModuleGate(
+    module: AdminModule.alumni,
+    child: alumniDashboardRouteBuilder(context, state),
+  );
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/entitlements/entitlement_provider.dart';
+import '../../core/entitlements/entitlement_resolver.dart';
 import '../../core/school_config/school_capability_registry.dart';
 import '../../core/school_config/school_configuration_models.dart';
 import '../../core/school_config/school_configuration_provider.dart';
@@ -25,6 +27,8 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
   late SchoolOperationsModel _operationsModel;
   late SchoolCapabilities _capabilities;
   int _branchCount = 1;
+  // Plan ceiling (B2): toggles for modules the plan does not include are locked.
+  SchoolCapabilities _ceiling = EntitlementResolver.unrestrictedCeiling;
 
   @override
   void initState() {
@@ -47,6 +51,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _ceiling = ref.watch(planCapabilityCeilingProvider);
     final isLast = _step == _stepLabels.length - 1;
     return Scaffold(
       key: QaTestKeys.schoolDiscoveryScreen,
@@ -105,6 +110,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
                 () => _capabilities = _capabilities.copyWith(transport: value),
               ),
               QaTestKeys.schoolDiscoveryCapabilityTransport,
+              locked: !_ceiling.transport,
             ),
             _capabilitySwitch(
               'Hostel',
@@ -113,6 +119,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
                 () => _capabilities = _capabilities.copyWith(hostel: value),
               ),
               QaTestKeys.schoolDiscoveryCapabilityHostel,
+              locked: !_ceiling.hostel,
             ),
             _capabilitySwitch(
               'Library',
@@ -121,6 +128,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
                 () => _capabilities = _capabilities.copyWith(library: value),
               ),
               QaTestKeys.schoolDiscoveryCapabilityLibrary,
+              locked: !_ceiling.library,
             ),
             _capabilitySwitch(
               'Inventory',
@@ -129,6 +137,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
                 () => _capabilities = _capabilities.copyWith(inventory: value),
               ),
               QaTestKeys.schoolDiscoveryCapabilityInventory,
+              locked: !_ceiling.inventory,
             ),
             _capabilitySwitch(
               'Alumni',
@@ -137,6 +146,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
                 () => _capabilities = _capabilities.copyWith(alumni: value),
               ),
               QaTestKeys.schoolDiscoveryCapabilityAlumni,
+              locked: !_ceiling.alumni,
             ),
             _capabilitySwitch(
               'HR Payroll',
@@ -145,6 +155,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
                 () => _capabilities = _capabilities.copyWith(hrPayroll: value),
               ),
               QaTestKeys.schoolDiscoveryCapabilityHrPayroll,
+              locked: !_ceiling.hrPayroll,
             ),
             _capabilitySwitch(
               'Multi-Branch',
@@ -154,6 +165,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
                     _capabilities = _capabilities.copyWith(multiBranch: value),
               ),
               QaTestKeys.schoolDiscoveryCapabilityMultiBranch,
+              locked: !_ceiling.multiBranch,
             ),
             _capabilitySwitch(
               'Trust / Organization',
@@ -164,6 +176,7 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
                 ),
               ),
               QaTestKeys.schoolDiscoveryCapabilityTrust,
+              locked: !_ceiling.trustOrganization,
             ),
           ],
         ),
@@ -235,8 +248,20 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
     String label,
     bool value,
     ValueChanged<bool> onChanged,
-    Key key,
-  ) {
+    Key key, {
+    bool locked = false,
+  }) {
+    // Plan-locked module: shown (never hidden) but disabled, with an upgrade hint.
+    if (locked) {
+      return SwitchListTile(
+        key: key,
+        title: Text(label),
+        subtitle: const Text('Upgrade to unlock'),
+        secondary: const Icon(Icons.lock_outline),
+        value: false,
+        onChanged: null,
+      );
+    }
     return SwitchListTile(
       key: key,
       title: Text(label),

@@ -23,6 +23,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { resolveSubscription } from "./entitlement_service.ts";
+import { entitlementEnforcementEnabled } from "./entitlement_enforcement.ts";
 
 export type ModuleRoute = (
   req: Request,
@@ -92,7 +93,10 @@ export function withEntitlement(
   slug: string,
 ): ModuleRoute {
   return async (req, config, method, path) => {
-    if (path === pathPrefix || path.startsWith(`${pathPrefix}/`)) {
+    if (
+      entitlementEnforcementEnabled() &&
+      (path === pathPrefix || path.startsWith(`${pathPrefix}/`))
+    ) {
       const denied = await enforceEntitlement(req, config, slug);
       if (denied) return denied;
     }

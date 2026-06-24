@@ -13,11 +13,12 @@ Legend: ✅ done & certified · 🟡 partial · ⛔ open · 🚫 intentionally o
 | G3 | Entitlement resolution (`planAllows ∩ schoolConfigEnabled`) | ✅ | Step 2 (`5f9d6bb`) + Step 3 (`39b3c6d`) |
 | G4 | Server-side enforcement (`requireEntitlement` → 402) | ✅ | Step 2 — transport/hostel/library/inventory/alumni/hr/director(multi_branch) |
 | G4a | Control-Center gating | 🚫 | Owner: keep ungated (overlaps core `module.management`) |
-| G5 | **Limit enforcement** (`limit.students`/`limit.schools` slab + grace on create paths) | ⛔ OPEN | data model + resolver expose limits; enrollment/school-create checks NOT wired |
-| G6 | Locked/upgrade UX | 🟡 | badge + Plan & Entitlements screen ✅ (Step 4); items below open |
-| G6a | Inline locked states on real module screens/KPIs | ⛔ OPEN | only the entitlements screen lists locked modules today |
-| G6b | School Discovery wizard renders plan-locked modules as locked | ⛔ OPEN | wizard still edits raw local config; effective is bounded but UI doesn't show the ceiling |
-| G6c | Copilot plan-locked topic message | ⛔ OPEN | `CopilotCapabilityFilter` not extended for plan-locked topics |
+| G5 | **Limit enforcement** (`limit.students`/`limit.schools` slab + grace on create paths) | ✅ | Step 4.6 — `enforceStudentLimit` (SIS create) + `enforceSchoolLimit` (control-center add-school); gated by the enforcement master switch |
+| G6 | Locked/upgrade UX | ✅ | badge + Plan & Entitlements screen (Step 4) + items below (Step 4.6) |
+| G6a | Inline locked states on real module screens | ✅ | Step 4.6 — `EntitlementModuleGate` route guard + nav shows locked modules (visible, lock glyph, never hidden) |
+| G6b | School Discovery wizard renders plan-locked modules as locked | ✅ | Step 4.6 — wizard toggles for plan-disallowed modules render disabled with "Upgrade to unlock" |
+| G6c | Copilot plan-locked topic message | ✅ | Step 4.6 — `CopilotCapabilityFilter` differentiates plan-locked (upgrade) vs school-disabled (enable in config) |
+| — | **Enforcement master switch** (`ENTITLEMENT_ENFORCEMENT`, default off) | ✅ | Step 4.6 — backend enforcement (module 402 + limits) is no-op until flipped → edge deploys dark safely |
 | G7 | Audit — plan assign/change | ✅ | Step 4.5 (`subscription.plan.assigned`) |
 | G7a | Audit — enterprise per-deal override applied | ⛔ OPEN (minor) | overrides exist in data model; no route/UI/`subscriptionOverrideApplied` yet |
 
@@ -29,16 +30,16 @@ Legend: ✅ done & certified · 🟡 partial · ⛔ open · 🚫 intentionally o
 | `PUT /platform/organizations/{id}/subscription` | ✅ | Step 4.5 |
 | `GET /platform/subscriptions` (assign screen list) | ✅ | Step 4.5 |
 | `GET /school-config` also returns resolved effective capabilities | ⚠️ DONE DIFFERENTLY | resolution done client-side in `schoolCapabilitiesProvider` (= local ∩ plan ceiling); server response unchanged. Functionally equivalent for gating; revisit only if a server-authoritative effective payload is required |
-| Limit checks on count-growing create paths | ⛔ OPEN | = G5 |
+| Limit checks on count-growing create paths | ✅ Step 4.6 | = G5 (gated by enforcement switch) |
 
 ## UI (spec §7)
 | Item | Status |
 |---|---|
 | Plan badge | ✅ Step 4 |
 | Plan & Entitlements screen + wa.me upgrade CTA | ✅ Step 4 |
-| Locked module/KPI inline states | ⛔ OPEN (G6a) |
-| School Discovery wizard ceiling | ⛔ OPEN (G6b) |
-| Copilot plan-locked message | ⛔ OPEN (G6c) |
+| Locked module inline states | ✅ Step 4.6 |
+| School Discovery wizard ceiling | ✅ Step 4.6 |
+| Copilot plan-locked message | ✅ Step 4.6 |
 | SuperAdmin assign-plan screen | ✅ Step 4.5 |
 
 ## Step 5 (planned — tests + production)
@@ -57,9 +58,13 @@ Legend: ✅ done & certified · 🟡 partial · ⛔ open · 🚫 intentionally o
 - Step 4: `docs/B2_STEP4_CERTIFICATION.md`
 - Step 4.5: `docs/B2_STEP4_5_CERTIFICATION.md`
 
+## Per-step certification docs (cont.)
+- Step 4.6: `docs/B2_STEP4_6_CERTIFICATION.md` (G5 limits + G6a/b/c locked UX + enforcement switch)
+
 ## Definition of "B2 100% complete"
-All ⛔ closed (G5, G6a/b/c, Step 5) or explicitly marked 🚫 by owner. Today: the
-**core entitlement loop is built and certified locally**; the open items are
-enforcement of slab limits, the remaining locked-state UX surfaces, and Step-5
-production. None are forgotten — they are listed here and will be closed before
-B2 is declared done.
+All functional spec items (G1–G7 except the 🚫/deferred-minor G7a + the §6
+GET /school-config server-payload deviation) are now ✅ **built and certified
+locally**. The ONLY remaining work is **Step 5** (integration/E2E tests, smoke
+script, VPS deploy + production cert) — ⛔ open by design (owner-gated). Deferred
+minors (G7a override audit; server-resolved capabilities payload) remain tracked
+above, non-blocking for the pilot.

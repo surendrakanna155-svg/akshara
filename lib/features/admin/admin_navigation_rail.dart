@@ -90,6 +90,7 @@ class AdminNavigationRail extends ConsumerWidget {
                       icon: destination.icon,
                       selectedIcon: destination.selectedIcon,
                       selected: index == selectedIndex,
+                      locked: destination.isLocked,
                       onTap: () => _navigate(context, destination),
                     );
                   },
@@ -150,6 +151,7 @@ class AdminNavigationRail extends ConsumerWidget {
                         selectedIcon: destination.selectedIcon,
                         selected: index == selectedIndex,
                         expanded: expanded,
+                        locked: destination.isLocked,
                         onTap: () => _navigate(context, destination),
                       );
                     },

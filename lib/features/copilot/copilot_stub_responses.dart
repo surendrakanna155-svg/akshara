@@ -7,11 +7,13 @@ String buildContextAwareStubReply({
   required String userMessage,
   required CopilotScreenContext? screenContext,
   SchoolCapabilities capabilities = const SchoolCapabilities(),
+  SchoolCapabilities? planCeiling,
 }) {
   final disabled = CopilotCapabilityFilter.disabledTopicMessage(
     userMessage: userMessage,
     capabilities: capabilities,
     module: screenContext?.module,
+    planCeiling: planCeiling,
   );
   if (disabled != null) {
     return disabled;

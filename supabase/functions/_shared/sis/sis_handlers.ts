@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, sisAudit } from "../audit/mutation_audit_catalog.ts";
+import { enforceStudentLimit } from "../entitlements/entitlement_limits.ts";
 import {
   InvalidStudentStatusError,
   InvalidStudentStatusTransitionError,
@@ -269,6 +270,10 @@ export async function handleCreateStudent(
   if (!input) {
     return errorEnvelope("VALIDATION_ERROR", "displayName and admissionNumber are required", 422);
   }
+
+  // B2 slab limit (no-op unless ENTITLEMENT_ENFORCEMENT is on for an assigned plan).
+  const limitDenied = await enforceStudentLimit(config, auth.claims);
+  if (limitDenied) return limitDenied;
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);

@@ -10,6 +10,8 @@ import '../features/director/director_portfolio_screen.dart';
 import '../features/director/director_reports_screen.dart';
 import '../features/director/director_revenue_screen.dart';
 import '../features/director/director_schools_screen.dart';
+import '../features/admin/models/admin_nav_models.dart';
+import '../features/entitlements/entitlement_module_gate.dart';
 import 'route_names.dart';
 
 String? directorRootRedirect(BuildContext context, GoRouterState state) {
@@ -21,7 +23,10 @@ String? directorRootRedirect(BuildContext context, GoRouterState state) {
 
 Widget directorDashboardRouteBuilder(
     BuildContext context, GoRouterState state) {
-  return const DirectorDashboardScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorDashboardScreen(),
+  );
 }
 
 Widget directorSchoolsRouteBuilder(BuildContext context, GoRouterState state) {

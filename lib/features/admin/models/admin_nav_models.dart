@@ -50,6 +50,7 @@ class AdminNavDestination {
     required this.icon,
     required this.selectedIcon,
     required this.requiredPermission,
+    this.isLocked = false,
   });
 
   final AdminModule module;
@@ -58,6 +59,22 @@ class AdminNavDestination {
   final IconData icon;
   final IconData selectedIcon;
   final Permission requiredPermission;
+
+  /// True when the module is visible but locked by the org's plan (B2). The
+  /// approved UX shows locked modules with an upgrade affordance — never hides.
+  final bool isLocked;
+
+  AdminNavDestination copyWith({bool? isLocked}) {
+    return AdminNavDestination(
+      module: module,
+      route: route,
+      label: label,
+      icon: icon,
+      selectedIcon: selectedIcon,
+      requiredPermission: requiredPermission,
+      isLocked: isLocked ?? this.isLocked,
+    );
+  }
 }
 
 /// Canonical module metadata for placeholders and breadcrumbs.

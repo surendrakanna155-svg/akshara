@@ -12,6 +12,7 @@ import {
 } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
+import { enforceSchoolLimit } from "../entitlements/entitlement_limits.ts";
 
 /**
  * Write counterpart to the Control Center read handlers. Control Center is
@@ -111,6 +112,10 @@ export async function handleCreateSchool(req: Request, config: AppConfig): Promi
   if (!auth.ok) return auth.response;
   const denied = requireManageOrgScope(auth.claims);
   if (denied) return denied;
+
+  // B2 school slab limit (no-op unless ENTITLEMENT_ENFORCEMENT is on for an assigned plan).
+  const limitDenied = await enforceSchoolLimit(config, auth.claims);
+  if (limitDenied) return limitDenied;
 
   const body = await readJson<Record<string, unknown>>(req);
   const name = str(body, "name");

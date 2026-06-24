@@ -76,6 +76,7 @@ class AksharaNavRailTile extends StatelessWidget {
     required this.onTap,
     this.expanded = true,
     this.semanticSelected = false,
+    this.locked = false,
   });
 
   final String label;
@@ -85,6 +86,9 @@ class AksharaNavRailTile extends StatelessWidget {
   final bool expanded;
   final VoidCallback onTap;
   final bool semanticSelected;
+
+  /// Module is visible but locked by the org's plan (B2) — shows a lock glyph.
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +161,12 @@ class AksharaNavRailTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        if (locked)
+                          Icon(
+                            Icons.lock_outline,
+                            size: 16,
+                            color: colors.onSurfaceVariant,
+                          ),
                       ],
                     )
                   : Center(

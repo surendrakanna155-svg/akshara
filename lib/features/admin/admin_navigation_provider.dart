@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/config/chain_scope.dart';
 import '../../core/config/school_build_scope.dart';
 import '../../core/security/permissions.dart';
+import '../../core/entitlements/entitlement_provider.dart';
 import '../../core/school_config/school_capability_registry.dart';
 import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/security/rbac_service.dart';
@@ -195,6 +196,7 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
 final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
   final rbac = ref.watch(rbacServiceProvider);
   final capabilities = ref.watch(schoolCapabilitiesProvider);
+  final planCeiling = ref.watch(planCapabilityCeilingProvider);
   final isChainOrg = ref.watch(isChainOrgProvider);
   return kAllAdminNavDestinations
       .where(
@@ -208,12 +210,23 @@ final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
       .where(
         (destination) => rbac.hasPermission(destination.requiredPermission),
       )
-      .where(
-        (destination) => SchoolCapabilityRegistry.isAdminModuleEnabled(
+      .map((destination) {
+        // Effective = school config ∩ plan ceiling. If enabled, show normally.
+        if (SchoolCapabilityRegistry.isAdminModuleEnabled(
           destination.module,
           capabilities,
-        ),
-      )
+        )) {
+          return destination;
+        }
+        // Disabled: locked by the PLAN (show locked + upgrade, never hide) vs
+        // turned off by the SCHOOL within its plan (hide — existing behaviour).
+        final planAllows = SchoolCapabilityRegistry.isAdminModuleEnabled(
+          destination.module,
+          planCeiling,
+        );
+        return planAllows ? null : destination.copyWith(isLocked: true);
+      })
+      .whereType<AdminNavDestination>()
       .toList(growable: false);
 });
 
