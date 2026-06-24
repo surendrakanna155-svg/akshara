@@ -58,6 +58,10 @@ import { routeDirector } from "../_shared/director/director_router.ts";
 // --- B1 school-config (AgentE) ---
 import { routeSchoolConfig } from "../_shared/school_config/school_config_router.ts";
 // --- end B1 school-config (AgentE) ---
+// --- B2 entitlement layer (Step 2) ---
+import { routeEntitlements } from "../_shared/entitlements/entitlement_router.ts";
+import { withEntitlement } from "../_shared/entitlements/entitlement_middleware.ts";
+// --- end B2 entitlement layer ---
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 
 const corsHeaders = {
@@ -82,17 +86,19 @@ async function routeModuleRequest(
     routeAttendance,
     routeAcademic,
     routeTimetable,
-    routeTransport,
-    routeHr,
-    routeHostel,
-    routeLibrary,
+    // --- B2: optional modules gated by plan entitlement (402 PLAN_UPGRADE_REQUIRED) ---
+    withEntitlement(routeTransport, "/transport", "module.transport"),
+    withEntitlement(routeHr, "/hr", "module.hr_payroll"),
+    withEntitlement(routeHostel, "/hostel", "module.hostel"),
+    withEntitlement(routeLibrary, "/library", "module.library"),
     routeInventoryDistribution,
-    routeInventory,
+    withEntitlement(routeInventory, "/inventory", "module.inventory"),
+    // --- end B2 gated modules ---
     routeEmployee,
     routeOperations,
     routeMemories,
     routePromotion,
-    routeAlumni,
+    withEntitlement(routeAlumni, "/alumni", "module.alumni"),
     routeManagement,
     routeControlCenter,
     routePilotOperations,
@@ -105,10 +111,13 @@ async function routeModuleRequest(
     routeGrowth,
     routeSchoolCompletion,
     routeParentExperience,
-    routeDirector,
+    withEntitlement(routeDirector, "/director", "module.multi_branch"),
     // --- B1 school-config (AgentE) ---
     routeSchoolConfig,
     // --- end B1 school-config (AgentE) ---
+    // --- B2 entitlement layer (Step 2): GET /plans, GET /subscription ---
+    routeEntitlements,
+    // --- end B2 entitlement layer ---
     routeAnalytics,
     routeEducation,
     routeIntelligence,
