@@ -205,7 +205,7 @@ status doc · memory updated. Then start a fresh session for the next batch.
 - [ ] **O5** Firebase setup → push notifications
 
 ### P1 — Revenue & Pilot Success (engineering, in order)
-- [ ] **B1** Admissions CRM — complete the remaining ~30% (lead pipeline stages, follow-up loop, conversion tracking)
+- [~] **B1** Admissions CRM — **PENDING PRODUCTION CERTIFICATION.** Code-complete + local-E2E-certified (11/11), analyze clean, tests green, committed c91b941. NOT Fully Complete until VPS deploy + real production migration + live smoke pass — see `docs/B1_VPS_DEPLOY_RUNBOOK.md`. (Blocked on VPS access this session.)
 - [ ] **B2** Capability Gating — finalize tier/package definitions → tiered pricing live (quick win)
 - [ ] **B3** Parent Insights — surface in parent UI + polish (quick win, already live)
 - [ ] **B4** AI Admissions Assistant — wire live Copilot `admissions` persona to funnel/CRM data + next-best-action
@@ -224,4 +224,4 @@ status doc · memory updated. Then start a fresh session for the next batch.
 ### P4 — Long-Term Expansion
 - [ ] **B12** Verticals (unfreeze after pilot validation + first paying schools)
 
-> Next batch to start: **B1 — Admissions CRM completion** (P0 items wait on owner inputs).
+> Current: **B1 is Pending Production Certification** — finish via `docs/B1_VPS_DEPLOY_RUNBOOK.md` (VPS deploy + prod migration + live smoke) before it is Fully Complete. Do NOT start B2 until B1 is VPS-certified.
