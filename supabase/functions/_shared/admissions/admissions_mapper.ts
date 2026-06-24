@@ -242,6 +242,60 @@ export function enrollmentToApi(
   };
 }
 
+export interface AdmissionsLeadActivityRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  lead_id: string;
+  activity_type: string;
+  title: string;
+  description: string;
+  actor: string;
+  created_at: string;
+}
+
+export interface AdmissionsLeadFollowUpRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  lead_id: string;
+  task: string;
+  scheduled_label: string;
+  completed_label: string;
+  counselor: string;
+  status: string;
+  outcome: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function leadActivityToApi(
+  row: AdmissionsLeadActivityRow,
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    timestampLabel: formatDisplayDateTime(row.created_at),
+    title: row.title,
+    description: row.description,
+    actor: row.actor,
+    type: row.activity_type,
+  };
+}
+
+export function followUpToApi(
+  row: AdmissionsLeadFollowUpRow,
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    scheduledLabel: row.scheduled_label,
+    completedLabel: row.completed_label,
+    task: row.task,
+    counselor: row.counselor,
+    status: row.status,
+    outcome: row.outcome,
+  };
+}
+
 export function listEnvelope(
   items: Record<string, unknown>[],
   pagination: {

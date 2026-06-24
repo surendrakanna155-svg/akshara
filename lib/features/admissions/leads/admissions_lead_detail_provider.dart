@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-
+import '../../../core/repositories/repository_providers.dart';
+import '../../../core/tenant/tenant_provider.dart';
 import '../admissions_models.dart';
-import 'admissions_leads_provider.dart';
 
 final admissionsLeadDetailLoadingProvider =
     StateProvider.family<bool, String>((ref, _) => false);
@@ -11,27 +11,31 @@ final admissionsLeadDetailErrorProvider =
 final admissionsLeadDetailEmptyProvider =
     StateProvider.family<bool, String>((ref, _) => false);
 
+/// Real lead-detail fetch — pulls the lead with its persisted activity timeline
+/// and follow-up history from the backend (`GET /admissions/leads/{id}`).
+final admissionsLeadDetailDataProvider =
+    FutureProvider.family<LeadDetailData, String>((ref, leadId) async {
+  final query = ref.watch(repositoryQueryProvider);
+  return ref
+      .read(admissionsRepositoryProvider)
+      .getLeadDetail(query: query, leadId: leadId);
+});
+
 final admissionsLeadDetailProvider =
     Provider.family<LeadDetailProfile?, String>((ref, leadId) {
   if (ref.watch(admissionsLeadDetailLoadingProvider(leadId))) return null;
   if (ref.watch(admissionsLeadDetailErrorProvider(leadId))) return null;
   if (ref.watch(admissionsLeadDetailEmptyProvider(leadId))) return null;
 
-  final leads = ref.watch(admissionsLeadsProvider);
-  AdmissionsLead? lead;
-  for (final item in leads) {
-    if (item.id == leadId) {
-      lead = item;
-      break;
-    }
-  }
-  if (lead == null) return null;
+  final data = ref.watch(admissionsLeadDetailDataProvider(leadId)).valueOrNull;
+  if (data == null) return null;
 
-  return _buildLeadDetail(lead);
+  return _buildLeadDetail(data);
 });
 
-LeadDetailProfile _buildLeadDetail(AdmissionsLead lead) {
-  final activeStages = [
+LeadDetailProfile _buildLeadDetail(LeadDetailData data) {
+  final lead = data.lead;
+  const activeStages = [
     LeadStage.newEnquiry,
     LeadStage.contacted,
     LeadStage.schoolVisit,
@@ -55,12 +59,11 @@ LeadDetailProfile _buildLeadDetail(AdmissionsLead lead) {
 
   return LeadDetailProfile(
     lead: lead,
-    email: '${lead.parentName.split(' ').first.toLowerCase()}@email.com',
-    address: '12, Lake View Colony, Hyderabad',
-    createdLabel: '28 May 2026',
-    lastActivityLabel: '4 Jun 2026 · 3:15 PM',
-    notes:
-        'Parent interested in CBSE curriculum. Prefers morning batch. Requested fee structure.',
+    email: data.email,
+    address: data.address,
+    createdLabel: data.createdLabel,
+    lastActivityLabel: data.lastActivityLabel,
+    notes: data.notes,
     availableCounselors: const [
       'Meera N.',
       'Rahul V.',
@@ -69,68 +72,7 @@ LeadDetailProfile _buildLeadDetail(AdmissionsLead lead) {
     ],
     statusSteps: statusSteps,
     acquisitionReadOnly: true,
-    activities: [
-      LeadActivityItem(
-        id: 'act_1',
-        timestampLabel: '4 Jun · 3:15 PM',
-        title: 'School visit completed',
-        description: 'Campus tour with both parents. Positive feedback on labs.',
-        actor: lead.counselor,
-        type: LeadActivityType.visit,
-      ),
-      LeadActivityItem(
-        id: 'act_2',
-        timestampLabel: '3 Jun · 11:00 AM',
-        title: 'WhatsApp brochure sent',
-        description: 'Shared fee plan and curriculum PDF.',
-        actor: lead.counselor,
-        type: LeadActivityType.whatsapp,
-      ),
-      LeadActivityItem(
-        id: 'act_3',
-        timestampLabel: '1 Jun · 10:30 AM',
-        title: 'Stage moved to ${lead.stage.label}',
-        description: 'Pipeline updated after phone screening.',
-        actor: lead.counselor,
-        type: LeadActivityType.stageChange,
-      ),
-      LeadActivityItem(
-        id: 'act_4',
-        timestampLabel: '28 May · 4:45 PM',
-        title: 'Lead created from ${lead.source.label}',
-        description: 'Campaign: ${lead.campaign}',
-        actor: 'System',
-        type: LeadActivityType.note,
-      ),
-    ],
-    followUpHistory: [
-      LeadFollowUpRecord(
-        id: 'fh_1',
-        scheduledLabel: '5 Jun · 10:00 AM',
-        completedLabel: '—',
-        task: 'Discuss fee plan and transport options',
-        counselor: lead.counselor,
-        status: FollowUpStatus.pending,
-        outcome: 'Scheduled',
-      ),
-      LeadFollowUpRecord(
-        id: 'fh_2',
-        scheduledLabel: '3 Jun · 11:00 AM',
-        completedLabel: '3 Jun · 11:20 AM',
-        task: 'Post-visit follow-up call',
-        counselor: lead.counselor,
-        status: FollowUpStatus.completed,
-        outcome: 'Parent requested application form',
-      ),
-      LeadFollowUpRecord(
-        id: 'fh_3',
-        scheduledLabel: '30 May · 2:00 PM',
-        completedLabel: '30 May · 2:10 PM',
-        task: 'Initial counselling call',
-        counselor: lead.counselor,
-        status: FollowUpStatus.completed,
-        outcome: 'Visit scheduled for 4 Jun',
-      ),
-    ],
+    activities: data.activities,
+    followUpHistory: data.followUpHistory,
   );
 }

@@ -71,6 +71,16 @@ class AdmissionsEnumCodec {
         _ => FollowUpStatus.pending,
       };
 
+  static LeadActivityType parseLeadActivityType(String? raw) => switch (raw) {
+        'note' => LeadActivityType.note,
+        'call' => LeadActivityType.call,
+        'visit' => LeadActivityType.visit,
+        'whatsapp' => LeadActivityType.whatsapp,
+        'stage_change' || 'stageChange' => LeadActivityType.stageChange,
+        'assignment' => LeadActivityType.assignment,
+        _ => LeadActivityType.note,
+      };
+
   static DocumentType parseDocumentType(String? raw) => switch (raw) {
         'birth_certificate' || 'birthCertificate' =>
           DocumentType.birthCertificate,

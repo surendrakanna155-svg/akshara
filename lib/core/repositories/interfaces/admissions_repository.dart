@@ -41,6 +41,13 @@ abstract class AdmissionsRepository {
     required UpdateLeadRequest request,
   });
 
+  /// Fetches a single lead with its persisted activity timeline and follow-up
+  /// history (`GET /admissions/leads/{id}`).
+  Future<LeadDetailData> getLeadDetail({
+    required RepositoryQuery query,
+    required String leadId,
+  });
+
   Future<AdmissionsLead> assignCounselor({
     required RepositoryQuery query,
     required String leadId,

@@ -55,6 +55,27 @@ class AdmissionsMapper {
     );
   }
 
+  LeadDetailData toLeadDetail(Map<String, dynamic> raw) {
+    final activities = (raw['activities'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(toLeadActivityItem)
+        .toList(growable: false);
+    final followUps = (raw['followUps'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(toFollowUpRecord)
+        .toList(growable: false);
+    return LeadDetailData(
+      lead: toLead(AdmissionsLeadDto.fromJson(raw)),
+      email: raw['email'] as String? ?? '',
+      address: raw['address'] as String? ?? '',
+      createdLabel: raw['createdLabel'] as String? ?? '',
+      lastActivityLabel: raw['lastActivityLabel'] as String? ?? '',
+      notes: raw['notes'] as String? ?? '',
+      activities: activities,
+      followUpHistory: followUps,
+    );
+  }
+
   List<AdmissionsApplication> toApplications(
     AdmissionsApplicationsResponseDto dto,
   ) {
@@ -503,7 +524,7 @@ class AdmissionsMapper {
       title: raw['title'] as String? ?? 'Note added',
       description: raw['description'] as String? ?? raw['content'] as String? ?? '',
       actor: raw['actor'] as String? ?? '',
-      type: LeadActivityType.note,
+      type: AdmissionsEnumCodec.parseLeadActivityType(raw['type'] as String?),
     );
   }
 

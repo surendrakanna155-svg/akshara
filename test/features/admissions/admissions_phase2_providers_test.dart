@@ -13,6 +13,7 @@ void main() {
       final container = createProviderTestContainer();
       addTearDown(container.dispose);
       await container.read(admissionsLeadsFutureProvider.future);
+      await container.read(admissionsLeadDetailDataProvider('LD-1042').future);
 
       final profile = container.read(admissionsLeadDetailProvider('LD-1042'));
       expect(profile, isNotNull);

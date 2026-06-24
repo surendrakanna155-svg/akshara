@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/api_failure.dart';
 import '../../../core/security/permissions.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../admissions_async_state.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
@@ -13,7 +12,6 @@ import '../admissions_workflow_actions.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_sub_nav.dart';
 import 'admissions_lead_detail_provider.dart';
-import 'admissions_leads_provider.dart';
 import 'widgets/admissions_lead_followup_history.dart';
 import 'widgets/admissions_lead_profile_panel.dart';
 import 'widgets/admissions_lead_score_panel.dart';
@@ -31,11 +29,11 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final leadsState = ref.watch(admissionsLeadsViewStateProvider);
+    final detailAsync = ref.watch(admissionsLeadDetailDataProvider(leadId));
     final isLoading = ref.watch(admissionsLeadDetailLoadingProvider(leadId)) ||
-        leadsState.isLoading;
+        detailAsync.isLoading;
     final isError = ref.watch(admissionsLeadDetailErrorProvider(leadId)) ||
-        leadsState.hasError;
+        detailAsync.hasError;
     final isEmpty = ref.watch(admissionsLeadDetailEmptyProvider(leadId));
     final profile = ref.watch(admissionsLeadDetailProvider(leadId));
     final isMobile = AdminLayout.isMobile(context);
@@ -58,14 +56,13 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
             )
           else if (isError)
             AksharaErrorState.fromFailure(
-              leadsState.failure ??
-                  const ApiFailure(
-                    type: ApiFailureType.unknown,
-                    message: 'Unable to load lead detail.',
-                    code: 'LEAD_DETAIL',
-                  ),
+              const ApiFailure(
+                type: ApiFailureType.unknown,
+                message: 'Unable to load lead detail.',
+                code: 'LEAD_DETAIL',
+              ),
               onRetry: () =>
-                  retryAdmissionsFuture(ref, admissionsLeadsFutureProvider),
+                  ref.invalidate(admissionsLeadDetailDataProvider(leadId)),
             )
           else if (isEmpty || profile == null)
             const AksharaEmptyState(
@@ -140,6 +137,38 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
                         showAddFollowUpDialog(context, ref, leadId),
                     icon: const Icon(Icons.event_outlined),
                     label: const Text('Add follow-up'),
+                  ),
+                ),
+                AksharaManageAction(
+                  permission: Permission.manageAdmissions,
+                  child: OutlinedButton.icon(
+                    onPressed: () => showAddLeadNoteDialog(
+                      context,
+                      ref,
+                      leadId,
+                      activityType: 'call',
+                      dialogTitle: 'Log call',
+                      fieldLabel: 'Call summary',
+                      successMessage: 'Call logged',
+                    ),
+                    icon: const Icon(Icons.call_outlined),
+                    label: const Text('Log call'),
+                  ),
+                ),
+                AksharaManageAction(
+                  permission: Permission.manageAdmissions,
+                  child: OutlinedButton.icon(
+                    onPressed: () => showAddLeadNoteDialog(
+                      context,
+                      ref,
+                      leadId,
+                      activityType: 'whatsapp',
+                      dialogTitle: 'Log WhatsApp',
+                      fieldLabel: 'WhatsApp message',
+                      successMessage: 'WhatsApp logged',
+                    ),
+                    icon: const Icon(Icons.chat_outlined),
+                    label: const Text('Log WhatsApp'),
                   ),
                 ),
                 AksharaManageAction(

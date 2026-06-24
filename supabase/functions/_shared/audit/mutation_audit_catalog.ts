@@ -92,6 +92,42 @@ export const admissionsAudit = {
       idempotencyKey: `admissions.lead.updated:${leadId}`,
     },
   }),
+  leadAssigned: (leadId: string, counselor: string, activityId: string): MutationAuditSpec => ({
+    ...workflow("leadAssigned", "lead", leadId, { leadId, counselor }),
+    domain: {
+      eventType: "admissions.lead.assigned",
+      payload: { leadId, counselor },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.lead.assigned:${activityId}`,
+    },
+  }),
+  leadStageChanged: (leadId: string, stage: string, activityId: string): MutationAuditSpec => ({
+    ...workflow("leadStageChanged", "lead", leadId, { leadId, stage }),
+    domain: {
+      eventType: "admissions.lead.stage_changed",
+      payload: { leadId, stage },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.lead.stage_changed:${activityId}`,
+    },
+  }),
+  leadFollowUpAdded: (leadId: string, followUpId: string): MutationAuditSpec => ({
+    ...workflow("leadFollowUpAdded", "lead", leadId, { leadId, followUpId }),
+    domain: {
+      eventType: "admissions.lead.follow_up_added",
+      payload: { leadId, followUpId },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.lead.follow_up_added:${followUpId}`,
+    },
+  }),
+  leadNoteAdded: (leadId: string, activityId: string, activityType: string): MutationAuditSpec => ({
+    ...workflow("leadNoteAdded", "lead", leadId, { leadId, activityType }),
+    domain: {
+      eventType: "admissions.lead.note_added",
+      payload: { leadId, activityType },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.lead.note_added:${activityId}`,
+    },
+  }),
   applicationCreated: (applicationId: string): MutationAuditSpec => ({
     ...workflow("applicationSubmitted", "application", applicationId, { applicationId }),
     domain: {

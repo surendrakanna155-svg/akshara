@@ -8,6 +8,15 @@ import 'admissions_journey_context_provider.dart';
 import 'admissions_models.dart';
 import 'admissions_mutations_provider.dart';
 import 'admissions_requests.dart';
+import 'leads/admissions_lead_detail_provider.dart';
+import 'leads/admissions_leads_provider.dart';
+
+/// Refreshes the lead detail timeline/follow-up history and the leads list so
+/// a CRM mutation is reflected immediately from the backend.
+void _refreshLead(WidgetRef ref, String leadId) {
+  ref.invalidate(admissionsLeadDetailDataProvider(leadId));
+  ref.invalidate(admissionsLeadsFutureProvider);
+}
 
 Future<void> showCreateLeadDialog(BuildContext context, WidgetRef ref) async {
   final parentController = TextEditingController();
@@ -121,6 +130,7 @@ Future<void> showAssignCounselorDialog(
           leadId: lead.id,
           request: AssignCounselorRequest(counselor: controller.text.trim()),
         );
+    _refreshLead(ref, lead.id);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Counselor assigned')),
@@ -173,6 +183,7 @@ Future<void> showChangeLeadStageDialog(
           leadId: lead.id,
           request: ChangeLeadStageRequest(stage: selected),
         );
+    _refreshLead(ref, lead.id);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Lead stage updated')),
@@ -186,17 +197,21 @@ Future<void> showChangeLeadStageDialog(
 Future<void> showAddLeadNoteDialog(
   BuildContext context,
   WidgetRef ref,
-  String leadId,
-) async {
+  String leadId, {
+  String activityType = 'note',
+  String dialogTitle = 'Add note',
+  String fieldLabel = 'Note',
+  String successMessage = 'Note added',
+}) async {
   final controller = TextEditingController();
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Add note'),
+      title: Text(dialogTitle),
       content: TextField(
         controller: controller,
         maxLines: 3,
-        decoration: const InputDecoration(labelText: 'Note'),
+        decoration: InputDecoration(labelText: fieldLabel),
       ),
       actions: [
         TextButton(
@@ -215,11 +230,15 @@ Future<void> showAddLeadNoteDialog(
   try {
     await ref.read(addLeadNoteProvider.notifier).execute(
           leadId: leadId,
-          request: LeadNoteRequest(content: controller.text.trim()),
+          request: LeadNoteRequest(
+            content: controller.text.trim(),
+            activityType: activityType,
+          ),
         );
+    _refreshLead(ref, leadId);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Note added')),
+      SnackBar(content: Text(successMessage)),
     );
   } catch (error) {
     if (!context.mounted) return;
@@ -273,6 +292,7 @@ Future<void> showAddFollowUpDialog(
             scheduledLabel: scheduleController.text.trim(),
           ),
         );
+    _refreshLead(ref, leadId);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Follow-up added')),

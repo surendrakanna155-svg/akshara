@@ -7,6 +7,8 @@ import type {
   AdmissionsApprovalRow,
   AdmissionsDocumentRow,
   AdmissionsEnrollmentRow,
+  AdmissionsLeadActivityRow,
+  AdmissionsLeadFollowUpRow,
   AdmissionsLeadRow,
 } from "./admissions_mapper.ts";
 
@@ -175,6 +177,146 @@ export async function updateLead(
     ],
   );
   return rows[0] ?? null;
+}
+
+// ─── Lead CRM: assignment, stage, activities, follow-ups (B1) ────────────────
+
+export async function assignLeadCounselor(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadId: string,
+  counselor: string,
+): Promise<AdmissionsLeadRow | null> {
+  const rows = await db.queryObject<AdmissionsLeadRow>(
+    `UPDATE admissions_leads SET
+      counselor = $4,
+      updated_at = timezone('utc', now())
+    WHERE id = $1 AND organization_id = $2 AND school_id = $3
+    RETURNING *`,
+    [leadId, organizationId, schoolId, counselor],
+  );
+  return rows[0] ?? null;
+}
+
+export async function changeLeadStage(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadId: string,
+  stage: string,
+): Promise<AdmissionsLeadRow | null> {
+  const rows = await db.queryObject<AdmissionsLeadRow>(
+    `UPDATE admissions_leads SET
+      stage = $4,
+      updated_at = timezone('utc', now())
+    WHERE id = $1 AND organization_id = $2 AND school_id = $3
+    RETURNING *`,
+    [leadId, organizationId, schoolId, stage],
+  );
+  return rows[0] ?? null;
+}
+
+export interface AddLeadActivityInput {
+  activityType: string;
+  title: string;
+  description: string;
+  actor: string;
+}
+
+export async function addLeadActivity(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadId: string,
+  input: AddLeadActivityInput,
+): Promise<AdmissionsLeadActivityRow> {
+  const rows = await db.queryObject<AdmissionsLeadActivityRow>(
+    `INSERT INTO admissions_lead_activities (
+      organization_id, school_id, lead_id, activity_type, title, description, actor
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *`,
+    [
+      organizationId,
+      schoolId,
+      leadId,
+      input.activityType,
+      input.title,
+      input.description,
+      input.actor,
+    ],
+  );
+  return rows[0]!;
+}
+
+export async function listLeadActivities(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadId: string,
+): Promise<AdmissionsLeadActivityRow[]> {
+  return await db.queryObject<AdmissionsLeadActivityRow>(
+    `SELECT * FROM admissions_lead_activities
+     WHERE lead_id = $1 AND organization_id = $2 AND school_id = $3
+     ORDER BY created_at DESC`,
+    [leadId, organizationId, schoolId],
+  );
+}
+
+export interface AddFollowUpInput {
+  task: string;
+  scheduledLabel: string;
+  outcome: string;
+  counselor: string;
+}
+
+export async function addLeadFollowUp(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadId: string,
+  input: AddFollowUpInput,
+): Promise<AdmissionsLeadFollowUpRow> {
+  const rows = await db.queryObject<AdmissionsLeadFollowUpRow>(
+    `INSERT INTO admissions_lead_follow_ups (
+      organization_id, school_id, lead_id, task, scheduled_label, counselor, outcome
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *`,
+    [
+      organizationId,
+      schoolId,
+      leadId,
+      input.task,
+      input.scheduledLabel,
+      input.counselor,
+      input.outcome || "Scheduled",
+    ],
+  );
+  // Keep the lead list view's scalar next-follow-up label in sync.
+  if (input.scheduledLabel) {
+    await db.queryObject(
+      `UPDATE admissions_leads SET
+        next_follow_up_label = $4,
+        updated_at = timezone('utc', now())
+      WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+      [leadId, organizationId, schoolId, input.scheduledLabel],
+    );
+  }
+  return rows[0]!;
+}
+
+export async function listLeadFollowUps(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadId: string,
+): Promise<AdmissionsLeadFollowUpRow[]> {
+  return await db.queryObject<AdmissionsLeadFollowUpRow>(
+    `SELECT * FROM admissions_lead_follow_ups
+     WHERE lead_id = $1 AND organization_id = $2 AND school_id = $3
+     ORDER BY created_at DESC`,
+    [leadId, organizationId, schoolId],
+  );
 }
 
 // ─── Applications ────────────────────────────────────────────────────────────

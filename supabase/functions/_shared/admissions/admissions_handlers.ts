@@ -22,7 +22,9 @@ import {
   approvalToApi,
   documentToApi,
   enrollmentToApi,
+  followUpToApi,
   handoffToApi,
+  leadActivityToApi,
   leadToApi,
   listEnvelope,
 } from "./admissions_mapper.ts";
@@ -32,6 +34,10 @@ import {
   updateHandoffStatus,
 } from "./admissions_handoffs_repository.ts";
 import {
+  addLeadActivity,
+  addLeadFollowUp,
+  assignLeadCounselor,
+  changeLeadStage,
   createApplication,
   createLead,
   ensureApprovalForApplication,
@@ -41,6 +47,8 @@ import {
   getLeadById,
   listApplications,
   listDocuments,
+  listLeadActivities,
+  listLeadFollowUps,
   listLeads,
   reviewDocument,
   setApprovalDecision,
@@ -148,13 +156,271 @@ export async function handleGetLead(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const lead = await runTenant(config, auth.claims, (db) =>
-      getLeadById(db, orgId, schoolId, leadId)
+    const detail = await runTenant(config, auth.claims, async (db) => {
+      const lead = await getLeadById(db, orgId, schoolId, leadId);
+      if (!lead) return null;
+      const activities = await listLeadActivities(db, orgId, schoolId, leadId);
+      const followUps = await listLeadFollowUps(db, orgId, schoolId, leadId);
+      return { lead, activities, followUps };
+    });
+    if (!detail) {
+      return errorEnvelope("NOT_FOUND", `Lead not found: ${leadId}`, 404);
+    }
+    return jsonResponse(
+      envelope({
+        ...leadToApi(detail.lead),
+        activities: detail.activities.map(leadActivityToApi),
+        followUps: detail.followUps.map(followUpToApi),
+      }),
     );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+function humanizeStage(stage: string): string {
+  return stage
+    .split(/[_\s]+/)
+    .filter((part) => part.length > 0)
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+export async function handleAssignLeadCounselor(
+  req: Request,
+  config: AppConfig,
+  leadId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  const counselor = snakeStr(body, "counselor");
+  if (!counselor) {
+    return errorEnvelope("VALIDATION_ERROR", "counselor is required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const lead = await runTenant(config, auth.claims, async (db) => {
+      const updated = await assignLeadCounselor(db, orgId, schoolId, leadId, counselor);
+      if (!updated) return null;
+      const activity = await addLeadActivity(db, orgId, schoolId, leadId, {
+        activityType: "assignment",
+        title: `Assigned to ${counselor}`,
+        description: `Lead assigned to counselor ${counselor}.`,
+        actor: counselor,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.leadAssigned(leadId, counselor, activity.id),
+        req,
+      );
+      return updated;
+    });
     if (!lead) {
       return errorEnvelope("NOT_FOUND", `Lead not found: ${leadId}`, 404);
     }
     return jsonResponse(envelope(leadToApi(lead)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+export async function handleChangeLeadStage(
+  req: Request,
+  config: AppConfig,
+  leadId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  const stage = snakeStr(body, "stage");
+  if (!stage) {
+    return errorEnvelope("VALIDATION_ERROR", "stage is required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const lead = await runTenant(config, auth.claims, async (db) => {
+      const updated = await changeLeadStage(db, orgId, schoolId, leadId, stage);
+      if (!updated) return null;
+      const activity = await addLeadActivity(db, orgId, schoolId, leadId, {
+        activityType: "stageChange",
+        title: `Stage moved to ${humanizeStage(stage)}`,
+        description: `Pipeline stage updated to ${humanizeStage(stage)}.`,
+        actor: updated.counselor || auth.claims.primary_role,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.leadStageChanged(leadId, stage, activity.id),
+        req,
+      );
+      return updated;
+    });
+    if (!lead) {
+      return errorEnvelope("NOT_FOUND", `Lead not found: ${leadId}`, 404);
+    }
+    return jsonResponse(envelope(leadToApi(lead)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+export async function handleAddLeadFollowUp(
+  req: Request,
+  config: AppConfig,
+  leadId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  const task = snakeStr(body, "task");
+  if (!task) {
+    return errorEnvelope("VALIDATION_ERROR", "task is required", 422);
+  }
+  const scheduledLabel = snakeStr(body, "scheduled_label");
+  const outcome = snakeStr(body, "outcome");
+  const counselor = snakeStr(body, "counselor");
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const lead = await getLeadById(db, orgId, schoolId, leadId);
+      if (!lead) return null;
+      const followUp = await addLeadFollowUp(db, orgId, schoolId, leadId, {
+        task,
+        scheduledLabel,
+        outcome,
+        counselor: counselor || lead.counselor,
+      });
+      await addLeadActivity(db, orgId, schoolId, leadId, {
+        activityType: "followUp",
+        title: scheduledLabel
+          ? `Follow-up scheduled · ${scheduledLabel}`
+          : "Follow-up logged",
+        description: task,
+        actor: counselor || lead.counselor || auth.claims.primary_role,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.leadFollowUpAdded(leadId, followUp.id),
+        req,
+      );
+      return followUp;
+    });
+    if (!result) {
+      return errorEnvelope("NOT_FOUND", `Lead not found: ${leadId}`, 404);
+    }
+    return jsonResponse(envelope(followUpToApi(result)), { status: 201 });
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+export async function handleAddLeadNote(
+  req: Request,
+  config: AppConfig,
+  leadId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  const content = snakeStr(body, "content");
+  if (!content) {
+    return errorEnvelope("VALIDATION_ERROR", "content is required", 422);
+  }
+  // Optional activity_type lets the same endpoint log notes, WhatsApp sends and
+  // call records onto the unified timeline (wa.me deep-link only, no Meta API).
+  const activityTypeRaw = snakeStr(body, "activity_type") || "note";
+  const allowedTypes = ["note", "whatsapp", "call"];
+  const activityType = allowedTypes.includes(activityTypeRaw)
+    ? activityTypeRaw
+    : "note";
+  const defaultTitle = activityType === "whatsapp"
+    ? "WhatsApp message logged"
+    : activityType === "call"
+    ? "Call logged"
+    : "Note added";
+  const title = snakeStr(body, "title") || defaultTitle;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const lead = await getLeadById(db, orgId, schoolId, leadId);
+      if (!lead) return null;
+      const activity = await addLeadActivity(db, orgId, schoolId, leadId, {
+        activityType,
+        title,
+        description: content,
+        actor: lead.counselor || auth.claims.primary_role,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.leadNoteAdded(leadId, activity.id, activityType),
+        req,
+      );
+      return activity;
+    });
+    if (!result) {
+      return errorEnvelope("NOT_FOUND", `Lead not found: ${leadId}`, 404);
+    }
+    return jsonResponse(envelope(leadActivityToApi(result)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);

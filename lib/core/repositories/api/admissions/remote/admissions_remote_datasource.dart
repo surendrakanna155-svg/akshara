@@ -55,6 +55,17 @@ class AdmissionsRemoteDataSource {
     return AdmissionsLeadsResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<LeadDetailData> fetchLeadDetail({
+    required RepositoryQuery query,
+    required String leadId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      AdmissionsApiPaths.lead(leadId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toLeadDetail(_requireData(response));
+  }
+
   Future<AdmissionsApplicationsResponseDto> fetchApplications({
     required RepositoryQuery query,
   }) async {

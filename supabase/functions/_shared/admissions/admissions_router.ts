@@ -1,8 +1,12 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleAddLeadFollowUp,
+  handleAddLeadNote,
   handleApproveAdmission,
   handleApproveDocument,
+  handleAssignLeadCounselor,
+  handleChangeLeadStage,
   handleCreateApplication,
   handleCreateLead,
   handleGetApplication,
@@ -38,6 +42,26 @@ function matchAdmissionsRoute(
   }
   if (path === "/admissions/leads" && method === "POST") {
     return { handler: handleCreateLead, args: [] };
+  }
+
+  const leadAssignMatch = path.match(/^\/admissions\/leads\/([^/]+)\/assign$/);
+  if (leadAssignMatch && method === "PATCH") {
+    return { handler: handleAssignLeadCounselor, args: [leadAssignMatch[1]!] };
+  }
+
+  const leadStageMatch = path.match(/^\/admissions\/leads\/([^/]+)\/stage$/);
+  if (leadStageMatch && method === "PATCH") {
+    return { handler: handleChangeLeadStage, args: [leadStageMatch[1]!] };
+  }
+
+  const leadFollowUpsMatch = path.match(/^\/admissions\/leads\/([^/]+)\/followups$/);
+  if (leadFollowUpsMatch && method === "POST") {
+    return { handler: handleAddLeadFollowUp, args: [leadFollowUpsMatch[1]!] };
+  }
+
+  const leadNotesMatch = path.match(/^\/admissions\/leads\/([^/]+)\/notes$/);
+  if (leadNotesMatch && method === "POST") {
+    return { handler: handleAddLeadNote, args: [leadNotesMatch[1]!] };
   }
 
   const leadMatch = path.match(/^\/admissions\/leads\/([^/]+)$/);

@@ -83,9 +83,20 @@ class FollowUpRequest {
 
 /// Adds a note to a lead timeline.
 class LeadNoteRequest {
-  const LeadNoteRequest({required this.content});
+  const LeadNoteRequest({
+    required this.content,
+    this.activityType = 'note',
+    this.title = '',
+  });
 
   final String content;
+
+  /// Timeline channel: `note`, `whatsapp` or `call`. Lets the same endpoint log
+  /// WhatsApp (wa.me) sends and call records onto the unified activity timeline.
+  final String activityType;
+
+  /// Optional override for the timeline entry title.
+  final String title;
 }
 
 /// Creates a draft application.

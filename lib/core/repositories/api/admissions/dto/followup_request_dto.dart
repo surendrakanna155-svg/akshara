@@ -38,7 +38,13 @@ class LeadNoteRequestDto {
   const LeadNoteRequestDto({required this.raw});
 
   factory LeadNoteRequestDto.fromDomain(LeadNoteRequest request) {
-    return LeadNoteRequestDto(raw: {'content': request.content});
+    return LeadNoteRequestDto(
+      raw: {
+        'content': request.content,
+        'activity_type': request.activityType,
+        if (request.title.isNotEmpty) 'title': request.title,
+      },
+    );
   }
 
   final Map<String, dynamic> raw;

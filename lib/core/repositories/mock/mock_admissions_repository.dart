@@ -1191,6 +1191,91 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
+  Future<LeadDetailData> getLeadDetail({
+    required RepositoryQuery query,
+    required String leadId,
+  }) async {
+    await _ensureLeads(query);
+    final lead = _store.leads!.firstWhere(
+      (item) => item.id == leadId,
+      orElse: () => throw StateError('Lead not found: $leadId'),
+    );
+    return LeadDetailData(
+      lead: lead,
+      email: '${lead.parentName.split(' ').first.toLowerCase()}@email.com',
+      address: '12, Lake View Colony, Hyderabad',
+      createdLabel: '28 May 2026',
+      lastActivityLabel: '4 Jun 2026 · 3:15 PM',
+      notes:
+          'Parent interested in CBSE curriculum. Prefers morning batch. Requested fee structure.',
+      activities: [
+        LeadActivityItem(
+          id: 'act_1',
+          timestampLabel: '4 Jun · 3:15 PM',
+          title: 'School visit completed',
+          description:
+              'Campus tour with both parents. Positive feedback on labs.',
+          actor: lead.counselor,
+          type: LeadActivityType.visit,
+        ),
+        LeadActivityItem(
+          id: 'act_2',
+          timestampLabel: '3 Jun · 11:00 AM',
+          title: 'WhatsApp brochure sent',
+          description: 'Shared fee plan and curriculum PDF.',
+          actor: lead.counselor,
+          type: LeadActivityType.whatsapp,
+        ),
+        LeadActivityItem(
+          id: 'act_3',
+          timestampLabel: '1 Jun · 10:30 AM',
+          title: 'Stage moved to ${lead.stage.label}',
+          description: 'Pipeline updated after phone screening.',
+          actor: lead.counselor,
+          type: LeadActivityType.stageChange,
+        ),
+        LeadActivityItem(
+          id: 'act_4',
+          timestampLabel: '28 May · 4:45 PM',
+          title: 'Lead created from ${lead.source.label}',
+          description: 'Campaign: ${lead.campaign}',
+          actor: 'System',
+          type: LeadActivityType.note,
+        ),
+      ],
+      followUpHistory: [
+        LeadFollowUpRecord(
+          id: 'fh_1',
+          scheduledLabel: '5 Jun · 10:00 AM',
+          completedLabel: '—',
+          task: 'Discuss fee plan and transport options',
+          counselor: lead.counselor,
+          status: FollowUpStatus.pending,
+          outcome: 'Scheduled',
+        ),
+        LeadFollowUpRecord(
+          id: 'fh_2',
+          scheduledLabel: '3 Jun · 11:00 AM',
+          completedLabel: '3 Jun · 11:20 AM',
+          task: 'Post-visit follow-up call',
+          counselor: lead.counselor,
+          status: FollowUpStatus.completed,
+          outcome: 'Parent requested application form',
+        ),
+        LeadFollowUpRecord(
+          id: 'fh_3',
+          scheduledLabel: '30 May · 2:00 PM',
+          completedLabel: '30 May · 2:10 PM',
+          task: 'Initial counselling call',
+          counselor: lead.counselor,
+          status: FollowUpStatus.completed,
+          outcome: 'Visit scheduled for 4 Jun',
+        ),
+      ],
+    );
+  }
+
+  @override
   Future<AdmissionsLead> assignCounselor({
     required RepositoryQuery query,
     required String leadId,

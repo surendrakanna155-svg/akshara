@@ -392,6 +392,32 @@ class LeadDetailProfile {
   final bool acquisitionReadOnly;
 }
 
+/// Raw lead-detail payload returned by the backend (`GET /admissions/leads/{id}`):
+/// the lead plus its persisted activity timeline and follow-up history. The
+/// presentation [LeadDetailProfile] is composed from this in the provider.
+@immutable
+class LeadDetailData {
+  const LeadDetailData({
+    required this.lead,
+    required this.email,
+    required this.address,
+    required this.createdLabel,
+    required this.lastActivityLabel,
+    required this.notes,
+    required this.activities,
+    required this.followUpHistory,
+  });
+
+  final AdmissionsLead lead;
+  final String email;
+  final String address;
+  final String createdLabel;
+  final String lastActivityLabel;
+  final String notes;
+  final List<LeadActivityItem> activities;
+  final List<LeadFollowUpRecord> followUpHistory;
+}
+
 // --- Phase 2: AD-05 Student Enrollment ---
 
 enum EnrollmentStep {

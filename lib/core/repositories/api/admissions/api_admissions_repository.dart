@@ -163,6 +163,13 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
       _remote.updateLead(query: query, leadId: leadId, request: request);
 
   @override
+  Future<LeadDetailData> getLeadDetail({
+    required RepositoryQuery query,
+    required String leadId,
+  }) =>
+      _remote.fetchLeadDetail(query: query, leadId: leadId);
+
+  @override
   Future<AdmissionsLead> assignCounselor({
     required RepositoryQuery query,
     required String leadId,
