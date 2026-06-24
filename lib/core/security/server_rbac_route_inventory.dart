@@ -61,6 +61,7 @@ abstract final class ServerRbacRouteInventory {
     'viewSchoolHealth',
     'viewEducation',
     'manageEducation',
+    'approveEducation',
     'viewStudentRisk',
     'generateIntelligence',
     'viewHomeworkIntelligence',

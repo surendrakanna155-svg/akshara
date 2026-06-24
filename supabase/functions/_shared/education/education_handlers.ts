@@ -78,6 +78,18 @@ function requireEducationWrite(
     requireSchoolOperationalScope(claims);
 }
 
+/**
+ * Validation gate: only a principal-level reviewer (approveEducation) may
+ * approve / request changes / publish a paper. Teachers (manageEducation) build
+ * and submit but cannot sign off their own paper.
+ */
+function requireEducationApprove(
+  claims: Parameters<typeof requirePermission>[0],
+): Response | null {
+  return requirePermission(claims, "approveEducation") ??
+    requireSchoolOperationalScope(claims);
+}
+
 function parsePagination(url: URL): { page: number; pageSize: number } {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
   const pageSize = Math.min(
@@ -469,7 +481,7 @@ export async function handlePublishQuestionPaper(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requireEducationWrite(auth.claims);
+  const denied = requireEducationApprove(auth.claims);
   if (denied) return denied;
 
   try {
@@ -551,7 +563,7 @@ export async function handleReviewQuestionPaper(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requireEducationWrite(auth.claims);
+  const denied = requireEducationApprove(auth.claims);
   if (denied) return denied;
 
   const body = await readJson<{ decision: "approved" | "changes_requested"; comments?: string }>(req);

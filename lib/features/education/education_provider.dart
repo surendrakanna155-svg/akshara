@@ -21,6 +21,20 @@ void assertManageEducation(Ref ref) {
   }
 }
 
+/// Validation (approve / request changes / publish) is principal-level only.
+void assertApproveEducation(Ref ref) {
+  final perms = ref.read(userPermissionsProvider);
+  if (perms == null || !perms.has(Permission.approveEducation)) {
+    throw ApiFailureException(
+      const ApiFailure(
+        type: ApiFailureType.forbidden,
+        message: 'Only a principal-level reviewer can validate question papers.',
+        code: 'RBAC_APPROVE_EDUCATION',
+      ),
+    );
+  }
+}
+
 final educationQueryProvider = Provider<RepositoryQuery>(
   (ref) => ref.watch(repositoryQueryProvider),
 );
@@ -31,6 +45,11 @@ final educationCanViewProvider = Provider<bool>((ref) {
 
 final educationCanManageProvider = Provider<bool>((ref) {
   return ref.watch(rbacServiceProvider).hasPermission(Permission.manageEducation);
+});
+
+/// True only for principal-level reviewers who may validate (approve / publish).
+final educationCanApproveProvider = Provider<bool>((ref) {
+  return ref.watch(rbacServiceProvider).hasPermission(Permission.approveEducation);
 });
 
 final questionBankListProvider = FutureProvider<List<QuestionBankItem>>((ref) async {
@@ -118,7 +137,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   Future<QuestionPaperSummary> publishPaper(String paperId) async {
     state = const AsyncLoading();
     try {
-      assertManageEducation(ref);
+      assertApproveEducation(ref);
       final paper = await ref.read(educationRepositoryProvider).publishQuestionPaper(
             query: ref.read(educationQueryProvider),
             paperId: paperId,
@@ -156,7 +175,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   }) async {
     state = const AsyncLoading();
     try {
-      assertManageEducation(ref);
+      assertApproveEducation(ref);
       final paper = await ref.read(educationRepositoryProvider).reviewQuestionPaper(
             query: ref.read(educationQueryProvider),
             paperId: paperId,

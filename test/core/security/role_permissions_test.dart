@@ -46,6 +46,17 @@ void main() {
       expect(permissions.contains(Permission.viewControlCenter), isFalse);
     });
 
+    test('teacher can manage education but cannot validate (approve) papers', () {
+      final permissions = RolePermissionMatrix.permissionsFor(ErpRole.teacher);
+      expect(permissions.contains(Permission.manageEducation), isTrue);
+      expect(permissions.contains(Permission.approveEducation), isFalse);
+    });
+
+    test('principal can validate (approve) question papers', () {
+      final permissions = RolePermissionMatrix.permissionsFor(ErpRole.principal);
+      expect(permissions.contains(Permission.approveEducation), isTrue);
+    });
+
     test('parent has parent experience permission; student has none', () {
       expect(
         RolePermissionMatrix.permissionsFor(ErpRole.parent).contains(

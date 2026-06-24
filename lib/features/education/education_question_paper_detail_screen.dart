@@ -23,11 +23,17 @@ class QuestionPaperDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(paperDetailProvider(paperId));
     final canManage = ref.watch(educationCanManageProvider);
+    final canApprove = ref.watch(educationCanApproveProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Question Paper')),
       body: detail.when(
-        data: (d) => _PaperBody(paperId: paperId, detail: d, canManage: canManage),
+        data: (d) => _PaperBody(
+          paperId: paperId,
+          detail: d,
+          canManage: canManage,
+          canApprove: canApprove,
+        ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
@@ -40,11 +46,13 @@ class _PaperBody extends ConsumerWidget {
     required this.paperId,
     required this.detail,
     required this.canManage,
+    required this.canApprove,
   });
 
   final String paperId;
   final QuestionPaperDetail detail;
   final bool canManage;
+  final bool canApprove;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -124,6 +132,7 @@ class _PaperBody extends ConsumerWidget {
           paper: paper,
           hasPendingAi: pending.isNotEmpty,
           canManage: canManage,
+          canApprove: canApprove,
         ),
 
         const SizedBox(height: 16),
@@ -434,12 +443,14 @@ class _GovernanceActions extends ConsumerWidget {
     required this.paper,
     required this.hasPendingAi,
     required this.canManage,
+    required this.canApprove,
   });
 
   final String paperId;
   final QuestionPaperSummary paper;
   final bool hasPendingAi;
   final bool canManage;
+  final bool canApprove;
 
   Future<void> _run(
     BuildContext context,
@@ -458,14 +469,17 @@ class _GovernanceActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!canManage) return const SizedBox.shrink();
+    if (!canManage && !canApprove) return const SizedBox.shrink();
     final notifier = ref.read(educationMutationsProvider.notifier);
     final status = paper.reviewStatus;
 
     final buttons = <Widget>[];
+    String? note;
 
-    if (status == EduPaperReviewStatus.draft ||
-        status == EduPaperReviewStatus.changesRequested) {
+    // Teacher (manage) builds & submits.
+    if (canManage &&
+        (status == EduPaperReviewStatus.draft ||
+            status == EduPaperReviewStatus.changesRequested)) {
       buttons.add(FilledButton.icon(
         key: QaTestKeys.educationSubmitPaperButton,
         icon: const Icon(Icons.send_outlined),
@@ -473,40 +487,49 @@ class _GovernanceActions extends ConsumerWidget {
         onPressed: hasPendingAi
             ? null
             : () => _run(context, ref, () => notifier.submitPaper(paperId),
-                'Paper submitted for review'),
+                'Paper submitted for the principal\'s review'),
       ));
     }
 
+    // Validation step — principal-level (approveEducation) only.
     if (status == EduPaperReviewStatus.submitted) {
-      buttons.add(OutlinedButton.icon(
-        key: QaTestKeys.educationReviewChangesButton,
-        icon: const Icon(Icons.edit_note_outlined),
-        label: const Text('Request changes'),
-        onPressed: () => _requestChanges(context, ref, notifier),
-      ));
-      buttons.add(FilledButton.icon(
-        key: QaTestKeys.educationReviewApproveButton,
-        icon: const Icon(Icons.verified_outlined),
-        label: const Text('Approve'),
-        onPressed: () => _run(context, ref,
-            () => notifier.reviewPaper(paperId, 'approved'), 'Paper approved'),
-      ));
+      if (canApprove) {
+        buttons.add(OutlinedButton.icon(
+          key: QaTestKeys.educationReviewChangesButton,
+          icon: const Icon(Icons.edit_note_outlined),
+          label: const Text('Request changes'),
+          onPressed: () => _requestChanges(context, ref, notifier),
+        ));
+        buttons.add(FilledButton.icon(
+          key: QaTestKeys.educationReviewApproveButton,
+          icon: const Icon(Icons.verified_outlined),
+          label: const Text('Approve'),
+          onPressed: () => _run(context, ref,
+              () => notifier.reviewPaper(paperId, 'approved'), 'Paper approved'),
+        ));
+      } else {
+        note = 'Submitted — waiting for a principal to validate this paper.';
+      }
     }
 
     if (status == EduPaperReviewStatus.approved) {
-      buttons.add(FilledButton.icon(
-        icon: const Icon(Icons.publish_outlined),
-        label: const Text('Publish'),
-        onPressed: hasPendingAi
-            ? null
-            : () => _run(context, ref, () => notifier.publishPaper(paperId),
-                'Paper published'),
-      ));
+      if (canApprove) {
+        buttons.add(FilledButton.icon(
+          icon: const Icon(Icons.publish_outlined),
+          label: const Text('Publish'),
+          onPressed: hasPendingAi
+              ? null
+              : () => _run(context, ref, () => notifier.publishPaper(paperId),
+                  'Paper published'),
+        ));
+      } else {
+        note = 'Approved — waiting for a principal to publish.';
+      }
     }
 
-    // A plain draft with no AI candidates can still be published directly
-    // (preserves the existing 100%-bank flow).
-    if (status == EduPaperReviewStatus.draft && !hasPendingAi) {
+    // A plain draft with no AI candidates can be published directly, but only by
+    // a principal-level reviewer (no teacher self-publish).
+    if (canApprove && status == EduPaperReviewStatus.draft && !hasPendingAi) {
       buttons.add(OutlinedButton.icon(
         icon: const Icon(Icons.publish_outlined),
         label: const Text('Publish now'),
@@ -516,11 +539,20 @@ class _GovernanceActions extends ConsumerWidget {
     }
 
     if (buttons.isEmpty) {
-      return Text('Status: ${_reviewStatusLabel(status)}',
+      return Text(note ?? 'Status: ${_reviewStatusLabel(status)}',
           style: Theme.of(context).textTheme.bodyMedium);
     }
 
-    return Wrap(spacing: 12, runSpacing: 8, children: buttons);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (note != null) ...[
+          Text(note, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 8),
+        ],
+        Wrap(spacing: 12, runSpacing: 8, children: buttons),
+      ],
+    );
   }
 
   Future<void> _requestChanges(

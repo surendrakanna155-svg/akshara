@@ -81,6 +81,7 @@ enum Permission {
   // Education Suite (v8.5–v8.8)
   viewEducation,
   manageEducation,
+  approveEducation,
 
   // Intelligence Layer (v8.9–v9.3)
   viewStudentRisk,
