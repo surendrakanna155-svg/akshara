@@ -323,24 +323,12 @@ export async function rollbackImportedStudent(
   schoolId: string,
   studentId: string,
 ): Promise<void> {
+  // The erp_tenant role has no direct DELETE on student tables (non-destructive
+  // by design), so rollback deletes go through a SECURITY DEFINER function that
+  // performs the scoped (org + school) cascade. See migration
+  // 20260715000000_onboarding_rollback_student_secdef.sql.
   await db.queryObject(
-    `DELETE FROM student_guardians
-     WHERE student_id = $1 AND organization_id = $2 AND school_id = $3`,
-    [studentId, organizationId, schoolId],
-  );
-  await db.queryObject(
-    `DELETE FROM sis_student_enrollments
-     WHERE student_id = $1 AND organization_id = $2 AND school_id = $3`,
-    [studentId, organizationId, schoolId],
-  );
-  await db.queryObject(
-    `DELETE FROM student_profiles
-     WHERE student_id = $1 AND organization_id = $2 AND school_id = $3`,
-    [studentId, organizationId, schoolId],
-  );
-  await db.queryObject(
-    `DELETE FROM students
-     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+    `SELECT onboarding_rollback_student($1::uuid, $2::uuid, $3::uuid)`,
     [studentId, organizationId, schoolId],
   );
 }

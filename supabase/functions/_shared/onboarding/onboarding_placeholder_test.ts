@@ -259,17 +259,13 @@ class FakeDb {
       throw new Error("upsertUserByPhone must not be called in these tests");
     }
 
-    if (s.startsWith("DELETE FROM student_guardians")) return [];
-    if (s.startsWith("DELETE FROM sis_student_enrollments")) {
-      this.enrollments = this.enrollments.filter((e) => e.student_id !== args[0]);
-      return [];
-    }
-    if (s.startsWith("DELETE FROM student_profiles")) {
-      this.profiles = this.profiles.filter((p) => p.student_id !== args[0]);
-      return [];
-    }
-    if (s.startsWith("DELETE FROM students")) {
-      this.students = this.students.filter((st) => st.id !== args[0]);
+    if (s.startsWith("SELECT onboarding_rollback_student")) {
+      // SECURITY DEFINER rollback: org+school-scoped cascade delete of one student.
+      const sid = args[0];
+      this.guardians = this.guardians.filter((g) => g.student_id !== sid);
+      this.enrollments = this.enrollments.filter((e) => e.student_id !== sid);
+      this.profiles = this.profiles.filter((p) => p.student_id !== sid);
+      this.students = this.students.filter((st) => st.id !== sid);
       return [];
     }
 
