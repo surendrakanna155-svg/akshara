@@ -272,6 +272,15 @@ final schoolConfigApiEnabledProvider = Provider<bool>((ref) {
       defaultValue: false);
 });
 
+/// B2 — entitlement layer (plan catalog + resolved subscription via
+/// `GET /plans`, `GET /subscription`). Default off; when off, the plan ceiling
+/// is unrestricted so existing journeys are unchanged.
+final entitlementApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('ENTITLEMENT_API_ENABLED',
+      defaultValue: false);
+});
+
 final multiSchoolOperationsApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
@@ -381,6 +390,7 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(evolutionApiEnabledProvider) ||
       ref.watch(schoolCompletionApiEnabledProvider) ||
       ref.watch(schoolConfigApiEnabledProvider) ||
+      ref.watch(entitlementApiEnabledProvider) ||
       ref.watch(multiSchoolOperationsApiEnabledProvider) ||
       ref.watch(organizationBuilderApiEnabledProvider) ||
       ref.watch(platformOperationsApiEnabledProvider) ||

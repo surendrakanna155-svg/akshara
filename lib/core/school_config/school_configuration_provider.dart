@@ -4,6 +4,8 @@ import '../tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../core/providers/shared_preferences_provider.dart';
 import '../../features/admin/models/admin_nav_models.dart';
+import '../entitlements/entitlement_provider.dart';
+import '../entitlements/entitlement_resolver.dart';
 import '../network/dio_provider.dart';
 import '../repositories/repository_config.dart';
 import '../repositories/api/school_config/school_config_api_repository.dart';
@@ -107,8 +109,22 @@ class SchoolConfigurationNotifier extends Notifier<SchoolConfiguration> {
   }
 }
 
-final schoolCapabilitiesProvider = Provider<SchoolCapabilities>((ref) {
+/// The school's own (unbounded) capability toggles — the personalization layer.
+final localSchoolCapabilitiesProvider = Provider<SchoolCapabilities>((ref) {
   return ref.watch(schoolConfigurationProvider).capabilities;
+});
+
+/// Effective capabilities = local school config ∩ plan ceiling (B2 entitlements).
+///
+/// This is the single seam where plan entitlements bound the existing gating
+/// engine: every consumer of [schoolCapabilitiesProvider] (admin modules, KPIs,
+/// copilot topics, module ids) now respects the plan. When the entitlement API
+/// is disabled the ceiling is unrestricted, so the result equals the raw local
+/// configuration (pre-B2 behaviour preserved).
+final schoolCapabilitiesProvider = Provider<SchoolCapabilities>((ref) {
+  final local = ref.watch(localSchoolCapabilitiesProvider);
+  final ceiling = ref.watch(planCapabilityCeilingProvider);
+  return EntitlementResolver.intersect(local, ceiling);
 });
 
 final enabledSchoolModuleIdsProvider = Provider<List<String>>((ref) {
