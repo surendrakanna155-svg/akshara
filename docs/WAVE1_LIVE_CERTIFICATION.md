@@ -56,4 +56,9 @@
 ## Test-data hygiene
 - Created CERT student + fee-structure rows → **deleted** (0 residual). Test-phone OTP cooldown was reset (staging phones only). Minor residuals: seed leave `lv_req_1` left `approved`; a few `cert-smoke` attendance-correction rows (harmless, staging).
 
-**Verdict: the deployed Wave-1 system is certified for authenticated live-mode operation across auth, school-config, HR, SIS, finance, attendance, parent visibility, and RBAC.**
+## A4 — cross-persona spine journey (added)
+**Fee → receipt → parent visibility: PASS (6/6)** — `scripts/qa/live_journey_fee_to_parent.py`.
+Admin records a ₹500 collection against the child's live invoice (`POST /finance/collections` → 201) → **parent's `/parent/receipts` count goes 2→3** (parent sees the new receipt) → collection cancelled to restore. Proves write-by-staff → visible-to-parent end to end.
+*Follow-up:* results → parent loop (enter marks → publish → parent sees) needs exam scaffolding; parent read side already green (`/parent/exams` 200).
+
+**Verdict: the deployed Wave-1 system is certified for authenticated live-mode operation across auth, school-config, HR, SIS, finance, attendance, parent visibility, RBAC, and the fee→receipt→parent cross-persona spine.**
