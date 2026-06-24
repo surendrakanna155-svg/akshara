@@ -610,6 +610,9 @@ abstract final class QaTestKeys {
   static const educationAddBankItemButton =
       ValueKey<String>('education_add_bank_item_button');
 
+  static const educationImportBankButton =
+      ValueKey<String>('education_import_bank_button');
+
   static const educationSaveBankItemButton =
       ValueKey<String>('education_save_bank_item_button');
 

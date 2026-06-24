@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
 import '../../core/testing/qa_test_keys.dart';
+import 'education_bank_import_sheet.dart';
 import 'education_bank_item_form.dart';
 import 'education_models.dart';
 import 'education_pdf_service.dart';
@@ -319,14 +320,52 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
           error: (e, _) => Text('Error: $e'),
         ),
         if (canManage)
-          FilledButton.icon(
-            key: QaTestKeys.educationAddBankItemButton,
-            icon: const Icon(Icons.add),
-            onPressed: () => _addBankItem(),
-            label: const Text('Add question'),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  key: QaTestKeys.educationAddBankItemButton,
+                  icon: const Icon(Icons.add),
+                  onPressed: () => _addBankItem(),
+                  label: const Text('Add question'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: QaTestKeys.educationImportBankButton,
+                  icon: const Icon(Icons.upload_file_outlined),
+                  onPressed: () => _importBank(),
+                  label: const Text('Import (CSV)'),
+                ),
+              ),
+            ],
           ),
       ],
     );
+  }
+
+  Future<void> _importBank() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final items = await showImportBankSheet(context);
+    if (items == null || items.isEmpty) return;
+    try {
+      final result = await ref.read(educationRepositoryProvider).importQuestionBank(
+            query: ref.read(educationQueryProvider),
+            items: items,
+          );
+      ref.invalidate(questionBankListProvider);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Imported ${result.imported} question(s)'
+            '${result.skippedDuplicates > 0 ? ' • ${result.skippedDuplicates} duplicate(s) skipped' : ''}',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
   }
 
   Future<void> _addBankItem() async {

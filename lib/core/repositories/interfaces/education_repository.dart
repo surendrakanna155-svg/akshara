@@ -13,6 +13,12 @@ abstract class EducationRepository {
     required QuestionBankItem item,
   });
 
+  /// Bulk-import question-bank items (server de-dupes by fingerprint).
+  Future<QuestionImportResult> importQuestionBank({
+    required RepositoryQuery query,
+    required List<QuestionBankItem> items,
+  });
+
   Future<List<QuestionPaperSummary>> listQuestionPapers({
     required RepositoryQuery query,
   });

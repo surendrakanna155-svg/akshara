@@ -108,6 +108,39 @@ void main() {
     expect(published.status, 'published');
   });
 
+  test('importQuestionBank adds new rows and skips duplicates', () async {
+    final result = await repository.importQuestionBank(
+      query: query,
+      items: const [
+        QuestionBankItem(
+          id: '',
+          subjectName: 'Mathematics',
+          chapter: 'Algebra',
+          topic: 'Linear equations',
+          difficulty: EduDifficulty.medium,
+          questionType: EduQuestionType.mcq,
+          marks: 2,
+          questionText: 'Solve 2x + 4 = 10', // duplicate of seeded bank_1
+        ),
+        QuestionBankItem(
+          id: '',
+          subjectName: 'Mathematics',
+          chapter: 'Real Numbers',
+          topic: 'HCF',
+          difficulty: EduDifficulty.easy,
+          questionType: EduQuestionType.mcq,
+          marks: 1,
+          questionText: 'What is the HCF of 12 and 18?',
+        ),
+      ],
+    );
+
+    expect(result.imported, 1);
+    expect(result.skippedDuplicates, 1);
+    final bank = await repository.listQuestionBank(query: query);
+    expect(bank.any((q) => q.questionText == 'What is the HCF of 12 and 18?'), isTrue);
+  });
+
   test('generateHomework creates draft assignment', () async {
     final hw = await repository.generateHomework(
       query: query,

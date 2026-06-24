@@ -159,6 +159,40 @@ class MockEducationRepository implements EducationRepository {
   }
 
   @override
+  Future<QuestionImportResult> importQuestionBank({
+    required RepositoryQuery query,
+    required List<QuestionBankItem> items,
+  }) async {
+    var imported = 0;
+    var skipped = 0;
+    for (final item in items) {
+      final dupe = _bank.any((b) =>
+          b.subjectName == item.subjectName &&
+          b.questionText.trim().toLowerCase() == item.questionText.trim().toLowerCase());
+      if (dupe) {
+        skipped++;
+        continue;
+      }
+      _bank.add(QuestionBankItem(
+        id: _nextId('bank'),
+        subjectName: item.subjectName,
+        chapter: item.chapter,
+        topic: item.topic,
+        difficulty: item.difficulty,
+        questionType: item.questionType,
+        marks: item.marks,
+        questionText: item.questionText,
+        answerText: item.answerText,
+        options: item.options,
+        programTrack: item.programTrack,
+        cognitiveLevel: item.cognitiveLevel,
+      ));
+      imported++;
+    }
+    return QuestionImportResult(imported: imported, skippedDuplicates: skipped);
+  }
+
+  @override
   Future<List<QuestionPaperSummary>> listQuestionPapers({
     required RepositoryQuery query,
   }) async =>

@@ -33,6 +33,18 @@ class ApiEducationRepository implements EducationRepository {
   }
 
   @override
+  Future<QuestionImportResult> importQuestionBank({
+    required RepositoryQuery query,
+    required List<QuestionBankItem> items,
+  }) async {
+    final data = await _remote.importQuestionBank(query: query, items: items);
+    return QuestionImportResult(
+      imported: (data['imported'] as num?)?.toInt() ?? 0,
+      skippedDuplicates: (data['skippedDuplicates'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  @override
   Future<List<QuestionPaperSummary>> listQuestionPapers({
     required RepositoryQuery query,
   }) async {

@@ -24,6 +24,13 @@ class HybridEducationRepository implements EducationRepository {
       _api.createQuestionBankItem(query: query, item: item);
 
   @override
+  Future<QuestionImportResult> importQuestionBank({
+    required RepositoryQuery query,
+    required List<QuestionBankItem> items,
+  }) =>
+      _api.importQuestionBank(query: query, items: items);
+
+  @override
   Future<List<QuestionPaperSummary>> listQuestionPapers({
     required RepositoryQuery query,
   }) =>

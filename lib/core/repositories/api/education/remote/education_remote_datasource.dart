@@ -56,6 +56,36 @@ class EducationRemoteDataSource {
     return _envelopeData(response);
   }
 
+  Future<Map<String, dynamic>> importQuestionBank({
+    required RepositoryQuery query,
+    required List<QuestionBankItem> items,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      EducationApiPaths.questionBankImport,
+      queryParameters: _queryParams(query),
+      data: {
+        'items': items
+            .map((item) => {
+                  'subjectName': item.subjectName,
+                  'chapter': item.chapter,
+                  'topic': item.topic,
+                  'difficulty': EducationMapper.difficultyToApi(item.difficulty),
+                  'questionType': EducationMapper.questionTypeToApi(item.questionType),
+                  'marks': item.marks,
+                  'questionText': item.questionText,
+                  if (item.answerText != null) 'answerText': item.answerText,
+                  'options': item.options,
+                  'programTrack': EducationMapper.programTrackToApi(item.programTrack),
+                  if (item.cognitiveLevel != null)
+                    'cognitiveLevel': EducationMapper.cognitiveLevelToApi(item.cognitiveLevel!),
+                  'source': 'import',
+                })
+            .toList(),
+      },
+    );
+    return _envelopeData(response);
+  }
+
   Future<List<Map<String, dynamic>>> fetchQuestionPapers({
     required RepositoryQuery query,
   }) async {

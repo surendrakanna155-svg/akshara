@@ -194,6 +194,14 @@ class PaperGap {
   final String chapter;
 }
 
+/// Result of a bulk question-bank import.
+class QuestionImportResult {
+  const QuestionImportResult({required this.imported, required this.skippedDuplicates});
+
+  final int imported;
+  final int skippedDuplicates;
+}
+
 /// One round of the paper review/approval governance trail.
 class PaperReview {
   const PaperReview({
