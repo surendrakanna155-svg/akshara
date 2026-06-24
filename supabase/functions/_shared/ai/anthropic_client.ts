@@ -1,17 +1,26 @@
-// Shared Anthropic (Claude) client for Akshara AI surfaces.
+// Shared AI client for Akshara AI surfaces (copilot, parent insights,
+// question-intelligence gap-fill).
 //
-// One place to talk to the Claude Messages API so every AI feature (copilot,
-// parent insights, future question-intelligence) shares the same request shape,
-// refusal handling, and model/key configuration. Raw `fetch` (Deno edge
-// function) — no SDK dependency, matching the rest of the backend.
+// Provider is config-driven so the same call sites work against either:
+//   • Anthropic directly  (AI_PROVIDER=anthropic, default) — POST api.anthropic.com
+//   • OpenRouter          (AI_PROVIDER=openrouter)         — POST openrouter.ai
+//                                                            (OpenAI-compatible)
+// One key change switches everything; no code edit needed to swap provider,
+// key, or model — see deploy/akshara-vps/.env.akshara.example.
 //
-// Provider/model is config-driven: ANTHROPIC_API_KEY enables live calls,
-// ANTHROPIC_MODEL overrides the default. With no key, callers fall back to
-// their own safe deterministic/stub output — nothing here ever fabricates.
+// With no key for the active provider, callers fall back to their own safe
+// deterministic/stub output — nothing here ever fabricates.
 
 export const DEFAULT_CLAUDE_MODEL = "claude-opus-4-8";
+/** Default OpenRouter model — Claude via OpenRouter (system is tuned for Claude;
+ * Sonnet balances quality and cost). Override with AI_MODEL / OPENROUTER_MODEL. */
+export const DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-4-6";
+
 const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
+const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+export type AiProvider = "anthropic" | "openrouter";
 
 export interface ClaudeMessage {
   role: "user" | "assistant";
@@ -24,6 +33,8 @@ export interface ClaudeCallInput {
   maxTokens?: number;
   model?: string;
   apiKey: string;
+  /** Defaults to the configured {@link aiProvider}. */
+  provider?: AiProvider;
 }
 
 export interface ClaudeUsage {
@@ -32,23 +43,50 @@ export interface ClaudeUsage {
 }
 
 export interface ClaudeCallResult {
-  /** Concatenated text of all `text` content blocks (empty on refusal). */
+  /** Concatenated assistant text (empty on refusal). */
   text: string;
   model: string;
-  /** true when the safety classifier declined (stop_reason === "refusal"). */
+  /** true when the provider declined (refusal / content filter). */
   refused: boolean;
   usage: ClaudeUsage | null;
 }
 
-/** The configured Anthropic API key, or undefined when AI is not enabled. */
-export function anthropicApiKey(): string | undefined {
-  const key = Deno.env.get("ANTHROPIC_API_KEY")?.trim();
-  return key && key.length > 0 ? key : undefined;
+/** Which AI provider is configured. Defaults to Anthropic-direct. */
+export function aiProvider(): AiProvider {
+  return Deno.env.get("AI_PROVIDER")?.trim().toLowerCase() === "openrouter"
+    ? "openrouter"
+    : "anthropic";
 }
 
-/** The configured Claude model, defaulting to the latest Opus. */
+function trimmedEnv(name: string): string | undefined {
+  const value = Deno.env.get(name)?.trim();
+  return value && value.length > 0 ? value : undefined;
+}
+
+/** The Anthropic-direct API key, or undefined when unset. */
+export function anthropicApiKey(): string | undefined {
+  return trimmedEnv("ANTHROPIC_API_KEY");
+}
+
+/** The OpenRouter API key, or undefined when unset. */
+export function openrouterApiKey(): string | undefined {
+  return trimmedEnv("OPENROUTER_API_KEY");
+}
+
+/**
+ * The API key for the active provider, or undefined when AI is not enabled.
+ * Callers gate on this and fall back to deterministic output when it is unset.
+ */
+export function aiApiKey(): string | undefined {
+  return aiProvider() === "openrouter" ? openrouterApiKey() : anthropicApiKey();
+}
+
+/** The configured model for the active provider. */
 export function claudeModel(): string {
-  return Deno.env.get("ANTHROPIC_MODEL")?.trim() || DEFAULT_CLAUDE_MODEL;
+  if (aiProvider() === "openrouter") {
+    return trimmedEnv("AI_MODEL") ?? trimmedEnv("OPENROUTER_MODEL") ?? DEFAULT_OPENROUTER_MODEL;
+  }
+  return trimmedEnv("ANTHROPIC_MODEL") ?? trimmedEnv("AI_MODEL") ?? DEFAULT_CLAUDE_MODEL;
 }
 
 interface AnthropicContentBlock {
@@ -63,19 +101,36 @@ interface AnthropicResponse {
   usage?: { input_tokens?: number; output_tokens?: number };
 }
 
+interface OpenRouterResponse {
+  model?: string;
+  choices?: Array<{
+    finish_reason?: string;
+    message?: { content?: string | null };
+  }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
 /**
- * Call the Claude Messages API. Caller must supply a non-empty `apiKey`
- * (gate on {@link anthropicApiKey} and fall back to deterministic output when
- * it is absent). Throws on transport/HTTP errors so callers can fall back.
+ * Call the configured AI provider. Caller must supply a non-empty `apiKey`
+ * (gate on {@link aiApiKey} and fall back to deterministic output when absent).
+ * Throws on transport/HTTP errors so callers can fall back.
  *
  * Note: `temperature`/`top_p`/`top_k` are intentionally NOT sent — they are
- * rejected (HTTP 400) on Opus 4.8 / 4.7 and the Fable family.
+ * rejected (HTTP 400) on Opus 4.8/4.7 and the Fable family, and omitting them
+ * is harmless on OpenRouter (provider defaults apply).
  */
 export async function callClaude(input: ClaudeCallInput): Promise<ClaudeCallResult> {
   if (!input.apiKey) {
-    throw new Error("ANTHROPIC_API_KEY not configured");
+    throw new Error("AI API key not configured");
   }
+  const provider = input.provider ?? aiProvider();
   const model = input.model ?? claudeModel();
+  return provider === "openrouter"
+    ? await callOpenRouter(input, model)
+    : await callAnthropic(input, model);
+}
+
+async function callAnthropic(input: ClaudeCallInput, model: string): Promise<ClaudeCallResult> {
   const response = await fetch(ANTHROPIC_MESSAGES_URL, {
     method: "POST",
     headers: {
@@ -93,9 +148,7 @@ export async function callClaude(input: ClaudeCallInput): Promise<ClaudeCallResu
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(
-      `Anthropic request failed: ${response.status} ${body.slice(0, 200)}`,
-    );
+    throw new Error(`Anthropic request failed: ${response.status} ${body.slice(0, 200)}`);
   }
 
   const payload = await response.json() as AnthropicResponse;
@@ -118,6 +171,54 @@ export async function callClaude(input: ClaudeCallInput): Promise<ClaudeCallResu
       ? {
         inputTokens: payload.usage.input_tokens ?? 0,
         outputTokens: payload.usage.output_tokens ?? 0,
+      }
+      : null,
+  };
+}
+
+async function callOpenRouter(input: ClaudeCallInput, model: string): Promise<ClaudeCallResult> {
+  // OpenAI-compatible Chat Completions shape: system is a message, not top-level.
+  const messages = [
+    { role: "system", content: input.system },
+    ...input.messages.map((m) => ({ role: m.role, content: m.content })),
+  ];
+  const response = await fetch(OPENROUTER_CHAT_URL, {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${input.apiKey}`,
+      "content-type": "application/json",
+      // Optional OpenRouter attribution headers — harmless if ignored.
+      "x-title": "Akshara",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: input.maxTokens ?? 1024,
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`OpenRouter request failed: ${response.status} ${body.slice(0, 200)}`);
+  }
+
+  const payload = await response.json() as OpenRouterResponse;
+  const choice = payload.choices?.[0];
+  const refused = choice?.finish_reason === "content_filter";
+  const text = (choice?.message?.content ?? "").trim();
+
+  if (!refused && !text) {
+    throw new Error("OpenRouter returned an empty completion");
+  }
+
+  return {
+    text,
+    model: payload.model ?? model,
+    refused,
+    usage: payload.usage
+      ? {
+        inputTokens: payload.usage.prompt_tokens ?? 0,
+        outputTokens: payload.usage.completion_tokens ?? 0,
       }
       : null,
   };

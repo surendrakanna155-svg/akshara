@@ -16,7 +16,7 @@
 import { buildPaperBlueprint } from "./education_generator.ts";
 import { solveBlueprint } from "./education_blueprint_solver.ts";
 import { generateAiCandidatesForGaps } from "./education_ai_question_gapfill.ts";
-import { anthropicApiKey } from "../ai/anthropic_client.ts";
+import { aiApiKey } from "../ai/anthropic_client.ts";
 import { listQuestionBankItems, type QuestionBankListFilters } from "./education_repository.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type {
@@ -124,7 +124,7 @@ export async function generateQuestionPaper(
 
   let aiCandidateCount = 0;
   const allowAi = input.allowAiGapFill !== false;
-  const apiKey = anthropicApiKey();
+  const apiKey = aiApiKey();
   if (allowAi && apiKey && solution.gaps.length > 0) {
     const candidates = await generateAiCandidatesForGaps(
       solution.gaps,
