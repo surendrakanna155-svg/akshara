@@ -1,5 +1,6 @@
 import type { AppConfig } from "../config.ts";
 import {
+  boolOr,
   createModuleWriteHandlers,
   requireStr,
   str,
@@ -61,6 +62,43 @@ export async function handleCreateRoute(req: Request, config: AppConfig): Promis
       request,
     );
     return { payload: saved, status: 201 };
+  });
+}
+
+/**
+ * POST /transport/attendance — record (or update) a transport pickup/drop
+ * attendance entry. Each entry is its own `attendance` entity row so the
+ * GET /transport/attendance list reads it back unchanged. Re-recording an
+ * existing id replaces it.
+ */
+export async function handleRecordAttendance(req: Request, config: AppConfig): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const id = str(body, "id") ?? crypto.randomUUID();
+    const payload = {
+      id,
+      studentName: requireStr(body, "studentName", "student_name"),
+      stopName: str(body, "stopName", "stop_name") ?? "",
+      routeName: str(body, "routeName", "route_name") ?? "",
+      scheduledTime: str(body, "scheduledTime", "scheduled_time") ?? "",
+      actualTime: str(body, "actualTime", "actual_time") ?? "",
+      status: str(body, "status") ?? "waiting",
+      parentNotified: boolOr(body, false, "parentNotified", "parent_notified"),
+      shift: str(body, "shift") ?? "am",
+    };
+    const existing = await writeStore.find(db, organizationId, schoolId, "attendance", id);
+    const saved = existing
+      ? (await writeStore.replace(db, organizationId, schoolId, "attendance", id, payload)) ?? payload
+      : await writeStore.insert(db, organizationId, schoolId, "attendance", id, payload);
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("transport.attendance.recorded", "transport_attendance", id, {
+        status: payload.status,
+      }),
+      request,
+    );
+    return { payload: saved, status: existing ? 200 : 201 };
   });
 }
 

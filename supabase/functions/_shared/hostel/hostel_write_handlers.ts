@@ -8,9 +8,47 @@ import {
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
+import type { TenantQueryClient } from "../tenant_db.ts";
 
 const writeStore = createEntityWriteStore("hostel_entities", "Hostel");
 const { runWrite } = createModuleWriteHandlers("manageHostel");
+
+/** Entity-store key under which hostel leave/gate-pass requests are stored. */
+export const HOSTEL_LEAVE_ENTITY_TYPE = "leave_request";
+
+/**
+ * Flips a hostel leave request's status to `approved`/`rejected`. Called by the
+ * generic approval engine when a hostel-leave approval is decided, so the
+ * approval decision actually mutates the underlying `hostel_entities` row
+ * (not just the approval audit/effect record). Returns the updated payload, or
+ * null when no matching leave row exists. Tenant RLS (`manageHostel` scope) is
+ * already enforced by the approval decision path's tenant context.
+ */
+export async function flipHostelLeaveStatus(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leaveRequestId: string,
+  status: "approved" | "rejected",
+): Promise<Record<string, unknown> | null> {
+  const existing = await writeStore.find(
+    db,
+    organizationId,
+    schoolId,
+    HOSTEL_LEAVE_ENTITY_TYPE,
+    leaveRequestId,
+  );
+  if (!existing) return null;
+  const next = { ...existing, status };
+  return await writeStore.replace(
+    db,
+    organizationId,
+    schoolId,
+    HOSTEL_LEAVE_ENTITY_TYPE,
+    leaveRequestId,
+    next,
+  ) ?? next;
+}
 
 /** POST /hostel/students — admit a student into the hostel. */
 export async function handleAdmitStudent(req: Request, config: AppConfig): Promise<Response> {

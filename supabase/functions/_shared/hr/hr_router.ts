@@ -12,11 +12,17 @@ import {
   handleSettings,
 } from "./hr_handlers.ts";
 import {
+  handleApproveLeaveRequest,
   handleCreateEmployee,
   handleCreateLeaveRequest,
+  handleCreatePerformanceReview,
+  handleCreateRecruitmentOpening,
   handleProcessPayrollRun,
+  handleRejectLeaveRequest,
   handleSetEmployeeStatus,
   handleUpdateEmployee,
+  handleUpdatePerformanceReview,
+  handleUpdateRecruitmentOpening,
 } from "./hr_write_handlers.ts";
 
 const UUID_SEGMENT =
@@ -67,6 +73,22 @@ function matchHrRoute(
     if (path === "/hr/leave") {
       return { handler: handleCreateLeaveRequest, args: [] };
     }
+    // --- A6 writes (AgentC) ---
+    const leaveApproveMatch = path.match(/^\/hr\/leave\/([^/]+)\/approve$/);
+    if (leaveApproveMatch) {
+      return { handler: handleApproveLeaveRequest, args: [leaveApproveMatch[1]!] };
+    }
+    const leaveRejectMatch = path.match(/^\/hr\/leave\/([^/]+)\/reject$/);
+    if (leaveRejectMatch) {
+      return { handler: handleRejectLeaveRequest, args: [leaveRejectMatch[1]!] };
+    }
+    if (path === "/hr/performance") {
+      return { handler: handleCreatePerformanceReview, args: [] };
+    }
+    if (path === "/hr/recruitment") {
+      return { handler: handleCreateRecruitmentOpening, args: [] };
+    }
+    // --- end A6 writes (AgentC) ---
     if (path === "/hr/payroll/run") {
       return { handler: handleProcessPayrollRun, args: [] };
     }
@@ -78,6 +100,16 @@ function matchHrRoute(
     if (employeeMatch) {
       return { handler: handleUpdateEmployee, args: [employeeMatch[1]!] };
     }
+    // --- A6 writes (AgentC) ---
+    const performanceMatch = path.match(/^\/hr\/performance\/([^/]+)$/);
+    if (performanceMatch) {
+      return { handler: handleUpdatePerformanceReview, args: [performanceMatch[1]!] };
+    }
+    const recruitmentMatch = path.match(/^\/hr\/recruitment\/([^/]+)$/);
+    if (recruitmentMatch) {
+      return { handler: handleUpdateRecruitmentOpening, args: [recruitmentMatch[1]!] };
+    }
+    // --- end A6 writes (AgentC) ---
     return null;
   }
 
