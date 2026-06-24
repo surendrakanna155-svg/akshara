@@ -276,6 +276,7 @@ abstract final class RouteNames {
   static const String unifiedOnboarding = '/admin/onboarding/unified';
   static const String studentOnboarding = '/admin/onboarding/students';
   static const String backupRestore = '/admin/backup-restore';
+  static const String planEntitlements = '/admin/plan';
 
   static String sisStudentDetail(String studentId) => '$sisStudents/$studentId';
 
@@ -531,6 +532,7 @@ abstract final class RouteNames {
   /// All module groups wrapped by [AdminShell].
   static const List<String> adminErpRoutes = [
     admin,
+    planEntitlements,
     copilot,
     education,
     intelligence,

@@ -1340,6 +1340,14 @@ abstract final class QaTestKeys {
   // FV-PLAT-14 Smart School Configuration
   static const schoolDiscoveryScreen =
       ValueKey<String>('school_discovery_screen');
+  // B2 entitlement UI.
+  static const planEntitlementsScreen =
+      ValueKey<String>('plan_entitlements_screen');
+  static const planNameLabel = ValueKey<String>('plan_name_label');
+  static const planTrialRemainingLabel =
+      ValueKey<String>('plan_trial_remaining_label');
+  static const planUpgradeWhatsappButton =
+      ValueKey<String>('plan_upgrade_whatsapp_button');
   static const schoolDiscoveryHubCard =
       ValueKey<String>('school_discovery_hub_card');
   static const schoolDiscoveryAppliedSnackbar =

@@ -12,6 +12,7 @@ import '../../theme/theme_extensions.dart';
 import '../copilot/copilot_navigation.dart';
 import '../copilot/settings/ai_access_preferences_provider.dart';
 import '../copilot/widgets/copilot_ai_quick_actions.dart';
+import '../entitlements/plan_badge.dart';
 import 'admin_navigation_provider.dart';
 import 'models/admin_nav_models.dart';
 
@@ -72,6 +73,10 @@ class AdminNavigationRail extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const AksharaNavBrandHeader(),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: PlanBadge(),
+              ),
               Divider(height: 1, color: colors.outlineVariant.withValues(alpha: 0.65)),
               Expanded(
                 child: ListView.builder(
@@ -127,6 +132,11 @@ class AdminNavigationRail extends ConsumerWidget {
                         )
                       : const EdgeInsets.only(top: AksharaSpacing.s6),
                 ),
+                if (expanded)
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: PlanBadge(),
+                  ),
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s1),

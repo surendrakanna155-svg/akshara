@@ -65,6 +65,7 @@ import '../features/teacher/timetable/teacher_timetable_screen.dart';
 import '../features/copilot/dock/copilot_dock_host.dart';
 import '../features/admin/admin_shell.dart';
 import '../features/admin/backup/backup_restore_screen.dart';
+import '../features/entitlements/plan_entitlements_screen.dart';
 import '../features/onboarding/unified_onboarding_flow_screen.dart';
 import '../features/onboarding/student_onboarding_screen.dart';
 import '../core/repositories/repository_providers.dart';
@@ -514,6 +515,13 @@ GoRouter createAppRouter({
             name: 'backupRestore',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: BackupRestoreScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.planEntitlements,
+            name: 'planEntitlements',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: PlanEntitlementsScreen(),
             ),
           ),
           GoRoute(
