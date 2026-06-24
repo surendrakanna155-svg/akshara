@@ -184,3 +184,44 @@ Platform; **P4** Verticals.
 *P1 finishes the revenue engines + harvests live AI; P2 opens the moat (AI School Builder
 Phase 1, Director, AI Predictions); P3 expands the platform (Org Builder, Dynamic Widgets);
 P4 grows TAM (Verticals). The long-term vision is sequenced behind revenue — never removed.*
+
+---
+
+## 8. Execution checklist — one batch at a time
+
+**How we run this:** one **batch per session**. Each batch starts with a *targeted*
+gap-check of that single feature against current code (NOT a repo-wide audit), then we
+close the gaps and finish with the **definition of done** below. Tick the box when certified.
+
+**Definition of done (every batch):** gaps closed · live-certified on the real VPS (real
+auth + real DB) · `flutter analyze` clean + tests green · committed & pushed · short cert/
+status doc · memory updated. Then start a fresh session for the next batch.
+
+### P0 — Owner-gated (PAUSED until owner provides inputs; can run anytime, in parallel)
+- [ ] **O1** Privacy policy — fill legal details (entity, address, email, grievance) → publish final
+- [ ] **O2** Generate upload keystore (owner custodies the password)
+- [ ] **O3** Play Console account + store listing + Data-Safety form
+- [ ] **O4** Activate parent SMS (`TRANSACTIONAL_SMS_ENABLED=true`) at pilot onboarding
+- [ ] **O5** Firebase setup → push notifications
+
+### P1 — Revenue & Pilot Success (engineering, in order)
+- [ ] **B1** Admissions CRM — complete the remaining ~30% (lead pipeline stages, follow-up loop, conversion tracking)
+- [ ] **B2** Capability Gating — finalize tier/package definitions → tiered pricing live (quick win)
+- [ ] **B3** Parent Insights — surface in parent UI + polish (quick win, already live)
+- [ ] **B4** AI Admissions Assistant — wire live Copilot `admissions` persona to funnel/CRM data + next-best-action
+- [ ] **B5** WhatsApp button — drop `WhatsAppContactButton` into admissions leads, fee defaulters, transport, vendors, alumni (quick win)
+- [ ] **B6** Marketing Engine — MVP (lead capture, campaigns on live Broadcasts/Branding, source attribution)
+
+### P2 — Strategic Differentiation
+- [ ] **B7** AI School Builder (Phase 1) — AI pre-fill of school structure/config on the certified onboarding foundation
+- [ ] **B8** Director Multi-School — polish for multi-branch sales
+- [ ] **B9** Advanced AI Predictions — scope + first model (fee-default / enrolment-likelihood) on real pilot data
+
+### P3 — Platform Expansion
+- [ ] **B10** Organization Builder — backend first, then UI
+- [ ] **B11** Dynamic Widget Platform
+
+### P4 — Long-Term Expansion
+- [ ] **B12** Verticals (unfreeze after pilot validation + first paying schools)
+
+> Next batch to start: **B1 — Admissions CRM completion** (P0 items wait on owner inputs).
