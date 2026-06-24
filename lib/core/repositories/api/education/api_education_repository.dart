@@ -45,6 +45,15 @@ class ApiEducationRepository implements EducationRepository {
   }
 
   @override
+  Future<QuestionBankItem> updateQuestionBankItem({
+    required RepositoryQuery query,
+    required QuestionBankItem item,
+  }) async {
+    final row = await _remote.updateQuestionBankItem(query: query, item: item);
+    return EducationMapper.questionBankFromApi(row);
+  }
+
+  @override
   Future<List<QuestionPaperSummary>> listQuestionPapers({
     required RepositoryQuery query,
   }) async {
@@ -131,6 +140,72 @@ class ApiEducationRepository implements EducationRepository {
       decision: decision,
     );
     return EducationMapper.paperItemFromApi(row);
+  }
+
+  @override
+  Future<QuestionPaperItem> updatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    EduQuestionType? questionType,
+    int? marks,
+    String? questionText,
+    String? answerText,
+    List<String>? options,
+  }) async {
+    final row = await _remote.updatePaperItem(
+      query: query,
+      paperId: paperId,
+      itemId: itemId,
+      questionType: questionType,
+      marks: marks,
+      questionText: questionText,
+      answerText: answerText,
+      options: options,
+    );
+    return EducationMapper.paperItemFromApi(row);
+  }
+
+  @override
+  Future<QuestionPaperItem> regeneratePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+  }) async {
+    final row = await _remote.regeneratePaperItem(
+      query: query,
+      paperId: paperId,
+      itemId: itemId,
+      chapter: chapter,
+    );
+    return EducationMapper.paperItemFromApi(row);
+  }
+
+  @override
+  Future<QuestionBankItem> promotePaperItemToBank({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+    String? topic,
+    EduDifficulty? difficulty,
+    EduCognitiveLevel? cognitiveLevel,
+    String? syllabusChapterId,
+    String? learningOutcome,
+  }) async {
+    final row = await _remote.promotePaperItemToBank(
+      query: query,
+      paperId: paperId,
+      itemId: itemId,
+      chapter: chapter,
+      topic: topic,
+      difficulty: difficulty,
+      cognitiveLevel: cognitiveLevel,
+      syllabusChapterId: syllabusChapterId,
+      learningOutcome: learningOutcome,
+    );
+    return EducationMapper.questionBankFromApi(row);
   }
 
   @override

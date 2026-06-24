@@ -195,6 +195,112 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
     }
   }
 
+  /// Feature C — edit a saved bank question.
+  Future<QuestionBankItem> updateBankItem(QuestionBankItem item) async {
+    state = const AsyncLoading();
+    try {
+      assertManageEducation(ref);
+      final updated = await ref.read(educationRepositoryProvider).updateQuestionBankItem(
+            query: ref.read(educationQueryProvider),
+            item: item,
+          );
+      ref.invalidate(questionBankListProvider);
+      state = const AsyncData(null);
+      return updated;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Feature A — fix one question inside a paper (token-free).
+  Future<QuestionPaperItem> editPaperItem(
+    String paperId,
+    String itemId, {
+    EduQuestionType? questionType,
+    int? marks,
+    String? questionText,
+    String? answerText,
+    List<String>? options,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      assertManageEducation(ref);
+      final item = await ref.read(educationRepositoryProvider).updatePaperItem(
+            query: ref.read(educationQueryProvider),
+            paperId: paperId,
+            itemId: itemId,
+            questionType: questionType,
+            marks: marks,
+            questionText: questionText,
+            answerText: answerText,
+            options: options,
+          );
+      _invalidatePaper(paperId);
+      state = const AsyncData(null);
+      return item;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Feature B — regenerate one slot with AI (spends tokens).
+  Future<QuestionPaperItem> regenerateItem(
+    String paperId,
+    String itemId, {
+    String? chapter,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      assertManageEducation(ref);
+      final item = await ref.read(educationRepositoryProvider).regeneratePaperItem(
+            query: ref.read(educationQueryProvider),
+            paperId: paperId,
+            itemId: itemId,
+            chapter: chapter,
+          );
+      _invalidatePaper(paperId);
+      state = const AsyncData(null);
+      return item;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Feature E — save an approved AI candidate into the reusable bank.
+  Future<QuestionBankItem> promoteItemToBank(
+    String paperId,
+    String itemId, {
+    String? chapter,
+    String? topic,
+    EduDifficulty? difficulty,
+    EduCognitiveLevel? cognitiveLevel,
+    String? syllabusChapterId,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      assertManageEducation(ref);
+      final created = await ref.read(educationRepositoryProvider).promotePaperItemToBank(
+            query: ref.read(educationQueryProvider),
+            paperId: paperId,
+            itemId: itemId,
+            chapter: chapter,
+            topic: topic,
+            difficulty: difficulty,
+            cognitiveLevel: cognitiveLevel,
+            syllabusChapterId: syllabusChapterId,
+          );
+      ref.invalidate(questionBankListProvider);
+      state = const AsyncData(null);
+      return created;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
   void _invalidatePaper(String paperId) {
     ref.invalidate(questionPapersListProvider);
     ref.invalidate(educationSelectedPaperProvider);

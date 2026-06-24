@@ -286,6 +286,97 @@ export async function importQuestionBankItems(
   return { created, skippedDuplicates };
 }
 
+export interface UpdateQuestionBankInput {
+  subjectName?: string;
+  chapter?: string;
+  topic?: string;
+  difficulty?: EduDifficulty;
+  questionType?: EduQuestionType;
+  marks?: number;
+  questionText?: string;
+  answerText?: string | null;
+  options?: string[];
+  programTrack?: EduProgramTrack;
+  cognitiveLevel?: EduCognitiveLevel | null;
+  syllabusChapterId?: string | null;
+  syllabusTopicId?: string | null;
+  learningOutcome?: string | null;
+  sourceReference?: string | null;
+}
+
+/**
+ * Edit a saved bank question in place (Feature C, token-free). Only the supplied
+ * fields change; the dedup fingerprint is recomputed from the resulting
+ * subject/chapter/type/text so a corrected question still de-duplicates cleanly
+ * on the next import or generation.
+ */
+export async function updateQuestionBankItem(
+  client: TenantQueryClient,
+  id: string,
+  input: UpdateQuestionBankInput,
+): Promise<QuestionBankItemRow | null> {
+  const existingRows = await client.queryObject<QuestionBankItemRow>(
+    `SELECT * FROM edu_question_bank_items WHERE id = $1`,
+    [id],
+  );
+  const existing = existingRows[0];
+  if (!existing) return null;
+
+  const subjectName = input.subjectName ?? existing.subject_name;
+  const chapter = input.chapter ?? existing.chapter;
+  const questionType = input.questionType ?? (existing.question_type as EduQuestionType);
+  const questionText = input.questionText ?? existing.question_text;
+  const fingerprint = computeQuestionFingerprint({
+    subjectName,
+    chapter,
+    questionType,
+    questionText,
+  });
+
+  const rows = await client.queryObject<QuestionBankItemRow>(
+    `UPDATE edu_question_bank_items SET
+       subject_name = $2,
+       chapter = $3,
+       topic = COALESCE($4, topic),
+       difficulty = COALESCE($5, difficulty),
+       question_type = $6,
+       marks = COALESCE($7, marks),
+       question_text = $8,
+       answer_text = $9,
+       options = COALESCE($10::jsonb, options),
+       program_track = COALESCE($11, program_track),
+       cognitive_level = $12,
+       syllabus_chapter_id = $13,
+       syllabus_topic_id = $14,
+       learning_outcome = $15,
+       source_reference = $16,
+       fingerprint = $17,
+       updated_at = now()
+     WHERE id = $1
+     RETURNING *`,
+    [
+      id,
+      subjectName,
+      chapter,
+      input.topic ?? null,
+      input.difficulty ?? null,
+      questionType,
+      input.marks ?? null,
+      questionText,
+      input.answerText === undefined ? existing.answer_text : input.answerText,
+      input.options === undefined ? null : JSON.stringify(input.options),
+      input.programTrack ?? null,
+      input.cognitiveLevel === undefined ? existing.cognitive_level : input.cognitiveLevel,
+      input.syllabusChapterId === undefined ? existing.syllabus_chapter_id : input.syllabusChapterId,
+      input.syllabusTopicId === undefined ? existing.syllabus_topic_id : input.syllabusTopicId,
+      input.learningOutcome === undefined ? existing.learning_outcome : input.learningOutcome,
+      input.sourceReference === undefined ? existing.source_reference : input.sourceReference,
+      fingerprint,
+    ],
+  );
+  return rows[0] ?? null;
+}
+
 export async function archiveQuestionBankItem(
   client: TenantQueryClient,
   id: string,
@@ -596,6 +687,273 @@ export async function moderatePaperItem(
     [itemId, paperId, decision],
   );
   return rows[0] ?? null;
+}
+
+/** A paper can be edited only before it is locked (published / archived). */
+function paperIsEditable(reviewStatus: string): boolean {
+  return reviewStatus !== "published" && reviewStatus !== "archived";
+}
+
+/** Rebuild the stored answer key from the paper's current items, in order. */
+async function rebuildPaperAnswerKey(
+  client: TenantQueryClient,
+  paperId: string,
+): Promise<void> {
+  const items = await client.queryObject<QuestionPaperItemRow>(
+    `SELECT * FROM edu_question_paper_items WHERE paper_id = $1 ORDER BY sort_order`,
+    [paperId],
+  );
+  const answerKey = items.map((item, index) => ({
+    questionNumber: index + 1,
+    answer: item.answer_text ?? "",
+    marks: item.marks,
+  }));
+  await client.queryObject(
+    `UPDATE edu_question_papers SET answer_key = $2::jsonb, updated_at = now()
+     WHERE id = $1`,
+    [paperId, JSON.stringify(answerKey)],
+  );
+}
+
+export interface UpdatePaperItemInput {
+  questionType?: EduQuestionType;
+  marks?: number;
+  questionText?: string;
+  answerText?: string | null;
+  options?: string[];
+}
+
+export type UpdatePaperItemResult =
+  | { ok: true; item: QuestionPaperItemRow; approvalReset: boolean }
+  | { ok: false; reason: "not_found" | "not_editable" };
+
+/**
+ * Edit one question inside a paper (Feature A, token-free). This is the fast
+ * "just fix that one question" path — the rest of the paper is untouched.
+ *
+ * Guards:
+ *  - A published / archived paper is locked → not_editable.
+ *  - Editing an already-approved paper invalidates the sign-off, so the paper is
+ *    reset to 'draft' and must be re-submitted for the principal's approval. The
+ *    stored answer key is rebuilt so exports stay consistent with the edit.
+ */
+export async function updatePaperItem(
+  client: TenantQueryClient,
+  paperId: string,
+  itemId: string,
+  input: UpdatePaperItemInput,
+): Promise<UpdatePaperItemResult> {
+  const paperRows = await client.queryObject<QuestionPaperRow>(
+    `SELECT * FROM edu_question_papers WHERE id = $1`,
+    [paperId],
+  );
+  const paper = paperRows[0];
+  if (!paper) return { ok: false, reason: "not_found" };
+  if (!paperIsEditable(paper.review_status)) return { ok: false, reason: "not_editable" };
+
+  const rows = await client.queryObject<QuestionPaperItemRow>(
+    `UPDATE edu_question_paper_items SET
+       question_type = COALESCE($3, question_type),
+       marks = COALESCE($4, marks),
+       question_text = COALESCE($5, question_text),
+       answer_text = $6,
+       options = COALESCE($7::jsonb, options)
+     WHERE id = $1 AND paper_id = $2
+     RETURNING *`,
+    [
+      itemId,
+      paperId,
+      input.questionType ?? null,
+      input.marks ?? null,
+      input.questionText ?? null,
+      input.answerText === undefined ? null : input.answerText,
+      input.options === undefined ? null : JSON.stringify(input.options),
+    ],
+  );
+  const item = rows[0];
+  if (!item) return { ok: false, reason: "not_found" };
+
+  await rebuildPaperAnswerKey(client, paperId);
+
+  let approvalReset = false;
+  if (paper.review_status === "approved") {
+    await client.queryObject(
+      `UPDATE edu_question_papers
+       SET review_status = 'draft', approved_by = NULL, approved_at = NULL,
+           updated_at = now()
+       WHERE id = $1`,
+      [paperId],
+    );
+    approvalReset = true;
+  }
+
+  return { ok: true, item, approvalReset };
+}
+
+/**
+ * Replace one paper item's content with a freshly AI-authored candidate
+ * (Feature B). The slot becomes source='ai_candidate', review_status='pending'
+ * again, so it must be re-moderated before the paper can be published — the AI
+ * sign-off rule still holds. Approval (if any) is reset, like an edit.
+ */
+export async function applyRegeneratedPaperItem(
+  client: TenantQueryClient,
+  paperId: string,
+  itemId: string,
+  content: {
+    questionType: EduQuestionType;
+    marks: number;
+    questionText: string;
+    answerText: string;
+    options: string[];
+  },
+): Promise<UpdatePaperItemResult> {
+  const paperRows = await client.queryObject<QuestionPaperRow>(
+    `SELECT * FROM edu_question_papers WHERE id = $1`,
+    [paperId],
+  );
+  const paper = paperRows[0];
+  if (!paper) return { ok: false, reason: "not_found" };
+  if (!paperIsEditable(paper.review_status)) return { ok: false, reason: "not_editable" };
+
+  const rows = await client.queryObject<QuestionPaperItemRow>(
+    `UPDATE edu_question_paper_items SET
+       question_type = $3, marks = $4, question_text = $5, answer_text = $6,
+       options = $7::jsonb, source = 'ai_candidate', review_status = 'pending'
+     WHERE id = $1 AND paper_id = $2
+     RETURNING *`,
+    [
+      itemId,
+      paperId,
+      content.questionType,
+      content.marks,
+      content.questionText,
+      content.answerText,
+      JSON.stringify(content.options),
+    ],
+  );
+  const item = rows[0];
+  if (!item) return { ok: false, reason: "not_found" };
+
+  await rebuildPaperAnswerKey(client, paperId);
+
+  let approvalReset = false;
+  if (paper.review_status === "approved") {
+    await client.queryObject(
+      `UPDATE edu_question_papers
+       SET review_status = 'draft', approved_by = NULL, approved_at = NULL,
+           updated_at = now()
+       WHERE id = $1`,
+      [paperId],
+    );
+    approvalReset = true;
+  }
+  return { ok: true, item, approvalReset };
+}
+
+/** Read one paper + a single item (for the regenerate slot reconstruction). */
+export async function getPaperItem(
+  client: TenantQueryClient,
+  paperId: string,
+  itemId: string,
+): Promise<{ paper: QuestionPaperRow; item: QuestionPaperItemRow } | null> {
+  const paperRows = await client.queryObject<QuestionPaperRow>(
+    `SELECT * FROM edu_question_papers WHERE id = $1`,
+    [paperId],
+  );
+  const paper = paperRows[0];
+  if (!paper) return null;
+  const itemRows = await client.queryObject<QuestionPaperItemRow>(
+    `SELECT * FROM edu_question_paper_items WHERE id = $1 AND paper_id = $2`,
+    [itemId, paperId],
+  );
+  const item = itemRows[0];
+  if (!item) return null;
+  return { paper, item };
+}
+
+/**
+ * Promote an approved AI-candidate paper item into the reusable bank
+ * (Feature E, token-free). Only an item a human has already approved is
+ * eligible — nothing AI-authored enters the bank without sign-off. Subject /
+ * program track default from the parent paper; chapter and the optional
+ * syllabus/cognitive metadata come from the caller. De-dupes by fingerprint.
+ */
+export type PromotePaperItemResult =
+  | { ok: true; item: QuestionBankItemRow; duplicate: boolean }
+  | { ok: false; reason: "not_found" | "not_approved" };
+
+export async function promotePaperItemToBank(
+  client: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  paperId: string,
+  itemId: string,
+  overrides: {
+    chapter?: string;
+    topic?: string;
+    difficulty?: EduDifficulty;
+    cognitiveLevel?: EduCognitiveLevel;
+    syllabusChapterId?: string;
+    syllabusTopicId?: string;
+    learningOutcome?: string;
+  },
+  createdBy: string,
+): Promise<PromotePaperItemResult> {
+  const paperRows = await client.queryObject<QuestionPaperRow>(
+    `SELECT * FROM edu_question_papers WHERE id = $1`,
+    [paperId],
+  );
+  const paper = paperRows[0];
+  if (!paper) return { ok: false, reason: "not_found" };
+
+  const itemRows = await client.queryObject<QuestionPaperItemRow>(
+    `SELECT * FROM edu_question_paper_items WHERE id = $1 AND paper_id = $2`,
+    [itemId, paperId],
+  );
+  const item = itemRows[0];
+  if (!item) return { ok: false, reason: "not_found" };
+  // Only an AI item that a human has approved may enter the reusable bank.
+  const isAiItem = item.source === "ai_candidate" || item.source === "ai_generated";
+  if (!isAiItem || item.review_status !== "approved") {
+    return { ok: false, reason: "not_approved" };
+  }
+
+  const paperChapters = Array.isArray(paper.chapters) ? paper.chapters as string[] : [];
+  const chapter = overrides.chapter ?? paperChapters[0] ?? "General";
+  const difficulty: EduDifficulty = overrides.difficulty ??
+    (paper.difficulty === "mixed" ? "medium" : (paper.difficulty as EduDifficulty));
+
+  const fingerprint = computeQuestionFingerprint({
+    subjectName: paper.subject_name,
+    chapter,
+    questionType: item.question_type,
+    questionText: item.question_text,
+  });
+  const existing = await findBankItemByFingerprint(client, fingerprint);
+  if (existing) return { ok: true, item: existing, duplicate: true };
+
+  const created = await createQuestionBankItem(client, organizationId, schoolId, {
+    subjectName: paper.subject_name,
+    chapter,
+    topic: overrides.topic,
+    difficulty,
+    questionType: item.question_type as EduQuestionType,
+    marks: item.marks,
+    questionText: item.question_text,
+    answerText: item.answer_text ?? undefined,
+    options: Array.isArray(item.options) ? item.options as string[] : [],
+    source: "ai_candidate",
+    sourceReference: `paper:${paperId}`,
+    programTrack: paper.program_track as EduProgramTrack,
+    cognitiveLevel: overrides.cognitiveLevel,
+    syllabusChapterId: overrides.syllabusChapterId,
+    syllabusTopicId: overrides.syllabusTopicId,
+    learningOutcome: overrides.learningOutcome,
+    reviewStatus: "approved",
+    createdBy,
+  });
+  return { ok: true, item: created, duplicate: false };
 }
 
 export async function listPaperReviews(

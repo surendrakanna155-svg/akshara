@@ -634,6 +634,25 @@ abstract final class QaTestKeys {
   static ValueKey<String> educationModerateRejectButton(String itemId) =>
       ValueKey<String>('education_moderate_reject_$itemId');
 
+  /// Per-question correction actions (Features A / B / E).
+  static ValueKey<String> educationQuestionActions(String itemId) =>
+      ValueKey<String>('education_question_actions_$itemId');
+
+  static ValueKey<String> educationEditQuestionAction(String itemId) =>
+      ValueKey<String>('education_edit_question_$itemId');
+
+  static ValueKey<String> educationRegenerateQuestionAction(String itemId) =>
+      ValueKey<String>('education_regenerate_question_$itemId');
+
+  static ValueKey<String> educationPromoteQuestionAction(String itemId) =>
+      ValueKey<String>('education_promote_question_$itemId');
+
+  static const educationSavePaperItemButton =
+      ValueKey<String>('education_save_paper_item_button');
+
+  static ValueKey<String> educationEditBankItemButton(String itemId) =>
+      ValueKey<String>('education_edit_bank_item_$itemId');
+
   static ValueKey<String> managementApproveButton(String approvalId) =>
       ValueKey<String>('management_approve_$approvalId');
 

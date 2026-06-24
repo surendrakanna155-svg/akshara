@@ -193,6 +193,17 @@ class MockEducationRepository implements EducationRepository {
   }
 
   @override
+  Future<QuestionBankItem> updateQuestionBankItem({
+    required RepositoryQuery query,
+    required QuestionBankItem item,
+  }) async {
+    final index = _bank.indexWhere((b) => b.id == item.id);
+    if (index < 0) throw StateError('Bank item ${item.id} not found');
+    _bank[index] = item;
+    return item;
+  }
+
+  @override
   Future<List<QuestionPaperSummary>> listQuestionPapers({
     required RepositoryQuery query,
   }) async =>
@@ -396,6 +407,111 @@ class MockEducationRepository implements EducationRepository {
     }).toList();
     _replacePaper(current, items: items);
     return items.firstWhere((item) => item.id == itemId);
+  }
+
+  @override
+  Future<QuestionPaperItem> updatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    EduQuestionType? questionType,
+    int? marks,
+    String? questionText,
+    String? answerText,
+    List<String>? options,
+  }) async {
+    final current = _papers.firstWhere((p) => p.paper.id == paperId);
+    if (current.paper.reviewStatus == EduPaperReviewStatus.published ||
+        current.paper.reviewStatus == EduPaperReviewStatus.archived) {
+      throw StateError('A published or archived paper cannot be edited');
+    }
+    final items = current.items.map((item) {
+      if (item.id != itemId) return item;
+      return QuestionPaperItem(
+        id: item.id,
+        questionNumber: item.questionNumber,
+        questionType: questionType ?? item.questionType,
+        marks: marks ?? item.marks,
+        questionText: questionText ?? item.questionText,
+        answerText: answerText ?? item.answerText,
+        options: options ?? item.options,
+        source: item.source,
+        reviewStatus: item.reviewStatus,
+      );
+    }).toList();
+    // Editing an approved paper invalidates the sign-off → back to draft.
+    final paper = current.paper.reviewStatus == EduPaperReviewStatus.approved
+        ? _withReviewStatus(current.paper, EduPaperReviewStatus.draft)
+        : current.paper;
+    _replacePaper(current, paper: paper, items: items);
+    return items.firstWhere((item) => item.id == itemId);
+  }
+
+  @override
+  Future<QuestionPaperItem> regeneratePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+  }) async {
+    final current = _papers.firstWhere((p) => p.paper.id == paperId);
+    final items = current.items.map((item) {
+      if (item.id != itemId) return item;
+      return QuestionPaperItem(
+        id: item.id,
+        questionNumber: item.questionNumber,
+        questionType: item.questionType,
+        marks: item.marks,
+        questionText:
+            'Regenerated: ${current.paper.subjectName} — ${chapter ?? "General"}',
+        answerText: 'Proposed model answer (awaiting moderation).',
+        options: item.options,
+        source: 'ai_candidate',
+        reviewStatus: 'pending',
+      );
+    }).toList();
+    final paper = current.paper.reviewStatus == EduPaperReviewStatus.approved
+        ? _withReviewStatus(current.paper, EduPaperReviewStatus.draft)
+        : current.paper;
+    _replacePaper(current, paper: paper, items: items);
+    return items.firstWhere((item) => item.id == itemId);
+  }
+
+  @override
+  Future<QuestionBankItem> promotePaperItemToBank({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+    String? topic,
+    EduDifficulty? difficulty,
+    EduCognitiveLevel? cognitiveLevel,
+    String? syllabusChapterId,
+    String? learningOutcome,
+  }) async {
+    final current = _papers.firstWhere((p) => p.paper.id == paperId);
+    final item = current.items.firstWhere((i) => i.id == itemId);
+    final isAi = item.source == 'ai_candidate' || item.source == 'ai_generated';
+    if (!isAi || item.reviewStatus != 'approved') {
+      throw StateError('Only an approved AI candidate can be saved to the bank');
+    }
+    final created = QuestionBankItem(
+      id: _nextId('bank'),
+      subjectName: current.paper.subjectName,
+      chapter: chapter ?? 'General',
+      topic: topic ?? '',
+      difficulty: difficulty ?? current.paper.difficulty,
+      questionType: item.questionType,
+      marks: item.marks,
+      questionText: item.questionText,
+      answerText: item.answerText,
+      options: item.options,
+      programTrack: current.paper.programTrack,
+      cognitiveLevel: cognitiveLevel,
+      syllabusChapterId: syllabusChapterId,
+    );
+    _bank.add(created);
+    return created;
   }
 
   @override

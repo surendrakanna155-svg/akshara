@@ -18,11 +18,15 @@ import {
   handleListQuestionPapers,
   handleListReportRemarks,
   handleModeratePaperItem,
+  handlePromotePaperItem,
   handlePublishHomework,
   handlePublishQuestionPaper,
   handlePublishReportRemark,
+  handleRegeneratePaperItem,
   handleReviewQuestionPaper,
   handleSubmitQuestionPaper,
+  handleUpdatePaperItem,
+  handleUpdateQuestionBank,
   handleUpdateReportRemark,
 } from "./education_handlers.ts";
 
@@ -49,9 +53,14 @@ export function matchEducationRoute(
     return { handler: handleExportQuestionBank, args: [] };
   }
 
-  const bankArchiveMatch = path.match(/^\/education\/question-bank\/([^/]+)$/);
-  if (bankArchiveMatch && method === "DELETE" && UUID_SEGMENT.test(bankArchiveMatch[1]!)) {
-    return { handler: handleArchiveQuestionBank, args: [bankArchiveMatch[1]!] };
+  const bankItemMatch = path.match(/^\/education\/question-bank\/([^/]+)$/);
+  if (bankItemMatch && UUID_SEGMENT.test(bankItemMatch[1]!)) {
+    if (method === "DELETE") {
+      return { handler: handleArchiveQuestionBank, args: [bankItemMatch[1]!] };
+    }
+    if (method === "PUT") {
+      return { handler: handleUpdateQuestionBank, args: [bankItemMatch[1]!] };
+    }
   }
 
   if (path === "/education/question-papers" && method === "GET") {
@@ -96,6 +105,45 @@ export function matchEducationRoute(
     return {
       handler: handleModeratePaperItem,
       args: [itemModerateMatch[1]!, itemModerateMatch[2]!],
+    };
+  }
+
+  const itemRegenerateMatch = path.match(
+    /^\/education\/question-papers\/([^/]+)\/items\/([^/]+)\/regenerate$/,
+  );
+  if (
+    itemRegenerateMatch && method === "POST" &&
+    UUID_SEGMENT.test(itemRegenerateMatch[1]!) && UUID_SEGMENT.test(itemRegenerateMatch[2]!)
+  ) {
+    return {
+      handler: handleRegeneratePaperItem,
+      args: [itemRegenerateMatch[1]!, itemRegenerateMatch[2]!],
+    };
+  }
+
+  const itemPromoteMatch = path.match(
+    /^\/education\/question-papers\/([^/]+)\/items\/([^/]+)\/promote$/,
+  );
+  if (
+    itemPromoteMatch && method === "POST" &&
+    UUID_SEGMENT.test(itemPromoteMatch[1]!) && UUID_SEGMENT.test(itemPromoteMatch[2]!)
+  ) {
+    return {
+      handler: handlePromotePaperItem,
+      args: [itemPromoteMatch[1]!, itemPromoteMatch[2]!],
+    };
+  }
+
+  const itemEditMatch = path.match(
+    /^\/education\/question-papers\/([^/]+)\/items\/([^/]+)$/,
+  );
+  if (
+    itemEditMatch && method === "PUT" &&
+    UUID_SEGMENT.test(itemEditMatch[1]!) && UUID_SEGMENT.test(itemEditMatch[2]!)
+  ) {
+    return {
+      handler: handleUpdatePaperItem,
+      args: [itemEditMatch[1]!, itemEditMatch[2]!],
     };
   }
 

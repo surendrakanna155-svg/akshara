@@ -311,6 +311,14 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
                               '${item.subjectName} • ${item.chapter} • '
                               '${item.questionType.name} • ${item.marks} marks',
                             ),
+                            trailing: canManage
+                                ? IconButton(
+                                    key: QaTestKeys.educationEditBankItemButton(item.id),
+                                    icon: const Icon(Icons.edit_outlined),
+                                    tooltip: 'Edit question',
+                                    onPressed: () => _editBankItem(item),
+                                  )
+                                : null,
                           ),
                         ),
                       )
@@ -383,6 +391,20 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
       ref.invalidate(questionBankListProvider);
       messenger.showSnackBar(
         const SnackBar(content: Text('Question added to bank')),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
+  Future<void> _editBankItem(QuestionBankItem item) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final edited = await showAddBankItemSheet(context, existing: item);
+    if (edited == null) return;
+    try {
+      await ref.read(educationMutationsProvider.notifier).updateBankItem(edited);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Question updated')),
       );
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text('$error')));

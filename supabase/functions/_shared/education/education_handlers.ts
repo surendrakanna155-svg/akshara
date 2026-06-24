@@ -19,7 +19,7 @@ import {
   questionPaperToApi,
   reportRemarkToApi,
 } from "./education_mapper.ts";
-import { generateQuestionPaper } from "./education_question_paper_service.ts";
+import { generateQuestionPaper, regeneratePaperItem } from "./education_question_paper_service.ts";
 import { resolveAiConfig } from "../ai/ai_settings.ts";
 import {
   archiveQuestionBankItem,
@@ -36,11 +36,14 @@ import {
   listQuestionPapers,
   listReportRemarks,
   moderatePaperItem,
+  promotePaperItemToBank,
   publishHomeworkAssignment,
   publishQuestionPaper,
   publishReportRemark,
   reviewQuestionPaper,
   submitQuestionPaper,
+  updatePaperItem,
+  updateQuestionBankItem,
   updateReportRemark,
 } from "./education_repository.ts";
 import {
@@ -279,6 +282,54 @@ export async function handleArchiveQuestionBank(
       if (!archived) return null;
       await emitMutationAudit(db, auth.claims, educationAudit.questionBankArchived(id), req);
       return archived;
+    });
+    if (!row) return errorEnvelope("NOT_FOUND", "Question bank item not found", 404);
+
+    return jsonResponse(envelope(questionBankToApi(row)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleUpdateQuestionBank(
+  req: Request,
+  config: AppConfig,
+  id: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{
+    subjectName?: string;
+    chapter?: string;
+    topic?: string;
+    difficulty?: EduDifficulty;
+    questionType?: EduQuestionType;
+    marks?: number;
+    questionText?: string;
+    answerText?: string | null;
+    options?: string[];
+    programTrack?: EduProgramTrack;
+    cognitiveLevel?: EduCognitiveLevel | null;
+    syllabusChapterId?: string | null;
+    syllabusTopicId?: string | null;
+    learningOutcome?: string | null;
+    sourceReference?: string | null;
+  }>(req);
+  if (!body || Object.keys(body).length === 0) {
+    return errorEnvelope("VALIDATION_ERROR", "At least one field is required", 422);
+  }
+
+  try {
+    const row = await runTenant(config, auth.claims, async (db) => {
+      const updated = await updateQuestionBankItem(db, id, body);
+      if (!updated) return null;
+      await emitMutationAudit(
+        db, auth.claims, educationAudit.questionBankUpdated(id, crypto.randomUUID()), req,
+      );
+      return updated;
     });
     if (!row) return errorEnvelope("NOT_FOUND", "Question bank item not found", 404);
 
@@ -598,6 +649,179 @@ export async function handleModeratePaperItem(
     }
 
     return jsonResponse(envelope(questionPaperItemToApi(row, row.sort_order)));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleUpdatePaperItem(
+  req: Request,
+  config: AppConfig,
+  paperId: string,
+  itemId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{
+    questionType?: EduQuestionType;
+    marks?: number;
+    questionText?: string;
+    answerText?: string | null;
+    options?: string[];
+  }>(req);
+  if (!body || Object.keys(body).length === 0) {
+    return errorEnvelope("VALIDATION_ERROR", "At least one field is required", 422);
+  }
+  if (body.questionText !== undefined && !body.questionText.trim()) {
+    return errorEnvelope("VALIDATION_ERROR", "questionText cannot be empty", 422);
+  }
+
+  try {
+    const outcome = await runTenant(config, auth.claims, async (db) => {
+      const result = await updatePaperItem(db, paperId, itemId, body);
+      if (result.ok) {
+        await emitMutationAudit(
+          db, auth.claims, educationAudit.questionPaperItemEdited(paperId, itemId, crypto.randomUUID()), req,
+        );
+      }
+      return result;
+    });
+
+    if (!outcome.ok) {
+      if (outcome.reason === "not_editable") {
+        return errorEnvelope(
+          "PAPER_NOT_EDITABLE",
+          "A published or archived paper cannot be edited",
+          409,
+        );
+      }
+      return errorEnvelope("NOT_FOUND", "Paper item not found", 404);
+    }
+
+    return jsonResponse(envelope({
+      item: questionPaperItemToApi(outcome.item, outcome.item.sort_order),
+      approvalReset: outcome.approvalReset,
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handleRegeneratePaperItem(
+  req: Request,
+  config: AppConfig,
+  paperId: string,
+  itemId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{ chapter?: string }>(req).catch(() => ({} as { chapter?: string }));
+  const orgId = organizationIdFromClaims(auth.claims);
+
+  try {
+    const outcome = await runTenant(config, auth.claims, async (db) => {
+      const ai = await resolveAiConfig(db, orgId);
+      const result = await regeneratePaperItem(db, paperId, itemId, {
+        chapter: body?.chapter,
+        ai,
+      });
+      if (result.ok) {
+        await emitMutationAudit(
+          db, auth.claims, educationAudit.questionPaperItemRegenerated(paperId, itemId, crypto.randomUUID()), req,
+        );
+      }
+      return result;
+    });
+
+    if (!outcome.ok) {
+      if (outcome.reason === "not_editable") {
+        return errorEnvelope("PAPER_NOT_EDITABLE", "A published or archived paper cannot be edited", 409);
+      }
+      if (outcome.reason === "ai_unavailable") {
+        return errorEnvelope(
+          "AI_UNAVAILABLE",
+          "AI is not configured. Set an AI key, or edit the question manually.",
+          409,
+        );
+      }
+      if (outcome.reason === "no_candidate") {
+        return errorEnvelope(
+          "AI_NO_CANDIDATE",
+          "AI did not return a valid replacement. Try again or edit the question manually.",
+          422,
+        );
+      }
+      return errorEnvelope("NOT_FOUND", "Paper item not found", 404);
+    }
+
+    return jsonResponse(envelope({
+      item: questionPaperItemToApi(outcome.result.item, outcome.result.item.sort_order),
+      approvalReset: outcome.result.approvalReset,
+    }));
+  } catch (error) {
+    return handleEducationError(error);
+  }
+}
+
+export async function handlePromotePaperItem(
+  req: Request,
+  config: AppConfig,
+  paperId: string,
+  itemId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireEducationWrite(auth.claims);
+  if (denied) return denied;
+
+  type PromoteBody = {
+    chapter?: string;
+    topic?: string;
+    difficulty?: EduDifficulty;
+    cognitiveLevel?: EduCognitiveLevel;
+    syllabusChapterId?: string;
+    syllabusTopicId?: string;
+    learningOutcome?: string;
+  };
+  const body = await readJson<PromoteBody>(req).catch(() => ({} as PromoteBody));
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const outcome = await runTenant(config, auth.claims, async (db) => {
+      const result = await promotePaperItemToBank(
+        db, orgId, schoolId, paperId, itemId, body ?? {}, auth.claims.sub,
+      );
+      if (result.ok && !result.duplicate) {
+        await emitMutationAudit(
+          db, auth.claims, educationAudit.questionPaperItemPromoted(paperId, itemId, result.item.id), req,
+        );
+      }
+      return result;
+    });
+
+    if (!outcome.ok) {
+      if (outcome.reason === "not_approved") {
+        return errorEnvelope(
+          "ITEM_NOT_PROMOTABLE",
+          "Only an approved AI candidate can be saved to the bank",
+          409,
+        );
+      }
+      return errorEnvelope("NOT_FOUND", "Paper item not found", 404);
+    }
+
+    return jsonResponse(envelope({
+      item: questionBankToApi(outcome.item),
+      duplicate: outcome.duplicate,
+    }), { status: outcome.duplicate ? 200 : 201 });
   } catch (error) {
     return handleEducationError(error);
   }

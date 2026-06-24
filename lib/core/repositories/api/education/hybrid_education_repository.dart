@@ -31,6 +31,13 @@ class HybridEducationRepository implements EducationRepository {
       _api.importQuestionBank(query: query, items: items);
 
   @override
+  Future<QuestionBankItem> updateQuestionBankItem({
+    required RepositoryQuery query,
+    required QuestionBankItem item,
+  }) =>
+      _api.updateQuestionBankItem(query: query, item: item);
+
+  @override
   Future<List<QuestionPaperSummary>> listQuestionPapers({
     required RepositoryQuery query,
   }) =>
@@ -97,6 +104,66 @@ class HybridEducationRepository implements EducationRepository {
         paperId: paperId,
         itemId: itemId,
         decision: decision,
+      );
+
+  @override
+  Future<QuestionPaperItem> updatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    EduQuestionType? questionType,
+    int? marks,
+    String? questionText,
+    String? answerText,
+    List<String>? options,
+  }) =>
+      _api.updatePaperItem(
+        query: query,
+        paperId: paperId,
+        itemId: itemId,
+        questionType: questionType,
+        marks: marks,
+        questionText: questionText,
+        answerText: answerText,
+        options: options,
+      );
+
+  @override
+  Future<QuestionPaperItem> regeneratePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+  }) =>
+      _api.regeneratePaperItem(
+        query: query,
+        paperId: paperId,
+        itemId: itemId,
+        chapter: chapter,
+      );
+
+  @override
+  Future<QuestionBankItem> promotePaperItemToBank({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+    String? topic,
+    EduDifficulty? difficulty,
+    EduCognitiveLevel? cognitiveLevel,
+    String? syllabusChapterId,
+    String? learningOutcome,
+  }) =>
+      _api.promotePaperItemToBank(
+        query: query,
+        paperId: paperId,
+        itemId: itemId,
+        chapter: chapter,
+        topic: topic,
+        difficulty: difficulty,
+        cognitiveLevel: cognitiveLevel,
+        syllabusChapterId: syllabusChapterId,
+        learningOutcome: learningOutcome,
       );
 
   @override

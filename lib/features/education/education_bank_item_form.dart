@@ -7,25 +7,29 @@ import '../school_completion/school_completion_providers.dart';
 import 'education_models.dart';
 
 /// Batch 8c — add a question to the bank, with a real syllabus-chapter picker.
-/// Returns the built [QuestionBankItem] (id '') on save, or null on cancel.
+/// Feature C — pass [existing] to edit a saved question in place instead.
+/// Returns the built [QuestionBankItem] on save (id '' when adding, or the
+/// existing id when editing), or null on cancel.
 Future<QuestionBankItem?> showAddBankItemSheet(
   BuildContext context, {
   String? initialSubject,
+  QuestionBankItem? existing,
 }) {
   return showModalBottomSheet<QuestionBankItem>(
     context: context,
     isScrollControlled: true,
     builder: (ctx) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-      child: _AddBankItemForm(initialSubject: initialSubject),
+      child: _AddBankItemForm(initialSubject: initialSubject, existing: existing),
     ),
   );
 }
 
 class _AddBankItemForm extends ConsumerStatefulWidget {
-  const _AddBankItemForm({this.initialSubject});
+  const _AddBankItemForm({this.initialSubject, this.existing});
 
   final String? initialSubject;
+  final QuestionBankItem? existing;
 
   @override
   ConsumerState<_AddBankItemForm> createState() => _AddBankItemFormState();
@@ -33,19 +37,27 @@ class _AddBankItemForm extends ConsumerStatefulWidget {
 
 class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
   late final TextEditingController _subject =
-      TextEditingController(text: widget.initialSubject ?? '');
-  final _chapter = TextEditingController();
-  final _topic = TextEditingController();
-  final _question = TextEditingController();
-  final _answer = TextEditingController();
-  final _options = TextEditingController();
-  final _marks = TextEditingController(text: '2');
+      TextEditingController(text: widget.existing?.subjectName ?? widget.initialSubject ?? '');
+  late final _chapter = TextEditingController(text: widget.existing?.chapter ?? '');
+  late final _topic = TextEditingController(text: widget.existing?.topic ?? '');
+  late final _question = TextEditingController(text: widget.existing?.questionText ?? '');
+  late final _answer = TextEditingController(text: widget.existing?.answerText ?? '');
+  late final _options =
+      TextEditingController(text: widget.existing?.options.join(', ') ?? '');
+  late final _marks = TextEditingController(text: '${widget.existing?.marks ?? 2}');
 
-  EduQuestionType _type = EduQuestionType.mcq;
-  EduDifficulty _difficulty = EduDifficulty.medium;
-  EduProgramTrack _track = EduProgramTrack.board;
-  EduCognitiveLevel? _cognitive;
-  String? _syllabusChapterId;
+  bool get _isEdit => widget.existing != null;
+
+  late EduQuestionType _type = widget.existing?.questionType ?? EduQuestionType.mcq;
+  // The bank difficulty dropdown only offers easy/medium/hard; a paper-level
+  // 'mixed' on an existing row falls back to medium so the dropdown stays valid.
+  late EduDifficulty _difficulty =
+      (widget.existing?.difficulty == null || widget.existing!.difficulty == EduDifficulty.mixed)
+          ? EduDifficulty.medium
+          : widget.existing!.difficulty;
+  late EduProgramTrack _track = widget.existing?.programTrack ?? EduProgramTrack.board;
+  late EduCognitiveLevel? _cognitive = widget.existing?.cognitiveLevel;
+  late String? _syllabusChapterId = widget.existing?.syllabusChapterId;
 
   @override
   void dispose() {
@@ -69,7 +81,7 @@ class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
         ? _options.text.split(',').map((o) => o.trim()).where((o) => o.isNotEmpty).toList()
         : const <String>[];
     final item = QuestionBankItem(
-      id: '',
+      id: widget.existing?.id ?? '',
       subjectName: _subject.text.trim(),
       chapter: _chapter.text.trim(),
       topic: _topic.text.trim(),
@@ -82,6 +94,7 @@ class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
       programTrack: _track,
       cognitiveLevel: _cognitive,
       syllabusChapterId: _syllabusChapterId,
+      reviewStatus: widget.existing?.reviewStatus ?? 'approved',
     );
     Navigator.of(context).pop(item);
   }
@@ -98,7 +111,7 @@ class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Add question to bank',
+              Text(_isEdit ? 'Edit bank question' : 'Add question to bank',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               _field(_subject, 'Subject'),
@@ -168,7 +181,7 @@ class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
                 builder: (context, _) => FilledButton(
                   key: QaTestKeys.educationSaveBankItemButton,
                   onPressed: _valid ? _save : null,
-                  child: const Text('Save question'),
+                  child: Text(_isEdit ? 'Save changes' : 'Save question'),
                 ),
               ),
               const SizedBox(height: 8),

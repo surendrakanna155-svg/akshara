@@ -108,6 +108,81 @@ void main() {
     expect(published.status, 'published');
   });
 
+  test('A: editing a question in an approved paper resets it to draft', () async {
+    final detail = await repository.generateQuestionPaper(query: query, request: mathPaper);
+    final paperId = detail.paper.id;
+    for (final item in detail.pendingAiItems) {
+      await repository.moderatePaperItem(
+        query: query, paperId: paperId, itemId: item.id!, decision: 'approved',
+      );
+    }
+    await repository.submitQuestionPaper(query: query, paperId: paperId);
+    await repository.reviewQuestionPaper(query: query, paperId: paperId, decision: 'approved');
+
+    final fresh = await repository.getQuestionPaper(query: query, paperId: paperId);
+    expect(fresh.paper.reviewStatus, EduPaperReviewStatus.approved);
+    final target = fresh.items.first;
+
+    final edited = await repository.updatePaperItem(
+      query: query,
+      paperId: paperId,
+      itemId: target.id!,
+      questionText: 'Corrected question text',
+    );
+    expect(edited.questionText, 'Corrected question text');
+
+    final after = await repository.getQuestionPaper(query: query, paperId: paperId);
+    expect(after.paper.reviewStatus, EduPaperReviewStatus.draft);
+  });
+
+  test('C: updateQuestionBankItem persists the edit', () async {
+    final bank = await repository.listQuestionBank(query: query);
+    final original = bank.first;
+    final edited = QuestionBankItem(
+      id: original.id,
+      subjectName: original.subjectName,
+      chapter: original.chapter,
+      topic: original.topic,
+      difficulty: original.difficulty,
+      questionType: original.questionType,
+      marks: 5,
+      questionText: 'Edited bank question',
+      answerText: original.answerText,
+      options: original.options,
+    );
+    final result = await repository.updateQuestionBankItem(query: query, item: edited);
+    expect(result.questionText, 'Edited bank question');
+    expect(result.marks, 5);
+
+    final reread = await repository.listQuestionBank(query: query);
+    expect(reread.firstWhere((b) => b.id == original.id).questionText, 'Edited bank question');
+  });
+
+  test('E: only an approved AI candidate promotes to the bank', () async {
+    final detail = await repository.generateQuestionPaper(query: query, request: mathPaper);
+    final paperId = detail.paper.id;
+    final candidate = detail.pendingAiItems.first;
+
+    // Pending → rejected by the promote gate.
+    expect(
+      () => repository.promotePaperItemToBank(
+        query: query, paperId: paperId, itemId: candidate.id!,
+      ),
+      throwsA(isA<StateError>()),
+    );
+
+    await repository.moderatePaperItem(
+      query: query, paperId: paperId, itemId: candidate.id!, decision: 'approved',
+    );
+    final bankBefore = (await repository.listQuestionBank(query: query)).length;
+    final promoted = await repository.promotePaperItemToBank(
+      query: query, paperId: paperId, itemId: candidate.id!, chapter: 'Algebra',
+    );
+    expect(promoted.chapter, 'Algebra');
+    final bankAfter = (await repository.listQuestionBank(query: query)).length;
+    expect(bankAfter, bankBefore + 1);
+  });
+
   test('importQuestionBank adds new rows and skips duplicates', () async {
     final result = await repository.importQuestionBank(
       query: query,

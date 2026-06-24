@@ -523,6 +523,64 @@ export const educationAudit = {
       idempotencyKey: `education.question_paper_item.moderated:${itemId}:${decision}`,
     },
   }),
+  questionBankUpdated: (itemId: string, nonce: string): MutationAuditSpec => ({
+    ...workflow("questionBankItemUpdated", "question_bank_item", itemId, { itemId }),
+    domain: {
+      eventType: "education.question_bank.updated",
+      payload: { itemId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_bank.updated:${itemId}:${nonce}`,
+    },
+  }),
+  questionPaperItemEdited: (
+    paperId: string,
+    itemId: string,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("questionPaperItemEdited", "question_paper_item", itemId, {
+      paperId,
+      itemId,
+    }),
+    domain: {
+      eventType: "education.question_paper_item.edited",
+      payload: { paperId, itemId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_paper_item.edited:${itemId}:${nonce}`,
+    },
+  }),
+  questionPaperItemRegenerated: (
+    paperId: string,
+    itemId: string,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("questionPaperItemRegenerated", "question_paper_item", itemId, {
+      paperId,
+      itemId,
+    }),
+    domain: {
+      eventType: "education.question_paper_item.regenerated",
+      payload: { paperId, itemId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_paper_item.regenerated:${itemId}:${nonce}`,
+    },
+  }),
+  questionPaperItemPromoted: (
+    paperId: string,
+    itemId: string,
+    bankItemId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("questionPaperItemPromoted", "question_bank_item", bankItemId, {
+      paperId,
+      itemId,
+      bankItemId,
+    }),
+    domain: {
+      eventType: "education.question_paper_item.promoted",
+      payload: { paperId, itemId, bankItemId },
+      sourceModule: "education",
+      idempotencyKey: `education.question_paper_item.promoted:${bankItemId}`,
+    },
+  }),
   homeworkGenerated: (assignmentId: string): MutationAuditSpec => ({
     ...workflow("homeworkGenerated", "homework_assignment", assignmentId, { assignmentId }),
     domain: {

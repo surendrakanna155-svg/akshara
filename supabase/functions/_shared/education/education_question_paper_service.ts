@@ -18,9 +18,17 @@ import { solveBlueprint } from "./education_blueprint_solver.ts";
 import { generateAiCandidatesForGaps } from "./education_ai_question_gapfill.ts";
 import { aiApiKey, aiProvider, claudeModel } from "../ai/anthropic_client.ts";
 import type { AiRuntimeConfig } from "../ai/ai_settings.ts";
-import { listQuestionBankItems, type QuestionBankListFilters } from "./education_repository.ts";
+import {
+  applyRegeneratedPaperItem,
+  getPaperItem,
+  listQuestionBankItems,
+  type QuestionBankListFilters,
+  type UpdatePaperItemResult,
+} from "./education_repository.ts";
+import type { BlueprintSlot } from "./education_blueprint_solver.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type {
+  EduDifficulty,
   EduExamType,
   EduPaperItemSource,
   EduProgramTrack,
@@ -62,6 +70,73 @@ export interface PaperGenerationResult {
   /** Blueprint slots left unfilled (bank empty + AI off/declined). */
   unfilledGapCount: number;
   gaps: PaperGap[];
+}
+
+export type RegeneratePaperItemResult =
+  | { ok: true; result: Extract<UpdatePaperItemResult, { ok: true }> }
+  | { ok: false; reason: "not_found" | "not_editable" | "ai_unavailable" | "no_candidate" };
+
+/**
+ * Regenerate ONE question slot with constrained AI (Feature B — spends tokens).
+ * Rebuilds the slot spec from the existing item + parent paper, asks Claude for
+ * a single replacement inside the syllabus scope, validates it, and writes it
+ * back as a fresh moderation candidate (pending). Safe-by-default: no key or no
+ * valid candidate returns a typed failure — the original item is left intact.
+ */
+export async function regeneratePaperItem(
+  client: TenantQueryClient,
+  paperId: string,
+  itemId: string,
+  opts: { chapter?: string; ai?: AiRuntimeConfig },
+): Promise<RegeneratePaperItemResult> {
+  const found = await getPaperItem(client, paperId, itemId);
+  if (!found) return { ok: false, reason: "not_found" };
+  const { paper, item } = found;
+  if (paper.review_status === "published" || paper.review_status === "archived") {
+    return { ok: false, reason: "not_editable" };
+  }
+
+  const aiConfig: AiRuntimeConfig = opts.ai ??
+    { provider: aiProvider(), model: claudeModel(), apiKey: aiApiKey(), source: "env" };
+  if (!aiConfig.apiKey) return { ok: false, reason: "ai_unavailable" };
+
+  const paperChapters = Array.isArray(paper.chapters) ? paper.chapters as string[] : [];
+  const chapter = opts.chapter ?? paperChapters[0] ?? "General";
+  const difficulty: EduDifficulty =
+    paper.difficulty === "mixed" ? "medium" : (paper.difficulty as EduDifficulty);
+
+  const slot: BlueprintSlot = {
+    index: 0,
+    questionType: item.question_type as EduQuestionType,
+    difficulty,
+    marks: item.marks,
+    chapter,
+  };
+
+  const candidates = await generateAiCandidatesForGaps(
+    [slot],
+    {
+      subjectName: paper.subject_name,
+      className: paper.class_name,
+      programTrack: paper.program_track as EduProgramTrack,
+      examType: paper.exam_type,
+      chapters: [chapter],
+    },
+    aiConfig.apiKey,
+    { provider: aiConfig.provider, model: aiConfig.model },
+  );
+  const candidate = candidates[0];
+  if (!candidate) return { ok: false, reason: "no_candidate" };
+
+  const applied = await applyRegeneratedPaperItem(client, paperId, itemId, {
+    questionType: candidate.questionType,
+    marks: candidate.marks,
+    questionText: candidate.questionText,
+    answerText: candidate.answerText,
+    options: candidate.options,
+  });
+  if (!applied.ok) return { ok: false, reason: applied.reason };
+  return { ok: true, result: applied };
 }
 
 function examTypeLabel(examType: EduExamType): string {

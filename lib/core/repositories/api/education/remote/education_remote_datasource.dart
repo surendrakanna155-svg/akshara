@@ -86,6 +86,33 @@ class EducationRemoteDataSource {
     return _envelopeData(response);
   }
 
+  Future<Map<String, dynamic>> updateQuestionBankItem({
+    required RepositoryQuery query,
+    required QuestionBankItem item,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      EducationApiPaths.questionBankItem(item.id),
+      queryParameters: _queryParams(query),
+      data: {
+        'subjectName': item.subjectName,
+        'chapter': item.chapter,
+        'topic': item.topic,
+        'difficulty': EducationMapper.difficultyToApi(item.difficulty),
+        'questionType': EducationMapper.questionTypeToApi(item.questionType),
+        'marks': item.marks,
+        'questionText': item.questionText,
+        'answerText': item.answerText,
+        'options': item.options,
+        'programTrack': EducationMapper.programTrackToApi(item.programTrack),
+        'cognitiveLevel': item.cognitiveLevel == null
+            ? null
+            : EducationMapper.cognitiveLevelToApi(item.cognitiveLevel!),
+        'syllabusChapterId': item.syllabusChapterId,
+      },
+    );
+    return _envelopeData(response);
+  }
+
   Future<List<Map<String, dynamic>>> fetchQuestionPapers({
     required RepositoryQuery query,
   }) async {
@@ -205,6 +232,75 @@ class EducationRemoteDataSource {
       data: {'decision': decision},
     );
     return _envelopeData(response);
+  }
+
+  Future<Map<String, dynamic>> updatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    EduQuestionType? questionType,
+    int? marks,
+    String? questionText,
+    String? answerText,
+    List<String>? options,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      EducationApiPaths.questionPaperItem(paperId, itemId),
+      queryParameters: _queryParams(query),
+      data: {
+        if (questionType != null)
+          'questionType': EducationMapper.questionTypeToApi(questionType),
+        if (marks != null) 'marks': marks,
+        if (questionText != null) 'questionText': questionText,
+        if (answerText != null) 'answerText': answerText,
+        if (options != null) 'options': options,
+      },
+    );
+    final data = _envelopeData(response);
+    return Map<String, dynamic>.from(data['item'] as Map);
+  }
+
+  Future<Map<String, dynamic>> regeneratePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      EducationApiPaths.questionPaperItemRegenerate(paperId, itemId),
+      queryParameters: _queryParams(query),
+      data: {if (chapter != null) 'chapter': chapter},
+    );
+    final data = _envelopeData(response);
+    return Map<String, dynamic>.from(data['item'] as Map);
+  }
+
+  Future<Map<String, dynamic>> promotePaperItemToBank({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+    String? topic,
+    EduDifficulty? difficulty,
+    EduCognitiveLevel? cognitiveLevel,
+    String? syllabusChapterId,
+    String? learningOutcome,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      EducationApiPaths.questionPaperItemPromote(paperId, itemId),
+      queryParameters: _queryParams(query),
+      data: {
+        if (chapter != null) 'chapter': chapter,
+        if (topic != null) 'topic': topic,
+        if (difficulty != null) 'difficulty': EducationMapper.difficultyToApi(difficulty),
+        if (cognitiveLevel != null)
+          'cognitiveLevel': EducationMapper.cognitiveLevelToApi(cognitiveLevel),
+        if (syllabusChapterId != null) 'syllabusChapterId': syllabusChapterId,
+        if (learningOutcome != null) 'learningOutcome': learningOutcome,
+      },
+    );
+    final data = _envelopeData(response);
+    return Map<String, dynamic>.from(data['item'] as Map);
   }
 
   Future<List<Map<String, dynamic>>> fetchHomework({

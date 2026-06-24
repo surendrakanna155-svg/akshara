@@ -19,6 +19,13 @@ abstract class EducationRepository {
     required List<QuestionBankItem> items,
   });
 
+  /// Edit a saved bank question in place (Feature C, token-free). [item.id]
+  /// identifies the row; its fields carry the new values.
+  Future<QuestionBankItem> updateQuestionBankItem({
+    required RepositoryQuery query,
+    required QuestionBankItem item,
+  });
+
   Future<List<QuestionPaperSummary>> listQuestionPapers({
     required RepositoryQuery query,
   });
@@ -63,6 +70,42 @@ abstract class EducationRepository {
     required String paperId,
     required String itemId,
     required String decision,
+  });
+
+  /// Edit one question inside a paper (Feature A, token-free). Editing an
+  /// approved paper resets it to draft (re-approval required).
+  Future<QuestionPaperItem> updatePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    EduQuestionType? questionType,
+    int? marks,
+    String? questionText,
+    String? answerText,
+    List<String>? options,
+  });
+
+  /// Regenerate one question slot with AI (Feature B — spends tokens). The new
+  /// question returns as a pending AI candidate that must be re-moderated.
+  Future<QuestionPaperItem> regeneratePaperItem({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+  });
+
+  /// Save an approved AI-candidate paper item into the reusable bank
+  /// (Feature E, token-free).
+  Future<QuestionBankItem> promotePaperItemToBank({
+    required RepositoryQuery query,
+    required String paperId,
+    required String itemId,
+    String? chapter,
+    String? topic,
+    EduDifficulty? difficulty,
+    EduCognitiveLevel? cognitiveLevel,
+    String? syllabusChapterId,
+    String? learningOutcome,
   });
 
   Future<Map<String, dynamic>> exportQuestionPaper({

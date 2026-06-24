@@ -3,8 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/testing/qa_test_keys.dart';
 import 'education_models.dart';
+import 'education_paper_item_edit_sheet.dart';
 import 'education_pdf_service.dart';
 import 'education_provider.dart';
+
+/// A paper can be corrected only before it is locked (published / archived).
+bool _paperEditable(EduPaperReviewStatus status) =>
+    status != EduPaperReviewStatus.published &&
+    status != EduPaperReviewStatus.archived;
 
 /// Batch 8c — paper detail with the AI-candidate moderation queue and the
 /// submit → review → approve → publish governance lifecycle.
@@ -95,9 +101,22 @@ class _PaperBody extends ConsumerWidget {
           const Divider(height: 32),
         ],
 
-        Text('Questions', style: Theme.of(context).textTheme.titleMedium),
+        Row(
+          children: [
+            Text('Questions', style: Theme.of(context).textTheme.titleMedium),
+            const Spacer(),
+            if (canManage && _paperEditable(paper.reviewStatus))
+              const Text('Tap ⋮ to correct a question',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+          ],
+        ),
         const SizedBox(height: 4),
-        ...detail.items.map((item) => _QuestionTile(item: item)),
+        ...detail.items.map((item) => _QuestionTile(
+              paperId: paperId,
+              item: item,
+              paperStatus: paper.reviewStatus,
+              canManage: canManage,
+            )),
 
         const Divider(height: 32),
         _GovernanceActions(
@@ -220,14 +239,28 @@ class _ModerationCard extends ConsumerWidget {
   }
 }
 
-class _QuestionTile extends StatelessWidget {
-  const _QuestionTile({required this.item});
+class _QuestionTile extends ConsumerWidget {
+  const _QuestionTile({
+    required this.paperId,
+    required this.item,
+    required this.paperStatus,
+    required this.canManage,
+  });
 
+  final String paperId;
   final QuestionPaperItem item;
+  final EduPaperReviewStatus paperStatus;
+  final bool canManage;
+
+  bool get _editable => _paperEditable(paperStatus);
+  bool get _promotable =>
+      (item.source == 'ai_candidate' || item.source == 'ai_generated') &&
+      item.reviewStatus == 'approved';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final rejected = item.source == 'ai_candidate' && item.reviewStatus == 'rejected';
+    final hasActions = canManage && item.id != null && (_editable || _promotable);
     return ListTile(
       dense: true,
       leading: CircleAvatar(radius: 14, child: Text('${item.questionNumber}')),
@@ -236,7 +269,162 @@ class _QuestionTile extends StatelessWidget {
         style: rejected ? const TextStyle(decoration: TextDecoration.lineThrough) : null,
       ),
       subtitle: Text('${item.questionType.name} • ${item.marks} marks • ${item.source}'),
+      trailing: hasActions
+          ? PopupMenuButton<String>(
+              key: QaTestKeys.educationQuestionActions(item.id!),
+              icon: const Icon(Icons.more_vert),
+              onSelected: (action) => _onAction(context, ref, action),
+              itemBuilder: (ctx) => [
+                if (_editable)
+                  PopupMenuItem<String>(
+                    key: QaTestKeys.educationEditQuestionAction(item.id!),
+                    value: 'edit',
+                    child: const ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Edit this question'),
+                    ),
+                  ),
+                if (_editable)
+                  PopupMenuItem<String>(
+                    key: QaTestKeys.educationRegenerateQuestionAction(item.id!),
+                    value: 'regenerate',
+                    child: const ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.smart_toy_outlined),
+                      title: Text('Regenerate with AI'),
+                      subtitle: Text('uses AI credits'),
+                    ),
+                  ),
+                if (_promotable)
+                  PopupMenuItem<String>(
+                    key: QaTestKeys.educationPromoteQuestionAction(item.id!),
+                    value: 'promote',
+                    child: const ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.library_add_outlined),
+                      title: Text('Save to question bank'),
+                    ),
+                  ),
+              ],
+            )
+          : null,
     );
+  }
+
+  Future<void> _onAction(BuildContext context, WidgetRef ref, String action) async {
+    switch (action) {
+      case 'edit':
+        await _edit(context, ref);
+      case 'regenerate':
+        await _regenerate(context, ref);
+      case 'promote':
+        await _promote(context, ref);
+    }
+  }
+
+  Future<void> _edit(BuildContext context, WidgetRef ref) async {
+    final edited = await showEditPaperItemSheet(context, item: item);
+    if (edited == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final wasApproved = paperStatus == EduPaperReviewStatus.approved;
+    try {
+      await ref.read(educationMutationsProvider.notifier).editPaperItem(
+            paperId,
+            item.id!,
+            questionType: edited.questionType,
+            marks: edited.marks,
+            questionText: edited.questionText,
+            answerText: edited.answerText ?? '',
+            options: edited.options,
+          );
+      messenger.showSnackBar(SnackBar(
+        content: Text(wasApproved
+            ? 'Question updated — paper reset to draft; submit again for approval.'
+            : 'Question updated.'),
+      ));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
+  Future<void> _regenerate(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Regenerate with AI?'),
+        content: const Text(
+          'This asks AI to author a fresh replacement for just this question. '
+          'It uses AI credits, and the new question must be moderated again '
+          'before the paper can be published.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Regenerate')),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(educationMutationsProvider.notifier).regenerateItem(paperId, item.id!);
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Question regenerated — review it in the AI moderation queue.'),
+      ));
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
+  Future<void> _promote(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final chapter = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save to question bank'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'This approved question will be saved to the reusable bank so '
+              'future papers can pick it up.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                labelText: 'Chapter (optional — defaults to the paper\'s)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (chapter == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(educationMutationsProvider.notifier).promoteItemToBank(
+            paperId,
+            item.id!,
+            chapter: chapter.isEmpty ? null : chapter,
+          );
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Saved to question bank.')),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
   }
 }
 
