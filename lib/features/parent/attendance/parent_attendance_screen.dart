@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
-import '../../../core/utils/whatsapp_launcher.dart';
+import '../../../core/widgets/whatsapp_contact_button.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -327,39 +327,13 @@ class _DayDetailSheet extends ConsumerWidget {
             const SizedBox(height: AksharaSpacing.s2),
             Align(
               alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () async {
-                  final phoneDigits = WhatsAppLauncher.resolvePhoneDigits(
-                    classTeacherPhone ?? '',
-                  );
-                  if (phoneDigits == null) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Class teacher contact is unavailable.'),
-                      ),
-                    );
-                    return;
-                  }
-                  final message =
-                      'Hello, I would like to discuss attendance for ${log.detailTitle}.';
-                  final opened = await WhatsAppLauncher.openChat(
-                    phoneE164: phoneDigits,
-                    message: message,
-                  );
-                  if (!context.mounted) return;
-                  if (!opened) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Could not open WhatsApp on this device.'),
-                      ),
-                    );
-                  }
-                },
-                child: Text(
-                  'Contact class teacher via WhatsApp',
-                  style: text.labelLarge.copyWith(color: colors.primary),
-                ),
+              child: WhatsAppContactButton(
+                phone: classTeacherPhone,
+                label: 'Contact class teacher via WhatsApp',
+                style: WhatsAppButtonStyle.text,
+                message:
+                    'Hello, I would like to discuss attendance for ${log.detailTitle}.',
+                unavailableMessage: 'Class teacher contact is unavailable.',
               ),
             ),
           ],

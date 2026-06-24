@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../core/widgets/whatsapp_contact_button.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -112,6 +113,19 @@ class HrEmployeeProfileScreen extends ConsumerWidget {
                       style: text.bodySmall),
                   Text('Email: ${employee.email}', style: text.bodySmall),
                   Text('Phone: ${employee.phone}', style: text.bodySmall),
+                  const SizedBox(height: AksharaSpacing.s2),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: WhatsAppContactButton(
+                      phone: employee.phone,
+                      label: 'Message on WhatsApp',
+                      style: WhatsAppButtonStyle.text,
+                      message:
+                          'Hello ${employee.name}, regarding ${employee.designation} at our school —',
+                      unavailableMessage:
+                          'No WhatsApp number on file for this staff member.',
+                    ),
+                  ),
                   const SizedBox(height: AksharaSpacing.s3),
                   AksharaManageAction(
                     permission: Permission.manageHr,

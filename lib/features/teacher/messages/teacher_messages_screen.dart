@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../../../core/utils/whatsapp_launcher.dart';
+import '../../../core/widgets/whatsapp_contact_button.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'message_models.dart';
@@ -222,41 +222,14 @@ class _ComposePane extends ConsumerWidget {
                 .state = draft.copyWith(body: v),
           ),
           const SizedBox(height: AksharaSpacing.s4),
-          OutlinedButton.icon(
-            onPressed: draft.recipient.trim().isEmpty
-                ? null
-                : () async {
-                    final phoneDigits = WhatsAppLauncher.resolvePhoneDigits(
-                      draft.recipient.trim(),
-                    );
-                    if (phoneDigits == null) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Enter parent phone number in To field (E.164 or 10-digit).',
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-                    final opened = await WhatsAppLauncher.openChat(
-                      phoneE164: phoneDigits,
-                      message: draft.body.trim().isEmpty
-                          ? 'Hello from Akshara School'
-                          : draft.body.trim(),
-                    );
-                    if (!context.mounted) return;
-                    if (!opened) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Could not open WhatsApp on this device.'),
-                        ),
-                      );
-                    }
-                  },
-            icon: const Icon(Icons.chat_outlined),
-            label: const Text('Open in WhatsApp'),
+          WhatsAppContactButton(
+            phone: draft.recipient.trim(),
+            label: 'Open in WhatsApp',
+            message: draft.body.trim().isEmpty
+                ? 'Hello from Akshara School'
+                : draft.body.trim(),
+            unavailableMessage:
+                'Enter parent phone number in To field (E.164 or 10-digit).',
           ),
           const SizedBox(height: AksharaSpacing.s3),
           FilledButton(
