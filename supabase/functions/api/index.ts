@@ -55,6 +55,9 @@ import { routeGrowth } from "../_shared/growth/growth_router.ts";
 import { routeSchoolCompletion } from "../_shared/school_completion/school_completion_router.ts";
 import { routeParentExperience } from "../_shared/parent_experience/parent_experience_router.ts";
 import { routeDirector } from "../_shared/director/director_router.ts";
+// --- B1 school-config (AgentE) ---
+import { routeSchoolConfig } from "../_shared/school_config/school_config_router.ts";
+// --- end B1 school-config (AgentE) ---
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 
 const corsHeaders = {
@@ -103,6 +106,9 @@ async function routeModuleRequest(
     routeSchoolCompletion,
     routeParentExperience,
     routeDirector,
+    // --- B1 school-config (AgentE) ---
+    routeSchoolConfig,
+    // --- end B1 school-config (AgentE) ---
     routeAnalytics,
     routeEducation,
     routeIntelligence,

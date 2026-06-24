@@ -4,6 +4,9 @@ import '../tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../core/providers/shared_preferences_provider.dart';
 import '../../features/admin/models/admin_nav_models.dart';
+import '../network/dio_provider.dart';
+import '../repositories/repository_config.dart';
+import '../repositories/api/school_config/school_config_api_repository.dart';
 import 'school_capability_registry.dart';
 import 'school_configuration_models.dart';
 import 'school_configuration_storage.dart';
@@ -13,6 +16,14 @@ final schoolConfigurationStorageProvider =
     Provider<SchoolConfigurationStorage?>((ref) {
   if (!ref.exists(sharedPreferencesProvider)) return null;
   return SchoolConfigurationStorage(ref.watch(sharedPreferencesProvider));
+});
+
+/// Tenant-authoritative repository — null until [schoolConfigApiEnabledProvider]
+/// is on (live release), keeping SharedPreferences as the offline path.
+final schoolConfigApiRepositoryProvider =
+    Provider<SchoolConfigApiRepository?>((ref) {
+  if (!ref.watch(schoolConfigApiEnabledProvider)) return null;
+  return SchoolConfigApiRepository(ref.watch(dioProvider));
 });
 
 final schoolConfigurationProvider =
@@ -26,10 +37,41 @@ class SchoolConfigurationNotifier extends Notifier<SchoolConfiguration> {
     final tenantId = ref.watch(tenantContextProvider).tenantId;
     final tenantConfig =
         TenantSchoolConfigurationStore.instance.read(tenantId);
-    if (tenantConfig != null) return tenantConfig;
 
+    // Synchronous seed: in-memory store, then the SharedPreferences cache,
+    // then the safe default. The tenant-authoritative backend (when enabled)
+    // refreshes this asynchronously below so the first frame never blocks.
     final storage = ref.read(schoolConfigurationStorageProvider);
-    return storage?.readSync() ?? SchoolConfiguration.demoDefault();
+    final seed = tenantConfig ??
+        storage?.readSync() ??
+        SchoolConfiguration.demoDefault();
+
+    final api = ref.read(schoolConfigApiRepositoryProvider);
+    if (api != null) {
+      _refreshFromBackend(api, tenantId);
+    }
+    return seed;
+  }
+
+  /// Pulls the tenant-authoritative configuration and reconciles local caches.
+  /// Failures are swallowed — the locally-seeded value already stands in.
+  Future<void> _refreshFromBackend(
+    SchoolConfigApiRepository api,
+    String tenantId,
+  ) async {
+    try {
+      final remote = await api.fetch();
+      if (remote == null) return;
+      TenantSchoolConfigurationStore.instance.write(
+        tenantId: tenantId,
+        config: remote,
+        actorLabel: 'Backend sync',
+      );
+      await ref.read(schoolConfigurationStorageProvider)?.write(remote);
+      state = remote;
+    } on Object {
+      // Offline / not-configured: keep the locally-seeded configuration.
+    }
   }
 
   Future<void> apply(SchoolConfiguration config) async {
@@ -40,7 +82,24 @@ class SchoolConfigurationNotifier extends Notifier<SchoolConfiguration> {
       actorLabel: ref.read(authProvider).displayName ?? 'Admin',
     );
     state = next;
+    // Local offline cache always written; backend is the source of truth when
+    // enabled but must not block the optimistic update (hybrid local fallback).
     await ref.read(schoolConfigurationStorageProvider)?.write(next);
+    final api = ref.read(schoolConfigApiRepositoryProvider);
+    if (api != null) {
+      try {
+        final persisted = await api.save(next);
+        TenantSchoolConfigurationStore.instance.write(
+          tenantId: tenantId,
+          config: persisted,
+          actorLabel: 'Backend sync',
+        );
+        await ref.read(schoolConfigurationStorageProvider)?.write(persisted);
+        state = persisted;
+      } on Object {
+        // Save will retry on next apply; local cache already reflects intent.
+      }
+    }
   }
 
   Future<void> resetToDemoDefault() async {

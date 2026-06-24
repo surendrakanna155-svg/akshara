@@ -41,8 +41,10 @@ abstract final class SchoolBuildScope {
   /// onboarding.
   ///
   /// CHAIN-GATED elsewhere (not here): franchise, multi-school portfolio/
-  /// onboarding, organization-builder and school-config discovery now surface
-  /// only for chain orgs at runtime — see [ChainScope] (M3, 2026-06-22).
+  /// onboarding and organization-builder surface only for chain orgs at runtime
+  /// — see [ChainScope] (M3, 2026-06-22). School-config discovery is NOT
+  /// chain-gated (B1) — it is the per-school capability wizard, reachable from
+  /// Management → Settings by any school admin/principal (gated on viewSchoolSetup).
   static const Set<String> hiddenRoutePrefixes = {
     // Non-school verticals (parent prefix covers all sub-routes)
     RouteNames.industry, // also /industry/framework

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/security/permissions.dart';
+import '../../../core/security/rbac_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
@@ -120,6 +122,25 @@ class _ManagementSettingsScreenState
           _SettingsSection(
             section: section,
             onEdit: _editSettingItem,
+          ),
+          const SizedBox(height: AksharaSpacing.s6),
+        ],
+        if (ref.watch(rbacServiceProvider).hasPermission(
+          Permission.viewSchoolSetup,
+        )) ...[
+          const AksharaSectionHeader(title: 'School configuration'),
+          Card(
+            elevation: 0,
+            child: ListTile(
+              key: QaTestKeys.schoolConfigSettingsLink,
+              leading: const Icon(Icons.tune_outlined),
+              title: const Text('School setup & modules'),
+              subtitle: const Text(
+                  'Tailor Akshara to your school — type, curriculum, and the '
+                  'modules you actually use'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(RouteNames.schoolDiscovery),
+            ),
           ),
           const SizedBox(height: AksharaSpacing.s6),
         ],
