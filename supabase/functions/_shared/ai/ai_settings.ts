@@ -51,14 +51,21 @@ interface AiConfigRow {
 
 /**
  * Resolve provider/model/key, preferring the admin-saved panel config (the
- * active, primary AI provider for this org) over env. Never throws — any error
- * resolving the panel config falls back to env.
+ * active, primary AI provider for this org) over env. Never throws, and never
+ * poisons the caller's transaction: the panel lookup runs inside a SAVEPOINT, so
+ * a failed query (e.g. the tenant role lacking SELECT on the platform tables)
+ * rolls back to the savepoint and we fall through to env — leaving the
+ * surrounding transaction usable.
  */
 export async function resolveAiConfig(
   db: TenantQueryClient,
   orgId?: string | null,
 ): Promise<AiRuntimeConfig> {
+  const SP = "ai_cfg_lookup";
+  let savepointOpen = false;
   try {
+    await db.queryObject(`SAVEPOINT ${SP}`);
+    savepointOpen = true;
     const rows = await db.queryObject<AiConfigRow>(
       `SELECT pc.provider_name, pc.config, sv.encrypted_payload
          FROM platform_provider_configs pc
@@ -69,6 +76,8 @@ export async function resolveAiConfig(
         LIMIT 1`,
       [orgId ?? null],
     );
+    await db.queryObject(`RELEASE SAVEPOINT ${SP}`);
+    savepointOpen = false;
     const row = rows[0];
     if (row?.encrypted_payload) {
       const provider = mapProviderName(row.provider_name);
@@ -83,7 +92,15 @@ export async function resolveAiConfig(
       }
     }
   } catch {
-    // fall through to env
+    // Roll the failed statement back to the savepoint so the surrounding
+    // transaction stays usable, then fall through to env.
+    if (savepointOpen) {
+      try {
+        await db.queryObject(`ROLLBACK TO SAVEPOINT ${SP}`);
+      } catch {
+        // ignore — best effort
+      }
+    }
   }
   return envConfig();
 }
