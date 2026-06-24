@@ -183,6 +183,22 @@ class MockSisRepository implements SisRepository {
       email: 'lakshmi.iyer@email.com',
       enrolledAt: 'Pending',
     ),
+    SisStudent(
+      id: 'SIS-STU-PLH-0001',
+      studentName: 'Placeholder · Grade 6A Roll 1',
+      admissionNumber: 'PLH-6A-001',
+      classLabel: '6',
+      section: 'A',
+      academicYear: '2026–27',
+      status: SisStudentStatus.active,
+      gender: '',
+      dateOfBirth: '',
+      guardianName: '',
+      phone: '',
+      email: '',
+      enrolledAt: 'Generated',
+      isPlaceholder: true,
+    ),
   ];
 
   static const List<SisEnrollmentQueueItem> _seedConversionQueue = [

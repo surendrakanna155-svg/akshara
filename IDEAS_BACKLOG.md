@@ -8,6 +8,21 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
 
 ## Open ideas
 
+- [ ] (2026-06-24) **First-time student data onboarding (bulk import + structure + placeholders).**
+  Day-one student setup for a new school. A real CSV import already exists on the
+  backend (`/onboarding/imports/students/preview|commit|rollback`, parent gets an
+  OTP login via `upsertUserByPhone`). What's missing: a downloadable **Excel
+  template** (.xlsx/.csv), capturing **how many sections per class** and **how
+  many students per section** at onboarding, **auto-generating editable
+  placeholder students** when a school gives only structure, and a quick
+  **add-one-student** form. Owner decisions (2026-06-24): admission number stays
+  the real ID, **Aadhaar is optional + stored masked** (dedupe only, not the
+  login); auto-created students are **editable placeholders** (no real parent
+  phone, can't OTP-login until replaced); schools get a **downloadable Excel
+  template** they fill and upload. This is the concrete first slice of the AI
+  School Builder below. Full plan:
+  [docs/plans/FIRST_TIME_STUDENT_DATA_ONBOARDING_PLAN.md](docs/plans/FIRST_TIME_STUDENT_DATA_ONBOARDING_PLAN.md)
+
 - [ ] (2026-06-20) **AI School Builder — AI-configured School Operating System.**
   FUTURE STRATEGIC INITIATIVE, priority HIGH. During first-time school setup, an
   AI interview (board / school type / strength / facilities / programs / channels)

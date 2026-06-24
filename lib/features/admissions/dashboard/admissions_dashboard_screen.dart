@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
@@ -116,7 +118,7 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
         AksharaInsightCard(
           message: data.aiInsight,
           actionLabel: data.aiActionLabel,
-          onAction: null,
+          onAction: () => context.go(RouteNames.admissionsLeads),
           semanticLabelPrefix: 'Admissions AI insight',
         ),
       ],

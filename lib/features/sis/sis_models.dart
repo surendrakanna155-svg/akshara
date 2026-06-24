@@ -116,6 +116,7 @@ class SisStudent {
     required this.email,
     required this.enrolledAt,
     this.feeAccountId,
+    this.isPlaceholder = false,
   });
 
   final String id;
@@ -132,6 +133,10 @@ class SisStudent {
   final String email;
   final String enrolledAt;
   final String? feeAccountId;
+
+  /// True for skeleton students generated from structure only (Path 2).
+  /// They have no real parent login until replaced with real data.
+  final bool isPlaceholder;
 }
 
 @immutable

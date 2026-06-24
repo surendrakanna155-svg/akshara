@@ -165,6 +165,9 @@ class SisMapper {
           raw['enrolledAt'] as String? ??
           '',
       feeAccountId: raw['feeAccountId'] as String?,
+      isPlaceholder: raw['isPlaceholder'] as bool? ??
+          raw['is_placeholder'] as bool? ??
+          false,
     );
   }
 
@@ -249,6 +252,9 @@ class SisMapper {
       email: raw['email'] as String? ?? '',
       enrolledAt: raw['enrolledAt'] as String? ?? '',
       feeAccountId: raw['feeAccountId'] as String?,
+      isPlaceholder: raw['isPlaceholder'] as bool? ??
+          raw['is_placeholder'] as bool? ??
+          false,
     );
   }
 

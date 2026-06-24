@@ -42,6 +42,7 @@ class MockOnboardingRepository implements OnboardingRepository {
     var valid = 0;
     var invalid = 0;
     var duplicate = 0;
+    final seenAadhaar = <String>{};
     for (var i = 0; i < rows.length; i++) {
       final row = rows[i];
       final errors = <String>[];
@@ -51,6 +52,15 @@ class MockOnboardingRepository implements OnboardingRepository {
         }
         if ((row['admissionNumber'] ?? row['admission_number'] ?? '').toString().isEmpty) {
           errors.add('admissionNumber is required');
+        }
+        final aadhaar =
+            (row['aadhaar'] ?? row['aadhaar_number'] ?? '').toString().replaceAll(RegExp(r'\s+'), '');
+        if (aadhaar.isNotEmpty) {
+          if (!RegExp(r'^\d{12}$').hasMatch(aadhaar)) {
+            errors.add('aadhaar must be 12 digits');
+          } else if (!seenAadhaar.add(aadhaar)) {
+            errors.add('duplicate Aadhaar');
+          }
         }
       } else {
         if ((row['displayName'] ?? row['name'] ?? '').toString().isEmpty) {
@@ -120,6 +130,34 @@ class MockOnboardingRepository implements OnboardingRepository {
       committedRows: 0,
     );
     return _jobs[index];
+  }
+
+  @override
+  Future<OnboardingImportJob> generatePlaceholderStudents({
+    required RepositoryQuery query,
+    required String academicYear,
+    required List<ClassSectionStructure> classes,
+  }) async {
+    var total = 0;
+    for (final c in classes) {
+      for (final s in c.sections) {
+        total += s.studentCount;
+      }
+    }
+    final job = OnboardingImportJob(
+      id: 'job_${_jobs.length + 1}',
+      importType: 'student_placeholder',
+      status: 'committed',
+      fileName: 'placeholders_$academicYear',
+      totalRows: total,
+      validRows: total,
+      invalidRows: 0,
+      duplicateRows: 0,
+      committedRows: total,
+      generatedCount: total,
+    );
+    _jobs.insert(0, job);
+    return job;
   }
 
   @override

@@ -152,7 +152,11 @@ class HrLeaveScreen extends ConsumerWidget {
           actionLabel: 'View settings',
           icon: Icons.approval_outlined,
           semanticLabelPrefix: 'Leave workflow integration',
-          onAction: null,
+          onAction: () => openPrincipalApprovalCenter(
+            context,
+            ref,
+            category: ApprovalCategory.leave,
+          ),
         ),
       ],
     );

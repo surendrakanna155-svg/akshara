@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../router/route_names.dart';
 import '../../../../shared/widgets/akshara_error_state.dart';
 import '../../../../shared/widgets/akshara_insight_card.dart';
 import '../../../../shared/widgets/akshara_loading_state.dart';
@@ -90,7 +92,7 @@ class ControlCenterSuccessScreen extends ConsumerWidget {
           actionLabel: 'Assign CS owner',
           icon: Icons.auto_awesome_outlined,
           semanticLabelPrefix: 'AI churn risk insight',
-          onAction: null,
+          onAction: () => context.go(RouteNames.controlCenterCrm),
         ),
       ],
     );

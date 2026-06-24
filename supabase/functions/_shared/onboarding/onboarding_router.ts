@@ -3,6 +3,7 @@ import { errorEnvelope } from "../http.ts";
 import {
   handleCommitImportJob,
   handleCreateInvite,
+  handleGeneratePlaceholderStudents,
   handleGetImportJob,
   handleListImportJobs,
   handleListInvites,
@@ -41,6 +42,9 @@ function matchOnboardingRoute(
   }
   if (path === "/onboarding/imports/teachers/preview" && method === "POST") {
     return { handler: handleTeacherImportPreview, args: [] };
+  }
+  if (path === "/onboarding/students/generate" && method === "POST") {
+    return { handler: handleGeneratePlaceholderStudents, args: [] };
   }
   if (path === "/onboarding/invites" && method === "GET") {
     return { handler: handleListInvites, args: [] };

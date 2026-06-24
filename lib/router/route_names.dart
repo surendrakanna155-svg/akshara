@@ -274,6 +274,7 @@ abstract final class RouteNames {
   static const String sisContinuity = '/sis/continuity';
   static const String onboardingHub = '/sis/onboarding';
   static const String unifiedOnboarding = '/admin/onboarding/unified';
+  static const String studentOnboarding = '/admin/onboarding/students';
   static const String backupRestore = '/admin/backup-restore';
 
   static String sisStudentDetail(String studentId) => '$sisStudents/$studentId';

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -172,7 +174,7 @@ class FinanceDiscountsScreen extends ConsumerWidget {
           actionLabel: 'View impact report',
           icon: Icons.savings_outlined,
           semanticLabelPrefix: 'Discount impact summary',
-          onAction: null,
+          onAction: () => context.go(RouteNames.financeReports),
         ),
       ],
     );

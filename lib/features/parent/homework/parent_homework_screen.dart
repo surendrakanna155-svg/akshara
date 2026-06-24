@@ -105,7 +105,9 @@ class ParentHomeworkScreen extends ConsumerWidget {
                               AksharaInsightCard(
                                 message: data.insightMessage,
                                 actionLabel: data.insightActionLabel,
-                                onAction: null,
+                                onAction: () => ref
+                                    .read(homeworkFilterProvider.notifier)
+                                    .state = HomeworkFilter.pending,
                               ),
                             ],
                           ),

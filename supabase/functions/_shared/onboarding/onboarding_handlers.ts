@@ -15,6 +15,8 @@ import {
   commitImportJob,
   createImportPreview,
   createInvite,
+  type GeneratePlaceholderInput,
+  generatePlaceholderStudents,
   getImportJob,
   listImportJobs,
   listInvites,
@@ -168,6 +170,67 @@ export async function handleStudentImportPreview(req: Request, config: AppConfig
 
 export async function handleTeacherImportPreview(req: Request, config: AppConfig): Promise<Response> {
   return await handleImportPreview(req, config, "teacher");
+}
+
+export async function handleGeneratePlaceholderStudents(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireOnboardingManage(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<GeneratePlaceholderInput>(req);
+  if (!body?.academicYear || typeof body.academicYear !== "string") {
+    return errorEnvelope("VALIDATION_ERROR", "academicYear is required", 422);
+  }
+  if (!Array.isArray(body.classes) || body.classes.length === 0) {
+    return errorEnvelope("VALIDATION_ERROR", "classes[] is required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims)!;
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const generated = await generatePlaceholderStudents(
+        db,
+        orgId,
+        schoolId,
+        auth.claims.sub,
+        body,
+      );
+      await recordMutationAudit(db, auth.claims, {
+        eventType: "onboardingPlaceholdersGenerated",
+        category: "onboarding",
+        entityType: "onboarding_import_job",
+        entityId: generated.job.id,
+        metadata: {
+          generatedCount: generated.generatedCount,
+          academicYear: body.academicYear,
+        },
+      }, {
+        eventType: "onboarding.placeholders.generated",
+        sourceModule: "onboarding",
+        payload: { generatedCount: generated.generatedCount },
+        idempotencyKey: `onboarding.placeholders:${generated.job.id}`,
+      }, req);
+      return generated;
+    });
+    return jsonResponse(envelope({
+      job: jobToApi(result.job),
+      generatedCount: result.generatedCount,
+    }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    if (error instanceof Error && error.message.startsWith("PLACEHOLDER_")) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    console.error("handleGeneratePlaceholderStudents error:", error);
+    const detail = error instanceof Error ? error.message : "Placeholder generation failed";
+    return errorEnvelope("INTERNAL_ERROR", detail, 500);
+  }
 }
 
 export async function handleCommitImportJob(

@@ -78,6 +78,19 @@ class OnboardingRemoteDataSource {
     return OnboardingImportJobDto.fromJson(_responseMap(response));
   }
 
+  Future<OnboardingGenerateDto> generatePlaceholderStudents({
+    required RepositoryQuery query,
+    required String academicYear,
+    required List<Map<String, dynamic>> classes,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      OnboardingApiPaths.generateStudents,
+      data: {'academicYear': academicYear, 'classes': classes},
+      queryParameters: _queryParams(query),
+    );
+    return OnboardingGenerateDto.fromJson(_responseMap(response));
+  }
+
   Future<OnboardingInvitesListDto> fetchInvites({required RepositoryQuery query}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       OnboardingApiPaths.invites,
