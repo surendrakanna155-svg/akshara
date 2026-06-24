@@ -3,6 +3,8 @@ import {
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
   buildFast2SmsRequest,
+  buildTransactionalRequest,
+  sendTransactionalSms,
   buildOtpMessage,
   isSmsConfigured,
   parseFast2SmsResponse,
@@ -80,4 +82,37 @@ Deno.test("isSmsConfigured requires key and provider", () => {
   assertEquals(isSmsConfigured(baseConfig), true);
   assertEquals(isSmsConfigured({ ...baseConfig, apiKey: null }), false);
   assertEquals(isSmsConfigured({ ...baseConfig, provider: "" }), false);
+});
+
+Deno.test("buildTransactionalRequest sends custom free-text on the quick route", () => {
+  const { url, headers, body } = buildTransactionalRequest(
+    baseConfig,
+    "9550055155",
+    "Akshara: Payment of Rs 500 received for Asha. Receipt available in the app.",
+  );
+  assertEquals(url, "https://www.fast2sms.com/dev/bulkV2");
+  assertEquals(headers.authorization, "KEY");
+  const params = new URLSearchParams(body);
+  assertEquals(params.get("route"), "q");
+  assertEquals(params.get("numbers"), "9550055155");
+  assertEquals(
+    params.get("message"),
+    "Akshara: Payment of Rs 500 received for Asha. Receipt available in the app.",
+  );
+});
+
+Deno.test("sendTransactionalSms no-ops when SMS not configured", async () => {
+  const res = await sendTransactionalSms(
+    { ...baseConfig, apiKey: null },
+    "9550055155",
+    "hello",
+  );
+  assertEquals(res.ok, false);
+  assertEquals(res.code, "SMS_NOT_CONFIGURED");
+});
+
+Deno.test("sendTransactionalSms rejects non-Indian mobile before any network call", async () => {
+  const res = await sendTransactionalSms(baseConfig, "+14155550123", "hello");
+  assertEquals(res.ok, false);
+  assertEquals(res.code, "SMS_INVALID_NUMBER");
 });

@@ -28,6 +28,7 @@ import {
   listReceiptsForAccount,
 } from "./finance_collections_repository.ts";
 import { getInvoice } from "./finance_invoices_repository.ts";
+import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../sms_provider.ts";
 import {
   collectionCreateToApi,
   collectionDetailToApi,
@@ -57,6 +58,51 @@ async function runTenant<T>(
 function requireFinanceRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "viewFinance") ??
     requireSchoolOperationalScope(claims);
+}
+
+/**
+ * Best-effort transactional SMS to the student's guardian after a fee payment.
+ * Gated by `transactionalSmsEnabled` + a configured SMS provider; any failure is
+ * logged and swallowed so it can never affect the collection response.
+ */
+async function notifyParentOfReceipt(
+  config: AppConfig,
+  claims: Parameters<typeof withTenantContext>[1],
+  invoiceId: string,
+  amount: number,
+): Promise<void> {
+  if (!config.transactionalSmsEnabled) return;
+  const smsConfig: SmsConfig = {
+    provider: config.smsProvider,
+    apiKey: config.smsApiKey,
+    fast2smsRoute: config.smsFast2smsRoute,
+    fast2smsSenderId: config.smsFast2smsSenderId,
+    fast2smsMessageId: config.smsFast2smsMessageId,
+  };
+  if (!isSmsConfigured(smsConfig)) return;
+  try {
+    const target = await runTenant(config, claims, (db) =>
+      db.queryObject<{ phone: string; name: string }>(
+        `SELECT u.phone AS phone, s.display_name AS name
+           FROM finance_invoices fi
+           JOIN students s ON s.id = fi.student_id
+           JOIN student_guardians sg ON sg.student_id = s.id
+           JOIN users u ON u.id = sg.guardian_user_id
+          WHERE fi.id = $1 AND u.phone IS NOT NULL
+          LIMIT 1`,
+        [invoiceId],
+      ).then((rows) => rows[0] ?? null)
+    );
+    if (!target?.phone) return;
+    const msg =
+      `Akshara: Payment of Rs ${amount} received for ${target.name}. Receipt available in the app.`;
+    const result = await sendTransactionalSms(smsConfig, target.phone, msg);
+    if (!result.ok) {
+      console.error(`receipt SMS not sent (${result.code}): ${result.detail}`);
+    }
+  } catch (error) {
+    console.error("receipt SMS error:", error instanceof Error ? error.message : error);
+  }
 }
 
 function requireFinanceWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
@@ -249,6 +295,7 @@ export async function handleCreateCollection(
       );
       return created;
     });
+    await notifyParentOfReceipt(config, auth.claims, invoiceId, amount);
     return jsonResponse(envelope(collectionCreateToApi(result)), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {

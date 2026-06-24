@@ -20,6 +20,7 @@ const baseConfig: AppConfig = {
   smsFast2smsRoute: "q",
   smsFast2smsSenderId: null,
   smsFast2smsMessageId: null,
+  transactionalSmsEnabled: false,
   supabaseUrl: "https://example.supabase.co",
   supabaseServiceRoleKey: "service-role-key",
   publicStorageBaseUrl: null,

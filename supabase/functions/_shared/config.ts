@@ -30,6 +30,8 @@ export interface AppConfig {
   smsFast2smsSenderId: string | null;
   /** DLT message template id (only for the "dlt" route). */
   smsFast2smsMessageId: string | null;
+  /** Master switch for transactional (non-OTP) SMS to parents. Default off. */
+  transactionalSmsEnabled: boolean;
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
   /**
@@ -113,6 +115,8 @@ export function loadConfig(): AppConfig {
     smsFast2smsRoute: Deno.env.get("FAST2SMS_ROUTE") ?? "q",
     smsFast2smsSenderId: Deno.env.get("FAST2SMS_SENDER_ID") ?? null,
     smsFast2smsMessageId: Deno.env.get("FAST2SMS_MESSAGE_ID") ?? null,
+    transactionalSmsEnabled:
+      (Deno.env.get("TRANSACTIONAL_SMS_ENABLED") ?? "false").toLowerCase() === "true",
     supabaseUrl,
     supabaseServiceRoleKey,
     publicStorageBaseUrl: Deno.env.get("PUBLIC_STORAGE_BASE_URL") ?? null,

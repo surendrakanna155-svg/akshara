@@ -118,6 +118,70 @@ export function isSmsConfigured(config: SmsConfig): boolean {
   return Boolean(config.apiKey && config.provider);
 }
 
+/**
+ * Build a Fast2SMS request for a transactional (non-OTP) free-text message.
+ * Uses the quick ("q") route — custom message, no DLT/template requirement
+ * (the same route the pilot already uses). Pure.
+ */
+export function buildTransactionalRequest(
+  config: SmsConfig,
+  mobile: string,
+  message: string,
+): { url: string; headers: Record<string, string>; body: string } {
+  const params = new URLSearchParams();
+  params.set("route", "q");
+  params.set("message", message);
+  params.set("numbers", mobile);
+  params.set("flash", "0");
+  return {
+    url: FAST2SMS_ENDPOINT,
+    headers: {
+      "authorization": config.apiKey ?? "",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  };
+}
+
+/**
+ * Send a transactional SMS (fee receipt, results published, …) to a parent.
+ * Same provider/HTTP shape as `sendOtpSms`; the caller owns the
+ * `transactionalSmsEnabled` gate. The only impure part is `fetch`.
+ */
+export async function sendTransactionalSms(
+  config: SmsConfig,
+  phone: string,
+  message: string,
+): Promise<SmsResult> {
+  if (!isSmsConfigured(config)) {
+    return { ok: false, code: "SMS_NOT_CONFIGURED", detail: "No SMS provider/API key" };
+  }
+  if (config.provider !== "fast2sms") {
+    return { ok: false, code: "SMS_PROVIDER_UNSUPPORTED", detail: `Unsupported SMS provider: ${config.provider}` };
+  }
+  const mobile = toIndianMobile(phone);
+  if (!mobile) {
+    return { ok: false, code: "SMS_INVALID_NUMBER", detail: `Not an Indian mobile: ${phone}` };
+  }
+  const { url, headers, body } = buildTransactionalRequest(config, mobile, message);
+  try {
+    const resp = await fetch(url, { method: "POST", headers, body });
+    let json: unknown = null;
+    try {
+      json = await resp.json();
+    } catch {
+      json = null;
+    }
+    return parseFast2SmsResponse(resp.status, json);
+  } catch (error) {
+    return {
+      ok: false,
+      code: "SMS_SEND_FAILED",
+      detail: error instanceof Error ? error.message : "network error",
+    };
+  }
+}
+
 /** Send an OTP SMS via the configured provider. Network call. */
 export async function sendOtpSms(
   config: SmsConfig,
