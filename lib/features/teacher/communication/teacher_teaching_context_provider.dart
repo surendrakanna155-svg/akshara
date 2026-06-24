@@ -7,11 +7,13 @@ import '../../../core/communication/parent_communication_models.dart';
 import '../../../core/communication/subject_teacher_concern_store.dart';
 import '../../../core/communication/teacher_student_risk_service.dart';
 import '../../../core/repositories/mock/mock_canonical_student_registry.dart';
+import '../../../core/repositories/repository_config.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/teaching/teacher_assignment_registry.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../auth/auth_models.dart';
 import '../../auth/auth_provider.dart';
+import '../../intelligence/intelligence_models.dart' as intel;
 import '../teacher_requests.dart';
 
 /// Active teaching assignment resolved from HR/SIS data for the logged-in teacher.
@@ -63,10 +65,95 @@ final pendingSubjectConcernsProvider =
       );
 });
 
+/// Class-teacher 360 risk snapshot.
+///
+/// When the live Intelligence backend is enabled (INTELLIGENCE_API_ENABLED) the
+/// authoritative risk verdict (level + reasons + score) is sourced from
+/// `/intelligence/risk/*` via [intelligenceRepositoryProvider]; the locally
+/// computed snapshot supplies the per-metric display rows. On any live failure
+/// (or when the module is off) it falls back to the deterministic mock snapshot.
 final teacherStudentRiskSnapshotProvider =
-    Provider.family<TeacherStudentRiskSnapshot, String>((ref, sisStudentId) {
-  return TeacherStudentRiskService.snapshotForStudent(sisStudentId);
+    FutureProvider.family<TeacherStudentRiskSnapshot, String>(
+        (ref, sisStudentId) async {
+  final base = TeacherStudentRiskService.snapshotForStudent(sisStudentId);
+
+  if (!isModuleApiEnabled(ref, intelligenceApiEnabledProvider)) {
+    return base;
+  }
+
+  try {
+    final repo = ref.read(intelligenceRepositoryProvider);
+    final query = ref.read(repositoryQueryProvider);
+    final risks = await repo.listStudentRisks(query: query);
+    final live = _matchLiveRisk(risks, base);
+    if (live == null) return base;
+    return _mergeLiveRisk(base, live);
+  } catch (_) {
+    // Live unavailable (no backend / network / key) — graceful mock fallback.
+    return base;
+  }
 });
+
+/// Matches a live risk snapshot to the resolved student. The live backend keys
+/// on the DB student UUID while the UI carries the SIS id, so we match on the
+/// student name as the stable cross-source identifier, falling back to the id.
+intel.StudentRiskSnapshot? _matchLiveRisk(
+  List<intel.StudentRiskSnapshot> risks,
+  TeacherStudentRiskSnapshot base,
+) {
+  for (final r in risks) {
+    if (r.studentId == base.sisStudentId) return r;
+  }
+  for (final r in risks) {
+    if (r.studentName != null &&
+        r.studentName!.trim().toLowerCase() ==
+            base.studentName.trim().toLowerCase()) {
+      return r;
+    }
+  }
+  return null;
+}
+
+/// Overlays the authoritative live risk verdict on the locally-computed snapshot.
+TeacherStudentRiskSnapshot _mergeLiveRisk(
+  TeacherStudentRiskSnapshot base,
+  intel.StudentRiskSnapshot live,
+) {
+  final factors = live.reasons
+      .map((r) => (r['label'] ?? r['code'] ?? '').toString())
+      .where((s) => s.isNotEmpty && s.toLowerCase() != 'stable profile')
+      .toList();
+  return TeacherStudentRiskSnapshot(
+    sisStudentId: base.sisStudentId,
+    studentName: live.studentName?.trim().isNotEmpty == true
+        ? live.studentName!.trim()
+        : base.studentName,
+    classLabel: live.className.isNotEmpty ? live.className : base.classLabel,
+    rollNo: base.rollNo,
+    attendancePercent: base.attendancePercent,
+    attendanceTrend: base.attendanceTrend,
+    subjectPerformance: base.subjectPerformance,
+    homeworkCompletionPercent: base.homeworkCompletionPercent,
+    behaviorIncidentCount: base.behaviorIncidentCount,
+    feePendingLabel: base.feePendingLabel,
+    riskLevel: _riskLevelFromLive(live.riskLevel),
+    riskFactors: factors.isNotEmpty ? factors : base.riskFactors,
+    communicationHistoryCount: base.communicationHistoryCount,
+    pendingConcernCount: base.pendingConcernCount,
+  );
+}
+
+StudentRiskLevel _riskLevelFromLive(intel.StudentRiskLevel level) {
+  switch (level) {
+    case intel.StudentRiskLevel.low:
+      return StudentRiskLevel.low;
+    case intel.StudentRiskLevel.medium:
+      return StudentRiskLevel.medium;
+    case intel.StudentRiskLevel.high:
+    case intel.StudentRiskLevel.critical:
+      return StudentRiskLevel.high;
+  }
+}
 
 Future<SubjectTeacherConcernFlagResult?> flagSubjectTeacherConcern(
   WidgetRef ref, {

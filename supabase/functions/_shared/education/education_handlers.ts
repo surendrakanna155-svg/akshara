@@ -51,6 +51,10 @@ import {
   generateStubRemark,
   type RemarkInputs,
 } from "./education_generator.ts";
+import {
+  assertChaptersWithinSyllabus,
+  OffSyllabusError,
+} from "./education_syllabus_boundary.ts";
 import type {
   EduCognitiveLevel,
   EduDifficulty,
@@ -110,6 +114,9 @@ async function runTenant<T>(
 function handleEducationError(error: unknown): Response {
   if (error instanceof TenantDbNotConfiguredError) {
     return tenantDbNotConfiguredResponse(error);
+  }
+  if (error instanceof OffSyllabusError) {
+    return errorEnvelope("OFF_SYLLABUS", error.message, 422);
   }
   const message = error instanceof Error ? error.message : "Education operation failed";
   return errorEnvelope("EDUCATION_ERROR", message, 500);
@@ -398,6 +405,14 @@ export async function handleGenerateQuestionPaper(req: Request, config: AppConfi
 
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
+      // Hard syllabus boundary: reject off-syllabus chapters before any
+      // bank/solver/AI work runs. Keeps generation on-curriculum.
+      await assertChaptersWithinSyllabus(
+        db,
+        body.className,
+        body.subjectName,
+        body.chapters ?? [],
+      );
       const ai = await resolveAiConfig(db, orgId);
       const generated = await generateQuestionPaper(db, body, ai);
       const saved = await createQuestionPaper(db, orgId, schoolId, {
