@@ -716,6 +716,7 @@ class MockFinanceRepository implements FinanceRepository {
           lastContact: '12 May · WhatsApp',
           collectionProbability: 62,
           feeAccountId: 'acct_4',
+          guardianPhone: '9876500092',
           contactHistory: [
             ContactHistoryEntry(
               id: 'ch_1',
@@ -744,6 +745,7 @@ class MockFinanceRepository implements FinanceRepository {
           lastContact: '3 Jun · Email',
           collectionProbability: 78,
           feeAccountId: 'acct_2',
+          guardianPhone: '9876500142',
           contactHistory: [
             ContactHistoryEntry(
               id: 'ch_3',
@@ -766,6 +768,7 @@ class MockFinanceRepository implements FinanceRepository {
           lastContact: '20 May · Phone',
           collectionProbability: 34,
           feeAccountId: 'acct_5',
+          guardianPhone: '9876500101',
           contactHistory: [
             ContactHistoryEntry(
               id: 'ch_4',

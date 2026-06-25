@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/widgets/whatsapp_contact_button.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -117,6 +118,7 @@ class _DriversTable extends StatelessWidget {
         DataColumn(label: Text('Attendance')),
         DataColumn(label: Text('Rating')),
         DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Contact')),
       ],
       rowCount: drivers.length,
       dataRowMinHeight: 56,
@@ -133,6 +135,12 @@ class _DriversTable extends StatelessWidget {
             DataCell(Text(driver.attendancePercent)),
             DataCell(Text(driver.rating)),
             DataCell(_DriverStatusChip(status: driver.status)),
+            DataCell(WhatsAppContactButton(
+              phone: driver.phone,
+              style: WhatsAppButtonStyle.icon,
+              label: 'WhatsApp ${driver.name}',
+              message: _driverMessage(driver),
+            )),
           ],
         );
       },
@@ -171,6 +179,15 @@ class _DriverCard extends StatelessWidget {
                 'Rating ${driver.rating} · Attendance ${driver.attendancePercent}',
                 style: text.bodySmall,
               ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: WhatsAppContactButton(
+                  phone: driver.phone,
+                  style: WhatsAppButtonStyle.text,
+                  label: 'WhatsApp',
+                  message: _driverMessage(driver),
+                ),
+              ),
             ],
           ),
         ),
@@ -178,6 +195,10 @@ class _DriverCard extends StatelessWidget {
     );
   }
 }
+
+String _driverMessage(TransportDriver driver) =>
+    'Hello ${driver.name}, this is from the school transport office regarding '
+    'bus ${driver.assignedBus}. ';
 
 class _DriverStatusChip extends StatelessWidget {
   const _DriverStatusChip({required this.status});

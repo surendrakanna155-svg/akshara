@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_failure.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/widgets/whatsapp_contact_button.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
@@ -121,6 +122,14 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
               spacing: AksharaSpacing.s2,
               runSpacing: AksharaSpacing.s2,
               children: [
+                WhatsAppContactButton(
+                  phone: profile.lead.phone,
+                  label: 'WhatsApp parent',
+                  message:
+                      'Hello ${profile.lead.parentName}, this is regarding '
+                      '${profile.lead.studentName}\'s admission enquiry. ',
+                  unavailableMessage: 'No contact number on this lead.',
+                ),
                 AksharaManageAction(
                   permission: Permission.manageAdmissions,
                   child: OutlinedButton.icon(

@@ -643,6 +643,9 @@ class FinanceMapper {
             lastContact: item['lastContact'] as String? ?? '',
             collectionProbability: item['collectionProbability'] as int? ?? 0,
             feeAccountId: item['feeAccountId'] as String? ?? '',
+            guardianPhone: item['guardianPhone'] as String? ??
+                item['phone'] as String? ??
+                '',
             contactHistory: _mapContactHistory(
               item['contactHistory'] as List<dynamic>? ?? const [],
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/whatsapp_contact_button.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
@@ -108,7 +109,16 @@ class AlumniProfileScreen extends ConsumerWidget {
                   const SizedBox(height: AksharaSpacing.s3),
                   Wrap(
                     spacing: AksharaSpacing.s3,
+                    runSpacing: AksharaSpacing.s2,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
+                      WhatsAppContactButton(
+                        phone: alumni.phone,
+                        label: 'WhatsApp',
+                        message:
+                            'Hello ${alumni.name}, greetings from the alumni '
+                            'relations office. ',
+                      ),
                       OutlinedButton(
                         onPressed: () => context.go(
                           RouteNames.sisStudentDetail(alumni.sisStudentId),

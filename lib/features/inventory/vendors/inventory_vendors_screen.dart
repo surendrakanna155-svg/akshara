@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/widgets/whatsapp_contact_button.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -132,7 +133,18 @@ class _VendorTable extends StatelessWidget {
                   cells: [
                     DataCell(Text(vendor.name)),
                     DataCell(Text(vendor.category)),
-                    DataCell(Text(vendor.contactPerson)),
+                    DataCell(Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(vendor.contactPerson),
+                        WhatsAppContactButton(
+                          phone: vendor.phone,
+                          style: WhatsAppButtonStyle.icon,
+                          label: 'WhatsApp ${vendor.contactPerson}',
+                          message: _vendorMessage(vendor),
+                        ),
+                      ],
+                    )),
                     DataCell(Text(vendor.gstNumber)),
                     DataCell(Text('${vendor.activeOrders}')),
                     DataCell(Text(vendor.totalSpend)),
@@ -177,7 +189,18 @@ class _VendorCard extends StatelessWidget {
                 style: text.bodySmall,
               ),
               const SizedBox(height: AksharaSpacing.s2),
-              _VendorStatusChip(status: vendor.status),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _VendorStatusChip(status: vendor.status),
+                  WhatsAppContactButton(
+                    phone: vendor.phone,
+                    style: WhatsAppButtonStyle.text,
+                    label: 'WhatsApp',
+                    message: _vendorMessage(vendor),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -185,6 +208,10 @@ class _VendorCard extends StatelessWidget {
     );
   }
 }
+
+String _vendorMessage(InventoryVendor vendor) =>
+    'Hello ${vendor.contactPerson}, this is from the school procurement office '
+    'regarding ${vendor.name}. ';
 
 class _VendorStatusChip extends StatelessWidget {
   const _VendorStatusChip({required this.status});

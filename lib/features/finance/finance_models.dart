@@ -600,6 +600,7 @@ class DefaulterRecord {
     required this.collectionProbability,
     required this.contactHistory,
     required this.feeAccountId,
+    this.guardianPhone = '',
   });
 
   final String id;
@@ -613,6 +614,10 @@ class DefaulterRecord {
   final int collectionProbability;
   final List<ContactHistoryEntry> contactHistory;
   final String feeAccountId;
+
+  /// Guardian's WhatsApp/contact number (B5). Empty when the backend doesn't
+  /// supply one — the WhatsApp affordance hides itself in that case.
+  final String guardianPhone;
 }
 
 @immutable

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/widgets/whatsapp_contact_button.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
@@ -157,6 +158,7 @@ class _DefaultersTable extends StatelessWidget {
             DataColumn(label: Text('Bucket')),
             DataColumn(label: Text('Last contact')),
             DataColumn(label: Text('Collection %')),
+            DataColumn(label: Text('Contact')),
           ],
           rows: [
             for (final record in defaulters)
@@ -170,6 +172,13 @@ class _DefaultersTable extends StatelessWidget {
                   DataCell(_AgingBucketChip(bucket: record.bucket)),
                   DataCell(Text(record.lastContact)),
                   DataCell(Text('${record.collectionProbability}%')),
+                  DataCell(WhatsAppContactButton(
+                    phone: record.guardianPhone,
+                    style: WhatsAppButtonStyle.icon,
+                    label: 'WhatsApp ${record.studentName}\'s guardian',
+                    message: _defaulterMessage(record),
+                    unavailableMessage: 'No guardian number on file.',
+                  )),
                 ],
               ),
           ],
@@ -225,6 +234,14 @@ class _DefaulterMobileCard extends StatelessWidget {
                       ? KpiAccent.success
                       : KpiAccent.warning,
                 ),
+                const Spacer(),
+                WhatsAppContactButton(
+                  phone: record.guardianPhone,
+                  style: WhatsAppButtonStyle.icon,
+                  label: 'WhatsApp guardian',
+                  message: _defaulterMessage(record),
+                  unavailableMessage: 'No guardian number on file.',
+                ),
               ],
             ),
           ],
@@ -251,3 +268,8 @@ class _AgingBucketChip extends StatelessWidget {
     return AksharaStatusChip(label: label, tone: tone);
   }
 }
+
+String _defaulterMessage(DefaulterRecord record) =>
+    'Hello, this is a gentle fee reminder from the school regarding '
+    '${record.studentName} (${record.admissionNumber}). The pending amount is '
+    '${record.overdueAmount}. ';
