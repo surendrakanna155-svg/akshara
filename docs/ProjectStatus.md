@@ -5,14 +5,18 @@
 **HEAD commit:** `42b7018`
 
 > **Live backend / pilot state (2026-06-25):** the self-hosted backend is live on the
-> VPS (`akshara.veloraunisexsalon.com`). Production-certified revenue/pilot batches:
-> **B1 Admissions CRM** (2026-06-24), **B2 Capability Gating / entitlement layer**
-> (2026-06-25 — enforcement enabled, pilot org on Professional), and **B3 Parent
-> Insights** (2026-06-25 — surfaced to parents, real AI, entitlement-gated, per-child
-> RLS, live smoke 13/13). The versioned table below tracks the older app-MVP
-> milestones; for current batch status see the authoritative
-> `docs/ROADMAP_RECONCILED_2026-06-24.md`, `docs/B3_PARENT_INSIGHTS_CERTIFICATION.md`,
-> and `docs/B2_STATUS_LEDGER.md`.
+> VPS (`akshara.veloraunisexsalon.com`). **The entire P1 (Revenue & Pilot Success) layer is
+> PRODUCTION CERTIFIED and now INTEGRATION CERTIFIED end-to-end:** B1 Admissions CRM
+> (2026-06-24), B2 Capability Gating (2026-06-25, enforcement on, pilot=Professional), B3
+> Parent Insights, B4 AI Admissions Assistant, B5 WhatsApp surfaces, B6 Marketing Engine
+> (all 2026-06-25). **P1 Integration Certification (2026-06-25):** the batches were verified
+> to work together — Marketing→CRM→AI handoff, capability gating, parent insights, RBAC
+> scope, WhatsApp readiness — live smoke **11/11** (`scripts/p1_integration_smoke.sh`). One
+> real cross-batch gap was found and fixed: the Marketing→CRM convert handoff wrote a UUID
+> owner, hiding marketing-sourced leads from the AI's assign next-best-action; the handoff
+> now leaves leads unassigned. For current status see
+> `docs/ROADMAP_RECONCILED_2026-06-24.md`, `docs/P1_INTEGRATION_CERTIFICATION.md`,
+> `docs/B6_MARKETING_ENGINE_CERTIFICATION.md`, and `docs/B2_STATUS_LEDGER.md`.
 
 ---
 

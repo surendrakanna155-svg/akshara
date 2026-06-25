@@ -471,10 +471,15 @@ export async function handleConvertGrowthInquiry(
         phone: inquiry.phone ?? "",
         source: inquiry.source,
         campaign: campaignName ?? inquiry.source,
-        counselor: auth.claims.sub,
+        // Handoff to Admissions CRM leaves the lead UNASSIGNED. `counselor` is a
+        // display name in B1 (e.g. "Meera N."), and B4's intelligence treats
+        // `counselor = ''` as the "assign an owner" signal. Writing the converting
+        // user's UUID here showed a raw UUID as the owner and hid the lead from the
+        // AI's assign next-best-action. Provenance is kept in `notes` + the audit log.
+        counselor: "",
         email: "",
         address: "",
-        notes: `Converted from growth inquiry ${inquiryId}`,
+        notes: `Converted from growth inquiry ${inquiryId} by ${auth.claims.sub}`,
       });
 
       await db.queryObject(
