@@ -177,6 +177,57 @@ class ApiDirectorRepository implements DirectorRepository {
         fileType: _str(m['fileType']),
       );
 
+  static DirectorMetricInput _metricInput(Map<String, dynamic> m) =>
+      DirectorMetricInput(
+        id: _str(m['id']),
+        schoolId: _str(m['schoolId']),
+        schoolName: _str(m['schoolName']),
+        periodMonth: _str(m['periodMonth']),
+        marketingSpendInr: _double(m['marketingSpendInr']),
+        operatingExpenseInr: _double(m['operatingExpenseInr']),
+        studentCapacity: _int(m['studentCapacity']),
+      );
+
+  static DirectorBoardPack _boardPack(Map<String, dynamic> m) {
+    final revenue = m['revenue'] as Map<String, dynamic>? ?? const {};
+    final growth = m['growth'] as Map<String, dynamic>? ?? const {};
+    final admissions = m['admissions'] as Map<String, dynamic>? ?? const {};
+    final marketing = m['marketing'] as Map<String, dynamic>? ?? const {};
+    final compliance = m['compliance'] as Map<String, dynamic>? ?? const {};
+    return DirectorBoardPack(
+      reportId: _str(m['reportId']),
+      title: _str(m['title']),
+      description: _str(m['description']),
+      fileType: _str(m['fileType']),
+      generatedAt: _date(m['generatedAt']),
+      executiveSummary: _str(m['executiveSummary']),
+      kpis: (m['kpis'] as List<dynamic>? ?? const [])
+          .map((e) => e as Map<String, dynamic>)
+          .map((e) => DirectorBoardPackKpi(
+                label: _str(e['label']),
+                value: _str(e['value']),
+              ))
+          .toList(growable: false),
+      schools: _schools(m['schools']),
+      chainRevenueCr: _double(revenue['chainRevenueCr']),
+      expensesCr: _double(revenue['expensesCr']),
+      netCr: _double(revenue['netCr']),
+      marginPercent: _int(revenue['marginPercent']),
+      forecastCr: _double(revenue['forecastCr']),
+      yoyGrowthPercent: _int(growth['yoyGrowthPercent']),
+      netGrowth: _int(growth['netGrowth']),
+      capacityPercent: _int(growth['capacityPercent']),
+      inquiries: _int(admissions['inquiries']),
+      enrolled: _int(admissions['enrolled']),
+      conversionPercent: _int(admissions['conversionPercent']),
+      totalSpendLakhs: _double(marketing['totalSpendLakhs']),
+      totalLeads: _int(marketing['totalLeads']),
+      roiPercent: _int(marketing['roiPercent']),
+      complianceTotal: _int(compliance['total']),
+      complianceOverdue: _int(compliance['overdue']),
+    );
+  }
+
   // ─── interface ────────────────────────────────────────────────────────────
 
   @override
@@ -282,10 +333,31 @@ class ApiDirectorRepository implements DirectorRepository {
   }
 
   @override
-  Future<String> exportReport({
+  Future<List<DirectorMetricInput>> getMetricInputs({
+    required RepositoryQuery query,
+  }) async {
+    final rows = await _remote.fetchMetricInputs(query: query);
+    return rows.map(_metricInput).toList(growable: false);
+  }
+
+  @override
+  Future<DirectorMetricInput> saveMetricInput({
+    required RepositoryQuery query,
+    required DirectorMetricInputDraft draft,
+  }) async {
+    final data = await _remote.saveMetricInput(
+      query: query,
+      body: draft.toJson(),
+    );
+    return _metricInput(data);
+  }
+
+  @override
+  Future<DirectorBoardPack> exportReport({
     required RepositoryQuery query,
     required String reportId,
   }) async {
-    return _remote.exportReport(query: query, reportId: reportId);
+    final data = await _remote.exportReport(query: query, reportId: reportId);
+    return _boardPack(data);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/reports/akshara_report_export_service.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../core/tenant/tenant_provider.dart';
@@ -142,15 +143,25 @@ class _DirectorReportsScreenState extends ConsumerState<DirectorReportsScreen> {
   }
 
   Future<void> _exportReport(BuildContext context, String reportId) async {
-    final exportId = await ref
-        .read(directorMutationsProvider.notifier)
-        .exportReport(reportId: reportId);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        key: QaTestKeys.directorReportExportedSnackbar,
-        content: Text('Report exported: $exportId'),
-      ),
-    );
+    try {
+      final pack = await ref
+          .read(directorMutationsProvider.notifier)
+          .exportReport(reportId: reportId);
+      await ref
+          .read(aksharaReportExportServiceProvider)
+          .shareDirectorBoardPackPdf(pack);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.directorReportExportedSnackbar,
+          content: Text('${pack.title} ready (${pack.schools.length} schools)'),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not export report: $error')),
+      );
+    }
   }
 }

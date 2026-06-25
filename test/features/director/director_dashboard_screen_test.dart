@@ -22,9 +22,24 @@ class _FakeDirectorRepository implements DirectorRepository {
   }
 
   @override
-  Future<String> exportReport({
+  Future<DirectorBoardPack> exportReport({
     required RepositoryQuery query,
     required String reportId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<DirectorMetricInput>> getMetricInputs({
+    required RepositoryQuery query,
+  }) async {
+    return const [];
+  }
+
+  @override
+  Future<DirectorMetricInput> saveMetricInput({
+    required RepositoryQuery query,
+    required DirectorMetricInputDraft draft,
   }) async {
     throw UnimplementedError();
   }

@@ -1249,6 +1249,15 @@ abstract final class QaTestKeys {
   static ValueKey<String> directorReportExportButton(String reportId) =>
       ValueKey<String>('director_report_export_$reportId');
 
+  static const directorManageInputsButton =
+      ValueKey<String>('director_manage_inputs_button');
+  static const directorMetricInputSchoolField =
+      ValueKey<String>('director_metric_input_school_field');
+  static const directorMetricInputSaveButton =
+      ValueKey<String>('director_metric_input_save_button');
+  static const directorMetricInputSavedSnackbar =
+      ValueKey<String>('director_metric_input_saved_snackbar');
+
   static ValueKey<String> branchTile(String branchId) =>
       ValueKey<String>('branch_tile_$branchId');
 

@@ -6,6 +6,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../features/director/director_models.dart';
 import '../../features/parent/receipts/receipt_models.dart';
 import '../exams/exam_remark.dart';
 import '../exams/exam_report_card.dart';
@@ -316,6 +317,108 @@ class AksharaReportExportService {
       ),
     );
     return document.save();
+  }
+
+  /// Builds the Director board-pack PDF from a server-assembled [DirectorBoardPack]
+  /// (live, org-wide aggregates — school-level only, no student/parent PII).
+  Future<Uint8List> buildDirectorBoardPackPdf(DirectorBoardPack pack) async {
+    final document = pw.Document();
+    final g = pack.generatedAt;
+    final generatedLabel =
+        '${g.year}-${g.month.toString().padLeft(2, '0')}-${g.day.toString().padLeft(2, '0')}';
+
+    document.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(28),
+        build: (context) => [
+          pw.Text(pack.title,
+              style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 2),
+          pw.Text(pack.description, style: const pw.TextStyle(fontSize: 12)),
+          pw.SizedBox(height: 2),
+          pw.Text('Generated: $generatedLabel · Aggregated data only · No student PII',
+              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+          pw.Divider(color: PdfColors.grey400),
+          pw.SizedBox(height: 6),
+          pw.Text('Executive summary',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 4),
+          pw.Text(pack.executiveSummary, style: const pw.TextStyle(fontSize: 10)),
+          pw.SizedBox(height: 14),
+          pw.Text('Portfolio KPIs',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 4),
+          pw.TableHelper.fromTextArray(
+            headers: const ['Metric', 'Value'],
+            data: [for (final k in pack.kpis) [k.label, k.value]],
+            border: pw.TableBorder.all(color: PdfColors.grey400),
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+            cellAlignments: const {1: pw.Alignment.centerRight},
+          ),
+          pw.SizedBox(height: 14),
+          pw.Text('Financials (₹ Cr)',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 4),
+          pw.TableHelper.fromTextArray(
+            headers: const ['Field', 'Value'],
+            data: [
+              ['Chain revenue', '${pack.chainRevenueCr} Cr'],
+              ['Expenses', '${pack.expensesCr} Cr'],
+              ['Net', '${pack.netCr} Cr'],
+              ['Margin', '${pack.marginPercent}%'],
+              ['Forecast', '${pack.forecastCr} Cr'],
+              ['Admissions conversion', '${pack.conversionPercent}% (${pack.enrolled}/${pack.inquiries})'],
+              ['Net student growth', '${pack.netGrowth}'],
+              ['Capacity utilization', '${pack.capacityPercent}%'],
+              ['Marketing spend', '${pack.totalSpendLakhs} L'],
+              ['Marketing ROI', '${pack.roiPercent}%'],
+              ['Compliance overdue', '${pack.complianceOverdue} of ${pack.complianceTotal}'],
+            ],
+            border: pw.TableBorder.all(color: PdfColors.grey400),
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+            cellAlignments: const {1: pw.Alignment.centerRight},
+          ),
+          pw.SizedBox(height: 14),
+          pw.Text('Schools',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 4),
+          pw.TableHelper.fromTextArray(
+            headers: const ['School', 'Students', 'Revenue', 'Fee %', 'Health'],
+            data: [
+              for (final s in pack.schools)
+                [
+                  s.schoolName,
+                  '${s.students}',
+                  '${s.revenueCr} Cr',
+                  '${s.feeCollectionPercent}%',
+                  '${s.healthScore}',
+                ],
+            ],
+            border: pw.TableBorder.all(color: PdfColors.grey400),
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+            cellAlignments: const {
+              1: pw.Alignment.centerRight,
+              2: pw.Alignment.centerRight,
+              3: pw.Alignment.centerRight,
+              4: pw.Alignment.centerRight,
+            },
+          ),
+        ],
+      ),
+    );
+    return document.save();
+  }
+
+  /// Builds and opens the OS share sheet for a Director board-pack PDF.
+  Future<void> shareDirectorBoardPackPdf(DirectorBoardPack pack) async {
+    final bytes = await buildDirectorBoardPackPdf(pack);
+    final name = '${pack.title}_${pack.reportId}'
+        .replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_');
+    await Printing.sharePdf(bytes: bytes, filename: '$name.pdf');
   }
 
   Future<void> previewPdf({

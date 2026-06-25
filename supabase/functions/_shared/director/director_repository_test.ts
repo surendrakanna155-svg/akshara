@@ -1,11 +1,15 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
+  buildBoardPack,
   buildExecutiveSummary,
   getAdmissions,
   getMarketing,
+  getMetricInputs,
   getSchoolRows,
+  upsertMetricInput,
 } from "./director_repository.ts";
+import { refineExecutiveSummaryWithClaude } from "./director_ai.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
@@ -70,6 +74,17 @@ class MockDirectorDb {
       return [{ amt: 32_000_000 }] as T[];
     }
 
+    // Report catalog row (for buildBoardPack).
+    if (has("FROM director_reports WHERE organization_id = $1 AND id = $2")) {
+      return [{
+        id: "rpt-1",
+        title: "Board Pack",
+        description: "Quarterly board review",
+        file_type: "PDF",
+        last_generated_at: "2026-06-01T00:00:00Z",
+      }] as T[];
+    }
+
     return [] as T[];
   }
 
@@ -124,6 +139,118 @@ Deno.test("getAdmissions computes funnel and per-school conversion", async () =>
   assertEquals(admissions.conversionPercent, 25); // 50/200
   assertEquals(admissions.bySchoolConversion["Akshara North"], 30); // 45/150
   assertEquals(admissions.bySchoolConversion["Akshara East"], 10); // 5/50
+});
+
+// ─── Metric inputs (the new write path) ─────────────────────────────────────
+
+/** Mock that captures args, for the upsert/list metric-input queries. */
+class MetricInputDb {
+  constructor(private readonly opts: { schoolOwned: boolean }) {}
+  // deno-lint-ignore require-await
+  async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    const has = (...frags: string[]) => frags.every((f) => sql.includes(f));
+
+    if (has("SELECT 1 AS ok FROM schools")) {
+      return (this.opts.schoolOwned ? [{ ok: 1 }] : []) as T[];
+    }
+    if (has("INSERT INTO director_metric_inputs", "ON CONFLICT")) {
+      return [{
+        id: "mi-1",
+        school_id: args[1],
+        school_name: "Akshara North",
+        period_month: args[2],
+        marketing_spend_inr: args[3],
+        operating_expense_inr: args[4],
+        student_capacity: args[5],
+      }] as T[];
+    }
+    if (has("FROM director_metric_inputs mi", "JOIN schools s")) {
+      return [{
+        id: "mi-1",
+        school_id: SCHOOL_A,
+        school_name: "Akshara North",
+        period_month: "2026-06-01",
+        marketing_spend_inr: 250000,
+        operating_expense_inr: 1800000,
+        student_capacity: 1500,
+      }] as T[];
+    }
+    return [] as T[];
+  }
+  // deno-lint-ignore require-await
+  async queryCount(): Promise<number> {
+    return 0;
+  }
+  get raw(): never {
+    throw new Error("unused");
+  }
+}
+
+const metricDb = (schoolOwned: boolean) =>
+  new MetricInputDb({ schoolOwned }) as unknown as TenantQueryClient;
+
+Deno.test("upsertMetricInput saves and maps an owned school's metric input", async () => {
+  const saved = await upsertMetricInput(metricDb(true), ORG, {
+    schoolId: SCHOOL_A,
+    periodMonth: "2026-06-01",
+    marketingSpendInr: 250000,
+    operatingExpenseInr: 1800000,
+    studentCapacity: 1500,
+  });
+  assertEquals(saved?.schoolId, SCHOOL_A);
+  assertEquals(saved?.marketingSpendInr, 250000);
+  assertEquals(saved?.operatingExpenseInr, 1800000);
+  assertEquals(saved?.studentCapacity, 1500);
+  assertEquals(saved?.periodMonth, "2026-06-01");
+});
+
+Deno.test("upsertMetricInput refuses a school outside the organization", async () => {
+  const saved = await upsertMetricInput(metricDb(false), ORG, {
+    schoolId: "a2000000-0000-4000-8000-00000000ffff",
+    periodMonth: "2026-06-01",
+    marketingSpendInr: 1,
+    operatingExpenseInr: 1,
+    studentCapacity: 1,
+  });
+  assertEquals(saved, null);
+});
+
+Deno.test("getMetricInputs returns entered rows mapped to the domain shape", async () => {
+  const rows = await getMetricInputs(metricDb(true), ORG);
+  assertEquals(rows.length, 1);
+  assertEquals(rows[0].schoolName, "Akshara North");
+  assertEquals(rows[0].marketingSpendInr, 250000);
+  assertEquals(rows[0].studentCapacity, 1500);
+});
+
+Deno.test("buildBoardPack assembles a real document from live aggregates", async () => {
+  const pack = await buildBoardPack(db(), ORG, "rpt-1", new Date("2026-06-15T00:00:00Z"));
+  assertEquals(pack?.title, "Board Pack");
+  assertEquals(pack?.fileType, "PDF");
+  assertEquals(pack?.schools.length, 2);
+  assertEquals(pack?.kpis.length, 5);
+  // KPIs carry the real chain figures, not placeholders.
+  assertEquals(pack?.kpis[0].value, "2"); // total schools
+  assertEquals(pack?.revenue.chainRevenueCr, 3.2);
+  assertEquals(pack?.admissions.conversionPercent, 25);
+  assertEquals(typeof pack?.executiveSummary, "string");
+  assertEquals((pack?.executiveSummary.length ?? 0) > 0, true);
+});
+
+Deno.test("refineExecutiveSummaryWithClaude returns the deterministic brief when no key", async () => {
+  const brief = "Portfolio spans 2 schools and 1,240 active students.";
+  const out = await refineExecutiveSummaryWithClaude(brief, {
+    focusArea: "dashboard",
+    schoolCount: 2,
+    totalStudents: 1240,
+    chainRevenueCr: 3.2,
+    marginPercent: 30,
+    enrolled: 50,
+    inquiries: 200,
+    conversionPercent: 25,
+    atRiskSchools: ["Akshara East"],
+  });
+  assertEquals(out, brief); // safe fallback — no API key configured in tests
 });
 
 Deno.test("buildExecutiveSummary summarizes real aggregates without PII", () => {

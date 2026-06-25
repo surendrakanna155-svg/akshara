@@ -471,6 +471,116 @@ export async function markReportGenerated(
   return rows.length > 0 ? rows[0] : null;
 }
 
+// ─── Non-derivable metric inputs (spend / expense / capacity) ───────────────
+// These three figures have no operational source, so the chain owner enters
+// them per school per month. They feed Revenue (expenses, net, margin),
+// Marketing (spend, CPL, ROI) and Growth (capacity %). Until entered, those
+// metrics report honest zeros — this is the write path that makes them real.
+
+export interface DirectorMetricInput {
+  id: string;
+  schoolId: string;
+  schoolName: string;
+  periodMonth: string; // YYYY-MM-01 (first of month)
+  marketingSpendInr: number;
+  operatingExpenseInr: number;
+  studentCapacity: number;
+}
+
+interface MetricInputRow {
+  id: string;
+  school_id: string;
+  school_name: string;
+  period_month: string;
+  marketing_spend_inr: number;
+  operating_expense_inr: number;
+  student_capacity: number;
+}
+
+function mapMetricInput(r: MetricInputRow): DirectorMetricInput {
+  return {
+    id: r.id,
+    schoolId: r.school_id,
+    schoolName: r.school_name,
+    periodMonth: new Date(r.period_month).toISOString().slice(0, 10),
+    marketingSpendInr: Number(r.marketing_spend_inr) || 0,
+    operatingExpenseInr: Number(r.operating_expense_inr) || 0,
+    studentCapacity: Number(r.student_capacity) || 0,
+  };
+}
+
+export async function getMetricInputs(
+  db: TenantQueryClient,
+  orgId: string,
+): Promise<DirectorMetricInput[]> {
+  const rows = await db.queryObject<MetricInputRow>(
+    `SELECT mi.id, mi.school_id, s.name AS school_name, mi.period_month,
+            mi.marketing_spend_inr::float8 AS marketing_spend_inr,
+            mi.operating_expense_inr::float8 AS operating_expense_inr,
+            mi.student_capacity
+     FROM director_metric_inputs mi
+     JOIN schools s ON s.id = mi.school_id
+     WHERE mi.organization_id = $1
+     ORDER BY mi.period_month DESC, s.name`,
+    [orgId],
+  );
+  return rows.map(mapMetricInput);
+}
+
+export interface MetricInputDraft {
+  schoolId: string;
+  periodMonth: string; // YYYY-MM-01
+  marketingSpendInr: number;
+  operatingExpenseInr: number;
+  studentCapacity: number;
+}
+
+/**
+ * Upsert a per-school, per-month metric input. Validates the school belongs to
+ * the org first (a foreign school would pass the org-scoped RLS WITH CHECK since
+ * we stamp organization_id ourselves, so the guard must be explicit). Returns
+ * null when the school is not in this organization.
+ */
+export async function upsertMetricInput(
+  db: TenantQueryClient,
+  orgId: string,
+  draft: MetricInputDraft,
+): Promise<DirectorMetricInput | null> {
+  const owned = await db.queryObject<{ ok: number }>(
+    `SELECT 1 AS ok FROM schools
+     WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`,
+    [draft.schoolId, orgId],
+  );
+  if (owned.length === 0) return null;
+
+  const rows = await db.queryObject<MetricInputRow>(
+    `INSERT INTO director_metric_inputs
+       (organization_id, school_id, period_month,
+        marketing_spend_inr, operating_expense_inr, student_capacity)
+     VALUES ($1, $2, date_trunc('month', $3::date), $4, $5, $6)
+     ON CONFLICT (organization_id, school_id, period_month) DO UPDATE
+       SET marketing_spend_inr = EXCLUDED.marketing_spend_inr,
+           operating_expense_inr = EXCLUDED.operating_expense_inr,
+           student_capacity = EXCLUDED.student_capacity,
+           updated_at = now()
+     RETURNING id, school_id,
+       (SELECT name FROM schools WHERE id = director_metric_inputs.school_id) AS school_name,
+       period_month,
+       marketing_spend_inr::float8 AS marketing_spend_inr,
+       operating_expense_inr::float8 AS operating_expense_inr,
+       student_capacity`,
+    [
+      orgId,
+      draft.schoolId,
+      draft.periodMonth,
+      draft.marketingSpendInr,
+      draft.operatingExpenseInr,
+      draft.studentCapacity,
+    ],
+  );
+  return rows.length > 0 ? mapMetricInput(rows[0]) : null;
+}
+
 // ─── Executive summary (deterministic from real aggregates; AI = Batch 8) ───
 
 export function buildExecutiveSummary(
@@ -533,5 +643,125 @@ export async function getDashboard(db: TenantQueryClient, orgId: string, now: Da
     admissions,
     complianceAlerts,
     executiveSummary: buildExecutiveSummary("dashboard", schoolRows, revenue, admissions),
+  };
+}
+
+// ─── Board pack (the real export payload) ───────────────────────────────────
+// A real, board-ready document built entirely from live org-wide aggregates.
+// The client renders this into a PDF — there is nothing fabricated here, and no
+// student/parent PII (school-level aggregates only). Returned by the export
+// endpoint so "Export" produces an actual document, not just a stamp.
+
+export interface DirectorBoardPack {
+  reportId: string;
+  title: string;
+  description: string;
+  fileType: string;
+  generatedAt: string;
+  executiveSummary: string;
+  kpis: { label: string; value: string }[];
+  schools: {
+    schoolName: string;
+    location: string;
+    students: number;
+    revenueCr: number;
+    feeCollectionPercent: number;
+    healthScore: number;
+    status: DirectorSchoolStatus;
+  }[];
+  revenue: {
+    chainRevenueCr: number;
+    expensesCr: number;
+    netCr: number;
+    marginPercent: number;
+    forecastCr: number;
+  };
+  growth: { yoyGrowthPercent: number; newEnrollments: number; withdrawals: number; netGrowth: number; capacityPercent: number };
+  admissions: { inquiries: number; applications: number; interviews: number; enrolled: number; conversionPercent: number };
+  marketing: { totalSpendLakhs: number; totalLeads: number; cplInr: number; roiPercent: number };
+  compliance: { total: number; compliant: number; dueSoon: number; overdue: number };
+}
+
+export async function buildBoardPack(
+  db: TenantQueryClient,
+  orgId: string,
+  reportId: string,
+  now: Date,
+): Promise<DirectorBoardPack | null> {
+  const reportRows = await db.queryObject<ReportRow>(
+    `SELECT id, title, description, file_type, last_generated_at
+     FROM director_reports WHERE organization_id = $1 AND id = $2`,
+    [orgId, reportId],
+  );
+  if (reportRows.length === 0) return null;
+  const report = reportRows[0];
+
+  const schoolRows = await getSchoolRows(db, orgId);
+  const revenue = await getRevenue(db, orgId, now);
+  const growth = await getGrowth(db, orgId, now);
+  const marketing = await getMarketing(db, orgId);
+  const admissions = await getAdmissions(db, orgId);
+  const compliance = await getCompliance(db, orgId);
+
+  const totalStudents = schoolRows.reduce((sum, s) => sum + s.students, 0);
+  const atRisk = schoolRows.filter((s) => s.status === "atRisk" || s.status === "critical").length;
+  const newAdmissions = schoolRows.reduce((sum, s) => sum + s.admissionsQtd, 0);
+
+  return {
+    reportId: report.id,
+    title: report.title,
+    description: report.description,
+    fileType: report.file_type,
+    generatedAt: now.toISOString(),
+    executiveSummary: buildExecutiveSummary("strategic_reports", schoolRows, revenue, admissions),
+    kpis: [
+      { label: "Total Schools", value: String(schoolRows.length) },
+      { label: "Total Students", value: totalStudents.toLocaleString("en-IN") },
+      { label: "Combined Revenue", value: `₹${revenue.chainRevenueCr} Cr` },
+      { label: "New Admissions QTD", value: String(newAdmissions) },
+      { label: "Schools at Risk", value: String(atRisk) },
+    ],
+    schools: schoolRows.map((s) => ({
+      schoolName: s.schoolName,
+      location: s.location,
+      students: s.students,
+      revenueCr: s.revenueCr,
+      feeCollectionPercent: s.feeCollectionPercent,
+      healthScore: s.healthScore,
+      status: s.status,
+    })),
+    revenue: {
+      chainRevenueCr: revenue.chainRevenueCr,
+      expensesCr: revenue.expensesCr,
+      netCr: revenue.netCr,
+      marginPercent: revenue.marginPercent,
+      forecastCr: revenue.forecastCr,
+    },
+    growth: {
+      yoyGrowthPercent: growth.yoyGrowthPercent,
+      newEnrollments: growth.newEnrollments,
+      withdrawals: growth.withdrawals,
+      netGrowth: growth.netGrowth,
+      capacityPercent: growth.capacityPercent,
+    },
+    admissions: {
+      inquiries: admissions.inquiries,
+      applications: admissions.applications,
+      interviews: admissions.interviews,
+      enrolled: admissions.enrolled,
+      conversionPercent: admissions.conversionPercent,
+    },
+    marketing: {
+      totalSpendLakhs: marketing.totalSpendLakhs,
+      totalLeads: marketing.totalLeads,
+      cplInr: marketing.cplInr,
+      roiPercent: marketing.roiPercent,
+    },
+    compliance: {
+      total: compliance.length,
+      compliant: compliance.filter((c) => c.status === "compliant").length,
+      dueSoon: compliance.filter((c) => c.status === "dueSoon").length,
+      overdue: compliance.filter((c) => c.status === "overdue").length,
+    },
   };
 }

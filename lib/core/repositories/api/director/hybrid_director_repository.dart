@@ -130,7 +130,26 @@ class HybridDirectorRepository implements DirectorRepository {
       );
 
   @override
-  Future<String> exportReport({
+  Future<List<DirectorMetricInput>> getMetricInputs({
+    required RepositoryQuery query,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.getMetricInputs(query: query),
+        mockCall: () => _mock.getMetricInputs(query: query),
+      );
+
+  @override
+  Future<DirectorMetricInput> saveMetricInput({
+    required RepositoryQuery query,
+    required DirectorMetricInputDraft draft,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.saveMetricInput(query: query, draft: draft),
+        mockCall: () => _mock.saveMetricInput(query: query, draft: draft),
+      );
+
+  @override
+  Future<DirectorBoardPack> exportReport({
     required RepositoryQuery query,
     required String reportId,
   }) =>

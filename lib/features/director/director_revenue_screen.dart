@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -9,6 +10,7 @@ import '../copilot/copilot_context_provider.dart';
 import 'director_models.dart';
 import 'director_navigation.dart';
 import 'director_providers.dart';
+import 'widgets/director_metric_input_editor.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
 
@@ -57,6 +59,17 @@ class DirectorRevenueScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: AksharaSpacing.s4),
+              if (ref.watch(directorCanManageProvider))
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    key: QaTestKeys.directorManageInputsButton,
+                    onPressed: () => showDirectorMetricInputEditor(context),
+                    icon: const Icon(Icons.tune_outlined, size: 18),
+                    label: const Text('Enter portfolio inputs'),
+                  ),
+                ),
               const SizedBox(height: AksharaSpacing.s4),
               const AksharaSectionHeader(title: 'School Revenue Table'),
               const SizedBox(height: AksharaSpacing.s3),

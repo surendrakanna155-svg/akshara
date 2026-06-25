@@ -16,14 +16,26 @@
 > owner, hiding marketing-sourced leads from the AI's assign next-best-action; the handoff
 > now leaves leads unassigned.
 >
-> **P2 begins — B7 AI School Builder (Phase 1) is PRODUCTION CERTIFIED (2026-06-25):** an
+> **P2 in progress — B7 AI School Builder (Phase 1) PRODUCTION CERTIFIED (2026-06-25):** an
 > entitlement-gated AI pre-fill (`POST /onboarding/startup/ai-prefill`,
 > `feature.ai_school_builder`, Professional+Enterprise) that turns a short founder brief into a
 > complete, board-appropriate startup-onboarding proposal (classes, sections, fees, language,
 > modules) on the certified onboarding foundation — deterministic baseline + Claude refinement
 > with safe fallback, **non-destructive** (proposes only). Live smoke **10/10** (real auth +
-> prod DB + real AI, `source=ai`). For current status see
-> `docs/ROADMAP_RECONCILED_2026-06-24.md`, `docs/B7_AI_SCHOOL_BUILDER_CERTIFICATION.md`,
+> prod DB + real AI, `source=ai`).
+>
+> **B8 Director Multi-School PRODUCTION CERTIFIED (2026-06-25):** polish for multi-branch sales
+> on the certified Batch-6 Director backend — closed three honesty gaps: (A) a metric-input
+> write path (`GET`/`POST /director/metric-inputs`, manage-gated, audited) so the chain owner
+> can enter the figures with no operational source (marketing spend, operating expense,
+> capacity), now feeding Margin / Marketing ROI / Capacity instead of permanent zeros; (B) a
+> real board-pack export (`POST /director/reports/:id/export` returns a document built from live
+> aggregates, rendered to a real PDF client-side); (C) a real-AI executive summary
+> (`director_ai.ts`, deterministic baseline + Claude, safe fallback). No migration (Batch-6
+> `director_metric_inputs` reused). Backend Deno tests 10/10, live cert **13/13** (real org-JWT
+> + prod DB + RBAC + multi-school aggregation + real AI). For current status see
+> `docs/ROADMAP_RECONCILED_2026-06-24.md`, `docs/B8_DIRECTOR_MULTI_SCHOOL_CERTIFICATION.md`,
+> `docs/B7_AI_SCHOOL_BUILDER_CERTIFICATION.md`,
 > `docs/P1_INTEGRATION_CERTIFICATION.md`, and `docs/B2_STATUS_LEDGER.md`.
 
 ---

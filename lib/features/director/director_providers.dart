@@ -81,3 +81,10 @@ final directorReportsProvider =
         query: ref.watch(repositoryQueryProvider),
       );
 });
+
+final directorMetricInputsProvider =
+    FutureProvider<List<DirectorMetricInput>>((ref) async {
+  return ref.read(directorRepositoryProvider).getMetricInputs(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});

@@ -8,9 +8,11 @@ import {
   handleExportReport,
   handleGrowth,
   handleMarketing,
+  handleMetricInputs,
   handlePortfolio,
   handleReports,
   handleRevenue,
+  handleSaveMetricInput,
   handleSchools,
   handleSummary,
 } from "./director_handlers.ts";
@@ -25,6 +27,7 @@ const GET_ROUTES: Record<string, (req: Request, config: AppConfig) => Promise<Re
   "/director/admissions": handleAdmissions,
   "/director/compliance": handleCompliance,
   "/director/reports": handleReports,
+  "/director/metric-inputs": handleMetricInputs,
 };
 
 const ACK_RE = /^\/director\/compliance\/([^/]+)\/acknowledge$/;
@@ -45,6 +48,7 @@ export async function routeDirector(
 
   if (method === "POST") {
     if (path === "/director/summary") return await handleSummary(req, config);
+    if (path === "/director/metric-inputs") return await handleSaveMetricInput(req, config);
 
     const ack = ACK_RE.exec(path);
     if (ack) return await handleAcknowledgeCompliance(req, config, decodeURIComponent(ack[1]));

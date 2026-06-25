@@ -97,7 +97,27 @@ class DirectorRemoteDataSource {
     return _data(response);
   }
 
-  Future<String> exportReport({
+  Future<List<Map<String, dynamic>>> fetchMetricInputs({
+    required RepositoryQuery query,
+  }) async {
+    final data = await _get('/director/metric-inputs', query);
+    return (data['items'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
+  }
+
+  Future<Map<String, dynamic>> saveMetricInput({
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/director/metric-inputs',
+      queryParameters: _params(query),
+      data: body,
+    );
+    return _data(response);
+  }
+
+  Future<Map<String, dynamic>> exportReport({
     required RepositoryQuery query,
     required String reportId,
   }) async {
@@ -105,6 +125,7 @@ class DirectorRemoteDataSource {
       '/director/reports/$reportId/export',
       queryParameters: _params(query),
     );
-    return _data(response)['reference'] as String? ?? '';
+    final data = _data(response);
+    return (data['document'] as Map<String, dynamic>?) ?? data;
   }
 }

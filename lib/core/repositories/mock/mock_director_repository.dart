@@ -328,11 +328,107 @@ class MockDirectorRepository implements DirectorRepository {
     return _complianceItems.firstWhere((item) => item.id == complianceId);
   }
 
+  static List<DirectorMetricInput> _metricInputs = [
+    const DirectorMetricInput(
+      id: 'mi-1',
+      schoolId: 'DR-SCH-001',
+      schoolName: 'Akshara North Campus',
+      periodMonth: '2026-06-01',
+      marketingSpendInr: 1200000,
+      operatingExpenseInr: 21000000,
+      studentCapacity: 2400,
+    ),
+  ];
+
   @override
-  Future<String> exportReport({
+  Future<List<DirectorMetricInput>> getMetricInputs({
+    required RepositoryQuery query,
+  }) async {
+    return _metricInputs;
+  }
+
+  @override
+  Future<DirectorMetricInput> saveMetricInput({
+    required RepositoryQuery query,
+    required DirectorMetricInputDraft draft,
+  }) async {
+    final school = _schools.firstWhere(
+      (s) => s.schoolId == draft.schoolId,
+      orElse: () => _schools.first,
+    );
+    final period = draft.periodMonth.length == 7
+        ? '${draft.periodMonth}-01'
+        : draft.periodMonth;
+    final saved = DirectorMetricInput(
+      id: 'mi-${draft.schoolId}-$period',
+      schoolId: draft.schoolId,
+      schoolName: school.schoolName,
+      periodMonth: period,
+      marketingSpendInr: draft.marketingSpendInr,
+      operatingExpenseInr: draft.operatingExpenseInr,
+      studentCapacity: draft.studentCapacity,
+    );
+    _metricInputs = [
+      saved,
+      ..._metricInputs.where(
+        (m) => !(m.schoolId == saved.schoolId && m.periodMonth == saved.periodMonth),
+      ),
+    ];
+    return saved;
+  }
+
+  @override
+  Future<DirectorBoardPack> exportReport({
     required RepositoryQuery query,
     required String reportId,
   }) async {
-    return 'director-report-$reportId-${DateTime.now().millisecondsSinceEpoch}';
+    final revenue = await getRevenueOverview(query: query);
+    final growth = await getGrowthAnalytics(query: query);
+    final admissions = await getAdmissionsPerformance(query: query);
+    final marketing = await getMarketingPerformance(query: query);
+    final compliance = await getComplianceMonitoring(query: query);
+    final totalStudents = _schools.fold<int>(0, (sum, s) => sum + s.students);
+    final atRisk = _schools
+        .where((s) =>
+            s.status == DirectorSchoolStatus.atRisk ||
+            s.status == DirectorSchoolStatus.critical)
+        .length;
+    return DirectorBoardPack(
+      reportId: reportId,
+      title: 'Board Pack',
+      description: 'Aggregated portfolio board review',
+      fileType: 'PDF',
+      generatedAt: DateTime.now(),
+      executiveSummary: await generateExecutiveSummary(
+        query: query,
+        focusArea: 'strategic_reports',
+      ),
+      kpis: [
+        DirectorBoardPackKpi(label: 'Total Schools', value: '${_schools.length}'),
+        DirectorBoardPackKpi(label: 'Total Students', value: '$totalStudents'),
+        DirectorBoardPackKpi(
+            label: 'Combined Revenue', value: '₹${revenue.chainRevenueCr} Cr'),
+        DirectorBoardPackKpi(label: 'Schools at Risk', value: '$atRisk'),
+      ],
+      schools: _schools,
+      chainRevenueCr: revenue.chainRevenueCr,
+      expensesCr: revenue.expensesCr,
+      netCr: revenue.netCr,
+      marginPercent: revenue.marginPercent,
+      forecastCr: revenue.forecastCr,
+      yoyGrowthPercent: growth.yoyGrowthPercent,
+      netGrowth: growth.netGrowth,
+      capacityPercent: growth.capacityPercent,
+      inquiries: admissions.inquiries,
+      enrolled: admissions.enrolled,
+      conversionPercent: admissions.conversionPercent,
+      totalSpendLakhs: marketing.totalSpendLakhs,
+      totalLeads: marketing.totalLeads,
+      roiPercent: marketing.roiPercent,
+      complianceTotal: compliance.length,
+      complianceOverdue: compliance
+          .where((c) => c.status == DirectorComplianceStatus.overdue)
+          .length,
+    );
   }
 }

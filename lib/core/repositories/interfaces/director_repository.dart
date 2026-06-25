@@ -48,7 +48,16 @@ abstract class DirectorRepository {
     required String complianceId,
   });
 
-  Future<String> exportReport({
+  Future<List<DirectorMetricInput>> getMetricInputs({
+    required RepositoryQuery query,
+  });
+
+  Future<DirectorMetricInput> saveMetricInput({
+    required RepositoryQuery query,
+    required DirectorMetricInputDraft draft,
+  });
+
+  Future<DirectorBoardPack> exportReport({
     required RepositoryQuery query,
     required String reportId,
   });

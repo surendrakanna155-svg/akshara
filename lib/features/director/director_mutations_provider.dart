@@ -50,16 +50,40 @@ class DirectorMutationsNotifier extends AsyncNotifier<void> {
     }
   }
 
-  Future<String> exportReport({required String reportId}) async {
+  Future<DirectorBoardPack> exportReport({required String reportId}) async {
     state = const AsyncLoading();
     try {
       assertManageDirectorPortal(ref);
-      final exportId = await ref.read(directorRepositoryProvider).exportReport(
+      final pack = await ref.read(directorRepositoryProvider).exportReport(
             query: ref.read(repositoryQueryProvider),
             reportId: reportId,
           );
       state = const AsyncData(null);
-      return exportId;
+      return pack;
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<DirectorMetricInput> saveMetricInput({
+    required DirectorMetricInputDraft draft,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      assertManageDirectorPortal(ref);
+      final saved = await ref.read(directorRepositoryProvider).saveMetricInput(
+            query: ref.read(repositoryQueryProvider),
+            draft: draft,
+          );
+      ref.invalidate(directorMetricInputsProvider);
+      // The entered figures change Revenue / Marketing / Growth aggregates.
+      ref.invalidate(directorRevenueProvider);
+      ref.invalidate(directorMarketingProvider);
+      ref.invalidate(directorGrowthProvider);
+      ref.invalidate(directorExecutiveDashboardProvider);
+      state = const AsyncData(null);
+      return saved;
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);
       rethrow;

@@ -24,17 +24,23 @@ import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   acknowledgeCompliance,
+  buildBoardPack,
   buildExecutiveSummary,
   getAdmissions,
   getCompliance,
   getDashboard,
   getGrowth,
   getMarketing,
+  getMetricInputs,
   getRevenue,
   getReports,
   getSchoolRows,
   markReportGenerated,
+  type MetricInputDraft,
+  upsertMetricInput,
 } from "./director_repository.ts";
+import { refineExecutiveSummaryWithClaude } from "./director_ai.ts";
+import { resolveAiConfig } from "../ai/ai_settings.ts";
 
 const ORG_SCOPES = ["organization", "school_group", "platform"];
 
@@ -124,6 +130,12 @@ export function handleReports(req: Request, config: AppConfig): Promise<Response
   }));
 }
 
+export function handleMetricInputs(req: Request, config: AppConfig): Promise<Response> {
+  return read(req, config, "Failed to load metric inputs", async (db, orgId) => ({
+    items: await getMetricInputs(db, orgId),
+  }));
+}
+
 export async function handleSummary(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
@@ -138,7 +150,31 @@ export async function handleSummary(req: Request, config: AppConfig): Promise<Re
       const schools = await getSchoolRows(db, orgId);
       const revenue = await getRevenue(db, orgId, new Date());
       const admissions = await getAdmissions(db, orgId);
-      return buildExecutiveSummary(focusArea, schools, revenue, admissions);
+      const deterministic = buildExecutiveSummary(focusArea, schools, revenue, admissions);
+
+      // Real AI refinement, grounded in the deterministic numbers. resolveAiConfig
+      // prefers the org's saved provider, else env; with no key configured the
+      // refine call returns the deterministic brief unchanged (safe fallback).
+      const ai = await resolveAiConfig(db, orgId);
+      const atRiskSchools = schools
+        .filter((s) => s.status === "atRisk" || s.status === "critical")
+        .map((s) => s.schoolName);
+      return await refineExecutiveSummaryWithClaude(
+        deterministic,
+        {
+          focusArea,
+          schoolCount: schools.length,
+          totalStudents: schools.reduce((sum, s) => sum + s.students, 0),
+          chainRevenueCr: revenue.chainRevenueCr,
+          marginPercent: revenue.marginPercent,
+          enrolled: admissions.enrolled,
+          inquiries: admissions.inquiries,
+          conversionPercent: admissions.conversionPercent,
+          atRiskSchools,
+        },
+        ai.apiKey,
+        { provider: ai.provider, model: ai.model },
+      );
     });
     return jsonResponse(envelope({ summary }));
   } catch (error) {
@@ -179,6 +215,63 @@ export async function handleAcknowledgeCompliance(
   }
 }
 
+function parseMetricDraft(body: unknown): MetricInputDraft | null {
+  if (!body || typeof body !== "object") return null;
+  const b = body as Record<string, unknown>;
+  const schoolId = typeof b.schoolId === "string" ? b.schoolId.trim() : "";
+  let period = typeof b.periodMonth === "string" ? b.periodMonth.trim() : "";
+  if (!schoolId || !period) return null;
+  if (/^\d{4}-\d{2}$/.test(period)) period = `${period}-01`;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(period)) return null;
+
+  const num = (v: unknown): number => {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+  return {
+    schoolId,
+    periodMonth: period,
+    marketingSpendInr: num(b.marketingSpendInr),
+    operatingExpenseInr: num(b.operatingExpenseInr),
+    studentCapacity: Math.round(num(b.studentCapacity)),
+  };
+}
+
+export async function handleSaveMetricInput(req: Request, config: AppConfig): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = gate(auth.claims, "manageDirectorPortal");
+  if (denied) return denied;
+
+  const draft = parseMetricDraft(await readJson<unknown>(req));
+  if (!draft) {
+    return errorEnvelope("VALIDATION_ERROR", "schoolId and periodMonth (YYYY-MM) are required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  try {
+    const saved = await withTenantContext(config, auth.claims, async (db) => {
+      const result = await upsertMetricInput(db, orgId, draft);
+      if (result) {
+        await emitMutationAudit(
+          db,
+          auth.claims,
+          moduleEntityAudit("director.metricInput.saved", "metricInput", result.id, {
+            schoolId: result.schoolId,
+            periodMonth: result.periodMonth,
+          }),
+          req,
+        );
+      }
+      return result;
+    });
+    if (!saved) return errorEnvelope("NOT_FOUND", "School not found in this organization", 404);
+    return jsonResponse(envelope(saved));
+  } catch (error) {
+    return failure(error, "Failed to save metric input");
+  }
+}
+
 export async function handleExportReport(
   req: Request,
   config: AppConfig,
@@ -191,20 +284,26 @@ export async function handleExportReport(
 
   const orgId = organizationIdFromClaims(auth.claims);
   try {
-    const reference = await withTenantContext(config, auth.claims, async (db) => {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
       const marked = await markReportGenerated(db, orgId, auth.claims.sub, reportId);
       if (!marked) return null;
+      // Build the real board-pack document from live aggregates — the client
+      // renders this into a PDF. Export now produces an actual document, not
+      // just a stamp.
+      const document = await buildBoardPack(db, orgId, reportId, new Date());
       await emitMutationAudit(
         db,
         auth.claims,
         moduleEntityAudit("director.report.exported", "report", reportId, {}),
         req,
       );
-      // Reference the app surfaces / can fetch; file is rendered client-side.
-      return `director-report-${reportId}-${new Date(marked.last_generated_at).getTime()}`;
+      return {
+        reference: `director-report-${reportId}-${new Date(marked.last_generated_at).getTime()}`,
+        document,
+      };
     });
-    if (!reference) return errorEnvelope("NOT_FOUND", "Report not found", 404);
-    return jsonResponse(envelope({ reference }));
+    if (!result) return errorEnvelope("NOT_FOUND", "Report not found", 404);
+    return jsonResponse(envelope(result));
   } catch (error) {
     return failure(error, "Failed to export report");
   }

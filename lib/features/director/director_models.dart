@@ -183,6 +183,121 @@ class DirectorReportItem {
   final String fileType;
 }
 
+/// A per-school, per-month figure the chain owner enters because no operational
+/// table can produce it (marketing spend, operating expense, capacity). Feeds
+/// Revenue (expenses/margin), Marketing (spend/CPL/ROI) and Growth (capacity).
+@immutable
+class DirectorMetricInput {
+  const DirectorMetricInput({
+    required this.id,
+    required this.schoolId,
+    required this.schoolName,
+    required this.periodMonth,
+    required this.marketingSpendInr,
+    required this.operatingExpenseInr,
+    required this.studentCapacity,
+  });
+
+  final String id;
+  final String schoolId;
+  final String schoolName;
+  final String periodMonth; // YYYY-MM-01
+  final double marketingSpendInr;
+  final double operatingExpenseInr;
+  final int studentCapacity;
+}
+
+/// What the metric-input editor submits for an upsert.
+@immutable
+class DirectorMetricInputDraft {
+  const DirectorMetricInputDraft({
+    required this.schoolId,
+    required this.periodMonth,
+    required this.marketingSpendInr,
+    required this.operatingExpenseInr,
+    required this.studentCapacity,
+  });
+
+  final String schoolId;
+  final String periodMonth; // YYYY-MM or YYYY-MM-01
+  final double marketingSpendInr;
+  final double operatingExpenseInr;
+  final int studentCapacity;
+
+  Map<String, dynamic> toJson() => {
+        'schoolId': schoolId,
+        'periodMonth': periodMonth,
+        'marketingSpendInr': marketingSpendInr,
+        'operatingExpenseInr': operatingExpenseInr,
+        'studentCapacity': studentCapacity,
+      };
+}
+
+@immutable
+class DirectorBoardPackKpi {
+  const DirectorBoardPackKpi({required this.label, required this.value});
+
+  final String label;
+  final String value;
+}
+
+/// The real export document: a board-ready pack assembled server-side from live
+/// org-wide aggregates. The client renders this into a PDF.
+@immutable
+class DirectorBoardPack {
+  const DirectorBoardPack({
+    required this.reportId,
+    required this.title,
+    required this.description,
+    required this.fileType,
+    required this.generatedAt,
+    required this.executiveSummary,
+    required this.kpis,
+    required this.schools,
+    required this.chainRevenueCr,
+    required this.expensesCr,
+    required this.netCr,
+    required this.marginPercent,
+    required this.forecastCr,
+    required this.yoyGrowthPercent,
+    required this.netGrowth,
+    required this.capacityPercent,
+    required this.inquiries,
+    required this.enrolled,
+    required this.conversionPercent,
+    required this.totalSpendLakhs,
+    required this.totalLeads,
+    required this.roiPercent,
+    required this.complianceTotal,
+    required this.complianceOverdue,
+  });
+
+  final String reportId;
+  final String title;
+  final String description;
+  final String fileType;
+  final DateTime generatedAt;
+  final String executiveSummary;
+  final List<DirectorBoardPackKpi> kpis;
+  final List<DirectorSchoolRow> schools;
+  final double chainRevenueCr;
+  final double expensesCr;
+  final double netCr;
+  final int marginPercent;
+  final double forecastCr;
+  final int yoyGrowthPercent;
+  final int netGrowth;
+  final int capacityPercent;
+  final int inquiries;
+  final int enrolled;
+  final int conversionPercent;
+  final double totalSpendLakhs;
+  final int totalLeads;
+  final int roiPercent;
+  final int complianceTotal;
+  final int complianceOverdue;
+}
+
 @immutable
 class DirectorDashboardData {
   const DirectorDashboardData({
