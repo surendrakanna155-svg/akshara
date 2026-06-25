@@ -110,6 +110,14 @@ class ParentDashboardScreen extends ConsumerWidget {
                             'Homework status, exam readiness & structured insights',
                         onTap: () => _navigate('experience_hub'),
                       ),
+                      const SizedBox(height: AksharaSpacing.s3),
+                      AksharaSurfaceListTile(
+                        icon: Icons.auto_awesome_outlined,
+                        title: 'Parent Insights',
+                        subtitle:
+                            'AI summaries of your child\'s progress, in your language',
+                        onTap: () => _navigate('parent_insights'),
+                      ),
                       if (data.aiInsight.message.isNotEmpty) ...[
                         const SizedBox(height: AksharaSpacing.s4),
                         AksharaAiSuggestionBar(

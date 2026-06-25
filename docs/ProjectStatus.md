@@ -6,10 +6,13 @@
 
 > **Live backend / pilot state (2026-06-25):** the self-hosted backend is live on the
 > VPS (`akshara.veloraunisexsalon.com`). Production-certified revenue/pilot batches:
-> **B1 Admissions CRM** (2026-06-24) and **B2 Capability Gating / entitlement layer**
-> (2026-06-25 — enforcement enabled, pilot org on Professional). The versioned table
-> below tracks the older app-MVP milestones; for current batch status see the
-> authoritative `docs/ROADMAP_RECONCILED_2026-06-24.md` and `docs/B2_STATUS_LEDGER.md`.
+> **B1 Admissions CRM** (2026-06-24), **B2 Capability Gating / entitlement layer**
+> (2026-06-25 — enforcement enabled, pilot org on Professional), and **B3 Parent
+> Insights** (2026-06-25 — surfaced to parents, real AI, entitlement-gated, per-child
+> RLS, live smoke 13/13). The versioned table below tracks the older app-MVP
+> milestones; for current batch status see the authoritative
+> `docs/ROADMAP_RECONCILED_2026-06-24.md`, `docs/B3_PARENT_INSIGHTS_CERTIFICATION.md`,
+> and `docs/B2_STATUS_LEDGER.md`.
 
 ---
 

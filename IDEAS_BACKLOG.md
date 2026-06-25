@@ -8,6 +8,14 @@ Format: `- [ ] (YYYY-MM-DD) The idea, in plain words.`
 
 ## Open ideas
 
+- [ ] (2026-06-25) **Parent Insights read-aloud (multilingual text-to-speech).**
+  The Parent Insights screen can speak summaries aloud in the parent's chosen
+  language (English/Hindi/Telugu) — valuable for low-literacy parents. Deferred
+  from B3 because it needs a new TTS dependency (`flutter_tts`) + per-platform
+  setup; B3 removed the fake "voice-ready" icon rather than ship a dead button.
+  When built: drive it from `ParentInsightSnapshot` text, respect the language
+  preference, add a play/stop control on each insight card.
+
 - [ ] (2026-06-24) **First-time student data onboarding (bulk import + structure + placeholders).**
   Day-one student setup for a new school. A real CSV import already exists on the
   backend (`/onboarding/imports/students/preview|commit|rollback`, parent gets an

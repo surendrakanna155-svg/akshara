@@ -136,7 +136,10 @@ Deno.test("enqueueDomainEvent dedupes on idempotency key", async () => {
   };
   const first = await enqueueDomainEvent(db, schoolClaims(), input);
   const second = await enqueueDomainEvent(db, schoolClaims(), input);
-  assertEquals(first, second);
+  // The insert path no longer projects an id (no RETURNING — see audit_repository);
+  // the dedup path still returns the existing row id. The guarantee is one row.
+  assertEquals(first, null);
+  assertEquals(typeof second, "string");
   assertEquals(mock.domainRows.length, 1);
 });
 

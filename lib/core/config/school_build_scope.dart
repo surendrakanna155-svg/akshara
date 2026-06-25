@@ -63,7 +63,8 @@ abstract final class SchoolBuildScope {
     // Evolution suite (experimental, not wired into real persona flows)
     RouteNames.setupWizard, // demo wizard; real onboarding is separate
     RouteNames.teacherAssistant,
-    RouteNames.parentInsights,
+    // parentInsights: surfaced for parents (B3, 2026-06-25) — live AI insights
+    // wired into the parent flow; entitlement-gated via feature.parent_insights.
     RouteNames.principalCommand,
     RouteNames.growthPlatform,
   };

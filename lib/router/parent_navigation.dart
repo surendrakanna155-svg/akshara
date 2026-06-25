@@ -22,6 +22,8 @@ void handleParentDashboardNavigation(
       context.push(parentExperienceHubPath(studentId));
     case 'academic_report':
       context.push(RouteNames.parentAcademicReport);
+    case 'parent_insights':
+      context.push(RouteNames.parentInsights);
     case 'child_switch':
       if (ref != null) {
         showParentChildSwitcherSheet(context, ref);

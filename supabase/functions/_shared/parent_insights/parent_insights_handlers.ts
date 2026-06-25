@@ -4,7 +4,7 @@ import {
   authenticateRequest,
   organizationIdFromClaims,
   requirePermission,
-  requireSchoolOperationalScope,
+  requireParentInsightsScope,
   schoolIdFromClaims,
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
@@ -21,7 +21,7 @@ export async function handleGenerateParentInsights(req: Request, config: AppConf
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
   const denied = requirePermission(auth.claims, "viewParentInsights") ??
-    requireSchoolOperationalScope(auth.claims);
+    requireParentInsightsScope(auth.claims);
   if (denied) return denied;
 
   const body = await readJson<{
@@ -105,7 +105,7 @@ export async function handleListParentInsights(
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
   const denied = requirePermission(auth.claims, "viewParentInsights") ??
-    requireSchoolOperationalScope(auth.claims);
+    requireParentInsightsScope(auth.claims);
   if (denied) return denied;
 
   try {
@@ -135,7 +135,7 @@ export async function handleGetParentLanguagePreference(req: Request, config: Ap
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
   const denied = requirePermission(auth.claims, "viewParentInsights") ??
-    requireSchoolOperationalScope(auth.claims);
+    requireParentInsightsScope(auth.claims);
   if (denied) return denied;
 
   const url = new URL(req.url);
@@ -165,7 +165,7 @@ export async function handleSaveParentLanguagePreference(req: Request, config: A
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
   const denied = requirePermission(auth.claims, "viewParentInsights") ??
-    requireSchoolOperationalScope(auth.claims);
+    requireParentInsightsScope(auth.claims);
   if (denied) return denied;
 
   const body = await readJson<{ language: string; studentId?: string }>(req);

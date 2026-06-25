@@ -62,6 +62,11 @@ class ParentShell extends ConsumerWidget {
     ],
     more: [
       MoreNavDestination(
+        route: RouteNames.parentInsights,
+        label: 'Insights',
+        icon: Icons.auto_awesome_outlined,
+      ),
+      MoreNavDestination(
         route: RouteNames.parentLeave,
         label: 'Leave',
         icon: Icons.event_busy_outlined,

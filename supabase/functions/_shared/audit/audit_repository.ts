@@ -170,7 +170,11 @@ export async function recordServerAuditEvent(
   req?: Request,
 ): Promise<string> {
   const { ipAddress, userAgent } = requestMeta(req);
-  const rows = await db.queryObject<{ id: string }>(
+  // No RETURNING: a server-side audit write must not depend on the actor's
+  // SELECT RLS. INSERT ... RETURNING re-checks the table's read policy against
+  // the new row, which (correctly) excludes persona scopes like parent/student
+  // and would spuriously fail the audited mutation. The returned id is unused.
+  await db.queryObject(
     `INSERT INTO audit_events (
        organization_id,
        school_id,
@@ -187,8 +191,7 @@ export async function recordServerAuditEvent(
        user_agent
      ) VALUES (
        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, 'server', $11, $12
-     )
-     RETURNING id::text`,
+     )`,
     [
       claims.tenant_id,
       claims.school_id,
@@ -204,7 +207,7 @@ export async function recordServerAuditEvent(
       userAgent,
     ],
   );
-  return rows[0]?.id ?? "";
+  return "";
 }
 
 export async function enqueueDomainEvent(
@@ -227,7 +230,10 @@ export async function enqueueDomainEvent(
     }
   }
 
-  const rows = await db.queryObject<{ id: string }>(
+  // No RETURNING: like the audit insert, the outbox write must not be gated by
+  // the actor's SELECT RLS (RETURNING re-checks the read policy, which excludes
+  // persona scopes). The id is unused by callers.
+  await db.queryObject(
     `INSERT INTO domain_events (
        organization_id,
        school_id,
@@ -240,8 +246,7 @@ export async function enqueueDomainEvent(
        published_at
      ) VALUES (
        $1, $2, $3, $4::jsonb, $5, $6, $7, 'published', timezone('utc', now())
-     )
-     RETURNING id::text`,
+     )`,
     [
       claims.tenant_id,
       schoolId,
@@ -252,7 +257,7 @@ export async function enqueueDomainEvent(
       input.idempotencyKey ?? null,
     ],
   );
-  return rows[0]?.id ?? null;
+  return null;
 }
 
 export async function recordMutationAudit(

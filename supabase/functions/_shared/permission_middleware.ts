@@ -63,6 +63,27 @@ export function requireSchoolOperationalScope(
   return null;
 }
 
+/**
+ * Parent Insights are consumed by the parent (scope "parent", restricted to
+ * their own children by RLS) and by school staff (scope "school"). Both carry a
+ * school_id; per-child authorization is enforced in the database, not here.
+ */
+export function requireParentInsightsScope(
+  claims: AccessTokenClaims,
+): Response | null {
+  if (
+    (claims.scope !== "parent" && claims.scope !== "school") ||
+    !claims.school_id
+  ) {
+    return errorEnvelope(
+      "FORBIDDEN",
+      "Parent insights require parent or school scope",
+      403,
+    );
+  }
+  return null;
+}
+
 export function organizationIdFromClaims(claims: AccessTokenClaims): string {
   return claims.tenant_id;
 }

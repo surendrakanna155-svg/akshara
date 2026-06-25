@@ -106,7 +106,8 @@ async function routeModuleRequest(
     routeSetupWizard,
     routeWidgetPlatform,
     routeTeacherAssistant,
-    routeParentInsights,
+    // B3: Parent Insights surfaced for parents — gated by plan entitlement.
+    withEntitlement(routeParentInsights, "/parent-insights", "feature.parent_insights"),
     routePrincipalCommand,
     routeGrowth,
     routeSchoolCompletion,
