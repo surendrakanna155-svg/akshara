@@ -9,6 +9,7 @@ import '../dto/admissions_dashboard_dto.dart';
 import '../dto/admissions_documents_dto.dart';
 import '../dto/admissions_enrollments_dto.dart';
 import '../dto/admissions_handoffs_dto.dart';
+import '../dto/admissions_intelligence_dto.dart';
 import '../dto/admissions_leads_dto.dart';
 import '../dto/admissions_reports_dto.dart';
 import '../dto/admissions_settings_dto.dart';
@@ -43,6 +44,16 @@ class AdmissionsRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return AdmissionsDashboardDto.fromJson(_responseMap(response));
+  }
+
+  Future<AdmissionsIntelligenceDto> fetchIntelligence({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      AdmissionsApiPaths.intelligence,
+      queryParameters: _queryParams(query),
+    );
+    return AdmissionsIntelligenceDto.fromJson(_responseMap(response));
   }
 
   Future<AdmissionsLeadsResponseDto> fetchLeads({

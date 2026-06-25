@@ -6,6 +6,7 @@ import '../dto/admissions_dashboard_dto.dart';
 import '../dto/admissions_documents_dto.dart';
 import '../dto/admissions_enrollments_dto.dart';
 import '../dto/admissions_handoffs_dto.dart';
+import '../dto/admissions_intelligence_dto.dart';
 import '../dto/admissions_leads_dto.dart';
 import '../dto/admissions_reports_dto.dart';
 import '../dto/admissions_settings_dto.dart';
@@ -32,6 +33,62 @@ class AdmissionsMapper {
       aiInsight: raw['aiInsight'] as String? ?? '',
       aiActionLabel: raw['aiActionLabel'] as String? ?? '',
     );
+  }
+
+  AdmissionsIntelligenceData toIntelligence(AdmissionsIntelligenceDto dto) {
+    final raw = dto.raw;
+    final funnelRaw = raw['funnel'] as Map<String, dynamic>? ?? const {};
+    final topSourceRaw = funnelRaw['topSource'] as Map<String, dynamic>?;
+    final stageCountsRaw =
+        funnelRaw['stageCounts'] as Map<String, dynamic>? ?? const {};
+    final funnel = AdmissionsFunnelSummary(
+      totalLeads: (funnelRaw['totalLeads'] as num?)?.toInt() ?? 0,
+      hotLeads: (funnelRaw['hotLeads'] as num?)?.toInt() ?? 0,
+      conversionRate: (funnelRaw['conversionRate'] as num?)?.toDouble() ?? 0,
+      pendingFollowUps: (funnelRaw['pendingFollowUps'] as num?)?.toInt() ?? 0,
+      unassignedLeads: (funnelRaw['unassignedLeads'] as num?)?.toInt() ?? 0,
+      stageCounts: {
+        for (final entry in stageCountsRaw.entries)
+          entry.key: (entry.value as num?)?.toInt() ?? 0,
+      },
+      topSource: topSourceRaw?['source'] as String?,
+      topSourceCount: (topSourceRaw?['count'] as num?)?.toInt() ?? 0,
+    );
+    final actions = (raw['nextBestActions'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(_toNextBestAction)
+        .toList(growable: false);
+    return AdmissionsIntelligenceData(
+      funnel: funnel,
+      nextBestActions: actions,
+    );
+  }
+
+  AdmissionsNextBestAction _toNextBestAction(Map<String, dynamic> raw) {
+    return AdmissionsNextBestAction(
+      id: raw['id'] as String? ?? '',
+      kind: raw['kind'] as String? ?? '',
+      priority: _parseActionPriority(raw['priority'] as String?),
+      title: raw['title'] as String? ?? '',
+      detail: raw['detail'] as String? ?? '',
+      cta: raw['cta'] as String? ?? '',
+      count: (raw['count'] as num?)?.toInt(),
+      leadId: raw['leadId'] as String?,
+    );
+  }
+
+  AdmissionsActionPriority _parseActionPriority(String? value) {
+    switch (value) {
+      case 'urgent':
+        return AdmissionsActionPriority.urgent;
+      case 'high':
+        return AdmissionsActionPriority.high;
+      case 'low':
+        return AdmissionsActionPriority.low;
+      case 'medium':
+      default:
+        return AdmissionsActionPriority.medium;
+    }
   }
 
   List<AdmissionsLead> toLeads(AdmissionsLeadsResponseDto dto) {

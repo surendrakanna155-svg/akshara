@@ -7,6 +7,8 @@ import '../repository_query.dart';
 abstract class AdmissionsRepository {
   Future<AdmissionsDashboardData> getDashboard(
       {required RepositoryQuery query});
+  Future<AdmissionsIntelligenceData> getIntelligence(
+      {required RepositoryQuery query});
   Future<PaginatedResult<AdmissionsLead>> getLeads(
       {required RepositoryQuery query});
   Future<PaginatedResult<AdmissionsApplication>> getApplications(

@@ -183,6 +183,74 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
+  Future<AdmissionsIntelligenceData> getIntelligence({
+    required RepositoryQuery query,
+  }) async {
+    return const AdmissionsIntelligenceData(
+      funnel: AdmissionsFunnelSummary(
+        totalLeads: 248,
+        hotLeads: 34,
+        conversionRate: 14.5,
+        pendingFollowUps: 12,
+        unassignedLeads: 7,
+        stageCounts: {
+          'new_enquiry': 28,
+          'contacted': 45,
+          'school_visit': 18,
+          'demo_class': 14,
+          'application': 22,
+          'confirmed': 42,
+          'joined': 36,
+        },
+        topSource: 'website',
+        topSourceCount: 96,
+      ),
+      nextBestActions: [
+        AdmissionsNextBestAction(
+          id: 'urgent_hot_lead:mock-1',
+          kind: 'stalled_hot_lead',
+          priority: AdmissionsActionPriority.urgent,
+          title: 'Hot lead cooling: Ananya Reddy',
+          detail:
+              'Ananya Reddy is a hot lead stuck at "Contacted" for 4 days. Reach out today before interest fades.',
+          cta: 'Call now',
+          leadId: 'mock-1',
+        ),
+        AdmissionsNextBestAction(
+          id: 'pending_follow_ups',
+          kind: 'pending_follow_ups',
+          priority: AdmissionsActionPriority.high,
+          title: '12 follow-ups pending',
+          detail:
+              '12 scheduled follow-ups are still open. Clear them today to keep leads moving through the funnel.',
+          cta: 'Review follow-ups',
+          count: 12,
+        ),
+        AdmissionsNextBestAction(
+          id: 'unassigned_leads',
+          kind: 'unassigned_leads',
+          priority: AdmissionsActionPriority.high,
+          title: '7 leads unassigned',
+          detail:
+              '7 leads have no counselor. Assign an owner so follow-ups don\'t slip through the cracks.',
+          cta: 'Assign counselor',
+          count: 7,
+        ),
+        AdmissionsNextBestAction(
+          id: 'stage_bottleneck:contacted',
+          kind: 'stage_bottleneck',
+          priority: AdmissionsActionPriority.medium,
+          title: '45 leads stuck at Contacted',
+          detail:
+              '45 leads are sitting at "Contacted". Schedule calls or visits to advance them to the next stage.',
+          cta: 'Advance pipeline',
+          count: 45,
+        ),
+      ],
+    );
+  }
+
+  @override
   Future<PaginatedResult<AdmissionsLead>> getLeads({
     required RepositoryQuery query,
   }) async {

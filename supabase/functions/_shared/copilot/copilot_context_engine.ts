@@ -2,6 +2,7 @@ import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { claimsHasPermission } from "./copilot_repository.ts";
 import type { CopilotAssistantType } from "./copilot_types.ts";
+import { loadAdmissionsIntelligence } from "../admissions/admissions_intelligence_repository.ts";
 
 export interface CopilotContextBundle {
   school: Record<string, unknown>;
@@ -155,20 +156,22 @@ async function loadAdmissionsContext(
   organizationId: string,
   schoolId: string,
 ): Promise<Record<string, unknown>> {
-  const leadCount = await db.queryCount(
-    `SELECT count(*)::text AS count FROM admissions_leads
-     WHERE organization_id = $1 AND school_id = $2`,
-    [organizationId, schoolId],
-  );
+  // B4 — ground the admissions persona in the real B1 CRM funnel plus the
+  // deterministic next-best-actions, instead of a bare lead count.
+  const intelligence = await loadAdmissionsIntelligence(db, organizationId, schoolId);
+
   const appRows = await db.queryObject<{ status: string; count: number }>(
     `SELECT status, count(*)::int AS count FROM admissions_applications
      WHERE organization_id = $1 AND school_id = $2
      GROUP BY status`,
     [organizationId, schoolId],
   );
+
   return {
     access: "granted",
-    leadCount,
+    leadCount: String(intelligence.funnel.totalLeads),
+    funnel: intelligence.funnel,
+    nextBestActions: intelligence.nextBestActions,
     applicationsByStatus: Object.fromEntries(appRows.map((r) => [r.status, r.count])),
   };
 }

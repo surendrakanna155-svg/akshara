@@ -37,6 +37,14 @@ Parent guidance mode:
 - Output talking points and sample phrases, not automated sends.
 `.trim();
 
+const ADMISSIONS_ASSISTANT_POLICY = `
+Admissions assistant mode:
+- Ground every answer in the admissions funnel + nextBestActions provided; never invent lead numbers.
+- When asked what to do, prioritise the nextBestActions in order (urgent → high → medium → low) and explain why.
+- Reference specific leads by name when the action names one; suggest concrete follow-ups (call, visit, assign counselor).
+- Read-only: recommend actions the counselor takes in the Admissions module — never claim you changed a lead.
+`.trim();
+
 export function buildSystemPrompt(
   assistantType: CopilotAssistantType,
   context: CopilotContextBundle,
@@ -51,6 +59,8 @@ export function buildSystemPrompt(
     ? TEACHER_COPILOT_POLICY
     : assistantType === "principal"
     ? PRINCIPAL_COPILOT_POLICY
+    : assistantType === "admissions"
+    ? ADMISSIONS_ASSISTANT_POLICY
     : "";
   return [
     READ_ONLY_POLICY,
@@ -98,12 +108,24 @@ export function buildStubAssistantReply(
     );
   }
   if (context.admissions.access === "granted") {
+    const funnel = context.admissions.funnel as
+      | { hotLeads?: number; conversionRate?: number; pendingFollowUps?: number; unassignedLeads?: number }
+      | undefined;
+    const actions = (context.admissions.nextBestActions as Array<{ title: string; cta: string }>) ?? [];
     lines.push(
-      "**Admissions snapshot**",
-      `- Leads: ${context.admissions.leadCount}`,
+      "**Admissions funnel**",
+      `- Leads: ${context.admissions.leadCount} (hot: ${funnel?.hotLeads ?? 0}, conversion: ${funnel?.conversionRate ?? 0}%)`,
+      `- Pending follow-ups: ${funnel?.pendingFollowUps ?? 0} · Unassigned leads: ${funnel?.unassignedLeads ?? 0}`,
       `- Applications: ${JSON.stringify(context.admissions.applicationsByStatus)}`,
       "",
     );
+    if (actions.length > 0) {
+      lines.push("**Next best actions**");
+      for (const action of actions.slice(0, 5)) {
+        lines.push(`- ${action.title} — ${action.cta}`);
+      }
+      lines.push("");
+    }
   }
   if (context.communication.access === "granted") {
     lines.push(

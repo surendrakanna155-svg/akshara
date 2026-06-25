@@ -26,6 +26,14 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
+  Future<AdmissionsIntelligenceData> getIntelligence({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchIntelligence(query: query);
+    return _mapper.toIntelligence(dto);
+  }
+
+  @override
   Future<PaginatedResult<AdmissionsLead>> getLeads({
     required RepositoryQuery query,
   }) async {

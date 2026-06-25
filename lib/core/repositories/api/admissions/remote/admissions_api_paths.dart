@@ -3,6 +3,7 @@ abstract final class AdmissionsApiPaths {
   static const String base = '/admissions';
 
   static const String dashboard = '$base/dashboard';
+  static const String intelligence = '$base/intelligence';
   static const String leads = '$base/leads';
   static const String applications = '$base/applications';
   static const String documents = '$base/documents';

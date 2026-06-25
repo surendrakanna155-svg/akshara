@@ -219,6 +219,69 @@ class AdmissionsDashboardData {
   final String aiActionLabel;
 }
 
+/// B4 — AI Admissions Assistant: funnel summary + ranked next-best-actions.
+@immutable
+class AdmissionsIntelligenceData {
+  const AdmissionsIntelligenceData({
+    required this.funnel,
+    required this.nextBestActions,
+  });
+
+  final AdmissionsFunnelSummary funnel;
+  final List<AdmissionsNextBestAction> nextBestActions;
+
+  bool get isEmpty => nextBestActions.isEmpty;
+}
+
+@immutable
+class AdmissionsFunnelSummary {
+  const AdmissionsFunnelSummary({
+    required this.totalLeads,
+    required this.hotLeads,
+    required this.conversionRate,
+    required this.pendingFollowUps,
+    required this.unassignedLeads,
+    required this.stageCounts,
+    this.topSource,
+    this.topSourceCount = 0,
+  });
+
+  final int totalLeads;
+  final int hotLeads;
+  final double conversionRate;
+  final int pendingFollowUps;
+  final int unassignedLeads;
+  final Map<String, int> stageCounts;
+  final String? topSource;
+  final int topSourceCount;
+}
+
+/// Priority buckets, highest urgency first.
+enum AdmissionsActionPriority { urgent, high, medium, low }
+
+@immutable
+class AdmissionsNextBestAction {
+  const AdmissionsNextBestAction({
+    required this.id,
+    required this.kind,
+    required this.priority,
+    required this.title,
+    required this.detail,
+    required this.cta,
+    this.count,
+    this.leadId,
+  });
+
+  final String id;
+  final String kind;
+  final AdmissionsActionPriority priority;
+  final String title;
+  final String detail;
+  final String cta;
+  final int? count;
+  final String? leadId;
+}
+
 @immutable
 class AdmissionsLead {
   const AdmissionsLead({

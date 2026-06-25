@@ -13,6 +13,7 @@ import '../admissions_navigation.dart';
 import '../widgets/admissions_chart_panel.dart';
 import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_dashboard_provider.dart';
+import 'widgets/admissions_assistant_card.dart';
 import 'widgets/admissions_counselor_leaderboard.dart';
 import 'widgets/admissions_dashboard_kpi_row.dart';
 import 'widgets/admissions_followups_table.dart';
@@ -64,6 +65,8 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AdmissionsDashboardKpiRow(kpis: data.kpis),
+        const SizedBox(height: AksharaSpacing.s6),
+        const AdmissionsAssistantCard(),
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Pipeline preview'),
         const SizedBox(height: AksharaSpacing.s3),
