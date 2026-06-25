@@ -325,9 +325,14 @@ class ApiAchievementPromotionRepository
   Future<AchievementPromotion> publishPromotion({
     required RepositoryQuery query,
     required String promotionId,
+    List<String> destinations = const [],
   }) async {
     return _mapper.mapPromotion(
-      await _remote.publishPromotion(query: query, promotionId: promotionId),
+      await _remote.publishPromotion(
+        query: query,
+        promotionId: promotionId,
+        destinations: destinations,
+      ),
     );
   }
 

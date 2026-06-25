@@ -428,6 +428,9 @@ class AchievementPromotion {
     required this.assets,
     required this.analytics,
     this.description,
+    this.subjectType = 'achievement',
+    this.destinations = const [],
+    this.publishResults = const {},
   });
 
   final String id;
@@ -437,6 +440,13 @@ class AchievementPromotion {
   final Map<String, dynamic> assets;
   final Map<String, int> analytics;
   final String? description;
+
+  /// General publisher fields (Phase 1): the subject the post is about
+  /// (holiday/festival/event/achievement), the channels published to, and the
+  /// per-channel outcome recorded at publish time.
+  final String subjectType;
+  final List<String> destinations;
+  final Map<String, dynamic> publishResults;
 
   List<PromotionAssetPreview> get assetPreviews {
     return assets.entries

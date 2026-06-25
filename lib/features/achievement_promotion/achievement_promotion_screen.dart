@@ -6,7 +6,55 @@ import '../phase5/phase5_models.dart';
 import '../phase5/phase5_providers.dart';
 import 'achievement_promotion_preview_screen.dart';
 
-Future<void> _advanceWorkflow(WidgetRef ref, AchievementPromotion p) async {
+/// Publisher destinations offered at publish time (Phase 1). Facebook/Instagram
+/// are selectable but recorded as pending-connection until Phase 2 (Meta).
+const _publishDestinations = <String, String>{
+  'parent_app': 'Parent App',
+  'student_app': 'Student App',
+  'teacher_app': 'Teacher App',
+  'staff_app': 'Staff App',
+  'whatsapp': 'WhatsApp',
+  'website': 'School Website',
+  'facebook': 'Facebook',
+  'instagram': 'Instagram',
+};
+
+Future<List<String>?> _pickDestinations(BuildContext context) {
+  final selected = <String>{'parent_app', 'student_app', 'teacher_app', 'staff_app'};
+  return showDialog<List<String>>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Select publish destinations'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final entry in _publishDestinations.entries)
+                CheckboxListTile(
+                  dense: true,
+                  title: Text(entry.value),
+                  value: selected.contains(entry.key),
+                  onChanged: (v) => setState(() {
+                    v == true ? selected.add(entry.key) : selected.remove(entry.key);
+                  }),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: selected.isEmpty ? null : () => Navigator.pop(context, selected.toList()),
+            child: const Text('Publish'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _advanceWorkflow(BuildContext context, WidgetRef ref, AchievementPromotion p) async {
   if (p.status == 'draft') {
     await ref.read(achievementPromotionRepositoryProvider).generateAssets(
           query: ref.read(phase5QueryProvider),
@@ -18,9 +66,12 @@ Future<void> _advanceWorkflow(WidgetRef ref, AchievementPromotion p) async {
           promotionId: p.id,
         );
   } else if (p.status == 'approved') {
+    final destinations = await _pickDestinations(context);
+    if (destinations == null || destinations.isEmpty) return;
     await ref.read(achievementPromotionRepositoryProvider).publishPromotion(
           query: ref.read(phase5QueryProvider),
           promotionId: p.id,
+          destinations: destinations,
         );
   }
 }
@@ -81,11 +132,11 @@ class AchievementPromotionScreen extends ConsumerWidget {
                       ref.invalidate(achievementPromotionsProvider);
                       return;
                     }
-                    await _advanceWorkflow(ref, p);
+                    await _advanceWorkflow(context, ref, p);
                     ref.invalidate(achievementPromotionsProvider);
                   },
                   onLongPress: () async {
-                    await _advanceWorkflow(ref, p);
+                    await _advanceWorkflow(context, ref, p);
                     ref.invalidate(achievementPromotionsProvider);
                   },
                 ),

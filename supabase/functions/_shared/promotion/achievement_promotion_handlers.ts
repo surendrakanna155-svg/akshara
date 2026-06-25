@@ -14,11 +14,14 @@ import {
   approvePromotion,
   createPromotion,
   generateAndStoreAssets,
+  generatePromotionAssets,
   getPromotion,
   listPromotions,
-  publishPromotion,
+  markPromotionPublished,
   trackPromotionMetric,
 } from "./achievement_promotion_repository.ts";
+import { enhanceCaptionsWithAi } from "./publisher_ai_captions.ts";
+import { dispatchPublish, PUBLISH_DESTINATIONS } from "./publisher_dispatch.ts";
 
 function requirePromotionRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "viewAchievementPromotion") ??
@@ -40,11 +43,15 @@ function mapPromotion(row: Awaited<ReturnType<typeof getPromotion>>) {
   return {
     id: row.id,
     achievementType: row.achievement_type,
+    subjectType: row.subject_type,
+    calendarEventId: row.calendar_event_id,
     title: row.title,
     description: row.description,
     status: row.status,
     assets: row.assets,
     analytics: row.analytics,
+    destinations: row.destinations,
+    publishResults: row.publish_results,
     createdAt: row.created_at,
     publishedAt: row.published_at,
   };
@@ -78,14 +85,18 @@ export async function handleCreatePromotion(req: Request, config: AppConfig): Pr
 
   const body = await readJson<{
     achievementType?: string;
+    subjectType?: string;
+    calendarEventId?: string;
     title?: string;
     description?: string;
   }>(req);
   if (!body) {
     return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
   }
-  if (!body.achievementType || !body.title) {
-    return errorEnvelope("VALIDATION_ERROR", "achievementType and title are required", 400);
+  // subjectType is the general publisher field; achievementType kept for back-compat.
+  const subjectType = body.subjectType ?? body.achievementType ?? "achievement";
+  if (!body.title) {
+    return errorEnvelope("VALIDATION_ERROR", "title is required", 400);
   }
 
   try {
@@ -95,7 +106,9 @@ export async function handleCreatePromotion(req: Request, config: AppConfig): Pr
         organizationIdFromClaims(auth.claims),
         schoolIdFromClaims(auth.claims),
         {
-          achievementType: body.achievementType!,
+          achievementType: body.achievementType ?? subjectType,
+          subjectType,
+          calendarEventId: body.calendarEventId ?? null,
           title: body.title!,
           description: body.description,
           submittedBy: auth.claims.sub,
@@ -127,8 +140,21 @@ export async function handleGeneratePromotionAssets(
   if (denied) return denied;
 
   try {
+    // Build subject-aware poster/caption assets, then AI-enhance the captions
+    // (safe fallback to the deterministic captions when AI is unavailable).
     const promotion = await withTenantContext(config, auth.claims, async (db) => {
-      const updated = await generateAndStoreAssets(db, promotionId);
+      const current = await getPromotion(db, promotionId);
+      if (!current) throw new Error("Promotion not found");
+      const baseAssets = generatePromotionAssets(current.title, {
+        subjectType: current.subject_type,
+        description: current.description ?? undefined,
+      });
+      const assets = await enhanceCaptionsWithAi(baseAssets, {
+        subjectType: current.subject_type,
+        title: current.title,
+        description: current.description,
+      });
+      const updated = await generateAndStoreAssets(db, promotionId, assets);
       await emitMutationAudit(
         db,
         auth.claims,
@@ -182,18 +208,63 @@ export async function handlePublishPromotion(
   const denied = requirePromotionApprove(auth.claims);
   if (denied) return denied;
 
+  const body = await readJson<{ destinations?: string[] }>(req).catch(() => ({} as { destinations?: string[] }));
+  const destinations = (body?.destinations ?? []).filter((d) =>
+    (PUBLISH_DESTINATIONS as readonly string[]).includes(d)
+  );
+  if (destinations.length === 0) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      `Select at least one valid destination: ${PUBLISH_DESTINATIONS.join(", ")}`,
+      422,
+    );
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+  if (!schoolId) {
+    return errorEnvelope("FORBIDDEN", "Publishing requires school scope", 403);
+  }
+
   try {
-    const promotion = await withTenantContext(config, auth.claims, async (db) => {
-      const published = await publishPromotion(db, promotionId);
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const current = await getPromotion(db, promotionId);
+      if (!current) return { error: "not_found" as const };
+      if (current.status !== "approved") return { error: "not_approved" as const };
+
+      const caption = (() => {
+        const card = current.assets?.appCard as Record<string, unknown> | undefined;
+        const c = card?.caption;
+        return typeof c === "string" && c.trim() ? c.trim() : current.title;
+      })();
+
+      const publishResults = await dispatchPublish(db, {
+        promotionId,
+        title: current.title,
+        caption,
+        assets: current.assets ?? {},
+        destinations,
+        orgId,
+        schoolId,
+        createdBy: auth.claims.sub,
+      });
+      const published = await markPromotionPublished(db, promotionId, destinations, publishResults);
       await emitMutationAudit(
         db,
         auth.claims,
         achievementPromotionAudit.published(promotionId),
         req,
       );
-      return published;
+      return { promotion: published };
     });
-    return jsonResponse(envelope(mapPromotion(promotion)));
+
+    if ("error" in result) {
+      if (result.error === "not_found") {
+        return errorEnvelope("NOT_FOUND", "Promotion not found", 404);
+      }
+      return errorEnvelope("PROMOTION_NOT_APPROVED", "Promotion must be approved before publishing", 409);
+    }
+    return jsonResponse(envelope(mapPromotion(result.promotion)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("PROMOTION_ERROR", "Publish promotion failed", 500);

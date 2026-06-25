@@ -530,6 +530,17 @@ export async function resolveBroadcastRecipients(
     if (rows.length > 0) return rows.map((r) => r.user_id);
   }
 
+  // All active staff of the school (teaching + non-teaching), unlike all_teachers
+  // which is limited to teacher/principal/schoolAdmin.
+  if (audience === "all_staff") {
+    const rows = await db.queryObject<{ user_id: string }>(
+      `SELECT DISTINCT user_id FROM school_memberships
+       WHERE school_id = $1 AND status = 'active'`,
+      [schoolId],
+    );
+    return rows.map((r) => r.user_id);
+  }
+
   return [];
 }
 

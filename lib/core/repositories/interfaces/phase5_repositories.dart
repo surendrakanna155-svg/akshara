@@ -131,6 +131,7 @@ abstract class AchievementPromotionRepository {
   Future<AchievementPromotion> publishPromotion({
     required RepositoryQuery query,
     required String promotionId,
+    List<String> destinations = const [],
   });
 
   Future<void> trackMetric({

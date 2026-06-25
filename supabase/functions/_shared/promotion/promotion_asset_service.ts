@@ -53,13 +53,70 @@ function assetMeta(
   };
 }
 
-export function generatePromotionAssetBundle(title: string): PromotionAssetBundle {
+export interface AssetBundleOptions {
+  subjectType?: string;
+  description?: string;
+}
+
+/** Subject-appropriate wording so a festival/holiday reads as a greeting, not an "achievement". */
+function tone(subjectType: string | undefined): {
+  poster: (t: string) => string;
+  whatsapp: (t: string) => string;
+  instagram: (t: string) => string;
+  facebook: (t: string) => string;
+  hashtags: string;
+} {
+  switch (subjectType) {
+    case "holiday":
+      return {
+        poster: (t) => `Holiday notice: ${t}. School remains closed.`,
+        whatsapp: (t) => `📅 Holiday: ${t}. Our school will remain closed. — Akshara School`,
+        instagram: (t) => `${t} 📅 Enjoy the break!`,
+        facebook: (t) => `Holiday announcement: ${t}. The school will remain closed.`,
+        hashtags: "#Holiday #SchoolNotice",
+      };
+    case "festival":
+      return {
+        poster: (t) => `Warm greetings on ${t} from all of us.`,
+        whatsapp: (t) => `🪔 Happy ${t}! Warm wishes to our school family. — Akshara School`,
+        instagram: (t) => `Happy ${t} ✨ from our school family`,
+        facebook: (t) => `Wishing everyone a joyful ${t} from our school family!`,
+        hashtags: "#Festival #Greetings",
+      };
+    case "event":
+    case "exam":
+    case "result":
+    case "admission":
+      return {
+        poster: (t) => `${t} — details inside.`,
+        whatsapp: (t) => `📣 ${t}. Please see the details shared by the school.`,
+        instagram: (t) => `${t} 📣`,
+        facebook: (t) => `${t} — see the details from our school.`,
+        hashtags: "#SchoolUpdate",
+      };
+    default: // achievement / general
+      return {
+        poster: (t) => `Celebrating ${t}.`,
+        whatsapp: (t) => `🎉 ${t}! Proud moment for our school family. Share the joy!`,
+        instagram: (t) => `${t} ✨ #AksharaPride #StudentSuccess`,
+        facebook: (t) => `Congratulations on ${t}! Share the joy with our community.`,
+        hashtags: "#AksharaPride",
+      };
+  }
+}
+
+export function generatePromotionAssetBundle(
+  title: string,
+  opts: AssetBundleOptions = {},
+): PromotionAssetBundle {
+  const t = tone(opts.subjectType);
+  const tail = opts.description ? ` ${opts.description}` : "";
   return {
     poster: assetMeta(
       "poster",
       "Poster",
-      `Celebrating ${title}`,
-      `Official achievement poster for ${title}. Ready for print at 1080×1920.`,
+      title,
+      `${t.poster(title)}${tail} Ready for print at 1080×1920.`,
       { format: "image/png", width: 1080, height: 1920, aspectRatio: "9:16" },
     ),
     banner: assetMeta(
@@ -73,28 +130,28 @@ export function generatePromotionAssetBundle(title: string): PromotionAssetBundl
       "appCard",
       "App Card",
       title,
-      `In-app achievement card for parent and student feeds.`,
+      `In-app card for parent and student feeds.`,
       { format: "image/png", width: 800, height: 450, aspectRatio: "16:9" },
     ),
     whatsapp: assetMeta(
       "whatsapp",
       "WhatsApp Banner",
       title,
-      `🎉 ${title}! Proud moment for our school family. Share the joy!`,
+      t.whatsapp(title),
       { format: "image/jpeg", width: 1200, height: 630, aspectRatio: "1.91:1" },
     ),
     instagram: assetMeta(
       "instagram",
       "Instagram Post",
       title,
-      `${title} ✨ #AksharaPride #StudentSuccess #SchoolAchievements`,
+      `${t.instagram(title)} ${t.hashtags}`,
       { format: "image/jpeg", width: 1080, height: 1080, aspectRatio: "1:1" },
     ),
     facebook: assetMeta(
       "facebook",
       "Facebook Post",
       title,
-      `Congratulations on ${title}! Share the joy with our community.`,
+      t.facebook(title),
       { format: "image/jpeg", width: 1200, height: 630, aspectRatio: "1.91:1" },
     ),
   };

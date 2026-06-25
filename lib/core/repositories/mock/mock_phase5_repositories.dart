@@ -579,6 +579,7 @@ class MockAchievementPromotionRepository
   Future<AchievementPromotion> publishPromotion({
     required RepositoryQuery query,
     required String promotionId,
+    List<String> destinations = const [],
   }) async {
     return AchievementPromotion(
       id: promotionId,
@@ -597,6 +598,10 @@ class MockAchievementPromotionRepository
         },
       },
       analytics: const {'views': 1, 'shares': 0, 'downloads': 0},
+      destinations: destinations,
+      publishResults: {
+        for (final d in destinations) d: const {'status': 'sent'},
+      },
     );
   }
 

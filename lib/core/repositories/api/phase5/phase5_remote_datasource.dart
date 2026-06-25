@@ -274,10 +274,12 @@ class Phase5RemoteDataSource {
   Future<Map<String, dynamic>> publishPromotion({
     required RepositoryQuery query,
     required String promotionId,
+    List<String> destinations = const [],
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/promotions/$promotionId/publish',
       queryParameters: _params(query),
+      data: {'destinations': destinations},
     );
     return _data(response);
   }

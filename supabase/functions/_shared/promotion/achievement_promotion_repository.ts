@@ -14,10 +14,21 @@ export interface PromotionRow {
   analytics: { views: number; shares: number; downloads: number };
   created_at: string;
   published_at: string | null;
+  subject_type: string;
+  calendar_event_id: string | null;
+  destinations: unknown;
+  publish_results: Record<string, unknown>;
 }
 
-export function generatePromotionAssets(title: string): Record<string, unknown> {
-  return promotionAssetsToRecord(generatePromotionAssetBundle(title));
+const PROMO_COLS =
+  `id, achievement_type, title, description, status, assets, analytics,
+   created_at, published_at, subject_type, calendar_event_id, destinations, publish_results`;
+
+export function generatePromotionAssets(
+  title: string,
+  opts: { subjectType?: string; description?: string } = {},
+): Record<string, unknown> {
+  return promotionAssetsToRecord(generatePromotionAssetBundle(title, opts));
 }
 
 export async function listPromotions(
@@ -27,10 +38,7 @@ export async function listPromotions(
   const conditions = status ? "WHERE status = $1" : "";
   const params = status ? [status] : [];
   return await client.queryObject<PromotionRow>(
-    `SELECT id, achievement_type, title, description, status, assets, analytics,
-            created_at, published_at
-     FROM achievement_promotions ${conditions}
-     ORDER BY created_at DESC`,
+    `SELECT ${PROMO_COLS} FROM achievement_promotions ${conditions} ORDER BY created_at DESC`,
     params,
   );
 }
@@ -40,9 +48,7 @@ export async function getPromotion(
   promotionId: string,
 ): Promise<PromotionRow | null> {
   const rows = await client.queryObject<PromotionRow>(
-    `SELECT id, achievement_type, title, description, status, assets, analytics,
-            created_at, published_at
-     FROM achievement_promotions WHERE id = $1`,
+    `SELECT ${PROMO_COLS} FROM achievement_promotions WHERE id = $1`,
     [promotionId],
   );
   return rows[0] ?? null;
@@ -57,15 +63,16 @@ export async function createPromotion(
     title: string;
     description?: string;
     submittedBy: string;
+    subjectType?: string;
+    calendarEventId?: string | null;
   },
 ): Promise<PromotionRow> {
   const rows = await client.queryObject<PromotionRow>(
     `INSERT INTO achievement_promotions (
        organization_id, school_id, achievement_type, title, description,
-       status, submitted_by
-     ) VALUES ($1, $2, $3, $4, $5, 'draft', $6)
-     RETURNING id, achievement_type, title, description, status, assets, analytics,
-               created_at, published_at`,
+       status, submitted_by, subject_type, calendar_event_id
+     ) VALUES ($1, $2, $3, $4, $5, 'draft', $6, $7, $8)
+     RETURNING ${PROMO_COLS}`,
     [
       organizationId,
       schoolId,
@@ -73,6 +80,8 @@ export async function createPromotion(
       input.title,
       input.description ?? null,
       input.submittedBy,
+      input.subjectType ?? "achievement",
+      input.calendarEventId ?? null,
     ],
   );
   return rows[0]!;
@@ -81,19 +90,17 @@ export async function createPromotion(
 export async function generateAndStoreAssets(
   client: TenantQueryClient,
   promotionId: string,
+  assets: Record<string, unknown>,
 ): Promise<PromotionRow> {
-  const current = await getPromotion(client, promotionId);
-  if (!current) throw new Error("Promotion not found");
-  const assets = generatePromotionAssets(current.title);
   const rows = await client.queryObject<PromotionRow>(
     `UPDATE achievement_promotions
      SET assets = $1::jsonb, status = 'pending_approval'
      WHERE id = $2
-     RETURNING id, achievement_type, title, description, status, assets, analytics,
-               created_at, published_at`,
+     RETURNING ${PROMO_COLS}`,
     [JSON.stringify(assets), promotionId],
   );
-  return rows[0]!;
+  if (!rows[0]) throw new Error("Promotion not found");
+  return rows[0];
 }
 
 export async function approvePromotion(
@@ -105,25 +112,26 @@ export async function approvePromotion(
     `UPDATE achievement_promotions
      SET status = 'approved', approved_by = $1
      WHERE id = $2
-     RETURNING id, achievement_type, title, description, status, assets, analytics,
-               created_at, published_at`,
+     RETURNING ${PROMO_COLS}`,
     [approvedBy, promotionId],
   );
   if (!rows[0]) throw new Error("Promotion not found");
   return rows[0];
 }
 
-export async function publishPromotion(
+export async function markPromotionPublished(
   client: TenantQueryClient,
   promotionId: string,
+  destinations: string[],
+  publishResults: Record<string, unknown>,
 ): Promise<PromotionRow> {
   const rows = await client.queryObject<PromotionRow>(
     `UPDATE achievement_promotions
-     SET status = 'published', published_at = timezone('utc', now())
+     SET status = 'published', published_at = timezone('utc', now()),
+         destinations = $2::jsonb, publish_results = $3::jsonb
      WHERE id = $1 AND status = 'approved'
-     RETURNING id, achievement_type, title, description, status, assets, analytics,
-               created_at, published_at`,
-    [promotionId],
+     RETURNING ${PROMO_COLS}`,
+    [promotionId, JSON.stringify(destinations), JSON.stringify(publishResults)],
   );
   if (!rows[0]) throw new Error("Promotion not found or not approved");
   return rows[0];

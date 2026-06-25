@@ -255,6 +255,7 @@ class Phase5Mapper {
     return AchievementPromotion(
       id: json['id'] as String? ?? '',
       achievementType: json['achievementType'] as String? ?? '',
+      subjectType: json['subjectType'] as String? ?? json['achievementType'] as String? ?? 'achievement',
       title: json['title'] as String? ?? '',
       status: json['status'] as String? ?? 'draft',
       assets: Map<String, dynamic>.from(json['assets'] as Map? ?? const {}),
@@ -264,6 +265,8 @@ class Phase5Mapper {
         'downloads': analytics['downloads'] as int? ?? 0,
       },
       description: json['description'] as String?,
+      destinations: (json['destinations'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      publishResults: Map<String, dynamic>.from(json['publishResults'] as Map? ?? const {}),
     );
   }
 
