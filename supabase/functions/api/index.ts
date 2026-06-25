@@ -47,6 +47,7 @@ import { routeOperations } from "../_shared/operations/operations_router.ts";
 import { routeMemories } from "../_shared/memories/school_memories_router.ts";
 import { routePromotion } from "../_shared/promotion/achievement_promotion_router.ts";
 import { routeSchoolCalendar } from "../_shared/school_calendar/school_calendar_router.ts";
+import { routeSocial } from "../_shared/social/social_router.ts";
 import { routeSetupWizard } from "../_shared/setup_wizard/setup_wizard_router.ts";
 import { routeWidgetPlatform } from "../_shared/widget_platform/widget_platform_router.ts";
 import { routeTeacherAssistant } from "../_shared/teacher_assistant/teacher_assistant_router.ts";
@@ -102,6 +103,7 @@ async function routeModuleRequest(
     routeMemories,
     routePromotion,
     routeSchoolCalendar,
+    routeSocial,
     withEntitlement(routeAlumni, "/alumni", "module.alumni"),
     routeManagement,
     routeControlCenter,

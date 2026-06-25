@@ -12,6 +12,7 @@ import {
   insertBroadcastRecipient,
   resolveBroadcastRecipients,
 } from "../communication/communication_repository.ts";
+import { publishToSocialChannel } from "../social/social_publish_service.ts";
 
 export const PUBLISH_DESTINATIONS = [
   "parent_app",
@@ -125,11 +126,16 @@ export async function dispatchPublish(
       );
       results[destination] = { status: "published", channel: "website", postId: rows[0]!.id };
     } else if (destination === "facebook" || destination === "instagram") {
-      results[destination] = {
-        status: "pending_connection",
-        channel: "meta",
-        note: "Requires a connected Meta account — enabled in Phase 2 (Social Media Integration).",
-      };
+      // Phase 2: post via Meta Graph using the school's connected account, or
+      // `pending_connection` when none is linked.
+      const posterNode = input.assets["poster"] as Record<string, unknown> | undefined;
+      const imageUrl = (posterNode?.previewUrl ?? posterNode?.downloadUrl ?? null) as string | null;
+      results[destination] = await publishToSocialChannel(
+        db,
+        destination,
+        captionFor(input.assets, destination, input.caption),
+        imageUrl,
+      );
     } else {
       results[destination] = { status: "skipped", reason: "unknown_destination" };
     }
