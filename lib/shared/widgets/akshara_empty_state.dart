@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/spacing.dart';
-import '../../theme/theme_extensions.dart';
 import 'akshara_motion.dart';
 import 'akshara_empty_illustration.dart';
 

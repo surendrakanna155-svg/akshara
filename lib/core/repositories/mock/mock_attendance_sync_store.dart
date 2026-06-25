@@ -1,5 +1,6 @@
 /// Cross-persona attendance sync for mock QA journeys (teacher submit → parent
 /// and student KPI).
+library;
 import '../../../features/parent/attendance/attendance_models.dart';
 import '../../attendance/attendance_sync_bridge.dart';
 

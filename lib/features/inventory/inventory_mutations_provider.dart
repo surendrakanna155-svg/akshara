@@ -10,7 +10,6 @@ import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
-import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
 import '../finance/inventory_finance/inventory_finance_models.dart';
@@ -153,11 +152,11 @@ class CreateProcurementOrderNotifier
             orderId: result.id,
             requesterId: auth.claims?.userId ?? 'storekeeper_demo',
             requesterName: auth.displayName ?? request.requestedBy,
-            title: 'Approve PO — ${result.poNumber ?? result.id}',
+            title: 'Approve PO — ${result.poNumber}',
             summary:
                 '${result.vendorName} · ${result.totalAmount} · ${result.items}',
             payload: {
-              'poNumber': result.poNumber ?? result.id,
+              'poNumber': result.poNumber,
               'vendorName': result.vendorName,
               'totalAmount': result.totalAmount,
               'requestedBy': request.requestedBy,

@@ -56,7 +56,9 @@ void main() {
       const query = RepositoryQuery.demo;
 
       expect((await repo.getDashboard(query: query)).kpis, hasLength(6));
-      expect((await repo.getStudents(query: query)).total, 10);
+      // 10 real students + 1 generated placeholder (isPlaceholder) seeded to
+      // exercise the first-time-onboarding placeholder UI in the registry.
+      expect((await repo.getStudents(query: query)).total, 11);
       expect(
         (await repo.getAcademicAssignment(query: query)).classOptions,
         isNotEmpty,

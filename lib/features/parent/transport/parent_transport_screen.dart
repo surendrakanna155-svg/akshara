@@ -72,7 +72,7 @@ class ParentTransportScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AksharaSpacing.s4),
-              AksharaInsightCard(
+              const AksharaInsightCard(
                 message:
                     'Bus is approximately 8 minutes away (telemetry preview). '
                     'Live map integration is not enabled in this build.',

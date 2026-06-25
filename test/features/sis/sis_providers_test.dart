@@ -43,7 +43,9 @@ void main() {
       await container.read(sisStudentsFutureProvider.future);
 
       final students = container.read(sisStudentsProvider);
-      expect(students, hasLength(10));
+      // 10 real students + 1 generated placeholder (isPlaceholder) seeded to
+      // exercise the first-time-onboarding placeholder UI in the registry.
+      expect(students, hasLength(11));
       expect(students.first.id, startsWith('SIS-STU-'));
     });
 

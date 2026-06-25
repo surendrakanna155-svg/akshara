@@ -361,7 +361,7 @@ class _MarksEntryPanel extends ConsumerWidget {
           const SizedBox(height: AksharaSpacing.s3),
           DropdownButtonFormField<String>(
             key: QaTestKeys.teacherExamSelector,
-            value: activeExamId,
+            initialValue: activeExamId,
             decoration: const InputDecoration(
               labelText: 'Exam session',
               isDense: true,

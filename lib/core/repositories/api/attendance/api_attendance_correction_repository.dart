@@ -1,7 +1,6 @@
 import '../../../attendance/attendance_correction_models.dart';
 import '../../interfaces/attendance_correction_repository.dart';
 import '../../repository_query.dart';
-import 'mapper/attendance_correction_mapper.dart';
 import 'remote/attendance_correction_remote_datasource.dart';
 
 class ApiAttendanceCorrectionRepository implements AttendanceCorrectionRepository {

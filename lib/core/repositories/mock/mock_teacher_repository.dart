@@ -590,37 +590,37 @@ Map<String, List<TeacherAttendanceStudent>> _mockStudentsByClass() {
   // Contract tests expect stable mock studentIds (s1..s6). We keep those ids
   // but align the canonical student name ("Ravi Kumar") to s5.
   final students8a = [
-    TeacherAttendanceStudent(
+    const TeacherAttendanceStudent(
       id: 's1',
       name: 'Arjun Das',
       rollNo: '05',
       mark: StudentAttendanceMark.unmarked,
     ),
-    TeacherAttendanceStudent(
+    const TeacherAttendanceStudent(
       id: 's2',
       name: 'Ananya Rao',
       rollNo: '02',
       mark: StudentAttendanceMark.present,
     ),
-    TeacherAttendanceStudent(
+    const TeacherAttendanceStudent(
       id: 's3',
       name: 'Karthik Menon',
       rollNo: '03',
       mark: StudentAttendanceMark.late,
     ),
-    TeacherAttendanceStudent(
+    const TeacherAttendanceStudent(
       id: 's4',
       name: 'Priya Nair',
       rollNo: '04',
       mark: StudentAttendanceMark.absent,
     ),
-    TeacherAttendanceStudent(
+    const TeacherAttendanceStudent(
       id: 's5',
       name: 'Ravi Kumar',
       rollNo: '01',
       mark: StudentAttendanceMark.unmarked,
     ),
-    TeacherAttendanceStudent(
+    const TeacherAttendanceStudent(
       id: 's6',
       name: 'Meera Iyer',
       rollNo: '06',

@@ -2,7 +2,6 @@ import '../../../exams/exam_administration_requests.dart';
 import '../../../exams/exam_administration_store.dart';
 import '../../interfaces/exam_administration_repository.dart';
 import '../../repository_query.dart';
-import 'mapper/exam_mapper.dart';
 import 'remote/exam_remote_datasource.dart';
 
 /// API implementation of [ExamAdministrationRepository] — enabled via [examApiEnabledProvider].

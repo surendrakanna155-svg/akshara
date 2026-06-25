@@ -31,7 +31,7 @@ void main() {
       StaffLeaveGovernanceStore.instance.reset();
 
       MockParentWriteStore.instance.leaveRequests = [
-        LeaveRequest(
+        const LeaveRequest(
           id: 'lv_test_1',
           childName: 'Ravi Kumar',
           childClass: 'Class 8-A',
@@ -41,7 +41,7 @@ void main() {
           type: LeaveType.personal,
           status: LeaveStatus.pending,
           submittedLabel: '18 Jun 2026',
-          timeline: const [
+          timeline: [
             LeaveTimelineStep(
               label: 'Submitted',
               dateLabel: 'Complete',
@@ -57,7 +57,7 @@ void main() {
       ];
 
       MockHrWriteStore.instance.leaveRequests = [
-        HrLeaveRequest(
+        const HrLeaveRequest(
           id: 'lv_req_test',
           employeeId: 'HR-EMP-1',
           employeeName: 'Anita Rao',

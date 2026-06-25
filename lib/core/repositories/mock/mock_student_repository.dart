@@ -145,13 +145,13 @@ class MockStudentRepository implements StudentRepository {
         schoolName: 'Akshara International School',
         unreadNotifications: 2,
         parentContacts: [
-          ParentContact(
+          const ParentContact(
             name: 'Suresh Kumar',
             relation: 'Father',
             phoneLabel: '+91 98765 43210',
             email: 'suresh.kumar@email.com',
           ),
-          ParentContact(
+          const ParentContact(
             name: 'Lakshmi Kumar',
             relation: 'Mother',
             phoneLabel: '+91 98765 43211',
@@ -159,10 +159,10 @@ class MockStudentRepository implements StudentRepository {
           ),
         ],
         academicSummary: [
-          AcademicSummaryItem(label: 'Current term', value: 'Term 2 · 2025-26'),
-          AcademicSummaryItem(label: 'Class teacher', value: 'Mrs. Sharma'),
-          AcademicSummaryItem(label: 'Attendance', value: '92% this month'),
-          AcademicSummaryItem(label: 'Overall grade', value: 'A'),
+          const AcademicSummaryItem(label: 'Current term', value: 'Term 2 · 2025-26'),
+          const AcademicSummaryItem(label: 'Class teacher', value: 'Mrs. Sharma'),
+          const AcademicSummaryItem(label: 'Attendance', value: '92% this month'),
+          const AcademicSummaryItem(label: 'Overall grade', value: 'A'),
         ],
       );
   }

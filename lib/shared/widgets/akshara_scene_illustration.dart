@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
 
 /// Lightweight vector-style scene illustrations for heroes and empty states (M15.5).

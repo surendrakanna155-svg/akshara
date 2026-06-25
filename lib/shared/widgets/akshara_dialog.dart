@@ -7,7 +7,7 @@ import 'akshara_motion.dart';
 
 /// Standard vertical gap between fields inside dialogs and sheets.
 class AksharaDialogFieldGap extends SizedBox {
-  const AksharaDialogFieldGap() : super(height: AksharaSpacing.s3);
+  const AksharaDialogFieldGap({super.key}) : super(height: AksharaSpacing.s3);
 }
 
 /// Premium dialog action row — cancel (text) + primary confirm.

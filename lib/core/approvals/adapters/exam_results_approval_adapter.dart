@@ -42,7 +42,7 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
     }
     if (exam.phase == ExamLifecyclePhase.published) {
       throw ApiFailureException(
-        ApiFailure(
+        const ApiFailure(
           type: ApiFailureType.unknown,
           message: 'Exam results are already published.',
           code: 'EXAM_ALREADY_PUBLISHED',
@@ -164,7 +164,7 @@ class ExamResultsApprovalAdapter implements ApprovalTypeAdapter {
   ) async {
     if (exam.coordinatorVerified || _store.isCoordinatorVerified(examId)) return;
     throw ApiFailureException(
-      ApiFailure(
+      const ApiFailure(
         type: ApiFailureType.unknown,
         message:
             'Exam results must be verified by the exam coordinator before principal approval.',

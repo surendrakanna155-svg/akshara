@@ -19,10 +19,10 @@ void main() {
 
     test('submittedCount includes reviewed; reviewedCount counts only reviewed',
         () {
-      final data = student.StudentHomeworkData(
+      final data = const student.StudentHomeworkData(
         studentName: 'Ravi',
         classLabel: '8-A',
-        items: const [
+        items: [
           student.StudentHomeworkItem(
             id: 'a',
             subject: 'Math',
@@ -64,12 +64,12 @@ void main() {
 
     test('submittedCount includes reviewed; reviewedCount counts only reviewed',
         () {
-      final data = parent.ParentHomeworkData(
+      final data = const parent.ParentHomeworkData(
         childName: 'Ravi',
         childClass: '8-A',
         insightMessage: '',
         insightActionLabel: '',
-        items: const [
+        items: [
           parent.ParentHomeworkItem(
             id: 'a',
             subject: 'Math',

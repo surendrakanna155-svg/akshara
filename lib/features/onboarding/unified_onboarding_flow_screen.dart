@@ -143,7 +143,7 @@ class _StepBody extends StatelessWidget {
       UnifiedOnboardingStep.schoolProfile =>
         _SchoolProfileStep(state: state, notifier: notifier),
       UnifiedOnboardingStep.curriculum => DropdownButtonFormField<String>(
-          value: state.curriculum,
+          initialValue: state.curriculum,
           decoration: const InputDecoration(
             labelText: 'Board / curriculum',
             border: OutlineInputBorder(),
@@ -191,7 +191,7 @@ class _StepBody extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButtonFormField<String>(
-              value: state.feeModel.isEmpty ? 'term_wise' : state.feeModel,
+              initialValue: state.feeModel.isEmpty ? 'term_wise' : state.feeModel,
               decoration: const InputDecoration(
                 labelText: 'Fee model',
                 border: OutlineInputBorder(),
@@ -251,7 +251,7 @@ class _StepBody extends StatelessWidget {
           ],
         ),
       UnifiedOnboardingStep.language => DropdownButtonFormField<String>(
-          value: state.defaultLanguage,
+          initialValue: state.defaultLanguage,
           decoration: const InputDecoration(
             labelText: 'Default parent language',
             border: OutlineInputBorder(),
@@ -445,7 +445,7 @@ class _AiBriefSheetState extends State<_AiBriefSheet> {
           ),
           const SizedBox(height: AksharaSpacing.s3),
           DropdownButtonFormField<String>(
-            value: _board,
+            initialValue: _board,
             decoration: const InputDecoration(
               labelText: 'Board / curriculum',
               border: OutlineInputBorder(),
@@ -461,7 +461,7 @@ class _AiBriefSheetState extends State<_AiBriefSheet> {
           ),
           const SizedBox(height: AksharaSpacing.s3),
           DropdownButtonFormField<String>(
-            value: _schoolType,
+            initialValue: _schoolType,
             decoration: const InputDecoration(
               labelText: 'School type',
               border: OutlineInputBorder(),

@@ -78,7 +78,7 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
           const AksharaSectionHeader(title: '1. Select student'),
           const SizedBox(height: AksharaSpacing.s2),
           DropdownButtonFormField<String>(
-            value: selectedId,
+            initialValue: selectedId,
             decoration: const InputDecoration(
               labelText: 'Student',
               border: OutlineInputBorder(),
@@ -214,7 +214,7 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
                 labelText: 'Concern type',
                 border: OutlineInputBorder(),
               ),
-              value: ref.watch(_subjectConcernCategoryProvider),
+              initialValue: ref.watch(_subjectConcernCategoryProvider),
               items: [
                 for (final cat in SubjectConcernCategory.values)
                   DropdownMenuItem(value: cat, child: Text(cat.label)),
@@ -287,6 +287,7 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
     }
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

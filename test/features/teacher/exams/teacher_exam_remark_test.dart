@@ -7,7 +7,6 @@ import 'package:akshara_erp/core/teaching/teacher_assignment_registry.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/teacher/communication/teacher_teaching_context_provider.dart';
-import 'package:akshara_erp/features/teacher/exams/exam_models.dart';
 import 'package:akshara_erp/features/teacher/exams/teacher_exams_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';

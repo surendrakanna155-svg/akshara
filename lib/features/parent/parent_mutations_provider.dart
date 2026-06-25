@@ -77,7 +77,7 @@ class SubmitParentLeaveNotifier extends AsyncNotifier<LeaveRequest?> {
       final rbac = ref.read(rbacServiceProvider);
       if (!rbac.hasPermission(Permission.submitStudentLeave)) {
         throw ApiFailureException(
-          ApiFailure(
+          const ApiFailure(
             type: ApiFailureType.forbidden,
             message: 'You do not have permission to submit student leave.',
             code: 'RBAC_SUBMITSTUDENTLEAVE',
@@ -208,7 +208,7 @@ class SubmitParentAttendanceCorrectionNotifier
       final rbac = ref.read(rbacServiceProvider);
       if (!rbac.hasPermission(Permission.submitAttendanceCorrection)) {
         throw ApiFailureException(
-          ApiFailure(
+          const ApiFailure(
             type: ApiFailureType.forbidden,
             message:
                 'You do not have permission to submit attendance corrections.',

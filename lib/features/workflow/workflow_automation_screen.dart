@@ -54,7 +54,7 @@ class _WorkflowAutomationScreenState extends ConsumerState<WorkflowAutomationScr
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
-          _StaleApprovalInsightBanner(),
+          const _StaleApprovalInsightBanner(),
           TabBar(
             controller: _tabs,
             tabs: const <Tab>[

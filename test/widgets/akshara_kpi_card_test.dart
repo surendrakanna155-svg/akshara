@@ -68,9 +68,9 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AksharaAppTheme.light(),
-          home: MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
-            child: const Scaffold(
+          home: const MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(1.5)),
+            child: Scaffold(
               body: Center(
                 child: SizedBox(
                   width: 200,

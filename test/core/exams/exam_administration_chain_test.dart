@@ -5,7 +5,6 @@ import 'package:akshara_erp/core/approvals/approval_request_type.dart';
 import 'package:akshara_erp/core/approvals/approval_status.dart';
 import 'package:akshara_erp/core/exams/exam_administration_store.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_approval_repository.dart';
-import 'package:akshara_erp/core/repositories/mock/mock_canonical_student_registry.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_parent_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_student_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_teacher_repository.dart';
@@ -25,7 +24,6 @@ void main() {
       final teacherRepo = MockTeacherRepository();
       final studentRepo = MockStudentRepository();
       final parentRepo = MockParentRepository();
-      final student = MockCanonicalStudentRegistry.primaryMobileStudent;
 
       final beforeStudent = await studentRepo.getExams(query: _query);
       final beforeParent = await parentRepo.getExams(query: _query);

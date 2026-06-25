@@ -45,7 +45,7 @@ class CreateHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
       assertManageHr(ref);
       if (!ref.read(rbacServiceProvider).hasPermission(Permission.submitStaffLeave)) {
         throw ApiFailureException(
-          ApiFailure(
+          const ApiFailure(
             type: ApiFailureType.forbidden,
             message: 'You do not have permission to submit staff leave.',
             code: 'RBAC_SUBMITSTAFFLEAVE',

@@ -1,7 +1,6 @@
 import 'package:akshara_erp/core/repositories/api/auth/dto/auth_permissions_dto.dart';
 import 'package:akshara_erp/core/repositories/api/auth/api_auth_repository.dart';
 import 'package:akshara_erp/core/repositories/api/auth/dto/auth_login_dto.dart';
-import 'package:akshara_erp/core/repositories/api/auth/dto/auth_permissions_dto.dart';
 import 'package:akshara_erp/core/repositories/api/auth/dto/auth_tokens_dto.dart';
 import 'package:akshara_erp/core/repositories/api/auth/dto/auth_user_dto.dart';
 import 'package:akshara_erp/core/repositories/api/auth/dto/auth_verify_otp_dto.dart';

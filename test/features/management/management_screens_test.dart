@@ -7,7 +7,6 @@ import 'package:akshara_erp/features/management/finance/management_finance_scree
 import 'package:akshara_erp/features/management/management_providers.dart';
 import 'package:akshara_erp/features/management/performance/management_performance_screen.dart';
 import 'package:akshara_erp/features/management/settings/management_settings_screen.dart';
-import 'package:akshara_erp/features/management/tasks/management_tasks_screen.dart';
 import 'package:akshara_erp/shared/widgets/widgets.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';

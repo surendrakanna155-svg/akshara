@@ -4,7 +4,6 @@ import 'package:akshara_erp/core/approvals/approval_request_type.dart';
 import 'package:akshara_erp/core/config/environment.dart';
 import 'package:akshara_erp/core/config/environment_provider.dart';
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
-import 'package:akshara_erp/features/management/approval/approval_center_provider.dart';
 import 'package:akshara_erp/features/management/tasks/management_tasks_screen.dart';
 import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +11,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/auth_test_overrides.dart';
-import '../../../helpers/provider_test_overrides.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../test_helpers.dart';

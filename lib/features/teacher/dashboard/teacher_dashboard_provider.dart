@@ -159,12 +159,12 @@ class TeacherDashboardData {
       greetingHeadline: 'Good morning, Priya',
       periodLabel: 'Period 3 · 10:30',
       unreadNotifications: 1,
-      checkIn: StaffCheckInInfo(
+      checkIn: const StaffCheckInInfo(
         status: StaffCheckInStatus.checkedIn,
         checkedInAt: '9:02 AM',
         verificationLabel: 'Geo+Face verified',
       ),
-      attendanceSummary: AttendanceSummary(
+      attendanceSummary: const AttendanceSummary(
         pendingBannerMessage: 'Attendance not marked for Class 8-A · Period 1',
         pendingBannerActionLabel: 'Mark now',
         pendingClassId: 'class-8a-p1',
@@ -174,7 +174,7 @@ class TeacherDashboardData {
         studentsTotal: 38,
       ),
       todaySchedule: [
-        ScheduleClass(
+        const ScheduleClass(
           id: 'sched-1',
           timeLabel: '09:00',
           subject: 'Mathematics',
@@ -182,7 +182,7 @@ class TeacherDashboardData {
           room: 'Room 204',
           status: ClassScheduleStatus.done,
         ),
-        ScheduleClass(
+        const ScheduleClass(
           id: 'sched-2',
           timeLabel: '11:00',
           subject: 'Mathematics',
@@ -190,7 +190,7 @@ class TeacherDashboardData {
           room: 'Room 206',
           status: ClassScheduleStatus.now,
         ),
-        ScheduleClass(
+        const ScheduleClass(
           id: 'sched-3',
           timeLabel: '14:00',
           subject: 'Mathematics',
@@ -200,51 +200,51 @@ class TeacherDashboardData {
         ),
       ],
       pendingTasks: [
-        PendingTask(
+        const PendingTask(
           id: 'hw_review',
           icon: Icons.assignment_outlined,
           count: 5,
           label: 'HW to review',
         ),
-        PendingTask(
+        const PendingTask(
           id: 'unread_messages',
           icon: Icons.chat_bubble_outline,
           count: 3,
           label: 'Unread messages',
         ),
-        PendingTask(
+        const PendingTask(
           id: 'leave',
           icon: Icons.event_busy_outlined,
           count: 1,
           label: 'Leave request',
         ),
       ],
-      classTeacher: ClassTeacherInfo(
+      classTeacher: const ClassTeacherInfo(
         classLabel: '8-A',
         title: 'Class Teacher · 8-A Dashboard',
       ),
       quickActions: [
-        TeacherQuickAction(
+        const TeacherQuickAction(
           id: 'mark_attendance',
           label: 'Attendance',
           icon: Icons.fact_check_outlined,
         ),
-        TeacherQuickAction(
+        const TeacherQuickAction(
           id: 'homework',
           label: 'Homework',
           icon: Icons.assignment_outlined,
         ),
-        TeacherQuickAction(
+        const TeacherQuickAction(
           id: 'timetable',
           label: 'Timetable',
           icon: Icons.calendar_view_week_outlined,
         ),
-        TeacherQuickAction(
+        const TeacherQuickAction(
           id: 'exams',
           label: 'Exams',
           icon: Icons.grading_outlined,
         ),
-        TeacherQuickAction(
+        const TeacherQuickAction(
           id: 'messages',
           label: 'Messages',
           icon: Icons.forum_outlined,

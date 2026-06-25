@@ -1,6 +1,5 @@
 import 'package:akshara_erp/core/timetable/daily_timetable_engine.dart';
 import 'package:akshara_erp/core/timetable/mock_daily_timetable_store.dart';
-import 'package:akshara_erp/features/hr/hr_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

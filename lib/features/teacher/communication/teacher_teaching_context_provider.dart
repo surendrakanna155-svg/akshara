@@ -199,7 +199,7 @@ void seedDemoSubjectConcernIfNeeded() {
   final store = SubjectTeacherConcernStore.instance;
   if (store.allConcerns().isNotEmpty) return;
   store.flag(
-    SubjectTeacherConcernFlagRequest(
+    const SubjectTeacherConcernFlagRequest(
       sisStudentId: MockCanonicalStudentRegistry.primaryMobileStudentId,
       category: SubjectConcernCategory.lowMarks,
       observation: 'Scored 38% in Mathematics unit test — needs revision support.',

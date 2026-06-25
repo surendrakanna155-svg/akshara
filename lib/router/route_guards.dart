@@ -243,7 +243,7 @@ class AccessDeniedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       key: QaTestKeys.accessDeniedScreen,
       body: AksharaErrorState(
         message: 'Access Denied',

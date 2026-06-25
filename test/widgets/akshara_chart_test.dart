@@ -12,15 +12,15 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AksharaAppTheme.light(),
-          home: Scaffold(
+          home: const Scaffold(
             body: AksharaChartCard(
               title: 'Revenue trend',
-              child: const SizedBox(height: 120),
-              legend: const AksharaChartLegend(
+              legend: AksharaChartLegend(
                 items: [
                   AksharaChartLegendItem(color: Colors.blue, label: 'Actual'),
                 ],
               ),
+              child: SizedBox(height: 120),
             ),
           ),
         ),
@@ -56,11 +56,11 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AksharaAppTheme.light(),
-          home: Scaffold(
+          home: const Scaffold(
             body: FinanceCollectionTrendChart(
               title: 'Collection trend',
               height: 220,
-              points: const [
+              points: [
                 CollectionTrendPoint(
                   label: 'Jan',
                   amountLakhs: 8.2,

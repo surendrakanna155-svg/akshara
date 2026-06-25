@@ -6,7 +6,6 @@ import '../../../core/config/exam_approval_config.dart';
 import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
-import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';

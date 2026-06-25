@@ -70,7 +70,7 @@ void main() {
       studentName: 'Ravi Kumar',
       classLabel: '8-A',
       termLabel: 'Term 2',
-      subjects: const [
+      subjects: [
         ReportCardSubjectLine(
           subject: 'Mathematics',
           examTitle: 'Unit Test — Mathematics',

@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/auth_test_overrides.dart';
-import '../helpers/provider_test_overrides.dart';
 import 'golden_test_helpers.dart';
 
 void main() {

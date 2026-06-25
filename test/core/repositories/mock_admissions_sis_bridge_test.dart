@@ -60,7 +60,7 @@ void main() {
     test('queues SIS conversion when matching enrollment exists', () {
       final store = MockAdmissionsWriteStore.instance;
       store.enrollments = [
-        PendingEnrollmentRecord(
+        const PendingEnrollmentRecord(
           id: 'enr_1',
           studentName: 'Journey Student',
           seekingClass: '6',

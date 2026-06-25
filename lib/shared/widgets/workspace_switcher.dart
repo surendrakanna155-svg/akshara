@@ -29,7 +29,7 @@ class WorkspaceSwitcher extends ConsumerWidget {
       children: [
         Text(
           'Your workspaces',
-          style: text.labelLarge?.copyWith(color: colors.onSurfaceVariant),
+          style: text.labelLarge.copyWith(color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: AksharaSpacing.s3),
         SingleChildScrollView(
@@ -98,7 +98,7 @@ class WorkspaceSwitcherButton extends ConsumerWidget {
                     active?.shortTitle ?? 'Workspace',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: text.labelLarge?.copyWith(
+                    style: text.labelLarge.copyWith(
                       color: colors.onPrimaryContainer,
                       fontWeight: FontWeight.w600,
                     ),
@@ -229,7 +229,7 @@ class _WorkspaceChip extends StatelessWidget {
               const SizedBox(width: AksharaSpacing.s2),
               Text(
                 workspace.shortTitle,
-                style: text.labelLarge?.copyWith(
+                style: text.labelLarge.copyWith(
                   color: selected ? colors.onPrimary : colors.onSurface,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),

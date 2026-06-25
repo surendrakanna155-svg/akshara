@@ -11,7 +11,6 @@ import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/features/auth/auth_claims.dart';
 import 'package:akshara_erp/features/auth/auth_models.dart';
-import 'package:akshara_erp/features/auth/auth_provider.dart';
 import 'package:akshara_erp/features/management/approval/approval_center_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

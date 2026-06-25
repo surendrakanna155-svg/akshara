@@ -57,7 +57,7 @@ class ReportCardView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AksharaSpacing.s4),
-        AksharaSectionHeader(title: 'Subjects', fixedHeight: false),
+        const AksharaSectionHeader(title: 'Subjects', fixedHeight: false),
         const SizedBox(height: AksharaSpacing.s2),
         Material(
           color: colors.surface,

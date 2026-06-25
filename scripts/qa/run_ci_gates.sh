@@ -7,8 +7,8 @@ cd "$ROOT"
 
 log() { echo "[ci-gates] $*"; }
 
-log "Gate 1: flutter analyze"
-flutter analyze
+log "Gate 1: flutter analyze (0-issue bar — warnings AND infos are fatal so lint drift can't recur)"
+flutter analyze --fatal-infos
 
 log "Gate 2: module coverage report generation"
 python3 scripts/qa/generate_module_coverage_report.py

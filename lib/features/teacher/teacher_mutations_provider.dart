@@ -228,7 +228,7 @@ class PublishTeacherExamResultsNotifier
       final rbac = ref.read(rbacServiceProvider);
       if (!rbac.hasPermission(Permission.publishExamResults)) {
         throw ApiFailureException(
-          ApiFailure(
+          const ApiFailure(
             type: ApiFailureType.forbidden,
             message: 'You do not have permission to publish exam results.',
             code: 'RBAC_PUBLISHEXAMRESULTS',
@@ -272,7 +272,7 @@ class ProcessTeacherExamResultsNotifier
       final rbac = ref.read(rbacServiceProvider);
       if (!rbac.hasPermission(Permission.submitExamResults)) {
         throw ApiFailureException(
-          ApiFailure(
+          const ApiFailure(
             type: ApiFailureType.forbidden,
             message:
                 'You do not have permission to submit exam results for verification.',
@@ -316,7 +316,7 @@ class SubmitTeacherExamResultsForApprovalNotifier
       final rbac = ref.read(rbacServiceProvider);
       if (!rbac.hasPermission(Permission.submitExamResults)) {
         throw ApiFailureException(
-          ApiFailure(
+          const ApiFailure(
             type: ApiFailureType.forbidden,
             message: 'You do not have permission to submit exam results.',
             code: 'RBAC_SUBMITEXAMRESULTS',
@@ -377,7 +377,7 @@ class SubmitAttendanceCorrectionNotifier
       final rbac = ref.read(rbacServiceProvider);
       if (!rbac.hasPermission(Permission.submitAttendanceCorrection)) {
         throw ApiFailureException(
-          ApiFailure(
+          const ApiFailure(
             type: ApiFailureType.forbidden,
             message:
                 'You do not have permission to submit attendance corrections.',

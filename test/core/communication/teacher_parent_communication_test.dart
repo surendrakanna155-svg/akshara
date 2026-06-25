@@ -70,7 +70,6 @@ void main() {
     });
 
     test('builds WhatsApp URI with parent phone', () {
-      final student = MockCanonicalStudentRegistry.primaryMobileStudent;
       final result = ParentCommunicationStore.instance.send(
         request: const ParentCommunicationSendRequest(
           sisStudentId: MockCanonicalStudentRegistry.primaryMobileStudentId,

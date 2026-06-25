@@ -389,8 +389,8 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.teacherClassTeacherDashboard,
             name: 'teacherClassTeacherDashboard',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: const TeacherClassTeacherDashboardScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: TeacherClassTeacherDashboardScreen(),
             ),
           ),
           GoRoute(
@@ -417,8 +417,8 @@ GoRouter createAppRouter({
           GoRoute(
             path: RouteNames.teacherHomeworkCreate,
             name: 'teacherHomeworkCreate',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: const TeacherHomeworkCreateScreen(),
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: TeacherHomeworkCreateScreen(),
             ),
           ),
           GoRoute(
