@@ -58,6 +58,42 @@ class StartupOnboardingMapper {
     };
   }
 
+  /// Merge an AI pre-fill proposal onto the current wizard state. Each field is
+  /// taken from the proposal when present and non-empty; otherwise the current
+  /// value is preserved (so a sparse proposal never wipes entered data).
+  UnifiedOnboardingState applyProposal(
+    UnifiedOnboardingState current,
+    Map<String, dynamic> proposal,
+  ) {
+    String str(String key, String fallback) {
+      final v = proposal[key];
+      return v is String && v.trim().isNotEmpty ? v.trim() : fallback;
+    }
+
+    List<String> list(String key, List<String> fallback) {
+      final parsed = _stringList(proposal[key]);
+      return parsed.isNotEmpty ? parsed : fallback;
+    }
+
+    return current.copyWith(
+      schoolName: str('schoolName', current.schoolName),
+      board: str('board', current.board),
+      curriculum: str('curriculum', current.curriculum),
+      address: str('address', current.address),
+      contactPhone: str('contactPhone', current.contactPhone),
+      contactEmail: str('contactEmail', current.contactEmail),
+      academicYear: str('academicYear', current.academicYear),
+      classes: list('classes', current.classes),
+      sections: list('sections', current.sections),
+      feeModel: str('feeModel', current.feeModel),
+      feeCategories: list('feeCategories', current.feeCategories),
+      themePrimary: str('themePrimary', current.themePrimary),
+      themeSecondary: str('themeSecondary', current.themeSecondary),
+      defaultLanguage: str('defaultLanguage', current.defaultLanguage),
+      modulesEnabled: list('modulesEnabled', current.modulesEnabled),
+    );
+  }
+
   UnifiedOnboardingStep _stepFromApi(String? value) {
     return UnifiedOnboardingStep.values.firstWhere(
       (step) => step.name == value,

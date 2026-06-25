@@ -102,7 +102,9 @@ async function routeModuleRequest(
     routeManagement,
     routeControlCenter,
     routePilotOperations,
-    routeOnboarding,
+    // B7: AI School Builder (Phase 1) — only the AI pre-fill path is plan-gated;
+    // the rest of /onboarding stays open (it's the certified onboarding foundation).
+    withEntitlement(routeOnboarding, "/onboarding/startup/ai-prefill", "feature.ai_school_builder"),
     routeSetupWizard,
     routeWidgetPlatform,
     routeTeacherAssistant,

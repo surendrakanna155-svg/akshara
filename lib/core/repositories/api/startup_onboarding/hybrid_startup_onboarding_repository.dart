@@ -1,5 +1,6 @@
 import '../../interfaces/startup_onboarding_repository.dart';
 import '../../repository_query.dart';
+import '../../../../features/onboarding/ai_school_builder_models.dart';
 import '../../../../features/onboarding/unified_onboarding_models.dart';
 import '../api_exception.dart';
 import 'api_startup_onboarding_repository.dart';
@@ -42,6 +43,19 @@ class HybridStartupOnboardingRepository implements StartupOnboardingRepository {
       return await _api.goLive(query: query);
     } on ApiNotConnectedException {
       return _mock.goLive(query: query);
+    }
+  }
+
+  @override
+  Future<StartupOnboardingPrefillResult> aiPrefill({
+    required RepositoryQuery query,
+    required SchoolBrief brief,
+    required UnifiedOnboardingState current,
+  }) async {
+    try {
+      return await _api.aiPrefill(query: query, brief: brief, current: current);
+    } on ApiNotConnectedException {
+      return _mock.aiPrefill(query: query, brief: brief, current: current);
     }
   }
 }

@@ -6,6 +6,7 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
+import 'ai_school_builder_models.dart';
 import 'unified_onboarding_models.dart';
 import 'unified_onboarding_provider.dart';
 
@@ -42,6 +43,8 @@ class _UnifiedOnboardingFlowScreenState
             const SizedBox(height: AksharaSpacing.s2),
             const LinearProgressIndicator(),
           ],
+          const SizedBox(height: AksharaSpacing.s4),
+          _AiQuickSetupCard(notifier: notifier, isBusy: state.isLoading),
           const SizedBox(height: AksharaSpacing.s4),
           _StepBody(state: state, notifier: notifier),
           if (state.goLiveValidationErrors.isNotEmpty) ...[
@@ -313,6 +316,245 @@ class _StepBody extends StatelessWidget {
           ),
         ),
     };
+  }
+}
+
+/// B7 — AI School Builder (Phase 1): one-tap entry that turns a short brief into
+/// a complete, board-appropriate draft, applied into the wizard for review.
+class _AiQuickSetupCard extends StatelessWidget {
+  const _AiQuickSetupCard({required this.notifier, required this.isBusy});
+
+  final UnifiedOnboardingNotifier notifier;
+  final bool isBusy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AksharaSurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
+              const SizedBox(width: AksharaSpacing.s2),
+              Expanded(
+                child: Text('AI Quick Setup', style: theme.textTheme.titleMedium),
+              ),
+            ],
+          ),
+          const SizedBox(height: AksharaSpacing.s2),
+          Text(
+            'Describe your school in a few words and let Akshara draft your '
+            'classes, sections, fees, language and modules. You can review and '
+            'edit everything before going live.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.tonalIcon(
+              key: QaTestKeys.unifiedOnboardingAiPrefillButton,
+              onPressed: isBusy ? null : () => _openBriefSheet(context),
+              icon: const Icon(Icons.auto_fix_high),
+              label: const Text('Pre-fill with AI'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openBriefSheet(BuildContext context) async {
+    final brief = await showModalBottomSheet<SchoolBrief>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: const _AiBriefSheet(),
+      ),
+    );
+    if (brief == null || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final meta = await notifier.aiPrefill(brief);
+      if (!context.mounted) return;
+      final tag = meta.isAi ? 'AI draft applied' : 'Draft applied';
+      final detail = meta.rationale.isEmpty ? '' : ' — ${meta.rationale}';
+      messenger.showSnackBar(SnackBar(content: Text('$tag$detail')));
+      if (meta.warnings.isNotEmpty) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(meta.warnings.join('\n'))),
+        );
+      }
+    } catch (_) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not generate a draft — try again')),
+      );
+    }
+  }
+}
+
+/// Collects the short founder brief for AI pre-fill.
+class _AiBriefSheet extends StatefulWidget {
+  const _AiBriefSheet();
+
+  @override
+  State<_AiBriefSheet> createState() => _AiBriefSheetState();
+}
+
+class _AiBriefSheetState extends State<_AiBriefSheet> {
+  final _schoolName = TextEditingController();
+  final _lowestGrade = TextEditingController();
+  final _highestGrade = TextEditingController();
+  final _students = TextEditingController();
+  final _teachers = TextEditingController();
+  String _board = 'CBSE';
+  String _schoolType = 'day_school';
+
+  @override
+  void dispose() {
+    _schoolName.dispose();
+    _lowestGrade.dispose();
+    _highestGrade.dispose();
+    _students.dispose();
+    _teachers.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Tell us about your school',
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: AksharaSpacing.s3),
+          TextField(
+            controller: _schoolName,
+            decoration: const InputDecoration(
+              labelText: 'School name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+          DropdownButtonFormField<String>(
+            value: _board,
+            decoration: const InputDecoration(
+              labelText: 'Board / curriculum',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'CBSE', child: Text('CBSE')),
+              DropdownMenuItem(value: 'ICSE', child: Text('ICSE')),
+              DropdownMenuItem(value: 'State Board', child: Text('State Board')),
+              DropdownMenuItem(value: 'IB', child: Text('IB')),
+              DropdownMenuItem(value: 'Cambridge', child: Text('Cambridge')),
+            ],
+            onChanged: (v) => setState(() => _board = v ?? _board),
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+          DropdownButtonFormField<String>(
+            value: _schoolType,
+            decoration: const InputDecoration(
+              labelText: 'School type',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'day_school', child: Text('Day school')),
+              DropdownMenuItem(value: 'preschool', child: Text('Preschool')),
+              DropdownMenuItem(value: 'primary', child: Text('Primary')),
+              DropdownMenuItem(value: 'high_school', child: Text('High school')),
+              DropdownMenuItem(
+                  value: 'higher_secondary', child: Text('Higher secondary')),
+              DropdownMenuItem(value: 'residential', child: Text('Residential')),
+            ],
+            onChanged: (v) => setState(() => _schoolType = v ?? _schoolType),
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _lowestGrade,
+                  decoration: const InputDecoration(
+                    labelText: 'Lowest grade',
+                    hintText: 'e.g. Nursery',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s3),
+              Expanded(
+                child: TextField(
+                  controller: _highestGrade,
+                  decoration: const InputDecoration(
+                    labelText: 'Highest grade',
+                    hintText: 'e.g. Grade 10',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _students,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Approx. students',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s3),
+              Expanded(
+                child: TextField(
+                  controller: _teachers,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Approx. teachers',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              key: QaTestKeys.unifiedOnboardingAiPrefillApplyButton,
+              onPressed: () {
+                Navigator.of(context).pop(
+                  SchoolBrief(
+                    schoolName: _schoolName.text.trim(),
+                    board: _board,
+                    schoolType: _schoolType,
+                    lowestGrade: _lowestGrade.text.trim(),
+                    highestGrade: _highestGrade.text.trim(),
+                    estimatedStudents: int.tryParse(_students.text.trim()),
+                    estimatedTeachers: int.tryParse(_teachers.text.trim()),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Generate draft'),
+            ),
+          ),
+          const SizedBox(height: AksharaSpacing.s2),
+        ],
+      ),
+    );
   }
 }
 

@@ -53,4 +53,16 @@ class StartupOnboardingRemoteDataSource {
     );
     return _unwrap(response);
   }
+
+  Future<Map<String, dynamic>> aiPrefillStartupOnboarding({
+    required RepositoryQuery query,
+    required Map<String, dynamic> brief,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      StartupOnboardingApiPaths.aiPrefill,
+      data: brief,
+      queryParameters: _queryParams(query),
+    );
+    return _unwrap(response);
+  }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/repositories/repository_query.dart';
 import '../../core/tenant/tenant_provider.dart';
+import 'ai_school_builder_models.dart';
 import 'unified_onboarding_models.dart';
 
 final unifiedOnboardingProvider =
@@ -100,6 +101,24 @@ class UnifiedOnboardingNotifier extends Notifier<UnifiedOnboardingState> {
     final index = steps.indexOf(state.currentStep);
     if (index > 0) {
       _persist(state.copyWith(currentStep: steps[index - 1]));
+    }
+  }
+
+  /// AI School Builder (Phase 1): pre-fill the wizard from a short brief. The
+  /// proposal is applied onto current state and persisted server-side so it
+  /// survives reload; the admin then reviews/refines before going live.
+  /// Returns the proposal metadata (source + rationale + warnings).
+  Future<SchoolBlueprintResult> aiPrefill(SchoolBrief brief) async {
+    state = state.copyWith(isLoading: true, goLiveValidationErrors: const []);
+    final repo = ref.read(startupOnboardingRepositoryProvider);
+    try {
+      final result = await repo.aiPrefill(query: _query, brief: brief, current: state);
+      final saved = await repo.save(query: _query, state: result.state);
+      state = saved.copyWith(isLoading: false, isHydrated: true);
+      return result.meta;
+    } catch (_) {
+      state = state.copyWith(isLoading: false, isHydrated: true);
+      rethrow;
     }
   }
 

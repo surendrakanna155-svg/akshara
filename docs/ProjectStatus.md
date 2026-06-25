@@ -14,9 +14,17 @@
 > scope, WhatsApp readiness — live smoke **11/11** (`scripts/p1_integration_smoke.sh`). One
 > real cross-batch gap was found and fixed: the Marketing→CRM convert handoff wrote a UUID
 > owner, hiding marketing-sourced leads from the AI's assign next-best-action; the handoff
-> now leaves leads unassigned. For current status see
-> `docs/ROADMAP_RECONCILED_2026-06-24.md`, `docs/P1_INTEGRATION_CERTIFICATION.md`,
-> `docs/B6_MARKETING_ENGINE_CERTIFICATION.md`, and `docs/B2_STATUS_LEDGER.md`.
+> now leaves leads unassigned.
+>
+> **P2 begins — B7 AI School Builder (Phase 1) is PRODUCTION CERTIFIED (2026-06-25):** an
+> entitlement-gated AI pre-fill (`POST /onboarding/startup/ai-prefill`,
+> `feature.ai_school_builder`, Professional+Enterprise) that turns a short founder brief into a
+> complete, board-appropriate startup-onboarding proposal (classes, sections, fees, language,
+> modules) on the certified onboarding foundation — deterministic baseline + Claude refinement
+> with safe fallback, **non-destructive** (proposes only). Live smoke **10/10** (real auth +
+> prod DB + real AI, `source=ai`). For current status see
+> `docs/ROADMAP_RECONCILED_2026-06-24.md`, `docs/B7_AI_SCHOOL_BUILDER_CERTIFICATION.md`,
+> `docs/P1_INTEGRATION_CERTIFICATION.md`, and `docs/B2_STATUS_LEDGER.md`.
 
 ---
 

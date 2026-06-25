@@ -1,5 +1,6 @@
 import '../../interfaces/startup_onboarding_repository.dart';
 import '../../repository_query.dart';
+import '../../../../features/onboarding/ai_school_builder_models.dart';
 import '../../../../features/onboarding/unified_onboarding_models.dart';
 import 'mapper/startup_onboarding_mapper.dart';
 import 'remote/startup_onboarding_remote_datasource.dart';
@@ -39,6 +40,23 @@ class ApiStartupOnboardingRepository implements StartupOnboardingRepository {
     return StartupOnboardingGoLiveResult(
       state: state,
       validationErrors: state.goLiveValidationErrors,
+    );
+  }
+
+  @override
+  Future<StartupOnboardingPrefillResult> aiPrefill({
+    required RepositoryQuery query,
+    required SchoolBrief brief,
+    required UnifiedOnboardingState current,
+  }) async {
+    final json = await _remote.aiPrefillStartupOnboarding(
+      query: query,
+      brief: brief.toJson(),
+    );
+    final proposal = (json['proposal'] as Map<String, dynamic>?) ?? const {};
+    return StartupOnboardingPrefillResult(
+      state: _mapper.applyProposal(current, proposal).copyWith(isHydrated: true),
+      meta: SchoolBlueprintResult.fromJson(json),
     );
   }
 }

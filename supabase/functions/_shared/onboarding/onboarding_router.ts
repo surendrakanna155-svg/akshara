@@ -17,6 +17,7 @@ import {
   handleGoLiveStartupOnboarding,
   handleSaveStartupOnboarding,
 } from "./startup_onboarding_handlers.ts";
+import { handleAiPrefillStartupOnboarding } from "./ai_school_builder_handlers.ts";
 
 function matchOnboardingRoute(
   method: string,
@@ -33,6 +34,9 @@ function matchOnboardingRoute(
   }
   if (path === "/onboarding/startup/go-live" && method === "POST") {
     return { handler: handleGoLiveStartupOnboarding, args: [] };
+  }
+  if (path === "/onboarding/startup/ai-prefill" && method === "POST") {
+    return { handler: handleAiPrefillStartupOnboarding, args: [] };
   }
   if (path === "/onboarding/imports" && method === "GET") {
     return { handler: handleListImportJobs, args: [] };

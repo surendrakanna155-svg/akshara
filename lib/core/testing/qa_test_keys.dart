@@ -1327,6 +1327,10 @@ abstract final class QaTestKeys {
       ValueKey<String>('unified_onboarding_go_live_success');
   static const unifiedOnboardingProvisionSummary =
       ValueKey<String>('unified_onboarding_provision_summary');
+  static const unifiedOnboardingAiPrefillButton =
+      ValueKey<String>('unified_onboarding_ai_prefill');
+  static const unifiedOnboardingAiPrefillApplyButton =
+      ValueKey<String>('unified_onboarding_ai_prefill_apply');
 
   static const organizationBuilderHubScreen =
       ValueKey<String>('organization_builder_hub_screen');
