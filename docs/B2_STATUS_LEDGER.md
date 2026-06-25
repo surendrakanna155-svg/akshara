@@ -42,14 +42,15 @@ Legend: ✅ done & certified · 🟡 partial · ⛔ open · 🚫 intentionally o
 | Copilot plan-locked message | ✅ Step 4.6 |
 | SuperAdmin assign-plan screen | ✅ Step 4.5 |
 
-## Step 5 (planned — tests + production)
+## Step 5 — tests + production · ✅ DONE (2026-06-25)
 | Item | Status |
 |---|---|
-| Contract / integration / E2E tests (assign → 402 → upgrade → 200) | ⛔ OPEN |
-| `scripts/capability_gating_b2_smoke.sh` | ⛔ OPEN |
-| VPS deploy (migrations `20260717*`×3 + `20260718`) + edge | ⛔ OPEN |
-| Live production certification | ⛔ OPEN |
-| ⚠️ Assign live pilot org a plan BEFORE enabling enforcement | ⛔ OPEN (else Trial 402s its modules) |
+| Live smoke `scripts/capability_gating_b2_smoke.sh` (assign → 402 → upgrade → unlocked) | ✅ **8/8** live |
+| VPS deploy (migrations `20260717*`×3 + `20260718`) + edge | ✅ applied + deployed |
+| Pilot org assigned correct plan (Professional) BEFORE enabling enforcement | ✅ via live `PUT` |
+| `ENTITLEMENT_ENFORCEMENT=true` enabled | ✅ on `akshara-edge` |
+| Live production certification | ✅ `docs/B2_STEP5_CERTIFICATION.md` |
+| Audit `subscription.plan.assigned` live | ✅ recorded |
 
 ## Per-step certification docs
 - Step 1: in commit `f006cba` (data model + seed; validated via `supabase db reset`)
@@ -61,10 +62,10 @@ Legend: ✅ done & certified · 🟡 partial · ⛔ open · 🚫 intentionally o
 ## Per-step certification docs (cont.)
 - Step 4.6: `docs/B2_STEP4_6_CERTIFICATION.md` (G5 limits + G6a/b/c locked UX + enforcement switch)
 
-## Definition of "B2 100% complete"
+## Definition of "B2 100% complete" — ✅ MET (2026-06-25)
 All functional spec items (G1–G7 except the 🚫/deferred-minor G7a + the §6
-GET /school-config server-payload deviation) are now ✅ **built and certified
-locally**. The ONLY remaining work is **Step 5** (integration/E2E tests, smoke
-script, VPS deploy + production cert) — ⛔ open by design (owner-gated). Deferred
-minors (G7a override audit; server-resolved capabilities payload) remain tracked
-above, non-blocking for the pilot.
+GET /school-config server-payload deviation) are **built, locally certified, and
+now PRODUCTION CERTIFIED on the VPS** with enforcement enabled and the pilot org on
+its correct plan (Professional). **B2 = Production Certified.** Deferred minors
+(G7a enterprise-override audit; server-resolved capabilities payload — done
+client-side) remain tracked above, non-blocking for the pilot.

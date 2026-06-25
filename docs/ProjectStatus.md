@@ -4,6 +4,13 @@
 **Current version:** `v0.2-academic-mvp`  
 **HEAD commit:** `42b7018`
 
+> **Live backend / pilot state (2026-06-25):** the self-hosted backend is live on the
+> VPS (`akshara.veloraunisexsalon.com`). Production-certified revenue/pilot batches:
+> **B1 Admissions CRM** (2026-06-24) and **B2 Capability Gating / entitlement layer**
+> (2026-06-25 — enforcement enabled, pilot org on Professional). The versioned table
+> below tracks the older app-MVP milestones; for current batch status see the
+> authoritative `docs/ROADMAP_RECONCILED_2026-06-24.md` and `docs/B2_STATUS_LEDGER.md`.
+
 ---
 
 ## Release History
