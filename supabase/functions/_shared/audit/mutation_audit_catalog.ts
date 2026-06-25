@@ -982,6 +982,16 @@ export const widgetPlatformAudit = {
       idempotencyKey: `widget_platform.layout:${layoutId}`,
     },
   }),
+  // B11 — role/vertical-pack dashboard override saved (entity = layout row id).
+  roleLayoutSaved: (role: string, layoutRowId: string): MutationAuditSpec => ({
+    ...workflow("widget_platform.role_layout.saved", "dashboard_layout", layoutRowId, { role }),
+    domain: {
+      eventType: "widget_platform.role_layout.saved",
+      payload: { role, layoutRowId },
+      sourceModule: "widget_platform",
+      idempotencyKey: `widget_platform.role_layout:${layoutRowId}`,
+    },
+  }),
 };
 
 // ─── Teacher Assistant (v10.7) ───────────────────────────────────────────────

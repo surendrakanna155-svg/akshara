@@ -5,25 +5,18 @@ import {
   handleGetWidgetData,
   handleListWidgets,
   handleRefreshWidgetData,
-  handleResetRoleLayout,
   handleSaveDashboardLayout,
 } from "./widget_platform_handlers.ts";
+import {
+  handleGetRoleLayout,
+  handleListDataSources,
+  handleListLayoutVersions,
+  handleResetRoleLayout,
+  handleSaveRoleLayout,
+} from "./widget_layout_handlers.ts";
 
 const ROLE_LAYOUT = /^\/widgets\/layouts\/([^/]+)$/;
 const ROLE_LAYOUT_RESET = /^\/widgets\/layouts\/([^/]+)\/reset$/;
-
-/**
- * Rewrites a request so the existing dashboard-layout handlers (which key on a
- * `dashboardKey` query param) honour the role from the `/widgets/layouts/:role`
- * path. Keeps a single layout storage path while serving the role-scoped client.
- */
-function withDashboardKey(req: Request, role: string): Request {
-  const url = new URL(req.url);
-  if (!url.searchParams.has("dashboardKey")) {
-    url.searchParams.set("dashboardKey", role);
-  }
-  return new Request(url.toString(), req);
-}
 
 export async function routeWidgetPlatform(
   req: Request,
@@ -43,8 +36,18 @@ export async function routeWidgetPlatform(
     return handleSaveDashboardLayout(req, config);
   }
 
+  // B11 — rich role/vertical-pack contract. Static segments are matched BEFORE
+  // the ROLE_LAYOUT param regex so "data-sources"/"versions" are never captured
+  // as a role.
+  if (path === "/widgets/data-sources" && method === "GET") {
+    return handleListDataSources(req, config);
+  }
+  if (path === "/widgets/layouts/versions" && method === "GET") {
+    return handleListLayoutVersions(req, config);
+  }
+
   // Role-scoped layout paths used by the Flutter client
-  // (EvolutionApiPaths.widgetRoleLayout). The role becomes the dashboardKey.
+  // (EvolutionApiPaths.widgetRoleLayout) — pack default + tenant override.
   const resetMatch = path.match(ROLE_LAYOUT_RESET);
   if (resetMatch && method === "POST") {
     return handleResetRoleLayout(req, config, decodeURIComponent(resetMatch[1]));
@@ -53,10 +56,10 @@ export async function routeWidgetPlatform(
   if (layoutMatch) {
     const role = decodeURIComponent(layoutMatch[1]);
     if (method === "GET") {
-      return handleGetDashboardLayout(withDashboardKey(req, role), config);
+      return handleGetRoleLayout(req, config, role);
     }
     if (method === "PUT") {
-      return handleSaveDashboardLayout(withDashboardKey(req, role), config);
+      return handleSaveRoleLayout(req, config, role);
     }
   }
 

@@ -16,10 +16,31 @@
 > owner, hiding marketing-sourced leads from the AI's assign next-best-action; the handoff
 > now leaves leads unassigned.
 >
-> **P2 complete + P3 started (2026-06-25):** all three P2 (moat) items — B7 AI School Builder,
-> B8 Director Multi-School, B9 Advanced AI Predictions — are PRODUCTION CERTIFIED, and the first
-> **P3 (Platform Expansion)** item, **B10 Organization Builder**, is now PRODUCTION CERTIFIED too
-> (details below).
+> **P2 complete + P3 complete (2026-06-25):** all three P2 (moat) items — B7 AI School Builder,
+> B8 Director Multi-School, B9 Advanced AI Predictions — are PRODUCTION CERTIFIED, and **both
+> P3 (Platform Expansion)** items — **B10 Organization Builder** and **B11 Dynamic Widget
+> Platform** — are now PRODUCTION CERTIFIED too. This completes every planned roadmap batch
+> (B1–B11); only P4 (B12 Verticals, frozen until pilot validation) remains (details below).
+>
+> **B11 Dynamic Widget Platform PRODUCTION CERTIFIED (2026-06-25) — second P3 (Platform
+> Expansion), final planned batch:** the role/vertical-pack dashboard contract the shipped Flutter
+> `dynamic_widgets` UI consumes (data-source registry, layout versions, per-role layouts with tenant
+> overrides). The older flat per-user dashboard layout already existed; the gap was the **rich
+> role-scoped contract** — `GET /widgets/data-sources` (404, no handler), `GET /widgets/layouts/versions`
+> (mis-routed), and `GET/PUT/POST /widgets/layouts/:role` (returned the wrong shape) — so the app was
+> silently falling back to its in-app mock. Built **no-migration** on the existing
+> `widget_platform_foundation` tables (`widget_registry`, `dashboard_layouts`): a backend pack catalog
+> (`widget_pack_catalog.ts`, mirrors the client mock — 6 data sources + per-role/vertical-pack default
+> layouts) and rich handlers (`widget_layout_handlers.ts`) that resolve the pack default or a persisted
+> **tenant override** (stored in `dashboard_layouts` under `role:<role>`, `owner_user_id` NULL).
+> RBAC-gated (`viewDynamicWidgets`/`manageDynamicWidgets`, school scope) — **no entitlement gate**, a
+> school-level configurability feature matching the UI. The edge `erp_tenant` role lacks DELETE on
+> `dashboard_layouts`, so save is UPDATE-first/INSERT-fallback and reset rewrites the row to the pack
+> default (no DELETE). Flutter unchanged (`EVOLUTION_API_ENABLED` already on). Backend Deno 10/10,
+> Flutter analyze clean + dynamic-widget tests 8/8. Live cert **16/16** (real school-JWT + prod DB +
+> RBAC): data-sources registry, pack-default layout, override save (version bump + audit) + durable
+> persist, versions reflect override, reset to default, RBAC 403 (manage/view/school-scope) + unauth
+> 401, legacy registry intact, clean teardown. See `docs/B11_DYNAMIC_WIDGET_PLATFORM_CERTIFICATION.md`.
 >
 > **P2 — B7 AI School Builder (Phase 1) PRODUCTION CERTIFIED (2026-06-25):** an
 > entitlement-gated AI pre-fill (`POST /onboarding/startup/ai-prefill`,
