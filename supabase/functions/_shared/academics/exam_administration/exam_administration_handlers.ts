@@ -447,27 +447,44 @@ export async function handleUpsertExamRemark(
     const body = await readJson<Record<string, unknown>>(req);
     if (!body) throw new ExamValidationError("JSON body required");
     const text = String(body.text ?? "").trim();
+    const authorRole = String(
+      body.authorRole ?? body.author_role ?? "classTeacher",
+    );
+    if (!["classTeacher", "principal", "vicePrincipal"].includes(authorRole)) {
+      throw new ExamValidationError(`Invalid authorRole: ${authorRole}`);
+    }
 
     const { organizationId, schoolId } = tenantIds(claims);
     return await withTenantContext(config, claims, async (db) => {
       const session = await getExamSession(db, organizationId, schoolId, examId);
       if (!session) throw new ExamNotFoundError(examId);
-      // Only the class teacher of the exam's class may author the remark
-      // (admins holding manageExams may override).
       const isAdmin = claims.permissions.includes("manageExams");
-      if (
-        !isAdmin &&
-        !(await isClassTeacherForExam(
-          db,
-          organizationId,
-          schoolId,
-          claims.sub,
-          session,
-        ))
-      ) {
-        throw new ExamScopeForbiddenError(
-          "Only the class teacher may author this remark.",
-        );
+      if (authorRole === "classTeacher") {
+        // Class-teacher remark: only the class teacher of the exam's class may
+        // author it (admins holding manageExams may override).
+        if (
+          !isAdmin &&
+          !(await isClassTeacherForExam(
+            db,
+            organizationId,
+            schoolId,
+            claims.sub,
+            session,
+          ))
+        ) {
+          throw new ExamScopeForbiddenError(
+            "Only the class teacher may author this remark.",
+          );
+        }
+      } else {
+        // Leadership remark (principal / vice-principal): requires the exam
+        // leadership authority (manageExams). A plain class teacher cannot post
+        // a leadership remark.
+        if (!isAdmin) {
+          throw new ExamScopeForbiddenError(
+            "Only the principal or vice-principal may author the leadership remark.",
+          );
+        }
       }
       const row = await upsertExamRemark(db, organizationId, schoolId, {
         examId,
@@ -475,6 +492,7 @@ export async function handleUpsertExamRemark(
         text,
         authorId: claims.sub,
         authorName: String(body.authorName ?? body.author_name ?? claims.sub),
+        authorRole,
       });
       return examRemarkToApi(row);
     });

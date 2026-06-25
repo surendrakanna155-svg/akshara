@@ -21,4 +21,9 @@ abstract final class ExamApiPaths {
 
   static String publishedResults(String sisStudentId) =>
       '$base/students/$sisStudentId/published';
+
+  static String remarks(String examId) => '$base/$examId/remarks';
+
+  static String remark(String examId, String sisStudentId) =>
+      '$base/$examId/remarks/$sisStudentId';
 }

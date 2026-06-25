@@ -41,6 +41,7 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/payments/intents/confirm", permission: null, scope: "parent", module: "payment" },
   { method: "GET", path: "/payments/intents/:id", permission: "viewPayments", scope: "school", module: "payment" },
   { method: "GET", path: "/teacher/dashboard", permission: "viewAdminHub", scope: "school", module: "teacher" },
+  { method: "POST", path: "/teacher/homework", permission: null, scope: "school", module: "teacher" },
   { method: "GET", path: "/student/dashboard", permission: null, scope: "student", module: "student" },
   { method: "POST", path: "/audit/events/batch", permission: null, scope: "school", module: "audit" },
   { method: "GET", path: "/communications/templates", permission: "viewCommunications", scope: "school", module: "communication" },

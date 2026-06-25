@@ -1,5 +1,6 @@
 import '../../exams/exam_administration_requests.dart';
 import '../../exams/exam_administration_store.dart';
+import '../../exams/exam_remark.dart';
 import '../interfaces/exam_administration_repository.dart';
 import '../repository_query.dart';
 
@@ -117,5 +118,32 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
     required String sisStudentId,
   }) async {
     return _store.resultsForStudent(sisStudentId);
+  }
+
+  @override
+  Future<ExamRemark> upsertRemark({
+    required RepositoryQuery query,
+    required String examId,
+    required String sisStudentId,
+    required String text,
+    required String authorName,
+    required ExamRemarkAuthorRole authorRole,
+  }) async {
+    return _store.upsertRemark(
+      examId: examId,
+      sisStudentId: sisStudentId,
+      text: text,
+      authorId: authorName,
+      authorName: authorName,
+      authorRole: authorRole,
+    );
+  }
+
+  @override
+  Future<List<ExamRemark>> listRemarks({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    return _store.remarksForExam(examId);
   }
 }

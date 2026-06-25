@@ -246,13 +246,16 @@ Future<void> saveLeadershipExamRemark(
   final roleLabel = role == ExamRemarkAuthorRole.principal
       ? 'Principal'
       : 'Vice Principal';
-  ExamAdministrationStore.instance.upsertRemark(
-    examId: examId,
-    sisStudentId: sisStudentId,
-    text: text.trim(),
-    authorId: auth.claims?.userId ?? 'leadership',
-    authorName: auth.displayName ?? roleLabel,
-    authorRole: role,
-  );
+  // Persist through the repository (backend in live mode), then cache the
+  // canonical remark so synchronous reads reflect it immediately.
+  final remark = await ref.read(examAdministrationRepositoryProvider).upsertRemark(
+        query: ref.read(repositoryQueryProvider),
+        examId: examId,
+        sisStudentId: sisStudentId,
+        text: text.trim(),
+        authorName: auth.displayName ?? roleLabel,
+        authorRole: role,
+      );
+  ExamAdministrationStore.instance.cacheRemarks([remark]);
   ref.read(examAdminRefreshTickProvider.notifier).state++;
 }

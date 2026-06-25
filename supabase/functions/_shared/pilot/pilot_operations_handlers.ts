@@ -10,6 +10,7 @@ import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_re
 import { enqueueNotificationRequested } from "../communication/notification_service.ts";
 import {
   createLeaveRequest,
+  insertHomeworkAssignment,
   reviewHomework,
   submitHomework,
   updateExamMark,
@@ -305,6 +306,75 @@ export async function handleTeacherHomeworkReview(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to review homework", 500);
+  }
+}
+
+export async function handleTeacherHomeworkCreate(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "school" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
+  }
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
+
+  const classLabel = String(body.class_label ?? body.classLabel ?? "").trim();
+  const subject = String(body.subject ?? "").trim();
+  const title = String(body.title ?? "").trim();
+  if (!classLabel || !subject || !title) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "class_label, subject and title are required",
+      422,
+    );
+  }
+  const dueLabel = String(body.due_label ?? body.dueLabel ?? "").trim() || "—";
+  const studentNameRaw = String(body.student_name ?? body.studentName ?? "").trim();
+  const studentName = studentNameRaw.length > 0 ? studentNameRaw : null;
+  const homeworkId = `hw_${crypto.randomUUID()}`;
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const created = await insertHomeworkAssignment(db, {
+        organizationId: auth.claims.tenant_id,
+        schoolId: auth.claims.school_id!,
+        teacherId: auth.claims.sub,
+        homeworkId,
+        classLabel,
+        subject,
+        title,
+        dueLabel,
+        studentName,
+      });
+      await auditMobileWrite(
+        db,
+        auth.claims,
+        req,
+        "homeworkCreated",
+        "homework_assignment",
+        created.id,
+        { classLabel, subject, deliveredCount: created.deliveredCount },
+      );
+      return created;
+    });
+    return jsonResponse(
+      envelope({
+        id: result.id,
+        title,
+        classLabel,
+        subject,
+        dueLabel,
+        deliveredCount: result.deliveredCount,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to create homework", 500);
   }
 }
 

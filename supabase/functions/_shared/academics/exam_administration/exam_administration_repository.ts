@@ -637,8 +637,12 @@ export async function upsertExamRemark(
     authorRole?: string;
   },
 ): Promise<ExamRemarkRow> {
-  const id = `${input.examId}|${input.studentId}`;
   const authorRole = input.authorRole ?? "classTeacher";
+  // Two independent remark slots per (exam, student): the class-teacher remark
+  // and the leadership (principal/VP) remark. The id carries the slot so the two
+  // never collide / overwrite each other (matches the app's store keying).
+  const slot = authorRole === "classTeacher" ? "teacher" : "leadership";
+  const id = `${input.examId}|${input.studentId}|${slot}`;
   const revision = JSON.stringify({
     text: input.text,
     authorId: input.authorId,

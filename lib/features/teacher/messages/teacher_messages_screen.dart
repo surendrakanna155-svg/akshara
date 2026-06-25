@@ -234,13 +234,19 @@ class _ComposePane extends ConsumerWidget {
           const SizedBox(height: AksharaSpacing.s3),
           FilledButton(
             onPressed: draft.isValid
-                ? () {
-                    final ok = sendComposedMessage(ref);
-                    if (ok) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Message sent (mock).')),
-                      );
-                    }
+                ? () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    final ok = await sendComposedMessage(ref);
+                    if (!context.mounted) return;
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          ok
+                              ? 'Message sent.'
+                              : 'Could not send message. Please try again.',
+                        ),
+                      ),
+                    );
                   }
                 : null,
             child: const Text('Send message'),

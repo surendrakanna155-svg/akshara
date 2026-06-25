@@ -16,7 +16,7 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 | Wave | Theme | Items | Severity mix | Est. |
 |------|-------|-------|--------------|------|
 | ~~**0**~~ | ~~Verify-vs-deployed-edge + restore green gates~~ | 9 | gate/triage | ✅ **DONE 2026-06-25** |
-| **1** | Stop silent data loss (mock writes in live paths) | 7 | 2C + 4H + 1M | ~4–5 days |
+| ~~**1**~~ | ~~Stop silent data loss (mock writes in live paths)~~ | 7 | 2C + 4H + 1M | ✅ **DONE 2026-06-25** |
 | **2** | Multi-child parent correctness + demo-identity purge | 14 | 5H + 6M + 3L | ~3–4 days |
 | **3** | Contract gaps + entitlement client + security hardening | 13 | 7H + 4M + 2L | ~5–6 days |
 | **4** | AI moderation gate + performance | 6 | 2H + 3M + 1L | ~3 days |
@@ -42,7 +42,10 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 
 ---
 
-## Wave 1 — Stop silent data loss (Theme A) (~4–5 days)
+## Wave 1 — Stop silent data loss (Theme A) ✅ **COMPLETE (2026-06-25)**
+
+> **Status: DONE & live-certified.** Cert: `docs/WAVE1_COMPLETION_CERTIFICATION.md`. Release-review: **GO**. Live cert 8/8 vs VPS pilot; deployed (migration `20260731000000` + edge recreate). Gates: analyze 0 / flutter 2383 / deno 665.
+> TCH-1 ✅ (POST /teacher/homework persists + delivers) · TCH-2 ✅ (compose-send wired) · TCH-5 ✅ (remarks persist; role-slot + authorRole fixes) · STF-7 ✅ (HR reports + real export) · STF-8 ✅ (5 settings edits hidden — no write path) · CORE-2 ✅ (/branches chain-gated) · CORE-1/PAR-4 ✅ (PTM gated off via SchoolBuildScope; **backend build remains** as the deferred half of this item).
 
 The highest-trust risk: actions that report success but never persist. Both Criticals live here.
 

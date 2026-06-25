@@ -507,6 +507,38 @@ class MockTeacherRepository implements TeacherRepository {
     return thread;
   }
 
+  @override
+  Future<TeacherHomeworkAssignment> createHomework({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+  }) async {
+    final parsed = SchoolHomeworkStore.parseClassLabel(request.classLabel);
+    final studentName = request.studentName?.trim() ?? '';
+    CanonicalStudentRecord? targetStudent;
+    if (studentName.isNotEmpty) {
+      for (final record in MockCanonicalStudentRegistry.all) {
+        if (record.studentName.toLowerCase() == studentName.toLowerCase()) {
+          targetStudent = record;
+          break;
+        }
+      }
+    }
+
+    final dueLabel = request.dueLabel.trim();
+    final record = SchoolHomeworkStore.instance.create(
+      grade: parsed.grade,
+      section: parsed.section,
+      subject: request.subject.trim(),
+      title: request.title.trim(),
+      dueLabel: dueLabel.isEmpty ? '—' : dueLabel,
+      teacherName: 'Priya Sharma',
+      targetSisStudentIds:
+          targetStudent == null ? const [] : [targetStudent.sisStudentId],
+    );
+
+    return SchoolHomeworkStore.instance.toTeacherAssignment(record);
+  }
+
   Future<void> _ensureLeaveHistory() async {
     _store.leaveRequests ??= List<TeacherLeaveRequest>.from(_mockHistory());
   }

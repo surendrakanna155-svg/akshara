@@ -6,6 +6,7 @@ abstract final class TeacherApiPaths {
   static const String attendanceClasses = '$base/attendance/classes';
   static const String attendanceStudents = '$base/attendance/students';
   static const String homework = '$base/homework';
+  static const String homeworkCreate = '$base/homework';
   static const String examsUpcoming = '$base/exams/upcoming';
   static const String examsMarksEntry = '$base/exams/marks-entry';
   static const String examsMarks = '$base/exams/marks';

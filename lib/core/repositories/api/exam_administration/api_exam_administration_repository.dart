@@ -1,5 +1,6 @@
 import '../../../exams/exam_administration_requests.dart';
 import '../../../exams/exam_administration_store.dart';
+import '../../../exams/exam_remark.dart';
 import '../../interfaces/exam_administration_repository.dart';
 import '../../repository_query.dart';
 import 'remote/exam_remote_datasource.dart';
@@ -98,4 +99,29 @@ class ApiExamAdministrationRepository implements ExamAdministrationRepository {
         query: query,
         sisStudentId: sisStudentId,
       );
+
+  @override
+  Future<ExamRemark> upsertRemark({
+    required RepositoryQuery query,
+    required String examId,
+    required String sisStudentId,
+    required String text,
+    required String authorName,
+    required ExamRemarkAuthorRole authorRole,
+  }) =>
+      _remote.upsertRemark(
+        query: query,
+        examId: examId,
+        sisStudentId: sisStudentId,
+        text: text,
+        authorName: authorName,
+        authorRole: authorRole,
+      );
+
+  @override
+  Future<List<ExamRemark>> listRemarks({
+    required RepositoryQuery query,
+    required String examId,
+  }) =>
+      _remote.fetchRemarks(query: query, examId: examId);
 }

@@ -39,6 +39,7 @@ abstract final class SchoolBuildScope {
   ///
   /// KEPT (deliberately not listed): branches, control center, director, real
   /// onboarding.
+  // branches now also chain-gated via ChainScope (CORE-2, 2026-06-25) — unreachable in single-school pilot.
   ///
   /// CHAIN-GATED elsewhere (not here): franchise, multi-school portfolio/
   /// onboarding and organization-builder surface only for chain orgs at runtime
@@ -63,6 +64,12 @@ abstract final class SchoolBuildScope {
     // Evolution suite (experimental, not wired into real persona flows)
     RouteNames.setupWizard, // demo wizard; real onboarding is separate
     RouteNames.teacherAssistant,
+    // Parent–Teacher Meetings (staff scheduling + parent PTM view): UI is built
+    // but has NO backend, so it was mock-only and lost edits on restart
+    // (CORE-1/PAR-4). Gated OFF until the PTM backend ships — remove these two
+    // entries to bring it back. (Wave 1, 2026-06-25)
+    RouteNames.parentMeetings,
+    RouteNames.parentPtm,
     // parentInsights: surfaced for parents (B3, 2026-06-25) — live AI insights
     // wired into the parent flow; entitlement-gated via feature.parent_insights.
     // growthPlatform: surfaced as the Marketing engine (B6, 2026-06-25) — lead

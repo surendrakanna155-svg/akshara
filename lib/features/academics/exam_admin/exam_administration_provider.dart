@@ -11,6 +11,21 @@ import 'exam_admin_models.dart';
 final examAdminPhaseFilterProvider =
     StateProvider<ExamAdminPhaseFilter>((ref) => ExamAdminPhaseFilter.all);
 
+/// Hydrates the local exam-remark cache from the backend for [examId] so that
+/// class-teacher and leadership remarks saved on any device survive restart and
+/// are visible across devices/roles. Screens that show remarks watch this to
+/// trigger the one-time load.
+final examRemarksHydrationProvider =
+    FutureProvider.family<int, String>((ref, examId) async {
+  final remarks =
+      await ref.read(examAdministrationRepositoryProvider).listRemarks(
+            query: ref.read(repositoryQueryProvider),
+            examId: examId,
+          );
+  ExamAdministrationStore.instance.cacheRemarks(remarks);
+  return remarks.length;
+});
+
 final examAdministrationListProvider =
     FutureProvider<List<ExamSession>>((ref) async {
   ref.watch(examAdminRefreshTickProvider);

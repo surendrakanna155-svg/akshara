@@ -22,6 +22,9 @@ class ExamMarksEntryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Load any backend-persisted remarks for this exam into the local cache so
+    // class-teacher / leadership remarks survive restart and show cross-device.
+    ref.watch(examRemarksHydrationProvider(examId));
     final examAsync = ref.watch(examMarksExamProvider(examId));
     final marksAsync = ref.watch(examMarksListProvider(examId));
     final approvalRequired = ref.watch(examApprovalRequiredProvider);

@@ -237,4 +237,12 @@ class ApiTeacherRepository implements TeacherRepository {
     final dto = await _remote.sendMessage(query: query, request: request);
     return _mapper.toMessageThread(dto);
   }
+
+  @override
+  Future<TeacherHomeworkAssignment> createHomework({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+  }) async {
+    return _remote.createHomework(query: query, request: request);
+  }
 }

@@ -593,6 +593,23 @@ final class ExamAdministrationStore {
         .toList(growable: false);
   }
 
+  /// Hydrates the local cache with canonical remarks fetched from the backend,
+  /// keyed by their slot. Unlike [upsertRemark] this does NOT append a new
+  /// audit-trail revision — it stores the remark (and its existing history) as
+  /// returned by the server, so synchronous reads reflect cross-device state.
+  void cacheRemarks(Iterable<ExamRemark> remarks) {
+    ensureSeeded();
+    for (final remark in remarks) {
+      final key = _remarkKey(
+        remark.examId,
+        remark.sisStudentId,
+        leadership: remark.authorRole.isLeadership,
+      );
+      _remarksByKey[key] = remark;
+    }
+    _persist();
+  }
+
   /// Creates or edits the remark for a (student, exam session). Appends to the
   /// audit trail and bumps updatedAt. [timestamp] is injectable for tests.
   ExamRemark upsertRemark({

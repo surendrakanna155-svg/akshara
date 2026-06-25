@@ -6,7 +6,9 @@
 **Method:** 12 parallel area-auditors over all 16 listed areas + live verification gates run by the coordinator. Existing `docs/*_CERTIFICATION.md` treated as source of truth; certified-and-unchanged areas were not re-audited.
 **Constraint honored:** No fixes implemented (at audit time). No features invented. No roadmap items created or reordered.
 
-> 🟢 **WAVE 0 COMPLETE (2026-06-25)** — `docs/WAVE0_TRIAGE_AND_GATES_CERTIFICATION.md`. The triage + gate-restoration wave is done: gates are now **green** (analyze 0 / flutter test 2383-pass / deno 665-pass), the finance-route findings were **verified real against the live VPS edge**, and the quality-gate drift is closed + CI-enforced. Findings resolved by Wave 0 are struck through / annotated below (TST-1, TST-2, TST-4, T-DRIFT, SEC-7/PRN-2, and the analyze warnings).
+> 🟢 **WAVE 0 COMPLETE (2026-06-25)** — `docs/WAVE0_TRIAGE_AND_GATES_CERTIFICATION.md`. Gates green, finance findings verified real vs live edge, quality-gate drift closed + CI-enforced. Resolved: TST-1, TST-2, TST-4, T-DRIFT, SEC-7/PRN-2, analyze warnings.
+>
+> 🟢 **WAVE 1 COMPLETE (2026-06-25)** — `docs/WAVE1_COMPLETION_CERTIFICATION.md`. Theme A (silent data loss) closed + **live-certified 8/8** + deployed to VPS. Resolved: **CORE-1/PAR-4, TCH-1, TCH-2, TCH-5, STF-7, STF-8, CORE-2** (annotated below). PTM backend build is the one deferred half of CORE-1/PAR-4 (feature gated off until built).
 
 > ⚠️ **Standing caveat (updated by Wave 0):** This was a **source-tree** audit. The `[verify-vs-deployed-edge]` finance findings (STF-1..5, STF-4, INT-2) have now been **verified against the live VPS edge** (`/opt/akshara/functions`, 2026-06-25): the contested routes are **confirmed absent on production** → they are **real gaps**, scheduled for Wave 3 (the tag is resolved). Memory note `no-production-backend-yet` is superseded by the live VPS work; several `docs/` readiness files (e.g. `PRODUCTION_READINESS_FINAL.md`, `AKSHARA_V1_FINAL_SIGNOFF.md`, `PLAY_STORE_AND_NOTIFICATIONS_READINESS.md`) remain **stale** relative to the B-series and FCM batches.
 
@@ -58,15 +60,15 @@ None of the Criticals/Highs are architectural; all are bounded, localized, and f
 
 ## 3. Issue Count by Severity
 
-Counts shown as **at audit → remaining after Wave 0** (Wave 0 closed 1 High + 3 Medium + 2 Low = 6 findings: TST-1/2/4, T-DRIFT, SEC-7, PRN-2).
+Counts shown as **at audit → remaining after Wave 1**. Wave 0 closed 6 (TST-1/2/4, T-DRIFT, SEC-7, PRN-2). Wave 1 closed 7 (2 Critical TCH-1/TCH-2 + 2 High TCH-5/CORE-1(=PAR-4) + 3 Medium STF-7/STF-8/CORE-2).
 
 | Severity | At audit | Remaining | Definition |
 |----------|------:|------:|------------|
-| **Critical** | 2 | 2 | Live user action silently fails / data lost; blocks core loop |
-| **High** | 21 | **20** | Wrong data shown, route 404 in live, security fail-open, broken core sub-flow, release blocker |
-| **Medium** | ~34 | **~31** | Degraded but non-blocking; mock/preview-only secondary flows; UX/perf/audit gaps |
+| **Critical** | 2 | **0** | Live user action silently fails / data lost; blocks core loop |
+| **High** | 21 | **18** | Wrong data shown, route 404 in live, security fail-open, broken core sub-flow, release blocker |
+| **Medium** | ~34 | **~28** | Degraded but non-blocking; mock/preview-only secondary flows; UX/perf/audit gaps |
 | **Low** | ~35 | **~33** | Cosmetic, by-design owner-gated, dead code, doc staleness, test hygiene |
-| **Total** | **~92** | **~86** | |
+| **Total** | **~92** | **~79** | |
 
 ---
 
@@ -93,8 +95,8 @@ Severity key: **C**ritical / **H**igh / **M**edium / **L**ow. Effort: **S** (<½
 ### 5.1 ERP Core — 93%
 | ID | Description | Evidence | Sev | Effort |
 |----|-------------|----------|:---:|:---:|
-| CORE-1 | Parent Meetings (PTM) is **mock-only but a live-reachable route**; scheduling/summary writes go to in-memory mock, lost on restart, no backend exists. *(cross-cuts Parent)* | `repository_providers.dart:389-392`; `app_router.dart:882`; `route_guards.dart:92`; `FINAL_TRUTH_AUDIT.md:214` | H | M |
-| CORE-2 | Branch & Franchise repositories are mock-only with no API path (chain-only; hidden by `SchoolBuildScope` for school pilots → unreachable today, but non-persistent for any chain org). | `repository_providers.dart:351-357`; `FINAL_TRUTH_AUDIT.md:58,112` | M | L |
+| ~~CORE-1~~ ✅ | **RESOLVED (Wave 1):** gated OFF via `SchoolBuildScope` (backend build deferred). Was: Parent Meetings (PTM) **mock-only but a live-reachable route**; scheduling/summary writes go to in-memory mock, lost on restart, no backend exists. *(cross-cuts Parent)* | `repository_providers.dart:389-392`; `app_router.dart:882`; `route_guards.dart:92`; `FINAL_TRUTH_AUDIT.md:214` | H | M |
+| ~~CORE-2~~ ✅ | **RESOLVED (Wave 1):** `/branches` now chain-gated via `ChainScope` (unreachable in single-school pilot). Was: Branch & Franchise repositories mock-only with no API path (chain-only; hidden by `SchoolBuildScope` for school pilots → unreachable today, but non-persistent for any chain org). | `repository_providers.dart:351-357`; `FINAL_TRUTH_AUDIT.md:58,112` | M | L |
 | CORE-3 | `tenantContextProvider` falls back to `TenantContext.demo` (`tenant_demo_001`) when claims null; dead in prod (hardened login logs out on null claims; RLS uses JWT) but ships demo identifiers — wants a defensive guard. | `tenant_provider.dart:21-27`; `auth_provider.dart:108-114` | L | S |
 | CORE-4 | Dead fallback scaffolding: `withMockWriteFallback` triggers only on `ApiNotConnectedException`, which is **never thrown in `lib/`** — all 6+ hybrid mock-write branches are unreachable dead code that obscures true live behavior. | `hybrid_write_fallback.dart:8-12`; `api_exception.dart` (no throw sites) | L | S |
 
@@ -106,7 +108,7 @@ Severity key: **C**ritical / **H**igh / **M**edium / **L**ow. Effort: **S** (<½
 | PAR-1 | **Multi-child scoping broken:** fees/exams/receipts/attendance/homework/timetable/notices/events reads never send `activeChildId`; backend defaults to `child_ids[0]` → switching child shows the **first** child's data. (RLS itself safe.) | `parent_remote_datasource.dart:185-191`; `mobile_read_handlers.ts:51-65` | H | M |
 | PAR-2 | Child switcher invalidates only dashboard/experience-hub/profile — **not** fees/exams/receipts/attendance — so those keep stale data after switching child. | `parent_active_child_provider.dart:49-55`; `parent_child_switcher_sheet.dart:45-46` | H | S |
 | PAR-3 | Leave application **hardcodes `childId:'child_ravi'`** (live write path) — a multi-child parent always files leave against the demo child. | `parent_leave_provider.dart:83` | H | S |
-| PAR-4 | Parent PTM view reads the mock-only meetings repo and resolves child via `MockCanonicalStudentRegistry` (`child_ravi` fallback); no live PTM data. *(same root as CORE-1)* | `parent_ptm_provider.dart:42-54` | M | M |
+| ~~PAR-4~~ ✅ | **RESOLVED (Wave 1):** parent PTM route gated off via `SchoolBuildScope` (= CORE-1). Was: Parent PTM view reads the mock-only meetings repo and resolves child via `MockCanonicalStudentRegistry` (`child_ravi` fallback); no live PTM data. *(same root as CORE-1)* | `parent_ptm_provider.dart:42-54` | M | M |
 | PAR-5 | Receipts/dashboard headers hardcode `childName:'Ravi Kumar'`, `childClass:'8-A'`, `unreadNotifications:2` regardless of real child. | `parent_receipts_provider.dart:77-80`; `parent_dashboard_provider.dart:44-49` | M | S |
 | PAR-6 | Dashboard child-switch is cosmetic: `forActiveChild` rewrites copy with hardcoded `isPriya` demo branches; `getDashboard` sends no child id, so real per-child dashboard isn't refetched. | `parent_dashboard_provider.dart:170-216,307-313` | M | M |
 | PAR-7 | Real-auth linked children built with `name:'Child'` + empty class → multi-child switcher shows indistinguishable "Child" entries. | `auth_role_mapping.dart:29-41` | M | M |
@@ -131,11 +133,11 @@ Severity key: **C**ritical / **H**igh / **M**edium / **L**ow. Effort: **S** (<½
 ### 5.4 Teacher App — 80%
 | ID | Description | Evidence | Sev | Effort |
 |----|-------------|----------|:---:|:---:|
-| TCH-1 | **Homework CREATE never persists** — writes only to in-memory `SchoolHomeworkStore.instance`; no repository/mutation call, no `createHomework` on `TeacherRepository`. Lost on restart, never reaches students/parents in live mode. | `teacher_homework_create_screen.dart:135-162` | **C** | M |
-| TCH-2 | **Compose-message SEND is a no-op** — `sendComposedMessage` clears the draft and flips the tab; never calls `sendTeacherMessageProvider`. The "Message sent (mock)." snackbar is literally true. (In-thread reply IS wired.) | `teacher_messages_provider.dart:46-52`; `teacher_messages_screen.dart:235-247` | **C** | M |
+| ~~TCH-1~~ ✅ | **FIXED (Wave 1, live-certified):** Homework CREATE never persisted — writes only to in-memory `SchoolHomeworkStore.instance`; no repository/mutation call, no `createHomework` on `TeacherRepository`. Lost on restart, never reaches students/parents in live mode. | `teacher_homework_create_screen.dart:135-162` | **C** | M |
+| ~~TCH-2~~ ✅ | **FIXED (Wave 1, live-certified):** Compose-message SEND was a no-op — `sendComposedMessage` clears the draft and flips the tab; never calls `sendTeacherMessageProvider`. The "Message sent (mock)." snackbar is literally true. (In-thread reply IS wired.) | `teacher_messages_provider.dart:46-52`; `teacher_messages_screen.dart:235-247` | **C** | M |
 | TCH-3 | "Students needing attention"/risk fabricated client-side from `MockCanonicalStudentRegistry` + synthetic snapshots — never the backend or the certified B9 engine. | `teacher_student_risk_service.dart:74-99` | H | M |
 | TCH-4 | Hardcoded teacher persona in app-bar subtitle of 4 screens (`"Priya Sharma · Mathematics"` / `"Priya Sharma"`) — every teacher sees the demo name. | `teacher_attendance_screen.dart:36`; `teacher_exams_screen.dart:36`; `teacher_homework_screen.dart:32`; `teacher_messages_screen.dart:39` | H | S |
-| TCH-5 | Exam leadership/student remarks persist only to a `SharedPreferences`-backed in-memory singleton; `ExamAdministrationRepository` has no remark method → never sent to backend, invisible to other devices/roles. | `exam_marks_entry_provider.dart:219-260`; `exam_administration_persistence.dart:5-12` | H | M |
+| ~~TCH-5~~ ✅ | **FIXED (Wave 1, live-certified):** Exam remarks persisted only to a `SharedPreferences`-backed in-memory singleton; `ExamAdministrationRepository` has no remark method → never sent to backend, invisible to other devices/roles. | `exam_marks_entry_provider.dart:219-260`; `exam_administration_persistence.dart:5-12` | H | M |
 | TCH-6 | `"(mock)"` text shipped in production success snackbars (leave-submit & compose) — underlying leave call IS real; string is demo-revealing. | `teacher_leave_screen.dart:232`; `teacher_messages_screen.dart:241` | M | S |
 | TCH-7 | Demo-data side effects in `build()`: `seedDemoSubjectConcernIfNeeded()` injects mock concerns on every rebuild of class-teacher/parent-communication screens. | `teacher_class_teacher_dashboard_screen.dart:22`; `teacher_teaching_context_provider.dart:198-211` | M | S |
 | TCH-8 | Homework-create form pre-filled with demo defaults ("8-A", "Mathematics", "Ravi Kumar") submittable unchanged. | `teacher_homework_create_screen.dart:27-31` | M | S |
@@ -153,8 +155,8 @@ Severity key: **C**ritical / **H**igh / **M**edium / **L**ow. Effort: **S** (<½
 | STF-4 | **Discounts dashboard READ** route absent — router has only `POST/PUT`; client `GET /finance/discounts` → screen load 404 (writes work per B5). **[verify-vs-deployed-edge]** | `finance_router.ts:217,221`; `finance_remote_datasource.dart:267` | H | S |
 | STF-5 | **Scholarship** create/update routes absent (`POST/PUT /finance/scholarships`); reachable from workflow actions. **[verify-vs-deployed-edge]** | `finance_remote_datasource.dart:406,420` | M | M |
 | STF-6 | Hostel report "Download" buttons dead for every report except `rpt_5` (non-null handler hides the no-op). | `hostel_reports_screen.dart:160-164` | M | S |
-| STF-7 | HR Reports data is `HrReportsData.mock()` (not backend-wired); report export app-wide is preview-only ("Export pipeline not connected yet") — no file produced. | `hr_reports_provider.dart:13`; `operational_action_feedback.dart:17` | M | M |
-| STF-8 | "Settings → Edit" is preview-only (no server write) in 5 modules (HR, transport, alumni, control-center settings + roles); HR Recruitment & Performance read-only (no stage-advance/hire/review mutations). | `hr/settings/...:131`; `transport/settings/...:136`; `platform/control_center/settings/...:135`, `.../roles/...:118`; `alumni/settings/...:133` | M | M |
+| ~~STF-7~~ ✅ | **FIXED (Wave 1):** wired to `getDashboard` + real PDF/CSV export. Was: HR Reports data `HrReportsData.mock()` (not backend-wired); report export app-wide is preview-only ("Export pipeline not connected yet") — no file produced. | `hr_reports_provider.dart:13`; `operational_action_feedback.dart:17` | M | M |
+| ~~STF-8~~ ✅ | **FIXED (Wave 1):** the 5 no-op edit affordances removed (no write path exists). Was: "Settings → Edit" preview-only in 5 modules (HR, transport, alumni, control-center settings + roles); HR Recruitment & Performance read-only (no stage-advance/hire/review mutations). | `hr/settings/...:131`; `transport/settings/...:136`; `platform/control_center/settings/...:135`, `.../roles/...:118`; `alumni/settings/...:133` | M | M |
 | STF-9 | Misc lows: `PUT /finance/student-accounts/{id}` route missing but no UI caller (dead code); school-config `apply()` lacks write-layer RBAC (route-guarded only); transport GPS map + hostel visitor QR are honest unbuilt placeholders; admin profile-menu "coming soon" cosmetic. | various | L | S |
 
 *Clean:* core money loop (collections/receipts/invoices/fee-structures/refunds/assignment), HR employees/leave/payroll, inventory/library/transport/hostel CRUD — repository-backed, audited, RBAC-gated (Batch 5 / HR certs). Management FY/Q filter now flows into query (remediated).

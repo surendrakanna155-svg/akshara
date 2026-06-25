@@ -139,6 +139,30 @@ class TeacherLeaveSubmitRequestDto {
   Map<String, dynamic> toJson() => raw;
 }
 
+class TeacherHomeworkCreateRequestDto {
+  const TeacherHomeworkCreateRequestDto({required this.raw});
+
+  factory TeacherHomeworkCreateRequestDto.fromDomain(
+    TeacherHomeworkCreateRequest request,
+  ) {
+    final studentName = request.studentName?.trim();
+    return TeacherHomeworkCreateRequestDto(
+      raw: {
+        'class_label': request.classLabel,
+        'subject': request.subject,
+        'title': request.title,
+        'due_label': request.dueLabel,
+        if (studentName != null && studentName.isNotEmpty)
+          'student_name': studentName,
+      },
+    );
+  }
+
+  final Map<String, dynamic> raw;
+
+  Map<String, dynamic> toJson() => raw;
+}
+
 class TeacherMessageSendRequestDto {
   const TeacherMessageSendRequestDto({required this.raw});
 

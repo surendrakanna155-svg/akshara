@@ -72,6 +72,7 @@ import '../features/onboarding/unified_onboarding_flow_screen.dart';
 import '../features/onboarding/student_onboarding_screen.dart';
 import '../core/repositories/repository_providers.dart';
 import '../core/tenant/tenant_provider.dart';
+import '../core/config/school_build_scope.dart';
 import '../core/testing/qa_test_keys.dart';
 import 'admin_navigation.dart';
 import 'route_guards.dart';
@@ -2470,6 +2471,11 @@ Widget parentTransportRouteBuilder(BuildContext context, GoRouterState state) {
 
 /// Parent-teacher meetings for active child (PA-13).
 Widget parentPtmRouteBuilder(BuildContext context, GoRouterState state) {
+  // Gated OFF until the PTM backend ships (CORE-1/PAR-4): mock-only, lost data
+  // on restart. Hidden via SchoolBuildScope.
+  if (SchoolBuildScope.isRouteHidden(state.uri.path)) {
+    return const AccessDeniedScreen();
+  }
   return ParentPtmScreen(
     onNotificationsTap: () => context.push(RouteNames.parentNotifications),
   );

@@ -104,4 +104,9 @@ abstract class TeacherRepository {
     required RepositoryQuery query,
     required TeacherMessageSendRequest request,
   });
+
+  Future<TeacherHomeworkAssignment> createHomework({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+  });
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_surface_card.dart';
-import '../../../shared/widgets/operational_action_feedback.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -111,19 +111,41 @@ class HrReportsScreen extends ConsumerWidget {
           spacing: AksharaSpacing.s3,
           children: [
             OutlinedButton.icon(
-              onPressed: () => showAksharaReportExportPreviewSnackBar(
-                context,
-                reportName: selected.title,
-              ),
+              onPressed: () async {
+                final service = ref.read(aksharaReportExportServiceProvider);
+                final bytes = await service.buildTabularReportPdf(
+                  reportTitle: selected.title,
+                  moduleLabel: 'HR · Reports',
+                  generatedAtLabel: DateTime.now().toIso8601String(),
+                  rows: _exportRows(data: data, selected: selected),
+                );
+                if (!context.mounted) return;
+                await service.previewPdf(
+                  documentName: '${selected.id}.pdf',
+                  bytes: bytes,
+                );
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${selected.title} PDF ready')),
+                );
+              },
               icon: const Icon(Icons.picture_as_pdf_outlined),
               label: const Text('Export PDF'),
             ),
             OutlinedButton.icon(
-              onPressed: () => showAksharaReportExportPreviewSnackBar(
-                context,
-                reportName: selected.title,
-                format: 'Excel',
-              ),
+              onPressed: () async {
+                final service = ref.read(aksharaReportExportServiceProvider);
+                final rows = _exportRows(data: data, selected: selected);
+                await service.shareTabularCsv(
+                  filename: '${selected.id}.csv',
+                  reportTitle: selected.title,
+                  rows: rows,
+                );
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${selected.title} Excel CSV ready')),
+                );
+              },
               icon: const Icon(Icons.table_chart_outlined),
               label: const Text('Export Excel'),
             ),
@@ -131,5 +153,19 @@ class HrReportsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  /// Builds the export rows for the selected report tile from live HR reports
+  /// data (headline metric + the selected report's catalog metadata).
+  List<MapEntry<String, String>> _exportRows({
+    required HrReportsData data,
+    required HrReportCatalogItem selected,
+  }) {
+    return [
+      MapEntry('Report', selected.title),
+      MapEntry('Report ID', selected.id),
+      MapEntry('Description', selected.description),
+      MapEntry('Headline metric', data.headlineMetric),
+    ];
   }
 }

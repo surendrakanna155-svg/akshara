@@ -14,6 +14,7 @@ void main() {
     test('franchise / multi-school / org-builder routes are chain-only', () {
       for (final route in [
         RouteNames.franchise,
+        RouteNames.branches, // CORE-2 (2026-06-25): now chain-gated too
         RouteNames.multiSchoolPortfolio,
         RouteNames.multiSchoolOnboarding,
         RouteNames.organizationBuilder,
@@ -34,7 +35,6 @@ void main() {
         RouteNames.financeDashboard,
         RouteNames.controlCenterDashboard,
         RouteNames.directorDashboard,
-        RouteNames.branches, // branch mgmt is kept, not chain-gated
         RouteNames.whiteLabel, // SaaS tier, gated by SchoolBuildScope instead
         RouteNames.platformOperations,
         RouteNames.admin,

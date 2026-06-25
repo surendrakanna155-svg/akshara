@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../teacher_mutations_provider.dart';
+import '../teacher_requests.dart';
 import 'message_models.dart';
 
 final teacherMessageMailboxProvider = StateProvider<MessageMailbox>(
@@ -43,9 +45,22 @@ final teacherMessageThreadProvider = Provider.family<MessageThread?, String>(
   },
 );
 
-bool sendComposedMessage(WidgetRef ref) {
+/// Sends the composed message through the real, audited send pipeline
+/// (`sendTeacherMessageProvider`). `threadId` is omitted so the backend opens a
+/// new thread. Returns true only when the send persisted (a thread came back);
+/// the draft is cleared and the mailbox flips to Sent only on success.
+Future<bool> sendComposedMessage(WidgetRef ref) async {
   final draft = ref.read(teacherComposeDraftProvider);
   if (!draft.isValid) return false;
+  final thread =
+      await ref.read(sendTeacherMessageProvider.notifier).execute(
+            TeacherMessageSendRequest(
+              recipient: draft.recipient,
+              subject: draft.subject,
+              body: draft.body,
+            ),
+          );
+  if (thread == null) return false;
   ref.read(teacherComposeDraftProvider.notifier).state = const ComposeDraft();
   ref.read(teacherMessageMailboxProvider.notifier).state = MessageMailbox.sent;
   return true;

@@ -4,6 +4,7 @@ import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../../exams/exam_administration_requests.dart';
 import '../../../../exams/exam_administration_store.dart';
+import '../../../../exams/exam_remark.dart';
 import '../mapper/exam_mapper.dart';
 import 'exam_api_paths.dart';
 
@@ -151,6 +152,41 @@ class ExamRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return _mapper.toPublishedResults(_listData(_responseMap(response)));
+  }
+
+  Future<ExamRemark> upsertRemark({
+    required RepositoryQuery query,
+    required String examId,
+    required String sisStudentId,
+    required String text,
+    required String authorName,
+    required ExamRemarkAuthorRole authorRole,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      ExamApiPaths.remark(examId, sisStudentId),
+      queryParameters: _queryParams(query),
+      data: {
+        'text': text,
+        'authorName': authorName,
+        'authorRole': authorRole.name,
+      },
+    );
+    return ExamRemark.fromJson(_requireData(response));
+  }
+
+  Future<List<ExamRemark>> fetchRemarks({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.remarks(examId),
+      queryParameters: _queryParams(query),
+    );
+    return [
+      for (final raw in _listData(_responseMap(response)))
+        if (raw is Map)
+          ExamRemark.fromJson(Map<String, dynamic>.from(raw)),
+    ];
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) => {

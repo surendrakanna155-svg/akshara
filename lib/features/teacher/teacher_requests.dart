@@ -212,6 +212,25 @@ class TeacherMessageSendRequest {
   final String? threadId;
 }
 
+/// Domain request to create a homework assignment.
+class TeacherHomeworkCreateRequest {
+  const TeacherHomeworkCreateRequest({
+    required this.classLabel,
+    required this.subject,
+    required this.title,
+    required this.dueLabel,
+    this.studentName,
+  });
+
+  final String classLabel;
+  final String subject;
+  final String title;
+  final String dueLabel;
+
+  /// Optional. Null/empty = delivered to the whole class.
+  final String? studentName;
+}
+
 /// Subject teacher escalates concern to class teacher (no direct parent send).
 class TeacherSubjectConcernFlagRequest {
   const TeacherSubjectConcernFlagRequest({

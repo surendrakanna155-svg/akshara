@@ -24,6 +24,7 @@ abstract final class ChainScope {
   /// covers its nested sub-routes (e.g. `/organization-builder/interview`).
   static const Set<String> chainOnlyRoutePrefixes = {
     RouteNames.franchise,
+    RouteNames.branches, // CORE-2: chain-gated, symmetric with franchise
     RouteNames.multiSchoolPortfolio,
     RouteNames.multiSchoolOnboarding,
     RouteNames.organizationBuilder, // also interview/preview/provisioning

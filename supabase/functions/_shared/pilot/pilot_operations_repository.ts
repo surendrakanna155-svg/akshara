@@ -902,3 +902,86 @@ export async function overlayExamsSnapshotFromResults(
 
   return { ...snapshot, childName, childClass, examResults };
 }
+
+// --- Teacher homework CREATE (TCH-1) ---
+//
+// Persists a homework assignment as a durable `homework_assignment` entity for
+// the teacher (survives restart, visible across the teacher's devices) and
+// delivers a `homework_item` entity to each target student so the existing
+// student/parent read path surfaces it. Targets are resolved from the real
+// `students` table (school scope can read it): a named student matches
+// display_name; otherwise the whole active roster of the school is targeted.
+// (Class-precise targeting in multi-class schools is a tracked refinement —
+// the `students` table carries no class column today.)
+export async function insertHomeworkAssignment(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string;
+    teacherId: string;
+    homeworkId: string;
+    classLabel: string;
+    subject: string;
+    title: string;
+    dueLabel: string;
+    studentName: string | null;
+  },
+): Promise<{ id: string; deliveredCount: number }> {
+  // teacher_entities is teacher-scoped (PK + RLS include teacher_id =
+  // app_current_user_id()), so the assignment is owned by the creating teacher.
+  await db.queryObject(
+    `INSERT INTO teacher_entities (id, organization_id, school_id, teacher_id, entity_type, payload)
+     VALUES ($1, $2, $3, $8::uuid, 'homework_assignment',
+       jsonb_build_object(
+         'id', $1::text, 'title', $4::text, 'classLabel', $5::text,
+         'subject', $6::text, 'dueLabel', $7::text, 'pendingReviews', 0))
+     ON CONFLICT (organization_id, school_id, teacher_id, entity_type, id)
+       DO UPDATE SET payload = EXCLUDED.payload`,
+    [
+      input.homeworkId,
+      input.organizationId,
+      input.schoolId,
+      input.title,
+      input.classLabel,
+      input.subject,
+      input.dueLabel,
+      input.teacherId,
+    ],
+  );
+
+  const targets = input.studentName && input.studentName.trim().length > 0
+    ? await db.queryObject<{ id: string }>(
+      `SELECT id::text AS id FROM students
+       WHERE organization_id = $1 AND school_id = $2 AND status = 'active'
+         AND lower(display_name) = lower($3)`,
+      [input.organizationId, input.schoolId, input.studentName.trim()],
+    )
+    : await db.queryObject<{ id: string }>(
+      `SELECT id::text AS id FROM students
+       WHERE organization_id = $1 AND school_id = $2 AND status = 'active'`,
+      [input.organizationId, input.schoolId],
+    );
+
+  for (const target of targets) {
+    await db.queryObject(
+      `INSERT INTO student_entities (id, organization_id, school_id, student_id, entity_type, payload)
+       VALUES ($1, $2, $3, $4::uuid, 'homework_item',
+         jsonb_build_object(
+           'id', $1::text, 'subject', $5::text, 'title', $6::text,
+           'dueLabel', $7::text, 'status', 'pending'))
+       ON CONFLICT (organization_id, school_id, student_id, entity_type, id)
+         DO UPDATE SET payload = EXCLUDED.payload`,
+      [
+        input.homeworkId,
+        input.organizationId,
+        input.schoolId,
+        target.id,
+        input.subject,
+        input.title,
+        input.dueLabel,
+      ],
+    );
+  }
+
+  return { id: input.homeworkId, deliveredCount: targets.length };
+}

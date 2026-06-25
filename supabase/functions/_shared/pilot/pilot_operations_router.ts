@@ -6,6 +6,7 @@ import {
   handleTeacherAttendanceDraft,
   handleTeacherAttendanceSubmit,
   handleTeacherExamMarkUpdate,
+  handleTeacherHomeworkCreate,
   handleTeacherHomeworkReview,
   handleTeacherLeaveSubmit,
 } from "./pilot_operations_handlers.ts";
@@ -28,6 +29,9 @@ function matchPilotRoute(
   }
   if (method === "POST" && path === "/student/homework/submit") {
     return { handler: handleStudentHomeworkSubmit };
+  }
+  if (method === "POST" && path === "/teacher/homework") {
+    return { handler: handleTeacherHomeworkCreate };
   }
 
   const reviewMatch = path.match(/^\/teacher\/homework\/submissions\/([^/]+)\/review$/);

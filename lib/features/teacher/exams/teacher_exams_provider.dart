@@ -6,6 +6,7 @@ import '../../../core/approvals/adapters/exam_results_approval_adapter.dart';
 import '../../../core/approvals/approval_request_type.dart';
 import '../../../core/config/exam_approval_config.dart';
 import '../../../core/exams/exam_administration_store.dart';
+import '../../../core/exams/exam_remark.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
@@ -226,13 +227,17 @@ Future<void> saveTeacherExamRemark(
   required String text,
 }) async {
   final ctx = ref.read(resolvedTeacherTeachingContextProvider);
-  ExamAdministrationStore.instance.upsertRemark(
-    examId: examId,
-    sisStudentId: sisStudentId,
-    text: text.trim(),
-    authorId: ctx.teacherId,
-    authorName: ctx.teacherName,
-  );
+  // Persist through the repository (backend in live mode), then cache the
+  // canonical remark so synchronous reads reflect it immediately.
+  final remark = await ref.read(examAdministrationRepositoryProvider).upsertRemark(
+        query: ref.read(repositoryQueryProvider),
+        examId: examId,
+        sisStudentId: sisStudentId,
+        text: text.trim(),
+        authorName: ctx.teacherName,
+        authorRole: ExamRemarkAuthorRole.classTeacher,
+      );
+  ExamAdministrationStore.instance.cacheRemarks([remark]);
   ref.read(teacherExamRefreshTickProvider.notifier).state++;
 }
 

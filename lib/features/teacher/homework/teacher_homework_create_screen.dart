@@ -2,16 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/homework/school_homework_store.dart';
-import '../../../core/repositories/mock/mock_canonical_student_registry.dart';
-import '../../../features/auth/auth_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
-import 'teacher_homework_provider.dart';
+import '../teacher_mutations_provider.dart';
+import '../teacher_requests.dart';
 
-/// TA-04 — Homework create wired to shared [SchoolHomeworkStore].
+/// TA-04 — Homework create persisted via [createTeacherHomeworkProvider].
 class TeacherHomeworkCreateScreen extends ConsumerStatefulWidget {
   const TeacherHomeworkCreateScreen({super.key});
 
@@ -111,55 +109,49 @@ class _TeacherHomeworkCreateScreenState
               ),
               const SizedBox(height: AksharaSpacing.s5),
               FilledButton(
-                onPressed: () {
+                onPressed: () async {
                   if (!(_formKey.currentState?.validate() ?? false)) return;
-                  final classLabel = _classController.text.trim();
-                  final parsed = SchoolHomeworkStore.parseClassLabel(classLabel);
-                  final title = _titleController.text.trim();
-                  final dueLabel = _dueController.text.trim();
+
+                  final messenger = ScaffoldMessenger.of(context);
+                  final router = GoRouter.of(context);
                   final studentName = _studentController.text.trim();
-                  final teacherName =
-                      ref.read(authProvider).displayName ?? 'Priya Sharma';
 
-                  CanonicalStudentRecord? targetStudent;
-                  if (studentName.isNotEmpty) {
-                    for (final record in MockCanonicalStudentRegistry.all) {
-                      if (record.studentName.toLowerCase() ==
-                          studentName.toLowerCase()) {
-                        targetStudent = record;
-                        break;
-                      }
+                  try {
+                    await ref
+                        .read(createTeacherHomeworkProvider.notifier)
+                        .execute(
+                          TeacherHomeworkCreateRequest(
+                            classLabel: _classController.text.trim(),
+                            subject: _subjectController.text.trim(),
+                            title: _titleController.text.trim(),
+                            dueLabel: _dueController.text.trim(),
+                            studentName:
+                                studentName.isEmpty ? null : studentName,
+                          ),
+                        );
+
+                    final error =
+                        ref.read(createTeacherHomeworkProvider).error;
+                    if (error != null) {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Could not create homework.'),
+                        ),
+                      );
+                      return;
                     }
+
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Homework created.')),
+                    );
+                    router.go(RouteNames.teacherHomework);
+                  } catch (_) {
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not create homework.'),
+                      ),
+                    );
                   }
-
-                  final record = SchoolHomeworkStore.instance.create(
-                    grade: parsed.grade,
-                    section: parsed.section,
-                    subject: _subjectController.text.trim(),
-                    title: title,
-                    dueLabel: dueLabel.isEmpty ? '—' : dueLabel,
-                    teacherName: teacherName,
-                    targetSisStudentIds: targetStudent == null
-                        ? const []
-                        : [targetStudent.sisStudentId],
-                  );
-
-                  final assignment =
-                      SchoolHomeworkStore.instance.toTeacherAssignment(record);
-
-                  final createdNotifier = ref
-                      .read(teacherHomeworkCreatedAssignmentsProvider.notifier);
-                  createdNotifier.state = [
-                    assignment,
-                    ...ref.read(teacherHomeworkCreatedAssignmentsProvider),
-                  ];
-
-                  ref
-                      .read(teacherHomeworkAssignmentProvider.notifier)
-                      .state = record.id;
-                  ref.read(teacherHomeworkEmptyProvider.notifier).state = false;
-
-                  context.go(RouteNames.teacherHomework);
                 },
                 child: const Text('Create'),
               ),

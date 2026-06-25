@@ -18,6 +18,7 @@ import '../../features/student_app/exams/student_exams_provider.dart';
 import 'attendance/teacher_attendance_provider.dart';
 import 'exams/exam_models.dart';
 import 'exams/teacher_exams_provider.dart';
+import 'homework/homework_models.dart';
 import 'homework/teacher_homework_provider.dart';
 import 'leave/leave_models.dart';
 import 'leave/teacher_leave_provider.dart';
@@ -509,4 +510,36 @@ class SendTeacherMessageNotifier extends AsyncNotifier<MessageThread?> {
 final sendTeacherMessageProvider =
     AsyncNotifierProvider<SendTeacherMessageNotifier, MessageThread?>(
   SendTeacherMessageNotifier.new,
+);
+
+class CreateTeacherHomeworkNotifier
+    extends AsyncNotifier<TeacherHomeworkAssignment?> {
+  @override
+  FutureOr<TeacherHomeworkAssignment?> build() => null;
+
+  Future<TeacherHomeworkAssignment?> execute(
+    TeacherHomeworkCreateRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        auditAction: 'createHomework',
+        entityId: 'homework',
+        entityIdForAudit: (assignment) => assignment.id,
+        invalidateHomework: true,
+        action: () => ref.read(teacherRepositoryProvider).createHomework(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final createTeacherHomeworkProvider =
+    AsyncNotifierProvider<CreateTeacherHomeworkNotifier,
+        TeacherHomeworkAssignment?>(
+  CreateTeacherHomeworkNotifier.new,
 );

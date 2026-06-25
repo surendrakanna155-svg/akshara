@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/widgets/akshara_error_state.dart';
@@ -128,13 +127,8 @@ class _SettingItemTile extends StatelessWidget {
           '${item.description}\n${item.value}',
           style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
         ),
-        trailing: item.editable
-            ? IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                tooltip: 'Edit ${item.label}',
-                onPressed: () => showAksharaOperationalPreviewSnackBar(context, action: 'Edit'),
-              )
-            : null,
+        // STF-8: edit affordance removed — no client/backend write path exists,
+        // so a no-op "Edit" misleads users. Settings remain read-only.
       ),
     );
   }

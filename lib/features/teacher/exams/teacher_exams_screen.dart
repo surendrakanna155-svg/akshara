@@ -10,6 +10,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'exam_models.dart';
 import 'teacher_exams_provider.dart';
+import '../../academics/exam_admin/exam_administration_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../../../theme/breakpoints.dart';
 
@@ -352,6 +353,10 @@ class _MarksEntryPanel extends ConsumerWidget {
     final activeExamId = ref.watch(teacherActiveExamIdProvider);
     final activeExam = ref.watch(teacherActiveExamProvider);
     final options = optionsAsync.valueOrNull ?? const <TeacherExamSessionOption>[];
+    // Hydrate backend-persisted remarks for the active exam into the local cache.
+    if (activeExamId != null) {
+      ref.watch(examRemarksHydrationProvider(activeExamId));
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

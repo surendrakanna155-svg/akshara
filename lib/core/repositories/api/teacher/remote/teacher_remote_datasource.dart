@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
+import '../../../../../features/teacher/homework/homework_models.dart';
 import '../../../../../features/teacher/teacher_requests.dart';
 import '../../../../communication/parent_communication_governance.dart';
 import '../dto/teacher_responses_dto.dart';
@@ -293,6 +294,28 @@ class TeacherRemoteDataSource {
       data: TeacherMessageSendRequestDto.fromDomain(request).toJson(),
     );
     return MessageThreadDto.fromJson(_requireData(response));
+  }
+
+  Future<TeacherHomeworkAssignment> createHomework({
+    required RepositoryQuery query,
+    required TeacherHomeworkCreateRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.homeworkCreate,
+      queryParameters: _queryParams(query),
+      data: TeacherHomeworkCreateRequestDto.fromDomain(request).toJson(),
+    );
+    final data = _requireData(response);
+    // Response data: { id, title, classLabel, subject, dueLabel, deliveredCount }.
+    // TeacherHomeworkAssignment carries no subject/deliveredCount; a freshly
+    // created assignment has no submissions yet, so default to empty.
+    return TeacherHomeworkAssignment(
+      id: (data['id'] ?? '').toString(),
+      title: (data['title'] ?? request.title).toString(),
+      classLabel: (data['classLabel'] ?? request.classLabel).toString(),
+      dueLabel: (data['dueLabel'] ?? request.dueLabel).toString(),
+      submissions: const [],
+    );
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
