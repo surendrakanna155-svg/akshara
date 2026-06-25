@@ -30,15 +30,23 @@ publisher (create → AI poster + captions → preview → approval → select d
   `pending_connection` when no account is linked. Publishing stays **approval-gated**
   (`approveAchievementPromotion`) and only goes to the **user-selected** channels.
 
-## Certification status
+## Certification status — ✅ PRODUCTION CERTIFIED (live, dry-run mode)
 
 - Backend unit tests **11/11** (AES-GCM round-trip, token never stored in clear,
   login-URL scopes, dry-run FB/IG request construction with token redaction) +
   `deno check` clean.
-- Live cert harness `scripts/qa/live_cert_social_media.py` certifies (in dry-run)
-  RBAC, **encrypted-token-at-rest**, connection CRUD, and the publisher posting via a
-  connection (dry_run) vs `pending_connection` without one. *(Runs once the VPS control
-  socket is reopened + the migration is deployed.)*
+- **Live cert 13/13 PASS** (2026-06-25) against the real VPS / real DB / school-scope
+  JWT via `scripts/qa/live_cert_social_media.py`: unauth→401, read needs
+  `viewSocialConnections`, connect needs `manageSocialConnections`, OAuth login URL
+  carries the publish scopes, connect stores a connection, **token is encrypted at rest
+  (`stored=ENC` — no plaintext in `encrypted_page_token`)**, list never exposes the
+  token, publisher posts FB+IG via the connection (`dry_run`, records the Graph request),
+  disconnect works, FB/IG fall back to `pending_connection` without a connection,
+  unauth disconnect→401, clean teardown.
+- Deployed: migration `20260730000000` applied (table + RLS + grants + 2 perms + 6 role
+  mappings), `SOCIAL_TOKEN_ENC_KEY` set on the VPS, `_shared/social/` + publisher +
+  router live, edge recreated. Server runs in **dry-run** until the owner completes the
+  Meta steps below; it flips to real posting automatically (no code change).
 
 ## ⚠️ Owner-gated go-live steps (external — cannot be done from this repo)
 
