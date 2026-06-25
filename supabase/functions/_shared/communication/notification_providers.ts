@@ -1,4 +1,5 @@
 import type { NotificationChannel, NotificationProviderConfig } from "./notification_provider_config.ts";
+import { sendFcmV1 } from "./fcm_v1_client.ts";
 
 export interface DeliveryPayload {
   channel: NotificationChannel;
@@ -6,6 +7,12 @@ export interface DeliveryPayload {
   subject: string | null;
   body: string;
   deviceToken?: string | null;
+  // Optional metadata forwarded to the FCM `data` payload so the app can route
+  // the tap and refresh the right inbox entry.
+  notificationId?: string | null;
+  category?: string | null;
+  childContext?: string | null;
+  route?: string | null;
 }
 
 export interface DeliveryResult {
@@ -113,30 +120,25 @@ async function sendPush(
       error: null,
     };
   }
-  if (!config.push.serverKey || !payload.deviceToken) {
+  if (!config.push.configured || !payload.deviceToken) {
     return { success: false, providerRef: null, error: "Push provider or device token missing" };
   }
-  const response = await fetch("https://fcm.googleapis.com/fcm/send", {
-    method: "POST",
-    headers: {
-      Authorization: `key=${config.push.serverKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      to: payload.deviceToken,
-      notification: {
-        title: payload.subject ?? "Akshara ERP",
-        body: payload.body,
-      },
-    }),
+  // Modern FCM HTTP v1 (service-account auth) — the legacy server-key API is
+  // retired. `data` values must be strings; nulls are dropped.
+  const data: Record<string, string> = {};
+  if (payload.notificationId) data.notification_id = payload.notificationId;
+  if (payload.category) data.category = payload.category;
+  if (payload.childContext) data.child_context = payload.childContext;
+  if (payload.route) data.route = payload.route;
+
+  const result = await sendFcmV1({
+    token: payload.deviceToken,
+    title: payload.subject ?? "Akshara ERP",
+    body: payload.body,
+    data,
   });
-  if (!response.ok) {
-    return { success: false, providerRef: null, error: await response.text() };
+  if (!result.success) {
+    return { success: false, providerRef: null, error: result.error };
   }
-  const data = await response.json() as { message_id?: number; multicast_id?: number };
-  return {
-    success: true,
-    providerRef: String(data.message_id ?? data.multicast_id ?? ""),
-    error: null,
-  };
+  return { success: true, providerRef: result.messageId, error: null };
 }

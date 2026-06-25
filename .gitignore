@@ -55,3 +55,7 @@ lcov.info
 # Local tool / CLI state (never commit)
 .claude/
 supabase/.branches/
+
+# Firebase service-account secrets — never commit
+*firebase-adminsdk*.json
+FCM_SERVICE_ACCOUNT*.json

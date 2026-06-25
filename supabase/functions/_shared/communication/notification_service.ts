@@ -73,6 +73,9 @@ export async function processDeliveryQueue(
       subject: delivery.rendered_subject,
       body: delivery.rendered_body,
       deviceToken,
+      notificationId: delivery.id,
+      category: delivery.category,
+      childContext: delivery.child_context ?? null,
     });
     if (result.success) {
       await markDeliverySent(db, delivery.id, result.providerRef);

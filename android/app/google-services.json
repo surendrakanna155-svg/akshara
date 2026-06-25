@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "35714138686",
+    "project_id": "akshara-erp",
+    "storage_bucket": "akshara-erp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35714138686:android:5c4b64cd7ef680300d876f",
+        "android_client_info": {
+          "package_name": "com.akshara.erp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3VhTFrV7VWu-hhdIrDRbk-BZX_xWUsiw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
