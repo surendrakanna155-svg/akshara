@@ -82,6 +82,8 @@ export async function handleCreateGrowthCampaign(req: Request, config: AppConfig
     budgetInr?: number;
     startDate?: string;
     endDate?: string;
+    audience?: string;
+    scheduledAt?: string;
   }>(req);
   if (!body?.name || !body.channel) {
     return errorEnvelope("VALIDATION_ERROR", "name and channel required", 422);
@@ -94,8 +96,9 @@ export async function handleCreateGrowthCampaign(req: Request, config: AppConfig
     const id = await withTenantContext(config, auth.claims, async (db) => {
       const rows = await db.queryObject<{ id: string }>(
         `INSERT INTO growth_campaigns (
-           organization_id, school_id, name, channel, budget_inr, start_date, end_date, created_by
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           organization_id, school_id, name, channel, budget_inr, start_date, end_date,
+           audience, scheduled_at, created_by
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
         [
           orgId,
@@ -105,6 +108,8 @@ export async function handleCreateGrowthCampaign(req: Request, config: AppConfig
           body.budgetInr ?? null,
           body.startDate ?? null,
           body.endDate ?? null,
+          body.audience ?? "all",
+          body.scheduledAt ?? null,
           auth.claims.sub,
         ],
       );
@@ -191,10 +196,148 @@ export async function handleListGrowthCampaigns(req: Request, config: AppConfig)
     const items = await withTenantContext(config, auth.claims, async (db) =>
       db.queryObject<Record<string, unknown>>(
         `SELECT id, name, channel, status, budget_inr AS "budgetInr",
-                start_date AS "startDate", end_date AS "endDate"
+                start_date AS "startDate", end_date AS "endDate",
+                audience, scheduled_at AS "scheduledAt", created_at AS "createdAt"
          FROM growth_campaigns
          ORDER BY created_at DESC
          LIMIT 50`,
+      )
+    );
+    return jsonResponse(envelope({ items }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("GROWTH_ERROR", String(error), 500);
+  }
+}
+
+// Columns returned for a single campaign — keys match the Flutter
+// `toGrowthCampaign` mapper so update/pause responses hydrate the model directly.
+const CAMPAIGN_RETURNING =
+  `id, name, channel, status, budget_inr AS "budgetInr",
+   audience, scheduled_at AS "scheduledAt", created_at AS "createdAt", updated_at`;
+
+export async function handleUpdateGrowthCampaign(
+  req: Request,
+  config: AppConfig,
+  campaignId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "manageGrowthPlatform") ??
+    requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{
+    name?: string;
+    channel?: string;
+    status?: string;
+    budgetInr?: number;
+    audience?: string;
+    scheduledAt?: string;
+  }>(req);
+
+  // Build a partial update from only the provided fields. RLS scopes the row to
+  // the caller's org+school, so a cross-tenant id silently affects zero rows.
+  const updatable: Array<[string, unknown]> = [
+    ["name", body?.name],
+    ["channel", body?.channel],
+    ["status", body?.status],
+    ["budget_inr", body?.budgetInr],
+    ["audience", body?.audience],
+    ["scheduled_at", body?.scheduledAt],
+  ];
+  const sets: string[] = [];
+  const params: unknown[] = [campaignId];
+  for (const [col, val] of updatable) {
+    if (val !== undefined) {
+      params.push(val);
+      sets.push(`${col} = $${params.length}`);
+    }
+  }
+  if (sets.length === 0) {
+    return errorEnvelope("VALIDATION_ERROR", "no updatable fields provided", 422);
+  }
+
+  try {
+    const campaign = await withTenantContext(config, auth.claims, async (db) => {
+      const rows = await db.queryObject<Record<string, unknown>>(
+        `UPDATE growth_campaigns SET ${sets.join(", ")}
+         WHERE id = $1
+         RETURNING ${CAMPAIGN_RETURNING}`,
+        params,
+      );
+      if (rows.length === 0) throw new Error("Campaign not found");
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        growthPlatformAudit.campaignUpdated(campaignId, String(rows[0]!.updated_at)),
+        req,
+      );
+      return rows[0]!;
+    });
+    return jsonResponse(envelope(campaign));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("GROWTH_ERROR", String(error), 500);
+  }
+}
+
+export async function handlePauseGrowthCampaign(
+  req: Request,
+  config: AppConfig,
+  campaignId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "manageGrowthPlatform") ??
+    requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const campaign = await withTenantContext(config, auth.claims, async (db) => {
+      const rows = await db.queryObject<Record<string, unknown>>(
+        `UPDATE growth_campaigns SET status = 'paused'
+         WHERE id = $1
+         RETURNING ${CAMPAIGN_RETURNING}`,
+        [campaignId],
+      );
+      if (rows.length === 0) throw new Error("Campaign not found");
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        growthPlatformAudit.campaignPaused(campaignId, String(rows[0]!.updated_at)),
+        req,
+      );
+      return rows[0]!;
+    });
+    return jsonResponse(envelope(campaign));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    return errorEnvelope("GROWTH_ERROR", String(error), 500);
+  }
+}
+
+export async function handleListGrowthCampaignHistory(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "viewGrowthPlatform") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  // History = past / inactive campaigns (paused or completed), most recent first.
+  try {
+    const items = await withTenantContext(config, auth.claims, async (db) =>
+      db.queryObject<Record<string, unknown>>(
+        `SELECT ${CAMPAIGN_RETURNING}
+         FROM growth_campaigns
+         WHERE status IN ('paused', 'completed')
+         ORDER BY updated_at DESC
+         LIMIT 100`,
       )
     );
     return jsonResponse(envelope({ items }));

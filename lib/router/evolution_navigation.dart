@@ -7,6 +7,8 @@ import '../features/evolution/parent_insights_screen.dart';
 import '../features/evolution/principal_command_screen.dart';
 import '../features/evolution/setup_wizard_screen.dart';
 import '../features/evolution/teacher_assistant_screen.dart';
+import '../features/admin/models/admin_nav_models.dart';
+import '../features/entitlements/entitlement_module_gate.dart';
 import 'route_names.dart';
 
 Widget setupWizardRouteBuilder(BuildContext context, GoRouterState state) {
@@ -30,7 +32,12 @@ Widget principalCommandRouteBuilder(BuildContext context, GoRouterState state) {
 }
 
 Widget growthPlatformRouteBuilder(BuildContext context, GoRouterState state) {
-  return const GrowthPlatformScreen();
+  // Defense-in-depth: the Marketing engine is plan-gated (module.marketing). The
+  // gate renders the upgrade view when locked; the server also enforces 402.
+  return const EntitlementModuleGate(
+    module: AdminModule.marketing,
+    child: GrowthPlatformScreen(),
+  );
 }
 
 String? evolutionRedirect(GoRouterState state) {

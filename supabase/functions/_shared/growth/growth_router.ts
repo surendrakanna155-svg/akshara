@@ -6,8 +6,11 @@ import {
   handleCreateGrowthInquiry,
   handleGrowthDashboard,
   handleGrowthFunnel,
+  handleListGrowthCampaignHistory,
   handleListGrowthCampaigns,
   handleListGrowthInquiries,
+  handlePauseGrowthCampaign,
+  handleUpdateGrowthCampaign,
 } from "./growth_handlers.ts";
 
 const UUID =
@@ -27,12 +30,25 @@ export async function routeGrowth(
   if (path === "/growth/funnel" && method === "GET") {
     return handleGrowthFunnel(req, config);
   }
+  if (path === "/growth/campaigns/history" && method === "GET") {
+    return handleListGrowthCampaignHistory(req, config);
+  }
   if (path === "/growth/campaigns" && method === "GET") {
     return handleListGrowthCampaigns(req, config);
   }
   if (path === "/growth/campaigns" && method === "POST") {
     return handleCreateGrowthCampaign(req, config);
   }
+
+  const pauseMatch = path.match(/^\/growth\/campaigns\/([^/]+)\/pause$/);
+  if (pauseMatch && method === "POST" && UUID.test(pauseMatch[1]!)) {
+    return handlePauseGrowthCampaign(req, config, pauseMatch[1]!);
+  }
+  const campaignMatch = path.match(/^\/growth\/campaigns\/([^/]+)$/);
+  if (campaignMatch && method === "PUT" && UUID.test(campaignMatch[1]!)) {
+    return handleUpdateGrowthCampaign(req, config, campaignMatch[1]!);
+  }
+
   if (path === "/growth/inquiries" && method === "GET") {
     return handleListGrowthInquiries(req, config);
   }

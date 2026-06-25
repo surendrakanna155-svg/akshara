@@ -6,6 +6,7 @@ import '../../../core/security/permissions.dart';
 enum AdminModule {
   admin,
   admissions,
+  marketing,
   finance,
   sis,
   hr,

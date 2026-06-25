@@ -31,12 +31,13 @@ void main() {
       addTearDown(container.dispose);
 
       final destinations = container.read(adminNavDestinationsProvider);
-      expect(destinations, hasLength(13));
+      expect(destinations, hasLength(14));
       expect(
         destinations.map((d) => d.route).toList(),
         [
           RouteNames.admin,
           RouteNames.admissionsDashboard,
+          RouteNames.growthPlatform, // Marketing engine (B6)
           RouteNames.financeDashboard,
           RouteNames.sisDashboard,
           RouteNames.hrDashboard,

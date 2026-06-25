@@ -65,8 +65,10 @@ abstract final class SchoolBuildScope {
     RouteNames.teacherAssistant,
     // parentInsights: surfaced for parents (B3, 2026-06-25) — live AI insights
     // wired into the parent flow; entitlement-gated via feature.parent_insights.
+    // growthPlatform: surfaced as the Marketing engine (B6, 2026-06-25) — lead
+    // capture + campaigns + source attribution, entitlement-gated via
+    // module.marketing; reachable from the Marketing nav tile.
     RouteNames.principalCommand,
-    RouteNames.growthPlatform,
   };
 
   /// Whether [module] is hidden from the admin navigation in this build.

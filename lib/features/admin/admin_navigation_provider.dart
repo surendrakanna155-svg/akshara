@@ -10,6 +10,7 @@ import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/workspace/workspace_providers.dart';
 import 'models/admin_nav_models.dart';
+import '../entitlements/entitlement_module_gate.dart';
 import '../../router/route_names.dart';
 
 /// All ERP module destinations before permission filtering.
@@ -29,6 +30,14 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     icon: Icons.school_outlined,
     selectedIcon: Icons.school,
     requiredPermission: Permission.viewAdmissions,
+  ),
+  AdminNavDestination(
+    module: AdminModule.marketing,
+    route: RouteNames.growthPlatform,
+    label: 'Marketing',
+    icon: Icons.campaign_outlined,
+    selectedIcon: Icons.campaign,
+    requiredPermission: Permission.viewGrowthPlatform,
   ),
   AdminNavDestination(
     module: AdminModule.finance,
@@ -211,6 +220,13 @@ final adminNavDestinationsProvider = Provider<List<AdminNavDestination>>((ref) {
         (destination) => rbac.hasPermission(destination.requiredPermission),
       )
       .map((destination) {
+        // Marketing is entitlement-gated outside the 8-flag SchoolCapabilities
+        // model; lock it from the resolved plan directly (never hide — B2 UX).
+        if (destination.module == AdminModule.marketing) {
+          return ref.watch(modulePlanLockedProvider(destination.module))
+              ? destination.copyWith(isLocked: true)
+              : destination;
+        }
         // Effective = school config ∩ plan ceiling. If enabled, show normally.
         if (SchoolCapabilityRegistry.isAdminModuleEnabled(
           destination.module,
@@ -262,6 +278,14 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
     description:
         'Admissions CRM (AD-01 → AD-10) will be built on this shell. Not started yet.',
     route: RouteNames.admissionsDashboard,
+  ),
+  AdminModule.marketing: AdminModuleInfo(
+    module: AdminModule.marketing,
+    title: 'Marketing',
+    description:
+        'Marketing engine — lead capture, campaigns, and source attribution feeding '
+        'the Admissions CRM.',
+    route: RouteNames.growthPlatform,
   ),
   AdminModule.finance: AdminModuleInfo(
     module: AdminModule.finance,

@@ -1051,6 +1051,26 @@ export const growthPlatformAudit = {
       idempotencyKey: `growth.inquiry.convert:${inquiryId}`,
     },
   }),
+  // Campaign edit/pause are repeatable — the row's post-update `updated_at` keys
+  // the outbox event so legitimate re-edits are not deduped away.
+  campaignUpdated: (id: string, version: string): MutationAuditSpec => ({
+    ...workflow("growthCampaignUpdated", "growth_campaign", id, { id }),
+    domain: {
+      eventType: "growth.campaign.updated",
+      payload: { id },
+      sourceModule: "growth",
+      idempotencyKey: `growth.campaign.update:${id}:${version}`,
+    },
+  }),
+  campaignPaused: (id: string, version: string): MutationAuditSpec => ({
+    ...workflow("growthCampaignPaused", "growth_campaign", id, { id }),
+    domain: {
+      eventType: "growth.campaign.paused",
+      payload: { id },
+      sourceModule: "growth",
+      idempotencyKey: `growth.campaign.pause:${id}:${version}`,
+    },
+  }),
 };
 
 export const schoolCompletionAudit = {

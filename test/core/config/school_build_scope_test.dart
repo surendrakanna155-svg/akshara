@@ -70,7 +70,6 @@ void main() {
         RouteNames.dynamicWidgets,
         RouteNames.resourceOptimization,
         RouteNames.schoolMemories,
-        RouteNames.growthPlatform,
         RouteNames.principalCommand,
       ]) {
         expect(
@@ -79,6 +78,13 @@ void main() {
           reason: '$route should be hidden in the school build',
         );
       }
+    });
+
+    test('growthPlatform (Marketing engine) is surfaced, not build-hidden (B6)',
+        () {
+      expect(SchoolBuildScope.isRouteHidden(RouteNames.growthPlatform), isFalse,
+          reason:
+              'B6 surfaced the Marketing engine; it is entitlement-gated, not hidden');
     });
 
     test('kept school + multi-school routes are NOT blocked', () {

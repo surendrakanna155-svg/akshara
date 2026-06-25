@@ -67,6 +67,7 @@ const Map<WorkspaceId, Workspace> kWorkspaceCatalog = {
     modules: {
       AdminModule.admin,
       AdminModule.admissions,
+      AdminModule.marketing,
       AdminModule.finance,
       AdminModule.sis,
       AdminModule.hr,
@@ -106,7 +107,7 @@ const Map<WorkspaceId, Workspace> kWorkspaceCatalog = {
     icon: Icons.support_agent_outlined,
     homeRoute: RouteNames.admissionsDashboard,
     shell: UserRole.staff,
-    modules: {AdminModule.admissions},
+    modules: {AdminModule.admissions, AdminModule.marketing},
   ),
   WorkspaceId.inventory: Workspace(
     id: WorkspaceId.inventory,

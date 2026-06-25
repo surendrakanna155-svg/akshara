@@ -24,6 +24,9 @@ abstract final class EntitlementSlugs {
   static const hrPayroll = 'module.hr_payroll';
   static const multiBranch = 'module.multi_branch';
   static const trustOrg = 'module.trust_org';
+  // Marketing / growth engine (B6) — gated like a module, but not one of the 8
+  // SchoolCapabilities flags, so it is checked against the entitlement set directly.
+  static const marketing = 'module.marketing';
   // Features.
   static const parentInsights = 'feature.parent_insights';
   static const aiPredictions = 'feature.ai_predictions';

@@ -109,7 +109,8 @@ async function routeModuleRequest(
     // B3: Parent Insights surfaced for parents — gated by plan entitlement.
     withEntitlement(routeParentInsights, "/parent-insights", "feature.parent_insights"),
     routePrincipalCommand,
-    routeGrowth,
+    // B6: Marketing Engine (growth platform) — gated by plan entitlement.
+    withEntitlement(routeGrowth, "/growth", "module.marketing"),
     routeSchoolCompletion,
     routeParentExperience,
     withEntitlement(routeDirector, "/director", "module.multi_branch"),
