@@ -8,6 +8,7 @@ import '../core/security/erp_role.dart';
 import '../features/auth/auth_models.dart';
 import '../features/auth/qa_login_persona.dart';
 import '../features/auth/login_screen.dart';
+import '../features/predictions/predictions_screen.dart';
 import '../features/auth/otp_verification_screen.dart';
 import '../features/auth/qa_login_screen.dart';
 import '../features/auth/splash_screen.dart';
@@ -551,6 +552,13 @@ GoRouter createAppRouter({
             name: 'intelligence',
             pageBuilder: (context, state) => NoTransitionPage(
               child: intelligenceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.aiPredictions,
+            name: 'aiPredictions',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: PredictionsScreen(),
             ),
           ),
           GoRoute(

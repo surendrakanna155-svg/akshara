@@ -23,6 +23,7 @@ import 'interfaces/alumni_repository.dart';
 import 'interfaces/control_center_repository.dart';
 import 'interfaces/platform_intelligence_repository.dart';
 import 'interfaces/director_repository.dart';
+import 'interfaces/predictions_repository.dart';
 import 'interfaces/inventory_finance_repository.dart';
 import 'interfaces/inventory_repository.dart';
 import 'interfaces/onboarding_repository.dart';
@@ -83,6 +84,7 @@ import 'interfaces/analytics_intelligence_repository.dart';
 import 'api/timetable/hybrid_timetable_repository.dart';
 import 'api/analytics/hybrid_analytics_intelligence_repository.dart';
 import 'api/director/hybrid_director_repository.dart';
+import 'api/predictions/hybrid_predictions_repository.dart';
 import 'api/hostel/hybrid_hostel_repository.dart';
 import 'api/hr/hybrid_hr_repository.dart';
 import 'mock/mock_timetable_repository.dart';
@@ -112,6 +114,7 @@ import 'mock/mock_sis_repository.dart';
 import 'mock/mock_control_center_repository.dart';
 import 'mock/mock_platform_intelligence_repository.dart';
 import 'mock/mock_director_repository.dart';
+import 'mock/mock_predictions_repository.dart';
 import 'mock/mock_transport_repository.dart';
 import 'mock/mock_onboarding_repository.dart';
 import 'mock/mock_startup_onboarding_repository.dart';
@@ -364,6 +367,16 @@ final directorRepositoryProvider = Provider<DirectorRepository>((ref) {
   }
   return MockDirectorRepository(
       pipeline: ref.watch(aiInferencePipelineProvider));
+});
+
+final predictionsRepositoryProvider = Provider<PredictionsRepository>((ref) {
+  if (isModuleApiEnabled(ref, predictionsApiEnabledProvider)) {
+    return HybridPredictionsRepository(
+      api: ref.read(apiPredictionsRepositoryProvider),
+      mock: MockPredictionsRepository(),
+    );
+  }
+  return MockPredictionsRepository();
 });
 
 final parentRepositoryProvider = Provider<ParentRepository>((ref) {

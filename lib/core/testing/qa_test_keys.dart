@@ -1249,6 +1249,17 @@ abstract final class QaTestKeys {
   static ValueKey<String> directorReportExportButton(String reportId) =>
       ValueKey<String>('director_report_export_$reportId');
 
+  static const predictionsScreen =
+      ValueKey<String>('predictions_screen');
+  static const predictionsFeeDefaultSection =
+      ValueKey<String>('predictions_fee_default_section');
+  static const predictionsConversionSection =
+      ValueKey<String>('predictions_conversion_section');
+  static const predictionsStudentRiskSection =
+      ValueKey<String>('predictions_student_risk_section');
+  static const intelligencePredictionsLaunchTile =
+      ValueKey<String>('intelligence_predictions_launch_tile');
+
   static const directorManageInputsButton =
       ValueKey<String>('director_manage_inputs_button');
   static const directorMetricInputSchoolField =

@@ -55,6 +55,7 @@ import { routeGrowth } from "../_shared/growth/growth_router.ts";
 import { routeSchoolCompletion } from "../_shared/school_completion/school_completion_router.ts";
 import { routeParentExperience } from "../_shared/parent_experience/parent_experience_router.ts";
 import { routeDirector } from "../_shared/director/director_router.ts";
+import { routePredictions } from "../_shared/predictions/predictions_router.ts";
 // --- B1 school-config (AgentE) ---
 import { routeSchoolConfig } from "../_shared/school_config/school_config_router.ts";
 // --- end B1 school-config (AgentE) ---
@@ -116,6 +117,9 @@ async function routeModuleRequest(
     routeSchoolCompletion,
     routeParentExperience,
     withEntitlement(routeDirector, "/director", "module.multi_branch"),
+    // B9: Advanced AI Predictions (fee-default / admission-conversion / student-risk) —
+    // gated by the Enterprise feature.ai_predictions entitlement (per-deal override-grantable).
+    withEntitlement(routePredictions, "/predictions", "feature.ai_predictions"),
     // --- B1 school-config (AgentE) ---
     routeSchoolConfig,
     // --- end B1 school-config (AgentE) ---

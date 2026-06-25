@@ -24,6 +24,17 @@
 > with safe fallback, **non-destructive** (proposes only). Live smoke **10/10** (real auth +
 > prod DB + real AI, `source=ai`).
 >
+> **B9 Advanced AI Predictions PRODUCTION CERTIFIED (2026-06-25):** the first prediction models,
+> shipped as one gated product — three school-scoped, data-grounded feeds: fee-default (finance
+> invoices), admission-conversion likelihood (admissions funnel), and student-risk (reuses the
+> certified intelligence engine). Each returns a deterministic list + an optional real-AI narrative
+> (Claude, safe fallback). New `_shared/predictions/` module gated by the Enterprise
+> `feature.ai_predictions` entitlement (per-deal override-grantable); per-endpoint RBAC
+> (viewFinance/viewAdmissions/viewStudentRisk). No migration, no new permission slugs. Flutter
+> `PredictionsScreen` at `/intelligence/predictions` + intelligence-hub launch tile. Live cert
+> **11/11**: gate denies the Professional pilot (402) → override enables → real predictions on real
+> data + real AI; RBAC + unauth + school-scope enforced. See `docs/B9_ADVANCED_AI_PREDICTIONS_CERTIFICATION.md`.
+>
 > **B8 Director Multi-School PRODUCTION CERTIFIED (2026-06-25):** polish for multi-branch sales
 > on the certified Batch-6 Director backend — closed three honesty gaps: (A) a metric-input
 > write path (`GET`/`POST /director/metric-inputs`, manage-gated, audited) so the chain owner

@@ -77,6 +77,8 @@ import 'multi_school/api_multi_school_operations_repository.dart';
 import 'multi_school/remote/multi_school_operations_remote_datasource.dart';
 import 'director/api_director_repository.dart';
 import 'director/remote/director_remote_datasource.dart';
+import 'predictions/api_predictions_repository.dart';
+import 'predictions/remote/predictions_remote_datasource.dart';
 import 'organization_builder/api_organization_builder_repository.dart';
 import 'organization_builder/remote/organization_builder_remote_datasource.dart';
 import 'platform_operations/api_platform_operations_repository.dart';
@@ -484,6 +486,17 @@ final directorRemoteDataSourceProvider = Provider<DirectorRemoteDataSource>(
 final apiDirectorRepositoryProvider = Provider<ApiDirectorRepository>(
   (ref) => ApiDirectorRepository(
     remote: ref.watch(directorRemoteDataSourceProvider),
+  ),
+);
+
+final predictionsRemoteDataSourceProvider =
+    Provider<PredictionsRemoteDataSource>(
+  (ref) => PredictionsRemoteDataSource(ref.watch(dioProvider)),
+);
+
+final apiPredictionsRepositoryProvider = Provider<ApiPredictionsRepository>(
+  (ref) => ApiPredictionsRepository(
+    remote: ref.watch(predictionsRemoteDataSourceProvider),
   ),
 );
 

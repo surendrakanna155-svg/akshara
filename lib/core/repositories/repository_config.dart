@@ -210,6 +210,11 @@ final directorApiEnabledProvider = Provider<bool>((ref) {
   return const bool.fromEnvironment('DIRECTOR_API_ENABLED',
       defaultValue: false);
 });
+final predictionsApiEnabledProvider = Provider<bool>((ref) {
+  if (!ref.watch(enableApiModeProvider)) return false;
+  return const bool.fromEnvironment('PREDICTIONS_API_ENABLED',
+      defaultValue: false);
+});
 final platformIntelligenceApiEnabledProvider = Provider<bool>((ref) {
   if (!ref.watch(enableApiModeProvider)) return false;
   return const bool.fromEnvironment(
@@ -377,6 +382,7 @@ final useApiRepositoriesProvider = Provider<bool>((ref) {
       ref.watch(alumniApiEnabledProvider) ||
       ref.watch(controlCenterApiEnabledProvider) ||
       ref.watch(directorApiEnabledProvider) ||
+      ref.watch(predictionsApiEnabledProvider) ||
       ref.watch(platformIntelligenceApiEnabledProvider) ||
       ref.watch(auditApiEnabledProvider) ||
       ref.watch(paymentApiEnabledProvider) ||

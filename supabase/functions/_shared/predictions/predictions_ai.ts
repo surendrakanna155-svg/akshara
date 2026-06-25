@@ -1,0 +1,67 @@
+// Optional Claude narrative for an Advanced AI Predictions list.
+//
+// predictions_service.ts computes every NUMBER (risk scores, likelihoods,
+// amounts) from real data. This step only turns the already-computed top items
+// into a short, action-oriented narrative for a school leader. Numbers and names
+// are passed through verbatim; the model is told never to invent them.
+//
+// Any failure (no key, refusal, empty/odd output, transport error) returns the
+// deterministic baseline unchanged — the narrative is strictly additive and safe.
+
+import { type AiProvider, callClaude, claudeModel } from "../ai/anthropic_client.ts";
+
+const NARRATIVE_MAX_TOKENS = 500;
+
+const SYSTEM_PROMPT = `
+You are Akshara's predictions assistant for a school leader. You are given an
+already-computed prediction summary whose numbers and names are final. Write a
+short, action-oriented narrative (2 to 4 sentences). Strict rules:
+- NEVER change, add, or invent any number (scores, likelihoods, ₹ amounts, counts).
+- Only reference the names/items present in the provided summary.
+- Be practical: say who to act on first and the single most useful next step.
+- No medical, psychological, or behavioural diagnoses; no PII beyond the names given.
+- Output ONLY the narrative prose. No headings, no JSON, no preamble.
+`.trim();
+
+export interface PredictionsNarrativeContext {
+  kind: "fee-default" | "admission-conversion" | "student-risk";
+  total: number;
+  high: number;
+  topItems: { name: string; metric: string }[];
+}
+
+/** Returns an AI-written narrative, or the deterministic baseline on any failure. */
+export async function narratePredictionsWithClaude(
+  baseline: string,
+  context: PredictionsNarrativeContext,
+  apiKey?: string,
+  opts?: { provider?: AiProvider; model?: string },
+): Promise<string> {
+  if (!apiKey) return baseline;
+
+  const userMessage = [
+    `Prediction type: ${context.kind}.`,
+    `Counts (final): ${context.total} analysed, ${context.high} high-priority.`,
+    "Top items (final — do not change names or metrics):",
+    JSON.stringify(context.topItems),
+    "",
+    "Deterministic baseline to rewrite into a leader-facing narrative:",
+    baseline,
+  ].join("\n");
+
+  try {
+    const result = await callClaude({
+      apiKey,
+      provider: opts?.provider,
+      model: opts?.model ?? claudeModel(),
+      maxTokens: NARRATIVE_MAX_TOKENS,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: "user", content: userMessage }],
+    });
+    if (result.refused) return baseline;
+    const text = result.text.trim();
+    return text.length > 0 ? text : baseline;
+  } catch {
+    return baseline;
+  }
+}

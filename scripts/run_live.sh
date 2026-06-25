@@ -45,4 +45,5 @@ flutter run \
   --dart-define=STUDENT_API_ENABLED=true \
   --dart-define=TEACHER_API_ENABLED=true \
   --dart-define=DIRECTOR_API_ENABLED=true \
+  --dart-define=PREDICTIONS_API_ENABLED=true \
   "$@"

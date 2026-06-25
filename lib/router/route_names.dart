@@ -78,6 +78,7 @@ abstract final class RouteNames {
   static const String appearanceSettings = '/settings/appearance';
   static const String education = '/education';
   static const String intelligence = '/intelligence';
+  static const String aiPredictions = '/intelligence/predictions';
   static const String studentSuccessIntelligence =
       '/intelligence/student-success';
   static const String examIntelligence = '/intelligence/exam';

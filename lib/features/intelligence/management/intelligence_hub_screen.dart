@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_dashboard_canvas.dart';
 import '../../../shared/widgets/akshara_dashboard_watermark.dart';
 import '../../../shared/widgets/akshara_executive_kpi_card.dart';
@@ -472,6 +475,19 @@ class _PrincipalSummaryTab extends ConsumerWidget {
         padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Text(summary.headline, style: context.aksharaText.displaySmall),
+          const SizedBox(height: AksharaSpacing.s4),
+          Card(
+            child: ListTile(
+              key: QaTestKeys.intelligencePredictionsLaunchTile,
+              leading: const Icon(Icons.online_prediction_outlined),
+              title: const Text('AI Predictions'),
+              subtitle: const Text(
+                'Fee-default, admission-conversion and student-risk forecasts',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go(RouteNames.aiPredictions),
+            ),
+          ),
           const SizedBox(height: AksharaSpacing.s4),
           const AksharaSectionHeader(title: 'Highlights'),
           for (final item in summary.highlights)
