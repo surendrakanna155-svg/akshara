@@ -1,5 +1,5 @@
 {
-  "_comment": "Akshara ERP — canonical LIVE release configuration (A1: live-as-default). Consumed via `flutter build --release --dart-define-from-file=config/live_release.json`. APP_ENV=production hardens auth/TLS; anonymous OTP login still works (auth_dio_provider allows it). Only module flags with a verified live backend are enabled here — org-builder / platform-intelligence / verticals are intentionally OFF (no backend yet; would 404). Differentiation modules with confirmed-real backends (EDUCATION, INTELLIGENCE, AI_COPILOT, EVOLUTION=parent-insights, DIRECTOR, CONTROL_CENTER) are ON.",
+  "_comment": "Akshara ERP — canonical LIVE release configuration (A1: live-as-default). Consumed via `flutter build --release --dart-define-from-file=config/live_release.json`. APP_ENV=production hardens auth/TLS; anonymous OTP login still works (auth_dio_provider allows it). Only module flags with a verified live backend are enabled here — platform-intelligence / verticals are intentionally OFF (no backend yet; would 404). Differentiation modules with confirmed-real backends (EDUCATION, INTELLIGENCE, AI_COPILOT, EVOLUTION=parent-insights, DIRECTOR, CONTROL_CENTER, ORGANIZATION_BUILDER=B10) are ON. ORGANIZATION_BUILDER is additionally chain-gated + Enterprise-entitlement-gated at runtime, so single-school/non-Enterprise pilots never see it.",
   "APP_ENV": "production",
   "API_BASE_URL": "https://akshara.veloraunisexsalon.com",
   "ENABLE_API_MODE": true,
@@ -42,5 +42,6 @@
   "EVOLUTION_API_ENABLED": true,
   "DIRECTOR_API_ENABLED": true,
   "CONTROL_CENTER_API_ENABLED": true,
-  "SCHOOL_CONFIG_API_ENABLED": true
+  "SCHOOL_CONFIG_API_ENABLED": true,
+  "ORGANIZATION_BUILDER_API_ENABLED": true
 }

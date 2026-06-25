@@ -16,13 +16,36 @@
 > owner, hiding marketing-sourced leads from the AI's assign next-best-action; the handoff
 > now leaves leads unassigned.
 >
-> **P2 in progress — B7 AI School Builder (Phase 1) PRODUCTION CERTIFIED (2026-06-25):** an
+> **P2 complete + P3 started (2026-06-25):** all three P2 (moat) items — B7 AI School Builder,
+> B8 Director Multi-School, B9 Advanced AI Predictions — are PRODUCTION CERTIFIED, and the first
+> **P3 (Platform Expansion)** item, **B10 Organization Builder**, is now PRODUCTION CERTIFIED too
+> (details below).
+>
+> **P2 — B7 AI School Builder (Phase 1) PRODUCTION CERTIFIED (2026-06-25):** an
 > entitlement-gated AI pre-fill (`POST /onboarding/startup/ai-prefill`,
 > `feature.ai_school_builder`, Professional+Enterprise) that turns a short founder brief into a
 > complete, board-appropriate startup-onboarding proposal (classes, sections, fees, language,
 > modules) on the certified onboarding foundation — deterministic baseline + Claude refinement
 > with safe fallback, **non-destructive** (proposes only). Live smoke **10/10** (real auth +
 > prod DB + real AI, `source=ai`).
+>
+> **B10 Organization Builder PRODUCTION CERTIFIED (2026-06-25) — first P3 (Platform Expansion):**
+> the chains/trusts no-touch org-setup flow (vertical packs → 7-step interview with a real AI
+> recommendation → config preview → real provisioning → job status), built as a backend to the
+> already-shipped Flutter UI. New migration `20260727000000` — three tables (`org_builder_packs`
+> catalog + four verticals; `org_builder_interview_drafts` with a client-supplied TEXT id;
+> `org_builder_provisioning_jobs`), `view`/`manageOrganizationBuilder` perms, org-scope RLS
+> (mirrors Director), Enterprise `feature.organization_builder` entitlement. New
+> `_shared/organization_builder/` module: repository (create-on-demand drafts, pure `buildPreview`,
+> **real synchronous provisioning** — six persisted step outcomes, draft → provisioned, no timers),
+> real-Claude interview recommendations (safe fallback), handlers (auth → RBAC → org-scope →
+> audit), router owning both contract prefixes (`/platform/org-builder/...` and
+> `/platform/provisioning-jobs/:id`) and self-enforcing the entitlement. Flutter unchanged — flipped
+> `ORGANIZATION_BUILDER_API_ENABLED` on; module stays chain-gated + Enterprise-gated at runtime.
+> Backend Deno 3/3, Flutter analyze clean + 9/9 org-builder tests. Live cert **17/17**: gate denies
+> the Professional pilot (402) → override enables → real org-scoped flow + real AI (137-char rec) +
+> real provision (6/6 steps) + audit; RBAC 403 (manage/view/org-scope) + unauth 401; override
+> restored. See `docs/B10_ORGANIZATION_BUILDER_CERTIFICATION.md`.
 >
 > **B9 Advanced AI Predictions PRODUCTION CERTIFIED (2026-06-25):** the first prediction models,
 > shipped as one gated product — three school-scoped, data-grounded feeds: fee-default (finance

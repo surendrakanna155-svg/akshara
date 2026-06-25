@@ -56,6 +56,7 @@ import { routeSchoolCompletion } from "../_shared/school_completion/school_compl
 import { routeParentExperience } from "../_shared/parent_experience/parent_experience_router.ts";
 import { routeDirector } from "../_shared/director/director_router.ts";
 import { routePredictions } from "../_shared/predictions/predictions_router.ts";
+import { routeOrganizationBuilder } from "../_shared/organization_builder/organization_builder_router.ts";
 // --- B1 school-config (AgentE) ---
 import { routeSchoolConfig } from "../_shared/school_config/school_config_router.ts";
 // --- end B1 school-config (AgentE) ---
@@ -120,6 +121,11 @@ async function routeModuleRequest(
     // B9: Advanced AI Predictions (fee-default / admission-conversion / student-risk) —
     // gated by the Enterprise feature.ai_predictions entitlement (per-deal override-grantable).
     withEntitlement(routePredictions, "/predictions", "feature.ai_predictions"),
+    // B10: Organization Builder (P3) — chains/trusts stand up a new vertical org
+    // (packs → interview → preview → provision). Self-enforces the Enterprise
+    // feature.organization_builder entitlement internally (it owns two disjoint
+    // path prefixes, which a single withEntitlement wrapper cannot cover).
+    routeOrganizationBuilder,
     // --- B1 school-config (AgentE) ---
     routeSchoolConfig,
     // --- end B1 school-config (AgentE) ---
