@@ -17,7 +17,7 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 |------|-------|-------|--------------|------|
 | ~~**0**~~ | ~~Verify-vs-deployed-edge + restore green gates~~ | 9 | gate/triage | ✅ **DONE 2026-06-25** |
 | ~~**1**~~ | ~~Stop silent data loss (mock writes in live paths)~~ | 7 | 2C + 4H + 1M | ✅ **DONE 2026-06-25** |
-| **2** | Multi-child parent correctness + demo-identity purge | 14 | 5H + 6M + 3L | 🟡 **CODE-COMPLETE + locally certified (2026-06-26); live deploy+cert pending VPS access** |
+| ~~**2**~~ | ~~Multi-child parent correctness + demo-identity purge~~ | 14 | 5H + 6M + 3L | ✅ **DONE 2026-06-26** (live 21/21) |
 | **3** | Contract gaps + entitlement client + security hardening | 13 | 7H + 4M + 2L | ~5–6 days |
 | **4** | AI moderation gate + performance | 6 | 2H + 3M + 1L | ~3 days |
 | **5** | UX consistency, a11y, Play Store custody, docs | ~25 | 2H + many M/L | ~4–5 days |
@@ -65,7 +65,7 @@ The highest-trust risk: actions that report success but never persist. Both Crit
 
 ## Wave 2 — Multi-child correctness + demo-identity purge (Themes B + C) (~3–4 days)
 
-> **Status (2026-06-26): CODE-COMPLETE & locally certified.** All 14 items implemented; gates green — `flutter analyze` **0**, `flutter test` **2383 pass**/1 skip/0 fail (student-dashboard goldens regenerated for STU-6/7), `deno test` **665 pass**, `deno check` clean. **Live deploy + live cert are BLOCKED on owner VPS access** (the SSH control-master socket is stale and the agent key is not authorized). To finish: owner opens the socket, then `/deploy` the two edge files (`auth_context.ts` + `auth_handlers.ts` — PAR-7 login/`/auth/me` `children`) and run `scripts/qa/live_cert_completion_wave2.py`. PAR-1's `activeChildId` backend validation already exists live; only PAR-7's enriched login payload is new backend.
+> **Status: ✅ PRODUCTION CERTIFIED (2026-06-26).** Cert: `docs/WAVE2_COMPLETION_CERTIFICATION.md`. Release-review: **GO**. Live cert **21/21** vs VPS pilot (`scripts/qa/live_cert_completion_wave2.py`); deployed (2 edge files `auth_context.ts` + `auth_handlers.ts` rsynced + `akshara-edge` restarted; **no migration**). Gates: analyze 0 / flutter 2383 / deno 665 / deno check clean. All 14 items closed.
 >
 > Per-item: PAR-1 ✅ (child-scoped `parentRepositoryQueryProvider` + datasource emits `activeChildId` on every read) · PAR-2 ✅ (`selectParentActiveChild` now invalidates the full per-child set + syncs the profile child id) · PAR-3 ✅ (leave files against the active child) · PAR-6 ✅ (dashboard `forActiveChild` drops the `isPriya` demo branch; receipts header from active child) · PAR-7 ✅ (backend enriches login/`/auth/me` with `children:[{id,name,classLabel}]`; client maps real name/class) · PAR-8 ✅ (transport resolves the active child, no `items.first` fallback) · PAR-9 ✅ (notices/events/leave header child + real unread). TCH-4 ✅ (4 teacher subtitles from `resolvedTeacherTeachingContextProvider`) · TCH-6 ✅ (leave `(mock)` removed) · TCH-7 ✅ (`seedDemoSubjectConcernIfNeeded` deleted) · TCH-8 ✅ (homework-create blank, class/subject prefilled from real assignment) · TCH-9 ✅ (real per-weekday dates) · UX-9 ✅ (HR caption de-named) · PRN-3 ✅ (approval actor fails closed) · CORE-3 ✅ (API-mode-gated assert against the demo-tenant fallback) · STU-6 ✅ (honest AI-tutor CTA) · STU-7 ✅ (`join_class` removed).
 
