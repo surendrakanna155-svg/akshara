@@ -1290,3 +1290,563 @@ export async function insertHomeworkAssignment(
 
   return { id: input.homeworkId, deliveredCount: targets.length };
 }
+
+// ===========================================================================
+// MJ-C7 (TEACH-1 + TEACH-5) — teacher static-snapshot read modernization.
+//
+// The teacher mobile reads (attendance roster, upcoming exams, exam marks,
+// leave history, dashboard) were served from the pre-seeded `teacher_entities`
+// snapshot rows, so they showed fixed fiction and never reflected real class
+// data or the teacher's own writes. The helpers below recompute each from the
+// canonical operational tables, scoped to THIS teacher (sub) inside the tenant
+// RLS context. A fresh school with no data returns honest zeros/empty arrays.
+// ===========================================================================
+
+// The teacher's own classes (class labels) come from the timetable: any slot
+// where the teacher is the assigned or substitute teacher. Distinct, ordered.
+async function listTeacherClassLabels(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  teacherUserId: string,
+): Promise<string[]> {
+  const rows = await db.queryObject<{ class_label: string }>(
+    `SELECT DISTINCT class_label
+       FROM timetable_slots
+      WHERE organization_id = $1 AND school_id = $2
+        AND (teacher_user_id = $3::uuid OR substitute_teacher_user_id = $3::uuid)
+        AND class_label IS NOT NULL AND class_label <> ''
+      ORDER BY class_label`,
+    [orgId, schoolId, teacherUserId],
+  );
+  return rows.map((r) => r.class_label);
+}
+
+function markToAttendanceStatus(mark: string): string {
+  if (mark === "absent") return "absent";
+  if (mark === "late") return "late";
+  return "present"; // present or excused
+}
+
+// --- TEACH-1: attendance class list (GET /teacher/attendance/classes) ---
+//
+// The class picker that feeds the roster. Computed from the teacher's real
+// timetable classes so its `id` (class_<label>) matches the studentsByClass
+// keys the roster returns. studentCount = current enrolled students; isPending
+// = no submitted attendance session for this class today. Empty => [].
+export async function listTeacherAttendanceClasses(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  teacherUserId: string,
+  pagination: { page: number; pageSize: number },
+): Promise<{
+  items: Array<Record<string, unknown>>;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}> {
+  // One slot row per (class, subject, period) the teacher teaches; the picker
+  // shows the class with its subject + earliest period label.
+  const rows = await db.queryObject<{
+    class_label: string;
+    subject_label: string;
+    period_number: number;
+    marked: boolean;
+    student_count: number;
+  }>(
+    `SELECT ts.class_label,
+            ts.subject_label,
+            min(ts.period_number) AS period_number,
+            bool_or(ses.id IS NOT NULL) AS marked,
+            (
+              SELECT count(*)::int FROM sis_student_enrollments e2
+               WHERE e2.organization_id = $1
+                 AND e2.school_id = $2
+                 AND e2.is_current = true
+                 AND (e2.class_name || '-' || e2.section_name) = ts.class_label
+            ) AS student_count
+       FROM timetable_slots ts
+       LEFT JOIN attendance_sessions ses
+         ON ses.organization_id = ts.organization_id
+        AND ses.school_id = ts.school_id
+        AND ses.class_label = ts.class_label
+        AND ses.session_date = CURRENT_DATE
+        AND ses.status = 'submitted'
+      WHERE ts.organization_id = $1 AND ts.school_id = $2
+        AND (ts.teacher_user_id = $3::uuid OR ts.substitute_teacher_user_id = $3::uuid)
+        AND ts.class_label IS NOT NULL AND ts.class_label <> ''
+      GROUP BY ts.class_label, ts.subject_label
+      ORDER BY ts.class_label, ts.subject_label`,
+    [orgId, schoolId, teacherUserId],
+  );
+
+  const all = rows.map((r) => ({
+    id: `class_${r.class_label}`,
+    label: `${r.class_label} ${r.subject_label}`,
+    subject: r.subject_label,
+    periodLabel: `Period ${r.period_number}`,
+    studentCount: r.student_count,
+    isPending: !r.marked,
+  }));
+  const total = all.length;
+  const start = Math.max(0, (pagination.page - 1) * pagination.pageSize);
+  const items = all.slice(start, start + pagination.pageSize);
+  return {
+    items,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    total,
+    hasMore: start + items.length < total,
+  };
+}
+
+// --- TEACH-1: attendance roster (GET /teacher/attendance/students) ---
+//
+// Builds the `studentsByClass` map the client expects: for each class the
+// teacher teaches, the real enrolled students (from sis_student_enrollments)
+// keyed by the seed class id ("class_<label>"), each carrying the latest
+// submitted attendance mark for today (else 'unmarked'). The summary + labels
+// reflect the first class. Empty school => studentsByClass:{} and zeroed
+// summary, never the seed fiction.
+export async function overlayTeacherAttendanceStudents(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  teacherUserId: string,
+  snapshot: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const classLabels = await listTeacherClassLabels(db, orgId, schoolId, teacherUserId);
+  if (classLabels.length === 0) {
+    return {
+      ...snapshot,
+      classLabel: "",
+      studentsByClass: {},
+      students: [],
+      summary: { present: 0, absent: 0, late: 0 },
+    };
+  }
+
+  const studentsByClass: Record<string, Record<string, unknown>[]> = {};
+  let firstClassPresent = 0;
+  let firstClassAbsent = 0;
+  let firstClassLate = 0;
+
+  for (let i = 0; i < classLabels.length; i += 1) {
+    const classLabel = classLabels[i]!;
+    const { className, sectionName } = parseClassLabel(classLabel);
+    // Real enrolled students for this class, with today's submitted mark (if any).
+    const rows = await db.queryObject<{
+      id: string;
+      name: string;
+      roll_no: string | null;
+      mark: string | null;
+    }>(
+      `SELECT s.id::text AS id,
+              s.display_name AS name,
+              e.roll_number AS roll_no,
+              ar.mark AS mark
+         FROM students s
+         INNER JOIN sis_student_enrollments e
+           ON e.student_id = s.id
+          AND e.organization_id = s.organization_id
+          AND e.school_id = s.school_id
+          AND e.is_current = true
+         LEFT JOIN attendance_sessions ses
+           ON ses.organization_id = s.organization_id
+          AND ses.school_id = s.school_id
+          AND ses.class_label = $3
+          AND ses.session_date = CURRENT_DATE
+          AND ses.status = 'submitted'
+         LEFT JOIN attendance_records ar
+           ON ar.session_id = ses.id
+          AND ar.student_id = s.id
+        WHERE s.organization_id = $1 AND s.school_id = $2 AND s.status = 'active'
+          AND e.class_name = $4
+          AND ($5::text IS NULL OR e.section_name = $5)
+        ORDER BY e.roll_number NULLS LAST, s.display_name`,
+      [orgId, schoolId, classLabel, className, sectionName],
+    );
+
+    const classId = `class_${classLabel}`;
+    studentsByClass[classId] = rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      rollNo: row.roll_no ?? "",
+      mark: row.mark ? markToAttendanceStatus(row.mark) : "unmarked",
+    }));
+
+    if (i === 0) {
+      for (const row of rows) {
+        if (!row.mark) continue;
+        const status = markToAttendanceStatus(row.mark);
+        if (status === "present") firstClassPresent += 1;
+        else if (status === "absent") firstClassAbsent += 1;
+        else if (status === "late") firstClassLate += 1;
+      }
+    }
+  }
+
+  const firstClassLabel = classLabels[0]!;
+  return {
+    ...snapshot,
+    classLabel: firstClassLabel,
+    studentsByClass,
+    students: studentsByClass[`class_${firstClassLabel}`] ?? [],
+    summary: {
+      present: firstClassPresent,
+      absent: firstClassAbsent,
+      late: firstClassLate,
+    },
+  };
+}
+
+// --- TEACH-1: upcoming exams (GET /teacher/exams/upcoming) ---
+//
+// Real exam_sessions for the classes this teacher teaches that are not yet
+// published, mapped to the client's upcoming-exam shape. Empty => [].
+export async function listTeacherUpcomingExams(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  teacherUserId: string,
+  pagination: { page: number; pageSize: number },
+): Promise<{
+  items: Array<Record<string, unknown>>;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}> {
+  const classLabels = await listTeacherClassLabels(db, orgId, schoolId, teacherUserId);
+  if (classLabels.length === 0) {
+    return { items: [], page: pagination.page, pageSize: pagination.pageSize, total: 0, hasMore: false };
+  }
+
+  const rows = await db.queryObject<{
+    id: string;
+    title: string;
+    grade: string;
+    section_name: string;
+    date_label: string;
+    max_marks: number;
+  }>(
+    `SELECT id, title, grade, section_name, date_label, max_marks
+       FROM exam_sessions
+      WHERE organization_id = $1 AND school_id = $2
+        AND phase <> 'published'
+        AND (grade || '-' || section_name) = ANY($3::text[])
+      ORDER BY updated_at DESC`,
+    [orgId, schoolId, classLabels],
+  );
+
+  const all = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    classLabel: `${r.grade}-${r.section_name}`,
+    dateLabel: r.date_label,
+    maxMarks: r.max_marks,
+  }));
+  const total = all.length;
+  const start = Math.max(0, (pagination.page - 1) * pagination.pageSize);
+  const items = all.slice(start, start + pagination.pageSize);
+  return {
+    items,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    total,
+    hasMore: start + items.length < total,
+  };
+}
+
+// --- TEACH-1: exam marks (GET /teacher/exams/marks) ---
+//
+// Real exam_mark_entries for the teacher's classes that are in marks-entry (not
+// yet published), mapped to the client's ExamMarkEntry shape. Empty => [].
+export async function listTeacherExamMarks(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  teacherUserId: string,
+  pagination: { page: number; pageSize: number },
+): Promise<{
+  items: Array<Record<string, unknown>>;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}> {
+  const classLabels = await listTeacherClassLabels(db, orgId, schoolId, teacherUserId);
+  if (classLabels.length === 0) {
+    return { items: [], page: pagination.page, pageSize: pagination.pageSize, total: 0, hasMore: false };
+  }
+
+  const rows = await db.queryObject<{
+    id: string;
+    student_id: string;
+    student_code: string | null;
+    student_name: string | null;
+    roll_number: string | null;
+    marks_obtained: number;
+    marks_entered: boolean;
+    max_marks: number;
+  }>(
+    `SELECT me.id, me.student_id::text AS student_id, me.student_code,
+            me.student_name, me.roll_number, me.marks_obtained,
+            me.marks_entered, me.max_marks
+       FROM exam_mark_entries me
+       INNER JOIN exam_sessions es ON es.id = me.exam_id
+        AND es.organization_id = me.organization_id
+        AND es.school_id = me.school_id
+      WHERE me.organization_id = $1 AND me.school_id = $2
+        AND me.published = false
+        AND me.class_label = ANY($3::text[])
+      ORDER BY me.roll_number NULLS LAST, me.id`,
+    [orgId, schoolId, classLabels],
+  );
+
+  const all = rows.map((r) => ({
+    id: r.id,
+    sisStudentId: r.student_code ?? r.student_id,
+    studentName: r.student_name ?? "",
+    rollNo: r.roll_number ?? "",
+    marksObtained: r.marks_entered ? r.marks_obtained : null,
+    maxMarks: r.max_marks,
+  }));
+  const total = all.length;
+  const start = Math.max(0, (pagination.page - 1) * pagination.pageSize);
+  const items = all.slice(start, start + pagination.pageSize);
+  return {
+    items,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    total,
+    hasMore: start + items.length < total,
+  };
+}
+
+// --- TEACH-1: leave history (GET /teacher/leave) ---
+//
+// The teacher's own leave applications from mobile_leave_requests (the canonical
+// store the HR/approval side reads). Scoped to requester_user_id = teacher and
+// requester_scope = 'teacher'. Same shape the leave_request seed used. Empty
+// => []. Newest first.
+export async function listTeacherLeaveRequests(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  teacherUserId: string,
+  pagination: { page: number; pageSize: number },
+): Promise<{
+  items: Array<Record<string, unknown>>;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}> {
+  const rows = await db.queryObject<{
+    id: string;
+    type_label: string;
+    from_date_label: string;
+    to_date_label: string;
+    reason: string;
+    status: string;
+    submitted_label: string;
+  }>(
+    `SELECT id, type_label, from_date_label, to_date_label, reason, status,
+            to_char(created_at, 'DD Mon YYYY') AS submitted_label
+       FROM mobile_leave_requests
+      WHERE organization_id = $1 AND school_id = $2
+        AND requester_user_id = $3::uuid AND requester_scope = 'teacher'
+      ORDER BY created_at DESC`,
+    [orgId, schoolId, teacherUserId],
+  );
+
+  const all = rows.map((r) => ({
+    id: r.id,
+    type: r.type_label,
+    typeLabel: r.type_label,
+    fromDateLabel: r.from_date_label,
+    toDateLabel: r.to_date_label,
+    reason: r.reason,
+    status: r.status,
+    submittedLabel: r.submitted_label,
+    timeline: [
+      { label: "Submitted", dateLabel: r.submitted_label, isComplete: true },
+      {
+        label: r.status === "rejected" ? "Rejected" : "Approved",
+        dateLabel: "",
+        isComplete: r.status === "approved" || r.status === "rejected",
+      },
+    ],
+  }));
+  const total = all.length;
+  const start = Math.max(0, (pagination.page - 1) * pagination.pageSize);
+  const items = all.slice(start, start + pagination.pageSize);
+  return {
+    items,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    total,
+    hasMore: start + items.length < total,
+  };
+}
+
+// --- TEACH-5: dashboard (GET /teacher/dashboard) ---
+//
+// Replaces the canned snapshot_dashboard `todaySchedule`/`pendingTasks`/
+// `aiInsight`/`attendanceSummary` with values derived from the teacher's real
+// timetable (today's classes), real submitted attendance sessions (which classes
+// are marked) and pending homework reviews. Preserves the snapshot's other
+// scaffolding fields (greeting, teacherName, quickActions, etc.). A fresh school
+// returns an empty schedule, zero pending tasks and a neutral insight — never
+// the seed "2 classes need attendance today" fiction.
+export async function overlayTeacherDashboard(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  teacherUserId: string,
+  snapshot: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const todayDow = (() => {
+    const day = new Date().getUTCDay();
+    return day === 0 ? 7 : day; // 1=Mon..7=Sun
+  })();
+
+  // Today's classes from the teacher's timetable.
+  const slotRows = await db.queryObject<{
+    period_number: number;
+    subject_label: string;
+    class_label: string;
+    room_label: string | null;
+  }>(
+    `SELECT period_number, subject_label, class_label, room_label
+       FROM timetable_slots
+      WHERE organization_id = $1 AND school_id = $2
+        AND day_of_week = $3
+        AND (teacher_user_id = $4::uuid OR substitute_teacher_user_id = $4::uuid)
+      ORDER BY period_number`,
+    [orgId, schoolId, todayDow, teacherUserId],
+  );
+
+  const todaySchedule = slotRows.map((row) => ({
+    id: `p${row.period_number}-${row.class_label}`,
+    timeLabel: periodTimeRange(row.period_number),
+    subject: row.subject_label,
+    classLabel: row.class_label,
+    room: row.room_label ?? "",
+    status: "upcoming",
+  }));
+
+  // Distinct classes the teacher teaches today, and which already have a
+  // submitted attendance session today.
+  const todaysClassLabels = Array.from(
+    new Set(slotRows.map((r) => r.class_label).filter((l) => l && l.length > 0)),
+  );
+
+  let markedClassLabels: string[] = [];
+  if (todaysClassLabels.length > 0) {
+    const markedRows = await db.queryObject<{ class_label: string }>(
+      `SELECT DISTINCT class_label
+         FROM attendance_sessions
+        WHERE organization_id = $1 AND school_id = $2
+          AND session_date = CURRENT_DATE AND status = 'submitted'
+          AND class_label = ANY($3::text[])`,
+      [orgId, schoolId, todaysClassLabels],
+    );
+    markedClassLabels = markedRows.map((r) => r.class_label);
+  }
+  const classesMarked = markedClassLabels.length;
+  const classesTotal = todaysClassLabels.length;
+  const pendingAttendanceCount = Math.max(0, classesTotal - classesMarked);
+  const firstUnmarked = todaysClassLabels.find(
+    (label) => !markedClassLabels.includes(label),
+  );
+
+  // Pending homework reviews (submissions still awaiting review) for this
+  // teacher's assignments.
+  const reviewRows = await db.queryObject<{ count: string }>(
+    `SELECT count(*)::text AS count
+       FROM homework_submissions hs
+       INNER JOIN teacher_entities te
+         ON te.id = hs.homework_id
+        AND te.organization_id = hs.organization_id
+        AND te.school_id = hs.school_id
+        AND te.entity_type = 'homework_assignment'
+        AND te.teacher_id = $3::uuid
+      WHERE hs.organization_id = $1 AND hs.school_id = $2
+        AND hs.status = 'submitted'`,
+    [orgId, schoolId, teacherUserId],
+  );
+  const pendingReviewCount = parseInt(reviewRows[0]?.count ?? "0", 10) || 0;
+
+  const pendingTasks: Record<string, unknown>[] = [];
+  if (pendingAttendanceCount > 0) {
+    pendingTasks.push({
+      id: "attendance",
+      icon: "attendance",
+      count: pendingAttendanceCount,
+      label: pendingAttendanceCount === 1
+        ? "1 class needs attendance"
+        : `${pendingAttendanceCount} classes need attendance`,
+    });
+  }
+  if (pendingReviewCount > 0) {
+    pendingTasks.push({
+      id: "homework",
+      icon: "homework",
+      count: pendingReviewCount,
+      label: pendingReviewCount === 1
+        ? "1 homework to review"
+        : `${pendingReviewCount} homework to review`,
+    });
+  }
+
+  // Deterministic insight derived from the real pending state (no Claude call —
+  // teacher has no existing AI insight pipeline).
+  let aiInsight: Record<string, unknown>;
+  if (pendingAttendanceCount > 0) {
+    aiInsight = {
+      message: pendingAttendanceCount === 1
+        ? "1 class needs attendance today."
+        : `${pendingAttendanceCount} classes need attendance today.`,
+      actionLabel: "Mark now",
+    };
+  } else if (pendingReviewCount > 0) {
+    aiInsight = {
+      message: pendingReviewCount === 1
+        ? "1 homework submission is waiting for your review."
+        : `${pendingReviewCount} homework submissions are waiting for your review.`,
+      actionLabel: "Review",
+    };
+  } else if (classesTotal > 0) {
+    aiInsight = {
+      message: "All caught up — attendance is marked for today's classes.",
+      actionLabel: "",
+    };
+  } else {
+    aiInsight = { message: "No classes scheduled for today.", actionLabel: "" };
+  }
+
+  const attendanceSummary: Record<string, unknown> = {
+    ...(snapshot.attendanceSummary as Record<string, unknown> ?? {}),
+    classesMarked,
+    classesTotal,
+    pendingClassId: firstUnmarked ? `class_${firstUnmarked}` : null,
+    pendingBannerMessage: pendingAttendanceCount > 0
+      ? (pendingAttendanceCount === 1
+        ? "1 class still needs attendance"
+        : `${pendingAttendanceCount} classes still need attendance`)
+      : null,
+    pendingBannerActionLabel: pendingAttendanceCount > 0 ? "Mark now" : "",
+  };
+
+  return {
+    ...snapshot,
+    todaySchedule,
+    pendingTasks,
+    aiInsight,
+    attendanceSummary,
+  };
+}

@@ -110,6 +110,288 @@ export async function listEntities(
   };
 }
 
+/**
+ * Returns every payload of one entity_type for this school. Used by the
+ * dashboard compute path to derive KPIs from the REAL employee / opening rows
+ * (not a pre-seeded snapshot count).
+ */
+export async function listPayloads(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  entityType: string,
+): Promise<Array<Record<string, unknown>>> {
+  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
+    `SELECT payload
+     FROM hr_entities
+     WHERE organization_id = $1
+       AND school_id = $2
+       AND entity_type = $3
+     ORDER BY id`,
+    [organizationId, schoolId, entityType],
+  );
+  return rows.map((row) => row.payload ?? {});
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard: computed live (MJ-H17 / HR-5). KPIs + trends + lists are derived
+// from the real HR tables for THIS school inside the tenant RLS context — never
+// from a hardcoded snapshot. A fresh school with 3 employees reports 3, not 148.
+// Field names mirror the seeded `snapshot_dashboard` shape EXACTLY because the
+// Flutter HR dashboard mapper (lib/.../hr/mapper/hr_mapper.dart) depends on them.
+// ---------------------------------------------------------------------------
+
+/** ISO yyyy-mm-dd for "today" (UTC), used to scope attendance / leave. */
+function isoToday(now = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
+
+function asArray(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? value as Array<Record<string, unknown>> : [];
+}
+
+/** Raw, real inputs the dashboard is computed from (all from live HR rows). */
+export interface DashboardInputs {
+  /** All `employee` entity payloads for this school. */
+  employees: Array<Record<string, unknown>>;
+  /** All `opening` (recruitment requisition) payloads for this school. */
+  openings: Array<Record<string, unknown>>;
+  /** `snapshot_attendance` payload (records + attendanceTrend), or {}. */
+  attendance: Record<string, unknown>;
+  /** `snapshot_leave` payload (requests + pendingCount), or {}. */
+  leave: Record<string, unknown>;
+  /** `snapshot_recruitment` payload (candidates), or {}. */
+  recruitment: Record<string, unknown>;
+}
+
+/** The numeric facts that ground both the KPI cards and the AI insight. */
+export interface DashboardKpiFacts {
+  totalEmployees: number;
+  activeEmployees: number;
+  presentToday: number;
+  onLeaveToday: number;
+  openPositions: number;
+  pendingLeaveCount: number;
+  /** Department with the most employees, or "" when there are none. */
+  topDepartment: string;
+  topDepartmentCount: number;
+}
+
+/**
+ * Computes the grounding facts from the live inputs. Empty inputs => all zeros
+ * (an honest "fresh school" picture), never a fabricated headline number.
+ */
+export function computeDashboardFacts(
+  inputs: DashboardInputs,
+  now = new Date(),
+): DashboardKpiFacts {
+  const today = isoToday(now);
+  const employees = inputs.employees;
+  const totalEmployees = employees.length;
+  const activeEmployees = employees.filter(
+    (e) => String(e.status ?? "active") === "active",
+  ).length;
+
+  // Present today: attendance records dated today with a present status.
+  const attendanceRecords = asArray(inputs.attendance.records);
+  const presentToday = attendanceRecords.filter(
+    (r) => String(r.date ?? "") === today && String(r.status ?? "") === "present",
+  ).length;
+
+  // On leave today: approved leave requests whose [fromDate, toDate] spans today.
+  const leaveRequests = asArray(inputs.leave.requests);
+  const onLeaveToday = leaveRequests.filter((r) => {
+    if (String(r.status ?? "") !== "approved") return false;
+    const from = String(r.fromDate ?? "");
+    const to = String(r.toDate ?? from);
+    return from !== "" && from <= today && today <= (to || from);
+  }).length;
+
+  // Open positions: sum of open requisition seats (count seats, not requisitions).
+  const openPositions = inputs.openings
+    .filter((o) => String(o.status ?? "open") === "open")
+    .reduce((sum, o) => sum + Math.max(0, Number(o.openings ?? 1) || 0), 0);
+
+  const pendingLeaveCount = leaveRequests.filter(
+    (r) => String(r.status ?? "") === "pending",
+  ).length;
+
+  // Largest department by headcount (drives the deterministic insight).
+  const deptCounts = new Map<string, number>();
+  for (const e of employees) {
+    const dept = String(e.department ?? "");
+    if (dept === "") continue;
+    deptCounts.set(dept, (deptCounts.get(dept) ?? 0) + 1);
+  }
+  let topDepartment = "";
+  let topDepartmentCount = 0;
+  for (const [dept, count] of deptCounts) {
+    if (count > topDepartmentCount) {
+      topDepartment = dept;
+      topDepartmentCount = count;
+    }
+  }
+
+  return {
+    totalEmployees,
+    activeEmployees,
+    presentToday,
+    onLeaveToday,
+    openPositions,
+    pendingLeaveCount,
+    topDepartment,
+    topDepartmentCount,
+  };
+}
+
+/** Builds the four KPI cards (same ids/labels/accents as the legacy snapshot). */
+export function buildDashboardKpis(
+  facts: DashboardKpiFacts,
+): Array<Record<string, unknown>> {
+  return [
+    {
+      id: "total_employees",
+      value: String(facts.totalEmployees),
+      label: "Total Employees",
+      accentName: "primary",
+    },
+    {
+      id: "present_today",
+      value: String(facts.presentToday),
+      label: "Present Today",
+      accentName: "success",
+    },
+    {
+      id: "on_leave",
+      value: String(facts.onLeaveToday),
+      label: "On Leave",
+      accentName: "warning",
+    },
+    {
+      id: "open_positions",
+      value: String(facts.openPositions),
+      label: "Open Positions",
+      accentName: "primary",
+    },
+  ];
+}
+
+/** Pending leave list for the dashboard, from the REAL leave requests. */
+export function buildPendingLeave(
+  inputs: DashboardInputs,
+): Array<Record<string, unknown>> {
+  return asArray(inputs.leave.requests)
+    .filter((r) => String(r.status ?? "") === "pending")
+    .map((r) => ({
+      id: String(r.id ?? ""),
+      employeeName: String(r.employeeName ?? ""),
+      leaveType: String(r.leaveType ?? "casual"),
+      days: Number(r.days ?? 0) || 0,
+      // The dashboard card labels this "submitted on"; the request's own start
+      // date is the closest real signal we record.
+      submittedOn: String(r.submittedOn ?? r.fromDate ?? ""),
+    }));
+}
+
+/** Recruitment snapshot list for the dashboard, from REAL candidate rows. */
+export function buildRecruitmentSnapshot(
+  inputs: DashboardInputs,
+): Array<Record<string, unknown>> {
+  return asArray(inputs.recruitment.candidates).map((c) => ({
+    id: String(c.id ?? ""),
+    name: String(c.name ?? ""),
+    role: String(c.role ?? ""),
+    department: String(c.department ?? "academics"),
+    appliedOn: String(c.appliedOn ?? ""),
+    stage: String(c.stage ?? "applied"),
+    experience: String(c.experience ?? ""),
+    source: String(c.source ?? ""),
+  }));
+}
+
+/**
+ * A deterministic, honest management note grounded in the real numbers — used
+ * directly, and as the safe fallback when no AI key is configured.
+ */
+export function buildManagementKpiNote(facts: DashboardKpiFacts): string {
+  if (facts.totalEmployees === 0) {
+    return "No employees on record yet. Add staff under HR to populate the dashboard.";
+  }
+  const attendancePct = facts.activeEmployees > 0
+    ? Math.round((facts.presentToday / facts.activeEmployees) * 100)
+    : 0;
+  return `${facts.presentToday} of ${facts.activeEmployees} active staff marked present today ` +
+    `(${attendancePct}%). Feeds the Management attendance KPI.`;
+}
+
+/**
+ * A deterministic insight built only from the computed facts. This is the safe
+ * fallback the AI layer returns when no key is configured or the call fails —
+ * it never names a person who is not present in the data and never fabricates a
+ * headline number.
+ */
+export function buildDeterministicInsight(facts: DashboardKpiFacts): string {
+  if (facts.totalEmployees === 0) {
+    return "No staff are on record yet. Once you add employees, this insight will " +
+      "summarise attendance, leave, and hiring for your school.";
+  }
+  const parts: string[] = [];
+  parts.push(
+    `${facts.totalEmployees} employees on record` +
+      (facts.activeEmployees !== facts.totalEmployees
+        ? ` (${facts.activeEmployees} active)`
+        : "") + ".",
+  );
+  parts.push(
+    `${facts.presentToday} present today, ${facts.onLeaveToday} on approved leave.`,
+  );
+  if (facts.pendingLeaveCount > 0) {
+    parts.push(
+      `${facts.pendingLeaveCount} leave request${
+        facts.pendingLeaveCount === 1 ? "" : "s"
+      } awaiting approval.`,
+    );
+  }
+  if (facts.openPositions > 0) {
+    parts.push(
+      `${facts.openPositions} open position${
+        facts.openPositions === 1 ? "" : "s"
+      } in recruitment.`,
+    );
+  }
+  if (facts.topDepartment !== "") {
+    parts.push(
+      `Largest team: ${facts.topDepartment} (${facts.topDepartmentCount}).`,
+    );
+  }
+  return parts.join(" ");
+}
+
+/**
+ * Assembles the full dashboard payload from the computed facts + real lists.
+ * `aiInsight` is supplied by the caller (real Claude, or the deterministic
+ * fallback). Trends that have no real historical source degrade to honest empty
+ * series rather than fabricated curves; `attendanceTrend` is reused from the
+ * real attendance snapshot when present.
+ */
+export function composeDashboard(
+  inputs: DashboardInputs,
+  facts: DashboardKpiFacts,
+  aiInsight: string,
+): Record<string, unknown> {
+  return {
+    aiInsight,
+    managementKpiNote: buildManagementKpiNote(facts),
+    kpis: buildDashboardKpis(facts),
+    // No real month-over-month headcount history is recorded yet — honest empty.
+    headcountTrend: [],
+    // Attendance trend is genuine when the attendance snapshot carries it.
+    attendanceTrend: asArray(inputs.attendance.attendanceTrend),
+    pendingLeave: buildPendingLeave(inputs),
+    recruitmentSnapshot: buildRecruitmentSnapshot(inputs),
+  };
+}
+
 export async function getEmployee(
   db: TenantQueryClient,
   organizationId: string,

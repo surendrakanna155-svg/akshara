@@ -6,6 +6,11 @@ import {
 } from "../permission_middleware.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
+  buildDashboardKpis,
+  buildDeterministicInsight,
+  composeDashboard,
+  computeDashboardFacts,
+  type DashboardInputs,
   employeeDetailToApi,
   getEmployee,
   getSnapshot,
@@ -14,6 +19,12 @@ import {
   HrSnapshotNotFoundError,
   listEntities,
 } from "./hr_read_repository.ts";
+import { generateHrInsightWithClaude } from "./hr_dashboard_ai.ts";
+
+/** Empty live HR state — a brand-new school with nothing on record. */
+function emptyInputs(): DashboardInputs {
+  return { employees: [], openings: [], attendance: {}, leave: {}, recruitment: {} };
+}
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
@@ -115,12 +126,172 @@ class MockHrDb {
   }
 }
 
-Deno.test("getSnapshot returns HR dashboard payload", async () => {
-  const db = new MockHrDb() as unknown as TenantQueryClient;
-  const snapshot = await getSnapshot(db, ORG, SCHOOL_A, "snapshot_dashboard");
-  assertEquals(typeof snapshot.aiInsight, "string");
-  assertEquals(Array.isArray(snapshot.kpis), true);
-  assertEquals(Array.isArray(snapshot.headcountTrend), true);
+// --- Dashboard is now COMPUTED live (MJ-H17 / HR-5) — no static 148 / no fake
+// attrition insight. KPIs reflect real rows; AI insight falls back deterministically.
+
+Deno.test("computeDashboardFacts: empty live state => all zeros (honest fresh school)", () => {
+  const facts = computeDashboardFacts(emptyInputs());
+  assertEquals(facts.totalEmployees, 0);
+  assertEquals(facts.activeEmployees, 0);
+  assertEquals(facts.presentToday, 0);
+  assertEquals(facts.onLeaveToday, 0);
+  assertEquals(facts.openPositions, 0);
+  assertEquals(facts.pendingLeaveCount, 0);
+  assertEquals(facts.topDepartment, "");
+});
+
+Deno.test("buildDashboardKpis on empty state never reports the old hardcoded 148", () => {
+  const kpis = buildDashboardKpis(computeDashboardFacts(emptyInputs()));
+  const total = kpis.find((k) => k.id === "total_employees");
+  assertEquals(total?.value, "0");
+  // Field names/labels preserved for the Flutter mapper.
+  assertEquals(total?.label, "Total Employees");
+  assertEquals(total?.accentName, "primary");
+  assertEquals(kpis.map((k) => k.id), [
+    "total_employees",
+    "present_today",
+    "on_leave",
+    "open_positions",
+  ]);
+});
+
+Deno.test("computeDashboardFacts: seeded live rows => real computed counts", () => {
+  const today = new Date("2026-06-26T10:00:00Z");
+  const inputs: DashboardInputs = {
+    employees: [
+      { id: "e1", name: "A", department: "academics", status: "active" },
+      { id: "e2", name: "B", department: "academics", status: "active" },
+      { id: "e3", name: "C", department: "administration", status: "inactive" },
+    ],
+    openings: [
+      { id: "o1", status: "open", openings: 2 },
+      { id: "o2", status: "closed", openings: 5 },
+    ],
+    attendance: {
+      records: [
+        { employeeId: "e1", date: "2026-06-26", status: "present" },
+        { employeeId: "e2", date: "2026-06-26", status: "absent" },
+        { employeeId: "e1", date: "2026-06-25", status: "present" }, // not today
+      ],
+    },
+    leave: {
+      requests: [
+        {
+          id: "lv1",
+          employeeName: "B",
+          leaveType: "sick",
+          days: 2,
+          status: "approved",
+          fromDate: "2026-06-25",
+          toDate: "2026-06-27",
+        },
+        {
+          id: "lv2",
+          employeeName: "A",
+          leaveType: "casual",
+          days: 1,
+          status: "pending",
+          fromDate: "2026-06-26",
+          toDate: "2026-06-26",
+        },
+      ],
+    },
+    recruitment: { candidates: [] },
+  };
+  const facts = computeDashboardFacts(inputs, today);
+  assertEquals(facts.totalEmployees, 3);
+  assertEquals(facts.activeEmployees, 2);
+  assertEquals(facts.presentToday, 1); // only e1 present today
+  assertEquals(facts.onLeaveToday, 1); // lv1 spans today, approved
+  assertEquals(facts.openPositions, 2); // only the open requisition's seats
+  assertEquals(facts.pendingLeaveCount, 1);
+  assertEquals(facts.topDepartment, "academics");
+  assertEquals(facts.topDepartmentCount, 2);
+});
+
+Deno.test("composeDashboard: lists derive from real rows; trends honest", () => {
+  const inputs: DashboardInputs = {
+    employees: [{ id: "e1", name: "A", department: "academics", status: "active" }],
+    openings: [],
+    attendance: { attendanceTrend: [{ label: "Mon", amountLakhs: 95, targetLakhs: 95 }] },
+    leave: {
+      requests: [
+        {
+          id: "lv2",
+          employeeName: "A",
+          leaveType: "casual",
+          days: 1,
+          status: "pending",
+          fromDate: "2026-06-26",
+        },
+      ],
+    },
+    recruitment: {
+      candidates: [
+        {
+          id: "cand_1",
+          name: "Deepa",
+          role: "Physics Teacher",
+          department: "academics",
+          appliedOn: "2026-05-28",
+          stage: "interview",
+          experience: "6 years",
+          source: "Referral",
+        },
+      ],
+    },
+  };
+  const facts = computeDashboardFacts(inputs, new Date("2026-06-26T10:00:00Z"));
+  const dash = composeDashboard(inputs, facts, "INSIGHT");
+  assertEquals(dash.aiInsight, "INSIGHT");
+  // No real headcount history => honest empty series, not a fabricated curve.
+  assertEquals(dash.headcountTrend, []);
+  // Real attendance trend passes through.
+  assertEquals(Array.isArray(dash.attendanceTrend), true);
+  assertEquals((dash.attendanceTrend as unknown[]).length, 1);
+  // Pending leave reflects the real pending request, field names preserved.
+  const pending = dash.pendingLeave as Array<Record<string, unknown>>;
+  assertEquals(pending.length, 1);
+  assertEquals(pending[0].id, "lv2");
+  assertEquals(pending[0].employeeName, "A");
+  assertEquals(pending[0].submittedOn, "2026-06-26"); // falls back to fromDate
+  // Recruitment snapshot reflects the real candidate with all DTO fields.
+  const recruit = dash.recruitmentSnapshot as Array<Record<string, unknown>>;
+  assertEquals(recruit.length, 1);
+  assertEquals(recruit[0].name, "Deepa");
+  assertEquals(recruit[0].stage, "interview");
+});
+
+Deno.test("buildDeterministicInsight: never the fake attrition string; grounded in facts", () => {
+  const facts = computeDashboardFacts({
+    employees: [
+      { id: "e1", department: "academics", status: "active" },
+      { id: "e2", department: "academics", status: "active" },
+      { id: "e3", department: "academics", status: "active" },
+    ],
+    openings: [{ id: "o1", status: "open", openings: 1 }],
+    attendance: {},
+    leave: {},
+    recruitment: {},
+  });
+  const insight = buildDeterministicInsight(facts);
+  assertEquals(insight.includes("attrition"), false);
+  assertEquals(insight.includes("148"), false);
+  assertEquals(insight.includes("3 employees"), true);
+  assertEquals(insight.includes("1 open position"), true);
+});
+
+Deno.test("buildDeterministicInsight: empty school yields an honest no-staff message", () => {
+  const insight = buildDeterministicInsight(computeDashboardFacts(emptyInputs()));
+  assertEquals(insight.toLowerCase().includes("no staff"), true);
+});
+
+Deno.test("generateHrInsightWithClaude: no key => deterministic fallback, never throws", async () => {
+  const facts = computeDashboardFacts(emptyInputs());
+  const deterministic = buildDeterministicInsight(facts);
+  // No apiKey passed => must return the deterministic insight unchanged.
+  const insight = await generateHrInsightWithClaude(facts, deterministic, undefined);
+  assertEquals(insight, deterministic);
 });
 
 Deno.test("getSnapshot throws when HR snapshot missing", async () => {

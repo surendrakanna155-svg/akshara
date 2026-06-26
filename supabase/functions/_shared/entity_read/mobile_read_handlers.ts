@@ -760,6 +760,118 @@ export function createTeacherMobileReadHandlers(
     }
   }
 
+  // Like handleSnapshot, but runs an overlay over the resolved snapshot (within
+  // the same tenant context / RLS) before shaping the envelope. Used by the
+  // teacher dashboard (TEACH-5) and attendance roster (TEACH-1) to replace the
+  // canned seed payload with values computed from this teacher's real data.
+  async function handleSnapshotWithOverlay(
+    req: Request,
+    config: AppConfig,
+    entityType: string,
+    notFoundMessage: string,
+    overlay: (
+      db: Parameters<EntityReadStore["getSnapshot"]>[0],
+      orgId: string,
+      schoolId: string,
+      teacherUserId: string,
+      snapshot: Record<string, unknown>,
+    ) => Promise<Record<string, unknown>>,
+  ): Promise<Response> {
+    const auth = await authenticateRequest(req, config);
+    if (!auth.ok) return auth.response;
+
+    const denied = requireRead(auth.claims);
+    if (denied) return denied;
+
+    const orgId = organizationIdFromClaims(auth.claims);
+    const schoolId = schoolIdFromClaims(auth.claims);
+
+    try {
+      const snapshot = await runTenant(config, auth.claims, async (db) => {
+        // A fresh school has no teacher_entities seed row for this snapshot.
+        // That must NOT 404 — the overlay supplies every data field from real
+        // tables, so fall back to an empty scaffold and let it compute honest
+        // zeros/empties. The seed (when present) only carries cosmetic labels.
+        let resolved: Record<string, unknown>;
+        try {
+          resolved = await store.getSnapshot(db, orgId, schoolId, entityType) as Record<
+            string,
+            unknown
+          >;
+        } catch (snapshotError) {
+          if (snapshotError instanceof store.SnapshotNotFoundError) {
+            resolved = {};
+          } else {
+            throw snapshotError;
+          }
+        }
+        return await overlay(db, orgId, schoolId, auth.claims.sub, resolved);
+      });
+      return jsonResponse(envelope(snapshot));
+    } catch (error) {
+      if (error instanceof TenantDbNotConfiguredError) {
+        return tenantDbNotConfiguredResponse(error);
+      }
+      console.error(`teacher snapshot+overlay(${entityType}) error:`, error);
+      return errorEnvelope("INTERNAL_ERROR", notFoundMessage, 500);
+    }
+  }
+
+  // Computes a paginated list directly from the teacher's real operational rows
+  // (ignoring the teacher_entities seed for this entity). Used by upcoming exams,
+  // exam marks and leave history (TEACH-1). RBAC is identical to handleList.
+  async function handleComputedList(
+    req: Request,
+    config: AppConfig,
+    errorMessage: string,
+    compute: (
+      db: Parameters<EntityReadStore["listEntities"]>[0],
+      orgId: string,
+      schoolId: string,
+      teacherUserId: string,
+      pagination: { page: number; pageSize: number },
+    ) => Promise<{
+      items: Array<Record<string, unknown>>;
+      page: number;
+      pageSize: number;
+      total: number;
+      hasMore: boolean;
+    }>,
+  ): Promise<Response> {
+    const auth = await authenticateRequest(req, config);
+    if (!auth.ok) return auth.response;
+
+    const denied = requireRead(auth.claims);
+    if (denied) return denied;
+
+    const url = new URL(req.url);
+    const pagination = parsePagination(url);
+    const orgId = organizationIdFromClaims(auth.claims);
+    const schoolId = schoolIdFromClaims(auth.claims);
+
+    try {
+      const result = await runTenant(config, auth.claims, async (db) =>
+        await compute(db, orgId, schoolId, auth.claims.sub, pagination)
+      );
+      return jsonResponse(
+        envelope(
+          listEnvelope(result.items, {
+            page: result.page,
+            pageSize: result.pageSize,
+            total: result.total,
+            hasMore: result.hasMore,
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof TenantDbNotConfiguredError) {
+        return tenantDbNotConfiguredResponse(error);
+      }
+      console.error("teacher computed-list error:", error);
+      return errorEnvelope("INTERNAL_ERROR", errorMessage, 500);
+    }
+  }
+
   async function handleTimetableSnapshot(
     req: Request,
     config: AppConfig,
@@ -893,5 +1005,12 @@ export function createTeacherMobileReadHandlers(
     }
   }
 
-  return { handleSnapshot, handleTimetableSnapshot, handleList, handleListWithOverlay };
+  return {
+    handleSnapshot,
+    handleSnapshotWithOverlay,
+    handleTimetableSnapshot,
+    handleList,
+    handleListWithOverlay,
+    handleComputedList,
+  };
 }

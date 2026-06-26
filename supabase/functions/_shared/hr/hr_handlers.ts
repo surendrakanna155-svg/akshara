@@ -10,7 +10,12 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { listEnvelope } from "../finance/finance_mapper.ts";
+import { resolveAiConfig } from "../ai/ai_settings.ts";
 import {
+  buildDeterministicInsight,
+  composeDashboard,
+  computeDashboardFacts,
+  type DashboardInputs,
   type EmployeeDetailContext,
   employeeDetailToApi,
   getEmployee,
@@ -18,7 +23,9 @@ import {
   HrEmployeeNotFoundError,
   HrSnapshotNotFoundError,
   listEntities,
+  listPayloads,
 } from "./hr_read_repository.ts";
+import { generateHrInsightWithClaude } from "./hr_dashboard_ai.ts";
 
 /**
  * Loads a snapshot's payload, returning an empty object when the snapshot does
@@ -93,8 +100,56 @@ async function handleSnapshot(
   }
 }
 
+/**
+ * GET /hr/dashboard — KPIs, pending leave, recruitment and the AI insight are
+ * all COMPUTED live from this school's real HR rows inside the tenant RLS
+ * context (MJ-H17 / HR-5). A fresh school with 3 employees reports 3, never the
+ * old hardcoded 148. The insight is real Claude grounded in the computed facts,
+ * with a deterministic fallback when no AI key is configured.
+ */
 export async function handleDashboard(req: Request, config: AppConfig): Promise<Response> {
-  return await handleSnapshot(req, config, "snapshot_dashboard", "Failed to load HR dashboard");
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireHrRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const payload = await runTenant(config, auth.claims, async (db) => {
+      const [employees, openings, attendance, leave, recruitment] = await Promise.all([
+        listPayloads(db, orgId, schoolId, "employee"),
+        listPayloads(db, orgId, schoolId, "opening"),
+        getSnapshotOrEmpty(db, orgId, schoolId, "snapshot_attendance"),
+        getSnapshotOrEmpty(db, orgId, schoolId, "snapshot_leave"),
+        getSnapshotOrEmpty(db, orgId, schoolId, "snapshot_recruitment"),
+      ]);
+      const inputs: DashboardInputs = { employees, openings, attendance, leave, recruitment };
+      const facts = computeDashboardFacts(inputs);
+
+      // Real AI insight grounded only in the computed facts; resolveAiConfig
+      // prefers the org's saved provider, else env. With no key the call returns
+      // the deterministic insight unchanged (safe fallback).
+      const deterministic = buildDeterministicInsight(facts);
+      const ai = await resolveAiConfig(db, orgId);
+      const aiInsight = await generateHrInsightWithClaude(
+        facts,
+        deterministic,
+        ai.apiKey,
+        { provider: ai.provider, model: ai.model },
+      );
+      return composeDashboard(inputs, facts, aiInsight);
+    });
+    return jsonResponse(envelope(payload));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("handleDashboard error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load HR dashboard", 500);
+  }
 }
 
 export async function handleEmployees(req: Request, config: AppConfig): Promise<Response> {
