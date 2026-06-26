@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 import 'timetable_models.dart';
 
 /// Selected day tab id in the Monday-Friday strip.
@@ -13,7 +13,7 @@ final parentTimetableErrorProvider = StateProvider<bool>((ref) => false);
 final parentTimetableEmptyProvider = StateProvider<bool>((ref) => false);
 
 final parentTimetableFutureProvider = FutureProvider<ParentTimetableData>((ref) async {
-  return ref.read(parentRepositoryProvider).getTimetable(query: ref.watch(repositoryQueryProvider));
+  return ref.read(parentRepositoryProvider).getTimetable(query: ref.watch(parentRepositoryQueryProvider));
 });
 
 final parentTimetableProvider = Provider<ParentTimetableData>((ref) {

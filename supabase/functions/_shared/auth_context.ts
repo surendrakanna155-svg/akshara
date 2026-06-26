@@ -6,6 +6,12 @@ import {
   type ResolvedPermissions,
 } from "./permission_resolver.ts";
 
+export interface ChildProfileSummary {
+  id: string;
+  name: string;
+  classLabel: string;
+}
+
 export interface AuthSessionContext {
   scope: AuthScope;
   tenantId: string;
@@ -14,6 +20,8 @@ export interface AuthSessionContext {
   schoolGroupId: string | null;
   studentId: string | null;
   childIds: string[];
+  /// Display details for linked children (login payload only; not in the JWT).
+  childProfiles?: ChildProfileSummary[];
   resolved: ResolvedPermissions;
 }
 
@@ -158,6 +166,52 @@ async function resolveOrganizationContext(
   };
 }
 
+/**
+ * Builds display details (name + current class) for a set of linked children.
+ * Names may be pre-resolved (e.g. from a guardian-link join); any missing ones
+ * are fetched from `students.display_name`. Class comes from the current SIS
+ * enrollment. Read-only and best-effort — missing data yields empty strings.
+ */
+export async function loadChildProfiles(
+  client: SupabaseClient,
+  childIds: string[],
+  preResolvedNames: Map<string, string> = new Map(),
+): Promise<ChildProfileSummary[]> {
+  if (childIds.length === 0) return [];
+
+  const nameByStudent = new Map(preResolvedNames);
+  const missing = childIds.filter((id) => !nameByStudent.has(id));
+  if (missing.length > 0) {
+    const { data: students } = await client
+      .from("students")
+      .select("id,display_name")
+      .in("id", missing);
+    for (const row of (students ?? []) as Array<{ id: string; display_name: string }>) {
+      nameByStudent.set(row.id, row.display_name ?? "");
+    }
+  }
+
+  const classByStudent = new Map<string, string>();
+  const { data: enrollments } = await client
+    .from("sis_student_enrollments")
+    .select("student_id,class_name,section_name")
+    .in("student_id", childIds)
+    .eq("is_current", true);
+  for (const row of (enrollments ?? []) as Array<
+    { student_id: string; class_name: string; section_name: string | null }
+  >) {
+    const label = [row.class_name, row.section_name].filter((p) => p && p.length)
+      .join("-");
+    classByStudent.set(row.student_id, label);
+  }
+
+  return childIds.map((id) => ({
+    id,
+    name: nameByStudent.get(id) ?? "",
+    classLabel: classByStudent.get(id) ?? "",
+  }));
+}
+
 async function resolveParentContext(
   client: SupabaseClient,
   userId: string,
@@ -181,6 +235,7 @@ async function resolveParentContext(
     organization_id: string;
     school_id: string;
     student_id: string;
+    students?: { id: string; display_name: string; status: string }[] | null;
   }>;
 
   const schoolIds = [...new Set(links.map((l) => l.school_id))];
@@ -193,6 +248,15 @@ async function resolveParentContext(
     ? activeStudentId
     : childIds[0];
 
+  // PAR-7: enrich linked children with real name + current class so the parent
+  // child-switcher shows distinct students, not placeholder "Child" entries.
+  const nameByStudent = new Map<string, string>();
+  for (const l of schoolLinks) {
+    const studentName = l.students?.[0]?.display_name;
+    if (studentName) nameByStudent.set(l.student_id, studentName);
+  }
+  const childProfiles = await loadChildProfiles(client, childIds, nameByStudent);
+
   const parentResolved = await loadRelationshipRolePermissions(client, "parent");
 
   return {
@@ -203,6 +267,7 @@ async function resolveParentContext(
     schoolGroupId: null,
     studentId: null,
     childIds,
+    childProfiles,
     resolved: parentResolved,
   };
 }

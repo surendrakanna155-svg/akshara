@@ -27,6 +27,18 @@ UserRole userRoleFromErpRole(ErpRole erpRole) {
 }
 
 List<LinkedChild> linkedChildrenFromAuthUser(AuthUser user) {
+  // PAR-7: prefer the server-supplied child details (real name + class) so the
+  // child-switcher shows distinct students instead of placeholder "Child".
+  if (user.children.isNotEmpty) {
+    return [
+      for (final child in user.children)
+        LinkedChild(
+          id: child.id,
+          name: child.name.isNotEmpty ? child.name : 'Student',
+          classLabel: child.classLabel,
+        ),
+    ];
+  }
   if (user.childIds.isEmpty) {
     return const [];
   }
@@ -34,7 +46,7 @@ List<LinkedChild> linkedChildrenFromAuthUser(AuthUser user) {
     for (final id in user.childIds)
       LinkedChild(
         id: id,
-        name: 'Child',
+        name: 'Student',
         classLabel: '',
       ),
   ];

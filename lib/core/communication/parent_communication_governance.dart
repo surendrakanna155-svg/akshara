@@ -33,6 +33,11 @@ class TeacherTeachingContext {
     return '$classTeacherGrade-$classTeacherSection';
   }
 
+  /// App-bar subtitle for teacher screens: "Name · Subject" (or just the name
+  /// when no subject is assigned). Derived from the logged-in teacher (TCH-4).
+  String get appBarSubtitle =>
+      primarySubject.isEmpty ? teacherName : '$teacherName · $primarySubject';
+
   bool isClassTeacherForStudent(CanonicalStudentRecord student) {
     if (!isClassTeacher) return false;
     return student.grade == classTeacherGrade &&

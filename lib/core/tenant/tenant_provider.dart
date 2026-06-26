@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/auth_provider.dart';
+import '../config/environment_provider.dart';
 import '../repositories/repository_query.dart';
 import 'tenant_context.dart';
 
@@ -19,6 +20,15 @@ final tenantContextProvider = Provider<TenantContext>((ref) {
   }
 
   if (auth.isAuthenticated) {
+    // CORE-3: in LIVE/API mode an authenticated session must always carry claims
+    // (hardened login logs out on null claims). Reaching here with API mode on
+    // is a broken session — fail fast rather than silently shipping the demo
+    // tenant identity (tenant_demo_001) to a real backend. In mock/demo mode an
+    // authenticated session without claims is the intended demo behaviour.
+    assert(
+      !ref.watch(enableApiModeProvider),
+      'Authenticated live session has null claims — refusing to assume the demo tenant.',
+    );
     return TenantContext.demo.copyWith(
       userId: 'user_${auth.phoneNumber ?? 'anonymous'}',
     );

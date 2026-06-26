@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 import 'notices_models.dart';
 
 /// Active notice category filter.
@@ -15,7 +15,7 @@ final parentNoticesErrorProvider = StateProvider<bool>((ref) => false);
 final parentNoticesEmptyProvider = StateProvider<bool>((ref) => false);
 
 final parentNoticesFutureProvider = FutureProvider<List<ParentNotice>>((ref) async {
-  return ref.read(parentRepositoryProvider).getNotices(query: ref.watch(repositoryQueryProvider));
+  return ref.read(parentRepositoryProvider).getNotices(query: ref.watch(parentRepositoryQueryProvider));
 });
 
 final _parentNoticesBaseProvider = Provider<List<ParentNotice>>((ref) {
@@ -57,11 +57,12 @@ final parentNoticesItemsProvider = Provider<List<ParentNotice>>((ref) {
 /// Screen payload with filtered notices.
 final parentNoticesProvider = Provider<ParentNoticesData>((ref) {
   final items = ref.watch(parentNoticesItemsProvider);
-
+  // PAR-9: header child + unread badge from real data, not hardcoded demo values.
+  final child = ref.watch(parentActiveChildProvider);
   return ParentNoticesData(
-    childName: 'Ravi Kumar',
-    childClass: '8-A',
-    unreadNotifications: 2,
+    childName: child?.name ?? '',
+    childClass: child?.classLabel ?? '',
+    unreadNotifications: items.where((notice) => !notice.isRead).length,
     notices: items,
   );
 });

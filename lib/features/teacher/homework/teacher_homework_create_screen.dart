@@ -6,6 +6,7 @@ import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../communication/teacher_teaching_context_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
 
@@ -22,11 +23,24 @@ class _TeacherHomeworkCreateScreenState
     extends ConsumerState<TeacherHomeworkCreateScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _classController = TextEditingController(text: '8-A');
-  final _subjectController = TextEditingController(text: 'Mathematics');
-  final _titleController = TextEditingController(text: 'Mathematics Practice');
-  final _dueController = TextEditingController(text: 'Due next Monday');
-  final _studentController = TextEditingController(text: 'Ravi Kumar');
+  // TCH-8: start blank (no demo defaults). Class/subject prefill from the
+  // logged-in teacher's real assignment for convenience; the rest is empty.
+  final _classController = TextEditingController();
+  final _subjectController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _dueController = TextEditingController();
+  final _studentController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final teaching = ref.read(resolvedTeacherTeachingContextProvider);
+    _classController.text = teaching.classTeacherClassLabel ??
+        (teaching.teachingClassLabels.isNotEmpty
+            ? teaching.teachingClassLabels.first
+            : '');
+    _subjectController.text = teaching.primarySubject;
+  }
 
   @override
   void dispose() {
@@ -86,6 +100,7 @@ class _TeacherHomeworkCreateScreenState
                 controller: _titleController,
                 decoration: const InputDecoration(
                   labelText: 'Assignment title (English)',
+                  hintText: 'e.g. Algebra practice worksheet',
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) =>
@@ -96,6 +111,7 @@ class _TeacherHomeworkCreateScreenState
                 controller: _dueController,
                 decoration: const InputDecoration(
                   labelText: 'Due label',
+                  hintText: 'e.g. Due next Monday',
                   border: OutlineInputBorder(),
                 ),
               ),

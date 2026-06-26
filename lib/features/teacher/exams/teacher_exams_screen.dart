@@ -10,6 +10,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'exam_models.dart';
 import 'teacher_exams_provider.dart';
+import '../communication/teacher_teaching_context_provider.dart';
 import '../../academics/exam_admin/exam_administration_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../../../theme/breakpoints.dart';
@@ -29,12 +30,13 @@ class TeacherExamsScreen extends ConsumerWidget {
     final section = ref.watch(teacherExamSectionProvider);
     final isLoading = ref.watch(teacherExamsLoadingProvider);
     final hasError = ref.watch(teacherExamsErrorProvider);
+    final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Exams',
-        subtitle: 'Priya Sharma · Mathematics',
+        subtitle: teaching.appBarSubtitle,
         unreadNotifications: data.unreadNotifications,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,

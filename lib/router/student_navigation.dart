@@ -35,8 +35,6 @@ void handleStudentNavigation(
       context.go(RouteNames.studentProfile);
     case 'notifications':
       context.push(RouteNames.parentNotifications);
-    case 'join_class':
-      context.go(RouteNames.studentTimetable);
     case 'ai_assistant':
     case 'ai_quiz':
       if (ref != null) {

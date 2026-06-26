@@ -203,13 +203,8 @@ class StudentDashboardData {
         daysUntil: 7,
       ),
       quickActions: [
-        StudentQuickAction(
-          id: 'join_class',
-          label: 'Join Class',
-          icon: Icons.videocam_outlined,
-          emphasis: StudentKpiTone.primary,
-          isVisible: true,
-        ),
+        // STU-7: no "Join Class" — there is no live-class/video feature; the
+        // action only routed to the timetable, implying a capability we lack.
         StudentQuickAction(
           id: 'submit_homework',
           label: 'Submit HW',
@@ -229,9 +224,11 @@ class StudentDashboardData {
           emphasis: StudentKpiTone.primary,
         ),
       ],
+      // STU-6: honest CTA to the real AI tutor (the action opens live AI) rather
+      // than a fabricated, static "AI insight" about the student.
       aiInsight: StudentAiInsight(
-        message: 'Revise quadratic equations — 15 min today boosts exam readiness',
-        actionLabel: 'Start quiz',
+        message: 'Ask your AI study buddy for help with today’s lessons',
+        actionLabel: 'Open AI tutor',
       ),
     );
   }

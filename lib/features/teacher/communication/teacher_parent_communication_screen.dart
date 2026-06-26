@@ -16,7 +16,6 @@ class TeacherParentCommunicationScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    seedDemoSubjectConcernIfNeeded();
     final students = ref.watch(teacherCommunicationStudentsProvider);
     final selectedId = ref.watch(teacherCommunicationSelectedStudentProvider);
     final reason = ref.watch(teacherCommunicationReasonProvider);

@@ -201,9 +201,14 @@ bool _skipApprovalDomainEffects(Ref ref) =>
 (String actorId, String actorName) _approvalActor(Ref ref) {
   final auth = ref.read(authProvider);
   final claims = auth.claims;
+  final actorId = claims?.userId;
+  // PRN-3: fail closed — never attribute an approval to a synthetic principal.
+  if (actorId == null || actorId.isEmpty) {
+    throw StateError('Approval requires an authenticated approver.');
+  }
   return (
-    claims?.userId ?? 'principal_001',
-    auth.displayName ?? claims?.erpRole.label ?? 'Principal',
+    actorId,
+    auth.displayName ?? claims?.erpRole.label ?? 'Approver',
   );
 }
 

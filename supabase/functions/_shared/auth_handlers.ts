@@ -11,6 +11,7 @@ import {
 } from "./jwt.ts";
 import {
   type AuthSessionContext,
+  loadChildProfiles,
   resolveAuthSessionContext,
   resolveAuthSessionContextFromSession,
   type ScopeLoginRequest,
@@ -102,6 +103,8 @@ function buildUserPayload(
     organizationId: ctx.organizationId,
     studentId: ctx.studentId,
     childIds: ctx.childIds,
+    // PAR-7: real linked-child details for the parent child-switcher.
+    children: ctx.childProfiles ?? [],
     email: user.email,
     mobile: user.phone,
   };
@@ -683,6 +686,12 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
   const { data: user } = await client.from("users").select("id,phone,email,display_name")
     .eq("id", claims.sub).maybeSingle();
 
+  // PAR-7: rehydrate real linked-child details so a restored parent session
+  // shows distinct children, not placeholder entries.
+  const children = claims.scope === "parent" && claims.child_ids.length > 0
+    ? await loadChildProfiles(client, claims.child_ids)
+    : [];
+
   return jsonResponse(envelope({
     id: claims.sub,
     displayName: user?.display_name ?? "User",
@@ -693,6 +702,7 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
     organizationId: claims.organization_id,
     studentId: claims.student_id,
     childIds: claims.child_ids,
+    children,
     email: user?.email,
     mobile: user?.phone,
   }));

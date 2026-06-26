@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 import 'attendance_models.dart';
 
 /// Visible month (always normalized to the first day).
@@ -27,7 +27,7 @@ final parentAttendanceEmptyProvider = StateProvider<bool>((ref) => false);
 final parentAttendanceFutureProvider = FutureProvider<AttendanceMonthData>((ref) async {
   final month = ref.watch(attendanceMonthProvider);
   return ref.read(parentRepositoryProvider).getAttendance(
-        query: ref.watch(repositoryQueryProvider),
+        query: ref.watch(parentRepositoryQueryProvider),
         month: month,
       );
 });

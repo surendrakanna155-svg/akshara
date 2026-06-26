@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 import 'events_models.dart';
 
 /// Active events section tab.
@@ -15,7 +15,7 @@ final parentEventsErrorProvider = StateProvider<bool>((ref) => false);
 final parentEventsEmptyProvider = StateProvider<bool>((ref) => false);
 
 final parentEventsFutureProvider = FutureProvider<ParentEventsData>((ref) async {
-  return ref.read(parentRepositoryProvider).getEvents(query: ref.watch(repositoryQueryProvider));
+  return ref.read(parentRepositoryProvider).getEvents(query: ref.watch(parentRepositoryQueryProvider));
 });
 
 final parentEventsProvider = Provider<ParentEventsData>((ref) {
@@ -26,14 +26,16 @@ final parentEventsProvider = Provider<ParentEventsData>((ref) {
     manualError: ref.watch(parentEventsErrorProvider),
     manualEmpty: ref.watch(parentEventsEmptyProvider),
   );
+  // PAR-9: fall back to the real active child, not a hardcoded demo student.
+  final child = ref.watch(parentActiveChildProvider);
   final resolved = data ??
       ref.watch(parentEventsFutureProvider).value ??
-      const ParentEventsData(
-        childName: 'Ravi Kumar',
-        childClass: '8-A',
-        unreadNotifications: 2,
-        upcomingEvents: [],
-        pastEvents: [],
+      ParentEventsData(
+        childName: child?.name ?? '',
+        childClass: child?.classLabel ?? '',
+        unreadNotifications: 0,
+        upcomingEvents: const [],
+        pastEvents: const [],
       );
 
   if (ref.watch(parentEventsEmptyProvider)) {

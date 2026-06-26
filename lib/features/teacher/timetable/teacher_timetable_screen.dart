@@ -82,7 +82,7 @@ class TeacherTimetableScreen extends ConsumerWidget {
                                             id: d.id,
                                             shortLabel: d.shortLabel,
                                             fullLabel: d.fullLabel,
-                                            date: DateTime(2026, 6, 1),
+                                            date: _dateForDayId(d.id),
                                             periods: const [],
                                             isSelected: d.isSelected,
                                             isToday: d.isToday,
@@ -134,4 +134,23 @@ class TeacherTimetableScreen extends ConsumerWidget {
                     ),
     );
   }
+}
+
+/// TCH-9: resolves the real calendar date for a weekday chip (mon–sun) within
+/// the current week, so the day selector shows correct, distinct dates instead
+/// of a constant "1".
+DateTime _dateForDayId(String id) {
+  const weekdayByDayId = <String, int>{
+    'mon': DateTime.monday,
+    'tue': DateTime.tuesday,
+    'wed': DateTime.wednesday,
+    'thu': DateTime.thursday,
+    'fri': DateTime.friday,
+    'sat': DateTime.saturday,
+    'sun': DateTime.sunday,
+  };
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final targetWeekday = weekdayByDayId[id.toLowerCase()] ?? today.weekday;
+  return today.add(Duration(days: targetWeekday - today.weekday));
 }

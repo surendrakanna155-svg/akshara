@@ -19,7 +19,6 @@ class TeacherClassTeacherDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    seedDemoSubjectConcernIfNeeded();
     final data = ref.watch(teacherDashboardProvider);
     final isLoading = ref.watch(teacherDashboardLoadingProvider);
     final hasError = ref.watch(teacherDashboardErrorProvider);

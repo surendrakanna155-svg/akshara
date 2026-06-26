@@ -42,6 +42,7 @@ class AuthUser {
     this.organizationId,
     this.scope,
     this.childIds = const [],
+    this.children = const [],
   });
 
   final String id;
@@ -58,6 +59,23 @@ class AuthUser {
 
   /// Linked child ids for parent accounts.
   final List<String> childIds;
+
+  /// Linked child display details (id + real name + current class) for parents.
+  /// Empty when the server didn't supply them; callers fall back to [childIds].
+  final List<AuthChildSummary> children;
+}
+
+/// Display summary for a parent's linked child (PAR-7).
+class AuthChildSummary {
+  const AuthChildSummary({
+    required this.id,
+    required this.name,
+    required this.classLabel,
+  });
+
+  final String id;
+  final String name;
+  final String classLabel;
 }
 
 /// Server-granted permission entry.

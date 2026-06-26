@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 
 /// Installment payment state (PA-03 §8).
 enum FeeInstallmentStatus { paid, due, upcoming }
@@ -283,7 +283,7 @@ final parentFeesErrorProvider = StateProvider<bool>((ref) => false);
 final parentFeesEmptyProvider = StateProvider<bool>((ref) => false);
 
 final parentFeesFutureProvider = FutureProvider<ParentFeesData>((ref) async {
-  return ref.read(parentRepositoryProvider).getFees(query: ref.watch(repositoryQueryProvider));
+  return ref.read(parentRepositoryProvider).getFees(query: ref.watch(parentRepositoryQueryProvider));
 });
 
 /// Fees payload for [ParentFeesScreen].

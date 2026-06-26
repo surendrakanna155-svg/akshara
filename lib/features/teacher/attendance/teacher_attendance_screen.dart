@@ -7,6 +7,7 @@ import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../communication/teacher_teaching_context_provider.dart';
 import 'attendance_models.dart';
 import 'teacher_attendance_provider.dart';
 import 'teacher_attendance_workflow.dart';
@@ -28,12 +29,13 @@ class TeacherAttendanceScreen extends ConsumerWidget {
     final data = ref.watch(teacherAttendanceProvider);
     final isLoading = ref.watch(teacherAttendanceLoadingProvider);
     final hasError = ref.watch(teacherAttendanceErrorProvider);
+    final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Mark Attendance',
-        subtitle: 'Priya Sharma · Mathematics',
+        subtitle: teaching.appBarSubtitle,
         unreadNotifications: data.unreadNotifications,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,

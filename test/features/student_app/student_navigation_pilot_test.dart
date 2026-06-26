@@ -88,14 +88,16 @@ void main() {
     expect(routes, contains(RouteNames.studentHomework));
   });
 
-  testWidgets('student join_class routes to timetable', (tester) async {
+  testWidgets('student join_class is removed (no navigation)', (tester) async {
+    // STU-7: there is no live-class feature; the action no longer exists and
+    // must not navigate anywhere (was misleadingly routing to the timetable).
     final routes = <String>[];
     await pumpNavHarness(
       tester,
       (context) => handleStudentNavigation(context, 'join_class'),
       routes.add,
     );
-    expect(routes, contains(RouteNames.studentTimetable));
+    expect(routes, isEmpty);
   });
 
   testWidgets('student ai_assistant routes to persona shell', (tester) async {

@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/communication/parent_communication_governance.dart';
 import '../../../core/communication/parent_communication_models.dart';
-import '../../../core/communication/subject_teacher_concern_store.dart';
 import '../../../core/communication/teacher_student_risk_service.dart';
-import '../../../core/repositories/mock/mock_canonical_student_registry.dart';
 import '../../../core/repositories/repository_config.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/teaching/teacher_assignment_registry.dart';
@@ -194,18 +192,3 @@ class FlagSubjectTeacherConcernNotifier
 final flagSubjectTeacherConcernProvider = AsyncNotifierProvider<
     FlagSubjectTeacherConcernNotifier,
     SubjectTeacherConcernFlagResult?>(FlagSubjectTeacherConcernNotifier.new);
-
-void seedDemoSubjectConcernIfNeeded() {
-  final store = SubjectTeacherConcernStore.instance;
-  if (store.allConcerns().isNotEmpty) return;
-  store.flag(
-    const SubjectTeacherConcernFlagRequest(
-      sisStudentId: MockCanonicalStudentRegistry.primaryMobileStudentId,
-      category: SubjectConcernCategory.lowMarks,
-      observation: 'Scored 38% in Mathematics unit test — needs revision support.',
-      flaggedByTeacherId: TeacherAssignmentRegistry.mrPatelId,
-      flaggedByTeacherName: 'Mr. Patel',
-      subject: 'Science',
-    ),
-  );
-}

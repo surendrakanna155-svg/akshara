@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../communication/teacher_teaching_context_provider.dart';
 import 'homework_models.dart';
 import 'teacher_homework_provider.dart';
 import 'widgets/homework_submission_row.dart';
@@ -24,12 +25,13 @@ class TeacherHomeworkScreen extends ConsumerWidget {
     final selected = ref.watch(teacherHomeworkProvider);
     final isLoading = ref.watch(teacherHomeworkLoadingProvider);
     final hasError = ref.watch(teacherHomeworkErrorProvider);
+    final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Homework Review',
-        subtitle: 'Priya Sharma · Mathematics',
+        subtitle: teaching.appBarSubtitle,
         unreadNotifications: 1,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,

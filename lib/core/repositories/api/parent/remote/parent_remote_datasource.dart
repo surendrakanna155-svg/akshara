@@ -187,6 +187,8 @@ class ParentRemoteDataSource {
       'tenantId': query.tenantId,
       if (query.schoolId != null) 'schoolId': query.schoolId,
       if (query.organizationId != null) 'organizationId': query.organizationId,
+      // Module-scoped params (e.g. activeChildId for multi-child parents — PAR-1).
+      ...query.additionalQueryParams,
     };
   }
 

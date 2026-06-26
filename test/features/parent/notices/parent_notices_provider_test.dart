@@ -1,13 +1,22 @@
+import 'package:akshara_erp/features/auth/auth_models.dart';
 import 'package:akshara_erp/features/parent/notices/notices_models.dart';
 import 'package:akshara_erp/features/parent/notices/parent_notices_provider.dart';
+import 'package:akshara_erp/features/parent/parent_active_child_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/provider_test_overrides.dart';
 
 void main() {
   group('parentNoticesProvider', () {
-    test('returns mock notices for active child', () async {
-      final container = createMobileProviderTestContainer();
+    test('returns mock notices with active-child header', () async {
+      // PAR-9: header reflects the active child, not a hardcoded demo student.
+      final container = createMobileProviderTestContainer(
+        overrides: [
+          parentActiveChildProvider.overrideWithValue(
+            const LinkedChild(id: 'child-ravi', name: 'Ravi Kumar', classLabel: '8-A'),
+          ),
+        ],
+      );
       addTearDown(container.dispose);
 
       await container.read(parentNoticesFutureProvider.future);

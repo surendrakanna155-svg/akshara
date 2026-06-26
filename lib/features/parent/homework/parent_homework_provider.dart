@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 import 'homework_models.dart';
 
 /// Active homework filter selected in PA-05.
@@ -15,7 +15,7 @@ final parentHomeworkErrorProvider = StateProvider<bool>((ref) => false);
 final parentHomeworkEmptyProvider = StateProvider<bool>((ref) => false);
 
 final parentHomeworkFutureProvider = FutureProvider<ParentHomeworkData>((ref) async {
-  return ref.read(parentRepositoryProvider).getHomework(query: ref.watch(repositoryQueryProvider));
+  return ref.read(parentRepositoryProvider).getHomework(query: ref.watch(parentRepositoryQueryProvider));
 });
 
 final _parentHomeworkBaseDataProvider = Provider<ParentHomeworkData>((ref) {

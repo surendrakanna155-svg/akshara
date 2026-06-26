@@ -29,6 +29,7 @@ import 'package:akshara_erp/core/repositories/api/student/remote/student_remote_
 import 'package:akshara_erp/core/repositories/repository_config.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
+import 'package:akshara_erp/features/parent/parent_active_child_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -45,6 +46,13 @@ Future<void> initProviderTestPrefs([Map<String, Object> values = const {}]) asyn
 List<Override> providerTestOverrides([List<Override> extra = const []]) {
   final base = <Override>[
     repositoryQueryProvider.overrideWith((ref) => RepositoryQuery.demo),
+    // Parent reads use the child-scoped query; in prefs-less unit tests
+    // short-circuit it to the demo scope (mirrors repositoryQueryProvider) so
+    // they don't transitively reach authProvider/SharedPreferences. Tests that
+    // need a specific child override parentActiveChildProvider explicitly
+    // (their override wins, being appended after this base).
+    parentRepositoryQueryProvider.overrideWith((ref) => RepositoryQuery.demo),
+    parentActiveChildProvider.overrideWithValue(null),
   ];
   if (_testPrefs != null) {
     base.insert(0, sharedPreferencesProvider.overrideWithValue(_testPrefs!));

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 import 'receipt_models.dart';
 
 /// Search query for receipt list.
@@ -19,7 +19,7 @@ final parentReceiptsErrorProvider = StateProvider<bool>((ref) => false);
 final parentReceiptsEmptyProvider = StateProvider<bool>((ref) => false);
 
 final parentReceiptsFutureProvider = FutureProvider<List<FeeReceipt>>((ref) async {
-  return ref.read(parentRepositoryProvider).getReceipts(query: ref.watch(repositoryQueryProvider));
+  return ref.read(parentRepositoryProvider).getReceipts(query: ref.watch(parentRepositoryQueryProvider));
 });
 
 final _parentReceiptsBaseProvider = Provider<List<FeeReceipt>>((ref) {
@@ -73,11 +73,13 @@ final parentReceiptsListProvider = Provider<List<FeeReceipt>>((ref) {
 /// Screen payload with unread badge count.
 final parentReceiptsDataProvider = Provider<ParentReceiptsData>((ref) {
   final receipts = ref.watch(parentReceiptsListProvider);
+  // PAR-6: header reflects the active child, not a hardcoded demo student.
+  final child = ref.watch(parentActiveChildProvider);
   return ParentReceiptsData(
-    childName: 'Ravi Kumar',
-    childClass: '8-A',
+    childName: (child?.name.isNotEmpty ?? false) ? child!.name : '',
+    childClass: child?.classLabel ?? '',
     receipts: receipts,
-    unreadNotifications: 2,
+    unreadNotifications: 0,
   );
 });
 

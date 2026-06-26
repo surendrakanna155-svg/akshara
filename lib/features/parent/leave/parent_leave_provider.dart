@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 import '../parent_mutations_provider.dart';
 import '../parent_requests.dart';
 import 'leave_models.dart';
@@ -23,7 +23,7 @@ final parentLeaveEmptyProvider = StateProvider<bool>((ref) => false);
 final parentLeaveSubmittingProvider = StateProvider<bool>((ref) => false);
 
 final parentLeaveHistoryFutureProvider = FutureProvider<List<LeaveRequest>>((ref) async {
-  return ref.read(parentRepositoryProvider).getLeaveHistory(query: ref.watch(repositoryQueryProvider));
+  return ref.read(parentRepositoryProvider).getLeaveHistory(query: ref.watch(parentRepositoryQueryProvider));
 });
 
 /// Leave history list.
@@ -44,11 +44,13 @@ final parentLeaveHistoryProvider = Provider<List<LeaveRequest>>((ref) {
 /// Screen payload.
 final parentLeaveDataProvider = Provider<ParentLeaveData>((ref) {
   final history = ref.watch(parentLeaveHistoryProvider);
+  // PAR-9: header reflects the active child, not a hardcoded demo student.
+  final child = ref.watch(parentActiveChildProvider);
   return ParentLeaveData(
-    childName: 'Ravi Kumar',
-    childClass: '8-A',
+    childName: child?.name ?? '',
+    childClass: child?.classLabel ?? '',
     history: history,
-    unreadNotifications: 2,
+    unreadNotifications: 0,
     pendingCount: history
         .where((item) => item.status == LeaveStatus.pending)
         .length,
@@ -79,9 +81,12 @@ Future<bool> submitLeaveApplication(WidgetRef ref) async {
 
   ref.read(parentLeaveSubmittingProvider.notifier).state = true;
 
+  // PAR-3: file leave against the active child, not a hardcoded demo child.
+  final activeChild = ref.read(parentActiveChildProvider);
+
   final result = await ref.read(submitParentLeaveProvider.notifier).execute(
         ParentLeaveSubmitRequest(
-          childId: 'child_ravi',
+          childId: activeChild?.id ?? '',
           fromDateLabel: draft.fromDateLabel,
           toDateLabel: draft.toDateLabel,
           reason: draft.reason.trim(),

@@ -7,6 +7,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'leave_models.dart';
 import 'teacher_leave_provider.dart';
+import '../communication/teacher_teaching_context_provider.dart';
 import '../../../theme/breakpoints.dart';
 
 /// Teacher leave requests — TA-07.
@@ -26,12 +27,13 @@ class TeacherLeaveScreen extends ConsumerWidget {
     final draft = ref.watch(teacherLeaveApplyDraftProvider);
     final isLoading = ref.watch(teacherLeaveLoadingProvider);
     final hasError = ref.watch(teacherLeaveErrorProvider);
+    final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Leave',
-        subtitle: 'Priya Sharma',
+        subtitle: teaching.teacherName,
         unreadNotifications: 1,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
@@ -229,7 +231,7 @@ class _ApplyForm extends ConsumerWidget {
                   if (ok) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Leave request submitted (mock).'),
+                        content: Text('Leave request submitted.'),
                       ),
                     );
                   }

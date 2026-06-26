@@ -113,7 +113,7 @@ class HrEmployeesScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:
-              'Teachers linked to the Teacher app (Priya Sharma, Mrs. Rao, Mr. Patel) sync attendance from TA-01.',
+              'Teachers linked to the Teacher app sync attendance automatically from their daily marking.',
           actionLabel: 'View attendance',
           icon: Icons.link_outlined,
           semanticLabelPrefix: 'Teacher app integration',

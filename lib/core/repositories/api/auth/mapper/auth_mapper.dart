@@ -74,6 +74,15 @@ class AuthMapper {
         for (final id in (raw['childIds'] as List<dynamic>? ?? const []))
           if (id is String) id,
       ],
+      children: [
+        for (final child in (raw['children'] as List<dynamic>? ?? const []))
+          if (child is Map<String, dynamic>)
+            AuthChildSummary(
+              id: child['id'] as String? ?? '',
+              name: child['name'] as String? ?? '',
+              classLabel: child['classLabel'] as String? ?? '',
+            ),
+      ],
     );
   }
 

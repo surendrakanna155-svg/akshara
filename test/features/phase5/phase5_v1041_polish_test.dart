@@ -6,12 +6,17 @@ import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_provider.
 
 void main() {
   group('parent dashboard child-aware', () {
-    test('forActiveChild updates greeting and summary for sibling', () {
+    test('forActiveChild personalizes greeting/identity, preserves base data', () {
       final base = ParentDashboardData.mock();
       final priya = base.forActiveChild(childName: 'Priya Kumar', childClass: '5-B');
       expect(priya.childName, 'Priya Kumar');
+      expect(priya.childClass, '5-B');
       expect(priya.greetingHeadline, "Priya's Day at a Glance");
-      expect(priya.todaySummary.length, 2);
+      // PAR-6: per-child data now comes from the backend (which receives
+      // activeChildId), not a hardcoded name-matched demo branch.
+      expect(priya.todaySummary, base.todaySummary);
+      expect(priya.statusChips, base.statusChips);
+      expect(priya.aiInsight, base.aiInsight);
     });
   });
 

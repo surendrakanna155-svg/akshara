@@ -5,7 +5,6 @@ import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/school_config/school_configuration_provider.dart';
 import '../../../core/school_config/school_dashboard_adapter.dart';
-import '../../../core/tenant/tenant_provider.dart';
 import '../parent_active_child_provider.dart';
 
 /// Mock dashboard payload for [ParentDashboardScreen] (PA-01).
@@ -167,50 +166,32 @@ class ParentDashboardData {
     );
   }
 
-  /// Applies active child identity to dashboard copy (v10.4.1 child-aware refresh).
+  /// Personalizes the dashboard greeting/identity for the active child.
+  ///
+  /// PAR-6: the per-child *data* (status, today summary, AI insight, notices,
+  /// events) comes from the backend, which now receives `activeChildId` and
+  /// returns that child's real dashboard. This only sets the identity/greeting;
+  /// it no longer fabricates a hardcoded demo branch per child name.
   ParentDashboardData forActiveChild({
     required String childName,
     required String childClass,
   }) {
-    final firstName = childName.split(' ').first;
-    final isPriya = childName.toLowerCase().contains('priya');
+    final firstName = childName.trim().isEmpty
+        ? ''
+        : childName.trim().split(' ').first;
     return ParentDashboardData(
       childName: childName,
       childClass: childClass,
       greetingEyebrow: greetingEyebrow,
-      greetingHeadline: "$firstName's Day at a Glance",
+      greetingHeadline:
+          firstName.isEmpty ? greetingHeadline : "$firstName's Day at a Glance",
       schoolName: schoolName,
-      statusChips: isPriya
-          ? const [
-              DashboardStatusChip(label: 'Present', tone: DashboardChipTone.success),
-              DashboardStatusChip(label: 'All clear', tone: DashboardChipTone.primary),
-            ]
-          : statusChips,
+      statusChips: statusChips,
       quickActions: quickActions,
-      todaySummary: isPriya
-          ? const [
-              TodaySummaryItem(
-                id: 'attendance',
-                icon: Icons.fact_check_outlined,
-                iconTone: DashboardChipTone.success,
-                title: 'Present · Marked 9:05 AM',
-              ),
-              TodaySummaryItem(
-                id: 'homework',
-                icon: Icons.assignment_outlined,
-                iconTone: DashboardChipTone.primary,
-                title: '1 homework due today',
-              ),
-            ]
-          : todaySummary,
+      todaySummary: todaySummary,
       notices: notices,
       events: events,
-      aiInsight: isPriya
-          ? const DashboardAiInsight(
-              message: 'Great attendance streak this month',
-              actionLabel: 'View hub',
-            )
-          : aiInsight,
+      aiInsight: aiInsight,
       unreadNotifications: unreadNotifications,
     );
   }
@@ -307,7 +288,7 @@ final parentDashboardEmptyProvider = StateProvider<bool>((ref) => false);
 final parentDashboardFutureProvider = FutureProvider<ParentDashboardData>((ref) async {
   final child = ref.watch(parentActiveChildProvider);
   final base = await ref.read(parentRepositoryProvider).getDashboard(
-        query: ref.watch(repositoryQueryProvider),
+        query: ref.watch(parentRepositoryQueryProvider),
       );
   if (child == null) return base;
   return base.forActiveChild(childName: child.name, childClass: child.classLabel);

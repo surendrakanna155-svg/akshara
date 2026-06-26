@@ -8,6 +8,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'message_models.dart';
 import 'teacher_messages_provider.dart';
+import '../communication/teacher_teaching_context_provider.dart';
 import '../../../theme/breakpoints.dart';
 
 /// Teacher messages inbox — TA-06.
@@ -31,12 +32,13 @@ class TeacherMessagesScreen extends ConsumerWidget {
     final draft = ref.watch(teacherComposeDraftProvider);
     final isLoading = ref.watch(teacherMessagesLoadingProvider);
     final hasError = ref.watch(teacherMessagesErrorProvider);
+    final teaching = ref.watch(resolvedTeacherTeachingContextProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Messages',
-        subtitle: 'Priya Sharma',
+        subtitle: teaching.teacherName,
         unreadNotifications: 1,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,

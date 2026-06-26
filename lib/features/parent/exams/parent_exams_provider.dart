@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
-import '../../../core/tenant/tenant_provider.dart';
+import '../parent_active_child_provider.dart';
 import 'exam_models.dart';
 
 /// Active section in segmented control.
@@ -15,7 +15,7 @@ final parentExamsErrorProvider = StateProvider<String?>((ref) => null);
 final parentExamsEmptyProvider = StateProvider<bool>((ref) => false);
 
 final parentExamsFutureProvider = FutureProvider<ParentExamsData>((ref) async {
-  return ref.read(parentRepositoryProvider).getExams(query: ref.watch(repositoryQueryProvider));
+  return ref.read(parentRepositoryProvider).getExams(query: ref.watch(parentRepositoryQueryProvider));
 });
 
 final parentExamsProvider = Provider<ParentExamsData>((ref) {
