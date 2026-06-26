@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/reports/akshara_report_export_service.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import '../phase4/phase4_providers.dart';
 import 'student_360_models.dart';
+import '../../theme/spacing.dart';
 
 class Student360Screen extends ConsumerStatefulWidget {
   const Student360Screen({super.key, required this.studentId});
@@ -194,13 +196,13 @@ class _OverviewTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         _identityHeader(context, data),
         const SizedBox(height: 16),
         _summaryRow(context, data),
         const SizedBox(height: 16),
-        Text('Timeline', style: Theme.of(context).textTheme.titleMedium),
+        Text('Timeline', style: context.aksharaText.titleMedium),
         const SizedBox(height: 8),
         timeline.when(
           data: (rawEvents) {
@@ -231,21 +233,21 @@ class _OverviewTab extends StatelessWidget {
     final section = data.identity['sectionName']?.toString();
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(name, style: Theme.of(context).textTheme.headlineSmall),
+            Text(name, style: context.aksharaText.headlineSmall),
             if (className.isNotEmpty)
               Text(
                 section != null ? '$className · $section' : className,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: context.aksharaText.bodyMedium,
               ),
             if (data.parentInformation.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
                 'Parent: ${_guardianLabel(data.parentInformation)}',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: context.aksharaText.bodySmall,
               ),
             ],
           ],
@@ -311,7 +313,7 @@ class _MetricTab extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         Card(
           child: Column(
@@ -366,17 +368,17 @@ class _CommunicationTab extends StatelessWidget {
     );
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Communication summary',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: context.aksharaText.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 if (communication['pendingNotices'] != null)
@@ -400,10 +402,10 @@ class _CommunicationTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        Text('Recent activity', style: Theme.of(context).textTheme.titleMedium),
+        Text('Recent activity', style: context.aksharaText.titleMedium),
         if (commEvents.isEmpty)
           const Padding(
-            padding: EdgeInsets.only(top: 8),
+            padding: EdgeInsets.only(top: AksharaSpacing.s2),
             child: AksharaEmptyState(
               message: 'No communication events in the timeline yet.',
               compact: true,

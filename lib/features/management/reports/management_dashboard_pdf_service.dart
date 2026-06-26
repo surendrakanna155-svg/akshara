@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../management_models.dart';
+import '../../../theme/spacing.dart';
 
 class ManagementDashboardPdfService {
   const ManagementDashboardPdfService();
@@ -18,7 +19,7 @@ class ManagementDashboardPdfService {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s6),
         build: (context) => [
           pw.Text(
             schoolName,
@@ -86,7 +87,7 @@ class ManagementDashboardPdfService {
 
   pw.Widget _kv(String key, String value) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 4),
+      padding: const pw.EdgeInsets.only(bottom: AksharaSpacing.s1),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [

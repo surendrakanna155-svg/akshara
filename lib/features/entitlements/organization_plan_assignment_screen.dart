@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/entitlements/entitlement_models.dart';
 import '../../core/entitlements/entitlement_provider.dart';
 import '../../core/entitlements/subscription_admin_provider.dart';
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/widgets/akshara_error_state.dart';
+import '../../shared/widgets/akshara_loading_state.dart';
 import '../../shared/widgets/akshara_surface_card.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -71,13 +74,10 @@ class _OrganizationPlanAssignmentScreenState
       appBar: AppBar(title: const Text('Organization Plans')),
       body: SafeArea(
         child: orgsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AksharaSpacing.s6),
-              child: Text('Could not load organizations.\n$e',
-                  textAlign: TextAlign.center),
-            ),
+          loading: () => const AksharaLoadingState(semanticLabel: 'Loading organizations'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(assignableOrganizationsProvider),
           ),
           data: (orgs) => _buildForm(context, orgs, plans),
         ),
@@ -113,7 +113,7 @@ class _OrganizationPlanAssignmentScreenState
       padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         Text('Select organization',
-            style: Theme.of(context).textTheme.titleSmall),
+            style: context.aksharaText.titleSmall),
         const SizedBox(height: AksharaSpacing.s2),
         AksharaSurfaceCard(
           child: DropdownButtonHideUnderline(
@@ -145,20 +145,18 @@ class _OrganizationPlanAssignmentScreenState
                   color: context.colors.primary),
               const SizedBox(width: AksharaSpacing.s2),
               Text('Current plan: ',
-                  style: Theme.of(context).textTheme.bodyMedium),
+                  style: context.aksharaText.bodyMedium),
               Text(
                 planLabel(currentPlan),
                 key: QaTestKeys.planAssignmentCurrentPlan,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                style: context.aksharaText.titleSmall
+                    .copyWith(fontWeight: FontWeight.w700),
               ),
             ],
           ),
         ),
         const SizedBox(height: AksharaSpacing.s4),
-        Text('Change plan', style: Theme.of(context).textTheme.titleSmall),
+        Text('Change plan', style: context.aksharaText.titleSmall),
         const SizedBox(height: AksharaSpacing.s2),
         AksharaSurfaceCard(
           child: DropdownButtonHideUnderline(
@@ -191,7 +189,7 @@ class _OrganizationPlanAssignmentScreenState
         const SizedBox(height: AksharaSpacing.s3),
         Text(
           'Assigning a plan changes entitlements only. No payment is taken.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          style: context.aksharaText.bodySmall.copyWith(
                 color: context.colors.onSurfaceVariant,
               ),
         ),

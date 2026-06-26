@@ -89,12 +89,12 @@ class PlanEntitlementsScreen extends ConsumerWidget {
               const SizedBox(height: AksharaSpacing.s4),
             ],
             Text('Included in every plan',
-                style: Theme.of(context).textTheme.titleSmall),
+                style: context.aksharaText.titleSmall),
             const SizedBox(height: AksharaSpacing.s2),
             ..._coreModules.map((e) => _EntitlementRow(item: e, included: true)),
             const SizedBox(height: AksharaSpacing.s4),
             Text('Modules & features',
-                style: Theme.of(context).textTheme.titleSmall),
+                style: context.aksharaText.titleSmall),
             const SizedBox(height: AksharaSpacing.s2),
             ..._optionalEntitlements.map(
               (e) => _EntitlementRow(item: e, included: subscription.allows(e.slug)),
@@ -113,7 +113,7 @@ class _CurrentPlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final text = Theme.of(context).textTheme;
+    final text = context.aksharaText;
     final trialDays = _trialDaysRemaining(subscription);
 
     return AksharaSurfaceCard(
@@ -124,7 +124,7 @@ class _CurrentPlanCard extends StatelessWidget {
             children: [
               Icon(Icons.workspace_premium_outlined, color: colors.primary),
               const SizedBox(width: AksharaSpacing.s2),
-              Text('Current plan', style: text.labelMedium?.copyWith(
+              Text('Current plan', style: text.labelMedium.copyWith(
                     color: colors.onSurfaceVariant,
                   )),
             ],
@@ -190,10 +190,8 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(label,
-          style: Theme.of(context)
-              .textTheme
-              .labelSmall
-              ?.copyWith(color: fg, fontWeight: FontWeight.w600)),
+          style: context.aksharaText.labelSmall
+              .copyWith(color: fg, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -206,7 +204,7 @@ class _UpgradeCallout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final text = Theme.of(context).textTheme;
+    final text = context.aksharaText;
     return AksharaSurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,7 +224,7 @@ class _UpgradeCallout extends StatelessWidget {
             '$lockedCount ${lockedCount == 1 ? 'module is' : 'modules are'} not '
             'included in your $planName plan. Talk to our team to upgrade and '
             'unlock them — no payment is taken in the app.',
-            style: text.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+            style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: AksharaSpacing.s3),
           const WhatsAppContactButton(
@@ -251,7 +249,7 @@ class _EntitlementRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final text = Theme.of(context).textTheme;
+    final text = context.aksharaText;
     return Padding(
       padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: AksharaSurfaceCard(
@@ -272,7 +270,7 @@ class _EntitlementRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     included ? item.description : 'Upgrade to unlock',
-                    style: text.bodySmall?.copyWith(
+                    style: text.bodySmall.copyWith(
                       color: included
                           ? colors.onSurfaceVariant
                           : colors.primary,
@@ -293,7 +291,7 @@ class _EntitlementRow extends StatelessWidget {
                 ),
                 child: Text('Locked',
                     style: text.labelSmall
-                        ?.copyWith(color: colors.onSurfaceVariant)),
+                        .copyWith(color: colors.onSurfaceVariant)),
               ),
           ],
         ),

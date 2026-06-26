@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/spacing.dart';
 import '../sis_models.dart';
 import '../widgets/sis_module_scaffold.dart';
@@ -123,8 +126,9 @@ class _SectionPlanTab extends ConsumerWidget {
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Text('Unable to load section balance: $error'),
+      loading: () => const AksharaLoadingState(),
+      error: (error, _) =>
+          AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
     );
   }
 }
@@ -167,8 +171,10 @@ class _QuarterlyPlanTab extends ConsumerWidget {
                   ),
               ],
             ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => Text('Unable to load quarterly reshuffle: $error'),
+            loading: () => const AksharaLoadingState(),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+            ),
           ),
         ),
         FilledButton(
@@ -212,8 +218,9 @@ class _PerformancePlanTab extends StatelessWidget {
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Text('Unable to load performance balance: $error'),
+      loading: () => const AksharaLoadingState(),
+      error: (error, _) =>
+          AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
     );
   }
 }

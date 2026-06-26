@@ -11,6 +11,7 @@ import '../../theme/theme_extensions.dart';
 import '../entitlements/entitlement_module_gate.dart';
 import 'predictions_models.dart';
 import 'predictions_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
 
 /// Advanced AI Predictions (B9) — a single school-leadership surface with three
 /// real, data-grounded prediction feeds (fee-default, admission-conversion,
@@ -43,7 +44,7 @@ class PredictionsScreen extends ConsumerWidget {
           Text(
             'Forward-looking risk and likelihood scores, computed from your live '
             'school data. Act on the highest-priority items first.',
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: context.aksharaText.bodyMedium,
           ),
           const SizedBox(height: AksharaSpacing.s4),
           if (canViewFee)
@@ -122,7 +123,7 @@ class _FeeDefaultSection extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s2),
         state.when(
           loading: () => const AksharaLoadingState(),
-          error: (e, _) => AksharaErrorState(message: '$e'),
+          error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           data: (feed) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -174,7 +175,7 @@ class _ConversionSection extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s2),
         state.when(
           loading: () => const AksharaLoadingState(),
-          error: (e, _) => AksharaErrorState(message: '$e'),
+          error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           data: (feed) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -214,7 +215,7 @@ class _StudentRiskSection extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s2),
         state.when(
           loading: () => const AksharaLoadingState(),
-          error: (e, _) => AksharaErrorState(message: '$e'),
+          error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           data: (feed) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

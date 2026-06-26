@@ -99,7 +99,7 @@ class AksharaAlertDialog extends StatelessWidget {
       actions: actions,
       actionsPadding: const EdgeInsets.fromLTRB(
         AksharaSpacing.s6,
-        0,
+        AksharaSpacing.s0,
         AksharaSpacing.s6,
         AksharaSpacing.s5,
       ),

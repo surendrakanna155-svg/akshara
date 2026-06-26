@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import 'franchise_mutations_provider.dart';
 import 'franchise_providers.dart';
+import '../../../theme/spacing.dart';
 
 class FranchiseScreen extends ConsumerWidget {
   const FranchiseScreen({super.key});
@@ -20,10 +24,13 @@ class FranchiseScreen extends ConsumerWidget {
       key: QaTestKeys.franchiseScreen,
       appBar: AppBar(title: const Text('Franchise Portfolio')),
       body: dashboard.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Error: $error')),
+        loading: () => const AksharaLoadingState(),
+        error: (error, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(error),
+          onRetry: () => ref.invalidate(franchiseDashboardProvider),
+        ),
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             Wrap(
               spacing: 12,

@@ -385,7 +385,7 @@ abstract final class AksharaAppTheme {
     return ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(64, 48)),
       padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        EdgeInsets.symmetric(horizontal: AksharaSpacing.s4, vertical: 14),
       ),
       textStyle: WidgetStatePropertyAll(text.labelLarge),
       animationDuration: AksharaMotion.fast,
@@ -437,7 +437,7 @@ abstract final class AksharaAppTheme {
     return ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(64, 48)),
       padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        EdgeInsets.symmetric(horizontal: AksharaSpacing.s4, vertical: 14),
       ),
       textStyle: WidgetStatePropertyAll(text.labelLarge),
       animationDuration: AksharaMotion.fast,
@@ -487,7 +487,7 @@ abstract final class AksharaAppTheme {
     return ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(64, 40)),
       padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        EdgeInsets.symmetric(horizontal: AksharaSpacing.s3, vertical: 10),
       ),
       textStyle: WidgetStatePropertyAll(text.labelLarge),
       animationDuration: AksharaMotion.fast,
@@ -538,7 +538,7 @@ abstract final class AksharaAppTheme {
     return ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(48, 40)),
       padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        EdgeInsets.symmetric(horizontal: AksharaSpacing.s3, vertical: 10),
       ),
       textStyle: WidgetStatePropertyAll(text.labelLarge),
       animationDuration: AksharaMotion.fast,
@@ -625,8 +625,9 @@ abstract final class AksharaAppTheme {
 
   static CheckboxThemeData _checkboxTheme(ColorScheme scheme) {
     return CheckboxThemeData(
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: VisualDensity.compact,
+      // UX-8: keep the full 48dp tap target (accessibility). The visual box is
+      // still compact via `side`/`shape`; only the touch area is padded out.
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       fillColor: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
           return scheme.primary;
@@ -698,8 +699,8 @@ abstract final class AksharaAppTheme {
         fontWeight: FontWeight.w600,
       ),
       contentTextStyle: text.bodyLarge.copyWith(color: scheme.onSurface),
-      actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      actionsPadding: const EdgeInsets.fromLTRB(AksharaSpacing.s6, AksharaSpacing.s0, AksharaSpacing.s6, AksharaSpacing.s6),
+      insetPadding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s6, vertical: AksharaSpacing.s6),
     );
   }
 

@@ -8,6 +8,7 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import 'industry_mutations_provider.dart';
 import 'industry_providers.dart';
+import '../../theme/spacing.dart';
 
 class IndustryHubScreen extends ConsumerWidget {
   const IndustryHubScreen({super.key, this.showFramework = false});
@@ -41,7 +42,7 @@ class IndustryHubScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AksharaSpacing.s6),
         children: [
           Text(
             'Active: ${activeIndustry.label}',

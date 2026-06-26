@@ -122,7 +122,7 @@ class AksharaChartLegend extends StatelessWidget {
           Container(
             padding: EdgeInsets.symmetric(
               horizontal: AksharaSpacing.s2,
-              vertical: items.length > 3 ? 0 : AksharaSpacing.s1,
+              vertical: items.length > 3 ? AksharaSpacing.s0 : AksharaSpacing.s1,
             ),
             decoration: BoxDecoration(
               color: colors.surfaceContainerLow,

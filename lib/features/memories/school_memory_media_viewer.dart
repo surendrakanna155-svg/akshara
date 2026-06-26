@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../phase5/phase5_models.dart';
+import '../../theme/spacing.dart';
 
 class SchoolMemoryMediaViewer extends StatelessWidget {
   const SchoolMemoryMediaViewer({super.key, required this.media});
@@ -21,7 +22,7 @@ class SchoolMemoryMediaViewer extends StatelessWidget {
                   Text('Video · ${media.mediaType}'),
                   if (media.storageUrl.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(AksharaSpacing.s4),
                       child: Text(media.storageUrl, textAlign: TextAlign.center),
                     ),
                 ],

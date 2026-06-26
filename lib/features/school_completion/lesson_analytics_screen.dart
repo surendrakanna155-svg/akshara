@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class LessonAnalyticsScreen extends ConsumerWidget {
   const LessonAnalyticsScreen({super.key});
@@ -28,9 +30,9 @@ class LessonAnalyticsScreen extends ConsumerWidget {
           children: [
             teacher.when(
               loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState(message: '$e'),
+              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
               data: (data) => ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
                 children: [
                   _metricTile('Coverage', '${data.coveragePercent}%'),
                   _metricTile('Completed', '${data.completedLessons}'),
@@ -45,7 +47,7 @@ class LessonAnalyticsScreen extends ConsumerWidget {
             ),
             principal.when(
               loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState(message: '$e'),
+              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
               data: (items) => ListView.builder(
                 itemCount: items.length,
                 itemBuilder: (context, index) {

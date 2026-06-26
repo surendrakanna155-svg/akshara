@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/widgets/akshara_error_state.dart';
+import '../../shared/widgets/akshara_loading_state.dart';
+import '../../theme/theme_extensions.dart';
 import 'education_models.dart';
 import 'education_paper_item_edit_sheet.dart';
 import 'education_pdf_service.dart';
 import 'education_provider.dart';
+import '../../theme/spacing.dart';
 
 /// A paper can be corrected only before it is locked (published / archived).
 bool _paperEditable(EduPaperReviewStatus status) =>
@@ -34,8 +39,11 @@ class QuestionPaperDetailScreen extends ConsumerWidget {
           canManage: canManage,
           canApprove: canApprove,
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        loading: () => const AksharaLoadingState(semanticLabel: 'Loading paper'),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(paperDetailProvider(paperId)),
+        ),
       ),
     );
   }
@@ -63,9 +71,9 @@ class _PaperBody extends ConsumerWidget {
     final reviews = ref.watch(paperReviewsProvider(paperId));
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
-        Text(paper.title, style: Theme.of(context).textTheme.titleLarge),
+        Text(paper.title, style: context.aksharaText.titleLarge),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -83,7 +91,7 @@ class _PaperBody extends ConsumerWidget {
           _Banner(
             key: QaTestKeys.educationUnfilledMarksBanner,
             icon: Icons.report_gmailerrorred_outlined,
-            color: Colors.orange,
+            color: context.akshara.warning,
             text: '$unfilledMarks marks unfilled — the bank could not cover the full '
                 'blueprint and AI did not author the remaining slots. Add bank '
                 'questions for these chapters or regenerate with AI gap-fill on.',
@@ -99,7 +107,7 @@ class _PaperBody extends ConsumerWidget {
 
         if (pending.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text('AI moderation queue', style: Theme.of(context).textTheme.titleMedium),
+          Text('AI moderation queue', style: context.aksharaText.titleMedium),
           const SizedBox(height: 4),
           ...pending.map((item) => _ModerationCard(
                 paperId: paperId,
@@ -111,7 +119,7 @@ class _PaperBody extends ConsumerWidget {
 
         Row(
           children: [
-            Text('Questions', style: Theme.of(context).textTheme.titleMedium),
+            Text('Questions', style: context.aksharaText.titleMedium),
             const Spacer(),
             if (canManage && _paperEditable(paper.reviewStatus))
               const Text('Tap ⋮ to correct a question',
@@ -146,11 +154,11 @@ class _PaperBody extends ConsumerWidget {
         ),
 
         const SizedBox(height: 16),
-        Text('Review history', style: Theme.of(context).textTheme.titleMedium),
+        Text('Review history', style: context.aksharaText.titleMedium),
         reviews.when(
           data: (items) => items.isEmpty
               ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s2),
                   child: Text('Not yet submitted for review.'),
                 )
               : Column(
@@ -164,10 +172,13 @@ class _PaperBody extends ConsumerWidget {
                       .toList(),
                 ),
           loading: () => const Padding(
-            padding: EdgeInsets.all(8),
+            padding: EdgeInsets.all(AksharaSpacing.s2),
             child: LinearProgressIndicator(),
           ),
-          error: (e, _) => Text('Error loading reviews: $e'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(paperReviewsProvider(paperId)),
+          ),
         ),
       ],
     );
@@ -206,7 +217,7 @@ class _ModerationCard extends ConsumerWidget {
     return Card(
       color: Colors.deepPurple.shade50,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -540,14 +551,14 @@ class _GovernanceActions extends ConsumerWidget {
 
     if (buttons.isEmpty) {
       return Text(note ?? 'Status: ${_reviewStatusLabel(status)}',
-          style: Theme.of(context).textTheme.bodyMedium);
+          style: context.aksharaText.bodyMedium);
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (note != null) ...[
-          Text(note, style: Theme.of(context).textTheme.bodyMedium),
+          Text(note, style: context.aksharaText.bodyMedium),
           const SizedBox(height: 8),
         ],
         Wrap(spacing: 12, runSpacing: 8, children: buttons),
@@ -608,8 +619,8 @@ class _Banner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+      padding: const EdgeInsets.all(AksharaSpacing.s3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),

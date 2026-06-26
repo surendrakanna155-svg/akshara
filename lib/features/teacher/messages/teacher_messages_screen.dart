@@ -186,7 +186,7 @@ class _ComposePane extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(pad, 0, pad, AksharaSpacing.s6),
+      padding: EdgeInsets.fromLTRB(pad, AksharaSpacing.s0, pad, AksharaSpacing.s6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

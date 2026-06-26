@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/widgets.dart';
 import 'white_label_providers.dart';
 
 class DeploymentProfilesScreen extends ConsumerWidget {
@@ -26,8 +28,11 @@ class DeploymentProfilesScreen extends ConsumerWidget {
             );
           },
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        loading: () => const AksharaLoadingState(),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(deploymentProfilesProvider),
+        ),
       ),
     );
   }

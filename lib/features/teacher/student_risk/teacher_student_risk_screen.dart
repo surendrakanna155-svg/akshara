@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/communication/parent_communication_models.dart';
 import '../../../core/communication/teacher_parent_templates.dart';
 import '../../../core/communication/teacher_student_risk_service.dart';
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/security/permissions.dart';
 import '../../../router/route_names.dart';
 import '../../../router/student360_navigation.dart';
@@ -30,11 +31,16 @@ class TeacherStudentRiskScreen extends ConsumerWidget {
         ref.watch(teacherStudentRiskSnapshotProvider(sisStudentId));
     return snapshotAsync.when(
       loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: AksharaLoadingState(),
       ),
       error: (error, _) => Scaffold(
         appBar: const AksharaAppBar(titleText: 'Student risk'),
-        body: Center(child: Text('Could not load risk: $error')),
+        body: AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(error),
+          onRetry: () => ref.invalidate(
+            teacherStudentRiskSnapshotProvider(sisStudentId),
+          ),
+        ),
       ),
       data: (snapshot) => _buildContent(context, ref, snapshot),
     );

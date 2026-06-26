@@ -5,6 +5,8 @@ import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 /// v12.7 — Subject templates, auto generation, and year cloning.
 class SyllabusAutomationScreen extends ConsumerStatefulWidget {
@@ -41,9 +43,9 @@ class _SyllabusAutomationScreenState extends ConsumerState<SyllabusAutomationScr
           children: [
             templates.when(
               loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState(message: '$e'),
+              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
               data: (items) => ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
                 itemCount: items.length,
                 itemBuilder: (context, index) {
                   final tpl = items[index];
@@ -64,11 +66,11 @@ class _SyllabusAutomationScreenState extends ConsumerState<SyllabusAutomationScr
             ),
             chapters.when(
               loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState(message: '$e'),
+              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
               data: (items) => Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AksharaSpacing.s4),
                     child: catalog.when(
                       data: (data) {
                         final yearId =
@@ -103,7 +105,7 @@ class _SyllabusAutomationScreenState extends ConsumerState<SyllabusAutomationScr
             ),
             catalog.when(
               loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState(message: '$e'),
+              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
               data: (data) {
                 if (data.years.length < 2) {
                   return const AksharaEmptyState(
@@ -114,7 +116,7 @@ class _SyllabusAutomationScreenState extends ConsumerState<SyllabusAutomationScr
                 final to = data.years[1].yearId;
                 return Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(AksharaSpacing.s6),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [

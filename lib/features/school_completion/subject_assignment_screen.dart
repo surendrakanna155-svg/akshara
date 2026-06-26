@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../core/repositories/academic/academic_models.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import 'school_completion_models.dart';
 import 'school_completion_providers.dart';
+import '../../theme/spacing.dart';
 
 class SubjectAssignmentScreen extends ConsumerStatefulWidget {
   const SubjectAssignmentScreen({super.key});
@@ -50,8 +53,11 @@ class _SubjectAssignmentScreenState extends ConsumerState<SubjectAssignmentScree
         ),
       ),
       body: catalog.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Catalog error: $e')),
+        loading: () => const AksharaLoadingState(),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(academicCatalogFutureProvider),
+        ),
         data: (data) {
           final yearId = data.years.isNotEmpty ? data.years.first.yearId : 'year_1';
           return TabBarView(
@@ -132,7 +138,7 @@ class _ClassSubjectTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         FilledButton.icon(
           icon: const Icon(Icons.add),
@@ -149,6 +155,7 @@ class _ClassSubjectTab extends StatelessWidget {
               '${a.periodsPerWeek} periods/week${a.isElective ? ' · Elective' : ''}',
             ),
             trailing: IconButton(
+              tooltip: 'Delete',
               icon: const Icon(Icons.delete_outline),
               onPressed: () => onDelete(a.id),
             ),
@@ -233,7 +240,7 @@ class _TeacherAllocationTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         if (workload.any((w) => w.isOverloaded))
           AksharaWarningBanner(
@@ -262,7 +269,7 @@ class _TeacherAllocationTab extends StatelessWidget {
             trailing: Text(
               '${w.totalPeriods}p',
               style: TextStyle(
-                color: w.isOverloaded ? Colors.red : null,
+                color: w.isOverloaded ? context.colors.error : null,
                 fontWeight: FontWeight.w600,
               ),
             ),

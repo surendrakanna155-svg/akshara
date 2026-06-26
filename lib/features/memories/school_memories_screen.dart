@@ -10,6 +10,7 @@ import '../../shared/widgets/akshara_manage_action.dart';
 import '../phase5/phase5_providers.dart';
 import 'memories_mutations_provider.dart';
 import 'school_memory_event_screen.dart';
+import '../../theme/spacing.dart';
 
 class SchoolMemoriesScreen extends ConsumerWidget {
   const SchoolMemoriesScreen({super.key});
@@ -40,7 +41,7 @@ class SchoolMemoriesScreen extends ConsumerWidget {
           return Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(AksharaSpacing.s4, AksharaSpacing.s4, AksharaSpacing.s4, AksharaSpacing.s2),
                 child: SegmentedButton<int>(
                   key: QaTestKeys.schoolMemoriesStatusTabs,
                   segments: const [

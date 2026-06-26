@@ -7,6 +7,7 @@ import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../parent_active_child_provider.dart';
 import 'parent_transport_provider.dart';
+import '../../../core/errors/api_failure_mapper.dart';
 
 /// Parent mobile transport — route allocation and telemetry-first ETA (PA-12).
 class ParentTransportScreen extends ConsumerWidget {
@@ -33,7 +34,7 @@ class ParentTransportScreen extends ConsumerWidget {
       ),
       body: allocationAsync.when(
         loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState(message: '$error'),
+        error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
         data: (allocation) {
           if (allocation == null) {
             return const AksharaEmptyState(

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class PilotDashboardScreen extends ConsumerWidget {
   const PilotDashboardScreen({super.key});
@@ -15,9 +18,9 @@ class PilotDashboardScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Real School Pilot Toolkit')),
       body: dashboard.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             ListTile(
               title: const Text('Pilot success score'),
@@ -29,7 +32,9 @@ class PilotDashboardScreen extends ConsumerWidget {
               subtitle: Text(data.onboardingStatus),
               trailing: Icon(
                 data.setupWizardCompleted ? Icons.check_circle : Icons.pending,
-                color: data.setupWizardCompleted ? Colors.green : Colors.orange,
+                color: data.setupWizardCompleted
+                    ? context.akshara.success
+                    : context.akshara.warning,
               ),
             ),
             const Divider(),

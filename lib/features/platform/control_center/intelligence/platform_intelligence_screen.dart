@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/api_failure_mapper.dart';
 import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/widgets/widgets.dart';
 import '../../../admin/admin_layout.dart';
@@ -138,8 +139,11 @@ class _PlatformIntelligenceScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(platformIntelligenceDashboardProvider),
+      ),
     );
   }
 
@@ -171,8 +175,11 @@ class _PlatformIntelligenceScreenState
           ...value.recommendations.map((item) => ListTile(title: Text(item))),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(organizationIntelligenceProvider),
+      ),
     );
   }
 
@@ -222,8 +229,11 @@ class _PlatformIntelligenceScreenState
               title: Text(insight.title), subtitle: Text(insight.detail))),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(schoolComparisonIntelligenceProvider),
+      ),
     );
   }
 
@@ -250,8 +260,11 @@ class _PlatformIntelligenceScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(revenueIntelligenceProvider),
+      ),
     );
   }
 
@@ -275,8 +288,11 @@ class _PlatformIntelligenceScreenState
               ListTile(title: Text(item.title), subtitle: Text(item.detail))),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(growthIntelligenceProvider),
+      ),
     );
   }
 
@@ -304,8 +320,11 @@ class _PlatformIntelligenceScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(portfolioRiskIntelligenceProvider),
+      ),
     );
   }
 

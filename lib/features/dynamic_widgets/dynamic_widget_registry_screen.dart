@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import '../evolution/evolution_models.dart';
 import 'dynamic_widget_models.dart';
 import 'dynamic_widget_providers.dart';
+import '../../theme/spacing.dart';
 
 class DynamicWidgetRegistryScreen extends ConsumerWidget {
   const DynamicWidgetRegistryScreen({super.key});
@@ -26,7 +29,7 @@ class DynamicWidgetRegistryScreen extends ConsumerWidget {
         title: const Text('Dynamic Widget Platform'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Wrap(
             spacing: 12,
@@ -49,19 +52,21 @@ class DynamicWidgetRegistryScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           Text(
             'Widget catalog',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: context.aksharaText.titleMedium,
           ),
           const SizedBox(height: 8),
           registryState.when(
             loading: () => const AksharaLoadingState(),
-            error: (error, _) =>
-                AksharaErrorState(message: 'Unable to load catalog: $error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () => ref.invalidate(dynamicWidgetRegistryProvider),
+            ),
             data: (widgets) => _WidgetCatalogList(widgets: widgets),
           ),
           const SizedBox(height: 24),
           Text(
             'Data source bindings',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: context.aksharaText.titleMedium,
           ),
           const SizedBox(height: 8),
           dataSourcesState.when(
@@ -69,13 +74,16 @@ class DynamicWidgetRegistryScreen extends ConsumerWidget {
               height: 48,
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (error, _) => Text('Data sources: $error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () => ref.invalidate(widgetDataSourcesProvider),
+            ),
             data: (sources) => _DataSourceList(sources: sources),
           ),
           const SizedBox(height: 24),
           Text(
             'Layout versions',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: context.aksharaText.titleMedium,
           ),
           const SizedBox(height: 8),
           versionsState.when(
@@ -83,7 +91,12 @@ class DynamicWidgetRegistryScreen extends ConsumerWidget {
               height: 48,
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (error, _) => Text('Versions: $error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () => ref.invalidate(
+                widgetLayoutVersionsProvider((role: null, pack: 'school')),
+              ),
+            ),
             data: (versions) => _VersionList(versions: versions),
           ),
         ],

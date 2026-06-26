@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../theme/theme_extensions.dart';
 import 'intelligence_models.dart';
 import 'intelligence_provider.dart';
+import '../../theme/spacing.dart';
 
 class IntelligenceScreen extends ConsumerStatefulWidget {
   const IntelligenceScreen({super.key});
@@ -107,10 +112,10 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
     final classes = ref.watch(classRisksListProvider);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         if (canGenerate) ...[
-          Text('Compute risk snapshots', style: Theme.of(context).textTheme.titleMedium),
+          Text('Compute risk snapshots', style: context.aksharaText.titleMedium),
           const SizedBox(height: 8),
           _textField(_yearLabelController, 'Academic year'),
           FilledButton(
@@ -127,7 +132,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
           ),
           const SizedBox(height: 24),
         ],
-        Text('Class risk dashboard', style: Theme.of(context).textTheme.titleMedium),
+        Text('Class risk dashboard', style: context.aksharaText.titleMedium),
         const SizedBox(height: 8),
         classes.when(
           data: (items) => items.isEmpty
@@ -135,18 +140,24 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
               : Column(
                   children: items.map(_classRiskCard).toList(),
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          loading: () => const AksharaLoadingState(semanticLabel: 'Loading class risks'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(classRisksListProvider),
+          ),
         ),
         const SizedBox(height: 24),
-        Text('Student risk dashboard', style: Theme.of(context).textTheme.titleMedium),
+        Text('Student risk dashboard', style: context.aksharaText.titleMedium),
         const SizedBox(height: 8),
         risks.when(
           data: (items) => items.isEmpty
               ? const Text('No student risk snapshots yet.')
               : Column(children: items.map(_studentRiskCard).toList()),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          loading: () => const AksharaLoadingState(semanticLabel: 'Loading student risks'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(studentRisksListProvider),
+          ),
         ),
       ],
     );
@@ -154,10 +165,10 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
 
   Widget _communicationTab(bool canGenerate) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         if (canGenerate) ...[
-          Text('AI Communication Assistant', style: Theme.of(context).textTheme.titleMedium),
+          Text('AI Communication Assistant', style: context.aksharaText.titleMedium),
           const SizedBox(height: 8),
           _dropdown('Scenario', _scenario, CommunicationScenario.values, (v) {
             setState(() => _scenario = v);
@@ -216,7 +227,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
         ] else
           const Text('Generate permission required for communication drafts.'),
         if (_lastDrafts.isNotEmpty) ...[
-          Text('Generated drafts', style: Theme.of(context).textTheme.titleMedium),
+          Text('Generated drafts', style: context.aksharaText.titleMedium),
           const SizedBox(height: 8),
           ..._lastDrafts.map(_communicationDraftCard),
         ],
@@ -226,10 +237,10 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
 
   Widget _parentGuidanceTab(bool canGenerate) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         if (canGenerate) ...[
-          Text('Parent Guidance Assistant', style: Theme.of(context).textTheme.titleMedium),
+          Text('Parent Guidance Assistant', style: context.aksharaText.titleMedium),
           const SizedBox(height: 8),
           _textField(_studentIdController, 'Student ID'),
           _dropdown('Mode', _guidanceMode, GuidanceMode.values, (v) {
@@ -293,14 +304,14 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
     final center = ref.watch(teacherSuccessCenterProvider);
     return center.when(
       data: (data) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           _metricRow('Risk students', data.riskStudents),
           _metricRow('Homework gaps', data.homeworkGaps),
           _metricRow('Attendance concerns', data.attendanceConcerns),
           _metricRow('Pending parent communication', data.pendingParentCommunication),
           const SizedBox(height: 16),
-          Text('Daily action planner', style: Theme.of(context).textTheme.titleMedium),
+          Text('Daily action planner', style: context.aksharaText.titleMedium),
           if (data.dailyActionPlan.isEmpty)
             const ListTile(title: Text('No actions planned — review risk dashboard'))
           else
@@ -318,7 +329,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
               ),
             ),
           const SizedBox(height: 16),
-          Text('Students needing attention', style: Theme.of(context).textTheme.titleMedium),
+          Text('Students needing attention', style: context.aksharaText.titleMedium),
           ...data.studentsNeedingAttention.map(
             (s) => ListTile(
               title: Text(s['studentName']?.toString() ?? 'Student'),
@@ -328,12 +339,12 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
             ),
           ),
           const SizedBox(height: 16),
-          Text('Insights', style: Theme.of(context).textTheme.titleMedium),
+          Text('Insights', style: context.aksharaText.titleMedium),
           _chipSection('Weak students', data.weakStudents),
           _chipSection('Improving students', data.improvingStudents),
           _chipSection('High performers', data.highPerformers),
           const SizedBox(height: 16),
-          Text('Suggested actions', style: Theme.of(context).textTheme.titleMedium),
+          Text('Suggested actions', style: context.aksharaText.titleMedium),
           ...data.suggestedActions.map(
             (a) => ListTile(
               leading: const Icon(Icons.lightbulb_outline),
@@ -343,8 +354,11 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading teacher center'),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(teacherSuccessCenterProvider),
+      ),
     );
   }
 
@@ -354,7 +368,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
     }
     final center = ref.watch(principalIntelligenceProvider(_principalPeriod));
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         SegmentedButton<String>(
           segments: const [
@@ -367,7 +381,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
           },
         ),
         const SizedBox(height: 16),
-        Text('Natural language query', style: Theme.of(context).textTheme.titleMedium),
+        Text('Natural language query', style: context.aksharaText.titleMedium),
         _textField(_principalQueryController, 'Ask about students, fees, attendance'),
         Wrap(
           spacing: 8,
@@ -403,12 +417,12 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
           const SizedBox(height: 8),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AksharaSpacing.s3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(_lastPrincipalQuery!.summary,
-                      style: Theme.of(context).textTheme.titleSmall),
+                      style: context.aksharaText.titleSmall),
                   const SizedBox(height: 8),
                   ..._lastPrincipalQuery!.items.take(10).map(
                         (item) => ListTile(
@@ -450,20 +464,20 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
                 ),
               ],
               const SizedBox(height: 16),
-              Text('School health insights', style: Theme.of(context).textTheme.titleMedium),
+              Text('School health insights', style: context.aksharaText.titleMedium),
               ...data.insights.map((i) => ListTile(title: Text(i))),
               const SizedBox(height: 16),
               Text('Intervention recommendations',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...data.interventions.map((i) => ListTile(title: Text(i))),
               const SizedBox(height: 16),
-              Text('Class risk summaries', style: Theme.of(context).textTheme.titleMedium),
+              Text('Class risk summaries', style: context.aksharaText.titleMedium),
               ...data.classSummaries.map(_classRiskCard),
               const SizedBox(height: 16),
-              Text('Export summaries', style: Theme.of(context).textTheme.titleMedium),
+              Text('Export summaries', style: context.aksharaText.titleMedium),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AksharaSpacing.s3),
                   child: Text(
                     _principalPeriod == 'quarterly'
                         ? data.quarterlySummary
@@ -473,8 +487,12 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
               ),
             ],
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          loading: () => const AksharaLoadingState(semanticLabel: 'Loading principal center'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () =>
+                ref.invalidate(principalIntelligenceProvider(_principalPeriod)),
+          ),
         ),
       ],
     );
@@ -554,7 +572,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
   Widget _guidanceReportCard(ParentGuidanceReport report) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -562,7 +580,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
               children: [
                 Expanded(
                   child: Text('Progress summary',
-                      style: Theme.of(context).textTheme.titleMedium),
+                      style: context.aksharaText.titleMedium),
                 ),
                 if (report.printable)
                   TextButton.icon(
@@ -594,7 +612,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
   Widget _metricRow(String label, int value) {
     return ListTile(
       title: Text(label),
-      trailing: Text('$value', style: Theme.of(context).textTheme.titleLarge),
+      trailing: Text('$value', style: context.aksharaText.titleLarge),
     );
   }
 
@@ -621,7 +639,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
     int maxLines = 1,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
@@ -641,7 +659,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
     ValueChanged<T> onChanged,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,

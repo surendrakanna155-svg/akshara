@@ -3,12 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/attendance/attendance_correction_models.dart';
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/repositories/mock/mock_attendance_sync_store.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
 
 final attendanceCorrectionsAdminProvider =
     FutureProvider<List<AttendanceCorrectionRequest>>((ref) async {
@@ -38,9 +42,10 @@ class AttendanceCorrectionsAdminScreen extends ConsumerWidget {
         ],
       ),
       body: requestsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => const Center(
-          child: Text('Unable to load attendance corrections.'),
+        loading: () => const AksharaLoadingState(),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(attendanceCorrectionsAdminProvider),
         ),
         data: (requests) => ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),
@@ -63,7 +68,7 @@ class AttendanceCorrectionsAdminScreen extends ConsumerWidget {
           const SizedBox(height: AksharaSpacing.s4),
           Text(
             'Correction requests',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: context.aksharaText.titleMedium,
           ),
           const SizedBox(height: AksharaSpacing.s2),
           if (requests.isEmpty)

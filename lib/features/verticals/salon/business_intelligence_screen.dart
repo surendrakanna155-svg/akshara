@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import 'salon_providers.dart';
+import '../../../theme/spacing.dart';
 
 class BusinessIntelligenceScreen extends ConsumerWidget {
   const BusinessIntelligenceScreen({super.key});
@@ -15,14 +19,17 @@ class BusinessIntelligenceScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Intelligence')),
       body: intel.when(
         data: (data) => ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AksharaSpacing.s6),
           children: [
             ...data.recommendations.map((r) => ListTile(title: Text(r))),
             ...data.insights.map((i) => ListTile(subtitle: Text(i))),
           ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        loading: () => const AksharaLoadingState(semanticLabel: 'Loading intelligence'),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(salonIntelligenceProvider),
+        ),
       ),
     );
   }

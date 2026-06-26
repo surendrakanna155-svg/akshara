@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,7 +16,19 @@ import 'core/providers/shared_preferences_provider.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // PERF-4 (F1): cold-start instrumentation. Measures process-entry → first
+  // rendered frame so the <3s budget can be verified on a real device with
+  // `flutter run --profile` (look for "cold-start: Nms" in the log). Disabled in
+  // release builds to avoid log noise / overhead.
+  final coldStart = kReleaseMode ? null : (Stopwatch()..start());
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  if (coldStart != null) {
+    binding.addPostFrameCallback((_) {
+      coldStart.stop();
+      debugPrint('cold-start: ${coldStart.elapsedMilliseconds}ms '
+          '(process-entry → first frame)');
+    });
+  }
   final prefs = await SharedPreferences.getInstance();
   final overrides = [
     sharedPreferencesProvider.overrideWithValue(prefs),

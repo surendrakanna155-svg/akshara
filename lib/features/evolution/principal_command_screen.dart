@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import 'evolution_providers.dart';
+import '../../theme/spacing.dart';
 
 class PrincipalCommandScreen extends ConsumerStatefulWidget {
   const PrincipalCommandScreen({super.key});
@@ -30,9 +32,9 @@ class _PrincipalCommandScreenState extends ConsumerState<PrincipalCommandScreen>
       appBar: AppBar(title: const Text('Principal Command Center')),
       body: center.when(
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
-            Text('Natural language query', style: Theme.of(context).textTheme.titleMedium),
+            Text('Natural language query', style: context.aksharaText.titleMedium),
             TextField(
               controller: _queryController,
               decoration: const InputDecoration(
@@ -75,7 +77,7 @@ class _PrincipalCommandScreenState extends ConsumerState<PrincipalCommandScreen>
               const SizedBox(height: 8),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AksharaSpacing.s3),
                   child: Text(_queryResult!['summary']?.toString() ?? ''),
                 ),
               ),
@@ -87,13 +89,13 @@ class _PrincipalCommandScreenState extends ConsumerState<PrincipalCommandScreen>
                   title: const Text('Priority engine score'),
                   trailing: Text(
                     '${data.priorityEngineScore}/100',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                    style: context.aksharaText.headlineSmall,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
             ],
-            Text('Top priorities', style: Theme.of(context).textTheme.titleMedium),
+            Text('Top priorities', style: context.aksharaText.titleMedium),
             ...data.topPriorities.map(
               (p) => ListTile(
                 leading: const Icon(Icons.priority_high),
@@ -101,13 +103,13 @@ class _PrincipalCommandScreenState extends ConsumerState<PrincipalCommandScreen>
                 trailing: Text('${p['count']}'),
               ),
             ),
-            Text('Executive summary', style: Theme.of(context).textTheme.titleMedium),
+            Text('Executive summary', style: context.aksharaText.titleMedium),
             Text(data.executiveSummary),
-            Text('Action recommendations', style: Theme.of(context).textTheme.titleMedium),
+            Text('Action recommendations', style: context.aksharaText.titleMedium),
             ...data.actionRecommendations.map((a) => ListTile(title: Text(a))),
-            Text('Risk overview', style: Theme.of(context).textTheme.titleMedium),
+            Text('Risk overview', style: context.aksharaText.titleMedium),
             Text('Critical: ${data.riskOverview['critical']} · High: ${data.riskOverview['high']}'),
-            Text('Widgets', style: Theme.of(context).textTheme.titleMedium),
+            Text('Widgets', style: context.aksharaText.titleMedium),
             ...data.widgets.entries.map((e) => ListTile(title: Text(e.key), trailing: Text('${e.value}'))),
           ],
         ),

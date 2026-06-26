@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
+import '../../theme/spacing.dart';
 
 /// v15.5 — Parent activation, adoption, and engagement dashboard.
 class ParentActivationDashboardScreen extends ConsumerWidget {
@@ -21,7 +22,7 @@ class ParentActivationDashboardScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(parentActivationDashboardProvider),
         ),
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             _metricCard('Activation rate', '${data.activationRate}%'),
             _metricCard('Adoption rate', '${data.adoptionRate}%'),

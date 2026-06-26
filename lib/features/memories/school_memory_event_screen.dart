@@ -11,10 +11,12 @@ import '../../shared/widgets/akshara_empty_state.dart';
 import '../../shared/widgets/akshara_error_state.dart';
 import '../../shared/widgets/akshara_loading_state.dart';
 import '../../shared/widgets/akshara_manage_action.dart';
+import '../../theme/theme_extensions.dart';
 import '../phase5/phase5_models.dart';
 import '../phase5/phase5_providers.dart';
 import 'memories_mutations_provider.dart';
 import 'school_memory_media_viewer.dart';
+import '../../theme/spacing.dart';
 
 class SchoolMemoryEventScreen extends ConsumerStatefulWidget {
   const SchoolMemoryEventScreen({super.key, required this.eventId});
@@ -124,7 +126,7 @@ class _SchoolMemoryEventScreenState
         actions: [
           if (_uploading)
             const Padding(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(AksharaSpacing.s4),
               child: SizedBox(
                   width: 20,
                   height: 20,
@@ -147,10 +149,10 @@ class _SchoolMemoryEventScreenState
       body: eventAsync.when(
         data: (event) {
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               Text(event.description ?? '',
-                  style: Theme.of(context).textTheme.bodyMedium),
+                  style: context.aksharaText.bodyMedium),
               const SizedBox(height: 8),
               Chip(label: Text('${event.category} · ${event.status}')),
               if (event.status.toLowerCase() == 'draft') ...[
@@ -203,12 +205,12 @@ class _SchoolMemoryEventScreenState
               else
                 for (final album in event.albums) ...[
                   Text(album.title,
-                      style: Theme.of(context).textTheme.titleMedium),
+                      style: context.aksharaText.titleMedium),
                   Text('${album.mediaCount} items'),
                   const SizedBox(height: 8),
                   if (album.media.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.only(bottom: 16),
+                      padding: EdgeInsets.only(bottom: AksharaSpacing.s4),
                       child: Text('No media in this album yet'),
                     )
                   else

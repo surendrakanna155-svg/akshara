@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
@@ -34,7 +35,10 @@ class DirectorComplianceScreen extends ConsumerWidget {
         ),
         body: state.when(
           loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState(message: '$error'),
+          error: (error, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(error),
+            onRetry: () => ref.invalidate(directorComplianceProvider),
+          ),
           data: (items) {
             if (items.isEmpty) {
               return const AksharaEmptyState(
@@ -105,7 +109,7 @@ class DirectorComplianceScreen extends ConsumerWidget {
         DataCell(Text(item.owner)),
         DataCell(
           item.acknowledged
-              ? const Icon(Icons.check_circle, color: Colors.green)
+              ? Icon(Icons.check_circle, color: context.akshara.success)
               : TextButton(
                   key: QaTestKeys.directorComplianceAcknowledgeButton(item.id),
                   onPressed:
@@ -176,7 +180,7 @@ class _ComplianceCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: item.acknowledged
-                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    ? Icon(Icons.check_circle, color: context.akshara.success)
                     : TextButton(
                         key: QaTestKeys.directorComplianceAcknowledgeButton(
                             item.id),

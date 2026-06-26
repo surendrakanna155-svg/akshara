@@ -5,6 +5,8 @@ import '../../../shared/widgets/widgets.dart';
 import '../inventory_models.dart';
 import '../widgets/inventory_module_scaffold.dart';
 import 'inventory_intelligence_provider.dart';
+import '../../../core/errors/api_failure_mapper.dart';
+import '../../../theme/spacing.dart';
 
 /// Inventory Copilot — stock forecasting, low-stock prediction, reorder recommendations.
 class InventoryCopilotScreen extends ConsumerWidget {
@@ -19,11 +21,11 @@ class InventoryCopilotScreen extends ConsumerWidget {
       showFilterBar: false,
       body: data.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (snapshot) => ListView(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             _metric('Stock forecast (units)', '${snapshot.stockForecastUnits}'),
             _metric('Confidence', '${snapshot.forecastConfidence}%'),

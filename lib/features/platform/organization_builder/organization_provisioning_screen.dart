@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/theme_extensions.dart';
 import 'organization_builder_models.dart';
 import 'organization_builder_providers.dart';
+import '../../../theme/spacing.dart';
 
 class OrganizationProvisioningScreen extends ConsumerStatefulWidget {
   const OrganizationProvisioningScreen({
@@ -50,18 +53,21 @@ class _OrganizationProvisioningScreenState
       ),
       body: jobState.when(
         loading: () => const AksharaLoadingState(),
-        error: (error, _) =>
-            AksharaErrorState(message: 'Unable to load job: $error'),
+        error: (error, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(error),
+          onRetry: () =>
+              ref.invalidate(provisioningJobProvider(widget.jobId)),
+        ),
         data: (job) {
           if (job.status == ProvisioningJobStatus.completed) {
             _pollTimer?.cancel();
           }
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               Text(
                 job.organizationName,
-                style: Theme.of(context).textTheme.headlineSmall,
+                style: context.aksharaText.headlineSmall,
               ),
               const SizedBox(height: 4),
               Text('Status: ${job.status.value}'),
@@ -75,7 +81,7 @@ class _OrganizationProvisioningScreenState
                 _StepTile(step: step),
               if (job.status == ProvisioningJobStatus.completed)
                 const Padding(
-                  padding: EdgeInsets.only(top: 16),
+                  padding: EdgeInsets.only(top: AksharaSpacing.s4),
                   child: ListTile(
                     key: QaTestKeys.organizationBuilderProvisioningCompleted,
                     leading: Icon(Icons.check_circle, color: Colors.green),

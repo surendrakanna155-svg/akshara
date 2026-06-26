@@ -9,6 +9,7 @@ import '../../../shared/widgets/widgets.dart';
 import 'organization_builder_models.dart';
 import 'organization_builder_mutations_provider.dart';
 import 'organization_builder_providers.dart';
+import '../../../theme/spacing.dart';
 
 const _kInterviewStepCount = 7;
 
@@ -89,7 +90,7 @@ class _OrganizationBuilderInterviewScreenState
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           child: AksharaMultiStepForm(
             stepLabels: [
               for (var i = 0; i < _kInterviewStepCount; i++)

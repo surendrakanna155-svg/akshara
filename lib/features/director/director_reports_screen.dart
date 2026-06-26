@@ -15,6 +15,7 @@ import 'director_navigation.dart';
 import 'director_providers.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
+import '../../core/errors/api_failure_mapper.dart';
 
 class DirectorReportsScreen extends ConsumerStatefulWidget {
   const DirectorReportsScreen({super.key});
@@ -47,7 +48,7 @@ class _DirectorReportsScreenState extends ConsumerState<DirectorReportsScreen> {
         ),
         body: reportsState.when(
           loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState(message: '$error'),
+          error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
           data: (reports) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

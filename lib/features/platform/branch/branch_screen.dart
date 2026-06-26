@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import 'branch_mutations_provider.dart';
 import 'branch_providers.dart';
+import '../../../theme/spacing.dart';
 
 class BranchScreen extends ConsumerWidget {
   const BranchScreen({super.key});
@@ -27,10 +31,13 @@ class BranchScreen extends ConsumerWidget {
         label: const Text('Assign School'),
       ),
       body: dashboard.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Error: $error')),
+        loading: () => const AksharaLoadingState(),
+        error: (error, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(error),
+          onRetry: () => ref.invalidate(branchDashboardProvider),
+        ),
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             Text(
               'Branches: ${data.totalBranches}  •  Schools: ${data.totalSchools}  •  Revenue: INR ${data.totalRevenueLakhs.toStringAsFixed(1)}L',
@@ -57,10 +64,13 @@ class BranchScreen extends ConsumerWidget {
             const Text('Assignments', style: TextStyle(fontSize: 16)),
             assignments.when(
               loading: () => const Padding(
-                padding: EdgeInsets.all(16),
+                padding: EdgeInsets.all(AksharaSpacing.s4),
                 child: CircularProgressIndicator(),
               ),
-              error: (error, _) => Text('Error: $error'),
+              error: (error, _) => AksharaErrorState.fromFailure(
+                apiFailureMapper.fromException(error),
+                onRetry: () => ref.invalidate(branchAssignmentsProvider),
+              ),
               data: (rows) => Column(
                 children: [
                   for (final row in rows)

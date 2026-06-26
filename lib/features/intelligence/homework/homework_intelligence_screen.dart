@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../theme/theme_extensions.dart';
 import '../../phase4/phase4_providers.dart';
+import '../../../theme/spacing.dart';
 
 class HomeworkIntelligenceScreen extends ConsumerStatefulWidget {
   const HomeworkIntelligenceScreen({super.key});
@@ -25,18 +30,17 @@ class _HomeworkIntelligenceScreenState extends ConsumerState<HomeworkIntelligenc
 
   @override
   Widget build(BuildContext context) {
-    final plan = ref.watch(
-      homeworkIntelligencePlanProvider((
-        className: _classController.text.trim(),
-        subjectName: _subjectController.text.trim(),
-        examType: _examType,
-      )),
+    final planArgs = (
+      className: _classController.text.trim(),
+      subjectName: _subjectController.text.trim(),
+      examType: _examType,
     );
+    final plan = ref.watch(homeworkIntelligencePlanProvider(planArgs));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Homework Intelligence')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           TextField(controller: _classController, decoration: const InputDecoration(labelText: 'Class')),
           TextField(controller: _subjectController, decoration: const InputDecoration(labelText: 'Subject')),
@@ -74,18 +78,22 @@ class _HomeworkIntelligenceScreenState extends ConsumerState<HomeworkIntelligenc
             data: (p) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Weak Topics', style: Theme.of(context).textTheme.titleMedium),
+                Text('Weak Topics', style: context.aksharaText.titleMedium),
                 ...p.weakTopics.map((t) => ListTile(title: Text('${t['topic']}'), subtitle: Text('${t['chapter']}'))),
-                Text('Risk Students', style: Theme.of(context).textTheme.titleMedium),
+                Text('Risk Students', style: context.aksharaText.titleMedium),
                 ...p.riskStudents.map((s) => ListTile(title: Text('${s['studentName']}'), subtitle: Text('${s['riskLevel']}'))),
-                Text('Suggested Homework', style: Theme.of(context).textTheme.titleMedium),
+                Text('Suggested Homework', style: context.aksharaText.titleMedium),
                 ...p.recommendedHomework.map((h) => ListTile(title: Text('${h['title']}'))),
-                Text('Suggested Worksheets', style: Theme.of(context).textTheme.titleMedium),
+                Text('Suggested Worksheets', style: context.aksharaText.titleMedium),
                 ...p.worksheetSuggestions.map((w) => ListTile(title: Text('${w['topic']}'))),
               ],
             ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error: $e'),
+            loading: () => const AksharaLoadingState(semanticLabel: 'Loading plan'),
+            error: (e, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(e),
+              onRetry: () =>
+                  ref.invalidate(homeworkIntelligencePlanProvider(planArgs)),
+            ),
           ),
         ],
       ),

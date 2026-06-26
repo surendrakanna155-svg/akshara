@@ -63,7 +63,7 @@ class _ParentInsightsScreenState extends ConsumerState<ParentInsightsScreen> {
                 PopupMenuItem(value: entry.key, child: Text(entry.value)),
             ],
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s3),
               child: language.when(
                 data: (l) => Row(
                   mainAxisSize: MainAxisSize.min,
@@ -442,12 +442,12 @@ class _PremiumInsightCard extends StatelessWidget {
           const SizedBox(height: 6),
           for (final item in items)
             Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: AksharaSpacing.s1),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(top: 6, right: 8),
+                    padding: const EdgeInsets.only(top: 6, right: AksharaSpacing.s2),
                     child: Container(
                       width: 5,
                       height: 5,

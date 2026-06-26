@@ -6,6 +6,8 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import 'communication_mutations_provider.dart';
 import 'communication_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class BroadcastAdminScreen extends ConsumerStatefulWidget {
   const BroadcastAdminScreen({super.key});
@@ -157,7 +159,7 @@ class _ComposeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         TextField(
           controller: audienceController,
@@ -217,7 +219,7 @@ class _TemplatesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         const Text('Existing templates',
             style: TextStyle(fontWeight: FontWeight.w600)),
@@ -235,7 +237,7 @@ class _TemplatesTab extends StatelessWidget {
             ],
           ),
           loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState(message: '$error'),
+          error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
         ),
         const Divider(),
         TextField(
@@ -295,7 +297,7 @@ class _HistoryTab extends StatelessWidget {
         },
       ),
       loading: () => const AksharaLoadingState(),
-      error: (error, _) => AksharaErrorState(message: '$error'),
+      error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
     );
   }
 }
@@ -313,7 +315,7 @@ class _DeliveryTab extends StatelessWidget {
             items.fold<int>(0, (sum, item) => sum + item.recipientCount);
         final sent = items.where((item) => item.status == 'sent').length;
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             ListTile(
                 title: const Text('Total campaigns'),
@@ -327,7 +329,7 @@ class _DeliveryTab extends StatelessWidget {
         );
       },
       loading: () => const AksharaLoadingState(),
-      error: (error, _) => AksharaErrorState(message: '$error'),
+      error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
     );
   }
 }

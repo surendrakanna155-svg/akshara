@@ -5,6 +5,8 @@ import '../../core/repositories/repository_providers.dart';
 import '../../core/repositories/academic/academic_catalog_provider.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 /// v15.3 — Room and lab allocation for timetables.
 class RoomAllocationScreen extends ConsumerWidget {
@@ -38,9 +40,9 @@ class RoomAllocationScreen extends ConsumerWidget {
       ),
       body: rooms.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (items) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             const AksharaSectionHeader(title: 'Classrooms'),
             ...items.where((r) => r.roomType == 'classroom').map(

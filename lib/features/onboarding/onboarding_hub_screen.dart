@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/widgets/akshara_error_state.dart';
+import '../../shared/widgets/akshara_loading_state.dart';
 import 'onboarding_provider.dart';
+import '../../theme/spacing.dart';
 
 class OnboardingHubScreen extends ConsumerWidget {
   const OnboardingHubScreen({super.key});
@@ -14,10 +18,13 @@ class OnboardingHubScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('School Onboarding')),
       body: dashboard.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Failed to load onboarding: $error')),
+        loading: () => const AksharaLoadingState(),
+        error: (error, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(error),
+          onRetry: () => ref.invalidate(onboardingDashboardProvider),
+        ),
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             _MetricRow(
               label: 'Pending invites',
@@ -31,7 +38,7 @@ class OnboardingHubScreen extends ConsumerWidget {
             const Text('Recent import jobs', style: TextStyle(fontWeight: FontWeight.bold)),
             if (data.recentJobs.isEmpty)
               const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
+                padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s3),
                 child: Text('No import jobs yet.'),
               )
             else
@@ -109,7 +116,7 @@ class _MetricRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s1),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [Text(label), Text(value, style: const TextStyle(fontWeight: FontWeight.w600))],

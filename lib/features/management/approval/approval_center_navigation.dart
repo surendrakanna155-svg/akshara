@@ -6,6 +6,7 @@ import '../../../core/approvals/approval_category.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import 'approval_center_provider.dart';
+import '../../../theme/spacing.dart';
 
 /// Opens the unified Principal Approval Center with optional category pre-filter.
 void openPrincipalApprovalCenter(
@@ -56,7 +57,7 @@ class ApprovalCenterRedirectBanner extends ConsumerWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

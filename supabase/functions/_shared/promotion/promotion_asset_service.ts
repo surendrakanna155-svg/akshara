@@ -49,7 +49,10 @@ function assetMeta(
     previewUrl: null,
     downloadUrl: null,
     generatedAt: now,
-    imageGenerationReady: true,
+    // AI-4: honest flag — no poster image is rendered yet (previewUrl/downloadUrl
+    // stay null). Image rendering + hosting is owner-gated (Phase 2); flip to
+    // true only when a real rendered asset URL is produced.
+    imageGenerationReady: false,
   };
 }
 

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
 import '../admin/admin_layout.dart';
 import '../copilot/copilot_context_provider.dart';
 import 'director_models.dart';
@@ -33,7 +35,10 @@ class DirectorDashboardScreen extends ConsumerWidget {
           key: QaTestKeys.directorDashboardScreen,
           child: state.when(
             loading: () => const AksharaLoadingState(),
-            error: (error, _) => AksharaErrorState(message: '$error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () => ref.invalidate(directorExecutiveDashboardProvider),
+            ),
             data: (data) => SingleChildScrollView(
             child: _DashboardBody(data: data),
           ),
@@ -114,7 +119,7 @@ class _SchoolHealthCard extends StatelessWidget {
         ),
         title: Text(
           school.schoolName,
-          style: Theme.of(context).textTheme.titleSmall,
+          style: context.aksharaText.titleSmall,
         ),
         subtitle: Text(
           '${school.location} · ${school.students} students · ${school.revenueCr} Cr',

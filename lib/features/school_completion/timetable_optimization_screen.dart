@@ -9,6 +9,8 @@ import '../../shared/widgets/widgets.dart';
 import 'school_completion_mutations_provider.dart';
 import 'school_completion_models.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class TimetableOptimizationScreen extends ConsumerStatefulWidget {
   const TimetableOptimizationScreen({super.key});
@@ -56,7 +58,7 @@ class _TimetableOptimizationScreenState
       appBar: AppBar(title: const Text('Timetable Optimization')),
       body: catalog.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (data) {
           _selectedAcademicYearId ??=
               data.years.isNotEmpty ? data.years.first.yearId : 'year_1';
@@ -64,7 +66,7 @@ class _TimetableOptimizationScreenState
           final optimization = ref.watch(timetableOptimizationProvider(yearId));
           return optimization.when(
             loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState(message: '$e'),
+            error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
             data: (result) {
               final actionableRecommendations = result.recommendations
                   .where(
@@ -74,7 +76,7 @@ class _TimetableOptimizationScreenState
                   )
                   .toList(growable: false);
               return ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
                 children: [
                   ListTile(
                     title: const Text('Quality score'),

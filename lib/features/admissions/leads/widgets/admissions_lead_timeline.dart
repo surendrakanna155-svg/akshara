@@ -87,7 +87,7 @@ class _TimelineRow extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(
-                bottom: isLast ? 0 : AksharaSpacing.s4,
+                bottom: isLast ? AksharaSpacing.s0 : AksharaSpacing.s4,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

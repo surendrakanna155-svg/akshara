@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class CommunicationDeliveryScreen extends ConsumerWidget {
   const CommunicationDeliveryScreen({super.key});
@@ -17,9 +19,9 @@ class CommunicationDeliveryScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Communication Delivery')),
       body: analytics.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             Align(
               alignment: Alignment.centerLeft,

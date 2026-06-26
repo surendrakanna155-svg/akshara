@@ -19,8 +19,8 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 | ~~**1**~~ | ~~Stop silent data loss (mock writes in live paths)~~ | 7 | 2C + 4H + 1M | ✅ **DONE 2026-06-25** |
 | ~~**2**~~ | ~~Multi-child parent correctness + demo-identity purge~~ | 14 | 5H + 6M + 3L | ✅ **DONE 2026-06-26** (live 21/21) |
 | ~~**3**~~ | ~~Contract gaps + entitlement client + security hardening~~ | 13 | 7H + 4M + 2L | ✅ **DONE 2026-06-26** (live 30/30) |
-| **4** | AI moderation gate + performance | 6 | 2H + 3M + 1L | ~3 days |
-| **5** | UX consistency, a11y, Play Store custody, docs | ~25 | 2H + many M/L | ~4–5 days |
+| ~~**4**~~ | ~~AI moderation gate + performance~~ | 6 | 2H + 3M + 1L | ✅ **DONE 2026-06-26** (live 20/20) |
+| ~~**5**~~ | ~~UX consistency, a11y, Play Store custody, docs~~ | ~25 | 2H + many M/L | ✅ **DONE 2026-06-26** (live 15/15) |
 
 ---
 
@@ -135,7 +135,10 @@ Depends on Wave 0.1 triage. Build only the routes confirmed absent; flip the ent
 
 ---
 
-## Wave 5 — UX consistency, a11y, Play Store custody, docs (Themes H + J + cleanup) (~4–5 days)
+## Wave 5 — UX consistency, a11y, Play Store custody, docs (Themes H + J + cleanup) ✅ **COMPLETE (2026-06-26)**
+
+> **Status: DONE & live-certified.** Cert: `docs/WAVE5_COMPLETION_CERTIFICATION.md`. Release-review: **GO**. Live cert **15/15** vs VPS pilot (`scripts/qa/live_cert_completion_wave5.py`); deployed (migration `20260803000000` + 4 edge files). Gates: analyze **0** / flutter **2389 passed** / deno **680 passed**.
+> Per-item: **UX-1** ✅ (46 raw `Text('Error: $e')` + 46 raw-leak `AksharaErrorState(message:'$e')` → `AksharaErrorState.fromFailure(apiFailureMapper.fromException(e))` with retry; no raw exception reaches users) · **UX-2** ✅ (raw `Theme.of(context).textTheme` → `context.aksharaText`) · **UX-3** ✅ (bare full-screen spinners → `AksharaLoadingState`) · **UX-4** ✅ (bare empty placeholders → `AksharaEmptyState`) · **UX-5** ✅ (status `Colors.red/green/orange` → `context.colors.error`/`context.akshara.success`/`.warning`) · **UX-6** ✅ (tooltips on icon-only `IconButton`s) · **UX-7** ✅ (104 files: magic-number `EdgeInsets` → `AksharaSpacing` tokens, value-identical) · **UX-8** ✅ (checkbox tap target restored to 48dp) · **PLY-3** ✅ (minSdk 24 / targetSdk 36 / compileSdk 36 pinned) · **NOT-1** ✅ (per-audience `data.route` deep links on the publisher fan-out; migration adds `notification_deliveries.route`) · **PERF-4** ✅ (cold-start instrumentation in `main.dart` + **live p95 224ms** measured in the cert) · **TST-3** ✅ (live-mode Patrol harness capability `kPatrolLiveEnvironment`; 3 P0 flows covered by `scripts/qa/live_cert_full_journeys.py` at the API layer) · **STF-6** ✅ (dead hostel download buttons honestly disabled) · **NOT-3** ✅ (stale push-not-wired doc corrected) · **AI-4** ✅ (`imageGenerationReady` flag now honest) · **PLY-4** ✅ (`ic_launcher_round` added). **Owner-gated (surfaced, not engineering-closable):** **PLY-1** (privacy-policy legal entity/address/grievance email) · **PLY-2** (release keystore custody). **By-design / documented (no code change):** CORE-4, SUP-3/4, MKT-1/2/3, INT-1/3, NOT-2, STF-9, PERF-3, TST-5.
 
 Polish-and-prove tail. The one High (UX-1) leads.
 

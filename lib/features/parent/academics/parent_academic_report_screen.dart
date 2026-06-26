@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
 import 'parent_academic_provider.dart';
 
 /// v13.2 — Structured parent academic report (no open AI chat).
@@ -39,7 +41,10 @@ class ParentAcademicReportScreen extends ConsumerWidget {
       ),
       body: summary.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(parentAcademicSummaryProvider),
+        ),
         data: (data) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
@@ -54,10 +59,13 @@ class ParentAcademicReportScreen extends ConsumerWidget {
             report.when(
               data: (text) => SelectableText(
                 text,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: context.aksharaText.bodySmall,
               ),
               loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text('Report unavailable: $e'),
+              error: (e, _) => AksharaErrorState.fromFailure(
+                apiFailureMapper.fromException(e),
+                onRetry: () => ref.invalidate(parentPrintableReportProvider),
+              ),
             ),
           ],
         ),
@@ -68,7 +76,7 @@ class ParentAcademicReportScreen extends ConsumerWidget {
   Widget _section(String title, Map<String, dynamic> map) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -88,7 +96,7 @@ class ParentAcademicReportScreen extends ConsumerWidget {
   Widget _listSection(String title, List<String> items) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -10,6 +10,7 @@ import '../../features/director/director_models.dart';
 import '../../features/parent/receipts/receipt_models.dart';
 import '../exams/exam_remark.dart';
 import '../exams/exam_report_card.dart';
+import '../../theme/spacing.dart';
 
 /// Shared PDF/CSV export scaffold (P0-FIN-003 / RPT-018).
 class AksharaReportExportService {
@@ -22,7 +23,7 @@ class AksharaReportExportService {
     document.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(28),
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s7),
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
@@ -112,7 +113,7 @@ class AksharaReportExportService {
     document.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(28),
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s7),
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
@@ -217,7 +218,7 @@ class AksharaReportExportService {
       pw.SizedBox(height: 4),
       pw.Container(
         width: double.infinity,
-        padding: const pw.EdgeInsets.all(8),
+        padding: const pw.EdgeInsets.all(AksharaSpacing.s2),
         decoration:
             pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
         child: pw.Text(text, style: const pw.TextStyle(fontSize: 10)),
@@ -287,7 +288,7 @@ class AksharaReportExportService {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s6),
         build: (context) => [
           pw.Text(
             reportTitle,
@@ -330,7 +331,7 @@ class AksharaReportExportService {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(28),
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s7),
         build: (context) => [
           pw.Text(pack.title,
               style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),

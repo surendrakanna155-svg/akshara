@@ -20,15 +20,21 @@
   ⚠️ Owner decision: this sends **real, paid** SMS to real parents on every fee receipt / results
   publish. Recommend enabling once the pilot school is ready to receive them.
 
-### Push notifications (Firebase/FCM) — **owner-gated, not yet wired**
-- `POST_NOTIFICATIONS` permission is declared; no `firebase_messaging` / `google-services.json` yet.
-- Needs a Firebase project + `google-services.json` (owner) before push can be built. Deferred.
+### Push notifications (Firebase/FCM) — **LIVE (Android)** ✅
+- Superseded by `docs/FCM_PUSH_HTTP_V1_CERTIFICATION.md`: real push via modern FCM HTTP v1
+  (service-account OAuth) is wired and live-certified. `firebase_core`/`firebase_messaging` are
+  integrated, `POST_NOTIFICATIONS` is declared, device-token register/refresh + foreground/background
+  handlers + deep-link routing (`data.route`) are in place. Per-event deep links are populated on the
+  enqueue paths as of Wave 5 (NOT-1).
+- VPS secret `FCM_SERVICE_ACCOUNT_JSON` (base64) is set; `google-services.json` is present for the app.
+- iOS push remains deferred (needs `GoogleService-Info.plist` + APNs `.p8`) — Android-only by design (NOT-2).
 
 ## B. Play Store readiness
 
 ### Done ✅
 - **applicationId** `com.akshara.erp`, version 18.6.2+187, display name "Akshara ERP".
-- **targetSdk 35 / compileSdk 35** (Flutter 3.44.1) — meets Play's 2025 target-API requirement.
+- **targetSdk 36 / compileSdk 36 / minSdk 24** — pinned explicitly in `android/app/build.gradle.kts`
+  (PLY-3), above Play's 2025 API-35 target requirement.
 - **Permissions** minimal + justifiable: `INTERNET`, `POST_NOTIFICATIONS`. No location/contacts/storage.
 - **R8 minify + resource shrink** enabled; `proguard-rules.pro` present.
 - **Release build verified**: `bash scripts/build_release.sh aab` builds `app-release.aab` against the

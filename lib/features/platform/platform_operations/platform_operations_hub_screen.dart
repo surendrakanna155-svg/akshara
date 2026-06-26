@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/audit/audit_compliance_providers.dart';
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
+import '../../../shared/widgets/widgets.dart';
+import '../../../theme/theme_extensions.dart';
 import 'platform_operations_models.dart';
 import 'platform_operations_mutations_provider.dart';
 import 'platform_operations_providers.dart';
+import '../../../theme/spacing.dart';
 
 class PlatformOperationsHubScreen extends ConsumerStatefulWidget {
   const PlatformOperationsHubScreen({
@@ -104,14 +108,14 @@ class _PlatformOperationsHubScreenState
     final auditHealth = ref.watch(auditHealthSnapshotProvider);
     return observability.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          Text('Observability', style: Theme.of(context).textTheme.titleLarge),
+          Text('Observability', style: context.aksharaText.titleLarge),
           const SizedBox(height: 12),
           _kpiWrap(value.kpis),
           const Divider(),
           Text('Audit Visibility',
-              style: Theme.of(context).textTheme.titleMedium),
+              style: context.aksharaText.titleMedium),
           ...value.auditMetrics.map(
             (metric) => ListTile(
               title: Text(metric.label),
@@ -140,7 +144,7 @@ class _PlatformOperationsHubScreenState
             ),
           ),
           const Divider(),
-          Text('Cross-links', style: Theme.of(context).textTheme.titleMedium),
+          Text('Cross-links', style: context.aksharaText.titleMedium),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -169,8 +173,11 @@ class _PlatformOperationsHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(observabilityDashboardProvider),
+      ),
     );
   }
 
@@ -181,14 +188,14 @@ class _PlatformOperationsHubScreenState
     final metrics = ref.watch(systemMetricsProvider);
     final intelligence = ref.watch(platformHealthIntelligenceProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         appHealth.when(
           data: (value) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Application Health',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: context.aksharaText.titleLarge),
               Text(
                 '${value.overallStatus.toUpperCase()} · ${value.uptimePercent}% uptime',
               ),
@@ -210,7 +217,7 @@ class _PlatformOperationsHubScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Platform Services',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               _kpiWrap(value.infrastructureKpis),
               ...value.services.map(
                 (service) => ListTile(
@@ -229,7 +236,7 @@ class _PlatformOperationsHubScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('School Portfolio (score ${value.portfolioScore})',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...value.schools.map(
                 (school) => ListTile(
                   title: Text(school.schoolName),
@@ -248,7 +255,7 @@ class _PlatformOperationsHubScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('System Metrics',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               _kpiWrap([
                 PlatformKpi(
                   id: 'cpu',
@@ -277,7 +284,7 @@ class _PlatformOperationsHubScreenState
             children: [
               const Divider(),
               Text('Health Intelligence (score ${value.overallScore})',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...value.scores.map(
                 (score) => ListTile(
                   title: Text(score.dimension),
@@ -299,14 +306,14 @@ class _PlatformOperationsHubScreenState
     final intelligence = ref.watch(errorIntelligenceProvider);
     final recommendations = ref.watch(errorRecommendationsProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         dashboard.when(
           data: (value) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Error Dashboard',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: context.aksharaText.titleLarge),
               Text(
                 '${value.totalErrors24h} errors · ${value.errorRatePercent}% rate',
               ),
@@ -319,7 +326,7 @@ class _PlatformOperationsHubScreenState
               ),
             ],
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AksharaLoadingState(),
           error: (error, _) => Text('Dashboard error: $error'),
         ),
         const Divider(),
@@ -328,7 +335,7 @@ class _PlatformOperationsHubScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Error Intelligence',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...value.classifications.map(
                 (item) => ListTile(
                   title: Text(item.category),
@@ -352,7 +359,7 @@ class _PlatformOperationsHubScreenState
             children: [
               const Divider(),
               Text('AI Recommendations',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...items.map(
                 (item) => ListTile(
                   title: Text(item.title),
@@ -372,10 +379,10 @@ class _PlatformOperationsHubScreenState
     final monitoring = ref.watch(workflowMonitoringProvider);
     return monitoring.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Text('Workflow Monitoring',
-              style: Theme.of(context).textTheme.titleLarge),
+              style: context.aksharaText.titleLarge),
           Text(
             '${value.totalFailures24h} failures · queue depth ${value.totalQueueDepth}',
           ),
@@ -391,8 +398,11 @@ class _PlatformOperationsHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(workflowMonitoringProvider),
+      ),
     );
   }
 
@@ -400,9 +410,9 @@ class _PlatformOperationsHubScreenState
     final monitoring = ref.watch(aiMonitoringProvider);
     return monitoring.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          Text('AI Monitoring', style: Theme.of(context).textTheme.titleLarge),
+          Text('AI Monitoring', style: context.aksharaText.titleLarge),
           _kpiWrap([
             PlatformKpi(
               id: 'inferences',
@@ -427,7 +437,7 @@ class _PlatformOperationsHubScreenState
           ]),
           const Divider(),
           Text('Provider Breakdown',
-              style: Theme.of(context).textTheme.titleMedium),
+              style: context.aksharaText.titleMedium),
           ...value.providerBreakdown.entries.map(
             (entry) => ListTile(
               title: Text(entry.key),
@@ -436,8 +446,11 @@ class _PlatformOperationsHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(aiMonitoringProvider),
+      ),
     );
   }
 
@@ -446,20 +459,20 @@ class _PlatformOperationsHubScreenState
     final history = ref.watch(alertHistoryProvider);
     final definitions = ref.watch(alertDefinitionsProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
-        Text('Active Alerts', style: Theme.of(context).textTheme.titleLarge),
+        Text('Active Alerts', style: context.aksharaText.titleLarge),
         active.when(
           data: (alerts) => Column(
             children: alerts
                 .map((alert) => _alertTile(ref, alert, showAck: true))
                 .toList(growable: false),
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AksharaLoadingState(),
           error: (error, _) => Text('Active alerts error: $error'),
         ),
         const Divider(),
-        Text('Alert History', style: Theme.of(context).textTheme.titleMedium),
+        Text('Alert History', style: context.aksharaText.titleMedium),
         history.when(
           data: (alerts) => Column(
             children: alerts
@@ -475,7 +488,7 @@ class _PlatformOperationsHubScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Alert Definitions',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...items.map(
                 (def) => ListTile(
                   title: Text(def.name),
@@ -531,21 +544,21 @@ class _PlatformOperationsHubScreenState
     final recommendations = ref.watch(securityRecommendationsProvider);
     final reviews = ref.watch(accessReviewsProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         dashboard.when(
           data: (value) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Security Dashboard',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: context.aksharaText.titleLarge),
               Text(
                 'Threat: ${value.threatLevel} · ${value.openFindings} open findings',
               ),
               _kpiWrap(value.kpis),
             ],
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AksharaLoadingState(),
           error: (error, _) => Text('Security error: $error'),
         ),
         permissions.when(
@@ -554,7 +567,7 @@ class _PlatformOperationsHubScreenState
             children: [
               const Divider(),
               Text('Permission Audit (${value.anomalyCount} anomalies)',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...value.rows.map(
                 (row) => ListTile(
                   title: Text(row.permission),
@@ -574,7 +587,7 @@ class _PlatformOperationsHubScreenState
             children: [
               const Divider(),
               Text('Role Audit (${value.staleCount} stale)',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...value.rows.map(
                 (row) => ListTile(
                   title: Text(row.role),
@@ -593,7 +606,7 @@ class _PlatformOperationsHubScreenState
             children: [
               const Divider(),
               Text('Mutation Audits',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...items.map(
                 (item) => ListTile(
                   title: Text(item.mutationId),
@@ -611,7 +624,7 @@ class _PlatformOperationsHubScreenState
             children: [
               const Divider(),
               Text('Privileged Actions',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...items.map(
                 (item) => ListTile(
                   title: Text(item.action),
@@ -630,7 +643,7 @@ class _PlatformOperationsHubScreenState
             children: [
               const Divider(),
               Text('Access Reviews',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...items.map(
                 (item) => ListTile(
                   key: QaTestKeys.platformOperationsAccessReviewTile(item.id),
@@ -659,7 +672,7 @@ class _PlatformOperationsHubScreenState
             children: [
               const Divider(),
               Text('Security Recommendations',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...items.map(
                 (item) => ListTile(
                   title: Text(item.title),
@@ -687,14 +700,14 @@ class _PlatformOperationsHubScreenState
     final diagnostics = ref.watch(tenantDiagnosticsProvider);
     final verificationState = ref.watch(runTenantVerificationProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         isolation.when(
           data: (value) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Tenant Isolation',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: context.aksharaText.titleLarge),
               Text(
                 '${value.passedProbes}/${value.totalProbes} probes passed · ${value.boundaryStatus}',
               ),
@@ -711,13 +724,15 @@ class _PlatformOperationsHubScreenState
                   subtitle: Text(probe.detail),
                   trailing: Icon(
                     probe.passed ? Icons.check_circle : Icons.error,
-                    color: probe.passed ? Colors.green : Colors.red,
+                    color: probe.passed
+                        ? context.akshara.success
+                        : context.colors.error,
                   ),
                 ),
               ),
             ],
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AksharaLoadingState(),
           error: (error, _) => Text('Isolation error: $error'),
         ),
         if (verificationState.hasValue && verificationState.value != null)
@@ -733,7 +748,7 @@ class _PlatformOperationsHubScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Tenant Diagnostics',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ...items.map(
                 (item) => ListTile(
                   title: Text(item.tenantName),
@@ -754,13 +769,13 @@ class _PlatformOperationsHubScreenState
     final report = ref.watch(productionReadinessReportProvider);
     return report.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Text('Production Readiness',
-              style: Theme.of(context).textTheme.titleLarge),
+              style: context.aksharaText.titleLarge),
           Text(
             'Score ${value.overallScore} · ${value.status}',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: context.aksharaText.titleMedium,
           ),
           const Divider(),
           ...value.categories.map(
@@ -772,7 +787,9 @@ class _PlatformOperationsHubScreenState
                     (item) => ListTile(
                       leading: Icon(
                         item.passed ? Icons.check : Icons.close,
-                        color: item.passed ? Colors.green : Colors.red,
+                        color: item.passed
+                            ? context.akshara.success
+                            : context.colors.error,
                       ),
                       title: Text(item.label),
                       subtitle:
@@ -784,8 +801,11 @@ class _PlatformOperationsHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(productionReadinessReportProvider),
+      ),
     );
   }
 
@@ -797,14 +817,14 @@ class _PlatformOperationsHubScreenState
         for (final kpi in kpis)
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AksharaSpacing.s3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(kpi.label, style: Theme.of(context).textTheme.labelSmall),
-                  Text(kpi.value, style: Theme.of(context).textTheme.titleMedium),
+                  Text(kpi.label, style: context.aksharaText.labelSmall),
+                  Text(kpi.value, style: context.aksharaText.titleMedium),
                   if (kpi.deltaLabel != null)
-                    Text(kpi.deltaLabel!, style: Theme.of(context).textTheme.bodySmall),
+                    Text(kpi.deltaLabel!, style: context.aksharaText.bodySmall),
                 ],
               ),
             ),

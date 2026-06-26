@@ -59,7 +59,7 @@ class PlanBadge extends ConsumerWidget {
                     child: Text(
                       subscription.planName,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      style: context.aksharaText.labelMedium.copyWith(
                             color: scheme.foreground,
                             fontWeight: FontWeight.w600,
                           ),

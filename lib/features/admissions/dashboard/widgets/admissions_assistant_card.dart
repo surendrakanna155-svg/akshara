@@ -282,7 +282,7 @@ class _PriorityBadge extends StatelessWidget {
       AdmissionsActionPriority.low => 'LOW',
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s2, vertical: 2),
       decoration: BoxDecoration(
         color: container,
         borderRadius: BorderRadius.circular(6),

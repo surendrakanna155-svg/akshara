@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
+import '../../theme/theme_extensions.dart';
 import 'school_completion_models.dart';
 import 'school_completion_providers.dart';
+import '../../theme/spacing.dart';
 
 class TimetableAutomationScreen extends ConsumerStatefulWidget {
   const TimetableAutomationScreen({super.key});
@@ -23,9 +25,9 @@ class _TimetableAutomationScreenState extends ConsumerState<TimetableAutomationS
     return Scaffold(
       appBar: AppBar(title: const Text('Timetable Automation')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          Text('Active subjects', style: Theme.of(context).textTheme.titleMedium),
+          Text('Active subjects', style: context.aksharaText.titleMedium),
           subjects.when(
             data: (items) => Text('${items.length} subjects will drive period allocation'),
             loading: () => const LinearProgressIndicator(),
@@ -61,7 +63,7 @@ class _TimetableAutomationScreenState extends ConsumerState<TimetableAutomationS
             const SizedBox(height: 16),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

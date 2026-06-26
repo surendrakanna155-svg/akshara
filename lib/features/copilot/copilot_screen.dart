@@ -131,7 +131,7 @@ class _CopilotScreenState extends ConsumerState<CopilotScreen> {
                             AksharaSpacing.s4,
                             AksharaSpacing.s4,
                             AksharaSpacing.s4,
-                            0,
+                            AksharaSpacing.s0,
                           ),
                           child: Material(
                             key: QaTestKeys.copilotContextBanner,
@@ -298,7 +298,7 @@ class _Sidebar extends StatelessWidget {
           const AksharaSectionHeader(title: 'History'),
           Expanded(
             child: sessionsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const AksharaLoadingState(semanticLabel: 'Loading history'),
               error: (_, __) => const AksharaEmptyState(
                 message: 'Unable to load history.',
                 icon: Icons.history,

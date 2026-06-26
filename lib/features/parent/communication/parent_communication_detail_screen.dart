@@ -73,7 +73,7 @@ class _ParentCommunicationDetailScreenState
               padding: const EdgeInsets.all(AksharaSpacing.s3),
               child: Text(
                 message.displayBody,
-                style: Theme.of(context).textTheme.bodyLarge,
+                style: context.aksharaText.bodyLarge,
               ),
             ),
           ),
@@ -86,7 +86,7 @@ class _ParentCommunicationDetailScreenState
                 padding: const EdgeInsets.all(AksharaSpacing.s3),
                 child: Text(
                   message.originalMessage,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: context.aksharaText.bodyMedium,
                 ),
               ),
             ),
@@ -129,7 +129,7 @@ class _MetaRow extends StatelessWidget {
             width: 88,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.labelMedium,
+              style: context.aksharaText.labelMedium,
             ),
           ),
           Expanded(child: Text(value)),

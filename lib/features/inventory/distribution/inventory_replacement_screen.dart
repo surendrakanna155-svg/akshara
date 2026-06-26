@@ -103,7 +103,7 @@ class _ReplacementCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     request.itemName ?? request.distributionId,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: context.aksharaText.titleMedium,
                   ),
                 ),
                 Chip(label: Text(request.status)),

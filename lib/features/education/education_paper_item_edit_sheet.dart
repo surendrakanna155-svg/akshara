@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../theme/theme_extensions.dart';
 import 'education_models.dart';
+import '../../theme/spacing.dart';
 
 /// Feature A — fast "fix just this one question" editor. Opens prefilled with
 /// the current question and returns the edited [QuestionPaperItem] (same id /
@@ -73,17 +75,17 @@ class _EditPaperItemFormState extends State<_EditPaperItemForm> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Edit question ${widget.item.questionNumber}',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: context.aksharaText.titleLarge),
               const SizedBox(height: 12),
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
                 child: DropdownButtonFormField<EduQuestionType>(
                   initialValue: _type,
                   isExpanded: true,
@@ -128,7 +130,7 @@ class _EditPaperItemFormState extends State<_EditPaperItemForm> {
     int maxLines = 1,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,

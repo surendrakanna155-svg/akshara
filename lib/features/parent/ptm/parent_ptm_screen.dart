@@ -8,6 +8,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../parent_meetings/parent_meeting_detail_screen.dart';
 import '../parent_active_child_provider.dart';
 import 'parent_ptm_provider.dart';
+import '../../../core/errors/api_failure_mapper.dart';
 
 /// Parent mobile PTM — upcoming meetings and summaries for the active child.
 class ParentPtmScreen extends ConsumerWidget {
@@ -34,7 +35,7 @@ class ParentPtmScreen extends ConsumerWidget {
       ),
       body: meetingsAsync.when(
         loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState(message: '$error'),
+        error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
         data: (meetings) {
           if (meetings.isEmpty) {
             return const AksharaEmptyState(

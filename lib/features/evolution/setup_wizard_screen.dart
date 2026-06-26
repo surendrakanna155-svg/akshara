@@ -5,6 +5,7 @@ import '../../core/repositories/repository_providers.dart';
 import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
 import 'evolution_providers.dart';
+import '../../theme/spacing.dart';
 
 class SetupWizardScreen extends ConsumerStatefulWidget {
   const SetupWizardScreen({super.key});
@@ -74,7 +75,7 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
           final isLast = _step >= s.steps.length - 1;
           return SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               child: AksharaMultiStepForm(
                 stepLabels: [for (final step in steps) step.label],
                 currentIndex: index,

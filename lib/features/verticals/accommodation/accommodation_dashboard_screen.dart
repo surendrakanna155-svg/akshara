@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import 'accommodation_providers.dart';
+import '../../../theme/spacing.dart';
 
 class AccommodationDashboardScreen extends ConsumerWidget {
   const AccommodationDashboardScreen({super.key});
@@ -20,7 +24,7 @@ class AccommodationDashboardScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Accommodation')),
       body: dashboard.when(
         data: (data) => ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AksharaSpacing.s6),
           children: [
             Text(data.summary, key: QaTestKeys.accommodationDashboardSummary),
             const SizedBox(height: 16),
@@ -61,8 +65,11 @@ class AccommodationDashboardScreen extends ConsumerWidget {
             ]),
           ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        loading: () => const AksharaLoadingState(),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(accommodationDashboardProvider),
+        ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../../../theme/spacing.dart';
 import '../control_center_models.dart';
 import '../control_center_providers.dart';
 import '../widgets/control_center_module_scaffold.dart';
+import '../../../../core/errors/api_failure_mapper.dart';
 
 /// v12.9 — Platform feature enablement per school (super admin only).
 class ControlCenterFeaturesScreen extends ConsumerWidget {
@@ -26,7 +27,7 @@ class ControlCenterFeaturesScreen extends ConsumerWidget {
           padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
           child: AksharaLoadingState(semanticLabel: 'Loading features'),
         ),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (snapshot) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [

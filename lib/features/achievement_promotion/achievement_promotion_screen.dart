@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../shared/widgets/akshara_empty_state.dart';
+import '../../shared/widgets/akshara_error_state.dart';
+import '../../shared/widgets/akshara_loading_state.dart';
 import '../phase5/phase5_models.dart';
 import '../phase5/phase5_providers.dart';
 import 'achievement_promotion_preview_screen.dart';
+import '../../theme/spacing.dart';
 
 /// Publisher destinations offered at publish time (Phase 1). Facebook/Instagram
 /// are selectable but recorded as pending-connection until Phase 2 (Meta).
@@ -107,14 +112,16 @@ class AchievementPromotionScreen extends ConsumerWidget {
       body: promotions.when(
         data: (items) {
           if (items.isEmpty) {
-            return const Center(child: Text('No promotions yet — create one'));
+            return const AksharaEmptyState(
+              message: 'No promotions yet — create one',
+            );
           }
           return ListView.builder(
             itemCount: items.length,
             itemBuilder: (context, index) {
               final p = items[index];
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s4, vertical: AksharaSpacing.s2),
                 child: ListTile(
                   title: Text(p.title),
                   subtitle: Text('${p.achievementType} · ${p.status}\n${_workflowHint(p.status)}'),
@@ -144,8 +151,11 @@ class AchievementPromotionScreen extends ConsumerWidget {
             },
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        loading: () => const AksharaLoadingState(),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(achievementPromotionsProvider),
+        ),
       ),
     );
   }

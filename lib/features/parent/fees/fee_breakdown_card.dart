@@ -116,7 +116,7 @@ class _BreakdownPanel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AksharaSpacing.s4,
-              0,
+              AksharaSpacing.s0,
               AksharaSpacing.s4,
               AksharaSpacing.s4,
             ),

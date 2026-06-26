@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import '../admin/admin_layout.dart';
 import 'school_completion_models.dart';
 import 'school_completion_mutations_provider.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class TeacherReassignmentScreen extends ConsumerStatefulWidget {
   const TeacherReassignmentScreen({super.key});
@@ -41,7 +44,7 @@ class _TeacherReassignmentScreenState
       appBar: AppBar(title: const Text('Teacher Reassignment Wizard')),
       body: options.when(
         loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState(message: '$error'),
+        error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
         data: (data) {
           if (_sourceTeacherId == null && data.sourceTeacherId.isNotEmpty) {
             _sourceTeacherId = data.sourceTeacherId;
@@ -71,11 +74,11 @@ class _TeacherReassignmentScreenState
           }
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AksharaSpacing.s3),
                   child: DropdownButtonFormField<String>(
                     key: QaTestKeys.teacherReassignmentSourceFilter,
                     initialValue: _sourceTeacherId,
@@ -105,7 +108,7 @@ class _TeacherReassignmentScreenState
               ),
               const SizedBox(height: 12),
               Text('Step 1: Select periods',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               const SizedBox(height: 8),
               _ReassignmentSlotsTable(
                 slots: data.slots,
@@ -120,7 +123,7 @@ class _TeacherReassignmentScreenState
               ),
               const SizedBox(height: 16),
               Text('Step 2: Select target teacher',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               const SizedBox(height: 8),
               _TeacherCandidatesPanel(
                 candidates: data.candidates,
@@ -131,7 +134,7 @@ class _TeacherReassignmentScreenState
               const SizedBox(height: 16),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AksharaSpacing.s3),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -266,7 +269,7 @@ class _ReassignmentSlotsTable extends StatelessWidget {
     if (slots.isEmpty) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(AksharaSpacing.s4),
           child: Text('No periods available for reassignment.'),
         ),
       );
@@ -349,7 +352,7 @@ class _TeacherCandidatesPanel extends StatelessWidget {
     if (candidates.isEmpty) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(AksharaSpacing.s4),
           child: Text('No target teachers available for selected periods.'),
         ),
       );

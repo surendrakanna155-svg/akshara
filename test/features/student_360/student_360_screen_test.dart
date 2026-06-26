@@ -1,5 +1,6 @@
 import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/student_360/student_360_screen.dart';
+import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,8 +12,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: providerTestOverrides(),
-        child: const MaterialApp(
-          home: Student360Screen(studentId: 'SIS-STU-10430'),
+        child: MaterialApp(
+          theme: AksharaAppTheme.light(),
+          home: const Student360Screen(studentId: 'SIS-STU-10430'),
         ),
       ),
     );

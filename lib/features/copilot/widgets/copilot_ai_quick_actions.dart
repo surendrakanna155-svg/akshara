@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/school_config/school_configuration_provider.dart';
+import '../../../theme/theme_extensions.dart';
 import '../copilot_navigation.dart';
 import '../copilot_quick_action.dart';
 import '../copilot_stub_responses.dart';
@@ -11,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../copilot_context_provider.dart';
 import '../copilot_provider.dart';
 import '../dock/copilot_dock_provider.dart';
+import '../../../theme/spacing.dart';
 
 Future<void> showCopilotQuickActionsMenu(
   BuildContext context,
@@ -27,10 +29,10 @@ Future<void> showCopilotQuickActionsMenu(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s4, vertical: AksharaSpacing.s2),
               child: Text(
                 'AI quick actions',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: context.aksharaText.titleMedium,
               ),
             ),
             for (final item in CopilotQuickAction.values)

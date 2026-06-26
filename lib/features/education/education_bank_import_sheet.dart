@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../theme/theme_extensions.dart';
 import 'education_models.dart';
+import '../../theme/spacing.dart';
 
 /// Batch 8c follow-up — token-free bulk import of question-bank items.
 /// Teacher pastes a spreadsheet (tab) or CSV; we parse, preview, and return the
@@ -56,13 +58,13 @@ class _ImportBankFormState extends State<_ImportBankForm> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Import questions', style: Theme.of(context).textTheme.titleLarge),
+              Text('Import questions', style: context.aksharaText.titleLarge),
               const SizedBox(height: 8),
               const Text(
                 'Paste rows from Excel/Sheets (tab-separated) or CSV. First row '
@@ -72,7 +74,7 @@ class _ImportBankFormState extends State<_ImportBankForm> {
               Card(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(AksharaSpacing.s2),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -112,12 +114,14 @@ class _ImportBankFormState extends State<_ImportBankForm> {
                   '${_valid.length} valid row(s)'
                   '${_invalidRows > 0 ? ' · $_invalidRows skipped (missing subject/chapter/question)' : ''}',
                   style: TextStyle(
-                    color: _valid.isEmpty ? Colors.red : Colors.green.shade700,
+                    color: _valid.isEmpty
+                        ? context.colors.error
+                        : context.akshara.success,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 ..._valid.take(3).map((q) => Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(top: AksharaSpacing.s1),
                       child: Text(
                         '• ${q.subjectName} / ${q.chapter} · ${q.questionType.name} · '
                         '${q.marks}m · ${q.questionText}',

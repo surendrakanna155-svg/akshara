@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../features/intelligence/teacher_effectiveness/teacher_intervention_intelligence.dart';
 import '../../features/intelligence/teacher_effectiveness/teacher_intervention_provider.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import 'evolution_providers.dart';
+import '../../theme/spacing.dart';
 
 class TeacherAssistantScreen extends ConsumerWidget {
   const TeacherAssistantScreen({super.key});
@@ -48,9 +51,9 @@ class TeacherAssistantScreen extends ConsumerWidget {
       ),
       body: insights.when(
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
-            Text('Which students need help?', style: Theme.of(context).textTheme.titleMedium),
+            Text('Which students need help?', style: context.aksharaText.titleMedium),
             ...data.riskStudents.map(
               (s) => ListTile(
                 title: Text(s['studentName']?.toString() ?? 'Student'),
@@ -83,7 +86,7 @@ class TeacherAssistantScreen extends ConsumerWidget {
                     .toList(),
               ),
             const SizedBox(height: 16),
-            Text('Intervention tracker', style: Theme.of(context).textTheme.titleMedium),
+            Text('Intervention tracker', style: context.aksharaText.titleMedium),
             interventions.when(
               data: (items) => items.isEmpty
                   ? const AksharaEmptyState(message: 'No open interventions yet.')
@@ -99,7 +102,10 @@ class TeacherAssistantScreen extends ConsumerWidget {
                           .toList(),
                     ),
               loading: () => const LinearProgressIndicator(),
-              error: (e, _) => Text('$e'),
+              error: (e, _) => AksharaErrorState.fromFailure(
+                apiFailureMapper.fromException(e),
+                onRetry: () => ref.invalidate(teacherInterventionsProvider),
+              ),
             ),
           ],
         ),
@@ -123,7 +129,7 @@ class TeacherAssistantScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Intervention suggestions', style: Theme.of(context).textTheme.titleMedium),
+        Text('Intervention suggestions', style: context.aksharaText.titleMedium),
         ListTile(
           dense: true,
           title: Text('${summary.totalSuggestions} students flagged'),
@@ -140,7 +146,7 @@ class TeacherAssistantScreen extends ConsumerWidget {
           ),
         if (summary.classLevelActions.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text('Class-level actions', style: Theme.of(context).textTheme.titleSmall),
+          Text('Class-level actions', style: context.aksharaText.titleSmall),
           for (final action in summary.classLevelActions)
             ListTile(dense: true, leading: const Icon(Icons.lightbulb_outline), title: Text(action)),
         ],

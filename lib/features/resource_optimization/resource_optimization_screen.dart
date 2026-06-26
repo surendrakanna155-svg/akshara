@@ -6,6 +6,7 @@ import '../../shared/widgets/widgets.dart';
 import 'resource_optimization_models.dart';
 import 'resource_optimization_mutations_provider.dart';
 import 'resource_optimization_providers.dart';
+import '../../theme/spacing.dart';
 
 class ResourceOptimizationScreen extends ConsumerStatefulWidget {
   const ResourceOptimizationScreen({super.key});
@@ -98,7 +99,7 @@ class _DomainRecommendationsList extends ConsumerWidget {
           );
         }
         return ListView.separated(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           itemCount: recommendations.length,
           separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, index) {

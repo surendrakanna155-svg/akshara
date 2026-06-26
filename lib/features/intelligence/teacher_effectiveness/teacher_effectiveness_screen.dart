@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../shared/widgets/widgets.dart';
 import 'teacher_effectiveness_provider.dart';
+import '../../../core/errors/api_failure_mapper.dart';
+import '../../../theme/spacing.dart';
 
 class TeacherEffectivenessScreen extends ConsumerStatefulWidget {
   const TeacherEffectivenessScreen({super.key});
@@ -71,9 +73,9 @@ class _TeacherEffectivenessScreenState extends ConsumerState<TeacherEffectivenes
         children: [
           lessonScores.when(
             loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState(message: '$e'),
+            error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
             data: (items) => ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               children: items
                   .map(
                     (s) => ListTile(
@@ -87,9 +89,9 @@ class _TeacherEffectivenessScreenState extends ConsumerState<TeacherEffectivenes
           ),
           topicMastery.when(
             loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState(message: '$e'),
+            error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
             data: (items) => ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               children: items
                   .map(
                     (t) => ListTile(
@@ -103,9 +105,9 @@ class _TeacherEffectivenessScreenState extends ConsumerState<TeacherEffectivenes
           ),
           performance.when(
             loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState(message: '$e'),
+            error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
             data: (p) => ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               children: [
                 ListTile(
                   title: const Text('Overall effectiveness'),
@@ -131,9 +133,9 @@ class _TeacherEffectivenessScreenState extends ConsumerState<TeacherEffectivenes
           ),
           planning.when(
             loading: () => const AksharaLoadingState(),
-            error: (e, _) => AksharaErrorState(message: '$e'),
+            error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
             data: (c) => ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               children: [
                 ListTile(title: const Text('Weekly focus'), subtitle: Text(c.weeklyFocus)),
                 const Divider(),
@@ -159,7 +161,7 @@ class _TeacherEffectivenessScreenState extends ConsumerState<TeacherEffectivenes
 
   Widget _meetingSummaryTab() {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         TextField(controller: _studentNameController, decoration: const InputDecoration(labelText: 'Student name')),
         TextField(controller: _classController, decoration: const InputDecoration(labelText: 'Class')),

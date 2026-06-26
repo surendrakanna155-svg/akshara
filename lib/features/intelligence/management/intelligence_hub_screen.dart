@@ -367,7 +367,7 @@ class _UnifiedRecommendationsTab extends ConsumerWidget {
           children: [
             Text(
               '${summary.totalRecommendations} recommendations · ${summary.criticalCount} critical',
-              style: Theme.of(context).textTheme.titleMedium,
+              style: context.aksharaText.titleMedium,
             ),
             const SizedBox(height: AksharaSpacing.s3),
             for (final item in summary.topRecommendations)
@@ -528,7 +528,7 @@ class _PrincipalSummaryTab extends ConsumerWidget {
                     title: 'Weekly briefing · ${briefing.weekLabel}'),
                 for (final section in briefing.sections) ...[
                   Text(section.title,
-                      style: Theme.of(context).textTheme.titleSmall),
+                      style: context.aksharaText.titleSmall),
                   for (final bullet in section.bullets)
                     ListTile(
                       dense: true,

@@ -6,6 +6,7 @@ import '../../core/config/environment_provider.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
 import 'auth_provider.dart';
 
 /// Clears session and returns to [QaLoginScreen] (visual QA / emulator builds).
@@ -50,7 +51,7 @@ class QaPersonaSwitcherBar extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     'QA visual test — tap to switch persona',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    style: context.aksharaText.labelMedium.copyWith(
                           color: Theme.of(context).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.w600,
                         ),

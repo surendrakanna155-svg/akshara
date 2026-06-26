@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/security/permissions.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../core/workflow/workflow_models.dart';
@@ -10,6 +11,7 @@ import '../management/widgets/management_module_scaffold.dart';
 import '../management/approval/approval_center_provider.dart';
 import 'workflow_automation_mutations_provider.dart';
 import 'workflow_automation_providers.dart';
+import '../../theme/spacing.dart';
 
 class WorkflowAutomationScreen extends ConsumerStatefulWidget {
   const WorkflowAutomationScreen({super.key});
@@ -73,13 +75,19 @@ class _WorkflowAutomationScreenState extends ConsumerState<WorkflowAutomationScr
               children: <Widget>[
                 definitions.when(
                   data: (rows) => _RulesTab(definitions: rows),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(child: Text('$error')),
+                  loading: () => const AksharaLoadingState(semanticLabel: 'Loading rules'),
+                  error: (error, _) => AksharaErrorState.fromFailure(
+                    apiFailureMapper.fromException(error),
+                    onRetry: () => ref.invalidate(workflowDefinitionsProvider),
+                  ),
                 ),
                 instances.when(
                   data: (rows) => _ActiveTab(instances: rows),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(child: Text('$error')),
+                  loading: () => const AksharaLoadingState(semanticLabel: 'Loading instances'),
+                  error: (error, _) => AksharaErrorState.fromFailure(
+                    apiFailureMapper.fromException(error),
+                    onRetry: () => ref.invalidate(workflowInstancesProvider),
+                  ),
                 ),
                 _EscalationsTab(instances: escalations),
                 jobs.when(
@@ -89,8 +97,11 @@ class _WorkflowAutomationScreenState extends ConsumerState<WorkflowAutomationScr
                         .read(workflowAutomationMutationsProvider.notifier)
                         .runScheduledJobsNow(),
                   ),
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(child: Text('$error')),
+                  loading: () => const AksharaLoadingState(semanticLabel: 'Loading schedule'),
+                  error: (error, _) => AksharaErrorState.fromFailure(
+                    apiFailureMapper.fromException(error),
+                    onRetry: () => ref.invalidate(scheduledWorkflowJobsProvider),
+                  ),
                 ),
               ],
             ),
@@ -138,7 +149,7 @@ class _ActiveTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (instances.isEmpty) {
-      return const Center(child: Text('No active workflow instances.'));
+      return const AksharaEmptyState(message: 'No active workflow instances.');
     }
     return ListView.builder(
       itemCount: instances.length,
@@ -173,7 +184,7 @@ class _EscalationsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (instances.isEmpty) {
-      return const Center(child: Text('No escalations pending.'));
+      return const AksharaEmptyState(message: 'No escalations pending.');
     }
     return ListView(
       children: [
@@ -215,7 +226,7 @@ class _ScheduleTab extends StatelessWidget {
         const SizedBox(height: 8),
         Expanded(
           child: jobs.isEmpty
-              ? const Center(child: Text('No scheduled jobs configured.'))
+              ? const AksharaEmptyState(message: 'No scheduled jobs configured.')
               : ListView(
                   children: [
                     for (final job in jobs)
@@ -240,7 +251,7 @@ class _StaleApprovalInsightBanner extends ConsumerWidget {
     final staleCount = ref.watch(approvalCenterStalePendingCountProvider);
     if (staleCount <= 0) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s3),
       child: MaterialBanner(
         content: Text(
           '$staleCount approval${staleCount == 1 ? '' : 's'} pending for more than 48 hours. '

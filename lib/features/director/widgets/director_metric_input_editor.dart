@@ -8,6 +8,7 @@ import '../../../theme/spacing.dart';
 import '../director_models.dart';
 import '../director_mutations_provider.dart';
 import '../director_providers.dart';
+import '../../../core/errors/api_failure_mapper.dart';
 
 /// Opens the metric-input editor. These three per-school figures (marketing
 /// spend, operating expense, capacity) have no operational source, so the chain
@@ -102,7 +103,7 @@ class _MetricInputEditorSheetState
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AksharaSpacing.s4,
-        0,
+        AksharaSpacing.s0,
         AksharaSpacing.s4,
         AksharaSpacing.s4,
       ),
@@ -122,7 +123,7 @@ class _MetricInputEditorSheetState
             const SizedBox(height: AksharaSpacing.s4),
             schoolsState.when(
               loading: () => const AksharaLoadingState(),
-              error: (error, _) => AksharaErrorState(message: '$error'),
+              error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
               data: (schools) => DropdownButtonFormField<String>(
                 key: QaTestKeys.directorMetricInputSchoolField,
                 initialValue: _schoolId,

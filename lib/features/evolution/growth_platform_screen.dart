@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/security/permissions.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import 'evolution_models.dart';
 import 'evolution_mutations_provider.dart';
 import 'evolution_providers.dart';
 import 'evolution_requests.dart';
+import '../../theme/spacing.dart';
 
 class GrowthPlatformScreen extends ConsumerWidget {
   const GrowthPlatformScreen({super.key});
@@ -72,7 +75,7 @@ class GrowthPlatformScreen extends ConsumerWidget {
   ) {
     return dashboard.when(
       data: (d) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Row(
             children: [
@@ -82,7 +85,7 @@ class GrowthPlatformScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Text('Conversion funnel', style: Theme.of(context).textTheme.titleMedium),
+          Text('Conversion funnel', style: context.aksharaText.titleMedium),
           funnel.when(
             data: (f) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +99,7 @@ class GrowthPlatformScreen extends ConsumerWidget {
                 ),
                 if (f.sourceAttribution.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text('Source attribution', style: Theme.of(context).textTheme.labelLarge),
+                  Text('Source attribution', style: context.aksharaText.labelLarge),
                   ...f.sourceAttribution.map(
                     (s) => Text('${s['source']}: ${s['inquiries']} inquiries, ${s['converted']} converted'),
                   ),
@@ -104,7 +107,10 @@ class GrowthPlatformScreen extends ConsumerWidget {
               ],
             ),
             loading: () => const LinearProgressIndicator(),
-            error: (e, _) => Text('$e'),
+            error: (e, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(e),
+              onRetry: () => ref.invalidate(growthFunnelProvider),
+            ),
           ),
         ],
       ),
@@ -124,7 +130,7 @@ class GrowthPlatformScreen extends ConsumerWidget {
       data: (items) => items.isEmpty
           ? const AksharaEmptyState(message: 'No campaigns yet.')
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               children: [
                 for (final c in items)
                   Card(
@@ -165,7 +171,10 @@ class GrowthPlatformScreen extends ConsumerWidget {
               ],
             ),
       loading: () => const LinearProgressIndicator(),
-      error: (e, _) => Center(child: Text('$e')),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(growthCampaignsProvider),
+      ),
     );
   }
 
@@ -174,7 +183,7 @@ class GrowthPlatformScreen extends ConsumerWidget {
       data: (items) => items.isEmpty
           ? const AksharaEmptyState(message: 'No inquiries yet.')
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               children: [
                 for (final i in items)
                   Card(
@@ -201,7 +210,10 @@ class GrowthPlatformScreen extends ConsumerWidget {
               ],
             ),
       loading: () => const LinearProgressIndicator(),
-      error: (e, _) => Center(child: Text('$e')),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(growthInquiriesProvider),
+      ),
     );
   }
 
@@ -359,7 +371,7 @@ class GrowthPlatformScreen extends ConsumerWidget {
   Widget _kpi(String label, String value) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
         child: Column(
           children: [
             Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),

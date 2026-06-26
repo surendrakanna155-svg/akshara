@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/widgets.dart';
+import '../../../theme/theme_extensions.dart';
 import 'white_label_mutations_provider.dart';
 import 'white_label_providers.dart';
 
@@ -24,7 +27,7 @@ class ThemeManagementScreen extends ConsumerWidget {
               title: Text(theme.name),
               subtitle: Text(theme.mode),
               trailing: theme.isActive
-                  ? const Icon(Icons.check_circle, color: Colors.green)
+                  ? Icon(Icons.check_circle, color: context.akshara.success)
                   : TextButton(
                       key: QaTestKeys.whiteLabelApplyThemeButton(theme.id),
                       onPressed: () {
@@ -37,8 +40,11 @@ class ThemeManagementScreen extends ConsumerWidget {
             );
           },
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        loading: () => const AksharaLoadingState(),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(themeConfigsProvider),
+        ),
       ),
     );
   }

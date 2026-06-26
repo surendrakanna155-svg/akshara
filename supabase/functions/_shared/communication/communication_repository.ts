@@ -43,6 +43,7 @@ export interface NotificationDeliveryRow {
   last_error: string | null;
   is_read: boolean;
   child_context: string | null;
+  route: string | null;
   sent_at: string | null;
   created_at: string;
 }
@@ -152,13 +153,14 @@ export async function enqueueDelivery(
     renderedSubject: string | null;
     renderedBody: string;
     childContext?: string | null;
+    route?: string | null;
   },
 ): Promise<NotificationDeliveryRow> {
   const rows = await db.queryObject<NotificationDeliveryRow>(
     `INSERT INTO notification_deliveries (
        organization_id, school_id, recipient_user_id, channel, template_id,
-       category, rendered_subject, rendered_body, child_context, status
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+       category, rendered_subject, rendered_body, child_context, route, status
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
      RETURNING *`,
     [
       input.organizationId,
@@ -170,6 +172,7 @@ export async function enqueueDelivery(
       input.renderedSubject,
       input.renderedBody,
       input.childContext ?? null,
+      input.route ?? null,
     ],
   );
   return rows[0]!;
@@ -191,6 +194,7 @@ export async function enqueueDeliveriesBatch(
     category: string;
     renderedSubject: string | null;
     renderedBody: string;
+    route?: string | null;
   },
 ): Promise<number> {
   if (input.recipientUserIds.length === 0) return 0;
@@ -201,15 +205,16 @@ export async function enqueueDeliveriesBatch(
     input.category,
     input.renderedSubject,
     input.renderedBody,
+    input.route ?? null,
   ];
   const values = input.recipientUserIds.map((userId, i) => {
     params.push(userId);
-    return `($1, $2, $${i + 7}, $3, $4, $5, $6, 'pending')`;
+    return `($1, $2, $${i + 8}, $3, $4, $5, $6, $7, 'pending')`;
   });
   const rows = await db.queryObject<{ id: string }>(
     `INSERT INTO notification_deliveries (
        organization_id, school_id, recipient_user_id, channel,
-       category, rendered_subject, rendered_body, status
+       category, rendered_subject, rendered_body, route, status
      ) VALUES ${values.join(", ")}
      RETURNING id`,
     params,

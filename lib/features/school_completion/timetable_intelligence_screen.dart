@@ -6,6 +6,8 @@ import '../../core/repositories/repository_providers.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_models.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 /// v13.1 — Room/lab allocation, exam timetable, optimization scoring.
 class TimetableIntelligenceScreen extends ConsumerStatefulWidget {
@@ -35,16 +37,16 @@ class _TimetableIntelligenceScreenState extends ConsumerState<TimetableIntellige
       appBar: AppBar(title: const Text('Timetable Intelligence')),
       body: catalog.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (data) {
           final yearId = data.years.isNotEmpty ? data.years.first.yearId : 'year_1';
           final intelligence = ref.watch(timetableIntelligenceProvider(yearId));
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               intelligence.when(
                 loading: () => const AksharaLoadingState(),
-                error: (e, _) => AksharaErrorState(message: '$e'),
+                error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
                 data: (result) => _IntelligencePanel(result: result),
               ),
               const Divider(height: 32),
@@ -67,7 +69,7 @@ class _TimetableIntelligenceScreenState extends ConsumerState<TimetableIntellige
               ),
               rooms.when(
                 loading: () => const AksharaLoadingState(),
-                error: (e, _) => AksharaErrorState(message: '$e'),
+                error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
                 data: (items) => Column(
                   children: items
                       .map(

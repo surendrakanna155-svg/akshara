@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../theme/spacing.dart';
 
 /// M15.5 decorative watermark motifs (3–8% opacity).
 enum AksharaWatermarkMotif {
@@ -37,7 +38,7 @@ class AksharaDashboardWatermark extends StatelessWidget {
       child: Align(
         alignment: alignment,
         child: Padding(
-          padding: const EdgeInsets.only(right: 8, top: 24),
+          padding: const EdgeInsets.only(right: AksharaSpacing.s2, top: AksharaSpacing.s6),
           child: CustomPaint(
             size: Size(size, size),
             painter: _WatermarkPainter(motif: motif, color: color),

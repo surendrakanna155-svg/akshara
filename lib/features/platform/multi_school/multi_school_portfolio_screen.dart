@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/theme_extensions.dart';
 import 'multi_school_models.dart';
 import 'multi_school_mutations_provider.dart';
 import 'multi_school_providers.dart';
+import '../../../theme/spacing.dart';
 
 class MultiSchoolPortfolioScreen extends ConsumerWidget {
   const MultiSchoolPortfolioScreen({super.key});
@@ -32,12 +35,15 @@ class MultiSchoolPortfolioScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           dashboardState.when(
             loading: () => const AksharaLoadingState(),
-            error: (error, _) =>
-                AksharaErrorState(message: 'Unable to load dashboard: $error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () =>
+                  ref.invalidate(multiSchoolPortfolioDashboardProvider),
+            ),
             data: (dashboard) => _KpiRow(kpis: dashboard.kpis),
           ),
           const SizedBox(height: 16),
@@ -53,7 +59,10 @@ class MultiSchoolPortfolioScreen extends ConsumerWidget {
               height: 72,
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (error, _) => Text('Unable to load alerts: $error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () => ref.invalidate(multiSchoolAlertsProvider),
+            ),
             data: (alerts) => _AlertsList(alerts: alerts),
           ),
           const SizedBox(height: 16),
@@ -64,8 +73,10 @@ class MultiSchoolPortfolioScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           schoolsState.when(
             loading: () => const AksharaLoadingState(),
-            error: (error, _) =>
-                AksharaErrorState(message: 'Unable to load schools: $error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () => ref.invalidate(multiSchoolSchoolsProvider),
+            ),
             data: (schools) => _SchoolList(schools: schools),
           ),
         ],
@@ -90,24 +101,24 @@ class _KpiRow extends StatelessWidget {
             width: 220,
             child: Card(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AksharaSpacing.s3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       kpi.label,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: context.aksharaText.bodySmall,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       kpi.value,
-                      style: Theme.of(context).textTheme.headlineSmall,
+                      style: context.aksharaText.headlineSmall,
                     ),
                     if (kpi.deltaLabel != null) ...[
                       const SizedBox(height: 4),
                       Text(
                         kpi.deltaLabel!,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: context.aksharaText.bodySmall,
                       ),
                     ],
                   ],
@@ -168,6 +179,7 @@ class _AlertsList extends ConsumerWidget {
               subtitle: Text('${alert.schoolName} - ${alert.message}'),
               trailing: IconButton(
                 key: QaTestKeys.multiSchoolDismissAlertButton(alert.id),
+                tooltip: 'Dismiss alert',
                 icon: const Icon(Icons.close),
                 onPressed: () async {
                   final result = await ref
@@ -283,9 +295,9 @@ class _HealthChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (score) {
-      >= 80 => Colors.green.shade700,
-      >= 60 => Colors.orange.shade700,
-      _ => Colors.red.shade700,
+      >= 80 => context.akshara.success,
+      >= 60 => context.akshara.warning,
+      _ => context.colors.error,
     };
     return Chip(
       key: QaTestKeys.multiSchoolHealthChip(score),

@@ -6,10 +6,13 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import '../admin/admin_layout.dart';
 import 'school_completion_models.dart';
 import 'school_completion_mutations_provider.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class SubstituteManagerScreen extends ConsumerStatefulWidget {
   const SubstituteManagerScreen({super.key});
@@ -73,7 +76,7 @@ class _SubstituteManagerScreenState
       appBar: AppBar(title: const Text('Substitute Teacher Wizard')),
       body: coverage.when(
         loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState(message: '$error'),
+        error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
         data: (data) {
           final slots = _filteredSlots(data.openSlots);
           final teachers = _rankedTeachers(data.candidates, _selectedSlot);
@@ -88,7 +91,7 @@ class _SubstituteManagerScreenState
             _selectedTeacher = null;
           }
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               _FilterBar(
                 dayFilter: _dayFilter,
@@ -107,7 +110,7 @@ class _SubstituteManagerScreenState
               ),
               const SizedBox(height: 16),
               Text('Open slots',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               const SizedBox(height: 8),
               _OpenSlotsTable(
                 slots: slots,
@@ -119,7 +122,7 @@ class _SubstituteManagerScreenState
               ),
               const SizedBox(height: 16),
               Text('Available teachers',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               const SizedBox(height: 8),
               _AvailableTeachersPanel(
                 slot: _selectedSlot,
@@ -131,7 +134,7 @@ class _SubstituteManagerScreenState
               const SizedBox(height: 16),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AksharaSpacing.s3),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -316,7 +319,7 @@ class _OpenSlotsTable extends StatelessWidget {
     if (slots.isEmpty) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(AksharaSpacing.s4),
           child: Text('No open timetable slots for the selected filter.'),
         ),
       );
@@ -407,7 +410,7 @@ class _AvailableTeachersPanel extends StatelessWidget {
     if (slot == null) {
       return const Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(AksharaSpacing.s4),
           child: Text('Select a slot to load ranked substitute teachers.'),
         ),
       );

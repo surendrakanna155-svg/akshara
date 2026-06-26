@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import '../phase5/phase5_providers.dart';
 import 'operations_hub_mutations_provider.dart';
 import 'operations_hub_navigation.dart';
+import '../../theme/spacing.dart';
 
 class OperationsHubScreen extends ConsumerWidget {
   const OperationsHubScreen({super.key});
@@ -20,19 +22,19 @@ class OperationsHubScreen extends ConsumerWidget {
       body: hub.when(
         data: (h) {
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               Card(
                 child: ListTile(
                   title: const Text('School Health'),
                   trailing: Text(
                     '${h.schoolHealth}/100',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: context.aksharaText.titleLarge,
                   ),
                 ),
               ),
               Text('Daily Summary',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               ListTile(
                 title: const Text('Attendance'),
                 trailing: Text('${h.dailySummary.attendancePct}%'),
@@ -48,7 +50,7 @@ class OperationsHubScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text('Critical Alerts',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               if (h.criticalAlerts.isEmpty)
                 const AksharaEmptyState(
                   message:
@@ -82,7 +84,7 @@ class OperationsHubScreen extends ConsumerWidget {
                 ),
               const SizedBox(height: 8),
               Text('Pending Actions',
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: context.aksharaText.titleMedium),
               if (h.pendingActions.isEmpty)
                 const AksharaEmptyState(
                   message:
@@ -107,7 +109,7 @@ class OperationsHubScreen extends ConsumerWidget {
                   ),
                 ),
               const SizedBox(height: 8),
-              Text('Widgets', style: Theme.of(context).textTheme.titleMedium),
+              Text('Widgets', style: context.aksharaText.titleMedium),
               ListTile(
                 title: const Text('Student risk alerts'),
                 trailing: Text('${h.widgets.studentRiskAlerts}'),

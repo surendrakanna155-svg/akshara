@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/forms/forms.dart';
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
 import '../sis/sis_models.dart';
 import '../sis/widgets/sis_module_scaffold.dart';
 import 'continuity_mutations_provider.dart';
@@ -43,7 +44,7 @@ class _ContinuityMigrationScreenState
             children: [
               Text(
                 'Continuity migration wizard',
-                style: Theme.of(context).textTheme.titleLarge,
+                style: context.aksharaText.titleLarge,
               ),
               const SizedBox(height: AksharaSpacing.s3),
               AksharaStepIndicator(
@@ -53,7 +54,7 @@ class _ContinuityMigrationScreenState
               const SizedBox(height: AksharaSpacing.s2),
               Text(
                 _continuitySteps[_step].$2,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: context.aksharaText.bodyMedium,
               ),
               const SizedBox(height: AksharaSpacing.s2),
               if (preview.valueOrNull != null)

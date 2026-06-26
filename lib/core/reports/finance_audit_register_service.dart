@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import '../audit/audit_event.dart';
 import '../audit/audit_provider.dart';
 import 'akshara_report_export_service.dart';
+import '../../theme/spacing.dart';
 
 /// Generates a finance audit register from local audit events (Phase E).
 class FinanceAuditRegisterService {
@@ -50,7 +51,7 @@ class FinanceAuditRegisterService {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4.landscape,
-        margin: const pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s6),
         build: (context) => [
           pw.Text(
             'Finance Audit Register',

@@ -37,6 +37,17 @@ const APP_AUDIENCE: Record<string, string> = {
   staff_app: "all_staff",
 };
 
+// NOT-1: per-audience deep link so a promotion push lands on the relevant
+// in-app surface instead of being a tap with no destination. Paths mirror
+// lib/router/route_names.dart and are persona-correct because each audience
+// only contains that persona's recipients.
+const AUDIENCE_ROUTE: Record<string, string> = {
+  all_parents: "/parent/notices",
+  all_students: "/student/notices",
+  all_teachers: "/teacher/dashboard",
+  all_staff: "/admin",
+};
+
 export interface DispatchInput {
   promotionId: string;
   title: string;
@@ -85,6 +96,7 @@ async function deliverToAudience(
     category: "announcement",
     renderedSubject: input.title,
     renderedBody: input.caption,
+    route: AUDIENCE_ROUTE[audience] ?? null,
   });
   await finalizeBroadcast(db, broadcast.id);
   return recipients.length;

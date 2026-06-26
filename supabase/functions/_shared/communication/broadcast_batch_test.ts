@@ -22,8 +22,8 @@ function fakeDb(): { db: TenantQueryClient; calls: Captured[] } {
     queryObject(sql: string, args: unknown[] = []): Promise<any[]> {
       calls.push({ sql, args });
       // enqueueDeliveriesBatch reads rows.length to count queued rows: return one
-      // row per recipient (args beyond the 6 fixed params).
-      const recipientCount = Math.max(0, args.length - 6);
+      // row per recipient (args beyond the 7 fixed params — incl. route, NOT-1).
+      const recipientCount = Math.max(0, args.length - 7);
       return Promise.resolve(
         Array.from({ length: recipientCount }, (_, i) => ({ id: `d-${i}` })),
       );
@@ -68,8 +68,30 @@ Deno.test("enqueueDeliveriesBatch issues one multi-row INSERT and counts rows", 
   const { sql, args } = calls[0];
   assert(sql.includes("INSERT INTO notification_deliveries"));
   assert(sql.includes("'pending'"));
-  // 6 fixed params, then one user param per recipient.
-  assertEquals(args, ["org", "school", "push", "announcement", "Title", "Body", "u1", "u2"]);
+  // 7 fixed params (incl. route, NULL when unset — NOT-1), then one user param
+  // per recipient.
+  assertEquals(
+    args,
+    ["org", "school", "push", "announcement", "Title", "Body", null, "u1", "u2"],
+  );
+});
+
+Deno.test("enqueueDeliveriesBatch carries the deep-link route when set (NOT-1)", async () => {
+  const { db, calls } = fakeDb();
+  await enqueueDeliveriesBatch(db, {
+    organizationId: "org",
+    schoolId: "school",
+    recipientUserIds: ["u1"],
+    channel: "push",
+    category: "announcement",
+    renderedSubject: "Title",
+    renderedBody: "Body",
+    route: "/parent/notices",
+  });
+  const { sql, args } = calls[0];
+  assert(sql.includes("route"));
+  // route is the 7th fixed param, before the per-recipient user ids.
+  assertEquals(args, ["org", "school", "push", "announcement", "Title", "Body", "/parent/notices", "u1"]);
 });
 
 Deno.test("enqueueDeliveriesBatch no-ops on empty cohort", async () => {

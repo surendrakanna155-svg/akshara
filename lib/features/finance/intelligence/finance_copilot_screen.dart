@@ -7,6 +7,8 @@ import '../finance_models.dart';
 import 'fee_collection_intelligence.dart';
 import 'fee_collection_intelligence_provider.dart';
 import 'finance_intelligence_provider.dart';
+import '../../../core/errors/api_failure_mapper.dart';
+import '../../../theme/spacing.dart';
 
 /// Finance Copilot — forecasting, defaulter prediction, trend analytics.
 class FinanceCopilotScreen extends ConsumerWidget {
@@ -22,9 +24,9 @@ class FinanceCopilotScreen extends ConsumerWidget {
       showFilterBar: false,
       body: data.when(
         loading: () => const AksharaLoadingState(),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (snapshot) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             _metric('Fee collection forecast', '₹${snapshot.feeCollectionForecast}'),
             _metric('Confidence', '${snapshot.forecastConfidence}%'),

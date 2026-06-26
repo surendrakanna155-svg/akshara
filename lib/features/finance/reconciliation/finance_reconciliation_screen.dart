@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_key_value_card.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
@@ -248,7 +249,7 @@ class _GoodsReceiptsTab extends ConsumerWidget {
         Expanded(
           flex: 4,
           child: detailAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const AksharaLoadingState(),
             error: (_, __) => const AksharaEmptyState(
               message: 'Unable to load goods receipt detail.',
               icon: Icons.error_outline,
@@ -428,8 +429,7 @@ class _VendorsTab extends ConsumerWidget {
                 const AksharaSectionHeader(title: 'Vendor transaction history'),
                 Expanded(
                   child: transactionsAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
+                    loading: () => const AksharaLoadingState(),
                     error: (_, __) => const AksharaEmptyState(
                       message: 'Unable to load vendor transactions.',
                       icon: Icons.error_outline,

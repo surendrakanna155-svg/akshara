@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import 'dynamic_widget_models.dart';
 import 'dynamic_widget_providers.dart';
+import '../../theme/spacing.dart';
 
 class DynamicWidgetRuntimeScreen extends ConsumerWidget {
   const DynamicWidgetRuntimeScreen({super.key});
@@ -26,30 +29,31 @@ class DynamicWidgetRuntimeScreen extends ConsumerWidget {
           IconButton(
             key: QaTestKeys.dynamicWidgetRuntimeRefreshButton,
             icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
             onPressed: () => ref.invalidate(dynamicWidgetLiveDataProvider(role)),
           ),
         ],
       ),
       body: layoutState.when(
         loading: () => const AksharaLoadingState(semanticLabel: 'Loading dashboard'),
-        error: (error, _) => AksharaErrorState(
-          message: '$error',
+        error: (error, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(error),
           onRetry: () => ref.invalidate(roleDashboardLayoutProvider(role)),
         ),
         data: (layout) {
           final widgets = filterWidgetsByRbac(layout.widgets, rbac);
           return liveDataState.when(
             loading: () => const AksharaLoadingState(semanticLabel: 'Loading widget data'),
-            error: (error, _) => AksharaErrorState(
-              message: '$error',
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
               onRetry: () => ref.invalidate(dynamicWidgetLiveDataProvider(role)),
             ),
             data: (liveData) => ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               children: [
                 Text(
                   'Role: $role · v${layout.version}',
-                  style: Theme.of(context).textTheme.labelLarge,
+                  style: context.aksharaText.labelLarge,
                 ),
                 if (layout.navigation.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -88,7 +92,7 @@ class DynamicWidgetRuntimeScreen extends ConsumerWidget {
                 ),
                 if (widgets.isEmpty)
                   const Padding(
-                    padding: EdgeInsets.only(top: 24),
+                    padding: EdgeInsets.only(top: AksharaSpacing.s6),
                     child: Center(child: Text('No widgets visible for your permissions.')),
                   ),
               ],
@@ -128,7 +132,7 @@ class _DynamicWidgetTile extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
@@ -45,17 +46,21 @@ class InventoryDistributionScreen extends ConsumerWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           dashboard.when(
             data: (d) => _KpiSection(dashboard: d),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('$e'),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(e),
+              onRetry: () =>
+                  ref.invalidate(inventoryDistributionDashboardProvider),
+            ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
           Text(
             'Student distributions',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: context.aksharaText.titleMedium,
           ),
           const SizedBox(height: AksharaSpacing.s2),
           items.when(
@@ -72,13 +77,16 @@ class InventoryDistributionScreen extends ConsumerWidget {
                       ],
                     ],
                   ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('$e'),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(e),
+              onRetry: () => ref.invalidate(inventoryDistributionsListProvider),
+            ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
           Text(
             'Distribution reports',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: context.aksharaText.titleMedium,
           ),
           const SizedBox(height: AksharaSpacing.s2),
           reports.when(
@@ -104,8 +112,11 @@ class InventoryDistributionScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('$e'),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(e),
+              onRetry: () => ref.invalidate(distributionReportsProvider),
+            ),
           ),
         ],
       ),
@@ -180,7 +191,7 @@ class _KpiCard extends StatelessWidget {
                 const SizedBox(height: AksharaSpacing.s2),
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: context.aksharaText.headlineSmall,
                 ),
                 const SizedBox(height: AksharaSpacing.s1),
                 Text(title),
@@ -218,7 +229,7 @@ class _DistributionCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     distribution.itemName ?? distribution.catalogItemId,
-                    style: Theme.of(context).textTheme.titleSmall,
+                    style: context.aksharaText.titleSmall,
                   ),
                 ),
                 _DistributionStatusChip(status: distribution.status),

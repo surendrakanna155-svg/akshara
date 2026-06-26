@@ -6,6 +6,7 @@ import '../../core/errors/api_failure_mapper.dart';
 import '../../shared/widgets/akshara_empty_state.dart';
 import '../../shared/widgets/akshara_error_state.dart';
 import '../../shared/widgets/akshara_loading_state.dart';
+import '../../theme/spacing.dart';
 
 /// Resolved UI state for a finance async repository call.
 @immutable
@@ -99,7 +100,7 @@ class FinanceAsyncBody<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.isLoading) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
+        padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s6),
         child: AksharaLoadingState(semanticLabel: loadingLabel),
       );
     }

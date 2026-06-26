@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../../platform/control_center/intelligence/platform_intelligence_models.dart';
 import '../../platform/control_center/intelligence/platform_intelligence_providers.dart';
 import 'trust_intelligence_providers.dart';
+import '../../../theme/spacing.dart';
 
 class TrustIntelligenceHubScreen extends ConsumerStatefulWidget {
   const TrustIntelligenceHubScreen({super.key});
@@ -88,9 +91,9 @@ class _TrustIntelligenceHubScreenState
     final trust = ref.watch(trustDashboardProvider);
     return trust.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          Text(value.trustName, style: Theme.of(context).textTheme.titleLarge),
+          Text(value.trustName, style: context.aksharaText.titleLarge),
           const SizedBox(height: 12),
           _kpiWrap(value.kpis),
           const Divider(),
@@ -107,8 +110,11 @@ class _TrustIntelligenceHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading trust'),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(trustDashboardProvider),
+      ),
     );
   }
 
@@ -116,7 +122,7 @@ class _TrustIntelligenceHubScreenState
     final comparison = ref.watch(schoolComparisonIntelligenceProvider);
     return comparison.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           if (AdminLayout.useCardLayout(context))
             for (final row in value.rows) ...[
@@ -156,8 +162,11 @@ class _TrustIntelligenceHubScreenState
             ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading comparison'),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(schoolComparisonIntelligenceProvider),
+      ),
     );
   }
 
@@ -165,7 +174,7 @@ class _TrustIntelligenceHubScreenState
     final revenue = ref.watch(revenueIntelligenceProvider);
     return revenue.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           _kpiWrap(value.kpis),
           const Divider(),
@@ -180,8 +189,11 @@ class _TrustIntelligenceHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading revenue'),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(revenueIntelligenceProvider),
+      ),
     );
   }
 
@@ -189,7 +201,7 @@ class _TrustIntelligenceHubScreenState
     final growth = ref.watch(growthIntelligenceProvider);
     return growth.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           _kpiWrap(value.kpis),
           const Divider(),
@@ -203,8 +215,11 @@ class _TrustIntelligenceHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading growth'),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(growthIntelligenceProvider),
+      ),
     );
   }
 
@@ -212,7 +227,7 @@ class _TrustIntelligenceHubScreenState
     final risk = ref.watch(portfolioRiskIntelligenceProvider);
     return risk.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           _kpiWrap(value.kpis),
           const Divider(),
@@ -225,8 +240,11 @@ class _TrustIntelligenceHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading risk'),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(portfolioRiskIntelligenceProvider),
+      ),
     );
   }
 
@@ -234,7 +252,7 @@ class _TrustIntelligenceHubScreenState
     final recommendations = ref.watch(trustRecommendationsProvider);
     return recommendations.when(
       data: (items) => ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
@@ -249,8 +267,11 @@ class _TrustIntelligenceHubScreenState
           );
         },
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading recommendations'),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(trustRecommendationsProvider),
+      ),
     );
   }
 
@@ -258,9 +279,9 @@ class _TrustIntelligenceHubScreenState
     final summary = ref.watch(trustExecutiveSummaryProvider);
     return summary.when(
       data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
-          Text(value.headline, style: Theme.of(context).textTheme.titleLarge),
+          Text(value.headline, style: context.aksharaText.titleLarge),
           const SizedBox(height: 8),
           Text(value.summary),
           const Divider(),
@@ -273,8 +294,11 @@ class _TrustIntelligenceHubScreenState
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(child: Text('Error: $error')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading summary'),
+      error: (error, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(error),
+        onRetry: () => ref.invalidate(trustExecutiveSummaryProvider),
+      ),
     );
   }
 

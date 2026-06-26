@@ -8,6 +8,8 @@ import '../../shared/widgets/widgets.dart';
 import 'parent_meeting_models.dart';
 import 'parent_meetings_mutations_provider.dart';
 import 'parent_meetings_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class ParentMeetingDetailScreen extends ConsumerStatefulWidget {
   const ParentMeetingDetailScreen({
@@ -40,7 +42,7 @@ class _ParentMeetingDetailScreenState
       appBar: AppBar(title: const Text('Parent Meeting Details')),
       body: meetingsState.when(
         loading: () => const AksharaLoadingState(),
-        error: (error, _) => AksharaErrorState(message: '$error'),
+        error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
         data: (meetings) {
           ParentMeetingRecord? meeting;
           for (final item in meetings) {
@@ -54,7 +56,7 @@ class _ParentMeetingDetailScreenState
           }
           _notesController.text = meeting.notes;
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               Text(
                 '${meeting.studentName} with ${meeting.parentName}',
@@ -108,7 +110,7 @@ class _ParentMeetingDetailScreenState
               const SizedBox(height: 8),
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AksharaSpacing.s3),
                   child: Text(
                     meeting.aiSummary?.trim().isNotEmpty == true
                         ? meeting.aiSummary!

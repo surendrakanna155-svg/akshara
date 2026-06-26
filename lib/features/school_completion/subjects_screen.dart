@@ -5,6 +5,7 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
 import 'subject_form_dialogs.dart';
+import '../../core/errors/api_failure_mapper.dart';
 
 class SubjectsScreen extends ConsumerWidget {
   const SubjectsScreen({super.key});
@@ -50,7 +51,7 @@ class SubjectsScreen extends ConsumerWidget {
                 },
               ),
         loading: () => const AksharaLoadingState(semanticLabel: 'Loading subjects'),
-        error: (e, _) => AksharaErrorState(message: '$e', onRetry: () => ref.invalidate(subjectsProvider)),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e), onRetry: () => ref.invalidate(subjectsProvider)),
       ),
     );
   }

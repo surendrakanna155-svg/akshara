@@ -58,7 +58,7 @@ class UpcomingExamCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AksharaSpacing.s2,
-                          vertical: 4,
+                          vertical: AksharaSpacing.s1,
                         ),
                         decoration: BoxDecoration(
                           color: ext.warningContainer,

@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/reports/akshara_report_export_service.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/tenant/tenant_provider.dart';
+import '../../theme/theme_extensions.dart';
 import 'onboarding_models.dart';
+import '../../theme/spacing.dart';
 
 /// First-time student data onboarding (the three paths from the plan):
 ///   1. STRUCTURE  → generate placeholder students from class/section sizes.
@@ -235,7 +237,7 @@ class _StructureStepState extends ConsumerState<_StructureStep> {
   Widget build(BuildContext context) {
     return ListView(
       key: const Key('onboarding_structure_step'),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         const Text(
           'Tell us your classes and how many students per section. '
@@ -285,9 +287,9 @@ class _StructureStepState extends ConsumerState<_StructureStep> {
   Widget _buildClassCard(int index) {
     final row = _rows[index];
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: AksharaSpacing.s3),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -302,6 +304,7 @@ class _StructureStepState extends ConsumerState<_StructureStep> {
                 ),
                 if (_rows.length > 1)
                   IconButton(
+                    tooltip: 'Delete',
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () => setState(() => _rows.removeAt(index)),
                   ),
@@ -537,7 +540,7 @@ class _UploadStepState extends ConsumerState<_UploadStep> {
   Widget build(BuildContext context) {
     final result = _result;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         const Text(
           'Download the template, fill it in Excel, then paste the rows '
@@ -594,7 +597,7 @@ class _UploadStepState extends ConsumerState<_UploadStep> {
                 dense: true,
                 leading: Icon(
                   valid ? Icons.check_circle : Icons.error_outline,
-                  color: valid ? Colors.green : Colors.red,
+                  color: valid ? context.akshara.success : context.colors.error,
                 ),
                 title: Text('Row ${row.rowNumber} · ${row.status}'),
                 subtitle: row.errors.isEmpty
@@ -633,7 +636,7 @@ class _AddOneStepState extends ConsumerState<_AddOneStep> {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         const Text('Add a single student quickly.'),
         const SizedBox(height: 12),

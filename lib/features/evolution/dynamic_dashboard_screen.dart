@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/widgets/widgets.dart';
+import '../../theme/theme_extensions.dart';
 import 'evolution_models.dart';
 import 'evolution_providers.dart';
+import '../../theme/spacing.dart';
 
 class DynamicDashboardScreen extends ConsumerStatefulWidget {
   const DynamicDashboardScreen({super.key});
@@ -27,10 +30,12 @@ class _DynamicDashboardScreenState extends ConsumerState<DynamicDashboardScreen>
         title: const Text('Dynamic Dashboard'),
         actions: [
           IconButton(
+            tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.invalidate(widgetLiveDataProvider(true)),
           ),
           IconButton(
+            tooltip: 'Save',
             icon: const Icon(Icons.save_outlined),
             onPressed: _layout == null
                 ? null
@@ -52,9 +57,9 @@ class _DynamicDashboardScreenState extends ConsumerState<DynamicDashboardScreen>
           data: (items) {
             final current = _layout ?? items;
             return ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
               children: [
-                Text('Live widgets', style: Theme.of(context).textTheme.titleMedium),
+                Text('Live widgets', style: context.aksharaText.titleMedium),
                 const SizedBox(height: 8),
                 liveData.when(
                   data: (data) => Wrap(
@@ -78,7 +83,7 @@ class _DynamicDashboardScreenState extends ConsumerState<DynamicDashboardScreen>
                           width: 160,
                           child: Card(
                             child: Padding(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(AksharaSpacing.s3),
                               child: Text('$title\nPermission required'),
                             ),
                           ),
@@ -88,14 +93,14 @@ class _DynamicDashboardScreenState extends ConsumerState<DynamicDashboardScreen>
                         width: 160,
                         child: Card(
                           child: Padding(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(AksharaSpacing.s3),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(title, style: Theme.of(context).textTheme.labelLarge),
+                                Text(title, style: context.aksharaText.labelLarge),
                                 Text(
                                   live?.value ?? '—',
-                                  style: Theme.of(context).textTheme.headlineSmall,
+                                  style: context.aksharaText.headlineSmall,
                                 ),
                                 Text(live?.summary ?? 'Loading…'),
                               ],
@@ -106,10 +111,13 @@ class _DynamicDashboardScreenState extends ConsumerState<DynamicDashboardScreen>
                     }).toList(),
                   ),
                   loading: () => const LinearProgressIndicator(),
-                  error: (e, _) => Text('Widget data: $e'),
+                  error: (e, _) => AksharaErrorState.fromFailure(
+                    apiFailureMapper.fromException(e),
+                    onRetry: () => ref.invalidate(widgetLiveDataProvider(false)),
+                  ),
                 ),
                 const SizedBox(height: 24),
-                Text('Layout & visibility', style: Theme.of(context).textTheme.titleMedium),
+                Text('Layout & visibility', style: context.aksharaText.titleMedium),
                 const SizedBox(height: 8),
                 ...List.generate(current.length, (index) {
                   final placement = current[index];
@@ -137,12 +145,14 @@ class _DynamicDashboardScreenState extends ConsumerState<DynamicDashboardScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
+                            tooltip: 'Move up',
                             icon: const Icon(Icons.arrow_upward),
                             onPressed: index == 0
                                 ? null
                                 : () => _moveItem(current, index, index - 1),
                           ),
                           IconButton(
+                            tooltip: 'Move down',
                             icon: const Icon(Icons.arrow_downward),
                             onPressed: index >= current.length - 1
                                 ? null
@@ -157,10 +167,16 @@ class _DynamicDashboardScreenState extends ConsumerState<DynamicDashboardScreen>
             );
           },
           loading: () => const AksharaLoadingState(semanticLabel: 'Loading layout'),
-          error: (e, _) => AksharaErrorState(message: '$e', onRetry: () => ref.invalidate(dashboardLayoutProvider)),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(dashboardLayoutProvider),
+          ),
         ),
         loading: () => const AksharaLoadingState(semanticLabel: 'Loading widgets'),
-        error: (e, _) => AksharaErrorState(message: '$e', onRetry: () => ref.invalidate(widgetRegistryProvider)),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(widgetRegistryProvider),
+        ),
       ),
     );
   }

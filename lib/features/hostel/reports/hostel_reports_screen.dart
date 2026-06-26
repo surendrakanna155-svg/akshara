@@ -154,15 +154,20 @@ class _ReportCatalogList extends StatelessWidget {
                   '${item.description} · ${item.lastGenerated}',
                   style: text.bodySmall,
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.download_outlined),
-                  tooltip: 'Download report',
-                  onPressed: () {
-                    if (item.id == 'rpt_5') {
-                      context.go(RouteNames.financeReports);
-                    }
-                  },
-                ),
+                // STF-6: only the finance-linked report has a real export
+                // destination today; the rest are honestly disabled (greyed)
+                // instead of presenting a silent no-op download affordance.
+                trailing: item.id == 'rpt_5'
+                    ? IconButton(
+                        icon: const Icon(Icons.download_outlined),
+                        tooltip: 'Open report',
+                        onPressed: () => context.go(RouteNames.financeReports),
+                      )
+                    : const IconButton(
+                        icon: Icon(Icons.download_outlined),
+                        tooltip: 'Export not available yet',
+                        onPressed: null,
+                      ),
               ),
             ),
           ),

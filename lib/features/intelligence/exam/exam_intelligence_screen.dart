@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../theme/theme_extensions.dart';
 import 'exam_intelligence_models.dart';
 import 'exam_intelligence_provider.dart';
+import '../../../theme/spacing.dart';
 
 class ExamIntelligenceScreen extends ConsumerStatefulWidget {
   const ExamIntelligenceScreen({super.key});
@@ -74,7 +79,7 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AksharaSpacing.s3),
             child: Row(
               children: [
                 Expanded(
@@ -125,23 +130,26 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
     final data = ref.watch(examAnalyticsProvider(_filters));
     return data.when(
       data: (a) => _analyticsContent(a),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading analytics'),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(examAnalyticsProvider(_filters)),
+      ),
     );
   }
 
   Widget _analyticsContent(ExamAnalytics a) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         _metric('Total exams', a.totalExams),
         _metric('Students assessed', a.studentsAssessed),
         _metric('Average score', a.averageScorePercent),
         _metric('Pass rate', a.passRatePercent),
         const SizedBox(height: 12),
-        Text('Insights', style: Theme.of(context).textTheme.titleMedium),
+        Text('Insights', style: context.aksharaText.titleMedium),
         ...a.insights.map((i) => ListTile(title: Text(i))),
-        Text('Top performers', style: Theme.of(context).textTheme.titleMedium),
+        Text('Top performers', style: context.aksharaText.titleMedium),
         ...a.topPerformers.map(
           (p) => ListTile(
             title: Text(p['studentName']?.toString() ?? ''),
@@ -156,7 +164,7 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
     final data = ref.watch(subjectPerformanceProvider(_filters));
     return data.when(
       data: (items) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: items
             .map(
               (s) => ListTile(
@@ -167,8 +175,11 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
             )
             .toList(),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading subjects'),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(subjectPerformanceProvider(_filters)),
+      ),
     );
   }
 
@@ -176,7 +187,7 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
     final data = ref.watch(weakChaptersProvider(_filters));
     return data.when(
       data: (items) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: items
             .map(
               (w) => Card(
@@ -188,8 +199,11 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
             )
             .toList(),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading weak chapters'),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(weakChaptersProvider(_filters)),
+      ),
     );
   }
 
@@ -197,13 +211,13 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
     final data = ref.watch(resultIntelligenceProvider(_filters.className));
     return data.when(
       data: (r) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           _metric('Pass count', r.passCount),
           _metric('Fail count', r.failCount),
           _metric('Distinctions', r.distinctionCount),
           ...r.insights.map((i) => ListTile(title: Text(i))),
-          Text('Grade distribution', style: Theme.of(context).textTheme.titleMedium),
+          Text('Grade distribution', style: context.aksharaText.titleMedium),
           ...r.gradeDistribution.map(
             (g) => ListTile(
               title: Text('Grade ${g['grade']}'),
@@ -212,8 +226,12 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading results'),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () =>
+            ref.invalidate(resultIntelligenceProvider(_filters.className)),
+      ),
     );
   }
 
@@ -221,14 +239,14 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
     final data = ref.watch(academicForecastProvider(_filters));
     return data.when(
       data: (f) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           _metric('Predicted avg', f.predictedAvgPercent),
           _metric('At-risk students', f.atRiskStudentCount),
           _metric('Improving students', f.improvingStudentCount),
-          Text('Recommendations', style: Theme.of(context).textTheme.titleMedium),
+          Text('Recommendations', style: context.aksharaText.titleMedium),
           ...f.recommendations.map((r) => ListTile(title: Text(r))),
-          Text('Subject forecasts', style: Theme.of(context).textTheme.titleMedium),
+          Text('Subject forecasts', style: context.aksharaText.titleMedium),
           ...f.subjectForecasts.map(
             (s) => ListTile(
               title: Text(s['subjectName']?.toString() ?? ''),
@@ -238,8 +256,11 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
           ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading forecast'),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(academicForecastProvider(_filters)),
+      ),
     );
   }
 
@@ -247,7 +268,7 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
     final data = ref.watch(rankMovementProvider(_filters.className));
     return data.when(
       data: (items) => ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: items
             .map(
               (r) => ListTile(
@@ -271,15 +292,18 @@ class _ExamIntelligenceScreenState extends ConsumerState<ExamIntelligenceScreen>
             )
             .toList(),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      loading: () => const AksharaLoadingState(semanticLabel: 'Loading rank movement'),
+      error: (e, _) => AksharaErrorState.fromFailure(
+        apiFailureMapper.fromException(e),
+        onRetry: () => ref.invalidate(rankMovementProvider(_filters.className)),
+      ),
     );
   }
 
   Widget _metric(String label, int value) {
     return ListTile(
       title: Text(label),
-      trailing: Text('$value', style: Theme.of(context).textTheme.titleLarge),
+      trailing: Text('$value', style: context.aksharaText.titleLarge),
     );
   }
 }

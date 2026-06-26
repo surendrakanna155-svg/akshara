@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../features/copilot/copilot_context_provider.dart';
 import '../../../features/copilot/copilot_screen_context.dart';
 import '../../../router/route_names.dart';
 import '../../../router/student360_navigation.dart';
+import '../../../shared/widgets/akshara_empty_state.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../theme/theme_extensions.dart';
 import '../intelligence_provider.dart';
 import 'attendance_intelligence.dart';
 import 'attendance_intelligence_provider.dart';
@@ -15,6 +20,7 @@ import '../academic/promotion_readiness_intelligence.dart';
 import '../academic/promotion_readiness_provider.dart';
 import 'student_success_models.dart';
 import 'student_success_provider.dart';
+import '../../../theme/spacing.dart';
 
 class StudentSuccessScreen extends ConsumerStatefulWidget {
   const StudentSuccessScreen({super.key});
@@ -168,38 +174,44 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
           if (dashboard != null)
             _dashboardTab(dashboard)
           else if (dashboardError != null)
-            Center(child: Text('Error: $dashboardError'))
+            const AksharaErrorState(message: 'Unable to load this section.')
           else
-            const Center(child: CircularProgressIndicator()),
+            const AksharaLoadingState(),
           atRisk.when(
             data: (profiles) => _atRiskTab(profiles),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) =>
+                AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           ),
           attendance.when(
             data: (profiles) => _attendanceTab(profiles),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) =>
+                AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           ),
           promotion.when(
             data: (profiles) => _promotionTab(profiles),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) =>
+                AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           ),
           predictions.when(
             data: (items) => _predictionsTab(items),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) =>
+                AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           ),
           improvements.when(
             data: (items) => _improvementsTab(items),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) =>
+                AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           ),
           interventions.when(
             data: (items) => _interventionsTab(items),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            loading: () => const AksharaLoadingState(),
+            error: (e, _) =>
+                AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           ),
         ],
       ),
@@ -208,12 +220,14 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
 
   Widget _attendanceTab(List<AttendanceIntelligenceProfile> profiles) {
     if (profiles.isEmpty) {
-      return const Center(child: Text('No attendance risks flagged at watch tier or above.'));
+      return const AksharaEmptyState(
+        message: 'No attendance risks flagged at watch tier or above.',
+      );
     }
 
     final summary = summarizeAttendanceProfiles(profiles);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         _metricTile('Flagged students', summary.totalFlagged),
         _metricTile('Chronic risk', summary.chronicCount),
@@ -221,7 +235,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
         _metricTile('Watch list', summary.watchCount),
         _metricTile('Avg predicted attendance', summary.averagePrediction),
         const SizedBox(height: 16),
-        Text('Attendance intervention queue', style: Theme.of(context).textTheme.titleMedium),
+        Text('Attendance intervention queue', style: context.aksharaText.titleMedium),
         for (final profile in summary.topProfiles)
           ListTile(
             title: Text('${profile.studentName} · ${profile.tier.label}'),
@@ -236,14 +250,16 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
 
   Widget _promotionTab(List<PromotionReadinessProfile> profiles) {
     if (profiles.isEmpty) {
-      return const Center(child: Text('No students require promotion review.'));
+      return const AksharaEmptyState(
+        message: 'No students require promotion review.',
+      );
     }
 
     final allProfiles = ref.read(promotionReadinessProfilesProvider).valueOrNull ?? profiles;
     final summary = summarizePromotionReadiness(allProfiles);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         _metricTile('Students assessed', summary.totalAssessed),
         _metricTile('Ready', summary.readyCount),
@@ -251,7 +267,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
         _metricTile('Not ready', summary.notReadyCount),
         _metricTile('Hold', summary.holdCount),
         const SizedBox(height: 16),
-        Text('Promotion review queue', style: Theme.of(context).textTheme.titleMedium),
+        Text('Promotion review queue', style: context.aksharaText.titleMedium),
         for (final profile in profiles)
           ListTile(
             title: Text('${profile.studentName} · ${profile.readiness.label}'),
@@ -266,19 +282,21 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
 
   Widget _atRiskTab(List<AtRiskStudentProfile> profiles) {
     if (profiles.isEmpty) {
-      return const Center(child: Text('No at-risk students flagged at medium tier or above.'));
+      return const AksharaEmptyState(
+        message: 'No at-risk students flagged at medium tier or above.',
+      );
     }
 
     final summary = summarizeAtRiskProfiles(profiles);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         _metricTile('Flagged students', summary.totalFlagged),
         _metricTile('Critical', summary.criticalCount),
         _metricTile('High', summary.highCount),
         _metricTile('Medium', summary.mediumCount),
         const SizedBox(height: 16),
-        Text('Intervention queue', style: Theme.of(context).textTheme.titleMedium),
+        Text('Intervention queue', style: context.aksharaText.titleMedium),
         for (final profile in summary.topProfiles)
           ListTile(
             key: QaTestKeys.atRiskStudentRow(profile.studentId),
@@ -296,7 +314,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
 
   Widget _dashboardTab(StudentSuccessDashboard d) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         _metricTile('Students analyzed', d.studentsAnalyzed),
         _metricTile('High dropout risk', d.highDropoutRiskCount),
@@ -305,10 +323,10 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
         _metricTile('Improving students', d.improvingStudentsCount),
         _metricTile('Avg improvement score', d.averageImprovementScore),
         const SizedBox(height: 16),
-        Text('Insights', style: Theme.of(context).textTheme.titleMedium),
+        Text('Insights', style: context.aksharaText.titleMedium),
         ...d.insights.map((i) => ListTile(title: Text(i))),
         const SizedBox(height: 16),
-        Text('Top risk students', style: Theme.of(context).textTheme.titleMedium),
+        Text('Top risk students', style: context.aksharaText.titleMedium),
         ...d.topRiskStudents.map(
           (s) => ListTile(
             title: Text(s['studentName']?.toString() ?? 'Student'),
@@ -323,10 +341,12 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
 
   Widget _predictionsTab(List<StudentSuccessSnapshot> items) {
     if (items.isEmpty) {
-      return const Center(child: Text('No predictions yet. Run compute to populate.'));
+      return const AksharaEmptyState(
+        message: 'No predictions yet. Run compute to populate.',
+      );
     }
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: items.map(_predictionCard).toList(),
     );
   }
@@ -368,7 +388,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
 
   Widget _improvementsTab(List<StudentImprovementItem> items) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: items
           .map(
             (i) => Card(
@@ -394,10 +414,12 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
 
   Widget _interventionsTab(List<InterventionEffectivenessItem> items) {
     if (items.isEmpty) {
-      return const Center(child: Text('No intervention records yet.'));
+      return const AksharaEmptyState(
+        message: 'No intervention records yet.',
+      );
     }
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: items
           .map(
             (i) => ListTile(
@@ -417,7 +439,7 @@ class _StudentSuccessScreenState extends ConsumerState<StudentSuccessScreen>
   Widget _metricTile(String label, int value) {
     return ListTile(
       title: Text(label),
-      trailing: Text('$value', style: Theme.of(context).textTheme.titleLarge),
+      trailing: Text('$value', style: context.aksharaText.titleLarge),
     );
   }
 }

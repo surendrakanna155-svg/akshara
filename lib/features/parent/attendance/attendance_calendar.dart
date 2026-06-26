@@ -70,7 +70,7 @@ class AttendanceCalendar extends StatelessWidget {
                             Expanded(
                               child: Padding(
                                 padding: EdgeInsets.only(
-                                  right: i < 6 ? 4 : 0,
+                                  right: i < 6 ? AksharaSpacing.s1 : AksharaSpacing.s0,
                                 ),
                                 child: i < row.length
                                     ? _CalendarDayCell(

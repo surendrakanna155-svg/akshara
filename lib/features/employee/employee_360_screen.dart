@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
+import '../../shared/widgets/akshara_error_state.dart';
+import '../../shared/widgets/akshara_loading_state.dart';
+import '../../theme/theme_extensions.dart';
 import '../phase5/phase5_providers.dart';
+import '../../theme/spacing.dart';
 
 class Employee360Screen extends ConsumerWidget {
   const Employee360Screen({super.key, this.employeeId = 'emp_1'});
@@ -18,7 +23,7 @@ class Employee360Screen extends ConsumerWidget {
       body: profile.when(
         data: (p) {
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               ListTile(
                 title: Text(p.profile['displayName']?.toString() ?? 'Employee'),
@@ -37,7 +42,7 @@ class Employee360Screen extends ConsumerWidget {
                 trailing: Text('${p.workload.substitutionLoad}'),
               ),
               const Divider(),
-              Text('Insights', style: Theme.of(context).textTheme.titleMedium),
+              Text('Insights', style: context.aksharaText.titleMedium),
               ...p.insights.map((i) => ListTile(title: Text(i))),
               const Divider(),
               dashboard.when(
@@ -45,7 +50,7 @@ class Employee360Screen extends ConsumerWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('School intelligence', style: Theme.of(context).textTheme.titleMedium),
+                      Text('School intelligence', style: context.aksharaText.titleMedium),
                       ListTile(
                         title: const Text('Avg workload'),
                         trailing: Text('${dash.avgWorkloadPercent}%'),
@@ -66,8 +71,11 @@ class Employee360Screen extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        loading: () => const AksharaLoadingState(semanticLabel: 'Loading profile'),
+        error: (e, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(e),
+          onRetry: () => ref.invalidate(employee360Provider(employeeId)),
+        ),
       ),
     );
   }

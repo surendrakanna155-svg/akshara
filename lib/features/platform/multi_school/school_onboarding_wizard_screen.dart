@@ -5,6 +5,7 @@ import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/forms/forms.dart';
 import 'multi_school_models.dart';
 import 'multi_school_mutations_provider.dart';
+import '../../../theme/spacing.dart';
 
 class SchoolOnboardingWizardScreen extends ConsumerStatefulWidget {
   const SchoolOnboardingWizardScreen({super.key});
@@ -45,7 +46,7 @@ class _SchoolOnboardingWizardScreenState
       appBar: AppBar(title: const Text('School Onboarding Wizard')),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           child: AksharaMultiStepForm(
             stepLabels: const ['Basics', 'Plan', 'Activate'],
             currentIndex: _step,

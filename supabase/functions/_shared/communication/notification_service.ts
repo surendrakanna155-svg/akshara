@@ -20,6 +20,7 @@ export interface EnqueueFromTemplateInput {
   recipientUserId: string;
   category?: string;
   childContext?: string | null;
+  route?: string | null;
 }
 
 export async function enqueueFromTemplate(
@@ -49,6 +50,7 @@ export async function enqueueFromTemplate(
     renderedSubject: subject,
     renderedBody: body,
     childContext: input.childContext,
+    route: input.route ?? null,
   });
 }
 
@@ -76,6 +78,7 @@ export async function processDeliveryQueue(
       notificationId: delivery.id,
       category: delivery.category,
       childContext: delivery.child_context ?? null,
+      route: delivery.route ?? null,
     });
     if (result.success) {
       await markDeliverySent(db, delivery.id, result.providerRef);

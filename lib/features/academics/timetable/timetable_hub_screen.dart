@@ -6,6 +6,7 @@ import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
 import '../../admin/admin_shell.dart';
@@ -333,8 +334,8 @@ class _KpiCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: Theme.of(context).textTheme.labelLarge),
-              Text(value, style: Theme.of(context).textTheme.headlineSmall),
+              Text(label, style: context.aksharaText.labelLarge),
+              Text(value, style: context.aksharaText.headlineSmall),
             ],
           ),
         ),

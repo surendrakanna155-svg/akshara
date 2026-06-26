@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/repositories/repository_providers.dart';
+import '../../theme/theme_extensions.dart';
 import '../phase5/phase5_models.dart';
 import '../phase5/phase5_providers.dart';
+import '../../theme/spacing.dart';
 
 class AchievementPromotionPreviewScreen extends ConsumerStatefulWidget {
   const AchievementPromotionPreviewScreen({super.key, required this.promotion});
@@ -84,10 +86,10 @@ class _AchievementPromotionPreviewScreenState
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Text('Status: ${widget.promotion.status}',
-              style: Theme.of(context).textTheme.titleMedium),
+              style: context.aksharaText.titleMedium),
           Text(
             'Analytics: ${widget.promotion.analytics['views']} views · '
             '${widget.promotion.analytics['shares']} shares · '
@@ -108,13 +110,13 @@ class _AchievementPromotionPreviewScreenState
           else
             ...previews.map(
               (asset) => Card(
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: AksharaSpacing.s3),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AksharaSpacing.s4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(asset.label, style: Theme.of(context).textTheme.titleMedium),
+                      Text(asset.label, style: context.aksharaText.titleMedium),
                       const SizedBox(height: 8),
                       Text(asset.headline, style: const TextStyle(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),

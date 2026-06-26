@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/theme_extensions.dart';
 import 'organization_builder_models.dart';
 import 'organization_builder_mutations_provider.dart';
 import 'organization_builder_providers.dart';
+import '../../../theme/spacing.dart';
 
 class OrganizationBuilderPreviewScreen extends ConsumerWidget {
   const OrganizationBuilderPreviewScreen({
@@ -29,14 +32,16 @@ class OrganizationBuilderPreviewScreen extends ConsumerWidget {
       ),
       body: previewState.when(
         loading: () => const AksharaLoadingState(),
-        error: (error, _) =>
-            AksharaErrorState(message: 'Unable to load preview: $error'),
+        error: (error, _) => AksharaErrorState.fromFailure(
+          apiFailureMapper.fromException(error),
+          onRetry: () => ref.invalidate(configPreviewProvider(draftId)),
+        ),
         data: (preview) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             Text(
               preview.organizationName,
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: context.aksharaText.headlineSmall,
             ),
             const SizedBox(height: 4),
             Text('Pack: ${preview.packId}'),
@@ -102,7 +107,7 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -133,7 +138,7 @@ class _ModuleList extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             leading: Icon(
               module.enabled ? Icons.check_circle : Icons.cancel_outlined,
-              color: module.enabled ? Colors.green : Colors.grey,
+              color: module.enabled ? context.akshara.success : Colors.grey,
             ),
             title: Text(module.name),
             trailing: module.isNew

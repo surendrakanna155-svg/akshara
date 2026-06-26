@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import 'evolution_models.dart';
+import '../../theme/spacing.dart';
 
 /// Builds and shares/prints a real PDF sheet for a [ParentInsightSnapshot].
 ///
@@ -23,7 +24,7 @@ class ParentInsightsPdfService {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s6),
         build: (context) => [
           pw.Text(
             schoolName.isEmpty ? 'Parent Insights' : schoolName,
@@ -80,7 +81,7 @@ class ParentInsightsPdfService {
 
   pw.Widget _heading(String text) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 4),
+      padding: const pw.EdgeInsets.only(bottom: AksharaSpacing.s1),
       child: pw.Text(
         text,
         style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
@@ -90,7 +91,7 @@ class ParentInsightsPdfService {
 
   pw.Widget _kv(String key, String value) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 4),
+      padding: const pw.EdgeInsets.only(bottom: AksharaSpacing.s1),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [

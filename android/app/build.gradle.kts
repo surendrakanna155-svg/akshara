@@ -25,7 +25,11 @@ if (hasReleaseKeystore) {
 
 android {
     namespace = "com.akshara.erp.akshara_erp"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned explicitly (not inherited from the Flutter default) so the Play
+    // target-API floor is statically verifiable in-repo. compileSdk/targetSdk 36
+    // are above Google Play's API-35 minimum for app updates; minSdk 24 is the
+    // Flutter floor and satisfies firebase_core/messaging (FCM push).
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -38,8 +42,8 @@ android {
         applicationId = "com.akshara.erp"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 24
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         testInstrumentationRunner = "pl.leancode.patrol.PatrolJUnitRunner"

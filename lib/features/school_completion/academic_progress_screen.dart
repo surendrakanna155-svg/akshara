@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 /// v12.8 — Lesson log linkage, topic/chapter completion, pending alerts.
 class AcademicProgressScreen extends ConsumerWidget {
@@ -29,9 +31,9 @@ class AcademicProgressScreen extends ConsumerWidget {
           children: [
             teacher.when(
               loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState(message: '$e'),
+              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
               data: (data) => ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
                 children: [
                   _metric('Coverage', '${data.coveragePercent}%'),
                   _metric('Topics completed', '${data.topicsCompleted}'),
@@ -49,9 +51,9 @@ class AcademicProgressScreen extends ConsumerWidget {
             ),
             principal.when(
               loading: () => const AksharaLoadingState(),
-              error: (e, _) => AksharaErrorState(message: '$e'),
+              error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
               data: (data) => ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
                 children: [
                   _metric('Overall coverage', '${data.overallCoveragePercent}%'),
                   const Divider(),

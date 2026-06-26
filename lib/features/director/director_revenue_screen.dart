@@ -13,6 +13,7 @@ import 'director_providers.dart';
 import 'widgets/director_metric_input_editor.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
+import '../../core/errors/api_failure_mapper.dart';
 
 class DirectorRevenueScreen extends ConsumerWidget {
   const DirectorRevenueScreen({super.key});
@@ -33,7 +34,7 @@ class DirectorRevenueScreen extends ConsumerWidget {
         ),
         body: state.when(
           loading: () => const AksharaLoadingState(),
-          error: (error, _) => AksharaErrorState(message: '$error'),
+          error: (error, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(error)),
           data: (revenue) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

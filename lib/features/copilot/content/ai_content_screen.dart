@@ -6,6 +6,7 @@ import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import 'ai_content_models.dart';
 import 'ai_content_providers.dart';
+import '../../../theme/spacing.dart';
 
 class AiContentScreen extends ConsumerStatefulWidget {
   const AiContentScreen({super.key});
@@ -38,7 +39,7 @@ class _AiContentScreenState extends ConsumerState<AiContentScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('AI Content Generation')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           DropdownButtonFormField<AiContentType>(
             key: QaTestKeys.aiContentTypePicker,
@@ -107,7 +108,7 @@ class _AiContentScreenState extends ConsumerState<AiContentScreen> {
             Card(
               key: QaTestKeys.aiContentGeneratedCard,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AksharaSpacing.s3),
                 child: SelectableText(generated.content),
               ),
             ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_providers.dart';
+import '../../theme/spacing.dart';
 
 /// Read-only WhatsApp provider status for school admins.
 /// Credentials and provider configuration are managed by platform super admin only.
@@ -19,7 +20,7 @@ class WhatsAppProviderScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('WhatsApp Status')),
       body: config.when(
         data: (data) => ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             const AksharaWarningBanner(
               message:

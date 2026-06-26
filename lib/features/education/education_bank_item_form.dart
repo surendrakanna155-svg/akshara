@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../theme/theme_extensions.dart';
 import '../school_completion/school_completion_models.dart';
 import '../school_completion/school_completion_providers.dart';
 import 'education_models.dart';
+import '../../theme/spacing.dart';
 
 /// Batch 8c — add a question to the bank, with a real syllabus-chapter picker.
 /// Feature C — pass [existing] to edit a saved question in place instead.
@@ -105,14 +107,14 @@ class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(_isEdit ? 'Edit bank question' : 'Add question to bank',
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: context.aksharaText.titleLarge),
               const SizedBox(height: 12),
               _field(_subject, 'Subject'),
 
@@ -129,7 +131,7 @@ class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
                   },
                 ),
                 loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s2),
                   child: LinearProgressIndicator(),
                 ),
                 error: (_, __) => const SizedBox.shrink(),
@@ -200,7 +202,7 @@ class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
     ValueChanged<String>? onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
@@ -219,7 +221,7 @@ class _AddBankItemFormState extends ConsumerState<_AddBankItemForm> {
     String Function(T) labelOf,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: DropdownButtonFormField<T>(
         initialValue: current,
         isExpanded: true,
@@ -250,7 +252,7 @@ class _SyllabusPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     if (chapters.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.only(bottom: AksharaSpacing.s2),
         child: Text(
           'No syllabus chapters found — type the chapter name below.',
           style: TextStyle(fontStyle: FontStyle.italic),
@@ -258,7 +260,7 @@ class _SyllabusPicker extends StatelessWidget {
       );
     }
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: DropdownButtonFormField<String?>(
         initialValue: selectedId,
         isExpanded: true,

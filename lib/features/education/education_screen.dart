@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/widgets/akshara_empty_state.dart';
+import '../../shared/widgets/akshara_error_state.dart';
+import '../../shared/widgets/akshara_loading_state.dart';
+import '../../theme/theme_extensions.dart';
 import 'education_bank_import_sheet.dart';
 import 'education_bank_item_form.dart';
 import 'education_models.dart';
 import 'education_pdf_service.dart';
 import 'education_provider.dart';
 import 'education_question_paper_detail_screen.dart';
+import '../../theme/spacing.dart';
 
 class EducationScreen extends ConsumerStatefulWidget {
   const EducationScreen({super.key});
@@ -117,10 +123,10 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
     final papers = ref.watch(questionPapersListProvider);
     final lastGenerated = ref.watch(lastGeneratedPaperProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         if (canManage) ...[
-          Text('Generate question paper', style: Theme.of(context).textTheme.titleMedium),
+          Text('Generate question paper', style: context.aksharaText.titleMedium),
           const SizedBox(height: 8),
           _textField(_yearLabelController, 'Academic year'),
           _textField(_classController, 'Class'),
@@ -159,12 +165,15 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
         ],
         papers.when(
           data: (items) => items.isEmpty
-              ? const Text('No question papers yet.')
+              ? const AksharaEmptyState(message: 'No question papers yet.')
               : Column(
                   children: items.map((paper) => _paperCard(paper, canManage)).toList(),
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          loading: () => const AksharaLoadingState(semanticLabel: 'Loading papers'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(questionPapersListProvider),
+          ),
         ),
       ],
     );
@@ -208,8 +217,8 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
   Widget _generationResultBanner(QuestionPaperDetail detail) {
     final hasIssues = detail.unfilledGapCount > 0 || detail.aiCandidateCount > 0;
     final color = detail.unfilledGapCount > 0
-        ? Colors.orange
-        : (detail.aiCandidateCount > 0 ? Colors.deepPurple : Colors.green);
+        ? context.akshara.warning
+        : (detail.aiCandidateCount > 0 ? Colors.deepPurple : context.akshara.success);
     final lines = <String>[
       if (detail.unfilledMarks > 0)
         '${detail.unfilledMarks} marks unfilled across ${detail.unfilledGapCount} slot(s) — '
@@ -220,7 +229,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
     ];
     return Container(
       key: detail.unfilledGapCount > 0 ? QaTestKeys.educationUnfilledMarksBanner : null,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AksharaSpacing.s3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
@@ -259,6 +268,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
         ),
         trailing: canManage
             ? IconButton(
+                tooltip: 'Print',
                 icon: const Icon(Icons.print_outlined),
                 onPressed: () => _printPaper(paper.id),
               )
@@ -296,11 +306,11 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
   Widget _questionBankTab(bool canManage) {
     final bank = ref.watch(questionBankListProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         bank.when(
           data: (items) => items.isEmpty
-              ? const Text('Question bank is empty.')
+              ? const AksharaEmptyState(message: 'Question bank is empty.')
               : Column(
                   children: items
                       .map(
@@ -324,8 +334,11 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
                       )
                       .toList(),
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          loading: () => const AksharaLoadingState(semanticLabel: 'Loading bank'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(questionBankListProvider),
+          ),
         ),
         if (canManage)
           Row(
@@ -414,7 +427,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
   Widget _homeworkTab(bool canManage) {
     final homework = ref.watch(homeworkListProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         if (canManage) ...[
           _dropdown('Assignment type', _homeworkType.name, EduHomeworkType.values, (v) {
@@ -445,7 +458,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
         ],
         homework.when(
           data: (items) => items.isEmpty
-              ? const Text('No homework assignments yet.')
+              ? const AksharaEmptyState(message: 'No homework assignments yet.')
               : Column(
                   children: items
                       .map(
@@ -454,6 +467,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
                             title: Text(hw.title),
                             subtitle: Text('${hw.status} • ${hw.content.length} questions'),
                             trailing: IconButton(
+                              tooltip: 'Print',
                               icon: const Icon(Icons.print_outlined),
                               onPressed: () => EducationPdfService.printHomework(hw),
                             ),
@@ -462,8 +476,11 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
                       )
                       .toList(),
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          loading: () => const AksharaLoadingState(semanticLabel: 'Loading homework'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(homeworkListProvider),
+          ),
         ),
       ],
     );
@@ -472,7 +489,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
   Widget _remarksTab(bool canManage) {
     final remarks = ref.watch(reportRemarksListProvider);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
       children: [
         if (canManage) ...[
           _textField(_studentIdController, 'Student ID'),
@@ -506,15 +523,15 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
         ],
         remarks.when(
           data: (items) => items.isEmpty
-              ? const Text('No report remarks yet.')
+              ? const AksharaEmptyState(message: 'No report remarks yet.')
               : Column(
                   children: items
                       .map(
                         (remark) => Card(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                              horizontal: AksharaSpacing.s2,
+                              vertical: AksharaSpacing.s1,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -594,8 +611,11 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
                       )
                       .toList(),
                 ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Error: $e'),
+          loading: () => const AksharaLoadingState(semanticLabel: 'Loading remarks'),
+          error: (e, _) => AksharaErrorState.fromFailure(
+            apiFailureMapper.fromException(e),
+            onRetry: () => ref.invalidate(reportRemarksListProvider),
+          ),
         ),
       ],
     );
@@ -607,7 +627,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
     TextInputType? keyboardType,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
@@ -623,7 +643,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
     ValueChanged<T> onChanged,
   ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: DropdownButtonFormField<T>(
         initialValue: values.firstWhere(
           (v) => v.toString().split('.').last == current,

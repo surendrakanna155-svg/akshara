@@ -136,7 +136,7 @@ class _FinanceQrPaymentScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text('Session ${session.id}',
-                style: Theme.of(context).textTheme.titleMedium),
+                style: context.aksharaText.titleMedium),
             const SizedBox(height: AksharaSpacing.s2),
             Text('Invoice: ${session.invoiceId}'),
             Text('Amount: ${session.amount}'),

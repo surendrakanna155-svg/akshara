@@ -6,6 +6,7 @@ import '../../core/testing/qa_test_keys.dart';
 import '../../shared/forms/forms.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
+import '../../theme/theme_extensions.dart';
 import 'ai_school_builder_models.dart';
 import 'unified_onboarding_models.dart';
 import 'unified_onboarding_provider.dart';
@@ -94,7 +95,7 @@ class _UnifiedOnboardingFlowScreenState
             const SizedBox(height: AksharaSpacing.s2),
             Text(
               'Saved server-side · ${state.lastSavedAt}',
-              style: Theme.of(context).textTheme.bodySmall,
+              style: context.aksharaText.bodySmall,
             ),
           ],
         ],
@@ -339,7 +340,7 @@ class _AiQuickSetupCard extends StatelessWidget {
               Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
               const SizedBox(width: AksharaSpacing.s2),
               Expanded(
-                child: Text('AI Quick Setup', style: theme.textTheme.titleMedium),
+                child: Text('AI Quick Setup', style: context.aksharaText.titleMedium),
               ),
             ],
           ),
@@ -348,7 +349,7 @@ class _AiQuickSetupCard extends StatelessWidget {
             'Describe your school in a few words and let Akshara draft your '
             'classes, sections, fees, language and modules. You can review and '
             'edit everything before going live.',
-            style: theme.textTheme.bodyMedium,
+            style: context.aksharaText.bodyMedium,
           ),
           const SizedBox(height: AksharaSpacing.s3),
           Align(
@@ -434,7 +435,7 @@ class _AiBriefSheetState extends State<_AiBriefSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Tell us about your school',
-              style: Theme.of(context).textTheme.titleLarge),
+              style: context.aksharaText.titleLarge),
           const SizedBox(height: AksharaSpacing.s3),
           TextField(
             controller: _schoolName,

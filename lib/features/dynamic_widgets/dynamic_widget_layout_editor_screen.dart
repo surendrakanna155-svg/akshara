@@ -8,6 +8,7 @@ import '../../shared/widgets/widgets.dart';
 import 'dynamic_widget_models.dart';
 import 'dynamic_widget_mutations_provider.dart';
 import 'dynamic_widget_providers.dart';
+import '../../theme/spacing.dart';
 
 class DynamicWidgetLayoutEditorScreen extends ConsumerStatefulWidget {
   const DynamicWidgetLayoutEditorScreen({super.key});
@@ -54,7 +55,7 @@ class _DynamicWidgetLayoutEditorScreenState
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             child: Row(
               children: [
                 Expanded(
@@ -119,7 +120,7 @@ class _DynamicWidgetLayoutEditorScreenState
               data: (layout) {
                 final current = _draft ?? layout;
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: AksharaSpacing.s4),
                   itemCount: current.widgets.length,
                   itemBuilder: (context, index) {
                     final widget = current.widgets[index];
@@ -139,7 +140,7 @@ class _DynamicWidgetLayoutEditorScreenState
                                 : null,
                           ),
                           Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            padding: const EdgeInsets.fromLTRB(AksharaSpacing.s4, AksharaSpacing.s0, AksharaSpacing.s4, AksharaSpacing.s3),
                             child: Row(
                               children: [
                                 IconButton(
@@ -191,7 +192,7 @@ class _DynamicWidgetLayoutEditorScreenState
           if (canManage)
             SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AksharaSpacing.s4),
                 child: Row(
                   children: [
                     Expanded(

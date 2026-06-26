@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/theme_extensions.dart';
 import 'organization_builder_models.dart';
 import 'organization_builder_providers.dart';
+import '../../../theme/spacing.dart';
 
 class OrganizationBuilderHubScreen extends ConsumerWidget {
   const OrganizationBuilderHubScreen({super.key});
@@ -22,7 +25,7 @@ class OrganizationBuilderHubScreen extends ConsumerWidget {
         title: const Text('Organization Builder'),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         children: [
           Card(
             key: QaTestKeys.schoolDiscoveryHubCard,
@@ -44,8 +47,10 @@ class OrganizationBuilderHubScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           packsState.when(
             loading: () => const AksharaLoadingState(),
-            error: (error, _) =>
-                AksharaErrorState(message: 'Unable to load packs: $error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () => ref.invalidate(verticalPacksProvider),
+            ),
             data: (packs) => _PackGrid(packs: packs),
           ),
           const SizedBox(height: 24),
@@ -59,7 +64,10 @@ class OrganizationBuilderHubScreen extends ConsumerWidget {
               height: 72,
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (error, _) => Text('Unable to load drafts: $error'),
+            error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error),
+              onRetry: () => ref.invalidate(interviewDraftsProvider),
+            ),
             data: (drafts) => _DraftList(drafts: drafts),
           ),
         ],
@@ -85,23 +93,23 @@ class _PackGrid extends StatelessWidget {
             child: Card(
               key: QaTestKeys.organizationBuilderPackCard(pack.id),
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AksharaSpacing.s3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       pack.name,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: context.aksharaText.titleMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       pack.description,
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: context.aksharaText.bodySmall,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Focus: ${pack.dashboardFocus}',
-                      style: Theme.of(context).textTheme.labelSmall,
+                      style: context.aksharaText.labelSmall,
                     ),
                     const SizedBox(height: 12),
                     Wrap(

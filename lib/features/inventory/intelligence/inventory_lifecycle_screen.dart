@@ -9,6 +9,8 @@ import '../inventory_workflow_actions.dart';
 import '../widgets/inventory_module_scaffold.dart';
 import 'inventory_intelligence_models.dart';
 import 'inventory_intelligence_provider.dart';
+import '../../../core/errors/api_failure_mapper.dart';
+import '../../../theme/spacing.dart';
 
 /// Asset Lifecycle — purchase, distribution, replacement, damage, retirement tracking.
 class InventoryLifecycleScreen extends ConsumerWidget {
@@ -26,7 +28,7 @@ class InventoryLifecycleScreen extends ConsumerWidget {
         showFilterBar: false,
         body: lifecycle.when(
           loading: () => const AksharaLoadingState(),
-          error: (e, _) => AksharaErrorState(message: '$e'),
+          error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
           data: (snapshot) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
@@ -95,7 +97,7 @@ class InventoryLifecycleScreen extends ConsumerWidget {
               ),
               if (snapshot.recentEvents.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
+                  padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s6),
                   child: AksharaEmptyState(
                     message: 'No lifecycle events recorded yet',
                   ),

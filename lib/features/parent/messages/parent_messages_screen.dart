@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
 import '../../teacher/messages/message_models.dart';
 import '../messages/parent_messages_provider.dart';
 import '../communication/parent_communication_inbox_provider.dart';
@@ -74,13 +75,11 @@ class ParentMessagesScreen extends ConsumerWidget {
                                   else
                                     Text(
                                       item.deliveryStatusLabel,
-                                      style:
-                                          Theme.of(context).textTheme.labelSmall,
+                                      style: context.aksharaText.labelSmall,
                                     ),
                                   Text(
                                     item.sentAtLabel,
-                                    style:
-                                        Theme.of(context).textTheme.labelSmall,
+                                    style: context.aksharaText.labelSmall,
                                   ),
                                 ],
                               ),

@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/errors/api_failure_mapper.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
+import '../../../shared/widgets/akshara_error_state.dart';
+import '../../../shared/widgets/akshara_loading_state.dart';
 import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
 import '../sis_models.dart';
 import '../widgets/sis_module_scaffold.dart';
 import 'academic_operations_mutations_provider.dart';
@@ -28,7 +32,7 @@ class SisReshuffleScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Student reshuffle', style: Theme.of(context).textTheme.titleLarge),
+              Text('Student reshuffle', style: context.aksharaText.titleLarge),
               const SizedBox(height: AksharaSpacing.s3),
               DropdownButtonFormField<String>(
                 initialValue: strategy,
@@ -68,10 +72,14 @@ class SisReshuffleScreen extends ConsumerWidget {
                   ),
                 ),
                 loading: () =>
-                    const SizedBox(height: 320, child: Center(child: CircularProgressIndicator())),
+                    const SizedBox(height: 320, child: AksharaLoadingState()),
                 error: (error, _) => SizedBox(
                   height: 320,
-                  child: Center(child: Text('Unable to load reshuffle: $error')),
+                  child: AksharaErrorState.fromFailure(
+                    apiFailureMapper.fromException(error),
+                    onRetry: () =>
+                        ref.invalidate(reshufflePreviewFutureProvider),
+                  ),
                 ),
               ),
               const SizedBox(height: AksharaSpacing.s3),

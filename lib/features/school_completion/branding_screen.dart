@@ -5,6 +5,8 @@ import '../../core/repositories/repository_providers.dart';
 import '../../shared/widgets/widgets.dart';
 import 'school_completion_models.dart';
 import 'school_completion_providers.dart';
+import '../../core/errors/api_failure_mapper.dart';
+import '../../theme/spacing.dart';
 
 class BrandingScreen extends ConsumerStatefulWidget {
   const BrandingScreen({super.key});
@@ -68,7 +70,7 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
         data: (data) {
           if (_displayName.text.isEmpty) _load(data);
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
               TextField(controller: _displayName, decoration: const InputDecoration(labelText: 'Display name')),
               TextField(controller: _tagline, decoration: const InputDecoration(labelText: 'Tagline')),
@@ -86,7 +88,7 @@ class _BrandingScreenState extends ConsumerState<BrandingScreen> {
           );
         },
         loading: () => const AksharaLoadingState(semanticLabel: 'Loading branding'),
-        error: (e, _) => AksharaErrorState(message: '$e', onRetry: () => ref.invalidate(schoolBrandingProvider)),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e), onRetry: () => ref.invalidate(schoolBrandingProvider)),
       ),
     );
   }

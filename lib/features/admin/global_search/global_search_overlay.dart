@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_motion.dart';
 import '../../../theme/spacing.dart';
+import '../../../theme/theme_extensions.dart';
 import 'global_search_registry.dart';
 import 'recent_routes_provider.dart';
 
@@ -127,7 +128,7 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleSmall,
+        style: context.aksharaText.titleSmall,
       ),
     );
   }

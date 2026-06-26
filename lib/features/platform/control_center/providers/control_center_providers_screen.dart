@@ -9,6 +9,7 @@ import '../../../../theme/spacing.dart';
 import '../control_center_models.dart';
 import '../control_center_providers.dart';
 import '../widgets/control_center_module_scaffold.dart';
+import '../../../../core/errors/api_failure_mapper.dart';
 
 /// v12.9 / v13.0 — Super-admin provider + vault management (no API key display).
 class ControlCenterProvidersScreen extends ConsumerStatefulWidget {
@@ -45,7 +46,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
           padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
           child: AksharaLoadingState(semanticLabel: 'Loading providers'),
         ),
-        error: (e, _) => AksharaErrorState(message: '$e'),
+        error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (snapshot) => ListView(
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
@@ -71,7 +72,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
   Widget _usagePanel(PlatformUsageAnalytics usage) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -130,7 +131,7 @@ class _ControlCenterProvidersScreenState extends ConsumerState<ControlCenterProv
         ),
         if (_category == 'ai')
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: AksharaSpacing.s2),
             child: TextField(
               controller: _model,
               decoration: InputDecoration(

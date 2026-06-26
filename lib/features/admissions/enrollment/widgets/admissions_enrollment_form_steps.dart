@@ -7,6 +7,7 @@ import '../../../../core/repositories/academic/academic_year_label.dart';
 import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/forms/forms.dart';
 import '../../../../theme/spacing.dart';
+import '../../../../theme/theme_extensions.dart';
 import '../../admissions_models.dart';
 
 /// Step form sections for the AD-05 enrollment wizard.
@@ -80,6 +81,7 @@ class _AdmissionsEnrollmentStudentStepState
           readOnly: true,
           suffixIcon: IconButton(
             icon: const Icon(Icons.calendar_today_outlined),
+            tooltip: 'Select date',
             onPressed: () async {
               final picked = await showDatePicker(
                 context: context,
@@ -408,7 +410,7 @@ class AdmissionsEnrollmentReviewStep extends StatelessWidget {
           const SizedBox(height: AksharaSpacing.s4),
           Text(
             'Admission number: ${form.generatedAdmissionNumber}',
-            style: Theme.of(context).textTheme.titleMedium,
+            style: context.aksharaText.titleMedium,
           ),
         ],
       ],
@@ -427,7 +429,7 @@ class _ReviewSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleSmall),
+        Text(title, style: context.aksharaText.titleSmall),
         const SizedBox(height: AksharaSpacing.s2),
         for (final line in lines)
           if (line.isNotEmpty)

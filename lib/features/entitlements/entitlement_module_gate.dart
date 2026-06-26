@@ -71,7 +71,7 @@ class PlanLockedModuleView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final text = Theme.of(context).textTheme;
+    final text = context.aksharaText;
     final planName = ref.watch(subscriptionProvider).planName;
 
     return Scaffold(
@@ -101,7 +101,7 @@ class PlanLockedModuleView extends ConsumerWidget {
                     '$moduleLabel is not included in your $planName plan. '
                     'Upgrade to unlock it — no payment is taken in the app.',
                     style: text.bodyMedium
-                        ?.copyWith(color: colors.onSurfaceVariant),
+                        .copyWith(color: colors.onSurfaceVariant),
                   ),
                   const SizedBox(height: AksharaSpacing.s4),
                   Wrap(
