@@ -292,11 +292,17 @@ export async function handleTeacherHomeworkReview(
 
   try {
     const result = await withTenantContext(config, auth.claims, async (db) => {
-      const row = await reviewHomework(db, submissionId, {
-        grade: snakeStr(body, "grade"),
-        comment: snakeStr(body, "comment"),
-        reviewerId: auth.claims.sub,
-      });
+      const row = await reviewHomework(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        submissionId,
+        {
+          grade: snakeStr(body, "grade"),
+          comment: snakeStr(body, "comment"),
+          reviewerId: auth.claims.sub,
+        },
+      );
       await auditMobileWrite(db, auth.claims, req, "homeworkReviewed", "homework_submission", submissionId, {
         grade: snakeStr(body, "grade"),
       });

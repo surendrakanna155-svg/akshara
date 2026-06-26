@@ -611,16 +611,34 @@ export function createStudentScopedReadHandlers(
     const studentId = studentIdFromClaims(auth.claims);
 
     try {
-      const result = await runTenant(config, auth.claims, async (db) =>
-        await store.listEntities(
+      const result = await runTenant(config, auth.claims, async (db) => {
+        const listed = await store.listEntities(
           db,
           orgId,
           schoolId,
           studentId,
           entityType,
           pagination,
-        )
-      );
+        );
+        // MJ-H7 (belt-and-suspenders): overlay the student's homework items with
+        // their own homework_submissions so a graded item reflects 'reviewed'
+        // (+ grade/comment) even if the review write-back to student_entities
+        // was missed. Keeps the student list authoritative against real data.
+        if (entityType === "homework_item") {
+          const { overlayStudentHomeworkFromSubmissions } = await import(
+            "../pilot/pilot_operations_repository.ts"
+          );
+          const items = await overlayStudentHomeworkFromSubmissions(
+            db,
+            orgId,
+            schoolId,
+            studentId,
+            listed.items,
+          );
+          return { ...listed, items };
+        }
+        return listed;
+      });
       return jsonResponse(
         envelope(
           listEnvelope(result.items, {
@@ -771,5 +789,57 @@ export function createTeacherMobileReadHandlers(
     }
   }
 
-  return { handleSnapshot, handleTimetableSnapshot, handleList };
+  // Like handleList, but runs an overlay over the listed items (within the same
+  // tenant context / RLS) before shaping the envelope. Used by teacher homework
+  // (MJ-C2) to attach a real submissions[] array per assignment. RBAC is
+  // identical to handleList (requireRead).
+  async function handleListWithOverlay(
+    req: Request,
+    config: AppConfig,
+    entityType: string,
+    errorMessage: string,
+    overlay: (
+      db: Parameters<EntityReadStore["listEntities"]>[0],
+      orgId: string,
+      schoolId: string,
+      items: Record<string, unknown>[],
+    ) => Promise<Record<string, unknown>[]>,
+  ): Promise<Response> {
+    const auth = await authenticateRequest(req, config);
+    if (!auth.ok) return auth.response;
+
+    const denied = requireRead(auth.claims);
+    if (denied) return denied;
+
+    const url = new URL(req.url);
+    const pagination = parsePagination(url);
+    const orgId = organizationIdFromClaims(auth.claims);
+    const schoolId = schoolIdFromClaims(auth.claims);
+
+    try {
+      const result = await runTenant(config, auth.claims, async (db) => {
+        const listed = await store.listEntities(db, orgId, schoolId, entityType, pagination);
+        const items = await overlay(db, orgId, schoolId, listed.items);
+        return { ...listed, items };
+      });
+      return jsonResponse(
+        envelope(
+          listEnvelope(result.items, {
+            page: result.page,
+            pageSize: result.pageSize,
+            total: result.total,
+            hasMore: result.hasMore,
+          }),
+        ),
+      );
+    } catch (error) {
+      if (error instanceof TenantDbNotConfiguredError) {
+        return tenantDbNotConfiguredResponse(error);
+      }
+      console.error(`teacher list+overlay(${entityType}) error:`, error);
+      return errorEnvelope("INTERNAL_ERROR", errorMessage, 500);
+    }
+  }
+
+  return { handleSnapshot, handleTimetableSnapshot, handleList, handleListWithOverlay };
 }

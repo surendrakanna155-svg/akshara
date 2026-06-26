@@ -1,8 +1,19 @@
 import type { AppConfig } from "../config.ts";
+import { envelope, errorEnvelope, jsonResponse } from "../http.ts";
+import {
+  authenticateRequest,
+  organizationIdFromClaims,
+  schoolIdFromClaims,
+} from "../permission_middleware.ts";
+import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
+import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { createModuleReadHandlers } from "../entity_read/module_read_handlers.ts";
-import { hostelStore } from "./hostel_read_repository.ts";
+import { hostelStore, recomputeVisitors } from "./hostel_read_repository.ts";
 
-const { handleSnapshot, handleList } = createModuleReadHandlers("viewHostel", hostelStore);
+const { handleSnapshot, handleList, requireRead } = createModuleReadHandlers(
+  "viewHostel",
+  hostelStore,
+);
 
 export async function handleDashboard(req: Request, config: AppConfig): Promise<Response> {
   return await handleSnapshot(req, config, "snapshot_dashboard", "Failed to load hostel dashboard");
@@ -28,8 +39,37 @@ export async function handleMess(req: Request, config: AppConfig): Promise<Respo
   return await handleSnapshot(req, config, "snapshot_mess", "Failed to load hostel mess data");
 }
 
+/**
+ * GET /hostel/visitors — recomputes the Visitors screen payload from the live
+ * `visitor` list entities (MJ-M1) so a just-logged visitor actually appears,
+ * rather than returning a frozen seeded snapshot. Same RBAC as the other hostel
+ * reads (`viewHostel` permission OR school operational scope) and same tenant
+ * context/RLS.
+ */
 export async function handleVisitors(req: Request, config: AppConfig): Promise<Response> {
-  return await handleSnapshot(req, config, "snapshot_visitors", "Failed to load hostel visitors");
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const payload = await withTenantContext(
+      config,
+      auth.claims,
+      async (db) => await recomputeVisitors(db, orgId, schoolId),
+    );
+    return jsonResponse(envelope(payload));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("handleVisitors error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load hostel visitors", 500);
+  }
 }
 
 export async function handleReports(req: Request, config: AppConfig): Promise<Response> {

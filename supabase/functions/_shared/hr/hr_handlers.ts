@@ -11,6 +11,7 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { listEnvelope } from "../finance/finance_mapper.ts";
 import {
+  type EmployeeDetailContext,
   employeeDetailToApi,
   getEmployee,
   getSnapshot,
@@ -18,6 +19,25 @@ import {
   HrSnapshotNotFoundError,
   listEntities,
 } from "./hr_read_repository.ts";
+
+/**
+ * Loads a snapshot's payload, returning an empty object when the snapshot does
+ * not exist for this school (so the employee detail degrades gracefully instead
+ * of failing the whole request).
+ */
+async function getSnapshotOrEmpty(
+  db: Parameters<typeof getSnapshot>[0],
+  orgId: string,
+  schoolId: string,
+  entityType: string,
+): Promise<Record<string, unknown>> {
+  try {
+    return await getSnapshot(db, orgId, schoolId, entityType);
+  } catch (error) {
+    if (error instanceof HrSnapshotNotFoundError) return {};
+    throw error;
+  }
+}
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
@@ -127,10 +147,27 @@ export async function handleEmployeeDetail(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const employee = await runTenant(config, auth.claims, async (db) =>
-      await getEmployee(db, orgId, schoolId, employeeId)
-    );
-    return jsonResponse(envelope(employeeDetailToApi(employee)));
+    const { employee, context } = await runTenant(config, auth.claims, async (db) => {
+      const employee = await getEmployee(db, orgId, schoolId, employeeId);
+      const [attendance, leave, settings] = await Promise.all([
+        getSnapshotOrEmpty(db, orgId, schoolId, "snapshot_attendance"),
+        getSnapshotOrEmpty(db, orgId, schoolId, "snapshot_leave"),
+        getSnapshotOrEmpty(db, orgId, schoolId, "snapshot_settings"),
+      ]);
+      const context: EmployeeDetailContext = {
+        attendanceRecords: Array.isArray(attendance.records)
+          ? attendance.records as Array<Record<string, unknown>>
+          : [],
+        leaveRequests: Array.isArray(leave.requests)
+          ? leave.requests as Array<Record<string, unknown>>
+          : [],
+        leavePolicy: Array.isArray(settings.leavePolicy)
+          ? settings.leavePolicy as Array<{ leaveType: string; entitlement: number }>
+          : undefined,
+      };
+      return { employee, context };
+    });
+    return jsonResponse(envelope(employeeDetailToApi(employee, context)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);

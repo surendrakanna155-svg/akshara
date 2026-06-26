@@ -2,7 +2,8 @@ import type { AppConfig } from "../config.ts";
 import { createTeacherMobileReadHandlers } from "../entity_read/mobile_read_handlers.ts";
 import { teacherStore } from "./teacher_read_repository.ts";
 
-const { handleSnapshot, handleTimetableSnapshot, handleList } = createTeacherMobileReadHandlers(teacherStore);
+const { handleSnapshot, handleTimetableSnapshot, handleList, handleListWithOverlay } =
+  createTeacherMobileReadHandlers(teacherStore);
 
 export async function handleDashboard(req: Request, config: AppConfig): Promise<Response> {
   return await handleSnapshot(req, config, "snapshot_dashboard", "Failed to load teacher dashboard");
@@ -22,7 +23,20 @@ export async function handleAttendanceStudents(req: Request, config: AppConfig):
 }
 
 export async function handleHomework(req: Request, config: AppConfig): Promise<Response> {
-  return await handleList(req, config, "homework_assignment", "Failed to load homework assignments");
+  // MJ-C2: overlay each assignment with its real submissions[] (joined from
+  // homework_submissions) + pendingReviews so the teacher can see and grade work.
+  return await handleListWithOverlay(
+    req,
+    config,
+    "homework_assignment",
+    "Failed to load homework assignments",
+    async (db, orgId, schoolId, items) => {
+      const { overlayTeacherHomeworkSubmissions } = await import(
+        "../pilot/pilot_operations_repository.ts"
+      );
+      return await overlayTeacherHomeworkSubmissions(db, orgId, schoolId, items);
+    },
+  );
 }
 
 export async function handleExamsUpcoming(req: Request, config: AppConfig): Promise<Response> {

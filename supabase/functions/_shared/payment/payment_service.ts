@@ -207,7 +207,21 @@ export async function confirmPayment(
     throw new PaymentIntentStateError(`Payment intent is not confirmable: ${intent.status}`);
   }
 
-  if (!razorpay.stubMode && input.razorpayPaymentId && input.razorpaySignature && intent.gateway_order_id) {
+  // FAIL-CLOSED: when running against a live Razorpay gateway (not stub mode),
+  // gateway verification is MANDATORY before any capture. Previously this whole
+  // block was skipped if the client omitted razorpayPaymentId/signature (the
+  // Flutter app sends only transactionRef), which meant flipping
+  // RAZORPAY_STUB_MODE=false without integrating the SDK would capture + issue a
+  // finance receipt with ZERO proof of payment. Now a live confirm with missing
+  // or invalid proof throws BEFORE any collection/receipt/capture is created.
+  // Stub mode (the current default with no RAZORPAY_* env) is unchanged: it
+  // never touches real money, so capture proceeds without a gateway signature.
+  if (!razorpay.stubMode) {
+    if (!input.razorpayPaymentId || !input.razorpaySignature || !intent.gateway_order_id) {
+      throw new PaymentIntentStateError(
+        "Live payment requires a verified Razorpay payment id and signature",
+      );
+    }
     const valid = await verifyRazorpayPaymentSignature(
       razorpay,
       intent.gateway_order_id,

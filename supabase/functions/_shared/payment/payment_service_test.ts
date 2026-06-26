@@ -1,8 +1,14 @@
-import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertRejects,
+} from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
-import type { PaymentIntentRow } from "./payment_repository.ts";
-import { processRazorpayWebhook } from "./payment_service.ts";
+import {
+  PaymentIntentStateError,
+  type PaymentIntentRow,
+} from "./payment_repository.ts";
+import { confirmPayment, processRazorpayWebhook } from "./payment_service.ts";
 
 const INTENT: PaymentIntentRow = {
   id: "d0000000-0000-4000-8000-000000000099",
@@ -153,3 +159,135 @@ Deno.test("payment.captured webhook creates finance collection when invoice link
   assertEquals(spy.intentCaptured, true);
   assertEquals(spy.auditWritten, true);
 });
+
+// --- confirmPayment fail-closed gateway verification (MJ-H11) ---
+
+const CONFIRM_INTENT: PaymentIntentRow = {
+  ...INTENT,
+  status: "initiated",
+  // invoice_id left set so that, if capture were (wrongly) reached, a collection
+  // would be created — the spy below would flip collectionCreated.
+};
+
+function parentClaims(): AccessTokenClaims {
+  return {
+    sub: CONFIRM_INTENT.payer_user_id,
+    tenant_id: CONFIRM_INTENT.organization_id,
+    organization_id: CONFIRM_INTENT.organization_id,
+    school_id: CONFIRM_INTENT.school_id,
+    role: "parent",
+    role_slugs: ["parent"],
+    primary_role: "parent",
+    permissions: [],
+    permissions_version: 1,
+    scope: "parent",
+    school_group_id: null,
+    student_id: null,
+    child_ids: ["a4000000-0000-4000-8000-000000000001"],
+    session_id: "confirm-test",
+  };
+}
+
+class ConfirmSpyDb {
+  collectionCreated = false;
+  intentCaptured = false;
+  // When invoiceLinked is false the intent has no invoice, so capture proceeds
+  // without creating a collection — used to assert stub capture works on its own.
+  constructor(private readonly invoiceLinked = true) {}
+
+  async queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("FROM payment_intents") && sql.includes("AND id = $2")) {
+      const intent = this.invoiceLinked
+        ? CONFIRM_INTENT
+        : { ...CONFIRM_INTENT, invoice_id: null };
+      return [intent] as T[];
+    }
+    if (sql.includes("INSERT INTO finance_collections")) {
+      this.collectionCreated = true;
+      return [] as T[];
+    }
+    if (sql.includes("UPDATE payment_intents") && sql.includes("captured")) {
+      this.intentCaptured = true;
+      return [{ ...CONFIRM_INTENT, status: "captured" }] as T[];
+    }
+    return [] as T[];
+  }
+}
+
+function withRazorpayEnv(
+  env: Record<string, string | undefined>,
+  fn: () => Promise<void>,
+): () => Promise<void> {
+  const keys = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_STUB_MODE"];
+  return async () => {
+    const prev: Record<string, string | undefined> = {};
+    for (const k of keys) prev[k] = Deno.env.get(k);
+    try {
+      for (const k of keys) {
+        const v = env[k];
+        if (v === undefined) Deno.env.delete(k);
+        else Deno.env.set(k, v);
+      }
+      await fn();
+    } finally {
+      for (const k of keys) {
+        const v = prev[k];
+        if (v === undefined) Deno.env.delete(k);
+        else Deno.env.set(k, v);
+      }
+    }
+  };
+}
+
+Deno.test(
+  "confirmPayment fails closed in live mode without Razorpay payment id/signature",
+  withRazorpayEnv(
+    {
+      RAZORPAY_KEY_ID: "rzp_live_test",
+      RAZORPAY_KEY_SECRET: "secret_test",
+      RAZORPAY_STUB_MODE: "false",
+    },
+    async () => {
+      const spy = new ConfirmSpyDb();
+      const db = spy as unknown as TenantQueryClient;
+
+      await assertRejects(
+        () =>
+          confirmPayment(db, parentClaims(), {
+            paymentIntentId: CONFIRM_INTENT.id,
+            transactionRef: "TXN-NO-PROOF",
+            // no razorpayPaymentId / razorpaySignature — exactly what the
+            // current Flutter app sends.
+          }),
+        PaymentIntentStateError,
+        "Live payment requires a verified Razorpay payment id and signature",
+      );
+
+      assertEquals(spy.collectionCreated, false, "must NOT create a collection");
+      assertEquals(spy.intentCaptured, false, "must NOT capture the intent");
+    },
+  ),
+);
+
+Deno.test(
+  "confirmPayment in stub mode still captures without a gateway signature",
+  withRazorpayEnv(
+    {
+      RAZORPAY_KEY_ID: undefined,
+      RAZORPAY_KEY_SECRET: undefined,
+      RAZORPAY_STUB_MODE: "true",
+    },
+    async () => {
+      const spy = new ConfirmSpyDb(false);
+      const db = spy as unknown as TenantQueryClient;
+
+      const result = await confirmPayment(db, parentClaims(), {
+        paymentIntentId: CONFIRM_INTENT.id,
+        transactionRef: "TXN-STUB",
+      });
+
+      assertEquals(spy.intentCaptured, true, "stub mode should still capture");
+      assertEquals(result.paidAmount, CONFIRM_INTENT.amount);
+    },
+  ),
+);

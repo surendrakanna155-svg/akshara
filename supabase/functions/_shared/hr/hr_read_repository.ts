@@ -132,8 +132,65 @@ export async function getEmployee(
   return row.payload;
 }
 
-export function employeeDetailToApi(employee: Record<string, unknown>): Record<string, unknown> {
-  const role = String(employee.role ?? "staff");
+/**
+ * Default leave entitlements (days per year) used when a school has not
+ * configured a `leavePolicy` in its `snapshot_settings`. These are ORG-POLICY
+ * entitlements that apply equally to every employee — they are NOT a per-person
+ * usage claim. Per-employee "used"/"available" is derived from that employee's
+ * own approved leave requests (see `buildLeaveBalances`).
+ */
+export const DEFAULT_LEAVE_POLICY: Array<{ leaveType: string; entitlement: number }> = [
+  { leaveType: "casual", entitlement: 12 },
+  { leaveType: "sick", entitlement: 12 },
+  { leaveType: "earned", entitlement: 15 },
+];
+
+/** Honest placeholder for an unrecorded text field (never a fabricated value). */
+export const NOT_ON_RECORD = "Not on record";
+
+/**
+ * Optional real per-employee context, sourced from existing HR snapshots, used
+ * to derive a truthful employee detail. All fields are optional: when a source
+ * is absent the corresponding section degrades to an honest empty/neutral value.
+ */
+export interface EmployeeDetailContext {
+  /** Rows from `snapshot_attendance.records` (all employees, this school). */
+  attendanceRecords?: Array<Record<string, unknown>>;
+  /** Rows from `snapshot_leave.requests` (all employees, this school). */
+  leaveRequests?: Array<Record<string, unknown>>;
+  /** Org leave policy from `snapshot_settings.leavePolicy`, if configured. */
+  leavePolicy?: Array<{ leaveType: string; entitlement: number }>;
+}
+
+/**
+ * Per-employee leave balances. The entitlement is a genuine org policy (same
+ * for everyone); the `used`/`available` split is computed from THIS employee's
+ * own approved leave requests, so two employees with different leave histories
+ * see different balances.
+ */
+function buildLeaveBalances(
+  employeeId: string,
+  ctx: EmployeeDetailContext,
+): Array<Record<string, unknown>> {
+  const policy = ctx.leavePolicy && ctx.leavePolicy.length > 0
+    ? ctx.leavePolicy
+    : DEFAULT_LEAVE_POLICY;
+  const approved = (ctx.leaveRequests ?? []).filter(
+    (r) => String(r.employeeId ?? "") === employeeId && String(r.status ?? "") === "approved",
+  );
+  return policy.map((p) => {
+    const used = approved
+      .filter((r) => String(r.leaveType ?? "") === p.leaveType)
+      .reduce((sum, r) => sum + (Number(r.days ?? 0) || 0), 0);
+    const available = Math.max(0, p.entitlement - used);
+    return { leaveType: p.leaveType, available, used };
+  });
+}
+
+export function employeeDetailToApi(
+  employee: Record<string, unknown>,
+  ctx: EmployeeDetailContext = {},
+): Record<string, unknown> {
   const department = String(employee.department ?? "");
   const name = String(employee.name ?? "");
   const employeeId = String(employee.id ?? "");
@@ -153,34 +210,41 @@ export function employeeDetailToApi(employee: Record<string, unknown>): Record<s
     integrationNotes.push("Also listed in Transport driver roster (TR-04).");
   }
 
+  // Address / emergency contact / reporting manager come from the employee's OWN
+  // payload (backfilled per-employee by migration 20260805000000). Absent values
+  // degrade to an honest neutral rather than a fabricated shared string.
+  const reportingManager = optionalText(employee.reportingManager);
+  const address = optionalText(employee.address);
+  const emergencyContact = optionalText(employee.emergencyContact);
+
+  // Documents come only from the employee's own record; never fabricated.
+  const documents = Array.isArray(employee.documents)
+    ? employee.documents as Array<Record<string, unknown>>
+    : [];
+
+  // Recent attendance is filtered to THIS employee from the real attendance
+  // snapshot — no hardcoded single-employee literal.
+  const recentAttendance = (ctx.attendanceRecords ?? []).filter(
+    (r) => String(r.employeeId ?? "") === employeeId,
+  );
+
   return {
     employee,
-    reportingManager: role === "principal" ? "Board of Trustees" : "Rajesh Iyer (Principal)",
-    address: "Hyderabad, Telangana",
-    emergencyContact: "+91 90000 12345",
-    leaveBalances: [
-      { leaveType: "casual", available: 8, used: 4 },
-      { leaveType: "sick", available: 10, used: 2 },
-      { leaveType: "earned", available: 15, used: 5 },
-    ],
-    documents: [
-      { id: "doc_1", title: "Offer letter", uploadedOn: "2019-05-20", status: "Verified" },
-      { id: "doc_2", title: "ID proof", uploadedOn: "2019-05-22", status: "Verified" },
-    ],
-    recentAttendance: employeeId === HR_EMPLOYEE_SCHOOL_A
-      ? [{
-        id: "att_1",
-        employeeId,
-        employeeName: name,
-        department,
-        date: "2026-06-06",
-        checkIn: "8:02 AM",
-        checkOut: "3:45 PM",
-        status: "present",
-        geoVerified: true,
-        faceVerified: true,
-      }]
-      : [],
+    reportingManager,
+    address,
+    emergencyContact,
+    leaveBalances: buildLeaveBalances(employeeId, ctx),
+    documents,
+    recentAttendance,
     integrationNotes,
   };
+}
+
+/** Returns a trimmed payload string, or the honest "Not on record" placeholder. */
+function optionalText(value: unknown): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) return trimmed;
+  }
+  return NOT_ON_RECORD;
 }

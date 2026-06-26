@@ -227,6 +227,8 @@ export async function submitHomework(
 
 export async function reviewHomework(
   db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
   submissionId: string,
   input: { grade: string; comment: string; reviewerId: string },
 ): Promise<Record<string, unknown>> {
@@ -243,11 +245,43 @@ export async function reviewHomework(
     [submissionId, input.grade, input.comment, input.reviewerId],
   );
   const row = rows[0];
+
+  // MJ-H7: push the grade/status back onto the student's own `homework_item`
+  // entity so a reviewed assignment reflects as 'reviewed' (with grade +
+  // teacher comment) in the student app. Without this the student keeps seeing
+  // 'pending'. jsonb merge (||) preserves the item's other fields.
+  if (row?.homework_id && row?.student_id) {
+    await db.queryObject(
+      `UPDATE student_entities
+       SET payload = payload || jsonb_build_object(
+             'status', 'reviewed',
+             'reviewGrade', $4::text,
+             'reviewComment', $5::text
+           )
+       WHERE organization_id = $1 AND school_id = $2
+         AND entity_type = 'homework_item'
+         AND id = $3 AND student_id = $6::uuid`,
+      [orgId, schoolId, row.homework_id, input.grade, input.comment, row.student_id],
+    );
+  }
+
+  // Resolve the real student display name for the review result so the teacher
+  // sees who they just graded instead of a placeholder.
+  let studentName = "Student";
+  if (row?.student_id) {
+    const nameRows = await db.queryObject<{ display_name: string }>(
+      `SELECT display_name FROM students
+       WHERE organization_id = $1 AND school_id = $2 AND id = $3::uuid LIMIT 1`,
+      [orgId, schoolId, row.student_id],
+    );
+    if (nameRows[0]?.display_name) studentName = nameRows[0].display_name;
+  }
+
   return {
     submission: {
       id: row?.id ?? submissionId,
-      studentName: "Student",
-      classLabel: "8-A",
+      studentName,
+      classLabel: "",
       title: row?.homework_id ?? "Homework",
       submittedLabel: "Reviewed",
       status: "reviewed",
@@ -903,16 +937,178 @@ export async function overlayExamsSnapshotFromResults(
   return { ...snapshot, childName, childClass, examResults };
 }
 
-// --- Teacher homework CREATE (TCH-1) ---
+// --- Student homework READ overlay (MJ-H7 belt-and-suspenders) ---
+//
+// Joins the student's own homework_submissions onto their `homework_item`
+// payloads so status/grade/comment reflect the latest real state even if the
+// review write-back to student_entities was missed. A 'submitted' submission
+// marks the item submitted; a 'reviewed' one marks it reviewed and carries the
+// grade + teacher comment. Items with no submission are returned untouched.
+export async function overlayStudentHomeworkFromSubmissions(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+  items: Record<string, unknown>[],
+): Promise<Record<string, unknown>[]> {
+  if (items.length === 0) return items;
+
+  const homeworkIds = items
+    .map((item) => String(item.id ?? ""))
+    .filter((id) => id.length > 0);
+  if (homeworkIds.length === 0) return items;
+
+  const rows = await db.queryObject<{
+    homework_id: string;
+    status: string;
+    grade: string | null;
+    comment: string | null;
+    submitted_label: string | null;
+  }>(
+    `SELECT homework_id, status, grade, comment,
+            to_char(submitted_at, 'DD Mon YYYY') AS submitted_label
+     FROM homework_submissions
+     WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
+       AND homework_id = ANY($4::text[])`,
+    [orgId, schoolId, studentId, homeworkIds],
+  );
+
+  const byHomework = new Map<string, typeof rows[number]>();
+  for (const row of rows) byHomework.set(row.homework_id, row);
+
+  return items.map((item) => {
+    const sub = byHomework.get(String(item.id ?? ""));
+    if (!sub) return item;
+    const overlay: Record<string, unknown> = {
+      ...item,
+      status: sub.status,
+      submittedLabel: sub.submitted_label ?? item.submittedLabel ?? "Submitted",
+    };
+    if (sub.status === "reviewed") {
+      overlay.reviewGrade = sub.grade ?? null;
+      overlay.reviewComment = sub.comment ?? null;
+    }
+    return overlay;
+  });
+}
+
+// --- Teacher homework READ overlay (MJ-C2) ---
+//
+// The generic teacher list returns `homework_assignment` payloads with no
+// submissions, so the teacher can never see or grade student work. This overlay
+// joins homework_submissions (keyed by homework_id) onto each assignment and
+// attaches a real `submissions` array — each entry carrying the submission's
+// real UUID (so the review POST targets a real row), the student's display
+// name, status, grade, comment and a submittedLabel. It also recomputes
+// pendingReviews = count of submissions still awaiting review (status =
+// 'submitted'). RLS keeps the read tenant/school scoped.
+export async function overlayTeacherHomeworkSubmissions(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  items: Record<string, unknown>[],
+): Promise<Record<string, unknown>[]> {
+  if (items.length === 0) return items;
+
+  const homeworkIds = items
+    .map((item) => String(item.id ?? ""))
+    .filter((id) => id.length > 0);
+  if (homeworkIds.length === 0) return items;
+
+  const rows = await db.queryObject<{
+    id: string;
+    homework_id: string;
+    student_name: string | null;
+    class_label: string | null;
+    status: string;
+    grade: string | null;
+    comment: string | null;
+    submitted_label: string | null;
+  }>(
+    `SELECT hs.id::text AS id,
+            hs.homework_id,
+            s.display_name AS student_name,
+            CASE
+              WHEN e.class_name IS NULL THEN NULL
+              WHEN e.section_name IS NULL OR e.section_name = '' THEN e.class_name
+              ELSE e.class_name || '-' || e.section_name
+            END AS class_label,
+            hs.status,
+            hs.grade,
+            hs.comment,
+            to_char(hs.submitted_at, 'DD Mon YYYY') AS submitted_label
+     FROM homework_submissions hs
+     LEFT JOIN students s ON s.id = hs.student_id
+       AND s.organization_id = hs.organization_id
+       AND s.school_id = hs.school_id
+     LEFT JOIN sis_student_enrollments e ON e.student_id = hs.student_id
+       AND e.organization_id = hs.organization_id
+       AND e.school_id = hs.school_id
+       AND e.is_current = true
+     WHERE hs.organization_id = $1 AND hs.school_id = $2
+       AND hs.homework_id = ANY($3::text[])
+     ORDER BY hs.submitted_at DESC`,
+    [orgId, schoolId, homeworkIds],
+  );
+
+  const byHomework = new Map<string, Record<string, unknown>[]>();
+  for (const row of rows) {
+    const bucket = byHomework.get(row.homework_id) ?? [];
+    bucket.push({
+      id: row.id,
+      studentName: row.student_name ?? "Student",
+      classLabel: row.class_label ?? "",
+      title: row.homework_id,
+      submittedLabel: row.submitted_label ?? "Submitted",
+      status: row.status,
+      grade: row.grade ?? null,
+      comment: row.comment ?? null,
+    });
+    byHomework.set(row.homework_id, bucket);
+  }
+
+  return items.map((item) => {
+    const homeworkId = String(item.id ?? "");
+    const submissions = byHomework.get(homeworkId) ?? [];
+    const pendingReviews = submissions.filter(
+      (s) => s.status === "submitted",
+    ).length;
+    return { ...item, submissions, pendingReviews };
+  });
+}
+
+// Parse a teacher-entered class label ("8-A", "8 A", or just "8") into the
+// enrollment columns used by sis_student_enrollments. The section is optional;
+// when omitted the whole class (all sections) is targeted.
+export function parseClassLabel(
+  classLabel: string,
+): { className: string; sectionName: string | null } {
+  const trimmed = (classLabel ?? "").trim();
+  if (!trimmed) return { className: "", sectionName: null };
+  // Split on the first '-' or whitespace separator.
+  const match = trimmed.match(/^(.+?)[\s-]+(.+)$/);
+  if (match) {
+    return {
+      className: match[1].trim(),
+      sectionName: match[2].trim() || null,
+    };
+  }
+  return { className: trimmed, sectionName: null };
+}
+
+// --- Teacher homework CREATE (TCH-1 / MJ-H8) ---
 //
 // Persists a homework assignment as a durable `homework_assignment` entity for
 // the teacher (survives restart, visible across the teacher's devices) and
 // delivers a `homework_item` entity to each target student so the existing
-// student/parent read path surfaces it. Targets are resolved from the real
-// `students` table (school scope can read it): a named student matches
-// display_name; otherwise the whole active roster of the school is targeted.
-// (Class-precise targeting in multi-class schools is a tracked refinement —
-// the `students` table carries no class column today.)
+// student/parent read path surfaces it.
+//
+// Targeting (MJ-H8): a named student matches display_name; otherwise the
+// homework is delivered only to students whose CURRENT enrollment
+// (sis_student_enrollments.is_current = true) matches the parsed class label
+// (class_name, and section_name when a section was given). Back-compat safety:
+// if the school has ZERO enrollment rows at all, fall back to the whole active
+// roster so un-enrolled pilots are never silently starved of homework.
 export async function insertHomeworkAssignment(
   db: TenantQueryClient,
   input: {
@@ -949,18 +1145,48 @@ export async function insertHomeworkAssignment(
     ],
   );
 
-  const targets = input.studentName && input.studentName.trim().length > 0
-    ? await db.queryObject<{ id: string }>(
+  let targets: Array<{ id: string }>;
+  if (input.studentName && input.studentName.trim().length > 0) {
+    // Named-student branch: deliver to that one student only.
+    targets = await db.queryObject<{ id: string }>(
       `SELECT id::text AS id FROM students
        WHERE organization_id = $1 AND school_id = $2 AND status = 'active'
          AND lower(display_name) = lower($3)`,
       [input.organizationId, input.schoolId, input.studentName.trim()],
-    )
-    : await db.queryObject<{ id: string }>(
-      `SELECT id::text AS id FROM students
-       WHERE organization_id = $1 AND school_id = $2 AND status = 'active'`,
+    );
+  } else {
+    // Whole-class branch (MJ-H8): target by current enrollment when the school
+    // has enrollment data; otherwise fall back to the full active roster.
+    const enrollmentCountRows = await db.queryObject<{ total: string }>(
+      `SELECT count(*)::text AS total FROM sis_student_enrollments
+       WHERE organization_id = $1 AND school_id = $2`,
       [input.organizationId, input.schoolId],
     );
+    const hasEnrollments = parseInt(enrollmentCountRows[0]?.total ?? "0", 10) > 0;
+
+    if (hasEnrollments) {
+      const { className, sectionName } = parseClassLabel(input.classLabel);
+      targets = await db.queryObject<{ id: string }>(
+        `SELECT s.id::text AS id
+         FROM students s
+         INNER JOIN sis_student_enrollments e
+           ON e.student_id = s.id
+          AND e.organization_id = s.organization_id
+          AND e.school_id = s.school_id
+          AND e.is_current = true
+         WHERE s.organization_id = $1 AND s.school_id = $2 AND s.status = 'active'
+           AND e.class_name = $3
+           AND ($4::text IS NULL OR e.section_name = $4)`,
+        [input.organizationId, input.schoolId, className, sectionName],
+      );
+    } else {
+      targets = await db.queryObject<{ id: string }>(
+        `SELECT id::text AS id FROM students
+         WHERE organization_id = $1 AND school_id = $2 AND status = 'active'`,
+        [input.organizationId, input.schoolId],
+      );
+    }
+  }
 
   for (const target of targets) {
     await db.queryObject(

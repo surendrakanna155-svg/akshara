@@ -215,34 +215,66 @@ export async function applyAttendanceCorrection(
   }
 
   const targetMark = markToDb(correction.to_mark);
-  const classLabel = correction.section_name
-    ? `${correction.class_label}-${correction.section_name}`
-    : correction.class_label;
 
-  await db.queryObject(
+  // Target the student's attendance_records row in the LATEST submitted session.
+  // We match by student identity (org/school/student_id) rather than the
+  // class_label string, because attendance_sessions store class_label as the raw
+  // class_id (e.g. "class_8a"), not the parsed "${class}-${section}" label — so a
+  // class_label equality never matched and the UPDATE flipped 0 rows. The
+  // student_id already uniquely identifies the right record within a session.
+  // When the correction carries an explicit session_date we honour it; otherwise
+  // we pick the most recent submitted session for that student.
+  const updated = await db.queryObject<{ id: string }>(
     `UPDATE attendance_records ar
-     SET mark = $5
+     SET mark = $4
      FROM attendance_sessions s
      WHERE ar.session_id = s.id
        AND ar.organization_id = $1
        AND ar.school_id = $2
        AND ar.student_id = $3::uuid
-       AND s.class_label = $4
        AND s.status = 'submitted'
-       AND s.session_date = (
-         SELECT COALESCE(ac.session_date, CURRENT_DATE)
-         FROM attendance_corrections ac
-         WHERE ac.organization_id = $1 AND ac.school_id = $2 AND ac.id = $6
-       )`,
+       AND s.id = (
+         SELECT s2.id
+         FROM attendance_sessions s2
+         JOIN attendance_records ar2 ON ar2.session_id = s2.id
+         WHERE s2.organization_id = $1
+           AND s2.school_id = $2
+           AND ar2.student_id = $3::uuid
+           AND s2.status = 'submitted'
+           AND (
+             (SELECT ac.session_date
+              FROM attendance_corrections ac
+              WHERE ac.organization_id = $1 AND ac.school_id = $2 AND ac.id = $5) IS NULL
+             OR s2.session_date = (
+               SELECT ac.session_date
+               FROM attendance_corrections ac
+               WHERE ac.organization_id = $1 AND ac.school_id = $2 AND ac.id = $5
+             )
+           )
+         ORDER BY s2.session_date DESC, s2.created_at DESC
+         LIMIT 1
+       )
+     RETURNING ar.id`,
     [
       organizationId,
       schoolId,
       correction.student_id,
-      classLabel,
       targetMark,
       correctionId,
     ],
   );
+
+  // RETURNING gives one row per record actually updated, so the array length is
+  // the affected row count. When 0 rows matched there is no attendance record yet
+  // for this student in a submitted session; we surface that as a warning so the
+  // approval is not a silent no-op, but we do NOT throw — the correction row
+  // remains the audit trail and the status flip below still records the decision.
+  const affected = updated.length;
+  if (affected === 0) {
+    console.warn(
+      `applyAttendanceCorrection: no attendance_records row updated for correction ${correctionId} (student ${correction.student_id}); correction status flipped to approved but no live mark changed`,
+    );
+  }
 
   return await updateAttendanceCorrectionStatus(
     db,

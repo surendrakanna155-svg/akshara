@@ -237,6 +237,8 @@ class _LeaveBalancesCard extends StatelessWidget {
             children: [
               const AksharaSectionHeader(title: 'Leave balances'),
               const SizedBox(height: AksharaSpacing.s3),
+              if (balances.isEmpty)
+                Text('No leave policy on record.', style: text.bodySmall),
               for (final balance in balances)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
@@ -310,6 +312,23 @@ class _DocumentsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (documents.isEmpty) {
+      return Semantics(
+        container: true,
+        label: 'Employee documents, none on record',
+        child: Card(
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.all(AksharaSpacing.s5),
+            child: Text(
+              'No documents on record.',
+              style: context.aksharaText.bodySmall,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Semantics(
       container: true,
       label: 'Employee documents, ${documents.length} files',

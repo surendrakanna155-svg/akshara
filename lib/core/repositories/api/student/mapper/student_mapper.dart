@@ -64,6 +64,8 @@ class StudentMapper {
       status: StudentEnumCodec.parseHomeworkStatus(raw['status'] as String?),
       attachmentLabel: raw['attachmentLabel'] as String?,
       submittedLabel: raw['submittedLabel'] as String?,
+      reviewGrade: raw['reviewGrade'] as String?,
+      reviewComment: raw['reviewComment'] as String?,
     );
   }
 
