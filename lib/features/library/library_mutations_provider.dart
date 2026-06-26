@@ -151,3 +151,63 @@ final addLibraryResourceProvider =
     AsyncNotifierProvider<AddLibraryResourceNotifier, LibraryDigitalResource?>(
   AddLibraryResourceNotifier.new,
 );
+
+class EnrollLibraryMemberNotifier extends AsyncNotifier<LibraryMember?> {
+  @override
+  FutureOr<LibraryMember?> build() => null;
+
+  Future<LibraryMember?> execute(EnrollLibraryMemberRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageLibrary(ref);
+      try {
+        final result = await ref.read(libraryRepositoryProvider).enrollMember(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(libraryMembersFutureProvider)
+          ..invalidate(libraryDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final enrollLibraryMemberProvider =
+    AsyncNotifierProvider<EnrollLibraryMemberNotifier, LibraryMember?>(
+  EnrollLibraryMemberNotifier.new,
+);
+
+class WaiveLibraryFineNotifier extends AsyncNotifier<LibraryFine?> {
+  @override
+  FutureOr<LibraryFine?> build() => null;
+
+  Future<LibraryFine?> execute(WaiveLibraryFineRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageLibrary(ref);
+      try {
+        final result = await ref.read(libraryRepositoryProvider).waiveFine(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(libraryFinesFutureProvider)
+          ..invalidate(libraryDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final waiveLibraryFineProvider =
+    AsyncNotifierProvider<WaiveLibraryFineNotifier, LibraryFine?>(
+  WaiveLibraryFineNotifier.new,
+);

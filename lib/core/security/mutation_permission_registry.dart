@@ -671,6 +671,18 @@ class MutationPermissionRegistry {
       permission: Permission.manageTransport,
       kind: 'manage',
     ),
+    MutationPermissionEntry(
+      moduleId: 'transport',
+      mutationId: 'recordAttendance',
+      permission: Permission.manageTransport,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'transport',
+      mutationId: 'notifyRouteDelay',
+      permission: Permission.manageTransport,
+      kind: 'manage',
+    ),
     // Teacher exams (M-D3)
     MutationPermissionEntry(
       moduleId: 'teacher',

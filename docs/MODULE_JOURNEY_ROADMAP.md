@@ -24,7 +24,7 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 | ~~**Wave 1**~~ | ~~Data-integrity & money/identity correctness — silent failures that corrupt or hide real records~~ | 7 | 2C + 4H + 1M | ✅ **DONE 2026-06-26** (live **16/16**) — cert: `docs/JOURNEY_WAVE_1_CERTIFICATION.md`; deployed to VPS (10 edge files + migration 20260805000000); gates analyze 0 · flutter 2389 · deno 707 |
 | **Wave 2** | Wire-gap 404s — build the missing backend routes so whole client journeys stop failing silently | 10 | Critical x3, High x5, Medium x1 | L x5 + M x4 ≈ 2 batches (split parent/teacher vs admissions/comms/settings if needed) |
 | **Wave 3** | Static-snapshot read modernization — apply the live-overlay/recompute framework to remaining personas/admin dashboards | 6 | Critical x2, High x2, Medium x2 | L x4 + M x2 ≈ 2 batches |
-| **Wave 4** | Build missing write surfaces & orphaned-feature wiring — complete partial modules and surface hidden paid features | 12 | Critical x1, High x6, Medium x4 | L x6 + M x6 + S x1 ≈ 2-3 batches |
+| ~~**Wave 4**~~ | ~~Build missing write surfaces & orphaned-feature wiring — complete partial modules and surface hidden paid features~~ | 12 | 1C + 6H + 5M | ✅ **DONE 2026-06-27** (live **28/28**) — cert: `docs/JOURNEY_WAVE_4_CERTIFICATION.md`; 4A client (MJ-C9/H23/H24/M5/M8) + 4B backend (MJ-H19/M9/H20/H21/H22/M6/M7); 2 migrations + 21 edge files deployed; gates analyze 0 · flutter 2416 · deno 825 |
 | **Wave 5** | RBAC hardening, error-state UX sweep & test-gate parity — polish, consistency, and regression safety | 10 | Medium x2, Low x3 + grouped UX/RBAC/test items | S-heavy (8 S + 2 M) ≈ 1 batch |
 
 ---
@@ -116,7 +116,9 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 
 ---
 
-## Wave Wave 4 — Build missing write surfaces & orphaned-feature wiring — complete partial modules and surface hidden paid features
+## Wave Wave 4 — Build missing write surfaces & orphaned-feature wiring — ✅ **DONE (PRODUCTION CERTIFIED 2026-06-27, live 28/28; see docs/JOURNEY_WAVE_4_CERTIFICATION.md)**
+
+> **Status: DONE.** All 12 items closed: **4A** client-only (MJ-C9 vendor-create + real-vendor PO, MJ-H23 Employee Platform nav, MJ-H24 Promotion/Holiday/Meta nav, MJ-M5 onboarding wizard nav, MJ-M8 HR dialogs honor input) + **4B** backend write surfaces (MJ-H19 transport attendance, MJ-M9 transport delay-notify + SIS identity, MJ-H20 hostel attendance+mess, MJ-H21 library member-enroll + issue-validation + fines + resource URL, MJ-H22 alumni donation + campaign increment, MJ-M6 Org Builder REAL provisioning, MJ-M7 admissions real Storage). 2 forward-only migrations (`20260806000010` org-builder SECURITY DEFINER provisioning, `20260806000020` admissions storage bucket) applied + ledgered; 21 edge files deployed; edge recreated. Live cert caught + fixed 3 real defects (transport allocation PK collision → upsert; Storage `:8080` port in `toPublicStorageUrl` → also fixes device-memories; org-builder empty-name validation). Gates: analyze 0 · flutter 2416 · deno 825 (+35).
 
 **Why this wave:** Close the 'deployed/built but unreachable or write-less' gaps: add UI for deployed writes (transport attendance, hostel attendance/mess, inventory vendor-create + real PO, library members/fines/edit, admissions doc storage), and add nav surfaces for orphaned certified features (Employee Platform/360, onboarding wizard, Promotion Center, Holiday Calendar, Meta-connect). High unblock-value for monetizable surfaces; depends on the prior waves' route/overlay work.
 

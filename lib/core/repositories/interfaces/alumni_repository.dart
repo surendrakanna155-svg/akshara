@@ -30,4 +30,8 @@ abstract class AlumniRepository {
     required RepositoryQuery query,
     required AddMentorshipPairRequest request,
   });
+  Future<AlumniDonation> recordDonation({
+    required RepositoryQuery query,
+    required RecordDonationRequest request,
+  });
 }

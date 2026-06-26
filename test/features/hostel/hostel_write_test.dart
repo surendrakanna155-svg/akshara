@@ -193,6 +193,97 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('recordHostelAttendance appends a roster row visible on read',
+        () async {
+      final repo = MockHostelRepository();
+      final before = await repo.getAttendanceRecords(query: query);
+
+      final record = await repo.recordHostelAttendance(
+        query: query,
+        request: const RecordHostelAttendanceRequest(
+          studentName: 'Karthik Sharma',
+          room: 'A-204',
+          rollNumber: '8-A-09',
+          morning: HostelAttendanceStatus.present,
+          evening: HostelAttendanceStatus.absent,
+          night: HostelAttendanceStatus.present,
+          remark: 'Missed evening roll call',
+          sisStudentId: 'SIS-STU-10425',
+        ),
+      );
+
+      final after = await repo.getAttendanceRecords(query: query);
+      expect(after.items.length, before.items.length + 1);
+      // Worst-of-sessions decides overall (absent wins).
+      expect(record.overallStatus, HostelAttendanceStatus.absent);
+      expect(after.items.any((r) => r.id == record.id), isTrue);
+    });
+
+    test('recordHostelAttendance rejects an empty student name', () async {
+      final repo = MockHostelRepository();
+
+      expect(
+        () => repo.recordHostelAttendance(
+          query: query,
+          request: const RecordHostelAttendanceRequest(
+            studentName: '  ',
+            room: 'A-204',
+            rollNumber: '8-A-09',
+            morning: HostelAttendanceStatus.present,
+            evening: HostelAttendanceStatus.present,
+            night: HostelAttendanceStatus.present,
+            remark: '',
+            sisStudentId: '',
+          ),
+        ),
+        throwsStateError,
+      );
+    });
+
+    test('recordMess appends a menu visible on the mess read', () async {
+      final repo = MockHostelRepository();
+      final before = await repo.getMessData(query: query);
+
+      final menu = await repo.recordMess(
+        query: query,
+        request: const RecordMessRequest(
+          day: 'Tue',
+          mealType: HostelMealType.dinner,
+          items: 'Roti · Paneer · Curd',
+          dietaryTags: ['Veg'],
+          headcount: 120,
+          costRupees: 60000,
+        ),
+      );
+
+      final after = await repo.getMessData(query: query);
+      expect(after.weeklyMenus.length, before.weeklyMenus.length + 1);
+      expect(menu.day, 'Tue');
+      expect(
+        after.weeklyMenus.any((m) => m.day == 'Tue' && m.items == menu.items),
+        isTrue,
+      );
+    });
+
+    test('recordMess rejects a negative cost', () async {
+      final repo = MockHostelRepository();
+
+      expect(
+        () => repo.recordMess(
+          query: query,
+          request: const RecordMessRequest(
+            day: 'Wed',
+            mealType: HostelMealType.lunch,
+            items: 'Rice · Dal',
+            dietaryTags: [],
+            headcount: 100,
+            costRupees: -1,
+          ),
+        ),
+        throwsStateError,
+      );
+    });
   });
 
   group('Hostel RBAC mutations', () {
@@ -342,6 +433,115 @@ void main() {
         container.read(logVisitorProvider).value?.status,
         HostelVisitorStatus.active,
       );
+    });
+
+    test('recordHostelAttendance fails without manageHostel', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(recordHostelAttendanceProvider.notifier).execute(
+            const RecordHostelAttendanceRequest(
+              studentName: 'Ravi Kumar',
+              room: 'A-204',
+              rollNumber: '10-A-12',
+              morning: HostelAttendanceStatus.present,
+              evening: HostelAttendanceStatus.present,
+              night: HostelAttendanceStatus.present,
+              remark: '',
+              sisStudentId: 'SIS-STU-10430',
+            ),
+          );
+
+      expect(container.read(recordHostelAttendanceProvider).hasError, isTrue);
+    });
+
+    test('recordHostelAttendance succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(recordHostelAttendanceProvider.notifier).execute(
+            const RecordHostelAttendanceRequest(
+              studentName: 'Ravi Kumar',
+              room: 'A-204',
+              rollNumber: '10-A-12',
+              morning: HostelAttendanceStatus.present,
+              evening: HostelAttendanceStatus.onLeave,
+              night: HostelAttendanceStatus.present,
+              remark: '',
+              sisStudentId: 'SIS-STU-10430',
+            ),
+          );
+
+      expect(container.read(recordHostelAttendanceProvider).hasValue, isTrue);
+      expect(
+        container.read(recordHostelAttendanceProvider).value?.overallStatus,
+        HostelAttendanceStatus.onLeave,
+      );
+    });
+
+    test('recordMess fails without manageHostel', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(recordMessProvider.notifier).execute(
+            const RecordMessRequest(
+              day: 'Mon',
+              mealType: HostelMealType.lunch,
+              items: 'Rice · Dal',
+              dietaryTags: ['Veg'],
+              headcount: 100,
+              costRupees: 40000,
+            ),
+          );
+
+      expect(container.read(recordMessProvider).hasError, isTrue);
+    });
+
+    test('recordMess succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(recordMessProvider.notifier).execute(
+            const RecordMessRequest(
+              day: 'Mon',
+              mealType: HostelMealType.lunch,
+              items: 'Rice · Dal',
+              dietaryTags: ['Veg'],
+              headcount: 100,
+              costRupees: 40000,
+            ),
+          );
+
+      expect(container.read(recordMessProvider).hasValue, isTrue);
+      expect(container.read(recordMessProvider).value?.day, 'Mon');
     });
   });
 }

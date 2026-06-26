@@ -120,6 +120,17 @@ void main() {
       expect(find.text('Emma Thomas'), findsOneWidget);
     });
 
+    testWidgets('TransportAttendanceScreen exposes a mark control per row', (
+      tester,
+    ) async {
+      await pumpTransportScreen(tester, const TransportAttendanceScreen());
+
+      expect(
+        find.byKey(QaTestKeys.transportMarkAttendanceButton('att_2')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('TransportTrackingScreen renders map placeholder', (
       tester,
     ) async {
@@ -127,6 +138,17 @@ void main() {
 
       expect(find.text('Vehicle telemetry'), findsOneWidget);
       expect(find.textContaining('Fleet telemetry'), findsWidgets);
+    });
+
+    testWidgets('TransportTrackingScreen exposes notify-delay action', (
+      tester,
+    ) async {
+      await pumpTransportScreen(tester, const TransportTrackingScreen());
+
+      expect(
+        find.byKey(QaTestKeys.transportNotifyDelayButton),
+        findsOneWidget,
+      );
     });
 
     testWidgets('TransportReportsScreen renders report catalog', (

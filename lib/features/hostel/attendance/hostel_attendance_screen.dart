@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -9,6 +11,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../hostel_models.dart';
 import '../hostel_providers.dart';
+import '../hostel_workflow_actions.dart';
 import '../widgets/hostel_module_scaffold.dart';
 
 /// HO-04 — Hostel Attendance.
@@ -37,6 +40,15 @@ class HostelAttendanceScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(hostelAttendanceFilterProvider.notifier).state = index,
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageHostel,
+        child: OutlinedButton.icon(
+          key: QaTestKeys.hostelRecordAttendanceButton,
+          onPressed: () => showRecordHostelAttendanceDialog(context, ref),
+          icon: const Icon(Icons.fact_check_outlined, size: 18),
+          label: const Text('Mark roll-call'),
+        ),
+      ),
       body: _buildBody(
         context,
         ref,

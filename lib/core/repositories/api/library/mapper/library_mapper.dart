@@ -192,6 +192,30 @@ class LibraryMapper {
     ];
   }
 
+  /// Maps a raw persisted `fine` entity (write response) to a [LibraryFine].
+  /// The stored `amount` is a number (rupees) and `status` is `outstanding` /
+  /// `waived`; we normalise both to the client shape.
+  LibraryFine toFineFromEntity(Map<String, dynamic> raw) {
+    final amount = raw['amount'];
+    final amountLabel = amount is num
+        ? '₹${amount.toInt()}'
+        : (amount as String? ?? '');
+    final status = raw['status'] as String?;
+    final sisStudentId = raw['sisStudentId'] as String?;
+    return LibraryFine(
+      id: raw['id'] as String? ?? '',
+      memberName: raw['memberName'] as String? ?? '',
+      bookTitle: raw['bookTitle'] as String? ?? '',
+      amount: amountLabel,
+      daysOverdue: raw['daysOverdue'] as int? ?? 0,
+      status: status == 'waived'
+          ? LibraryFineStatus.waived
+          : LibraryEnumCodec.parseFineStatus(status),
+      financeLinked: sisStudentId != null,
+      sisStudentId: sisStudentId,
+    );
+  }
+
   List<LibraryFine> _mapFines(List<dynamic> items) {
     return [
       for (final item in items)
@@ -218,6 +242,7 @@ class LibraryMapper {
       downloads: item['downloads'] as int? ?? 0,
       studentAppVisible: item['studentAppVisible'] as bool? ?? false,
       teacherAppVisible: item['teacherAppVisible'] as bool? ?? false,
+      resourceUrl: item['resourceUrl'] as String?,
     );
   }
 

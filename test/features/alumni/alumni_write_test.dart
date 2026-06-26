@@ -187,6 +187,106 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('recordDonation surfaces in the donation ledger', () async {
+      final repo = MockAlumniRepository();
+      final before = await repo.getDonations(query: query);
+
+      final donation = await repo.recordDonation(
+        query: query,
+        request: const RecordDonationRequest(
+          alumniName: 'Arjun Patel',
+          alumniId: 'ALM-001',
+          amount: '₹12,000',
+          date: '20 Jun 2026',
+          campaignId: '',
+          status: 'received',
+          paymentMode: 'UPI',
+        ),
+      );
+
+      final after = await repo.getDonations(query: query);
+      expect(after.total, before.total + 1);
+      expect(donation.status, AlumniDonationStatus.received);
+      expect(donation.amount, '₹12,000');
+      expect(after.items.any((d) => d.id == donation.id), isTrue);
+    });
+
+    test('recordDonation increments a referenced campaign donor count',
+        () async {
+      final repo = MockAlumniRepository();
+      final campaign = await repo.createCampaign(
+        query: query,
+        request: const CreateAlumniCampaignRequest(
+          name: 'Science Lab Fund',
+          goalAmount: '₹8L',
+          deadline: '31 Dec 2026',
+          financeAccountCode: 'FN-ALM-SCI-2026',
+        ),
+      );
+      expect(campaign.donorCount, 0);
+
+      final donation = await repo.recordDonation(
+        query: query,
+        request: RecordDonationRequest(
+          alumniName: 'Priya Sharma',
+          alumniId: 'ALM-002',
+          amount: '₹30,000',
+          date: '21 Jun 2026',
+          campaignId: campaign.id,
+          status: 'received',
+          paymentMode: 'Bank transfer',
+        ),
+      );
+
+      // Donation is attributed to the campaign by name.
+      expect(donation.campaign, 'Science Lab Fund');
+
+      final campaigns = await repo.getCampaigns(query: query);
+      final updated =
+          campaigns.items.firstWhere((c) => c.id == campaign.id);
+      expect(updated.donorCount, 1);
+    });
+
+    test('recordDonation rejects an empty donor', () async {
+      final repo = MockAlumniRepository();
+
+      expect(
+        () => repo.recordDonation(
+          query: query,
+          request: const RecordDonationRequest(
+            alumniName: '  ',
+            alumniId: '',
+            amount: '₹1,000',
+            date: '',
+            campaignId: '',
+            status: 'received',
+            paymentMode: '',
+          ),
+        ),
+        throwsStateError,
+      );
+    });
+
+    test('recordDonation rejects an empty amount', () async {
+      final repo = MockAlumniRepository();
+
+      expect(
+        () => repo.recordDonation(
+          query: query,
+          request: const RecordDonationRequest(
+            alumniName: 'Arjun Patel',
+            alumniId: 'ALM-001',
+            amount: '  ',
+            date: '',
+            campaignId: '',
+            status: 'received',
+            paymentMode: '',
+          ),
+        ),
+        throwsStateError,
+      );
+    });
   });
 
   group('Alumni RBAC mutations', () {
@@ -397,6 +497,62 @@ void main() {
       expect(
         container.read(addMentorshipPairProvider).value?.status,
         MentorshipStatus.pending,
+      );
+    });
+
+    test('recordDonation fails without manageAlumni', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(recordDonationProvider.notifier).execute(
+            const RecordDonationRequest(
+              alumniName: 'Blocked Donor',
+              alumniId: '',
+              amount: '₹1,000',
+              date: '',
+              campaignId: '',
+              status: 'received',
+              paymentMode: '',
+            ),
+          );
+
+      expect(container.read(recordDonationProvider).hasError, isTrue);
+    });
+
+    test('recordDonation succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(recordDonationProvider.notifier).execute(
+            const RecordDonationRequest(
+              alumniName: 'Allowed Donor',
+              alumniId: 'ALM-001',
+              amount: '₹5,000',
+              date: '22 Jun 2026',
+              campaignId: '',
+              status: 'received',
+              paymentMode: 'UPI',
+            ),
+          );
+
+      expect(container.read(recordDonationProvider).hasValue, isTrue);
+      expect(
+        container.read(recordDonationProvider).value?.status,
+        AlumniDonationStatus.received,
       );
     });
   });

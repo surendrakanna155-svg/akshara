@@ -145,3 +145,34 @@ final addMentorshipPairProvider =
     AsyncNotifierProvider<AddMentorshipPairNotifier, MentorshipPair?>(
   AddMentorshipPairNotifier.new,
 );
+
+class RecordDonationNotifier extends AsyncNotifier<AlumniDonation?> {
+  @override
+  FutureOr<AlumniDonation?> build() => null;
+
+  Future<AlumniDonation?> execute(RecordDonationRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageAlumni(ref);
+      try {
+        final result = await ref.read(alumniRepositoryProvider).recordDonation(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(alumniDonationsFutureProvider)
+          ..invalidate(alumniCampaignsFutureProvider)
+          ..invalidate(alumniDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final recordDonationProvider =
+    AsyncNotifierProvider<RecordDonationNotifier, AlumniDonation?>(
+  RecordDonationNotifier.new,
+);

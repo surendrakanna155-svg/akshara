@@ -143,6 +143,28 @@ class TransportRemoteDataSource {
     return TransportRouteDto.fromJson(_writeData(response));
   }
 
+  Future<TransportAttendanceRecordDto> recordAttendance({
+    required RepositoryQuery query,
+    required RecordTransportAttendanceRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TransportApiPaths.attendance,
+      queryParameters: _queryParams(query),
+      data: {
+        if (request.id != null) 'id': request.id,
+        'studentName': request.studentName,
+        'stopName': request.stopName,
+        'routeName': request.routeName,
+        'scheduledTime': request.scheduledTime,
+        'actualTime': request.actualTime,
+        'status': TransportEnumCodec.attendanceStatusToApi(request.status),
+        'parentNotified': request.parentNotified,
+        'shift': TransportEnumCodec.shiftToApi(request.shift),
+      },
+    );
+    return TransportAttendanceRecordDto.fromJson(_writeData(response));
+  }
+
   Future<TransportAllocationDto> assignStudentTransport({
     required RepositoryQuery query,
     required AssignStudentTransportRequest request,
@@ -155,6 +177,10 @@ class TransportRemoteDataSource {
         'routeId': request.routeId,
         'pickupStop': request.pickupStop,
         'dropStop': request.dropStop,
+        'studentName': request.studentName,
+        'admissionNumber': request.admissionNumber,
+        'sisStudentId': request.sisStudentId,
+        'classLabel': request.classLabel,
       },
     );
     return TransportAllocationDto.fromJson(_writeData(response));
@@ -185,6 +211,21 @@ class TransportRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return TransportAllocationDto.fromJson(_writeData(response));
+  }
+
+  Future<TransportDelayNotificationDto> notifyRouteDelay({
+    required RepositoryQuery query,
+    required NotifyRouteDelayRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TransportApiPaths.notifyDelay,
+      queryParameters: _queryParams(query),
+      data: {
+        'routeId': request.routeId,
+        'message': request.message,
+      },
+    );
+    return TransportDelayNotificationDto.fromJson(_writeData(response));
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {

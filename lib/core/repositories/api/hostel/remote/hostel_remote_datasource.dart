@@ -163,6 +163,46 @@ class HostelRemoteDataSource {
     return HostelRoomDto.fromJson(_writeData(response));
   }
 
+  Future<HostelAttendanceRecordDto> recordAttendance({
+    required RepositoryQuery query,
+    required RecordHostelAttendanceRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HostelApiPaths.recordAttendance,
+      queryParameters: _queryParams(query),
+      data: {
+        'studentName': request.studentName,
+        'room': request.room,
+        'rollNumber': request.rollNumber,
+        'morning': HostelEnumCodec.attendanceStatusToApi(request.morning),
+        'evening': HostelEnumCodec.attendanceStatusToApi(request.evening),
+        'night': HostelEnumCodec.attendanceStatusToApi(request.night),
+        'remark': request.remark,
+        'sisStudentId': request.sisStudentId,
+      },
+    );
+    return HostelAttendanceRecordDto.fromJson(_writeData(response));
+  }
+
+  Future<HostelMealMenuDto> recordMess({
+    required RepositoryQuery query,
+    required RecordMessRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HostelApiPaths.recordMess,
+      queryParameters: _queryParams(query),
+      data: {
+        'day': request.day,
+        'mealType': HostelEnumCodec.mealTypeToApi(request.mealType),
+        'items': request.items,
+        'dietaryTags': request.dietaryTags,
+        'headcount': request.headcount,
+        'costRupees': request.costRupees,
+      },
+    );
+    return HostelMealMenuDto.fromJson(_writeData(response));
+  }
+
   Future<HostelVisitorDto> logVisitor({
     required RepositoryQuery query,
     required LogVisitorRequest request,

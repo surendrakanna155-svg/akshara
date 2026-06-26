@@ -19,7 +19,11 @@ abstract final class AdmissionsApiPaths {
   static const String enrollmentsGenerateNumber =
       '$base/enrollments/generate-admission-number';
   static const String documentsUpload = '$base/documents/upload';
+  static const String documentsUploadPresign = '$base/documents/upload/presign';
   static const String handoffsSend = '$base/handoffs/send';
+
+  static String documentDownload(String documentId) =>
+      '$documents/$documentId/download';
 
   static String lead(String leadId) => '$leads/$leadId';
   static String leadAssign(String leadId) => '${lead(leadId)}/assign';

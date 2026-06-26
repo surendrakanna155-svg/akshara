@@ -149,6 +149,112 @@ void main() {
     });
   });
 
+  group('Transport mock attendance + delay writes', () {
+    const query = RepositoryQuery.demo;
+
+    test('recordAttendance updates an existing record in place', () async {
+      final repo = MockTransportRepository();
+      final before = await repo.getAttendanceRecords(query: query);
+      final target = before.items.firstWhere(
+        (r) => r.status == TransportAttendanceStatus.waiting,
+      );
+
+      final updated = await repo.recordAttendance(
+        query: query,
+        request: RecordTransportAttendanceRequest(
+          id: target.id,
+          studentName: target.studentName,
+          stopName: target.stopName,
+          routeName: target.routeName,
+          scheduledTime: target.scheduledTime,
+          actualTime: target.actualTime,
+          status: TransportAttendanceStatus.picked,
+          parentNotified: target.parentNotified,
+          shift: target.shift,
+        ),
+      );
+
+      expect(updated.status, TransportAttendanceStatus.picked);
+
+      final after = await repo.getAttendanceRecords(query: query);
+      expect(after.items.length, before.items.length);
+      expect(
+        after.items.firstWhere((r) => r.id == target.id).status,
+        TransportAttendanceStatus.picked,
+      );
+    });
+
+    test('recordAttendance inserts a new record when id is null', () async {
+      final repo = MockTransportRepository();
+      final before = await repo.getAttendanceRecords(query: query);
+
+      final created = await repo.recordAttendance(
+        query: query,
+        request: const RecordTransportAttendanceRequest(
+          studentName: 'New Rider',
+          stopName: 'Stop X',
+          routeName: 'Route 12 — North',
+          status: TransportAttendanceStatus.absent,
+        ),
+      );
+
+      expect(created.studentName, 'New Rider');
+      final after = await repo.getAttendanceRecords(query: query);
+      expect(after.items.length, before.items.length + 1);
+    });
+
+    test('assignStudentTransport carries real SIS identity through', () async {
+      final repo = MockTransportRepository();
+
+      final assigned = await repo.assignStudentTransport(
+        query: query,
+        request: const AssignStudentTransportRequest(
+          allocationId: 'alloc_5',
+          routeId: 'route_12',
+          pickupStop: 'Lake View Colony',
+          dropStop: 'Akshara Main Gate',
+          studentName: 'Kavya Iyer',
+          admissionNumber: 'ADM-2026-0145',
+          sisStudentId: 'SIS-STU-10425',
+          classLabel: '6',
+        ),
+      );
+
+      expect(assigned.studentName, 'Kavya Iyer');
+      expect(assigned.sisStudentId, 'SIS-STU-10425');
+      expect(assigned.admissionNumber, 'ADM-2026-0145');
+    });
+
+    test('notifyRouteDelay returns route + affected cohort count', () async {
+      final repo = MockTransportRepository();
+
+      final result = await repo.notifyRouteDelay(
+        query: query,
+        request: const NotifyRouteDelayRequest(
+          routeId: 'route_12',
+          message: 'Bus running 15 min late',
+        ),
+      );
+
+      expect(result.routeName, 'Route 12 — North');
+      expect(result.recipientCount, greaterThanOrEqualTo(2));
+    });
+
+    test('notifyRouteDelay rejects empty message', () async {
+      final repo = MockTransportRepository();
+      expect(
+        () => repo.notifyRouteDelay(
+          query: query,
+          request: const NotifyRouteDelayRequest(
+            routeId: 'route_12',
+            message: '   ',
+          ),
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+  });
+
   group('Transport mock writes', () {
     const query = RepositoryQuery.demo;
 
@@ -241,6 +347,51 @@ void main() {
           );
 
       expect(container.read(activateTransportRouteProvider).hasError, isTrue);
+    });
+
+    test('recordAttendance fails without manageTransport', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(recordTransportAttendanceProvider.notifier).execute(
+            const RecordTransportAttendanceRequest(
+              studentName: 'Denied Rider',
+              status: TransportAttendanceStatus.picked,
+            ),
+          );
+
+      expect(
+        container.read(recordTransportAttendanceProvider).hasError,
+        isTrue,
+      );
+    });
+
+    test('notifyRouteDelay fails without manageTransport', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(notifyRouteDelayProvider.notifier).execute(
+            const NotifyRouteDelayRequest(
+              routeId: 'route_12',
+              message: 'Late',
+            ),
+          );
+
+      expect(container.read(notifyRouteDelayProvider).hasError, isTrue);
     });
   });
 }

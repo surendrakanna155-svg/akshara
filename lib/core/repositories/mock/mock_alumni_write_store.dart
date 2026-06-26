@@ -12,20 +12,24 @@ final class MockAlumniWriteStore {
   final List<AlumniEvent> events = [];
   final List<AlumniCampaign> campaigns = [];
   final List<MentorshipPair> mentorshipPairs = [];
+  final List<AlumniDonation> donations = [];
   int _sequence = 100;
   int _eventSequence = 100;
   int _campaignSequence = 100;
   int _mentorshipSequence = 100;
+  int _donationSequence = 100;
 
   void reset() {
     graduates.clear();
     events.clear();
     campaigns.clear();
     mentorshipPairs.clear();
+    donations.clear();
     _sequence = 100;
     _eventSequence = 100;
     _campaignSequence = 100;
     _mentorshipSequence = 100;
+    _donationSequence = 100;
   }
 
   bool hasGraduateForSisStudent(String sisStudentId) {
@@ -166,5 +170,69 @@ final class MockAlumniWriteStore {
     );
     mentorshipPairs.insert(0, pair);
     return pair;
+  }
+
+  /// Records a donation against the alumni ledger. When the donation references
+  /// a [campaign] held in this write store, that campaign's donor count is
+  /// incremented (mirrors the live campaign raisedAmount/donorCount increment).
+  AlumniDonation recordDonation(
+    RecordDonationRequest request, {
+    String? campaignName,
+  }) {
+    final donor = request.alumniName.trim();
+    if (donor.isEmpty) {
+      throw StateError('Donor name is required');
+    }
+    final amount = request.amount.trim();
+    if (amount.isEmpty) {
+      throw StateError('Donation amount is required');
+    }
+
+    final campaignId = request.campaignId.trim();
+    var resolvedCampaign = campaignName?.trim() ?? '';
+    if (campaignId.isNotEmpty) {
+      final index = campaigns.indexWhere((c) => c.id == campaignId);
+      if (index != -1) {
+        final existing = campaigns[index];
+        if (resolvedCampaign.isEmpty) resolvedCampaign = existing.name;
+        campaigns[index] = AlumniCampaign(
+          id: existing.id,
+          name: existing.name,
+          goalAmount: existing.goalAmount,
+          raisedAmount: existing.raisedAmount,
+          donorCount: existing.donorCount + 1,
+          deadline: existing.deadline,
+          status: existing.status,
+          financeAccountCode: existing.financeAccountCode,
+        );
+      }
+    }
+
+    final donation = AlumniDonation(
+      id: 'don_new_${++_donationSequence}',
+      alumniName: donor,
+      alumniId: request.alumniId.trim(),
+      amount: amount,
+      date: request.date.trim().isEmpty ? '—' : request.date.trim(),
+      campaign: resolvedCampaign.isEmpty ? '—' : resolvedCampaign,
+      status: _parseDonationStatus(request.status),
+      financeReceiptId: '—',
+      paymentMode: request.paymentMode.trim(),
+    );
+    donations.insert(0, donation);
+    return donation;
+  }
+
+  static AlumniDonationStatus _parseDonationStatus(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'pledged':
+        return AlumniDonationStatus.pledged;
+      case 'pending':
+        return AlumniDonationStatus.pending;
+      case 'refunded':
+        return AlumniDonationStatus.refunded;
+      default:
+        return AlumniDonationStatus.received;
+    }
   }
 }

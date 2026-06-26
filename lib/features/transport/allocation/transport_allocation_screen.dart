@@ -233,6 +233,8 @@ class _AllocationActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch routes so they are loaded before the assign dialog reads them.
+    final routes = ref.watch(transportRoutesProvider);
     return AksharaManageAction(
       permission: Permission.manageTransport,
       child: Wrap(
@@ -246,6 +248,7 @@ class _AllocationActions extends ConsumerWidget {
                 context,
                 ref,
                 allocation: allocation,
+                routes: routes,
               ),
               style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
               child: const Text('Assign'),
@@ -257,6 +260,7 @@ class _AllocationActions extends ConsumerWidget {
                 context,
                 ref,
                 allocation: allocation,
+                routes: routes,
               ),
               style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
               child: const Text('Transfer'),

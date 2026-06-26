@@ -89,6 +89,130 @@ export async function recomputeVisitors(
   return { activeVisitors, visitorLog, qrPlaceholderLabel, parentAppRoute };
 }
 
+/** Default finance-integration note shown on the Mess screen when no seed snapshot is present. */
+const DEFAULT_MESS_FINANCE_NOTE =
+  "Mess expenses post to Finance FN-05 expense ledger";
+
+/** Newest-first ordering by ISO `recordedAt` timestamp (string compare is safe for ISO). */
+function byRecordedAtDesc(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>,
+): number {
+  const ar = (a.recordedAt as string | undefined) ?? "";
+  const br = (b.recordedAt as string | undefined) ?? "";
+  if (ar === br) return 0;
+  return ar < br ? 1 : -1;
+}
+
+/** Formats a rupee amount as the `₹N.NL` (lakhs) label the Mess screen expects. */
+function rupeesToLakhLabel(rupees: number): string {
+  const lakhs = rupees / 100000;
+  return `₹${lakhs.toFixed(1)}L`;
+}
+
+/**
+ * Recomputes the Mess screen payload from the live `mess_record` entities
+ * (HOSTE-3) instead of only a frozen seeded snapshot. A just-recorded menu (a
+ * `mess_record` entity inserted by `handleRecordMess`) therefore appears on the
+ * Mess screen immediately, and the MTD cost reflects the recorded spend.
+ *
+ * Returns the exact JSON shape the Flutter `HostelMessData` mapper expects:
+ * `{ weeklyMenus, consumptionTrend, costMtd, financeIntegrationNote }`.
+ * - `weeklyMenus`: the recorded menus newest-first (mapped to {day, mealType,
+ *   items, dietaryTags}).
+ * - `consumptionTrend`: per-day total cost (lakhs) so the trend chart reflects
+ *   real spend.
+ * - `costMtd`: the summed cost of recorded meals, as a `₹N.NL` label.
+ *
+ * When no `mess_record` entities exist yet, falls back to the seed
+ * `snapshot_mess` payload (preserving the previous behaviour) so the screen is
+ * never empty for a freshly-seeded tenant, and a missing seed does not 500.
+ */
+export async function recomputeMess(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<Record<string, unknown>> {
+  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
+    `SELECT payload
+       FROM hostel_entities
+       WHERE organization_id = $1
+         AND school_id = $2
+         AND entity_type = $3
+       ORDER BY id`,
+    [organizationId, schoolId, "mess_record"],
+  );
+  const records = rows.map((row) => row.payload);
+
+  let seededFinanceNote = DEFAULT_MESS_FINANCE_NOTE;
+  let seedSnapshot: Record<string, unknown> | null = null;
+  try {
+    seedSnapshot = await hostelStore.getSnapshot(
+      db,
+      organizationId,
+      schoolId,
+      "snapshot_mess",
+    );
+    if (typeof seedSnapshot.financeIntegrationNote === "string") {
+      seededFinanceNote = seedSnapshot.financeIntegrationNote;
+    }
+  } catch (_error) {
+    // No seed snapshot for this tenant — defaults below are correct, do not 500.
+  }
+
+  // No live records yet: return the seed snapshot verbatim when present so the
+  // screen keeps its richer demo content; otherwise an honest empty payload.
+  if (records.length === 0) {
+    if (seedSnapshot) return seedSnapshot;
+    return {
+      weeklyMenus: [],
+      consumptionTrend: [],
+      costMtd: rupeesToLakhLabel(0),
+      financeIntegrationNote: seededFinanceNote,
+    };
+  }
+
+  const sorted = [...records].sort(byRecordedAtDesc);
+
+  const weeklyMenus = sorted.map((record) => ({
+    day: (record.day as string | undefined) ?? "",
+    mealType: (record.mealType as string | undefined) ?? "breakfast",
+    items: (record.items as string | undefined) ?? "",
+    dietaryTags: Array.isArray(record.dietaryTags)
+      ? (record.dietaryTags as unknown[]).map((tag) => String(tag))
+      : [],
+  }));
+
+  // Per-day total cost (in lakhs), in the order days first appear (newest-first).
+  const costByDay = new Map<string, number>();
+  for (const record of sorted) {
+    const day = (record.day as string | undefined) ?? "";
+    const cost = typeof record.costRupees === "number"
+      ? record.costRupees
+      : parseInt(String(record.costRupees ?? 0), 10) || 0;
+    costByDay.set(day, (costByDay.get(day) ?? 0) + cost);
+  }
+  const consumptionTrend = [...costByDay.entries()].map(([label, rupees]) => ({
+    label,
+    amountLakhs: Number((rupees / 100000).toFixed(2)),
+    targetLakhs: Number((rupees / 100000).toFixed(2)),
+  }));
+
+  const totalRupees = sorted.reduce((sum, record) => {
+    const cost = typeof record.costRupees === "number"
+      ? record.costRupees
+      : parseInt(String(record.costRupees ?? 0), 10) || 0;
+    return sum + cost;
+  }, 0);
+
+  return {
+    weeklyMenus,
+    consumptionTrend,
+    costMtd: rupeesToLakhLabel(totalRupees),
+    financeIntegrationNote: seededFinanceNote,
+  };
+}
+
 export const getSnapshot = hostelStore.getSnapshot;
 export const listEntities = hostelStore.listEntities;
 export const getEntity = hostelStore.getEntity;

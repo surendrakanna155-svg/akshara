@@ -137,4 +137,13 @@ class ApiAlumniRepository implements AlumniRepository {
     final dto = await _remote.addMentorshipPair(query: query, request: request);
     return _mapper.toMentorshipPair(dto);
   }
+
+  @override
+  Future<AlumniDonation> recordDonation({
+    required RepositoryQuery query,
+    required RecordDonationRequest request,
+  }) async {
+    final dto = await _remote.recordDonation(query: query, request: request);
+    return _mapper.toDonation(dto);
+  }
 }

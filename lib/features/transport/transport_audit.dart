@@ -8,7 +8,7 @@ import '../../features/auth/auth_provider.dart';
 Future<void> recordTransportAudit(
   Ref ref, {
   required AuditEventType type,
-  required String allocationId,
+  String? allocationId,
   Map<String, String> metadata = const {},
 }) {
   final auth = ref.read(authProvider);
@@ -20,7 +20,7 @@ Future<void> recordTransportAudit(
     schoolId: auth.claims?.schoolId,
     category: AuditEventCategory.workflow,
     metadata: {
-      'allocationId': allocationId,
+      if (allocationId != null) 'allocationId': allocationId,
       ...metadata,
     },
   );

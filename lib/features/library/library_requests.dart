@@ -43,6 +43,7 @@ class AddLibraryResourceRequest {
     required this.title,
     required this.type,
     required this.classAccess,
+    required this.resourceUrl,
     required this.studentAppVisible,
     required this.teacherAppVisible,
   });
@@ -50,6 +51,31 @@ class AddLibraryResourceRequest {
   final String title;
   final LibraryResourceType type;
   final String classAccess;
+
+  /// Real, openable http(s) content pointer (LIBRA-4) — not metadata-only.
+  final String resourceUrl;
   final bool studentAppVisible;
   final bool teacherAppVisible;
+}
+
+class EnrollLibraryMemberRequest {
+  const EnrollLibraryMemberRequest({
+    required this.name,
+    required this.memberType,
+    required this.identifier,
+    required this.classOrDepartment,
+    this.sisStudentId,
+  });
+
+  final String name;
+  final LibraryMemberType memberType;
+  final String identifier;
+  final String classOrDepartment;
+  final String? sisStudentId;
+}
+
+class WaiveLibraryFineRequest {
+  const WaiveLibraryFineRequest({required this.fineId});
+
+  final String fineId;
 }

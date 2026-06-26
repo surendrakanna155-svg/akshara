@@ -211,6 +211,7 @@ class LibraryDigitalResource {
     required this.downloads,
     required this.studentAppVisible,
     required this.teacherAppVisible,
+    this.resourceUrl,
   });
 
   final String id;
@@ -220,6 +221,9 @@ class LibraryDigitalResource {
   final int downloads;
   final bool studentAppVisible;
   final bool teacherAppVisible;
+
+  /// Retrievable http(s) content pointer (LIBRA-4); null on legacy seed rows.
+  final String? resourceUrl;
 }
 
 @immutable

@@ -102,7 +102,7 @@ class LibraryReturnsScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message:
-              'Overdue fines on return post to Finance FN-02 library_fine fee head. Waive actions are audit-logged.',
+              'Overdue returns raise a fine that shows in Fines & Payments and can be waived (audit-logged). Configure the library_fine fee head under Finance FN-02.',
           actionLabel: 'Finance fees',
           icon: Icons.account_balance_wallet_outlined,
           semanticLabelPrefix: 'Finance integration',

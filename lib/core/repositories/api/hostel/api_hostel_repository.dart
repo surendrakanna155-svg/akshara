@@ -122,4 +122,22 @@ class ApiHostelRepository implements HostelRepository {
     final dto = await _remote.logVisitor(query: query, request: request);
     return _mapper.toVisitor(dto);
   }
+
+  @override
+  Future<HostelAttendanceRecord> recordHostelAttendance({
+    required RepositoryQuery query,
+    required RecordHostelAttendanceRequest request,
+  }) async {
+    final dto = await _remote.recordAttendance(query: query, request: request);
+    return _mapper.toAttendanceRecord(dto);
+  }
+
+  @override
+  Future<HostelMealMenu> recordMess({
+    required RepositoryQuery query,
+    required RecordMessRequest request,
+  }) async {
+    final dto = await _remote.recordMess(query: query, request: request);
+    return _mapper.toMealMenu(dto);
+  }
 }

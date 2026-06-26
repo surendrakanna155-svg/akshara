@@ -12,6 +12,7 @@ abstract final class TransportApiPaths {
   static const String reports = '$base/reports';
   static const String settings = '$base/settings';
   static const String occupancyMetrics = '$base/occupancy-metrics';
+  static const String notifyDelay = '$base/notify-delay';
 
   static String activateRoute(String id) => '$base/routes/$id/activate';
   static String transferAllocation(String id) => '$base/allocations/$id/transfer';

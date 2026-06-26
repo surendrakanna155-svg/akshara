@@ -12,14 +12,19 @@ class MockHostelRepository implements HostelRepository {
   MockHostelRepository()
       : _students = List<HostelStudent>.from(_seedStudents),
         _rooms = List<HostelRoom>.from(_seedRooms),
-        _activeVisitors = List<HostelVisitor>.from(_seedActiveVisitors);
+        _activeVisitors = List<HostelVisitor>.from(_seedActiveVisitors),
+        _attendance = List<HostelAttendanceRecord>.from(_seedAttendance),
+        _weeklyMenus = List<HostelMealMenu>.from(_seedWeeklyMenus);
 
   final List<HostelStudent> _students;
   final List<HostelRoom> _rooms;
   final List<HostelVisitor> _activeVisitors;
+  final List<HostelAttendanceRecord> _attendance;
+  final List<HostelMealMenu> _weeklyMenus;
   int _studentCounter = 5;
   int _roomCounter = 5;
   int _visitorCounter = 200;
+  int _attendanceCounter = 4;
 
   HostelOccupancyMetrics get _occupancyMetrics {
     final totalBeds = _rooms.fold<int>(0, (sum, room) => sum + room.totalBeds);
@@ -281,7 +286,10 @@ class MockHostelRepository implements HostelRepository {
   Future<PaginatedResult<HostelAttendanceRecord>> getAttendanceRecords({
     required RepositoryQuery query,
   }) async {
-    return paginateList(const [
+    return paginateList(_attendance, query);
+  }
+
+  static const _seedAttendance = [
       HostelAttendanceRecord(
         id: 'att_1',
         studentName: 'Ravi Kumar',
@@ -334,8 +342,7 @@ class MockHostelRepository implements HostelRepository {
         parentNotified: true,
         sisStudentId: 'SIS-STU-10415',
       ),
-    ], query);
-  }
+  ];
 
   @override
   Future<PaginatedResult<HostelLeaveRequest>> getLeaveRequests({
@@ -401,36 +408,38 @@ class MockHostelRepository implements HostelRepository {
     ], query);
   }
 
+  static const _seedWeeklyMenus = [
+    HostelMealMenu(
+      day: 'Mon',
+      mealType: HostelMealType.breakfast,
+      items: 'Idli · Sambar · Chutney',
+      dietaryTags: ['Veg', 'Jain option'],
+    ),
+    HostelMealMenu(
+      day: 'Mon',
+      mealType: HostelMealType.lunch,
+      items: 'Rice · Dal · Paneer curry · Salad',
+      dietaryTags: ['Veg'],
+    ),
+    HostelMealMenu(
+      day: 'Mon',
+      mealType: HostelMealType.snacks,
+      items: 'Fruit bowl · Biscuits',
+      dietaryTags: ['Veg', 'Allergy: nuts'],
+    ),
+    HostelMealMenu(
+      day: 'Mon',
+      mealType: HostelMealType.dinner,
+      items: 'Roti · Mixed veg · Curd',
+      dietaryTags: ['Veg', 'Jain option'],
+    ),
+  ];
+
   @override
   Future<HostelMessData> getMessData({required RepositoryQuery query}) async {
-    return const HostelMessData(
-      weeklyMenus: [
-        HostelMealMenu(
-          day: 'Mon',
-          mealType: HostelMealType.breakfast,
-          items: 'Idli · Sambar · Chutney',
-          dietaryTags: ['Veg', 'Jain option'],
-        ),
-        HostelMealMenu(
-          day: 'Mon',
-          mealType: HostelMealType.lunch,
-          items: 'Rice · Dal · Paneer curry · Salad',
-          dietaryTags: ['Veg'],
-        ),
-        HostelMealMenu(
-          day: 'Mon',
-          mealType: HostelMealType.snacks,
-          items: 'Fruit bowl · Biscuits',
-          dietaryTags: ['Veg', 'Allergy: nuts'],
-        ),
-        HostelMealMenu(
-          day: 'Mon',
-          mealType: HostelMealType.dinner,
-          items: 'Roti · Mixed veg · Curd',
-          dietaryTags: ['Veg', 'Jain option'],
-        ),
-      ],
-      consumptionTrend: [
+    return HostelMessData(
+      weeklyMenus: List<HostelMealMenu>.unmodifiable(_weeklyMenus),
+      consumptionTrend: const [
         HostelTrendPoint(label: 'Jan', amountLakhs: 1.0, targetLakhs: 1.1),
         HostelTrendPoint(label: 'Feb', amountLakhs: 1.05, targetLakhs: 1.1),
         HostelTrendPoint(label: 'Mar', amountLakhs: 1.12, targetLakhs: 1.15),
@@ -806,6 +815,76 @@ class MockHostelRepository implements HostelRepository {
     );
     _activeVisitors.insert(0, visitor);
     return visitor;
+  }
+
+  HostelAttendanceStatus _overallStatus(
+    HostelAttendanceStatus morning,
+    HostelAttendanceStatus evening,
+    HostelAttendanceStatus night,
+  ) {
+    final sessions = [morning, evening, night];
+    if (sessions.contains(HostelAttendanceStatus.absent)) {
+      return HostelAttendanceStatus.absent;
+    }
+    if (sessions.contains(HostelAttendanceStatus.onLeave)) {
+      return HostelAttendanceStatus.onLeave;
+    }
+    return HostelAttendanceStatus.present;
+  }
+
+  @override
+  Future<HostelAttendanceRecord> recordHostelAttendance({
+    required RepositoryQuery query,
+    required RecordHostelAttendanceRequest request,
+  }) async {
+    final studentName = request.studentName.trim();
+    if (studentName.isEmpty) {
+      throw StateError('Student name is required');
+    }
+
+    _attendanceCounter += 1;
+    final record = HostelAttendanceRecord(
+      id: 'att_$_attendanceCounter',
+      studentName: studentName,
+      room: request.room.trim(),
+      rollNumber: request.rollNumber.trim(),
+      morning: request.morning,
+      evening: request.evening,
+      night: request.night,
+      overallStatus:
+          _overallStatus(request.morning, request.evening, request.night),
+      remark: request.remark.trim(),
+      parentNotified: false,
+      sisStudentId: request.sisStudentId.trim(),
+    );
+    _attendance.insert(0, record);
+    return record;
+  }
+
+  @override
+  Future<HostelMealMenu> recordMess({
+    required RepositoryQuery query,
+    required RecordMessRequest request,
+  }) async {
+    final items = request.items.trim();
+    if (request.day.trim().isEmpty || items.isEmpty) {
+      throw StateError('Day and menu items are required');
+    }
+    if (request.headcount < 0 || request.costRupees < 0) {
+      throw StateError('Headcount and cost must not be negative');
+    }
+
+    final menu = HostelMealMenu(
+      day: request.day.trim(),
+      mealType: request.mealType,
+      items: items,
+      dietaryTags: request.dietaryTags
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toList(),
+    );
+    _weeklyMenus.insert(0, menu);
+    return menu;
   }
 
   static String _formatCheckIn() {

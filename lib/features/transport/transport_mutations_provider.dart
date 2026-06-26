@@ -85,6 +85,48 @@ final activateTransportRouteProvider =
   ActivateTransportRouteNotifier.new,
 );
 
+class RecordTransportAttendanceNotifier
+    extends AsyncNotifier<TransportAttendanceRecord?> {
+  @override
+  FutureOr<TransportAttendanceRecord?> build() => null;
+
+  Future<TransportAttendanceRecord?> execute(
+    RecordTransportAttendanceRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result =
+            await ref.read(transportRepositoryProvider).recordAttendance(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        await recordTransportAudit(
+          ref,
+          type: AuditEventType.transportAttendanceRecorded,
+          metadata: {
+            'attendanceId': result.id,
+            'status': result.status.name,
+          },
+        );
+        ref
+          ..invalidate(transportAttendanceFutureProvider)
+          ..invalidate(transportDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final recordTransportAttendanceProvider = AsyncNotifierProvider<
+    RecordTransportAttendanceNotifier, TransportAttendanceRecord?>(
+  RecordTransportAttendanceNotifier.new,
+);
+
 class AssignStudentTransportNotifier
     extends AsyncNotifier<StudentTransportAllocation?> {
   @override
@@ -109,6 +151,7 @@ class AssignStudentTransportNotifier
           metadata: {
             'routeId': result.routeId,
             'busNumber': result.busNumber,
+            'sisStudentId': result.sisStudentId,
           },
         );
         ref
@@ -216,4 +259,44 @@ class RemoveStudentTransportNotifier
 final removeStudentTransportProvider = AsyncNotifierProvider<
     RemoveStudentTransportNotifier, StudentTransportAllocation?>(
   RemoveStudentTransportNotifier.new,
+);
+
+class NotifyRouteDelayNotifier
+    extends AsyncNotifier<TransportDelayNotificationResult?> {
+  @override
+  FutureOr<TransportDelayNotificationResult?> build() => null;
+
+  Future<TransportDelayNotificationResult?> execute(
+    NotifyRouteDelayRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result =
+            await ref.read(transportRepositoryProvider).notifyRouteDelay(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        await recordTransportAudit(
+          ref,
+          type: AuditEventType.transportDelayNotified,
+          metadata: {
+            'routeId': request.routeId,
+            'recipientCount': '${result.recipientCount}',
+          },
+        );
+        ref.invalidate(transportTrackingFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final notifyRouteDelayProvider = AsyncNotifierProvider<NotifyRouteDelayNotifier,
+    TransportDelayNotificationResult?>(
+  NotifyRouteDelayNotifier.new,
 );

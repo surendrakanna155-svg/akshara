@@ -24,6 +24,12 @@ const NEW_ROUTES: Array<{ method: string; path: string }> = [
     method: "POST",
     path: "/admissions/approval/11111111-1111-1111-1111-111111111111/notes",
   },
+  // ADMIS-5: real-file document storage routes.
+  { method: "POST", path: "/admissions/documents/upload/presign" },
+  {
+    method: "GET",
+    path: "/admissions/documents/11111111-1111-1111-1111-111111111111/download",
+  },
 ];
 
 for (const route of NEW_ROUTES) {

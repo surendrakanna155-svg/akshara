@@ -132,6 +132,16 @@ class TransportMapper {
     );
   }
 
+  TransportDelayNotificationResult toDelayNotification(
+    TransportDelayNotificationDto dto,
+  ) {
+    final raw = dto.raw;
+    return TransportDelayNotificationResult(
+      routeName: raw['routeName'] as String? ?? '',
+      recipientCount: (raw['recipientCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   TransportTrackingPlaceholderData toTrackingPlaceholder(TransportTrackingDto dto) {
     final raw = dto.raw;
     return TransportTrackingPlaceholderData(

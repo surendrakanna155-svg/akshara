@@ -180,3 +180,67 @@ final logVisitorProvider =
     AsyncNotifierProvider<LogVisitorNotifier, HostelVisitor?>(
   LogVisitorNotifier.new,
 );
+
+class RecordHostelAttendanceNotifier
+    extends AsyncNotifier<HostelAttendanceRecord?> {
+  @override
+  FutureOr<HostelAttendanceRecord?> build() => null;
+
+  Future<HostelAttendanceRecord?> execute(
+    RecordHostelAttendanceRequest request,
+  ) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHostel(ref);
+      try {
+        final result =
+            await ref.read(hostelRepositoryProvider).recordHostelAttendance(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        ref
+          ..invalidate(hostelAttendanceFutureProvider)
+          ..invalidate(hostelDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final recordHostelAttendanceProvider = AsyncNotifierProvider<
+    RecordHostelAttendanceNotifier, HostelAttendanceRecord?>(
+  RecordHostelAttendanceNotifier.new,
+);
+
+class RecordMessNotifier extends AsyncNotifier<HostelMealMenu?> {
+  @override
+  FutureOr<HostelMealMenu?> build() => null;
+
+  Future<HostelMealMenu?> execute(RecordMessRequest request) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHostel(ref);
+      try {
+        final result = await ref.read(hostelRepositoryProvider).recordMess(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(hostelMessFutureProvider)
+          ..invalidate(hostelDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final recordMessProvider =
+    AsyncNotifierProvider<RecordMessNotifier, HostelMealMenu?>(
+  RecordMessNotifier.new,
+);

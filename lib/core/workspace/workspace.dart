@@ -71,6 +71,7 @@ const Map<WorkspaceId, Workspace> kWorkspaceCatalog = {
       AdminModule.finance,
       AdminModule.sis,
       AdminModule.hr,
+      AdminModule.employee,
       AdminModule.management,
       AdminModule.transport,
       AdminModule.hostel,

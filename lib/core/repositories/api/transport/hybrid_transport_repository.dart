@@ -84,6 +84,16 @@ class HybridTransportRepository implements TransportRepository {
       );
 
   @override
+  Future<TransportAttendanceRecord> recordAttendance({
+    required RepositoryQuery query,
+    required RecordTransportAttendanceRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.recordAttendance(query: query, request: request),
+        mockCall: () => _mock.recordAttendance(query: query, request: request),
+      );
+
+  @override
   Future<StudentTransportAllocation> assignStudentTransport({
     required RepositoryQuery query,
     required AssignStudentTransportRequest request,
@@ -111,5 +121,15 @@ class HybridTransportRepository implements TransportRepository {
       withMockWriteFallback(
         apiCall: () => _api.removeStudentTransport(query: query, request: request),
         mockCall: () => _mock.removeStudentTransport(query: query, request: request),
+      );
+
+  @override
+  Future<TransportDelayNotificationResult> notifyRouteDelay({
+    required RepositoryQuery query,
+    required NotifyRouteDelayRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.notifyRouteDelay(query: query, request: request),
+        mockCall: () => _mock.notifyRouteDelay(query: query, request: request),
       );
 }

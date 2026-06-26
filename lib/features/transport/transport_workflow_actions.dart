@@ -98,47 +98,47 @@ Future<void> showActivateTransportRouteDialog(
   }
 }
 
-Future<void> showAssignStudentTransportDialog(
+Future<void> showRecordTransportAttendanceDialog(
   BuildContext context,
   WidgetRef ref, {
-  required StudentTransportAllocation allocation,
+  required TransportAttendanceRecord record,
 }) async {
-  final routeController = TextEditingController(text: 'route_12');
-  final pickupController = TextEditingController(text: 'Lake View Colony');
-  final dropController = TextEditingController(text: 'Akshara Main Gate');
+  var selected = record.status == TransportAttendanceStatus.notScheduled
+      ? TransportAttendanceStatus.waiting
+      : record.status;
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text('Assign ${allocation.studentName}'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: routeController,
-            decoration: const InputDecoration(labelText: 'Route ID'),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: Text('Mark ${record.studentName}'),
+        content: Wrap(
+          spacing: 8,
+          children: [
+            for (final status in const [
+              TransportAttendanceStatus.picked,
+              TransportAttendanceStatus.waiting,
+              TransportAttendanceStatus.absent,
+            ])
+              ChoiceChip(
+                label: Text(_attendanceStatusLabel(status)),
+                selected: selected == status,
+                onSelected: (_) => setState(() => selected = status),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
-          TextField(
-            controller: pickupController,
-            decoration: const InputDecoration(labelText: 'Pickup stop'),
-          ),
-          TextField(
-            controller: dropController,
-            decoration: const InputDecoration(labelText: 'Drop stop'),
+          FilledButton(
+            key: QaTestKeys.transportMarkAttendanceDialogSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Save'),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          key: QaTestKeys.transportAssignDialogSubmitButton,
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Assign'),
-        ),
-      ],
     ),
   );
 
@@ -146,12 +146,232 @@ Future<void> showAssignStudentTransportDialog(
 
   try {
     final updated =
+        await ref.read(recordTransportAttendanceProvider.notifier).execute(
+              RecordTransportAttendanceRequest(
+                id: record.id,
+                studentName: record.studentName,
+                stopName: record.stopName,
+                routeName: record.routeName,
+                scheduledTime: record.scheduledTime,
+                actualTime: record.actualTime,
+                status: selected,
+                parentNotified: record.parentNotified,
+                shift: record.shift,
+              ),
+            );
+    if (!context.mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.transportAttendanceRecordedSnackbar,
+        content: Text(
+          '${updated.studentName} marked ${_attendanceStatusLabel(updated.status)}',
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+  }
+}
+
+String _attendanceStatusLabel(TransportAttendanceStatus status) {
+  return switch (status) {
+    TransportAttendanceStatus.picked => 'Picked',
+    TransportAttendanceStatus.waiting => 'Waiting',
+    TransportAttendanceStatus.absent => 'Absent',
+    TransportAttendanceStatus.notScheduled => 'Not scheduled',
+  };
+}
+
+Future<void> showNotifyRouteDelayDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required List<TransportRoute> routes,
+}) async {
+  final selectableRoutes =
+      routes.where((r) => r.status == TransportRouteStatus.active).toList();
+  if (selectableRoutes.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No active routes to notify.')),
+    );
+    return;
+  }
+
+  var selectedRouteId = selectableRoutes.first.id;
+  final messageController = TextEditingController();
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Notify parents of delay'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: selectedRouteId,
+              decoration: const InputDecoration(labelText: 'Route'),
+              items: [
+                for (final route in selectableRoutes)
+                  DropdownMenuItem<String>(
+                    value: route.id,
+                    child: Text(route.name),
+                  ),
+              ],
+              onChanged: (value) =>
+                  setState(() => selectedRouteId = value ?? selectedRouteId),
+            ),
+            TextField(
+              controller: messageController,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Delay message',
+                hintText: 'e.g. Bus running 15 min late due to traffic',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.transportNotifyDelayDialogSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Notify'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final message = messageController.text.trim();
+  if (message.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Enter a delay message before notifying.')),
+    );
+    return;
+  }
+
+  try {
+    final result = await ref.read(notifyRouteDelayProvider.notifier).execute(
+          NotifyRouteDelayRequest(
+            routeId: selectedRouteId,
+            message: message,
+          ),
+        );
+    if (!context.mounted || result == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.transportNotifyDelaySuccessSnackbar,
+        content: Text(
+          'Notified ${result.recipientCount} parent(s) on ${result.routeName}',
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+  }
+}
+
+Future<void> showAssignStudentTransportDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required StudentTransportAllocation allocation,
+  required List<TransportRoute> routes,
+}) async {
+  final selectableRoutes =
+      routes.where((r) => r.status == TransportRouteStatus.active).toList();
+  if (selectableRoutes.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No active routes available to assign.')),
+    );
+    return;
+  }
+
+  var selectedRouteId = selectableRoutes.first.id;
+  final pickupController = TextEditingController();
+  final dropController = TextEditingController(text: 'Akshara Main Gate');
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: Text('Assign ${allocation.studentName}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'SIS ID ${allocation.sisStudentId} · ${allocation.admissionNumber}',
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: selectedRouteId,
+              decoration: const InputDecoration(labelText: 'Route'),
+              items: [
+                for (final route in selectableRoutes)
+                  DropdownMenuItem<String>(
+                    value: route.id,
+                    child: Text(route.name),
+                  ),
+              ],
+              onChanged: (value) =>
+                  setState(() => selectedRouteId = value ?? selectedRouteId),
+            ),
+            TextField(
+              controller: pickupController,
+              decoration: const InputDecoration(labelText: 'Pickup stop'),
+            ),
+            TextField(
+              controller: dropController,
+              decoration: const InputDecoration(labelText: 'Drop stop'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.transportAssignDialogSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Assign'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final pickup = pickupController.text.trim();
+  final drop = dropController.text.trim();
+  if (pickup.isEmpty || drop.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Pickup and drop stops are required.')),
+    );
+    return;
+  }
+
+  try {
+    final updated =
         await ref.read(assignStudentTransportProvider.notifier).execute(
               AssignStudentTransportRequest(
                 allocationId: allocation.id,
-                routeId: routeController.text.trim(),
-                pickupStop: pickupController.text.trim(),
-                dropStop: dropController.text.trim(),
+                routeId: selectedRouteId,
+                pickupStop: pickup,
+                dropStop: drop,
+                studentName: allocation.studentName,
+                admissionNumber: allocation.admissionNumber,
+                sisStudentId: allocation.sisStudentId,
+                classLabel: allocation.classLabel,
               ),
             );
     if (!context.mounted || updated == null) return;
@@ -171,56 +391,89 @@ Future<void> showTransferStudentTransportDialog(
   BuildContext context,
   WidgetRef ref, {
   required StudentTransportAllocation allocation,
+  required List<TransportRoute> routes,
 }) async {
-  final routeController = TextEditingController(text: 'route_08');
-  final pickupController = TextEditingController(text: 'Hitech City');
-  final dropController = TextEditingController(text: 'Akshara Main Gate');
+  final selectableRoutes = routes
+      .where((r) =>
+          r.status == TransportRouteStatus.active && r.id != allocation.routeId)
+      .toList();
+  if (selectableRoutes.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No other active route to transfer to.')),
+    );
+    return;
+  }
+
+  var selectedRouteId = selectableRoutes.first.id;
+  final pickupController = TextEditingController(text: allocation.pickupStop);
+  final dropController = TextEditingController(text: allocation.dropStop);
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text('Transfer ${allocation.studentName}'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: routeController,
-            decoration: const InputDecoration(labelText: 'Target route ID'),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: Text('Transfer ${allocation.studentName}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: selectedRouteId,
+              decoration: const InputDecoration(labelText: 'Target route'),
+              items: [
+                for (final route in selectableRoutes)
+                  DropdownMenuItem<String>(
+                    value: route.id,
+                    child: Text(route.name),
+                  ),
+              ],
+              onChanged: (value) =>
+                  setState(() => selectedRouteId = value ?? selectedRouteId),
+            ),
+            TextField(
+              controller: pickupController,
+              decoration: const InputDecoration(labelText: 'Pickup stop'),
+            ),
+            TextField(
+              controller: dropController,
+              decoration: const InputDecoration(labelText: 'Drop stop'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
-          TextField(
-            controller: pickupController,
-            decoration: const InputDecoration(labelText: 'Pickup stop'),
-          ),
-          TextField(
-            controller: dropController,
-            decoration: const InputDecoration(labelText: 'Drop stop'),
+          FilledButton(
+            key: QaTestKeys.transportTransferDialogSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Transfer'),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          key: QaTestKeys.transportTransferDialogSubmitButton,
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Transfer'),
-        ),
-      ],
     ),
   );
 
   if (confirmed != true || !context.mounted) return;
+
+  final pickup = pickupController.text.trim();
+  final drop = dropController.text.trim();
+  if (pickup.isEmpty || drop.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Pickup and drop stops are required.')),
+    );
+    return;
+  }
 
   try {
     final updated =
         await ref.read(transferStudentTransportProvider.notifier).execute(
               TransferStudentTransportRequest(
                 allocationId: allocation.id,
-                targetRouteId: routeController.text.trim(),
-                pickupStop: pickupController.text.trim(),
-                dropStop: dropController.text.trim(),
+                targetRouteId: selectedRouteId,
+                pickupStop: pickup,
+                dropStop: drop,
               ),
             );
     if (!context.mounted || updated == null) return;

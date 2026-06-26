@@ -112,6 +112,7 @@ void main() {
           title: 'NCERT Maths Class 9 (PDF)',
           type: LibraryResourceType.pdf,
           classAccess: 'Class 9',
+          resourceUrl: 'https://ncert.nic.in/jemh1.pdf',
           studentAppVisible: true,
           teacherAppVisible: false,
         ),
@@ -121,7 +122,76 @@ void main() {
       expect(after.resources.length, before.resources.length + 1);
       expect(resource.downloads, 0);
       expect(resource.teacherAppVisible, isFalse);
+      expect(resource.resourceUrl, 'https://ncert.nic.in/jemh1.pdf');
       expect(after.resources.any((r) => r.id == resource.id), isTrue);
+    });
+
+    test('addDigitalResource rejects an empty URL', () async {
+      final repo = MockLibraryRepository();
+      expect(
+        () => repo.addDigitalResource(
+          query: query,
+          request: const AddLibraryResourceRequest(
+            title: 'No link',
+            type: LibraryResourceType.link,
+            classAccess: 'All classes',
+            resourceUrl: '',
+            studentAppVisible: true,
+            teacherAppVisible: true,
+          ),
+        ),
+        throwsStateError,
+      );
+    });
+
+    test('enrollMember adds an active member usable for an issue', () async {
+      final repo = MockLibraryRepository();
+      final before = await repo.getMembers(query: query);
+
+      final member = await repo.enrollMember(
+        query: query,
+        request: const EnrollLibraryMemberRequest(
+          name: 'Sneha Kulkarni',
+          memberType: LibraryMemberType.student,
+          identifier: 'ADM-2026-0210',
+          classOrDepartment: 'Class 9',
+          sisStudentId: 'SIS-STU-20001',
+        ),
+      );
+
+      final after = await repo.getMembers(query: query);
+      expect(after.total, before.total + 1);
+      expect(member.status, LibraryMemberStatus.active);
+      expect(member.activeLoans, 0);
+
+      // The freshly-enrolled member can borrow a book (no garbage id).
+      final issue = await repo.issueLibraryBook(
+        query: query,
+        request: IssueLibraryBookRequest(
+          isbn: '978-0-07-802563-1',
+          memberId: member.id,
+        ),
+      );
+      expect(issue.memberName, 'Sneha Kulkarni');
+    });
+
+    test('waiveFine flips a pending fine and drops it from the pending total',
+        () async {
+      final repo = MockLibraryRepository();
+      final before = await repo.getFines(query: query);
+      final pending = before.fines
+          .firstWhere((f) => f.status == LibraryFineStatus.pending);
+
+      final waived = await repo.waiveFine(
+        query: query,
+        request: WaiveLibraryFineRequest(fineId: pending.id),
+      );
+      expect(waived.status, LibraryFineStatus.waived);
+
+      final after = await repo.getFines(query: query);
+      final updated = after.fines.firstWhere((f) => f.id == pending.id);
+      expect(updated.status, LibraryFineStatus.waived);
+      expect(after.totalPending, isNot(before.totalPending));
     });
   });
 
@@ -242,6 +312,7 @@ void main() {
               title: 'Blocked Resource',
               type: LibraryResourceType.link,
               classAccess: 'All classes',
+              resourceUrl: 'https://example.org/blocked',
               studentAppVisible: true,
               teacherAppVisible: true,
             ),
@@ -266,6 +337,7 @@ void main() {
               title: 'Allowed Resource',
               type: LibraryResourceType.video,
               classAccess: 'Class 10',
+              resourceUrl: 'https://example.org/allowed.mp4',
               studentAppVisible: true,
               teacherAppVisible: true,
             ),
@@ -275,6 +347,96 @@ void main() {
       expect(
         container.read(addLibraryResourceProvider).value?.downloads,
         0,
+      );
+    });
+
+    test('enrollMember fails without manageLibrary', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(enrollLibraryMemberProvider.notifier).execute(
+            const EnrollLibraryMemberRequest(
+              name: 'Blocked Member',
+              memberType: LibraryMemberType.student,
+              identifier: 'ADM-X',
+              classOrDepartment: 'Class 1',
+            ),
+          );
+
+      expect(container.read(enrollLibraryMemberProvider).hasError, isTrue);
+    });
+
+    test('enrollMember succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(enrollLibraryMemberProvider.notifier).execute(
+            const EnrollLibraryMemberRequest(
+              name: 'Allowed Member',
+              memberType: LibraryMemberType.staff,
+              identifier: 'EMP-9',
+              classOrDepartment: 'Administration',
+            ),
+          );
+
+      expect(container.read(enrollLibraryMemberProvider).hasValue, isTrue);
+      expect(
+        container.read(enrollLibraryMemberProvider).value?.status,
+        LibraryMemberStatus.active,
+      );
+    });
+
+    test('waiveFine fails without manageLibrary', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.admissionsCounselor),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(waiveLibraryFineProvider.notifier).execute(
+            const WaiveLibraryFineRequest(fineId: 'fine_1'),
+          );
+
+      expect(container.read(waiveLibraryFineProvider).hasError, isTrue);
+    });
+
+    test('waiveFine succeeds for superAdmin', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.superAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(waiveLibraryFineProvider.notifier).execute(
+            const WaiveLibraryFineRequest(fineId: 'fine_1'),
+          );
+
+      expect(container.read(waiveLibraryFineProvider).hasValue, isTrue);
+      expect(
+        container.read(waiveLibraryFineProvider).value?.status,
+        LibraryFineStatus.waived,
       );
     });
   });

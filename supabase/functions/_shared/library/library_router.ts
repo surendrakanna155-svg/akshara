@@ -13,13 +13,23 @@ import {
 import {
   handleAddBook,
   handleAddDigitalResource,
+  handleEnrollMember,
   handleIssueBook,
   handleReturnBook,
+  handleWaiveFine,
 } from "./library_write_handlers.ts";
 
 type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
+type ParamRouteHandler = (
+  req: Request,
+  config: AppConfig,
+  ...args: string[]
+) => Promise<Response>;
 
-function matchLibraryRoute(method: string, path: string): { handler: RouteHandler } | null {
+function matchLibraryRoute(
+  method: string,
+  path: string,
+): { handler: ParamRouteHandler; args: string[] } | null {
   if (method === "GET") {
     const routes: Record<string, RouteHandler> = {
       "/library/dashboard": handleDashboard,
@@ -32,18 +42,24 @@ function matchLibraryRoute(method: string, path: string): { handler: RouteHandle
       "/library/reports": handleReports,
     };
     const handler = routes[path] as RouteHandler | undefined;
-    return handler ? { handler } : null;
+    return handler ? { handler, args: [] } : null;
   }
 
   if (method === "POST") {
+    const waiveMatch = path.match(/^\/library\/fines\/([^/]+)\/waive$/);
+    if (waiveMatch) {
+      return { handler: handleWaiveFine, args: [waiveMatch[1]!] };
+    }
+
     const routes: Record<string, RouteHandler> = {
       "/library/catalog": handleAddBook,
       "/library/issues": handleIssueBook,
       "/library/returns": handleReturnBook,
+      "/library/members": handleEnrollMember,
       "/library/digital-resources": handleAddDigitalResource,
     };
     const handler = routes[path] as RouteHandler | undefined;
-    return handler ? { handler } : null;
+    return handler ? { handler, args: [] } : null;
   }
 
   return null;
@@ -62,5 +78,5 @@ export async function routeLibrary(
     return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
   }
 
-  return await match.handler(req, config);
+  return await match.handler(req, config, ...match.args);
 }

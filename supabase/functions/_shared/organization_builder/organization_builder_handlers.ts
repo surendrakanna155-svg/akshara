@@ -231,13 +231,19 @@ export function handleProvision(req: Request, config: AppConfig): Promise<Respon
     if (!draftId) throw new ValidationError("draftId is required");
 
     const result = await provision(db, orgId, draftId, new Date().toISOString());
+    // Audit real provisioning only on a genuinely completed job; a failed job
+    // means the SECURITY DEFINER function rolled back, so nothing was created.
+    const eventType = result.job.status === "completed"
+      ? "orgBuilder.organization.provisioned"
+      : "orgBuilder.organization.provision_failed";
     await emitMutationAudit(
       db,
       claims,
-      moduleEntityAudit("orgBuilder.organization.provisioned", "provisioningJob", result.job.id, {
+      moduleEntityAudit(eventType, "provisioningJob", result.job.id, {
         draftId,
         organizationName: result.job.organizationName,
         packId: result.resolvedConfig.packId,
+        status: result.job.status,
       }),
       req,
     );

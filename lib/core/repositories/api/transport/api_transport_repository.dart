@@ -122,6 +122,15 @@ class ApiTransportRepository implements TransportRepository {
   }
 
   @override
+  Future<TransportAttendanceRecord> recordAttendance({
+    required RepositoryQuery query,
+    required RecordTransportAttendanceRequest request,
+  }) async {
+    final dto = await _remote.recordAttendance(query: query, request: request);
+    return _mapper.toAttendanceRecord(dto);
+  }
+
+  @override
   Future<StudentTransportAllocation> assignStudentTransport({
     required RepositoryQuery query,
     required AssignStudentTransportRequest request,
@@ -146,5 +155,14 @@ class ApiTransportRepository implements TransportRepository {
   }) async {
     final dto = await _remote.removeStudentTransport(query: query, request: request);
     return _mapper.toAllocation(dto);
+  }
+
+  @override
+  Future<TransportDelayNotificationResult> notifyRouteDelay({
+    required RepositoryQuery query,
+    required NotifyRouteDelayRequest request,
+  }) async {
+    final dto = await _remote.notifyRouteDelay(query: query, request: request);
+    return _mapper.toDelayNotification(dto);
   }
 }

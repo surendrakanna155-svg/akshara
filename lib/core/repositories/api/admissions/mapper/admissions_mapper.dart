@@ -176,6 +176,7 @@ class AdmissionsMapper {
       uploadedLabel: raw['uploadedLabel'] as String? ?? '',
       verifiedBy: raw['verifiedBy'] as String?,
       leadId: raw['leadId'] as String? ?? '',
+      hasFile: raw['hasFile'] as bool? ?? false,
     );
   }
 

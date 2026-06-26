@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../router/route_names.dart';
@@ -12,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../alumni_models.dart';
 import '../alumni_providers.dart';
+import '../alumni_workflow_actions.dart';
 import '../widgets/alumni_module_scaffold.dart';
 
 /// AL-05 — Donations.
@@ -42,10 +44,11 @@ class AlumniDonationsScreen extends ConsumerWidget {
           ref.read(alumniDonationsFilterProvider.notifier).state = index,
       filterTrailing: AksharaManageAction(
         permission: Permission.manageAlumni,
-        child: OutlinedButton.icon(
-          onPressed: () => context.go(RouteNames.financeCollections),
-          icon: const Icon(Icons.account_balance_outlined, size: 18),
-          label: const Text('Finance ledger'),
+        child: FilledButton.icon(
+          key: QaTestKeys.alumniRecordDonationButton,
+          onPressed: () => showRecordDonationDialog(context, ref),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Record donation'),
         ),
       ),
       body: _buildBody(

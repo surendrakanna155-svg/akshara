@@ -48,6 +48,28 @@ class CreateAlumniCampaignRequest {
   final String financeAccountCode;
 }
 
+class RecordDonationRequest {
+  const RecordDonationRequest({
+    required this.alumniName,
+    required this.alumniId,
+    required this.amount,
+    required this.date,
+    required this.campaignId,
+    required this.status,
+    required this.paymentMode,
+  });
+
+  final String alumniName;
+  final String alumniId;
+  final String amount;
+  final String date;
+
+  /// Optional id of the campaign this donation funds ('' when unattributed).
+  final String campaignId;
+  final String status;
+  final String paymentMode;
+}
+
 class AddMentorshipPairRequest {
   const AddMentorshipPairRequest({
     required this.mentorName,

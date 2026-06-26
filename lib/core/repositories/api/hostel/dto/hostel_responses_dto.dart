@@ -89,6 +89,16 @@ class HostelAttendanceResponseDto {
   final List<HostelAttendanceRecordDto> items;
 }
 
+class HostelMealMenuDto {
+  const HostelMealMenuDto({required this.raw});
+
+  factory HostelMealMenuDto.fromJson(Map<String, dynamic> json) {
+    return HostelMealMenuDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
 class HostelLeaveRequestDto {
   const HostelLeaveRequestDto({required this.raw});
 

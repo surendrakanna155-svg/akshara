@@ -34,4 +34,12 @@ abstract class HostelRepository {
     required RepositoryQuery query,
     required LogVisitorRequest request,
   });
+  Future<HostelAttendanceRecord> recordHostelAttendance({
+    required RepositoryQuery query,
+    required RecordHostelAttendanceRequest request,
+  });
+  Future<HostelMealMenu> recordMess({
+    required RepositoryQuery query,
+    required RecordMessRequest request,
+  });
 }

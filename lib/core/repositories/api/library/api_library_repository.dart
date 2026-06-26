@@ -103,4 +103,22 @@ class ApiLibraryRepository implements LibraryRepository {
     final raw = await _remote.addDigitalResource(query: query, request: request);
     return _mapper.toDigitalResource(raw);
   }
+
+  @override
+  Future<LibraryMember> enrollMember({
+    required RepositoryQuery query,
+    required EnrollLibraryMemberRequest request,
+  }) async {
+    final dto = await _remote.enrollMember(query: query, request: request);
+    return _mapper.toMember(dto);
+  }
+
+  @override
+  Future<LibraryFine> waiveFine({
+    required RepositoryQuery query,
+    required WaiveLibraryFineRequest request,
+  }) async {
+    final raw = await _remote.waiveFine(query: query, request: request);
+    return _mapper.toFineFromEntity(raw);
+  }
 }

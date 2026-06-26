@@ -10,6 +10,7 @@ class DocumentUploadRequestDto {
         'lead_id': request.leadId,
         'document_type': _documentTypeToApi(request.documentType),
         'file_name': request.fileName,
+        'storage_path': request.storagePath,
         'student_name': request.studentName,
         'class_label': request.classLabel,
       },

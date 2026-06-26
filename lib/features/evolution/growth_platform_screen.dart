@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/errors/api_failure_mapper.dart';
 import '../../core/security/permissions.dart';
+import '../../core/security/rbac_service.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../router/route_names.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/theme_extensions.dart';
 import 'evolution_models.dart';
@@ -36,6 +39,15 @@ class GrowthPlatformScreen extends ConsumerWidget {
             ],
           ),
           actions: [
+            if (ref
+                .watch(rbacServiceProvider)
+                .hasPermission(Permission.viewAchievementPromotion))
+              TextButton.icon(
+                key: QaTestKeys.growthPromotionCenterLink,
+                onPressed: () => context.push(RouteNames.achievementPromotion),
+                icon: const Icon(Icons.campaign_outlined),
+                label: const Text('Promotion Center'),
+              ),
             AksharaManageAction(
               permission: Permission.manageGrowthPlatform,
               child: TextButton.icon(

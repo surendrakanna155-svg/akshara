@@ -7,9 +7,30 @@ import {
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
+import { formatRupees, parseRupees } from "./alumni_read_repository.ts";
 
 const writeStore = createEntityWriteStore("alumni_entities", "Alumni");
 const { runWrite } = createModuleWriteHandlers("manageAlumni");
+
+/**
+ * Apply a new donation's contribution to a campaign payload: bump its raised
+ * amount by the donated rupees and increment the donor count. The current
+ * `raisedAmount`/`donorCount` are seeded constants with no increment path; this
+ * is the only writer that advances them. Returns a fresh payload (no mutation).
+ */
+export function applyDonationToCampaign(
+  campaign: Record<string, unknown>,
+  donationAmount: string,
+): Record<string, unknown> {
+  const currentRaised = parseRupees(campaign.raisedAmount);
+  const nextRaised = currentRaised + parseRupees(donationAmount);
+  const currentDonors = typeof campaign.donorCount === "number" ? campaign.donorCount : 0;
+  return {
+    ...campaign,
+    raisedAmount: formatRupees(nextRaised),
+    donorCount: currentDonors + 1,
+  };
+}
 
 /** POST /alumni/registry — add a graduate to the alumni registry. */
 export async function handleAddAlumni(req: Request, config: AppConfig): Promise<Response> {
@@ -118,6 +139,72 @@ export async function handleAddMentorshipPair(
       moduleEntityAudit("alumni.mentorship.added", "alumni_mentorship", id, {
         mentorAlumniId: payload.mentorAlumniId,
         menteeName: payload.menteeName,
+      }),
+      request,
+    );
+    return { payload: saved, status: 201 };
+  });
+}
+
+/**
+ * POST /alumni/donations — record a donation against the alumni ledger.
+ *
+ * Inserts a `donation` entity in the shape the donations ledger + dashboard
+ * read (alumniName/alumniId/amount/date/campaign/status/financeReceiptId/
+ * paymentMode). When the donation references a campaign by id, that campaign
+ * entity is found and replaced with its `raisedAmount` advanced and
+ * `donorCount` incremented — the only path that grows these seeded constants.
+ */
+export async function handleRecordDonation(req: Request, config: AppConfig): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const id = crypto.randomUUID();
+    const amount = requireStr(body, "amount");
+    const campaignId = str(body, "campaignId", "campaign_id") ?? "";
+
+    let campaignName = str(body, "campaign") ?? "";
+    if (campaignId !== "") {
+      const campaign = await writeStore.find(
+        db,
+        organizationId,
+        schoolId,
+        "campaign",
+        campaignId,
+      );
+      if (campaign !== null) {
+        if (campaignName === "") campaignName = str(campaign, "name") ?? "";
+        await writeStore.replace(
+          db,
+          organizationId,
+          schoolId,
+          "campaign",
+          campaignId,
+          applyDonationToCampaign(campaign, amount),
+        );
+      }
+    }
+
+    const payload = {
+      id,
+      alumniName: requireStr(body, "alumniName", "alumni_name"),
+      alumniId: str(body, "alumniId", "alumni_id") ?? "",
+      amount,
+      date: str(body, "date") ?? "",
+      campaignId,
+      campaign: campaignName || "—",
+      status: str(body, "status") ?? "received",
+      financeReceiptId: str(body, "financeReceiptId", "finance_receipt_id") ?? "—",
+      financeAccountCode: str(body, "financeAccountCode", "finance_account_code") ?? "",
+      paymentMode: str(body, "paymentMode", "payment_mode") ?? "",
+    };
+    const saved = await writeStore.insert(db, organizationId, schoolId, "donation", id, payload);
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("alumni.donation.recorded", "alumni_donation", id, {
+        alumniId: payload.alumniId,
+        amount: payload.amount,
+        campaignId,
       }),
       request,
     );

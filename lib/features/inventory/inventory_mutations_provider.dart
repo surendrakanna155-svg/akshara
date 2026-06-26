@@ -107,6 +107,16 @@ class CreateProcurementOrderNotifier
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertCreateInventoryPo(ref);
+      final vendorId = request.vendorId?.trim() ?? '';
+      if (vendorId.isEmpty) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.unknown,
+            message: 'Select a vendor before creating a purchase order.',
+            code: 'INVENTORY_PO_VENDOR_REQUIRED',
+          ),
+        );
+      }
       try {
         final query = ref.read(repositoryQueryProvider);
         final financePo = await ref
@@ -114,7 +124,7 @@ class CreateProcurementOrderNotifier
             .createPurchaseOrder(
               query: query,
               request: CreateInventoryPurchaseOrderRequest(
-                vendorId: 'vendor_if_1',
+                vendorId: vendorId,
                 poNumber:
                     request.poNumber ?? _draftPoNumber(DateTime.now()),
                 lines: [

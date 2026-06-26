@@ -34,6 +34,11 @@ import {
   updateHandoffStatus,
 } from "./admissions_handoffs_repository.ts";
 import {
+  buildAdmissionsDocumentStoragePath,
+  createAdmissionsDocumentDownloadUrl,
+  createAdmissionsDocumentUploadUrl,
+} from "../storage/storage_service.ts";
+import {
   addLeadActivity,
   addLeadFollowUp,
   assignLeadCounselor,
@@ -44,6 +49,7 @@ import {
   getApplicationById,
   getApprovalById,
   getDocumentById,
+  getDocumentStoragePath,
   getLeadById,
   listApplications,
   listDocuments,
@@ -821,6 +827,7 @@ export async function handleUploadDocument(
   const leadId = snakeStr(body, "lead_id");
   const documentType = snakeStr(body, "document_type");
   const fileName = snakeStr(body, "file_name");
+  const storagePath = snakeStr(body, "storage_path");
   if (!leadId || !documentType || !fileName) {
     return errorEnvelope(
       "VALIDATION_ERROR",
@@ -828,9 +835,28 @@ export async function handleUploadDocument(
       422,
     );
   }
+  // ADMIS-5: a document is only "uploaded" once a real file is stored. The
+  // client first presigns + PUTs the bytes, then confirms here with the
+  // resulting storage_path. No metadata-only fallback.
+  if (!storagePath) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "storage_path is required — upload the file via /admissions/documents/upload/presign first",
+      422,
+    );
+  }
 
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
+
+  // Guard: the stored object must live under this tenant's prefix.
+  if (!storagePath.startsWith(`${orgId}/${schoolId}/`)) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "storage_path is not scoped to this tenant",
+      422,
+    );
+  }
 
   try {
     const doc = await runTenant(config, auth.claims, async (db) => {
@@ -838,6 +864,7 @@ export async function handleUploadDocument(
         leadId,
         documentType,
         fileName,
+        storagePath,
         studentName: snakeStr(body, "student_name"),
         classLabel: snakeStr(body, "class_label"),
       });
@@ -850,6 +877,96 @@ export async function handleUploadDocument(
       return tenantDbNotConfiguredResponse(error);
     }
     throw error;
+  }
+}
+
+/// ADMIS-5: presign a direct-to-Storage upload for an admissions document.
+/// Mirrors the device-memories presign flow: the client PUTs the file bytes to
+/// the returned signed URL, then confirms via POST /admissions/documents/upload.
+export async function handlePresignDocumentUpload(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  const leadId = snakeStr(body, "lead_id");
+  const fileName = snakeStr(body, "file_name");
+  if (!leadId || !fileName) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "lead_id and file_name are required",
+      422,
+    );
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+  const storagePath = buildAdmissionsDocumentStoragePath(
+    orgId,
+    schoolId,
+    leadId,
+    fileName,
+  );
+
+  try {
+    const upload = await createAdmissionsDocumentUploadUrl(config, storagePath);
+    return jsonResponse(envelope({
+      signedUrl: upload.signedUrl,
+      token: upload.token,
+      storagePath: upload.path,
+    }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Presign failed";
+    return errorEnvelope("ADMISSIONS_UPLOAD_ERROR", message, 500);
+  }
+}
+
+/// ADMIS-5: return a short-lived signed URL so a verifier/principal can open or
+/// download a stored admissions document. Tenant-scoped via the document row.
+export async function handleDownloadDocument(
+  req: Request,
+  config: AppConfig,
+  documentId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "viewAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const path = await runTenant(config, auth.claims, (db) =>
+      getDocumentStoragePath(db, orgId, schoolId, documentId)
+    );
+    if (!path) {
+      return errorEnvelope(
+        "NOT_FOUND",
+        `No stored file for document: ${documentId}`,
+        404,
+      );
+    }
+    const downloadUrl = await createAdmissionsDocumentDownloadUrl(config, path);
+    return jsonResponse(envelope({ downloadUrl }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    const message = error instanceof Error ? error.message : "Download URL failed";
+    return errorEnvelope("ADMISSIONS_ERROR", message, 500);
   }
 }
 

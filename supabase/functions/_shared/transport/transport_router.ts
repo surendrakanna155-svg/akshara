@@ -16,6 +16,7 @@ import {
   handleActivateRoute,
   handleAssignStudentTransport,
   handleCreateRoute,
+  handleNotifyRouteDelay,
   handleRecordAttendance,
   handleRemoveStudentTransport,
   handleTransferStudentTransport,
@@ -53,6 +54,9 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
       return { handler: handleRecordAttendance };
     }
     // --- end A6 writes (AgentC) ---
+    if (path === "/transport/notify-delay") {
+      return { handler: handleNotifyRouteDelay };
+    }
     if (/^\/transport\/routes\/[^/]+\/activate$/.test(path)) {
       return { handler: handleActivateRoute };
     }

@@ -348,6 +348,64 @@ class AdmissionsRemoteDataSource {
     );
   }
 
+  /// ADMIS-5: presign a direct-to-Storage upload, returning the signed URL and
+  /// the storage path to confirm with afterwards.
+  Future<({String signedUrl, String storagePath})> presignDocumentUpload({
+    required RepositoryQuery query,
+    required String leadId,
+    required String fileName,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AdmissionsApiPaths.documentsUploadPresign,
+      queryParameters: _queryParams(query),
+      data: {'lead_id': leadId, 'file_name': fileName},
+    );
+    final data = _requireData(response);
+    return (
+      signedUrl: data['signedUrl'] as String? ?? '',
+      storagePath: data['storagePath'] as String? ?? '',
+    );
+  }
+
+  /// PUT file bytes to the Supabase signed upload URL (separate host from API).
+  Future<void> putSignedUpload({
+    required String signedUrl,
+    required List<int> bytes,
+    required String contentType,
+  }) async {
+    final uploadClient = Dio(
+      BaseOptions(
+        headers: {'Content-Type': contentType},
+        validateStatus: (status) => status != null && status < 500,
+      ),
+    );
+    final response = await uploadClient.put<List<int>>(
+      signedUrl,
+      data: bytes,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    if (response.statusCode == null || response.statusCode! >= 400) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        message: 'Upload failed (${response.statusCode})',
+      );
+    }
+  }
+
+  /// ADMIS-5: resolve a signed download URL for a stored document.
+  Future<String> fetchDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String documentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      AdmissionsApiPaths.documentDownload(documentId),
+      queryParameters: _queryParams(query),
+    );
+    final data = _requireData(response);
+    return data['downloadUrl'] as String? ?? '';
+  }
+
   Future<StudentDocumentRecord> approveDocument({
     required RepositoryQuery query,
     required String documentId,

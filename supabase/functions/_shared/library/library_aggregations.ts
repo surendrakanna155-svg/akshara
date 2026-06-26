@@ -183,10 +183,38 @@ export function computeDashboard(
   };
 }
 
-/** Recompute the fines view from live overdue (open) loans. */
+/**
+ * Map a persisted `fine` entity (written by handleReturnBook on an overdue
+ * return) into the fines-view DTO the Flutter `LibraryMapper` reads. The
+ * persisted status (`outstanding` / `waived`) maps to the client enum
+ * (`pending` / `waived`); only `outstanding` fines count toward `totalPending`.
+ */
+function mapPersistedFine(fine: Row): Row {
+  const status = asStr(fine.status, "outstanding");
+  const sisStudentId = (fine.sisStudentId as string | null) ?? null;
+  return {
+    id: asStr(fine.id),
+    memberName: asStr(fine.memberName),
+    bookTitle: asStr(fine.bookTitle),
+    amount: rupees(asInt(fine.amount, 0)),
+    daysOverdue: asInt(fine.daysOverdue, 0),
+    status: status === "waived" ? "waived" : "pending",
+    financeLinked: sisStudentId != null,
+    sisStudentId,
+  };
+}
+
+/**
+ * Recompute the fines view from BOTH the persisted `fine` entities (raised on
+ * overdue returns, mutated by waive) AND the live overdue (open, un-returned)
+ * loans. The two sets are disjoint — an open loan has no return-time fine row
+ * yet — so a fine appears exactly once. Only `outstanding` (pending) amounts
+ * count toward `totalPending`; waived fines are listed but excluded.
+ */
 export function computeFines(
   issues: Row[],
   members: Row[],
+  fineEntities: Row[] = [],
   now: Date = new Date(),
 ): Row {
   const overdue = openLoans(issues, now).filter((loan) => loan.daysOverdue > 0);
@@ -198,7 +226,18 @@ export function computeFines(
   }
 
   let totalPending = 0;
-  const fines = overdue.map((loan) => {
+
+  // Persisted return-time fines (outstanding + waived).
+  const persisted = fineEntities.map((fine) => {
+    const mapped = mapPersistedFine(fine);
+    if (mapped.status === "pending") {
+      totalPending += asInt(fine.amount, 0);
+    }
+    return mapped;
+  });
+
+  // Live fines on still-open overdue loans (not yet returned).
+  const live = overdue.map((loan) => {
     const amount = loan.daysOverdue * FINE_PER_DAY;
     totalPending += amount;
     const memberName = asStr(loan.issue.memberName);
@@ -217,7 +256,7 @@ export function computeFines(
   });
 
   return {
-    fines,
+    fines: [...persisted, ...live],
     financeIntegrationNote:
       "Library fines sync to Finance FN-02 fee head library_fine. Paid fines post to FN-05 collections.",
     financeRoute: "/finance/fee-structures",

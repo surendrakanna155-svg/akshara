@@ -8,9 +8,11 @@ class MockTransportWriteStore {
 
   List<StudentTransportAllocation>? allocations;
   List<TransportVehicle>? vehicles;
+  List<TransportAttendanceRecord>? attendance;
 
   void reset() {
     allocations = null;
     vehicles = null;
+    attendance = null;
   }
 }

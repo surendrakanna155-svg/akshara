@@ -446,6 +446,15 @@ abstract final class QaTestKeys {
   static const inventoryPoSuccessSnackbar =
       ValueKey<String>('inventory_po_success_snackbar');
 
+  static const inventoryPoVendorDropdown =
+      ValueKey<String>('inventory_po_vendor_dropdown');
+  static const inventoryCreateVendorSubmitButton =
+      ValueKey<String>('inventory_create_vendor_submit_button');
+  static const inventoryVendorCreatedSnackbar =
+      ValueKey<String>('inventory_vendor_created_snackbar');
+  static const inventoryAddVendorButton =
+      ValueKey<String>('inventory_add_vendor_button');
+
   static ValueKey<String> inventoryPoReceiveHandoffButton(String orderId) =>
       ValueKey<String>('inventory_po_receive_handoff_button_$orderId');
 
@@ -511,6 +520,24 @@ abstract final class QaTestKeys {
 
   static const transportRemoveSuccessSnackbar =
       ValueKey<String>('transport_remove_success_snackbar');
+
+  static ValueKey<String> transportMarkAttendanceButton(String recordId) =>
+      ValueKey<String>('transport_mark_attendance_button_$recordId');
+
+  static const transportMarkAttendanceDialogSubmitButton =
+      ValueKey<String>('transport_mark_attendance_dialog_submit_button');
+
+  static const transportAttendanceRecordedSnackbar =
+      ValueKey<String>('transport_attendance_recorded_snackbar');
+
+  static const transportNotifyDelayButton =
+      ValueKey<String>('transport_notify_delay_button');
+
+  static const transportNotifyDelayDialogSubmitButton =
+      ValueKey<String>('transport_notify_delay_dialog_submit_button');
+
+  static const transportNotifyDelaySuccessSnackbar =
+      ValueKey<String>('transport_notify_delay_success_snackbar');
 
   static const transportReportExportPdfButton =
       ValueKey<String>('transport_report_export_pdf_button');
@@ -836,6 +863,9 @@ abstract final class QaTestKeys {
   static const schoolConfigSettingsLink =
       ValueKey<String>('school_config_settings_link');
 
+  static const unifiedOnboardingSettingsLink =
+      ValueKey<String>('unified_onboarding_settings_link');
+
   static const teacherSettingsScreen =
       ValueKey<String>('teacher_settings_screen');
 
@@ -914,6 +944,21 @@ abstract final class QaTestKeys {
   static const libraryAddResourceSuccessSnackbar =
       ValueKey<String>('library_add_resource_success_snackbar');
 
+  static const libraryEnrollMemberButton =
+      ValueKey<String>('library_enroll_member_button');
+
+  static const libraryEnrollMemberDialogSubmitButton =
+      ValueKey<String>('library_enroll_member_dialog_submit_button');
+
+  static const libraryEnrollMemberSuccessSnackbar =
+      ValueKey<String>('library_enroll_member_success_snackbar');
+
+  static ValueKey<String> libraryWaiveFineButton(String fineId) =>
+      ValueKey<String>('library_waive_fine_$fineId');
+
+  static const libraryWaiveFineSuccessSnackbar =
+      ValueKey<String>('library_waive_fine_success_snackbar');
+
   static const alumniAddButton = ValueKey<String>('alumni_add_button');
 
   static const alumniAddDialogSubmitButton =
@@ -948,6 +993,15 @@ abstract final class QaTestKeys {
 
   static const alumniAddMentorshipSuccessSnackbar =
       ValueKey<String>('alumni_add_mentorship_success_snackbar');
+
+  static const alumniRecordDonationButton =
+      ValueKey<String>('alumni_record_donation_button');
+
+  static const alumniRecordDonationDialogSubmitButton =
+      ValueKey<String>('alumni_record_donation_dialog_submit_button');
+
+  static const alumniRecordDonationSuccessSnackbar =
+      ValueKey<String>('alumni_record_donation_success_snackbar');
 
   static const controlCenterCreateSchoolButton =
       ValueKey<String>('control_center_create_school_button');
@@ -1008,6 +1062,24 @@ abstract final class QaTestKeys {
 
   static const hostelLogVisitorSuccessSnackbar =
       ValueKey<String>('hostel_log_visitor_success_snackbar');
+
+  static const hostelRecordAttendanceButton =
+      ValueKey<String>('hostel_record_attendance_button');
+
+  static const hostelRecordAttendanceDialogSubmitButton =
+      ValueKey<String>('hostel_record_attendance_dialog_submit_button');
+
+  static const hostelRecordAttendanceSuccessSnackbar =
+      ValueKey<String>('hostel_record_attendance_success_snackbar');
+
+  static const hostelRecordMessButton =
+      ValueKey<String>('hostel_record_mess_button');
+
+  static const hostelRecordMessDialogSubmitButton =
+      ValueKey<String>('hostel_record_mess_dialog_submit_button');
+
+  static const hostelRecordMessSuccessSnackbar =
+      ValueKey<String>('hostel_record_mess_success_snackbar');
 
   static ValueKey<String> hostelAssignStudentButton(String studentId) =>
       ValueKey<String>('hostel_assign_student_$studentId');
@@ -1098,6 +1170,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('growth_create_campaign_button');
   static const growthCreateInquiryButton =
       ValueKey<String>('growth_create_inquiry_button');
+  static const growthPromotionCenterLink =
+      ValueKey<String>('growth_promotion_center_link');
   static const growthCampaignNameField =
       ValueKey<String>('growth_campaign_name_field');
   static const growthCampaignChannelField =
@@ -1438,6 +1512,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('organization_builder_start_provisioning_button');
   static const organizationBuilderProvisioningCompleted =
       ValueKey<String>('organization_builder_provisioning_completed');
+  static const organizationBuilderProvisioningFailed =
+      ValueKey<String>('organization_builder_provisioning_failed');
 
   static ValueKey<String> organizationBuilderPackCard(String packId) =>
       ValueKey<String>('organization_builder_pack_$packId');

@@ -26,6 +26,7 @@ abstract final class AuditSecurityCategorizer {
       case AuditEventType.followupAdded:
       case AuditEventType.applicationSubmitted:
       case AuditEventType.enrollmentSubmitted:
+      case AuditEventType.documentUploaded:
       case AuditEventType.documentApproved:
       case AuditEventType.documentRejected:
       case AuditEventType.admissionApproved:
@@ -83,6 +84,8 @@ abstract final class AuditSecurityCategorizer {
       case AuditEventType.transportStudentAssigned:
       case AuditEventType.transportStudentTransferred:
       case AuditEventType.transportStudentRemoved:
+      case AuditEventType.transportAttendanceRecorded:
+      case AuditEventType.transportDelayNotified:
         return AuditEventCategory.workflow;
 
       case AuditEventType.errorReported:

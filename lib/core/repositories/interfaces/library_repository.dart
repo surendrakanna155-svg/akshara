@@ -29,4 +29,12 @@ abstract class LibraryRepository {
     required RepositoryQuery query,
     required AddLibraryResourceRequest request,
   });
+  Future<LibraryMember> enrollMember({
+    required RepositoryQuery query,
+    required EnrollLibraryMemberRequest request,
+  });
+  Future<LibraryFine> waiveFine({
+    required RepositoryQuery query,
+    required WaiveLibraryFineRequest request,
+  });
 }

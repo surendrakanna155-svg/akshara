@@ -14,17 +14,20 @@ class MockLibraryRepository implements LibraryRepository {
         _issues = List<LibraryIssueRecord>.from(_seedIssues),
         _returns = List<LibraryReturnRecord>.from(_seedReturns),
         _members = List<LibraryMember>.from(_seedMembers),
+        _fines = List<LibraryFine>.from(_seedFines),
         _resources = List<LibraryDigitalResource>.from(_seedResources);
 
   final List<LibraryBook> _books;
   final List<LibraryIssueRecord> _issues;
   final List<LibraryReturnRecord> _returns;
   final List<LibraryMember> _members;
+  final List<LibraryFine> _fines;
   final List<LibraryDigitalResource> _resources;
   int _issueCounter = 5;
   int _returnCounter = 5;
   int _bookCounter = 6;
   int _resourceCounter = 5;
+  int _memberCounter = 5;
 
   static const _seedIssues = [
     LibraryIssueRecord(
@@ -343,54 +346,65 @@ class MockLibraryRepository implements LibraryRepository {
   }) async =>
       paginateList(_members, query);
 
+  static const _seedFines = [
+    LibraryFine(
+      id: 'fine_1',
+      memberName: 'Arjun Patel',
+      bookTitle: 'To Kill a Mockingbird',
+      amount: '₹60',
+      daysOverdue: 1,
+      status: LibraryFineStatus.pending,
+      financeLinked: false,
+      sisStudentId: 'SIS-STU-10421',
+    ),
+    LibraryFine(
+      id: 'fine_2',
+      memberName: 'Priya Sharma',
+      bookTitle: 'Pride and Prejudice',
+      amount: '₹450',
+      daysOverdue: 7,
+      status: LibraryFineStatus.pending,
+      financeLinked: true,
+      sisStudentId: 'SIS-STU-10415',
+    ),
+    LibraryFine(
+      id: 'fine_3',
+      memberName: 'Rohan Mehta',
+      bookTitle: 'The Great Gatsby',
+      amount: '₹50',
+      daysOverdue: 2,
+      status: LibraryFineStatus.paid,
+      financeLinked: true,
+    ),
+    LibraryFine(
+      id: 'fine_4',
+      memberName: 'Emma Thomas',
+      bookTitle: 'NCERT Mathematics Class 10',
+      amount: '₹30',
+      daysOverdue: 1,
+      status: LibraryFineStatus.waived,
+      financeLinked: false,
+      sisStudentId: 'SIS-STU-10418',
+    ),
+  ];
+
+  String get _totalPendingLabel {
+    var total = 0;
+    for (final fine in _fines) {
+      if (fine.status != LibraryFineStatus.pending) continue;
+      total += int.tryParse(fine.amount.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+    }
+    return '₹$total';
+  }
+
   @override
   Future<LibraryFinesData> getFines({required RepositoryQuery query}) async {
-    return const LibraryFinesData(
-      fines: [
-        LibraryFine(
-          id: 'fine_1',
-          memberName: 'Arjun Patel',
-          bookTitle: 'To Kill a Mockingbird',
-          amount: '₹60',
-          daysOverdue: 1,
-          status: LibraryFineStatus.pending,
-          financeLinked: false,
-          sisStudentId: 'SIS-STU-10421',
-        ),
-        LibraryFine(
-          id: 'fine_2',
-          memberName: 'Priya Sharma',
-          bookTitle: 'Pride and Prejudice',
-          amount: '₹450',
-          daysOverdue: 7,
-          status: LibraryFineStatus.pending,
-          financeLinked: true,
-          sisStudentId: 'SIS-STU-10415',
-        ),
-        LibraryFine(
-          id: 'fine_3',
-          memberName: 'Rohan Mehta',
-          bookTitle: 'The Great Gatsby',
-          amount: '₹50',
-          daysOverdue: 2,
-          status: LibraryFineStatus.paid,
-          financeLinked: true,
-        ),
-        LibraryFine(
-          id: 'fine_4',
-          memberName: 'Emma Thomas',
-          bookTitle: 'NCERT Mathematics Class 10',
-          amount: '₹30',
-          daysOverdue: 1,
-          status: LibraryFineStatus.waived,
-          financeLinked: false,
-          sisStudentId: 'SIS-STU-10418',
-        ),
-      ],
+    return LibraryFinesData(
+      fines: List<LibraryFine>.unmodifiable(_fines),
       financeIntegrationNote:
           'Library fines sync to Finance FN-02 fee head library_fine. Paid fines post to FN-05 collections.',
       financeRoute: RouteNames.financeFeeStructures,
-      totalPending: '₹510',
+      totalPending: _totalPendingLabel,
     );
   }
 
@@ -412,6 +426,7 @@ class MockLibraryRepository implements LibraryRepository {
       type: LibraryResourceType.pdf,
       classAccess: 'Class 10',
       downloads: 842,
+      resourceUrl: 'https://ncert.nic.in/textbook/pdf/jesc1dd.pdf',
       studentAppVisible: true,
       teacherAppVisible: true,
     ),
@@ -421,6 +436,7 @@ class MockLibraryRepository implements LibraryRepository {
       type: LibraryResourceType.ebook,
       classAccess: 'All classes',
       downloads: 1204,
+      resourceUrl: 'https://www.oxfordlearnersdictionaries.com/',
       studentAppVisible: true,
       teacherAppVisible: true,
     ),
@@ -430,6 +446,7 @@ class MockLibraryRepository implements LibraryRepository {
       type: LibraryResourceType.link,
       classAccess: 'Class 8–10',
       downloads: 567,
+      resourceUrl: 'https://www.khanacademy.org/math/algebra',
       studentAppVisible: true,
       teacherAppVisible: true,
     ),
@@ -439,6 +456,7 @@ class MockLibraryRepository implements LibraryRepository {
       type: LibraryResourceType.pdf,
       classAccess: 'Staff only',
       downloads: 48,
+      resourceUrl: 'https://example.org/staff-policy-handbook.pdf',
       studentAppVisible: false,
       teacherAppVisible: true,
     ),
@@ -448,6 +466,7 @@ class MockLibraryRepository implements LibraryRepository {
       type: LibraryResourceType.video,
       classAccess: 'Class 9–12',
       downloads: 312,
+      resourceUrl: 'https://www.youtube.com/watch?v=VRWRmIEHr3A',
       studentAppVisible: true,
       teacherAppVisible: true,
     ),
@@ -720,6 +739,11 @@ class MockLibraryRepository implements LibraryRepository {
       throw StateError('Resource title is required');
     }
 
+    final url = request.resourceUrl.trim();
+    if (url.isEmpty) {
+      throw StateError('A digital resource needs a retrievable URL');
+    }
+
     _resourceCounter += 1;
     final resource = LibraryDigitalResource(
       id: 'dig_$_resourceCounter',
@@ -728,10 +752,63 @@ class MockLibraryRepository implements LibraryRepository {
       classAccess:
           request.classAccess.trim().isEmpty ? 'All classes' : request.classAccess.trim(),
       downloads: 0,
+      resourceUrl: url,
       studentAppVisible: request.studentAppVisible,
       teacherAppVisible: request.teacherAppVisible,
     );
     _resources.insert(0, resource);
     return resource;
+  }
+
+  @override
+  Future<LibraryMember> enrollMember({
+    required RepositoryQuery query,
+    required EnrollLibraryMemberRequest request,
+  }) async {
+    final name = request.name.trim();
+    if (name.isEmpty) {
+      throw StateError('Member name is required');
+    }
+
+    _memberCounter += 1;
+    final member = LibraryMember(
+      id: 'mem_$_memberCounter',
+      name: name,
+      memberType: request.memberType,
+      identifier: request.identifier.trim(),
+      classOrDepartment: request.classOrDepartment.trim(),
+      activeLoans: 0,
+      status: LibraryMemberStatus.active,
+      sisStudentId: request.sisStudentId,
+    );
+    _members.insert(0, member);
+    return member;
+  }
+
+  @override
+  Future<LibraryFine> waiveFine({
+    required RepositoryQuery query,
+    required WaiveLibraryFineRequest request,
+  }) async {
+    final index = _fines.indexWhere((fine) => fine.id == request.fineId);
+    if (index < 0) {
+      throw StateError('Fine not found: ${request.fineId}');
+    }
+    final fine = _fines[index];
+    if (fine.status == LibraryFineStatus.waived) {
+      throw StateError('Fine already waived');
+    }
+    final waived = LibraryFine(
+      id: fine.id,
+      memberName: fine.memberName,
+      bookTitle: fine.bookTitle,
+      amount: fine.amount,
+      daysOverdue: fine.daysOverdue,
+      status: LibraryFineStatus.waived,
+      financeLinked: fine.financeLinked,
+      sisStudentId: fine.sisStudentId,
+    );
+    _fines[index] = waived;
+    return waived;
   }
 }

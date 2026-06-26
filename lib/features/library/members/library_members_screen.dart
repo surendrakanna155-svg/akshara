@@ -5,6 +5,7 @@ import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -12,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../library_models.dart';
 import '../library_providers.dart';
+import '../library_workflow_actions.dart';
 import '../widgets/library_module_scaffold.dart';
 
 /// LB-05 — Library Members.
@@ -42,10 +44,11 @@ class LibraryMembersScreen extends ConsumerWidget {
           ref.read(libraryMembersFilterProvider.notifier).state = index,
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
-        child: OutlinedButton.icon(
-          onPressed: () => context.go(RouteNames.sisStudents),
-          icon: const Icon(Icons.badge_outlined, size: 18),
-          label: const Text('SIS registry'),
+        child: FilledButton.icon(
+          key: QaTestKeys.libraryEnrollMemberButton,
+          onPressed: () => showEnrollLibraryMemberDialog(context, ref),
+          icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+          label: const Text('Add member'),
         ),
       ),
       body: _buildBody(

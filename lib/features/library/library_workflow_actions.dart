@@ -9,6 +9,7 @@ import '../../shared/widgets/akshara_dialog.dart';
 import '../../shared/widgets/akshara_motion.dart';
 import 'library_models.dart';
 import 'library_mutations_provider.dart';
+import 'library_providers.dart';
 import 'library_requests.dart';
 
 void _showLibraryMutationError(BuildContext context, Object error) {
@@ -20,52 +21,108 @@ void _showLibraryMutationError(BuildContext context, Object error) {
   );
 }
 
+String _libraryMemberTypeLabel(LibraryMemberType type) => switch (type) {
+      LibraryMemberType.student => 'Student',
+      LibraryMemberType.teacher => 'Teacher',
+      LibraryMemberType.staff => 'Staff',
+    };
+
 Future<void> showIssueLibraryBookDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final isbnController =
-      TextEditingController(text: '978-0-07-802563-1');
-  final memberIdController = TextEditingController(text: 'mem_5');
+  // Pick from LIVE data — never hardcoded mock-seed ids (MJ-H21 / LIBRA-1).
+  final members = ref.read(libraryMembersProvider) ?? const [];
+  final books = (ref.read(libraryCatalogProvider) ?? const [])
+      .where((book) => book.availableCopies > 0)
+      .toList(growable: false);
 
-  final confirmed = await showDialog<bool>(
+  if (members.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Enrol a member before issuing a book.'),
+      ),
+    );
+    return;
+  }
+  if (books.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('No books with available copies to issue.'),
+      ),
+    );
+    return;
+  }
+
+  LibraryMember? selectedMember;
+  LibraryBook? selectedBook;
+
+  final confirmed = await showAksharaDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Issue book'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: isbnController,
-            decoration: const InputDecoration(labelText: 'ISBN'),
-          ),
-          TextField(
-            controller: memberIdController,
-            decoration: const InputDecoration(labelText: 'Member ID'),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AksharaAlertDialog(
+        title: 'Issue book',
+        icon: Icons.menu_book_outlined,
+        scrollable: true,
+        content: AksharaDialogFormBody(
+          children: [
+            DropdownMenu<LibraryMember>(
+              initialSelection: selectedMember,
+              label: const Text('Member'),
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                for (final member in members)
+                  DropdownMenuEntry(
+                    value: member,
+                    label:
+                        '${member.name} · ${_libraryMemberTypeLabel(member.memberType)}',
+                  ),
+              ],
+              onSelected: (value) => setState(() => selectedMember = value),
+            ),
+            DropdownMenu<LibraryBook>(
+              initialSelection: selectedBook,
+              label: const Text('Book'),
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                for (final book in books)
+                  DropdownMenuEntry(
+                    value: book,
+                    label:
+                        '${book.title} (${book.availableCopies} avail.)',
+                  ),
+              ],
+              onSelected: (value) => setState(() => selectedBook = value),
+            ),
+          ],
+        ),
+        actions: [
+          AksharaDialogActions(
+            confirmLabel: 'Issue',
+            confirmKey: QaTestKeys.libraryIssueDialogSubmitButton,
+            onCancel: () => Navigator.of(context).pop(false),
+            onConfirm: () {
+              if (selectedMember == null || selectedBook == null) return;
+              Navigator.of(context).pop(true);
+            },
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          key: QaTestKeys.libraryIssueDialogSubmitButton,
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Issue'),
-        ),
-      ],
     ),
   );
 
-  if (confirmed != true || !context.mounted) return;
+  if (confirmed != true ||
+      !context.mounted ||
+      selectedMember == null ||
+      selectedBook == null) {
+    return;
+  }
 
   try {
     final issue = await ref.read(issueLibraryBookProvider.notifier).execute(
           IssueLibraryBookRequest(
-            isbn: isbnController.text.trim(),
-            memberId: memberIdController.text.trim(),
+            isbn: selectedBook!.isbn,
+            memberId: selectedMember!.id,
           ),
         );
     if (!context.mounted || issue == null) return;
@@ -77,9 +134,7 @@ Future<void> showIssueLibraryBookDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Unable to issue book: $error')),
-    );
+    _showLibraryMutationError(context, error);
   }
 }
 
@@ -88,69 +143,90 @@ Future<void> showReturnLibraryBookDialog(
   WidgetRef ref, {
   String? initialIssueId,
 }) async {
-  final issueIdController =
-      TextEditingController(text: initialIssueId ?? 'iss_2');
+  // Open loans come from LIVE data — no hardcoded mock-seed issue id.
+  final openIssues = ref.read(libraryIssuesProvider) ?? const [];
+  if (openIssues.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No open loans to return.')),
+    );
+    return;
+  }
+
+  LibraryIssueRecord? selectedIssue = initialIssueId == null
+      ? null
+      : openIssues.cast<LibraryIssueRecord?>().firstWhere(
+            (issue) => issue?.id == initialIssueId,
+            orElse: () => null,
+          );
   var condition = LibraryReturnCondition.good;
 
-  final confirmed = await showDialog<bool>(
+  final confirmed = await showAksharaDialog<bool>(
     context: context,
     builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        title: const Text('Return book'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (context, setState) => AksharaAlertDialog(
+        title: 'Return book',
+        icon: Icons.assignment_return_outlined,
+        scrollable: true,
+        content: AksharaDialogFormBody(
           children: [
-            TextField(
-              controller: issueIdController,
-              decoration: const InputDecoration(labelText: 'Issue ID'),
+            DropdownMenu<LibraryIssueRecord>(
+              initialSelection: selectedIssue,
+              label: const Text('Open loan'),
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                for (final issue in openIssues)
+                  DropdownMenuEntry(
+                    value: issue,
+                    label: '${issue.bookTitle} · ${issue.memberName}',
+                  ),
+              ],
+              onSelected: (value) => setState(() => selectedIssue = value),
             ),
-            const SizedBox(height: 12),
-            DropdownButton<LibraryReturnCondition>(
-              value: condition,
-              isExpanded: true,
-              items: const [
-                DropdownMenuItem(
+            DropdownMenu<LibraryReturnCondition>(
+              initialSelection: condition,
+              label: const Text('Condition'),
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: const [
+                DropdownMenuEntry(
                   value: LibraryReturnCondition.good,
-                  child: Text('Good'),
+                  label: 'Good',
                 ),
-                DropdownMenuItem(
+                DropdownMenuEntry(
                   value: LibraryReturnCondition.fair,
-                  child: Text('Fair'),
+                  label: 'Fair',
                 ),
-                DropdownMenuItem(
+                DropdownMenuEntry(
                   value: LibraryReturnCondition.damaged,
-                  child: Text('Damaged'),
+                  label: 'Damaged',
                 ),
               ],
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => condition = value);
-                }
+              onSelected: (value) {
+                if (value != null) setState(() => condition = value);
               },
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            key: QaTestKeys.libraryReturnDialogSubmitButton,
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Return'),
+          AksharaDialogActions(
+            confirmLabel: 'Return',
+            confirmKey: QaTestKeys.libraryReturnDialogSubmitButton,
+            onCancel: () => Navigator.of(context).pop(false),
+            onConfirm: () {
+              if (selectedIssue == null) return;
+              Navigator.of(context).pop(true);
+            },
           ),
         ],
       ),
     ),
   );
 
-  if (confirmed != true || !context.mounted) return;
+  if (confirmed != true || !context.mounted || selectedIssue == null) return;
 
   try {
     final record = await ref.read(returnLibraryBookProvider.notifier).execute(
           ReturnLibraryBookRequest(
-            issueId: issueIdController.text.trim(),
+            issueId: selectedIssue!.id,
             condition: condition,
           ),
         );
@@ -287,6 +363,7 @@ Future<void> showAddLibraryResourceDialog(
 ) async {
   final titleController = TextEditingController();
   final classAccessController = TextEditingController(text: 'All classes');
+  final urlController = TextEditingController();
   var type = LibraryResourceType.pdf;
   var studentAppVisible = true;
   var teacherAppVisible = true;
@@ -322,6 +399,13 @@ Future<void> showAddLibraryResourceDialog(
               },
             ),
             AksharaFormField(
+              label: 'Resource URL',
+              controller: urlController,
+              required: true,
+              keyboardType: TextInputType.url,
+              hint: 'https://… (PDF, e-book or link)',
+            ),
+            AksharaFormField(
               label: 'Class access',
               controller: classAccessController,
               hint: 'e.g. Class 8–10 or Staff only',
@@ -346,7 +430,10 @@ Future<void> showAddLibraryResourceDialog(
             confirmKey: QaTestKeys.libraryAddResourceDialogSubmitButton,
             onCancel: () => Navigator.of(context).pop(false),
             onConfirm: () {
-              if (titleController.text.trim().isEmpty) return;
+              if (titleController.text.trim().isEmpty ||
+                  !_isHttpUrl(urlController.text.trim())) {
+                return;
+              }
               Navigator.of(context).pop(true);
             },
           ),
@@ -364,6 +451,7 @@ Future<void> showAddLibraryResourceDialog(
                 title: titleController.text.trim(),
                 type: type,
                 classAccess: classAccessController.text.trim(),
+                resourceUrl: urlController.text.trim(),
                 studentAppVisible: studentAppVisible,
                 teacherAppVisible: teacherAppVisible,
               ),
@@ -373,6 +461,155 @@ Future<void> showAddLibraryResourceDialog(
       SnackBar(
         key: QaTestKeys.libraryAddResourceSuccessSnackbar,
         content: Text('Added "${resource.title}" to digital resources'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showLibraryMutationError(context, error);
+  }
+}
+
+bool _isHttpUrl(String value) {
+  if (value.isEmpty) return false;
+  final uri = Uri.tryParse(value);
+  return uri != null &&
+      uri.hasScheme &&
+      (uri.scheme == 'http' || uri.scheme == 'https') &&
+      uri.host.isNotEmpty;
+}
+
+Future<void> showEnrollLibraryMemberDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final nameController = TextEditingController();
+  final identifierController = TextEditingController();
+  final classController = TextEditingController();
+  final sisController = TextEditingController();
+  var memberType = LibraryMemberType.student;
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AksharaAlertDialog(
+        title: 'Add member',
+        icon: Icons.person_add_alt_1_outlined,
+        scrollable: true,
+        content: AksharaDialogFormBody(
+          children: [
+            AksharaFormField(
+              label: 'Name',
+              controller: nameController,
+              required: true,
+            ),
+            DropdownMenu<LibraryMemberType>(
+              initialSelection: memberType,
+              label: const Text('Type'),
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: [
+                for (final option in LibraryMemberType.values)
+                  DropdownMenuEntry(
+                    value: option,
+                    label: _libraryMemberTypeLabel(option),
+                  ),
+              ],
+              onSelected: (value) {
+                if (value != null) setState(() => memberType = value);
+              },
+            ),
+            AksharaFormField(
+              label: 'ID (admission / employee)',
+              controller: identifierController,
+              hint: 'e.g. ADM-2026-0138 or EMP-TCH-042',
+            ),
+            AksharaFormField(
+              label: 'Class / Department',
+              controller: classController,
+              hint: 'e.g. Class 10 or English Dept',
+            ),
+            AksharaFormField(
+              label: 'SIS student id (optional)',
+              controller: sisController,
+              hint: 'Links fines to Finance',
+            ),
+          ],
+        ),
+        actions: [
+          AksharaDialogActions(
+            confirmLabel: 'Add member',
+            confirmKey: QaTestKeys.libraryEnrollMemberDialogSubmitButton,
+            onCancel: () => Navigator.of(context).pop(false),
+            onConfirm: () {
+              if (nameController.text.trim().isEmpty) return;
+              Navigator.of(context).pop(true);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final sis = sisController.text.trim();
+    final member = await ref.read(enrollLibraryMemberProvider.notifier).execute(
+          EnrollLibraryMemberRequest(
+            name: nameController.text.trim(),
+            memberType: memberType,
+            identifier: identifierController.text.trim(),
+            classOrDepartment: classController.text.trim(),
+            sisStudentId: sis.isEmpty ? null : sis,
+          ),
+        );
+    if (!context.mounted || member == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.libraryEnrollMemberSuccessSnackbar,
+        content: Text('Enrolled ${member.name} as a library member'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showLibraryMutationError(context, error);
+  }
+}
+
+Future<void> waiveLibraryFine(
+  BuildContext context,
+  WidgetRef ref,
+  LibraryFine fine,
+) async {
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Waive fine',
+      icon: Icons.gavel_outlined,
+      content: Text(
+        'Waive the ${fine.amount} fine for ${fine.memberName} '
+        '(${fine.bookTitle})? This is audit-logged.',
+      ),
+      actions: [
+        AksharaDialogActions(
+          confirmLabel: 'Waive fine',
+          onCancel: () => Navigator.of(context).pop(false),
+          onConfirm: () => Navigator.of(context).pop(true),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final waived = await ref.read(waiveLibraryFineProvider.notifier).execute(
+          WaiveLibraryFineRequest(fineId: fine.id),
+        );
+    if (!context.mounted || waived == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.libraryWaiveFineSuccessSnackbar,
+        content: Text('Waived ${waived.amount} fine for ${waived.memberName}'),
       ),
     );
   } catch (error) {

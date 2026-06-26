@@ -17,6 +17,8 @@ import {
   handleCheckoutStudent,
   handleCreateRoom,
   handleLogVisitor,
+  handleRecordHostelAttendance,
+  handleRecordMess,
 } from "./hostel_write_handlers.ts";
 
 type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
@@ -42,6 +44,8 @@ function matchHostelRoute(method: string, path: string): { handler: RouteHandler
     const staticRoutes: Record<string, RouteHandler> = {
       "/hostel/students": handleAdmitStudent,
       "/hostel/rooms": handleCreateRoom,
+      "/hostel/attendance": handleRecordHostelAttendance,
+      "/hostel/mess": handleRecordMess,
       "/hostel/visitors": handleLogVisitor,
     };
     const staticHandler = staticRoutes[path] as RouteHandler | undefined;

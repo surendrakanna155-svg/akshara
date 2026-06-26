@@ -1,10 +1,12 @@
 import type { AppConfig } from "../config.ts";
 import {
+  boolOr,
   createModuleWriteHandlers,
   intOr,
   requireStr,
   str,
   WriteNotFoundError,
+  WriteValidationError,
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
@@ -215,6 +217,147 @@ export async function handleCreateRoom(req: Request, config: AppConfig): Promise
       moduleEntityAudit("hostel.room.created", "hostel_room", id, {
         roomNumber: payload.roomNumber,
         block: payload.block,
+      }),
+      request,
+    );
+    return { payload: saved, status: 201 };
+  });
+}
+
+/** Hostel attendance status values accepted from the client (mirror `HostelAttendanceStatus`). */
+const HOSTEL_ATTENDANCE_STATUSES = ["present", "absent", "onLeave"] as const;
+
+/** Normalises a body session field to a valid attendance status, defaulting to `present`. */
+function attendanceStatus(
+  body: Record<string, unknown>,
+  fallback: string,
+  ...keys: string[]
+): string {
+  const value = str(body, ...keys);
+  if (value && (HOSTEL_ATTENDANCE_STATUSES as readonly string[]).includes(value)) {
+    return value;
+  }
+  return fallback;
+}
+
+/** Worst-of the three sessions decides the overall status shown on the roster. */
+function overallAttendanceStatus(
+  morning: string,
+  evening: string,
+  night: string,
+): string {
+  const sessions = [morning, evening, night];
+  if (sessions.includes("absent")) return "absent";
+  if (sessions.includes("onLeave")) return "onLeave";
+  return "present";
+}
+
+/**
+ * POST /hostel/attendance — record a hostel attendance roster row (HOSTE-1).
+ * Inserts an `attendance` entity in the exact shape the Attendance screen mapper
+ * reads, so the just-recorded row appears immediately on the read
+ * (`handleAttendance` is already a `handleList(...,'attendance',...)`).
+ */
+export async function handleRecordHostelAttendance(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const studentName = requireStr(body, "studentName", "student_name");
+    const morning = attendanceStatus(body, "present", "morning");
+    const evening = attendanceStatus(body, morning, "evening");
+    const night = attendanceStatus(body, evening, "night");
+    const id = crypto.randomUUID();
+    const payload = {
+      id,
+      studentName,
+      room: str(body, "room") ?? "",
+      rollNumber: str(body, "rollNumber", "roll_number") ?? "",
+      morning,
+      evening,
+      night,
+      overallStatus: overallAttendanceStatus(morning, evening, night),
+      remark: str(body, "remark") ?? "",
+      parentNotified: boolOr(body, false, "parentNotified", "parent_notified"),
+      sisStudentId: str(body, "sisStudentId", "sis_student_id") ?? "",
+    };
+    const saved = await writeStore.insert(
+      db,
+      organizationId,
+      schoolId,
+      "attendance",
+      id,
+      payload,
+    );
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hostel.attendance.recorded", "hostel_attendance", id, {
+        studentName: payload.studentName,
+        overallStatus: payload.overallStatus,
+        sisStudentId: payload.sisStudentId,
+      }),
+      request,
+    );
+    return { payload: saved, status: 201 };
+  });
+}
+
+/**
+ * POST /hostel/mess — record today's mess menu + headcount + cost (HOSTE-3).
+ * Inserts a `mess_record` entity that the Mess read (`handleMess`) recomputes
+ * the live menu/cost from, so the just-recorded menu appears immediately.
+ */
+export async function handleRecordMess(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const day = requireStr(body, "day");
+    const mealType = requireStr(body, "mealType", "meal_type");
+    const items = requireStr(body, "items");
+    const headcount = intOr(body, 0, "headcount");
+    const costRupees = intOr(body, 0, "costRupees", "cost_rupees");
+    if (headcount < 0 || costRupees < 0) {
+      throw new WriteValidationError("headcount and cost must not be negative");
+    }
+    const id = crypto.randomUUID();
+    const payload = {
+      id,
+      day,
+      mealType,
+      items,
+      dietaryTags: ((): string[] => {
+        const raw = body["dietaryTags"] ?? body["dietary_tags"];
+        if (Array.isArray(raw)) {
+          return raw.filter((tag) => tag != null).map((tag) => String(tag).trim())
+            .filter((tag) => tag.length > 0);
+        }
+        const single = str(body, "dietaryTags", "dietary_tags");
+        return single ? [single] : [];
+      })(),
+      headcount,
+      costRupees,
+      recordedAt: new Date().toISOString(),
+    };
+    const saved = await writeStore.insert(
+      db,
+      organizationId,
+      schoolId,
+      "mess_record",
+      id,
+      payload,
+    );
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hostel.mess.recorded", "hostel_mess_record", id, {
+        day: payload.day,
+        mealType: payload.mealType,
+        headcount: payload.headcount,
+        costRupees: payload.costRupees,
       }),
       request,
     );

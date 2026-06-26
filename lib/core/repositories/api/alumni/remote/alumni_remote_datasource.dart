@@ -176,6 +176,26 @@ class AlumniRemoteDataSource {
     return MentorshipPairDto.fromJson(_writeData(response));
   }
 
+  Future<AlumniDonationDto> recordDonation({
+    required RepositoryQuery query,
+    required RecordDonationRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AlumniApiPaths.donations,
+      queryParameters: _queryParams(query),
+      data: {
+        'alumniName': request.alumniName,
+        'alumniId': request.alumniId,
+        'amount': request.amount,
+        'date': request.date,
+        'campaignId': request.campaignId,
+        'status': request.status,
+        'paymentMode': request.paymentMode,
+      },
+    );
+    return AlumniDonationDto.fromJson(_writeData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,

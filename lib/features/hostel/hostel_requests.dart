@@ -50,6 +50,46 @@ class CreateHostelRoomRequest {
   final String facilities;
 }
 
+class RecordHostelAttendanceRequest {
+  const RecordHostelAttendanceRequest({
+    required this.studentName,
+    required this.room,
+    required this.rollNumber,
+    required this.morning,
+    required this.evening,
+    required this.night,
+    required this.remark,
+    required this.sisStudentId,
+  });
+
+  final String studentName;
+  final String room;
+  final String rollNumber;
+  final HostelAttendanceStatus morning;
+  final HostelAttendanceStatus evening;
+  final HostelAttendanceStatus night;
+  final String remark;
+  final String sisStudentId;
+}
+
+class RecordMessRequest {
+  const RecordMessRequest({
+    required this.day,
+    required this.mealType,
+    required this.items,
+    required this.dietaryTags,
+    required this.headcount,
+    required this.costRupees,
+  });
+
+  final String day;
+  final HostelMealType mealType;
+  final String items;
+  final List<String> dietaryTags;
+  final int headcount;
+  final int costRupees;
+}
+
 class LogVisitorRequest {
   const LogVisitorRequest({
     required this.visitorName,

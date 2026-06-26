@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/errors/api_failure_mapper.dart';
+import '../../router/phase5_navigation.dart';
 import '../../shared/widgets/akshara_error_state.dart';
 import '../../shared/widgets/akshara_loading_state.dart';
 import '../../theme/theme_extensions.dart';
@@ -45,6 +47,8 @@ class EmployeePlatformScreen extends ConsumerWidget {
                     (e) => ListTile(
                       title: Text(e.displayName),
                       subtitle: Text('${e.employeeCode} · ${e.status}'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push(employee360Path(e.id)),
                     ),
                   )
                   .toList(),

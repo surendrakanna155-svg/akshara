@@ -53,6 +53,7 @@ export interface AdmissionsDocumentRow {
   uploaded_at: string | null;
   verified_by: string | null;
   reviewer_note: string | null;
+  storage_path: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -154,6 +155,9 @@ export function documentToApi(
       : "—",
     verifiedBy: row.verified_by,
     leadId: row.lead_id ?? "",
+    // A real file is attached and retrievable (signed URL) via the document
+    // download endpoint. Null storage_path = metadata-only legacy row.
+    hasFile: !!row.storage_path,
   };
 }
 

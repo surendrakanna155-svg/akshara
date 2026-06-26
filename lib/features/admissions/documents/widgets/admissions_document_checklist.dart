@@ -15,11 +15,15 @@ class AdmissionsDocumentChecklist extends ConsumerWidget {
     required this.items,
     this.onApprove,
     this.onReject,
+    this.onOpen,
   });
 
   final List<DocumentChecklistItem> items;
   final VoidCallback? onApprove;
   final VoidCallback? onReject;
+
+  /// ADMIS-5: opens the stored file for the selected document (signed URL).
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,6 +80,16 @@ class AdmissionsDocumentChecklist extends ConsumerWidget {
                 ),
                 const Divider(height: AksharaSpacing.s6),
               ],
+              if (onOpen != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: onOpen,
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text('Open document'),
+                  ),
+                ),
+              if (onOpen != null) const SizedBox(height: AksharaSpacing.s2),
               if (onApprove != null || onReject != null)
                 Row(
                   children: [

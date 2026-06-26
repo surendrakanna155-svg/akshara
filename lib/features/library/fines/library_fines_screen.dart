@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -10,6 +11,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../library_models.dart';
 import '../library_providers.dart';
+import '../library_workflow_actions.dart';
 import '../widgets/library_kpi_row.dart';
 import '../widgets/library_module_scaffold.dart';
 
@@ -49,6 +51,7 @@ class LibraryFinesScreen extends ConsumerWidget {
       ),
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
@@ -59,7 +62,8 @@ class LibraryFinesScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
@@ -98,9 +102,9 @@ class LibraryFinesScreen extends ConsumerWidget {
               icon: Icons.pending_outlined,
               accentName: 'warning',
             ),
-            const LibraryKpi(
+            LibraryKpi(
               id: 'count',
-              value: '4',
+              value: '${fines.length}',
               label: 'Records shown',
               icon: Icons.receipt_long_outlined,
               accentName: 'neutral',
@@ -119,7 +123,10 @@ class LibraryFinesScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Overdue fines'),
         const SizedBox(height: AksharaSpacing.s3),
-        _FinesTable(fines: fines),
+        _FinesTable(
+          fines: fines,
+          onWaive: (fine) => waiveLibraryFine(context, ref, fine),
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message: data.financeIntegrationNote,
@@ -134,9 +141,10 @@ class LibraryFinesScreen extends ConsumerWidget {
 }
 
 class _FinesTable extends StatelessWidget {
-  const _FinesTable({required this.fines});
+  const _FinesTable({required this.fines, required this.onWaive});
 
   final List<LibraryFine> fines;
+  final void Function(LibraryFine fine) onWaive;
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +152,7 @@ class _FinesTable extends StatelessWidget {
       return Column(
         children: [
           for (final fine in fines) ...[
-            _FineCard(fine: fine),
+            _FineCard(fine: fine, onWaive: onWaive),
             const SizedBox(height: AksharaSpacing.s3),
           ],
         ],
@@ -167,6 +175,7 @@ class _FinesTable extends StatelessWidget {
               DataColumn(label: Text('Days overdue')),
               DataColumn(label: Text('Status')),
               DataColumn(label: Text('Finance')),
+              DataColumn(label: Text('Actions')),
             ],
             rows: [
               for (final fine in fines)
@@ -183,6 +192,7 @@ class _FinesTable extends StatelessWidget {
                     DataCell(Text('${fine.daysOverdue}')),
                     DataCell(_FineStatusChip(status: fine.status)),
                     DataCell(Text(fine.financeLinked ? 'Linked' : '—')),
+                    DataCell(_WaiveFineAction(fine: fine, onWaive: onWaive)),
                   ],
                 ),
             ],
@@ -193,10 +203,34 @@ class _FinesTable extends StatelessWidget {
   }
 }
 
-class _FineCard extends StatelessWidget {
-  const _FineCard({required this.fine});
+class _WaiveFineAction extends StatelessWidget {
+  const _WaiveFineAction({required this.fine, required this.onWaive});
 
   final LibraryFine fine;
+  final void Function(LibraryFine fine) onWaive;
+
+  @override
+  Widget build(BuildContext context) {
+    if (fine.status != LibraryFineStatus.pending) {
+      return const SizedBox.shrink();
+    }
+    return AksharaManageAction(
+      permission: Permission.manageLibrary,
+      child: TextButton.icon(
+        key: QaTestKeys.libraryWaiveFineButton(fine.id),
+        onPressed: () => onWaive(fine),
+        icon: const Icon(Icons.gavel_outlined, size: 18),
+        label: const Text('Waive'),
+      ),
+    );
+  }
+}
+
+class _FineCard extends StatelessWidget {
+  const _FineCard({required this.fine, required this.onWaive});
+
+  final LibraryFine fine;
+  final void Function(LibraryFine fine) onWaive;
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +252,13 @@ class _FineCard extends StatelessWidget {
                 style: text.bodySmall,
               ),
               const SizedBox(height: AksharaSpacing.s2),
-              _FineStatusChip(status: fine.status),
+              Row(
+                children: [
+                  _FineStatusChip(status: fine.status),
+                  const Spacer(),
+                  _WaiveFineAction(fine: fine, onWaive: onWaive),
+                ],
+              ),
             ],
           ),
         ),

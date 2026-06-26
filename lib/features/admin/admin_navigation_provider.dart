@@ -64,6 +64,14 @@ const List<AdminNavDestination> kAllAdminNavDestinations = [
     requiredPermission: Permission.viewHr,
   ),
   AdminNavDestination(
+    module: AdminModule.employee,
+    route: RouteNames.employees,
+    label: 'Employee Platform',
+    icon: Icons.work_outline,
+    selectedIcon: Icons.work,
+    requiredPermission: Permission.viewEmployees,
+  ),
+  AdminNavDestination(
     module: AdminModule.management,
     route: RouteNames.managementDashboard,
     label: 'Management',
@@ -307,6 +315,14 @@ const Map<AdminModule, AdminModuleInfo> kAdminModuleInfo = {
     description:
         'Employee registry, attendance, leave, payroll, recruitment, and performance (HR-01 → HR-09).',
     route: RouteNames.hrDashboard,
+  ),
+  AdminModule.employee: AdminModuleInfo(
+    module: AdminModule.employee,
+    title: 'Employee Platform',
+    description:
+        'Unified staff platform — Employee 360 profiles, role assignment, and '
+        'workforce operations across departments.',
+    route: RouteNames.employees,
   ),
   AdminModule.management: AdminModuleInfo(
     module: AdminModule.management,

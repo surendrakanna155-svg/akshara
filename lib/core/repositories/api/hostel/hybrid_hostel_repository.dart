@@ -114,5 +114,27 @@ class HybridHostelRepository implements HostelRepository {
         apiCall: () => _api.logVisitor(query: query, request: request),
         mockCall: () => _mock.logVisitor(query: query, request: request),
       );
+
+  @override
+  Future<HostelAttendanceRecord> recordHostelAttendance({
+    required RepositoryQuery query,
+    required RecordHostelAttendanceRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () =>
+            _api.recordHostelAttendance(query: query, request: request),
+        mockCall: () =>
+            _mock.recordHostelAttendance(query: query, request: request),
+      );
+
+  @override
+  Future<HostelMealMenu> recordMess({
+    required RepositoryQuery query,
+    required RecordMessRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.recordMess(query: query, request: request),
+        mockCall: () => _mock.recordMess(query: query, request: request),
+      );
 }
 

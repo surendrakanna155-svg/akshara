@@ -8,6 +8,7 @@ import {
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
+import { sendBroadcastMessage } from "../communication/communication_service.ts";
 
 const writeStore = createEntityWriteStore("transport_entities", "Transport");
 const { runWrite } = createModuleWriteHandlers("manageTransport");
@@ -136,6 +137,7 @@ export async function handleAssignStudentTransport(
     const routeId = requireStr(body, "routeId", "route_id");
     const routes = await writeStore.findAll(db, organizationId, schoolId, "route");
     const id = str(body, "allocationId", "allocation_id") ?? crypto.randomUUID();
+    const sisStudentId = str(body, "sisStudentId", "sis_student_id") ?? "";
     const payload = {
       id,
       studentName: str(body, "studentName", "student_name") ?? "",
@@ -147,14 +149,27 @@ export async function handleAssignStudentTransport(
       routeName: routeNameById(routes, routeId),
       busNumber: busById(routes, routeId),
       shift: str(body, "shift") ?? "both",
-      sisStudentId: str(body, "sisStudentId", "sis_student_id") ?? "",
+      sisStudentId,
+      // SIS transport-flag handoff: the allocation row carries the student's SIS
+      // id + an explicit enrolled flag. The SIS Student-360 read
+      // (student_360_service.ts) matches this row back by sisStudentId, so a
+      // student's profile surfaces "transport enrolled" without mutating the
+      // students table. Idempotent — re-assign rewrites the same flag.
+      transportEnrolled: true,
     };
-    const saved = await writeStore.insert(db, organizationId, schoolId, "allocation", id, payload);
+    // Assign targets an existing unassigned allocation row (UI flow) OR creates a
+    // new one when adding a student from SIS — upsert so a re-assign rewrites the
+    // same row (idempotent) instead of colliding on the entity PK.
+    const existing = await writeStore.find(db, organizationId, schoolId, "allocation", id);
+    const saved = existing
+      ? (await writeStore.replace(db, organizationId, schoolId, "allocation", id, payload)) ?? payload
+      : await writeStore.insert(db, organizationId, schoolId, "allocation", id, payload);
     await emitMutationAudit(
       db,
       claims,
       moduleEntityAudit("transport.allocation.assigned", "transport_allocation", id, {
         routeId,
+        sisStudentId,
       }),
       request,
     );
@@ -238,11 +253,14 @@ export async function handleRemoveStudentTransport(
     }
     await writeStore.remove(db, organizationId, schoolId, "allocation", allocationId);
     // Clear the route association so the cleared allocation reads as "unassigned".
+    // Also drop the SIS transport-flag so the Student-360 read stops surfacing
+    // the student as transport-enrolled.
     const cleared = {
       ...allocation,
       routeId: "",
       routeName: "",
       busNumber: "",
+      transportEnrolled: false,
     };
     await emitMutationAudit(
       db,
@@ -253,5 +271,57 @@ export async function handleRemoveStudentTransport(
       request,
     );
     return { payload: cleared, status: 200 };
+  });
+}
+
+/**
+ * POST /transport/notify-delay — broadcast a delay notification to the parents
+ * of students on a given route. The real, certifiable half of TR-07: GPS live
+ * telemetry needs hardware, but a delay alert does not — it reuses the
+ * Communication broadcast pipeline ({@link sendBroadcastMessage}) which queues
+ * push deliveries out of the request cycle. `recipientCount` is the number of
+ * students currently allocated to the route (the affected cohort).
+ */
+export async function handleNotifyRouteDelay(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const routeId = requireStr(body, "routeId", "route_id");
+    const message = requireStr(body, "message");
+
+    const routes = await writeStore.findAll(db, organizationId, schoolId, "route");
+    const route = routes.find((r) => String(r.id ?? "") === routeId);
+    if (!route) {
+      throw new WriteNotFoundError(`Transport route not found: ${routeId}`);
+    }
+    const routeName = (route.name as string | undefined) ?? routeId;
+
+    const allocations = await writeStore.findAll(db, organizationId, schoolId, "allocation");
+    const affected = allocations.filter((a) => String(a.routeId ?? "") === routeId);
+
+    const title = `Transport delay — ${routeName}`;
+    await sendBroadcastMessage(
+      db,
+      claims,
+      { audience: "parents", title, body: message },
+      request,
+    );
+
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("transport.delay.notified", "transport_route", routeId, {
+        routeId,
+        recipientCount: affected.length,
+      }),
+      request,
+    );
+
+    return {
+      payload: { routeId, routeName, recipientCount: affected.length },
+      status: 200,
+    };
   });
 }

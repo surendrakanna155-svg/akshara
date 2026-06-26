@@ -530,6 +530,8 @@ export interface UploadDocumentInput {
   fileName: string;
   studentName: string;
   classLabel: string;
+  /** Storage object path of the uploaded file (tenant-prefixed). */
+  storagePath: string;
 }
 
 export async function uploadDocument(
@@ -553,8 +555,8 @@ export async function uploadDocument(
   const rows = await db.queryObject<AdmissionsDocumentRow>(
     `INSERT INTO admissions_documents (
       organization_id, school_id, lead_id, application_id, student_name, class_label,
-      document_type, file_name, is_required, status, uploaded_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, 'uploaded', timezone('utc', now()))
+      document_type, file_name, storage_path, is_required, status, uploaded_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, 'uploaded', timezone('utc', now()))
     RETURNING *`,
     [
       organizationId,
@@ -565,9 +567,24 @@ export async function uploadDocument(
       classLabel,
       input.documentType,
       input.fileName,
+      input.storagePath,
     ],
   );
   return rows[0]!;
+}
+
+export async function getDocumentStoragePath(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  documentId: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ storage_path: string | null }>(
+    `SELECT storage_path FROM admissions_documents
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+    [documentId, organizationId, schoolId],
+  );
+  return rows[0]?.storage_path ?? null;
 }
 
 export async function reviewDocument(

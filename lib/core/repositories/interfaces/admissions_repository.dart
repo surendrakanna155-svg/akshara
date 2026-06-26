@@ -105,6 +105,26 @@ abstract class AdmissionsRepository {
     required DocumentUploadRequest request,
   });
 
+  /// Uploads the real file bytes to Storage (presign → PUT) and then confirms
+  /// the document metadata, returning the persisted, retrievable record.
+  Future<StudentDocumentRecord> uploadDocumentFile({
+    required RepositoryQuery query,
+    required String leadId,
+    required DocumentType documentType,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+    String studentName,
+    String classLabel,
+  });
+
+  /// Resolves a short-lived signed URL for opening/downloading a stored
+  /// document during verification.
+  Future<String> getDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String documentId,
+  });
+
   Future<StudentDocumentRecord> approveDocument({
     required RepositoryQuery query,
     required String documentId,

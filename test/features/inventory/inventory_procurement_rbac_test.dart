@@ -30,6 +30,7 @@ void main() {
           .read(createProcurementOrderProvider.notifier)
           .execute(
             const CreateInventoryProcurementOrderRequest(
+              vendorId: 'vendor_if_1',
               vendorName: 'Vendor A',
               items: 'Notebooks',
               totalAmount: '25000',

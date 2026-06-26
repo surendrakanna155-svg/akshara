@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
@@ -12,6 +15,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../transport_models.dart';
 import '../transport_providers.dart';
+import '../transport_workflow_actions.dart';
 import '../widgets/transport_module_scaffold.dart';
 
 /// TR-07 — GPS Tracking (placeholder architecture).
@@ -23,24 +27,30 @@ class TransportTrackingScreen extends ConsumerWidget {
     final isLoading = ref.watch(transportTrackingLoadingProvider);
     final isError = ref.watch(transportTrackingErrorProvider);
     final data = ref.watch(transportTrackingProvider);
+    // Watch routes so they are loaded before the notify-delay dialog reads them.
+    final routes = ref.watch(transportRoutesProvider);
 
     return TransportModuleScaffold(
       screen: TransportScreen.tracking,
       showFilterBar: false,
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         data: data,
+        routes: routes,
       ),
     );
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required TransportTrackingPlaceholderData? data,
+    required List<TransportRoute> routes,
   }) {
     if (isLoading) {
       return const Padding(
@@ -99,6 +109,23 @@ class TransportTrackingScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AksharaSpacing.s4),
+        Align(
+          alignment: Alignment.centerRight,
+          child: AksharaManageAction(
+            permission: Permission.manageTransport,
+            child: FilledButton.icon(
+              key: QaTestKeys.transportNotifyDelayButton,
+              onPressed: () => showNotifyRouteDelayDialog(
+                context,
+                ref,
+                routes: routes,
+              ),
+              icon: const Icon(Icons.notifications_active_outlined, size: 18),
+              label: const Text('Notify parents of delay'),
             ),
           ),
         ),

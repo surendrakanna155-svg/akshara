@@ -59,9 +59,15 @@ class _OrganizationProvisioningScreenState
               ref.invalidate(provisioningJobProvider(widget.jobId)),
         ),
         data: (job) {
-          if (job.status == ProvisioningJobStatus.completed) {
+          // Stop polling on any TERMINAL state — completed OR failed.
+          if (job.status == ProvisioningJobStatus.completed ||
+              job.status == ProvisioningJobStatus.failed) {
             _pollTimer?.cancel();
           }
+          final failedStep = job.steps.cast<ProvisioningStep?>().firstWhere(
+                (s) => s?.status == ProvisioningStepStatus.failed,
+                orElse: () => null,
+              );
           return ListView(
             padding: const EdgeInsets.all(AksharaSpacing.s4),
             children: [
@@ -79,6 +85,7 @@ class _OrganizationProvisioningScreenState
               const SizedBox(height: 8),
               for (final step in job.steps)
                 _StepTile(step: step),
+              // Success terminal state — only on a genuinely completed job.
               if (job.status == ProvisioningJobStatus.completed)
                 const Padding(
                   padding: EdgeInsets.only(top: AksharaSpacing.s4),
@@ -86,6 +93,21 @@ class _OrganizationProvisioningScreenState
                     key: QaTestKeys.organizationBuilderProvisioningCompleted,
                     leading: Icon(Icons.check_circle, color: Colors.green),
                     title: Text('Organization provisioned successfully.'),
+                  ),
+                ),
+              // Distinct failed terminal state — surfaced to the operator.
+              if (job.status == ProvisioningJobStatus.failed)
+                Padding(
+                  padding: const EdgeInsets.only(top: AksharaSpacing.s4),
+                  child: ListTile(
+                    key: QaTestKeys.organizationBuilderProvisioningFailed,
+                    leading: const Icon(Icons.error_outline, color: Colors.red),
+                    title: const Text('Provisioning failed.'),
+                    subtitle: Text(
+                      failedStep?.error != null && failedStep!.error!.isNotEmpty
+                          ? '${failedStep.label}: ${failedStep.error}'
+                          : 'No changes were applied. You can retry provisioning.',
+                    ),
                   ),
                 ),
             ],

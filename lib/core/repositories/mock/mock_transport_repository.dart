@@ -476,56 +476,90 @@ class MockTransportRepository implements TransportRepository {
   }) async =>
       paginateList(await _loadAllocations(), query);
 
+  static const _seedAttendance = [
+    TransportAttendanceRecord(
+      id: 'att_1',
+      studentName: 'Ravi Kumar',
+      stopName: 'Lake View Colony',
+      routeName: 'Route 12 — North',
+      scheduledTime: '7:05 AM',
+      actualTime: '7:06 AM',
+      status: TransportAttendanceStatus.picked,
+      parentNotified: false,
+      shift: TransportShift.am,
+    ),
+    TransportAttendanceRecord(
+      id: 'att_2',
+      studentName: 'Emma Thomas',
+      stopName: 'Green Park Gate',
+      routeName: 'Route 12 — North',
+      scheduledTime: '7:18 AM',
+      actualTime: '—',
+      status: TransportAttendanceStatus.waiting,
+      parentNotified: false,
+      shift: TransportShift.am,
+    ),
+    TransportAttendanceRecord(
+      id: 'att_3',
+      studentName: 'Ananya Reddy',
+      stopName: 'Hitech City',
+      routeName: 'Route 08 — West',
+      scheduledTime: '7:10 AM',
+      actualTime: '7:22 AM',
+      status: TransportAttendanceStatus.picked,
+      parentNotified: true,
+      shift: TransportShift.am,
+    ),
+    TransportAttendanceRecord(
+      id: 'att_4',
+      studentName: 'Rohan Mehta',
+      stopName: 'Banjara Hills',
+      routeName: 'Route 05 — Central',
+      scheduledTime: '7:12 AM',
+      actualTime: '—',
+      status: TransportAttendanceStatus.absent,
+      parentNotified: true,
+      shift: TransportShift.am,
+    ),
+  ];
+
+  Future<List<TransportAttendanceRecord>> _loadAttendance() async {
+    final store = MockTransportWriteStore.instance;
+    store.attendance ??= List<TransportAttendanceRecord>.from(_seedAttendance);
+    return store.attendance!;
+  }
+
   @override
   Future<PaginatedResult<TransportAttendanceRecord>> getAttendanceRecords({
     required RepositoryQuery query,
   }) async =>
-      paginateList(const [
-        TransportAttendanceRecord(
-          id: 'att_1',
-          studentName: 'Ravi Kumar',
-          stopName: 'Lake View Colony',
-          routeName: 'Route 12 — North',
-          scheduledTime: '7:05 AM',
-          actualTime: '7:06 AM',
-          status: TransportAttendanceStatus.picked,
-          parentNotified: false,
-          shift: TransportShift.am,
-        ),
-        TransportAttendanceRecord(
-          id: 'att_2',
-          studentName: 'Emma Thomas',
-          stopName: 'Green Park Gate',
-          routeName: 'Route 12 — North',
-          scheduledTime: '7:18 AM',
-          actualTime: '—',
-          status: TransportAttendanceStatus.waiting,
-          parentNotified: false,
-          shift: TransportShift.am,
-        ),
-        TransportAttendanceRecord(
-          id: 'att_3',
-          studentName: 'Ananya Reddy',
-          stopName: 'Hitech City',
-          routeName: 'Route 08 — West',
-          scheduledTime: '7:10 AM',
-          actualTime: '7:22 AM',
-          status: TransportAttendanceStatus.picked,
-          parentNotified: true,
-          shift: TransportShift.am,
-        ),
-        TransportAttendanceRecord(
-          id: 'att_4',
-          studentName: 'Rohan Mehta',
-          stopName: 'Banjara Hills',
-          routeName: 'Route 05 — Central',
-          scheduledTime: '7:12 AM',
-          actualTime: '—',
-          status: TransportAttendanceStatus.absent,
-          parentNotified: true,
-          shift: TransportShift.am,
-        ),
-      ], query);
+      paginateList(await _loadAttendance(), query);
+
+  @override
+  Future<TransportAttendanceRecord> recordAttendance({
+    required RepositoryQuery query,
+    required RecordTransportAttendanceRequest request,
+  }) async {
+    final records = await _loadAttendance();
+    final record = TransportAttendanceRecord(
+      id: request.id ?? 'att_${DateTime.now().microsecondsSinceEpoch}',
+      studentName: request.studentName,
+      stopName: request.stopName,
+      routeName: request.routeName,
+      scheduledTime: request.scheduledTime,
+      actualTime: request.actualTime,
+      status: request.status,
+      parentNotified: request.parentNotified,
+      shift: request.shift,
+    );
+    final index = records.indexWhere((r) => r.id == record.id);
+    if (index >= 0) {
+      records[index] = record;
+    } else {
+      records.insert(0, record);
+    }
+    return record;
+  }
 
   @override
   Future<TransportTrackingPlaceholderData> getTrackingPlaceholder({required RepositoryQuery query}) async {
@@ -905,20 +939,47 @@ class MockTransportRepository implements TransportRepository {
 
     final updated = StudentTransportAllocation(
       id: current.id,
-      studentName: current.studentName,
-      admissionNumber: current.admissionNumber,
-      classLabel: current.classLabel,
+      studentName:
+          request.studentName.isNotEmpty ? request.studentName : current.studentName,
+      admissionNumber: request.admissionNumber.isNotEmpty
+          ? request.admissionNumber
+          : current.admissionNumber,
+      classLabel:
+          request.classLabel.isNotEmpty ? request.classLabel : current.classLabel,
       pickupStop: request.pickupStop,
       dropStop: request.dropStop,
       routeId: route.id,
       routeName: route.name,
       busNumber: route.assignedBus,
       shift: current.shift,
-      sisStudentId: current.sisStudentId,
+      sisStudentId:
+          request.sisStudentId.isNotEmpty ? request.sisStudentId : current.sisStudentId,
     );
     allocations[index] = updated;
     await _syncRouteAndVehicleMetrics();
     return updated;
+  }
+
+  @override
+  Future<TransportDelayNotificationResult> notifyRouteDelay({
+    required RepositoryQuery query,
+    required NotifyRouteDelayRequest request,
+  }) async {
+    final routeIndex = _routes.indexWhere((r) => r.id == request.routeId);
+    if (routeIndex < 0) {
+      throw StateError('Route not found');
+    }
+    if (request.message.trim().isEmpty) {
+      throw StateError('Delay message is required');
+    }
+    final route = _routes[routeIndex];
+    final allocations = await _loadAllocations();
+    final affected =
+        allocations.where((a) => a.routeId == request.routeId).length;
+    return TransportDelayNotificationResult(
+      routeName: route.name,
+      recipientCount: affected,
+    );
   }
 
   @override

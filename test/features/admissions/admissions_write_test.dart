@@ -84,6 +84,28 @@ void main() {
 
       expect(container.read(approveAdmissionProvider).hasError, isTrue);
     });
+
+    test('uploadDocument fails when manageAdmissions permission missing', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(uploadDocumentProvider.notifier).execute(
+            leadId: 'LD-1',
+            documentType: DocumentType.birthCertificate,
+            fileName: 'bc.pdf',
+            bytes: const [1, 2, 3],
+            contentType: 'application/pdf',
+          );
+
+      expect(container.read(uploadDocumentProvider).hasError, isTrue);
+    });
   });
 
   group('Admissions audit events', () {
@@ -129,10 +151,43 @@ void main() {
         '/admissions/approval/APR-1/approve',
       );
       expect(AdmissionsApiPaths.handoffsSend, '/admissions/handoffs/send');
+      // ADMIS-5: real-file document storage endpoints.
+      expect(
+        AdmissionsApiPaths.documentsUploadPresign,
+        '/admissions/documents/upload/presign',
+      );
+      expect(
+        AdmissionsApiPaths.documentDownload('DOC-1'),
+        '/admissions/documents/DOC-1/download',
+      );
     });
   });
 
   group('Mock write repository flows', () {
+    test('uploadDocumentFile stores a retrievable document', () async {
+      final repo = MockAdmissionsRepository();
+      const query = RepositoryQuery.demo;
+      final doc = await repo.uploadDocumentFile(
+        query: query,
+        leadId: 'LD-1',
+        documentType: DocumentType.transferCertificate,
+        fileName: 'tc.pdf',
+        bytes: const [1, 2, 3],
+        contentType: 'application/pdf',
+        studentName: 'Ananya',
+        classLabel: '5',
+      );
+      // A stored file means the verifier can open it (signed-URL flag).
+      expect(doc.hasFile, isTrue);
+      expect(doc.status, DocumentVerificationStatus.uploaded);
+
+      final url = await repo.getDocumentDownloadUrl(
+        query: query,
+        documentId: doc.id,
+      );
+      expect(url, isNotEmpty);
+    });
+
     test('sendToFinance updates handoff status', () async {
       final repo = MockAdmissionsRepository();
       const query = RepositoryQuery.demo;

@@ -10,6 +10,7 @@ enum AdminModule {
   finance,
   sis,
   hr,
+  employee,
   management,
   transport,
   hostel,

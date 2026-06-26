@@ -5,7 +5,7 @@ import {
   requireSchoolOperationalScope,
 } from "../permission_middleware.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
-import { recomputeVisitors } from "./hostel_read_repository.ts";
+import { recomputeMess, recomputeVisitors } from "./hostel_read_repository.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
@@ -162,6 +162,96 @@ Deno.test("recomputeVisitors returns empty lists when no visitors logged", async
   const payload = await recomputeVisitors(db, ORG, SCHOOL_A);
   assertEquals((payload.activeVisitors as unknown[]).length, 0);
   assertEquals((payload.visitorLog as unknown[]).length, 0);
+});
+
+function messRecord(
+  id: string,
+  overrides: Partial<Record<string, unknown>> = {},
+): MockRow {
+  return {
+    entity_type: "mess_record",
+    id,
+    payload: {
+      id,
+      day: "Mon",
+      mealType: "lunch",
+      items: "Rice · Dal · Sabzi",
+      dietaryTags: ["Veg"],
+      headcount: 100,
+      costRupees: 50000,
+      recordedAt: "2026-06-26T10:00:00.000Z",
+      ...overrides,
+    },
+  };
+}
+
+Deno.test("recomputeMess surfaces a just-recorded menu and live MTD cost", async () => {
+  const db = new MockHostelDb([
+    messRecord("m1", {
+      day: "Tue",
+      mealType: "dinner",
+      items: "Roti · Paneer · Curd",
+      costRupees: 60000,
+      recordedAt: "2026-06-26T18:00:00.000Z",
+    }),
+  ]) as unknown as TenantQueryClient;
+
+  const payload = await recomputeMess(db, ORG, SCHOOL_A);
+  const menus = payload.weeklyMenus as Array<Record<string, unknown>>;
+  assertEquals(menus.length, 1);
+  assertEquals(menus[0]?.day, "Tue");
+  assertEquals(menus[0]?.items, "Roti · Paneer · Curd");
+  // ₹60,000 = ₹0.6L MTD.
+  assertEquals(payload.costMtd, "₹0.6L");
+});
+
+Deno.test("recomputeMess aggregates MTD cost across records, newest-first", async () => {
+  const db = new MockHostelDb([
+    messRecord("m1", {
+      day: "Mon",
+      costRupees: 50000,
+      recordedAt: "2026-06-26T10:00:00.000Z",
+    }),
+    messRecord("m2", {
+      day: "Tue",
+      costRupees: 70000,
+      recordedAt: "2026-06-26T12:00:00.000Z",
+    }),
+  ]) as unknown as TenantQueryClient;
+
+  const payload = await recomputeMess(db, ORG, SCHOOL_A);
+  const menus = payload.weeklyMenus as Array<Record<string, unknown>>;
+  // Newest-first ordering by recordedAt (Tue before Mon).
+  assertEquals(menus.map((m) => m.day), ["Tue", "Mon"]);
+  // ₹50,000 + ₹70,000 = ₹1.2L MTD.
+  assertEquals(payload.costMtd, "₹1.2L");
+});
+
+Deno.test("recomputeMess falls back to seed snapshot when no records exist", async () => {
+  const db = new MockHostelDb([
+    {
+      entity_type: "snapshot_mess",
+      id: "default",
+      payload: {
+        weeklyMenus: [{ day: "Mon", mealType: "breakfast", items: "Idli", dietaryTags: [] }],
+        consumptionTrend: [],
+        costMtd: "₹1.0L",
+        financeIntegrationNote: "Seeded mess note",
+      },
+    },
+  ]) as unknown as TenantQueryClient;
+
+  const payload = await recomputeMess(db, ORG, SCHOOL_A);
+  assertEquals(payload.costMtd, "₹1.0L");
+  assertEquals(payload.financeIntegrationNote, "Seeded mess note");
+  assertEquals((payload.weeklyMenus as unknown[]).length, 1);
+});
+
+Deno.test("recomputeMess returns an honest empty payload when nothing is seeded", async () => {
+  const db = new MockHostelDb([]) as unknown as TenantQueryClient;
+  const payload = await recomputeMess(db, ORG, SCHOOL_A);
+  assertEquals((payload.weeklyMenus as unknown[]).length, 0);
+  assertEquals(payload.costMtd, "₹0.0L");
 });
 
 Deno.test("hostel visitors read denies organization scope", () => {

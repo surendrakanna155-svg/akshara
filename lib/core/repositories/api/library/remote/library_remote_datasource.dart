@@ -150,9 +150,39 @@ class LibraryRemoteDataSource {
         'title': request.title,
         'type': LibraryEnumCodec.resourceTypeToApi(request.type),
         'classAccess': request.classAccess,
+        'resourceUrl': request.resourceUrl,
         'studentAppVisible': request.studentAppVisible,
         'teacherAppVisible': request.teacherAppVisible,
       },
+    );
+    return _writeData(response);
+  }
+
+  Future<LibraryMemberDto> enrollMember({
+    required RepositoryQuery query,
+    required EnrollLibraryMemberRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      LibraryApiPaths.members,
+      queryParameters: _queryParams(query),
+      data: {
+        'name': request.name,
+        'memberType': LibraryEnumCodec.memberTypeToApi(request.memberType),
+        'identifier': request.identifier,
+        'classOrDepartment': request.classOrDepartment,
+        if (request.sisStudentId != null) 'sisStudentId': request.sisStudentId,
+      },
+    );
+    return LibraryMemberDto(raw: _writeData(response));
+  }
+
+  Future<Map<String, dynamic>> waiveFine({
+    required RepositoryQuery query,
+    required WaiveLibraryFineRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      LibraryApiPaths.waiveFine(request.fineId),
+      queryParameters: _queryParams(query),
     );
     return _writeData(response);
   }

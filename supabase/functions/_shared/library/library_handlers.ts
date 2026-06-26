@@ -150,11 +150,12 @@ export async function handleFines(req: Request, config: AppConfig): Promise<Resp
     config,
     "Failed to load library fines",
     async (db, orgId, schoolId) => {
-      const [issues, members] = await Promise.all([
+      const [issues, members, fines] = await Promise.all([
         listAllEntities(db, orgId, schoolId, "issue"),
         listAllEntities(db, orgId, schoolId, "member"),
+        listAllEntities(db, orgId, schoolId, "fine"),
       ]);
-      return computeFines(issues, members);
+      return computeFines(issues, members, fines);
     },
   );
 }

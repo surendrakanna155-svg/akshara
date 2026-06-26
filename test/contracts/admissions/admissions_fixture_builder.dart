@@ -104,6 +104,7 @@ class AdmissionsFixtureBuilder {
         'uploadedLabel': doc.uploadedLabel,
         'verifiedBy': doc.verifiedBy,
         'leadId': doc.leadId,
+        'hasFile': doc.hasFile,
       };
 
   Map<String, dynamic> enrollmentItem(PendingEnrollmentRecord record) => {

@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../hostel_models.dart';
 import '../hostel_providers.dart';
+import '../hostel_workflow_actions.dart';
 import '../widgets/hostel_module_scaffold.dart';
 import '../widgets/hostel_trend_chart.dart';
 
@@ -29,7 +33,16 @@ class HostelMessScreen extends ConsumerWidget {
 
     return HostelModuleScaffold(
       screen: HostelScreen.mess,
-      showFilterBar: false,
+      filters: const ['This week'],
+      filterTrailing: AksharaManageAction(
+        permission: Permission.manageHostel,
+        child: OutlinedButton.icon(
+          key: QaTestKeys.hostelRecordMessButton,
+          onPressed: () => showRecordMessDialog(context, ref),
+          icon: const Icon(Icons.restaurant_outlined, size: 18),
+          label: const Text('Record menu'),
+        ),
+      ),
       body: _buildBody(
         context,
         isLoading: isLoading,

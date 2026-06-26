@@ -43,7 +43,16 @@ function computeConductScore(
 }
 
 function mapTransportPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const routeId = (payload.routeId ?? payload.route_id ?? "") as string;
+  // The transport allocation row is the SIS transport-flag: a row that still
+  // carries a route (and was not cleared by a remove) means the student is
+  // transport-enrolled. The explicit `transportEnrolled` flag is preferred when
+  // present, falling back to "has a route" for older rows.
+  const enrolled = typeof payload.transportEnrolled === "boolean"
+    ? payload.transportEnrolled
+    : routeId.length > 0;
   return {
+    enrolled,
     routeName: payload.routeName ?? payload.route_name ?? null,
     stopName: payload.pickupStop ?? payload.pickup_stop ?? payload.dropStop ?? payload.drop_stop ?? null,
     vehicleNumber: payload.busNumber ?? payload.bus_number ?? null,

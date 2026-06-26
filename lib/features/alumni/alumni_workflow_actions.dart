@@ -8,6 +8,7 @@ import '../../shared/forms/akshara_form_field.dart';
 import '../../shared/widgets/akshara_dialog.dart';
 import '../../shared/widgets/akshara_motion.dart';
 import 'alumni_mutations_provider.dart';
+import 'alumni_providers.dart';
 import 'alumni_requests.dart';
 
 void _showAlumniMutationError(BuildContext context, Object error) {
@@ -359,6 +360,145 @@ Future<void> showAddMentorshipDialog(
       SnackBar(
         key: QaTestKeys.alumniAddMentorshipSuccessSnackbar,
         content: Text('Matched ${pair.mentorName} with ${pair.menteeName}'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showAlumniMutationError(context, error);
+  }
+}
+
+const List<({String value, String label})> _donationStatusOptions = [
+  (value: 'received', label: 'Received'),
+  (value: 'pledged', label: 'Pledged'),
+  (value: 'pending', label: 'Pending'),
+];
+
+Future<void> showRecordDonationDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final donorController = TextEditingController();
+  final alumniIdController = TextEditingController();
+  final amountController = TextEditingController();
+  final dateController = TextEditingController();
+  final paymentModeController = TextEditingController();
+
+  // Live campaigns power the optional attribution dropdown; an empty list just
+  // leaves the donation unattributed.
+  final campaignsResult = await ref.read(alumniCampaignsFutureProvider.future);
+  if (!context.mounted) return;
+  final campaigns = campaignsResult.items;
+
+  String? selectedCampaignId;
+  String selectedStatus = _donationStatusOptions.first.value;
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, setState) => AksharaAlertDialog(
+        title: 'Record donation',
+        icon: Icons.volunteer_activism_outlined,
+        scrollable: true,
+        content: AksharaDialogFormBody(
+          children: [
+            AksharaFormField(
+              label: 'Donor / alumnus',
+              controller: donorController,
+              required: true,
+            ),
+            AksharaFormField(
+              label: 'Alumni ID',
+              controller: alumniIdController,
+              hint: 'e.g. ALM-001',
+            ),
+            AksharaFormField(
+              label: 'Amount',
+              controller: amountController,
+              required: true,
+              hint: 'e.g. ₹25,000',
+            ),
+            AksharaFormField(
+              label: 'Date',
+              controller: dateController,
+              hint: 'e.g. 15 Aug 2026',
+            ),
+            DropdownButtonFormField<String?>(
+              initialValue: selectedCampaignId,
+              decoration: const InputDecoration(labelText: 'Campaign (optional)'),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('No campaign'),
+                ),
+                for (final campaign in campaigns)
+                  DropdownMenuItem<String?>(
+                    value: campaign.id,
+                    child: Text(campaign.name),
+                  ),
+              ],
+              onChanged: (value) => setState(() => selectedCampaignId = value),
+            ),
+            DropdownButtonFormField<String>(
+              initialValue: selectedStatus,
+              decoration: const InputDecoration(labelText: 'Status'),
+              items: [
+                for (final option in _donationStatusOptions)
+                  DropdownMenuItem(
+                    value: option.value,
+                    child: Text(option.label),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => selectedStatus = value);
+              },
+            ),
+            AksharaFormField(
+              label: 'Payment mode',
+              controller: paymentModeController,
+              hint: 'e.g. UPI, Bank transfer',
+            ),
+          ],
+        ),
+        actions: [
+          AksharaDialogActions(
+            confirmLabel: 'Record donation',
+            confirmKey: QaTestKeys.alumniRecordDonationDialogSubmitButton,
+            onCancel: () => Navigator.of(context).pop(false),
+            onConfirm: () {
+              if (donorController.text.trim().isEmpty ||
+                  amountController.text.trim().isEmpty) {
+                return;
+              }
+              Navigator.of(context).pop(true);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final donation = await ref.read(recordDonationProvider.notifier).execute(
+          RecordDonationRequest(
+            alumniName: donorController.text.trim(),
+            alumniId: alumniIdController.text.trim(),
+            amount: amountController.text.trim(),
+            date: dateController.text.trim(),
+            campaignId: selectedCampaignId ?? '',
+            status: selectedStatus,
+            paymentMode: paymentModeController.text.trim(),
+          ),
+        );
+    if (!context.mounted || donation == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.alumniRecordDonationSuccessSnackbar,
+        content: Text(
+          'Recorded ${donation.amount} from ${donation.alumniName}',
+        ),
       ),
     );
   } catch (error) {

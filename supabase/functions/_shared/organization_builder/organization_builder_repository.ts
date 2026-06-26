@@ -465,13 +465,38 @@ export interface ProvisionResult {
   resolvedConfig: ConfigPreviewView;
 }
 
+interface ProvisionRow {
+  new_org_id: string | null;
+  new_school_id: string | null;
+  roles_seeded: number | string;
+  permissions_granted: number | string;
+  seeds_loaded: number | string;
+  reused: boolean;
+  failed_step: string | null;
+  error_message: string | null;
+}
+
+/** Resolves the acting user's id from the request context (for org-admin grant). */
+async function currentActorId(db: TenantQueryClient): Promise<string | null> {
+  const rows = await db.queryObject<{ user_id: string | null }>(
+    `SELECT NULLIF(current_setting('app.user_id', true), '') AS user_id`,
+  );
+  return rows[0]?.user_id ?? null;
+}
+
 /**
- * Provisions the organization from a draft. Real work, done synchronously and
- * persisted: resolves the configuration, records a job whose six steps each
- * reflect a piece of work actually completed (org record created, modules
- * resolved, roles/permissions resolved, seed entities resolved, draft taken
- * live), and flips the draft to `provisioned`. The persisted job is what the
- * client polls — no in-memory timers.
+ * Provisions the organization from a draft. REAL work, done synchronously and
+ * persisted. The privileged `org_builder_provision_tenant` SECURITY DEFINER
+ * function creates (or idempotently reuses) the child organization + its primary
+ * branch, seeds the vertical pack's roles into the RBAC catalog, grants their
+ * permissions, seeds any baseline rows the pack defines, and takes the org live —
+ * all in one atomic call that rolls back its own partial writes on failure.
+ *
+ * The job's six steps record the ACTUAL outcome: completed up to the point the
+ * function reached, the failing step marked `failed` (with its error) and the
+ * rest `pending`, on failure. The job status mirrors that (`completed` only when
+ * every step really ran), and the draft is flipped to `provisioned` ONLY on real
+ * success. The persisted job is what the client polls — no in-memory timers.
  */
 export async function provision(
   db: TenantQueryClient,
@@ -483,22 +508,58 @@ export async function provision(
   const pack = (await getPack(db, draft.packId)) ?? (await getPack(db, "pack_school"))!;
   const preview = buildPreview(draft, pack, nowIso);
 
-  const totalPermissions = preview.roles.reduce((sum, r) => sum + r.permissionCount, 0);
-  const step = (id: string, label: string): ProvisioningStepView => ({
-    id,
-    label,
-    status: "completed",
-    startedAt: nowIso,
-    completedAt: nowIso,
-  });
-  const steps: ProvisioningStepView[] = [
-    step("step_org", "Create organization"),
-    step("step_branch", "Create branch"),
-    step("step_roles", `Seed roles (${preview.roles.length})`),
-    step("step_permissions", `Assign permissions (${totalPermissions})`),
-    step("step_seeds", `Load seed data (${pack.primaryEntities.length} entities)`),
-    step("step_golive", "Go live"),
+  const actorId = await currentActorId(db);
+
+  // Real, atomic tenant creation. The function never raises: it returns the
+  // failing step + message as data so partial work is unwound yet we can still
+  // commit a durable job row describing the failure.
+  const provRows = await db.queryObject<ProvisionRow>(
+    `SELECT new_org_id, new_school_id, roles_seeded, permissions_granted,
+            seeds_loaded, reused, failed_step, error_message
+     FROM org_builder_provision_tenant($1::uuid, $2, $3, $4, $5::uuid)`,
+    [orgId, draftId, pack.id, draft.organizationName, actorId],
+  );
+  const result = provRows[0];
+  const rolesSeeded = Number(result?.roles_seeded ?? 0);
+  const permsGranted = Number(result?.permissions_granted ?? 0);
+  const seedsLoaded = Number(result?.seeds_loaded ?? 0);
+  const failedStep = result?.failed_step ?? null;
+  const errorMessage = result?.error_message ?? null;
+
+  // Ordered step plan, with the real labels/counts. Status is filled in below.
+  const plan: Array<{ id: string; label: string }> = [
+    { id: "step_org", label: "Create organization" },
+    { id: "step_branch", label: "Create branch" },
+    { id: "step_roles", label: `Seed roles (${rolesSeeded})` },
+    { id: "step_permissions", label: `Assign permissions (${permsGranted})` },
+    { id: "step_seeds", label: `Load seed data (${seedsLoaded} rows)` },
+    { id: "step_golive", label: "Go live" },
   ];
+
+  const failedIdx = failedStep ? plan.findIndex((s) => s.id === failedStep) : -1;
+  const steps: ProvisioningStepView[] = plan.map((s, i) => {
+    if (failedIdx < 0) {
+      // Full success — every step really ran.
+      return { ...s, status: "completed", startedAt: nowIso, completedAt: nowIso };
+    }
+    if (i < failedIdx) {
+      // Ran before the failure, but the function rolled everything back; the work
+      // did not durably land, so mark it skipped (not falsely completed).
+      return { ...s, status: "skipped", startedAt: nowIso, completedAt: nowIso };
+    }
+    if (i === failedIdx) {
+      return {
+        ...s,
+        status: "failed",
+        startedAt: nowIso,
+        completedAt: nowIso,
+        error: errorMessage ?? "Provisioning step failed",
+      };
+    }
+    return { ...s, status: "pending" };
+  });
+
+  const jobStatus: ProvisioningJobView["status"] = failedIdx < 0 ? "completed" : "failed";
 
   const resolvedConfig = {
     packId: pack.id,
@@ -506,30 +567,38 @@ export async function provision(
     roles: preview.roles,
     widgets: preview.widgets,
     workflows: preview.workflows,
+    newOrganizationId: result?.new_org_id ?? null,
+    newBranchId: result?.new_school_id ?? null,
+    reused: result?.reused ?? false,
   };
 
   const rows = await db.queryObject<JobRow>(
     `INSERT INTO org_builder_provisioning_jobs
        (organization_id, draft_id, organization_name, status, steps,
         resolved_config, started_at, completed_at)
-     VALUES ($1, $2, $3, 'completed', $4::jsonb, $5::jsonb, $6::timestamptz, $6::timestamptz)
+     VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::timestamptz,
+             CASE WHEN $4 IN ('completed', 'failed') THEN $7::timestamptz END)
      RETURNING id, draft_id, organization_name, status, steps, started_at, completed_at`,
     [
       orgId,
       draftId,
       draft.organizationName,
+      jobStatus,
       JSON.stringify(steps),
       JSON.stringify(resolvedConfig),
       nowIso,
     ],
   );
 
-  await db.queryObject(
-    `UPDATE org_builder_interview_drafts
-     SET status = 'provisioned', updated_at = now()
-     WHERE id = $1 AND organization_id = $2`,
-    [draftId, orgId],
-  );
+  // Flip the draft to provisioned ONLY on a real, complete success.
+  if (jobStatus === "completed") {
+    await db.queryObject(
+      `UPDATE org_builder_interview_drafts
+       SET status = 'provisioned', updated_at = now()
+       WHERE id = $1 AND organization_id = $2`,
+      [draftId, orgId],
+    );
+  }
 
   return { job: mapJob(rows[0]), resolvedConfig: preview };
 }

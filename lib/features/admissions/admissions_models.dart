@@ -744,6 +744,7 @@ class StudentDocumentRecord {
     required this.uploadedLabel,
     required this.verifiedBy,
     required this.leadId,
+    this.hasFile = false,
   });
 
   final String id;
@@ -755,6 +756,9 @@ class StudentDocumentRecord {
   final String uploadedLabel;
   final String? verifiedBy;
   final String leadId;
+
+  /// True when a real file is stored and retrievable via a signed URL.
+  final bool hasFile;
 }
 
 @immutable

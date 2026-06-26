@@ -9,6 +9,7 @@ import '../../shared/widgets/akshara_dialog.dart';
 import '../../shared/widgets/akshara_motion.dart';
 import 'hostel_models.dart';
 import 'hostel_mutations_provider.dart';
+import 'hostel_providers.dart';
 import 'hostel_requests.dart';
 
 void _showHostelMutationError(BuildContext context, Object error) {
@@ -25,6 +26,20 @@ String _hostelRoomTypeLabel(HostelRoomType type) => switch (type) {
       HostelRoomType.ac => 'AC',
       HostelRoomType.dormitory => 'Dormitory',
       HostelRoomType.staff => 'Staff',
+    };
+
+String _hostelAttendanceStatusLabel(HostelAttendanceStatus status) =>
+    switch (status) {
+      HostelAttendanceStatus.present => 'Present',
+      HostelAttendanceStatus.absent => 'Absent',
+      HostelAttendanceStatus.onLeave => 'On leave',
+    };
+
+String _hostelMealTypeLabel(HostelMealType type) => switch (type) {
+      HostelMealType.breakfast => 'Breakfast',
+      HostelMealType.lunch => 'Lunch',
+      HostelMealType.snacks => 'Snacks',
+      HostelMealType.dinner => 'Dinner',
     };
 
 Future<void> showAdmitHostelStudentDialog(
@@ -412,6 +427,262 @@ Future<void> showLogVisitorDialog(
       SnackBar(
         key: QaTestKeys.hostelLogVisitorSuccessSnackbar,
         content: Text('Issued ${visitor.passId} to ${visitor.visitorName}'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showHostelMutationError(context, error);
+  }
+}
+
+/// HOSTE-1 — records a hostel attendance roster row. The resident picker is
+/// driven from the live hostel students list (no hardcoded mock IDs); room and
+/// roll auto-fill from the chosen resident.
+Future<void> showRecordHostelAttendanceDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final students = ref.read(hostelStudentsProvider) ?? const <HostelStudent>[];
+  final residents = students
+      .where((s) => s.status != HostelStudentStatus.checkedOut)
+      .toList();
+
+  HostelStudent? selected = residents.isNotEmpty ? residents.first : null;
+  final roomController = TextEditingController(text: selected?.room ?? '');
+  final rollController = TextEditingController();
+  final remarkController = TextEditingController();
+  var morning = HostelAttendanceStatus.present;
+  var evening = HostelAttendanceStatus.present;
+  var night = HostelAttendanceStatus.present;
+
+  Widget statusDropdown(
+    String label,
+    HostelAttendanceStatus value,
+    ValueChanged<HostelAttendanceStatus> onChanged,
+  ) {
+    return DropdownMenu<HostelAttendanceStatus>(
+      initialSelection: value,
+      label: Text(label),
+      expandedInsets: EdgeInsets.zero,
+      dropdownMenuEntries: [
+        for (final option in HostelAttendanceStatus.values)
+          DropdownMenuEntry(
+            value: option,
+            label: _hostelAttendanceStatusLabel(option),
+          ),
+      ],
+      onSelected: (next) {
+        if (next != null) onChanged(next);
+      },
+    );
+  }
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AksharaAlertDialog(
+        title: 'Record attendance',
+        icon: Icons.fact_check_outlined,
+        scrollable: true,
+        content: AksharaDialogFormBody(
+          children: [
+            if (residents.isEmpty)
+              const Text('No hostel residents available to record.')
+            else
+              DropdownMenu<HostelStudent>(
+                initialSelection: selected,
+                label: const Text('Resident'),
+                expandedInsets: EdgeInsets.zero,
+                dropdownMenuEntries: [
+                  for (final resident in residents)
+                    DropdownMenuEntry(
+                      value: resident,
+                      label: '${resident.studentName} · ${resident.room}',
+                    ),
+                ],
+                onSelected: (next) {
+                  setState(() {
+                    selected = next;
+                    roomController.text = next?.room ?? '';
+                  });
+                },
+              ),
+            AksharaFormField(
+              label: 'Room',
+              controller: roomController,
+              hint: 'e.g. A-204',
+            ),
+            AksharaFormField(
+              label: 'Roll number',
+              controller: rollController,
+              hint: 'e.g. 10-A-12',
+            ),
+            statusDropdown('Morning', morning, (v) => morning = v),
+            statusDropdown('Evening', evening, (v) => evening = v),
+            statusDropdown('Night', night, (v) => night = v),
+            AksharaFormField(
+              label: 'Remark',
+              controller: remarkController,
+              hint: 'Optional note',
+            ),
+          ],
+        ),
+        actions: [
+          AksharaDialogActions(
+            confirmLabel: 'Record',
+            confirmKey: QaTestKeys.hostelRecordAttendanceDialogSubmitButton,
+            onCancel: () => Navigator.of(context).pop(false),
+            onConfirm: () {
+              if (selected == null) return;
+              Navigator.of(context).pop(true);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+  final resident = selected;
+  if (resident == null) return;
+
+  try {
+    final record =
+        await ref.read(recordHostelAttendanceProvider.notifier).execute(
+              RecordHostelAttendanceRequest(
+                studentName: resident.studentName,
+                room: roomController.text.trim(),
+                rollNumber: rollController.text.trim(),
+                morning: morning,
+                evening: evening,
+                night: night,
+                remark: remarkController.text.trim(),
+                sisStudentId: resident.sisStudentId,
+              ),
+            );
+    if (!context.mounted || record == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hostelRecordAttendanceSuccessSnackbar,
+        content: Text(
+          'Recorded ${record.studentName} — '
+          '${_hostelAttendanceStatusLabel(record.overallStatus)}',
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showHostelMutationError(context, error);
+  }
+}
+
+/// HOSTE-3 — records a mess menu entry with headcount and cost.
+Future<void> showRecordMessDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final dayController = TextEditingController();
+  final itemsController = TextEditingController();
+  final dietaryController = TextEditingController();
+  final headcountController = TextEditingController();
+  final costController = TextEditingController();
+  var mealType = HostelMealType.lunch;
+
+  final confirmed = await showAksharaDialog<bool>(
+    context: context,
+    builder: (context) => AksharaAlertDialog(
+      title: 'Record mess menu',
+      icon: Icons.restaurant_outlined,
+      scrollable: true,
+      content: AksharaDialogFormBody(
+        children: [
+          AksharaFormField(
+            label: 'Day',
+            controller: dayController,
+            required: true,
+            hint: 'e.g. Mon',
+          ),
+          DropdownMenu<HostelMealType>(
+            initialSelection: mealType,
+            label: const Text('Meal'),
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              for (final option in HostelMealType.values)
+                DropdownMenuEntry(
+                  value: option,
+                  label: _hostelMealTypeLabel(option),
+                ),
+            ],
+            onSelected: (value) {
+              if (value != null) mealType = value;
+            },
+          ),
+          AksharaFormField(
+            label: 'Menu items',
+            controller: itemsController,
+            required: true,
+            hint: 'e.g. Rice · Dal · Sabzi',
+          ),
+          AksharaFormField(
+            label: 'Dietary tags',
+            controller: dietaryController,
+            hint: 'Comma separated, e.g. Veg, Jain option',
+          ),
+          AksharaFormField(
+            label: 'Headcount',
+            controller: headcountController,
+            keyboardType: TextInputType.number,
+          ),
+          AksharaFormField(
+            label: 'Cost (₹)',
+            controller: costController,
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+      actions: [
+        AksharaDialogActions(
+          confirmLabel: 'Record',
+          confirmKey: QaTestKeys.hostelRecordMessDialogSubmitButton,
+          onCancel: () => Navigator.of(context).pop(false),
+          onConfirm: () {
+            if (dayController.text.trim().isEmpty ||
+                itemsController.text.trim().isEmpty) {
+              return;
+            }
+            Navigator.of(context).pop(true);
+          },
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final dietaryTags = dietaryController.text
+      .split(',')
+      .map((tag) => tag.trim())
+      .where((tag) => tag.isNotEmpty)
+      .toList();
+
+  try {
+    final menu = await ref.read(recordMessProvider.notifier).execute(
+          RecordMessRequest(
+            day: dayController.text.trim(),
+            mealType: mealType,
+            items: itemsController.text.trim(),
+            dietaryTags: dietaryTags,
+            headcount: int.tryParse(headcountController.text.trim()) ?? 0,
+            costRupees: int.tryParse(costController.text.trim()) ?? 0,
+          ),
+        );
+    if (!context.mounted || menu == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hostelRecordMessSuccessSnackbar,
+        content: Text(
+          'Recorded ${menu.day} ${_hostelMealTypeLabel(menu.mealType)} menu',
+        ),
       ),
     );
   } catch (error) {

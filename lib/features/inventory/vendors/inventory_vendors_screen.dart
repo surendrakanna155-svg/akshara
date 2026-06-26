@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/widgets/whatsapp_contact_button.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../../core/security/permissions.dart';
 import '../../admin/admin_layout.dart';
 import '../inventory_models.dart';
 import '../inventory_providers.dart';
+import '../inventory_workflow_actions.dart';
 import '../widgets/inventory_module_scaffold.dart';
 
 /// INV-07 — Vendors.
@@ -40,6 +43,7 @@ class InventoryVendorsScreen extends ConsumerWidget {
           ref.read(inventoryVendorsFilterProvider.notifier).state = index,
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
@@ -50,7 +54,8 @@ class InventoryVendorsScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
@@ -69,15 +74,27 @@ class InventoryVendorsScreen extends ConsumerWidget {
     }
 
     if (isEmpty || vendors.isEmpty) {
-      return const AksharaEmptyState(
-        message: 'No vendors match the selected filters.',
-        icon: Icons.store_outlined,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _addVendorButton(context, ref),
+          const SizedBox(height: AksharaSpacing.s4),
+          const AksharaEmptyState(
+            message: 'No vendors match the selected filters.',
+            icon: Icons.store_outlined,
+          ),
+        ],
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: _addVendorButton(context, ref),
+        ),
+        const SizedBox(height: AksharaSpacing.s3),
         const AksharaSectionHeader(title: 'Vendor directory'),
         const SizedBox(height: AksharaSpacing.s3),
         _VendorTable(vendors: vendors),
@@ -86,6 +103,18 @@ class InventoryVendorsScreen extends ConsumerWidget {
           pageProvider: inventoryVendorsPageProvider,
         ),
       ],
+    );
+  }
+
+  Widget _addVendorButton(BuildContext context, WidgetRef ref) {
+    return AksharaManageAction(
+      permission: Permission.manageInventory,
+      child: FilledButton.tonalIcon(
+        key: QaTestKeys.inventoryAddVendorButton,
+        onPressed: () => showCreateInventoryVendorDialog(context, ref),
+        icon: const Icon(Icons.add_business_outlined),
+        label: const Text('Add vendor'),
+      ),
     );
   }
 }

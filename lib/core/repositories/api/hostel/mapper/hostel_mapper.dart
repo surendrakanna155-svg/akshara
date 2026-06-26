@@ -244,17 +244,22 @@ class HostelMapper {
     ];
   }
 
+  HostelMealMenu toMealMenu(HostelMealMenuDto dto) => _mapMealMenu(dto.raw);
+
   List<HostelMealMenu> _mapMealMenus(List<dynamic> items) {
     return [
       for (final item in items)
-        if (item is Map<String, dynamic>)
-          HostelMealMenu(
-            day: item['day'] as String? ?? '',
-            mealType: HostelEnumCodec.parseMealType(item['mealType'] as String?),
-            items: item['items'] as String? ?? '',
-            dietaryTags: _stringList(item['dietaryTags']),
-          ),
+        if (item is Map<String, dynamic>) _mapMealMenu(item),
     ];
+  }
+
+  HostelMealMenu _mapMealMenu(Map<String, dynamic> item) {
+    return HostelMealMenu(
+      day: item['day'] as String? ?? '',
+      mealType: HostelEnumCodec.parseMealType(item['mealType'] as String?),
+      items: item['items'] as String? ?? '',
+      dietaryTags: _stringList(item['dietaryTags']),
+    );
   }
 
   HostelVisitor toVisitor(HostelVisitorDto dto) => _mapVisitor(dto.raw);

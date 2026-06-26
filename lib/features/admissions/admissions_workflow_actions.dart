@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/testing/qa_test_keys.dart';
 import '../../core/errors/api_failure.dart';
@@ -403,6 +406,126 @@ Future<void> runSendToFinance(
     if (!context.mounted) return;
     _showMutationError(context, ref, error);
   }
+}
+
+/// ADMIS-5: collects document metadata, then uploads a real file to Storage
+/// (presign → PUT bytes → confirm) so it is retrievable during verification.
+Future<void> showUploadDocumentDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required String leadId,
+  String studentName = '',
+  String classLabel = '',
+}) async {
+  var documentType = DocumentType.birthCertificate;
+  final fileController =
+      TextEditingController(text: 'birth_certificate.pdf');
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Upload document'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButton<DocumentType>(
+              value: documentType,
+              isExpanded: true,
+              items: [
+                for (final type in DocumentType.values)
+                  DropdownMenuItem(value: type, child: Text(type.label)),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => documentType = value);
+              },
+            ),
+            TextField(
+              controller: fileController,
+              decoration: const InputDecoration(labelText: 'File name'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Upload'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final fileName = fileController.text.trim().isEmpty
+      ? '${documentType.name}.pdf'
+      : fileController.text.trim();
+
+  try {
+    final document = await ref.read(uploadDocumentProvider.notifier).execute(
+          leadId: leadId,
+          documentType: documentType,
+          fileName: fileName,
+          bytes: _documentBytes(),
+          contentType: 'application/pdf',
+          studentName: studentName,
+          classLabel: classLabel,
+        );
+    if (!context.mounted || document == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Document uploaded: ${document.documentType.label}')),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, ref, error);
+  }
+}
+
+/// ADMIS-5: opens the stored file for a document via a short-lived signed URL.
+Future<void> runOpenDocument(
+  BuildContext context,
+  WidgetRef ref,
+  String documentId,
+) async {
+  try {
+    final url = await ref
+        .read(documentDownloadUrlProvider.notifier)
+        .execute(documentId: documentId);
+    if (url == null || url.isEmpty) {
+      throw const ApiFailure(
+        type: ApiFailureType.unknown,
+        message: 'No stored file for this document.',
+        code: 'NO_DOCUMENT_FILE',
+      );
+    }
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the document.')),
+      );
+    }
+  } catch (error) {
+    if (!context.mounted) return;
+    _showMutationError(context, ref, error);
+  }
+}
+
+/// Minimal valid single-page PDF payload. Mirrors the device-memories module's
+/// synthetic-bytes upload precedent (no OS file picker dependency in the app).
+Uint8List _documentBytes() {
+  const pdf =
+      '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
+      '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+      '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\n'
+      'trailer<</Root 1 0 R>>\n%%EOF';
+  return Uint8List.fromList(pdf.codeUnits);
 }
 
 void _showMutationError(BuildContext context, WidgetRef ref, Object error) {

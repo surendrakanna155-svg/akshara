@@ -257,6 +257,47 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
       _remote.uploadDocument(query: query, request: request);
 
   @override
+  Future<StudentDocumentRecord> uploadDocumentFile({
+    required RepositoryQuery query,
+    required DocumentType documentType,
+    required String leadId,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+    String studentName = '',
+    String classLabel = '',
+  }) async {
+    final presign = await _remote.presignDocumentUpload(
+      query: query,
+      leadId: leadId,
+      fileName: fileName,
+    );
+    await _remote.putSignedUpload(
+      signedUrl: presign.signedUrl,
+      bytes: bytes,
+      contentType: contentType,
+    );
+    return _remote.uploadDocument(
+      query: query,
+      request: DocumentUploadRequest(
+        leadId: leadId,
+        documentType: documentType,
+        fileName: fileName,
+        storagePath: presign.storagePath,
+        studentName: studentName,
+        classLabel: classLabel,
+      ),
+    );
+  }
+
+  @override
+  Future<String> getDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String documentId,
+  }) =>
+      _remote.fetchDocumentDownloadUrl(query: query, documentId: documentId);
+
+  @override
   Future<StudentDocumentRecord> approveDocument({
     required RepositoryQuery query,
     required String documentId,

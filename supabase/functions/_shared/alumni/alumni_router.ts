@@ -16,6 +16,7 @@ import {
   handleAddMentorshipPair,
   handleCreateCampaign,
   handleCreateEvent,
+  handleRecordDonation,
 } from "./alumni_write_handlers.ts";
 
 function matchAlumniRoute(
@@ -53,6 +54,7 @@ function matchAlumniRoute(
       "/alumni/events": handleCreateEvent,
       "/alumni/campaigns": handleCreateCampaign,
       "/alumni/mentorship": handleAddMentorshipPair,
+      "/alumni/donations": handleRecordDonation,
     };
     const handler = routes[path] as ((req: Request, config: AppConfig) => Promise<Response>) | undefined;
     return handler ? { handler, args: [] } : null;

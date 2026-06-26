@@ -31,6 +31,7 @@ enum AuditEventType {
   followupAdded,
   applicationSubmitted,
   enrollmentSubmitted,
+  documentUploaded,
   documentApproved,
   documentRejected,
   admissionApproved,
@@ -94,6 +95,8 @@ enum AuditEventType {
   transportStudentAssigned,
   transportStudentTransferred,
   transportStudentRemoved,
+  transportAttendanceRecorded,
+  transportDelayNotified,
 
   errorReported,
 }

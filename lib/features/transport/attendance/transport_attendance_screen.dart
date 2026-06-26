@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -9,6 +11,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../transport_models.dart';
 import '../transport_providers.dart';
+import '../transport_workflow_actions.dart';
 import '../widgets/transport_module_scaffold.dart';
 
 /// TR-06 — Transport Attendance.
@@ -128,6 +131,7 @@ class _AttendanceTable extends StatelessWidget {
               DataColumn(label: Text('Actual')),
               DataColumn(label: Text('Status')),
               DataColumn(label: Text('Parent notified')),
+              DataColumn(label: Text('Actions')),
             ],
             rows: [
               for (final record in records)
@@ -142,6 +146,7 @@ class _AttendanceTable extends StatelessWidget {
                     DataCell(
                       Text(record.parentNotified ? 'Yes' : 'No'),
                     ),
+                    DataCell(_AttendanceActions(record: record)),
                   ],
                 ),
             ],
@@ -152,13 +157,37 @@ class _AttendanceTable extends StatelessWidget {
   }
 }
 
-class _AttendanceCard extends StatelessWidget {
+class _AttendanceActions extends ConsumerWidget {
+  const _AttendanceActions({required this.record});
+
+  final TransportAttendanceRecord record;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AksharaManageAction(
+      permission: Permission.manageTransport,
+      child: OutlinedButton.icon(
+        key: QaTestKeys.transportMarkAttendanceButton(record.id),
+        onPressed: () => showRecordTransportAttendanceDialog(
+          context,
+          ref,
+          record: record,
+        ),
+        style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+        icon: const Icon(Icons.how_to_reg_outlined, size: 18),
+        label: const Text('Mark'),
+      ),
+    );
+  }
+}
+
+class _AttendanceCard extends ConsumerWidget {
   const _AttendanceCard({required this.record});
 
   final TransportAttendanceRecord record;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -187,6 +216,8 @@ class _AttendanceCard extends StatelessWidget {
                 'Scheduled ${record.scheduledTime} · Actual ${record.actualTime}',
                 style: text.bodySmall,
               ),
+              const SizedBox(height: AksharaSpacing.s3),
+              _AttendanceActions(record: record),
             ],
           ),
         ),

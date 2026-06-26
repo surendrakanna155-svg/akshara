@@ -419,6 +419,17 @@ class TransportSettingsData {
 }
 
 @immutable
+class TransportDelayNotificationResult {
+  const TransportDelayNotificationResult({
+    required this.routeName,
+    required this.recipientCount,
+  });
+
+  final String routeName;
+  final int recipientCount;
+}
+
+@immutable
 class TransportTrackingPlaceholderData {
   const TransportTrackingPlaceholderData({
     required this.vehicles,

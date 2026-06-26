@@ -24,6 +24,8 @@ import {
   handleUpdateHandoffStatus,
   handleUpdateLead,
   handleUploadDocument,
+  handlePresignDocumentUpload,
+  handleDownloadDocument,
 } from "./admissions_handlers.ts";
 import { handleDashboard } from "./admissions_dashboard_handlers.ts";
 import { handleAdmissionsIntelligence } from "./admissions_intelligence_handlers.ts";
@@ -125,8 +127,19 @@ function matchAdmissionsRoute(
   if (path === "/admissions/documents" && method === "GET") {
     return { handler: handleListDocuments, args: [] };
   }
+  // ADMIS-5: presign the direct-to-Storage upload before confirming metadata.
+  // Declared before the generic /upload match so it is not shadowed.
+  if (path === "/admissions/documents/upload/presign" && method === "POST") {
+    return { handler: handlePresignDocumentUpload, args: [] };
+  }
   if (path === "/admissions/documents/upload" && method === "POST") {
     return { handler: handleUploadDocument, args: [] };
+  }
+
+  // ADMIS-5: signed-URL retrieval of a stored document for verification.
+  const docDownloadMatch = path.match(/^\/admissions\/documents\/([^/]+)\/download$/);
+  if (docDownloadMatch && method === "GET") {
+    return { handler: handleDownloadDocument, args: [docDownloadMatch[1]!] };
   }
 
   const docApproveMatch = path.match(/^\/admissions\/documents\/([^/]+)\/approve$/);

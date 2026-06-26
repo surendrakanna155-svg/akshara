@@ -88,9 +88,29 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
               final checklist = ref.watch(
                 admissionsDocumentChecklistProvider(selected?.leadId),
               );
+              final canOpen = selected?.hasFile ?? false;
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: AksharaSpacing.s4),
+                child: FilledButton.icon(
+                  onPressed: selected == null
+                      ? null
+                      : () => showUploadDocumentDialog(
+                            context,
+                            ref,
+                            leadId: selected.leadId,
+                            studentName: selected.studentName,
+                            classLabel: selected.classLabel,
+                          ),
+                  icon: const Icon(Icons.upload_file_outlined, size: 18),
+                  label: const Text('Upload document'),
+                ),
+              ),
+            ),
             AdmissionsResponsiveGrid(
               desktopColumns: 4,
               tabletColumns: 2,
@@ -151,6 +171,13 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
               if (checklist.isNotEmpty)
                 AdmissionsDocumentChecklist(
                   items: checklist,
+                  onOpen: !canOpen || selectedDocumentId == null
+                      ? null
+                      : () => runOpenDocument(
+                            context,
+                            ref,
+                            selectedDocumentId,
+                          ),
                   onApprove: selectedDocumentId == null
                       ? null
                       : () => runApproveDocument(
@@ -187,6 +214,13 @@ class AdmissionsDocumentsScreen extends ConsumerWidget {
                         ? const SizedBox.shrink()
                         : AdmissionsDocumentChecklist(
                             items: checklist,
+                            onOpen: !canOpen || selectedDocumentId == null
+                                ? null
+                                : () => runOpenDocument(
+                                      context,
+                                      ref,
+                                      selectedDocumentId,
+                                    ),
                             onApprove: selectedDocumentId == null
                                 ? null
                                 : () => runApproveDocument(

@@ -1532,9 +1532,43 @@ class MockAdmissionsRepository implements AdmissionsRepository {
       uploadedLabel: 'Just now',
       verifiedBy: null,
       leadId: request.leadId,
+      hasFile: request.storagePath.isNotEmpty,
     );
     _store.documents!.insert(0, doc);
     return doc;
+  }
+
+  @override
+  Future<StudentDocumentRecord> uploadDocumentFile({
+    required RepositoryQuery query,
+    required DocumentType documentType,
+    required String leadId,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+    String studentName = '',
+    String classLabel = '',
+  }) async {
+    // Mock parity: simulate a stored object path (presign → PUT → confirm).
+    return uploadDocument(
+      query: query,
+      request: DocumentUploadRequest(
+        leadId: leadId,
+        documentType: documentType,
+        fileName: fileName,
+        storagePath: 'mock/$leadId/${_store.nextDocId()}_$fileName',
+        studentName: studentName,
+        classLabel: classLabel,
+      ),
+    );
+  }
+
+  @override
+  Future<String> getDocumentDownloadUrl({
+    required RepositoryQuery query,
+    required String documentId,
+  }) async {
+    return 'https://mock.storage/admissions-documents/$documentId';
   }
 
   @override

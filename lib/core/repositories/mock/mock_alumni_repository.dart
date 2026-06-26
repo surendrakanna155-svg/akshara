@@ -321,11 +321,7 @@ class MockAlumniRepository implements AlumniRepository {
   }) async =>
       paginateList(_allEvents, query);
 
-  @override
-  Future<PaginatedResult<AlumniDonation>> getDonations({
-    required RepositoryQuery query,
-  }) async =>
-      paginateList(const [
+  static const _seedDonations = [
         AlumniDonation(
           id: 'don_1',
           alumniName: 'Arjun Patel',
@@ -370,7 +366,18 @@ class MockAlumniRepository implements AlumniRepository {
           financeReceiptId: '—',
           paymentMode: 'Cheque',
         ),
-      ], query);
+  ];
+
+  List<AlumniDonation> get _allDonations => [
+        ...MockAlumniWriteStore.instance.donations,
+        ..._seedDonations,
+      ];
+
+  @override
+  Future<PaginatedResult<AlumniDonation>> getDonations({
+    required RepositoryQuery query,
+  }) async =>
+      paginateList(_allDonations, query);
 
   static const _seedCampaigns = [
     AlumniCampaign(
@@ -682,5 +689,23 @@ class MockAlumniRepository implements AlumniRepository {
     required AddMentorshipPairRequest request,
   }) async {
     return MockAlumniWriteStore.instance.addMentorshipPair(request);
+  }
+
+  @override
+  Future<AlumniDonation> recordDonation({
+    required RepositoryQuery query,
+    required RecordDonationRequest request,
+  }) async {
+    final campaignId = request.campaignId.trim();
+    final campaignName = campaignId.isEmpty
+        ? null
+        : _allCampaigns
+            .where((c) => c.id == campaignId)
+            .map((c) => c.name)
+            .firstOrNull;
+    return MockAlumniWriteStore.instance.recordDonation(
+      request,
+      campaignName: campaignName,
+    );
   }
 }

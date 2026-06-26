@@ -26,6 +26,11 @@ abstract class TransportRepository {
     required ActivateTransportRouteRequest request,
   });
 
+  Future<TransportAttendanceRecord> recordAttendance({
+    required RepositoryQuery query,
+    required RecordTransportAttendanceRequest request,
+  });
+
   Future<StudentTransportAllocation> assignStudentTransport({
     required RepositoryQuery query,
     required AssignStudentTransportRequest request,
@@ -39,5 +44,10 @@ abstract class TransportRepository {
   Future<StudentTransportAllocation> removeStudentTransport({
     required RepositoryQuery query,
     required RemoveStudentTransportRequest request,
+  });
+
+  Future<TransportDelayNotificationResult> notifyRouteDelay({
+    required RepositoryQuery query,
+    required NotifyRouteDelayRequest request,
   });
 }

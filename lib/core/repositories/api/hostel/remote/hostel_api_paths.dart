@@ -12,6 +12,9 @@ abstract final class HostelApiPaths {
   static const String reports = '$base/reports';
   static const String occupancyMetrics = '$base/occupancy-metrics';
 
+  static const String recordAttendance = attendance;
+  static const String recordMess = mess;
+
   static String assignRoom(String hostelStudentId) =>
       '$students/$hostelStudentId/room';
 

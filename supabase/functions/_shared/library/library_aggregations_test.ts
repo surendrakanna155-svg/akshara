@@ -87,7 +87,7 @@ Deno.test("dashboard: fresh school => zeros and empty lists", () => {
 });
 
 Deno.test("fines: fresh school => empty list, zero pending", () => {
-  const result = computeFines([], [], NOW);
+  const result = computeFines([], [], [], NOW);
   assertEquals(result.fines, []);
   assertEquals(result.totalPending, "₹0");
 });
@@ -136,7 +136,7 @@ Deno.test("fines: lists overdue open loans with computed amount and finance link
   ];
   const members = [member({ name: "Arjun", sisStudentId: "SIS-1" })];
 
-  const result = computeFines(issues, members, NOW);
+  const result = computeFines(issues, members, [], NOW);
   const fines = result.fines as Array<Record<string, unknown>>;
   assertEquals(fines.length, 1);
   assertEquals(fines[0].memberName, "Arjun");

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
@@ -183,6 +184,7 @@ class _ResourcesTable extends StatelessWidget {
               DataColumn(label: Text('Downloads')),
               DataColumn(label: Text('Student app')),
               DataColumn(label: Text('Teacher app')),
+              DataColumn(label: Text('Open')),
             ],
             rows: [
               for (final resource in resources)
@@ -194,12 +196,44 @@ class _ResourcesTable extends StatelessWidget {
                     DataCell(Text('${resource.downloads}')),
                     DataCell(Text(resource.studentAppVisible ? 'Yes' : '—')),
                     DataCell(Text(resource.teacherAppVisible ? 'Yes' : '—')),
+                    DataCell(_OpenResourceAction(resource: resource)),
                   ],
                 ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _OpenResourceAction extends StatelessWidget {
+  const _OpenResourceAction({required this.resource});
+
+  final LibraryDigitalResource resource;
+
+  Future<void> _open(BuildContext context) async {
+    final raw = resource.resourceUrl;
+    final uri = raw == null ? null : Uri.tryParse(raw);
+    if (uri == null) return;
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open resource link.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final url = resource.resourceUrl;
+    if (url == null || url.isEmpty) {
+      return const Text('—');
+    }
+    return TextButton.icon(
+      onPressed: () => _open(context),
+      icon: const Icon(Icons.open_in_new_outlined, size: 18),
+      label: const Text('Open'),
     );
   }
 }
@@ -229,7 +263,13 @@ class _ResourceCard extends StatelessWidget {
                 style: text.bodySmall,
               ),
               const SizedBox(height: AksharaSpacing.s2),
-              _ResourceTypeChip(type: resource.type),
+              Row(
+                children: [
+                  _ResourceTypeChip(type: resource.type),
+                  const Spacer(),
+                  _OpenResourceAction(resource: resource),
+                ],
+              ),
             ],
           ),
         ),

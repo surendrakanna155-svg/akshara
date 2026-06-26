@@ -6,47 +6,106 @@ import 'hr_models.dart';
 import 'hr_mutations_provider.dart';
 import 'hr_requests.dart';
 
+String _hrDepartmentLabel(HrDepartment d) => switch (d) {
+      HrDepartment.academics => 'Academics',
+      HrDepartment.administration => 'Administration',
+      HrDepartment.transport => 'Transport',
+      HrDepartment.finance => 'Finance',
+      HrDepartment.hr => 'HR',
+      HrDepartment.support => 'Support',
+    };
+
+String _hrLeaveTypeLabel(HrLeaveType t) => switch (t) {
+      HrLeaveType.casual => 'Casual',
+      HrLeaveType.sick => 'Sick',
+      HrLeaveType.earned => 'Earned',
+      HrLeaveType.maternity => 'Maternity',
+      HrLeaveType.unpaid => 'Unpaid',
+    };
+
+String _hrRoleLabel(HrEmployeeRole r) => switch (r) {
+      HrEmployeeRole.teacher => 'Teacher',
+      HrEmployeeRole.driver => 'Driver',
+      HrEmployeeRole.admin => 'Admin',
+      HrEmployeeRole.principal => 'Principal',
+      HrEmployeeRole.staff => 'Staff',
+    };
+
 Future<void> showCreateHrLeaveDialog(BuildContext context, WidgetRef ref) async {
-  final employeeController = TextEditingController(text: 'Mrs. Rao');
-  final reasonController = TextEditingController(text: 'Personal leave');
-  final fromController = TextEditingController(text: '2026-06-15');
-  final toController = TextEditingController(text: '2026-06-15');
+  final employeeController = TextEditingController();
+  final reasonController = TextEditingController();
+  final fromController = TextEditingController();
+  final toController = TextEditingController();
+  final daysController = TextEditingController(text: '1');
+  var department = HrDepartment.academics;
+  var leaveType = HrLeaveType.casual;
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('New leave request'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: employeeController,
-            decoration: const InputDecoration(labelText: 'Employee name'),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('New leave request'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: employeeController,
+                decoration: const InputDecoration(labelText: 'Employee name'),
+              ),
+              DropdownButtonFormField<HrDepartment>(
+                initialValue: department,
+                decoration: const InputDecoration(labelText: 'Department'),
+                items: [
+                  for (final d in HrDepartment.values)
+                    DropdownMenuItem(value: d, child: Text(_hrDepartmentLabel(d))),
+                ],
+                onChanged: (v) => setState(() => department = v ?? department),
+              ),
+              DropdownButtonFormField<HrLeaveType>(
+                initialValue: leaveType,
+                decoration: const InputDecoration(labelText: 'Leave type'),
+                items: [
+                  for (final t in HrLeaveType.values)
+                    DropdownMenuItem(value: t, child: Text(_hrLeaveTypeLabel(t))),
+                ],
+                onChanged: (v) => setState(() => leaveType = v ?? leaveType),
+              ),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(labelText: 'Reason'),
+              ),
+              TextField(
+                controller: fromController,
+                decoration: const InputDecoration(
+                  labelText: 'From date (YYYY-MM-DD)',
+                ),
+              ),
+              TextField(
+                controller: toController,
+                decoration: const InputDecoration(
+                  labelText: 'To date (YYYY-MM-DD)',
+                ),
+              ),
+              TextField(
+                controller: daysController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Number of days'),
+              ),
+            ],
           ),
-          TextField(
-            controller: reasonController,
-            decoration: const InputDecoration(labelText: 'Reason'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
-          TextField(
-            controller: fromController,
-            decoration: const InputDecoration(labelText: 'From date'),
-          ),
-          TextField(
-            controller: toController,
-            decoration: const InputDecoration(labelText: 'To date'),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Submit'),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Submit'),
-        ),
-      ],
     ),
   );
 
@@ -57,11 +116,11 @@ Future<void> showCreateHrLeaveDialog(BuildContext context, WidgetRef ref) async 
           CreateHrLeaveRequest(
             employeeId: 'HR-EMP-102',
             employeeName: employeeController.text.trim(),
-            department: HrDepartment.academics,
-            leaveType: HrLeaveType.casual,
+            department: department,
+            leaveType: leaveType,
             fromDate: fromController.text.trim(),
             toDate: toController.text.trim(),
-            days: 1,
+            days: int.tryParse(daysController.text.trim()) ?? 1,
             reason: reasonController.text.trim(),
           ),
         );
@@ -133,52 +192,76 @@ Future<void> showCreateHrEmployeeDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final nameController = TextEditingController(text: 'QA Staff Member');
-  final codeController = TextEditingController(text: 'EMP-900');
-  final designationController = TextEditingController(text: 'Office Assistant');
-  final emailController = TextEditingController(text: 'qa.staff@akshara.edu');
-  final phoneController = TextEditingController(text: '+91 90000 11122');
+  final nameController = TextEditingController();
+  final codeController = TextEditingController();
+  final designationController = TextEditingController();
+  final emailController = TextEditingController();
+  final phoneController = TextEditingController();
+  var department = HrDepartment.administration;
+  var role = HrEmployeeRole.staff;
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Add employee'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(labelText: 'Name'),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Add employee'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: codeController,
+                decoration: const InputDecoration(labelText: 'Employee code'),
+              ),
+              DropdownButtonFormField<HrDepartment>(
+                initialValue: department,
+                decoration: const InputDecoration(labelText: 'Department'),
+                items: [
+                  for (final d in HrDepartment.values)
+                    DropdownMenuItem(value: d, child: Text(_hrDepartmentLabel(d))),
+                ],
+                onChanged: (v) => setState(() => department = v ?? department),
+              ),
+              DropdownButtonFormField<HrEmployeeRole>(
+                initialValue: role,
+                decoration: const InputDecoration(labelText: 'Role'),
+                items: [
+                  for (final r in HrEmployeeRole.values)
+                    DropdownMenuItem(value: r, child: Text(_hrRoleLabel(r))),
+                ],
+                onChanged: (v) => setState(() => role = v ?? role),
+              ),
+              TextField(
+                controller: designationController,
+                decoration: const InputDecoration(labelText: 'Designation'),
+              ),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(labelText: 'Phone'),
+              ),
+            ],
           ),
-          TextField(
-            controller: codeController,
-            decoration: const InputDecoration(labelText: 'Employee code'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
-          TextField(
-            controller: designationController,
-            decoration: const InputDecoration(labelText: 'Designation'),
-          ),
-          TextField(
-            controller: emailController,
-            decoration: const InputDecoration(labelText: 'Email'),
-          ),
-          TextField(
-            controller: phoneController,
-            decoration: const InputDecoration(labelText: 'Phone'),
+          FilledButton(
+            key: QaTestKeys.hrCreateEmployeeDialogSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Create'),
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          key: QaTestKeys.hrCreateEmployeeDialogSubmitButton,
-          onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Create'),
-        ),
-      ],
     ),
   );
 
@@ -189,8 +272,8 @@ Future<void> showCreateHrEmployeeDialog(
           CreateHrEmployeeRequest(
             name: nameController.text.trim(),
             employeeCode: codeController.text.trim(),
-            department: HrDepartment.administration,
-            role: HrEmployeeRole.staff,
+            department: department,
+            role: role,
             designation: designationController.text.trim(),
             email: emailController.text.trim(),
             phone: phoneController.text.trim(),

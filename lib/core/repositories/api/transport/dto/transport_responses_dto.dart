@@ -147,6 +147,16 @@ class TransportAttendanceResponseDto {
   final List<TransportAttendanceRecordDto> items;
 }
 
+class TransportDelayNotificationDto {
+  const TransportDelayNotificationDto({required this.raw});
+
+  factory TransportDelayNotificationDto.fromJson(Map<String, dynamic> json) {
+    return TransportDelayNotificationDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
 class TransportTrackingDto {
   const TransportTrackingDto({required this.raw});
 

@@ -445,6 +445,78 @@ final rejectDocumentProvider =
   RejectDocumentNotifier.new,
 );
 
+/// ADMIS-5: uploads a real document file (presign → PUT bytes → confirm) so the
+/// stored object is retrievable during verification.
+class UploadDocumentNotifier extends AsyncNotifier<StudentDocumentRecord?> {
+  @override
+  FutureOr<StudentDocumentRecord?> build() => null;
+
+  Future<StudentDocumentRecord?> execute({
+    required String leadId,
+    required DocumentType documentType,
+    required String fileName,
+    required List<int> bytes,
+    required String contentType,
+    String studentName = '',
+    String classLabel = '',
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageAdmissions(ref),
+        auditType: AuditEventType.documentUploaded,
+        entityId: leadId,
+        entityIdForAudit: (doc) => doc.id,
+        metadata: {'leadId': leadId},
+        invalidateDocuments: true,
+        action: () => ref.read(admissionsRepositoryProvider).uploadDocumentFile(
+              query: ref.read(repositoryQueryProvider),
+              leadId: leadId,
+              documentType: documentType,
+              fileName: fileName,
+              bytes: bytes,
+              contentType: contentType,
+              studentName: studentName,
+              classLabel: classLabel,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final uploadDocumentProvider =
+    AsyncNotifierProvider<UploadDocumentNotifier, StudentDocumentRecord?>(
+  UploadDocumentNotifier.new,
+);
+
+/// ADMIS-5: resolves a short-lived signed URL to open a stored document.
+class DocumentDownloadUrlNotifier extends AsyncNotifier<String?> {
+  @override
+  FutureOr<String?> build() => null;
+
+  Future<String?> execute({required String documentId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      try {
+        return await ref.read(admissionsRepositoryProvider).getDocumentDownloadUrl(
+              query: ref.read(repositoryQueryProvider),
+              documentId: documentId,
+            );
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final documentDownloadUrlProvider =
+    AsyncNotifierProvider<DocumentDownloadUrlNotifier, String?>(
+  DocumentDownloadUrlNotifier.new,
+);
+
 class ApproveAdmissionNotifier extends AsyncNotifier<ApprovalQueueItem?> {
   @override
   FutureOr<ApprovalQueueItem?> build() => null;

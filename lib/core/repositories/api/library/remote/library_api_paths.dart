@@ -10,4 +10,6 @@ abstract final class LibraryApiPaths {
   static const String fines = '$base/fines';
   static const String digitalResources = '$base/digital-resources';
   static const String reports = '$base/reports';
+
+  static String waiveFine(String fineId) => '$fines/$fineId/waive';
 }

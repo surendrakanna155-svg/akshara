@@ -142,6 +142,20 @@ class _ManagementSettingsScreenState
               onTap: () => context.push(RouteNames.schoolDiscovery),
             ),
           ),
+          const SizedBox(height: AksharaSpacing.s4),
+          Card(
+            elevation: 0,
+            child: ListTile(
+              key: QaTestKeys.unifiedOnboardingSettingsLink,
+              leading: const Icon(Icons.auto_awesome_motion_outlined),
+              title: const Text('Guided school onboarding'),
+              subtitle: const Text(
+                  'Step-by-step wizard to set up your school — structure, '
+                  'staff, students, and first-run data'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(RouteNames.unifiedOnboarding),
+            ),
+          ),
           const SizedBox(height: AksharaSpacing.s6),
         ],
         const AksharaSectionHeader(title: 'AI Assistant'),

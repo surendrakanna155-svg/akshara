@@ -137,6 +137,7 @@ class DocumentUploadRequest {
     required this.leadId,
     required this.documentType,
     required this.fileName,
+    required this.storagePath,
     this.studentName = '',
     this.classLabel = '',
   });
@@ -144,6 +145,10 @@ class DocumentUploadRequest {
   final String leadId;
   final DocumentType documentType;
   final String fileName;
+
+  /// Storage object path returned by the presign step; links the confirmed
+  /// document row to the file already uploaded to Supabase Storage.
+  final String storagePath;
   final String studentName;
   final String classLabel;
 }
