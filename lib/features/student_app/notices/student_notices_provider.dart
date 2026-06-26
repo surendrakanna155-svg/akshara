@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../dashboard/student_dashboard_provider.dart';
 import 'notices_models.dart';
 
 final studentNoticeScopeProvider = StateProvider<StudentNoticeScope>(
@@ -46,10 +47,11 @@ final studentNoticesItemsProvider = Provider<List<StudentNotice>>((ref) {
 });
 
 final studentNoticesProvider = Provider<StudentNoticesData>((ref) {
+  final dash = ref.watch(studentDashboardFutureProvider).value;
   return StudentNoticesData(
-    studentName: 'Ravi Kumar',
-    classLabel: '8-A',
-    unreadNotifications: 2,
+    studentName: dash?.studentName ?? '',
+    classLabel: dash?.classLabel ?? '',
+    unreadNotifications: dash?.unreadNotifications ?? 0,
     notices: ref.watch(studentNoticesItemsProvider),
   );
 });

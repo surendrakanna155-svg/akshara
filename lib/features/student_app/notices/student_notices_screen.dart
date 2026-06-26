@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../dashboard/student_dashboard_provider.dart';
 import 'student_notices_provider.dart';
 import 'widgets/notice_list_row.dart';
 import 'widgets/notices_filter_bar.dart';
@@ -20,17 +21,27 @@ class StudentNoticesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final asyncNotices = ref.watch(studentNoticesFutureProvider);
+    final asyncDash = ref.watch(studentDashboardFutureProvider);
     final data = ref.watch(studentNoticesProvider);
     final scope = ref.watch(studentNoticeScopeProvider);
-    final isLoading = ref.watch(studentNoticesLoadingProvider);
-    final hasError = ref.watch(studentNoticesErrorProvider);
+    final isLoading = ref.watch(studentNoticesLoadingProvider) ||
+        asyncNotices.isLoading ||
+        asyncDash.isLoading;
+    final hasError = ref.watch(studentNoticesErrorProvider) ||
+        asyncNotices.hasError ||
+        asyncDash.hasError;
+    final identityResolved =
+        asyncDash.hasValue && data.studentName.isNotEmpty;
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Notices',
-        subtitle: '${data.studentName} · ${data.classLabel}',
-        unreadNotifications: data.unreadNotifications,
+        subtitle: identityResolved
+            ? '${data.studentName} · ${data.classLabel}'
+            : null,
+        unreadNotifications: asyncDash.hasValue ? data.unreadNotifications : 0,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
@@ -39,9 +50,12 @@ class StudentNoticesScreen extends ConsumerWidget {
           : hasError
               ? AksharaErrorState(
                   message: 'Unable to load notices right now.',
-                  onRetry: () => ref
-                      .read(studentNoticesErrorProvider.notifier)
-                      .state = false,
+                  onRetry: () {
+                    ref
+                        .read(studentNoticesErrorProvider.notifier)
+                        .state = false;
+                    ref.invalidate(studentNoticesFutureProvider);
+                  },
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {

@@ -41,7 +41,7 @@ final studentAttendanceProvider = Provider<AttendanceMonthData>((ref) {
   );
   final resolved = base ??
       ref.watch(studentAttendanceFutureProvider).value ??
-      AttendanceMonthData.mock(month: month);
+      AttendanceMonthData.empty(month: month);
   return resolved.withSelectedDay(selected);
 });
 

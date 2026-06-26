@@ -20,9 +20,12 @@ class StudentTimetableScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(studentTimetableFutureProvider);
     final data = ref.watch(studentTimetableProvider);
-    final isLoading = ref.watch(studentTimetableLoadingProvider);
-    final hasError = ref.watch(studentTimetableErrorProvider);
+    final isLoading =
+        ref.watch(studentTimetableLoadingProvider) || async.isLoading;
+    final hasError =
+        ref.watch(studentTimetableErrorProvider) || async.hasError;
     final isEmpty = ref.watch(studentTimetableEmptyProvider);
     final selectedDay = data.selectedDay;
 
@@ -30,8 +33,10 @@ class StudentTimetableScreen extends ConsumerWidget {
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Timetable',
-        subtitle: '${data.childName} · ${data.childClass}',
-        unreadNotifications: data.unreadNotifications,
+        subtitle: async.hasValue
+            ? '${data.childName} · ${data.childClass}'
+            : null,
+        unreadNotifications: async.hasValue ? data.unreadNotifications : 0,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
@@ -40,8 +45,10 @@ class StudentTimetableScreen extends ConsumerWidget {
           const AksharaLoadingState(semanticLabel: 'Loading timetable'),
         (_, true, _) => AksharaErrorState(
             message: 'Unable to load timetable. Please try again.',
-            onRetry: () =>
-                ref.read(studentTimetableErrorProvider.notifier).state = false,
+            onRetry: () {
+              ref.read(studentTimetableErrorProvider.notifier).state = false;
+              ref.invalidate(studentTimetableFutureProvider);
+            },
           ),
         (_, _, true) => const AksharaEmptyState(
             message: 'No timetable is available for this week.',

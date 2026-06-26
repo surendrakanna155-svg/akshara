@@ -24,10 +24,18 @@ class NotificationsNotifier extends Notifier<List<AppNotification>> {
   @override
   List<AppNotification> build() {
     Future.microtask(refresh);
-    return _mergedInbox();
+    return _seedInbox();
   }
 
   bool get _useApi => ref.read(communicationApiEnabledProvider);
+
+  /// Initial/seed inbox before the first [refresh] resolves.
+  ///
+  /// In live (API) builds this is the real in-app communication bridge only —
+  /// never the fabricated demo inbox. The demo inbox is reserved for mock/demo
+  /// builds where no live backend is wired.
+  List<AppNotification> _seedInbox() =>
+      _useApi ? _commStoreInbox() : _mergedInbox();
 
   Future<void> refresh() async {
     if (!_useApi) {
@@ -38,14 +46,19 @@ class NotificationsNotifier extends Notifier<List<AppNotification>> {
       final items = await ref.read(communicationRepositoryProvider).getNotifications(
             query: ref.read(repositoryQueryProvider),
           );
-      state = items.isEmpty ? _mergedInbox() : items;
+      // Live: show exactly what the server returns. A real empty inbox stays
+      // empty (the screen renders its empty state); we only surface real
+      // in-app communications, never fabricated demo notifications.
+      state = items.isEmpty ? _commStoreInbox() : items;
     } catch (_) {
-      state = _mergedInbox();
+      // On failure fall back to real in-app communications only — no demo data.
+      state = _commStoreInbox();
     }
   }
 
-  List<AppNotification> _mergedInbox() {
-    final commNotifications = [
+  /// Real in-app communications bridged from [ParentCommunicationStore].
+  List<AppNotification> _commStoreInbox() {
+    return [
       for (final record in ParentCommunicationStore.instance.allRecords())
         if (record.includesInApp)
           AppNotification(
@@ -61,7 +74,11 @@ class NotificationsNotifier extends Notifier<List<AppNotification>> {
             childContext: record.studentName,
           ),
     ];
-    return [...commNotifications, ..._fallbackInbox];
+  }
+
+  /// Demo inbox (real in-app comms + sample notifications) for mock/demo builds.
+  List<AppNotification> _mergedInbox() {
+    return [..._commStoreInbox(), ..._fallbackInbox];
   }
 
   Future<void> markRead(String id) async {

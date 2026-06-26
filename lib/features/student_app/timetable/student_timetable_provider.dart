@@ -30,14 +30,14 @@ final studentTimetableProvider = Provider<ParentTimetableData>((ref) {
   final resolved = base ?? ref.watch(studentTimetableFutureProvider).value;
   if (resolved == null) {
     return const ParentTimetableData(
-      childName: 'Ravi Kumar',
-      childClass: '8-A',
-      weekRangeLabel: '1 Jun - 5 Jun 2026',
+      childName: '',
+      childClass: '',
+      weekRangeLabel: '',
       days: [],
       totalPeriodsThisWeek: 0,
       completedPeriodsToday: 0,
       upcomingPeriodsToday: 0,
-      unreadNotifications: 2,
+      unreadNotifications: 0,
     ).withSelectedDay(selectedDayId);
   }
   final data = isEmpty

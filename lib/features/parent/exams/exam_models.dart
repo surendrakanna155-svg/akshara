@@ -110,6 +110,18 @@ class ParentExamsData {
     );
   }
 
+  /// Neutral-empty placeholder used as the production fallback before the
+  /// FutureProvider resolves (no fabricated identity or exam data).
+  factory ParentExamsData.empty() {
+    return const ParentExamsData(
+      childName: '',
+      childClass: '',
+      unreadNotifications: 0,
+      upcomingExams: [],
+      examResults: [],
+    );
+  }
+
   factory ParentExamsData.mock() {
     return const ParentExamsData(
       childName: 'Ravi Kumar',

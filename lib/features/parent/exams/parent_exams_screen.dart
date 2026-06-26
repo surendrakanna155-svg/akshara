@@ -31,10 +31,15 @@ class ParentExamsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(parentExamsFutureProvider);
     final data = ref.watch(parentExamsProvider);
     final section = ref.watch(parentExamSectionProvider);
-    final isLoading = ref.watch(parentExamsLoadingProvider);
-    final error = ref.watch(parentExamsErrorProvider);
+    final isLoading =
+        ref.watch(parentExamsLoadingProvider) || async.isLoading;
+    final manualError = ref.watch(parentExamsErrorProvider);
+    final error = async.hasError
+        ? (manualError ?? 'Unable to load exam data right now.')
+        : manualError;
     final isSectionEmpty = switch (section) {
       ExamSection.upcoming => data.upcomingExams.isEmpty,
       ExamSection.results => data.examResults.isEmpty,
@@ -44,8 +49,10 @@ class ParentExamsScreen extends ConsumerWidget {
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Exams',
-        subtitle: '${data.childName} · ${data.childClass}',
-        unreadNotifications: data.unreadNotifications,
+        subtitle: async.hasValue
+            ? '${data.childName} · ${data.childClass}'
+            : null,
+        unreadNotifications: async.hasValue ? data.unreadNotifications : 0,
         showAi: false,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
@@ -78,7 +85,10 @@ class ParentExamsScreen extends ConsumerWidget {
     if (error != null) {
       return AksharaErrorState(
         message: error,
-        onRetry: () => ref.read(parentExamsErrorProvider.notifier).state = null,
+        onRetry: () {
+          ref.read(parentExamsErrorProvider.notifier).state = null;
+          ref.invalidate(parentExamsFutureProvider);
+        },
       );
     }
 

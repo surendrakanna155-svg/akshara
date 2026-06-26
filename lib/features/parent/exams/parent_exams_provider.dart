@@ -29,7 +29,7 @@ final parentExamsProvider = Provider<ParentExamsData>((ref) {
   );
   final resolved = data ??
       ref.watch(parentExamsFutureProvider).value ??
-      ParentExamsData.mock();
+      ParentExamsData.empty();
   if (!empty) {
     return resolved;
   }

@@ -1,3 +1,4 @@
+import 'package:akshara_erp/features/student_app/dashboard/student_dashboard_provider.dart';
 import 'package:akshara_erp/features/student_app/homework/homework_models.dart';
 import 'package:akshara_erp/features/student_app/homework/student_homework_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +11,8 @@ void main() {
       final container = createMobileProviderTestContainer();
       addTearDown(container.dispose);
 
+      // Identity is sourced from dashboard; await both futures.
+      await container.read(studentDashboardFutureProvider.future);
       await container.read(studentHomeworkFutureProvider.future);
       final data = container.read(studentHomeworkProvider);
 

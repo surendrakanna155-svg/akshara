@@ -182,6 +182,25 @@ class AttendanceMonthData {
     return '${months[month.month - 1]} ${month.year}';
   }
 
+  /// Neutral-empty placeholder used as the production fallback before the
+  /// FutureProvider resolves (no fabricated identity or attendance data).
+  static AttendanceMonthData empty({DateTime? month}) {
+    final target = DateTime(month?.year ?? 2026, month?.month ?? 6, 1);
+    return AttendanceMonthData(
+      month: target,
+      childName: '',
+      childClass: '',
+      kpi: const AttendanceKpiMetrics(
+        attendancePercent: 0,
+        absentDays: 0,
+        lateDays: 0,
+      ),
+      calendarDays: const [],
+      recentLogs: const [],
+      unreadNotifications: 0,
+    );
+  }
+
   static AttendanceMonthData mock({DateTime? month}) {
     final target = DateTime(month?.year ?? 2026, month?.month ?? 6, 1);
     if (target.year == 2026 && target.month == 6) {

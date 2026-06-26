@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../dashboard/student_dashboard_provider.dart';
 import 'homework_models.dart';
 import 'student_homework_provider.dart';
 import 'widgets/homework_filter_bar.dart';
@@ -21,17 +22,27 @@ class StudentHomeworkScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final asyncHomework = ref.watch(studentHomeworkFutureProvider);
+    final asyncDash = ref.watch(studentDashboardFutureProvider);
     final data = ref.watch(studentHomeworkProvider);
     final filter = ref.watch(studentHomeworkFilterProvider);
-    final isLoading = ref.watch(studentHomeworkLoadingProvider);
-    final hasError = ref.watch(studentHomeworkErrorProvider);
+    final isLoading = ref.watch(studentHomeworkLoadingProvider) ||
+        asyncHomework.isLoading ||
+        asyncDash.isLoading;
+    final hasError = ref.watch(studentHomeworkErrorProvider) ||
+        asyncHomework.hasError ||
+        asyncDash.hasError;
+    final identityResolved =
+        asyncDash.hasValue && data.studentName.isNotEmpty;
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Homework',
-        subtitle: '${data.studentName} · ${data.classLabel}',
-        unreadNotifications: data.unreadNotifications,
+        subtitle: identityResolved
+            ? '${data.studentName} · ${data.classLabel}'
+            : null,
+        unreadNotifications: asyncDash.hasValue ? data.unreadNotifications : 0,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
@@ -40,9 +51,12 @@ class StudentHomeworkScreen extends ConsumerWidget {
           : hasError
               ? AksharaErrorState(
                   message: 'Unable to load homework right now.',
-                  onRetry: () => ref
-                      .read(studentHomeworkErrorProvider.notifier)
-                      .state = false,
+                  onRetry: () {
+                    ref
+                        .read(studentHomeworkErrorProvider.notifier)
+                        .state = false;
+                    ref.invalidate(studentHomeworkFutureProvider);
+                  },
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {

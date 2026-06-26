@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../dashboard/student_dashboard_provider.dart';
 import '../student_mutations_provider.dart';
 import '../student_requests.dart';
 import 'homework_models.dart';
@@ -54,10 +55,11 @@ final studentHomeworkItemsProvider = Provider<List<StudentHomeworkItem>>((ref) {
 });
 
 final studentHomeworkProvider = Provider<StudentHomeworkData>((ref) {
+  final dash = ref.watch(studentDashboardFutureProvider).value;
   return StudentHomeworkData(
-    studentName: 'Ravi Kumar',
-    classLabel: '8-A',
-    unreadNotifications: 2,
+    studentName: dash?.studentName ?? '',
+    classLabel: dash?.classLabel ?? '',
+    unreadNotifications: dash?.unreadNotifications ?? 0,
     items: ref.watch(studentHomeworkItemsProvider),
   );
 });

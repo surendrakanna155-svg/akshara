@@ -27,9 +27,12 @@ class StudentDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(studentDashboardFutureProvider);
     final data = ref.watch(studentDashboardProvider);
-    final isLoading = ref.watch(studentDashboardLoadingProvider);
-    final hasError = ref.watch(studentDashboardErrorProvider);
+    final isLoading =
+        ref.watch(studentDashboardLoadingProvider) || async.isLoading;
+    final hasError =
+        ref.watch(studentDashboardErrorProvider) || async.hasError;
     final isEmpty = ref.watch(studentDashboardEmptyProvider);
     final overdueCount = data.homeworkDue
         .where((h) => h.status == HomeworkStatus.overdue)
@@ -41,12 +44,14 @@ class StudentDashboardScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         titleText: 'Home',
-        titleTrailing: AksharaContextChip(
-          label: data.classLabel,
-          semanticLabel: 'Class ${data.classLabel}',
-          fontWeight: FontWeight.w600,
-        ),
-        unreadNotifications: data.unreadNotifications,
+        titleTrailing: async.hasValue
+            ? AksharaContextChip(
+                label: data.classLabel,
+                semanticLabel: 'Class ${data.classLabel}',
+                fontWeight: FontWeight.w600,
+              )
+            : null,
+        unreadNotifications: async.hasValue ? data.unreadNotifications : 0,
         showAi: true,
         showProfile: true,
         capNotificationBadgeAt99: true,
@@ -61,7 +66,10 @@ class StudentDashboardScreen extends ConsumerWidget {
         hasError: hasError,
         isEmpty: isEmpty,
         errorMessage: 'Unable to load your dashboard.',
-        onRetry: () => ref.invalidate(studentDashboardFutureProvider),
+        onRetry: () {
+          ref.read(studentDashboardErrorProvider.notifier).state = false;
+          ref.invalidate(studentDashboardFutureProvider);
+        },
         builder: (context) => LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;

@@ -28,13 +28,13 @@ final studentExamsProvider = Provider<StudentExamsData>((ref) {
   final resolved = data ??
       ref.watch(studentExamsFutureProvider).value ??
       const StudentExamsData(
-        studentName: 'Ravi Kumar',
-        classLabel: '8-A',
+        studentName: '',
+        classLabel: '',
         upcomingExams: [],
         examResults: [],
         subjectScores: [],
         averagePercent: 0,
-        unreadNotifications: 2,
+        unreadNotifications: 0,
       );
 
   if (ref.watch(studentExamsEmptyProvider)) {

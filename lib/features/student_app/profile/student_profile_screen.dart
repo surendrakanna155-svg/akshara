@@ -29,13 +29,16 @@ class StudentProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoading = ref.watch(studentProfileLoadingProvider);
-    final hasError = ref.watch(studentProfileErrorProvider);
+    final async = ref.watch(studentProfileFutureProvider);
+    final isLoading =
+        ref.watch(studentProfileLoadingProvider) || async.isLoading;
+    final hasError =
+        ref.watch(studentProfileErrorProvider) || async.hasError;
 
     if (isLoading) {
       return Scaffold(
         backgroundColor: context.colors.surfaceContainerLow,
-        appBar: _buildAppBar(context, schoolName: 'Akshara International School'),
+        appBar: _buildAppBar(context, schoolName: null),
         body: const AksharaLoadingState(semanticLabel: 'Loading profile'),
       );
     }
@@ -43,11 +46,13 @@ class StudentProfileScreen extends ConsumerWidget {
     if (hasError) {
       return Scaffold(
         backgroundColor: context.colors.surfaceContainerLow,
-        appBar: _buildAppBar(context, schoolName: 'Akshara International School'),
+        appBar: _buildAppBar(context, schoolName: null),
         body: AksharaErrorState(
           message: 'Unable to load your profile right now.',
-          onRetry: () =>
-              ref.read(studentProfileErrorProvider.notifier).state = false,
+          onRetry: () {
+            ref.read(studentProfileErrorProvider.notifier).state = false;
+            ref.invalidate(studentProfileFutureProvider);
+          },
         ),
       );
     }
@@ -199,7 +204,7 @@ class StudentProfileScreen extends ConsumerWidget {
 
   PreferredSizeWidget _buildAppBar(
     BuildContext context, {
-    required String schoolName,
+    required String? schoolName,
     int unread = 0,
   }) {
     return AksharaAppBar(

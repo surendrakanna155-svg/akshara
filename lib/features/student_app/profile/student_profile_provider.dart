@@ -24,14 +24,14 @@ final studentProfileProvider = Provider<StudentProfileData>((ref) {
   return data ??
       ref.watch(studentProfileFutureProvider).value ??
       const StudentProfileData(
-        studentName: 'Ravi Kumar',
-        classLabel: '8-A',
-        rollNo: '08',
-        admissionNo: 'AKS-2024-0842',
-        dateOfBirth: '14 Mar 2012',
-        bloodGroup: 'B+',
-        schoolName: 'Akshara International School',
-        unreadNotifications: 2,
+        studentName: '',
+        classLabel: '',
+        rollNo: '',
+        admissionNo: '',
+        dateOfBirth: '',
+        bloodGroup: '',
+        schoolName: '',
+        unreadNotifications: 0,
         parentContacts: [],
         academicSummary: [],
       );

@@ -38,13 +38,16 @@ class _StudentAttendanceScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = ref.watch(studentAttendanceLoadingProvider);
-    final hasError = ref.watch(studentAttendanceErrorProvider);
+    final async = ref.watch(studentAttendanceFutureProvider);
+    final isLoading =
+        ref.watch(studentAttendanceLoadingProvider) || async.isLoading;
+    final hasError =
+        ref.watch(studentAttendanceErrorProvider) || async.hasError;
 
     if (isLoading) {
       return Scaffold(
         backgroundColor: context.colors.surfaceContainerLow,
-        appBar: _buildAppBar(context, unread: 2),
+        appBar: _buildAppBar(context, subtitle: null, unread: 0),
         body: const AksharaLoadingState(semanticLabel: 'Loading attendance'),
       );
     }
@@ -52,11 +55,13 @@ class _StudentAttendanceScreenState
     if (hasError) {
       return Scaffold(
         backgroundColor: context.colors.surfaceContainerLow,
-        appBar: _buildAppBar(context, unread: 2),
+        appBar: _buildAppBar(context, subtitle: null, unread: 0),
         body: AksharaErrorState(
           message: 'Unable to load your attendance right now.',
-          onRetry: () =>
-              ref.read(studentAttendanceErrorProvider.notifier).state = false,
+          onRetry: () {
+            ref.read(studentAttendanceErrorProvider.notifier).state = false;
+            ref.invalidate(studentAttendanceFutureProvider);
+          },
         ),
       );
     }
@@ -67,7 +72,13 @@ class _StudentAttendanceScreenState
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
-      appBar: _buildAppBar(context, unread: data.unreadNotifications),
+      appBar: _buildAppBar(
+        context,
+        subtitle: async.hasValue
+            ? '${data.childName} · ${data.childClass}'
+            : null,
+        unread: async.hasValue ? data.unreadNotifications : 0,
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isTablet = constraints.maxWidth >=
@@ -169,10 +180,14 @@ class _StudentAttendanceScreenState
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, {required int unread}) {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context, {
+    required String? subtitle,
+    required int unread,
+  }) {
     return AksharaAppBar(
       titleText: 'Attendance',
-      subtitle: 'Ravi Kumar · 8-A',
+      subtitle: subtitle,
       unreadNotifications: unread,
       showAi: true,
       trailingPadding: true,

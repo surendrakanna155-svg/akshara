@@ -39,6 +39,8 @@ flutter run \
   --dart-define=HOSTEL_API_ENABLED=true \
   --dart-define=LIBRARY_API_ENABLED=true \
   --dart-define=INVENTORY_API_ENABLED=true \
+  --dart-define=INVENTORY_DISTRIBUTION_API_ENABLED=true \
+  --dart-define=EMPLOYEE_API_ENABLED=true \
   --dart-define=MANAGEMENT_API_ENABLED=true \
   --dart-define=ALUMNI_API_ENABLED=true \
   --dart-define=PARENT_API_ENABLED=true \

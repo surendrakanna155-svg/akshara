@@ -24,17 +24,21 @@ class StudentExamsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(studentExamsFutureProvider);
     final data = ref.watch(studentExamsProvider);
     final section = ref.watch(studentExamSectionProvider);
-    final isLoading = ref.watch(studentExamsLoadingProvider);
-    final hasError = ref.watch(studentExamsErrorProvider);
+    final isLoading =
+        ref.watch(studentExamsLoadingProvider) || async.isLoading;
+    final hasError = ref.watch(studentExamsErrorProvider) || async.hasError;
 
     return Scaffold(
       backgroundColor: context.colors.surfaceContainerLow,
       appBar: AksharaAppBar(
         titleText: 'Exams',
-        subtitle: '${data.studentName} · ${data.classLabel}',
-        unreadNotifications: data.unreadNotifications,
+        subtitle: async.hasValue
+            ? '${data.studentName} · ${data.classLabel}'
+            : null,
+        unreadNotifications: async.hasValue ? data.unreadNotifications : 0,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),
@@ -43,9 +47,10 @@ class StudentExamsScreen extends ConsumerWidget {
           : hasError
               ? AksharaErrorState(
                   message: 'Unable to load exam data right now.',
-                  onRetry: () =>
-                      ref.read(studentExamsErrorProvider.notifier).state =
-                          false,
+                  onRetry: () {
+                    ref.read(studentExamsErrorProvider.notifier).state = false;
+                    ref.invalidate(studentExamsFutureProvider);
+                  },
                 )
               : LayoutBuilder(
                   builder: (context, constraints) {

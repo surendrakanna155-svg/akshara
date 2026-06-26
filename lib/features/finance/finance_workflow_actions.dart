@@ -221,14 +221,13 @@ Future<void> showCreateRefundDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final feeAccountController = TextEditingController(text: 'acct_1');
-  final studentNameController = TextEditingController(text: 'Arjun Patel');
-  final admissionController = TextEditingController(text: 'ADM-2026-0138');
-  final classController = TextEditingController(text: '10');
-  final amountController = TextEditingController(text: '₹5,000');
-  final reasonController =
-      TextEditingController(text: 'Fee adjustment — duplicate payment');
-  final receiptController = TextEditingController(text: 'RCP-2026-0142');
+  final feeAccountController = TextEditingController();
+  final studentNameController = TextEditingController();
+  final admissionController = TextEditingController();
+  final classController = TextEditingController();
+  final amountController = TextEditingController();
+  final reasonController = TextEditingController();
+  final receiptController = TextEditingController();
 
   final confirmed = await showAksharaDialog<bool>(
     context: context,
@@ -242,10 +241,12 @@ Future<void> showCreateRefundDialog(
             label: 'Fee account ID',
             controller: feeAccountController,
             required: true,
+            hint: 'e.g. acct_1024',
           ),
           AksharaFormField(
             label: 'Student name',
             controller: studentNameController,
+            hint: 'Student this refund is for',
           ),
           AksharaFormField(
             label: 'Admission number',
@@ -259,6 +260,7 @@ Future<void> showCreateRefundDialog(
             label: 'Refund amount',
             controller: amountController,
             required: true,
+            hint: 'Amount to refund',
           ),
           AksharaFormField(
             label: 'Reason',
@@ -315,11 +317,10 @@ Future<void> showAssignFeeConcessionDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final studentNameController = TextEditingController(text: 'Arjun Patel');
-  final feeAccountController = TextEditingController(text: 'acct_1');
-  final amountController = TextEditingController(text: '₹15,000');
-  final reasonController =
-      TextEditingController(text: 'Merit scholarship — Term 2');
+  final studentNameController = TextEditingController();
+  final feeAccountController = TextEditingController();
+  final amountController = TextEditingController();
+  final reasonController = TextEditingController();
 
   final confirmed = await showAksharaDialog<bool>(
     context: context,
@@ -333,15 +334,18 @@ Future<void> showAssignFeeConcessionDialog(
             label: 'Student name',
             controller: studentNameController,
             required: true,
+            hint: 'Student receiving the concession',
           ),
           AksharaFormField(
             label: 'Fee account ID',
             controller: feeAccountController,
+            hint: 'e.g. acct_1024',
           ),
           AksharaFormField(
             label: 'Concession amount',
             controller: amountController,
             required: true,
+            hint: 'Concession / scholarship amount',
           ),
           AksharaFormField(
             label: 'Reason',

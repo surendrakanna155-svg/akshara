@@ -227,9 +227,38 @@ class StudentDashboardData {
       // STU-6: honest CTA to the real AI tutor (the action opens live AI) rather
       // than a fabricated, static "AI insight" about the student.
       aiInsight: StudentAiInsight(
-        message: 'Ask your AI study buddy for help with today’s lessons',
+        message: "Ask your AI study buddy for help with today's lessons",
         actionLabel: 'Open AI tutor',
       ),
+    );
+  }
+
+  /// Neutral-empty placeholder used as the production fallback before the
+  /// FutureProvider resolves (shows no fabricated identity or data).
+  factory StudentDashboardData.empty() {
+    return const StudentDashboardData(
+      studentName: '',
+      classLabel: '',
+      greetingHeadline: '',
+      greetingSubtitle: '',
+      unreadNotifications: 0,
+      todaySchedule: [],
+      attendanceKpi: AttendanceKpi(
+        label: '',
+        value: '',
+        detail: '',
+        tone: StudentKpiTone.primary,
+      ),
+      homeworkDue: [],
+      examReminder: ExamReminder(
+        id: '',
+        title: '',
+        subject: '',
+        dateLabel: '',
+        daysUntil: 0,
+      ),
+      quickActions: [],
+      aiInsight: StudentAiInsight(message: '', actionLabel: ''),
     );
   }
 }
@@ -252,5 +281,5 @@ final studentDashboardProvider = Provider<StudentDashboardData>((ref) {
   );
   return data ??
       ref.watch(studentDashboardFutureProvider).value ??
-      StudentDashboardData.mock();
+      StudentDashboardData.empty();
 });
