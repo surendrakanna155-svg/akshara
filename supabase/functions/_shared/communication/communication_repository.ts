@@ -175,6 +175,48 @@ export async function enqueueDelivery(
   return rows[0]!;
 }
 
+/**
+ * PERF-1: enqueue one push delivery per recipient in a single multi-row INSERT.
+ * Mirrors {@link enqueueDelivery} (template_id / child_context default to NULL,
+ * status defaults to 'pending') but for a whole broadcast cohort at once.
+ * Returns the number of rows queued.
+ */
+export async function enqueueDeliveriesBatch(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string | null;
+    recipientUserIds: string[];
+    channel: string;
+    category: string;
+    renderedSubject: string | null;
+    renderedBody: string;
+  },
+): Promise<number> {
+  if (input.recipientUserIds.length === 0) return 0;
+  const params: unknown[] = [
+    input.organizationId,
+    input.schoolId,
+    input.channel,
+    input.category,
+    input.renderedSubject,
+    input.renderedBody,
+  ];
+  const values = input.recipientUserIds.map((userId, i) => {
+    params.push(userId);
+    return `($1, $2, $${i + 7}, $3, $4, $5, $6, 'pending')`;
+  });
+  const rows = await db.queryObject<{ id: string }>(
+    `INSERT INTO notification_deliveries (
+       organization_id, school_id, recipient_user_id, channel,
+       category, rendered_subject, rendered_body, status
+     ) VALUES ${values.join(", ")}
+     RETURNING id`,
+    params,
+  );
+  return rows.length;
+}
+
 export async function fetchPendingDeliveries(
   db: TenantQueryClient,
   orgId: string,
@@ -398,6 +440,30 @@ export async function insertBroadcastRecipient(
      VALUES ($1, $2, $3, 'pending')
      ON CONFLICT (broadcast_id, user_id) DO NOTHING`,
     [broadcastId, orgId, userId],
+  );
+}
+
+/**
+ * PERF-1: write every broadcast recipient in a single multi-row INSERT instead
+ * of one round-trip per recipient. A no-op for an empty list.
+ */
+export async function insertBroadcastRecipientsBatch(
+  db: TenantQueryClient,
+  broadcastId: string,
+  orgId: string,
+  userIds: string[],
+): Promise<void> {
+  if (userIds.length === 0) return;
+  const params: unknown[] = [broadcastId, orgId];
+  const values = userIds.map((userId, i) => {
+    params.push(userId);
+    return `($1, $2, $${i + 3}, 'pending')`;
+  });
+  await db.queryObject(
+    `INSERT INTO comm_recipients (broadcast_id, organization_id, user_id, delivery_status)
+     VALUES ${values.join(", ")}
+     ON CONFLICT (broadcast_id, user_id) DO NOTHING`,
+    params,
   );
 }
 

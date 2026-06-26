@@ -6,6 +6,12 @@ import 'education_models.dart';
 
 class EducationPdfService {
   static Future<void> printQuestionPaper(QuestionPaperDetail detail) async {
+    // AI-1 moderation gate: only human-approved items may print onto the
+    // student-facing paper — a rejected (disapproved) or still-pending AI
+    // candidate must never reach the printed sheet. Renumber and rebuild the
+    // answer key from the surviving items so the question numbers stay aligned.
+    final printable =
+        detail.items.where((item) => item.reviewStatus == 'approved').toList();
     final doc = pw.Document();
     doc.addPage(
       pw.MultiPage(
@@ -14,22 +20,23 @@ class EducationPdfService {
           pw.Header(level: 0, child: pw.Text(detail.paper.title)),
           pw.Text('Total marks: ${detail.paper.totalMarks}'),
           pw.SizedBox(height: 12),
-          ...detail.items.map(
-            (item) => pw.Column(
+          ...printable.asMap().entries.map(
+            (entry) => pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('Q${item.questionNumber}. (${item.marks} marks) ${item.questionText}'),
-                if (item.options.isNotEmpty)
-                  ...item.options.map((o) => pw.Text('  • $o')),
+                pw.Text(
+                    'Q${entry.key + 1}. (${entry.value.marks} marks) ${entry.value.questionText}'),
+                if (entry.value.options.isNotEmpty)
+                  ...entry.value.options.map((o) => pw.Text('  • $o')),
                 pw.SizedBox(height: 8),
               ],
             ),
           ),
           pw.Divider(),
           pw.Header(level: 1, child: pw.Text('Answer Key')),
-          ...detail.answerKey.map(
+          ...printable.asMap().entries.map(
             (entry) => pw.Text(
-              'Q${entry['questionNumber']}: ${entry['answer']} (${entry['marks']} marks)',
+              'Q${entry.key + 1}: ${entry.value.answerText ?? ''} (${entry.value.marks} marks)',
             ),
           ),
         ],

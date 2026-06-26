@@ -140,6 +140,12 @@ class EducationMapper {
   }
 
   static QuestionPaperSummary paperSummaryFromApi(Map<String, dynamic> json) {
+    // AI-5: the composition counts are persisted inside `blueprint` (and the
+    // AI count is stored there as `aiCandidateCount`); only the generate
+    // response echoes them at the top level. Prefer the top-level value, then
+    // fall back to the blueprint, so list/detail chips no longer read 0.
+    final blueprint =
+        json['blueprint'] is Map ? json['blueprint'] as Map : const {};
     return QuestionPaperSummary(
       id: json['id'] as String,
       title: json['title'] as String,
@@ -152,10 +158,17 @@ class EducationMapper {
       status: json['status'] as String? ?? 'draft',
       reviewStatus: paperReviewStatusFromApi(json['reviewStatus'] as String? ?? 'draft'),
       programTrack: programTrackFromApi(json['programTrack'] as String? ?? 'board'),
-      bankReuseCount: json['bankReuseCount'] as int?,
-      aiGeneratedCount: json['aiGeneratedCount'] as int?,
+      bankReuseCount:
+          _intOrNull(json['bankReuseCount'] ?? blueprint['bankReuseCount']),
+      aiGeneratedCount: _intOrNull(json['aiGeneratedCount'] ??
+          blueprint['aiCandidateCount'] ??
+          blueprint['aiGeneratedCount']),
     );
   }
+
+  /// Coerce a JSON number (int or double) to int, tolerating nulls.
+  static int? _intOrNull(Object? value) =>
+      value is num ? value.toInt() : null;
 
   static QuestionPaperItem paperItemFromApi(Map<String, dynamic> json) {
     return QuestionPaperItem(

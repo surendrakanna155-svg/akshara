@@ -870,6 +870,18 @@ export async function handleExportQuestionPaper(
     );
     if (!result) return errorEnvelope("NOT_FOUND", "Question paper not found", 404);
 
+    // AI-2 moderation gate: a paper may only be exported as a student-facing
+    // document once it has cleared the publish gate (which itself blocks any
+    // pending AI candidate). This stops a draft/submitted paper — whose items
+    // may still be unmoderated — from being exported around the governance flow.
+    if (result.paper.review_status !== "published") {
+      return errorEnvelope(
+        "PAPER_NOT_PUBLISHED",
+        "Only a published question paper can be exported",
+        409,
+      );
+    }
+
     return jsonResponse(envelope(paperExportDocument(result.paper, result.items)));
   } catch (error) {
     return handleEducationError(error);

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/repositories/repository_providers.dart';
+import '../../../core/utils/debouncer.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
@@ -28,6 +29,9 @@ class SisRegistryScreen extends ConsumerStatefulWidget {
 
 class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
   late final TextEditingController _searchController;
+  // PERF-2: debounce so a search only fetches once typing settles, not once
+  // per keystroke (a request storm in live mode).
+  final Debouncer _searchDebouncer = Debouncer();
 
   @override
   void initState() {
@@ -37,6 +41,7 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
 
   @override
   void dispose() {
+    _searchDebouncer.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -115,8 +120,10 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
                   prefixIcon: Icon(Icons.search),
                   hintText: 'e.g. ADM-2026-0138',
                 ),
-                onChanged: (value) =>
-                    ref.read(sisRegistrySearchProvider.notifier).state = value,
+                onChanged: (value) => _searchDebouncer.run(() {
+                  if (!mounted) return;
+                  ref.read(sisRegistrySearchProvider.notifier).state = value;
+                }),
               ),
             ),
           ),

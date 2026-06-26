@@ -4,9 +4,10 @@ import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_re
 import {
   createBroadcast,
   createThread,
+  enqueueDeliveriesBatch,
   finalizeBroadcast,
   getThread,
-  insertBroadcastRecipient,
+  insertBroadcastRecipientsBatch,
   insertMessage,
   listMessagesForThread,
   listThreadsForUser,
@@ -15,6 +16,14 @@ import {
   type CommThreadRow,
 } from "./communication_repository.ts";
 import { enqueueNotificationRequested, processDeliveryQueue } from "./notification_service.ts";
+
+/**
+ * PERF-1: hard cap on the recipients fanned out in a single broadcast so a
+ * runaway audience can't blow the request/transaction budget. Anything beyond
+ * the cap is dropped from this broadcast (and surfaced in the audit metadata);
+ * the bound is generous enough to cover a whole school.
+ */
+const MAX_BROADCAST_RECIPIENTS = 5000;
 
 export class CommunicationValidationError extends Error {
   constructor(message: string) {
@@ -235,25 +244,30 @@ export async function sendBroadcastMessage(
     createdBy: claims.sub,
   });
 
-  const recipients = await resolveBroadcastRecipients(
+  const resolved = await resolveBroadcastRecipients(
     db,
     claims.tenant_id,
     schoolId,
     audience,
   );
-  for (const userId of recipients) {
-    await insertBroadcastRecipient(db, broadcast.id, claims.tenant_id, userId);
-    await enqueueNotificationRequested(
-      db,
-      claims.tenant_id,
-      schoolId ?? "a2000000-0000-4000-8000-000000000001",
-      userId,
-      input.title,
-      input.body,
-      "announcement",
-    );
-  }
-  await processDeliveryQueue(db, claims.tenant_id);
+  // PERF-1: bound the cohort, then write recipients + push deliveries in two
+  // multi-row INSERTs instead of 2 round-trips per recipient. The actual
+  // per-recipient send is NOT done here — deliveries are queued ('pending') and
+  // drained out of the request/response cycle (see handleCreateBroadcast), so a
+  // large-cohort broadcast can never block or time out the HTTP request.
+  const recipients = resolved.slice(0, MAX_BROADCAST_RECIPIENTS);
+  const dropped = resolved.length - recipients.length;
+
+  await insertBroadcastRecipientsBatch(db, broadcast.id, claims.tenant_id, recipients);
+  await enqueueDeliveriesBatch(db, {
+    organizationId: claims.tenant_id,
+    schoolId: schoolId ?? "a2000000-0000-4000-8000-000000000001",
+    recipientUserIds: recipients,
+    channel: "push",
+    category: "announcement",
+    renderedSubject: input.title,
+    renderedBody: input.body,
+  });
   await finalizeBroadcast(db, broadcast.id);
 
   await recordMutationAudit(
@@ -264,7 +278,12 @@ export async function sendBroadcastMessage(
       category: "workflow",
       entityType: "comm_broadcast",
       entityId: broadcast.id,
-      metadata: { audience: input.audience, recipientCount: recipients.length },
+      metadata: {
+        audience: input.audience,
+        recipientCount: recipients.length,
+        resolvedCount: resolved.length,
+        droppedOverCap: dropped,
+      },
       correlationId: req ? correlationIdFromRequest(req) : undefined,
     },
     {
@@ -281,7 +300,8 @@ export async function sendBroadcastMessage(
     audience: broadcast.audience,
     title: broadcast.title,
     recipientCount: recipients.length,
-    status: "sent",
+    droppedOverCap: dropped,
+    status: "queued",
   };
 }
 

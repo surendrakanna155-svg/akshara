@@ -149,7 +149,7 @@ export async function handleGeneratePromotionAssets(
         subjectType: current.subject_type,
         description: current.description ?? undefined,
       });
-      const assets = await enhanceCaptionsWithAi(baseAssets, {
+      const assets = await enhanceCaptionsWithAi(db, auth.claims.tenant_id, baseAssets, {
         subjectType: current.subject_type,
         title: current.title,
         description: current.description,

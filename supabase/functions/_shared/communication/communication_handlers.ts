@@ -56,6 +56,51 @@ async function auditComm(
   );
 }
 
+/** PERF-1: cap on how many delivery batches one async drain pass will process,
+ * so a background task can never loop unbounded. Each batch is itself capped by
+ * fetchPendingDeliveries' LIMIT. */
+const MAX_DRAIN_BATCHES = 200;
+
+/**
+ * PERF-1: drain the notification queue OUTSIDE the request/response cycle.
+ * `sendBroadcastMessage` now only enqueues ('pending') deliveries; this opens a
+ * fresh tenant context (the request's connection is already closed by the time
+ * a background task runs) and sends them in bounded batches until the queue is
+ * empty. Errors are swallowed — deliveries persist and are retried on the next
+ * drain. When the edge runtime exposes `EdgeRuntime.waitUntil` the work runs
+ * after the response is returned; otherwise (local/test) the caller awaits it so
+ * delivery still happens within the request.
+ */
+async function drainNotificationQueue(
+  config: AppConfig,
+  claims: AccessTokenClaims,
+): Promise<void> {
+  const orgId = organizationIdFromClaims(claims);
+  for (let batch = 0; batch < MAX_DRAIN_BATCHES; batch++) {
+    const result = await withTenantContext(config, claims, (db) =>
+      processDeliveryQueue(db, orgId, claims)
+    );
+    if (result.processed === 0) break;
+  }
+}
+
+/** Schedule {@link drainNotificationQueue} off the request path when the edge
+ * runtime supports it; otherwise return the promise for the caller to await. */
+function scheduleNotificationDrain(
+  config: AppConfig,
+  claims: AccessTokenClaims,
+): Promise<void> {
+  const edge = (globalThis as {
+    EdgeRuntime?: { waitUntil(promise: Promise<unknown>): void };
+  }).EdgeRuntime;
+  const task = drainNotificationQueue(config, claims).catch(() => {});
+  if (edge?.waitUntil) {
+    edge.waitUntil(task);
+    return Promise.resolve();
+  }
+  return task;
+}
+
 function snakeStr(body: Record<string, unknown>, key: string): string {
   return String(body[key] ?? "");
 }
@@ -114,6 +159,8 @@ export async function handleCreateBroadcast(
         req,
       )
     );
+    // PERF-1: send the queued deliveries out of the synchronous request.
+    await scheduleNotificationDrain(config, auth.claims);
     return jsonResponse(envelope(result), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {

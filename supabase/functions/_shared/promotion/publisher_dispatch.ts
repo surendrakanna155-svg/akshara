@@ -7,12 +7,16 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
   createBroadcast,
-  enqueueDelivery,
+  enqueueDeliveriesBatch,
   finalizeBroadcast,
-  insertBroadcastRecipient,
+  insertBroadcastRecipientsBatch,
   resolveBroadcastRecipients,
 } from "../communication/communication_repository.ts";
 import { publishToSocialChannel } from "../social/social_publish_service.ts";
+
+/** PERF-1: bound a single publish fan-out the same way broadcasts are bounded
+ * (see communication_service.ts MAX_BROADCAST_RECIPIENTS). */
+const MAX_PUBLISH_RECIPIENTS = 5000;
 
 export const PUBLISH_DESTINATIONS = [
   "parent_app",
@@ -68,19 +72,20 @@ async function deliverToAudience(
     body: input.caption,
     createdBy: input.createdBy,
   });
-  const recipients = await resolveBroadcastRecipients(db, input.orgId, input.schoolId, audience);
-  for (const userId of recipients) {
-    await insertBroadcastRecipient(db, broadcast.id, input.orgId, userId);
-    await enqueueDelivery(db, {
-      organizationId: input.orgId,
-      schoolId: input.schoolId,
-      recipientUserId: userId,
-      channel: "push",
-      category: "announcement",
-      renderedSubject: input.title,
-      renderedBody: input.caption,
-    });
-  }
+  // PERF-1: cap the cohort, then write recipients + push deliveries in two
+  // multi-row INSERTs instead of 2 round-trips per recipient.
+  const resolved = await resolveBroadcastRecipients(db, input.orgId, input.schoolId, audience);
+  const recipients = resolved.slice(0, MAX_PUBLISH_RECIPIENTS);
+  await insertBroadcastRecipientsBatch(db, broadcast.id, input.orgId, recipients);
+  await enqueueDeliveriesBatch(db, {
+    organizationId: input.orgId,
+    schoolId: input.schoolId,
+    recipientUserIds: recipients,
+    channel: "push",
+    category: "announcement",
+    renderedSubject: input.title,
+    renderedBody: input.caption,
+  });
   await finalizeBroadcast(db, broadcast.id);
   return recipients.length;
 }

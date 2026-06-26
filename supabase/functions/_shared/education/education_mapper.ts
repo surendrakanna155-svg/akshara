@@ -133,6 +133,19 @@ export function paperExportDocument(
   paper: QuestionPaperRow,
   items: QuestionPaperItemRow[],
 ): Record<string, unknown> {
+  // AI-1 moderation gate: only human-approved items may reach a student-facing
+  // paper. Bank items default to 'approved' at creation; AI candidates are
+  // 'pending' until moderated and become 'approved' or 'rejected'. A rejected
+  // (human-disapproved) or still-pending item must never print. We renumber
+  // and rebuild the answer key from the surviving items so question numbers and
+  // the answer key stay aligned (the stored answer_key may reference excluded
+  // items).
+  const printable = items.filter((item) => item.review_status === "approved");
+  const answerKey = printable.map((item, i) => ({
+    questionNumber: i + 1,
+    answer: item.answer_text ?? "",
+    marks: item.marks,
+  }));
   return {
     title: paper.title,
     meta: {
@@ -143,8 +156,8 @@ export function paperExportDocument(
       totalMarks: paper.total_marks,
       difficulty: paper.difficulty,
     },
-    questions: items.map((item, i) => questionPaperItemToApi(item, i)),
-    answerKey: paper.answer_key,
+    questions: printable.map((item, i) => questionPaperItemToApi(item, i)),
+    answerKey,
     blueprint: paper.blueprint,
     generatedAt: new Date().toISOString(),
     format: "akshara-education-pdf-v1",
