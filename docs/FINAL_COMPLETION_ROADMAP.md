@@ -18,7 +18,7 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 | ~~**0**~~ | ~~Verify-vs-deployed-edge + restore green gates~~ | 9 | gate/triage | ✅ **DONE 2026-06-25** |
 | ~~**1**~~ | ~~Stop silent data loss (mock writes in live paths)~~ | 7 | 2C + 4H + 1M | ✅ **DONE 2026-06-25** |
 | ~~**2**~~ | ~~Multi-child parent correctness + demo-identity purge~~ | 14 | 5H + 6M + 3L | ✅ **DONE 2026-06-26** (live 21/21) |
-| **3** | Contract gaps + entitlement client + security hardening | 13 | 7H + 4M + 2L | ~5–6 days |
+| ~~**3**~~ | ~~Contract gaps + entitlement client + security hardening~~ | 13 | 7H + 4M + 2L | ✅ **DONE 2026-06-26** (live 30/30) |
 | **4** | AI moderation gate + performance | 6 | 2H + 3M + 1L | ~3 days |
 | **5** | UX consistency, a11y, Play Store custody, docs | ~25 | 2H + many M/L | ~4–5 days |
 
@@ -92,7 +92,11 @@ One persona class (multi-child parents) sees wrong data; demo names leak across 
 
 ---
 
-## Wave 3 — Contract gaps + entitlement client + security hardening (Themes D + I + F) (~5–6 days)
+## Wave 3 — Contract gaps + entitlement client + security hardening (Themes D + I + F) ✅ **COMPLETE (2026-06-26)**
+
+> **Status: DONE & live-certified.** Cert: `docs/WAVE3_COMPLETION_CERTIFICATION.md`. Release-review: **GO**. Live cert **30/30** vs VPS pilot (`scripts/qa/live_cert_completion_wave3.py`); deployed (20 edge files + migrations `20260801`/`20260802` + `COMMUNICATION_WEBHOOK_SECRET`). Gates: deno check clean / deno test 672 / flutter analyze 0. All 13 items closed.
+>
+> Per-item: SEC-1 ✅ (HMAC `x-akshara-signature` + tenant-from-row + columns/status fix — webhook was previously non-functional) · SUP-1 ✅ (flag on) · SUP-2 ✅ (superAdmin assign 200 / non-super 403) · STF-4 ✅ · STF-1 ✅ (record/list/reconcile) · STF-2 ✅ (create/get/confirm) · STF-3 ✅ (defaulters/reports/settings) · STF-5 ✅ (scholarships) · INT-2 ✅ (real `guardianPhone`) · SEC-2 ✅ (comm mutation audits) · SEC-3 ✅ (parent child-scope guard) · SEC-5 ✅ (saveStep + resetRoleLayout audited) · SEC-4/SEC-6 ✅ (parent RLS + rbac inventory + hardened test).
 
 Depends on Wave 0.1 triage. Build only the routes confirmed absent; flip the entitlement client on; close the one fail-open route.
 
