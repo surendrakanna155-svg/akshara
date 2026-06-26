@@ -132,6 +132,42 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/onboarding/imports/:id/rollback", permission: "manageOnboarding", scope: "school", module: "onboarding" },
   { method: "GET", path: "/onboarding/invites", permission: "viewOnboarding", scope: "school", module: "onboarding" },
   { method: "POST", path: "/onboarding/invites", permission: "manageOnboarding", scope: "school", module: "onboarding" },
+
+  // ─── Wave 3: finance peripheral routes (STF-1..5) ───────────────────────────
+  { method: "GET", path: "/finance/discounts", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "POST", path: "/finance/payments/offline", permission: "manageFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/finance/payments/offline", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "POST", path: "/finance/payments/offline/:id/reconcile", permission: "manageFinance", scope: "school", module: "finance" },
+  { method: "POST", path: "/finance/payments/qr", permission: "manageFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/finance/payments/qr/:id", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "POST", path: "/finance/payments/qr/:id/confirm", permission: "manageFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/finance/defaulters", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/finance/reports", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "GET", path: "/finance/settings", permission: "viewFinance", scope: "school", module: "finance" },
+  { method: "PUT", path: "/finance/settings", permission: "manageFinance", scope: "school", module: "finance" },
+  { method: "POST", path: "/finance/scholarships", permission: "manageFinance", scope: "school", module: "finance" },
+  { method: "PUT", path: "/finance/scholarships/:id", permission: "manageFinance", scope: "school", module: "finance" },
+
+  // ─── Wave 3 (SEC-6): previously-unmapped live routers ───────────────────────
+  // Predictions (additionally Enterprise feature.ai_predictions gated at runtime).
+  { method: "GET", path: "/predictions/fee-defaults", permission: "viewFinance", scope: "school", module: "predictions" },
+  { method: "GET", path: "/predictions/student-risk", permission: "viewStudentRisk", scope: "school", module: "predictions" },
+  // Director portal (org-scope multi-school aggregation).
+  { method: "GET", path: "/director/summary", permission: "viewDirectorPortal", scope: "organization", module: "director" },
+  { method: "POST", path: "/director/metric-inputs", permission: "manageDirectorPortal", scope: "organization", module: "director" },
+  // Organization builder (Enterprise feature.organization_builder gated at runtime).
+  { method: "GET", path: "/platform/org-builder/packs", permission: "viewOrganizationBuilder", scope: "organization", module: "organization_builder" },
+  { method: "POST", path: "/platform/org-builder/provision", permission: "manageOrganizationBuilder", scope: "organization", module: "organization_builder" },
+  // Entitlements / subscription plan catalog + assignment.
+  { method: "GET", path: "/subscription", permission: "viewSubscription", scope: "school", module: "subscriptions" },
+  { method: "PUT", path: "/platform/organizations/:id/subscription", permission: "managePlatformSubscriptions", scope: "organization", module: "subscriptions" },
+  // Dynamic widget platform role layouts (RBAC-only, no entitlement gate).
+  { method: "PUT", path: "/widgets/layouts/:role", permission: "manageDynamicWidgets", scope: "school", module: "widget_platform" },
+  { method: "POST", path: "/widgets/layouts/:role/reset", permission: "manageDynamicWidgets", scope: "school", module: "widget_platform" },
+  // Webhooks are authenticated by shared-secret HMAC over the raw body, NOT by a
+  // JWT/permission — listed here for inventory completeness (permission: null).
+  { method: "POST", path: "/communications/delivery/webhook", permission: null, scope: "school", module: "webhook" },
+  { method: "POST", path: "/webhooks/razorpay", permission: null, scope: "school", module: "webhook" },
 ];
 
 export const RBAC_MODULE_PERMISSIONS = [
@@ -152,4 +188,8 @@ export const RBAC_MODULE_PERMISSIONS = [
   "viewSchoolMemories", "manageSchoolMemories",
   "viewAchievementPromotion", "manageAchievementPromotion", "approveAchievementPromotion",
   "viewOnboarding", "manageOnboarding",
+  "viewSubscription", "managePlatformSubscriptions",
+  "viewDirectorPortal", "manageDirectorPortal",
+  "viewOrganizationBuilder", "manageOrganizationBuilder",
+  "viewDynamicWidgets", "manageDynamicWidgets",
 ] as const;

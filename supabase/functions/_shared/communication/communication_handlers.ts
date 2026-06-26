@@ -7,6 +7,12 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { createServiceClient } from "../db.ts";
+import {
+  correlationIdFromRequest,
+  recordMutationAudit,
+} from "../audit/audit_repository.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
 import {
   CommunicationValidationError,
   listNotificationTemplates,
@@ -17,6 +23,38 @@ import {
 } from "./communication_service.ts";
 import { getNotificationDeliveryMetrics } from "./communication_repository.ts";
 import { processDeliveryQueue } from "./notification_service.ts";
+import {
+  loadCommunicationWebhookConfig,
+  verifyCommunicationWebhookSignature,
+} from "./communication_webhook_auth.ts";
+
+/** Inline mutation-audit helper for communication writes (module-local style,
+ * mirroring communication_service.ts which calls recordMutationAudit directly). */
+async function auditComm(
+  db: Parameters<typeof recordMutationAudit>[0],
+  claims: AccessTokenClaims,
+  eventType: string,
+  domainEventType: string,
+  entityType: string,
+  entityId: string,
+  metadata: Record<string, unknown>,
+  req: Request,
+): Promise<void> {
+  const correlationId = correlationIdFromRequest(req);
+  await recordMutationAudit(
+    db,
+    claims,
+    { eventType, category: "workflow", entityType, entityId, metadata, correlationId },
+    {
+      eventType: domainEventType,
+      payload: { entityId, ...metadata },
+      sourceModule: "communication",
+      idempotencyKey: `${domainEventType}:${entityId}:${Date.now()}`,
+      correlationId,
+    },
+    req,
+  );
+}
 
 function snakeStr(body: Record<string, unknown>, key: string): string {
   return String(body[key] ?? "");
@@ -318,9 +356,14 @@ export async function handleMarkNotificationRead(
 
   try {
     const { markNotificationRead } = await import("./communication_repository.ts");
-    const updated = await withTenantContext(config, auth.claims, async (db) =>
-      await markNotificationRead(db, auth.claims.tenant_id, auth.claims.sub, notificationId)
-    );
+    const updated = await withTenantContext(config, auth.claims, async (db) => {
+      const ok = await markNotificationRead(db, auth.claims.tenant_id, auth.claims.sub, notificationId);
+      if (ok) {
+        await auditComm(db, auth.claims, "notificationRead", "communication.notification.read",
+          "notification_delivery", notificationId, {}, req);
+      }
+      return ok;
+    });
     if (!updated) {
       return errorEnvelope("NOT_FOUND", "Notification not found", 404);
     }
@@ -345,9 +388,14 @@ export async function handleMarkAllNotificationsRead(
 
   try {
     const { markAllNotificationsRead } = await import("./communication_repository.ts");
-    const count = await withTenantContext(config, auth.claims, async (db) =>
-      await markAllNotificationsRead(db, auth.claims.tenant_id, auth.claims.sub)
-    );
+    const count = await withTenantContext(config, auth.claims, async (db) => {
+      const c = await markAllNotificationsRead(db, auth.claims.tenant_id, auth.claims.sub);
+      if (c > 0) {
+        await auditComm(db, auth.claims, "notificationsAllRead", "communication.notification.all_read",
+          "notification_delivery", auth.claims.sub, { markedCount: c }, req);
+      }
+      return c;
+    });
     return jsonResponse(envelope({ markedCount: count }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -377,9 +425,11 @@ export async function handleRegisterDeviceToken(
 
   try {
     const { registerDeviceToken } = await import("./communication_repository.ts");
-    await withTenantContext(config, auth.claims, async (db) =>
-      await registerDeviceToken(db, auth.claims.tenant_id, auth.claims.sub, platform, token)
-    );
+    await withTenantContext(config, auth.claims, async (db) => {
+      await registerDeviceToken(db, auth.claims.tenant_id, auth.claims.sub, platform, token);
+      await auditComm(db, auth.claims, "deviceTokenRegistered", "communication.device_token.registered",
+        "comm_device_token", auth.claims.sub, { platform }, req);
+    });
     return jsonResponse(envelope({ registered: true, platform }), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -408,9 +458,11 @@ export async function handleUnregisterDeviceToken(
 
   try {
     const { unregisterDeviceToken } = await import("./communication_repository.ts");
-    await withTenantContext(config, auth.claims, async (db) =>
-      await unregisterDeviceToken(db, auth.claims.tenant_id, auth.claims.sub, token)
-    );
+    await withTenantContext(config, auth.claims, async (db) => {
+      await unregisterDeviceToken(db, auth.claims.tenant_id, auth.claims.sub, token);
+      await auditComm(db, auth.claims, "deviceTokenUnregistered", "communication.device_token.unregistered",
+        "comm_device_token", auth.claims.sub, {}, req);
+    });
     return jsonResponse(envelope({ unregistered: true }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -442,9 +494,30 @@ export async function handleDeliveryMetrics(req: Request, config: AppConfig): Pr
   }
 }
 
-/** External provider webhook — confirms delivery status (v15.6). */
+/**
+ * External provider webhook — confirms delivery status (v15.6).
+ *
+ * SEC-1 (Wave 3): authenticated with a shared-secret HMAC over the raw body
+ * (`x-akshara-signature`). The tenant is derived from the matched delivery row
+ * via the service client (never from the payload, never hardcoded), then the
+ * status update runs under that row's own school scope so RLS still applies.
+ */
 export async function handleDeliveryWebhook(req: Request, config: AppConfig): Promise<Response> {
-  const body = (await readJson<{ deliveryId?: string; status?: string; externalId?: string }>(req)) ?? {};
+  const rawBody = await req.text();
+
+  const webhookConfig = loadCommunicationWebhookConfig();
+  const signature = req.headers.get("x-akshara-signature");
+  const valid = await verifyCommunicationWebhookSignature(webhookConfig, rawBody, signature);
+  if (!valid) {
+    return errorEnvelope("UNAUTHORIZED", "Invalid webhook signature", 401);
+  }
+
+  let body: { deliveryId?: string; status?: string; externalId?: string };
+  try {
+    body = rawBody ? JSON.parse(rawBody) : {};
+  } catch {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid webhook JSON", 422);
+  }
   if (!body.deliveryId && !body.externalId) {
     return errorEnvelope("VALIDATION_ERROR", "deliveryId or externalId required", 422);
   }
@@ -455,42 +528,62 @@ export async function handleDeliveryWebhook(req: Request, config: AppConfig): Pr
   }
 
   try {
-    const updated = await withTenantContext(
-      config,
-      {
-        sub: "system-webhook",
-        tenant_id: "a1000000-0000-4000-8000-000000000001",
-        organization_id: "a1000000-0000-4000-8000-000000000001",
-        school_id: "a2000000-0000-4000-8000-000000000001",
-        role: "system",
-        role_slugs: ["system"],
-        primary_role: "system",
-        permissions: [],
-        permissions_version: 1,
-        scope: "school",
-        school_group_id: null,
-        student_id: null,
-        child_ids: [],
-        session_id: "delivery-webhook",
-      },
-      async (db) => {
-        const rows = await db.queryObject<{ id: string }>(
-          body.deliveryId
-            ? `UPDATE notification_deliveries
-               SET status = $2, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
-                   updated_at = now()
-               WHERE id = $1::uuid
-               RETURNING id`
-            : `UPDATE notification_deliveries
-               SET status = $2, delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
-                   updated_at = now()
-               WHERE external_id = $1
-               RETURNING id`,
-          [body.deliveryId ?? body.externalId, status],
-        );
-        return rows[0]?.id ?? null;
-      },
-    );
+    // Derive the tenant from the delivery row (service client bypasses RLS for
+    // this read only — the actual write below runs under the row's school scope).
+    const serviceClient = createServiceClient(config);
+    const lookup = body.deliveryId
+      ? await serviceClient
+        .from("notification_deliveries")
+        .select("id,organization_id,school_id")
+        .eq("id", body.deliveryId)
+        .maybeSingle()
+      : await serviceClient
+        .from("notification_deliveries")
+        .select("id,organization_id,school_id")
+        .eq("external_id", body.externalId!)
+        .maybeSingle();
+
+    const row = lookup.data as
+      | { id: string; organization_id: string; school_id: string | null }
+      | null;
+    if (!row?.organization_id || !row?.school_id) {
+      return errorEnvelope("NOT_FOUND", "Delivery record not found", 404);
+    }
+
+    const tenantClaims: AccessTokenClaims = {
+      sub: "00000000-0000-4000-8000-000000000000",
+      tenant_id: row.organization_id,
+      organization_id: row.organization_id,
+      school_id: row.school_id,
+      role: "schoolAdmin",
+      role_slugs: ["schoolAdmin"],
+      primary_role: "schoolAdmin",
+      permissions: ["viewCommunications"],
+      permissions_version: 1,
+      scope: "school",
+      school_group_id: null,
+      student_id: null,
+      child_ids: [],
+      session_id: "delivery-webhook",
+    };
+
+    const updated = await withTenantContext(config, tenantClaims, async (db) => {
+      const rows = await db.queryObject<{ id: string }>(
+        `UPDATE notification_deliveries
+            SET status = $2,
+                delivered_at = CASE WHEN $2 = 'delivered' THEN now() ELSE delivered_at END,
+                updated_at = now()
+          WHERE id = $1::uuid
+          RETURNING id`,
+        [row.id, status],
+      );
+      const id = rows[0]?.id ?? null;
+      if (id) {
+        await auditComm(db, tenantClaims, "deliveryConfirmed", "communication.delivery.confirmed",
+          "notification_delivery", id, { status }, req);
+      }
+      return id;
+    });
     if (!updated) return errorEnvelope("NOT_FOUND", "Delivery record not found", 404);
     return jsonResponse(envelope({ deliveryId: updated, status, confirmed: true }));
   } catch (error) {

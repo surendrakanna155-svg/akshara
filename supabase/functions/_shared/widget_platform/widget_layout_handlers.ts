@@ -233,13 +233,33 @@ export async function handleResetRoleLayout(
     await withTenantContext(config, auth.claims, async (db) => {
       // No DELETE grant — clear the override by rewriting the row to the pack
       // default (isTenantOverride=false, version reset). No row → nothing to clear.
-      await db.queryObject(
+      const rows = await db.queryObject<{ id: string }>(
         `UPDATE dashboard_layouts
             SET layout = $4::jsonb, updated_at = timezone('utc', now())
           WHERE organization_id = $1 AND school_id = $2
-            AND owner_user_id IS NULL AND dashboard_key = $3`,
+            AND owner_user_id IS NULL AND dashboard_key = $3
+          RETURNING id`,
         [orgId, schoolId, roleKey(role), JSON.stringify(def)],
       );
+      // SEC-5 — audit the override clear (only when a row was actually rewritten).
+      const id = rows[0]?.id;
+      if (id) {
+        await emitMutationAudit(db, auth.claims, {
+          audit: {
+            eventType: "widget_platform.role_layout.reset",
+            category: "workflow",
+            entityType: "dashboard_layout",
+            entityId: id,
+            metadata: { role, pack },
+          },
+          domain: {
+            eventType: "widget_platform.role_layout.reset",
+            payload: { role, pack, layoutRowId: id },
+            sourceModule: "widget_platform",
+            idempotencyKey: `widget_platform.role_layout.reset:${id}:${pack}`,
+          },
+        }, req);
+      }
     });
     return jsonResponse(envelope(def));
   } catch (error) {

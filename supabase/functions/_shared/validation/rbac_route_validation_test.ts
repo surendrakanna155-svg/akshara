@@ -41,6 +41,48 @@ Deno.test("RBAC route inventory is non-empty and modules covered", () => {
   }
 });
 
+// SEC-6 — guard against the inventory silently dropping the routers it was
+// extended to cover in Wave 3 (predictions/director/org-builder/subscriptions/
+// webhook/widgets) and the finance peripheral surface.
+Deno.test("RBAC inventory covers Wave 3 routers", () => {
+  const modules = new Set(RBAC_ROUTE_INVENTORY.map((r) => r.module));
+  for (
+    const name of [
+      "predictions",
+      "director",
+      "organization_builder",
+      "subscriptions",
+      "webhook",
+      "widget_platform",
+    ]
+  ) {
+    assertEquals(modules.has(name), true, `missing module ${name}`);
+  }
+  // Finance peripheral routes present.
+  const paths = new Set(RBAC_ROUTE_INVENTORY.map((r) => `${r.method} ${r.path}`));
+  for (
+    const route of [
+      "GET /finance/defaulters",
+      "POST /finance/payments/offline",
+      "POST /finance/payments/qr",
+      "GET /finance/settings",
+      "POST /finance/scholarships",
+    ]
+  ) {
+    assertEquals(paths.has(route), true, `missing route ${route}`);
+  }
+});
+
+// SEC-1 — the delivery webhook must be documented as HMAC-authenticated, i.e.
+// carry no RBAC permission (the audit's fail-open finding stays closed).
+Deno.test("delivery webhook is shared-secret authenticated, not RBAC", () => {
+  const webhook = RBAC_ROUTE_INVENTORY.find(
+    (r) => r.path === "/communications/delivery/webhook",
+  );
+  assertExists(webhook);
+  assertEquals(webhook!.permission, null);
+});
+
 Deno.test("RBAC routes deny when required permission missing", () => {
   for (const rule of RBAC_ROUTE_INVENTORY) {
     if (!rule.permission) continue;

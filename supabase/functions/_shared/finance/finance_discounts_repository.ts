@@ -83,6 +83,19 @@ export async function createDiscountRule(
   return rows[0]!;
 }
 
+export async function listDiscountRules(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<FinanceDiscountRuleRow[]> {
+  return await db.queryObject<FinanceDiscountRuleRow>(
+    `SELECT * FROM finance_discount_rules
+     WHERE organization_id = $1 AND school_id = $2
+     ORDER BY created_at DESC`,
+    [organizationId, schoolId],
+  );
+}
+
 export async function getDiscountRule(
   db: TenantQueryClient,
   organizationId: string,

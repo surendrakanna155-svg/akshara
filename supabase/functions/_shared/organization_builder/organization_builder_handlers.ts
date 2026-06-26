@@ -166,7 +166,7 @@ export function handleSaveStep(
   config: AppConfig,
   draftId: string,
 ): Promise<Response> {
-  return write(req, config, "Failed to save interview step", async (db, orgId) => {
+  return write(req, config, "Failed to save interview step", async (db, orgId, claims) => {
     const body = await readJson<{ stepIndex?: number; answers?: unknown }>(req);
     const stepIndex = Number(body?.stepIndex);
     if (!Number.isInteger(stepIndex) || stepIndex < 0 || stepIndex > 6) {
@@ -196,7 +196,19 @@ export function handleSaveStep(
     // Prepend the fresh rec, drop any prior rec for the same step (stable id).
     const recommendations = [rec, ...existing.recommendations.filter((r) => r.id !== rec.id)];
 
-    return await saveStep(db, orgId, draftId, stepIndex, answers, recommendations);
+    const result = await saveStep(db, orgId, draftId, stepIndex, answers, recommendations);
+    // SEC-5 — audit the interview-step write (mirrors handleProvision).
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("orgBuilder.interview.step_saved", "interviewDraft", `${draftId}:${stepIndex}`, {
+        draftId,
+        stepIndex,
+        packId: pack.id,
+      }),
+      req,
+    );
+    return result;
   });
 }
 

@@ -16,12 +16,94 @@ import {
   DiscountRuleNotFoundError,
   type DiscountRuleStatus,
   isDiscountRuleStatus,
+  listDiscountRules,
   updateDiscountRule,
 } from "./finance_discounts_repository.ts";
+import {
+  listScholarships,
+  scholarshipToApi,
+} from "./finance_scholarships_repository.ts";
 
 function requireFinanceWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "manageFinance") ??
     requireSchoolOperationalScope(claims);
+}
+
+function requireFinanceRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
+  return requirePermission(claims, "viewFinance") ??
+    requireSchoolOperationalScope(claims);
+}
+
+/**
+ * GET /finance/discounts — discounts dashboard (rules + scholarships + KPIs).
+ * The client mapper reads `{ kpis, scholarships, rules, assignments,
+ * impactSummary }` from the unwrapped envelope data.
+ */
+export async function handleDiscountsDashboard(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireFinanceRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const data = await withTenantContext(config, auth.claims, async (db) => {
+      const [rules, scholarships] = await Promise.all([
+        listDiscountRules(db, orgId, schoolId),
+        listScholarships(db, orgId, schoolId),
+      ]);
+      return { rules, scholarships };
+    });
+
+    const activeScholarships = data.scholarships.length;
+    const pendingApproval = data.rules.filter((r) => r.status === "pending").length;
+    const assignedCount = data.scholarships.reduce(
+      (sum, s) => sum + (s.active_assignments ?? 0),
+      0,
+    );
+
+    const body = {
+      kpis: [
+        {
+          id: "active_scholarships",
+          value: String(activeScholarships),
+          label: "Active Scholarships",
+          accentName: "primary",
+        },
+        {
+          id: "assigned",
+          value: String(assignedCount),
+          label: "Students Assigned",
+          accentName: "success",
+        },
+        {
+          id: "pending_approval",
+          value: String(pendingApproval),
+          label: "Pending Approval",
+          accentName: "warning",
+        },
+      ],
+      scholarships: data.scholarships.map(scholarshipToApi),
+      rules: data.rules.map(discountRuleToApi),
+      assignments: [] as Record<string, unknown>[],
+      impactSummary: activeScholarships > 0
+        ? `${activeScholarships} scholarship${activeScholarships === 1 ? "" : "s"} active across ${assignedCount} assignment${assignedCount === 1 ? "" : "s"}.`
+        : "",
+    };
+
+    return jsonResponse(envelope(body));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
+    throw error;
+  }
 }
 
 function optionalStr(

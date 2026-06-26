@@ -8,6 +8,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
 import {
   buildPrintableReport,
   generateParentAcademicSummary,
@@ -15,6 +16,23 @@ import {
   getParentActivationStats,
   parentSummaryToApi,
 } from "./parent_experience_service.ts";
+
+/**
+ * SEC-3 (Wave 3) — defense-in-depth: a parent-scope caller may only request a
+ * summary/report for one of their own linked children. RLS already scopes reads
+ * to the school; this stops a parent from probing other students in the school
+ * by passing an arbitrary studentId. School-scope staff are unaffected.
+ */
+function assertParentChildAccess(
+  claims: AccessTokenClaims,
+  studentId: string,
+): Response | null {
+  if (claims.scope !== "parent") return null;
+  if (!(claims.child_ids ?? []).includes(studentId)) {
+    return errorEnvelope("FORBIDDEN", "Student is not linked to this parent", 403);
+  }
+  return null;
+}
 
 export async function routeParentExperience(
   req: Request,
@@ -52,6 +70,8 @@ async function handleGetParentSummary(req: Request, config: AppConfig): Promise<
 
   const studentId = new URL(req.url).searchParams.get("studentId");
   if (!studentId) return errorEnvelope("VALIDATION_ERROR", "studentId required", 422);
+  const childDenied = assertParentChildAccess(auth.claims, studentId);
+  if (childDenied) return childDenied;
 
   try {
     const summary = await withTenantContext(config, auth.claims, async (db) => {
@@ -84,6 +104,8 @@ async function handleRefreshParentSummary(req: Request, config: AppConfig): Prom
 
   const studentId = new URL(req.url).searchParams.get("studentId");
   if (!studentId) return errorEnvelope("VALIDATION_ERROR", "studentId required", 422);
+  const childDenied = assertParentChildAccess(auth.claims, studentId);
+  if (childDenied) return childDenied;
 
   try {
     const summary = await withTenantContext(config, auth.claims, (db) =>
@@ -109,6 +131,8 @@ async function handleGetPrintableReport(req: Request, config: AppConfig): Promis
 
   const studentId = new URL(req.url).searchParams.get("studentId");
   if (!studentId) return errorEnvelope("VALIDATION_ERROR", "studentId required", 422);
+  const childDenied = assertParentChildAccess(auth.claims, studentId);
+  if (childDenied) return childDenied;
 
   try {
     const report = await withTenantContext(config, auth.claims, async (db) => {

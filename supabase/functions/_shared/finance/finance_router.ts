@@ -51,8 +51,29 @@ import {
 } from "./finance_refunds_handlers.ts";
 import {
   handleCreateDiscountRule,
+  handleDiscountsDashboard,
   handleUpdateDiscountRule,
 } from "./finance_discounts_handlers.ts";
+import {
+  handleListOfflinePayments,
+  handleReconcileOfflinePayment,
+  handleRecordOfflinePayment,
+} from "./finance_offline_payments_handlers.ts";
+import {
+  handleConfirmQrPaymentSession,
+  handleCreateQrPaymentSession,
+  handleGetQrPaymentSession,
+} from "./finance_qr_handlers.ts";
+import { handleFinanceDefaulters } from "./finance_defaulters_handlers.ts";
+import { handleFinanceReports } from "./finance_reports_handlers.ts";
+import {
+  handleGetSettings,
+  handleUpdateSettings,
+} from "./finance_settings_handlers.ts";
+import {
+  handleCreateScholarship,
+  handleUpdateScholarship,
+} from "./finance_scholarships_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -214,6 +235,9 @@ export function matchFinanceRoute(
     return { handler: handleGetRefund, args: [refundMatch[1]!] };
   }
 
+  if (path === "/finance/discounts" && method === "GET") {
+    return { handler: handleDiscountsDashboard, args: [] };
+  }
   if (path === "/finance/discounts" && method === "POST") {
     return { handler: handleCreateDiscountRule, args: [] };
   }
@@ -221,6 +245,56 @@ export function matchFinanceRoute(
   const discountMatch = path.match(/^\/finance\/discounts\/([^/]+)$/);
   if (discountMatch && method === "PUT") {
     return { handler: handleUpdateDiscountRule, args: [discountMatch[1]!] };
+  }
+
+  // ─── STF-1: offline payments ───────────────────────────────────────────────
+  if (path === "/finance/payments/offline" && method === "POST") {
+    return { handler: handleRecordOfflinePayment, args: [] };
+  }
+  if (path === "/finance/payments/offline" && method === "GET") {
+    return { handler: handleListOfflinePayments, args: [] };
+  }
+  const offlineReconcileMatch = path.match(
+    /^\/finance\/payments\/offline\/([^/]+)\/reconcile$/,
+  );
+  if (offlineReconcileMatch && method === "POST") {
+    return { handler: handleReconcileOfflinePayment, args: [offlineReconcileMatch[1]!] };
+  }
+
+  // ─── STF-2: QR / UPI payment sessions ──────────────────────────────────────
+  if (path === "/finance/payments/qr" && method === "POST") {
+    return { handler: handleCreateQrPaymentSession, args: [] };
+  }
+  const qrConfirmMatch = path.match(/^\/finance\/payments\/qr\/([^/]+)\/confirm$/);
+  if (qrConfirmMatch && method === "POST") {
+    return { handler: handleConfirmQrPaymentSession, args: [qrConfirmMatch[1]!] };
+  }
+  const qrSessionMatch = path.match(/^\/finance\/payments\/qr\/([^/]+)$/);
+  if (qrSessionMatch && method === "GET") {
+    return { handler: handleGetQrPaymentSession, args: [qrSessionMatch[1]!] };
+  }
+
+  // ─── STF-3: defaulters / reports / settings ────────────────────────────────
+  if (path === "/finance/defaulters" && method === "GET") {
+    return { handler: handleFinanceDefaulters, args: [] };
+  }
+  if (path === "/finance/reports" && method === "GET") {
+    return { handler: handleFinanceReports, args: [] };
+  }
+  if (path === "/finance/settings" && method === "GET") {
+    return { handler: handleGetSettings, args: [] };
+  }
+  if (path === "/finance/settings" && method === "PUT") {
+    return { handler: handleUpdateSettings, args: [] };
+  }
+
+  // ─── STF-5: scholarships ───────────────────────────────────────────────────
+  if (path === "/finance/scholarships" && method === "POST") {
+    return { handler: handleCreateScholarship, args: [] };
+  }
+  const scholarshipMatch = path.match(/^\/finance\/scholarships\/([^/]+)$/);
+  if (scholarshipMatch && method === "PUT") {
+    return { handler: handleUpdateScholarship, args: [scholarshipMatch[1]!] };
   }
 
   return null;

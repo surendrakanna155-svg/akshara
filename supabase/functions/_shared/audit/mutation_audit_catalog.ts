@@ -340,6 +340,74 @@ export const financeAudit = {
       idempotencyKey: `finance.executive:${Date.now()}`,
     },
   }),
+  // ─── Wave 3 finance peripheral routes ──────────────────────────────────────
+  offlinePaymentRecorded: (offlinePaymentId: string): MutationAuditSpec => ({
+    ...workflow("offlinePaymentRecorded", "finance_offline_payment", offlinePaymentId, {
+      offlinePaymentId,
+    }),
+    domain: {
+      eventType: "finance.offline_payment.recorded",
+      payload: { offlinePaymentId },
+      sourceModule: "finance",
+      idempotencyKey: `finance.offline_payment.recorded:${offlinePaymentId}`,
+    },
+  }),
+  offlinePaymentReconciled: (offlinePaymentId: string): MutationAuditSpec => ({
+    ...workflow("offlinePaymentReconciled", "finance_offline_payment", offlinePaymentId, {
+      offlinePaymentId,
+    }),
+    domain: {
+      eventType: "finance.offline_payment.reconciled",
+      payload: { offlinePaymentId },
+      sourceModule: "finance",
+      idempotencyKey: `finance.offline_payment.reconciled:${offlinePaymentId}`,
+    },
+  }),
+  qrSessionCreated: (sessionId: string): MutationAuditSpec => ({
+    ...workflow("qrSessionCreated", "finance_qr_session", sessionId, { sessionId }),
+    domain: {
+      eventType: "finance.qr_session.created",
+      payload: { sessionId },
+      sourceModule: "finance",
+      idempotencyKey: `finance.qr_session.created:${sessionId}`,
+    },
+  }),
+  qrSessionConfirmed: (sessionId: string): MutationAuditSpec => ({
+    ...workflow("qrSessionConfirmed", "finance_qr_session", sessionId, { sessionId }),
+    domain: {
+      eventType: "finance.qr_session.confirmed",
+      payload: { sessionId },
+      sourceModule: "finance",
+      idempotencyKey: `finance.qr_session.confirmed:${sessionId}`,
+    },
+  }),
+  scholarshipCreated: (scholarshipId: string): MutationAuditSpec => ({
+    ...workflow("scholarshipCreated", "finance_scholarship", scholarshipId, { scholarshipId }),
+    domain: {
+      eventType: "finance.scholarship.created",
+      payload: { scholarshipId },
+      sourceModule: "finance",
+      idempotencyKey: `finance.scholarship.created:${scholarshipId}`,
+    },
+  }),
+  scholarshipUpdated: (scholarshipId: string): MutationAuditSpec => ({
+    ...workflow("scholarshipUpdated", "finance_scholarship", scholarshipId, { scholarshipId }),
+    domain: {
+      eventType: "finance.scholarship.updated",
+      payload: { scholarshipId },
+      sourceModule: "finance",
+      idempotencyKey: `finance.scholarship.updated:${scholarshipId}`,
+    },
+  }),
+  financeSettingsUpdated: (schoolId: string, nonce: string): MutationAuditSpec => ({
+    ...workflow("financeSettingsUpdated", "finance_settings", schoolId, { schoolId }),
+    domain: {
+      eventType: "finance.settings.updated",
+      payload: { schoolId },
+      sourceModule: "finance",
+      idempotencyKey: `finance.settings.updated:${schoolId}:${nonce}`,
+    },
+  }),
 };
 
 // ─── SIS ────────────────────────────────────────────────────────────────────
