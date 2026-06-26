@@ -87,6 +87,7 @@ export interface CommBroadcastRow {
   scheduled_at: string | null;
   sent_at: string | null;
   created_by: string;
+  created_at: string;
 }
 
 export async function listTemplates(
@@ -102,6 +103,43 @@ export async function listTemplates(
      ORDER BY code`,
     [orgId, schoolId],
   );
+}
+
+/**
+ * MJ-C6a: persist a new notification template into the SAME table
+ * {@link listTemplates} reads from (`notification_templates`), scoped to the
+ * caller's school so it then appears in the list. `variables` is stored as
+ * jsonb. Returns the inserted row.
+ */
+export async function insertTemplate(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string;
+    code: string;
+    channel: string;
+    subjectTemplate: string | null;
+    bodyTemplate: string;
+    variables: unknown;
+  },
+): Promise<NotificationTemplateRow> {
+  const rows = await db.queryObject<NotificationTemplateRow>(
+    `INSERT INTO notification_templates (
+       organization_id, school_id, code, channel,
+       subject_template, body_template, variables, is_active
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true)
+     RETURNING *`,
+    [
+      input.organizationId,
+      input.schoolId,
+      input.code,
+      input.channel,
+      input.subjectTemplate,
+      input.bodyTemplate,
+      JSON.stringify(input.variables ?? []),
+    ],
+  );
+  return rows[0]!;
 }
 
 export async function getTemplateByCode(
@@ -420,6 +458,32 @@ export async function createBroadcast(
     ],
   );
   return rows[0]!;
+}
+
+/**
+ * MJ-C6b: list past broadcasts from the SAME table {@link createBroadcast}
+ * writes to (`comm_broadcasts`), scoped to the caller's org (and school when
+ * present). Each row carries its real recipient count from `comm_recipients`.
+ * Returns an empty list when none exist — never fabricated.
+ */
+export async function listBroadcastHistory(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string | null,
+  limit = 50,
+  offset = 0,
+): Promise<(CommBroadcastRow & { recipient_count: number })[]> {
+  return await db.queryObject<CommBroadcastRow & { recipient_count: number }>(
+    `SELECT b.*,
+            (SELECT count(*)::int FROM comm_recipients r WHERE r.broadcast_id = b.id)
+              AS recipient_count
+       FROM comm_broadcasts b
+      WHERE b.organization_id = $1
+        AND ($2::uuid IS NULL OR b.school_id IS NULL OR b.school_id = $2::uuid)
+      ORDER BY COALESCE(b.sent_at, b.created_at) DESC
+      LIMIT $3 OFFSET $4`,
+    [orgId, schoolId, limit, offset],
+  );
 }
 
 export async function finalizeBroadcast(

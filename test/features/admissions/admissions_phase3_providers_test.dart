@@ -28,8 +28,14 @@ void main() {
 
       final review = container.read(admissionsApprovalReviewProvider('appr_1'));
       expect(review, isNotNull);
-      expect(review!.counselorNotes, isNotEmpty);
-      expect(review.workflowSteps, hasLength(5));
+      // MJ-H15: the review detail is now built from the REAL approval-queue row.
+      // The factual workflow stages remain; the previously fabricated counselor
+      // notes are gone (honest empty until a real note is persisted via
+      // POST /admissions/approval/{id}/notes), and the history is derived from
+      // the row's real submission/decision — never invented.
+      expect(review!.workflowSteps, hasLength(5));
+      expect(review.counselorNotes, isEmpty);
+      expect(review.history, isNotEmpty);
     });
   });
 

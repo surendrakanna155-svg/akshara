@@ -74,7 +74,7 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 
 ---
 
-## Wave Wave 2 — Wire-gap 404s — build the missing backend routes so whole client journeys stop failing silently
+## Wave Wave 2 — Wire-gap 404s — build the missing backend routes so whole client journeys stop failing silently — ✅ DONE (PRODUCTION CERTIFIED 2026-06-26, live 28/28; see docs/JOURNEY_WAVE_2_CERTIFICATION.md)
 
 **Why this wave:** These are journeys where the Flutter surface ships but the route 404s in production, breaking core persona loops (parent↔teacher comms, leave, PTM; teacher exam workflow; admissions tabs; communication templates/history; management/admin settings save). They unblock the most user-visible broken paths and share a fix pattern (build/mount the route + add a client↔router path-parity contract test). Grouped as the 'make every shipped screen actually work' batch.
 

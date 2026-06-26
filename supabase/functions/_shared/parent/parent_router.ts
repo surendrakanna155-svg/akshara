@@ -22,11 +22,19 @@ import {
   handleReceipts,
   handleTimetable,
 } from "./parent_handlers.ts";
+import {
+  handleCommunicationInbox,
+  handleCommunicationMessage,
+  handleListMeetings,
+  handleMeetingRsvp,
+} from "./parent_write_handlers.ts";
 
-function matchParentRoute(
+type ParentHandler = (req: Request, config: AppConfig) => Promise<Response>;
+
+export function matchParentRoute(
   method: string,
   path: string,
-): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
+): { handler: ParentHandler } | null {
   if (method === "POST") {
     if (path === "/parent/payments/initiate") {
       return { handler: handleInitiatePayment };
@@ -37,12 +45,22 @@ function matchParentRoute(
     if (path === "/parent/experience/acknowledge") {
       return { handler: handleParentAcknowledge };
     }
+    // MJ-H12 — POST /parent/leave is served by routePilotOperations (writes the
+    // canonical mobile_leave_requests row that the school/HR approval side reads).
+    // We do NOT re-register it here; instead GET /parent/leave now overlays those
+    // real rows so the submitted leave is visible to the parent.
+    // MJ-C4 — parent RSVPs to a PTM/meeting.
+    const rsvpMatch = path.match(/^\/parent\/meetings\/([^/]+)\/rsvp$/);
+    if (rsvpMatch) {
+      const meetingId = decodeURIComponent(rsvpMatch[1]);
+      return { handler: (req, config) => handleMeetingRsvp(req, config, meetingId) };
+    }
     return null;
   }
 
   if (method !== "GET") return null;
 
-  const staticRoutes: Record<string, (req: Request, config: AppConfig) => Promise<Response>> = {
+  const staticRoutes: Record<string, ParentHandler> = {
     "/parent/dashboard": handleDashboard,
     "/parent/attendance": handleAttendance,
     "/parent/homework": handleHomework,
@@ -55,6 +73,10 @@ function matchParentRoute(
     "/parent/leave": handleLeave,
     "/parent/profile": handleProfile,
     "/parent/experience/hub": handleParentExperienceHub,
+    // MJ-C3 — parent communication inbox.
+    "/parent/communication/inbox": handleCommunicationInbox,
+    // MJ-C4 — parent meetings / PTM list.
+    "/parent/meetings": handleListMeetings,
   };
 
   const staticHandler = staticRoutes[path];
@@ -67,6 +89,16 @@ function matchParentRoute(
     const installmentId = decodeURIComponent(paymentMatch[1]);
     return {
       handler: (req, config) => handlePaymentSummary(req, config, installmentId),
+    };
+  }
+
+  // MJ-C3 — single communication message by id. Kept LAST so it does not
+  // shadow /parent/communication/inbox above.
+  const commMatch = path.match(/^\/parent\/communication\/([^/]+)$/);
+  if (commMatch && commMatch[1] !== "inbox") {
+    const communicationId = decodeURIComponent(commMatch[1]);
+    return {
+      handler: (req, config) => handleCommunicationMessage(req, config, communicationId),
     };
   }
 

@@ -80,10 +80,24 @@ final admissionsApprovalHistoryProvider =
   return review?.history ?? const [];
 });
 
+/// Builds the review detail entirely from the REAL approval-queue row.
+///
+/// Wave 1 (MJ-H14/MJ-H15) removed the previously hardcoded notes/fee-plan/
+/// history fixture. There is no list-notes/list-history read endpoint, so we
+/// surface only what is genuinely persisted on the approval row:
+///   * `history`  — derived from the row's real decision + submitted label +
+///                  counselor (no invented timeline entries).
+///   * `counselorNotes` — honest empty until notes are persisted/fetched
+///                  (the write path is `POST /admissions/approval/{id}/notes`).
+///   * `feePlanLabel` — honest "Not yet assigned": a fee plan is only attached
+///                  later at the finance-handoff step, so claiming one here
+///                  would be fabricated.
+///   * `workflowSteps` — the factual approval process stages (static labels,
+///                  not per-application data).
 ApprovalReviewDetail _buildReview(ApprovalQueueItem item) {
   return ApprovalReviewDetail(
     queueItem: item,
-    feePlanLabel: 'Standard CBSE · 3 installments',
+    feePlanLabel: 'Not yet assigned',
     workflowSteps: const [
       'Application submitted',
       'Documents verified',
@@ -91,37 +105,47 @@ ApprovalReviewDetail _buildReview(ApprovalQueueItem item) {
       'Principal approval',
       'Fee handoff',
     ],
-    counselorNotes: [
-      CounselorNote(
-        id: 'note_1',
-        author: item.counselor,
-        timestampLabel: '4 Jun · 2:30 PM',
-        content:
-            'Strong academic background. Parent prefers morning transport route.',
-      ),
-      const CounselorNote(
-        id: 'note_2',
-        author: 'Meera N.',
-        timestampLabel: '3 Jun · 11:00 AM',
-        content: 'All mandatory documents uploaded except marks memo.',
-      ),
-    ],
-    history: [
-      ApprovalHistoryRecord(
-        id: 'hist_1',
-        timestampLabel: '4 Jun · 9:00 AM',
-        actor: item.counselor,
-        decision: ApprovalDecision.pending,
-        comment: 'Submitted to principal queue',
-      ),
-      if (item.decision == ApprovalDecision.approved)
-        const ApprovalHistoryRecord(
-          id: 'hist_2',
-          timestampLabel: '2 Jun · 4:15 PM',
-          actor: 'Principal Sharma',
-          decision: ApprovalDecision.approved,
-          comment: 'Approved for Class 10 admission',
-        ),
-    ],
+    counselorNotes: const [],
+    history: _deriveHistory(item),
   );
+}
+
+/// Derives the approval history from the real queue row. The submission entry
+/// always exists (the application reached the principal queue); the decision
+/// entry is appended only once a real approve/reject decision is recorded.
+List<ApprovalHistoryRecord> _deriveHistory(ApprovalQueueItem item) {
+  final actor = item.counselor.isEmpty ? 'Admissions' : item.counselor;
+  final records = <ApprovalHistoryRecord>[
+    ApprovalHistoryRecord(
+      id: '${item.id}_submitted',
+      timestampLabel: item.submittedLabel,
+      actor: actor,
+      decision: ApprovalDecision.pending,
+      comment: 'Submitted to principal queue',
+    ),
+  ];
+
+  if (item.decision == ApprovalDecision.approved) {
+    records.add(
+      ApprovalHistoryRecord(
+        id: '${item.id}_approved',
+        timestampLabel: item.submittedLabel,
+        actor: 'Principal',
+        decision: ApprovalDecision.approved,
+        comment: 'Admission approved',
+      ),
+    );
+  } else if (item.decision == ApprovalDecision.rejected) {
+    records.add(
+      ApprovalHistoryRecord(
+        id: '${item.id}_rejected',
+        timestampLabel: item.submittedLabel,
+        actor: 'Principal',
+        decision: ApprovalDecision.rejected,
+        comment: 'Admission rejected',
+      ),
+    );
+  }
+
+  return records;
 }

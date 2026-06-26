@@ -37,6 +37,7 @@ import 'control_center/remote/control_center_remote_datasource.dart';
 import 'platform_intelligence/api_platform_intelligence_repository.dart';
 import 'platform_intelligence/remote/platform_intelligence_remote_datasource.dart';
 import 'parent/api_parent_repository.dart';
+import 'parent/api_parent_meetings_repository.dart';
 import 'parent/remote/parent_remote_datasource.dart';
 import 'teacher/api_teacher_repository.dart';
 import 'teacher/remote/teacher_remote_datasource.dart';
@@ -51,7 +52,10 @@ import 'approval/remote/approval_remote_datasource.dart';
 import 'analytics/api_analytics_intelligence_repository.dart';
 import 'analytics/remote/analytics_intelligence_remote_datasource.dart';
 import 'communication/api_communication_repository.dart';
+import 'communication/remote/communication_api_paths.dart';
 import 'communication/remote/communication_remote_datasource.dart';
+import '../../security/erp_role.dart';
+import '../../security/rbac_service.dart';
 import 'onboarding/api_onboarding_repository.dart';
 import 'onboarding/remote/onboarding_remote_datasource.dart';
 import 'startup_onboarding/api_startup_onboarding_repository.dart';
@@ -314,6 +318,11 @@ final apiParentRepositoryProvider = Provider<ApiParentRepository>(
   ),
 );
 
+final apiParentMeetingsRepositoryProvider =
+    Provider<ApiParentMeetingsRepository>(
+  (ref) => ApiParentMeetingsRepository(ref.watch(dioProvider)),
+);
+
 final apiTeacherRepositoryProvider = Provider<ApiTeacherRepository>(
   (ref) => ApiTeacherRepository(
     remote: ref.watch(teacherRemoteDataSourceProvider),
@@ -331,10 +340,27 @@ final communicationRemoteDataSourceProvider =
   (ref) => CommunicationRemoteDataSource(ref.watch(dioProvider)),
 );
 
+/// MJ-M2: the active persona decides which notification routes the repository
+/// hits. A student persona must read /student/notifications (and the matching
+/// mark-read / device-token routes — derived inside the repository from this
+/// path); a parent persona keeps /parent/*. Driven off the same RBAC role state
+/// the rest of the app reads (rbacServiceProvider), so a student no longer hits
+/// the parent-only route (403 -> demo fallback) and never invokes its own.
 final apiCommunicationRepositoryProvider = Provider<ApiCommunicationRepository>(
-  (ref) => ApiCommunicationRepository(
-    remote: ref.watch(communicationRemoteDataSourceProvider),
-  ),
+  (ref) {
+    final rbac = ref.watch(rbacServiceProvider);
+    // Branch to student only when the active persona is a student and is NOT a
+    // parent (a parent persona keeps the parent routes); mirrors how other
+    // persona-scoped repositories resolve their role.
+    final isStudentPersona =
+        rbac.hasRole(ErpRole.student) && !rbac.hasRole(ErpRole.parent);
+    return ApiCommunicationRepository(
+      remote: ref.watch(communicationRemoteDataSourceProvider),
+      notificationsPath: isStudentPersona
+          ? CommunicationApiPaths.studentNotifications
+          : CommunicationApiPaths.parentNotifications,
+    );
+  },
 );
 
 final onboardingRemoteDataSourceProvider = Provider<OnboardingRemoteDataSource>(

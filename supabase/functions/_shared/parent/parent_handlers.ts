@@ -9,6 +9,7 @@ const {
   handleList,
   handleDetail,
   handleFinanceReceipts,
+  handleLeaveRequests,
 } = createParentScopedReadHandlers(parentStore);
 
 export async function handleDashboard(req: Request, config: AppConfig): Promise<Response> {
@@ -50,7 +51,11 @@ export async function handleEvents(req: Request, config: AppConfig): Promise<Res
 }
 
 export async function handleLeave(req: Request, config: AppConfig): Promise<Response> {
-  return await handleList(req, config, "leave_request", "Failed to load parent leave history");
+  // MJ-H12: read the REAL submitted leave from mobile_leave_requests (where
+  // POST /parent/leave persists) so a parent sees the leave they just applied
+  // for — the old read hit the parent_entities "leave_request" cache, which the
+  // submit path never writes, so the screen always looked empty.
+  return await handleLeaveRequests(req, config, "Failed to load parent leave history");
 }
 
 export async function handleProfile(req: Request, config: AppConfig): Promise<Response> {

@@ -186,6 +186,79 @@ function leaveToApi(id: string, input: {
   };
 }
 
+/**
+ * MJ-H12 — list a parent's leave applications for GET /parent/leave.
+ *
+ * POST /parent/leave persists into `mobile_leave_requests` (the canonical store
+ * the school/HR approval + intelligence side reads). The parent's leave history
+ * screen, however, read the `parent_entities` "leave_request" cache, so a parent
+ * never saw the leave they just submitted. This reads the real rows back for the
+ * resolved child, mapped to the same shape `leaveToApi` returns so the existing
+ * parent_mapper.toLeaveRequest parser consumes it unchanged. Paginated in-memory
+ * (a parent has few leave rows). Newest first.
+ */
+export async function listParentLeaveRequests(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  studentId: string,
+  pagination: { page: number; pageSize: number },
+): Promise<{
+  items: Array<Record<string, unknown>>;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}> {
+  const rows = await db.queryObject<{
+    id: string;
+    type_label: string;
+    from_date_label: string;
+    to_date_label: string;
+    reason: string;
+    status: string;
+    has_attachment: boolean;
+    attachment_name: string | null;
+    submitted_label: string;
+  }>(
+    `SELECT id, type_label, from_date_label, to_date_label, reason, status,
+            has_attachment, attachment_name,
+            to_char(created_at, 'DD Mon YYYY') AS submitted_label
+       FROM mobile_leave_requests
+      WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
+      ORDER BY created_at DESC`,
+    [organizationId, schoolId, studentId],
+  );
+  const all = rows.map((r) => ({
+    id: r.id,
+    // Convention mirrors leaveToApi (the POST response): this list is already
+    // scoped to the active child, so a placeholder label is honest, not faked
+    // identity. The parent app shows the child from its own active-child context.
+    childName: "Linked child",
+    childClass: "",
+    type: r.type_label,
+    typeLabel: r.type_label,
+    fromDateLabel: r.from_date_label,
+    toDateLabel: r.to_date_label,
+    reason: r.reason,
+    status: r.status,
+    submittedLabel: r.submitted_label,
+    timeline: [{ label: "Submitted", timeLabel: r.submitted_label, isComplete: true }],
+    hasAttachment: r.has_attachment,
+    attachmentName: r.attachment_name,
+  }));
+  const total = all.length;
+  const start = Math.max(0, (pagination.page - 1) * pagination.pageSize);
+  const items = all.slice(start, start + pagination.pageSize);
+  return {
+    items,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    total,
+    hasMore: start + items.length < total,
+  };
+}
+
 export async function submitHomework(
   db: TenantQueryClient,
   input: {

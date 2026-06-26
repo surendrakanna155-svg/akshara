@@ -182,6 +182,21 @@ export const admissionsAudit = {
       idempotencyKey: `admissions.document.rejected:${documentId}`,
     },
   }),
+  approvalNoteAdded: (
+    approvalId: string,
+    noteId: string,
+  ): MutationAuditSpec => ({
+    ...workflow("approvalNoteAdded", "approval", approvalId, {
+      approvalId,
+      noteId,
+    }),
+    domain: {
+      eventType: "admissions.approval.note_added",
+      payload: { approvalId, noteId },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.approval.note_added:${noteId}`,
+    },
+  }),
   admissionApproved: (approvalId: string): MutationAuditSpec => ({
     ...workflow("admissionApproved", "approval", approvalId, { approvalId }),
     domain: {

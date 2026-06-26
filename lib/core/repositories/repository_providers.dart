@@ -388,6 +388,11 @@ final parentRepositoryProvider = Provider<ParentRepository>((ref) {
 
 final parentMeetingsRepositoryProvider =
     Provider<ParentMeetingsRepository>((ref) {
+  // MJ-C4 — live parent PTM view reads real ptm_meeting entities; falls back to
+  // the mock when the parent module is not in live API mode.
+  if (isModuleApiEnabled(ref, parentApiEnabledProvider)) {
+    return ref.read(apiParentMeetingsRepositoryProvider);
+  }
   return MockParentMeetingsRepository();
 });
 

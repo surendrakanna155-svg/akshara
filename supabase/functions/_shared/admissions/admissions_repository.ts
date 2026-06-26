@@ -689,7 +689,118 @@ export async function setApprovalDecision(
   return await getApprovalById(db, organizationId, schoolId, approvalId);
 }
 
+/**
+ * Real approval queue: approvals still awaiting a principal decision
+ * (decision = 'pending'). Document counts come from the approval row's
+ * subquery, mirroring getApprovalById.
+ */
+export async function listPendingApprovals(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  pagination: PaginationParams,
+): Promise<PaginationResult<AdmissionsApprovalRow>> {
+  const limit = Math.min(Math.max(pagination.pageSize, 1), 100);
+  const offset = offsetFor(pagination.page, limit);
+
+  const total = await db.queryCount(
+    `SELECT count(*)::text AS count FROM admissions_approvals
+     WHERE organization_id = $1 AND school_id = $2 AND decision = 'pending'`,
+    [organizationId, schoolId],
+  );
+
+  const items = await db.queryObject<AdmissionsApprovalRow>(
+    `SELECT ap.*,
+      (SELECT count(*)::int FROM admissions_documents d
+       WHERE d.application_id = ap.application_id AND d.status = 'verified') AS documents_complete,
+      (SELECT count(*)::int FROM admissions_documents d
+       WHERE d.application_id = ap.application_id) AS documents_total
+     FROM admissions_approvals ap
+     WHERE ap.organization_id = $1 AND ap.school_id = $2 AND ap.decision = 'pending'
+     ORDER BY ap.submitted_at DESC NULLS LAST, ap.created_at DESC
+     LIMIT $3 OFFSET $4`,
+    [organizationId, schoolId, limit, offset],
+  );
+
+  return {
+    items,
+    total,
+    page: pagination.page,
+    pageSize: limit,
+    hasMore: offset + items.length < total,
+  };
+}
+
 // ─── Enrollment ────────────────────────────────────────────────────────────────
+
+/**
+ * Real pending enrollments: approved students handed off but not yet converted
+ * into an active SIS record (conversion_status = 'pending').
+ */
+export async function listPendingEnrollments(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  pagination: PaginationParams,
+): Promise<PaginationResult<AdmissionsEnrollmentRow>> {
+  const limit = Math.min(Math.max(pagination.pageSize, 1), 100);
+  const offset = offsetFor(pagination.page, limit);
+
+  const total = await db.queryCount(
+    `SELECT count(*)::text AS count FROM admissions_enrollments
+     WHERE organization_id = $1 AND school_id = $2 AND conversion_status = 'pending'`,
+    [organizationId, schoolId],
+  );
+
+  const items = await db.queryObject<AdmissionsEnrollmentRow>(
+    `SELECT * FROM admissions_enrollments
+     WHERE organization_id = $1 AND school_id = $2 AND conversion_status = 'pending'
+     ORDER BY submitted_at DESC
+     LIMIT $3 OFFSET $4`,
+    [organizationId, schoolId, limit, offset],
+  );
+
+  return {
+    items,
+    total,
+    page: pagination.page,
+    pageSize: limit,
+    hasMore: offset + items.length < total,
+  };
+}
+
+/**
+ * Prefill source for the enrollment form: the most recently approved
+ * application (status = 'approved') for this school, optionally pinned to a
+ * specific application id. Returns null when there is nothing approved yet so
+ * the handler can return an honest empty/default prefill.
+ */
+export async function getEnrollmentPrefillApplication(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  applicationId: string | null,
+): Promise<AdmissionsApplicationRow | null> {
+  if (applicationId) {
+    const pinned = await getApplicationById(
+      db,
+      organizationId,
+      schoolId,
+      applicationId,
+    );
+    if (pinned && pinned.status === "approved") return pinned;
+    if (pinned) return pinned;
+  }
+
+  const rows = await db.queryObject<AdmissionsApplicationRow>(
+    `SELECT * FROM admissions_applications
+     WHERE organization_id = $1 AND school_id = $2 AND status = 'approved'
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [organizationId, schoolId],
+  );
+  return rows[0] ?? null;
+}
 
 export interface EnrollmentSubmitInput {
   applicationId: string | null;

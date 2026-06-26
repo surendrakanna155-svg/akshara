@@ -10,26 +10,38 @@ import {
   handleSettings,
   handleTasks,
 } from "./management_handlers.ts";
+import { handleUpdateSettings } from "./management_write_handlers.ts";
+
+type ManagementHandler = (req: Request, config: AppConfig) => Promise<Response>;
 
 function matchManagementRoute(
   method: string,
   path: string,
-): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
-  if (method !== "GET") return null;
+): { handler: ManagementHandler } | null {
+  if (method === "GET") {
+    const readRoutes: Record<string, ManagementHandler> = {
+      "/management/dashboard": handleDashboard,
+      "/management/analytics": handleAnalytics,
+      "/management/admissions-funnel": handleAdmissionsFunnel,
+      "/management/financial-health": handleFinancialHealth,
+      "/management/academic-health": handleAcademicHealth,
+      "/management/school-performance": handleSchoolPerformance,
+      "/management/tasks": handleTasks,
+      "/management/settings": handleSettings,
+    };
+    const handler = readRoutes[path] as ManagementHandler | undefined;
+    return handler ? { handler } : null;
+  }
 
-  const routes: Record<string, (req: Request, config: AppConfig) => Promise<Response>> = {
-    "/management/dashboard": handleDashboard,
-    "/management/analytics": handleAnalytics,
-    "/management/admissions-funnel": handleAdmissionsFunnel,
-    "/management/financial-health": handleFinancialHealth,
-    "/management/academic-health": handleAcademicHealth,
-    "/management/school-performance": handleSchoolPerformance,
-    "/management/tasks": handleTasks,
-    "/management/settings": handleSettings,
-  };
+  if (method === "PUT") {
+    const writeRoutes: Record<string, ManagementHandler> = {
+      "/management/settings": handleUpdateSettings,
+    };
+    const handler = writeRoutes[path] as ManagementHandler | undefined;
+    return handler ? { handler } : null;
+  }
 
-  const handler = routes[path] as (typeof routes)[string] | undefined;
-  return handler ? { handler } : null;
+  return null;
 }
 
 export async function routeManagement(

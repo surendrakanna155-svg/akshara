@@ -27,6 +27,14 @@ import {
 } from "./admissions_handlers.ts";
 import { handleDashboard } from "./admissions_dashboard_handlers.ts";
 import { handleAdmissionsIntelligence } from "./admissions_intelligence_handlers.ts";
+import {
+  handleAddApprovalNote,
+  handleApprovalQueue,
+  handleEnrollmentPrefill,
+  handlePendingEnrollments,
+  handleReports,
+  handleSettings,
+} from "./admissions_extras_handlers.ts";
 
 const UUID_SEGMENT =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -43,6 +51,22 @@ function matchAdmissionsRoute(
   }
   if (path === "/admissions/intelligence" && method === "GET") {
     return { handler: handleAdmissionsIntelligence, args: [] };
+  }
+  // MJ-H14: read endpoints backed by real admissions data.
+  if (path === "/admissions/reports" && method === "GET") {
+    return { handler: handleReports, args: [] };
+  }
+  if (path === "/admissions/settings" && method === "GET") {
+    return { handler: handleSettings, args: [] };
+  }
+  if (path === "/admissions/approval-queue" && method === "GET") {
+    return { handler: handleApprovalQueue, args: [] };
+  }
+  if (path === "/admissions/enrollments/pending" && method === "GET") {
+    return { handler: handlePendingEnrollments, args: [] };
+  }
+  if (path === "/admissions/enrollment/prefill" && method === "GET") {
+    return { handler: handleEnrollmentPrefill, args: [] };
   }
   if (path === "/admissions/leads" && method === "POST") {
     return { handler: handleCreateLead, args: [] };
@@ -123,6 +147,12 @@ function matchAdmissionsRoute(
   const approvalRejectMatch = path.match(/^\/admissions\/approval\/([^/]+)\/reject$/);
   if (approvalRejectMatch && method === "POST") {
     return { handler: handleRejectAdmission, args: [approvalRejectMatch[1]!] };
+  }
+
+  // MJ-H15: persist an approval note (mirrors the approve/{id}/approve regex).
+  const approvalNotesMatch = path.match(/^\/admissions\/approval\/([^/]+)\/notes$/);
+  if (approvalNotesMatch && method === "POST") {
+    return { handler: handleAddApprovalNote, args: [approvalNotesMatch[1]!] };
   }
 
   if (path === "/admissions/enrollments" && method === "POST") {

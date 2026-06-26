@@ -15,6 +15,8 @@ import {
 import type { AccessTokenClaims } from "../jwt.ts";
 import {
   CommunicationValidationError,
+  createNotificationTemplate,
+  listBroadcastHistoryEntries,
   listNotificationTemplates,
   listUserMessageThreads,
   listUserNotifications,
@@ -129,6 +131,86 @@ export async function handleListTemplates(
       return tenantDbNotConfiguredResponse(error);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to load templates", 500);
+  }
+}
+
+/**
+ * MJ-C6a: POST /communications/templates — create a notification template.
+ * Enforces the same permission/scope gate as {@link handleCreateBroadcast}
+ * (the "sendBroadcast" permission; school/organization scope checked in the
+ * service), persists into the same `notification_templates` store
+ * {@link handleListTemplates} reads from, and audits the write.
+ */
+export async function handleCreateTemplate(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "sendBroadcast");
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  try {
+    const template = await withTenantContext(config, auth.claims, async (db) =>
+      await createNotificationTemplate(
+        db,
+        auth.claims,
+        {
+          code: snakeStr(body, "code"),
+          channel: snakeStr(body, "channel"),
+          subjectTemplate: optionalSnakeStr(body, "subject_template"),
+          bodyTemplate: snakeStr(body, "body_template"),
+          variables: body["variables"],
+        },
+        req,
+      )
+    );
+    return jsonResponse(envelope(template), { status: 201 });
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to create template", 500);
+  }
+}
+
+/**
+ * MJ-C6b: GET /communications/broadcasts/history — list past broadcasts from
+ * the same `comm_broadcasts` store {@link handleCreateBroadcast} writes to.
+ * Real persisted rows only; an empty list when none exist.
+ */
+export async function handleBroadcastHistory(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "sendBroadcast");
+  if (denied) return denied;
+
+  const { limit, offset } = paginationFromRequest(req);
+
+  try {
+    const items = await withTenantContext(config, auth.claims, async (db) =>
+      await listBroadcastHistoryEntries(db, auth.claims, limit, offset)
+    );
+    return jsonResponse(envelope({ items, limit, offset }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load broadcast history", 500);
   }
 }
 

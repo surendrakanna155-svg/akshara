@@ -305,6 +305,24 @@ export async function sendBroadcastMessage(
   };
 }
 
+function templateToApi(t: {
+  id: string;
+  code: string;
+  channel: string;
+  subject_template: string | null;
+  body_template: string;
+  variables: unknown;
+}): Record<string, unknown> {
+  return {
+    id: t.id,
+    code: t.code,
+    channel: t.channel,
+    subjectTemplate: t.subject_template,
+    bodyTemplate: t.body_template,
+    variables: t.variables,
+  };
+}
+
 export async function listNotificationTemplates(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
@@ -312,12 +330,116 @@ export async function listNotificationTemplates(
   const schoolId = requireSchool(claims);
   const { listTemplates } = await import("./communication_repository.ts");
   const rows = await listTemplates(db, claims.tenant_id, schoolId);
-  return rows.map((t) => ({
-    id: t.id,
-    code: t.code,
-    channel: t.channel,
-    subjectTemplate: t.subject_template,
-    bodyTemplate: t.body_template,
-    variables: t.variables,
+  return rows.map(templateToApi);
+}
+
+/**
+ * MJ-C6a: create a notification template and persist it into the SAME
+ * `notification_templates` store {@link listNotificationTemplates} reads from,
+ * scoped to the caller's school. Validates the channel against the table's
+ * CHECK constraint and the required code/body up front, and audits the write.
+ * Returns the created template in the same shape as the list endpoint.
+ */
+export async function createNotificationTemplate(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  input: {
+    code: string;
+    channel: string;
+    subjectTemplate?: string;
+    bodyTemplate: string;
+    variables?: unknown;
+  },
+  req?: Request,
+): Promise<Record<string, unknown>> {
+  if (claims.scope !== "school" && claims.scope !== "organization") {
+    throw new CommunicationValidationError(
+      "Template management requires school or organization scope",
+    );
+  }
+  const schoolId = requireSchool(claims);
+  const code = input.code.trim();
+  if (!code) {
+    throw new CommunicationValidationError("Template code is required");
+  }
+  const channel = input.channel.trim();
+  if (!["sms", "email", "push"].includes(channel)) {
+    throw new CommunicationValidationError(
+      "channel must be one of sms, email, push",
+    );
+  }
+  const bodyTemplate = input.bodyTemplate.trim();
+  if (!bodyTemplate) {
+    throw new CommunicationValidationError("body_template is required");
+  }
+  const variables = Array.isArray(input.variables)
+    ? input.variables.map((v) => String(v))
+    : [];
+
+  const { insertTemplate } = await import("./communication_repository.ts");
+  const row = await insertTemplate(db, {
+    organizationId: claims.tenant_id,
+    schoolId,
+    code,
+    channel,
+    subjectTemplate: input.subjectTemplate?.trim() || null,
+    bodyTemplate,
+    variables,
+  });
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "templateCreated",
+      category: "workflow",
+      entityType: "notification_template",
+      entityId: row.id,
+      metadata: { code: row.code, channel: row.channel },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      eventType: "communication.template.created",
+      payload: { templateId: row.id, code: row.code },
+      sourceModule: "communication",
+      idempotencyKey: `communication.template.created:${row.id}`,
+    },
+    req,
+  );
+
+  return templateToApi(row);
+}
+
+/**
+ * MJ-C6b: list past broadcasts from the SAME `comm_broadcasts` store
+ * {@link sendBroadcastMessage} writes to, scoped to the caller's org/school.
+ * Empty list when none — never fabricated.
+ */
+export async function listBroadcastHistoryEntries(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  limit = 50,
+  offset = 0,
+): Promise<Record<string, unknown>[]> {
+  if (claims.scope !== "school" && claims.scope !== "organization") {
+    throw new CommunicationValidationError(
+      "Broadcast history requires school or organization scope",
+    );
+  }
+  const { listBroadcastHistory } = await import("./communication_repository.ts");
+  const rows = await listBroadcastHistory(
+    db,
+    claims.tenant_id,
+    claims.school_id ?? null,
+    limit,
+    offset,
+  );
+  return rows.map((b) => ({
+    id: b.id,
+    title: b.title,
+    audience: b.audience,
+    status: b.status,
+    recipientCount: b.recipient_count,
+    sentAt: b.sent_at ?? b.created_at,
   }));
 }

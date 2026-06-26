@@ -1,7 +1,9 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleBroadcastHistory,
   handleCreateBroadcast,
+  handleCreateTemplate,
   handleDeliveryMetrics,
   handleDeliveryWebhook,
   handleListTemplates,
@@ -18,12 +20,23 @@ import {
   handleUnregisterDeviceToken,
 } from "./communication_handlers.ts";
 
-function matchCommunicationRoute(
+/** Exported for path-parity tests: pure method+path → handler resolution with
+ * no auth/DB side effects. */
+export function matchCommunicationRoute(
   method: string,
   path: string,
 ): { handler: (req: Request, config: AppConfig) => Promise<Response> } | null {
   if (method === "GET" && path === "/communications/templates") {
     return { handler: handleListTemplates };
+  }
+  // MJ-C6a: create a notification template (was 404 — only GET existed).
+  if (method === "POST" && path === "/communications/templates") {
+    return { handler: handleCreateTemplate };
+  }
+  // MJ-C6b: past-broadcast history (was 404). Must precede the create route so
+  // the more-specific path matches first.
+  if (method === "GET" && path === "/communications/broadcasts/history") {
+    return { handler: handleBroadcastHistory };
   }
   if (method === "POST" && path === "/communications/broadcasts") {
     return { handler: handleCreateBroadcast };
@@ -52,7 +65,12 @@ function matchCommunicationRoute(
   if (method === "POST" && path === "/parent/device-tokens/unregister") {
     return { handler: handleUnregisterDeviceToken };
   }
-  if (method === "GET" && path === "/parent/messages/threads") {
+  // MJ-C3: the client calls /parent/messages; alias it to the thread list so it
+  // no longer 404s (only /parent/messages/threads was registered).
+  if (
+    method === "GET" &&
+    (path === "/parent/messages/threads" || path === "/parent/messages")
+  ) {
     return { handler: handleParentMessageThreads };
   }
   if (method === "POST" && path === "/parent/messages/send") {
