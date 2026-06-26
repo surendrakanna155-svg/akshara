@@ -92,6 +92,17 @@ def read(path):
         return f.read()
 
 
+def jwt_claims(token):
+    """Decode a JWT payload (no verification) to read scope-specific claims."""
+    try:
+        import base64
+        p = token.split(".")[1]
+        p += "=" * (-len(p) % 4)
+        return json.loads(base64.urlsafe_b64decode(p).decode())
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def login(ident):
     for _ in range(6):
         s, b = http("POST", "/auth/login", body={"identifier": ident, "type": "phone"})
@@ -246,79 +257,67 @@ rec("MJ-M1.visitors payload keeps static fields (qr/parentRoute)",
     f"keys={[k for k in vd.keys()] if isinstance(vd, dict) else vd}")
 
 # ── MJ-H9 — attendance correction apply updates the real record ─────────────────
-# Resolve a class + the student's id from the teacher roster, mark absent, correct
-# to present, approve, then confirm the student's attendance reads back present.
+# Drive the REAL fixed code path: teacher marks the student absent → admin creates
+# a correction → admin submits it to the Approval Center → admin approves it (this
+# is the ONLY route that calls applyAttendanceCorrection) → read the student's
+# attendance back (the overlay reads attendance_records, so a present read-back
+# proves the record actually flipped — the old 0-row UPDATE left it absent).
 def run_attendance_correction():
-    # 1. roster: find a class + the student row
-    s, b = http("GET", "/teacher/attendance/classes", token=teacher)
-    classes = items(b)
-    class_id = None
-    for c in classes:
-        cid = c.get("classId") or c.get("id") or c.get("class_id")
-        if cid:
-            class_id = cid
-            break
-    if not class_id:
-        rec("MJ-H9.attendance correction applies to real record", False,
-            "no class available from /teacher/attendance/classes")
-        return
-    # student_id: from /auth/me (student scope carries student_id) via permissions
-    s, me2 = http("GET", "/auth/me", token=student)
-    sid = d(me2).get("studentId") or d(me2).get("student_id")
-    if not sid:
-        # fall back: parent child id
-        s, pb = http("GET", "/auth/me", token=parent)
-        kids = d(pb).get("childIds") or d(pb).get("child_ids") or []
-        sid = kids[0] if kids else None
+    sclaims = jwt_claims(student)
+    sid = sclaims.get("student_id") or sclaims.get("studentId")
+    tclaims = jwt_claims(teacher)
+    teacher_sub = tclaims.get("sub")
     if not sid:
         rec("MJ-H9.attendance correction applies to real record", False,
-            "could not resolve a student_id to correct")
+            "could not resolve student_id from the student JWT")
         return
-    # 2. teacher submits attendance with the student ABSENT
+    class_id = f"class_certw1_{TS}"
+    # 1. teacher marks the student ABSENT in a fresh submitted session
     s, b = http("POST", "/teacher/attendance/submit", token=teacher, body={
         "class_id": class_id,
         "entries": [{"student_id": sid, "mark": "absent"}],
     })
     if s not in (200, 201):
         rec("MJ-H9.attendance correction applies to real record", False,
-            f"attendance submit HTTP {s}")
+            f"attendance submit HTTP {s} {str(b)[:120]}")
         return
-    # 3. create a correction absent→present (manageSis: admin)
+    # confirm the pre-state via the student's own attendance overlay
+    s, ab = http("GET", "/student/attendance", token=student)
+    pre_logs = d(ab).get("recentLogs") or []
+    # 2. admin creates a correction absent→present (sisStudentId accepts the uuid)
     s, b = http("POST", "/attendance/corrections", token=admin, body={
         "sisStudentId": sid, "studentName": student_name,
-        "classLabel": "8", "section": "A", "dateLabel": "Today",
-        "fromMark": "Absent", "toMark": "Present",
+        "classLabel": class_id, "section": "",
+        "dateLabel": "Today", "fromMark": "Absent", "toMark": "Present",
         "reason": f"cert correction {TS}",
     })
-    corr = d(b)
-    corr_id = corr.get("id")
+    corr_id = d(b).get("id")
     if not corr_id:
         rec("MJ-H9.attendance correction applies to real record", False,
             f"create correction HTTP {s} body={str(b)[:160]}")
         return
-    # 4. approve it through the approval center (principal/admin)
-    approved = False
-    for path, payload in (
-        (f"/approvals/{corr_id}/approve", {}),
-        ("/approvals/decide", {"id": corr_id, "decision": "approve"}),
-        (f"/attendance/corrections/{corr_id}/approve", {}),
-    ):
-        s, b = http("POST", path, token=admin, body=payload)
-        if s in (200, 201):
-            approved = True
-            break
-    # 5. read back the student's attendance — the corrected mark must be present
-    s, b = http("GET", "/student/attendance", token=student)
-    att = d(b)
-    logs = att.get("recentLogs") or att.get("logs") or []
-    # The just-corrected day should read 'present'/'Present'.
-    present_today = any(
-        str(l.get("status", "")).lower() in ("present", "p")
-        for l in logs[:3]
-    )
-    rec("MJ-H9.attendance correction applies to real record (approve→present)",
-        approved and (present_today or (att.get("kpi") or {})),
-        f"approved={approved} present_seen={present_today} corr={corr_id}")
+    # 3. submit the correction to the Approval Center
+    s, b = http("POST", "/approvals", token=admin, body={
+        "type": "attendanceCorrection", "title": f"Attendance correction {TS}",
+        "summary": f"{student_name} absent→present", "requester_id": teacher_sub or "cert",
+        "requester_name": "Cert Teacher", "entity_type": "attendance_correction",
+        "entity_id": corr_id,
+    })
+    appr_id = d(b).get("id")
+    if not appr_id:
+        rec("MJ-H9.attendance correction applies to real record", False,
+            f"submit approval HTTP {s} body={str(b)[:160]}")
+        return
+    # 4. approve it → triggers applyAttendanceCorrection (the fixed UPDATE)
+    s, b = http("POST", f"/approvals/{appr_id}/approve", token=admin, body={})
+    approved = s in (200, 201)
+    # 5. read the student's attendance back — the corrected day must be present
+    s, ab2 = http("GET", "/student/attendance", token=student)
+    logs = d(ab2).get("recentLogs") or []
+    present_today = any(str(l.get("status", "")).lower() == "present" for l in logs[:2])
+    rec("MJ-H9.attendance correction approve→record flips to present (real UPDATE)",
+        approved and present_today,
+        f"approved={approved} present_in_recent={present_today} corr={corr_id} appr={appr_id}")
 
 run_attendance_correction()
 

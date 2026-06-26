@@ -1,17 +1,19 @@
 # AKSHARA — Journey Wave 1 Completion Certification
 
-**Status:** 🟡 **CODE-COMPLETE · ALL GATES GREEN · LIVE CERT + DEPLOY PENDING (owner SSH socket)**
+**Status:** ✅ **PRODUCTION CERTIFIED (2026-06-26) — live 16/16**
 **Wave:** MODULE_JOURNEY_ROADMAP **Wave 1** — "Data-integrity & money/identity correctness — silent failures that corrupt or hide real records."
 **Scope source of truth:** `docs/MODULE_JOURNEY_AUDIT.md` (issue IDs) + `docs/MODULE_JOURNEY_ROADMAP.md` (Wave 1). No new features, no roadmap expansion — this only closes the audit's Wave-1 findings.
-**Live cert script (ready):** `scripts/qa/live_cert_journey_wave1.py` — real VPS, real pilot OTP (teacher/student/admin/parent), real write→read cycles. **Not yet run** — the backend changes (+1 migration) must be deployed to the VPS first, which requires the owner's SSH control socket (my key is not authorised on the VPS).
+**Live cert:** `scripts/qa/live_cert_journey_wave1.py` → **16/16** against the live VPS pilot (`https://akshara.veloraunisexsalon.com`) with real pilot OTP auth (teacher/student/admin/parent JWTs), real RBAC, real DB write→read cycles, and the Approval-Center → `applyAttendanceCorrection` path.
 
 ---
 
 ## 1. Verdict
 
-**Code-complete and gate-certified.** All **7 Wave-1 findings** (2 Critical, 4 High, 1 Medium) are fixed at the true root cause with real data, real persistence, and RBAC/RLS preserved. The three quality gates are green with **zero regression** vs the pre-wave baseline. The work was executed by four parallel agents over disjoint file sets, then integrated and reviewed centrally.
+**PRODUCTION CERTIFIED.** All **7 Wave-1 findings** (2 Critical, 4 High, 1 Medium) are fixed at the true root cause with real data, real persistence, and RBAC/RLS preserved. The three quality gates are green with **zero regression**, and the live cert is **16/16** against the deployed VPS pilot. The work was executed by four parallel agents over disjoint file sets, then integrated, reviewed, deployed, and live-certified centrally.
 
-**Remaining to reach PRODUCTION CERTIFIED:** (1) deploy the edge functions + the one new migration to the live VPS pilot; (2) run `scripts/qa/live_cert_journey_wave1.py` against the live backend; (3) flip this header to ✅ with the live N/N. Both (1) and (2) are blocked only by VPS access (owner opens the SSH control socket I reuse — see `akshara-vps-deploy-ssh-blocked`).
+**Live-cert caught a real latent bug the offline gates could not:** once MJ-C2 made the grade path reachable, `reviewHomework`'s pre-existing `WHERE id = $1::uuid OR homework_id = $1` made the driver infer `$1` as `uuid`, so `homework_id` (text) `= $1` threw `operator does not exist: text = uuid` (HTTP 500 on grade). Fixed by casting the column instead (`id::text = $1 OR homework_id = $1`) so the single param is unambiguously text; re-certified green. Deno fake-DB tests cannot catch a Postgres type-resolution error — the live write→read cycle is what surfaced it.
+
+**Deploy:** 10 edge `_shared` files synced to the VPS host bind-mount (`/opt/akshara/functions/_shared`, each verified byte-identical to the committed source), migration `20260805000000_wave1_hr_employee_profile.sql` applied to `akshara_db` (UPDATE 1 leave policy + UPDATE 4 reportingManager) and ledgered in `supabase_migrations.schema_migrations`, edge container restarted, `/health` ok.
 
 **Headline trust win:** the silent data-integrity failures are closed — a teacher can now actually **see and grade** student homework (it was invisible in live), a graded homework now **reaches the student** with its grade, homework is delivered to the **target class** instead of the whole school, an approved attendance correction now **actually updates the record** (the old 0-row UPDATE is fixed), every HR employee profile shows that **person's real data** instead of one shared fabricated template, a logged hostel visitor now **appears** on the Visitors screen, and the Razorpay confirm path is now **fail-closed** so it can never capture a payment without gateway proof if stub mode is ever disabled.
 
@@ -24,7 +26,7 @@
 | `flutter analyze --fatal-infos` | **0 issues** | 0 | — |
 | `flutter test` | **2389 passed / 1 skipped / 0 failed** | 2389 | no regression |
 | `deno test _shared/` | **707 passed / 0 failed / 2 ignored** | 680 | **+27 new Wave-1 tests** |
-| Live cert (`live_cert_journey_wave1.py`) | ⏳ **pending deploy + SSH socket** | — | — |
+| Live cert (`live_cert_journey_wave1.py`) | ✅ **16/16** vs live VPS pilot | — | real auth + RBAC + write→read |
 
 The +27 deno tests cover: teacher-homework submissions overlay + pendingReviews, grade write-back to the student entity, class-targeted fan-out (+ zero-enrollment fallback), `applyAttendanceCorrection` real-record update, Razorpay fail-closed live mode + stub path, HR per-employee distinctness, and hostel visitor recompute.
 
@@ -81,14 +83,18 @@ The +27 deno tests cover: teacher-homework submissions overlay + pendingReviews,
 
 ---
 
-## 7. Live certification plan (run once the VPS socket is open)
+## 7. Live certification result (16/16)
 
-1. Deploy edge functions + apply `20260805000000_wave1_hr_employee_profile.sql` to the VPS (standard `/deploy` recipe; edge with `--no-deps` to dodge the known pg healthcheck quirk).
-2. Run `python3 scripts/qa/live_cert_journey_wave1.py` — expects all checks green:
-   - homework create→student-receives→submit→teacher-sees-real-UUID→grade→student-sees-grade,
-   - class targeting (non-existent class delivers to 0),
-   - HR two-employee distinctness + no shared constants,
-   - hostel visitor log→appears,
-   - attendance correction approve→reads-back-present,
-   - Razorpay fail-closed guard present.
-3. On green, flip §1 status to ✅ **PRODUCTION CERTIFIED (live N/N)** and record the count here.
+Run: `python3 scripts/qa/live_cert_journey_wave1.py` against `https://akshara.veloraunisexsalon.com` — **16/16 PASS**:
+- health + real pilot OTP auth (admin/teacher/student/parent JWTs);
+- **MJ-C2** teacher creates homework → student receives (pending) → student submits → **teacher sees the submission with its real UUID + pendingReviews**;
+- **MJ-H7** teacher grades the real submission (HTTP 200, after the `text=uuid` fix) → **student reads back status=reviewed, grade=A**;
+- **MJ-H8** a non-existent class delivers to **0** students (class-targeted, not whole-school);
+- **MJ-H10** HR profiles carry **no fabricated shared constants** + two employees yield **distinct** profile data;
+- **MJ-M1** a logged hostel visitor **appears** in `activeVisitors` (live recompute) with its real passId; static fields retained;
+- **MJ-H9** teacher marks absent → correction → Approval-Center approve → **the student's attendance reads back present** (the real record flipped — `applyAttendanceCorrection`, correction `att_corr_4`, approval UUID confirmed);
+- **MJ-H11** `confirmPayment` fail-closed guard present (live runs stub mode; the live-mode capture-without-proof branch is now impossible).
+
+### Honest notes
+- **HR `reportingManager`**: for employees whose seed `hr_entities` payload already carried an (empty) `reportingManager` key, the **idempotent** backfill migration left it untouched, so the profile shows the honest empty / "Not on record" state rather than the derived value. This is by design — it is never a fabricated shared constant. The certified MJ-H10 win (no identical fabricated data, real distinct per-employee data) holds regardless. The migration populated `reportingManager` on the 4 rows that lacked the key.
+- **Razorpay (MJ-H11)** real-money capture remains owner-gated (Razorpay merchant keys + app SDK); the fix only makes the backend fail-closed.

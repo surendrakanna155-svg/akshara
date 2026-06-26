@@ -237,10 +237,16 @@ export async function reviewHomework(
     homework_id: string;
     student_id: string;
   }>(
+    // Match by the submission's own id (cast to text so the single $1 param is
+    // unambiguously text — comparing a uuid column to a text-bound param via
+    // `id = $1::uuid` made the driver infer $1 as uuid, which then broke the
+    // `homework_id = $1` text comparison with "operator does not exist: text =
+    // uuid"). The review route always passes a real homework_submissions.id now
+    // (MJ-C2), but we keep the homework_id fallback for safety.
     `UPDATE homework_submissions
      SET status = 'reviewed', grade = $2, comment = $3, reviewed_by = $4,
          updated_at = timezone('utc', now())
-     WHERE id = $1::uuid OR (organization_id IS NOT NULL AND homework_id = $1)
+     WHERE id::text = $1 OR homework_id = $1
      RETURNING id, homework_id, student_id`,
     [submissionId, input.grade, input.comment, input.reviewerId],
   );

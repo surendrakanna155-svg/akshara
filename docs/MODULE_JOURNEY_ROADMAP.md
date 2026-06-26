@@ -21,7 +21,7 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 | Wave | Theme | Items | Severity mix | Est. |
 |------|-------|------:|--------------|------|
 | ~~**Wave 0**~~ | ~~Stop showing fake data as real — live-config drift + demo fallbacks~~ | 8 | 1C + 5H + 1M + 1L | ✅ **DONE 2026-06-26** (live 14/14) — cert: `docs/JOURNEY_WAVE_0_CERTIFICATION.md` |
-| ~~**Wave 1**~~ | ~~Data-integrity & money/identity correctness — silent failures that corrupt or hide real records~~ | 7 | 2C + 4H + 1M | 🟡 **CODE-COMPLETE 2026-06-26** (gates: analyze 0 · flutter 2389 · deno 707, +27) — cert: `docs/JOURNEY_WAVE_1_CERTIFICATION.md`; live cert + deploy pending owner SSH socket |
+| ~~**Wave 1**~~ | ~~Data-integrity & money/identity correctness — silent failures that corrupt or hide real records~~ | 7 | 2C + 4H + 1M | ✅ **DONE 2026-06-26** (live **16/16**) — cert: `docs/JOURNEY_WAVE_1_CERTIFICATION.md`; deployed to VPS (10 edge files + migration 20260805000000); gates analyze 0 · flutter 2389 · deno 707 |
 | **Wave 2** | Wire-gap 404s — build the missing backend routes so whole client journeys stop failing silently | 10 | Critical x3, High x5, Medium x1 | L x5 + M x4 ≈ 2 batches (split parent/teacher vs admissions/comms/settings if needed) |
 | **Wave 3** | Static-snapshot read modernization — apply the live-overlay/recompute framework to remaining personas/admin dashboards | 6 | Critical x2, High x2, Medium x2 | L x4 + M x2 ≈ 2 batches |
 | **Wave 4** | Build missing write surfaces & orphaned-feature wiring — complete partial modules and surface hidden paid features | 12 | Critical x1, High x6, Medium x4 | L x6 + M x6 + S x1 ≈ 2-3 batches |
@@ -52,9 +52,9 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 
 ---
 
-## Wave Wave 1 — Data-integrity & money/identity correctness — silent failures that corrupt or hide real records 🟡 **CODE-COMPLETE (2026-06-26)**
+## Wave Wave 1 — Data-integrity & money/identity correctness — silent failures that corrupt or hide real records ✅ **COMPLETE (2026-06-26)**
 
-> **Status: CODE-COMPLETE — gates green, live cert + deploy pending.** Cert: `docs/JOURNEY_WAVE_1_CERTIFICATION.md`. All 7 items (MJ-C2/H7/H8/H9/H10/H11/M1) fixed at root cause with new deno coverage. Gates held: analyze 0 · flutter 2389 · deno 707 (+27 Wave-1 tests). One migration (`20260805000000_wave1_hr_employee_profile.sql`, idempotent UPDATE-only). Live cert script `scripts/qa/live_cert_journey_wave1.py` is written and ready; running it + deploying the edge/migration to the VPS is blocked only on the owner opening the SSH control socket.
+> **Status: DONE.** Cert: `docs/JOURNEY_WAVE_1_CERTIFICATION.md`. Live cert `scripts/qa/live_cert_journey_wave1.py` **16/16** (real OTP auth/RBAC/write→read). All 7 items (MJ-C2/H7/H8/H9/H10/H11/M1) fixed at root cause, deployed to the VPS pilot (10 edge `_shared` files + migration `20260805000000_wave1_hr_employee_profile.sql` applied + ledgered), edge restarted. Gates held: analyze 0 · flutter 2389 · deno 707 (+27 Wave-1 tests). Live cert additionally surfaced + fixed a latent `text=uuid` 500 in `reviewHomework` (made reachable by MJ-C2).
 
 **Why this wave:** After the cheap trust fixes, close the silent data-integrity defects where a write succeeds but is wrong, lost, or invisible — these are the items most likely to produce incorrect operational decisions or financial discrepancies and must be airtight before pilot. Grouped because they share the write-then-read-decoupling and gateway-integrity root causes and can be certified together as a correctness batch.
 
