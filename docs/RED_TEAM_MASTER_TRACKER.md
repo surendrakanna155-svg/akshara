@@ -2,7 +2,7 @@
 
 **This is the single source of truth for every Red Team issue** until each reaches `Closed`. Nothing is deleted; merged/duplicate/false-positive IDs are **retained** with their disposition recorded.
 
-**Last updated:** 2026-06-27 (Wave 2 CLOSED) · **HEAD:** `84e4f02` · **Branch:** `feature/scope-trim-school-build`
+**Last updated:** 2026-06-27 (Wave 2 CLOSED) · **HEAD:** `d347b4d` · **Branch:** `feature/scope-trim-school-build`
 **Inputs:** [`RED_TEAM_CERTIFICATION_AUDIT.md`](./RED_TEAM_CERTIFICATION_AUDIT.md) · [`RED_TEAM_VALIDATION_REPORT.md`](./RED_TEAM_VALIDATION_REPORT.md) · [`RED_TEAM_REPRODUCTION_REPORT.md`](./RED_TEAM_REPRODUCTION_REPORT.md) · [`RED_TEAM_COMPLETION_ROADMAP.md`](./RED_TEAM_COMPLETION_ROADMAP.md)
 **Wave status:** ✅ **Wave 1 (RT-01..08) CLOSED** — live 26/26, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md), commit `6b1e5c1`, 2026-06-27. ✅ **Wave 2 (RT-09..15) CLOSED** — live 25/25 + Wave-1 regression 26/26, [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md), migration `20260815000000`, 2026-06-27. Waves 3–5 remain **Open** (awaiting approval).
 
