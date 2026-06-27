@@ -166,6 +166,34 @@ export function createEntityWriteStore(
     return rows.length > 0;
   }
 
+  /**
+   * RT-06: lock the snapshot row (`SELECT … FOR UPDATE`) before reading it, so
+   * concurrent read-modify-write mutators on the same snapshot are serialized
+   * instead of last-writer-wins (which silently dropped leave requests /
+   * approvals / settings). Callers run inside `withTenantContext`'s single
+   * transaction, so the row lock is held until commit. Returns the locked
+   * payload, or null if the row does not yet exist.
+   */
+  async function lockSnapshot(
+    db: TenantQueryClient,
+    organizationId: string,
+    schoolId: string,
+    entityType: string,
+    id: string,
+  ): Promise<Record<string, unknown> | null> {
+    const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
+      `SELECT payload
+       FROM ${tableName}
+       WHERE organization_id = $1
+         AND school_id = $2
+         AND entity_type = $3
+         AND id = $4
+       FOR UPDATE`,
+      [organizationId, schoolId, entityType, id],
+    );
+    return rows[0]?.payload ?? null;
+  }
+
   async function mutateSnapshot(
     db: TenantQueryClient,
     organizationId: string,
@@ -174,24 +202,48 @@ export function createEntityWriteStore(
     mutate: (current: Record<string, unknown>) => Record<string, unknown>,
     snapshotId = "default",
   ): Promise<Record<string, unknown>> {
-    const existing = await find(
+    const existing = await lockSnapshot(
       db,
       organizationId,
       schoolId,
       snapshotEntityType,
       snapshotId,
     );
-    const next = mutate(existing ?? {});
     if (existing === null) {
-      return await insert(
-        db,
-        organizationId,
-        schoolId,
-        snapshotEntityType,
-        snapshotId,
-        next,
-      );
+      // First write for this snapshot. Two concurrent first-writers both see
+      // null here; the loser's INSERT raises a primary-key conflict — recover by
+      // locking the now-present row and applying our mutation on top of it (no
+      // lost update). The winner returns directly.
+      try {
+        return await insert(
+          db,
+          organizationId,
+          schoolId,
+          snapshotEntityType,
+          snapshotId,
+          mutate({}),
+        );
+      } catch (error) {
+        if (!String(error).includes("duplicate key")) throw error;
+        const current = await lockSnapshot(
+          db,
+          organizationId,
+          schoolId,
+          snapshotEntityType,
+          snapshotId,
+        );
+        const replaced = await replace(
+          db,
+          organizationId,
+          schoolId,
+          snapshotEntityType,
+          snapshotId,
+          mutate(current ?? {}),
+        );
+        return replaced ?? mutate(current ?? {});
+      }
     }
+    const next = mutate(existing);
     const replaced = await replace(
       db,
       organizationId,

@@ -302,13 +302,27 @@ export async function handleUpdateExamMark(
     if (!Number.isFinite(marksObtained)) {
       throw new ExamValidationError("marksObtained is required");
     }
+    // RT-08: server-side lower bound. `marks_obtained` is an INTEGER column; a
+    // negative or fractional value would corrupt grades. The upper bound
+    // (<= max_marks) needs the entry's max_marks and is enforced below; a DB
+    // CHECK (exam_mark_entries_marks_bounds) is the backstop for both.
+    if (!Number.isInteger(marksObtained) || marksObtained < 0) {
+      throw new ExamValidationError("marksObtained must be a non-negative integer");
+    }
 
     const { organizationId, schoolId } = tenantIds(claims);
     const row = await withTenantContext(config, claims, async (db) => {
+      // Load the entry once: needed for the RT-08 upper-bound check and reused
+      // for the subject-teacher scope check below.
+      const mark = await getExamMark(db, organizationId, schoolId, markEntryId);
+      if (!mark) throw new ExamMarkNotFoundError(markEntryId);
+      if (marksObtained > mark.max_marks) {
+        throw new ExamValidationError(
+          `marksObtained (${marksObtained}) exceeds max_marks (${mark.max_marks})`,
+        );
+      }
       // P2 — a plain subject teacher may only edit marks for exams they teach.
       if (isSubjectTeacherScoped(claims)) {
-        const mark = await getExamMark(db, organizationId, schoolId, markEntryId);
-        if (!mark) throw new ExamMarkNotFoundError(markEntryId);
         const session = await getExamSession(
           db,
           organizationId,

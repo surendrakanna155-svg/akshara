@@ -42,6 +42,66 @@ export interface WriteResult {
 }
 
 /**
+ * RT-07: store-and-replay idempotency for generic entity writes.
+ *
+ * The first request with a given key claims a `request_idempotency` row
+ * (`INSERT … ON CONFLICT DO NOTHING`), runs `operation`, and stores the inner
+ * payload + status. A concurrent or repeated request with the same key is
+ * serialized by the `(organization_id, idempotency_key)` unique index — it
+ * finds the claim already taken and replays the stored response instead of
+ * writing again. All of this runs inside the caller's single tenant
+ * transaction, so the claim and the write commit or roll back together.
+ */
+async function runWithIdempotency(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  idempotencyKey: string,
+  req: Request,
+  operation: () => Promise<WriteResult>,
+): Promise<WriteResult> {
+  const url = new URL(req.url);
+  const claimed = await db.queryObject<{ id: string }>(
+    `INSERT INTO request_idempotency
+       (organization_id, school_id, idempotency_key, method, path)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (organization_id, idempotency_key) DO NOTHING
+     RETURNING id`,
+    [organizationId, schoolId, idempotencyKey, req.method, url.pathname],
+  );
+
+  if (claimed.length === 0) {
+    // Key already used — replay the stored response.
+    const prior = await db.queryObject<{ status_code: number | null; response_payload: Record<string, unknown> | null }>(
+      `SELECT status_code, response_payload FROM request_idempotency
+       WHERE organization_id = $1 AND idempotency_key = $2`,
+      [organizationId, idempotencyKey],
+    );
+    const row = prior[0];
+    if (row && row.response_payload != null) {
+      return { payload: row.response_payload, status: row.status_code ?? 201 };
+    }
+    // The claim exists but no response was stored — a same-key request is still
+    // in flight (or its tx rolled back). Surface a clean conflict rather than
+    // risk a duplicate write.
+    throw new WriteValidationError(
+      "A request with this Idempotency-Key is already being processed",
+      409,
+      "IDEMPOTENCY_CONFLICT",
+    );
+  }
+
+  const result = await operation();
+  await db.queryObject(
+    `UPDATE request_idempotency
+       SET status_code = $3, response_payload = $4::jsonb, completed_at = timezone('utc', now())
+     WHERE organization_id = $1 AND idempotency_key = $2`,
+    [organizationId, idempotencyKey, result.status ?? 201, JSON.stringify(result.payload)],
+  );
+  return result;
+}
+
+/**
  * Factory for module write handlers. Mirrors {@link createModuleReadHandlers}
  * but enforces a `manage*` permission and runs the operation inside a single
  * tenant transaction (so the entity write + its audit row commit or roll back
@@ -69,10 +129,26 @@ export function createModuleWriteHandlers(managePermission: string) {
     const organizationId = organizationIdFromClaims(auth.claims);
     const schoolId = schoolIdFromClaims(auth.claims);
 
+    // RT-07: honour the (already CORS-advertised) Idempotency-Key on generic
+    // entity writes. When present, the operation + its store/replay run in the
+    // same tenant transaction so a double-tapped POST writes once and replays.
+    const idempotencyKey = req.headers.get("Idempotency-Key") ??
+      req.headers.get("idempotency-key");
+
     try {
-      const result = await withTenantContext(config, auth.claims, (db) =>
-        operation({ db, organizationId, schoolId, claims: auth.claims, body, req })
-      );
+      const result = await withTenantContext(config, auth.claims, async (db) => {
+        if (idempotencyKey) {
+          return await runWithIdempotency(
+            db,
+            organizationId,
+            schoolId,
+            idempotencyKey,
+            req,
+            () => operation({ db, organizationId, schoolId, claims: auth.claims, body, req }),
+          );
+        }
+        return await operation({ db, organizationId, schoolId, claims: auth.claims, body, req });
+      });
       return jsonResponse(envelope(result.payload), { status: result.status ?? 201 });
     } catch (error) {
       if (error instanceof TenantDbNotConfiguredError) {

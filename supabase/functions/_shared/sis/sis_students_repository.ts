@@ -356,43 +356,78 @@ export async function createStudent(
   }
 
   const dbStatus = statusToDb(parseApiStatus(input.status));
-  const studentCode = await generateStudentCode(db, schoolId);
 
-  const studentRows = await db.queryObject<{ id: string }>(
-    `INSERT INTO students (
-      organization_id, school_id, student_code, display_name, status, created_by
-    ) VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING id`,
-    [organizationId, schoolId, studentCode, displayName, dbStatus, input.createdBy],
-  );
-  const studentId = studentRows[0]!.id;
+  // RT-03: `generateStudentCode` is MAX+1 with no lock, so two concurrent
+  // enrolments compute the same code and one 500s on the UNIQUE(school_id,
+  // student_code) constraint. Retry-on-conflict: a savepoint lets us roll back
+  // just the failed INSERT (not the whole transaction) and re-derive the code
+  // — by then the winner is committed/visible, so MAX+1 advances past it.
+  let studentId: string | undefined;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const studentCode = await generateStudentCode(db, schoolId);
+    await db.queryObject("SAVEPOINT sis_student_code");
+    try {
+      const studentRows = await db.queryObject<{ id: string }>(
+        `INSERT INTO students (
+          organization_id, school_id, student_code, display_name, status, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id`,
+        [organizationId, schoolId, studentCode, displayName, dbStatus, input.createdBy],
+      );
+      await db.queryObject("RELEASE SAVEPOINT sis_student_code");
+      studentId = studentRows[0]!.id;
+      break;
+    } catch (error) {
+      await db.queryObject("ROLLBACK TO SAVEPOINT sis_student_code");
+      if (String(error).includes("duplicate key") && attempt < 4) continue;
+      throw error;
+    }
+  }
+  if (!studentId) {
+    throw new ValidationError("Could not allocate a unique student code; please retry");
+  }
 
-  await db.queryObject(
-    `INSERT INTO student_profiles (
-      organization_id, school_id, student_id, admission_number,
-      date_of_birth, gender, blood_group, address, city, state, postal_code, country,
-      created_by
-    ) VALUES (
-      $1, $2, $3, $4,
-      $5::date, $6, $7, $8, $9, $10, $11, $12,
-      $13
-    )`,
-    [
-      organizationId,
-      schoolId,
-      studentId,
-      admissionNumber,
-      input.dateOfBirth || null,
-      input.gender ?? null,
-      input.bloodGroup ?? null,
-      input.address ?? null,
-      input.city ?? null,
-      input.state ?? null,
-      input.postalCode ?? null,
-      input.country ?? null,
-      input.createdBy,
-    ],
-  );
+  // RT-02: the admissionNumberExists() check above is TOCTOU-racy. The DB now
+  // enforces UNIQUE(school_id, admission_number); map the violation to the same
+  // DuplicateAdmissionNumberError (409) so a concurrent duplicate is rejected
+  // cleanly instead of 500ing. The whole transaction rolls back (no orphan
+  // students row).
+  try {
+    await db.queryObject(
+      `INSERT INTO student_profiles (
+        organization_id, school_id, student_id, admission_number,
+        date_of_birth, gender, blood_group, address, city, state, postal_code, country,
+        created_by
+      ) VALUES (
+        $1, $2, $3, $4,
+        $5::date, $6, $7, $8, $9, $10, $11, $12,
+        $13
+      )`,
+      [
+        organizationId,
+        schoolId,
+        studentId,
+        admissionNumber,
+        input.dateOfBirth || null,
+        input.gender ?? null,
+        input.bloodGroup ?? null,
+        input.address ?? null,
+        input.city ?? null,
+        input.state ?? null,
+        input.postalCode ?? null,
+        input.country ?? null,
+        input.createdBy,
+      ],
+    );
+  } catch (error) {
+    if (
+      String(error).includes("duplicate key") &&
+      String(error).includes("admission")
+    ) {
+      throw new DuplicateAdmissionNumberError(admissionNumber);
+    }
+    throw error;
+  }
 
   const detail = await getStudent(db, organizationId, schoolId, studentId);
   if (!detail) throw new StudentNotFoundError(studentId);

@@ -273,6 +273,10 @@ export async function handleCreateCollection(
         notes: optionalStr(body, "notes", "notes"),
         collectionDate: optionalStr(body, "collection_date", "collectionDate"),
         collectedBy: auth.claims.sub,
+        // RT-01: honour the Idempotency-Key header (already CORS-advertised) so a
+        // double-submitted payment replays the original collection.
+        idempotencyKey: req.headers.get("Idempotency-Key") ??
+          req.headers.get("idempotency-key") ?? undefined,
       });
       const { recordMutationAudit } = await import("../audit/audit_repository.ts");
       await recordMutationAudit(

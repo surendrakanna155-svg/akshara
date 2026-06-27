@@ -140,16 +140,11 @@ export async function createAttendanceCorrection(
   schoolId: string,
   input: CreateAttendanceCorrectionInput,
 ): Promise<AttendanceCorrectionRow> {
-  let id = input.id;
-  if (!id) {
-    const countRows = await db.queryObject<{ count: string }>(
-      `SELECT count(*)::text AS count FROM attendance_corrections
-       WHERE organization_id = $1 AND school_id = $2`,
-      [organizationId, schoolId],
-    );
-    const next = (parseInt(countRows[0]?.count ?? "0", 10) || 0) + 1;
-    id = `att_corr_${next}`;
-  }
+  // RT-04: a `count(*)+1` id raced to primary-key (org, school, id) conflicts
+  // under concurrent submits (two callers compute the same next id → one 500s).
+  // A UUID-suffixed id is collision-free without a lock. Staff omit `input.id`;
+  // parent callers still pass their own unique id (see CreateAttendanceCorrectionInput).
+  const id = input.id ?? `att_corr_${crypto.randomUUID()}`;
 
   const studentId = await resolveStudentId(
     db,

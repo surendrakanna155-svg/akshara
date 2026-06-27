@@ -211,13 +211,11 @@ export async function createExamSession(
   schoolId: string,
   input: CreateExamInput,
 ): Promise<ExamSessionRow> {
-  const countRows = await db.queryObject<{ count: string }>(
-    `SELECT count(*)::text AS count FROM exam_sessions
-     WHERE organization_id = $1 AND school_id = $2`,
-    [organizationId, schoolId],
-  );
-  const next = (parseInt(countRows[0]?.count ?? "0", 10) || 0) + 1;
-  const id = `exam_${next}`;
+  // RT-05: a `count(*)+1` id raced to primary-key (org, school, id) conflicts
+  // under concurrent exam creation (two callers compute the same `exam_<n>` →
+  // one 500s / a duplicate is created). A UUID-suffixed id is collision-free
+  // without a lock.
+  const id = `exam_${crypto.randomUUID()}`;
 
   const createdBy = input.createdBy &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(

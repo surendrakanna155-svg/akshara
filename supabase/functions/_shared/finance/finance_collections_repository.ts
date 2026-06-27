@@ -60,6 +60,12 @@ export interface CreateCollectionInput {
   notes?: string;
   collectionDate?: string;
   collectedBy: string;
+  /**
+   * RT-01: optional client-supplied idempotency key (from the `Idempotency-Key`
+   * header). When present, a repeated/double-submitted request with the same key
+   * replays the original collection instead of creating a second one.
+   */
+  idempotencyKey?: string;
 }
 
 export class InvoiceNotCollectibleError extends Error {
@@ -138,6 +144,12 @@ async function loadInvoiceForCollection(
   schoolId: string,
   invoiceId: string,
 ): Promise<FinanceInvoiceRow & { student_account_id: string }> {
+  // RT-01: lock the invoice row for the duration of the transaction. Without
+  // this, two concurrent collections both read the same outstanding_amount,
+  // both pass the "amount <= outstanding" check, and both decrement — producing
+  // a double payment and a negative outstanding. FOR UPDATE OF fi serializes
+  // them: the second waits, then re-reads the already-decremented outstanding
+  // and is correctly rejected (or applied against the remainder).
   const rows = await db.queryObject<FinanceInvoiceRow & { student_account_id: string }>(
     `SELECT fi.*, fsa.id AS student_account_id
      FROM finance_invoices fi
@@ -145,7 +157,8 @@ async function loadInvoiceForCollection(
        ON fsa.fee_assignment_id = fi.fee_assignment_id
       AND fsa.organization_id = fi.organization_id
       AND fsa.school_id = fi.school_id
-     WHERE fi.id = $1 AND fi.organization_id = $2 AND fi.school_id = $3`,
+     WHERE fi.id = $1 AND fi.organization_id = $2 AND fi.school_id = $3
+     FOR UPDATE OF fi`,
     [invoiceId, organizationId, schoolId],
   );
   const invoice = rows[0];
@@ -159,6 +172,53 @@ async function loadInvoiceForCollection(
     throw new InvoiceNotCollectibleError("Cannot collect against a draft invoice");
   }
   return invoice;
+}
+
+/**
+ * RT-01: rebuild the full {collection, receipt, invoice} result for an existing
+ * collection — used to replay a request that carried an already-seen
+ * idempotency key, so a double-submit returns the original collection rather
+ * than creating a second one.
+ */
+async function loadCollectionWithReceipt(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  collectionId: string,
+): Promise<CollectionWithReceipt | null> {
+  const collectionRows = await db.queryObject<FinanceCollectionRow>(
+    `SELECT * FROM finance_collections
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+    [collectionId, organizationId, schoolId],
+  );
+  const collection = collectionRows[0];
+  if (!collection) return null;
+
+  const receiptRows = await db.queryObject<FinanceReceiptRow>(
+    `SELECT * FROM finance_receipts
+     WHERE collection_id = $1 AND organization_id = $2 AND school_id = $3`,
+    [collectionId, organizationId, schoolId],
+  );
+  const invoiceRows = await db.queryObject<FinanceInvoiceRow>(
+    `SELECT * FROM finance_invoices WHERE id = $1`,
+    [collection.invoice_id],
+  );
+  if (!receiptRows[0] || !invoiceRows[0]) return null;
+  return { collection, receipt: receiptRows[0], invoice: invoiceRows[0] };
+}
+
+async function findCollectionByIdempotencyKey(
+  db: TenantQueryClient,
+  organizationId: string,
+  idempotencyKey: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ id: string }>(
+    `SELECT id FROM finance_collections
+     WHERE organization_id = $1 AND idempotency_key = $2
+     LIMIT 1`,
+    [organizationId, idempotencyKey],
+  );
+  return rows[0]?.id ?? null;
 }
 
 export async function createCollection(
@@ -178,6 +238,26 @@ export async function createCollection(
     input.invoiceId,
   );
 
+  // RT-01: replay an already-processed request (same Idempotency-Key) without
+  // re-decrementing. Checked AFTER acquiring the invoice lock so concurrent
+  // same-key submits serialize: the second sees the first's committed row.
+  if (input.idempotencyKey) {
+    const existingId = await findCollectionByIdempotencyKey(
+      db,
+      organizationId,
+      input.idempotencyKey,
+    );
+    if (existingId) {
+      const replayed = await loadCollectionWithReceipt(
+        db,
+        organizationId,
+        schoolId,
+        existingId,
+      );
+      if (replayed) return replayed;
+    }
+  }
+
   const outstanding = parseAmount(invoice.outstanding_amount);
   if (input.amountCollected > outstanding) {
     throw new CollectionAmountError(
@@ -191,28 +271,52 @@ export async function createCollection(
   const newOutstanding = outstanding - input.amountCollected;
   const newInvoiceStatus = computeInvoiceStatus(newOutstanding, total);
 
-  const collectionRows = await db.queryObject<FinanceCollectionRow>(
-    `INSERT INTO finance_collections (
-      organization_id, school_id, student_id, invoice_id, student_account_id,
-      receipt_number, collection_date, payment_method, reference_number,
-      amount_collected, notes, collection_status, collected_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'completed', $12)
-    RETURNING *`,
-    [
-      organizationId,
-      schoolId,
-      invoice.student_id,
-      invoice.id,
-      invoice.student_account_id,
-      receiptNumber,
-      collectionDate,
-      input.paymentMethod,
-      input.referenceNumber ?? null,
-      input.amountCollected,
-      input.notes ?? null,
-      input.collectedBy,
-    ],
-  );
+  let collectionRows: FinanceCollectionRow[];
+  try {
+    collectionRows = await db.queryObject<FinanceCollectionRow>(
+      `INSERT INTO finance_collections (
+        organization_id, school_id, student_id, invoice_id, student_account_id,
+        receipt_number, collection_date, payment_method, reference_number,
+        amount_collected, notes, collection_status, collected_by, idempotency_key
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'completed', $12, $13)
+      RETURNING *`,
+      [
+        organizationId,
+        schoolId,
+        invoice.student_id,
+        invoice.id,
+        invoice.student_account_id,
+        receiptNumber,
+        collectionDate,
+        input.paymentMethod,
+        input.referenceNumber ?? null,
+        input.amountCollected,
+        input.notes ?? null,
+        input.collectedBy,
+        input.idempotencyKey ?? null,
+      ],
+    );
+  } catch (error) {
+    // RT-01: the partial-unique index on (organization_id, idempotency_key) is
+    // the DB backstop for a same-key race that slips past the replay check
+    // above — recover by replaying the row the winner just committed.
+    if (
+      input.idempotencyKey &&
+      String(error).includes("duplicate key") &&
+      String(error).includes("idempotency")
+    ) {
+      const existingId = await findCollectionByIdempotencyKey(
+        db,
+        organizationId,
+        input.idempotencyKey,
+      );
+      const replayed = existingId
+        ? await loadCollectionWithReceipt(db, organizationId, schoolId, existingId)
+        : null;
+      if (replayed) return replayed;
+    }
+    throw error;
+  }
   const collection = collectionRows[0]!;
 
   let receiptRows: FinanceReceiptRow[];
