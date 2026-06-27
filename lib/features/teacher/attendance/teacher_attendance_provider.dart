@@ -131,6 +131,31 @@ void applyBulkMark(WidgetRef ref, StudentAttendanceMark mark) {
   ref.read(_teacherAttendanceStudentsProvider.notifier).state = map;
 }
 
+/// Restore an in-progress attendance grid recovered from a local draft (Data
+/// Reliability Platform §5): apply [marks] (studentId → mark) onto the current
+/// roster for [classId] so the teacher resumes exactly where they left off.
+void restoreAttendanceMarks(
+  WidgetRef ref, {
+  required String classId,
+  required Map<String, StudentAttendanceMark> marks,
+}) {
+  if (ref.read(teacherAttendanceProvider).isSubmitted) return;
+  final map = Map<String, List<TeacherAttendanceStudent>>.from(
+    ref.read(_teacherAttendanceStudentsProvider) ??
+        ref.read(teacherAttendanceStudentsFutureProvider).value ??
+        {},
+  );
+  final students = map[classId];
+  if (students == null) return;
+  map[classId] = [
+    for (final student in students)
+      marks.containsKey(student.id)
+          ? student.copyWith(mark: marks[student.id]!)
+          : student,
+  ];
+  ref.read(_teacherAttendanceStudentsProvider.notifier).state = map;
+}
+
 Future<void> saveAttendanceDraft(WidgetRef ref) async {
   final classId = ref.read(teacherAttendanceClassProvider);
   final students = ref.read(teacherAttendanceProvider).students;

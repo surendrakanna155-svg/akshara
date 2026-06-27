@@ -3,6 +3,10 @@ import 'package:dio/dio.dart';
 import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../../../features/parent/parent_requests.dart';
+import '../../../../reliability/model/mutation_outcome.dart';
+import '../../../../reliability/policy/operation_policy_registry.dart';
+import '../../../../reliability/reliable_datasource_write.dart';
+import '../../../../reliability/reliable_writer.dart';
 import '../../teacher/dto/teacher_responses_dto.dart';
 import '../dto/parent_communication_dto.dart';
 import '../dto/parent_message_send_request_dto.dart';
@@ -12,10 +16,16 @@ import '../dto/parent_responses_dto.dart';
 import 'parent_api_paths.dart';
 
 /// Dio-backed remote data source for Parent mobile APIs.
+///
+/// The leave-application write routes through the Data Reliability Platform's
+/// [ReliableWriter] when one is injected (queued offline, replayed exactly-once,
+/// optimistic while pending); otherwise it falls back to a direct Dio call.
 class ParentRemoteDataSource {
-  ParentRemoteDataSource(this._dio);
+  ParentRemoteDataSource(this._dio, {ReliableWriter? reliableWriter})
+      : _reliable = reliableWriter;
 
   final Dio _dio;
+  final ReliableWriter? _reliable;
 
   Future<ParentDashboardDto> fetchDashboard({
     required RepositoryQuery query,
@@ -150,12 +160,63 @@ class ParentRemoteDataSource {
     required RepositoryQuery query,
     required ParentLeaveSubmitRequest request,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      ParentApiPaths.leave,
-      queryParameters: _queryParams(query),
-      data: ParentLeaveSubmitRequestDto.fromDomain(request).toJson(),
+    final Map<String, dynamic> data = await _reliableWrite(
+      type: OperationTypes.applyLeave,
+      method: 'POST',
+      path: ParentApiPaths.leave,
+      query: query,
+      body: ParentLeaveSubmitRequestDto.fromDomain(request).toJson(),
+      entityRef: 'leave:${request.childId}',
+      optimistic: () => <String, dynamic>{
+        'id': 'pending-${request.childId}-${request.fromDateLabel}',
+        'childClass': '',
+        'fromDateLabel': request.fromDateLabel,
+        'toDateLabel': request.toDateLabel,
+        'reason': request.reason,
+        'type': ParentLeaveSubmitRequestDto.fromDomain(request).toJson()['type'],
+        'status': 'pending',
+        'submittedLabel': 'Pending sync',
+        'timeline': const <dynamic>[],
+        'hasAttachment': request.hasAttachment,
+        if (request.attachmentName != null)
+          'attachmentName': request.attachmentName,
+      },
     );
-    return ParentLeaveRequestDto.fromJson(_requireData(response));
+    return ParentLeaveRequestDto.fromJson(data);
+  }
+
+  /// Routes a pilot-critical write through the reliability platform when a
+  /// [ReliableWriter] is available; otherwise a direct Dio call (legacy/online).
+  /// Returns the response `data` map — the server row when confirmed, or
+  /// [optimistic]'s projection when the write was queued offline.
+  Future<Map<String, dynamic>> _reliableWrite({
+    required String type,
+    required String method,
+    required String path,
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+    required Map<String, dynamic> Function() optimistic,
+    String? entityRef,
+  }) async {
+    final ReliableWriter? reliable = _reliable;
+    if (reliable == null) {
+      final response = await _dio.request<Map<String, dynamic>>(
+        path,
+        data: body,
+        queryParameters: _queryParams(query),
+        options: Options(method: method),
+      );
+      return _requireData(response);
+    }
+    final MutationOutcome outcome = await reliable.runWrite(
+      type: type,
+      method: method,
+      path: path,
+      body: body,
+      scope: _queryParams(query),
+      entityRef: entityRef,
+    );
+    return resolveWriteOutcome(outcome, optimistic: optimistic).data;
   }
 
   Future<ParentPaymentInitiationResponseDto> initiatePayment({

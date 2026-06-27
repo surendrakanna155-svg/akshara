@@ -48,6 +48,10 @@ export interface ExamMarkRow {
   grade_letter: string | null;
   marks_entered: boolean;
   updated_at: string;
+  // Optimistic-concurrency version, bumped on every update (Data Reliability
+  // Platform §8.2). Lets a queued offline edit detect that the row changed
+  // underneath it (409 CONFLICT carrying this row).
+  row_version: number;
 }
 
 export class ExamNotFoundError extends Error {
@@ -82,6 +86,18 @@ export class ExamMarkNotFoundError extends Error {
   constructor(id: string) {
     super(`Mark entry not found: ${id}`);
     this.name = "ExamMarkNotFoundError";
+  }
+}
+
+/**
+ * Optimistic-concurrency conflict on a mark entry (Data Reliability Platform
+ * §8.2): the client's queued edit was based on an older `row_version`. Carries
+ * the current server row so the client can show "yours vs theirs" / re-apply.
+ */
+export class ExamMarkConflictError extends Error {
+  constructor(id: string, readonly currentRow: ExamMarkRow) {
+    super(`Mark entry changed since last read: ${id}`);
+    this.name = "ExamMarkConflictError";
   }
 }
 
@@ -139,6 +155,7 @@ export function examMarkToApi(row: ExamMarkRow): Record<string, unknown> {
     published: row.published,
     grade: row.grade_letter,
     maxMarks: row.max_marks,
+    rowVersion: row.row_version,
   };
 }
 
@@ -415,7 +432,21 @@ export async function updateExamMark(
   schoolId: string,
   markEntryId: string,
   marksObtained: number,
+  expectedVersion?: number | null,
 ): Promise<ExamMarkRow> {
+  // Optimistic concurrency (Data Reliability Platform §8.2): when the client
+  // sends the row_version its edit was based on, reject with the current row if
+  // it has since changed, so the platform can resolve the conflict (low-risk
+  // last-write-wins re-applies with the new version; high-risk parks it).
+  if (expectedVersion != null) {
+    const current = await getExamMark(db, organizationId, schoolId, markEntryId);
+    if (!current) throw new ExamMarkNotFoundError(markEntryId);
+    if (Number(current.row_version) !== Number(expectedVersion)) {
+      throw new ExamMarkConflictError(markEntryId, current);
+    }
+  }
+  // The `bump_row_version` BEFORE-UPDATE trigger increments row_version; the
+  // RETURNING row therefore carries the new version.
   const rows = await db.queryObject<ExamMarkRow>(
     `UPDATE exam_mark_entries
      SET marks_obtained = $4,

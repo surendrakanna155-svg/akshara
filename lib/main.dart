@@ -13,6 +13,8 @@ import 'core/errors/error_reporting_service.dart';
 import 'core/errors/global_error_handler.dart';
 import 'core/notifications/push_messaging_service.dart';
 import 'core/providers/shared_preferences_provider.dart';
+import 'core/reliability/reliability_providers.dart';
+import 'core/reliability/store/reliability_store_opener.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -30,8 +32,13 @@ Future<void> main() async {
     });
   }
   final prefs = await SharedPreferences.getInstance();
+  // Data Reliability Platform: open the durable, encrypted on-device store for
+  // drafts + the outbox once, and bind it so every write inherits offline-safe
+  // queue/retry and draft persistence (Phase 0b).
+  final reliabilityStore = await openReliabilityStore();
   final overrides = [
     sharedPreferencesProvider.overrideWithValue(prefs),
+    reliabilityStoreProvider.overrideWithValue(reliabilityStore),
   ];
 
   final bootstrap = ProviderContainer(overrides: overrides);
@@ -60,6 +67,9 @@ Future<void> main() async {
       // are mounted before any deep-link navigation or banner.
       unawaited(container.read(pushMessagingServiceProvider).start());
     }
+    // Start the sync engine so any writes queued while offline drain
+    // automatically on reconnect (with idempotent, exactly-once replay).
+    container.read(syncEngineProvider);
   });
 }
 

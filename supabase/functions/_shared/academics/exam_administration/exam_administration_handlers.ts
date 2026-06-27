@@ -17,6 +17,7 @@ import {
   examSessionToApi,
   ExamApprovalMismatchError,
   ExamApprovalRequiredError,
+  ExamMarkConflictError,
   ExamMarkNotFoundError,
   ExamNotFoundError,
   ExamScopeForbiddenError,
@@ -84,6 +85,17 @@ function mapExamError(error: unknown): Response {
   }
   if (error instanceof ExamApprovalMismatchError) {
     return errorEnvelope("EXAM_APPROVAL_MISMATCH", error.message, 409);
+  }
+  if (error instanceof ExamMarkConflictError) {
+    // 409 CONFLICT carrying the current server row in `data` so the Data
+    // Reliability Platform can show "yours vs theirs" / re-apply (§8.2).
+    return jsonResponse(
+      {
+        data: examMarkToApi(error.currentRow),
+        error: { code: "CONFLICT", message: error.message },
+      },
+      { status: 409 },
+    );
   }
   throw error;
 }
@@ -342,12 +354,14 @@ export async function handleUpdateExamMark(
           throw new ExamScopeForbiddenError();
         }
       }
+      const expectedRaw = body.expectedVersion ?? body.expected_version;
       return await updateExamMark(
         db,
         organizationId,
         schoolId,
         markEntryId,
         marksObtained,
+        expectedRaw == null ? null : Number(expectedRaw),
       );
     });
     return examMarkToApi(row);

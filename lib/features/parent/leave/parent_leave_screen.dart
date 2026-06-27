@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reliability/drafts/draft_autosave.dart';
+import '../../../core/reliability/drafts/draft_model.dart';
+import '../parent_active_child_provider.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -11,7 +14,11 @@ import 'widgets/leave_request_row.dart';
 import '../../../theme/breakpoints.dart';
 
 /// Parent leave requests — PA-12.
-class ParentLeaveScreen extends ConsumerWidget {
+///
+/// The apply-leave form is draft-persisted (Data Reliability Platform §5): it
+/// autosaves as the parent types and, on return, offers to resume exactly where
+/// they left off — work is never lost to an interruption / app close / lock.
+class ParentLeaveScreen extends ConsumerStatefulWidget {
   const ParentLeaveScreen({
     super.key,
     this.onNotificationsTap,
@@ -19,11 +26,63 @@ class ParentLeaveScreen extends ConsumerWidget {
 
   final VoidCallback? onNotificationsTap;
 
+  @override
+  ConsumerState<ParentLeaveScreen> createState() => _ParentLeaveScreenState();
+}
+
+class _ParentLeaveScreenState extends ConsumerState<ParentLeaveScreen>
+    with DraftAutosaveMixin {
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
-  static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
+  static const double _tabletMaxContentWidth =
+      AksharaBreakpoints.compactContentMaxWidth;
+
+  String _draftKeyFor(String childId) => 'leave_apply:$childId';
+
+  String get _activeChildId =>
+      ref.read(parentActiveChildProvider)?.id ?? 'unknown';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      offerResumeIfAny(
+        draftKey: _draftKeyFor(_activeChildId),
+        onResume: (json) {
+          ref.read(leaveApplyDraftProvider.notifier).state =
+              LeaveApplyDraft.fromJson(json);
+          ref.read(parentLeaveSectionProvider.notifier).state =
+              LeaveScreenSection.apply;
+        },
+      );
+    });
+  }
+
+  @override
+  DraftModel? buildDraftSnapshot() {
+    final draft = ref.read(leaveApplyDraftProvider);
+    if (draft.isEmpty) return null;
+    return MapDraft(
+      _draftKeyFor(_activeChildId),
+      draft.toJson(),
+      draftLabel: 'Leave application',
+    );
+  }
+
+  Future<void> _onSubmit() async {
+    final submitted = await submitLeaveApplication(ref);
+    if (submitted) {
+      // The form was accepted (or safely queued) — drop the local draft so it
+      // is never re-offered.
+      await discardDraftOnSubmit(_draftKeyFor(_activeChildId));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Autosave as the form changes (debounced + flushed on app background).
+    ref.listen(leaveApplyDraftProvider, (_, __) => scheduleDraftSave());
+
     final data = ref.watch(parentLeaveDataProvider);
     final section = ref.watch(parentLeaveSectionProvider);
     final isLoading = ref.watch(parentLeaveLoadingProvider);
@@ -38,7 +97,7 @@ class ParentLeaveScreen extends ConsumerWidget {
         unreadNotifications: data.unreadNotifications,
         showAi: false,
         trailingPadding: true,
-        onNotificationsTap: onNotificationsTap,
+        onNotificationsTap: widget.onNotificationsTap,
       ),
       body: isLoading
           ? const AksharaLoadingState(semanticLabel: 'Loading leave requests')
@@ -88,9 +147,7 @@ class ParentLeaveScreen extends ConsumerWidget {
                               else
                                 LeaveApplyForm(
                                   isSubmitting: isSubmitting,
-                                  onSubmit: () async {
-                                    await submitLeaveApplication(ref);
-                                  },
+                                  onSubmit: _onSubmit,
                                 ),
                             ],
                           ),

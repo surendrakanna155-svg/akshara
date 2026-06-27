@@ -309,6 +309,7 @@ class FinanceCollectionResult {
     required this.collectionDate,
     required this.receipt,
     required this.invoice,
+    this.pendingSync = false,
   });
 
   final String collectionId;
@@ -320,6 +321,13 @@ class FinanceCollectionResult {
   final String collectionDate;
   final FinanceReceiptDetail receipt;
   final FinanceInvoice invoice;
+
+  /// True when the collection was recorded offline and is waiting to sync
+  /// (Data Reliability Platform, refinement R1). While pending, the amount is
+  /// safely queued but the transaction is NOT server-confirmed — a final
+  /// receipt must NOT be generated, printed or shared until [pendingSync] is
+  /// false (i.e. the server confirmed it).
+  final bool pendingSync;
 }
 
 @immutable

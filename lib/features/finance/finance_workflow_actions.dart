@@ -795,14 +795,29 @@ Future<void> showRecordCollectionDialog(
           ),
         );
     if (!context.mounted || result == null) return;
-    ref.read(financeLastReceiptNumberProvider.notifier).state =
-        result.receiptNumber;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        key: QaTestKeys.financeCollectionSuccessSnackbar,
-        content: Text('Receipt ${result.receiptNumber} recorded'),
-      ),
-    );
+    if (result.pendingSync) {
+      // Refinement R1: an offline-recorded collection is NOT server-confirmed.
+      // Do not finalise a receipt — show "Pending Sync"; the receipt is issued
+      // only after the Sync Center confirms the transaction.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          key: QaTestKeys.financeCollectionSuccessSnackbar,
+          content: Text(
+            'Payment saved offline — pending sync. The receipt will be '
+            'issued once it syncs.',
+          ),
+        ),
+      );
+    } else {
+      ref.read(financeLastReceiptNumberProvider.notifier).state =
+          result.receiptNumber;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.financeCollectionSuccessSnackbar,
+          content: Text('Receipt ${result.receiptNumber} recorded'),
+        ),
+      );
+    }
   } catch (error) {
     if (!context.mounted) return;
     _showMutationError(context, error);

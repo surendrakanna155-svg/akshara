@@ -103,6 +103,14 @@ class LeaveApplyDraft {
       toDateLabel.isNotEmpty &&
       reason.trim().length >= 8;
 
+  /// True when nothing has been entered yet (nothing worth persisting).
+  bool get isEmpty =>
+      fromDateLabel.isEmpty &&
+      toDateLabel.isEmpty &&
+      reason.trim().isEmpty &&
+      type == LeaveType.sick &&
+      !hasAttachment;
+
   LeaveApplyDraft copyWith({
     String? fromDateLabel,
     String? toDateLabel,
@@ -118,6 +126,30 @@ class LeaveApplyDraft {
       type: type ?? this.type,
       hasAttachment: hasAttachment ?? this.hasAttachment,
       attachmentName: attachmentName ?? this.attachmentName,
+    );
+  }
+
+  /// Serialise the in-progress form for draft persistence (design §5).
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'fromDateLabel': fromDateLabel,
+        'toDateLabel': toDateLabel,
+        'reason': reason,
+        'type': type.name,
+        'hasAttachment': hasAttachment,
+        'attachmentName': attachmentName,
+      };
+
+  factory LeaveApplyDraft.fromJson(Map<String, dynamic> json) {
+    return LeaveApplyDraft(
+      fromDateLabel: json['fromDateLabel'] as String? ?? '',
+      toDateLabel: json['toDateLabel'] as String? ?? '',
+      reason: json['reason'] as String? ?? '',
+      type: LeaveType.values.firstWhere(
+        (LeaveType t) => t.name == json['type'],
+        orElse: () => LeaveType.sick,
+      ),
+      hasAttachment: json['hasAttachment'] as bool? ?? false,
+      attachmentName: json['attachmentName'] as String?,
     );
   }
 }

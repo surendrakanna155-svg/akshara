@@ -2,18 +2,32 @@ import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
+import '../../../../../features/teacher/attendance/attendance_models.dart';
 import '../../../../../features/teacher/homework/homework_models.dart';
 import '../../../../../features/teacher/teacher_requests.dart';
 import '../../../../communication/parent_communication_governance.dart';
+import '../../../../reliability/model/mutation_outcome.dart';
+import '../../../../reliability/policy/operation_policy_registry.dart';
+import '../../../../reliability/reliable_datasource_write.dart';
+import '../../../../reliability/reliable_writer.dart';
 import '../dto/teacher_responses_dto.dart';
 import '../dto/teacher_write_request_dto.dart';
 import 'teacher_api_paths.dart';
 
 /// Dio-backed remote data source for Teacher mobile APIs.
+///
+/// Pilot-critical writes (attendance draft/submit, leave) route through the
+/// Data Reliability Platform's [ReliableWriter] when one is injected: every such
+/// write is queued offline, replayed exactly-once on reconnect, and returns an
+/// optimistic result while pending. When no writer is supplied (e.g. legacy unit
+/// tests) the methods fall back to a direct Dio call — identical online
+/// behaviour, no reliability.
 class TeacherRemoteDataSource {
-  TeacherRemoteDataSource(this._dio);
+  TeacherRemoteDataSource(this._dio, {ReliableWriter? reliableWriter})
+      : _reliable = reliableWriter;
 
   final Dio _dio;
+  final ReliableWriter? _reliable;
 
   Future<TeacherDashboardDto> fetchDashboard({
     required RepositoryQuery query,
@@ -132,24 +146,48 @@ class TeacherRemoteDataSource {
     required RepositoryQuery query,
     required TeacherAttendanceDraftRequest request,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      TeacherApiPaths.attendanceDraft,
-      queryParameters: _queryParams(query),
-      data: TeacherAttendanceDraftRequestDto.fromDomain(request).toJson(),
+    final Map<String, dynamic> data = await _reliableWrite(
+      type: OperationTypes.markAttendance,
+      method: 'POST',
+      path: TeacherApiPaths.attendanceDraft,
+      query: query,
+      body: TeacherAttendanceDraftRequestDto.fromDomain(request).toJson(),
+      entityRef: 'attendance:${request.classId}',
+      optimistic: () => <String, dynamic>{
+        'classId': request.classId,
+        'savedAtLabel': 'Pending sync',
+        'markedCount': request.entries.length,
+      },
     );
-    return TeacherAttendanceDraftResponseDto.fromJson(_requireData(response));
+    return TeacherAttendanceDraftResponseDto.fromJson(data);
   }
 
   Future<TeacherAttendanceSubmitResponseDto> submitClassAttendance({
     required RepositoryQuery query,
     required TeacherAttendanceSubmitRequest request,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      TeacherApiPaths.attendanceSubmit,
-      queryParameters: _queryParams(query),
-      data: TeacherAttendanceSubmitRequestDto.fromDomain(request).toJson(),
+    final Map<String, dynamic> data = await _reliableWrite(
+      type: OperationTypes.submitAttendance,
+      method: 'POST',
+      path: TeacherApiPaths.attendanceSubmit,
+      query: query,
+      body: TeacherAttendanceSubmitRequestDto.fromDomain(request).toJson(),
+      entityRef: 'attendance:${request.classId}',
+      optimistic: () => <String, dynamic>{
+        'classId': request.classId,
+        'submittedAtLabel': 'Pending sync',
+        'presentCount': request.entries
+            .where((e) => e.mark == StudentAttendanceMark.present)
+            .length,
+        'absentCount': request.entries
+            .where((e) => e.mark == StudentAttendanceMark.absent)
+            .length,
+        'lateCount': request.entries
+            .where((e) => e.mark == StudentAttendanceMark.late)
+            .length,
+      },
     );
-    return TeacherAttendanceSubmitResponseDto.fromJson(_requireData(response));
+    return TeacherAttendanceSubmitResponseDto.fromJson(data);
   }
 
   Future<TeacherHomeworkReviewResponseDto> reviewHomeworkSubmission({
@@ -276,12 +314,24 @@ class TeacherRemoteDataSource {
     required RepositoryQuery query,
     required TeacherLeaveSubmitRequest request,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      TeacherApiPaths.leave,
-      queryParameters: _queryParams(query),
-      data: TeacherLeaveSubmitRequestDto.fromDomain(request).toJson(),
+    final Map<String, dynamic> data = await _reliableWrite(
+      type: OperationTypes.applyLeave,
+      method: 'POST',
+      path: TeacherApiPaths.leave,
+      query: query,
+      body: TeacherLeaveSubmitRequestDto.fromDomain(request).toJson(),
+      entityRef: 'leave:teacher',
+      optimistic: () => <String, dynamic>{
+        'id': 'pending-${request.fromDateLabel}-${request.toDateLabel}',
+        'typeLabel': request.typeLabel,
+        'fromDateLabel': request.fromDateLabel,
+        'toDateLabel': request.toDateLabel,
+        'reason': request.reason,
+        'status': 'pending',
+        'timeline': const <dynamic>[],
+      },
     );
-    return TeacherLeaveRequestDto.fromJson(_requireData(response));
+    return TeacherLeaveRequestDto.fromJson(data);
   }
 
   Future<MessageThreadDto> sendMessage({
@@ -316,6 +366,41 @@ class TeacherRemoteDataSource {
       dueLabel: (data['dueLabel'] ?? request.dueLabel).toString(),
       submissions: const [],
     );
+  }
+
+  /// Routes a pilot-critical write through the reliability platform when a
+  /// [ReliableWriter] is available; otherwise performs a direct Dio call
+  /// (legacy/online-only). Returns the response `data` map the caller parses:
+  /// the server row when confirmed, or [optimistic]'s projection when the write
+  /// was queued offline (the Sync Center surfaces it until confirmed).
+  Future<Map<String, dynamic>> _reliableWrite({
+    required String type,
+    required String method,
+    required String path,
+    required RepositoryQuery query,
+    required Map<String, dynamic> body,
+    required Map<String, dynamic> Function() optimistic,
+    String? entityRef,
+  }) async {
+    final ReliableWriter? reliable = _reliable;
+    if (reliable == null) {
+      final response = await _dio.request<Map<String, dynamic>>(
+        path,
+        data: body,
+        queryParameters: _queryParams(query),
+        options: Options(method: method),
+      );
+      return _requireData(response);
+    }
+    final MutationOutcome outcome = await reliable.runWrite(
+      type: type,
+      method: method,
+      path: path,
+      body: body,
+      scope: _queryParams(query),
+      entityRef: entityRef,
+    );
+    return resolveWriteOutcome(outcome, optimistic: optimistic).data;
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {

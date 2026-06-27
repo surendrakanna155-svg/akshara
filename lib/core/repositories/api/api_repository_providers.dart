@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../ai/ai_inference_providers.dart';
 import '../../network/dio_provider.dart';
+import '../../reliability/reliability_providers.dart';
 import '../academic/api/academic_remote_data_source.dart';
 import '../academic/api/api_academic_repository.dart';
 import 'academic_operations/api_academic_operations_repository.dart';
@@ -103,7 +104,10 @@ final admissionsRemoteDataSourceProvider = Provider<AdmissionsRemoteDataSource>(
 );
 
 final financeRemoteDataSourceProvider = Provider<FinanceRemoteDataSource>(
-  (ref) => FinanceRemoteDataSource(ref.watch(dioProvider)),
+  (ref) => FinanceRemoteDataSource(
+    ref.watch(dioProvider),
+    reliableWriter: ref.watch(reliableWriterProvider),
+  ),
 );
 
 final sisRemoteDataSourceProvider = Provider<SisRemoteDataSource>(
@@ -301,11 +305,17 @@ final apiPlatformIntelligenceRepositoryProvider =
 );
 
 final parentRemoteDataSourceProvider = Provider<ParentRemoteDataSource>(
-  (ref) => ParentRemoteDataSource(ref.watch(dioProvider)),
+  (ref) => ParentRemoteDataSource(
+    ref.watch(dioProvider),
+    reliableWriter: ref.watch(reliableWriterProvider),
+  ),
 );
 
 final teacherRemoteDataSourceProvider = Provider<TeacherRemoteDataSource>(
-  (ref) => TeacherRemoteDataSource(ref.watch(dioProvider)),
+  (ref) => TeacherRemoteDataSource(
+    ref.watch(dioProvider),
+    reliableWriter: ref.watch(reliableWriterProvider),
+  ),
 );
 
 final studentRemoteDataSourceProvider = Provider<StudentRemoteDataSource>(
@@ -617,7 +627,10 @@ final apiApprovalRepositoryProvider = Provider<ApiApprovalRepository>(
 );
 
 final examRemoteDataSourceProvider = Provider<ExamRemoteDataSource>(
-  (ref) => ExamRemoteDataSource(ref.watch(dioProvider)),
+  (ref) => ExamRemoteDataSource(
+    ref.watch(dioProvider),
+    reliableWriter: ref.watch(reliableWriterProvider),
+  ),
 );
 
 final apiExamAdministrationRepositoryProvider =

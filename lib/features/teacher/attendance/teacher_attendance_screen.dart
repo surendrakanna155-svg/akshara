@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reliability/drafts/draft_autosave.dart';
+import '../../../core/reliability/drafts/draft_model.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
@@ -68,9 +70,55 @@ class _AttendanceBody extends ConsumerStatefulWidget {
   ConsumerState<_AttendanceBody> createState() => _AttendanceBodyState();
 }
 
-class _AttendanceBodyState extends ConsumerState<_AttendanceBody> {
+class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
+    with DraftAutosaveMixin {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
+
+  String _draftKeyFor(String classId) => 'attendance:$classId';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final classId = widget.data.selectedClassId;
+      offerResumeIfAny(
+        draftKey: _draftKeyFor(classId),
+        onResume: (json) {
+          final rawMarks = (json['marks'] as Map?) ?? const {};
+          final marks = <String, StudentAttendanceMark>{
+            for (final entry in rawMarks.entries)
+              entry.key as String: StudentAttendanceMark.values.firstWhere(
+                (m) => m.name == entry.value,
+                orElse: () => StudentAttendanceMark.unmarked,
+              ),
+          };
+          restoreAttendanceMarks(ref, classId: classId, marks: marks);
+        },
+      );
+    });
+  }
+
+  @override
+  DraftModel? buildDraftSnapshot() {
+    final data = widget.data;
+    if (data.isSubmitted) return null;
+    final hasAnyMark =
+        data.students.any((s) => s.mark != StudentAttendanceMark.unmarked);
+    if (!hasAnyMark) return null;
+    return MapDraft(
+      _draftKeyFor(data.selectedClassId),
+      <String, dynamic>{
+        'classId': data.selectedClassId,
+        'marks': <String, dynamic>{
+          for (final s in data.students)
+            if (s.mark != StudentAttendanceMark.unmarked) s.id: s.mark.name,
+        },
+      },
+      draftLabel: 'Attendance roster',
+    );
+  }
 
   @override
   void dispose() {
@@ -90,6 +138,10 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody> {
 
   @override
   Widget build(BuildContext context) {
+    // Autosave the in-progress roster as marks change (debounced + flushed when
+    // the app is backgrounded), so a half-marked roster is never lost.
+    ref.listen(teacherAttendanceProvider, (_, __) => scheduleDraftSave());
+
     final data = widget.data;
     final visibleStudents = _visibleStudents;
     return LayoutBuilder(
@@ -243,7 +295,12 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody> {
                   unmarkedCount: data.unmarkedCount,
                   onSaveDraft: () => saveAttendanceDraft(ref),
                   onSubmit: () async {
+                    final classId = data.selectedClassId;
                     final ok = await submitAttendance(ref);
+                    if (ok) {
+                      // Submitted (or safely queued) — drop the local draft.
+                      await discardDraftOnSubmit(_draftKeyFor(classId));
+                    }
                     if (!context.mounted) return;
                     if (!ok) {
                       ScaffoldMessenger.of(context).showSnackBar(

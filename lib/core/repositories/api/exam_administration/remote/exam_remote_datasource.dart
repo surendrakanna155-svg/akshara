@@ -5,16 +5,31 @@ import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../../exams/exam_administration_requests.dart';
 import '../../../../exams/exam_administration_store.dart';
 import '../../../../exams/exam_remark.dart';
+import '../../../../reliability/model/mutation_outcome.dart';
+import '../../../../reliability/policy/operation_policy_registry.dart';
+import '../../../../reliability/reliable_datasource_write.dart';
+import '../../../../reliability/reliable_writer.dart';
 import '../mapper/exam_mapper.dart';
 import 'exam_api_paths.dart';
 
 /// Dio-backed remote data source for exam administration API (F4).
+///
+/// A per-cell mark save (`updateMark`) routes through the Data Reliability
+/// Platform's [ReliableWriter] when injected, so a teacher entering a grid of
+/// marks on a flaky network never loses an entry: each save is queued offline
+/// and replayed exactly-once (idempotency key), returning the entered value
+/// optimistically while pending. Without a writer it falls back to a direct PATCH.
 class ExamRemoteDataSource {
-  ExamRemoteDataSource(this._dio, {ExamMapper mapper = const ExamMapper()})
-      : _mapper = mapper;
+  ExamRemoteDataSource(
+    this._dio, {
+    ExamMapper mapper = const ExamMapper(),
+    ReliableWriter? reliableWriter,
+  })  : _mapper = mapper,
+        _reliable = reliableWriter;
 
   final Dio _dio;
   final ExamMapper _mapper;
+  final ReliableWriter? _reliable;
 
   Future<List<ExamSession>> fetchExams({
     required RepositoryQuery query,
@@ -135,12 +150,32 @@ class ExamRemoteDataSource {
     required RepositoryQuery query,
     required UpdateExamMarkRequest request,
   }) async {
-    final response = await _dio.patch<Map<String, dynamic>>(
-      ExamApiPaths.markEntry(request.markEntryId),
-      queryParameters: _queryParams(query),
-      data: {'marksObtained': request.marksObtained},
+    final Map<String, dynamic> body = {'marksObtained': request.marksObtained};
+    final ReliableWriter? reliable = _reliable;
+    if (reliable == null) {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        ExamApiPaths.markEntry(request.markEntryId),
+        queryParameters: _queryParams(query),
+        data: body,
+      );
+      return _mapper.toMark(_requireData(response));
+    }
+    final MutationOutcome outcome = await reliable.runWrite(
+      type: OperationTypes.saveExamMarksDraft,
+      method: 'PATCH',
+      path: ExamApiPaths.markEntry(request.markEntryId),
+      body: body,
+      scope: _queryParams(query),
+      entityRef: 'examMark:${request.markEntryId}',
     );
-    return _mapper.toMark(_requireData(response));
+    final ResolvedWrite resolved = resolveWriteOutcome(
+      outcome,
+      optimistic: () => <String, dynamic>{
+        'id': request.markEntryId,
+        'marksObtained': request.marksObtained,
+      },
+    );
+    return _mapper.toMark(resolved.data);
   }
 
   Future<List<PublishedExamResult>> fetchPublishedResultsForStudent({

@@ -68,6 +68,7 @@ import { routeEntitlements } from "../_shared/entitlements/entitlement_router.ts
 import { withEntitlement } from "../_shared/entitlements/entitlement_middleware.ts";
 // --- end B2 entitlement layer ---
 import { errorEnvelope, routePath } from "../_shared/http.ts";
+import { dispatchWithIdempotency } from "../_shared/idempotency_dispatch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -150,16 +151,21 @@ async function routeModuleRequest(
     routeAudit,
   ] as const;
 
-  for (const route of moduleRouters) {
-    const matched = await route(req, config, method, path);
-    if (matched) return matched;
-  }
-
-  return errorEnvelope(
-    "NOT_FOUND",
-    `Route not found: ${method} ${path}`,
-    404,
-  );
+  // Universal store-and-replay idempotency (Data Reliability Platform §8.1):
+  // every mutating module route carrying an `Idempotency-Key` replays exactly
+  // once. Inert for any request without the header, so existing traffic is
+  // unchanged.
+  return dispatchWithIdempotency(req, config, async () => {
+    for (const route of moduleRouters) {
+      const matched = await route(req, config, method, path);
+      if (matched) return matched;
+    }
+    return errorEnvelope(
+      "NOT_FOUND",
+      `Route not found: ${method} ${path}`,
+      404,
+    );
+  });
 }
 
 /**

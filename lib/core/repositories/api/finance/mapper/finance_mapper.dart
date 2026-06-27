@@ -236,6 +236,7 @@ class FinanceMapper {
         studentAccountId: collectionRaw['studentAccountId'] as String? ?? '',
       ),
       invoice: toFinanceInvoice(FinanceInvoiceDto.fromJson(invoiceRaw)),
+      pendingSync: raw['pendingSync'] as bool? ?? false,
     );
   }
 

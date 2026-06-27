@@ -2,6 +2,10 @@ import 'package:dio/dio.dart';
 
 import '../../../../../features/finance/finance_models.dart';
 import '../../../../../features/finance/finance_requests.dart';
+import '../../../../reliability/model/mutation_outcome.dart';
+import '../../../../reliability/policy/operation_policy_registry.dart';
+import '../../../../reliability/reliable_datasource_write.dart';
+import '../../../../reliability/reliable_writer.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../repository_query.dart';
 import '../dto/approve_refund_request_dto.dart';
@@ -38,14 +42,25 @@ import '../mapper/finance_mapper.dart';
 import 'finance_api_paths.dart';
 
 /// Dio-backed remote data source for Finance.
+///
+/// Fee collection routes through the Data Reliability Platform's
+/// [ReliableWriter] when one is injected: the write is queued offline and
+/// replayed exactly-once (the backend's idempotency key guarantees no
+/// double-charge / double-receipt). While queued it returns a `pendingSync`
+/// result so the UI shows "Pending Sync" and never finalises a receipt until the
+/// server confirms (refinement R1). Without a writer it falls back to a direct
+/// Dio call.
 class FinanceRemoteDataSource {
   FinanceRemoteDataSource(
     this._dio, {
     FinanceMapper mapper = const FinanceMapper(),
-  }) : _mapper = mapper;
+    ReliableWriter? reliableWriter,
+  })  : _mapper = mapper,
+        _reliable = reliableWriter;
 
   final Dio _dio;
   final FinanceMapper _mapper;
+  final ReliableWriter? _reliable;
 
   Future<FinanceDashboardDto> fetchDashboard({
     required RepositoryQuery query,
@@ -143,12 +158,44 @@ class FinanceRemoteDataSource {
     required RepositoryQuery query,
     required CreateCollectionRequest request,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      FinanceApiPaths.collections,
-      queryParameters: _queryParams(query),
-      data: CreateCollectionRequestDto.fromDomain(request).toJson(),
+    final Map<String, dynamic> body =
+        CreateCollectionRequestDto.fromDomain(request).toJson();
+    final ReliableWriter? reliable = _reliable;
+    if (reliable == null) {
+      final response = await _dio.post<Map<String, dynamic>>(
+        FinanceApiPaths.collections,
+        queryParameters: _queryParams(query),
+        data: body,
+      );
+      return FinanceCollectionResultDto.fromJson(_requireData(response));
+    }
+    final MutationOutcome outcome = await reliable.runWrite(
+      type: OperationTypes.collectFee,
+      method: 'POST',
+      path: FinanceApiPaths.collections,
+      body: body,
+      scope: _queryParams(query),
+      entityRef: 'fee:${request.invoiceId}',
     );
-    return FinanceCollectionResultDto.fromJson(_requireData(response));
+    final ResolvedWrite resolved = resolveWriteOutcome(
+      outcome,
+      // Offline-queued money: NO receipt number is minted client-side. The
+      // optimistic projection is explicitly non-final (pendingSync) so the UI
+      // shows "Pending Sync" and a receipt is generated only after the server
+      // confirms the transaction (refinement R1).
+      optimistic: () => <String, dynamic>{
+        'pendingSync': true,
+        'collection': <String, dynamic>{
+          'invoiceId': request.invoiceId,
+          'amountCollected': request.amountCollected,
+          'paymentMethod': request.paymentMethod,
+          'collectionDate': request.collectionDate ?? 'Today',
+        },
+        'receipt': const <String, dynamic>{},
+        'invoice': const <String, dynamic>{},
+      },
+    );
+    return FinanceCollectionResultDto.fromJson(resolved.data);
   }
 
   Future<QrPaymentSessionDto> createQrPaymentSession({

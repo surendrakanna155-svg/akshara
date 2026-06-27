@@ -80,6 +80,7 @@ import 'route_guards.dart';
 import 'admissions_navigation.dart';
 import 'finance_navigation.dart';
 import '../features/settings/appearance_settings_screen.dart';
+import '../core/reliability/sync_center/sync_center_screen.dart';
 import 'copilot_navigation.dart';
 import 'education_navigation.dart';
 import 'intelligence_navigation.dart';
@@ -223,6 +224,11 @@ GoRouter createAppRouter({
         path: RouteNames.appearanceSettings,
         name: 'appearanceSettings',
         builder: (context, state) => const AppearanceSettingsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.syncCenter,
+        name: 'syncCenter',
+        builder: (context, state) => const SyncCenterScreen(),
       ),
       GoRoute(
         path: RouteNames.aiAssistant,

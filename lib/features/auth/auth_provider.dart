@@ -8,6 +8,7 @@ import '../../core/auth/auth_session_manager.dart';
 import '../../core/auth/token_refresh_service.dart';
 import '../../core/config/environment_provider.dart';
 import '../../core/providers/shared_preferences_provider.dart';
+import '../../core/reliability/reliability_providers.dart';
 import '../../core/repositories/interfaces/auth_repository.dart';
 import '../../core/security/server_permission_models.dart';
 import '../../core/security/server_permission_provider.dart';
@@ -539,6 +540,13 @@ class AuthNotifier extends Notifier<AuthState> {
     await ref.read(sessionMetadataStorageProvider).clear();
     await ref.read(tokenRevocationServiceProvider).clearLocalRevocations();
     await ref.read(serverPermissionCacheProvider).clear();
+    // Data Reliability Platform (§9): wipe all locally-persisted drafts and the
+    // outbox on logout / user switch so PII (marks, fees, names) never leaks to
+    // the next user on a shared device. Guarded so a store error never blocks
+    // sign-out.
+    try {
+      await ref.read(reliabilityStoreProvider).clear();
+    } catch (_) {}
     ref.read(serverPermissionSyncProvider.notifier).state =
         const ServerPermissionSyncState();
     state = const AuthState(status: AuthStatus.unauthenticated);

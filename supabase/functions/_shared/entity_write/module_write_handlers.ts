@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { idempotencyAlreadyClaimed } from "../idempotency_dispatch.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 
@@ -132,8 +133,13 @@ export function createModuleWriteHandlers(managePermission: string) {
     // RT-07: honour the (already CORS-advertised) Idempotency-Key on generic
     // entity writes. When present, the operation + its store/replay run in the
     // same tenant transaction so a double-tapped POST writes once and replays.
-    const idempotencyKey = req.headers.get("Idempotency-Key") ??
-      req.headers.get("idempotency-key");
+    // When the universal dispatch wrapper has ALREADY claimed this request's key
+    // (Data Reliability Platform §8.1), we defer to it and just run the
+    // operation — claiming the same (org, key) here would 409 the first request.
+    const idempotencyKey = idempotencyAlreadyClaimed(req)
+      ? null
+      : (req.headers.get("Idempotency-Key") ??
+        req.headers.get("idempotency-key"));
 
     try {
       const result = await withTenantContext(config, auth.claims, async (db) => {
