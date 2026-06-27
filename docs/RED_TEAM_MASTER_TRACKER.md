@@ -2,7 +2,7 @@
 
 **This is the single source of truth for every Red Team issue** until each reaches `Closed`. Nothing is deleted; merged/duplicate/false-positive IDs are **retained** with their disposition recorded.
 
-**Last updated:** 2026-06-27 (Wave 5 CLOSED — Red Team COMPLETE) · **HEAD:** `<pending-commit>` · **Branch:** `feature/scope-trim-school-build`
+**Last updated:** 2026-06-27 (Wave 5 CLOSED — Red Team COMPLETE) · **HEAD:** `82845f0` · **Branch:** `feature/scope-trim-school-build`
 **Inputs:** [`RED_TEAM_CERTIFICATION_AUDIT.md`](./RED_TEAM_CERTIFICATION_AUDIT.md) · [`RED_TEAM_VALIDATION_REPORT.md`](./RED_TEAM_VALIDATION_REPORT.md) · [`RED_TEAM_REPRODUCTION_REPORT.md`](./RED_TEAM_REPRODUCTION_REPORT.md) · [`RED_TEAM_COMPLETION_ROADMAP.md`](./RED_TEAM_COMPLETION_ROADMAP.md)
 **Wave status:** ✅ **ALL 5 WAVES CLOSED (RT-01..35).** Wave 1 (RT-01..08) live 26/26 [`W1`](./RED_TEAM_WAVE_1_CERTIFICATION.md) `6b1e5c1`. Wave 2 (RT-09..15) live 25/25 [`W2`](./RED_TEAM_WAVE_2_CERTIFICATION.md) migration `20260815000000`. Wave 3 (RT-16..23) live 24/24 [`W3`](./RED_TEAM_WAVE_3_CERTIFICATION.md) edge-only. Wave 4 (RT-24..30) client-only, flutter 2448 [`W4`](./RED_TEAM_WAVE_4_CERTIFICATION.md). Wave 5 (RT-31..35) live 15/15 + regression W1 26/26 · W2 25/25 · W3 24/24 · W4 flutter 2450 [`W5`](./RED_TEAM_WAVE_5_CERTIFICATION.md), 2026-06-27. **The Red Team engagement is COMPLETE.**
 
