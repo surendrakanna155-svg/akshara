@@ -68,7 +68,10 @@ export function createManagementReadHandlers(
         return tenantDbNotConfiguredResponse(error);
       }
       if (error instanceof store.SnapshotNotFoundError) {
-        return errorEnvelope("NOT_FOUND", notFoundMessage, 404);
+        // Empty-state contract: a school with no management snapshot yet (e.g.
+        // freshly onboarded) gets a clean empty payload — never a 404. The
+        // null-tolerant client mapper renders a zero-state dashboard.
+        return jsonResponse(envelope({}));
       }
       console.error(`management snapshot(${entityType}) error:`, error);
       return errorEnvelope("INTERNAL_ERROR", notFoundMessage, 500);

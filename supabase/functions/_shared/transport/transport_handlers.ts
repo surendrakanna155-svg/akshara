@@ -63,7 +63,11 @@ async function handleSnapshot(
       return tenantDbNotConfiguredResponse(error);
     }
     if (error instanceof TransportSnapshotNotFoundError) {
-      return errorEnvelope("NOT_FOUND", notFoundMessage, 404);
+      // Empty-state contract: a school that has enabled Transport but not yet
+      // generated its derived snapshot (e.g. freshly onboarded, no routes/buses)
+      // gets a clean empty payload — never a 404. The null-tolerant client mapper
+      // renders this as a zero-state dashboard instead of an error screen.
+      return jsonResponse(envelope({}));
     }
     console.error(`handleSnapshot(${entityType}) error:`, error);
     return errorEnvelope("INTERNAL_ERROR", notFoundMessage, 500);

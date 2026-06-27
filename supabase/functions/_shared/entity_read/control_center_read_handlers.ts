@@ -66,7 +66,10 @@ export function createControlCenterReadHandlers(
         return tenantDbNotConfiguredResponse(error);
       }
       if (error instanceof store.SnapshotNotFoundError) {
-        return errorEnvelope("NOT_FOUND", notFoundMessage, 404);
+        // Empty-state contract: an org with no control-center snapshot yet (e.g.
+        // newly provisioned trust/chain) gets a clean empty payload — never a
+        // 404. The null-tolerant client mapper renders a zero-state dashboard.
+        return jsonResponse(envelope({}));
       }
       console.error(`control-center snapshot(${entityType}) error:`, error);
       return errorEnvelope("INTERNAL_ERROR", notFoundMessage, 500);

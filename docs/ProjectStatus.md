@@ -4,6 +4,22 @@
 **Current version:** `v0.2-academic-mvp`  
 **HEAD commit:** `42b7018`
 
+> **Pilot School Simulation — LIVE CERTIFIED (2026-06-27):** ran Akshara the way
+> real customers do — Small Private (State), Large CBSE, ICSE and State-board
+> schools; single-school organizations vs. multi-school trusts; the full dynamic
+> module lifecycle (Inventory/Hostel/Library/Transport/HR/Alumni: enable → use →
+> disable → re-enable, with **data never deleted on disable**); and a full month
+> of operations — all against the live VPS pilot. **Live total 83/83**
+> (`scripts/qa/live_cert_pilot_simulation.py` 41/41 + `live_cert_full_journeys.py`
+> 25/25 + `live_cert_onboarding_dynamic_config.py` 17/17); analyze 0, flutter
+> 2440/0, backend 857/0. Found, fixed and live-verified **one** genuine production
+> bug: snapshot dashboards (Transport/Inventory/Hostel + Management/Control-Center)
+> returned **404** for every school but the seeded demo pilot — they now return a
+> clean **200 empty-state** when no snapshot row exists (5 edge handlers, no
+> migration, deployed). See `docs/PILOT_SCHOOL_SIMULATION.md` +
+> `docs/PILOT_SIMULATION_ROADMAP.md`. *(Legal & Compliance and GA certification
+> not yet started — intentionally out of scope.)*
+>
 > **Onboarding & Dynamic Configuration PRODUCTION CERTIFIED (2026-06-27):** the
 > first-time-school experience is now proven end-to-end — Akshara builds the right
 > ERP per school and disabling a module removes it everywhere (and re-enabling
