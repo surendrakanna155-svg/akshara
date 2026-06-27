@@ -5,7 +5,19 @@
 **Design:** [`DATA_RELIABILITY_PLATFORM_DESIGN.md`](DATA_RELIABILITY_PLATFORM_DESIGN.md) (approved, refinements R1–R4)
 **Phase 0a:** [`DATA_RELIABILITY_PLATFORM_PHASE0_PROGRESS.md`](DATA_RELIABILITY_PLATFORM_PHASE0_PROGRESS.md) (foundation, 34/34 unit/widget tests)
 
-**Verdict:** 🟢 **PRODUCTION-READY (code + tests)** — `flutter analyze` clean; full Flutter suite green; reliability Deno suite green. Live VPS deploy of the backend changes is the one remaining gated step (additive + behind the `Idempotency-Key` header, so existing traffic is unchanged).
+**Verdict:** 🟢 **PRODUCTION CERTIFIED (LIVE)** — `flutter analyze` clean; full Flutter suite green; reliability Deno suite green; **backend deployed to the live VPS pilot and live-certified 20/20**, with the existing idempotency suite **26/26** (no regression). EOS gate: **PASS**.
+
+### Live deployment (2026-06-28, VPS pilot `akshara.veloraunisexsalon.com`)
+- **Migration `20260817000000`** applied to `akshara_db` (4× `row_version` + `bump_row_version` trigger + function) and ledgered in `supabase_migrations.schema_migrations`.
+- **Edge functions** deployed surgically (5 files) to `/opt/akshara/functions`, `deno check` clean, `akshara-edge` restarted → `/health` ok, `/health/ready database:true`. Only the Phase-0b idempotency delta was applied to `api/index.ts` (the VPS's pre-existing, separately-tracked legal-layer gap was left untouched).
+- **Live cert `scripts/qa/live_cert_reliability_phase0b.py` → 20/20:**
+  - migration deployed (row_version + trigger + function on all 4 tables)
+  - **inert without an `Idempotency-Key`** — a keyless write creates no `request_idempotency` row (existing traffic unchanged)
+  - **universal idempotency exactly-once** — a retried `PATCH /academics/exams/marks/{id}` with the same key (and a *different* value) replays the first response; the DB value is unchanged and `row_version` is not bumped twice — proven on a route that had **no** idempotency before this deploy
+  - **optimistic concurrency** — a stale `expectedVersion` → `409 CONFLICT` carrying the current server row; the correct version applies and bumps `row_version`
+- **Regression — `scripts/qa/live_cert_red_team_wave1.py` → 26/26:** finance double-submit yields exactly one collection; two concurrent payments → one wins / one clean 422 / never negative; the `createModuleWriteHandlers` factory route still replays via exactly one idempotency row (the factory correctly **defers** to the universal wrapper — no double-claim).
+
+The four pilot write paths inherit the verified behaviour through the same route-agnostic universal dispatch (proven live across three distinct route families — academics/marks, finance/fee, library/generic). Client-side offline→reconnect→exactly-once is proven by the Flutter integration tests; the server-side exactly-once replay it depends on is now proven live.
 
 ---
 
@@ -18,7 +30,7 @@
 | **3. Draft persistence (WhatsApp resume)** | Reusable `DraftAutosaveMixin` (autosave + Resume/Discard banner + discard-on-submit); bound to leave form + attendance grid | [`drafts/draft_autosave.dart`](../lib/core/reliability/drafts/draft_autosave.dart), [`parent_leave_screen.dart`](../lib/features/parent/leave/parent_leave_screen.dart), [`teacher_attendance_screen.dart`](../lib/features/teacher/attendance/teacher_attendance_screen.dart) |
 | **4. Autosave** | Debounced on form change + flushed on app background/lock | `DraftAutosaveMixin.scheduleDraftSave`; lifecycle flush in [`app.dart`](../lib/app/app.dart) (`didChangeAppLifecycleState` → `DraftFlushRegistry.flushAll`) |
 | **5. Sync Banner + Sync Center in the shell** | Global `SyncBanner` injected via the `MaterialApp.router` builder (all shells); top-level `/sync-center` route | [`app.dart`](../lib/app/app.dart), [`app_router.dart`](../lib/router/app_router.dart) (`RouteNames.syncCenter`) |
-| **6. Backend universal idempotency + conflict/version** | `dispatchWithIdempotency` wraps the whole module dispatch; `row_version` + `409 CONFLICT`-with-row | [`idempotency_dispatch.ts`](../supabase/functions/_shared/idempotency_dispatch.ts), [`api/index.ts`](../supabase/functions/api/index.ts), migration [`20260817000000`](../supabase/migrations/20260817000000_reliability_row_version_conflict.sql), [`exam_administration_repository.ts`](../supabase/functions/_shared/academics/exam_administration/exam_administration_repository.ts) |
+| **6. Backend universal idempotency + conflict/version** | `dispatchWithIdempotency` wraps the whole module dispatch; `row_version` + `409 CONFLICT`-with-row — **deployed live + 20/20 cert** | [`idempotency_dispatch.ts`](../supabase/functions/_shared/idempotency_dispatch.ts), [`api/index.ts`](../supabase/functions/api/index.ts), migration [`20260817000000`](../supabase/migrations/20260817000000_reliability_row_version_conflict.sql), [`exam_administration_repository.ts`](../supabase/functions/_shared/academics/exam_administration/exam_administration_repository.ts) |
 | **7. Encryption for local draft/outbox** | SQLCipher (`sqflite_sqlcipher`) with a 256-bit key generated once into `flutter_secure_storage` | [`sqflite_reliability_store.dart`](../lib/core/reliability/store/sqflite_reliability_store.dart) (`_obtainCipherKey`, `openDatabase(password:)`) |
 | **8. Airplane-mode integration tests** | offline → "relaunch" → reconnect → flushed exactly once; lost-ack replay; fee R1; draft resume | [`test/integration/reliability/`](../test/integration/reliability/), [`test/core/reliability/draft_resume_test.dart`](../test/core/reliability/draft_resume_test.dart) |
 | **9. No regression** | `flutter analyze` clean; full suite green | §3 |
@@ -52,6 +64,8 @@ A queued write carries a client-generated `operationId` as its `Idempotency-Key`
 | `deno test _shared/idempotency_dispatch_test.ts` | **6 pass** (universal idempotency) |
 | `deno test …/exam_mark_conflict_test.ts` | **4 pass** (row_version + 409 conflict) |
 | `deno test _shared/transport _shared/entity_write red_team_wave1` | **no regression** from the dispatch wrapper / factory change |
+| **LIVE** `live_cert_reliability_phase0b.py` (VPS) | **20/20** — idempotency exactly-once · inert-without-key · 409 conflict · row_version |
+| **LIVE** `live_cert_red_team_wave1.py` (VPS) | **26/26** — finance/factory idempotency, no regression |
 
 ---
 

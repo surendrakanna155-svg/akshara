@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-27 (Phase 0a) · 2026-06-28 (Phase 0b) · Branch: `feature/data-reliability-platform`
 **Design:** [`DATA_RELIABILITY_PLATFORM_DESIGN.md`](DATA_RELIABILITY_PLATFORM_DESIGN.md) (approved with refinements R1–R4)
-**Status:** 🟢 **Phase 0a (Foundation) COMPLETE & VERIFIED** · 🟢 **Phase 0b (Integration) COMPLETE & VERIFIED** · 🟡 Phase 0c (inherit-by-default) follows
+**Status:** 🟢 **Phase 0a (Foundation) COMPLETE & VERIFIED** · 🟢 **Phase 0b (Integration) COMPLETE, DEPLOYED & LIVE-CERTIFIED (20/20 + 26/26 regression)** · 🟡 Phase 0c (inherit-by-default) follows
 
 > **Phase 0b cert:** see [`DATA_RELIABILITY_PLATFORM_CERTIFICATION.md`](DATA_RELIABILITY_PLATFORM_CERTIFICATION.md).
 > The reliability platform is now wired into the live app: bootstrap opens the
@@ -58,6 +58,7 @@ All landed and verified (see the certification for evidence/`file:line`):
 7. ✅ **Backend — row versioning + conflict** — migration `20260817000000` adds `row_version` + a `bump_row_version` trigger to the four queueable tables; the exam-mark update honours an `expectedVersion` precondition and returns `409 CONFLICT` carrying the current row. 4 Deno tests.
 8. ✅ **Encryption-at-rest** — `SqfliteReliabilityStore.open()` uses `sqflite_sqlcipher` with a 256-bit key generated once into `flutter_secure_storage`.
 9. ✅ **Integration tests (airplane-mode)** — attendance offline → "relaunch" → reconnect → flushed **exactly once**; lost-ack idempotency replay; fee R1 pending/no-receipt; draft resume across sessions + per-user isolation + logout wipe.
+10. ✅ **Live deployment + certification** — migration `20260817000000` applied + ledgered on the VPS; the 5 edge files deployed surgically; `akshara-edge` healthy; `live_cert_reliability_phase0b.py` **20/20** (exactly-once replay, inert-without-key, 409 conflict with server row, row_version bump) + `live_cert_red_team_wave1.py` **26/26** (no regression).
 
 ### Remaining → Phase 0c (after QW-gate, not blocking Phase 0b)
 
