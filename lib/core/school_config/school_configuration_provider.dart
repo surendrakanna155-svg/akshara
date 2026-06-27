@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../tenant/tenant_provider.dart';
@@ -98,8 +99,15 @@ class SchoolConfigurationNotifier extends Notifier<SchoolConfiguration> {
         );
         await ref.read(schoolConfigurationStorageProvider)?.write(persisted);
         state = persisted;
-      } on Object {
-        // Save will retry on next apply; local cache already reflects intent.
+      } on Object catch (error) {
+        // Local cache already reflects the optimistic intent, but the durable
+        // backend row did NOT persist — surface this so the caller can warn the
+        // user instead of silently diverging. Re-thrown after logging.
+        debugPrint(
+          'SchoolConfigurationNotifier: backend save failed — local config may '
+          'diverge from the server until the next successful apply: $error',
+        );
+        rethrow;
       }
     }
   }

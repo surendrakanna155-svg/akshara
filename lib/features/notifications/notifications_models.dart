@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../admin/models/admin_nav_models.dart';
+
 /// Notification categories per [Notifications.md] §5.
 enum NotificationCategory {
   fee,
@@ -33,6 +35,23 @@ extension NotificationCategoryX on NotificationCategory {
         NotificationCategory.approval => 'Approval',
         NotificationCategory.announcement => 'Announcement',
         NotificationCategory.system => 'System',
+      };
+
+  /// Owning optional [AdminModule] for dynamic-config capability gating, or null
+  /// for core categories that are always visible. Only optional-module
+  /// categories map to a module so an inbox can hide notifications for a module
+  /// the school has turned off (gap G7) — reusing the same capability mapping
+  /// the admin nav uses ([SchoolCapabilityRegistry.isAdminModuleEnabled]).
+  AdminModule? get capabilityModule => switch (this) {
+        NotificationCategory.transport => AdminModule.transport,
+        NotificationCategory.hostel => AdminModule.hostel,
+        NotificationCategory.fee ||
+        NotificationCategory.attendance ||
+        NotificationCategory.academic ||
+        NotificationCategory.approval ||
+        NotificationCategory.announcement ||
+        NotificationCategory.system =>
+          null,
       };
 }
 

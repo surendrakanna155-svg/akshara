@@ -311,6 +311,7 @@ class AuthNotifier extends Notifier<AuthState> {
         for (final entry in result.permissions) entry.permission,
       ],
       accessTokenExpiresAt: result.tokens.expiresAt,
+      isChainOrganization: user.isChainOrganization,
     );
 
     state = AuthState(

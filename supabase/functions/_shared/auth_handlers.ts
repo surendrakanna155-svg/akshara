@@ -105,6 +105,8 @@ function buildUserPayload(
     childIds: ctx.childIds,
     // PAR-7: real linked-child details for the parent child-switcher.
     children: ctx.childProfiles ?? [],
+    // G4: multi-school (chain/trust) marker — drives Organization Builder visibility.
+    isChainOrganization: ctx.isChainOrganization,
     email: user.email,
     mobile: user.phone,
   };
@@ -129,6 +131,7 @@ function buildAccessClaims(
     school_group_id: ctx.schoolGroupId,
     student_id: ctx.studentId,
     child_ids: ctx.childIds,
+    is_chain_organization: ctx.isChainOrganization,
     session_id: sessionId,
   };
 }
@@ -703,6 +706,7 @@ export async function handleMe(req: Request, config: AppConfig): Promise<Respons
     studentId: claims.student_id,
     childIds: claims.child_ids,
     children,
+    isChainOrganization: claims.is_chain_organization ?? false,
     email: user?.email,
     mobile: user?.phone,
   }));

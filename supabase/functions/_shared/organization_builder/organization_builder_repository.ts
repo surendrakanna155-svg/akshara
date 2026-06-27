@@ -97,6 +97,9 @@ export interface ProvisioningJobView {
   steps: ProvisioningStepView[];
   startedAt: string;
   completedAt?: string;
+  /** G11 — the tenant the job actually created, so the client can open it. */
+  newOrganizationId?: string | null;
+  newBranchId?: string | null;
 }
 
 const UNIVERSAL_EMPLOYEE_MODULE_ID = "universal_employee";
@@ -194,12 +197,16 @@ interface JobRow {
   steps: unknown;
   started_at: unknown;
   completed_at: unknown;
+  resolved_config?: unknown;
 }
 
 function mapJob(row: JobRow): ProvisioningJobView {
   const steps = Array.isArray(row.steps)
     ? (row.steps as ProvisioningStepView[])
     : [];
+  const config = (row.resolved_config && typeof row.resolved_config === "object")
+    ? row.resolved_config as Record<string, unknown>
+    : {};
   return {
     id: row.id,
     draftId: row.draft_id,
@@ -208,6 +215,8 @@ function mapJob(row: JobRow): ProvisioningJobView {
     steps,
     startedAt: iso(row.started_at),
     completedAt: row.completed_at ? iso(row.completed_at) : undefined,
+    newOrganizationId: (config.newOrganizationId as string | null) ?? null,
+    newBranchId: (config.newBranchId as string | null) ?? null,
   };
 }
 
@@ -578,7 +587,7 @@ export async function provision(
         resolved_config, started_at, completed_at)
      VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::timestamptz,
              CASE WHEN $4 IN ('completed', 'failed') THEN $7::timestamptz END)
-     RETURNING id, draft_id, organization_name, status, steps, started_at, completed_at`,
+     RETURNING id, draft_id, organization_name, status, steps, started_at, completed_at, resolved_config`,
     [
       orgId,
       draftId,
@@ -609,7 +618,8 @@ export async function getJob(
   jobId: string,
 ): Promise<ProvisioningJobView | null> {
   const rows = await db.queryObject<JobRow>(
-    `SELECT id, draft_id, organization_name, status, steps, started_at, completed_at
+    `SELECT id, draft_id, organization_name, status, steps, started_at, completed_at,
+            resolved_config
      FROM org_builder_provisioning_jobs
      WHERE id = $1 AND organization_id = $2`,
     [jobId, orgId],

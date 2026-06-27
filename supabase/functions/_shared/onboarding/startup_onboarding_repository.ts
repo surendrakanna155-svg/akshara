@@ -255,6 +255,9 @@ export function provisionToApi(result: StartupOnboardingProvisionResult) {
     classCount: result.classIds.length,
     sectionCount: result.sectionIds.length,
     feeStructureCount: result.feeStructureIds.length,
+    subjectCount: result.subjectIds.length,
+    syllabusTopicsCreated: result.syllabusTopicsCreated,
+    capabilitiesApplied: result.capabilitiesApplied,
     warnings: result.warnings,
     provisioned: result.provisioned,
   };

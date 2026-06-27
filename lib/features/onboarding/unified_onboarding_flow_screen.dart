@@ -415,6 +415,20 @@ class _AiBriefSheetState extends State<_AiBriefSheet> {
   final _teachers = TextEditingController();
   String _board = 'CBSE';
   String _schoolType = 'day_school';
+  AksharaLanguage _primaryLanguage = AksharaLanguage.english;
+
+  /// Optional modules/facilities. The value is the lowercased key the backend
+  /// deterministic engine keys modules + fee categories off
+  /// (see _shared/onboarding/ai_school_builder_service.ts `resolveModules`).
+  static const List<({String key, String label})> _facilities = [
+    (key: 'transport', label: 'Transport'),
+    (key: 'hostel', label: 'Hostel'),
+    (key: 'library', label: 'Library'),
+    (key: 'inventory', label: 'Inventory'),
+    (key: 'alumni', label: 'Alumni'),
+    (key: 'hr_payroll', label: 'HR / Payroll'),
+  ];
+  final Set<String> _selectedModules = <String>{};
 
   @override
   void dispose() {
@@ -530,6 +544,45 @@ class _AiBriefSheetState extends State<_AiBriefSheet> {
               ),
             ],
           ),
+          const SizedBox(height: AksharaSpacing.s3),
+          DropdownButtonFormField<AksharaLanguage>(
+            initialValue: _primaryLanguage,
+            decoration: const InputDecoration(
+              labelText: 'Primary language',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              for (final lang in AksharaLanguage.values)
+                DropdownMenuItem(
+                  value: lang,
+                  child: Text(lang.displayName),
+                ),
+            ],
+            onChanged: (v) =>
+                setState(() => _primaryLanguage = v ?? _primaryLanguage),
+          ),
+          const SizedBox(height: AksharaSpacing.s4),
+          Text('Facilities & optional modules',
+              style: context.aksharaText.labelLarge),
+          const SizedBox(height: AksharaSpacing.s2),
+          Wrap(
+            spacing: AksharaSpacing.s2,
+            runSpacing: AksharaSpacing.s2,
+            children: [
+              for (final facility in _facilities)
+                FilterChip(
+                  label: Text(facility.label),
+                  selected: _selectedModules.contains(facility.key),
+                  onSelected: (selected) => setState(() {
+                    if (selected) {
+                      _selectedModules.add(facility.key);
+                    } else {
+                      _selectedModules.remove(facility.key);
+                    }
+                  }),
+                ),
+            ],
+          ),
           const SizedBox(height: AksharaSpacing.s4),
           Align(
             alignment: Alignment.centerRight,
@@ -545,6 +598,8 @@ class _AiBriefSheetState extends State<_AiBriefSheet> {
                     highestGrade: _highestGrade.text.trim(),
                     estimatedStudents: int.tryParse(_students.text.trim()),
                     estimatedTeachers: int.tryParse(_teachers.text.trim()),
+                    languages: [_primaryLanguage.displayName],
+                    interestedModules: _selectedModules.toList(growable: false),
                   ),
                 );
               },

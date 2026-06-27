@@ -43,6 +43,7 @@ class AuthUser {
     this.scope,
     this.childIds = const [],
     this.children = const [],
+    this.isChainOrganization = false,
   });
 
   final String id;
@@ -63,6 +64,11 @@ class AuthUser {
   /// Linked child display details (id + real name + current class) for parents.
   /// Empty when the server didn't supply them; callers fall back to [childIds].
   final List<AuthChildSummary> children;
+
+  /// Whether the signed-in org is a CHAIN (multi-school tenant). Backend
+  /// supplies this on the login user payload; defaults to `false` for
+  /// independent schools. Flows into [AuthClaims.isChainOrganization].
+  final bool isChainOrganization;
 }
 
 /// Display summary for a parent's linked child (PAR-7).

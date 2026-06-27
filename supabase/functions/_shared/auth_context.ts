@@ -22,7 +22,29 @@ export interface AuthSessionContext {
   childIds: string[];
   /// Display details for linked children (login payload only; not in the JWT).
   childProfiles?: ChildProfileSummary[];
+  /// G4 — true when the caller's organization runs more than one school (a
+  /// chain/trust). Drives Organization Builder visibility client-side, which
+  /// otherwise had no server source and was permanently hidden.
+  isChainOrganization: boolean;
   resolved: ResolvedPermissions;
+}
+
+/**
+ * An organization is a "chain" when it operates more than one (non-deleted)
+ * school — the natural source of truth for trust/multi-branch visibility.
+ * Best-effort: any read error resolves to false (single-school behavior).
+ */
+async function resolveChainStatus(
+  client: SupabaseClient,
+  organizationId: string,
+): Promise<boolean> {
+  const { count, error } = await client
+    .from("schools")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .is("deleted_at", null);
+  if (error) return false;
+  return (count ?? 0) > 1;
 }
 
 export interface ScopeLoginRequest {
@@ -118,6 +140,7 @@ async function resolveSchoolContext(
     schoolGroupId: null,
     studentId: null,
     childIds: [],
+    isChainOrganization: await resolveChainStatus(client, membership.schools.organization_id),
     resolved,
   };
 }
@@ -162,6 +185,7 @@ async function resolveOrganizationContext(
     schoolGroupId: null,
     studentId: null,
     childIds: [],
+    isChainOrganization: await resolveChainStatus(client, membership.organization_id),
     resolved,
   };
 }
@@ -268,6 +292,7 @@ async function resolveParentContext(
     studentId: null,
     childIds,
     childProfiles,
+    isChainOrganization: false,
     resolved: parentResolved,
   };
 }
@@ -304,6 +329,7 @@ async function resolveStudentContext(
     schoolGroupId: null,
     studentId: student.id,
     childIds: [],
+    isChainOrganization: false,
     resolved: studentResolved,
   };
 }

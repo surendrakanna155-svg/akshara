@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/school_config/school_capability_registry.dart';
+import '../../../core/school_config/school_configuration_models.dart';
 import '../../../core/security/permissions.dart';
 import '../../../router/route_names.dart';
+import '../models/admin_nav_models.dart';
 
 /// Searchable ERP destination for global search overlay.
 @immutable
@@ -12,6 +15,7 @@ class GlobalSearchEntry {
     required this.module,
     this.keywords = const [],
     this.requiredPermission,
+    this.capabilityModule,
   });
 
   final String label;
@@ -23,6 +27,14 @@ class GlobalSearchEntry {
   /// route's real guard (see [kErpRouteViewPermissions]). Null = generic
   /// destination (e.g. role dashboards) visible to all authenticated users.
   final Permission? requiredPermission;
+
+  /// Owning [AdminModule] for dynamic-config capability gating. When the module
+  /// is disabled for the school (`effectiveCapability = planAllows ∩
+  /// schoolConfigEnabled` is off), the entry is hidden so it never becomes a
+  /// dead link to [AccessDeniedScreen] — the SAME source the admin nav uses
+  /// (see [SchoolCapabilityRegistry.isAdminModuleEnabled]). Null = core
+  /// destination always available regardless of optional-module config.
+  final AdminModule? capabilityModule;
 
   bool matches(String query) {
     if (query.isEmpty) return true;
@@ -41,6 +53,15 @@ class GlobalSearchEntry {
   bool isVisibleTo(bool Function(Permission) hasPermission) {
     final permission = requiredPermission;
     return permission == null || hasPermission(permission);
+  }
+
+  /// Whether this entry's owning optional module is enabled for the school under
+  /// the dynamic-config rule. Core entries ([capabilityModule] null) are always
+  /// enabled. Uses the SAME [SchoolCapabilityRegistry] mapping as the admin nav.
+  bool isCapabilityEnabled(SchoolCapabilities capabilities) {
+    final module = capabilityModule;
+    return module == null ||
+        SchoolCapabilityRegistry.isAdminModuleEnabled(module, capabilities);
   }
 }
 
@@ -130,6 +151,7 @@ abstract final class GlobalSearchRegistry {
       module: 'Inventory',
       keywords: ['stock', 'procurement'],
       requiredPermission: Permission.viewInventory,
+      capabilityModule: AdminModule.inventory,
     ),
     GlobalSearchEntry(
       label: 'Inventory Reports',
@@ -137,6 +159,7 @@ abstract final class GlobalSearchRegistry {
       module: 'Inventory',
       keywords: ['analytics', 'trends'],
       requiredPermission: Permission.viewInventory,
+      capabilityModule: AdminModule.inventory,
     ),
     GlobalSearchEntry(
       label: 'Inventory Lifecycle',
@@ -144,6 +167,7 @@ abstract final class GlobalSearchRegistry {
       module: 'Inventory',
       keywords: ['lifecycle', 'intelligence'],
       requiredPermission: Permission.viewInventoryIntelligence,
+      capabilityModule: AdminModule.inventory,
     ),
     GlobalSearchEntry(
       label: 'Communication Analytics',
@@ -188,15 +212,24 @@ abstract final class GlobalSearchRegistry {
 
   /// Entries matching [query]. When [hasPermission] is provided, entries the
   /// user lacks the view-permission for are excluded so they neither appear nor
-  /// are navigable (MJ-L8 / ADMIN-6 RBAC fix).
+  /// are navigable (MJ-L8 / ADMIN-6 RBAC fix). When [capabilities] is provided,
+  /// entries whose optional module is disabled for the school are excluded too,
+  /// so a turned-off module (transport/hostel/library/inventory/alumni/hr) never
+  /// becomes a dead link to [AccessDeniedScreen] (gap G6) — using the same
+  /// capability source as the admin nav.
   static List<GlobalSearchEntry> search(
     String query, {
     bool Function(Permission)? hasPermission,
+    SchoolCapabilities? capabilities,
   }) {
     return entries
         .where((entry) => entry.matches(query))
         .where(
           (entry) => hasPermission == null || entry.isVisibleTo(hasPermission),
+        )
+        .where(
+          (entry) =>
+              capabilities == null || entry.isCapabilityEnabled(capabilities),
         )
         .toList();
   }

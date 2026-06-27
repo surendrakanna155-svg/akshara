@@ -30,8 +30,56 @@ import {
   type RoleDashboardLayoutDef,
   WIDGET_DATA_SOURCES,
 } from "./widget_pack_catalog.ts";
+import { resolveSubscription } from "../entitlements/entitlement_service.ts";
 
 const DEFAULT_PACK = "school";
+
+/**
+ * Maps a widget's `dataSource` prefix to the optional capability flag that gates
+ * it (the 8 flags in `entitlement_resolver.CAPABILITY_ENTITLEMENTS`). Core
+ * prefixes (academics/operations/finance/intelligence) and vertical-pack
+ * prefixes return null — they are never gated by the optional-module flags.
+ */
+export function optionalCapabilityForDataSource(dataSource: string): string | null {
+  const prefix = dataSource.split(".")[0];
+  switch (prefix) {
+    case "transport":
+      return "transport";
+    case "hostel":
+      return "hostel";
+    case "library":
+      return "library";
+    case "inventory":
+      return "inventory";
+    case "alumni":
+      return "alumni";
+    case "hr":
+    case "payroll":
+      return "hrPayroll";
+    default:
+      return null;
+  }
+}
+
+/**
+ * G5 — drop any widget that belongs to an optional module the school has
+ * disabled, so a disabled module can never leak a dashboard widget (defence in
+ * depth on top of the per-widget RBAC filter). A no-op for the core school pack
+ * today; correct for tenant overrides / future optional-module widgets.
+ */
+export function filterLayoutByCapabilities(
+  layout: RoleDashboardLayoutDef,
+  capabilities: Record<string, boolean>,
+): RoleDashboardLayoutDef {
+  const allowed = (dataSource: string): boolean => {
+    const flag = optionalCapabilityForDataSource(dataSource);
+    return !flag || capabilities[flag] !== false;
+  };
+  const widgets = Array.isArray(layout.widgets)
+    ? layout.widgets.filter((w) => allowed(w.dataSource))
+    : layout.widgets;
+  return { ...layout, widgets };
+}
 
 function roleKey(role: string): string {
   return `role:${role}`;
@@ -139,12 +187,20 @@ export async function handleGetRoleLayout(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
+    const capabilities = await withTenantContext(
+      config,
+      auth.claims,
+      (db) => resolveSubscription(db, orgId, schoolId),
+    ).then((r) => r.capabilities).catch(() => ({} as Record<string, boolean>));
+
     const row = await fetchOverrideRow(config, auth.claims, orgId, schoolId, role);
     const stored = storedLayout(row);
     if (isOverride(stored)) {
-      return jsonResponse(envelope({ ...stored, role, isTenantOverride: true }));
+      const filtered = filterLayoutByCapabilities(stored!, capabilities);
+      return jsonResponse(envelope({ ...filtered, role, isTenantOverride: true }));
     }
-    return jsonResponse(envelope(packDefaultLayout(role, DEFAULT_PACK)));
+    const def = filterLayoutByCapabilities(packDefaultLayout(role, DEFAULT_PACK), capabilities);
+    return jsonResponse(envelope(def));
   } catch (error) {
     return widgetPlatformError(error);
   }

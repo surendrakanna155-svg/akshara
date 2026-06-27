@@ -83,6 +83,7 @@ class AuthMapper {
               classLabel: child['classLabel'] as String? ?? '',
             ),
       ],
+      isChainOrganization: raw['isChainOrganization'] as bool? ?? false,
     );
   }
 

@@ -4,6 +4,25 @@
 **Current version:** `v0.2-academic-mvp`  
 **HEAD commit:** `42b7018`
 
+> **Onboarding & Dynamic Configuration PRODUCTION CERTIFIED (2026-06-27):** the
+> first-time-school experience is now proven end-to-end — Akshara builds the right
+> ERP per school and disabling a module removes it everywhere (and re-enabling
+> restores it). Closed the systemic root cause (the founder's module choice never
+> reached the runtime gate: onboarding wrote `schools.settings.modules_enabled`
+> while gating reads `school_configuration.capabilities`) plus 12 gaps (G1–G12):
+> go-live now derives + writes capabilities (G1) and a default subject/syllabus set
+> (G8) idempotently (G9, find-or-create); the brief UI collects facilities (G2);
+> the **backend now rejects school-disabled modules with 403 MODULE_DISABLED** (G3);
+> dashboard/search/notifications honour disabled modules (G5/G6/G7); Organization
+> Builder is reachable (backend emits `isChainOrganization`, G4); plus honesty
+> polish (G10/G11/G12). The first real go-live (B7 only ever certified the
+> propose-only AI prefill) surfaced and fixed three latent bugs — `schools` write
+> needed a SECURITY DEFINER fn (migration `20260813000000`), and two CHECK-constraint
+> violations (`syllabus.source`, `fee.status`). Live cert
+> `scripts/qa/live_cert_onboarding_dynamic_config.py` **17/17** (real auth + DB +
+> RBAC, isolated throwaway school, pilot untouched); Deno 102/102; analyze 0; tests
+> green. See `docs/ONBOARDING_DYNAMIC_CONFIGURATION_CERTIFICATION.md`.
+>
 > **Live backend / pilot state (2026-06-25):** the self-hosted backend is live on the
 > VPS (`akshara.veloraunisexsalon.com`). **The entire P1 (Revenue & Pilot Success) layer is
 > PRODUCTION CERTIFIED and now INTEGRATION CERTIFIED end-to-end:** B1 Admissions CRM

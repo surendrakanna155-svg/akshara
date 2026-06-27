@@ -24,6 +24,16 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { resolveSubscription } from "./entitlement_service.ts";
 import { entitlementEnforcementEnabled } from "./entitlement_enforcement.ts";
+import { CAPABILITY_ENTITLEMENTS } from "./entitlement_resolver.ts";
+
+/**
+ * Reverse of `CAPABILITY_ENTITLEMENTS`: entitlement slug → capability flag.
+ * Used so the gate can distinguish "your plan doesn't include this" (402) from
+ * "your plan allows it but the school switched it off" (403 MODULE_DISABLED).
+ */
+const ENTITLEMENT_TO_CAPABILITY: Record<string, string> = Object.fromEntries(
+  Object.entries(CAPABILITY_ENTITLEMENTS).map(([flag, slug]) => [slug, flag]),
+);
 
 export type ModuleRoute = (
   req: Request,
@@ -52,6 +62,29 @@ export function requireEntitlement(
 }
 
 /**
+ * Pure two-tier gate: 402 when the plan doesn't include the slug, else 403
+ * MODULE_DISABLED when the slug maps to an optional capability the school has
+ * switched off, else null (allowed). Side-effect-free for unit testing.
+ */
+export function gateModuleAccess(
+  allowed: Iterable<string>,
+  capabilities: Record<string, boolean>,
+  slug: string,
+): Response | null {
+  const planDenied = requireEntitlement(allowed, slug);
+  if (planDenied) return planDenied;
+  const flag = ENTITLEMENT_TO_CAPABILITY[slug];
+  if (flag && capabilities[flag] === false) {
+    return errorEnvelope(
+      "MODULE_DISABLED",
+      `This module is disabled for this school: ${slug}`,
+      403,
+    );
+  }
+  return null;
+}
+
+/**
  * Resolves the caller org's plan-allowed entitlements and enforces `slug`.
  * Returns a Response to short-circuit (401/402/500) or null to proceed.
  */
@@ -71,7 +104,10 @@ export async function enforceEntitlement(
       auth.claims,
       (db) => resolveSubscription(db, orgId, schoolId),
     );
-    return requireEntitlement(resolved.entitlements, slug);
+    // G3 — plan ceiling (402) first, then school-disabled enforcement (403):
+    // the plan may allow the optional module while the school has switched it
+    // off in its own config, in which case the backend must not be callable.
+    return gateModuleAccess(resolved.entitlements, resolved.capabilities, slug);
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);

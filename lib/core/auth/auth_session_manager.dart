@@ -174,6 +174,7 @@ class AuthSessionManager {
       schoolId: jwt.schoolId,
       organizationId: jwt.organizationId,
       accessTokenExpiresAt: jwt.expiresAt,
+      isChainOrganization: jwt.isChainOrganization,
     );
   }
 

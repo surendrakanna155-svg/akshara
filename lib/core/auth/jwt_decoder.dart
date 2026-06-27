@@ -11,6 +11,7 @@ class JwtClaims {
     this.permissions = const [],
     this.expiresAt,
     this.issuedAt,
+    this.isChainOrganization = false,
   });
 
   final String? subject;
@@ -21,6 +22,10 @@ class JwtClaims {
   final List<String> permissions;
   final DateTime? expiresAt;
   final DateTime? issuedAt;
+
+  /// Whether the signed-in org is a CHAIN (multi-school tenant). Backend signs
+  /// this as `is_chain_organization`; defaults to `false` when absent.
+  final bool isChainOrganization;
 
   bool get isExpired {
     if (expiresAt == null) return false;
@@ -87,6 +92,9 @@ class JwtDecoder {
       permissions: permissions,
       expiresAt: _parseEpoch(json['exp']),
       issuedAt: _parseEpoch(json['iat']),
+      isChainOrganization: (json['is_chain_organization'] as bool?) ??
+          (json['isChainOrganization'] as bool?) ??
+          false,
     );
   }
 

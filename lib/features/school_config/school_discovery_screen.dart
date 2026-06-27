@@ -286,7 +286,22 @@ class _SchoolDiscoveryScreenState extends ConsumerState<SchoolDiscoveryScreen> {
       operationsModel: _operationsModel,
       branchCount: _branchCount,
     );
-    await ref.read(schoolConfigurationProvider.notifier).apply(config);
+    try {
+      await ref.read(schoolConfigurationProvider.notifier).apply(config);
+    } catch (_) {
+      // Local state was applied optimistically, but the durable backend save
+      // failed — warn the user instead of silently confirming success.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Configuration saved locally, but syncing to the server failed. '
+            'It will retry on the next change.',
+          ),
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

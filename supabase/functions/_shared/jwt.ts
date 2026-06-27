@@ -23,6 +23,9 @@ export interface AccessTokenClaims {
   school_group_id: string | null;
   student_id: string | null;
   child_ids: string[];
+  /** G4 — true when the org runs more than one school (chain/trust). Optional so
+   * existing claim literals stay valid; absent resolves to false. */
+  is_chain_organization?: boolean;
   session_id: string;
 }
 
@@ -45,6 +48,7 @@ export async function signAccessToken(
     school_group_id: claims.school_group_id,
     student_id: claims.student_id,
     child_ids: claims.child_ids,
+    is_chain_organization: claims.is_chain_organization ?? false,
     session_id: claims.session_id,
   })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
@@ -80,6 +84,7 @@ export async function verifyAccessToken(
       school_group_id: (payload.school_group_id as string | null) ?? null,
       student_id: (payload.student_id as string | null) ?? null,
       child_ids: childIds,
+      is_chain_organization: (payload.is_chain_organization as boolean | undefined) ?? false,
       session_id: payload.session_id as string,
     };
   } catch {

@@ -5,6 +5,8 @@ import '../../core/communication/parent_communication_store.dart';
 import '../../core/communication/teacher_parent_templates.dart';
 import '../../core/repositories/repository_config.dart';
 import '../../core/repositories/repository_providers.dart';
+import '../../core/school_config/school_capability_registry.dart';
+import '../../core/school_config/school_configuration_provider.dart';
 import '../../core/tenant/tenant_provider.dart';
 import 'notifications_models.dart';
 
@@ -119,7 +121,23 @@ class NotificationsNotifier extends Notifier<List<AppNotification>> {
   }
 
   List<AppNotification> filtered(NotificationFilter filter) {
-    final visible = state.where((n) => !n.isArchived).toList();
+    // Dynamic-config gate: drop notifications whose optional module is disabled
+    // for the school (effectiveCapability = planAllows ∩ schoolConfigEnabled is
+    // off) so a turned-off module's notifications never surface (gap G7). Core
+    // categories carry no capabilityModule and are always shown. Same capability
+    // source as the admin nav.
+    final capabilities = ref.read(schoolCapabilitiesProvider);
+    final visible = state
+        .where((n) => !n.isArchived)
+        .where((n) {
+          final module = n.category.capabilityModule;
+          return module == null ||
+              SchoolCapabilityRegistry.isAdminModuleEnabled(
+                module,
+                capabilities,
+              );
+        })
+        .toList();
     return switch (filter) {
       NotificationFilter.all => visible,
       NotificationFilter.unread => visible.where((n) => !n.isRead).toList(),

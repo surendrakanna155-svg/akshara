@@ -1,7 +1,7 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
-import { createAcademicYear } from "../academic/academic_years_repository.ts";
-import { createClass } from "../academic/classes_repository.ts";
-import { createSection } from "../academic/sections_repository.ts";
+import { createAcademicYear, type AcademicYearRow } from "../academic/academic_years_repository.ts";
+import { createClass, DuplicateClassError } from "../academic/classes_repository.ts";
+import { createSection, DuplicateSectionError } from "../academic/sections_repository.ts";
 import { createFeeStructure } from "../finance/finance_structures_repository.ts";
 import { encodeFeeHead } from "../finance/finance_mapper.ts";
 import { createSubject } from "../school_completion/subjects_repository.ts";
@@ -36,36 +36,90 @@ export async function provisionSchoolFromWizard(
 
   const yearLabel = built.recommendations.academicYear;
   const startYear = new Date().getFullYear();
-  const year = await createAcademicYear(db, organizationId, schoolId, {
-    yearLabel,
-    startDate: `${startYear}-04-01`,
-    endDate: `${startYear + 1}-03-31`,
-    isCurrent: true,
-    createdBy: userId,
-  });
+  // G9 — idempotent provision: reuse an existing academic year / class / section
+  // instead of throwing a 500 mid-write when the wizard is re-run or the school
+  // already ran startup onboarding (mirrors the startup-onboarding path).
+  let year: AcademicYearRow;
+  const existingYear = await db.queryObject<AcademicYearRow>(
+    `SELECT * FROM academic_years
+      WHERE organization_id = $1 AND school_id = $2 AND year_label = $3 LIMIT 1`,
+    [organizationId, schoolId, yearLabel],
+  );
+  if (existingYear[0]) {
+    year = existingYear[0];
+    warnings.push(`Academic year ${yearLabel} already exists — reused`);
+  } else {
+    try {
+      year = await createAcademicYear(db, organizationId, schoolId, {
+        yearLabel,
+        startDate: `${startYear}-04-01`,
+        endDate: `${startYear + 1}-03-31`,
+        isCurrent: true,
+        createdBy: userId,
+      });
+    } catch (error) {
+      const retry = await db.queryObject<AcademicYearRow>(
+        `SELECT * FROM academic_years
+          WHERE organization_id = $1 AND school_id = $2 AND year_label = $3 LIMIT 1`,
+        [organizationId, schoolId, yearLabel],
+      );
+      if (!retry[0]) throw error;
+      year = retry[0];
+      warnings.push(`Academic year ${yearLabel} already exists — reused`);
+    }
+  }
 
   for (const [idx, grade] of built.recommendations.classes.entries()) {
-    const cls = await createClass(db, organizationId, schoolId, {
-      academicYearId: year.id,
-      className: grade,
-      displayOrder: idx,
-      createdBy: userId,
-    });
-    classIds.push(cls.id);
+    let classId: string | undefined;
+    try {
+      const cls = await createClass(db, organizationId, schoolId, {
+        academicYearId: year.id,
+        className: grade,
+        displayOrder: idx,
+        createdBy: userId,
+      });
+      classId = cls.id;
+      classIds.push(cls.id);
+    } catch (error) {
+      if (error instanceof DuplicateClassError) {
+        const existing = await db.queryObject<{ id: string }>(
+          `SELECT id FROM classes
+            WHERE organization_id = $1 AND school_id = $2
+              AND academic_year_id = $3 AND class_name = $4 LIMIT 1`,
+          [organizationId, schoolId, year.id, grade],
+        );
+        classId = existing[0]?.id;
+        if (classId) {
+          classIds.push(classId);
+          warnings.push(`Class ${grade} already exists — reused`);
+        }
+      } else {
+        warnings.push(`Class ${grade} skipped: ${String(error)}`);
+      }
+    }
+    if (!classId) continue;
 
     const sectionsForGrade = built.recommendations.sections.filter((s) => s.startsWith(grade));
     for (const sectionLabel of sectionsForGrade) {
       const sectionName = sectionLabel.split(" — ")[1]?.trim() ?? "A";
       const capacity = 40;
-      const sec = await createSection(db, organizationId, schoolId, {
-        classId: cls.id,
-        sectionName,
-        capacity,
-        createdBy: userId,
-      });
-      sectionIds.push(sec.id);
-      if (capacity > 35) {
-        warnings.push(`Large class size configured for ${grade} ${sectionName} (capacity ${capacity})`);
+      try {
+        const sec = await createSection(db, organizationId, schoolId, {
+          classId,
+          sectionName,
+          capacity,
+          createdBy: userId,
+        });
+        sectionIds.push(sec.id);
+        if (capacity > 35) {
+          warnings.push(`Large class size configured for ${grade} ${sectionName} (capacity ${capacity})`);
+        }
+      } catch (error) {
+        if (error instanceof DuplicateSectionError) {
+          warnings.push(`Section ${sectionName} for ${grade} already exists — skipped`);
+        } else {
+          warnings.push(`Section ${sectionName} for ${grade} skipped: ${String(error)}`);
+        }
       }
     }
   }
@@ -122,7 +176,7 @@ export async function provisionSchoolFromWizard(
       academicYear: yearLabel,
       academicYearId: year.id,
       description: "Auto-provisioned by setup wizard",
-      status: "draft",
+      status: "inactive",
       createdBy: userId,
       items: [{
         feeHead: encodeFeeHead("tuition", feeName),

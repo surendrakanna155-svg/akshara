@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:akshara_erp/core/school_config/school_configuration_models.dart';
 import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/features/admin/global_search/global_search_registry.dart';
 import 'package:akshara_erp/router/route_guards.dart';
@@ -83,6 +84,45 @@ void main() {
       );
       expect(
         results.any((e) => e.route == RouteNames.teacherDashboard),
+        isTrue,
+      );
+    });
+
+    test('disabling a module hides its entries from search (gap G6)', () {
+      // School has inventory turned off — its entries must not surface even with
+      // the matching view-permission, so tapping never hits AccessDeniedScreen.
+      final disabledInventory = GlobalSearchRegistry.search(
+        'inventory',
+        hasPermission: granting(const {
+          Permission.viewInventory,
+          Permission.viewInventoryIntelligence,
+        }),
+        capabilities: const SchoolCapabilities(inventory: false),
+      );
+      expect(
+        disabledInventory.any((e) => e.route == RouteNames.inventoryDashboard),
+        isFalse,
+      );
+
+      // With the module enabled the same query returns the entries.
+      final enabledInventory = GlobalSearchRegistry.search(
+        'inventory',
+        hasPermission: granting(const {Permission.viewInventory}),
+        capabilities: const SchoolCapabilities(),
+      );
+      expect(
+        enabledInventory.any((e) => e.route == RouteNames.inventoryDashboard),
+        isTrue,
+      );
+
+      // Core entries (no capabilityModule) stay visible regardless of config.
+      final core = GlobalSearchRegistry.search(
+        'finance',
+        hasPermission: granting(const {Permission.viewFinance}),
+        capabilities: const SchoolCapabilities(inventory: false),
+      );
+      expect(
+        core.any((e) => e.route == RouteNames.financeDashboard),
         isTrue,
       );
     });

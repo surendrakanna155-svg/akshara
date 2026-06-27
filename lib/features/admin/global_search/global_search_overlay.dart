@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/school_config/school_configuration_models.dart';
+import '../../../core/school_config/school_configuration_provider.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../router/route_names.dart';
@@ -51,15 +53,22 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
   @override
   Widget build(BuildContext context) {
     final rbac = ref.watch(rbacServiceProvider);
+    final capabilities = ref.watch(schoolCapabilitiesProvider);
     final recentRoutes = ref.watch(recentRoutesProvider);
     // RBAC filter: entries the user lacks the route's view-permission for must
-    // neither surface nor be navigable (MJ-L8 / ADMIN-6).
+    // neither surface nor be navigable (MJ-L8 / ADMIN-6). Capability filter:
+    // entries whose optional module is disabled for the school are dropped so a
+    // turned-off module never becomes a dead link (gap G6) — same source as nav.
     final recentEntries = GlobalSearchRegistry.entries
         .where((entry) => recentRoutes.contains(entry.route))
         .where((entry) => entry.isVisibleTo(rbac.hasPermission))
+        .where((entry) => entry.isCapabilityEnabled(capabilities))
         .toList();
-    final results =
-        GlobalSearchRegistry.search(_query, hasPermission: rbac.hasPermission);
+    final results = GlobalSearchRegistry.search(
+      _query,
+      hasPermission: rbac.hasPermission,
+      capabilities: capabilities,
+    );
 
     return DraggableScrollableSheet(
       expand: false,
@@ -102,6 +111,7 @@ class _GlobalSearchOverlayState extends ConsumerState<GlobalSearchOverlay> {
                       _QuickActionRow(
                         onNavigate: _navigate,
                         hasPermission: rbac.hasPermission,
+                        capabilities: capabilities,
                       ),
                       const SizedBox(height: AksharaSpacing.s4),
                     ],
@@ -165,10 +175,12 @@ class _QuickActionRow extends StatelessWidget {
   const _QuickActionRow({
     required this.onNavigate,
     required this.hasPermission,
+    required this.capabilities,
   });
 
   final void Function(GlobalSearchEntry entry) onNavigate;
   final bool Function(Permission) hasPermission;
+  final SchoolCapabilities capabilities;
 
   static const _quickIds = [
     RouteNames.admissionsEnrollment,
@@ -182,6 +194,7 @@ class _QuickActionRow extends StatelessWidget {
     final quickEntries = GlobalSearchRegistry.entries
         .where((entry) => _quickIds.contains(entry.route))
         .where((entry) => entry.isVisibleTo(hasPermission))
+        .where((entry) => entry.isCapabilityEnabled(capabilities))
         .toList();
 
     return Wrap(

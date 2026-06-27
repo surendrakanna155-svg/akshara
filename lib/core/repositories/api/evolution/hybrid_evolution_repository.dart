@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../interfaces/evolution_repository.dart';
 import '../../repository_query.dart';
 import '../../../../features/dynamic_widgets/dynamic_widget_models.dart';
@@ -256,11 +258,20 @@ class HybridEvolutionRepository implements EvolutionRepository {
       // role-scoped layout configured yet — fall back to the mock default so
       // the dashboard still renders something useful.
       if (live.widgets.isEmpty) {
+        debugPrint(
+          'HybridEvolutionRepository: live role dashboard layout for "$role" '
+          'is empty — serving mock fallback layout (degraded).',
+        );
         return _fallback.getRoleDashboardLayout(query: query, role: role);
       }
       return live;
-    } catch (_) {
-      // Missing route / network / backend off — never hard-error the dashboard.
+    } catch (error) {
+      // Missing route / network / backend off — never hard-error the dashboard,
+      // but make the silent mock substitution observable.
+      debugPrint(
+        'HybridEvolutionRepository: live role dashboard layout for "$role" '
+        'failed — serving mock fallback layout (degraded): $error',
+      );
       return _fallback.getRoleDashboardLayout(query: query, role: role);
     }
   }
