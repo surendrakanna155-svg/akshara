@@ -1,8 +1,8 @@
 # AKSHARA — Red Team Completion Roadmap
 
 **Companion to:** [`RED_TEAM_CERTIFICATION_AUDIT.md`](./RED_TEAM_CERTIFICATION_AUDIT.md) · validated by [`RED_TEAM_VALIDATION_REPORT.md`](./RED_TEAM_VALIDATION_REPORT.md)
-**Date:** 2026-06-27 (validation reconciliation added 2026-06-27; Wave 1 closed 2026-06-27)
-**Status:** ✅ **Wave 1 CLOSED** (RT-01..08 fixed, deployed, live 26/26 — commit `6b1e5c1`, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). Waves 2–5 awaiting owner approval; no fixes applied beyond Wave 1.
+**Date:** 2026-06-27 (validation reconciliation added 2026-06-27; Wave 1 closed 2026-06-27; Wave 2 closed 2026-06-27)
+**Status:** ✅ **Wave 1 CLOSED** (RT-01..08 fixed, deployed, live 26/26 — commit `6b1e5c1`, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). ✅ **Wave 2 CLOSED** (RT-09..15 fixed via migration `20260815000000`, deployed, live 25/25 + Wave-1 regression 26/26 — [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md)). Waves 3–5 awaiting owner approval; no fixes applied beyond Wave 2.
 
 > ## Validation reconciliation (post-validation pass)
 >
@@ -49,7 +49,7 @@ Each wave also produces a `docs/RED_TEAM_WAVE_<n>_CERTIFICATION.md` recording th
 | Wave | Theme | Findings | Severity mix | Risk if skipped |
 |---|---|---|---|---|
 | 1 | Transactional Integrity — duplicates & lost updates | RT-01,02,03,04,05,06,07,08 | 2 Crit, 4 High, 2 Med | Money/identity corruption, lost records |
-| 2 | Tenant & Privacy Isolation (RLS) | RT-09,10,11,12,13,14,15 | 1 Crit, 4 High, 1 Med, 1 Low | Cross-family PII leak/tamper |
+| 2 ✅ **CLOSED** (live 25/25, `20260815000000`) | Tenant & Privacy Isolation (RLS) | RT-09,10,11,12,13,14,15 | 1 Crit, 4 High, 1 Med, 1 Low | Cross-family PII leak/tamper |
 | 3 | Session & Authorization Enforcement | RT-16,17,18,19,20,21,22,23 | 3 High, 2 Med, 3 Low | Revocation/demotion ineffective; gate bypass |
 | 4 | Client Write Resilience | RT-24,25,26,27,28,29,30 | 3 High, 4 Med | Double-submit duplicates; invisible failures |
 | 5 | Input/Upload Hardening & Scale | RT-31,32,33,34,35 | 2 High, 2 Med, 1 Low | Upload abuse, DB-connection cliff, bloat |
@@ -78,7 +78,9 @@ Each wave also produces a `docs/RED_TEAM_WAVE_<n>_CERTIFICATION.md` recording th
 
 ---
 
-## Wave 2 — Tenant & Privacy Isolation (RLS)
+## Wave 2 — Tenant & Privacy Isolation (RLS) — ✅ CLOSED (live 25/25 + W1 regression 26/26, `20260815000000`, 2026-06-27)
+
+> **CLOSED.** All 7 findings fixed in one migration `20260815000000_red_team_wave2_tenant_privacy_rls.sql`, applied to the live VPS pilot and certified **25/25** under the unprivileged `erp_tenant` role (rolled-back probes — the same method that reproduced the leaks). Wave-1 regression re-run live **26/26**. See [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md). **Implementation notes vs the plan below:** RT-10 and RT-11 were closed by restricting their tables to `school` scope (no parent-facing reader exists for either — strictly safer than the guardian-pin, zero functional impact); RT-09 used the guardian-pin as planned (it has a real parent read path). RT-14's `school_id` pin applies to per-school scopes only — `organization` scope stays org-wide so the `publishPendingDomainEvents` outbox drain is not regressed. Cert proves the fix on a single-family pilot by probing a synthetic non-guardian parent / second school — no 2-family fixture needed.
 
 **Why second:** these are confirmed cross-family **PII** read/write leaks — a privacy incident is as damaging as data corruption, and the fixes are small, surgical policy edits.
 

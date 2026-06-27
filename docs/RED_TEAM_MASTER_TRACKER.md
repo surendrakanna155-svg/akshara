@@ -2,9 +2,9 @@
 
 **This is the single source of truth for every Red Team issue** until each reaches `Closed`. Nothing is deleted; merged/duplicate/false-positive IDs are **retained** with their disposition recorded.
 
-**Last updated:** 2026-06-27 (Wave 1 CLOSED) · **HEAD:** `6b1e5c1` · **Branch:** `feature/scope-trim-school-build`
+**Last updated:** 2026-06-27 (Wave 2 CLOSED) · **HEAD:** `84e4f02` · **Branch:** `feature/scope-trim-school-build`
 **Inputs:** [`RED_TEAM_CERTIFICATION_AUDIT.md`](./RED_TEAM_CERTIFICATION_AUDIT.md) · [`RED_TEAM_VALIDATION_REPORT.md`](./RED_TEAM_VALIDATION_REPORT.md) · [`RED_TEAM_REPRODUCTION_REPORT.md`](./RED_TEAM_REPRODUCTION_REPORT.md) · [`RED_TEAM_COMPLETION_ROADMAP.md`](./RED_TEAM_COMPLETION_ROADMAP.md)
-**Wave status:** ✅ **Wave 1 (RT-01..08) CLOSED** — live 26/26, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md), commit `6b1e5c1`, 2026-06-27. Waves 2–5 remain **Open** (awaiting approval).
+**Wave status:** ✅ **Wave 1 (RT-01..08) CLOSED** — live 26/26, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md), commit `6b1e5c1`, 2026-06-27. ✅ **Wave 2 (RT-09..15) CLOSED** — live 25/25 + Wave-1 regression 26/26, [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md), migration `20260815000000`, 2026-06-27. Waves 3–5 remain **Open** (awaiting approval).
 
 ## Lifecycle
 
@@ -12,7 +12,7 @@
 Open → In Progress → Fixed → Certified → Closed
 ```
 
-**Wave 1 (RT-01..08) is `Closed`** (fixed, deployed, live-certified 26/26 — see commit `6b1e5c1` / [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). All remaining issues (Waves 2–5) are **Open**. Status changes only as waves are approved and executed.
+**Wave 1 (RT-01..08) is `Closed`** (fixed, deployed, live-certified 26/26 — see commit `6b1e5c1` / [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). **Wave 2 (RT-09..15) is `Closed`** (fixed, deployed, live-certified 25/25, Wave-1 regression 26/26 — see migration `20260815000000_red_team_wave2_tenant_privacy_rls.sql` / [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md)). All remaining issues (Waves 3–5) are **Open**. Status changes only as waves are approved and executed.
 
 ## Disposition legend
 
@@ -26,7 +26,7 @@ Open → In Progress → Fixed → Certified → Closed
 |---|---|
 | Original findings | 35 |
 | Confirmed real defects | 33 |
-| Verified Live | 7 |
+| Verified Live | 14 (RT-09..15 re-verified live post-fix in Wave 2) |
 | Verified Test | 0 |
 | Static Only | 25 |
 | Not Reproducible | 3 |
@@ -50,13 +50,13 @@ Open → In Progress → Fixed → Certified → Closed
 | RT-06 | HR / Library / Mgmt snapshots | High | Closed | STATIC ONLY | Static | `mutateSnapshot` find→mutate→replace, no `FOR UPDATE`; **5** call sites (audit said 4) | Read-modify-write last-writer-wins | W1 / P2 | Leave requests / approvals silently vanish | Medium — lost records | Low | `hr_write_handlers.ts:388` was missed by audit |
 | RT-07 | Entity-write framework + CRM | Medium | Closed | STATIC ONLY | Static | `runWrite` ignores `Idempotency-Key` (CORS-allowed, consumed only by payments); leads no `(school_id,phone)` unique | No idempotency on generic inserts | W1 / P3 | Double-tap dups everything; dup leads skew CRM | Medium | Low | Umbrella over RT-01/RT-02 |
 | RT-08 | Academics / Exam marks | High | Closed | STATIC ONLY | Live-schema | Live: `exam_mark_entries.marks_obtained INTEGER`, **no CHECK**; handler only `Number.isFinite` | No server bound, no DB CHECK | W1 / P2 | Corrupt grades; %>100 / negative | Medium — grade corruption | Low | Bad-marks commit withheld; no-CHECK confirmed live |
-| RT-09 | Parent / Academic summaries | Critical | Open | **VERIFIED LIVE** | Live | Probe: non-guardian parent read child summary → `rows_visible=1` (rolled back) | Policy gates only org+school, no guardian pin, no WITH CHECK | W2 / **P1** | Any parent reads/alters any child's academic summary | **High — cross-family PII** | **High** | Latent today (single-family pilot); fix before multi-family onboarding. Pattern exists in `20260725000000` |
-| RT-10 | Parent / Engagement analytics | Medium (was High) | Open | **VERIFIED LIVE** | Live | Probe: parent read another parent's snapshot → `score=99` visible (rolled back) | Policy org+school only, keyed `parent_user_id`, no pin | W2 / P3 | Cross-parent metric leak | Medium (metrics, not child PII) | Medium | No parent-scope caller found → lower exposure |
-| RT-11 | Parent / Teacher effectiveness | High | Open | **VERIFIED LIVE** | Live | Probe: parent read foreign child meeting summary → `rows_visible=1` (rolled back) | Same shape as RT-09 (per-child, org+school only) | W2 / **P1** | Cross-family meeting-summary leak | **High — cross-family PII** | **High** | Identical predicate to RT-09 |
-| RT-12 | Communication Hub | High | Open | **VERIFIED LIVE** | Live | Probe: parent A read parent B private msg `"PRIVATE-MSG-FOR-FAMILY-B"`; `comm_threads` correctly returned 0 (rolled back) | `comm_messages_thread` lacks thread-participation check | W2 / **P1** | Parent reads/posts into any family's thread | **High — private message leak + injection** | **High** | **Most serious**; correct pattern exists in sibling `comm_threads_participant` |
-| RT-13 | School Memories | High | Open | **VERIFIED LIVE** | Live | Probe: parent-scope `INSERT` into `school_memory_events` → `INSERT 0 1` ALLOWED (rolled back) | `FOR ALL` USING allows parent/student scope, no WITH CHECK | W2 / P2 | Parent/student tamper with school-wide memory | Medium — unauthorized write | Medium | Read scope OK; write scope too broad |
-| RT-14 | Audit / Domain events | Medium | Open | **VERIFIED LIVE** | Live | Probe: school-A context wrote `domain_events` tagged school-B → `INSERT 0 1` (rolled back) | INSERT WITH CHECK pins only `organization_id`, not `school_id` | W2 / P3 | Within-org cross-school audit/event pollution | Low | Medium — forensic integrity | `domain_events` UPDATE policy equally weak; cross-tenant still blocked |
-| RT-15 | Platform / secret vault | Low | Open | **NOT REPRODUCIBLE** | Live | Probe: `erp_tenant SELECT platform_secret_vault` → **permission denied**; 0 grants; `has_table_privilege=f/f/f` | Tables created without ENABLE RLS | W2 / P4 | None currently | None | Latent only | **FALSE POSITIVE for current exploitability** — mitigated by no-grant. Optional defense-in-depth |
+| RT-09 | Parent / Academic summaries | Critical | **Closed** | **VERIFIED LIVE** | Live | Pre-fix: non-guardian parent read child summary → `rows_visible=1`. Post-fix (cert 25/25): non-guardian → **0**, real guardian → **1** | Policy gates only org+school, no guardian pin, no WITH CHECK | W2 / **P1** | Any parent reads/alters any child's academic summary | **High — cross-family PII** | **High** | **FIXED** `20260815000000`: `parent_academic_summaries_access` guardian-pin (USING+WITH CHECK), mirrors `20260725000000`. Closed 2026-06-27 |
+| RT-10 | Parent / Engagement analytics | Medium (was High) | **Closed** | **VERIFIED LIVE** | Live | Post-fix (cert): parent scope read → **0**; staff (school) → **1** | Policy org+school only, keyed `parent_user_id`, no pin | W2 / P3 | Cross-parent metric leak | Medium (metrics, not child PII) | Medium | **FIXED** `20260815000000`: `parent_engagement_scope` restricted to school scope (no parent-facing reader). Closed 2026-06-27 |
+| RT-11 | Parent / Teacher effectiveness | High | **Closed** | **VERIFIED LIVE** | Live | Post-fix (cert): parent scope read → **0**; staff (school) → **1** | Same shape as RT-09 (per-child, org+school only) | W2 / **P1** | Cross-family meeting-summary leak | **High — cross-family PII** | **High** | **FIXED** `20260815000000`: `parent_meeting_summaries_scope` restricted to school scope (no parent surface). Closed 2026-06-27 |
+| RT-12 | Communication Hub | High | **Closed** | **VERIFIED LIVE** | Live | Post-fix (cert): non-participant parent read thread → **0** + INSERT **RLS-denied**; owning parent reads own msg → **1** | `comm_messages_thread` lacks thread-participation check | W2 / **P1** | Parent reads/posts into any family's thread | **High — private message leak + injection** | **High** | **FIXED** `20260815000000`: `comm_messages_thread` now checks `comm_threads` participation (USING+WITH CHECK), mirrors `comm_threads_participant`. Closed 2026-06-27 |
+| RT-13 | School Memories | High | **Closed** | **VERIFIED LIVE** | Live | Pre-fix: parent INSERT → `INSERT 0 1`. Post-fix (cert): parent INSERT **RLS-denied**, parent SELECT still works, staff INSERT → **1** | `FOR ALL` USING allows parent/student scope, no WITH CHECK | W2 / P2 | Parent/student tamper with school-wide memory | Medium — unauthorized write | Medium | **FIXED** `20260815000000`: split into read (school/parent/student) + school-only write policies, ×3 tables. Closed 2026-06-27 |
+| RT-14 | Audit / Domain events | Medium | **Closed** | **VERIFIED LIVE** | Live | Pre-fix: school-A wrote `domain_events` tagged school-B → `INSERT 0 1`. Post-fix (cert): cross-school INSERT **RLS-denied**, same-school → **1** | INSERT WITH CHECK pins only `organization_id`, not `school_id` | W2 / P3 | Within-org cross-school audit/event pollution | Low | Medium — forensic integrity | **FIXED** `20260815000000`: `domain_events_school_insert`/`_update` pin `school_id` for per-school scopes; org scope kept for outbox drain. Closed 2026-06-27 |
+| RT-15 | Platform / secret vault | Low | **Closed** | **VERIFIED LIVE** | Live | Pre-fix: no RLS (relied on no-grant). Post-fix (cert): `relrowsecurity=t`+`force=t`, deny-all policy; `erp_tenant` SELECT → **permission denied** | Tables created without ENABLE RLS | W2 / P4 | None currently | None | Latent only | **FALSE POSITIVE for current exploitability** — closed as defense-in-depth. **FIXED** `20260815000000`: ENABLE+FORCE RLS + `platform_secret_vault_deny_all`. Closed 2026-06-27 |
 | RT-16 | Auth / Session lifecycle | High | Open | STATIC ONLY | Static | `authenticateRequest` stateless verify; `revoked_at` never checked per-request; TTL 900s | No per-request session-revocation check | W3 / P2 | Logout/revoke ineffective ≤15 min | Low | **High — stolen/revoked token usable** | Shares root with RT-17; RLS still tenant-scopes |
 | RT-17 | Auth / RBAC lifecycle | High | Open | STATIC ONLY | Static | `permissions_version` in JWT never compared to live membership; no admin bump | Stale permissions frozen in JWT | W3 / P2 | Demoted user keeps perms ≤15 min | Medium | **High — privilege persistence** | Refresh re-resolves; one fix in `authenticateRequest` closes RT-16+17 |
 | RT-18 | Entitlements | Medium (was High) | Open | **NOT REPRODUCIBLE** | Live | Live env: `ENTITLEMENT_ENFORCEMENT=true` on `akshara-edge` | Enforcement no-op unless flag set | W3 / P3 | Module bypass only if flag unset | Low | Low | Mitigated on pilot (B2 cert); deploy-precondition for other envs |
@@ -85,7 +85,7 @@ Open → In Progress → Fixed → Certified → Closed
 | Wave | Findings (incl. retained merged IDs) | P1 | P2 | P3 | P4 |
 |---|---|---|---|---|---|
 | W1 — Transactional integrity ✅ **CLOSED (live 26/26, `6b1e5c1`)** | RT-01,02,03,04,05,06,07,08 | RT-01, RT-02 | RT-03, RT-06, RT-08 | RT-04, RT-05, RT-07 | — |
-| W2 — Tenant & privacy (RLS) | RT-09,10,11,12,13,14,15 | RT-09, RT-11, RT-12 | RT-13 | RT-10, RT-14 | RT-15 |
+| W2 — Tenant & privacy (RLS) ✅ **CLOSED (live 25/25 + W1 regression 26/26, `20260815000000`)** | RT-09,10,11,12,13,14,15 | RT-09, RT-11, RT-12 | RT-13 | RT-10, RT-14 | RT-15 |
 | W3 — Session & authorization | RT-16,17,18,19,20,21,22,23 | — | RT-16, RT-17, RT-20 | RT-18, RT-19, RT-21, RT-22 | RT-23 |
 | W4 — Client write resilience | RT-24,(25),26,27,(28),29,30 | — | RT-24(+25), RT-26 | RT-27, RT-29 | RT-30 |
 | W5 — Input/upload & scale | RT-31,32,33,34,35 | — | RT-35 | RT-31, RT-32, RT-33 | RT-34 |
@@ -102,4 +102,6 @@ Open → In Progress → Fixed → Certified → Closed
 
 ---
 
-**Wave 1 (RT-01..08): fixed, deployed to the VPS pilot, and live-certified 26/26 (commit `6b1e5c1`, 2026-06-27) → `Closed`. Waves 2–5 remain Open, awaiting owner approval of the wave order. Per the engagement rules, the next wave does not start without approval.**
+**Wave 1 (RT-01..08): fixed, deployed to the VPS pilot, and live-certified 26/26 (commit `6b1e5c1`, 2026-06-27) → `Closed`.**
+
+**Wave 2 (RT-09..15): fixed via migration `20260815000000_red_team_wave2_tenant_privacy_rls.sql`, applied to the VPS pilot, and live-certified 25/25 under the `erp_tenant` role (rolled-back probes), with the Wave-1 regression re-run live at 26/26 (2026-06-27) → `Closed`. Evidence: [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md); cert script `scripts/qa/live_cert_red_team_wave2.py`. Waves 3–5 remain Open, awaiting owner approval of the wave order. Per the engagement rules, the next wave does not start without approval.**
