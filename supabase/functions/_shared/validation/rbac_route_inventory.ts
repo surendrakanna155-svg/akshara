@@ -133,7 +133,7 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/promotions/:id/generate", permission: "manageAchievementPromotion", scope: "school", module: "promotion" },
   { method: "POST", path: "/promotions/:id/approve", permission: "approveAchievementPromotion", scope: "school", module: "promotion" },
   { method: "POST", path: "/promotions/:id/publish", permission: "approveAchievementPromotion", scope: "school", module: "promotion" },
-  { method: "POST", path: "/promotions/:id/track", permission: "viewAchievementPromotion", scope: "school", module: "promotion" },
+  { method: "POST", path: "/promotions/:id/track", permission: "manageAchievementPromotion", scope: "school", module: "promotion" },
   { method: "GET", path: "/school-calendar", permission: "viewSchoolCalendar", scope: "school", module: "school_calendar" },
   { method: "POST", path: "/school-calendar", permission: "manageSchoolCalendar", scope: "school", module: "school_calendar" },
   { method: "DELETE", path: "/school-calendar/:id", permission: "manageSchoolCalendar", scope: "school", module: "school_calendar" },

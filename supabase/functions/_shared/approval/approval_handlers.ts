@@ -290,14 +290,34 @@ async function handleDecision(
   const actorName = optionalStr(body, "actor_name", "actorName") ?? "Approver";
   const comment = optionalStr(body, "comment", "comment") ?? null;
 
-  if (status !== "cancelled") {
-    const row = await runTenant(config, auth.claims, (db) =>
-      getApprovalById(db, organizationIdFromClaims(auth.claims), schoolIdFromClaims(auth.claims), approvalId)
-    );
-    if (!row) {
-      return errorEnvelope("NOT_FOUND", `Approval not found: ${approvalId}`, 404);
+  // RT-20 — authorize EVERY decision, including cancel. The cancel path
+  // previously skipped this entire block, so any school-scoped user (even one
+  // with no approval authority) could cancel any pending approval — a workflow
+  // DoS / authz bypass. The approval row is now always loaded so cancel can be
+  // gated the same way as approve/reject.
+  const row = await runTenant(config, auth.claims, (db) =>
+    getApprovalById(db, organizationIdFromClaims(auth.claims), schoolIdFromClaims(auth.claims), approvalId)
+  );
+  if (!row) {
+    return errorEnvelope("NOT_FOUND", `Approval not found: ${approvalId}`, 404);
+  }
+  const perm = approvalPermissionForType(row.type);
+
+  if (status === "cancelled") {
+    // Cancel requires either approval authority for this type (or management
+    // oversight), or being the original requester withdrawing their own request.
+    const hasApproveAuthority =
+      (perm ? requirePermission(auth.claims, perm) === null : false) ||
+      requirePermission(auth.claims, "manageManagement") === null;
+    const isRequester = row.requester_id === auth.claims.sub;
+    if (!hasApproveAuthority && !isRequester) {
+      return errorEnvelope(
+        "FORBIDDEN",
+        "Cancelling this approval requires approval authority or being the requester.",
+        403,
+      );
     }
-    const perm = approvalPermissionForType(row.type);
+  } else {
     if (perm) {
       const permDenied = requirePermission(auth.claims, perm);
       if (permDenied) return permDenied;
@@ -415,7 +435,10 @@ export async function handleRecordApprovalAudit(
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
 
-  const denied = requirePermission(auth.claims, "viewManagement") ??
+  // RT-22 — this is a WRITE (it inserts an approval audit entry), so it must
+  // require a manage-tier slug. It was gated by the read slug `viewManagement`,
+  // letting a view-only management user forge audit-trail entries.
+  const denied = requirePermission(auth.claims, "manageManagement") ??
     requireSchoolScope(auth.claims);
   if (denied) return denied;
 

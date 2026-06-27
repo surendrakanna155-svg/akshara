@@ -278,7 +278,9 @@ export async function handleTrackPromotion(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePromotionRead(auth.claims);
+  // RT-22 — tracking a metric is a WRITE; gate it with the manage slug, not the
+  // read slug, so a view-only user cannot mutate promotion engagement counts.
+  const denied = requirePromotionWrite(auth.claims);
   if (denied) return denied;
 
   const body = await readJson<{ metric?: string }>(req);

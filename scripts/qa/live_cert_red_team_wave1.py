@@ -23,7 +23,7 @@ Proves on the LIVE database:
 
 Fixtures use dedicated `cef…` UUIDs and are cleaned up; mark_1 is reset. Re-runnable.
 """
-import json, os, subprocess, threading, time, urllib.request, urllib.error
+import json, os, subprocess, threading, time, urllib.request, urllib.error, uuid
 
 BASE = "https://akshara.veloraunisexsalon.com"
 ORG = "a1000000-0000-4000-8000-000000000001"
@@ -96,19 +96,43 @@ const t = await new SignJWT({
   tenant_id: Deno.env.get("ORG"), organization_id: Deno.env.get("ORG"),
   school_id: Deno.env.get("SCHOOL") || null,
   role: Deno.env.get("ROLE"), role_slugs: [Deno.env.get("ROLE")], primary_role: Deno.env.get("ROLE"),
-  permissions: JSON.parse(Deno.env.get("PERMS")), permissions_version: 1,
+  permissions: JSON.parse(Deno.env.get("PERMS")),
+  permissions_version: parseInt(Deno.env.get("VERSION") || "1", 10),
   scope: "school", school_group_id: null, student_id: null,
-  child_ids: [], session_id: "cert-rtw1",
+  child_ids: [], session_id: Deno.env.get("SESSION_ID"),
 }).setProtectedHeader({ alg: "HS256", typ: "JWT" })
   .setSubject(Deno.env.get("SUB")).setIssuedAt()
   .setExpirationTime(Math.floor(Date.now() / 1000) + 3600).sign(secret);
 console.log(t);
 '''
 
+# Red Team Wave 3 (RT-16/17) added a per-request session-revocation +
+# permissions_version check in authenticateRequest. A cert token must therefore
+# reference a REAL, live session row and carry the LIVE membership version, or
+# every authenticated probe is (correctly) rejected 401. These helpers seed that
+# state; cleanup() removes the seeded sessions.
+seeded_sessions = []
+
+
+def seed_session(sub, school):
+    sid = str(uuid.uuid4())
+    db(f"INSERT INTO sessions (id, user_id, tenant_id, scope, context_school_id) "
+       f"VALUES ('{sid}','{sub}','{ORG}','school','{school}')")
+    seeded_sessions.append(sid)
+    return sid
+
+
+def live_version(sub, school):
+    v = db(f"SELECT permissions_version FROM school_memberships "
+           f"WHERE user_id='{sub}' AND school_id='{school}' AND status='active' LIMIT 1")
+    return v if v else "1"
+
 
 def mint(perms, role="schoolAdmin", sub=USER, school=SCHOOL_A):
-    env = (f"-e ORG={ORG} -e SUB={sub} -e ROLE={role} "
-           f"-e SCHOOL={school or ''} -e PERMS='{json.dumps(perms)}'")
+    sid = seed_session(sub, school)
+    version = live_version(sub, school)
+    env = (f"-e ORG={ORG} -e SUB={sub} -e ROLE={role} -e SCHOOL={school or ''} "
+           f"-e VERSION={version} -e SESSION_ID={sid} -e PERMS='{json.dumps(perms)}'")
     out, _ = ssh(f"docker exec -i {env} akshara-edge deno run -A -", stdin=MINT)
     tok = out.splitlines()[-1] if out else ""
     return tok if tok.count(".") == 2 else None
@@ -135,6 +159,8 @@ def cleanup():
     db("UPDATE exam_mark_entries SET marks_obtained=0, marks_entered=false WHERE id='mark_1'")
     db("DELETE FROM student_profiles WHERE admission_number LIKE 'ADM-RTW1-%'")
     db(f"DELETE FROM students WHERE display_name='Cert RTW1 Student' AND school_id='{SCHOOL_A}'")
+    for sid in seeded_sessions:
+        db(f"DELETE FROM sessions WHERE id='{sid}'")
 
 
 print("=== Red Team Wave 1 LIVE certification (real VPS / scoped JWTs / DB / locks / RLS) ===\n")

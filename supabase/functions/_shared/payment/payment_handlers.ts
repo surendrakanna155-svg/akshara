@@ -25,6 +25,26 @@ function idempotencyKey(req: Request): string | null {
   return req.headers.get("Idempotency-Key") ?? req.headers.get("idempotency-key");
 }
 
+/**
+ * RT-19 — payment intents are created/confirmed only under parent scope (the
+ * payer), with a school context. The `payment_intents` RLS already pins writes
+ * to `payer_user_id = app_current_user_id()` under `parent` scope (and school
+ * scope is read-only), so this is the matching authorization gate that turns a
+ * wrong-scope caller into a clean 403 instead of relying on RLS alone.
+ */
+function requirePaymentWriteScope(
+  claims: { scope: string; school_id: string | null },
+): Response | null {
+  if (claims.scope !== "parent" || !claims.school_id) {
+    return errorEnvelope(
+      "FORBIDDEN",
+      "Payment initiation requires parent scope",
+      403,
+    );
+  }
+  return null;
+}
+
 function snakeStr(body: Record<string, unknown>, key: string): string {
   return String(body[key] ?? "");
 }
@@ -40,6 +60,9 @@ export async function handleInitiatePayment(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
+
+  const scopeDenied = requirePaymentWriteScope(auth.claims);
+  if (scopeDenied) return scopeDenied;
 
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) {
@@ -79,6 +102,9 @@ export async function handleConfirmPayment(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
+
+  const scopeDenied = requirePaymentWriteScope(auth.claims);
+  if (scopeDenied) return scopeDenied;
 
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) {
@@ -172,7 +198,15 @@ export async function handleRazorpayWebhook(
   const razorpay = loadRazorpayConfig();
   const signature = req.headers.get("X-Razorpay-Signature");
   const valid = await verifyRazorpayWebhookSignature(razorpay, rawBody, signature);
-  if (!valid && !razorpay.stubMode) {
+  // RT-23 — fail-closed on the signature. Previously a forged webhook was
+  // accepted whenever `stubMode` was on (the default, and live on the pilot),
+  // which would let anyone forge payment events the moment real credentials
+  // were added. Signature enforcement is now decoupled from stubMode: an
+  // invalid/forged signature is always rejected unless an operator has
+  // *explicitly* opted into unsigned webhooks for local development.
+  const allowUnsigned =
+    (Deno.env.get("RAZORPAY_ALLOW_UNSIGNED") ?? "false").toLowerCase() === "true";
+  if (!valid && !allowUnsigned) {
     return errorEnvelope("FORBIDDEN", "Invalid Razorpay webhook signature", 403);
   }
 

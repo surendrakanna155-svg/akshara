@@ -1,8 +1,8 @@
 # AKSHARA — Red Team Completion Roadmap
 
 **Companion to:** [`RED_TEAM_CERTIFICATION_AUDIT.md`](./RED_TEAM_CERTIFICATION_AUDIT.md) · validated by [`RED_TEAM_VALIDATION_REPORT.md`](./RED_TEAM_VALIDATION_REPORT.md)
-**Date:** 2026-06-27 (validation reconciliation added 2026-06-27; Wave 1 closed 2026-06-27; Wave 2 closed 2026-06-27)
-**Status:** ✅ **Wave 1 CLOSED** (RT-01..08 fixed, deployed, live 26/26 — commit `6b1e5c1`, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). ✅ **Wave 2 CLOSED** (RT-09..15 fixed via migration `20260815000000`, deployed, live 25/25 + Wave-1 regression 26/26 — [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md)). Waves 3–5 awaiting owner approval; no fixes applied beyond Wave 2.
+**Date:** 2026-06-27 (validation reconciliation added 2026-06-27; Wave 1 closed 2026-06-27; Wave 2 closed 2026-06-27; Wave 3 closed 2026-06-27)
+**Status:** ✅ **Wave 1 CLOSED** (RT-01..08 fixed, deployed, live 26/26 — commit `6b1e5c1`, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). ✅ **Wave 2 CLOSED** (RT-09..15 fixed via migration `20260815000000`, deployed, live 25/25 + Wave-1 regression 26/26 — [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md)). ✅ **Wave 3 CLOSED** (RT-16..23 fixed edge-only, deployed, live 24/24 + Wave-1 26/26 + Wave-2 25/25 regression — [`RED_TEAM_WAVE_3_CERTIFICATION.md`](./RED_TEAM_WAVE_3_CERTIFICATION.md)). Waves 4–5 awaiting owner approval; no fixes applied beyond Wave 3.
 
 > ## Validation reconciliation (post-validation pass)
 >
@@ -50,7 +50,7 @@ Each wave also produces a `docs/RED_TEAM_WAVE_<n>_CERTIFICATION.md` recording th
 |---|---|---|---|---|
 | 1 | Transactional Integrity — duplicates & lost updates | RT-01,02,03,04,05,06,07,08 | 2 Crit, 4 High, 2 Med | Money/identity corruption, lost records |
 | 2 ✅ **CLOSED** (live 25/25, `20260815000000`) | Tenant & Privacy Isolation (RLS) | RT-09,10,11,12,13,14,15 | 1 Crit, 4 High, 1 Med, 1 Low | Cross-family PII leak/tamper |
-| 3 | Session & Authorization Enforcement | RT-16,17,18,19,20,21,22,23 | 3 High, 2 Med, 3 Low | Revocation/demotion ineffective; gate bypass |
+| 3 ✅ **CLOSED** (live 24/24, edge-only) | Session & Authorization Enforcement | RT-16,17,18,19,20,21,22,23 | 3 High, 2 Med, 3 Low | Revocation/demotion ineffective; gate bypass |
 | 4 | Client Write Resilience | RT-24,25,26,27,28,29,30 | 3 High, 4 Med | Double-submit duplicates; invisible failures |
 | 5 | Input/Upload Hardening & Scale | RT-31,32,33,34,35 | 2 High, 2 Med, 1 Low | Upload abuse, DB-connection cliff, bloat |
 
@@ -99,7 +99,9 @@ Each wave also produces a `docs/RED_TEAM_WAVE_<n>_CERTIFICATION.md` recording th
 
 ---
 
-## Wave 3 — Session & Authorization Enforcement
+## Wave 3 — Session & Authorization Enforcement — ✅ CLOSED (live 24/24 + W1 26/26 + W2 25/25, edge-only, 2026-06-27)
+
+> **CLOSED.** All 8 findings fixed with **no migration** (edge-function changes only), deployed to the VPS pilot, and live-certified **24/24** over HTTPS using edge-minted scoped JWTs that reference real `sessions` rows + the live `permissions_version` (so the new per-request check treats cert traffic exactly like real traffic). RT-16/17 are a single fix in `authenticateRequest` (`_shared/session_validation.ts`); RT-19/20/21/22 add the missing authorization gates; RT-23 fails the webhook closed; RT-18 is a deploy-precondition (flag confirmed live). Wave-1 (26/26) and Wave-2 (25/25) regressions re-run live with no regressions. See [`RED_TEAM_WAVE_3_CERTIFICATION.md`](./RED_TEAM_WAVE_3_CERTIFICATION.md). **Implementation notes vs the plan below:** RT-16/17 use a per-request DB check with **no TTL cache** (immediacy chosen over the optional cache — the security property is literal, and the lookups are indexed PK reads negligible at pilot scale); RT-21 closes the relationship-user pollution vector by restricting ingestion to staff scope (no existing manage slug fits universal telemetry, and events are already actor-pinned); RT-18 keeps the default OFF by design and is documented as a deploy-precondition rather than flipping the default.
 
 **Why third:** closes the stale-token window and the gate-bypass routes. Higher design surface than Waves 1–2 (touches the hot auth path), so it follows the data-integrity fixes.
 

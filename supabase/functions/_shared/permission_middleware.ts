@@ -5,12 +5,18 @@ import {
   verifyAccessToken,
   type AccessTokenClaims,
 } from "./jwt.ts";
+import { assertSessionValid } from "./session_validation.ts";
 
 export type AuthResult =
   | { ok: true; claims: AccessTokenClaims }
   | { ok: false; response: Response };
 
-/** Validates bearer JWT. Auth plumbing only — no tenant data access. */
+/**
+ * Validates the bearer JWT, then (RT-16/RT-17) re-checks the session and RBAC
+ * freshness against live state so logout/revoke/demotion take effect on the
+ * very next request instead of waiting out the 15-minute token TTL. This is the
+ * single chokepoint every authenticated handler funnels through.
+ */
 export async function authenticateRequest(
   req: Request,
   config: AppConfig,
@@ -29,6 +35,13 @@ export async function authenticateRequest(
       ok: false,
       response: errorEnvelope("UNAUTHORIZED", "Invalid access token", 401),
     };
+  }
+
+  // RT-16 (session revocation) + RT-17 (permissions freshness): the stateless
+  // signature alone is not enough — consult live session + membership state.
+  const sessionDenied = await assertSessionValid(config, claims);
+  if (sessionDenied) {
+    return { ok: false, response: sessionDenied };
   }
 
   return { ok: true, claims };

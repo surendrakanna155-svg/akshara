@@ -36,6 +36,19 @@ function requireTeacherEffectivenessRead(
     requireSchoolOperationalScope(claims);
 }
 
+/**
+ * RT-22 — generating + persisting a parent-meeting summary is a WRITE, so it
+ * requires a manage-tier slug (`manageLessonLogs`, held by teachers and school
+ * admins) rather than the read slug. Previously a view-only user could trigger
+ * the AI generation and write a row.
+ */
+function requireTeacherEffectivenessManage(
+  claims: Parameters<typeof requirePermission>[0],
+): Response | null {
+  return requirePermission(claims, "manageLessonLogs") ??
+    requireSchoolOperationalScope(claims);
+}
+
 export async function handleGetLessonEffectivenessScores(
   req: Request,
   config: AppConfig,
@@ -152,7 +165,7 @@ export async function handleGenerateParentMeetingSummary(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requireTeacherEffectivenessRead(auth.claims);
+  const denied = requireTeacherEffectivenessManage(auth.claims);
   if (denied) return denied;
 
   const body = await readJson<ParentMeetingSummaryInput>(req);

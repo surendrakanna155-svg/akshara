@@ -23,6 +23,19 @@ export async function handleAuditBatchUpload(
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
 
+  // RT-21 — client audit ingestion is a staff/compliance feature. Restrict it
+  // to membership scopes (school / organization); relationship users
+  // (parent / student) — the largest and least-trusted population — can no
+  // longer inject rows into the forensic trail. Accepted events stay
+  // server-pinned to the actor, tenant, and school (defense in depth).
+  if (auth.claims.scope !== "school" && auth.claims.scope !== "organization") {
+    return errorEnvelope(
+      "FORBIDDEN",
+      "Audit ingestion requires a staff scope",
+      403,
+    );
+  }
+
   const body = await readJson<BatchUploadBody>(req);
   if (!body?.events || !Array.isArray(body.events) || body.events.length === 0) {
     return errorEnvelope("VALIDATION_ERROR", "events array is required", 422);
