@@ -30,6 +30,7 @@ class ApplyResourceOptimizationRecommendationNotifier
     required ResourceOptimizationDomain domain,
     required String recommendationId,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageResourceOptimization(ref);
@@ -61,6 +62,7 @@ class DismissResourceOptimizationRecommendationNotifier
     required ResourceOptimizationDomain domain,
     required String recommendationId,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageResourceOptimization(ref);

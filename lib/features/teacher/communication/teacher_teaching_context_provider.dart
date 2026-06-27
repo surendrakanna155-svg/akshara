@@ -176,6 +176,7 @@ class FlagSubjectTeacherConcernNotifier
   Future<SubjectTeacherConcernFlagResult?> execute(
     TeacherSubjectConcernFlagRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return ref.read(teacherRepositoryProvider).flagSubjectConcern(

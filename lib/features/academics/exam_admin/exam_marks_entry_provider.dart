@@ -13,6 +13,7 @@ import '../../../core/security/rbac_service.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import '../../../features/auth/auth_provider.dart';
 import 'exam_administration_provider.dart';
+import '../../../core/errors/mutation_in_progress.dart';
 
 final examMarksExamProvider = FutureProvider.family<ExamSession?, String>(
   (ref, examId) async {
@@ -40,7 +41,7 @@ final examMarksMutationProvider =
 
 class ExamMarksMutationNotifier extends AsyncNotifier<void> {
   @override
-  Future<void> build() async {}
+  void build() {}
 
   Future<ExamMarkRecord> updateMark({
     required String markEntryId,
@@ -57,6 +58,7 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
       );
     }
 
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     late ExamMarkRecord updated;
     state = await AsyncValue.guard(() async {
@@ -85,6 +87,7 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
       );
     }
 
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await ref.read(examAdministrationRepositoryProvider).processResults(
@@ -114,6 +117,7 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
       );
     }
 
+    if (state.isLoading) return;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final auth = ref.read(authProvider);
@@ -139,6 +143,7 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
       );
     }
 
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     late String approvalId;
     state = await AsyncValue.guard(() async {
@@ -180,6 +185,7 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
       );
     }
 
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     late int count;
     state = await AsyncValue.guard(() async {

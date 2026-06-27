@@ -220,6 +220,7 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
     required ApprovalRequest request,
     String? comment,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertApprovalPermission(
@@ -261,6 +262,7 @@ class ResolveApprovalRequestNotifier extends AsyncNotifier<ApprovalRequest?> {
     required ApprovalRequest request,
     required String comment,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertApprovalPermission(

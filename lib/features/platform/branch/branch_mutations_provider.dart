@@ -34,6 +34,7 @@ class BranchMutationsNotifier extends AsyncNotifier<BranchAssignment?> {
     required String schoolName,
     required String managerName,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageBranchOperations(ref);

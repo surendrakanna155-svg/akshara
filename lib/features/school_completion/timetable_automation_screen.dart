@@ -6,6 +6,7 @@ import '../../theme/theme_extensions.dart';
 import 'school_completion_models.dart';
 import 'school_completion_providers.dart';
 import '../../theme/spacing.dart';
+import '../../core/errors/error_text.dart';
 
 class TimetableAutomationScreen extends ConsumerStatefulWidget {
   const TimetableAutomationScreen({super.key});
@@ -31,7 +32,7 @@ class _TimetableAutomationScreenState extends ConsumerState<TimetableAutomationS
           subjects.when(
             data: (items) => Text('${items.length} subjects will drive period allocation'),
             loading: () => const LinearProgressIndicator(),
-            error: (e, _) => Text('$e'),
+            error: (e, _) => Text(aksharaErrorMessage(e)),
           ),
           const SizedBox(height: 16),
           FilledButton(

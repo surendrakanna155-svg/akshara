@@ -107,6 +107,7 @@ class SendTeacherParentCommunicationNotifier
     final studentId = ref.read(teacherCommunicationSelectedStudentProvider);
     if (studentId == null) return null;
 
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final concernId =

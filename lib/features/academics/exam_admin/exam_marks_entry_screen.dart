@@ -13,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import 'exam_admin_models.dart';
 import 'exam_administration_provider.dart';
 import 'exam_marks_entry_provider.dart';
+import '../../../core/errors/error_text.dart';
 
 /// ERP marks entry and publication chain for a single exam session.
 class ExamMarksEntryScreen extends ConsumerWidget {
@@ -248,7 +249,7 @@ class _MarksEntryBody extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }
@@ -263,7 +264,7 @@ class _MarksEntryBody extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }
@@ -282,7 +283,7 @@ class _MarksEntryBody extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }
@@ -298,7 +299,7 @@ class _MarksEntryBody extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }
@@ -367,7 +368,7 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -423,7 +424,7 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }

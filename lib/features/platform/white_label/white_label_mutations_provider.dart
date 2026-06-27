@@ -39,6 +39,7 @@ class SaveBrandingProfileNotifier extends AsyncNotifier<BrandingProfile?> {
   FutureOr<BrandingProfile?> build() => null;
 
   Future<BrandingProfile?> execute({required BrandingProfile profile}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageWhiteLabelPlatform(ref);
@@ -70,6 +71,7 @@ class ApplyThemeNotifier extends AsyncNotifier<ThemeConfig?> {
   FutureOr<ThemeConfig?> build() => null;
 
   Future<ThemeConfig?> execute({required String themeId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageWhiteLabelPlatform(ref);
@@ -104,6 +106,7 @@ class UploadLogoNotifier extends AsyncNotifier<LogoAsset?> {
     required String label,
     required String variant,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageWhiteLabelPlatform(ref);

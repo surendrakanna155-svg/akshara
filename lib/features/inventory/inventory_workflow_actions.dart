@@ -11,6 +11,7 @@ import 'inventory_mutations_provider.dart';
 import 'inventory_requests.dart';
 import 'intelligence/inventory_intelligence_models.dart';
 import 'vendors/inventory_vendor_catalog_provider.dart';
+import '../../core/errors/error_text.dart';
 
 Future<void> showCreateProcurementOrderDialog(
   BuildContext context,
@@ -147,7 +148,7 @@ Future<void> showCreateProcurementOrderDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$error')));
+        .showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -246,7 +247,7 @@ Future<void> showCreateInventoryVendorDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$error')));
+        .showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -313,7 +314,7 @@ Future<void> showRecordAssetLifecycleEventDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$error')));
+        .showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -373,7 +374,7 @@ Future<void> submitProcurementReceiveHandoff(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$error')));
+        .showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -426,6 +427,6 @@ Future<void> submitProcurementApproveHandoff(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('$error')));
+        .showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }

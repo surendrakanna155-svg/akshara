@@ -7,6 +7,7 @@ import '../../../core/workflow/workflow_models.dart';
 import '../intelligence_provider.dart';
 import 'at_risk_student_intelligence.dart';
 import 'student_success_models.dart';
+import '../../../core/errors/mutation_in_progress.dart';
 
 final studentSuccessCanViewProvider = Provider<bool>((ref) {
   final rbac = ref.watch(rbacServiceProvider);
@@ -49,9 +50,10 @@ final studentSuccessMutationsProvider =
 
 class StudentSuccessMutationsNotifier extends AsyncNotifier<void> {
   @override
-  Future<void> build() async {}
+  void build() {}
 
   Future<int> compute() async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       List<StudentSuccessSnapshot> previousRows;

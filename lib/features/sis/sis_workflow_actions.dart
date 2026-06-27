@@ -6,6 +6,7 @@ import 'profile/sis_profile_edit_sheet.dart';
 import 'sis_models.dart';
 import 'sis_mutations_provider.dart';
 import 'sis_requests.dart';
+import '../../core/errors/error_text.dart';
 
 Future<void> showSisProfileEditSheet(
   BuildContext context,
@@ -84,7 +85,7 @@ Future<void> showSisDocumentUploadDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }

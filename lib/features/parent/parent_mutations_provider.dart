@@ -72,6 +72,7 @@ class SubmitParentLeaveNotifier extends AsyncNotifier<LeaveRequest?> {
   FutureOr<LeaveRequest?> build() => null;
 
   Future<LeaveRequest?> execute(ParentLeaveSubmitRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final rbac = ref.read(rbacServiceProvider);
@@ -141,6 +142,7 @@ class InitiateParentPaymentNotifier extends AsyncNotifier<PaymentInitiationResul
   Future<PaymentInitiationResult?> execute(
     ParentPaymentInitiateRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -171,6 +173,7 @@ class ConfirmParentPaymentNotifier extends AsyncNotifier<PaymentConfirmationResu
   Future<PaymentConfirmationResult?> execute(
     ParentPaymentConfirmRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -203,6 +206,7 @@ class SubmitParentAttendanceCorrectionNotifier
   Future<ParentAttendanceCorrectionResult?> execute(
     ParentAttendanceCorrectionRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final rbac = ref.read(rbacServiceProvider);

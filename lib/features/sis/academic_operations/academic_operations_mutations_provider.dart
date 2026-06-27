@@ -10,6 +10,7 @@ import '../registry/sis_registry_provider.dart';
 import '../sis_audit.dart';
 import 'academic_operations_models.dart';
 import 'academic_operations_providers.dart';
+import '../../../core/errors/mutation_in_progress.dart';
 
 void _invalidateAcademicOperationReads(Ref ref) {
   ref.invalidate(suggestedMappingsFutureProvider);
@@ -30,6 +31,7 @@ class PreviewYearTransitionNotifier extends AsyncNotifier<AcademicTransitionJob?
     required String targetYearId,
     required List<ClassMappingRule> mappings,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSis(ref);
@@ -60,6 +62,7 @@ class ExecuteYearTransitionNotifier
   FutureOr<AcademicTransitionExecutionReport?> build() => null;
 
   Future<AcademicTransitionExecutionReport?> execute({required String jobId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSis(ref);
@@ -129,6 +132,7 @@ class ExecuteOperationPlanNotifier
   Future<AcademicOperationExecutionReport?> _run(
     Future<AcademicOperationExecutionReport> Function() action,
   ) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSis(ref);

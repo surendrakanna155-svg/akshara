@@ -39,6 +39,7 @@ class ActivateSchoolNotifier extends AsyncNotifier<SchoolLifecycleRecord?> {
   FutureOr<SchoolLifecycleRecord?> build() => null;
 
   Future<SchoolLifecycleRecord?> execute({required String schoolId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
@@ -73,6 +74,7 @@ class DeactivateSchoolNotifier extends AsyncNotifier<SchoolLifecycleRecord?> {
     required String schoolId,
     String? reason,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
@@ -107,6 +109,7 @@ class CompleteOnboardingNotifier extends AsyncNotifier<SchoolLifecycleRecord?> {
   Future<SchoolLifecycleRecord?> execute({
     required SchoolOnboardingDraft draft,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
@@ -144,6 +147,7 @@ class DismissPortfolioAlertNotifier extends AsyncNotifier<String?> {
   FutureOr<String?> build() => null;
 
   Future<String?> execute({required String alertId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
@@ -173,6 +177,7 @@ class CompletePortfolioActionNotifier extends AsyncNotifier<PortfolioAction?> {
   FutureOr<PortfolioAction?> build() => null;
 
   Future<PortfolioAction?> execute({required String actionId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);

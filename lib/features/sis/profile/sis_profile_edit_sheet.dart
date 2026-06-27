@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/error_text.dart';
 import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/forms/akshara_unsaved_guard.dart';
 import '../../../theme/spacing.dart';
 import '../sis_models.dart';
 import '../sis_mutations_provider.dart';
@@ -32,6 +34,11 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   bool _saving = false;
+  bool _dirty = false;
+
+  void _markDirty() {
+    if (!_dirty) setState(() => _dirty = true);
+  }
 
   @override
   void initState() {
@@ -48,6 +55,21 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
         TextEditingController(text: widget.profile.parent.guardianName);
     _phoneController = TextEditingController(text: widget.profile.parent.phone);
     _emailController = TextEditingController(text: widget.profile.parent.email);
+    // RT-30: mark the form dirty on the first edit so back/refresh prompts.
+    for (final c in [
+      _studentNameController,
+      _admissionController,
+      _classController,
+      _sectionController,
+      _academicYearController,
+      _genderController,
+      _dobController,
+      _guardianController,
+      _phoneController,
+      _emailController,
+    ]) {
+      c.addListener(_markDirty);
+    }
   }
 
   @override
@@ -67,7 +89,9 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return AksharaUnsavedChangesGuard(
+      hasUnsavedChanges: _dirty && !_saving,
+      child: Padding(
       padding: EdgeInsets.only(
         left: AksharaSpacing.s4,
         right: AksharaSpacing.s4,
@@ -111,6 +135,7 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -127,7 +152,7 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await ref.read(updateStudentProvider.notifier).execute(
+      final result = await ref.read(updateStudentProvider.notifier).execute(
             studentId: widget.profile.student.id,
             request: UpdateStudentRequest(
               studentName: _studentNameController.text.trim(),
@@ -143,7 +168,28 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
             ),
           );
       if (!mounted) return;
+      // RT-26: the mutation returns null on failure (it does not throw). Without
+      // this check the sheet popped with `true` on a failed save, so the user
+      // believed it succeeded. Surface the failure and keep the sheet open.
+      if (result == null) {
+        final failure = ref.read(updateStudentProvider).error;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              failure != null
+                  ? aksharaErrorMessage(failure)
+                  : 'Could not save changes. Please try again.',
+            ),
+          ),
+        );
+        return;
+      }
       Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(aksharaErrorMessage(error))),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }

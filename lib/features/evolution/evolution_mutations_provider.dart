@@ -37,6 +37,7 @@ class CreateGrowthCampaignNotifier extends AsyncNotifier<String?> {
   FutureOr<String?> build() => null;
 
   Future<String?> execute(CreateGrowthCampaignRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageGrowthPlatform(ref);
@@ -71,6 +72,7 @@ class CreateGrowthInquiryNotifier extends AsyncNotifier<String?> {
     String? gradeInterest,
     String? campaignId,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageGrowthPlatform(ref);
@@ -103,6 +105,7 @@ class ConvertGrowthInquiryNotifier extends AsyncNotifier<String?> {
   FutureOr<String?> build() => null;
 
   Future<String?> execute(String inquiryId) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageGrowthPlatform(ref);
@@ -134,6 +137,7 @@ class UpdateGrowthCampaignNotifier extends AsyncNotifier<GrowthCampaign?> {
     required String campaignId,
     required UpdateGrowthCampaignRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageGrowthPlatform(ref);
@@ -163,6 +167,7 @@ class PauseGrowthCampaignNotifier extends AsyncNotifier<GrowthCampaign?> {
   FutureOr<GrowthCampaign?> build() => null;
 
   Future<GrowthCampaign?> execute(String campaignId) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageGrowthPlatform(ref);

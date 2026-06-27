@@ -33,6 +33,7 @@ class AssignSubstituteNotifier
 
   Future<SubstituteAssignmentResult?> execute(
       AssignSubstituteRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAcademicTimetable(ref);
@@ -88,6 +89,7 @@ class ReassignTeacherNotifier
 
   Future<TeacherReassignmentResult?> execute(
       ReassignTeacherRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAcademicTimetable(ref);
@@ -140,6 +142,7 @@ class ApplyTimetableOptimizationNotifier
 
   Future<ApplyTimetableOptimizationResult?> execute(
       ApplyTimetableOptimizationRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAcademicTimetable(ref);

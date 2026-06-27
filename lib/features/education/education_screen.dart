@@ -15,6 +15,7 @@ import 'education_pdf_service.dart';
 import 'education_provider.dart';
 import 'education_question_paper_detail_screen.dart';
 import '../../theme/spacing.dart';
+import '../../core/errors/error_text.dart';
 
 class EducationScreen extends ConsumerStatefulWidget {
   const EducationScreen({super.key});
@@ -210,7 +211,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 
@@ -385,7 +386,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 
@@ -406,7 +407,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
         const SnackBar(content: Text('Question added to bank')),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 
@@ -420,7 +421,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
         const SnackBar(content: Text('Question updated')),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 
@@ -566,7 +567,7 @@ class _EducationScreenState extends ConsumerState<EducationScreen>
                                           );
                                         } catch (error) {
                                           messenger.showSnackBar(
-                                            SnackBar(content: Text('$error')),
+                                            SnackBar(content: Text(aksharaErrorMessage(error))),
                                           );
                                         }
                                       },

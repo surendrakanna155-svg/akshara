@@ -32,6 +32,7 @@ class CreateTransportRouteNotifier extends AsyncNotifier<TransportRoute?> {
   FutureOr<TransportRoute?> build() => null;
 
   Future<TransportRoute?> execute(CreateTransportRouteRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageTransport(ref);
@@ -62,6 +63,7 @@ class ActivateTransportRouteNotifier extends AsyncNotifier<TransportRoute?> {
   Future<TransportRoute?> execute(
     ActivateTransportRouteRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageTransport(ref);
@@ -93,6 +95,7 @@ class RecordTransportAttendanceNotifier
   Future<TransportAttendanceRecord?> execute(
     RecordTransportAttendanceRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageTransport(ref);
@@ -135,6 +138,7 @@ class AssignStudentTransportNotifier
   Future<StudentTransportAllocation?> execute(
     AssignStudentTransportRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageTransport(ref);
@@ -181,6 +185,7 @@ class TransferStudentTransportNotifier
   Future<StudentTransportAllocation?> execute(
     TransferStudentTransportRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageTransport(ref);
@@ -227,6 +232,7 @@ class RemoveStudentTransportNotifier
   Future<StudentTransportAllocation?> execute(
     RemoveStudentTransportRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageTransport(ref);
@@ -269,6 +275,7 @@ class NotifyRouteDelayNotifier
   Future<TransportDelayNotificationResult?> execute(
     NotifyRouteDelayRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageTransport(ref);

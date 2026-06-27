@@ -43,6 +43,7 @@ class SaveInterviewStepNotifier extends AsyncNotifier<InterviewDraft?> {
     required int stepIndex,
     required Map<String, String> answers,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageOrganizationBuilder(ref);
@@ -75,6 +76,7 @@ class GeneratePreviewNotifier extends AsyncNotifier<ConfigPreview?> {
   FutureOr<ConfigPreview?> build() => null;
 
   Future<ConfigPreview?> execute({required String draftId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageOrganizationBuilder(ref);
@@ -106,6 +108,7 @@ class StartProvisioningNotifier extends AsyncNotifier<ProvisioningJob?> {
   FutureOr<ProvisioningJob?> build() => null;
 
   Future<ProvisioningJob?> execute({required String draftId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageOrganizationBuilder(ref);

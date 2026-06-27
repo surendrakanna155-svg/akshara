@@ -37,6 +37,7 @@ class ResolveManagementApprovalNotifier
   Future<ManagementApprovalItem?> execute(
     ResolveManagementApprovalRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageManagement(ref);
@@ -79,6 +80,7 @@ class UpdateManagementSettingsNotifier
   Future<ManagementSettingsData?> execute(
     UpdateManagementSettingsRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageManagement(ref);
@@ -124,6 +126,7 @@ class ExportManagementDashboardNotifier extends AsyncNotifier<Uint8List?> {
   FutureOr<Uint8List?> build() => null;
 
   Future<Uint8List?> execute() async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageManagement(ref);

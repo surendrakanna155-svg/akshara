@@ -32,6 +32,7 @@ class WorkflowAutomationMutations extends AsyncNotifier<void> {
     required String instanceId,
     required String transitionAction,
   }) async {
+    if (state.isLoading) return;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageWorkflowAutomation(ref);
@@ -45,6 +46,7 @@ class WorkflowAutomationMutations extends AsyncNotifier<void> {
   }
 
   Future<void> runScheduledJobsNow() async {
+    if (state.isLoading) return;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageWorkflowAutomation(ref);

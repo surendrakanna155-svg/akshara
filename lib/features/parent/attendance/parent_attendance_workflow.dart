@@ -8,6 +8,7 @@ import '../../../shared/widgets/akshara_motion.dart';
 import '../parent_mutations_provider.dart';
 import '../parent_requests.dart';
 import 'attendance_models.dart';
+import '../../../core/errors/error_text.dart';
 
 Future<void> showParentAttendanceCorrectionDialog(
   BuildContext context,
@@ -85,7 +86,7 @@ Future<void> showParentAttendanceCorrectionDialog(
     messenger.showSnackBar(
       SnackBar(
         key: QaTestKeys.parentAttendanceCorrectionSuccessSnackbar,
-        content: Text('$error'),
+        content: Text(aksharaErrorMessage(error)),
       ),
     );
   }

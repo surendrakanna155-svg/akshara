@@ -10,6 +10,7 @@ import '../../../../theme/spacing.dart';
 import '../exam_admin_navigation.dart';
 import '../exam_administration_provider.dart';
 import '../exam_marks_entry_provider.dart';
+import '../../../../core/errors/error_text.dart';
 
 class ExamLifecycleActions extends ConsumerWidget {
   const ExamLifecycleActions({super.key, required this.exam});
@@ -75,7 +76,7 @@ class ExamLifecycleActions extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }
@@ -92,7 +93,7 @@ class ExamLifecycleActions extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }

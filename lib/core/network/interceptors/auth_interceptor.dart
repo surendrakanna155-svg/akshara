@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../features/auth/auth_token_models.dart';
 import '../../auth/jwt_decoder.dart';
@@ -76,19 +77,39 @@ class AuthInterceptor extends QueuedInterceptor {
       if (existing != null && !_isRefreshing) {
         final refreshed = await _refreshTokens(existing.refreshToken);
         if (refreshed != null) {
-          try {
-            final response = await _retry(err.requestOptions, refreshed);
-            handler.resolve(response);
-            return;
-          } on DioException catch (retryError) {
-            handler.next(retryError);
-            return;
+          // RT-29: only auto-replay the failed request when it is safe to do so.
+          // Idempotent verbs are always safe; a non-idempotent write is only
+          // replayed when it carries an Idempotency-Key the server dedupes
+          // (RT-07 backend support). A bare write is NOT retried — replaying it
+          // verbatim could create a duplicate. The refreshed session lets the
+          // user's own resubmit succeed.
+          if (isSafeToAutoReplay(err.requestOptions)) {
+            try {
+              final response = await _retry(err.requestOptions, refreshed);
+              handler.resolve(response);
+              return;
+            } on DioException catch (retryError) {
+              handler.next(retryError);
+              return;
+            }
           }
+          handler.next(err);
+          return;
         }
       }
       onSessionExpired?.call();
     }
     handler.next(err);
+  }
+
+  /// Whether a request may be transparently re-sent after a 401 token refresh
+  /// without risking a duplicate side effect (RT-29).
+  @visibleForTesting
+  static bool isSafeToAutoReplay(RequestOptions options) {
+    const idempotentVerbs = {'GET', 'HEAD', 'OPTIONS'};
+    if (idempotentVerbs.contains(options.method.toUpperCase())) return true;
+    return options.headers.keys
+        .any((k) => k.toLowerCase() == 'idempotency-key');
   }
 
   Future<bool> _rejectIfInsecure(

@@ -30,6 +30,7 @@ class DismissOperationsAlertNotifier extends AsyncNotifier<String?> {
   FutureOr<String?> build() => null;
 
   Future<String?> execute(String alertId) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageOperationsHub(ref);
@@ -58,6 +59,7 @@ class CompleteOperationsActionNotifier extends AsyncNotifier<String?> {
   FutureOr<String?> build() => null;
 
   Future<String?> execute(String actionId) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageOperationsHub(ref);

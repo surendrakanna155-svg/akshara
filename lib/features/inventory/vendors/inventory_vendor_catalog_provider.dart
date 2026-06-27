@@ -31,6 +31,7 @@ class CreateInventoryVendorNotifier
   Future<InventoryFinanceVendor?> execute(
     CreateInventoryVendorRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final perms = ref.read(userPermissionsProvider);

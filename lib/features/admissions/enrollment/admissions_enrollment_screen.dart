@@ -13,6 +13,7 @@ import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_enrollment_provider.dart';
 import 'enrollment_validation.dart';
 import 'widgets/admissions_enrollment_form_steps.dart';
+import '../../../core/errors/error_text.dart';
 
 /// AD-05 — Student Enrollment multi-step wizard.
 class AdmissionsEnrollmentScreen extends ConsumerStatefulWidget {
@@ -182,7 +183,7 @@ class _AdmissionsEnrollmentScreenState
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }

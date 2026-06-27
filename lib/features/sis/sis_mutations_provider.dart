@@ -62,6 +62,7 @@ class CreateStudentNotifier extends AsyncNotifier<SisStudent?> {
   FutureOr<SisStudent?> build() => null;
 
   Future<SisStudent?> execute(CreateStudentRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -92,6 +93,7 @@ class UpdateStudentNotifier extends AsyncNotifier<SisStudent?> {
     required String studentId,
     required UpdateStudentRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -123,6 +125,7 @@ class UploadStudentDocumentNotifier extends AsyncNotifier<SisDocumentSummary?> {
     required String studentId,
     required UploadStudentDocumentRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -153,6 +156,7 @@ class UpdateStudentStatusNotifier extends AsyncNotifier<SisStudent?> {
     required String studentId,
     required UpdateStudentStatusRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -181,6 +185,7 @@ class AssignAcademicAssignmentNotifier extends AsyncNotifier<SisStudent?> {
   FutureOr<SisStudent?> build() => null;
 
   Future<SisStudent?> execute(AcademicAssignmentRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final catalog = ref.read(academicCatalogProvider);
@@ -214,6 +219,7 @@ class BulkAcademicAssignmentNotifier extends AsyncNotifier<int?> {
   FutureOr<int?> build() => null;
 
   Future<int?> execute(BulkAcademicAssignmentRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSis(ref);
@@ -266,6 +272,7 @@ class ConvertAdmissionsEnrollmentNotifier
   Future<SisConversionPreview?> execute(
     AdmissionsConversionRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final catalog = ref.read(academicCatalogProvider);

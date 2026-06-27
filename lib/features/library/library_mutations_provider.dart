@@ -30,6 +30,7 @@ class IssueLibraryBookNotifier extends AsyncNotifier<LibraryIssueRecord?> {
   FutureOr<LibraryIssueRecord?> build() => null;
 
   Future<LibraryIssueRecord?> execute(IssueLibraryBookRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageLibrary(ref);
@@ -62,6 +63,7 @@ class ReturnLibraryBookNotifier extends AsyncNotifier<LibraryReturnRecord?> {
   FutureOr<LibraryReturnRecord?> build() => null;
 
   Future<LibraryReturnRecord?> execute(ReturnLibraryBookRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageLibrary(ref);
@@ -95,6 +97,7 @@ class AddLibraryBookNotifier extends AsyncNotifier<LibraryBook?> {
   FutureOr<LibraryBook?> build() => null;
 
   Future<LibraryBook?> execute(AddLibraryBookRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageLibrary(ref);
@@ -126,6 +129,7 @@ class AddLibraryResourceNotifier extends AsyncNotifier<LibraryDigitalResource?> 
 
   Future<LibraryDigitalResource?> execute(
       AddLibraryResourceRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageLibrary(ref);
@@ -157,6 +161,7 @@ class EnrollLibraryMemberNotifier extends AsyncNotifier<LibraryMember?> {
   FutureOr<LibraryMember?> build() => null;
 
   Future<LibraryMember?> execute(EnrollLibraryMemberRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageLibrary(ref);
@@ -187,6 +192,7 @@ class WaiveLibraryFineNotifier extends AsyncNotifier<LibraryFine?> {
   FutureOr<LibraryFine?> build() => null;
 
   Future<LibraryFine?> execute(WaiveLibraryFineRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageLibrary(ref);

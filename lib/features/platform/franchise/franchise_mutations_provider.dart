@@ -33,6 +33,7 @@ class FranchiseMutationsNotifier extends AsyncNotifier<FranchiseEntity?> {
     required String franchiseId,
     int delta = 1,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageFranchiseOperations(ref);

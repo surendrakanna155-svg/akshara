@@ -97,6 +97,7 @@ class CreateLeadNotifier extends AsyncNotifier<AdmissionsLead?> {
   FutureOr<AdmissionsLead?> build() => null;
 
   Future<AdmissionsLead?> execute(CreateLeadRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -130,6 +131,7 @@ class UpdateLeadNotifier extends AsyncNotifier<AdmissionsLead?> {
     required String leadId,
     required UpdateLeadRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -162,6 +164,7 @@ class AssignCounselorNotifier extends AsyncNotifier<AdmissionsLead?> {
     required String leadId,
     required AssignCounselorRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -195,6 +198,7 @@ class ChangeLeadStageNotifier extends AsyncNotifier<AdmissionsLead?> {
     required String leadId,
     required ChangeLeadStageRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -228,6 +232,7 @@ class AddLeadFollowUpNotifier extends AsyncNotifier<LeadFollowUpRecord?> {
     required String leadId,
     required FollowUpRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -260,6 +265,7 @@ class AddLeadNoteNotifier extends AsyncNotifier<LeadActivityItem?> {
     required String leadId,
     required LeadNoteRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -290,6 +296,7 @@ class SubmitApplicationNotifier extends AsyncNotifier<AdmissionsApplication?> {
   FutureOr<AdmissionsApplication?> build() => null;
 
   Future<AdmissionsApplication?> execute(String applicationId) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -319,6 +326,7 @@ class CreateApplicationNotifier extends AsyncNotifier<AdmissionsApplication?> {
 
   Future<AdmissionsApplication?> execute(
       CreateApplicationRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -351,6 +359,7 @@ class SubmitEnrollmentNotifier extends AsyncNotifier<PendingEnrollmentRecord?> {
   Future<PendingEnrollmentRecord?> execute(
     EnrollmentSubmitRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final catalog = ref.read(academicCatalogProvider);
@@ -389,6 +398,7 @@ class ApproveDocumentNotifier extends AsyncNotifier<StudentDocumentRecord?> {
     required String documentId,
     DocumentVerificationRequest request = const DocumentVerificationRequest(),
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -421,6 +431,7 @@ class RejectDocumentNotifier extends AsyncNotifier<StudentDocumentRecord?> {
     required String documentId,
     DocumentVerificationRequest request = const DocumentVerificationRequest(),
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -460,6 +471,7 @@ class UploadDocumentNotifier extends AsyncNotifier<StudentDocumentRecord?> {
     String studentName = '',
     String classLabel = '',
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -497,6 +509,7 @@ class DocumentDownloadUrlNotifier extends AsyncNotifier<String?> {
   FutureOr<String?> build() => null;
 
   Future<String?> execute({required String documentId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       try {
@@ -525,6 +538,7 @@ class ApproveAdmissionNotifier extends AsyncNotifier<ApprovalQueueItem?> {
     required String approvalId,
     ApprovalDecisionRequest request = const ApprovalDecisionRequest(),
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -558,6 +572,7 @@ class RejectAdmissionNotifier extends AsyncNotifier<ApprovalQueueItem?> {
     required String approvalId,
     ApprovalDecisionRequest request = const ApprovalDecisionRequest(),
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -587,6 +602,7 @@ class SendToFinanceNotifier extends AsyncNotifier<ApprovedStudentHandoff?> {
   FutureOr<ApprovedStudentHandoff?> build() => null;
 
   Future<ApprovedStudentHandoff?> execute(FinanceHandoffRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -619,6 +635,7 @@ class UpdateAdmissionsSettingsNotifier
   Future<AdmissionsSettingsData?> execute(
     UpdateAdmissionsSettingsRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(

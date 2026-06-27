@@ -30,6 +30,7 @@ class AdmitHostelStudentNotifier extends AsyncNotifier<HostelStudent?> {
   FutureOr<HostelStudent?> build() => null;
 
   Future<HostelStudent?> execute(AdmitHostelStudentRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHostel(ref);
@@ -60,6 +61,7 @@ class AssignHostelRoomNotifier extends AsyncNotifier<HostelStudent?> {
   FutureOr<HostelStudent?> build() => null;
 
   Future<HostelStudent?> execute(AssignHostelRoomRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHostel(ref);
@@ -92,6 +94,7 @@ class CheckoutHostelStudentNotifier extends AsyncNotifier<HostelStudent?> {
   FutureOr<HostelStudent?> build() => null;
 
   Future<HostelStudent?> execute(CheckoutHostelStudentRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHostel(ref);
@@ -125,6 +128,7 @@ class CreateHostelRoomNotifier extends AsyncNotifier<HostelRoom?> {
   FutureOr<HostelRoom?> build() => null;
 
   Future<HostelRoom?> execute(CreateHostelRoomRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHostel(ref);
@@ -156,6 +160,7 @@ class LogVisitorNotifier extends AsyncNotifier<HostelVisitor?> {
   FutureOr<HostelVisitor?> build() => null;
 
   Future<HostelVisitor?> execute(LogVisitorRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHostel(ref);
@@ -189,6 +194,7 @@ class RecordHostelAttendanceNotifier
   Future<HostelAttendanceRecord?> execute(
     RecordHostelAttendanceRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHostel(ref);
@@ -220,6 +226,7 @@ class RecordMessNotifier extends AsyncNotifier<HostelMealMenu?> {
   FutureOr<HostelMealMenu?> build() => null;
 
   Future<HostelMealMenu?> execute(RecordMessRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHostel(ref);

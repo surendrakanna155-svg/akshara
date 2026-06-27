@@ -16,6 +16,7 @@ import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_applications_provider.dart';
 import 'widgets/admissions_application_workflow.dart';
 import 'widgets/admissions_applications_table.dart';
+import '../../../core/errors/error_text.dart';
 
 /// AD-03 — Applications management with status workflow.
 class AdmissionsApplicationsScreen extends ConsumerWidget {
@@ -110,7 +111,7 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }
@@ -134,7 +135,7 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
       } catch (error) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$error')),
+          SnackBar(content: Text(aksharaErrorMessage(error))),
         );
       }
       return;

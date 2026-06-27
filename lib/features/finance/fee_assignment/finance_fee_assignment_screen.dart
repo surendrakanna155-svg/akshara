@@ -19,6 +19,7 @@ import '../invoices/finance_invoice_management_section.dart';
 import '../widgets/finance_handoff_queue.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_fee_assignment_provider.dart';
+import '../../../core/errors/error_text.dart';
 
 /// FN-04 — Fee Assignment workflow.
 class FinanceFeeAssignmentScreen extends ConsumerWidget {
@@ -130,7 +131,7 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('$error'),
+                                  content: Text(aksharaErrorMessage(error)),
                                 ),
                               );
                             }
@@ -199,7 +200,7 @@ class FinanceFeeAssignmentScreen extends ConsumerWidget {
                                 } catch (error) {
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('$error')),
+                                    SnackBar(content: Text(aksharaErrorMessage(error))),
                                   );
                                 }
                               },

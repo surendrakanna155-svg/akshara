@@ -28,6 +28,7 @@ class SetActiveIndustryNotifier extends AsyncNotifier<IndustryType?> {
   FutureOr<IndustryType?> build() => null;
 
   Future<IndustryType?> execute({required IndustryType industry}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageIndustryFramework(ref);
@@ -53,6 +54,7 @@ class ActivateIndustryModuleNotifier extends AsyncNotifier<String?> {
     required String moduleId,
     required bool isActive,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageIndustryFramework(ref);

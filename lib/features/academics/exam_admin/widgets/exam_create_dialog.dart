@@ -13,6 +13,7 @@ import '../../../../shared/widgets/akshara_motion.dart';
 import '../../../../theme/spacing.dart';
 import '../exam_administration_provider.dart';
 import '../exam_settings_provider.dart';
+import '../../../../core/errors/error_text.dart';
 
 Future<void> showExamCreateDialog(BuildContext context, WidgetRef ref) async {
   final suggestedTerms = ref.read(examReportSettingsProvider).suggestedTerms;
@@ -218,7 +219,7 @@ Future<void> showExamCreateDialog(BuildContext context, WidgetRef ref) async {
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }

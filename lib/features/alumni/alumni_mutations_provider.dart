@@ -30,6 +30,7 @@ class AddAlumniNotifier extends AsyncNotifier<AlumniRecord?> {
   FutureOr<AlumniRecord?> build() => null;
 
   Future<AlumniRecord?> execute(AddAlumniRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAlumni(ref);
@@ -60,6 +61,7 @@ class CreateAlumniEventNotifier extends AsyncNotifier<AlumniEvent?> {
   FutureOr<AlumniEvent?> build() => null;
 
   Future<AlumniEvent?> execute(CreateAlumniEventRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAlumni(ref);
@@ -90,6 +92,7 @@ class CreateAlumniCampaignNotifier extends AsyncNotifier<AlumniCampaign?> {
   FutureOr<AlumniCampaign?> build() => null;
 
   Future<AlumniCampaign?> execute(CreateAlumniCampaignRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAlumni(ref);
@@ -120,6 +123,7 @@ class AddMentorshipPairNotifier extends AsyncNotifier<MentorshipPair?> {
   FutureOr<MentorshipPair?> build() => null;
 
   Future<MentorshipPair?> execute(AddMentorshipPairRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAlumni(ref);
@@ -151,6 +155,7 @@ class RecordDonationNotifier extends AsyncNotifier<AlumniDonation?> {
   FutureOr<AlumniDonation?> build() => null;
 
   Future<AlumniDonation?> execute(RecordDonationRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAlumni(ref);

@@ -40,6 +40,7 @@ class CreateHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
   FutureOr<HrLeaveRequest?> build() => null;
 
   Future<HrLeaveRequest?> execute(CreateHrLeaveRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHr(ref);
@@ -105,6 +106,7 @@ class ApproveHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
     required String leaveRequestId,
     required ApproveLeaveRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertApproveHrLeave(ref);
@@ -154,6 +156,7 @@ class RejectHrLeaveNotifier extends AsyncNotifier<HrLeaveRequest?> {
     required String leaveRequestId,
     required ApproveLeaveRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertApproveHrLeave(ref);
@@ -200,6 +203,7 @@ class ProcessHrPayrollRunNotifier extends AsyncNotifier<HrPayrollRun?> {
   FutureOr<HrPayrollRun?> build() => null;
 
   Future<HrPayrollRun?> execute(ProcessHrPayrollRunRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHr(ref);
@@ -229,6 +233,7 @@ class CreateHrEmployeeNotifier extends AsyncNotifier<HrEmployee?> {
   FutureOr<HrEmployee?> build() => null;
 
   Future<HrEmployee?> execute(CreateHrEmployeeRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHr(ref);
@@ -268,6 +273,7 @@ class UpdateHrEmployeeNotifier extends AsyncNotifier<HrEmployee?> {
   FutureOr<HrEmployee?> build() => null;
 
   Future<HrEmployee?> execute(UpdateHrEmployeeRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHr(ref);
@@ -305,6 +311,7 @@ class SetHrEmployeeStatusNotifier extends AsyncNotifier<HrEmployee?> {
   FutureOr<HrEmployee?> build() => null;
 
   Future<HrEmployee?> execute(SetHrEmployeeStatusRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHr(ref);

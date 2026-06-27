@@ -68,12 +68,13 @@ final copilotSendMessageProvider =
 
 class CopilotSendMessageNotifier extends AsyncNotifier<CopilotSendMessageResult?> {
   @override
-  Future<CopilotSendMessageResult?> build() async => null;
+  CopilotSendMessageResult? build() => null;
 
   Future<CopilotSendMessageResult?> send(String content) async {
     final sessionId = ref.read(copilotSelectedSessionIdProvider);
     if (sessionId == null || content.trim().isEmpty) return null;
 
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final screenContext = ref.read(copilotEffectiveContextProvider);

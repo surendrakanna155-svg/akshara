@@ -41,6 +41,7 @@ class SubmitStudentHomeworkNotifier extends AsyncNotifier<StudentHomeworkItem?> 
   FutureOr<StudentHomeworkItem?> build() => null;
 
   Future<StudentHomeworkItem?> execute(StudentHomeworkSubmitRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(

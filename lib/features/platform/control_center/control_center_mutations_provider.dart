@@ -30,6 +30,7 @@ class CreateSchoolNotifier extends AsyncNotifier<PlatformSchool?> {
   FutureOr<PlatformSchool?> build() => null;
 
   Future<PlatformSchool?> execute(CreateSchoolRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageControlCenter(ref);
@@ -60,6 +61,7 @@ class CreateCrmLeadNotifier extends AsyncNotifier<CrmDeal?> {
   FutureOr<CrmDeal?> build() => null;
 
   Future<CrmDeal?> execute(CreateCrmLeadRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageControlCenter(ref);

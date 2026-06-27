@@ -7,6 +7,7 @@ import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/errors/api_failure.dart';
 import 'education_models.dart';
+import '../../core/errors/mutation_in_progress.dart';
 
 void assertManageEducation(Ref ref) {
   final perms = ref.read(userPermissionsProvider);
@@ -114,9 +115,10 @@ final educationMutationsProvider =
 
 class EducationMutationsNotifier extends AsyncNotifier<void> {
   @override
-  Future<void> build() async {}
+  void build() {}
 
   Future<QuestionPaperDetail> generatePaper(GenerateQuestionPaperRequest request) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageEducation(ref);
@@ -135,6 +137,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<QuestionPaperSummary> publishPaper(String paperId) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertApproveEducation(ref);
@@ -152,6 +155,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<QuestionPaperSummary> submitPaper(String paperId) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageEducation(ref);
@@ -173,6 +177,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
     String decision, {
     String? comments,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertApproveEducation(ref);
@@ -196,6 +201,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
     String itemId,
     String decision,
   ) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageEducation(ref);
@@ -216,6 +222,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
 
   /// Feature C — edit a saved bank question.
   Future<QuestionBankItem> updateBankItem(QuestionBankItem item) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageEducation(ref);
@@ -242,6 +249,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
     String? answerText,
     List<String>? options,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageEducation(ref);
@@ -270,6 +278,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
     String itemId, {
     String? chapter,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageEducation(ref);
@@ -298,6 +307,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
     EduCognitiveLevel? cognitiveLevel,
     String? syllabusChapterId,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageEducation(ref);
@@ -328,6 +338,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<HomeworkAssignment> generateHomework(GenerateHomeworkRequest request) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     assertManageEducation(ref);
     final created = await ref.read(educationRepositoryProvider).generateHomework(
@@ -340,6 +351,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<ReportCardRemark> generateRemark(GenerateReportRemarkRequest request) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     assertManageEducation(ref);
     final created = await ref.read(educationRepositoryProvider).generateReportRemark(
@@ -362,6 +374,7 @@ class EducationMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<ReportCardRemark> publishRemark(String remarkId) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageEducation(ref);

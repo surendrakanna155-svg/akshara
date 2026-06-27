@@ -38,6 +38,7 @@ class AllocateRoomNotifier extends AsyncNotifier<AccommodationAllocation?> {
     required String roomId,
     required DateTime startDate,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAccommodation(ref);
@@ -69,6 +70,7 @@ class RegisterResidentNotifier extends AsyncNotifier<Resident?> {
     required String name,
     required String detail,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageAccommodation(ref);

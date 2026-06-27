@@ -42,6 +42,7 @@ class SaveRoleDashboardLayoutNotifier extends AsyncNotifier<RoleDashboardLayout?
     required RoleDashboardLayout layout,
     int? version,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageDynamicWidgets(ref);
@@ -75,6 +76,7 @@ class ResetLayoutToPackDefaultNotifier extends AsyncNotifier<RoleDashboardLayout
     required String role,
     required String verticalPack,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageDynamicWidgets(ref);

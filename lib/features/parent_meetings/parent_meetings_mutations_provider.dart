@@ -14,6 +14,7 @@ import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
 import 'parent_meeting_models.dart';
 import 'parent_meetings_providers.dart';
+import '../../core/errors/mutation_in_progress.dart';
 
 void assertManageParentMeetings(Ref ref) {
   final permissions = ref.read(userPermissionsProvider);
@@ -48,6 +49,7 @@ class ParentMeetingsMutationsNotifier extends AsyncNotifier<void> {
     required DateTime meetingAt,
     String notes = '',
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageParentMeetings(ref);
@@ -75,6 +77,7 @@ class ParentMeetingsMutationsNotifier extends AsyncNotifier<void> {
     required String meetingId,
     required String notes,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageParentMeetings(ref);
@@ -96,6 +99,7 @@ class ParentMeetingsMutationsNotifier extends AsyncNotifier<void> {
   Future<ParentMeetingRecord> generateSummary({
     required ParentMeetingRecord meeting,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageParentMeetings(ref);
@@ -134,6 +138,7 @@ class ParentMeetingsMutationsNotifier extends AsyncNotifier<void> {
     required String actionItemId,
     required bool completed,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageParentMeetings(ref);
@@ -160,6 +165,7 @@ class ParentMeetingsMutationsNotifier extends AsyncNotifier<void> {
     String? notes,
     bool notifyParent = false,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageParentMeetings(ref);

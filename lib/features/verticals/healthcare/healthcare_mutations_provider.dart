@@ -38,6 +38,7 @@ class BookAppointmentNotifier extends AsyncNotifier<Appointment?> {
     required String practitionerId,
     required DateTime scheduledAt,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHealthcare(ref);
@@ -69,6 +70,7 @@ class RegisterPatientNotifier extends AsyncNotifier<Patient?> {
     required String name,
     required String detail,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageHealthcare(ref);

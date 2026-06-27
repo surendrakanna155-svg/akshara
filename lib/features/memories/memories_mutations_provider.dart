@@ -29,6 +29,7 @@ class CreateSchoolMemoryEventNotifier
 
   Future<SchoolMemoryEvent?> execute(
       CreateSchoolMemoryEventRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSchoolMemories(ref);
@@ -68,6 +69,7 @@ class PublishSchoolMemoryEventNotifier
   FutureOr<SchoolMemoryEvent?> build() => null;
 
   Future<SchoolMemoryEvent?> execute({required String eventId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSchoolMemories(ref);

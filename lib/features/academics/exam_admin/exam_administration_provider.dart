@@ -7,6 +7,7 @@ import '../../../core/repositories/interfaces/exam_administration_repository.dar
 import '../../../core/repositories/repository_query.dart';
 import '../../../core/tenant/tenant_provider.dart';
 import 'exam_admin_models.dart';
+import '../../../core/errors/mutation_in_progress.dart';
 
 final examAdminPhaseFilterProvider =
     StateProvider<ExamAdminPhaseFilter>((ref) => ExamAdminPhaseFilter.all);
@@ -61,9 +62,10 @@ final examAdminMutationProvider =
 
 class ExamAdminMutationNotifier extends AsyncNotifier<void> {
   @override
-  Future<void> build() async {}
+  void build() {}
 
   Future<ExamSession> createExam(CreateExamAdministrationRequest request) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await ref.read(examAdministrationRepositoryProvider).createExam(
@@ -97,6 +99,7 @@ class ExamAdminMutationNotifier extends AsyncNotifier<void> {
       RepositoryQuery query,
     ) action,
   ) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await action(

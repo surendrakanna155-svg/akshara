@@ -20,6 +20,7 @@ import 'inventory_providers.dart';
 import 'inventory_requests.dart';
 import 'intelligence/inventory_intelligence_models.dart';
 import 'intelligence/inventory_intelligence_provider.dart';
+import '../../core/errors/mutation_in_progress.dart';
 
 void assertCreateInventoryPo(Ref ref) {
   final perms = ref.read(userPermissionsProvider);
@@ -104,6 +105,7 @@ class CreateProcurementOrderNotifier
   Future<InventoryProcurementOrder?> execute(
     CreateInventoryProcurementOrderRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertCreateInventoryPo(ref);
@@ -207,6 +209,7 @@ class ApproveProcurementHandoffNotifier
   Future<InventoryFinanceApproveResult> execute(
     InventoryProcurementOrder order,
   ) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertApprovePurchaseOrder(ref);
@@ -253,6 +256,7 @@ class RecordAssetLifecycleEventNotifier
   Future<AssetLifecycleEvent?> execute(
     RecordAssetLifecycleEventRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertAssetLifecycle(ref);
@@ -286,6 +290,7 @@ class ReceiveProcurementHandoffNotifier
   Future<InventoryFinanceReceiveResult?> execute(
     InventoryProcurementOrder order,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertProcurementWorkflow(ref);

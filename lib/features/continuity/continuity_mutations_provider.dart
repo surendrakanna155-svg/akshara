@@ -16,6 +16,7 @@ class PreviewContinuityMigrationNotifier
   FutureOr<ContinuityMigrationPlan?> build() => null;
 
   Future<ContinuityMigrationPlan?> execute() async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSis(ref);
@@ -48,6 +49,7 @@ class ExecuteContinuityMigrationNotifier
   FutureOr<ContinuityMigrationResult?> build() => null;
 
   Future<ContinuityMigrationResult?> execute({required String planId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSis(ref);

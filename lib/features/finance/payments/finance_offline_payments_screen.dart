@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/error_text.dart';
 import '../../../core/repositories/paginated_result.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
@@ -145,7 +146,24 @@ class _OfflinePaymentsTable extends ConsumerWidget {
                           final result = await notifier.execute(
                             offlinePaymentId: payment.id,
                           );
-                          if (!context.mounted || result == null) return;
+                          if (!context.mounted) return;
+                          // RT-26: surface a failed reconcile instead of
+                          // silently returning (it returns null on error).
+                          if (result == null) {
+                            final failure = ref
+                                .read(reconcileOfflinePaymentProvider)
+                                .error;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  failure != null
+                                      ? aksharaErrorMessage(failure)
+                                      : 'Could not reconcile this payment. Please try again.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               key: QaTestKeys
@@ -339,7 +357,24 @@ Future<void> _showRecordOfflinePaymentDialog(
                       recordedAt: DateTime.now().toIso8601String(),
                     ),
                   );
-                  if (!context.mounted || result == null) return;
+                  if (!context.mounted) return;
+                  // RT-26: surface a failed record instead of silently closing
+                  // (execute returns null on error) — the dialog stays open so
+                  // the user can correct and retry.
+                  if (result == null) {
+                    final failure =
+                        ref.read(recordOfflinePaymentProvider).error;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          failure != null
+                              ? aksharaErrorMessage(failure)
+                              : 'Could not record this payment. Please try again.',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

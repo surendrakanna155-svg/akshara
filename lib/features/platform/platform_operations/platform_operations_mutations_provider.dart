@@ -43,6 +43,7 @@ class AcknowledgeAlertNotifier extends AsyncNotifier<PlatformAlert?> {
     required String alertId,
     String? note,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManagePlatformOperations(ref);
@@ -76,6 +77,7 @@ class RunTenantVerificationNotifier
   FutureOr<TenantVerificationReport?> build() => null;
 
   Future<TenantVerificationReport?> execute() async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManagePlatformOperations(ref);
@@ -107,6 +109,7 @@ class CompleteAccessReviewNotifier extends AsyncNotifier<AccessReviewItem?> {
   FutureOr<AccessReviewItem?> build() => null;
 
   Future<AccessReviewItem?> execute({required String reviewId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManagePlatformOperations(ref);

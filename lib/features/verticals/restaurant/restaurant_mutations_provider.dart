@@ -38,6 +38,7 @@ class CreateRestaurantOrderNotifier extends AsyncNotifier<RestaurantOrder?> {
     required String items,
     required String notes,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageRestaurant(ref);
@@ -69,6 +70,7 @@ class UpdateKitchenTicketNotifier extends AsyncNotifier<KitchenTicket?> {
     required String ticketId,
     required String status,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageRestaurant(ref);

@@ -116,6 +116,7 @@ class CreateFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
 
   Future<FinanceFeeStructure?> execute(
       CreateFeeStructureRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final catalog = ref.read(academicCatalogProvider);
@@ -187,6 +188,7 @@ class UpdateFeeStructureNotifier extends AsyncNotifier<FinanceFeeStructure?> {
     required String feeStructureId,
     required UpdateFeeStructureRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final catalog = ref.read(academicCatalogProvider);
@@ -221,6 +223,7 @@ class CreateStudentAccountNotifier extends AsyncNotifier<StudentFeeAccount?> {
 
   Future<StudentFeeAccount?> execute(
       CreateStudentAccountRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -253,6 +256,7 @@ class UpdateStudentAccountNotifier extends AsyncNotifier<StudentFeeAccount?> {
     required String accountId,
     required UpdateStudentAccountRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -282,6 +286,7 @@ class AssignFeePlanNotifier extends AsyncNotifier<StudentFeeAccount?> {
   FutureOr<StudentFeeAccount?> build() => null;
 
   Future<StudentFeeAccount?> execute(AssignFeePlanRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final account = await _runMutation(
@@ -329,6 +334,7 @@ class CreateCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
 
   Future<FinanceCollectionResult?> execute(
       CreateCollectionRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -365,6 +371,7 @@ class RecordOfflinePaymentNotifier
   Future<OfflinePaymentRecord?> execute(
     RecordOfflinePaymentRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -401,6 +408,7 @@ class ReconcileOfflinePaymentNotifier
     ReconcileOfflinePaymentRequest request =
         const ReconcileOfflinePaymentRequest(),
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -437,6 +445,7 @@ class CreateQrPaymentSessionNotifier extends AsyncNotifier<QrPaymentSession?> {
 
   Future<QrPaymentSession?> execute(
       CreateQrPaymentSessionRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final session = await _runMutation(
@@ -475,6 +484,7 @@ class ConfirmQrPaymentSessionNotifier extends AsyncNotifier<QrPaymentSession?> {
     required String sessionId,
     required ConfirmQrPaymentRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -511,6 +521,7 @@ class CreateRefundNotifier extends AsyncNotifier<RefundRequest?> {
   FutureOr<RefundRequest?> build() => null;
 
   Future<RefundRequest?> execute(CreateRefundRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final refund = await _runMutation(
@@ -564,6 +575,7 @@ class ApproveRefundNotifier extends AsyncNotifier<RefundRequest?> {
     required String refundId,
     ApproveRefundRequest request = const ApproveRefundRequest(),
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       if (ref.read(financeApprovalRequiredProvider) &&
@@ -604,6 +616,7 @@ class RejectRefundNotifier extends AsyncNotifier<RefundRequest?> {
   FutureOr<RefundRequest?> build() => null;
 
   Future<RefundRequest?> execute({required String refundId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -633,6 +646,7 @@ class CreateScholarshipNotifier extends AsyncNotifier<ScholarshipCatalogItem?> {
 
   Future<ScholarshipCatalogItem?> execute(
       CreateScholarshipRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -665,6 +679,7 @@ class UpdateScholarshipNotifier extends AsyncNotifier<ScholarshipCatalogItem?> {
     required String scholarshipId,
     required UpdateScholarshipRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -694,6 +709,7 @@ class CreateDiscountRuleNotifier extends AsyncNotifier<DiscountRule?> {
   FutureOr<DiscountRule?> build() => null;
 
   Future<DiscountRule?> execute(CreateDiscountRuleRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -726,6 +742,7 @@ class UpdateDiscountRuleNotifier extends AsyncNotifier<DiscountRule?> {
     required String ruleId,
     required UpdateDiscountRuleRequest request,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -758,6 +775,7 @@ class UpdateFinanceSettingsNotifier
   Future<FinanceSettingsData?> execute(
     UpdateFinanceSettingsRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -786,6 +804,7 @@ class IssueInvoiceNotifier extends AsyncNotifier<FinanceInvoice?> {
   FutureOr<FinanceInvoice?> build() => null;
 
   Future<FinanceInvoice?> execute({required String invoiceId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -815,6 +834,7 @@ class CancelInvoiceNotifier extends AsyncNotifier<FinanceInvoice?> {
   FutureOr<FinanceInvoice?> build() => null;
 
   Future<FinanceInvoice?> execute({required String invoiceId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -845,6 +865,7 @@ class CancelCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
 
   Future<FinanceCollectionResult?> execute(
       {required String collectionId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -878,6 +899,7 @@ class ExportReceiptPdfNotifier extends AsyncNotifier<Uint8List?> {
   FutureOr<Uint8List?> build() => null;
 
   Future<Uint8List?> execute({required String receiptId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageFinance(ref);
@@ -940,6 +962,7 @@ class AssignFeeConcessionNotifier extends AsyncNotifier<String?> {
     required String reason,
     String feeAccountId = '',
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final perms = ref.read(userPermissionsProvider);

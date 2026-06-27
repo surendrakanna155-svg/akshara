@@ -14,6 +14,7 @@ import '../sis_async_state.dart';
 import '../sis_models.dart';
 import '../widgets/sis_enrollment_queue.dart';
 import '../widgets/sis_module_scaffold.dart';
+import '../../../core/errors/error_text.dart';
 
 /// SIS-05 — Admissions Conversion.
 class SisAdmissionsConversionScreen extends ConsumerStatefulWidget {
@@ -213,7 +214,7 @@ class _SisAdmissionsConversionScreenState
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$error')),
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     }
   }

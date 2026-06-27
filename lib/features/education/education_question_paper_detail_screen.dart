@@ -11,6 +11,7 @@ import 'education_paper_item_edit_sheet.dart';
 import 'education_pdf_service.dart';
 import 'education_provider.dart';
 import '../../theme/spacing.dart';
+import '../../core/errors/error_text.dart';
 
 /// A paper can be corrected only before it is locked (published / archived).
 bool _paperEditable(EduPaperReviewStatus status) =>
@@ -208,7 +209,7 @@ class _ModerationCard extends ConsumerWidget {
         SnackBar(content: Text('AI candidate $decision')),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 
@@ -367,7 +368,7 @@ class _QuestionTile extends ConsumerWidget {
             : 'Question updated.'),
       ));
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 
@@ -395,7 +396,7 @@ class _QuestionTile extends ConsumerWidget {
         content: Text('Question regenerated — review it in the AI moderation queue.'),
       ));
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 
@@ -443,7 +444,7 @@ class _QuestionTile extends ConsumerWidget {
         const SnackBar(content: Text('Saved to question bank.')),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 }
@@ -474,7 +475,7 @@ class _GovernanceActions extends ConsumerWidget {
       await action();
       messenger.showSnackBar(SnackBar(content: Text(successMessage)));
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
     }
   }
 

@@ -5,6 +5,7 @@ import '../../core/testing/qa_test_keys.dart';
 import 'hr_models.dart';
 import 'hr_mutations_provider.dart';
 import 'hr_requests.dart';
+import '../../core/errors/error_text.dart';
 
 String _hrDepartmentLabel(HrDepartment d) => switch (d) {
       HrDepartment.academics => 'Academics',
@@ -134,7 +135,7 @@ Future<void> showCreateHrLeaveDialog(BuildContext context, WidgetRef ref) async 
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }
@@ -183,7 +184,7 @@ Future<void> showProcessPayrollRunDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }
@@ -289,7 +290,7 @@ Future<void> showCreateHrEmployeeDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }
@@ -360,7 +361,7 @@ Future<void> showEditHrEmployeeDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }
@@ -388,7 +389,7 @@ Future<void> deactivateHrEmployee(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }
@@ -416,7 +417,7 @@ Future<void> activateHrEmployee(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }

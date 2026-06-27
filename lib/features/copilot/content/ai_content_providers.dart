@@ -15,6 +15,7 @@ class AiContentGenerationNotifier extends AsyncNotifier<AiGeneratedContent?> {
   FutureOr<AiGeneratedContent?> build() => null;
 
   Future<AiGeneratedContent?> execute(AiContentRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(
       () => ref.read(aiContentServiceProvider).generate(request),

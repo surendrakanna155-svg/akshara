@@ -9,6 +9,7 @@ import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
 import 'director_models.dart';
 import 'director_providers.dart';
+import '../../core/errors/mutation_in_progress.dart';
 
 void assertManageDirectorPortal(Ref ref) {
   final permissions = ref.read(userPermissionsProvider);
@@ -33,6 +34,7 @@ class DirectorMutationsNotifier extends AsyncNotifier<void> {
   Future<DirectorComplianceItem> acknowledgeCompliance({
     required String complianceId,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageDirectorPortal(ref);
@@ -51,6 +53,7 @@ class DirectorMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<DirectorBoardPack> exportReport({required String reportId}) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageDirectorPortal(ref);
@@ -69,6 +72,7 @@ class DirectorMutationsNotifier extends AsyncNotifier<void> {
   Future<DirectorMetricInput> saveMetricInput({
     required DirectorMetricInputDraft draft,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       assertManageDirectorPortal(ref);

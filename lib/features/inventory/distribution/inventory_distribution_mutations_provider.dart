@@ -43,6 +43,7 @@ class CreateDistributionNotifier
     required String catalogItemId,
     required int quantity,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageInventoryDistribution(ref);
@@ -78,6 +79,7 @@ class MarkDistributedNotifier extends AsyncNotifier<InvStudentDistribution?> {
     required String distributionId,
     String? notes,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageInventoryDistribution(ref);
@@ -114,6 +116,7 @@ class RequestReplacementNotifier
     required String distributionId,
     String? notes,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageInventoryDistribution(ref);
@@ -145,6 +148,7 @@ class ApproveReplacementNotifier extends AsyncNotifier<InvReplacementRequest?> {
   FutureOr<InvReplacementRequest?> build() => null;
 
   Future<InvReplacementRequest?> execute({required String requestId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageInventoryDistribution(ref);
@@ -175,6 +179,7 @@ class FulfillReplacementNotifier extends AsyncNotifier<InvReplacementRequest?> {
   FutureOr<InvReplacementRequest?> build() => null;
 
   Future<InvReplacementRequest?> execute({required String requestId}) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageInventoryDistribution(ref);
@@ -208,6 +213,7 @@ class RejectReplacementNotifier extends AsyncNotifier<InvReplacementRequest?> {
     required String requestId,
     String? reason,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageInventoryDistribution(ref);

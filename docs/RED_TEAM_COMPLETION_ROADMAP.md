@@ -1,8 +1,8 @@
 # AKSHARA — Red Team Completion Roadmap
 
 **Companion to:** [`RED_TEAM_CERTIFICATION_AUDIT.md`](./RED_TEAM_CERTIFICATION_AUDIT.md) · validated by [`RED_TEAM_VALIDATION_REPORT.md`](./RED_TEAM_VALIDATION_REPORT.md)
-**Date:** 2026-06-27 (validation reconciliation added 2026-06-27; Wave 1 closed 2026-06-27; Wave 2 closed 2026-06-27; Wave 3 closed 2026-06-27)
-**Status:** ✅ **Wave 1 CLOSED** (RT-01..08 fixed, deployed, live 26/26 — commit `6b1e5c1`, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). ✅ **Wave 2 CLOSED** (RT-09..15 fixed via migration `20260815000000`, deployed, live 25/25 + Wave-1 regression 26/26 — [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md)). ✅ **Wave 3 CLOSED** (RT-16..23 fixed edge-only, deployed, live 24/24 + Wave-1 26/26 + Wave-2 25/25 regression — [`RED_TEAM_WAVE_3_CERTIFICATION.md`](./RED_TEAM_WAVE_3_CERTIFICATION.md)). Waves 4–5 awaiting owner approval; no fixes applied beyond Wave 3.
+**Date:** 2026-06-27 (validation reconciliation added 2026-06-27; Waves 1–4 closed 2026-06-27)
+**Status:** ✅ **Wave 1 CLOSED** (RT-01..08 fixed, deployed, live 26/26 — commit `6b1e5c1`, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). ✅ **Wave 2 CLOSED** (RT-09..15 fixed via migration `20260815000000`, deployed, live 25/25 + Wave-1 regression 26/26 — [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md)). ✅ **Wave 3 CLOSED** (RT-16..23 fixed edge-only, deployed, live 24/24 + Wave-1 26/26 + Wave-2 25/25 regression — [`RED_TEAM_WAVE_3_CERTIFICATION.md`](./RED_TEAM_WAVE_3_CERTIFICATION.md)). ✅ **Wave 4 CLOSED** (RT-24..30 fixed client-only, flutter analyze 0 / test 2448 incl. 8 new + backend regression W1 26/26 · W2 25/25 · W3 24/24 — [`RED_TEAM_WAVE_4_CERTIFICATION.md`](./RED_TEAM_WAVE_4_CERTIFICATION.md)). Wave 5 awaiting owner approval; no fixes applied beyond Wave 4.
 
 > ## Validation reconciliation (post-validation pass)
 >
@@ -51,7 +51,7 @@ Each wave also produces a `docs/RED_TEAM_WAVE_<n>_CERTIFICATION.md` recording th
 | 1 | Transactional Integrity — duplicates & lost updates | RT-01,02,03,04,05,06,07,08 | 2 Crit, 4 High, 2 Med | Money/identity corruption, lost records |
 | 2 ✅ **CLOSED** (live 25/25, `20260815000000`) | Tenant & Privacy Isolation (RLS) | RT-09,10,11,12,13,14,15 | 1 Crit, 4 High, 1 Med, 1 Low | Cross-family PII leak/tamper |
 | 3 ✅ **CLOSED** (live 24/24, edge-only) | Session & Authorization Enforcement | RT-16,17,18,19,20,21,22,23 | 3 High, 2 Med, 3 Low | Revocation/demotion ineffective; gate bypass |
-| 4 | Client Write Resilience | RT-24,25,26,27,28,29,30 | 3 High, 4 Med | Double-submit duplicates; invisible failures |
+| 4 ✅ **CLOSED** (flutter 2448 +8; client-only) | Client Write Resilience | RT-24,25,26,27,28,29,30 | 3 High, 4 Med | Double-submit duplicates; invisible failures |
 | 5 | Input/Upload Hardening & Scale | RT-31,32,33,34,35 | 2 High, 2 Med, 1 Low | Upload abuse, DB-connection cliff, bloat |
 
 ---
@@ -122,7 +122,9 @@ Each wave also produces a `docs/RED_TEAM_WAVE_<n>_CERTIFICATION.md` recording th
 
 ---
 
-## Wave 4 — Client Write Resilience
+## Wave 4 — Client Write Resilience — ✅ CLOSED (client-only; flutter analyze 0 / test 2448 incl. 8 new + W1 26/26 · W2 25/25 · W3 24/24 regression, 2026-06-27)
+
+> **CLOSED.** All 7 findings fixed in the Flutter client with **no backend change** (so the unit-under-test is the client; the authoritative gate is `flutter analyze` + `flutter test`, with the live VPS regression proving the backend is untouched). A double-submit re-entry guard was applied at all **204** mutation entry points (RT-24/25), previously-swallowed write failures now surface (RT-26), all **48** raw error sites route through a clean mapper (RT-27), the auth interceptor only auto-replays safe requests after a 401 refresh (RT-29), and `AksharaUnsavedChangesGuard` now covers in-app back **and** web `beforeunload` and is applied to key forms (RT-30). RT-28 was confirmed not reproducible (duplicate of RT-24/26/27). See [`RED_TEAM_WAVE_4_CERTIFICATION.md`](./RED_TEAM_WAVE_4_CERTIFICATION.md). **Implementation notes vs the plan below:** the RT-24 guard is applied inline at every site (lowest-regression vs a mixin refactor of 176 classes) and is identical everywhere; 7 mutation notifiers with an empty `async` build were made synchronous so `state.isLoading` means exactly "mutation in flight"; 34 non-nullable-return methods throw a typed `mutationInProgressFailure()` (they cannot early-return a value); RT-30's web `beforeunload` uses `dart:js_interop` (no new dependency) and is integrated into the one guard widget. The client changes ship in the next app release (Play submission owner-gated).
 
 **Why fourth:** with the backend deduped (Wave 1) and authorized (Wave 3), harden the client so users can't trigger the failure modes in the first place and always see what happened.
 

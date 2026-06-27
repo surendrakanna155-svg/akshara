@@ -7,6 +7,7 @@ import '../../../core/tenant/tenant_provider.dart';
 import '../inventory_finance/inventory_finance_models.dart';
 import '../inventory_finance/inventory_finance_requests.dart';
 import 'finance_reconciliation_provider.dart';
+import '../../../core/errors/mutation_in_progress.dart';
 
 final inventoryFinanceApprovePurchaseOrderProvider =
     AsyncNotifierProvider<InventoryFinanceApproveNotifier, InventoryFinanceApproveResult?>(
@@ -23,6 +24,7 @@ class InventoryFinanceApproveNotifier extends AsyncNotifier<InventoryFinanceAppr
   FutureOr<InventoryFinanceApproveResult?> build() => null;
 
   Future<InventoryFinanceApproveResult> approve(String purchaseOrderId) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final result = await ref.read(inventoryFinanceRepositoryProvider).approvePurchaseOrder(
@@ -44,6 +46,7 @@ class InventoryFinanceReceiveGoodsNotifier extends AsyncNotifier<InventoryFinanc
     required String purchaseOrderId,
     required ReceiveInventoryGoodsRequest request,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final result = await ref.read(inventoryFinanceRepositoryProvider).receiveGoods(

@@ -8,6 +8,7 @@ import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import 'teacher_leave_approvals_provider.dart';
+import '../../../core/errors/error_text.dart';
 
 /// Class teacher approves/rejects their own class's student-leave requests.
 class TeacherLeaveApprovalsScreen extends ConsumerWidget {
@@ -58,7 +59,7 @@ class _LeaveCard extends ConsumerWidget {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('$e')));
+              .showSnackBar(SnackBar(content: Text(aksharaErrorMessage(e))));
         }
       }
     }

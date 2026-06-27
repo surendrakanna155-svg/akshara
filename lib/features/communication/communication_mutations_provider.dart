@@ -38,6 +38,7 @@ class SendBroadcastNotifier extends AsyncNotifier<BroadcastResult?> {
   FutureOr<BroadcastResult?> build() => null;
 
   Future<BroadcastResult?> execute(BroadcastRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       _assertManageCommunication(ref);
@@ -70,6 +71,7 @@ class SaveTemplateNotifier extends AsyncNotifier<CommunicationTemplate?> {
     required String bodyTemplate,
     List<String> variables = const [],
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       _assertManageCommunicationTemplates(ref);

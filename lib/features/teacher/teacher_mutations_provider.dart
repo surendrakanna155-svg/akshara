@@ -92,6 +92,7 @@ class SaveTeacherAttendanceDraftNotifier
   Future<TeacherAttendanceDraftResult?> execute(
     TeacherAttendanceDraftRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -123,6 +124,7 @@ class SubmitTeacherClassAttendanceNotifier
   Future<TeacherAttendanceSubmitResult?> execute(
     TeacherAttendanceSubmitRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -155,6 +157,7 @@ class ReviewTeacherHomeworkNotifier
   Future<TeacherHomeworkReviewResult?> execute(
     TeacherHomeworkReviewRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -184,6 +187,7 @@ class UpdateTeacherExamMarkNotifier extends AsyncNotifier<ExamMarkEntry?> {
   FutureOr<ExamMarkEntry?> build() => null;
 
   Future<ExamMarkEntry?> execute(TeacherExamMarkUpdateRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -214,6 +218,7 @@ class PublishTeacherExamResultsNotifier
   Future<TeacherExamPublishResult?> execute(
     TeacherExamPublishRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       if (ref.read(examApprovalRequiredProvider)) {
@@ -268,6 +273,7 @@ class ProcessTeacherExamResultsNotifier
   Future<TeacherExamProcessResultsResult?> execute(
     TeacherExamProcessResultsRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final rbac = ref.read(rbacServiceProvider);
@@ -312,6 +318,7 @@ class SubmitTeacherExamResultsForApprovalNotifier
   Future<TeacherExamSubmitApprovalResult?> execute(
     TeacherExamSubmitApprovalRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final rbac = ref.read(rbacServiceProvider);
@@ -373,6 +380,7 @@ class SubmitAttendanceCorrectionNotifier
   Future<TeacherAttendanceCorrectionResult?> execute(
     TeacherAttendanceCorrectionRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final rbac = ref.read(rbacServiceProvider);
@@ -461,6 +469,7 @@ class SubmitTeacherLeaveNotifier extends AsyncNotifier<TeacherLeaveRequest?> {
   FutureOr<TeacherLeaveRequest?> build() => null;
 
   Future<TeacherLeaveRequest?> execute(TeacherLeaveSubmitRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -489,6 +498,7 @@ class SendTeacherMessageNotifier extends AsyncNotifier<MessageThread?> {
   FutureOr<MessageThread?> build() => null;
 
   Future<MessageThread?> execute(TeacherMessageSendRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(
@@ -520,6 +530,7 @@ class CreateTeacherHomeworkNotifier
   Future<TeacherHomeworkAssignment?> execute(
     TeacherHomeworkCreateRequest request,
   ) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       return _runMutation(

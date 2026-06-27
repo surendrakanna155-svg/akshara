@@ -6,6 +6,7 @@ import '../../core/tenant/tenant_provider.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import 'intelligence_models.dart';
+import '../../core/errors/mutation_in_progress.dart';
 
 final intelligenceQueryProvider = Provider<RepositoryQuery>(
   (ref) => ref.watch(repositoryQueryProvider),
@@ -66,9 +67,10 @@ final intelligenceMutationsProvider =
 
 class IntelligenceMutationsNotifier extends AsyncNotifier<void> {
   @override
-  Future<void> build() async {}
+  void build() {}
 
   Future<int> computeRisks({String? academicYearLabel}) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       final rows = await ref.read(intelligenceRepositoryProvider).computeStudentRisks(
@@ -100,6 +102,7 @@ class IntelligenceMutationsNotifier extends AsyncNotifier<void> {
     String? examName,
     String? meetingDate,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       final drafts = await ref.read(intelligenceRepositoryProvider).generateCommunication(
@@ -131,6 +134,7 @@ class IntelligenceMutationsNotifier extends AsyncNotifier<void> {
     bool publish = true,
     bool autoFillFromRisk = true,
   }) async {
+    if (state.isLoading) throw mutationInProgressFailure();
     state = const AsyncLoading();
     try {
       final report = await ref.read(intelligenceRepositoryProvider).generateParentGuidance(

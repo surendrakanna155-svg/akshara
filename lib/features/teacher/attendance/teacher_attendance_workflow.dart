@@ -8,6 +8,7 @@ import '../../../shared/widgets/akshara_motion.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
 import 'attendance_models.dart';
+import '../../../core/errors/error_text.dart';
 
 Future<void> showAttendanceCorrectionDialog(
   BuildContext context,
@@ -147,7 +148,7 @@ Future<void> showAttendanceCorrectionDialog(
   } catch (error) {
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$error')),
+      SnackBar(content: Text(aksharaErrorMessage(error))),
     );
   }
 }

@@ -60,9 +60,10 @@ final timetableMutationsProvider =
 
 class TimetableMutationsNotifier extends AsyncNotifier<void> {
   @override
-  Future<void> build() async {}
+  void build() {}
 
   Future<void> generate({String? sectionId}) async {
+    if (state.isLoading) return;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await ref.read(timetableRepositoryProvider).generate(
@@ -80,6 +81,7 @@ class TimetableMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> validate(String timetableId) async {
+    if (state.isLoading) return;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await ref.read(timetableRepositoryProvider).validate(
@@ -92,6 +94,7 @@ class TimetableMutationsNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> publish(String timetableId) async {
+    if (state.isLoading) return;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await ref.read(timetableRepositoryProvider).publish(

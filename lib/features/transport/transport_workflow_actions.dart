@@ -5,6 +5,7 @@ import '../../core/testing/qa_test_keys.dart';
 import 'transport_models.dart';
 import 'transport_mutations_provider.dart';
 import 'transport_requests.dart';
+import '../../core/errors/error_text.dart';
 
 Future<void> showCreateTransportRouteDialog(
   BuildContext context,
@@ -49,7 +50,7 @@ Future<void> showCreateTransportRouteDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -94,7 +95,7 @@ Future<void> showActivateTransportRouteDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -170,7 +171,7 @@ Future<void> showRecordTransportAttendanceDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -275,7 +276,7 @@ Future<void> showNotifyRouteDelayDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -383,7 +384,7 @@ Future<void> showAssignStudentTransportDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -485,7 +486,7 @@ Future<void> showTransferStudentTransportDialog(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }
 
@@ -531,6 +532,6 @@ Future<void> removeStudentFromRoute(
     );
   } catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
   }
 }

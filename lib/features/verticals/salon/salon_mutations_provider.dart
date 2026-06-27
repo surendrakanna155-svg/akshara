@@ -38,6 +38,7 @@ class BookSalonAppointmentNotifier extends AsyncNotifier<SalonAppointment?> {
     required String serviceId,
     required DateTime scheduledAt,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSalon(ref);
@@ -69,6 +70,7 @@ class RegisterSalonCustomerNotifier extends AsyncNotifier<SalonCustomer?> {
     required String name,
     required String detail,
   }) async {
+    if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageSalon(ref);
