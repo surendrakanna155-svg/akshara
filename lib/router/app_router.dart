@@ -15,6 +15,7 @@ import '../features/auth/splash_screen.dart';
 import '../features/auth/staff/staff_login_screen.dart';
 import '../features/auth/staff/staff_otp_screen.dart';
 import '../features/auth/staff/staff_login_provider.dart';
+import '../features/legal/legal_acceptance_screen.dart';
 import '../features/notifications/notifications_screen.dart';
 import '../features/finance/finance_models.dart';
 import '../features/parent/attendance/parent_attendance_screen.dart';
@@ -124,6 +125,7 @@ GoRouter createAppRouter({
   Listenable? refreshListenable,
   required AuthState Function() readAuth,
   bool Function()? readQaLoginEnabled,
+  bool Function()? readLegalBlocked,
 }) {
   final rootNavigatorKey = GlobalKey<NavigatorState>();
   String authEntryRoute() => (readQaLoginEnabled?.call() ?? false)
@@ -135,8 +137,20 @@ GoRouter createAppRouter({
     initialLocation: RouteNames.splash,
     refreshListenable: refreshListenable,
     debugLogDiagnostics: true,
-    redirect: (context, state) =>
-        _authRedirect(readAuth(), state.uri.path, authEntryRoute()),
+    redirect: (context, state) {
+      final auth = readAuth();
+      final authResult =
+          _authRedirect(auth, state.uri.path, authEntryRoute());
+      if (authResult != null) {
+        return authResult;
+      }
+      // Auth is satisfied for this location; now enforce the legal gate.
+      return legalGateRedirect(
+        auth,
+        readLegalBlocked?.call() ?? false,
+        state.uri.path,
+      );
+    },
     routes: [
       GoRoute(
         path: RouteNames.root,
@@ -189,6 +203,11 @@ GoRouter createAppRouter({
             identifierType: type,
           );
         },
+      ),
+      GoRoute(
+        path: RouteNames.legalAcceptance,
+        name: 'legalAcceptance',
+        builder: (context, state) => const LegalAcceptanceScreen(),
       ),
       GoRoute(
         path: RouteNames.parent,
@@ -2294,6 +2313,25 @@ String? _authRedirect(AuthState auth, String location, String entryRoute) {
     return homeRouteForRole(auth.role);
   }
 
+  return null;
+}
+
+/// Enforces the mandatory legal-acceptance gate AFTER [_authRedirect] has allowed
+/// the location. When [blocked] (the backend positively reported outstanding
+/// mandatory policies), an authenticated user is redirected to the acceptance
+/// screen and cannot navigate elsewhere until they accept. When not blocked, a
+/// user who somehow lands on the gate is sent home. Anything other than a
+/// definitive "blocked" is fail-open, so a legal-endpoint outage never traps
+/// users out of the app.
+String? legalGateRedirect(AuthState auth, bool blocked, String location) {
+  if (!auth.isAuthenticated) return null;
+  final isGateRoute = location == RouteNames.legalAcceptance;
+  if (blocked) {
+    return isGateRoute ? null : RouteNames.legalAcceptance;
+  }
+  if (isGateRoute) {
+    return homeRouteForAuth(auth);
+  }
   return null;
 }
 

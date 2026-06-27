@@ -10,6 +10,10 @@ abstract final class RouteNames {
   static const String staffLogin = '/staff/login';
   static const String staffOtp = '/staff/otp';
 
+  /// Mandatory legal-acceptance gate (shown after login when policies are
+  /// outstanding; also opened from Profile → Legal to review policies).
+  static const String legalAcceptance = '/legal-acceptance';
+
   // Parent app (mobile)
   static const String parent = '/parent';
   static const String parentDashboard = '/parent/dashboard';

@@ -162,6 +162,13 @@ class TeacherProfileScreen extends ConsumerWidget {
                   value: 'Appearance, AI Assistant',
                   onTap: () => context.push(RouteNames.teacherSettings),
                 ),
+                const SizedBox(height: AksharaSpacing.s2),
+                ProfileInfoRow(
+                  icon: Icons.gavel_outlined,
+                  label: 'Terms & Policies',
+                  value: 'Review the terms you accepted',
+                  onTap: () => context.push(RouteNames.legalAcceptance),
+                ),
                 const SizedBox(height: AksharaSpacing.s3),
                 Text(
                   'More profile details (designation, qualifications, '

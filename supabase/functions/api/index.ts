@@ -59,6 +59,7 @@ import { routeParentExperience } from "../_shared/parent_experience/parent_exper
 import { routeDirector } from "../_shared/director/director_router.ts";
 import { routePredictions } from "../_shared/predictions/predictions_router.ts";
 import { routeOrganizationBuilder } from "../_shared/organization_builder/organization_builder_router.ts";
+import { routeLegal } from "../_shared/legal/legal_router.ts";
 // --- B1 school-config (AgentE) ---
 import { routeSchoolConfig } from "../_shared/school_config/school_config_router.ts";
 // --- end B1 school-config (AgentE) ---
@@ -82,6 +83,7 @@ async function routeModuleRequest(
   path: string,
 ): Promise<Response> {
   const moduleRouters = [
+    routeLegal,
     routeApproval,
     routeAdmissions,
     routeFinance,

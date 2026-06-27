@@ -33,6 +33,7 @@ Future<void> pumpAksharaRouter(
   SharedPreferences? prefs,
   AuthState? authOverride,
   bool settleSplash = true,
+  List<Override> overrides = const [],
 }) async {
   useMobileViewport(tester);
   SharedPreferences.setMockInitialValues({});
@@ -49,6 +50,7 @@ Future<void> pumpAksharaRouter(
         ),
         if (authOverride != null) authStateOverride(authOverride),
         ...providerTestOverrides(),
+        ...overrides,
       ],
       child: MaterialApp.router(
         theme: AksharaAppTheme.light(),

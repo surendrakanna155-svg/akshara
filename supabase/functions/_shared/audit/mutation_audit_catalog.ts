@@ -1340,6 +1340,32 @@ export const schoolCompletionAudit = {
   }),
 };
 
+// ─── Legal & Compliance ──────────────────────────────────────────────────────
+
+export const legalAudit = {
+  /**
+   * A user accepted a legal policy version in-app. Keyed per user+policy+version so
+   * every distinct acceptance is recorded exactly once (re-accepting the same
+   * version is deduped both here and by the table's unique constraint).
+   */
+  policyAccepted: (
+    userId: string,
+    policyKey: string,
+    policyVersion: string,
+  ): MutationAuditSpec => ({
+    ...workflow("legalPolicyAccepted", "legal_policy", policyKey, {
+      policyKey,
+      policyVersion,
+    }),
+    domain: {
+      eventType: "legal.policy.accepted",
+      payload: { userId, policyKey, policyVersion },
+      sourceModule: "legal",
+      idempotencyKey: `legal.policy.accepted:${userId}:${policyKey}:${policyVersion}`,
+    },
+  }),
+};
+
 // ─── Subscription / Entitlement (B2) ─────────────────────────────────────────
 
 export const subscriptionAudit = {

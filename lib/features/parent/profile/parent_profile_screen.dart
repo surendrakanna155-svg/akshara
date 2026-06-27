@@ -209,6 +209,14 @@ class ParentProfileScreen extends ConsumerWidget {
                                 value: 'How we handle your family\'s data',
                                 onTap: () => _openPrivacyPolicy(context),
                               ),
+                              const SizedBox(height: AksharaSpacing.s2),
+                              ProfileInfoRow(
+                                icon: Icons.gavel_outlined,
+                                label: 'Terms & Policies',
+                                value: 'Review the terms you accepted',
+                                onTap: () =>
+                                    context.push(RouteNames.legalAcceptance),
+                              ),
                               const SizedBox(height: AksharaSpacing.s4),
                               AksharaInsightCard(
                                 message:
