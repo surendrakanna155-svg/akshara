@@ -57,21 +57,8 @@ export async function handleInventoryCopilot(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const snapshot = await withTenantContext(config, auth.claims, async (db) => {
-      const data = await computeInventoryCopilot(db, orgId, schoolId);
-      await db.queryObject(
-        `INSERT INTO inventory_intelligence_snapshots (organization_id, school_id, snapshot_type, payload, created_by)
-         VALUES ($1, $2, 'copilot', $3::jsonb, $4)`,
-        [orgId, schoolId, JSON.stringify(data), auth.claims.sub ?? null],
-      );
-      await emitMutationAudit(
-        db,
-        auth.claims,
-        inventoryIntelligenceAudit.copilotComputed(),
-        req,
-      );
-      return data;
-    });
+    const snapshot = await withTenantContext(config, auth.claims, (db) =>
+      computeInventoryCopilot(db, orgId, schoolId));
     return jsonResponse(envelope(snapshot));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -96,21 +83,8 @@ export async function handleAssetLifecycle(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const snapshot = await withTenantContext(config, auth.claims, async (db) => {
-      const data = await computeAssetLifecycle(db, orgId, schoolId);
-      await db.queryObject(
-        `INSERT INTO inventory_intelligence_snapshots (organization_id, school_id, snapshot_type, payload, created_by)
-         VALUES ($1, $2, 'lifecycle', $3::jsonb, $4)`,
-        [orgId, schoolId, JSON.stringify(data), auth.claims.sub ?? null],
-      );
-      await emitMutationAudit(
-        db,
-        auth.claims,
-        inventoryIntelligenceAudit.lifecycleViewed(data.assetsTracked),
-        req,
-      );
-      return data;
-    });
+    const snapshot = await withTenantContext(config, auth.claims, (db) =>
+      computeAssetLifecycle(db, orgId, schoolId));
     return jsonResponse(envelope(snapshot));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
@@ -209,21 +183,8 @@ export async function handleProcurementWorkflow(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const snapshot = await withTenantContext(config, auth.claims, async (db) => {
-      const data = await computeProcurementWorkflow(db, orgId, schoolId);
-      await db.queryObject(
-        `INSERT INTO inventory_intelligence_snapshots (organization_id, school_id, snapshot_type, payload, created_by)
-         VALUES ($1, $2, 'procurement', $3::jsonb, $4)`,
-        [orgId, schoolId, JSON.stringify(data), auth.claims.sub ?? null],
-      );
-      await emitMutationAudit(
-        db,
-        auth.claims,
-        inventoryIntelligenceAudit.procurementWorkflowViewed(data.pendingApprovals),
-        req,
-      );
-      return data;
-    });
+    const snapshot = await withTenantContext(config, auth.claims, (db) =>
+      computeProcurementWorkflow(db, orgId, schoolId));
     return jsonResponse(envelope(snapshot));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {

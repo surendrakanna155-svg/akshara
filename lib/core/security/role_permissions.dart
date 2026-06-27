@@ -50,10 +50,9 @@ class RolePermissionMatrix {
       Permission.viewDirectorPortal,
       Permission.manageDirectorPortal,
       Permission.viewOrganizationIntelligence,
-      Permission.viewBranchOperations,
-      Permission.manageBranchOperations,
-      Permission.viewFranchiseOperations,
-      Permission.manageFranchiseOperations,
+      // SA-1 (MJ-L5): branch/franchise platform-ops permissions removed — no
+      // server migration seeds them, so granting them client-side only
+      // surfaced mock-backed tiles in the offline local-matrix fallback.
       Permission.viewOnboarding,
       Permission.manageOnboarding,
       Permission.viewAiCopilot,
@@ -143,12 +142,12 @@ class RolePermissionMatrix {
       Permission.viewInventoryIntelligence,
       Permission.manageAssetLifecycle,
       Permission.manageProcurementWorkflow,
-      Permission.viewMultiSchoolOperations,
-      Permission.manageMultiSchoolOperations,
+      // SA-1 (MJ-L5): multi-school-operations permissions removed — unseeded
+      // server-side; client grant only surfaced the mock-backed portfolio.
       Permission.viewOrganizationBuilder,
       Permission.manageOrganizationBuilder,
-      Permission.viewPlatformOperations,
-      Permission.managePlatformOperations,
+      // SA-1 (MJ-L5): platform-operations permissions removed — unseeded
+      // server-side (GET /platform-operations/observability is 404 live).
       Permission.viewIndustryFramework,
       Permission.manageIndustryFramework,
       Permission.viewHealthcare,
@@ -159,8 +158,8 @@ class RolePermissionMatrix {
       Permission.manageRestaurantHospitality,
       Permission.viewAccommodation,
       Permission.manageAccommodation,
-      Permission.viewWhiteLabelPlatform,
-      Permission.manageWhiteLabelPlatform,
+      // SA-1 (MJ-L5): white-label-platform permissions removed — unseeded
+      // server-side; client grant only surfaced the mock-backed branding UI.
     },
     ErpRole.schoolAdmin: {
       Permission.viewAdminHub,
@@ -595,6 +594,8 @@ class RolePermissionMatrix {
       Permission.viewExamIntelligence,
       Permission.manageExamMarks,
       Permission.submitExamResults,
+      // Wave 5 MJ-M10 — teacher creates & grades homework (server-gated too).
+      Permission.manageHomework,
       Permission.markAttendance,
       Permission.viewAttendance,
       Permission.submitAttendanceCorrection,

@@ -642,7 +642,7 @@ class MockEvolutionRepository implements EvolutionRepository {
             title: 'Attendance Risk',
             dataSource: 'intelligence.attendance_risk',
             permissions: ['viewStudentRisk'],
-            drillDown: '/sis/attendance',
+            drillDown: '/management/attendance-corrections',
             size: WidgetGridSize.half,
             order: 3,
           ),

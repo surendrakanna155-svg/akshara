@@ -2,6 +2,7 @@ import 'package:akshara_erp/core/repositories/interfaces/platform_operations_rep
 import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
+import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
@@ -331,6 +332,14 @@ class _FakePlatformOperationsRepository implements PlatformOperationsRepository 
   }
 }
 
+final _platformOperator = UserPermissions.fromClaims(
+  role: ErpRole.superAdmin,
+  explicitPermissions: const [
+    Permission.viewPlatformOperations,
+    Permission.managePlatformOperations,
+  ],
+);
+
 void main() {
   Future<void> pumpHub(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -346,11 +355,12 @@ void main() {
           platformOperationsRepositoryProvider
               .overrideWithValue(_FakePlatformOperationsRepository()),
           repositoryQueryProvider.overrideWithValue(RepositoryQuery.demo),
-          userPermissionsProvider.overrideWithValue(
-            UserPermissions.forRole(ErpRole.superAdmin),
-          ),
+          // SA-1 (MJ-L5): superAdmin no longer holds platform-ops perms in the
+          // matrix (unseeded server-side); grant them explicitly so this hub
+          // smoke test still exercises the screen.
+          userPermissionsProvider.overrideWithValue(_platformOperator),
           rbacServiceProvider.overrideWithValue(
-            RbacService(UserPermissions.forRole(ErpRole.superAdmin)),
+            RbacService(_platformOperator),
           ),
         ],
         child: MaterialApp(

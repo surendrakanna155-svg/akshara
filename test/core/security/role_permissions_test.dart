@@ -57,6 +57,30 @@ void main() {
       expect(permissions.contains(Permission.approveEducation), isTrue);
     });
 
+    test('superAdmin does not hold unseeded platform permissions (SA-1)', () {
+      // These platform permissions are not seeded in ANY server migration, so
+      // the client matrix must not advertise them — otherwise the offline
+      // local-matrix fallback would surface mock-backed tiles.
+      final permissions =
+          RolePermissionMatrix.permissionsFor(ErpRole.superAdmin);
+      const unseeded = <Permission>[
+        Permission.viewPlatformOperations,
+        Permission.managePlatformOperations,
+        Permission.viewWhiteLabelPlatform,
+        Permission.manageWhiteLabelPlatform,
+        Permission.viewMultiSchoolOperations,
+        Permission.manageMultiSchoolOperations,
+        Permission.viewFranchiseOperations,
+        Permission.manageFranchiseOperations,
+        Permission.viewBranchOperations,
+        Permission.manageBranchOperations,
+      ];
+      for (final p in unseeded) {
+        expect(permissions.contains(p), isFalse,
+            reason: 'superAdmin should NOT advertise unseeded $p');
+      }
+    });
+
     test('parent has parent experience permission; student has none', () {
       expect(
         RolePermissionMatrix.permissionsFor(ErpRole.parent).contains(

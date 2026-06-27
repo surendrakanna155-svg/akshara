@@ -19,9 +19,8 @@ void main() {
       );
     });
 
-    test('super admin school admin and management can access routes', () {
+    test('school admin and management can access routes', () {
       for (final role in [
-        ErpRole.superAdmin,
         ErpRole.schoolAdmin,
         ErpRole.management,
       ]) {
@@ -29,6 +28,13 @@ void main() {
         expect(
             canAccessErpRoute(rbac, RouteNames.multiSchoolPortfolio), isTrue);
       }
+    });
+
+    test('super admin cannot access (SA-1: unseeded server-side)', () {
+      // Multi-school operations have no server migration seed, so the client
+      // matrix must not advertise them to superAdmin.
+      final rbac = RbacService(UserPermissions.forRole(ErpRole.superAdmin));
+      expect(canAccessErpRoute(rbac, RouteNames.multiSchoolPortfolio), isFalse);
     });
   });
 }

@@ -67,6 +67,13 @@ export class InvalidRefundTransitionError extends Error {
   }
 }
 
+export class RefundSelfApprovalError extends Error {
+  constructor(message = "A refund cannot be approved by its requester") {
+    super(message);
+    this.name = "RefundSelfApprovalError";
+  }
+}
+
 function offsetFor(page: number, pageSize: number): number {
   return Math.max(0, (page - 1) * pageSize);
 }
@@ -391,6 +398,13 @@ export async function approveRefund(
     throw new InvalidRefundTransitionError(
       `Cannot approve refund in status: ${refund.refund_status}`,
     );
+  }
+
+  // Maker-checker: the approver must not be the requester. Only enforced when
+  // the requester id is known (legacy rows with a null requester are skipped
+  // rather than blocked). This runs before any state mutation below.
+  if (refund.requested_by && refund.requested_by === approvedBy) {
+    throw new RefundSelfApprovalError();
   }
 
   const collectionRows = await db.queryObject<FinanceCollectionRow>(

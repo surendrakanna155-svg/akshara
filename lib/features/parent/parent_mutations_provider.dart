@@ -228,6 +228,9 @@ class SubmitParentAttendanceCorrectionNotifier
       final correction = await ref
           .read(attendanceCorrectionRepositoryProvider)
           .createCorrection(
+            // MJ-M11/ATTEN-2 — parents post to the parent-scoped correction
+            // route (staff route requires manageSis a parent never holds).
+            asParent: true,
             query: ref.read(repositoryQueryProvider),
             request: CreateAttendanceCorrectionRequest(
               sisStudentId: request.sisStudentId,

@@ -37,13 +37,21 @@ export async function buildOperationsHub(
     feeAlerts,
   ] = await Promise.all([
     client.queryObject<{ present: number; absent: number; total: number }>(
+      // attendance_records has no date column of its own; the date lives on the
+      // parent attendance_sessions row (session_date). Join through session_id —
+      // the previous `recorded_on = CURRENT_DATE` referenced a non-existent
+      // column and 500'd the whole operations hub / widgets data endpoint.
       `SELECT
-       count(*) FILTER (WHERE mark = 'present')::int AS present,
-       count(*) FILTER (WHERE mark = 'absent')::int AS absent,
+       count(*) FILTER (WHERE ar.mark = 'present')::int AS present,
+       count(*) FILTER (WHERE ar.mark = 'absent')::int AS absent,
        count(*)::int AS total
-     FROM attendance_records
-     WHERE organization_id = $1 AND school_id = $2
-       AND recorded_on = CURRENT_DATE`,
+     FROM attendance_records ar
+     JOIN attendance_sessions s
+       ON s.id = ar.session_id
+      AND s.organization_id = ar.organization_id
+      AND s.school_id = ar.school_id
+     WHERE ar.organization_id = $1 AND ar.school_id = $2
+       AND s.session_date = CURRENT_DATE`,
       [organizationId, schoolId],
     ),
     client.queryObject<{ amount: number; count: number }>(

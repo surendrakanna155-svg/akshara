@@ -20,8 +20,11 @@ function cacheKey(orgId: string, schoolId: string, userId: string): string {
   return `${orgId}:${schoolId}:${userId}`;
 }
 
-function hasWidgetAccess(claims: AccessTokenClaims, permission: string): boolean {
-  if (claims.permissions.includes(permission)) return true;
+function hasWidgetAccess(claims: AccessTokenClaims, requiredPermission: string | null): boolean {
+  // Widgets with an explicit required permission must satisfy it via the
+  // claim's permission set — school scope alone does not grant access.
+  if (requiredPermission) return claims.permissions.includes(requiredPermission);
+  // Generic widgets (no required permission) remain accessible to school scope.
   return claims.scope === "school" && !!claims.school_id;
 }
 
@@ -174,7 +177,7 @@ export async function buildWidgetData(
   for (const id of ids) {
     const base = allWidgets[id];
     if (!base) continue;
-    const permission = WIDGET_PERMISSIONS[id] ?? "viewDynamicWidgets";
+    const permission = WIDGET_PERMISSIONS[id] ?? null;
     const allowed = hasWidgetAccess(claims, permission);
     widgets[id] = allowed
       ? base

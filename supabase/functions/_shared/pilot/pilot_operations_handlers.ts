@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requirePermission,
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
@@ -72,6 +73,10 @@ export async function handleTeacherAttendanceDraft(
   if (auth.claims.scope !== "school" || !auth.claims.school_id) {
     return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
   }
+  // MJ-M10/ATTEN-3: marking attendance is a teaching action — gate on the
+  // granular permission so non-teaching school staff cannot mark/overwrite.
+  const denied = requirePermission(auth.claims, "markAttendance");
+  if (denied) return denied;
 
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
@@ -114,6 +119,10 @@ export async function handleTeacherAttendanceSubmit(
   if (auth.claims.scope !== "school" || !auth.claims.school_id) {
     return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
   }
+  // MJ-M10/ATTEN-3: submitting attendance (which fires guardian absence alerts)
+  // requires the markAttendance permission, not just school scope.
+  const denied = requirePermission(auth.claims, "markAttendance");
+  if (denied) return denied;
 
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
@@ -287,6 +296,9 @@ export async function handleTeacherHomeworkReview(
   if (auth.claims.scope !== "school" || !auth.claims.school_id) {
     return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
   }
+  // MJ-M10/TEACH-4: grading a submission requires the manageHomework permission.
+  const denied = requirePermission(auth.claims, "manageHomework");
+  if (denied) return denied;
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
 
@@ -324,6 +336,9 @@ export async function handleTeacherHomeworkCreate(
   if (auth.claims.scope !== "school" || !auth.claims.school_id) {
     return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
   }
+  // MJ-M10/TEACH-4: creating homework requires the manageHomework permission.
+  const denied = requirePermission(auth.claims, "manageHomework");
+  if (denied) return denied;
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
 
@@ -394,6 +409,10 @@ export async function handleTeacherExamMarkUpdate(
   if (auth.claims.scope !== "school" || !auth.claims.school_id) {
     return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
   }
+  // MJ-M10/TEACH-4: editing exam marks requires the manageExamMarks permission
+  // (the existing exam-governance permission, reused for the mobile teacher path).
+  const denied = requirePermission(auth.claims, "manageExamMarks");
+  if (denied) return denied;
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
 

@@ -57,8 +57,11 @@ final dynamicWidgetLiveDataProvider =
     FutureProvider.family<Map<String, WidgetLiveData>, String>(
   (ref, role) async {
     final layout = await ref.watch(roleDashboardLayoutProvider(role).future);
-    final visibleIds = layout.widgets
-        .where((w) => w.visible)
+    // Apply the SAME RBAC predicate used at render so data for widgets the
+    // user cannot view is never requested (no live data crosses the wire only
+    // to be discarded). filterWidgetsByRbac already excludes invisible widgets.
+    final rbac = ref.watch(rbacServiceProvider);
+    final visibleIds = filterWidgetsByRbac(layout.widgets, rbac)
         .map((w) => w.id)
         .toList();
     if (visibleIds.isEmpty) return const {};

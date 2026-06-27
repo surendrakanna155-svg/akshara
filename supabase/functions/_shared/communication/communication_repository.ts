@@ -142,6 +142,51 @@ export async function insertTemplate(
   return rows[0]!;
 }
 
+/**
+ * MJ-M12: update an existing notification template in place, scoped to the
+ * caller's school (or org-wide rows). Only the supplied fields change; the rest
+ * keep their current values via COALESCE. Returns the updated row, or null when
+ * no active template with that id is visible to the caller.
+ */
+export async function updateTemplate(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string;
+    templateId: string;
+    code: string | null;
+    channel: string | null;
+    subjectTemplate: string | null;
+    bodyTemplate: string | null;
+    variables: unknown | null;
+  },
+): Promise<NotificationTemplateRow | null> {
+  const rows = await db.queryObject<NotificationTemplateRow>(
+    `UPDATE notification_templates SET
+       code = COALESCE($4, code),
+       channel = COALESCE($5, channel),
+       subject_template = CASE WHEN $6::text IS NULL THEN subject_template ELSE $6 END,
+       body_template = COALESCE($7, body_template),
+       variables = COALESCE($8::jsonb, variables)
+     WHERE id = $3
+       AND organization_id = $1
+       AND is_active = true
+       AND (school_id IS NULL OR school_id = $2)
+     RETURNING *`,
+    [
+      input.organizationId,
+      input.schoolId,
+      input.templateId,
+      input.code,
+      input.channel,
+      input.subjectTemplate,
+      input.bodyTemplate,
+      input.variables == null ? null : JSON.stringify(input.variables),
+    ],
+  );
+  return rows[0] ?? null;
+}
+
 export async function getTemplateByCode(
   db: TenantQueryClient,
   orgId: string,

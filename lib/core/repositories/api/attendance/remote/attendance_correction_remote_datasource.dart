@@ -50,9 +50,12 @@ class AttendanceCorrectionRemoteDataSource {
   Future<AttendanceCorrectionRequest> createCorrection({
     required RepositoryQuery query,
     required CreateAttendanceCorrectionRequest request,
+    bool asParent = false,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
-      AttendanceApiPaths.corrections,
+      asParent
+          ? AttendanceApiPaths.parentCorrections
+          : AttendanceApiPaths.corrections,
       queryParameters: _queryParams(query),
       data: _mapper.createBody(request),
     );

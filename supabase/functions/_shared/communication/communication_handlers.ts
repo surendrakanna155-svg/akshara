@@ -22,6 +22,7 @@ import {
   listUserNotifications,
   sendBroadcastMessage,
   sendDirectMessage,
+  updateNotificationTemplate,
 } from "./communication_service.ts";
 import { getNotificationDeliveryMetrics } from "./communication_repository.ts";
 import { processDeliveryQueue } from "./notification_service.ts";
@@ -179,6 +180,68 @@ export async function handleCreateTemplate(
       return errorEnvelope("VALIDATION_ERROR", error.message, 422);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to create template", 500);
+  }
+}
+
+/**
+ * MJ-M12: PUT /communications/templates/:id — update a notification template.
+ * Closes the client↔router path-parity gap where the Flutter client issued
+ * `PUT /communications/templates/{id}` but no route was registered (the call
+ * 404'd live while the mock masked it). Same permission/scope gate as
+ * {@link handleCreateTemplate}; persists into the same `notification_templates`
+ * store; audits the write. The template id is parsed from the request path.
+ */
+export async function handleUpdateTemplate(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "sendBroadcast");
+  if (denied) return denied;
+
+  const pathParts = new URL(req.url).pathname.split("/");
+  const templateId = pathParts[pathParts.length - 1] ?? "";
+  if (!templateId) {
+    return errorEnvelope("VALIDATION_ERROR", "Template id is required", 422);
+  }
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  try {
+    const template = await withTenantContext(config, auth.claims, async (db) =>
+      await updateNotificationTemplate(
+        db,
+        auth.claims,
+        templateId,
+        {
+          code: "code" in body ? snakeStr(body, "code") : undefined,
+          channel: "channel" in body ? snakeStr(body, "channel") : undefined,
+          subjectTemplate: "subject_template" in body
+            ? optionalSnakeStr(body, "subject_template")
+            : undefined,
+          bodyTemplate: "body_template" in body
+            ? snakeStr(body, "body_template")
+            : undefined,
+          variables: "variables" in body ? body["variables"] : undefined,
+        },
+        req,
+      )
+    );
+    return jsonResponse(envelope(template));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      const status = error.message === "Template not found" ? 404 : 422;
+      const code = status === 404 ? "NOT_FOUND" : "VALIDATION_ERROR";
+      return errorEnvelope(code, error.message, status);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to update template", 500);
   }
 }
 

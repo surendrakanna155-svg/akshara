@@ -15,9 +15,11 @@ void main() {
       );
     });
 
-    test('super admin can access', () {
+    test('super admin cannot access (SA-1: unseeded server-side)', () {
+      // White-label platform has no server migration seed, so the client
+      // matrix must not advertise it to superAdmin.
       final rbac = RbacService(UserPermissions.forRole(ErpRole.superAdmin));
-      expect(canAccessErpRoute(rbac, RouteNames.whiteLabel), isTrue);
+      expect(canAccessErpRoute(rbac, RouteNames.whiteLabel), isFalse);
     });
   });
 }

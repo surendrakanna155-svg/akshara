@@ -2,6 +2,7 @@ import 'package:akshara_erp/core/repositories/interfaces/multi_school_operations
 import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
+import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
@@ -126,6 +127,14 @@ class _FakeWizardRepository implements MultiSchoolOperationsRepository {
   }
 }
 
+final _multiSchoolOperator = UserPermissions.fromClaims(
+  role: ErpRole.superAdmin,
+  explicitPermissions: const [
+    Permission.viewMultiSchoolOperations,
+    Permission.manageMultiSchoolOperations,
+  ],
+);
+
 void main() {
   testWidgets('completes onboarding wizard', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -141,8 +150,12 @@ void main() {
           multiSchoolOperationsRepositoryProvider
               .overrideWithValue(_FakeWizardRepository()),
           repositoryQueryProvider.overrideWithValue(RepositoryQuery.demo),
-          userPermissionsProvider.overrideWithValue(
-            UserPermissions.forRole(ErpRole.superAdmin),
+          // SA-1 (MJ-L5): superAdmin no longer holds multi-school perms in the
+          // matrix (unseeded server-side); grant them explicitly so this wizard
+          // smoke test still exercises the screen.
+          userPermissionsProvider.overrideWithValue(_multiSchoolOperator),
+          rbacServiceProvider.overrideWithValue(
+            RbacService(_multiSchoolOperator),
           ),
         ],
         child: MaterialApp(

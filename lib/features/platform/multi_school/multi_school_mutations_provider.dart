@@ -8,6 +8,7 @@ import '../../../core/repositories/repository_providers.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../platform_backend_guard.dart';
 import 'multi_school_models.dart';
 import 'multi_school_providers.dart';
 
@@ -41,6 +42,7 @@ class ActivateSchoolNotifier extends AsyncNotifier<SchoolLifecycleRecord?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
+      assertMultiSchoolBackendAvailable(ref);
       try {
         final result = await ref
             .read(multiSchoolOperationsRepositoryProvider)
@@ -74,6 +76,7 @@ class DeactivateSchoolNotifier extends AsyncNotifier<SchoolLifecycleRecord?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
+      assertMultiSchoolBackendAvailable(ref);
       try {
         final result = await ref
             .read(multiSchoolOperationsRepositoryProvider)
@@ -107,6 +110,7 @@ class CompleteOnboardingNotifier extends AsyncNotifier<SchoolLifecycleRecord?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
+      assertMultiSchoolBackendAvailable(ref);
       try {
         final saved = await ref
             .read(multiSchoolOperationsRepositoryProvider)
@@ -143,6 +147,7 @@ class DismissPortfolioAlertNotifier extends AsyncNotifier<String?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
+      assertMultiSchoolBackendAvailable(ref);
       try {
         await ref.read(multiSchoolOperationsRepositoryProvider).dismissAlert(
               query: ref.read(repositoryQueryProvider),
@@ -171,6 +176,7 @@ class CompletePortfolioActionNotifier extends AsyncNotifier<PortfolioAction?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageMultiSchoolOperations(ref);
+      assertMultiSchoolBackendAvailable(ref);
       try {
         final result = await ref
             .read(multiSchoolOperationsRepositoryProvider)

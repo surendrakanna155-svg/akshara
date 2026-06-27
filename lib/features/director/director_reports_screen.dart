@@ -136,6 +136,11 @@ class _DirectorReportsScreenState extends ConsumerState<DirectorReportsScreen> {
               );
       if (!mounted) return;
       setState(() => _generatedSummary = summary);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not generate executive summary: $error')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isGeneratingSummary = false);

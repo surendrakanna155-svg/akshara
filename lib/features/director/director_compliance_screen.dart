@@ -126,17 +126,24 @@ class DirectorComplianceScreen extends ConsumerWidget {
     WidgetRef ref,
     DirectorComplianceItem item,
   ) async {
-    await ref
-        .read(directorMutationsProvider.notifier)
-        .acknowledgeCompliance(complianceId: item.id);
-    ref.invalidate(directorComplianceProvider);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        key: QaTestKeys.directorComplianceAcknowledgedSnackbar,
-        content: Text('Compliance item acknowledged.'),
-      ),
-    );
+    try {
+      await ref
+          .read(directorMutationsProvider.notifier)
+          .acknowledgeCompliance(complianceId: item.id);
+      ref.invalidate(directorComplianceProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          key: QaTestKeys.directorComplianceAcknowledgedSnackbar,
+          content: Text('Compliance item acknowledged.'),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not acknowledge compliance item: $error')),
+      );
+    }
   }
 }
 

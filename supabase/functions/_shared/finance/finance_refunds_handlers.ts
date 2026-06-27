@@ -15,6 +15,7 @@ import {
   RefundAmountError,
   RefundNotCollectibleError,
   RefundNotFoundError,
+  RefundSelfApprovalError,
   approveRefund,
   createRefund,
   getRefund,
@@ -75,6 +76,9 @@ function parseRefundAmount(body: Record<string, unknown>): number | null {
 function mapRefundError(error: unknown): Response | null {
   if (error instanceof RefundNotFoundError) {
     return errorEnvelope("NOT_FOUND", error.message, 404);
+  }
+  if (error instanceof RefundSelfApprovalError) {
+    return errorEnvelope("FORBIDDEN", error.message, 403);
   }
   if (
     error instanceof RefundAmountError ||
@@ -232,6 +236,10 @@ export async function handleApproveRefund(
 
   try {
     const refund = await runTenant(config, auth.claims, async (db) => {
+      // Maker-checker: a refund cannot be approved by the same user who
+      // requested it, even when that user holds both manageFinance and
+      // approveRefunds. Enforced inside approveRefund (server-side, before
+      // any state mutation) so the rejection cannot be bypassed.
       const approved = await approveRefund(db, orgId, schoolId, refundId, auth.claims.sub);
       await emitMutationAudit(db, auth.claims, financeAudit.refundApproved(refundId), req);
       return approved;

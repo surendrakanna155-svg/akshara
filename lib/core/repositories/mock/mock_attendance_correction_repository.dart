@@ -32,6 +32,7 @@ class MockAttendanceCorrectionRepository
   Future<AttendanceCorrectionRequest> createCorrection({
     required RepositoryQuery query,
     required CreateAttendanceCorrectionRequest request,
+    bool asParent = false,
   }) async {
     return _store.create(request);
   }

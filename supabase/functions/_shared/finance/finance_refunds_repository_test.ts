@@ -8,6 +8,7 @@ import {
 import {
   InvalidRefundTransitionError,
   RefundAmountError,
+  RefundSelfApprovalError,
   approveRefund,
   createRefund,
   getRefund,
@@ -23,6 +24,7 @@ type Row = Record<string, unknown>;
 const ORG = "org-1";
 const SCHOOL = "school-1";
 const USER = "user-1";
+const CHECKER = "user-2";
 const COLLECTION_ID = "col-1";
 const INVOICE_ID = "inv-1";
 const ACCOUNT_ID = "acct-1";
@@ -282,7 +284,7 @@ Deno.test("sequential refunds cannot exceed collection amount", async () => {
     refundReason: "First partial",
     requestedBy: USER,
   });
-  await approveRefund(asDb(db), ORG, SCHOOL, first.id, USER);
+  await approveRefund(asDb(db), ORG, SCHOOL, first.id, CHECKER);
   await assertRejects(
     () => createRefund(asDb(db), ORG, SCHOOL, {
       collectionId: COLLECTION_ID,
@@ -309,7 +311,7 @@ Deno.test("partial refund increases outstanding from current balance not invoice
     refundReason: "Full refund of first collection",
     requestedBy: USER,
   });
-  await approveRefund(asDb(db), ORG, SCHOOL, created.id, USER);
+  await approveRefund(asDb(db), ORG, SCHOOL, created.id, CHECKER);
 
   assertEquals(db.invoices[0]!.outstanding_amount, "30000");
   assertEquals(db.accounts[0]!.outstanding_amount, "30000");
@@ -324,7 +326,7 @@ Deno.test("approveRefund updates invoice account and collection status", async (
     refundReason: "Partial refund",
     requestedBy: USER,
   });
-  const approved = await approveRefund(asDb(db), ORG, SCHOOL, created.id, USER);
+  const approved = await approveRefund(asDb(db), ORG, SCHOOL, created.id, CHECKER);
   assertEquals(approved.refund_status, "processed");
   assertEquals(db.invoices[0]!.outstanding_amount, "47000");
   assertEquals(db.accounts[0]!.outstanding_amount, "47000");
@@ -340,7 +342,7 @@ Deno.test("approveRefund marks collection refunded when full amount", async () =
     refundReason: "Full refund",
     requestedBy: USER,
   });
-  await approveRefund(asDb(db), ORG, SCHOOL, created.id, USER);
+  await approveRefund(asDb(db), ORG, SCHOOL, created.id, CHECKER);
   assertEquals(db.collections[0]!.collection_status, "refunded");
 });
 
@@ -371,6 +373,37 @@ Deno.test("approveRefund rejects non-pending refund", async () => {
     () => approveRefund(asDb(db), ORG, SCHOOL, created.id, USER),
     InvalidRefundTransitionError,
   );
+});
+
+Deno.test("approveRefund rejects self-approval by the requester", async () => {
+  const db = new MockRefundsDb();
+  const created = await createRefund(asDb(db), ORG, SCHOOL, {
+    collectionId: COLLECTION_ID,
+    refundAmount: 1000,
+    refundReason: "Self approval attempt",
+    requestedBy: USER,
+  });
+  // Approver id equals the requester id -> must be blocked, before mutation.
+  await assertRejects(
+    () => approveRefund(asDb(db), ORG, SCHOOL, created.id, USER),
+    RefundSelfApprovalError,
+  );
+  // No state mutation occurred: refund still pending, balances untouched.
+  assertEquals(db.refunds[0]!.refund_status, "pending");
+  assertEquals(db.invoices[0]!.outstanding_amount, "45000");
+});
+
+Deno.test("approveRefund succeeds when approver differs from requester", async () => {
+  const db = new MockRefundsDb();
+  const created = await createRefund(asDb(db), ORG, SCHOOL, {
+    collectionId: COLLECTION_ID,
+    refundAmount: 1000,
+    refundReason: "Maker-checker approval",
+    requestedBy: USER,
+  });
+  const approved = await approveRefund(asDb(db), ORG, SCHOOL, created.id, CHECKER);
+  assertEquals(approved.refund_status, "processed");
+  assertEquals(approved.approved_by, CHECKER);
 });
 
 Deno.test("listRefunds returns paginated items", async () => {

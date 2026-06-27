@@ -15,9 +15,13 @@ void main() {
       );
     });
 
-    test('super admin can access branch route', () {
+    test('super admin cannot access branch route (SA-1: unseeded server-side)',
+        () {
+      // Branch operations have no server migration seed, so the client matrix
+      // must not advertise them to superAdmin — otherwise the offline
+      // local-matrix fallback would surface a mock-backed tile.
       final rbac = RbacService(UserPermissions.forRole(ErpRole.superAdmin));
-      expect(canAccessErpRoute(rbac, RouteNames.branches), isTrue);
+      expect(canAccessErpRoute(rbac, RouteNames.branches), isFalse);
     });
   });
 }

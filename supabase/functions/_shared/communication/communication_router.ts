@@ -18,7 +18,13 @@ import {
   handleTeacherMessageThreads,
   handleTeacherSendMessage,
   handleUnregisterDeviceToken,
+  handleUpdateTemplate,
 } from "./communication_handlers.ts";
+
+/** MJ-M12: matches `/communications/templates/{id}` — a single non-empty,
+ * non-slash segment after the templates collection (excludes the bare
+ * collection path and nested paths). */
+const TEMPLATE_ITEM_PATH = /^\/communications\/templates\/[^/]+$/;
 
 /** Exported for path-parity tests: pure method+path → handler resolution with
  * no auth/DB side effects. */
@@ -32,6 +38,12 @@ export function matchCommunicationRoute(
   // MJ-C6a: create a notification template (was 404 — only GET existed).
   if (method === "POST" && path === "/communications/templates") {
     return { handler: handleCreateTemplate };
+  }
+  // MJ-M12: edit a notification template (was 404 — the client issues
+  // `PUT /communications/templates/{id}` but no route was registered; the mock
+  // masked it). The id is parsed from the path inside the handler.
+  if (method === "PUT" && TEMPLATE_ITEM_PATH.test(path)) {
+    return { handler: handleUpdateTemplate };
   }
   // MJ-C6b: past-broadcast history (was 404). Must precede the create route so
   // the more-specific path matches first.

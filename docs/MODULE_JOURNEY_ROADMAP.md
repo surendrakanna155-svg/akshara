@@ -25,7 +25,7 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 | **Wave 2** | Wire-gap 404s — build the missing backend routes so whole client journeys stop failing silently | 10 | Critical x3, High x5, Medium x1 | L x5 + M x4 ≈ 2 batches (split parent/teacher vs admissions/comms/settings if needed) |
 | **Wave 3** | Static-snapshot read modernization — apply the live-overlay/recompute framework to remaining personas/admin dashboards | 6 | Critical x2, High x2, Medium x2 | L x4 + M x2 ≈ 2 batches |
 | ~~**Wave 4**~~ | ~~Build missing write surfaces & orphaned-feature wiring — complete partial modules and surface hidden paid features~~ | 12 | 1C + 6H + 5M | ✅ **DONE 2026-06-27** (live **28/28**) — cert: `docs/JOURNEY_WAVE_4_CERTIFICATION.md`; 4A client (MJ-C9/H23/H24/M5/M8) + 4B backend (MJ-H19/M9/H20/H21/H22/M6/M7); 2 migrations + 21 edge files deployed; gates analyze 0 · flutter 2416 · deno 825 |
-| **Wave 5** | RBAC hardening, error-state UX sweep & test-gate parity — polish, consistency, and regression safety | 10 | Medium x2, Low x3 + grouped UX/RBAC/test items | S-heavy (8 S + 2 M) ≈ 1 batch |
+| ~~**Wave 5**~~ | ~~RBAC hardening, error-state UX sweep & test-gate parity — polish, consistency, and regression safety~~ | 10 | Medium x2, Low x3 + grouped UX/RBAC/test items | ✅ **DONE 2026-06-27** (live **24/24**) — cert: `docs/JOURNEY_WAVE_5_CERTIFICATION.md`; MJ-M10/M11/L2/L3/L4/L5/L6/L7/L8/M12; migration 20260807000010 + edge files deployed; gates analyze 0 · flutter 2439 · deno 848 |
 
 ---
 
@@ -143,7 +143,11 @@ Findings are grouped into **6 execution waves** ordered by *risk-to-trust* and *
 
 ---
 
-## Wave Wave 5 — RBAC hardening, error-state UX sweep & test-gate parity — polish, consistency, and regression safety
+## Wave Wave 5 — RBAC hardening, error-state UX sweep & test-gate parity — ✅ **DONE (PRODUCTION CERTIFIED 2026-06-27, live 24/24; see docs/JOURNEY_WAVE_5_CERTIFICATION.md)**
+
+> **Status: DONE.** All 10 items closed: **MJ-M10** teacher writes gate on granular perms (new `markAttendance`/`manageHomework` + reused `manageExamMarks`; non-teaching staff blocked), **MJ-M11** parent-scoped attendance-correction route + own-child RLS + `submitAttendanceCorrection` grant, **MJ-L2** per-widget RBAC for school scope + drill-down route + hidden-widget fetch, **MJ-L4** copilot error state + deterministic fallback, **MJ-L5** removed unseeded superAdmin platform perms + honest mock-write state, **MJ-L3** Director entitlement gates + write error handling, **MJ-L6** refund self-approval block, **MJ-L7** inventory intelligence GETs side-effect-free, **MJ-L8** global-search RBAC filter, **MJ-M12** comms path-parity contract tests (+ fixed a real missing `PUT /communications/templates/:id` handler). 1 forward-only migration (`20260807000010_wave5_teacher_attendance_rbac`) applied + ledgered; edge `_shared` redeployed; edge recreated. Live cert caught + fixed 3 real defects (pre-existing `recorded_on` 500 in operations-hub/widgets endpoint → join `attendance_sessions.session_date`; parent-correction PK collision under RLS-filtered count → unique id; error-mapping masking PK clash as 403 → narrowed to RLS). 8 disjoint items built by parallel agents; teacher/attendance RBAC owned centrally. Class-assignment binding (TEACH-4 half) deferred pending ATTEN-7 identifier normalization. Gates: analyze 0 · flutter 2439 · deno 848.
+
+### Original plan (for reference)
 
 **Why this wave:** Final consolidation wave: harden intra-school RBAC (scope-only write gates, per-widget data bypass, self-approval, missing entitlement wrappers), do one States/UX sweep extending the Wave5 fromFailure standard to mutation paths (silent submit/save/send failures), and add the client↔deployed-router path-parity contract tests that would have caught the wire-gaps. Lowest risk-to-trust per item but closes the long tail and prevents recurrence; certifiable as the hardening/regression batch.
 

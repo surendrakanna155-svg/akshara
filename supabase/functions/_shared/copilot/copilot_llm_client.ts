@@ -36,6 +36,11 @@ const REFUSAL_REPLY =
  * Generate a copilot reply via Claude. Falls back to the deterministic
  * read-only stub when no ANTHROPIC_API_KEY is configured, so the copilot stays
  * safe and functional before the live key is provisioned.
+ *
+ * A Claude transport/non-OK error (timeout, 5xx, empty completion) also falls
+ * back to the same deterministic stub — mirroring predictions_ai.ts and the
+ * parent-insights client — so a transport failure yields a graceful assistant
+ * reply instead of a 500 that leaves the user's persisted message dangling.
  */
 export async function generateCopilotResponse(
   input: CopilotGenerationInput,
@@ -57,18 +62,32 @@ export async function generateCopilotResponse(
     { role: "user" as const, content: input.userMessage },
   ];
 
-  const result = await callClaude({
-    apiKey: input.apiKey,
-    provider: input.provider,
-    model: input.model ?? claudeModel(),
-    maxTokens: COPILOT_MAX_TOKENS,
-    system: input.systemPrompt,
-    messages,
-  });
+  try {
+    const result = await callClaude({
+      apiKey: input.apiKey,
+      provider: input.provider,
+      model: input.model ?? claudeModel(),
+      maxTokens: COPILOT_MAX_TOKENS,
+      system: input.systemPrompt,
+      messages,
+    });
 
-  return {
-    content: result.refused ? REFUSAL_REPLY : result.text,
-    model: result.model,
-    stub: false,
-  };
+    return {
+      content: result.refused ? REFUSAL_REPLY : result.text,
+      model: result.model,
+      stub: false,
+    };
+  } catch (_error) {
+    // Transport/non-OK error — degrade to the deterministic stub rather than
+    // propagating a 500 and orphaning the already-persisted user message.
+    return {
+      content: buildStubAssistantReply(
+        input.assistantType,
+        input.userMessage,
+        input.context,
+      ),
+      model: "akshara-stub",
+      stub: true,
+    };
+  }
 }

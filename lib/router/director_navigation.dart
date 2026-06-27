@@ -30,37 +30,61 @@ Widget directorDashboardRouteBuilder(
 }
 
 Widget directorSchoolsRouteBuilder(BuildContext context, GoRouterState state) {
-  return const DirectorSchoolsScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorSchoolsScreen(),
+  );
 }
 
 Widget directorPortfolioRouteBuilder(
     BuildContext context, GoRouterState state) {
-  return const DirectorPortfolioScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorPortfolioScreen(),
+  );
 }
 
 Widget directorRevenueRouteBuilder(BuildContext context, GoRouterState state) {
-  return const DirectorRevenueScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorRevenueScreen(),
+  );
 }
 
 Widget directorGrowthRouteBuilder(BuildContext context, GoRouterState state) {
-  return const DirectorGrowthScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorGrowthScreen(),
+  );
 }
 
 Widget directorMarketingRouteBuilder(
     BuildContext context, GoRouterState state) {
-  return const DirectorMarketingScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorMarketingScreen(),
+  );
 }
 
 Widget directorAdmissionsRouteBuilder(
     BuildContext context, GoRouterState state) {
-  return const DirectorAdmissionsScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorAdmissionsScreen(),
+  );
 }
 
 Widget directorComplianceRouteBuilder(
     BuildContext context, GoRouterState state) {
-  return const DirectorComplianceScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorComplianceScreen(),
+  );
 }
 
 Widget directorReportsRouteBuilder(BuildContext context, GoRouterState state) {
-  return const DirectorReportsScreen();
+  return const EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorReportsScreen(),
+  );
 }

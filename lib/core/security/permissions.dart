@@ -90,6 +90,8 @@ enum Permission {
   // Phase 4 (v9.4–v9.7)
   viewHomeworkIntelligence,
   manageHomeworkIntelligence,
+  // Wave 5 MJ-M10 — granular teacher homework write gate (create + grade).
+  manageHomework,
   viewStudent360,
   viewEmployees,
   manageEmployees,

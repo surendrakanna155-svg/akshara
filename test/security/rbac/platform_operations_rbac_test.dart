@@ -23,12 +23,17 @@ void main() {
       }
     });
 
-    test('super admin can access; school roles cannot (least privilege)', () {
+    test(
+        'super admin cannot access (SA-1: unseeded); school roles cannot '
+        '(least privilege)', () {
+      // Platform operations have no server migration seed (GET
+      // /platform-operations/observability is 404 live), so the client matrix
+      // must not advertise them to superAdmin.
       expect(
         canAccessErpRoute(
             RbacService(UserPermissions.forRole(ErpRole.superAdmin)),
             RouteNames.platformOperations),
-        isTrue,
+        isFalse,
       );
       for (final role in [ErpRole.schoolAdmin, ErpRole.management]) {
         final rbac = RbacService(UserPermissions.forRole(role));

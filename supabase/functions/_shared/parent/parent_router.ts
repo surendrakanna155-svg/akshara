@@ -4,6 +4,7 @@ import {
   handleConfirmPayment,
   handleInitiatePayment,
 } from "../payment/payment_handlers.ts";
+import { handleParentCreateAttendanceCorrection } from "../attendance/attendance_handlers.ts";
 import {
   handleParentAcknowledge,
   handleParentExperienceHub,
@@ -54,6 +55,11 @@ export function matchParentRoute(
     if (rsvpMatch) {
       const meetingId = decodeURIComponent(rsvpMatch[1]);
       return { handler: (req, config) => handleMeetingRsvp(req, config, meetingId) };
+    }
+    // MJ-M11/ATTEN-2 — parent submits an attendance correction for their own
+    // child (parent-scoped; RLS restricts to student_guardians-linked children).
+    if (path === "/parent/attendance/corrections") {
+      return { handler: handleParentCreateAttendanceCorrection };
     }
     return null;
   }

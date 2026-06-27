@@ -2,6 +2,7 @@ import 'package:akshara_erp/core/repositories/mock/mock_evolution_repository.dar
 import 'package:akshara_erp/core/repositories/repository_providers.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
+import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
 import 'package:akshara_erp/core/tenant/tenant_provider.dart';
@@ -57,5 +58,34 @@ void main() {
         findsOneWidget);
     expect(find.text('82'), findsOneWidget);
     expect(find.text('₹1.2L'), findsOneWidget);
+  });
+
+  test('live data provider does not request RBAC-hidden widgets', () async {
+    // Principal layout = school_health, student_risk, fee_collection,
+    // attendance_risk. Grant everything EXCEPT viewFinance so fee_collection
+    // is hidden and must never be requested.
+    final restricted = UserPermissions(
+      role: ErpRole.principal,
+      permissionSet: PermissionSet.from(
+        Permission.values.where((p) => p != Permission.viewFinance),
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        evolutionRepositoryProvider.overrideWithValue(MockEvolutionRepository()),
+        repositoryQueryProvider.overrideWithValue(RepositoryQuery.demo),
+        rbacServiceProvider.overrideWithValue(RbacService(restricted)),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final data = await container
+        .read(dynamicWidgetLiveDataProvider(ErpRole.principal.name).future);
+
+    expect(data.containsKey('fee_collection'), isFalse,
+        reason: 'hidden widget data must not cross the wire');
+    expect(data.containsKey('school_health'), isTrue);
+    expect(data.containsKey('student_risk'), isTrue);
+    expect(data.containsKey('attendance_risk'), isTrue);
   });
 }

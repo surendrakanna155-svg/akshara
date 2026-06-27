@@ -194,6 +194,75 @@ export async function handleCreateAttendanceCorrection(
   });
 }
 
+/**
+ * POST /parent/attendance/corrections — a parent submits a correction request
+ * for their OWN child (ATTEN-2 / MJ-M11). The staff correction route
+ * (handleCreateAttendanceCorrection) requires manageSis, which a parent never
+ * holds, so parents were 403'd. Here we authorize on parent scope and force the
+ * requester to be the parent: requester_role is pinned to 'parent' and
+ * requester_id to the parent's user id, regardless of the body. The DB is the
+ * authoritative gate — the attendance_corrections_parent_insert RLS policy
+ * rejects the INSERT unless the resolved student is linked to this parent via
+ * student_guardians, so a parent cannot file a correction for another child.
+ */
+export async function handleParentCreateAttendanceCorrection(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "parent" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Parent scope required", 403);
+  }
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
+  const sisStudentId = String(body.sisStudentId ?? body.sis_student_id ?? "").trim();
+  if (!sisStudentId) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "sisStudentId is required", 422);
+  }
+
+  const { organizationId, schoolId } = tenantIds(auth.claims);
+  try {
+    const row = await withTenantContext(config, auth.claims, (db) =>
+      createAttendanceCorrection(db, organizationId, schoolId, {
+        // Unique id — the parent-scope SELECT RLS hides staff rows, so the
+        // sequential count would collide on the (org, school, id) PK.
+        id: `att_corr_p_${crypto.randomUUID()}`,
+        sisStudentId,
+        studentName: String(body.studentName ?? body.student_name ?? ""),
+        classLabel: String(body.classLabel ?? body.class_label ?? ""),
+        section: String(body.section ?? body.section_name ?? ""),
+        dateLabel: String(body.dateLabel ?? body.date_label ?? ""),
+        fromMark: String(body.fromMark ?? body.from_mark ?? ""),
+        toMark: String(body.toMark ?? body.to_mark ?? ""),
+        reason: String(body.reason ?? ""),
+        // Pinned to the calling parent — never trust the body for identity.
+        requesterId: auth.claims.sub,
+        requesterName: String(body.requesterName ?? body.requester_name ?? "Parent"),
+        requesterRole: "parent",
+        presentDelta: Number(body.presentDelta ?? body.present_delta ?? 1) || 1,
+      })
+    );
+    return jsonResponse(envelope(correctionToApi(row)), { status: 201 });
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
+    // An RLS WITH CHECK failure (child not linked to this parent) surfaces as a
+    // "new row violates row-level security policy" db error — return a clean 403.
+    // Match the RLS phrasing specifically so unrelated db errors (e.g. a PK
+    // clash) are NOT masked as a 403.
+    if (
+      error instanceof Error &&
+      /row-level security|permission denied/i.test(error.message)
+    ) {
+      return errorEnvelope("FORBIDDEN", "Child not linked to parent account", 403);
+    }
+    return mapAttendanceError(error);
+  }
+}
+
 export async function handleUpdateAttendanceCorrectionStatus(
   req: Request,
   config: AppConfig,

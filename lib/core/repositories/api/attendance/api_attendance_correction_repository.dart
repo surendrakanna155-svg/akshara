@@ -28,8 +28,13 @@ class ApiAttendanceCorrectionRepository implements AttendanceCorrectionRepositor
   Future<AttendanceCorrectionRequest> createCorrection({
     required RepositoryQuery query,
     required CreateAttendanceCorrectionRequest request,
+    bool asParent = false,
   }) =>
-      _remote.createCorrection(query: query, request: request);
+      _remote.createCorrection(
+        query: query,
+        request: request,
+        asParent: asParent,
+      );
 
   @override
   Future<AttendanceCorrectionRequest> updateStatus({

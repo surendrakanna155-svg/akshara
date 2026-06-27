@@ -411,6 +411,95 @@ export async function createNotificationTemplate(
 }
 
 /**
+ * MJ-M12: update an existing notification template in the SAME
+ * `notification_templates` store {@link listNotificationTemplates} reads from,
+ * scoped to the caller's school. Only the supplied fields change. Validates the
+ * channel (when supplied) against the table's CHECK constraint and audits the
+ * write. Throws {@link CommunicationValidationError} when the template is not
+ * visible to the caller, so the handler can map it to a 404.
+ */
+export async function updateNotificationTemplate(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  templateId: string,
+  input: {
+    code?: string;
+    channel?: string;
+    subjectTemplate?: string;
+    bodyTemplate?: string;
+    variables?: unknown;
+  },
+  req?: Request,
+): Promise<Record<string, unknown>> {
+  if (claims.scope !== "school" && claims.scope !== "organization") {
+    throw new CommunicationValidationError(
+      "Template management requires school or organization scope",
+    );
+  }
+  const schoolId = requireSchool(claims);
+  const id = templateId.trim();
+  if (!id) {
+    throw new CommunicationValidationError("Template id is required");
+  }
+  const code = input.code?.trim();
+  if (input.code !== undefined && !code) {
+    throw new CommunicationValidationError("Template code cannot be empty");
+  }
+  const channel = input.channel?.trim();
+  if (channel !== undefined && !["sms", "email", "push"].includes(channel)) {
+    throw new CommunicationValidationError(
+      "channel must be one of sms, email, push",
+    );
+  }
+  const bodyTemplate = input.bodyTemplate?.trim();
+  if (input.bodyTemplate !== undefined && !bodyTemplate) {
+    throw new CommunicationValidationError("body_template cannot be empty");
+  }
+  const variables = input.variables === undefined
+    ? null
+    : (Array.isArray(input.variables)
+      ? input.variables.map((v) => String(v))
+      : []);
+
+  const { updateTemplate } = await import("./communication_repository.ts");
+  const row = await updateTemplate(db, {
+    organizationId: claims.tenant_id,
+    schoolId,
+    templateId: id,
+    code: code ?? null,
+    channel: channel ?? null,
+    subjectTemplate: input.subjectTemplate?.trim() ?? null,
+    bodyTemplate: bodyTemplate ?? null,
+    variables,
+  });
+  if (!row) {
+    throw new CommunicationValidationError("Template not found");
+  }
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "templateUpdated",
+      category: "workflow",
+      entityType: "notification_template",
+      entityId: row.id,
+      metadata: { code: row.code, channel: row.channel },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      eventType: "communication.template.updated",
+      payload: { templateId: row.id, code: row.code },
+      sourceModule: "communication",
+      idempotencyKey: `communication.template.updated:${row.id}:${Date.now()}`,
+    },
+    req,
+  );
+
+  return templateToApi(row);
+}
+
+/**
  * MJ-C6b: list past broadcasts from the SAME `comm_broadcasts` store
  * {@link sendBroadcastMessage} writes to, scoped to the caller's org/school.
  * Empty list when none — never fabricated.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/errors/api_failure_mapper.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/akshara_empty_state.dart';
 import '../../shared/widgets/akshara_error_state.dart';
@@ -44,7 +45,23 @@ class _CopilotScreenState extends ConsumerState<CopilotScreen> {
     final content = _messageController.text;
     if (content.trim().isEmpty) return;
     _messageController.clear();
-    await ref.read(copilotSendMessageProvider.notifier).send(content);
+    final result = await ref.read(copilotSendMessageProvider.notifier).send(content);
+    final sendState = ref.read(copilotSendMessageProvider);
+    if (result == null && sendState.hasError) {
+      // Surface the failure and restore the user's text so they can retry —
+      // otherwise the typed message vanishes with no reply and no feedback.
+      _messageController.text = content;
+      if (mounted) {
+        final failure = apiFailureMapper.fromException(sendState.error!);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(failure.displayMessage),
+            backgroundColor: context.colors.error,
+          ),
+        );
+      }
+      return;
+    }
     if (_scrollController.hasClients) {
       await Future<void>.delayed(const Duration(milliseconds: 100));
       _scrollController.animateTo(

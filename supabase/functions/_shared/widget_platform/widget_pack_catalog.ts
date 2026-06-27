@@ -186,7 +186,7 @@ function schoolWidgets(role: string): DynamicWidgetItemDef[] {
           title: "Attendance Risk",
           dataSource: "intelligence.attendance_risk",
           permissions: ["viewStudentRisk"],
-          drillDown: "/sis/attendance",
+          drillDown: "/management/attendance-corrections",
           size: "half",
           visible: true,
           order: 3,

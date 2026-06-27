@@ -93,6 +93,14 @@ export interface CreateAttendanceCorrectionInput {
   requesterName: string;
   requesterRole: string;
   presentDelta?: number;
+  /**
+   * Optional explicit id. Staff callers omit it and get the sequential
+   * `att_corr_<n>` id (count is accurate under school-scope RLS). Parent callers
+   * MUST pass a unique id: the parent-scope SELECT RLS only shows their own
+   * corrections, so a count-derived id would always be `att_corr_1` and collide
+   * with existing staff rows on the (org, school, id) primary key.
+   */
+  id?: string;
 }
 
 export async function listAttendanceCorrections(
@@ -132,13 +140,16 @@ export async function createAttendanceCorrection(
   schoolId: string,
   input: CreateAttendanceCorrectionInput,
 ): Promise<AttendanceCorrectionRow> {
-  const countRows = await db.queryObject<{ count: string }>(
-    `SELECT count(*)::text AS count FROM attendance_corrections
-     WHERE organization_id = $1 AND school_id = $2`,
-    [organizationId, schoolId],
-  );
-  const next = (parseInt(countRows[0]?.count ?? "0", 10) || 0) + 1;
-  const id = `att_corr_${next}`;
+  let id = input.id;
+  if (!id) {
+    const countRows = await db.queryObject<{ count: string }>(
+      `SELECT count(*)::text AS count FROM attendance_corrections
+       WHERE organization_id = $1 AND school_id = $2`,
+      [organizationId, schoolId],
+    );
+    const next = (parseInt(countRows[0]?.count ?? "0", 10) || 0) + 1;
+    id = `att_corr_${next}`;
+  }
 
   const studentId = await resolveStudentId(
     db,

@@ -15,6 +15,7 @@ abstract class AttendanceCorrectionRepository {
   Future<AttendanceCorrectionRequest> createCorrection({
     required RepositoryQuery query,
     required CreateAttendanceCorrectionRequest request,
+    bool asParent = false,
   });
 
   Future<AttendanceCorrectionRequest> updateStatus({

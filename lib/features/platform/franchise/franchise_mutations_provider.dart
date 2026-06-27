@@ -7,6 +7,7 @@ import '../../../core/repositories/repository_providers.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../platform_backend_guard.dart';
 import 'franchise_models.dart';
 import 'franchise_providers.dart';
 
@@ -35,6 +36,7 @@ class FranchiseMutationsNotifier extends AsyncNotifier<FranchiseEntity?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageFranchiseOperations(ref);
+      assertFranchiseBackendAvailable(ref);
       final entity =
           await ref.read(franchiseRepositoryProvider).updateFranchiseScore(
                 query: ref.read(repositoryQueryProvider),

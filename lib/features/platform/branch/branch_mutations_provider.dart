@@ -7,6 +7,7 @@ import '../../../core/repositories/repository_providers.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/security/rbac_service.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../platform_backend_guard.dart';
 import 'branch_models.dart';
 import 'branch_providers.dart';
 
@@ -36,6 +37,7 @@ class BranchMutationsNotifier extends AsyncNotifier<BranchAssignment?> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       assertManageBranchOperations(ref);
+      assertBranchBackendAvailable(ref);
       final assignment = await ref.read(branchRepositoryProvider).assignSchool(
             query: ref.read(repositoryQueryProvider),
             branchId: ref.read(selectedBranchIdProvider),
