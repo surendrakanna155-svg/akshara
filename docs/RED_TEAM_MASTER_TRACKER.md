@@ -18,7 +18,7 @@ Open → In Progress → Fixed → Certified → Closed
 
 - **Verification:** VERIFIED LIVE · VERIFIED TEST · STATIC ONLY · NOT REPRODUCIBLE
 - **Environment:** Live (observed/queried on VPS) · Live-schema (enabling condition read off prod, destructive trigger withheld) · Static (code only)
-- **Status:** Open (all, pending approval)
+- **Status:** Closed (all 35 — Waves 1–5 complete; see [`RED_TEAM_FINAL_CERTIFICATION.md`](./RED_TEAM_FINAL_CERTIFICATION.md))
 
 ## Counts at a glance
 
