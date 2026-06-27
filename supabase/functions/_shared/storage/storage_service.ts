@@ -12,6 +12,79 @@ export function createStorageAdmin(config: AppConfig) {
   });
 }
 
+// ─── RT-31: presign-time upload validation (early rejection) ──────────────────
+// The Storage buckets already enforce size + MIME at upload time (migrations
+// 20260622700000 / 20260806000020). These mirror those limits at the app layer
+// so a wrong-type / oversized upload is rejected when the client asks for the
+// signed URL — a clean error instead of a wasted PUT that the bucket bounces.
+
+export interface UploadConstraints {
+  maxBytes: number;
+  allowedMimeTypes: string[];
+  allowedExtensions: string[];
+}
+
+export const MEMORY_UPLOAD_CONSTRAINTS: UploadConstraints = {
+  maxBytes: 52428800, // 50 MiB — matches the school-memories bucket
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "video/mp4",
+    "video/webm",
+  ],
+  allowedExtensions: ["jpg", "jpeg", "png", "webp", "gif", "mp4", "webm"],
+};
+
+export const ADMISSIONS_UPLOAD_CONSTRAINTS: UploadConstraints = {
+  maxBytes: 26214400, // 25 MiB — matches the admissions-documents bucket
+  allowedMimeTypes: [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+  ],
+  allowedExtensions: ["pdf", "jpg", "jpeg", "png", "webp", "heic"],
+};
+
+export interface UploadDeclaration {
+  contentType?: string | null;
+  sizeBytes?: number | null;
+}
+
+/**
+ * Returns a user-facing error message when the declared upload violates the
+ * bucket constraints, or `null` when it is acceptable. The filename extension is
+ * always checked (no client cooperation needed); a declared content-type / size
+ * is checked when present.
+ */
+export function validateUpload(
+  filename: string,
+  declaration: UploadDeclaration,
+  constraints: UploadConstraints,
+): string | null {
+  const dot = filename.lastIndexOf(".");
+  const ext = dot >= 0 ? filename.slice(dot + 1).toLowerCase() : "";
+  if (!ext || !constraints.allowedExtensions.includes(ext)) {
+    return `File type ".${ext || "unknown"}" is not allowed. Allowed: ${
+      constraints.allowedExtensions.join(", ")
+    }`;
+  }
+  const contentType = declaration.contentType?.toLowerCase();
+  if (contentType && !constraints.allowedMimeTypes.includes(contentType)) {
+    return `Content type "${contentType}" is not allowed.`;
+  }
+  const size = declaration.sizeBytes;
+  if (size != null && (size <= 0 || size > constraints.maxBytes)) {
+    return `File exceeds the maximum size of ${
+      Math.floor(constraints.maxBytes / 1048576)
+    } MiB.`;
+  }
+  return null;
+}
+
 /**
  * Signed URLs are generated against the internal gateway origin (supabaseUrl)
  * but must be handed to the device as a PUBLIC origin it can reach. Rewrites the

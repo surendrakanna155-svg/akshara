@@ -168,6 +168,15 @@ export function createModuleWriteHandlers(managePermission: string) {
   return { runWrite, requireWrite };
 }
 
+/**
+ * RT-32 — a generous default upper bound for any single text field read from a
+ * request body. The DB columns are unbounded `TEXT`, so without this a client
+ * could submit a multi-megabyte string per field (DB bloat / UI overflow /
+ * large-payload DoS). 20 000 chars is far above any legitimate single field
+ * (names, codes, addresses, notes) while rejecting abuse.
+ */
+export const MAX_FIELD_LEN = 20000;
+
 /** Body field readers tolerant of camelCase / snake_case from either client. */
 export function str(
   body: Record<string, unknown>,
@@ -176,7 +185,14 @@ export function str(
   for (const key of keys) {
     if (key in body && body[key] != null) {
       const value = String(body[key]).trim();
-      if (value.length > 0) return value;
+      if (value.length === 0) continue;
+      // RT-32: reject over-long input rather than persisting it unbounded.
+      if (value.length > MAX_FIELD_LEN) {
+        throw new WriteValidationError(
+          `${key} exceeds the maximum length of ${MAX_FIELD_LEN} characters`,
+        );
+      }
+      return value;
     }
   }
   return undefined;
@@ -194,6 +210,16 @@ export function requireStr(
   return value;
 }
 
+/**
+ * RT-33 — a generous magnitude bound for any integer read from a request body.
+ * Previously `intOr` accepted any finite int, so an absurd/overflowing value
+ * could be persisted where no column CHECK existed. 1e12 covers every legitimate
+ * count and money amount (₹1000 crore even in paise) while rejecting abuse.
+ * Sign-specific bounds (e.g. marks `0 ≤ x ≤ max`) remain enforced by DB CHECKs
+ * at the relevant tables (RT-08).
+ */
+export const MAX_INT_MAGNITUDE = 1_000_000_000_000;
+
 export function intOr(
   body: Record<string, unknown>,
   fallback: number,
@@ -202,7 +228,14 @@ export function intOr(
   for (const key of keys) {
     if (key in body && body[key] != null) {
       const num = parseInt(String(body[key]), 10);
-      if (Number.isFinite(num)) return num;
+      if (Number.isFinite(num)) {
+        if (Math.abs(num) > MAX_INT_MAGNITUDE) {
+          throw new WriteValidationError(
+            `${key} is out of the allowed numeric range`,
+          );
+        }
+        return num;
+      }
     }
   }
   return fallback;

@@ -30,6 +30,7 @@ class AksharaFormField extends StatelessWidget {
     this.autovalidateMode,
     this.validator,
     this.dense = false,
+    this.maxLength,
   });
 
   final String label;
@@ -55,10 +56,18 @@ class AksharaFormField extends StatelessWidget {
   final FormFieldValidator<String>? validator;
   final bool dense;
 
+  /// RT-32 — upper bound on characters a user can enter. Defaults are generous
+  /// (1 000 single-line / 10 000 multi-line) so no realistic input is truncated,
+  /// while preventing the unbounded-text entry the audit flagged. The counter is
+  /// hidden so the bound is invisible until reached. The server `str()` reader
+  /// is the hard backstop.
+  final int? maxLength;
+
   @override
   Widget build(BuildContext context) {
     final decorationLabel = required ? '$label *' : label;
     final verticalPadding = dense ? AksharaSpacing.s3 : AksharaSpacing.s4;
+    final effectiveMaxLength = maxLength ?? (maxLines > 1 ? 10000 : 1000);
 
     return Semantics(
       label: semanticLabel ?? decorationLabel,
@@ -71,6 +80,10 @@ class AksharaFormField extends StatelessWidget {
         keyboardType: keyboardType,
         maxLines: maxLines,
         minLines: minLines,
+        maxLength: effectiveMaxLength,
+        // Hide the character counter so the bound stays invisible until hit.
+        buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+            null,
         textInputAction: textInputAction,
         autovalidateMode: autovalidateMode,
         validator: validator ??

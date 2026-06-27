@@ -1,8 +1,8 @@
 # AKSHARA — Red Team Completion Roadmap
 
 **Companion to:** [`RED_TEAM_CERTIFICATION_AUDIT.md`](./RED_TEAM_CERTIFICATION_AUDIT.md) · validated by [`RED_TEAM_VALIDATION_REPORT.md`](./RED_TEAM_VALIDATION_REPORT.md)
-**Date:** 2026-06-27 (validation reconciliation added 2026-06-27; Waves 1–4 closed 2026-06-27)
-**Status:** ✅ **Wave 1 CLOSED** (RT-01..08 fixed, deployed, live 26/26 — commit `6b1e5c1`, [`RED_TEAM_WAVE_1_CERTIFICATION.md`](./RED_TEAM_WAVE_1_CERTIFICATION.md)). ✅ **Wave 2 CLOSED** (RT-09..15 fixed via migration `20260815000000`, deployed, live 25/25 + Wave-1 regression 26/26 — [`RED_TEAM_WAVE_2_CERTIFICATION.md`](./RED_TEAM_WAVE_2_CERTIFICATION.md)). ✅ **Wave 3 CLOSED** (RT-16..23 fixed edge-only, deployed, live 24/24 + Wave-1 26/26 + Wave-2 25/25 regression — [`RED_TEAM_WAVE_3_CERTIFICATION.md`](./RED_TEAM_WAVE_3_CERTIFICATION.md)). ✅ **Wave 4 CLOSED** (RT-24..30 fixed client-only, flutter analyze 0 / test 2448 incl. 8 new + backend regression W1 26/26 · W2 25/25 · W3 24/24 — [`RED_TEAM_WAVE_4_CERTIFICATION.md`](./RED_TEAM_WAVE_4_CERTIFICATION.md)). Wave 5 awaiting owner approval; no fixes applied beyond Wave 4.
+**Date:** 2026-06-27 (validation reconciliation added 2026-06-27; all five waves closed 2026-06-27)
+**Status:** ✅ **ALL FIVE WAVES CLOSED (RT-01..35) — the Red Team engagement is COMPLETE.** Wave 1 (RT-01..08) live 26/26 `6b1e5c1` [`W1`](./RED_TEAM_WAVE_1_CERTIFICATION.md). Wave 2 (RT-09..15) live 25/25, migration `20260815000000` [`W2`](./RED_TEAM_WAVE_2_CERTIFICATION.md). Wave 3 (RT-16..23) live 24/24, edge-only [`W3`](./RED_TEAM_WAVE_3_CERTIFICATION.md). Wave 4 (RT-24..30) client-only, flutter 2448 [`W4`](./RED_TEAM_WAVE_4_CERTIFICATION.md). Wave 5 (RT-31..35) live 15/15 + regression W1 26/26 · W2 25/25 · W3 24/24 · W4 flutter 2450 [`W5`](./RED_TEAM_WAVE_5_CERTIFICATION.md).
 
 > ## Validation reconciliation (post-validation pass)
 >
@@ -52,7 +52,7 @@ Each wave also produces a `docs/RED_TEAM_WAVE_<n>_CERTIFICATION.md` recording th
 | 2 ✅ **CLOSED** (live 25/25, `20260815000000`) | Tenant & Privacy Isolation (RLS) | RT-09,10,11,12,13,14,15 | 1 Crit, 4 High, 1 Med, 1 Low | Cross-family PII leak/tamper |
 | 3 ✅ **CLOSED** (live 24/24, edge-only) | Session & Authorization Enforcement | RT-16,17,18,19,20,21,22,23 | 3 High, 2 Med, 3 Low | Revocation/demotion ineffective; gate bypass |
 | 4 ✅ **CLOSED** (flutter 2448 +8; client-only) | Client Write Resilience | RT-24,25,26,27,28,29,30 | 3 High, 4 Med | Double-submit duplicates; invisible failures |
-| 5 | Input/Upload Hardening & Scale | RT-31,32,33,34,35 | 2 High, 2 Med, 1 Low | Upload abuse, DB-connection cliff, bloat |
+| 5 ✅ **CLOSED** (live 15/15 + W1/W2/W3/W4 regression) | Input/Upload Hardening & Scale | RT-31,32,33,34,35 | 2 High, 2 Med, 1 Low | Upload abuse, DB-connection cliff, bloat |
 
 ---
 
@@ -144,7 +144,11 @@ Each wave also produces a `docs/RED_TEAM_WAVE_<n>_CERTIFICATION.md` recording th
 
 ---
 
-## Wave 5 — Input/Upload Hardening & Scale
+## Wave 5 — Input/Upload Hardening & Scale — ✅ CLOSED (live 15/15 + W1 26/26 · W2 25/25 · W3 24/24 · W4 flutter 2450, 2026-06-27)
+
+> **CLOSED.** All 5 findings fixed with **no migration** (6 edge files + the shared client form field), deployed to the VPS pilot and live-certified **15/15**. RT-35 (the scaling cliff) is fixed with an in-app `Pool` of `erp_tenant` connections replacing the per-request `connect→end`; proven by a 20-way concurrent read probe **and** the W1/W3 regression certs, which route every read/write through the pool, passing end-to-end (per-request RLS context is preserved — the `BEGIN … set_request_context(is_local) … COMMIT` envelope is unchanged). RT-31 adds presign content-type/size early-rejection mirroring the existing bucket policies; RT-32 bounds the shared `str()` reader + the shared `AksharaFormField` (116 usages); RT-33 bounds `intOr` magnitude; RT-34 caps the parent children fan-out at 50. See [`RED_TEAM_WAVE_5_CERTIFICATION.md`](./RED_TEAM_WAVE_5_CERTIFICATION.md). **Implementation notes vs the plan below:** RT-35 uses an in-app pool rather than a PgBouncer container (self-contained, no infra change); RT-33 is the systemic reader bound (magnitude), with sign-specific bounds kept at DB CHECKs (RT-08); the client form `maxLength` ships in the next app release (Play submission owner-gated).
+>
+> **With Wave 5 closed, the Red Team engagement (RT-01..35, all five waves) is COMPLETE.**
 
 **Why last:** important but lower immediate blast radius; RT-35 is the one to watch (scaling cliff) and may be promoted earlier if a load incident is observed.
 

@@ -1,6 +1,34 @@
-import { Client } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
+import {
+  Pool,
+  type PoolClient,
+} from "https://deno.land/x/postgres@v0.19.3/mod.ts";
 import type { AppConfig } from "./config.ts";
 import type { AccessTokenClaims } from "./jwt.ts";
+
+/**
+ * RT-35 — a process-level connection pool replaces the previous per-request
+ * `new Client() → connect() → end()`, which opened (and tore down) a fresh
+ * Postgres connection on EVERY tenant query and would exhaust the database's
+ * connection slots under a traffic spike (a 500 cascade). One small pool of
+ * `erp_tenant` connections is created lazily per edge isolate and reused across
+ * requests; `POOL_SIZE` caps the concurrent connections this isolate can hold.
+ */
+const POOL_SIZE = 10;
+let _pool: Pool | null = null;
+let _poolUrl: string | null = null;
+
+function tenantPool(url: string): Pool {
+  if (_pool && _poolUrl === url) return _pool;
+  // Connection string changed (config reload) — drain the stale pool first.
+  if (_pool) {
+    const stale = _pool;
+    _pool = null;
+    stale.end().catch(() => {});
+  }
+  _pool = new Pool(url, POOL_SIZE, /* lazy */ true);
+  _poolUrl = url;
+  return _pool;
+}
 
 /** Thrown when ERP_TENANT_DATABASE_URL is not configured. */
 export class TenantDbNotConfiguredError extends Error {
@@ -35,7 +63,7 @@ export function claimsToTenantParams(claims: AccessTokenClaims): TenantContextPa
 }
 
 async function applyRequestContext(
-  client: Client,
+  client: PoolClient,
   params: TenantContextParams,
 ): Promise<void> {
   await client.queryObject`
@@ -53,7 +81,7 @@ async function applyRequestContext(
 
 /** Read-only query executor on a non-bypass `erp_tenant` connection with RLS enforced. */
 export class TenantQueryClient {
-  constructor(private readonly client: Client) {}
+  constructor(private readonly client: PoolClient) {}
 
   async queryCount(sql: string, args: unknown[] = []): Promise<number> {
     const result = await this.client.queryObject<{ count: string }>(sql, args);
@@ -65,7 +93,7 @@ export class TenantQueryClient {
     return result.rows;
   }
 
-  get raw(): Client {
+  get raw(): PoolClient {
     return this.client;
   }
 }
@@ -86,9 +114,8 @@ export async function withTenantContext<T>(
     throw new TenantDbNotConfiguredError();
   }
 
-  const client = new Client(config.erpTenantDatabaseUrl);
-
-  await client.connect();
+  // RT-35: acquire a pooled connection instead of opening a new one per request.
+  const client = await tenantPool(config.erpTenantDatabaseUrl).connect();
   const params = claimsToTenantParams(claims);
 
   try {
@@ -104,7 +131,8 @@ export async function withTenantContext<T>(
       throw error;
     }
   } finally {
-    await client.end();
+    // Return the connection to the pool (does not close it).
+    client.release();
   }
 }
 
@@ -116,9 +144,10 @@ export async function probeTenantConnection(
     return { ok: false, error: "ERP_TENANT_DATABASE_URL not set" };
   }
 
-  const client = new Client(config.erpTenantDatabaseUrl);
+  // Probe through the pool (RT-35) so it also exercises the pooled path.
+  let client: PoolClient | null = null;
   try {
-    await client.connect();
+    client = await tenantPool(config.erpTenantDatabaseUrl).connect();
     const result = await client.queryObject<{ role: string }>`
       SELECT current_user::text AS role
     `;
@@ -129,6 +158,6 @@ export async function probeTenantConnection(
       error: error instanceof Error ? error.message : "Connection failed",
     };
   } finally {
-    await client.end();
+    client?.release();
   }
 }

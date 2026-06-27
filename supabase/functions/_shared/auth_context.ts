@@ -57,6 +57,11 @@ export interface ScopeLoginRequest {
 const ORG_SCOPES: AuthScope[] = ["organization"];
 const RELATIONSHIP_SCOPES: AuthScope[] = ["parent", "student"];
 
+/// RT-34 — upper bound on the parent/guardian children fan-out queries. A real
+/// guardian is linked to a handful of students; this caps the worst-case login
+/// query for an outlier (or abusive) account.
+const PARENT_FANOUT_LIMIT = 50;
+
 /** Default login: school staff if present, else org, parent, student (v6.0 school-first compat). */
 export function resolveLoginScopeOrder(
   requested?: AuthScope,
@@ -209,7 +214,8 @@ export async function loadChildProfiles(
     const { data: students } = await client
       .from("students")
       .select("id,display_name")
-      .in("id", missing);
+      .in("id", missing)
+      .limit(PARENT_FANOUT_LIMIT); // RT-34: bound the fan-out
     for (const row of (students ?? []) as Array<{ id: string; display_name: string }>) {
       nameByStudent.set(row.id, row.display_name ?? "");
     }
@@ -220,7 +226,8 @@ export async function loadChildProfiles(
     .from("sis_student_enrollments")
     .select("student_id,class_name,section_name")
     .in("student_id", childIds)
-    .eq("is_current", true);
+    .eq("is_current", true)
+    .limit(PARENT_FANOUT_LIMIT); // RT-34: bound the fan-out
   for (const row of (enrollments ?? []) as Array<
     { student_id: string; class_name: string; section_name: string | null }
   >) {
@@ -252,7 +259,8 @@ async function resolveParentContext(
 
   if (schoolId) query = query.eq("school_id", schoolId);
 
-  const { data, error } = await query;
+  // RT-34: bound the guardian-link fan-out (no family has 50+ active links).
+  const { data, error } = await query.limit(PARENT_FANOUT_LIMIT);
   if (error || !data?.length) return null;
 
   const links = data as Array<{

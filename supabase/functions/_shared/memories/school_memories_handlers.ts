@@ -26,6 +26,8 @@ import {
   buildMemoryStoragePath,
   createMemoryDownloadUrl,
   createMemoryUploadUrl,
+  MEMORY_UPLOAD_CONSTRAINTS,
+  validateUpload,
 } from "../storage/storage_service.ts";
 
 function requireMemoriesRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
@@ -218,12 +220,23 @@ export async function handleMemoryUploadPresign(
     albumTitle?: string;
     filename?: string;
     mediaType?: string;
+    contentType?: string;
+    sizeBytes?: number;
   }>(req);
   if (!body) {
     return errorEnvelope("VALIDATION_ERROR", "Request body required", 400);
   }
   if (!body.filename) {
     return errorEnvelope("VALIDATION_ERROR", "filename is required", 400);
+  }
+  // RT-31: reject wrong-type / oversized uploads at presign (bucket enforces too).
+  const uploadError = validateUpload(
+    body.filename,
+    { contentType: body.contentType, sizeBytes: body.sizeBytes },
+    MEMORY_UPLOAD_CONSTRAINTS,
+  );
+  if (uploadError) {
+    return errorEnvelope("VALIDATION_ERROR", uploadError, 422);
   }
 
   const orgId = organizationIdFromClaims(auth.claims);

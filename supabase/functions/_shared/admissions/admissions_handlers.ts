@@ -34,9 +34,11 @@ import {
   updateHandoffStatus,
 } from "./admissions_handoffs_repository.ts";
 import {
+  ADMISSIONS_UPLOAD_CONSTRAINTS,
   buildAdmissionsDocumentStoragePath,
   createAdmissionsDocumentDownloadUrl,
   createAdmissionsDocumentUploadUrl,
+  validateUpload,
 } from "../storage/storage_service.ts";
 import {
   addLeadActivity,
@@ -907,6 +909,18 @@ export async function handlePresignDocumentUpload(
       "lead_id and file_name are required",
       422,
     );
+  }
+  // RT-31: reject wrong-type / oversized uploads at presign (bucket enforces too).
+  const uploadError = validateUpload(
+    fileName,
+    {
+      contentType: optionalSnakeStr(body, "content_type"),
+      sizeBytes: body.size_bytes == null ? null : Number(body.size_bytes),
+    },
+    ADMISSIONS_UPLOAD_CONSTRAINTS,
+  );
+  if (uploadError) {
+    return errorEnvelope("VALIDATION_ERROR", uploadError, 422);
   }
 
   const orgId = organizationIdFromClaims(auth.claims);

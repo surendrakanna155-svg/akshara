@@ -144,6 +144,9 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
       padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
       child: TextField(
         controller: controller,
+        maxLength: 1000, // RT-32: bound text entry
+        buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+            null,
         decoration: InputDecoration(labelText: label),
       ),
     );
