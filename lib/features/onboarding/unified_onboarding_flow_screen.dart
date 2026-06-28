@@ -639,11 +639,17 @@ class _SchoolProfileStepState extends State<_SchoolProfileStep> {
     _address = TextEditingController();
     _phone = TextEditingController();
     _email = TextEditingController();
-    _schoolName.addListener(() => widget.notifier.updateSchoolName(_schoolName.text));
-    _address.addListener(() => widget.notifier.updateAddress(_address.text));
-    _phone.addListener(() => widget.notifier.updateContactPhone(_phone.text));
-    _email.addListener(() => widget.notifier.updateContactEmail(_email.text));
+    _schoolName.addListener(_onSchoolNameChanged);
+    _address.addListener(_onAddressChanged);
+    _phone.addListener(_onPhoneChanged);
+    _email.addListener(_onEmailChanged);
   }
+
+  void _onSchoolNameChanged() =>
+      widget.notifier.updateSchoolName(_schoolName.text);
+  void _onAddressChanged() => widget.notifier.updateAddress(_address.text);
+  void _onPhoneChanged() => widget.notifier.updateContactPhone(_phone.text);
+  void _onEmailChanged() => widget.notifier.updateContactEmail(_email.text);
 
   @override
   void dispose() {
@@ -657,6 +663,14 @@ class _SchoolProfileStepState extends State<_SchoolProfileStep> {
   void _applyHydratedState(UnifiedOnboardingState state) {
     if (_hydratedFromStore || !state.isHydrated) return;
     _hydratedFromStore = true;
+    // Hydration runs inside build(); detach the change listeners first so
+    // seeding controller text from the (already-current) state does not call
+    // back into the notifier and mutate a provider mid-build (Riverpod throws
+    // "Tried to modify a provider while the widget tree was building").
+    _schoolName.removeListener(_onSchoolNameChanged);
+    _address.removeListener(_onAddressChanged);
+    _phone.removeListener(_onPhoneChanged);
+    _email.removeListener(_onEmailChanged);
     if (_schoolName.text.isEmpty && state.schoolName.isNotEmpty) {
       _schoolName.text = state.schoolName;
     }
@@ -669,6 +683,10 @@ class _SchoolProfileStepState extends State<_SchoolProfileStep> {
     if (_email.text.isEmpty && state.contactEmail.isNotEmpty) {
       _email.text = state.contactEmail;
     }
+    _schoolName.addListener(_onSchoolNameChanged);
+    _address.addListener(_onAddressChanged);
+    _phone.addListener(_onPhoneChanged);
+    _email.addListener(_onEmailChanged);
   }
 
   @override

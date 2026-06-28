@@ -652,7 +652,7 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
     );
   }
 
-  Widget _dropdown<T>(
+  Widget _dropdown<T extends Enum>(
     String label,
     T value,
     List<T> options,
@@ -671,9 +671,12 @@ class _IntelligenceScreenState extends ConsumerState<IntelligenceScreen>
             value: value,
             items: options
                 .map(
+                  // NOTE: `.name` is the EnumName extension getter; it cannot be
+                  // dispatched through `dynamic` (extensions resolve statically),
+                  // so the value must be statically typed as Enum.
                   (o) => DropdownMenuItem<T>(
                     value: o,
-                    child: Text((o as dynamic).name),
+                    child: Text(o.name),
                   ),
                 )
                 .toList(),

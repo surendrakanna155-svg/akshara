@@ -29,6 +29,11 @@ class ControlCenterFeaturesScreen extends ConsumerWidget {
         ),
         error: (e, _) => AksharaErrorState.fromFailure(apiFailureMapper.fromException(e)),
         data: (snapshot) => ListView(
+          // The scaffold already hosts this body inside a SingleChildScrollView,
+          // so the list must shrink-wrap and defer scrolling to the parent
+          // (a bare ListView gets unbounded height here → layout assertion).
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.all(AksharaSpacing.s4),
           children: [
             const AksharaWarningBanner(

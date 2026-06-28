@@ -127,6 +127,9 @@ class _MetricInputEditorSheetState
               data: (schools) => DropdownButtonFormField<String>(
                 key: QaTestKeys.directorMetricInputSchoolField,
                 initialValue: _schoolId,
+                // Long school names overflow the narrow bottom-sheet dropdown;
+                // isExpanded constrains the selected-value display to the field.
+                isExpanded: true,
                 decoration: const InputDecoration(labelText: 'School'),
                 items: [
                   for (final s in schools)

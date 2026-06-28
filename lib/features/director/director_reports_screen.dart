@@ -82,17 +82,22 @@ class _DirectorReportsScreenState extends ConsumerState<DirectorReportsScreen> {
               const SizedBox(height: AksharaSpacing.s5),
               Row(
                 children: [
-                  FilledButton.icon(
-                    key: QaTestKeys.directorReportsGenerateSummaryButton,
-                    onPressed: _isGeneratingSummary ? null : _generateSummary,
-                    icon: _isGeneratingSummary
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.auto_awesome_outlined),
-                    label: const Text('Generate AI Executive Summary'),
+                  // Stretch the button to the available width: its long label
+                  // overflows a fixed-width Row on narrow phones (~358px content
+                  // column → 109px overflow). Expanded lets it wrap/shrink to fit.
+                  Expanded(
+                    child: FilledButton.icon(
+                      key: QaTestKeys.directorReportsGenerateSummaryButton,
+                      onPressed: _isGeneratingSummary ? null : _generateSummary,
+                      icon: _isGeneratingSummary
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.auto_awesome_outlined),
+                      label: const Text('Generate AI Executive Summary'),
+                    ),
                   ),
                 ],
               ),

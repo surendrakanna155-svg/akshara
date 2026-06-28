@@ -123,8 +123,12 @@ class _PaperBody extends ConsumerWidget {
             Text('Questions', style: context.aksharaText.titleMedium),
             const Spacer(),
             if (canManage && _paperEditable(paper.reviewStatus))
-              const Text('Tap ⋮ to correct a question',
-                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+              const Flexible(
+                child: Text('Tap ⋮ to correct a question',
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+              ),
           ],
         ),
         const SizedBox(height: 4),

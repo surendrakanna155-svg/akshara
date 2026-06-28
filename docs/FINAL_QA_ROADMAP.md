@@ -167,6 +167,15 @@ The waves are ordered so that **value and safety compound**:
 
 ## QW3 — Flutter Widget/UI & State Coverage  ·  53 rows  ·  effort: M
 
+> **CLOSEOUT 2026-06-28 — locally-verifiable scope COMPLETE. EOS gate: PASS.** All 53 `QA-F`
+> rows worked across 7 parallel module-clusters: **52 Verified · 1 Open** (`QA-F-048` blocked —
+> the HR Excel employee-import UI does not exist). **263 new widget/golden/router tests** across
+> 38 files; full sweep **`flutter analyze` 0 issues · `flutter test` +2849/0**. The pump harness
+> caught **2 P1-class crashes** (Intelligence enum-`.name` dynamic-dispatch `NoSuchMethodError`;
+> unified-onboarding mid-build provider mutation) and **5 layout defects** — all fixed in-flight —
+> and surfaced 6 honest validation/UX gaps tracked for QW6/QW7. See
+> [`QW3_COMPLETION_CERTIFICATION.md`](QW3_COMPLETION_CERTIFICATION.md).
+
 **Goal:** Close the screen-pump gap (finding **F4**) — every screen renders, every form validates, every dialog/bottom-sheet opens+confirms, every loading/error/empty state shows.
 
 **Scope (53):** the P1/P2 `QA-F` rows — auth staff/splash; the full parent fees widget set + attendance + exam/leave widgets + child-switcher; notifications list mark-read; onboarding forms/stepper/import preview; operations hub; legal review; achievement_promotion (zero-coverage module); finance search/dialogs/export; teacher homework/marks/leave/AI forms; student submit/result rows/attendance; education CSV import + add/edit dialogs + moderation queue; HR Excel import + action buttons + employee form; employee 360; school_config discovery; settings AI; director sub-screens + portfolio form; entitlements negative path; per-persona nav-builder route map; control-center/org-builder/intelligence/verticals/transport-dialog sweeps; dashboard goldens (finance/admissions/director).
