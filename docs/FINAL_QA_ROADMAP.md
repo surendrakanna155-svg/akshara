@@ -90,6 +90,38 @@ The waves are ordered so that **value and safety compound**:
 
 ## QW1 — Critical Path & CI Enforcement  ·  53 rows  ·  effort: L
 
+> **IN PROGRESS (started 2026-06-28).** The **CI Enforcement Backbone landed first** (the roadmap's "land early" enforcement half): backend full Deno tree is now a PR + deploy gate (`QA-B-071/072`, `QA-X-037` — **Verified**, 889/0 local), an lcov coverage-minimum gate is enforced (`QA-X-038` — **Verified**, floor 60% vs 60.24% measured), and the full-Patrol nightly, Maestro approval-chains, and live-regression cron workflows are authored (`QA-X-035` Passing; `QA-X-036/039`, `QA-B-073` Test-Written — flip to Verified on first scheduled CI run). **EOS gate: CONDITIONAL PASS.** See [`QW1_CI_ENFORCEMENT_CERTIFICATION.md`](QW1_CI_ENFORCEMENT_CERTIFICATION.md).
+>
+> **Then the 7 P0 Flutter widget surfaces landed** — `QA-F-001/002` (auth OTP+login), `QA-F-005/006` (fees summary + PayNow bar, the money loop), `QA-F-012` (attendance), `QA-F-014` (leave form), `QA-F-018` (notifications) — all **Verified** (21/21 widget tests green, analyze clean; **EOS gate: PASS**, 1 P2 tracked: attendance calendar 12px overflow at the 428px breakpoint).
+>
+> **Patrol e2e is verifiable locally** (emulator `Medium_Phone_API_36.0` + patrol_cli v4.4.0), so the QA-J journey rows reach Verified here.
+>
+> **Then the QA personas + RBAC-isolation journeys + money loop landed** — `QA-J-019/024/037/047/058` (HR/School-Admin/Director/Staff personas, QA-harness-only per owner decision), `QA-J-061` (staff→teacher gate), `QA-J-001/060` (parent money loop) — all **Verified** (Patrol 5/5 green; **EOS gate: PASS**; one P1 found-and-fixed in-flight — QA-login persona permission resolution). See [`QW1_PERSONA_RBAC_MONEY_CERTIFICATION.md`](QW1_PERSONA_RBAC_MONEY_CERTIFICATION.md).
+>
+> **Then the P0 journey batches landed (2026-06-28):** messaging (`QA-J-002/013/057`), year-end commit (`QA-J-038/039/059`), homework + teacher marks (`QA-J-008/012/014`), admission approve (`QA-J-032`), legal gate (`QA-J-062`), ChainScope + control-center negatives (`QA-J-048/052`), and the backend RBAC per-route matrix + anti-escalation (`QA-B-038/049`) — **all Verified** (Patrol journeys green on the emulator; complex multi-step screens proven via deterministic integration tests with the UI deferred to QW3/QW7; backend full Deno tree **892/0**). **EOS gate: PASS** for every batch — see the EOS ledger.
+>
+> **Then the CLOSEOUT landed (2026-06-28) — locally-verifiable QW1 scope COMPLETE.** The
+> chain-org-**allowed** positive (`QA-J-048`) closed via `QaLoginPersona.chainDirector` (Patrol
+> `qw1-rbac-pos` green); the last open locally-verifiable P0 rows were built and verified —
+> `QA-J-003` (parent child-switch Patrol), `QA-J-009` (student cross-shell Patrol),
+> `QA-F-026/036/038` (legal / attendance-gate / marks-grid widget tests),
+> `QA-B-014/066` (finance route contract + per-route 403 envelope Deno); and tracker-lag rows
+> already covered by passing tests were reconciled to **Verified** (`QA-F-001/002`,
+> `QA-X-001/002/006`). **EOS gate: PASS** (locally-verifiable scope). See
+> [`QW1_COMPLETION_CERTIFICATION.md`](QW1_COMPLETION_CERTIFICATION.md).
+>
+> **QW1 row status: 44 Verified · 5 Open (INFRA-BLOCKED) · 1 Passing · 3 Test-Written.**
+>
+> **Remaining QW1 (infrastructure-dependent only — NOT locally fixable):**
+> (1) **Live Postgres / RLS** — `QA-B-051/052/057` (+ the `QA-B-014` cross-tenant leg): rolled-back-txn
+> probes need `ERP_TENANT_DATABASE_URL` with RLS → **live-regression DB cron**.
+> (2) **FCM Push** — `QA-X-010/012`: token register/refresh + push-tap deep-link need FCM on a device
+> → **device/FCM CI lane**.
+> (3) **VPS Cron** — `QA-X-035` (Passing) · `QA-X-036/039`, `QA-B-073` (Test-Written): CI workflows
+> authored; flip to Verified on **first scheduled run**.
+> The wave is **CONDITIONAL** at the program level until these environment-gated rows turn green on
+> their lanes; no locally-verifiable P0/P1 remains.
+
 **Goal:** Make every pilot-critical workflow provably correct *and* make the whole test estate run in CI so it can never silently regress again.
 
 **Scope (53):** all P0 journeys (`QA-J` P0s), the 10 P0 Flutter UI surfaces, the 10 ship-first backend rows, and the 10 P0 cross-cutting rows.

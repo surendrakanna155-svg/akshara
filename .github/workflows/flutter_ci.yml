@@ -6,6 +6,35 @@ on:
   pull_request:
 
 jobs:
+  # QW1 QA-B-072: backend Deno tests are a PR merge gate on the primary
+  # (path-unfiltered) workflow — so backend regressions can never merge without
+  # a backend test run, even on a Flutter-only PR that touches a shared contract.
+  backend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.8.2
+
+      - name: Cache Deno dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/deno
+          key: deno-${{ runner.os }}-${{ hashFiles('supabase/functions/**/*.ts') }}
+          restore-keys: |
+            deno-${{ runner.os }}-
+
+      - name: Type-check full edge graph
+        run: deno check supabase/functions/api/index.ts
+
+      - name: Deno tests (full edge tree — _shared + api handlers)
+        run: deno test --allow-env --allow-read supabase/functions/
+
   analyze-and-test:
     runs-on: ubuntu-latest
     timeout-minutes: 45

@@ -1,0 +1,85 @@
+name: Live Regression (VPS)
+
+# QW1 QA-X-039 / QA-B-073 — scheduled live regression against the VPS pilot.
+#
+# The ~50 smoke + 32 live-cert scripts hit the real VPS with real pilot-OTP auth
+# and a real DB, but until now ran MANUALLY only — so a deploy or data drift could
+# break a pilot-critical flow in production between manual certs with nobody
+# noticing. This cron runs a curated, additive live-cert subset nightly, fails
+# (and therefore alerts) on any regression, and can gate releases on green.
+#
+# Auth model: the curated scripts log in as allowlisted pilot phones, for which
+# the VPS returns the OTP in the /auth/login response (free, instant). No secret
+# tokens are required. The target base URL is overridable for staging vs pilot.
+#
+# Safety: runs only when the repo variable LIVE_REGRESSION_ENABLED == 'true'
+# (set it in repo Settings → Variables), so the pilot is never hit unexpectedly.
+# Always runnable on demand via workflow_dispatch.
+
+on:
+  schedule:
+    # 02:30 UTC nightly (~08:00 IST) — before the pilot school's working hours.
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Override live base URL (blank = script default / VPS pilot)'
+        required: false
+        default: ''
+
+concurrency:
+  # Never overlap live runs against the same VPS.
+  group: live-regression
+  cancel-in-progress: false
+
+jobs:
+  live-cert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # Scheduled runs respect the kill-switch variable; manual dispatch always runs.
+    if: github.event_name == 'workflow_dispatch' || vars.LIVE_REGRESSION_ENABLED == 'true'
+    env:
+      # Curated additive subset — journey waves (money/identity/data-integrity)
+      # plus the reliability regression. Each script self-authenticates via pilot
+      # OTP and is idempotent/additive (creates marked test rows only).
+      LIVE_CERT_SCRIPTS: >-
+        scripts/qa/live_cert_journey_wave1.py
+        scripts/qa/live_journey_fee_to_parent.py
+        scripts/qa/live_journey_results_to_parent.py
+        scripts/qa/live_cert_reliability_phase0b.py
+      LIVE_BASE_URL: ${{ github.event.inputs.base_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run curated live-cert subset against VPS
+        run: |
+          set -uo pipefail
+          fail=0
+          summary="$RUNNER_TEMP/live_summary.md"
+          echo "## Live Regression results" > "$summary"
+          echo "" >> "$summary"
+          for s in $LIVE_CERT_SCRIPTS; do
+            if [ ! -f "$s" ]; then
+              echo "::error::live-cert script missing: $s"
+              echo "- ⚠️ MISSING: \`$s\`" >> "$summary"
+              fail=1
+              continue
+            fi
+            echo "::group::$s"
+            if python3 "$s"; then
+              echo "- ✅ \`$s\`" >> "$summary"
+            else
+              echo "::error::live-cert FAILED: $s"
+              echo "- ❌ \`$s\`" >> "$summary"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+          exit $fail

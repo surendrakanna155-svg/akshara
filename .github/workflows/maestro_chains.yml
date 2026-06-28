@@ -1,0 +1,80 @@
+name: Maestro Approval Chains
+
+# QW1 QA-X-036 — wire the deep multi-persona Maestro approval chains into CI.
+#
+# The 22 `workflow_*` chains (and the wider biz_* journeys) under qa/journeys/
+# previously ran via qa/run_all_qa.sh MANUALLY only — never in any workflow — so
+# the cross-persona approval flows (submit → approve → publish → recipient-sees)
+# had no automated guard. This job boots an Android emulator, installs the QA APK
+# (mock backend, instant QA login), and runs the workflow_* chains on every
+# release branch + nightly.
+
+on:
+  push:
+    branches:
+      - 'release/**'
+  schedule:
+    # 03:30 UTC nightly — after the Patrol nightly, before working hours.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: maestro-chains-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maestro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable KVM (hardware acceleration for the emulator)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Maestro CLI
+        run: bash scripts/qa/setup_maestro.sh
+
+      - name: Build QA APK (mock backend + instant QA login)
+        run: bash scripts/qa/build_qa_apk.sh
+
+      - name: Run Maestro approval chains on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            export PATH="${HOME}/.maestro/bin:${PATH}"
+            APK="build/app/outputs/flutter-apk/app-profile.apk"
+            [ -f "$APK" ] || APK="build/app/outputs/flutter-apk/app-release.apk"
+            adb install -r "$APK"
+            # The 22 cross-persona approval chains are the minimum required gate.
+            maestro test --config qa/maestro/config.yaml \
+              --format junit --output qa/reports/maestro_chains.junit.xml \
+              qa/journeys/workflow_*.yaml
+
+      - name: Upload Maestro reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-chains-${{ github.run_id }}
+          path: qa/reports/

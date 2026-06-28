@@ -131,6 +131,14 @@ Future<void> waitForQaLogin(dynamic $) async {
 
 /// One-tap QA persona login from the QA login screen.
 Future<void> loginAsQaPersona(dynamic $, QaLoginPersona persona) async {
+  // Scroll the persona button into view first — the persona list grew past a
+  // single screen (QW1 added HR/School-Admin/Director/Staff), so later buttons
+  // are off-screen and a plain tap would time out as not hit-testable.
+  try {
+    await $(persona.buttonLabel).scrollTo();
+  } catch (_) {
+    // Already on-screen / not inside a scrollable — fall through to tap.
+  }
   await $(persona.buttonLabel).tap();
   await $.pumpAndSettle(timeout: const Duration(seconds: 15));
   await $(persona.dashboardAnchor).waitUntilVisible(

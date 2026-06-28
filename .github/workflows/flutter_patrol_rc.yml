@@ -1,11 +1,19 @@
 name: Flutter Patrol RC
 
-# Staged Patrol gates: fast smoke on release branches; full regression on manual dispatch.
+# Staged Patrol gates: fast smoke on release branches; full regression on manual
+# dispatch AND on a nightly schedule.
+#
+# QW1 QA-X-035: the full Patrol E2E suite (not just the 4-target smoke on the PR
+# gate) runs nightly here so money/RBAC/persistence-chain regressions are caught
+# within 24h even when nothing is pushed — a scheduled nightly that blocks release.
 on:
   push:
     branches:
       - main
       - 'release/**'
+  schedule:
+    # 03:00 UTC nightly — full Patrol regression (resolves to FULL mode below).
+    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       coverage_mode:

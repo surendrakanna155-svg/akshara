@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_dialog.dart';
 import '../../../theme/spacing.dart';
@@ -29,6 +30,7 @@ Future<void> showParentChildSwitcherSheet(BuildContext context, WidgetRef ref) a
             ),
             for (final child in children)
               ListTile(
+                key: QaTestKeys.parentChildSwitcherOption(child.id),
                 leading: CircleAvatar(
                   backgroundColor: context.colors.primaryContainer,
                   child: Text(

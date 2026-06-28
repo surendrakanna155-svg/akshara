@@ -38,8 +38,12 @@ jobs:
         # modules (e.g. broken import paths) that `deno test` alone misses.
         run: deno check supabase/functions/api/index.ts
 
-      - name: Deno unit tests
-        run: deno test --allow-env --allow-read supabase/functions/_shared/
+      - name: Deno tests (full edge tree — _shared + api handlers)
+        # QW1 QA-B-071 / QA-X-037: the full tree (including api/ handler +
+        # router-contract tests) is the required gate before any staging deploy —
+        # previously only _shared/ ran, so api/ money/RBAC regressions shipped
+        # unguarded.
+        run: deno test --allow-env --allow-read supabase/functions/
 
       - uses: supabase/setup-cli@v1
         with:

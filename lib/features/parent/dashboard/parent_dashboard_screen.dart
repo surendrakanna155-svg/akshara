@@ -42,6 +42,7 @@ class ParentDashboardScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       appBar: AksharaAppBar(
         title: AksharaChildSelectorChip(
+          key: QaTestKeys.parentChildSelectorChip,
           name: activeChild?.name ?? data.childName,
           classLabel: activeChild?.classLabel ?? data.childClass,
           onTap: () => showParentChildSwitcherSheet(context, ref),

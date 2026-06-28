@@ -13,6 +13,7 @@ import '../../core/repositories/interfaces/auth_repository.dart';
 import '../../core/security/server_permission_models.dart';
 import '../../core/security/server_permission_provider.dart';
 import '../../core/security/erp_role.dart';
+import '../../core/security/permissions.dart';
 import 'auth_claims.dart';
 import 'auth_models.dart';
 import 'auth_role_mapping.dart';
@@ -436,6 +437,8 @@ class AuthNotifier extends Notifier<AuthState> {
         phoneNumber: phone,
         displayName: persona.displayName,
         erpRoles: persona.erpRoles,
+        permissions: persona.customPermissions,
+        isChainOrganization: persona.isChainOrg,
       );
       return;
     }
@@ -467,6 +470,8 @@ class AuthNotifier extends Notifier<AuthState> {
     required String displayName,
     ErpRole? erpRole,
     List<ErpRole>? erpRoles,
+    Iterable<Permission>? permissions,
+    bool isChainOrganization = false,
   }) async {
     if (ref.read(environmentProvider).disableDemoAuth &&
         !ref.read(isQaLoginEnabledProvider)) {
@@ -494,6 +499,12 @@ class AuthNotifier extends Notifier<AuthState> {
       claims: AuthClaims.demoForRole(
         erpRoles: resolvedRoles,
         userId: 'user_${_normalizePhone(phoneNumber)}',
+        // QW1 QA-harness personas (HR/Director) carry a curated permission
+        // subset; null for role-derived personas (falls back to the role union).
+        permissions: permissions,
+        // QW1 QA-J-048: the chain-director persona flags a chain org so the
+        // ChainScope gate (isChainOrgProvider) surfaces chain-only modules.
+        isChainOrganization: isChainOrganization,
       ),
     );
     await _persistSession();

@@ -34,4 +34,7 @@ flutter test \
 log "Gate 5: full flutter test suite with coverage"
 flutter test --coverage
 
+log "Gate 6: coverage minimum-threshold enforcement (QA-X-038)"
+bash scripts/qa/check_coverage_threshold.sh
+
 log "All CI gates passed."

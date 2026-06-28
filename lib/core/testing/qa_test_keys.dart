@@ -1258,6 +1258,12 @@ abstract final class QaTestKeys {
   static const parentNoticeCarousel =
       ValueKey<String>('parent_notice_carousel');
 
+  // QA-J-003 — multi-child switcher (app-bar chip + per-child sheet option).
+  static const parentChildSelectorChip =
+      ValueKey<String>('parent_child_selector_chip');
+  static ValueKey<String> parentChildSwitcherOption(String childId) =>
+      ValueKey<String>('parent_child_switcher_option_$childId');
+
   static const parentTransportScreen =
       ValueKey<String>('parent_transport_screen');
   static const parentPtmScreen = ValueKey<String>('parent_ptm_screen');

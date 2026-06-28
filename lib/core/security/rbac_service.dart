@@ -53,8 +53,19 @@ final userPermissionsProvider = Provider<UserPermissions?>((ref) {
 
   final claims = auth.claims;
   if (claims != null) {
-    // QA automation builds use full role matrix — avoid stale partial server snapshots.
+    // QA automation builds use the full role matrix — avoid stale partial server
+    // snapshots. EXCEPTION (QW1): a QA persona may carry a curated permission
+    // subset (HR / Director have no dedicated ErpRole) — honor it so RBAC-
+    // isolation personas are scoped exactly, instead of inheriting their staff-
+    // shell base role's full union. Personas without a subset (empty list) keep
+    // the role-matrix behavior unchanged. QA-login-only; production path below.
     if (ref.read(environmentProvider).enableQaLogin) {
+      if (claims.permissions.isNotEmpty) {
+        return UserPermissions.fromClaims(
+          roles: claims.erpRoles,
+          explicitPermissions: claims.permissions,
+        );
+      }
       return UserPermissions.forRoles(claims.erpRoles);
     }
 
