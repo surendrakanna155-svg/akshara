@@ -144,6 +144,18 @@ The waves are ordered so that **value and safety compound**:
 
 ## QW2 — Module Write/Persistence E2E  ·  32 rows  ·  effort: M
 
+> **CLOSEOUT 2026-06-28 — locally-verifiable scope COMPLETE. EOS gate: PASS.** All 32 rows worked
+> across 6 batches (staff-functional · teacher · school-admin · principal · platform-director-
+> entitlement · cross-cutting). The theme — *write under the correct persona, not a god-login* —
+> was proven deterministically against the real gates (`MutationPermissionRegistry`,
+> `RolePermissionMatrix`, `canAccessErpRoute`, `SchoolCapabilityRegistry`, `EntitlementResolver`):
+> 8 test files, **32/32 green**, analyze clean. Persistence is cited per row from the existing
+> superAdmin e2e suites; UI-under-persona = Patrol follow-up. **QW2 row status: 28 Verified · 4
+> Open** (blocked, with explicit reasons): `QA-J-004` (FCM push, with QA-X-010/012), `QA-J-063`
+> (AI-scope server-enforced → live/RLS lane), `QA-J-005` (PTM backend not shipped — SchoolBuildScope-
+> hidden), `QA-J-010` (student self-service comms backend not built). Wave is **CONDITIONAL** until
+> those feature/infra lanes land. See [`QW2_COMPLETION_CERTIFICATION.md`](QW2_COMPLETION_CERTIFICATION.md).
+
 **Goal:** Every operational module's real write workflow is exercised **end-to-end under the correct persona** with persistence asserted (not nav/READ, not god-login).
 
 **Scope (32):** the P1 `QA-J` rows — HR employee/payroll/Excel under HR persona (`QA-J-020/021/022`); Staff functional flows (library issue/return, transport route→allocate→board, hostel assign→check-in→roll-call, storekeeper PO limits, counselor lead→convert) under their own personas (`QA-J-026/027/028/029/030`); finance collect→reaches-parent chain (`QA-J-025`); principal reject-with-comment + broadcast + result-reject path (`QA-J-033/034/035/036`); school-admin convert+create-login, transfer/TC, section-balance commit, AI prefill, subject→class-teacher→timetable chain (`QA-J-040..044`); director metric-input→margin/ROI (`QA-J-049`); super-admin provision→login-to-tenant, plan-assign→entitlement-effect (`QA-J-053/054`); cross-cutting attendance-correction loop, question-paper build→validate→publish, AI-assistant persona scope, capability/entitlement gating (`QA-J-063/064/066/068/069`).
