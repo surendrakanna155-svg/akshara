@@ -243,6 +243,25 @@ The waves are ordered so that **value and safety compound**:
 
 ## QW6 — Resilience & Non-functional  ·  24 rows  ·  effort: M
 
+> **CLOSEOUT 2026-06-30 — locally-verifiable scope COMPLETE. EOS gate: PASS.** Of the 24 rows, 3
+> (`QA-X-014/015/016` audit-trail) were already closed in QW4; the 21 open rows worked across 7
+> batches (offline-reliability · audit · state-sweeps · import/export · performance · golden ·
+> security): **17 Verified · 2 Verified-rescoped · 1 Test-Written/infra-blocked · 1 Blocked-
+> MISSING-FEATURE.** A **mandatory discovery cross-check before any code** (4-agent pass) classified
+> every row REAL-NOW / INFRA-BLOCKED / MISSING-FEATURE and surfaced **4 owner decisions** — honouring
+> "no new product behaviour / no assuming scope": (1) **`QA-X-004` offline cached reads = BUILD** —
+> Phase 0 shipped offline *writes* (outbox/drafts) but no read cache, so a reusable read-cache
+> platform was built (`CacheRecord` + store + a single `OfflineReadCacheInterceptor` Dio choke point,
+> SQLCipher v1→v2 migration, LRU-bounded, tenant-scoped, wiped on logout); (2) **`QA-X-017` backend
+> denied-audit = also wire it** — emitted at the single `handleRequest` choke point (no change to the
+> 29 `requirePermission` sites); (3) **`QA-X-021`/`QA-X-022` = re-scope** to the existing real slices
+> (student importer round-trip; single-payment reconcile idempotency), broad variants (education-CSV /
+> batch-file reconcile) owner-deferred; (4) **`QA-X-020` HR Excel import = defer** (feature does not
+> exist; logged to `PRODUCT_COMMERCIAL_BACKLOG.md`). **69 new Flutter tests + 37 new Deno tests +
+> 20 golden baselines**, `flutter analyze` 0 · `flutter test` **2974/0** · new Deno **37/0** · `api/`
+> regression **16/0**. **Infra-blocked:** `QA-X-025` (p95 latency k6 probe authored; needs the live
+> VPS cron). See [`QW6_COMPLETION_CERTIFICATION.md`](QW6_COMPLETION_CERTIFICATION.md).
+
 **Goal:** Verify the app behaves under stress, failure, and scale — and that observability (audit/notifications) actually fires.
 **Scope (24):** the `QA-X` QW6 rows —
 - **Offline** cached reads + connectivity banner + unsaved-guard (verifies Phase 0 platform behaviour) — `QA-X-004/005/009`.

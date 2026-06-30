@@ -1,8 +1,10 @@
+import '../model/cache_record.dart';
 import '../model/draft_record.dart';
 import '../model/mutation_envelope.dart';
 
-/// Durable local storage for the platform: the outbox (queued writes) and
-/// drafts (in-progress forms).
+/// Durable local storage for the platform: the outbox (queued writes), drafts
+/// (in-progress forms), and the read cache (last-good responses for offline
+/// reads).
 ///
 /// The interface keeps the sync engine storage-agnostic and fully unit-testable
 /// ([InMemoryReliabilityStore]); the production implementation is backed by an
@@ -25,7 +27,19 @@ abstract interface class ReliabilityStore {
   Future<void> deleteDraft(String key);
   Future<List<DraftRecord>> draftsForUser(String userId);
 
+  // ── Read cache ────────────────────────────────────────────────────────────
+  /// Persist the last-good response for an idempotent read. Implementations
+  /// evict the oldest entries beyond their capacity (LRU-by-write-time) so the
+  /// cache cannot grow unbounded.
+  Future<void> putCache(CacheRecord record);
+  Future<CacheRecord?> getCache(String key);
+  Future<void> deleteCache(String key);
+
+  /// Wipe only the read cache (drafts + outbox untouched).
+  Future<void> clearCache();
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
-  /// Wipe all drafts and queued operations (called on logout / user switch).
+  /// Wipe all drafts, queued operations, and cached reads (called on logout /
+  /// user switch).
   Future<void> clear();
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/auth_providers.dart';
 import '../config/environment_provider.dart';
 import '../network/interceptors/error_reporting_interceptor.dart';
+import '../reliability/reliability_providers.dart';
 import '../tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../features/auth/auth_token_provider.dart';
@@ -24,6 +25,9 @@ final dioProvider = Provider<Dio>((ref) {
         ref.read(authProvider.notifier).logout();
       },
       allowAnonymous: !environment.requireAuthentication,
+      // QA-X-004: reuse the platform's encrypted on-device store so reads are
+      // cached and served offline. The store is bound once at bootstrap.
+      readCacheStore: ref.read(reliabilityStoreProvider),
     ),
   );
 

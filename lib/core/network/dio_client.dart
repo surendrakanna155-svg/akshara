@@ -5,9 +5,11 @@ import 'api_config.dart';
 import 'interceptors/api_error_interceptor.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/correlation_id_interceptor.dart';
+import 'interceptors/offline_read_cache_interceptor.dart';
 import 'interceptors/retry_interceptor.dart';
 import 'interceptors/tenant_interceptor.dart';
 import '../../features/auth/auth_token_models.dart';
+import '../reliability/store/reliability_store.dart';
 import '../tenant/tenant_context.dart';
 
 /// Dependencies required to build a production-ready Dio client.
@@ -20,6 +22,7 @@ class DioClientDependencies {
     this.onTokensRefreshed,
     this.onSessionExpired,
     this.allowAnonymous = true,
+    this.readCacheStore,
   });
 
   final Environment environment;
@@ -29,6 +32,11 @@ class DioClientDependencies {
   final void Function(AuthTokens tokens)? onTokensRefreshed;
   final void Function()? onSessionExpired;
   final bool allowAnonymous;
+
+  /// When supplied, every idempotent `GET` is cached to this durable store and
+  /// served back offline (QA-X-004). Omit it (tests / auth-only clients) to skip
+  /// offline read caching entirely.
+  final ReliabilityStore? readCacheStore;
 }
 
 /// Factory for a configured [Dio] instance with standard interceptors.
@@ -64,6 +72,11 @@ Dio createDioClient({DioClientDependencies? dependencies}) {
     // refresh+replay runs first) and *before* ApiErrorInterceptor (so it sees
     // the raw status code before the error is mapped to an ApiFailureException).
     RetryInterceptor(),
+    // QA-X-004: offline read cache. Caches successful GET bodies and, once retry
+    // has given up on a connectivity failure, serves the last good copy back —
+    // *before* ApiErrorInterceptor maps the raw DioException away.
+    if (deps.readCacheStore != null)
+      OfflineReadCacheInterceptor(deps.readCacheStore!),
     ApiErrorInterceptor(),
     if (deps.environment.enableLogging)
       LogInterceptor(

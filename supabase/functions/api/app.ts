@@ -70,6 +70,10 @@ import { withEntitlement } from "../_shared/entitlements/entitlement_middleware.
 // --- end B2 entitlement layer ---
 import { errorEnvelope, routePath } from "../_shared/http.ts";
 import { dispatchWithIdempotency } from "../_shared/idempotency_dispatch.ts";
+import {
+  recordAccessDenied,
+  type AccessDeniedSink,
+} from "../_shared/audit/access_denied_audit.ts";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -222,6 +226,7 @@ function withCors(response: Response, correlationId: string): Response {
 export async function handleRequest(
   req: Request,
   configLoader: () => AppConfig = loadConfig,
+  accessDeniedSink?: AccessDeniedSink,
 ): Promise<Response> {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -288,6 +293,21 @@ export async function handleRequest(
       response = await handleContextSwitch(req, config);
     } else {
       response = await routeModuleRequest(req, config, method, path);
+    }
+
+    // QA-X-017: every RBAC/scope denial (403 FORBIDDEN) is recorded as a
+    // server-side access-denied audit event — observed once here rather than at
+    // each requirePermission call site. Best-effort + never throws.
+    if (response.status === 403) {
+      await recordAccessDenied({
+        req,
+        config,
+        response,
+        method,
+        path,
+        correlationId,
+        sink: accessDeniedSink,
+      });
     }
 
     logRequest({
