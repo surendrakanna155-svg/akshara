@@ -74,6 +74,7 @@ admissions, SIS, attendance, exams, fees/payments, messaging) plus the in-flight
 | **QW8** Production Readiness & Market Certification (incl. backup/DR, security, perf) | Per roadmap — GA gate |
 | **NEW: QW-Consolidation** (proposed, owner-review) | Unify the 14 overlapping surfaces below (North Star O3). See "Consolidation" section. |
 | Premium-module deepening: Lesson Planning, Syllabus depth, Scholarships/Discounts depth, Asset Mgmt | Fold into the relevant module's QW cert; not GA-blocking. |
+| **Custom Reports / report builder** (today: per-module *fixed* reports only, no builder) | 🟠 partial — **recovered in the 2026-06-30 reconciliation check** (was tangentially in the "unified reporting layer" overlap but untracked as a build item). Ties to the Consolidation "Reports vs Analytics vs Intelligence vs BI → unified reporting layer". Premium; not GA-blocking. |
 | **HR Excel bulk import** (employee directory: template → upload .xlsx → header-validate → bad-row reject → partial-rollback) | 🔴 **NEW — owner-deferred (2026-06-30).** Does NOT exist (no UI, no `/hr/import` endpoint; HR is single-record CRUD). Surfaced by `QA-X-020` + `QA-F-048`. Not GA-blocking (single-record HR works). Build as a future module-deepening item, then certify `QA-X-020`/`QA-F-048`. Student-onboarding bulk import already exists and is certified — this is the HR analogue. |
 
 ---
@@ -92,6 +93,7 @@ admissions, SIS, attendance, exams, fees/payments, messaging) plus the in-flight
 | **Dedicated expense-management module** | 🟠 partial | Premium; currently via approvals |
 | **Device / MDM management console** | 🟠 partial | Enterprise; FCM tokens only today |
 | **Community portal (standalone)** | 🔴 planned | Beyond core ERP |
+| **"API-OFF-live" Enterprise/Premium surfaces** — Workflow Automation (`WORKFLOW_API_ENABLED` off), Academic Operations (`ACADEMIC_OPERATIONS_API_ENABLED` off), Continuity (`CONTINUITY` off, `/sis/continuity`), Platform Ops/Intelligence (off) | 🟠 partial (UI exists, backend flag OFF live → mock/404) | **Recovered in the 2026-06-30 reconciliation-completeness check** (were orphaned — UI built, API off, not in any queue). Same "API OFF live" posture as white-label/verticals. Default = **Phase 2 enable when productized** (hide-first per O1 until then); final per-surface keep/hide is an owner call. Not GA-blocking (route-guarded off). |
 
 ---
 
@@ -156,3 +158,12 @@ Analytics. These are ✅/🟢 in the audit and covered by existing certification
   prerequisite is now **resolved to BUILD before GA** (O7), not an open build-vs-scope question.
 - **Billing / white-label "Capability Prerequisites"** (roadmap QW7/QW8) are now **resolved**:
   billing → Phase 2 (O6); white-label → Phase 2 (O10).
+- **Reconciliation-completeness check (2026-06-30, before QW7).** Re-audited `still_pending.md`'s full
+  gap inventory (Deliverable 2 🟠/🔴/❌, Deliverable 5 overlaps, Deliverable 6 planned) against this
+  backlog. **All major gaps were already captured** (i18n, staff Face ID, backup/DR, billing, packs,
+  GPS, white-label, custom domain, verticals, branch/franchise, every advanced-attendance variant,
+  reception/gate-pass/visitor, community portal, GL/accounting, expense mgmt, device mgmt, secure CBT,
+  app biometric lock, and all 14 consolidation overlaps). **5 orphaned 🟠 "API-OFF-live" surfaces were
+  recovered** and filed: Workflow Automation, Academic Operations, Continuity, Platform Ops/Intelligence
+  → Queue 4; Custom Reports/report-builder → Queue 3. Nothing else was missing — the audit no longer
+  needs to be re-run from scratch.
