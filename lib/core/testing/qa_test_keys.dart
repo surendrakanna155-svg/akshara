@@ -184,6 +184,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('report_card_leadership_remark');
   static const reportCardShareButton =
       ValueKey<String>('report_card_share_button');
+  static const studentReportCardExportButton =
+      ValueKey<String>('student_report_card_export_button');
   static const teacherExamRemarkField =
       ValueKey<String>('teacher_exam_remark_field');
   static const teacherExamRemarkSaveButton =

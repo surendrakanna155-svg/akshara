@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../exams/report_card_provider.dart';
 import '../exams/student_exams_provider.dart';
 import '../exams/widgets/exam_result_row.dart';
 import '../exams/widgets/subject_score_row.dart';
+
+/// School name for report-card branding (placeholder until school profile wired).
+const String _reportCardSchoolName = 'Akshara Vidyalaya';
 
 /// ST-06 — Term report card synthesized from synced exam results.
 class StudentReportCardScreen extends ConsumerWidget {
@@ -18,6 +23,10 @@ class StudentReportCardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(studentExamsProvider);
+    // QA-J-011 — student-side report-card download. Reuses the SAME shared
+    // [AksharaReportExportService.shareReportCardPdf] the parent app uses; the
+    // action only appears once a published report card exists for the student.
+    final reportCard = ref.watch(studentReportCardProvider);
 
     return Scaffold(
       key: QaTestKeys.studentReportCardScreen,
@@ -26,6 +35,20 @@ class StudentReportCardScreen extends ConsumerWidget {
         titleText: 'Report Card',
         subtitle: '${data.studentName} · ${data.classLabel}',
         onNotificationsTap: onNotificationsTap,
+        additionalActions: [
+          if (reportCard != null)
+            IconButton(
+              key: QaTestKeys.studentReportCardExportButton,
+              tooltip: 'Export / share PDF',
+              icon: const Icon(Icons.ios_share_outlined),
+              onPressed: () => ref
+                  .read(aksharaReportExportServiceProvider)
+                  .shareReportCardPdf(
+                    card: reportCard,
+                    schoolName: _reportCardSchoolName,
+                  ),
+            ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AksharaSpacing.s4),

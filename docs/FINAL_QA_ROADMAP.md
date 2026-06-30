@@ -220,6 +220,20 @@ The waves are ordered so that **value and safety compound**:
 
 ## QW5 — Secondary / Advanced / Verticals Journeys  ·  14 rows  ·  effort: S
 
+> **CLOSEOUT 2026-06-30 — locally-verifiable scope COMPLETE. EOS gate: PASS.** All 14 P2 `QA-J` rows
+> worked across 5 batches: **12 Verified · 1 Partial · 1 Blocked**. The wave's defining move was a
+> **mandatory backlog cross-check before any code** — a 5-agent discovery pass classified each row
+> REAL/READ-ONLY/MOCK/PHASE-2 and surfaced **3 owner decisions** (backup-restore → defer to QW8;
+> white-label → re-scope to GA-ready School Branding; student report-card download → wire it),
+> honouring "no new product behaviour without owner approval". Proven deterministically against the
+> real gates (`MutationPermissionRegistry`, `RolePermissionMatrix`, `EntitlementResolver`) plus two
+> widget render proofs; **11 new test files**, **1 owner-approved feature wire-up** (student
+> report-card export reusing the shared `AksharaReportExportService`), `flutter test` **2905/0**,
+> analyze clean. **Partial:** `QA-J-055` (platform-ops acknowledge — gate contract green, live
+> round-trip infra-blocked: `managePlatformOperations` unseeded server-side, 404 live). **Blocked:**
+> `QA-J-046` (backup→restore — owner-deferred to QW8 `QA-R-009`; user-facing restore has no backend).
+> See [`QW5_COMPLETION_CERTIFICATION.md`](QW5_COMPLETION_CERTIFICATION.md).
+
 **Goal:** Cover the lower-risk, advanced, and display-only journeys once the core is locked.
 **Scope (14):** the P2 `QA-J` rows — parent transport view / notification mark-read; student report-card download; teacher student-risk intervention; HR recruitment/performance writes; finance refund verb negative; school-admin room/syllabus auto-allocate + backup→restore; director board-pack PDF + entitlement lock; super-admin alert-ack + white-label apply; onboarding import under schoolAdmin; achievement multi-channel publish.
 **Entry:** QW2 complete (shares personas/flows).
