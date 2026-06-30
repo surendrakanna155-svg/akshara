@@ -27,7 +27,7 @@
 | O4 | **Student attendance** is entered by **teachers** after students arrive at school. **Students do NOT use Face ID** for attendance. | Owner (2026-06-30) |
 | O5 | **Staff attendance MAY use Face ID.** Staff Face ID is **Must Before GA**. | Owner (2026-06-30) |
 | O6 | **Commercial monetization** (in-product billing, SMS/storage/AI-token quotas, marketplace add-ons) → **Phase 2** (after GA). Pilot + early GA run on entitlement-gating + manual/external invoicing. | Owner (2026-06-30) |
-| O7 | **Multi-language / full UI i18n** → **Must Before GA** (regional-language parent/teacher/student UI). Partial content/AI localization already exists. | Owner (2026-06-30) |
+| O7 | **English-first product — NO full app localization.** *(SUPERSEDED 2026-06-30: the earlier "full UI i18n Must-Before-GA" is CANCELLED.)* Do NOT add `flutter_localizations`/`.arb`, do NOT translate UI/buttons/menus/forms/dashboards/admin/Parent-App screens, do NOT localize PDFs (receipts/report-cards/progress-cards/TC/certificates stay English). **Replaced by "Parent Communication Localization"** → only parent-FACING communication + parent-facing AI respect the parent's profile language (see Queue 2). Teacher/Principal/Admin/Director/ERP UI + their AI stay English. | Owner (2026-06-30, FINAL) |
 | O8 | **Live GPS bus tracking** (live map + parent tracking + driver app) → **Phase 2**. Transport admin ships for GA without real-time tracking; do not market "live tracking" pre-Phase-2. | Owner (2026-06-30) |
 | O9 | **Geo-fencing / RFID / QR attendance** → **Future Vision** (audit flags these as marketing liabilities if promised pre-GA). | Owner (2026-06-30) |
 | O10 | **White-label platform + custom domain** → **Phase 2** (Enterprise upsell; API OFF live; ties to monetization O6). School Branding + onboarding branding are already GA-ready. | Derived from O1/O6, owner-review |
@@ -51,14 +51,15 @@ admissions, SIS, attendance, exams, fees/payments, messaging) plus the in-flight
 
 | Item | Audit status | Current evidence | Action |
 |---|---|---|---|
-| **Full UI i18n / multi-language** (O7) | 🟡 partial | `content_localization.dart`, RTL Urdu typography, multilingual AI parent guidance — but **no `.arb` / `flutter_localizations`**, English-only UI | **NEW build: "Phase 0-L" localization platform** (strings + templates + PDF/SMS/AI language plumbing) → then certify via QW7 `QA-C-015..018`. Resolves the roadmap's i18n "Capability Prerequisite". |
+| **Parent Communication Localization** (O7, English-first) | 🟡 partial — capability exists in part | `content_localization.dart`, `translation_service.dart` (~70 message pairs), parent **preferred-language** profile field, teacher→parent template translation (`parent_communication_store.dart`), script typography (Telugu/Hindi/Tamil/Kannada/Malayalam + Urdu RTL). **Missing:** per-language variants on backend notification templates + recipient-language lookup in the send path + parent-facing-AI language. | **Scope = parent-FACING comms ONLY** (attendance/homework/teacher+behaviour remarks/fee reminders/leave responses/exam-result notifications/school notices/broadcasts) **+ Parent Guidance / Parent Copilot AI**, rendered in the **parent's profile language**. Per-recipient: a broadcast localizes only the parent's copy. **English-first everywhere else** (UI, PDFs, Teacher/Admin AI). Certify via re-scoped `QA-C-016` (parent comms) + `QA-C-018` (parent AI); `QA-C-015` (UI strings) + `QA-C-017` (PDFs) are **scoped-OUT**. |
 | **Staff Face ID attendance** (O5) | 🔴 planned | No biometric capture wired | **NEW build:** staff check-in via device Face ID/biometrics. Student attendance stays teacher-entered (O4). New feature + RBAC + audit + cert. |
 | **Backup & Disaster Recovery (backend)** | 🟠 partial | Backup/restore screens are **UI-only**; backend "not confirmed live" | Build + drill real backup/restore/integrity; certify via QW8 `QA-R-009`. |
 | **Behaviour & Production-Readiness certification** | n/a | — | QW7 (`QA-C`) + QW8 (`QA-R`) per roadmap — the GA gate. |
 | Security / performance / multi-school SaaS certs | ✅ partial | QW1 RBAC + RLS legs; perf targets undefined | QW6/QW8 per roadmap. |
 
-> **GA is declared only after QW8's Final Production Checklist passes** (see roadmap). i18n and staff
-> Face ID are now hard GA-blockers per O5/O7.
+> **GA is declared only after QW8's Final Production Checklist passes** (see roadmap). **Parent
+> Communication Localization** (O7, English-first — NOT full i18n) and **staff Face ID** are the hard
+> GA-blockers per O7/O5.
 
 ---
 
@@ -152,10 +153,12 @@ Analytics. These are ✅/🟢 in the audit and covered by existing certification
 
 ## Doc corrections applied during reconciliation
 
-- **Localization overstatement:** `FINAL_QA_ROADMAP.md` (QW7) said "no localization infrastructure".
-  Reality: *partial* content/AI localization exists (`content_localization.dart`, RTL Urdu,
-  multilingual AI guidance); only full UI-string `.arb`/`flutter_localizations` is missing. The i18n
-  prerequisite is now **resolved to BUILD before GA** (O7), not an open build-vs-scope question.
+- **Localization direction — FINAL (2026-06-30):** the product is **English-first**. The earlier plan to
+  build full UI i18n (`.arb`/`flutter_localizations`) before GA is **CANCELLED**; O7 now means **Parent
+  Communication Localization only** (parent-facing comms + parent AI in the parent's language; UI, PDFs,
+  and staff/admin AI stay English). The partial localization that exists (`content_localization.dart`,
+  `translation_service.dart`, parent language pref, script typography) is the foundation for the
+  parent-comms slice — NOT a step toward full UI translation.
 - **Billing / white-label "Capability Prerequisites"** (roadmap QW7/QW8) are now **resolved**:
   billing → Phase 2 (O6); white-label → Phase 2 (O10).
 - **Reconciliation-completeness check (2026-06-30, before QW7).** Re-audited `still_pending.md`'s full

@@ -2,7 +2,7 @@
 
 **Document ID:** `AKS-TECH-ARCH-v1.0`  
 **Status:** Architecture specification (no implementation code)  
-**Source:** SRS Parts 5, 6, 9, 11A, 13, 15, 18 · Module specs · `ArchitectureReview.md` · `PROJECT_CONTEXT.md`  
+**Source:** SRS Parts 5, 6, 9, 11A, 13, 15, 18 · Module specs · `archive/audit/architecture-review/ArchitectureReview.md` · `PROJECT_CONTEXT.md`  
 **Stack:** Flutter · Riverpod · GoRouter · Supabase · PostgreSQL · FCM · Cloudflare R2 · Razorpay · OpenAI
 
 ---
@@ -95,7 +95,7 @@ Shell selection occurs post-authentication based on `active_role` and `allowed_r
 | Layer | Technology | Purpose |
 |-------|------------|---------|
 | UI | Flutter 3.x | Cross-platform UI |
-| Design | Material 3 | Theming per `DesignSystem.md` |
+| Design | Material 3 | Theming per `archive/design/DesignSystem.md` |
 | State | Riverpod 2.x | DI, async state, caching |
 | Routing | GoRouter | Declarative navigation, deep links |
 | Backend | Supabase | Auth, DB, realtime, edge functions |
@@ -204,11 +204,11 @@ lib/
 │   ├── ai/
 │   └── settings/
 │
-├── l10n/                              # Localization (ARB files)
-│   ├── app_en.arb
-│   ├── app_te.arb
-│   └── ...
+├── core/i18n/                         # Parent Communication Localization ONLY
+│   ├── content_localization.dart      #   (English-first product — NO .arb /
+│   └── translation_service.dart       #    flutter_localizations / UI translation)
 │
+
 ├── routes/                            # GoRouter configuration
 │   ├── app_router.dart
 │   ├── route_guards.dart
@@ -1102,7 +1102,7 @@ Repositories append `academic_year_id` filter to academic queries.
 └─────────────┘
 ```
 
-`connectivityProvider` (Riverpod) drives global offline banner per `DesignSystem.md`.
+`connectivityProvider` (Riverpod) drives global offline banner per `archive/design/DesignSystem.md`.
 
 ### 14.2 Offline-Capable Features
 
@@ -1361,7 +1361,7 @@ CI/CD (GitHub Actions) injects secrets from repository environment secrets.
 
 ### 17.3 Lead Ownership Boundary (Marketing vs Admissions)
 
-Per `ArchitectureReview.md` AR-004:
+Per `archive/audit/architecture-review/ArchitectureReview.md` AR-004:
 
 | System of record | Module | Responsibility |
 |------------------|--------|----------------|
@@ -1632,7 +1632,7 @@ Per `PROJECT_CONTEXT.md`:
 
 ## Appendix B — Open Architecture Items
 
-From `ArchitectureReview.md` — track resolution:
+From `archive/audit/architecture-review/ArchitectureReview.md` — track resolution:
 
 | Item | Target doc/action |
 |------|-------------------|

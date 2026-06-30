@@ -284,7 +284,7 @@ The waves are ordered so that **value and safety compound**:
 - **UI behaviour** (`QA-C-001..008`) — per app/portal (Parent, Student, Teacher, ERP/Admin shell, Principal/Management, Director/Control-Center): every screen, widget, button, icon, dropdown, menu, form, dialog, bottom-sheet, search, filter, sort, pagination, and all four states (empty/loading/error/success) — **every clickable element performs its expected action**; plus an interaction-primitives sweep and a state sweep.
 - **Complete workflow behaviour** (`QA-C-009`) — each critical workflow verified for: correct persistence + navigation + permissions + notification + audit logging + backend update + UI refresh, as one integrated assertion.
 - **Communication behaviour** (`QA-C-010..014`) — Push · SMS · Email · WhatsApp · In-App, each verifying recipient, language, template, placeholders, deep-link, destination screen, delivery status, audit record.
-- **Multi-language certification** (`QA-C-015..018`) — every supported language across screens/buttons/menus, templates/placeholders/notifications, documents (PDFs/receipts), and AI responses; **no untranslated or mixed-language text**. ⚠ *see Capability Prerequisites.*
+- **Parent Communication Localization** (`QA-C-016`, `QA-C-018`) — **English-first product** (owner FINAL 2026-06-30): the UI is NOT localized. Only **parent-facing communication + parent-facing AI** respect the parent's profile language: notification/comms templates & placeholders (`QA-C-016`) and Parent Guidance / Parent Copilot responses (`QA-C-018`). **Scoped-OUT:** `QA-C-015` (UI strings/buttons/menus) and `QA-C-017` (PDF documents — receipts/report-cards/TC/certificates stay English). Teacher/Admin/Principal/Director UI + their AI stay English.
 - **RBAC behaviour** (`QA-C-019..020`) — every role, permission, role combination, deny path, approval flow, delegated permission.
 - **Data reliability** (`QA-C-021`) — certifies the Phase 0 platform in real workflows: draft persistence, autosave, session recovery, offline queue, sync, retry, conflict handling, duplicate prevention.
 - **AI behaviour** (`QA-C-022`) — correct language, persona, permission scope; empty responses, timeout handling, retry, safe-failure.
@@ -310,11 +310,15 @@ This is an entitlement-gated capability (ties to the existing 4-tier model) and 
 
 These three were open build-vs-scope calls; the owner has now decided (see
 [`PRODUCT_COMMERCIAL_BACKLOG.md`](PRODUCT_COMMERCIAL_BACKLOG.md), decisions O6/O7/O10):
-- **Multi-language / i18n → BUILD, Must Before GA (O7).** *Correction:* the app is not "no localization"
-  — partial content/AI localization exists (`content_localization.dart`, RTL Urdu typography,
-  multilingual AI parent guidance); only full UI-string `.arb`/`flutter_localizations` is missing. Build
-  the **"Phase 0-L" localization platform** (strings + templates + PDF/SMS/AI language plumbing) **before
-  GA**, then certify via `QA-C-015..018`.
+- **English-first product — NO full UI i18n (O7, FINAL 2026-06-30).** The earlier "build the Phase 0-L
+  full-UI-localization platform before GA" is **CANCELLED**. The app UI, PDFs (receipts/report-cards/
+  TC/certificates), and Teacher/Admin AI stay **English**. O7 now scopes to **Parent Communication
+  Localization** only: parent-FACING comms (attendance/homework/teacher+behaviour remarks/fee reminders/
+  leave responses/exam-result notifications/notices/broadcasts) **+ Parent Guidance / Parent Copilot AI**,
+  rendered in the parent's profile language (per-recipient). Built on the existing partial layer
+  (`content_localization.dart`, `translation_service.dart`, parent language pref); the remaining build is
+  per-language notification-template variants + recipient-language send-path + parent-AI language — far
+  smaller than full i18n. Certify via re-scoped `QA-C-016` + `QA-C-018`; `QA-C-015`/`QA-C-017` are scoped-OUT.
 - **Billing → Phase 2 (O6).** Pilot + early GA run on entitlement-gating + manual/external invoicing;
   in-product billing + usage quotas + marketplace are post-GA. `QA-R-011` certifies entitlement/plan
   behaviour at GA; payment-collection behaviour is deferred to Phase 2.
@@ -322,9 +326,10 @@ These three were open build-vs-scope calls; the owner has now decided (see
   branding are GA-ready; the tiered "Powered-by / footer / full-removal" gating and platform white-label
   (API OFF live) are an Enterprise upsell tied to monetization. `QA-C-024` scopes to the GA-ready slice.
 
-**New Must-Before-GA build items** (added to the backlog): full UI i18n (O7) and **staff Face ID
-attendance** (O5 — student attendance stays teacher-entered, O4). Advanced attendance (geo-fencing /
-RFID / QR) and live GPS bus tracking are **Future Vision / Phase 2** respectively (O8/O9).
+**New Must-Before-GA build items** (added to the backlog): **Parent Communication Localization** (O7,
+English-first — NOT full UI i18n) and **staff Face ID attendance** (O5 — student attendance stays
+teacher-entered, O4). Advanced attendance (geo-fencing / RFID / QR) and live GPS bus tracking are
+**Future Vision / Phase 2** respectively (O8/O9).
 
 ---
 
@@ -381,7 +386,7 @@ Akshara ERP may be certified **Production Ready** only when **all** hold:
 | **QW7** | 25 | L | QW1–QW6 substantially complete; Phase 0 live | — (behaviour gate) |
 | **QW8** | 12 | L | QW7 complete | — (final gate) |
 
-**Total: 283 rows across 8 waves, preceded by Phase 0 (platform build).** Effort is relative (S/M/L), not a time estimate. Phase 0 is a build-and-test prerequisite that *unblocks* 8 rows. **QW7 and QW8 are sequential mandatory certification gates — GA is declared only after QW8's Final Production Checklist passes.** Note: three QW7/QW8 rows depend on **Capability Prerequisites** (i18n, billing, branding-tier removal) that need an owner build-vs-scope decision before they can be certified.
+**Total: 283 rows across 8 waves, preceded by Phase 0 (platform build).** Effort is relative (S/M/L), not a time estimate. Phase 0 is a build-and-test prerequisite that *unblocks* 8 rows. **QW7 and QW8 are sequential mandatory certification gates — GA is declared only after QW8's Final Production Checklist passes.** Note: the QW7/QW8 Capability Prerequisites are now **owner-resolved** — localization is **English-first / Parent Communication Localization only** (O7, NOT full i18n), billing is Phase 2 (O6), branding-tier removal is Phase 2 (O10).
 
 ---
 
