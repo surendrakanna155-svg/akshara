@@ -9,6 +9,8 @@ import '../../../shared/widgets/akshara_status_chip.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../staff_attendance/staff_attendance_providers.dart';
+import '../../staff_attendance/widgets/staff_check_in_card.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
 import '../widgets/hr_module_scaffold.dart';
@@ -41,13 +43,30 @@ class HrAttendanceScreen extends ConsumerWidget {
       selectedFilterIndex: filterIndex,
       onFilterSelected: (index) =>
           ref.read(hrAttendanceFilterProvider.notifier).state = index,
-      body: _buildBody(
-        context,
-        isLoading: isLoading,
-        isError: isError,
-        isEmpty: isEmpty,
-        data: data,
-        records: records,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // O5 — staff biometric self check-in/out. Always visible (does not
+            // depend on the attendance list); only staff hold the permission the
+            // backend enforces on the write.
+            StaffCheckInCard(
+              // Deferred: the reliability/biometric stack is resolved only on
+              // tap (ref.read in the callback), never at screen-build time.
+              onRecord: (event) =>
+                  ref.read(staffAttendanceControllerProvider).record(event),
+            ),
+            const SizedBox(height: AksharaSpacing.s6),
+            _buildBody(
+              context,
+              isLoading: isLoading,
+              isError: isError,
+              isEmpty: isEmpty,
+              data: data,
+              records: records,
+            ),
+          ],
+        ),
       ),
     );
   }

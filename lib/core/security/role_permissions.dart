@@ -5,8 +5,11 @@ import 'permissions.dart';
 class RolePermissionMatrix {
   const RolePermissionMatrix._();
 
+  /// Roles that are NOT staff and therefore never self-check-in (O5/O4).
+  static const Set<ErpRole> _nonStaffRoles = {ErpRole.parent, ErpRole.student};
+
   static PermissionSet permissionsFor(ErpRole role) {
-    return PermissionSet.from(_permissionsForRole[role] ?? const {});
+    return PermissionSet.from(_withStaffAttendance(role, _permissionsForRole[role] ?? const {}));
   }
 
   /// Union of the default permissions across every role in [roles].
@@ -14,9 +17,18 @@ class RolePermissionMatrix {
   static PermissionSet permissionsForRoles(Iterable<ErpRole> roles) {
     final union = <Permission>{};
     for (final role in roles) {
-      union.addAll(_permissionsForRole[role] ?? const {});
+      union.addAll(_withStaffAttendance(role, _permissionsForRole[role] ?? const {}));
     }
     return PermissionSet.from(union);
+  }
+
+  /// O5: every staff persona (everyone except parent/student) may self check-in
+  /// via device biometric. Granted here — and seeded server-side in
+  /// `20260818000000_staff_face_id_attendance.sql` — rather than hand-listed in
+  /// 13 role sets, so a new staff role inherits it automatically.
+  static Set<Permission> _withStaffAttendance(ErpRole role, Set<Permission> base) {
+    if (_nonStaffRoles.contains(role)) return base;
+    return {...base, Permission.markStaffAttendance};
   }
 
   static const Map<ErpRole, Set<Permission>> _permissionsForRole = {

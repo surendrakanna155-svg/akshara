@@ -98,6 +98,10 @@ enum AuditEventType {
   transportAttendanceRecorded,
   transportDelayNotified,
 
+  // O5 — staff biometric self check-in/out.
+  staffCheckInRecorded,
+  staffCheckOutRecorded,
+
   errorReported,
 }
 

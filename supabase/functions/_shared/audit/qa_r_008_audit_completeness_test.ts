@@ -49,6 +49,7 @@ import {
   schoolMemoriesAudit,
   setupWizardAudit,
   sisAudit,
+  staffAttendanceAudit,
   subscriptionAudit,
   teacherAssistantAudit,
   widgetPlatformAudit,
@@ -82,6 +83,8 @@ const CATALOGUED_MODULES = new Set<string>([
   "subscriptions",
   // `parent` experience acknowledge audits via `parentExperienceAudit`.
   "parent",
+  // staff Face ID check-in/out audits via `staffAttendanceAudit` (O5).
+  "staff_attendance",
 ]);
 
 /**
@@ -152,6 +155,7 @@ const NAMED_CATALOG_GROUPS: Record<string, Record<string, unknown>> = {
   growthPlatformAudit,
   schoolCompletionAudit,
   subscriptionAudit,
+  staffAttendanceAudit,
 };
 
 function mutatingRules(): RbacRouteRule[] {

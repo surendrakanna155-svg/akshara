@@ -186,6 +186,11 @@ enum Permission {
   submitStaffLeave,
   approveStaffLeave,
 
+  // O5 — staff self check-in/out via device biometric (Face ID / fingerprint).
+  // Held by every staff persona (not parent/student). Student attendance stays
+  // teacher-entered (O4); markAttendance above is the teacher→roster permission.
+  markStaffAttendance,
+
   // Phase D M-D5 — Finance approval governance
   assignScholarship,
   approveFeeConcession,

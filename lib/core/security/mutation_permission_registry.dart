@@ -22,6 +22,19 @@ class MutationPermissionRegistry {
   const MutationPermissionRegistry._();
 
   static const entries = <MutationPermissionEntry>[
+    // Staff Face ID attendance (O5) — biometric-gated self check-in/out.
+    MutationPermissionEntry(
+      moduleId: 'staff_attendance',
+      mutationId: 'recordStaffCheckIn',
+      permission: Permission.markStaffAttendance,
+      kind: 'manage',
+    ),
+    MutationPermissionEntry(
+      moduleId: 'staff_attendance',
+      mutationId: 'recordStaffCheckOut',
+      permission: Permission.markStaffAttendance,
+      kind: 'manage',
+    ),
     // Admissions
     MutationPermissionEntry(
       moduleId: 'admissions',

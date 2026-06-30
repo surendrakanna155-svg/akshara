@@ -1419,3 +1419,42 @@ export const subscriptionAudit = {
     },
   }),
 };
+
+// ─── Staff attendance (Face ID self check-in/out, O5) ────────────────────────
+
+export const staffAttendanceAudit = {
+  checkInRecorded: (
+    checkInId: string,
+    userId: string,
+    method: string,
+  ): MutationAuditSpec => ({
+    ...workflow("staffCheckInRecorded", "staff_check_in", checkInId, {
+      userId,
+      method,
+      eventType: "check_in",
+    }),
+    domain: {
+      eventType: "staff_attendance.check_in.recorded",
+      payload: { checkInId, userId, method },
+      sourceModule: "staff_attendance",
+      idempotencyKey: `staff_attendance.check_in.recorded:${checkInId}`,
+    },
+  }),
+  checkOutRecorded: (
+    checkInId: string,
+    userId: string,
+    method: string,
+  ): MutationAuditSpec => ({
+    ...workflow("staffCheckOutRecorded", "staff_check_in", checkInId, {
+      userId,
+      method,
+      eventType: "check_out",
+    }),
+    domain: {
+      eventType: "staff_attendance.check_out.recorded",
+      payload: { checkInId, userId, method },
+      sourceModule: "staff_attendance",
+      idempotencyKey: `staff_attendance.check_out.recorded:${checkInId}`,
+    },
+  }),
+};

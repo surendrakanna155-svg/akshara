@@ -50,6 +50,12 @@ class OperationPolicyRegistry {
         kind: OperationKind.queueable,
         conflictCategory: ConflictCategory.lowRisk,
       ),
+      // Staff biometric check-in/out (O5): single-owner, append-only — queue +
+      // last-write-wins so a check-in made on poor connectivity is never lost.
+      OperationTypes.markStaffAttendance: const OperationPolicy(
+        kind: OperationKind.queueable,
+        conflictCategory: ConflictCategory.lowRisk,
+      ),
       // High-risk record-of-truth — queue but require explicit conflict
       // resolution and never finalise (e.g. a receipt) until confirmed (R1/R2).
       OperationTypes.collectFee: const OperationPolicy(
@@ -78,6 +84,7 @@ abstract final class OperationTypes {
   static const String saveExamMarksDraft = 'exam.marks.saveDraft';
   static const String submitExamMarks = 'exam.marks.submit';
   static const String applyLeave = 'leave.apply';
+  static const String markStaffAttendance = 'staffAttendance.check';
   static const String collectFee = 'finance.collectFee';
   static const String login = 'auth.login';
   static const String gatewayPayment = 'finance.gatewayPayment';

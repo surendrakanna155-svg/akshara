@@ -22,6 +22,7 @@ abstract final class ServerRbacRouteInventory {
     'education',
     'intelligence',
     'employee',
+    'staff_attendance',
     'inventory_distribution',
     'operations',
     'memories',
@@ -115,8 +116,9 @@ abstract final class ServerRbacRouteInventory {
     'manageAccommodation',
     'viewWhiteLabelPlatform',
     'manageWhiteLabelPlatform',
+    'markStaffAttendance',
   ];
 
-  /// Mirrors server RBAC inventory entry count (v13.4).
-  static const protectedRouteCount = 120;
+  /// Mirrors server RBAC inventory entry count (v13.4 + staff Face ID check-in).
+  static const protectedRouteCount = 121;
 }

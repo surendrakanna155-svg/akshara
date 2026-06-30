@@ -29,6 +29,9 @@ dependencies:
   sqflite: ^2.4.3
   path: ^1.9.1
   sqflite_sqlcipher: ^3.4.0
+  # Device biometric (Face ID / fingerprint) for staff self check-in attendance
+  # (O5, Must-Before-GA). Device OS gate only — NO computer-vision face matching.
+  local_auth: ^2.3.0
 
 dev_dependencies:
   flutter_test:

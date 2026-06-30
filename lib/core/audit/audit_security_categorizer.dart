@@ -86,6 +86,8 @@ abstract final class AuditSecurityCategorizer {
       case AuditEventType.transportStudentRemoved:
       case AuditEventType.transportAttendanceRecorded:
       case AuditEventType.transportDelayNotified:
+      case AuditEventType.staffCheckInRecorded:
+      case AuditEventType.staffCheckOutRecorded:
         return AuditEventCategory.workflow;
 
       case AuditEventType.errorReported:
