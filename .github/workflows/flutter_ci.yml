@@ -33,7 +33,14 @@ jobs:
         run: deno check supabase/functions/api/index.ts
 
       - name: Deno tests (full edge tree — _shared + api handlers)
-        run: deno test --allow-env --allow-read supabase/functions/
+        run: deno test --allow-env --allow-read --coverage=cov_profile supabase/functions/
+
+      - name: Backend coverage floor (QA-B-074)
+        run: |
+          PCT=$(deno coverage cov_profile --lcov 2>/dev/null | awk -F: '/^LF:/{f+=$2} /^LH:/{h+=$2} END{ if (f==0) print "0"; else printf "%.1f",(h/f)*100 }')
+          FLOOR="${BACKEND_COVERAGE_FLOOR:-40}"
+          echo "Backend line coverage: ${PCT}%  (floor ${FLOOR}%)"
+          awk -v p="$PCT" -v f="$FLOOR" 'BEGIN{ exit !(p+0 >= f+0) }' || { echo "FAIL: backend line coverage below ${FLOOR}% floor"; exit 1; }
 
   analyze-and-test:
     runs-on: ubuntu-latest

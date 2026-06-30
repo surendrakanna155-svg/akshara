@@ -5,6 +5,7 @@ import {
   admissionsAudit,
   academicAudit,
   emitMutationAudit,
+  examAudit,
   financeAudit,
   sisAudit,
 } from "./mutation_audit_catalog.ts";
@@ -76,4 +77,16 @@ Deno.test("sis admissionsConverted catalog references student and enrollment", (
 Deno.test("academic yearCreated catalog uses academic module", () => {
   const spec = academicAudit.yearCreated("yr-1");
   assertEquals(spec.domain.sourceModule, "academic");
+});
+
+Deno.test("exam resultsPublished catalog binds the result set + approver count", () => {
+  const spec = examAudit.resultsPublished("exam-1", 42, "appr-1");
+  assertEquals(spec.audit.eventType, "examResultsPublished");
+  assertEquals(spec.audit.category, "workflow");
+  assertEquals(spec.audit.entityType, "exam_session");
+  assertEquals(spec.audit.entityId, "exam-1");
+  assertEquals(spec.audit.metadata?.publishedCount, 42);
+  assertEquals(spec.audit.metadata?.approvalId, "appr-1");
+  assertEquals(spec.domain.eventType, "exam.results.published");
+  assertEquals(spec.domain.idempotencyKey, "exam.results.published:exam-1");
 });

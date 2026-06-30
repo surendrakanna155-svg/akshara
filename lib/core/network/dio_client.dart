@@ -5,6 +5,7 @@ import 'api_config.dart';
 import 'interceptors/api_error_interceptor.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/correlation_id_interceptor.dart';
+import 'interceptors/retry_interceptor.dart';
 import 'interceptors/tenant_interceptor.dart';
 import '../../features/auth/auth_token_models.dart';
 import '../tenant/tenant_context.dart';
@@ -58,6 +59,11 @@ Dio createDioClient({DioClientDependencies? dependencies}) {
       onTokensRefreshed: deps.onTokensRefreshed,
       onSessionExpired: deps.onSessionExpired,
     ),
+    // QA-X-008: bounded, idempotent-only (GET/HEAD) retry for transient 5xx/429
+    // and connection/timeout errors. Placed *after* AuthInterceptor (so a 401
+    // refresh+replay runs first) and *before* ApiErrorInterceptor (so it sees
+    // the raw status code before the error is mapped to an ApiFailureException).
+    RetryInterceptor(),
     ApiErrorInterceptor(),
     if (deps.environment.enableLogging)
       LogInterceptor(

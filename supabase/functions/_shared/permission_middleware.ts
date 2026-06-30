@@ -62,6 +62,28 @@ export function requirePermission(
   return null;
 }
 
+/**
+ * OR-gate: returns `null` (grant) when the caller holds **any** of `permissions`,
+ * else a 403 listing them. This is the correct primitive for "specific OR broader"
+ * fallbacks — note that chaining `requirePermission(a) ?? requirePermission(b)`
+ * does NOT express OR: `requirePermission` returns a truthy `Response` on denial,
+ * so `??` short-circuits on the first miss and the chain collapses into an AND of
+ * every slug (the QW4-INV-OR defect). Use this helper instead.
+ */
+export function requireAnyPermission(
+  claims: AccessTokenClaims,
+  permissions: string[],
+): Response | null {
+  if (permissions.some((p) => claims.permissions.includes(p))) {
+    return null;
+  }
+  return errorEnvelope(
+    "FORBIDDEN",
+    `Permission required: one of ${permissions.join(", ")}`,
+    403,
+  );
+}
+
 /** Admissions operational tables require an active school scope with school_id. */
 export function requireSchoolOperationalScope(
   claims: AccessTokenClaims,

@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -15,8 +16,7 @@ import {
 } from "./employee_intelligence_service.ts";
 
 function requireIntelRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "viewEmployeeIntelligence") ??
-    requirePermission(claims, "viewEmployees") ??
+  return requireAnyPermission(claims, ["viewEmployeeIntelligence", "viewEmployees"]) ??
     requireSchoolOperationalScope(claims);
 }
 

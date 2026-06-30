@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -21,14 +22,12 @@ import {
 } from "./inventory_distribution_repository.ts";
 
 function requireDistRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "viewInventoryDistribution") ??
-    requirePermission(claims, "viewInventory") ??
+  return requireAnyPermission(claims, ["viewInventoryDistribution", "viewInventory"]) ??
     requireSchoolOperationalScope(claims);
 }
 
 function requireDistWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "manageInventoryDistribution") ??
-    requirePermission(claims, "manageInventory") ??
+  return requireAnyPermission(claims, ["manageInventoryDistribution", "manageInventory"]) ??
     requireSchoolOperationalScope(claims);
 }
 

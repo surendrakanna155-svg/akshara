@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -15,8 +16,7 @@ import { buildPrincipalCommandCenter } from "./principal_command_service.ts";
 export async function handlePrincipalCommandCenter(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "viewPrincipalCommand") ??
-    requirePermission(auth.claims, "viewAnalytics") ??
+  const denied = requireAnyPermission(auth.claims, ["viewPrincipalCommand", "viewAnalytics"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -37,8 +37,7 @@ export async function handlePrincipalCommandCenter(req: Request, config: AppConf
 export async function handlePrincipalCommandQuery(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "viewPrincipalCommand") ??
-    requirePermission(auth.claims, "viewAnalytics") ??
+  const denied = requireAnyPermission(auth.claims, ["viewPrincipalCommand", "viewAnalytics"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 

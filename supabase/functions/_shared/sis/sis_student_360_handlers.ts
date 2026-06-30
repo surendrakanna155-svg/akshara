@@ -4,6 +4,7 @@ import { envelope, errorEnvelope, jsonResponse } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -14,8 +15,7 @@ import { StudentNotFoundError } from "./sis_students_repository.ts";
 import { buildStudent360Profile, buildStudentTimeline } from "./student_360_service.ts";
 
 function requireStudent360Read(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "viewStudent360") ??
-    requirePermission(claims, "viewSis") ??
+  return requireAnyPermission(claims, ["viewStudent360", "viewSis"]) ??
     requireSchoolOperationalScope(claims);
 }
 

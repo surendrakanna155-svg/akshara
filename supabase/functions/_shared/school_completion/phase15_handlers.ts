@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -25,8 +26,7 @@ function tenantError(error: unknown): Response {
 }
 
 function requireAnalyticsRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "viewCommunicationAnalytics") ??
-    requirePermission(claims, "viewCommunicationDelivery") ??
+  return requireAnyPermission(claims, ["viewCommunicationAnalytics", "viewCommunicationDelivery"]) ??
     requireSchoolOperationalScope(claims);
 }
 

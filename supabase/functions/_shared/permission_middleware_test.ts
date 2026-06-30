@@ -1,5 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import {
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
 } from "./permission_middleware.ts";
@@ -35,4 +36,27 @@ Deno.test("requireSchoolOperationalScope denies organization scope", () => {
   const orgClaims = { ...baseClaims, scope: "organization" as const, school_id: null };
   const response = requireSchoolOperationalScope(orgClaims);
   assertEquals(response?.status, 403);
+});
+
+// QW4-INV-OR — the OR-gate primitive that replaced the broken
+// `requirePermission(a) ?? requirePermission(b)` chains (which collapsed into an AND).
+Deno.test("requireAnyPermission grants when the caller holds the specific slug", () => {
+  assertEquals(requireAnyPermission(baseClaims, ["viewAdmissions", "manageGrowthPlatform"]), null);
+});
+
+Deno.test("requireAnyPermission grants when the caller holds the broader fallback slug", () => {
+  // baseClaims holds manageAdmissions but NOT manageGrowthPlatform — the OR fallback
+  // (the exact case the old `??` chain wrongly denied) must now grant.
+  assertEquals(requireAnyPermission(baseClaims, ["manageGrowthPlatform", "manageAdmissions"]), null);
+});
+
+Deno.test("requireAnyPermission denies when the caller holds NONE of the slugs", () => {
+  const response = requireAnyPermission(baseClaims, ["manageGrowthPlatform", "viewFinance"]);
+  assertEquals(response?.status, 403);
+});
+
+Deno.test("requireAnyPermission lists the accepted slugs in the 403 message", async () => {
+  const response = requireAnyPermission(baseClaims, ["approveRefunds", "manageFinance"]);
+  const body = await response!.json();
+  assertEquals(body.error.message, "Permission required: one of approveRefunds, manageFinance");
 });

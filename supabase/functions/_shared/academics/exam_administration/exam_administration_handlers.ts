@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../../tenant_handlers.ts";
 import { findApprovedByEntity } from "../../approval/approval_repository.ts";
+import { emitMutationAudit, examAudit } from "../../audit/mutation_audit_catalog.ts";
 import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../../sms_provider.ts";
 import {
   createExamSession,
@@ -443,9 +444,19 @@ export async function handlePublishExamResults(
       }
     }
 
-    const publishedCount = await withTenantContext(config, claims, (db) =>
-      publishExamResults(db, organizationId, schoolId, examId)
-    );
+    const publishedCount = await withTenantContext(config, claims, async (db) => {
+      const count = await publishExamResults(db, organizationId, schoolId, examId);
+      // QA-X-015 — audit the publish: a non-reversible mutation that exposes
+      // results to students/parents must leave a server-side trail binding the
+      // actor (claims.sub, set by recordServerAuditEvent) to the result set.
+      await emitMutationAudit(
+        db,
+        claims,
+        examAudit.resultsPublished(examId, count, approvalId ?? null),
+        req,
+      );
+      return count;
+    });
     await notifyParentsOfResults(config, claims, examId);
     return { examId, publishedCount };
   });

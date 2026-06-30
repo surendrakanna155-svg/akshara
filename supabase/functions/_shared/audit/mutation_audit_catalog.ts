@@ -568,6 +568,35 @@ export const academicAudit = {
   }),
 };
 
+// ─── Exam Administration ─────────────────────────────────────────────────────
+
+export const examAudit = {
+  /**
+   * Exam results were PUBLISHED (made visible to students/parents) — a critical,
+   * non-reversible mutation. `examId` is the exam_session (result set) id; the
+   * approver who authorized the publish (when an approval gate is used) and the
+   * count of published mark entries are recorded for the trail. Keyed per exam so
+   * a re-publish of the same session is deduped on the outbox.
+   */
+  resultsPublished: (
+    examId: string,
+    publishedCount: number,
+    approvalId?: string | null,
+  ): MutationAuditSpec => ({
+    ...workflow("examResultsPublished", "exam_session", examId, {
+      examId,
+      publishedCount,
+      ...(approvalId ? { approvalId } : {}),
+    }),
+    domain: {
+      eventType: "exam.results.published",
+      payload: { examId, publishedCount, approvalId: approvalId ?? null },
+      sourceModule: "exam",
+      idempotencyKey: `exam.results.published:${examId}`,
+    },
+  }),
+};
+
 // ─── Education (v8.5–v8.8) ──────────────────────────────────────────────────
 
 export const educationAudit = {

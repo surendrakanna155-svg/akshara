@@ -126,6 +126,18 @@ class PushMessagingService {
     }
   }
 
+  /// Test seam for the foreground-message handler (QA-X-011). Exercises the
+  /// exact same pure logic FCM drives via `onMessage.listen`, without the FCM
+  /// stream/permission plumbing that can't run headless.
+  @visibleForTesting
+  void handleForegroundMessage(RemoteMessage message) =>
+      _onForegroundMessage(message);
+
+  /// Test seam for the notification-tap (background / terminated) handler.
+  @visibleForTesting
+  void handleNotificationTapped(RemoteMessage message) =>
+      _onNotificationTapped(message);
+
   /// Foreground message: refresh the in-app inbox and show a tappable banner.
   void _onForegroundMessage(RemoteMessage message) {
     // Reuse the existing inbox so the new notification appears immediately.

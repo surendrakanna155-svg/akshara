@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -19,14 +20,12 @@ import {
 } from "./employee_repository.ts";
 
 function requireEmployeeRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "viewEmployees") ??
-    requirePermission(claims, "viewHr") ??
+  return requireAnyPermission(claims, ["viewEmployees", "viewHr"]) ??
     requireSchoolOperationalScope(claims);
 }
 
 function requireEmployeeWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "manageEmployees") ??
-    requirePermission(claims, "manageHr") ??
+  return requireAnyPermission(claims, ["manageEmployees", "manageHr"]) ??
     requireSchoolOperationalScope(claims);
 }
 

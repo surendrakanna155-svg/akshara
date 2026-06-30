@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -22,24 +23,21 @@ import {
 function requireInventoryIntelligence(
   claims: Parameters<typeof requirePermission>[0],
 ): Response | null {
-  return requirePermission(claims, "viewInventoryIntelligence") ??
-    requirePermission(claims, "viewInventory") ??
+  return requireAnyPermission(claims, ["viewInventoryIntelligence", "viewInventory"]) ??
     requireSchoolOperationalScope(claims);
 }
 
 function requireAssetLifecycleManage(
   claims: Parameters<typeof requirePermission>[0],
 ): Response | null {
-  return requirePermission(claims, "manageAssetLifecycle") ??
-    requirePermission(claims, "manageInventory") ??
+  return requireAnyPermission(claims, ["manageAssetLifecycle", "manageInventory"]) ??
     requireSchoolOperationalScope(claims);
 }
 
 function requireProcurementWorkflowManage(
   claims: Parameters<typeof requirePermission>[0],
 ): Response | null {
-  return requirePermission(claims, "manageProcurementWorkflow") ??
-    requirePermission(claims, "manageInventory") ??
+  return requireAnyPermission(claims, ["manageProcurementWorkflow", "manageInventory"]) ??
     requireSchoolOperationalScope(claims);
 }
 

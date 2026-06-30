@@ -193,6 +193,16 @@ The waves are ordered so that **value and safety compound**:
 
 ## QW4 — Backend API/RBAC/RLS/Error-path  ·  70 rows  ·  effort: L
 
+> **CLOSEOUT 2026-06-30 — locally-verifiable scope COMPLETE. EOS gate: PASS.** All 73 QW4 rows worked
+> across 3 batches: **59 Verified · 8 Partial · 6 Blocked** (the 6 Blocked + the Partial data legs are
+> pure live-Postgres/RLS rolled-back-txn probes needing `ERP_TENANT_DATABASE_URL`). Proven DB-free via
+> the route-contract pattern (503 = authorized proxy) + an `app.ts` testable seam; backend
+> **`deno test` 1344/0**, flutter **2874/0**, analyze clean. The suites caught + fixed **2 P1s**
+> (QW4-INV-OR systemic OR-fallback RBAC inversion across 29 sites/15 files via a new
+> `requireAnyPermission` helper; exam-results publish was completely unaudited) and **hardened CORS on
+> error paths**; built a read-path `RetryInterceptor` and a backend coverage floor (40%) in CI. See
+> [`QW4_BACKEND_API_CERTIFICATION.md`](QW4_BACKEND_API_CERTIFICATION.md).
+
 **Goal:** Turn the backend from "37% RBAC-documented, 9/50 routers tested" into a fully contract-asserted surface (findings **F5/F9**).
 
 **Scope (70):** the `QA-B` QW4 rows + `QA-X` QW4 rows —

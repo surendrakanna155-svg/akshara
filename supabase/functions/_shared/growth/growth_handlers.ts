@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -15,8 +16,7 @@ import { createLead } from "../admissions/admissions_repository.ts";
 export async function handleGrowthDashboard(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "viewGrowthPlatform") ??
-    requirePermission(auth.claims, "viewAdmissions") ??
+  const denied = requireAnyPermission(auth.claims, ["viewGrowthPlatform", "viewAdmissions"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -71,8 +71,7 @@ export async function handleGrowthDashboard(req: Request, config: AppConfig): Pr
 export async function handleCreateGrowthCampaign(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "manageGrowthPlatform") ??
-    requirePermission(auth.claims, "manageAdmissions") ??
+  const denied = requireAnyPermission(auth.claims, ["manageGrowthPlatform", "manageAdmissions"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -131,8 +130,7 @@ export async function handleCreateGrowthCampaign(req: Request, config: AppConfig
 export async function handleCreateGrowthInquiry(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "manageGrowthPlatform") ??
-    requirePermission(auth.claims, "manageAdmissions") ??
+  const denied = requireAnyPermission(auth.claims, ["manageGrowthPlatform", "manageAdmissions"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -223,8 +221,7 @@ export async function handleUpdateGrowthCampaign(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "manageGrowthPlatform") ??
-    requirePermission(auth.claims, "manageAdmissions") ??
+  const denied = requireAnyPermission(auth.claims, ["manageGrowthPlatform", "manageAdmissions"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -290,8 +287,7 @@ export async function handlePauseGrowthCampaign(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "manageGrowthPlatform") ??
-    requirePermission(auth.claims, "manageAdmissions") ??
+  const denied = requireAnyPermission(auth.claims, ["manageGrowthPlatform", "manageAdmissions"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -350,8 +346,7 @@ export async function handleListGrowthCampaignHistory(
 export async function handleGrowthFunnel(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "viewGrowthPlatform") ??
-    requirePermission(auth.claims, "viewAdmissions") ??
+  const denied = requireAnyPermission(auth.claims, ["viewGrowthPlatform", "viewAdmissions"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -429,8 +424,7 @@ export async function handleConvertGrowthInquiry(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "manageGrowthPlatform") ??
-    requirePermission(auth.claims, "manageAdmissions") ??
+  const denied = requireAnyPermission(auth.claims, ["manageGrowthPlatform", "manageAdmissions"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 

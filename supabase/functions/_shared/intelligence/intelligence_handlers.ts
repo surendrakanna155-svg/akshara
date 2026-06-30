@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -39,8 +40,7 @@ import type {
 } from "./intelligence_types.ts";
 
 function requireRiskRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "viewStudentRisk") ??
-    requirePermission(claims, "viewAnalytics") ??
+  return requireAnyPermission(claims, ["viewStudentRisk", "viewAnalytics"]) ??
     requireSchoolOperationalScope(claims);
 }
 
@@ -390,8 +390,7 @@ export async function handleTeacherSuccessCenter(req: Request, config: AppConfig
 export async function handlePrincipalQuery(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "viewAnalytics") ??
-    requirePermission(auth.claims, "viewSchoolHealth") ??
+  const denied = requireAnyPermission(auth.claims, ["viewAnalytics", "viewSchoolHealth"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -419,8 +418,7 @@ export async function handlePrincipalIntelligenceCenter(
 ): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "viewAnalytics") ??
-    requirePermission(auth.claims, "viewSchoolHealth") ??
+  const denied = requireAnyPermission(auth.claims, ["viewAnalytics", "viewSchoolHealth"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 

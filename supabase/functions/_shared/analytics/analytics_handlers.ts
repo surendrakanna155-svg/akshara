@@ -17,9 +17,14 @@ function requireAnalyticsView(claims: Parameters<typeof requirePermission>[0]): 
 }
 
 function requireSchoolHealthView(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "viewSchoolHealth") ??
-    requirePermission(claims, "viewAnalytics") ??
-    requireSchoolOperationalScope(claims);
+  // School-health/principal views are allowed for EITHER permission (viewSchoolHealth
+  // OR viewAnalytics), then must hold school scope. NB: chaining the two permission
+  // checks with `??` would have ANDed them (requirePermission returns null on
+  // success, so a held first permission fell through to require the second too) —
+  // that denied legitimate viewAnalytics-only principals. Evaluate the OR explicitly.
+  const denied = requirePermission(claims, "viewSchoolHealth");
+  if (denied && requirePermission(claims, "viewAnalytics")) return denied;
+  return requireSchoolOperationalScope(claims);
 }
 
 async function loadBundle(req: Request, config: AppConfig, auth: Awaited<ReturnType<typeof authenticateRequest>> & { ok: true }) {

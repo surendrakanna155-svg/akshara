@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -207,8 +208,7 @@ export async function handleCreateLessonLog(req: Request, config: AppConfig): Pr
 export async function handleAutomateTimetables(req: Request, config: AppConfig): Promise<Response> {
   const auth = await authenticateRequest(req, config);
   if (!auth.ok) return auth.response;
-  const denied = requirePermission(auth.claims, "manageTimetableAutomation") ??
-    requirePermission(auth.claims, "manageAcademicTimetable") ??
+  const denied = requireAnyPermission(auth.claims, ["manageTimetableAutomation", "manageAcademicTimetable"]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 

@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -17,15 +18,12 @@ import {
 } from "./homework_intelligence_service.ts";
 
 function requireHwIntelRead(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "viewHomeworkIntelligence") ??
-    requirePermission(claims, "viewEducation") ??
-    requirePermission(claims, "viewStudentRisk") ??
+  return requireAnyPermission(claims, ["viewHomeworkIntelligence", "viewEducation", "viewStudentRisk"]) ??
     requireSchoolOperationalScope(claims);
 }
 
 function requireHwIntelWrite(claims: Parameters<typeof requirePermission>[0]): Response | null {
-  return requirePermission(claims, "manageHomeworkIntelligence") ??
-    requirePermission(claims, "manageEducation") ??
+  return requireAnyPermission(claims, ["manageHomeworkIntelligence", "manageEducation"]) ??
     requireSchoolOperationalScope(claims);
 }
 
