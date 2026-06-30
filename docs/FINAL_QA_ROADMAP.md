@@ -2,6 +2,12 @@
 
 **Date:** 2026-06-27 · HEAD `0f33c6a` · Companion to [`FINAL_QA_AUDIT.md`](FINAL_QA_AUDIT.md) and [`FINAL_QA_MASTER_TRACKER.md`](FINAL_QA_MASTER_TRACKER.md).
 
+> **Scope vs quality.** This roadmap proves *quality* (the QA waves QW1–QW8). For *scope* — every
+> product/commercial gap, UX issue, architecture improvement, and future feature — the single source
+> of truth is [`PRODUCT_COMMERCIAL_BACKLOG.md`](PRODUCT_COMMERCIAL_BACKLOG.md) (reconciled from the
+> `still_pending.md` audit, with the locked owner decisions O1–O10). The two are cross-linked, not
+> duplicated.
+
 > **This roadmap is a plan, not an instruction to start.** All 246 tracker rows are `Open`. **No tests or fixes will be written until the owner approves execution.** GA Certification stays **paused** until the waves below are complete and green.
 
 > **Engineering gate:** This plan is governed by the Engineering Operating System (`/eos`) per [`engineering/ENGINEERING_GATE_POLICY.md`](engineering/ENGINEERING_GATE_POLICY.md). No wave or row here is "complete" until `/eos <scope>` returns PASS against the [Engineering Constitution](engineering/AKSHARA_ENGINEERING_CONSTITUTION.md). The EOS is the only engineering standard for this work — do not add bespoke checklists.
@@ -257,12 +263,25 @@ Complete white-label capability is a **permanent commercial-SaaS roadmap item**.
 
 This is an entitlement-gated capability (ties to the existing 4-tier model) and is certified by `QA-C-023/024` and `QA-R-004/011`.
 
-### ⚠ Capability prerequisites discovered (need an owner build-vs-scope call, Phase-0 style)
+### ✅ Capability prerequisites — RESOLVED by owner decision (2026-06-30)
 
-Certification cannot pass on capabilities that **do not exist yet**. Three were found during this extension; each needs the owner to choose **build** (so it can be certified) or **scope to v1** (document the limit) — exactly like the Phase 0 decision, and **not** silently treated as a test:
-- **Multi-language / i18n** — the app today has **no localization infrastructure** (no `.arb`, no `flutter_localizations`, English-only). `QA-C-015..018` require building an i18n/localization platform (strings + templates + PDF/SMS/AI language plumbing) before they can be certified. **Recommendation: treat as a "Phase 0-L" localization platform** preceding QW7's language rows.
-- **Billing** — subscriptions are **entitlement-only today (no billing/payment-gateway for plans)**. `QA-R-011` "billing behaviour / upgrade-downgrade" needs a billing flow built, or explicit scope-out for the pilot.
-- **Subscription-aware branding removal** — white-label module exists, but the tiered "Powered-by / footer / full-removal" gating may need implementation; `QA-C-024` build-scope to confirm.
+These three were open build-vs-scope calls; the owner has now decided (see
+[`PRODUCT_COMMERCIAL_BACKLOG.md`](PRODUCT_COMMERCIAL_BACKLOG.md), decisions O6/O7/O10):
+- **Multi-language / i18n → BUILD, Must Before GA (O7).** *Correction:* the app is not "no localization"
+  — partial content/AI localization exists (`content_localization.dart`, RTL Urdu typography,
+  multilingual AI parent guidance); only full UI-string `.arb`/`flutter_localizations` is missing. Build
+  the **"Phase 0-L" localization platform** (strings + templates + PDF/SMS/AI language plumbing) **before
+  GA**, then certify via `QA-C-015..018`.
+- **Billing → Phase 2 (O6).** Pilot + early GA run on entitlement-gating + manual/external invoicing;
+  in-product billing + usage quotas + marketplace are post-GA. `QA-R-011` certifies entitlement/plan
+  behaviour at GA; payment-collection behaviour is deferred to Phase 2.
+- **White-label / subscription-aware branding tiers → Phase 2 (O10).** School branding + onboarding
+  branding are GA-ready; the tiered "Powered-by / footer / full-removal" gating and platform white-label
+  (API OFF live) are an Enterprise upsell tied to monetization. `QA-C-024` scopes to the GA-ready slice.
+
+**New Must-Before-GA build items** (added to the backlog): full UI i18n (O7) and **staff Face ID
+attendance** (O5 — student attendance stays teacher-entered, O4). Advanced attendance (geo-fencing /
+RFID / QR) and live GPS bus tracking are **Future Vision / Phase 2** respectively (O8/O9).
 
 ---
 
