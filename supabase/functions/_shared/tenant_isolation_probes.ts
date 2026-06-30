@@ -191,6 +191,22 @@ import {
   EDU_QUESTION_BANK_PROBE_SCHOOL_B,
   EDU_QUESTION_BANK_PROBE_SQL,
 } from "./education/education_repository.ts";
+import {
+  SCHOOL_BRANDING_PROBE_SCHOOL_A,
+  SCHOOL_BRANDING_PROBE_SCHOOL_B,
+  SCHOOL_BRANDING_PROBE_SQL,
+} from "./school_completion/branding_repository.ts";
+import {
+  SCHOOL_CONFIGURATION_PROBE_SCHOOL_A,
+  SCHOOL_CONFIGURATION_PROBE_SCHOOL_B,
+  SCHOOL_CONFIGURATION_PROBE_SQL,
+} from "./school_config/school_config_repository.ts";
+import {
+  ORGANIZATION_SUBSCRIPTION_PROBE_SQL,
+  SUBSCRIPTION_PROBE_ORG_A_ROW,
+  SUBSCRIPTION_PROBE_ORG_B,
+  SUBSCRIPTION_PROBE_ORG_B_ROW,
+} from "./entitlements/entitlement_repository.ts";
 
 export interface IsolationProbeResult {
   name: string;
@@ -261,6 +277,27 @@ function orgClaims(): AccessTokenClaims {
     sub: STAFF_A,
     tenant_id: ORG,
     organization_id: ORG,
+    school_id: null,
+    role: "organizationAdmin",
+    role_slugs: ["organizationAdmin"],
+    primary_role: "organizationAdmin",
+    permissions: [],
+    permissions_version: 1,
+    scope: "organization",
+    school_group_id: null,
+    student_id: null,
+    child_ids: [],
+    session_id: "probe",
+  };
+}
+
+// Org-scoped claim for a SECOND tenant (org B) — proves cross-org isolation of
+// the org-keyed organization_subscriptions table (QA-R-003).
+function orgBClaims(): AccessTokenClaims {
+  return {
+    sub: STAFF_A,
+    tenant_id: SUBSCRIPTION_PROBE_ORG_B,
+    organization_id: SUBSCRIPTION_PROBE_ORG_B,
     school_id: null,
     role: "organizationAdmin",
     role_slugs: ["organizationAdmin"],
@@ -2062,6 +2099,67 @@ export async function runEnforcedIsolationProbes(
   tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
     const n = await count(db, INTEL_RISK_API_PROBE_SQL);
     return { name: "parent_denied_intel_risk_api", pass: n === 0, detail: `visible_intel_risk_api=${n}` };
+  }));
+
+  // ── Per-school branding isolation (QA-R-004) ───────────────────────────────
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SCHOOL_BRANDING_PROBE_SQL, [SCHOOL_BRANDING_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_branding", pass: n === 1, detail: `visible_branding=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SCHOOL_BRANDING_PROBE_SQL, [SCHOOL_BRANDING_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_branding", pass: n === 0, detail: `visible_cross_school_branding=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_B), async (db) => {
+    const n = await count(db, SCHOOL_BRANDING_PROBE_SQL, [SCHOOL_BRANDING_PROBE_SCHOOL_A]);
+    return { name: "school_b_cannot_see_school_a_branding", pass: n === 0, detail: `visible_cross_school_branding=${n}` };
+  }));
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, SCHOOL_BRANDING_PROBE_SQL, [SCHOOL_BRANDING_PROBE_SCHOOL_A]);
+    return { name: "organization_denied_school_branding", pass: n === 0, detail: `visible_branding=${n}` };
+  }));
+
+  // ── Per-school configuration isolation (QA-R-004) ──────────────────────────
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SCHOOL_CONFIGURATION_PROBE_SQL, [SCHOOL_CONFIGURATION_PROBE_SCHOOL_A]);
+    return { name: "school_a_sees_own_configuration", pass: n === 1, detail: `visible_configuration=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, SCHOOL_CONFIGURATION_PROBE_SQL, [SCHOOL_CONFIGURATION_PROBE_SCHOOL_B]);
+    return { name: "school_a_cannot_see_school_b_configuration", pass: n === 0, detail: `visible_cross_school_configuration=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_B), async (db) => {
+    const n = await count(db, SCHOOL_CONFIGURATION_PROBE_SQL, [SCHOOL_CONFIGURATION_PROBE_SCHOOL_A]);
+    return { name: "school_b_cannot_see_school_a_configuration", pass: n === 0, detail: `visible_cross_school_configuration=${n}` };
+  }));
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, SCHOOL_CONFIGURATION_PROBE_SQL, [SCHOOL_CONFIGURATION_PROBE_SCHOOL_A]);
+    return { name: "organization_denied_school_configuration", pass: n === 0, detail: `visible_configuration=${n}` };
+  }));
+
+  // ── Per-org subscription isolation (QA-R-003) ──────────────────────────────
+  // organization_subscriptions is org-keyed (no school_id): both probe schools
+  // share org A's single subscription row, so the isolation axis is org A vs
+  // org B. A claim in org A must never read org B's subscription row.
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_A_ROW]);
+    return { name: "org_a_sees_own_subscription", pass: n === 1, detail: `visible_subscription=${n}` };
+  }));
+  tasks.push(() => runWithClaims(orgClaims(), async (db) => {
+    const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_B_ROW]);
+    return { name: "org_a_cannot_see_org_b_subscription", pass: n === 0, detail: `visible_cross_org_subscription=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_A_ROW]);
+    return { name: "school_a_sees_own_org_subscription", pass: n === 1, detail: `visible_subscription=${n}` };
+  }));
+  tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
+    const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_B_ROW]);
+    return { name: "school_a_cannot_see_org_b_subscription", pass: n === 0, detail: `visible_cross_org_subscription=${n}` };
+  }));
+  tasks.push(() => runWithClaims(orgBClaims(), async (db) => {
+    const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_A_ROW]);
+    return { name: "org_b_cannot_see_org_a_subscription", pass: n === 0, detail: `visible_cross_org_subscription=${n}` };
   }));
 
   const tests = await runProbeTasks(tasks);

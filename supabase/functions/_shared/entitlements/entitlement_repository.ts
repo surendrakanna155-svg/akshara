@@ -7,6 +7,21 @@
 
 import type { TenantQueryClient } from "../tenant_db.ts";
 
+// ── Tenant-isolation probes (QA-R-003 — per-org subscription isolation) ───────
+// organization_subscriptions is ORG-keyed (one row per org, no school_id; RLS:
+// organization_id = tenant AND scope IN ('organization','school')). The probe
+// org A is the pilot org both probe schools belong to; probe org B is a SECOND
+// tenant. A claim in org A (whether school- or org-scoped) must read only its
+// own org's subscription row and never org B's. SUBSCRIPTION_PROBE_ORG_A_ROW is
+// org A's own subscription row id (visible n=1); _ORG_B_ROW belongs to org B
+// (cross-tenant, must be n=0).
+export const SUBSCRIPTION_PROBE_ORG_B = "e3000000-0000-4000-8000-0000000000b1";
+export const SUBSCRIPTION_PROBE_ORG_A_ROW = "e3000000-0000-4000-8000-0000000000a1";
+export const SUBSCRIPTION_PROBE_ORG_B_ROW = "e3000000-0000-4000-8000-0000000000a2";
+export const ORGANIZATION_SUBSCRIPTION_PROBE_SQL = `
+  SELECT count(*)::text AS count FROM organization_subscriptions WHERE id = $1::uuid
+`;
+
 export interface PlanRow {
   slug: string;
   name: string;

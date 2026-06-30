@@ -1,5 +1,15 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 
+// ── Tenant-isolation probes (QA-R-004 — per-school branding isolation) ────────
+// Branding is school-scoped (RLS: organization_id = tenant AND school_id =
+// current_school). School A must read only its own branding row and never
+// School B's.
+export const SCHOOL_BRANDING_PROBE_SCHOOL_A = "e1000000-0000-4000-8000-000000000001";
+export const SCHOOL_BRANDING_PROBE_SCHOOL_B = "e1000000-0000-4000-8000-000000000002";
+export const SCHOOL_BRANDING_PROBE_SQL = `
+  SELECT count(*)::text AS count FROM school_branding WHERE id = $1::uuid
+`;
+
 export interface BrandingRow {
   id: string;
   organization_id: string;

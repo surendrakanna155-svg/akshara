@@ -7,6 +7,16 @@
 
 import type { TenantQueryClient } from "../tenant_db.ts";
 
+// ── Tenant-isolation probes (QA-R-004 — per-school configuration isolation) ───
+// Configuration is school-scoped (RLS: organization_id = tenant AND scope =
+// 'school' AND school_id = current_school). School A must read only its own
+// configuration row and never School B's.
+export const SCHOOL_CONFIGURATION_PROBE_SCHOOL_A = "e2000000-0000-4000-8000-000000000001";
+export const SCHOOL_CONFIGURATION_PROBE_SCHOOL_B = "e2000000-0000-4000-8000-000000000002";
+export const SCHOOL_CONFIGURATION_PROBE_SQL = `
+  SELECT count(*)::text AS count FROM school_configuration WHERE id = $1::uuid
+`;
+
 export interface SchoolConfigRow {
   schoolType: string;
   curriculum: string;
