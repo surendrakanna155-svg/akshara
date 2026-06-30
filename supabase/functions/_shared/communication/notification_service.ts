@@ -4,6 +4,7 @@ import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_re
 import { loadNotificationProviderConfig } from "./notification_provider_config.ts";
 import { sendViaProvider } from "./notification_providers.ts";
 import { renderTemplate } from "./template_renderer.ts";
+import { localizeNotification, normalizeParentLanguage } from "./parent_comms_localization.ts";
 import {
   enqueueDelivery,
   fetchActiveDeviceToken,
@@ -21,6 +22,13 @@ export interface EnqueueFromTemplateInput {
   category?: string;
   childContext?: string | null;
   route?: string | null;
+  /**
+   * QA-C-016: the recipient PARENT's preferred language (e.g. "te"). When set to
+   * a non-English supported language AND the template has a catalog variant, the
+   * subject/body are rendered from the deterministic parent-comms catalog (no
+   * LLM). Omitted / "en" / non-parent recipients keep the English DB template.
+   */
+  recipientLanguage?: string | null;
 }
 
 export async function enqueueFromTemplate(
@@ -36,10 +44,22 @@ export async function enqueueFromTemplate(
   if (!template) {
     throw new Error(`Template not found: ${input.templateCode}`);
   }
-  const subject = template.subject_template
+  // QA-C-016: deterministic, catalog-based parent-language localization. Only a
+  // non-English supported parent language with a catalogued template is localized;
+  // every other case keeps the existing English DB-template render (no regression,
+  // no LLM).
+  const language = normalizeParentLanguage(input.recipientLanguage);
+  const localized = language === "en"
+    ? null
+    : localizeNotification(input.templateCode, language, input.variables);
+  const subject = localized
+    ? localized.subject
+    : template.subject_template
     ? renderTemplate(template.subject_template, input.variables)
     : null;
-  const body = renderTemplate(template.body_template, input.variables);
+  const body = localized
+    ? localized.body
+    : renderTemplate(template.body_template, input.variables);
   return await enqueueDelivery(db, {
     organizationId: claims.tenant_id,
     schoolId,

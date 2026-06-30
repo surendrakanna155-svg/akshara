@@ -206,6 +206,30 @@ export async function getTemplateByCode(
   return rows[0] ?? null;
 }
 
+/**
+ * QA-C-016: resolves a recipient parent's stored language NAME from
+ * `parent_language_preferences` (student-specific pref first, then the global
+ * per-user pref), or `null` when none is set. Caller maps it to a code via
+ * `parentLanguageCodeFromName` and passes it as `recipientLanguage`.
+ */
+export async function getParentPreferredLanguageName(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  userId: string,
+  studentId?: string | null,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ language: string }>(
+    `SELECT language FROM parent_language_preferences
+     WHERE organization_id = $1 AND school_id = $2 AND user_id = $3
+       AND (student_id = $4 OR student_id IS NULL)
+     ORDER BY student_id NULLS LAST
+     LIMIT 1`,
+    [orgId, schoolId, userId, studentId ?? null],
+  );
+  return rows[0]?.language ?? null;
+}
+
 export async function listDeliveriesForUser(
   db: TenantQueryClient,
   orgId: string,

@@ -278,7 +278,23 @@ The waves are ordered so that **value and safety compound**:
 
 ## QW7 — Feature Behaviour Certification (MANDATORY)  ·  25 rows (`QA-C`)  ·  effort: L
 
-**Goal:** certify product quality from the **end-user's** perspective, not just technical coverage. A feature is **not complete** until its behaviour is fully verified: every element does the expected thing, in the right language, for the right role, producing the right notification, audit, and UI refresh.
+> **CLOSEOUT 2026-06-30 — locally-verifiable scope COMPLETE. EOS gate: PASS.** Of the 25 `QA-C` rows:
+> **21 Verified · 2 Won't-Build (scoped-out) · 2 Verified GA-slice**, with infra/Phase-2 legs marked
+> honestly. A 4-agent discovery-first pass classified every row and surfaced the **English-first
+> product pivot** (owner FINAL): full UI i18n is **CANCELLED** — `QA-C-015` (UI strings) + `QA-C-017`
+> (PDFs) are **Won't-Build**; `QA-C-016`/`QA-C-018` re-scoped to **Parent Communication Localization**
+> (deterministic, no-LLM: a multilingual template catalog + send-path seam + the existing
+> `parent_language_preferences` store; parent-AI generates natively in-language). The other 21 rows
+> certify end-user behaviour on top of QW1–QW6 coverage: per-app clickable-element + 4-state behaviour
+> (`001–007`), state-sweep cite (`008` = QW6 `QA-X-018/019`), the 7-point integrated workflow (`009`),
+> all five comm channels (`010–014`), the RBAC allow/deny-UX matrix (`019`), multi-hat/approvals
+> (`020` — **delegated permissions confirmed absent**, marked honestly), reliability E2E (`021`),
+> AI persona/permission/failure-modes (`022`), and the GA-ready white-label slice (`023/024`, tiers =
+> Phase-2 per O10) + local pilot behaviour (`025`). **168 new tests** (132 Flutter + 36 Deno),
+> `flutter analyze` 0 · `flutter test` **3106/0** · new+regressed Deno **121/0** · **zero defects**.
+> See [`QW7_COMPLETION_CERTIFICATION.md`](QW7_COMPLETION_CERTIFICATION.md).
+
+**Goal:** certify product quality from the **end-user's** perspective, not just technical coverage. A feature is **not complete** until its behaviour is fully verified: every element does the expected thing, in the right language (parent-facing comms only — English-first elsewhere), for the right role, producing the right notification, audit, and UI refresh.
 
 **Scope (`QA-C-001..025`):**
 - **UI behaviour** (`QA-C-001..008`) — per app/portal (Parent, Student, Teacher, ERP/Admin shell, Principal/Management, Director/Control-Center): every screen, widget, button, icon, dropdown, menu, form, dialog, bottom-sheet, search, filter, sort, pagination, and all four states (empty/loading/error/success) — **every clickable element performs its expected action**; plus an interaction-primitives sweep and a state sweep.

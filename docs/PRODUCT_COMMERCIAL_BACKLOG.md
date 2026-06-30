@@ -71,7 +71,7 @@ admissions, SIS, attendance, exams, fees/payments, messaging) plus the in-flight
 | **QW4** Backend API/RBAC/RLS/error-path | 🟢 in progress (this wave) |
 | **QW5** Secondary/advanced/verticals journeys | ✅ COMPLETE (`QW5_COMPLETION_CERTIFICATION.md`) — 12 V · 1 Partial (`QA-J-055` platform-ops live round-trip) · 1 Blocked (`QA-J-046` backup→restore **deferred to QW8 `QA-R-009`** per owner). White-label row (`QA-J-056`) re-scoped to GA-ready School Branding per O10. |
 | **QW6** Resilience & non-functional (offline cache, audit, import/export, perf, golden, security) | ✅ COMPLETE (`QW6_COMPLETION_CERTIFICATION.md`) — 17 V · 2 Verified-rescoped (`QA-X-021`/`QA-X-022`) · 1 Test-Written/infra-blocked (`QA-X-025` p95 cron) · 1 Blocked-MISSING-FEATURE (`QA-X-020` HR Excel import → deferred below). Owner decision (2026-06-30): **BUILD** the offline read-cache platform (`QA-X-004` shipped). |
-| **QW7** Feature Behaviour Certification (incl. i18n cert once O7 built) | Per roadmap |
+| **QW7** Feature Behaviour Certification | ✅ COMPLETE (`QW7_COMPLETION_CERTIFICATION.md`) — 21 Verified · 2 Won't-Build (UI/PDF i18n, English-first) · 2 Verified GA-slice (white-label). Built **Parent Communication Localization** (deterministic, no-LLM catalog) for `QA-C-016/018`. 168 new tests; flutter 3106/0; zero defects. |
 | **QW8** Production Readiness & Market Certification (incl. backup/DR, security, perf) | Per roadmap — GA gate |
 | **NEW: QW-Consolidation** (proposed, owner-review) | Unify the 14 overlapping surfaces below (North Star O3). See "Consolidation" section. |
 | Premium-module deepening: Lesson Planning, Syllabus depth, Scholarships/Discounts depth, Asset Mgmt | Fold into the relevant module's QW cert; not GA-blocking. |
