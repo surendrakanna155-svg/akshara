@@ -2,6 +2,10 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import type { FinanceInvoiceRow } from "./finance_invoices_repository.ts";
 import type { PaginationParams, PaginationResult } from "./finance_structures_repository.ts";
 import { isDateLocked } from "./finance_day_close_repository.ts";
+import {
+  allocateCollectionToHeads,
+  reverseCollectionFromHeads,
+} from "./finance_head_allocations_repository.ts";
 
 export type CollectionStatus =
   | "draft"
@@ -408,6 +412,18 @@ export async function createCollection(
     ],
   );
 
+  // FIN-D2: AFTER the (unchanged) outstanding reduction, allocate the collected
+  // amount across the invoice's fee heads (tuition first, then sort_order). This
+  // is a derived ledger — it does not read or write outstanding. Keeps the
+  // invariant SUM(head_paid) == amount_paid.
+  await allocateCollectionToHeads(
+    db,
+    organizationId,
+    schoolId,
+    invoice.id,
+    input.amountCollected,
+  );
+
   const updatedInvoiceRows = await db.queryObject<FinanceInvoiceRow>(
     `SELECT * FROM finance_invoices WHERE id = $1`,
     [invoice.id],
@@ -632,6 +648,17 @@ export async function cancelCollection(
         updated_at = timezone('utc', now())
        WHERE id = $2 AND organization_id = $3 AND school_id = $4`,
       [amount, collection.student_account_id, organizationId, schoolId],
+    );
+
+    // FIN-D2: reverse the head allocation in REVERSE priority order, exactly
+    // undoing the amount this collection had allocated. Runs AFTER the unchanged
+    // outstanding reversal; preserves SUM(head_paid) == amount_paid.
+    await reverseCollectionFromHeads(
+      db,
+      organizationId,
+      schoolId,
+      collection.invoice_id,
+      amount,
     );
   }
 

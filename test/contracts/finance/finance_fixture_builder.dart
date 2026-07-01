@@ -242,6 +242,7 @@ class FinanceFixtureBuilder {
   Map<String, dynamic> collectionDetailEnvelope(CollectionDetail detail) {
     return envelope({
       'feeAccountId': detail.feeAccountId,
+      'invoiceId': detail.invoiceId,
       'aiInsight': detail.aiInsight,
       'payment': collectionItem(detail.payment),
       'summaryKpis': [
@@ -285,6 +286,36 @@ class FinanceFixtureBuilder {
           },
       ],
     });
+  }
+
+  // FIN-6 — installment schedule list envelope.
+  Map<String, dynamic> installmentScheduleEnvelope(
+    List<InstallmentScheduleEntry> terms,
+  ) {
+    return listEnvelope([
+      for (final t in terms)
+        {
+          'id': t.id,
+          'termNo': t.termNo,
+          'termLabel': t.termLabel,
+          'dueDate': t.dueDate,
+          'amount': t.amount,
+          'status': t.status,
+        },
+    ]);
+  }
+
+  // FIN-9 — head-wise dues list envelope.
+  Map<String, dynamic> headWiseDuesEnvelope(List<HeadWiseDue> dues) {
+    return listEnvelope([
+      for (final d in dues)
+        {
+          'feeHead': d.feeHead,
+          'category': d.category,
+          'label': d.label,
+          'dues': d.dues,
+        },
+    ]);
   }
 
   Map<String, dynamic> defaultersEnvelope(DefaultersDashboardData data) {

@@ -307,6 +307,21 @@ class HybridFinanceRepository implements FinanceRepository {
   }) =>
       _api.getInvoice(query: query, invoiceId: invoiceId);
 
+  // ── FIN-6: invoice installment / due schedule ──────────────────────────────
+  @override
+  Future<List<InstallmentScheduleEntry>> getInvoiceInstallments({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) =>
+      _api.getInvoiceInstallments(query: query, invoiceId: invoiceId);
+
+  // ── FIN-9: head-wise dues analytics ────────────────────────────────────────
+  @override
+  Future<List<HeadWiseDue>> getHeadWiseDues({
+    required RepositoryQuery query,
+  }) =>
+      _api.getHeadWiseDues(query: query);
+
   @override
   Future<FinanceInvoice> issueInvoice({
     required RepositoryQuery query,

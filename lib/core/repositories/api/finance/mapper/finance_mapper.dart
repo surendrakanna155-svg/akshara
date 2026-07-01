@@ -198,6 +198,7 @@ class FinanceMapper {
     return CollectionDetail(
       payment: toCollectionPayment(CollectionPaymentDto.fromJson(paymentRaw)),
       feeAccountId: raw['feeAccountId'] as String? ?? '',
+      invoiceId: raw['invoiceId'] as String? ?? '',
       aiInsight: raw['aiInsight'] as String? ?? '',
       summaryKpis: _mapKpis(raw['summaryKpis'] as List<dynamic>? ?? const []),
       paymentTimeline: _mapPaymentTimeline(
@@ -545,6 +546,43 @@ class FinanceMapper {
       cancelledBy: raw['cancelledBy'] as String? ?? '',
       cancelledByName: raw['cancelledByName'] as String? ?? '',
       cancelledAt: raw['cancelledAt'] as String? ?? '',
+    );
+  }
+
+  // ── FIN-6: invoice installment schedule ────────────────────────────────────
+  List<InstallmentScheduleEntry> toInvoiceInstallments(
+    InstallmentScheduleResponseDto dto,
+  ) {
+    return [for (final item in dto.items) _toInstallmentScheduleEntry(item)];
+  }
+
+  InstallmentScheduleEntry _toInstallmentScheduleEntry(
+    InstallmentScheduleEntryDto dto,
+  ) {
+    final raw = dto.raw;
+    final termNo = (raw['termNo'] as num?)?.toInt() ?? 0;
+    return InstallmentScheduleEntry(
+      id: raw['id'] as String? ?? '',
+      termNo: termNo,
+      termLabel: raw['termLabel'] as String? ?? 'Term $termNo',
+      dueDate: raw['dueDate'] as String? ?? '',
+      amount: raw['amount'] as String? ?? '0',
+      status: raw['status'] as String? ?? 'pending',
+    );
+  }
+
+  // ── FIN-9: head-wise dues analytics ────────────────────────────────────────
+  List<HeadWiseDue> toHeadWiseDues(HeadWiseDuesResponseDto dto) {
+    return [for (final item in dto.items) _toHeadWiseDue(item)];
+  }
+
+  HeadWiseDue _toHeadWiseDue(HeadWiseDueDto dto) {
+    final raw = dto.raw;
+    return HeadWiseDue(
+      feeHead: raw['feeHead'] as String? ?? '',
+      category: raw['category'] as String? ?? '',
+      label: raw['label'] as String? ?? '',
+      dues: raw['dues'] as String? ?? '0',
     );
   }
 

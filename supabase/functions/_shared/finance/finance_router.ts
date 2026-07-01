@@ -45,6 +45,8 @@ import {
   handleFinanceCopilot,
   handleFinanceExecutiveDashboard,
 } from "./finance_intelligence_handlers.ts";
+import { handleListInvoiceInstallments } from "./finance_installments_handlers.ts";
+import { handleHeadWiseDues } from "./finance_analytics_handlers.ts";
 import {
   handleGetGoodsReceipt,
   handleInventoryFinanceTimeline,
@@ -112,6 +114,11 @@ export function matchFinanceRoute(
   }
   if (path === "/finance/intelligence/executive" && method === "GET") {
     return { handler: handleFinanceExecutiveDashboard, args: [] };
+  }
+
+  // FIN-9: head-wise dues + outstanding analytics (read → viewFinance).
+  if (path === "/finance/analytics/head-wise-dues" && method === "GET") {
+    return { handler: handleHeadWiseDues, args: [] };
   }
 
   if (path === "/finance/inventory-reconciliation/dashboard" && method === "GET") {
@@ -249,6 +256,15 @@ export function matchFinanceRoute(
   );
   if (waiveLateFeeMatch && method === "POST") {
     return { handler: handleWaiveLateFee, args: [waiveLateFeeMatch[1]!] };
+  }
+
+  // FIN-6: invoice installment schedule — matched BEFORE the bare invoice GET so
+  // the /installments suffix isn't swallowed by the single-segment regex.
+  const invoiceInstallmentsMatch = path.match(
+    /^\/finance\/invoices\/([^/]+)\/installments$/,
+  );
+  if (invoiceInstallmentsMatch && method === "GET") {
+    return { handler: handleListInvoiceInstallments, args: [invoiceInstallmentsMatch[1]!] };
   }
 
   const invoiceMatch = path.match(/^\/finance\/invoices\/([^/]+)$/);

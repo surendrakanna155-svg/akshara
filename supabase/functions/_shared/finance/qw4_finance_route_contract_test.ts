@@ -92,6 +92,8 @@ const routes: RouteCase[] = [
   // viewFinanceIntelligence) via requireAnyPermission — EITHER alone authorizes
   // (here: only viewFinanceIntelligence → pass); a token holding NEITHER (viewFinance) is denied.
   { method: "GET", path: "/finance/intelligence/executive", holder: ["viewFinanceIntelligence"], other: ["viewFinance"] },
+  // FIN-9: head-wise dues analytics (read → viewFinance)
+  { method: "GET", path: "/finance/analytics/head-wise-dues", holder: ["viewFinance"], other: ["viewInventory"] },
   // inventory-reconciliation (gate: viewFinance)
   { method: "GET", path: "/finance/inventory-reconciliation/dashboard", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "GET", path: "/finance/inventory-reconciliation/timeline", holder: ["viewFinance"], other: ["viewInventory"] },
@@ -132,6 +134,8 @@ const routes: RouteCase[] = [
   // FIN-D5: waive a single invoice's late fee (write → manageFinance)
   { method: "POST", path: `/finance/invoices/${ID}/waive-late-fee`, holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: `/finance/invoices/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
+  // FIN-6: invoice installment schedule (read → viewFinance)
+  { method: "GET", path: `/finance/invoices/${ID}/installments`, holder: ["viewFinance"], other: ["viewInventory"] },
   // refunds (approve/reject gate on approveRefunds — see QA-B-015)
   { method: "GET", path: "/finance/refunds", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "POST", path: "/finance/refunds", holder: ["manageFinance"], other: ["viewFinance"] },

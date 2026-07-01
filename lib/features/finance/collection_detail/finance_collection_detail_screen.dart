@@ -21,6 +21,7 @@ import '../receipts/finance_receipt_pdf_service.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_collection_detail_provider.dart';
+import 'finance_installments_provider.dart';
 
 /// FN-06 — Collection detail for a single payment.
 class FinanceCollectionDetailScreen extends ConsumerWidget {
@@ -147,6 +148,13 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
           )
         else
           _InstallmentHistoryTable(installments: detail.installmentHistory),
+        // FIN-6: term-wise due schedule for this collection's invoice.
+        if (detail.invoiceId.isNotEmpty) ...[
+          const SizedBox(height: AksharaSpacing.s6),
+          const AksharaSectionHeader(title: 'Due schedule'),
+          const SizedBox(height: AksharaSpacing.s3),
+          _InstallmentScheduleSection(invoiceId: detail.invoiceId),
+        ],
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Receipt links'),
         const SizedBox(height: AksharaSpacing.s3),
@@ -281,6 +289,140 @@ class _InstallmentHistoryTable extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// FIN-6 — informational term-wise due schedule for the invoice. Async-loaded
+/// via [financeInvoiceInstallmentsFutureProvider]; renders a table (desktop) or
+/// cards (mobile). Hides itself gracefully while loading / on error / when empty.
+class _InstallmentScheduleSection extends ConsumerWidget {
+  const _InstallmentScheduleSection({required this.invoiceId});
+
+  final String invoiceId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async =
+        ref.watch(financeInvoiceInstallmentsFutureProvider(invoiceId));
+    return async.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s3),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => Text(
+        'Could not load the due schedule.',
+        style: context.aksharaText.bodySmall,
+      ),
+      data: (installments) {
+        if (installments.isEmpty) {
+          return Text(
+            'No installment schedule for this invoice.',
+            style: context.aksharaText.bodySmall,
+          );
+        }
+        final useCards = AdminLayout.useCardLayout(context);
+        if (useCards) {
+          return Column(
+            children: [
+              for (final term in installments) ...[
+                _InstallmentScheduleCard(term: term),
+                const SizedBox(height: AksharaSpacing.s3),
+              ],
+            ],
+          );
+        }
+        return _InstallmentScheduleTable(installments: installments);
+      },
+    );
+  }
+}
+
+class _InstallmentScheduleTable extends StatelessWidget {
+  const _InstallmentScheduleTable({required this.installments});
+
+  final List<InstallmentScheduleEntry> installments;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: 'Due schedule, ${installments.length} terms',
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowHeight: 48,
+          dataRowMinHeight: 52,
+          dataRowMaxHeight: 64,
+          columns: const [
+            DataColumn(label: Text('Term')),
+            DataColumn(label: Text('Due date')),
+            DataColumn(label: Text('Amount')),
+            DataColumn(label: Text('Status')),
+          ],
+          rows: [
+            for (final term in installments)
+              DataRow(
+                cells: [
+                  DataCell(Text(term.termLabel)),
+                  DataCell(Text(term.dueDate)),
+                  DataCell(Text(term.amount)),
+                  DataCell(_InstallmentStatusChip(status: term.status)),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InstallmentScheduleCard extends StatelessWidget {
+  const _InstallmentScheduleCard({required this.term});
+
+  final InstallmentScheduleEntry term;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final text = context.aksharaText;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(term.termLabel, style: text.titleSmall),
+            const SizedBox(height: AksharaSpacing.s2),
+            Text('Due ${term.dueDate} · ${term.amount}', style: text.bodySmall),
+            const SizedBox(height: AksharaSpacing.s2),
+            _InstallmentStatusChip(status: term.status),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InstallmentStatusChip extends StatelessWidget {
+  const _InstallmentStatusChip({required this.status});
+
+  /// 'pending' | 'due' | 'paid'
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, tone) = switch (status) {
+      'paid' => ('Paid', KpiAccent.success),
+      'due' => ('Due', KpiAccent.warning),
+      _ => ('Pending', KpiAccent.primary),
+    };
+    return AksharaStatusChip(label: label, tone: tone);
   }
 }
 

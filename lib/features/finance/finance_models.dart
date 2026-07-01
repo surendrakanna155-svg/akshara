@@ -569,6 +569,7 @@ class CollectionDetail {
     required this.receiptLinks,
     required this.feeAccountId,
     required this.aiInsight,
+    this.invoiceId = '',
   });
 
   final CollectionPayment payment;
@@ -578,6 +579,10 @@ class CollectionDetail {
   final List<ReceiptLink> receiptLinks;
   final String feeAccountId;
   final String aiInsight;
+
+  /// FIN-6: the invoice this collection was applied to (drives the installment
+  /// schedule lookup). Empty when the backend doesn't supply one.
+  final String invoiceId;
 }
 
 @immutable
@@ -661,6 +666,47 @@ class DefaultersDashboardData {
   final List<DefaulterRecord> defaulters;
   final String aiInsight;
   final String aiActionLabel;
+}
+
+/// FIN-6 — one term of an invoice's informational installment / due schedule.
+/// Purely for display + reminders; the invoice's single outstanding stays
+/// authoritative (no per-term money movement).
+@immutable
+class InstallmentScheduleEntry {
+  const InstallmentScheduleEntry({
+    required this.id,
+    required this.termNo,
+    required this.termLabel,
+    required this.dueDate,
+    required this.amount,
+    required this.status,
+  });
+
+  final String id;
+  final int termNo;
+  final String termLabel;
+  final String dueDate;
+  final String amount;
+
+  /// 'pending' | 'due' | 'paid' (as emitted by the backend).
+  final String status;
+}
+
+/// FIN-9 — outstanding dues rolled up per fee head across open invoices.
+@immutable
+class HeadWiseDue {
+  const HeadWiseDue({
+    required this.feeHead,
+    required this.category,
+    required this.label,
+    required this.dues,
+  });
+
+  /// Raw "category:label" head key.
+  final String feeHead;
+  final String category;
+  final String label;
+  final String dues;
 }
 
 /// FIN-R3 — promise-to-pay commitment status.

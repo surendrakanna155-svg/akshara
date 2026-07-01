@@ -81,3 +81,57 @@ class StudentLedgerDto {
 
   final Map<String, dynamic> raw;
 }
+
+// ── FIN-6: invoice installment schedule ──────────────────────────────────────
+class InstallmentScheduleEntryDto {
+  const InstallmentScheduleEntryDto({required this.raw});
+
+  factory InstallmentScheduleEntryDto.fromJson(Map<String, dynamic> json) {
+    return InstallmentScheduleEntryDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class InstallmentScheduleResponseDto {
+  const InstallmentScheduleResponseDto({required this.items});
+
+  factory InstallmentScheduleResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return InstallmentScheduleResponseDto(
+      items: [
+        for (final item in envelope.requireListItems())
+          InstallmentScheduleEntryDto.fromJson(item),
+      ],
+    );
+  }
+
+  final List<InstallmentScheduleEntryDto> items;
+}
+
+// ── FIN-9: head-wise dues analytics ──────────────────────────────────────────
+class HeadWiseDueDto {
+  const HeadWiseDueDto({required this.raw});
+
+  factory HeadWiseDueDto.fromJson(Map<String, dynamic> json) {
+    return HeadWiseDueDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class HeadWiseDuesResponseDto {
+  const HeadWiseDuesResponseDto({required this.items});
+
+  factory HeadWiseDuesResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return HeadWiseDuesResponseDto(
+      items: [
+        for (final item in envelope.requireListItems())
+          HeadWiseDueDto.fromJson(item),
+      ],
+    );
+  }
+
+  final List<HeadWiseDueDto> items;
+}

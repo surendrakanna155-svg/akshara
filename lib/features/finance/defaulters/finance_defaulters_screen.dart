@@ -23,6 +23,7 @@ import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
 import '../widgets/finance_responsive_grid.dart';
 import 'finance_defaulters_provider.dart';
+import 'finance_head_wise_dues_provider.dart';
 
 /// FN-07 — Defaulters, aging analysis, and fee-recovery CRM (FIN-R1..R5, FIN-8).
 class FinanceDefaultersScreen extends ConsumerWidget {
@@ -81,6 +82,9 @@ class FinanceDefaultersScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s6),
         // FIN-R3 — promise-to-pay worklist.
         const _PromiseWorklistSection(),
+        const SizedBox(height: AksharaSpacing.s6),
+        // FIN-9 — head-wise outstanding dues.
+        const _HeadWiseDuesSection(),
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Aging buckets'),
         const SizedBox(height: AksharaSpacing.s3),
@@ -202,6 +206,57 @@ class _DefaulterExportActions extends ConsumerWidget {
 }
 
 /// FIN-R1/R5 — recovery KPIs and collector performance table.
+/// FIN-9 — per-fee-head outstanding dues across open invoices. Async-loaded via
+/// [financeHeadWiseDuesFutureProvider]; hides itself while loading / on error /
+/// when there are no dues.
+class _HeadWiseDuesSection extends ConsumerWidget {
+  const _HeadWiseDuesSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(financeHeadWiseDuesFutureProvider);
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (dues) {
+        if (dues.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AksharaSectionHeader(title: 'Head-wise dues'),
+            const SizedBox(height: AksharaSpacing.s3),
+            Semantics(
+              container: true,
+              label: 'Head-wise dues, ${dues.length} fee heads',
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowHeight: 44,
+                  dataRowMinHeight: 44,
+                  dataRowMaxHeight: 56,
+                  columns: const [
+                    DataColumn(label: Text('Fee head')),
+                    DataColumn(label: Text('Outstanding')),
+                  ],
+                  rows: [
+                    for (final due in dues)
+                      DataRow(cells: [
+                        DataCell(Text(due.label.isNotEmpty
+                            ? due.label
+                            : due.category)),
+                        DataCell(Text('₹${due.dues}')),
+                      ]),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _RecoverySection extends ConsumerWidget {
   const _RecoverySection();
 

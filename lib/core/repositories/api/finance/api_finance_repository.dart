@@ -473,6 +473,28 @@ class ApiFinanceRepository implements FinanceRepository {
     return _mapper.toFinanceInvoice(dto);
   }
 
+  // ── FIN-6: invoice installment / due schedule ──────────────────────────────
+  @override
+  Future<List<InstallmentScheduleEntry>> getInvoiceInstallments({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final dto = await _remote.fetchInvoiceInstallments(
+      query: query,
+      invoiceId: invoiceId,
+    );
+    return _mapper.toInvoiceInstallments(dto);
+  }
+
+  // ── FIN-9: head-wise dues analytics ────────────────────────────────────────
+  @override
+  Future<List<HeadWiseDue>> getHeadWiseDues({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchHeadWiseDues(query: query);
+    return _mapper.toHeadWiseDues(dto);
+  }
+
   @override
   Future<FinanceInvoice> issueInvoice({
     required RepositoryQuery query,

@@ -281,6 +281,7 @@ class MockFinanceRepository implements FinanceRepository {
         return CollectionDetail(
           payment: payment,
           feeAccountId: _accountIdForAdmission(payment.admissionNumber),
+          invoiceId: _store.invoices.isNotEmpty ? _store.invoices.first.id : '',
           summaryKpis: [
             FinanceKpi(
               id: 'amount',
@@ -1549,6 +1550,72 @@ class MockFinanceRepository implements FinanceRepository {
       if (invoice.id == invoiceId) return invoice;
     }
     return null;
+  }
+
+  // ── FIN-6: invoice installment / due schedule ──────────────────────────────
+  @override
+  Future<List<InstallmentScheduleEntry>> getInvoiceInstallments({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final invoice = _store.invoices.cast<FinanceInvoice?>().firstWhere(
+          (item) => item?.id == invoiceId,
+          orElse: () => null,
+        );
+    if (invoice == null) return const [];
+    // Representative 3-term schedule that sums to the invoice total.
+    final total = _parseFinanceAmount(invoice.totalAmount);
+    final outstanding = _parseFinanceAmount(invoice.outstandingAmount);
+    final paid = (total - outstanding).clamp(0.0, total);
+    final per = total / 3;
+    final terms = <InstallmentScheduleEntry>[];
+    var cumulative = 0.0;
+    for (var i = 0; i < 3; i++) {
+      final amount = i == 2 ? (total - cumulative) : per;
+      cumulative += amount;
+      final status = cumulative <= paid
+          ? 'paid'
+          : (i == 0 ? 'due' : 'pending');
+      terms.add(
+        InstallmentScheduleEntry(
+          id: '${invoice.id}_t${i + 1}',
+          termNo: i + 1,
+          termLabel: 'Term ${i + 1}',
+          dueDate: invoice.dueDate,
+          amount: _formatFinanceAmount(amount),
+          status: status,
+        ),
+      );
+    }
+    return terms;
+  }
+
+  // ── FIN-9: head-wise dues analytics ────────────────────────────────────────
+  @override
+  Future<List<HeadWiseDue>> getHeadWiseDues({
+    required RepositoryQuery query,
+  }) async {
+    // Representative rollup keyed by common fee heads.
+    return const [
+      HeadWiseDue(
+        feeHead: 'tuition:Tuition',
+        category: 'tuition',
+        label: 'Tuition',
+        dues: '184000',
+      ),
+      HeadWiseDue(
+        feeHead: 'transport:Transport',
+        category: 'transport',
+        label: 'Transport',
+        dues: '62000',
+      ),
+      HeadWiseDue(
+        feeHead: 'lab:Laboratory',
+        category: 'lab',
+        label: 'Laboratory',
+        dues: '28500',
+      ),
+    ];
   }
 
   @override

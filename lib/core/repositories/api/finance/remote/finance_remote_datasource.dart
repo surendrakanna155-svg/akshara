@@ -262,6 +262,29 @@ class FinanceRemoteDataSource {
     return CancelledCollectionsResponseDto.fromJson(_responseMap(response));
   }
 
+  // ── FIN-6: invoice installment schedule ────────────────────────────────────
+  Future<InstallmentScheduleResponseDto> fetchInvoiceInstallments({
+    required RepositoryQuery query,
+    required String invoiceId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.invoiceInstallments(invoiceId),
+      queryParameters: _queryParams(query),
+    );
+    return InstallmentScheduleResponseDto.fromJson(_responseMap(response));
+  }
+
+  // ── FIN-9: head-wise dues analytics ────────────────────────────────────────
+  Future<HeadWiseDuesResponseDto> fetchHeadWiseDues({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.analyticsHeadWiseDues,
+      queryParameters: _queryParams(query),
+    );
+    return HeadWiseDuesResponseDto.fromJson(_responseMap(response));
+  }
+
   // ── FIN-D5: late-fee accrual + waive ───────────────────────────────────────
   Future<LateFeeAccrualResultDto> accrueLateFees({
     required RepositoryQuery query,

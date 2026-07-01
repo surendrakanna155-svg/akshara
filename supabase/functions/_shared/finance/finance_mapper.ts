@@ -239,6 +239,67 @@ export function invoiceToApi(row: FinanceInvoiceRow): Record<string, unknown> {
   };
 }
 
+// FIN-6 — one installment (term) of the invoice's informational due schedule.
+export function installmentToApi(
+  row: {
+    id: string;
+    invoice_id: string;
+    term_no: number;
+    due_date: string;
+    amount_minor: string;
+    status: string;
+  },
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    invoiceId: row.invoice_id,
+    termNo: row.term_no,
+    termLabel: `Term ${row.term_no}`,
+    dueDate: row.due_date,
+    amount: formatAmount(row.amount_minor),
+    status: row.status,
+  };
+}
+
+// FIN-D2 — one head-allocation row (per-head total + paid + remaining).
+export function headAllocationToApi(
+  row: {
+    fee_head: string;
+    head_label: string;
+    head_total_minor: string;
+    head_paid_minor: string;
+    sort_order: number;
+    priority: number;
+  },
+): Record<string, unknown> {
+  const total = parseFloat(row.head_total_minor) || 0;
+  const paid = parseFloat(row.head_paid_minor) || 0;
+  const { category } = decodeFeeHead(row.fee_head);
+  return {
+    feeHead: row.fee_head,
+    category,
+    label: row.head_label,
+    total: formatAmount(total),
+    paid: formatAmount(paid),
+    remaining: formatAmount(Math.max(0, total - paid)),
+    sortOrder: row.sort_order,
+    priority: row.priority,
+  };
+}
+
+// FIN-9 — one head-wise dues row (per fee head, outstanding across open invoices).
+export function headWiseDueToApi(
+  row: { fee_head: string; head_label: string; dues: string },
+): Record<string, unknown> {
+  const { category } = decodeFeeHead(row.fee_head);
+  return {
+    feeHead: row.fee_head,
+    category,
+    label: row.head_label,
+    dues: formatAmount(row.dues),
+  };
+}
+
 export function dailySummaryToApi(data: DailySummaryData): Record<string, unknown> {
   return {
     todayCollections: formatAmount(data.todayCollections),
@@ -332,6 +393,9 @@ export function collectionDetailToApi(
   return {
     payment: collectionPaymentToApi(row),
     feeAccountId: row.student_account_id,
+    // FIN-6: expose the invoice id so the client can load the installment
+    // schedule for this collection's invoice (additive; existing fields unchanged).
+    invoiceId: row.invoice_id,
     aiInsight: "",
     summaryKpis: [
       {

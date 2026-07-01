@@ -175,6 +175,17 @@ abstract class FinanceRepository {
     required String invoiceId,
   });
 
+  // ── FIN-6: invoice installment / due schedule ──────────────────────────────
+  Future<List<InstallmentScheduleEntry>> getInvoiceInstallments({
+    required RepositoryQuery query,
+    required String invoiceId,
+  });
+
+  // ── FIN-9: head-wise dues analytics ────────────────────────────────────────
+  Future<List<HeadWiseDue>> getHeadWiseDues({
+    required RepositoryQuery query,
+  });
+
   Future<FinanceInvoice> issueInvoice({
     required RepositoryQuery query,
     required String invoiceId,

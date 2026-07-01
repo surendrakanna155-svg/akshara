@@ -6,6 +6,7 @@ import 'package:akshara_erp/core/repositories/api/finance/dto/finance_defaulters
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_discounts_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_fee_structures_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_invoices_dto.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/finance_d_features_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_refunds_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_reports_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_settings_dto.dart';
@@ -437,6 +438,41 @@ void main() {
       final history = mapper.toInstallmentHistory(mapped);
       expect(history.termLabel, 'Annual');
       expect(history.amount, mapped.totalAmount);
+    });
+
+    // FIN-6 — invoice installment schedule round-trip.
+    test('getInvoiceInstallments DTO mapping matches mock output', () async {
+      final mockData = await mockRepo.getInvoiceInstallments(
+        query: kQuery,
+        invoiceId: 'inv_1',
+      );
+      final mapped = const FinanceMapper().toInvoiceInstallments(
+        InstallmentScheduleResponseDto.fromJson(
+          _fixtures.installmentScheduleEnvelope(mockData),
+        ),
+      );
+      expect(mapped.length, mockData.length);
+      if (mockData.isNotEmpty) {
+        expect(mapped.first.termNo, mockData.first.termNo);
+        expect(mapped.first.amount, mockData.first.amount);
+        expect(mapped.first.status, mockData.first.status);
+      }
+    });
+
+    // FIN-9 — head-wise dues round-trip.
+    test('getHeadWiseDues DTO mapping matches mock output', () async {
+      final mockData = await mockRepo.getHeadWiseDues(query: kQuery);
+      final mapped = const FinanceMapper().toHeadWiseDues(
+        HeadWiseDuesResponseDto.fromJson(
+          _fixtures.headWiseDuesEnvelope(mockData),
+        ),
+      );
+      expect(mapped.length, mockData.length);
+      if (mockData.isNotEmpty) {
+        expect(mapped.first.feeHead, mockData.first.feeHead);
+        expect(mapped.first.label, mockData.first.label);
+        expect(mapped.first.dues, mockData.first.dues);
+      }
     });
 
     test('getDiscountsDashboard DTO mapping matches mock output', () async {

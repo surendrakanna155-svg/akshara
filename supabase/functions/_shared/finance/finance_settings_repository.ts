@@ -121,6 +121,32 @@ export const FINANCE_SETTINGS_TEMPLATE: SettingSectionTemplate[] = [
           "Maximum late fee per invoice (0 = no cap).",
         editable: true,
       },
+      // FIN-6 — due-date & installment schedule controls.
+      {
+        id: "due_days",
+        label: "Invoice Due (days)",
+        defaultValue: "30",
+        description:
+          "Days after issue that a new invoice is due (single annual term).",
+        editable: true,
+      },
+      {
+        id: "installment_terms",
+        label: "Installment Terms",
+        defaultValue: "1",
+        description:
+          "Number of terms, or a CSV of per-term due-day offsets (e.g. '0,90,180'). '1' = single annual due schedule.",
+        editable: true,
+      },
+      // FIN-D2 — per-head allocation priority.
+      {
+        id: "head_allocation_priority",
+        label: "Fee-head Allocation Priority",
+        defaultValue: "tuition_first",
+        description:
+          "Order part-payments are allocated across fee heads. Currently only 'tuition_first' is implemented.",
+        editable: true,
+      },
     ],
   },
 ];
@@ -157,6 +183,31 @@ export function settingsToApi(
       }),
     })),
   };
+}
+
+/**
+ * Reads a single finance setting value (keyed "<sectionId>.<itemId>") from the
+ * stored overrides, falling back to the canonical template default and then to
+ * the supplied `fallback`. Used by the money path (FIN-6 due-days / installment
+ * terms, FIN-D2 allocation priority) to read config WITHOUT altering behaviour:
+ * an unconfigured school always resolves to the documented default.
+ */
+export async function getFinanceSettingValue(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  sectionId: string,
+  itemId: string,
+  fallback: string,
+): Promise<string> {
+  const row = await getSettingsRow(db, organizationId, schoolId);
+  const key = settingsKey(sectionId, itemId);
+  const stored = row?.settings?.[key];
+  if (stored != null && String(stored).trim() !== "") return String(stored);
+  const templateDefault = FINANCE_SETTINGS_TEMPLATE
+    .find((s) => s.id === sectionId)?.items
+    .find((i) => i.id === itemId)?.defaultValue;
+  return templateDefault ?? fallback;
 }
 
 export async function getSettingsRow(

@@ -66,6 +66,21 @@ void main() {
       );
     });
 
+    // FIN-6 / FIN-9 — new additive routes.
+    test('invoice installments path matches deployed route', () {
+      expect(
+        FinanceApiPaths.invoiceInstallments('inv-1'),
+        '/finance/invoices/inv-1/installments',
+      );
+    });
+
+    test('head-wise dues analytics path matches deployed route', () {
+      expect(
+        FinanceApiPaths.analyticsHeadWiseDues,
+        '/finance/analytics/head-wise-dues',
+      );
+    });
+
     test('collection paths match deployed routes', () {
       expect(FinanceApiPaths.collections, '/finance/collections');
       expect(

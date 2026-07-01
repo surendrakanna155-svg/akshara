@@ -1,5 +1,8 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type { PaginationParams, PaginationResult } from "./finance_structures_repository.ts";
+import { getFinanceSettingValue } from "./finance_settings_repository.ts";
+import { generateInstallmentSchedule } from "./finance_installments_repository.ts";
+import { seedHeadAllocations } from "./finance_head_allocations_repository.ts";
 
 export type InvoiceStatus =
   | "draft"
@@ -93,7 +96,14 @@ export async function createAnnualInvoice(
 
   const now = new Date();
   const invoiceDate = addDaysIso(now, 0);
-  const dueDate = addDaysIso(now, 30);
+  // FIN-6: due date driven by the school's `payments.due_days` setting (default
+  // "30") instead of the previous hardcoded +30. An unconfigured school still
+  // resolves to 30 — behaviour-preserving by default.
+  const dueDays = parseInt(
+    await getFinanceSettingValue(db, organizationId, schoolId, "payments", "due_days", "30"),
+    10,
+  );
+  const dueDate = addDaysIso(now, Number.isFinite(dueDays) ? dueDays : 30);
   const total = input.totalAmount;
   const invoiceNumber = buildInvoiceNumber(input.academicYear);
 
@@ -119,7 +129,32 @@ export async function createAnnualInvoice(
     ],
   );
 
-  return rows[0]!;
+  const invoice = rows[0]!;
+
+  // FIN-6: generate the informational term-wise due schedule (does NOT create
+  // extra invoices; the single outstanding stays authoritative).
+  await generateInstallmentSchedule(
+    db,
+    organizationId,
+    schoolId,
+    invoice.id,
+    invoiceDate,
+    total,
+  );
+
+  // FIN-D2: seed the per-head allocation ledger from the structure items linked
+  // via the assignment (falls back to one "General" head = total). Derived
+  // ledger only — the invoice outstanding is untouched.
+  await seedHeadAllocations(
+    db,
+    organizationId,
+    schoolId,
+    invoice.id,
+    input.feeAssignmentId,
+    total,
+  );
+
+  return invoice;
 }
 
 export async function listInvoices(

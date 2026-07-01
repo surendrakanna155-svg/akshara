@@ -56,6 +56,12 @@ abstract final class FinanceApiPaths {
   // FIN-D5: waive a single invoice's late fee.
   static String invoiceWaiveLateFee(String id) => '${invoice(id)}/waive-late-fee';
 
+  // FIN-6: invoice installment / due schedule.
+  static String invoiceInstallments(String id) => '${invoice(id)}/installments';
+
+  // FIN-9: head-wise dues + outstanding analytics.
+  static const String analyticsHeadWiseDues = '$base/analytics/head-wise-dues';
+
   // FIN-2: printable student ledger / fee statement.
   static String studentLedger(String studentAccountId) =>
       '${studentAccount(studentAccountId)}/ledger';
