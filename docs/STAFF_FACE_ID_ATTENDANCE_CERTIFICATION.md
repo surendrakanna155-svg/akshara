@@ -6,6 +6,17 @@
 **live** deploy + on-device cert pass (see "Honest residual").
 **Gate:** Engineering Operating System (`/eos`).
 
+> ⚠️ **AUTH MODEL SUPERSEDED — FINAL owner decision 2026-07-01.** This certification's attendance
+> authentication (a **device-biometric hard-block** — Face ID / fingerprint via `local_auth` /
+> `biometricVerified`, **no GPS, no camera face match**) is **no longer the product design.** Attendance
+> auth is now **GPS geofence → anti-mock location validation → live camera face verification →
+> check-in/out**, and **MUST NEVER** use fingerprint / Touch ID / PIN / password / device-biometric
+> fallback (device OS biometric is allowed for **app login only**). See
+> [`ATTENDANCE_AUTH_DESIGN_DECISION.md`](ATTENDANCE_AUTH_DESIGN_DECISION.md). The ledger / RBAC / audit /
+> offline scaffolding below is reusable; the **authentication mechanism is superseded** and must be
+> **re-implemented** before B4 can certify (tracked P1 gap). The green results below remain historically
+> accurate for what was built — they do **not** certify the current design.
+
 ---
 
 ## Verdict

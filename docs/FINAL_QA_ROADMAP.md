@@ -12,6 +12,8 @@
 
 > **Engineering gate:** This plan is governed by the Engineering Operating System (`/eos`) per [`engineering/ENGINEERING_GATE_POLICY.md`](engineering/ENGINEERING_GATE_POLICY.md). No wave or row here is "complete" until `/eos <scope>` returns PASS against the [Engineering Constitution](engineering/AKSHARA_ENGINEERING_CONSTITUTION.md). The EOS is the only engineering standard for this work — do not add bespoke checklists.
 
+> **⏭ ROADMAP CONTINUES BELOW QW8 (added 2026-07-01).** QW1–QW8 + Phase 0 are **historical, completed, and frozen** (this document does not modify a single certification, tracker entry, or milestone above the "NEXT-GENERATION ROADMAP" divider). The engineering program now continues with three new phases after QW8: **Phase B — Release Engineering** (the Track B live-VPS validation that currently blocks GA `QA-R-012`), **Phase C — Product Enhancement Implementation** (post-GA, sourced only from the frozen [`PRODUCT_ENHANCEMENT_BACKLOG.md`](PRODUCT_ENHANCEMENT_BACKLOG.md)), and **Phase D — Future / Phase 2 / Commercial** (sourced only from [`PRODUCT_COMMERCIAL_BACKLOG.md`](PRODUCT_COMMERCIAL_BACKLOG.md)). Jump to the **[NEXT-GENERATION ROADMAP](#next-generation-roadmap--phases-b--c--d)** section.
+
 ---
 
 ## Sequencing principle
@@ -413,3 +415,250 @@ Akshara ERP may be certified **Production Ready** only when **all** hold:
 - Each wave should close with a short `*_QA_WAVE_n_CERTIFICATION.md` recording what was added and the green evidence, consistent with the project's existing certification discipline.
 
 **Nothing in this roadmap executes until the owner approves.**
+
+---
+---
+
+<a id="next-generation-roadmap--phases-b--c--d"></a>
+
+# ══════════════════════════════════════════════════════════════════════
+# NEXT-GENERATION ROADMAP — Phases B / C / D
+# (continuation of QW1–QW8 · nothing above this divider is modified)
+# ══════════════════════════════════════════════════════════════════════
+
+**Added:** 2026-07-01 · Branch `feature/data-reliability-platform` · Companion sources: [`PRODUCT_ENHANCEMENT_BACKLOG.md`](PRODUCT_ENHANCEMENT_BACKLOG.md) (🔒 frozen Rev 4 → **Phase C**) · [`PRODUCT_COMMERCIAL_BACKLOG.md`](PRODUCT_COMMERCIAL_BACKLOG.md) (SSOT scope → **Phase D**) · [`FINAL_QA_MASTER_TRACKER.md`](FINAL_QA_MASTER_TRACKER.md) (QA-R / Track-B rows → **Phase B**).
+
+> **This is a continuation, not a new project.** QW1–QW8 and Phase 0 stay exactly as certified. Phases B/C/D are the *next* execution stages layered on top of the completed QA program. **Same governance:** every wave/task is gated by the EOS (`/eos <scope>`) against the Engineering Constitution; no task is "complete" until EOS returns PASS. **Nothing here executes until the owner approves each phase.**
+
+### Where we are (2026-07-01)
+
+- **QW1–QW8 — COMPLETE** (local/technical + behaviour + local production-readiness). All QA-R rows are locally Verified; the residual is live.
+- **Staff Face ID (O5) — BUILT + locally certified** (`STAFF_FACE_ID_ATTENDANCE_CERTIFICATION.md`). Cert scope = **GA-1** (biometric check-in/out) only; **live deploy + on-device run is the only residual** (→ Phase B B4).
+- **GA (`QA-R-012`) is BLOCKED on exactly three things**, all live-infrastructure, all with **staged, fail-loud harnesses** already authored: (1) the **Track B live-VPS run**, (2) the **staff Face ID live leg**, (3) the **live-regression cron 7-day green** window. **Phase B closes all three.**
+
+### Phase sequence
+
+```
+ QW1 … QW8  (DONE, frozen)
+      │
+      ▼
+ ┌─────────────────────────── PHASE B — Release Engineering (Track B) ───────────────────────────┐
+ │  Live VPS deploy · edge functions · migrations · Face ID live · tenant Postgres · multi-school  │
+ │  · isolation · backup/restore drill · monitoring · k6 perf · pilot sim · 7-day regression cron  │
+ │  → all QA-R live legs green → QA-R-012 Final GA Certification → **GA DECLARED**                  │
+ └───────────────────────────────────────────────┬────────────────────────────────────────────────┘
+                                                  ▼ (GA gate passed)
+ ┌───────────────────────── PHASE C — Product Enhancement Implementation ─────────────────────────┐
+ │  Source = frozen PRODUCT_ENHANCEMENT_BACKLOG (Rev 4). Foundations first (XCT), then             │
+ │  Band 1 (P1 Critical Operational) → Band 2 (P2 Productivity) → Band 3 (P3 Nice Improvements),    │
+ │  grouped into logical module/theme waves. Approved frozen items only — no invented features.    │
+ └───────────────────────────────────────────────┬────────────────────────────────────────────────┘
+                                                  ▼
+ ┌───────────────────────────── PHASE D — Future / Phase 2 / Commercial ──────────────────────────┐
+ │  Source = PRODUCT_COMMERCIAL_BACKLOG only (Queue 4 Phase-2 · Queue 5 Future Vision ·            │
+ │  proposed Consolidation wave). Not mixed with Phase C.                                          │
+ └────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+> **Phase B is the only GA-blocking phase.** Phases C and D are **post-GA** and do not gate the commercial launch. Phase C may begin only after `QA-R-012` passes (or with explicit owner approval to overlap low-risk foundation work).
+
+---
+
+## PHASE B — Release Engineering (Track B: live-VPS validation)  ·  13 tasks (B1–B13)
+
+**Goal:** promote the locally-certified platform to a **live, production-validated** deployment on the VPS pilot and **close every live-only residual** so `QA-R-012` (the Final Production Checklist) can pass and **GA can be declared**. This phase runs the *already-authored, staged, fail-loud* Track B harnesses against real infrastructure — it does **not** write new features. (Skills: `/deploy` for the ship recipe, `/certify` for the live cert runs, `/eos` as the gate.)
+
+**Entry gate (owner-provided infrastructure — the sole blockers):**
+- **SSH ControlMaster socket** to the VPS pilot (`~/.ssh/akshara-cm.sock`, e.g. `ssh -fN -M -S ~/.ssh/akshara-cm.sock -o ControlPersist=8h root@<vps>`).
+- **Tenant Postgres** reachable via `ERP_TENANT_DATABASE_URL` (with RLS), for the rolled-back-txn isolation probes and the DR drill.
+- A **device or emulator with a camera and high-accuracy location services (mock-location OFF)**, for the staff-attendance live cert (B4). ⚠ B4 is **re-scoped 2026-07-01** — attendance auth = **geofence + anti-mock GPS + live camera face verification**, **never** device biometric/PIN/password; it needs the feature **re-implemented first** (see [`ATTENDANCE_AUTH_DESIGN_DECISION.md`](ATTENDANCE_AUTH_DESIGN_DECISION.md)).
+
+**Exit gate:** all live QA-R legs green + the live-regression cron **7 consecutive days green** → `QA-R-012` PASS → **GA DECLARED**. No QA-R tracker row is *rewritten* — each flips from its current "Verified-local / Test-Written / STAGED-INFRA-BLOCKED" state to live-Verified as its harness runs green.
+
+| # | Task | Priority | Dependencies | Expected output | Completion criteria | EOS gate |
+|---|------|:--------:|--------------|-----------------|---------------------|----------|
+| **B1** | **Live VPS deployment** — ship backend + latest build to the VPS pilot via the `/deploy` recipe | **P0** (infra blocker) | SSH ControlMaster socket open | VPS pilot running the current HEAD; deploy log + post-deploy smoke | `/health` → 200 · post-deploy smoke green · deployed version == HEAD | PASS on `/deploy` post-deploy smoke |
+| **B2** | **Edge Function deployment** — deploy all Supabase edge functions live | **P0** (infra blocker) | B1 | All edge functions live at HEAD (incl. staff-attendance, reliability idempotency/409) | Function-invoke smoke 200 · route inventory matches `api/app.ts` | PASS (function smoke) |
+| **B3** | **Database migrations** — apply all pending migrations live (idempotency `row_version`/409, reliability v2, `20260818000000_staff_face_id_attendance.sql`) | **P0** (infra blocker) | B1 · B5 (tenant DB) | Live schema at HEAD; RLS policies present; append-only `staff_check_ins` ledger | Idempotent re-apply clean · schema diff = 0 · RLS + CHECK constraints verified | PASS (migration verify) |
+| **B4** | **Staff attendance live cert** (O5) — ⚠ **RE-SCOPED 2026-07-01** (see [`ATTENDANCE_AUTH_DESIGN_DECISION.md`](ATTENDANCE_AUTH_DESIGN_DECISION.md)). Attendance auth = **GPS geofence → anti-mock location validation → live camera face verification → check-in/out**; **NEVER** device biometric / Touch ID / PIN / password. The as-built device-biometric O5 feature is **superseded** and must be **re-implemented first** (P1 gap). | **P0** (blocked on re-impl) | B2 · B3 · **attendance-auth re-implementation** · camera+high-accuracy-GPS device | Attendance working live via geofence + anti-mock + live camera face; ledger writes; self-insert/school-read isolation proven | Live geofence + anti-mock + camera-face check-in/out green · live RLS self-insert PASS · **no device-biometric/PIN path exists** | **PASS on corrected staff-attendance scope** |
+| **B5** | **Tenant Postgres configuration** — provision/point `ERP_TENANT_DATABASE_URL` with RLS enabled | **P0** (infra blocker) | B1 | Tenant DB reachable; RLS active; app role wired to `app_current_user_id()` | `tenant_isolation_enforced_test.ts` collapses from ignore-gated → runnable | PASS (connectivity + RLS smoke) |
+| **B6** | **Multi-school validation** (`QA-R-002`) — `live_cert_multi_school_concurrent.py` (N=3) + `live_cert_pilot_full_year.py` multi-tenant | **P0** | B2 · B3 · B5 | N schools running the full journey simultaneously with no interference | Concurrent run **N/N green** · zero cross-school interference | PASS (`QA-R-002` live) |
+| **B7** | **Tenant isolation validation** (`QA-R-003/004`, `QA-R-008` live-RLS) — `tenant_isolation_enforced_test.ts` 233 probes / 16-way + 13 branding/config probes | **P0** | B5 | Zero read/write bleed between simultaneously-active schools; per-tenant branding/config isolated | **233 probes PASS live** · 13 branding/config probes PASS | PASS (`QA-R-003/004/008` live-RLS) |
+| **B8** | **Backup & Restore drill** (`QA-R-009`, closes `QA-J-046`) — live `pg_dump → restore → integrity → drop` on a staging tenant + rollback procedure | **P0** | B1 · B5 | Executed DR drill; integrity-after-restore verified; runbook validated | Drill green · restored data integrity == source · `BACKUP_RESTORE_RUNBOOK.md` steps reproducible | PASS (`QA-R-009` live drill) |
+| **B9** | **Monitoring validation** (`QA-R-010`) — trigger each health check / alert / scheduled job; verify live webhook/SMS alert delivery | **P1** | B1 · B2 | Health/alerting/jobs firing and observable in production | Each alert/health/job triggered + observed · watchdog RECOVERED path seen | PASS (`QA-R-010` live) |
+| **B10** | **Performance validation (k6)** (`QA-R-005/006`, `QA-X-025`) — run `scripts/perf/qa_x_025_p95_latency_probe.js` at scale on the live-regression lane | **P0** (R-006) / P1 (R-005) | B2 · B3 · B5 (seeded scale) | Live p95 latency + scale numbers vs `PERFORMANCE_TARGETS.md` T1–T8 | Live k6 p95 meets every T1–T8 SLA at production scale | PASS (`QA-R-006` live) |
+| **B11** | **Pilot school simulation** (`QA-R-001`) — `live_cert_pilot_full_year.py` unattended single-school representative pass (all ~22 stage types) | **P0** | B2 · B3 · B5 | End-to-end single-school run with **no manual intervention** | All ~22 stages **N/N green** unattended | PASS (`QA-R-001` live) |
+| **B12** | **Live regression monitoring** (`QA-X-035/036/039`, `QA-B-073`) — stand up the live-regression cron and hold it green | **P0** (GA prereq) | B1–B11 | Scheduled full-suite cron running against live; alerting on red | **7 consecutive days green**, no red window | PASS (cron 7-day green) |
+| **B13** | **`QA-R-012` — Final GA Certification** — verify every Final Production Checklist item; declare Production Ready | **P0** (the gate) | **B1–B12** + B4 (Face ID live) + B12 (7-day cron) | GA sign-off; `QA-R-012` → Verified | Every checklist item satisfied · no open P0 · no blocking P1 | **PASS on `QA-R-012` → GA DECLARED** |
+
+**Staged harnesses already authored (run, don't build):** `scripts/qa/live_cert_pilot_full_year.py` (B11), `scripts/qa/live_cert_multi_school_concurrent.py` (B6), `tenant_isolation_probes.ts` / `tenant_isolation_enforced_test.ts` — 233 probes (B7), `scripts/perf/qa_x_025_p95_latency_probe.js` — k6 (B10), the backup/restore drill scripts (B8), and the staff-attendance migration + edge function (B3/B4). All are `py_compile`/`deno check` clean and **fail-loud** — they collapse to PASS the moment the live socket + tenant DB are available.
+
+---
+
+## PHASE C — Product Enhancement Implementation (post-GA)
+
+**Source of truth:** the 🔒 **frozen** [`PRODUCT_ENHANCEMENT_BACKLOG.md`](PRODUCT_ENHANCEMENT_BACKLOG.md) (Rev 4, 2026-06-30). **Only approved frozen items** are scheduled here — **no invented features, no speculative additions.** Locked product decisions apply to every wave (English-first; students never use Face ID/QR/RFID/geo; staff Face ID is the only Must-Before-GA attendance; parent-comms localization is deterministic-catalog only).
+
+**Structure.** Enhancements are banded by the backlog's priority legend and grouped into **logical module/theme implementation waves** (not one wave per item). Bands sequence the work: **Foundations → Band 1 (P1 Critical Operational) → Band 2 (P2 Productivity) → Band 3 (P3 Nice Improvement)**. `Ph2`/`Fut`-tagged enhancement items are held in the **deferred tail** (they pair with Phase 2 timing but remain sourced from the *enhancement* backlog, not Phase D). Every wave is EOS-gated; each enhancement ID is one engineering task within its wave.
+
+**Entry gate:** `QA-R-012` PASS (GA declared). Foundation work (C0) *may* be owner-approved to overlap the tail of Phase B since it is additive and non-GA-blocking.
+
+### Phase C wave index
+
+| Wave | Theme | Band | Item IDs | Cx | Key dependency |
+|------|-------|:----:|----------|----|----------------|
+| **C0** | **Cross-cutting foundations** (build first) | Foundation (P1) | XCT-1, XCT-2, XCT-3 | L,L,S | none — unblocks ~20 reports + all reminders |
+| **C1** | **Finance — Fee Recovery / Collections CRM** | Band 1 | FIN-R1, FIN-R2, FIN-R3, FIN-R4, FIN-R5 | M×5 | C0 (XCT-1, XCT-2) |
+| **C2** | **Finance — Counter, Statements & Reports** | Band 1 | FIN-1, FIN-2, FIN-6, FIN-7, FIN-8 | S–M | C0 (XCT-1) |
+| **C3** | **Staff Attendance Dashboard & Muster** | Band 1 | GA-2, GA-3, TCH-9, HR-6 | M×4 | **Phase B B4** (GA-1 live), C0 (XCT-1) |
+| **C4** | **Exams — Fast Marks & Tabulation** (O2 top-priority) | Band 1 | EXM-1, EXM-2, EXM-3 | M×3 | C0 (XCT-1) |
+| **C5** | **Academic Registers & Certificates** | Band 1 | ATT-1, ATT-2, SIS-1 | L,M,M | C0 (XCT-1) |
+| **C6** | **Homework — Core (due-date + non-submitters)** | Band 1 | HWK-1, HWK-2 | S–M,M | ⚠ HWK-1 = contract/schema change (owner + migration) |
+| **C7** | **HR — Payroll & Salary Registers** | Band 1 | HR-1, HR-2 | M,M | C0 (XCT-1) |
+| **C8** | **Transport — Fleet, Roster & Fee** | Band 1 | TRN-1, TRN-2, TRN-3, TRN-4, TRN-9 | M×4, M–L | C0 (XCT-1); TRN-9 → C2 (FIN-6 pattern) + Finance |
+| **C9** | **Operational Modules — Inventory, Library & Communication (daily ops)** | Band 1 | INV-1, INV-2, LIB-1, LIB-2, COM-1, COM-2 | M/S | C0 (XCT-1) |
+| **C10** | **Principal — Approval Center batch actions** | Band 1 | PRI-1 | M | none (may co-run with C3) |
+| **C11** | **Admissions / Front-office productivity** | Band 2 | ADM-1, ADM-2, ADM-3, ADM-4, ADM-5 | S–M | C0 (XCT-1) |
+| **C12** | **Finance productivity & receipting** | Band 2 | FIN-3, FIN-4, FIN-5, FIN-9, FIN-R6, FIN-R7 | S–M | C2, C1 |
+| **C13** | **Academic-work productivity (Exams + Homework)** | Band 2 | EXM-4, EXM-5, EXM-6, EXM-7, HWK-3, HWK-4, HWK-5, HWK-6, HWK-7, HWK-8 | S–M | C4, C6, C0 (XCT-1/2) |
+| **C14** | **Teacher & Attendance productivity** | Band 2 | TCH-1, TCH-2, TCH-3, TCH-4, ATT-3, ATT-4 | S–M | C0, C4 (EXM-2 for TCH-2) |
+| **C15** | **HR & SIS productivity** | Band 2 | HR-3, HR-4, HR-7, SIS-2, SIS-5 | S–M | C0 (XCT-1) |
+| **C16** | **Transport & Inventory productivity** | Band 2 | TRN-5, TRN-6, TRN-7, TRN-8, INV-3, INV-4, INV-5, INV-6, INV-7 | S–M | C8, C9, C0 (XCT-1/2) |
+| **C17** | **Library & Communication productivity** | Band 2 | LIB-3, LIB-4, LIB-5, COM-3, COM-4, COM-5 | S–M | C9, C0 (XCT-2) |
+| **C18** | **Leadership productivity (Principal & Director)** | Band 2 | PRI-2, PRI-3, DIR-1, DIR-2 | S–M | C4 (EXM-2 → PRI-2), C0 (XCT-1) |
+| **C19** | **Parent self-service** | Band 2 | PAR-1, PAR-2, PAR-3, PAR-4, PAR-5 | S–M | C0 (XCT-1/2) |
+| **C20** | **Teacher & Leadership polish** | Band 3 | TCH-5, TCH-6, TCH-7, PRI-4, PRI-5, DIR-3 | S–M | C0 |
+| **C21** | **Records & Parent polish** | Band 3 | SIS-3, SIS-4, HR-5, PAR-6 | S–M | C0 |
+
+> **Wave count = 22 (C0 + 21).** ~90 approved enhancement items grouped into coherent module/theme batches — *not* one wave per item. Cx = relative complexity (S ≤ ~2d · M ~1wk · L > 1wk) carried from the backlog.
+
+### Band 1 — P1 Critical Operational (a real school can't run the daily workflow without it)
+
+Each wave below: **Dependencies · Expected output · Completion criteria · EOS gate.** Every enhancement ID is one task.
+
+- **C0 — Cross-cutting foundations** *(P1; build first)* — **XCT-1** shared PDF+CSV/Excel export pipeline (replaces the platform-wide `showAksharaExportQueuedSnackBar` dead stub, generalising `akshara_report_export_service.dart`), **XCT-2** shared reminder & scheduling foundation (scheduled-job runner + in-app reminder/notification centre; **external push/SMS/WhatsApp delivery stays owner-gated** — in-app surfacing ships now), **XCT-3** date pickers for all free-text date fields *(P2, cross-cutting UX)*.
+  - **Deps:** none. **Output:** one real export path + one reminder rail every module reuses; no module invents its own. **Completion:** ≥3 module "Export" buttons emit a real file; ≥1 in-app reminder fires end-to-end; date pickers on the 4 known free-text date fields. **EOS gate:** PASS on the foundation scope before any dependent wave starts.
+- **C1 — Finance Fee Recovery / Collections CRM** — FIN-R1 recovery dashboard · FIN-R2 telecaller call queue · FIN-R3 promise-to-pay · FIN-R4 contact/reminder history · FIN-R5 collector performance. **Deps:** C0. **Output:** the defaulter list *expands* (does not duplicate) into a real recovery CRM. **Completion:** call queue → log outcome → PTP → contact-history persist round-trip; collector metrics compute from real data. **EOS gate:** PASS.
+- **C2 — Finance Counter, Statements & Reports** — FIN-1 daily collection summary export · FIN-2 printable student fee statement/ledger · FIN-6 installment/term-wise due schedule (replaces hardcoded +30d) · FIN-7 transaction-level day collection report · FIN-8 class-wise dues report. **Deps:** C0. **Output:** the fee office's daily counter reports + a per-student ledger. **Completion:** each report exports real transactions; installment due dates drive aging. **EOS gate:** PASS.
+- **C3 — Staff Attendance Dashboard & Muster** — GA-2 manual attendance request + manual close (mandatory reason, Principal/HR approve, fully audited) · GA-3 principal real-time staff-attendance summary (Total/Checked-In/Checked-Out/Working-Now/Late/Absent) · TCH-9 "My Attendance" (read-only self-service) · HR-6 monthly staff-attendance muster export. **Deps:** **Phase B B4** (GA-1 biometric check-in/out live) + C0 (XCT-1). *GA-1 is already built/certified; this wave adds the exception workflows + dashboards that ride on its `staff_check_ins` ledger.* **Output:** the read-only HR-04 screen becomes a live operational board feeding payroll. **Completion:** manual-close audited; summary rolls up from GA-1/GA-2; muster exports employee×day grid. **EOS gate:** PASS.
+- **C4 — Exams: Fast Marks & Tabulation** *(O2 top-priority module)* — EXM-1 fast bulk marks entry (grid, Enter-to-next, Save-all; folds "save all marks") · EXM-2 marks-entry progress board across teachers/classes · EXM-3 consolidated class mark sheet / tabulation register export. **Deps:** C0. **Output:** a class of 30 marked in ~1 grid save instead of ~60 taps; school-wide completion visibility. **Completion:** Save-all persists a whole class; progress board shows who still owes marks; tabulation register exports. **EOS gate:** PASS.
+- **C5 — Academic Registers & Certificates** — ATT-1 office attendance register (AC-06, a specced P0 with no screen: filter, named present/absent/late, read+export) · ATT-2 monthly class attendance register export (students×days grid) · SIS-1 Bonafide/Study/Conduct certificate generation (print-ready PDF, English). **Deps:** C0 (XCT-1). **Output:** the canonical monthly attendance artifacts + student certificates. **Completion:** register renders + exports; certificates generate as print-ready PDFs. **EOS gate:** PASS.
+- **C6 — Homework Core** — HWK-1 real due-date picker (replace free-text `due_label`; keystone for reminders/overdue/sorting) · HWK-2 "not submitted" list per assignment. **Deps:** ⚠ **HWK-1 is a contract/schema change** (`due_label` free-text → real `due_date DATE`) — needs an owner-approved migration (flagged, not created here). **Output:** structured due dates + roster-diff non-submitter list. **Completion:** due-date persists as DATE; non-submitters computed from roster diff. **EOS gate:** PASS.
+- **C7 — HR Payroll & Salary Registers** — HR-1 salary register export (per-employee Basic/Allowances/Deductions/Net + totals) · HR-2 one-click payslip run (per-employee PDF + all-for-run). **Deps:** C0 (XCT-1). **Output:** payroll produces real payslips + a salary register, replacing the stub snackbar. **Completion:** payslip PDFs generate per run; register exports with totals. **EOS gate:** PASS.
+- **C8 — Transport Fleet, Roster & Fee** — TRN-1 vehicle & driver registration (CRUD, replaces seed-only) · TRN-2 vehicle-document expiry tracker (real dates) · TRN-3 stop-wise student roster + route roster print/export · TRN-4 stop editor / ordered stop management · TRN-9 transport fee structure + due schedule → **raises fee demand** (Transport *defines*; **Finance remains the only payment engine**). **Deps:** C0 (XCT-1); TRN-9 reuses the **C2 FIN-6** installment pattern + hands off to Finance. **Output:** a school can onboard its fleet, print stop rosters, and bill transport through Finance. **Completion:** fleet CRUD persists; stop rosters export; transport demand appears in Finance (no duplicate payment logic). **EOS gate:** PASS. *(Live GPS bus tracking stays Phase D / O8 — untouched here.)*
+- **C9 — Operational Modules: Inventory, Library & Communication** — INV-1 stock issue/consumption with issue slip · INV-2 consumable registry + reorder-level CRUD · LIB-1 one-click overdue list + export · LIB-2 catalog edit/delete + CSV bulk import · COM-1 per-broadcast delivery & read report + CSV export · COM-2 audience picker (class/section) + saved segments. **Deps:** C0 (XCT-1). **Output:** stock can go *down*, the library catalog is editable/importable, broadcasts target classes and report delivery. **Completion:** issue-slip persists; catalog edit/import works; broadcast delivery/read report exports; class/section audience resolves. **EOS gate:** PASS.
+- **C10 — Principal Approval Center batch actions** — PRI-1 batch approve/reject (multi-select) in the Approval Center. **Deps:** none (may co-run with C3, both principal-facing). **Output:** the principal clears 5–15 daily approvals in bulk instead of one-by-one. **Completion:** multi-select approve/reject persists + audits each decision. **EOS gate:** PASS.
+
+### Band 2 — P2 Productivity (speeds up / de-duplicates an existing flow)
+
+- **C11 — Admissions / Front-office productivity:** ADM-1 real admissions reports export · ADM-2 auto-log WhatsApp/call to lead timeline · ADM-3 bulk lead actions · ADM-4 inline actions on "Follow-ups due today" · ADM-5 "New Application" from a real lead picker (removes placeholder-junk rows).
+- **C12 — Finance productivity & receipting:** FIN-3 Indian-format receipt polish (logo/letterhead/amount-in-words/ORIGINAL-COPY; English preserved) · FIN-4 duplicate-receipt reprint (+DUPLICATE stamp + audit) · FIN-5 batch receipt printing · FIN-9 outstanding analytics · FIN-R6 collection targets *(needs FIN-D6)* · FIN-R7 cheque/DD/PDC + bounce tracking.
+- **C13 — Academic-work productivity (Exams + Homework):** EXM-4 subject-topper/merit list · EXM-5 pass/fail & grade-distribution report · EXM-6 marks-entry deadline + teacher reminder *(rides XCT-2)* · EXM-7 exam datesheet PDF · HWK-3 same homework → multiple sections · HWK-4 teacher attachment on create · HWK-5 homework history/export · HWK-6 bulk mark-submitted/reviewed · HWK-7 student submit with note/photo · HWK-8 "due tomorrow" reminder *(rides XCT-2 + HWK-1)*.
+- **C14 — Teacher & Attendance productivity:** TCH-1 mark attendance from a today-schedule row · TCH-2 marks-pending/deadline surface on home *(ties XCT-2)* · TCH-3 my-class summary export · TCH-4 cover/substitution alert + weekly timetable · ATT-3 absentees-only fast-mark · ATT-4 office "not-yet-marked" compliance monitor.
+- **C15 — HR & SIS productivity:** HR-3 batch leave approve/reject · HR-4 leave-balance report/export · HR-7 employee directory export · SIS-2 richer registry export + class-list/contact-sheet · SIS-5 transfer/exit log report.
+- **C16 — Transport & Inventory productivity:** TRN-5 bulk student→route allocation · TRN-6 transport list/vehicle exports · TRN-7 route capacity/over-allocation warning · TRN-8 document-expiry reminders *(rides XCT-2 + TRN-2)* · INV-3 manual stock-adjust · INV-4 low-stock/reorder report + raise-PO · INV-5 stock/consumption/GRN exports · INV-6 physical stock-take/count session · INV-7 low-stock alert to storekeeper *(rides XCT-2)*.
+- **C17 — Library & Communication productivity:** LIB-3 barcode quick issue/return (plain book barcode/ISBN — *not* biometric) · LIB-4 loan renewal/re-issue · LIB-5 overdue-book reminder *(rides XCT-2)* · COM-3 resend-to-unread · COM-4 schedule-send (activates dead `scheduled_at` — rides XCT-2) · COM-5 save-broadcast-as-template.
+- **C18 — Leadership productivity (Principal & Director):** PRI-2 unsubmitted/pending exam-marks exception list (shares EXM-2 data) · PRI-3 daily school report · DIR-1 cross-school league table · DIR-2 consolidated collection report.
+- **C19 — Parent self-service:** PAR-1 surface PTM Accept/Decline RSVP (endpoint exists) · PAR-2 "Apply Leave" dashboard quick action · PAR-3 medical-certificate upload on leave · PAR-4 payment-history export · PAR-5 in-app proactive reminder banners *(ties XCT-2)*.
+
+### Band 3 — P3 Nice Improvement (polish / convenience)
+
+- **C20 — Teacher & Leadership polish:** TCH-5 "Create homework" quick action · TCH-6 pending-task counts deep-link to filtered view · TCH-7 teacher timetable export/share · PRI-4 weekly principal digest · PRI-5 pending-approval reminder/escalation *(surface the inert stale-count)* · DIR-3 CSV/Excel export of the school-comparison table.
+- **C21 — Records & Parent polish:** SIS-3 document "Verify" action + status · SIS-4 family/sibling view for the clerk · HR-5 headcount-by-department report · PAR-6 surface PTM action-items/follow-ups + "next PTM" hero.
+
+### Phase C deferred tail (`Ph2` / `Fut` enhancement items — pair with Phase 2 timing)
+
+Sourced from the *enhancement* backlog (not Phase D). Scheduled only when their paired Phase-2 capability lands or the owner promotes them: **SIS-6** bulk document upload · **EXM-8** comparative term analysis · **HWK-9** templates/"repeat last" · **HWK-10** class homework-load/clash + principal oversight · **COM-6** thread export for a parent · **LIB-6** member library-card/history export · **LIB-7** book reservation/hold queue *(Fut)* · **INV-8** vendor performance/rating · **TCH-8** global section/class quick-switcher · **PAR-7** event RSVP actionable · **PAR-8** add-to-calendar (.ics).
+
+### Phase C — pending owner decisions (Appendix A — must resolve before the affected task runs)
+
+The backlog's **Appendix A (~26 behaviour/policy items)** are **not scheduled into a wave** until the owner decides; each then slots into the band shown in the backlog. They gate specific tasks above:
+
+| Group | Decisions (→ recommended default in backlog) | Blocks |
+|---|---|---|
+| **Finance** | FIN-D1 day-close lock · FIN-D2 fee-head allocation on part-pay · FIN-D3 receipt-cancellation reason · FIN-D4 concession maker-checker *(⚠ prereq: concession persistence is an in-memory **defect** → route to QA)* · FIN-D5 late-fee accrual · FIN-D6 collection-target ownership | C2, C12 |
+| **Admissions** | ADM-D1 lost-reason taxonomy · ADM-D2 duplicate-lead warn-vs-block · ADM-D3 admission-number scheme *(⚠ back-compat)* · ADM-D4 offer/confirmation letter | C11 |
+| **SIS** | SIS-D1 TC engine (no-dues gate/auto-status/register) · SIS-D2 ID-card batch · SIS-D3 mandatory-document set | C5, C15 |
+| **HR** | HR-D1 staff document-expiry types + lead · HR-D2 probation-end follow-up · HR-D3 leave-on-behalf balance rule | C15 |
+| **Attendance** | ATT-D1 consecutive-absence escalation · ATT-D2 short-attendance threshold · ATT-D3 half-day + auto-excuse approved leave | C5, C14 |
+| **Exams** | EXM-D1 batch report-card print trigger · EXM-D2 grace/moderation policy · EXM-D3 supplementary result rule · EXM-D4 hall-ticket content · EXM-D5 seating strategy · EXM-D6 absent/"AB" handling | C4, C13 |
+| **Comm / Library / Homework / Director / Parent** | COM-D1 acknowledgement-required notices · LIB-D1 issue guardrails · HWK-D1 "not submitted" parent nudge · DIR-D1 per-school drill-down scoping · PAR-D1..D6 (cancel leave · family view · 80C certificate · action inbox · parent calendar view · consent slips) | C17, C9, C13, C18, C19 |
+
+> **QA defects (not Phase C waves) — route to the tracker:** the platform-wide export dead-stub (fixed *by* XCT-1), HR leave-dialog hardcoded `employeeId`, in-memory concession persistence (prereq for FIN-D4), admissions placeholder-junk rows (fixed by ADM-5), and the one mock canonical student-registry path. These are honesty/quality issues, per the backlog's "Out of scope — defects" list — they belong in `FINAL_QA_MASTER_TRACKER.md`, not a product wave.
+
+---
+
+## PHASE D — Future / Phase 2 / Commercial
+
+**Source of truth:** [`PRODUCT_COMMERCIAL_BACKLOG.md`](PRODUCT_COMMERCIAL_BACKLOG.md) **only** (owner decisions O1–O10). **Not mixed with Phase C.** These are post-GA, mostly monetization/enterprise/future-vision, and are *not* scheduled into dated waves here — they are the forward commercial roadmap, promoted individually by owner decision when the market calls for them.
+
+### D1 — Phase 2 Commercial (Queue 4)
+
+| Item | Owner decision |
+|---|---|
+| In-product billing (invoicing, MRR, renewals, subscription payment collection) | O6 |
+| Usage quotas + packs (SMS / storage / AI tokens) | O6 |
+| Marketplace purchasable add-ons | O6 |
+| Live GPS bus tracking + parent live map + driver app | O8 |
+| White-label platform + custom domain + subscription-aware branding tiers | O10 (ties O6) |
+| Custom theme maturity (beyond per-school colours) | Enterprise upsell |
+| Full general ledger / accounting | Premium; post-core |
+| Dedicated expense-management module | Premium |
+| Device / MDM management console | Enterprise |
+| Community portal (standalone) | Beyond core ERP |
+| "API-OFF-live" Enterprise surfaces — Workflow Automation, Academic Operations, Continuity, Platform Ops/Intelligence (UI exists, backend flag OFF live) | Phase 2 enable-when-productized (hide-first per O1) |
+
+### D2 — Future Vision (Queue 5 — deferred / scoped-out)
+
+| Item | Rationale |
+|---|---|
+| Industry vertical packs (healthcare / salon / restaurant / accommodation) | O1 — hide-first (UIs route-guarded off) |
+| Branch / franchise management | O1 (multi-school/director KEPT) |
+| Geo-fencing attendance · RFID attendance · QR attendance | O9 |
+| **Student Face ID** | **N/A by decision (O4)** — students never; teachers enter attendance |
+| Face-recognition (CV) attendance | Future product; no CV pipeline |
+| School website builder / CMS · dynamic pages · blog · SEO | Beyond core ERP |
+| Reception desk · gate pass · school-wide visitor mgmt | Hostel-scoped visitor mgmt exists; school-wide is future |
+| Secure CBT / online exam workspace | Archived-docs only |
+| App biometric lock (parent/teacher mobile) | Documented, not coded |
+| Biometric / RFID hardware partner integrations | Hardware partnerships |
+
+### D3 — Consolidation & De-duplication (proposed `QW-Consolidation`, owner-review)
+
+Per North Star O3 ("easiest, cut scope creep"), the audit's **14 overlapping surfaces** are candidates for a focused consolidation wave (e.g. unify AI entry points; single communication primitive; converge principal dashboards on the Dynamic Widget Platform; document Assets as an Inventory submodule). **Owner go/no-go required** before it becomes a scheduled wave — see the backlog's Consolidation table.
+
+### Phase D — related Queue 3 deferred deepening (quality/premium, cross-reference)
+
+Sourced from the commercial backlog's Queue 3 (future QW — quality, not new scope), noted here so nothing is lost: **HR Excel bulk import** (owner-deferred module-deepening; certifies `QA-X-020`/`QA-F-048` when built — *explicitly excluded from the Phase C enhancement backlog*), **Custom Reports / report-builder** (ties to the Phase C XCT-1 export foundation but the full builder is premium/future), and premium-module deepening (Lesson Planning, Syllabus depth, Scholarships/Discounts depth, Asset Mgmt). These fold into their module's future QW cert; **not GA-blocking**.
+
+---
+
+## Conflicts found & reconciliation (during this roadmap build)
+
+1. **Staff Face ID banding (enhancement backlog vs O5 cert).** The frozen enhancement backlog lists **GA-1/GA-2/GA-3** as "GA" items, but the O5 `STAFF_FACE_ID_ATTENDANCE_CERTIFICATION.md` proves **only GA-1** (biometric check-in/out) is built. **Reconciled:** GA-1 → **Phase B B4** (live deploy = the only residual); **GA-2 + GA-3 (+ TCH-9, HR-6)** → **Phase C Wave C3**. No duplication; if a later build already delivered GA-2/GA-3, C3 collapses to verification-only *(owner to confirm — see decisions below)*.
+2. **HR Excel bulk import.** Appears in the commercial Queue 3 (owner-deferred) **and** is explicitly **excluded** from the enhancement backlog's main tables. **Reconciled:** kept **out of Phase C**; lives in **Phase D** Queue-3 deferred deepening (certifies `QA-X-020`/`QA-F-048`). No wave duplicates it.
+3. **Custom Reports / report-builder vs XCT-1.** Both touch "export/reporting." **Reconciled:** **XCT-1** (shared export pipeline) is the Phase C **foundation** (C0); the full **report-builder** stays Queue 3 / Phase D (premium). Cross-referenced, not duplicated.
+4. **TRN-9 transport fee vs the Phase-2 payment engine (O6/O8).** **Reconciled per the owner-decided architecture:** Transport only **defines** fee structure + due schedule and **raises demand**; **Finance stays the sole payment/collection engine** (TRN-9 reuses the FIN-6 installment pattern). Transport fee = Phase C (C8); live GPS tracking = Phase D (O8). No conflict.
+5. **Parent Communication Localization.** Must-Before-GA (Queue 2) **and already BUILT** (QW7 `QA-C-016/018`, deterministic no-LLM catalog). **Reconciled:** **not** a Phase C item (it is GA-complete); its **live send-path validation rides Phase B** (B6/B11 pilot runs). English-first everywhere else stands.
+6. **Backup/DR.** `QA-R-009` is local-certified; the **live** `pg_dump→restore→integrity` drill is **Phase B B8** (closes the QW5-deferred `QA-J-046`), **not** a Phase C wave.
+7. **Reminder delivery channel.** All module reminder items (HWK-8, LIB-5, TRN-8, INV-7, EXM-6, COM-4, PRI-5, PAR-5) ride **XCT-2's in-app** rail only; **external push/SMS/WhatsApp delivery stays owner-gated** until the owner opens the go-live channel (see decisions).
+
+## Owner decisions required before implementation
+
+**Phase B (unblocks GA):**
+1. ✅ **SSH ControlMaster socket** — open (owner opened it 2026-07-01). 2. **Tenant Postgres** `ERP_TENANT_DATABASE_URL` (with RLS) for isolation probes + DR drill. 3. A **camera + high-accuracy-location device/emulator (mock-location OFF)** for the staff-attendance live cert (B4) — **and** the B4 **attendance-auth re-implementation** per [`ATTENDANCE_AUTH_DESIGN_DECISION.md`](ATTENDANCE_AUTH_DESIGN_DECISION.md) (attendance = geofence + anti-mock + live camera face; **never** device biometric/PIN/password). ⚠ **FINAL product correction 2026-07-01** — the as-built device-biometric O5 feature is **superseded**.
+
+**Phase C (before the affected wave runs):**
+4. **Confirm GA-2/GA-3 (+ TCH-9/HR-6) are un-built** (the O5 cert only covers GA-1) → they are real C3 scope, not verification-only. 5. **HWK-1 contract change** (`due_label` → `due_date DATE`) — approve the schema/migration (keystone for HWK reminders/overdue). 6. **XCT-2 external-delivery go-live** (push/SMS/WhatsApp) — currently owner-gated; decide when in-app-only reminders may fan out externally. 7. **Resolve Appendix A (~26 items)** to their recommended defaults (or alternatives) so C2/C4/C5/C11/C12/C13/C14/C15/C17/C18/C19 can schedule their blocked tasks. 8. **Route the listed QA defects** (in-memory concession persistence, hardcoded HR `employeeId`, mock student-registry path) to `FINAL_QA_MASTER_TRACKER.md` rather than a product wave.
+
+**Phase D:** 9. **Consolidation go/no-go** (`QW-Consolidation`, D3). 10. Phase-2 monetization sequencing (billing/quotas/white-label — O6/O10) is owner-timed post-GA.
+
+## Phase B / C / D ordering summary
+
+| Phase | Scope | Tasks/Waves | GA-blocking? | Starts after |
+|---|---|---|:---:|---|
+| **B — Release Engineering** | Track B live-VPS validation → `QA-R-012` | B1–B13 | **YES** (the only GA gate) | Owner opens SSH socket + tenant Postgres *(now available)* |
+| **C — Product Enhancement** | Frozen enhancement backlog (Rev 4) | C0 + C1–C21 (22 waves, ~90 items) | No (post-GA) | `QA-R-012` PASS (C0 foundations may overlap with owner OK) |
+| **D — Future / Commercial** | Commercial backlog Queues 4/5 + Consolidation | D1 / D2 / D3 (roadmap, owner-promoted) | No | Post-GA, owner-timed |
+
+**Governance (unchanged):** the EOS (`/eos <scope>`) is the single engineering gate for every Phase B task and Phase C wave — none is "complete" until EOS returns PASS. QW1–QW8 certifications, the Master Tracker rows, and both frozen backlogs are **preserved, not modified**, by this continuation. **Nothing in Phases B/C/D executes until the owner approves each phase.**
