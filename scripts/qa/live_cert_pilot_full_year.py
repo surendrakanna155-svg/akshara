@@ -56,6 +56,7 @@ ADMIN = "+919876543210"
 ADMIN_UID = "a3000000-0000-4000-8000-000000000001"
 SOCK = os.path.expanduser("~/.ssh/akshara-cm.sock")
 TS = str(int(time.time()))
+YEAR_LABEL = "AY-" + TS[-6:]   # unique per run — academic-year label is unique per org
 
 # One throwaway single-school tenant for the full-year walk.
 PILOT = "a2000000-0000-4000-8000-0000000000e1"
@@ -177,6 +178,67 @@ def go_live(token, school, name, board, curriculum, modules, fee_cats):
     return s, (data(b).get("provision") or {})
 
 
+def import_commit(tok, school, kind, rows):
+    """Persistent onboarding import (preview -> commit, NO rollback). `kind` is
+    'teachers' or 'students'. Returns the commit response data (or None)."""
+    s, b = http("POST", f"/onboarding/imports/{kind}/preview", tok,
+                {"fileName": f"{kind}.csv", "rows": rows}, school=school)
+    jid = (data(b).get("job") or {}).get("id")
+    if not jid:
+        return None
+    s, b = http("POST", f"/onboarding/imports/{jid}/commit", tok, school=school)
+    return data(b)
+
+
+def seed_tenant(tok, school):
+    """Self-seed a FRESH school so the full-year walk exercises every stage:
+    a current academic year, teacher/parent/student persona logins (the fixed
+    demo phones the later stages log in with — provisioned INTO this school), and
+    a fee structure->assignment (which auto-issues a collectible invoice). Makes
+    the sim genuinely unattended end-to-end instead of assuming a pre-seeded
+    tenant. All calls are the real API (evidence-based recipes)."""
+    seeded = {"student": None, "year": None}
+    # 1) current academic year — UNIQUE label per run (year label is unique per
+    #    org, so a shared "2026-27" from go-live / a sibling school 409s).
+    sy, by = http("POST", "/academic/years", tok,
+                  {"yearLabel": YEAR_LABEL, "startDate": "2026-04-01", "endDate": "2027-03-31",
+                   "isCurrent": True, "status": "active"}, school=school)
+    seeded["year"] = data(by).get("yearId") or data(by).get("id")
+    # 2) teacher persona at the phone stage 14+ logs in with.
+    import_commit(tok, school, "teachers",
+                  [{"displayName": "PFY Teacher", "phone": "9876543213",
+                    "role": "teacher", "email": "pfyteacher@example.com"}])
+    # 3) parent + student personas linked to a real enrolled student.
+    adm = f"PFY-P-{TS[-6:]}"
+    import_commit(tok, school, "students",
+                  [{"studentName": "PFY Persona Child", "admissionNumber": adm,
+                    "classLabel": "Grade 1", "sectionLabel": "A", "academicYear": YEAR_LABEL,
+                    "parentName": "PFY Persona Parent", "parentPhone": "9876543211",
+                    "studentPhone": "9876543212"}])
+    # 4) resolve the seeded student id — the SIS roster exposes `studentId`.
+    s, b = http("GET", "/sis/students", tok, school=school)
+    roster = items(b)
+    for st in roster:
+        an = st.get("admissionNumber") or st.get("admission_number")
+        if an == adm:
+            seeded["student"] = st.get("studentId") or st.get("id"); break
+    if not seeded["student"]:
+        seeded["student"] = next((st.get("studentId") or st.get("id")
+                                  for st in roster if (st.get("studentId") or st.get("id"))), None)
+    # 5) fee structure -> assignment (auto-issues an 'issued' invoice for §10).
+    if seeded["student"]:
+        s, b = http("POST", "/finance/fee-structures", tok,
+                    {"name": "PFY Annual Plan", "academicYear": YEAR_LABEL, "status": "active",
+                     "categories": [{"category": "tuition", "label": "Tuition", "amount": 48000}]},
+                    school=school)
+        fs_id = data(b).get("id")
+        if fs_id:
+            http("POST", "/finance/fee-assignments", tok,
+                 {"studentId": seeded["student"], "feeStructureId": fs_id, "academicYear": YEAR_LABEL},
+                 school=school)
+    return seeded
+
+
 def require_socket_or_die():
     """FAIL LOUDLY: this is an authoring scaffold for the LIVE run. A missing
     socket or an unreachable API must error in setup — never silently green."""
@@ -220,6 +282,15 @@ try:
     rec("03.go-live", "PASS" if s == 200 and prov.get("provisioned") and (prov.get("subjectCount") or 0) > 0 else "FAIL",
         f"HTTP {s} provisioned={prov.get('provisioned')} subjects={prov.get('subjectCount')}")
 
+    # ─── Self-seed the fresh tenant (year + personas + fee/invoice) ────────────
+    # A real school's year begins by setting up the calendar, staff, roster and
+    # fees; this makes the unattended walk exercise those stages instead of
+    # skipping them. Not a graded stage — a setup step the later stages rely on.
+    seed = seed_tenant(tok, PILOT)
+    seed_sid = seed.get("student")
+    rec("03b.seed-tenant", "PASS" if seed_sid and seed.get("year") else "NOTE",
+        f"seeded year={str(seed.get('year'))[:8]} student={str(seed_sid)[:8]}")
+
     # ─── Stage 4: school-config read + write roundtrip ─────────────────────────
     s, b = http("GET", "/school-config", tok, school=PILOT)
     cur = data(b).get("configuration") or {}
@@ -239,14 +310,9 @@ try:
     # ─── Stage 5: academic year resolve (needed by timetable build) ────────────
     s, b = http("GET", "/academic/years", tok, school=PILOT)
     years = items(b)
-    year_id = next((y.get("id") for y in years if y.get("id")), None)
-    if not year_id:
-        # The go-live provisions a year; create one explicitly if the read is empty.
-        sc, bc = http("POST", "/academic/years", tok,
-                      {"name": "2026-27", "startDate": "2026-06-01", "endDate": "2027-03-31"},
-                      school=PILOT)
-        year_id = data(bc).get("id")
-    rec("05.academic-year", "PASS" if s == 200 and year_id else "FAIL", f"HTTP {s} year={year_id}")
+    # Prefer the year the seed step created (its id), else the first resolvable one.
+    year_id = seed.get("year") or next((y.get("yearId") or y.get("id") for y in years if (y.get("yearId") or y.get("id"))), None)
+    rec("05.academic-year", "PASS" if s == 200 and year_id else "FAIL", f"HTTP {s} year={str(year_id)[:8]}")
 
     # ─── Stage 6: SIS roster read (fresh school -> clean 200, never 500) ────────
     s, b = http("GET", "/sis/students", tok, school=PILOT)
