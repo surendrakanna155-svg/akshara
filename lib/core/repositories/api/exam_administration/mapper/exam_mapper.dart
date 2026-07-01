@@ -54,6 +54,62 @@ class ExamMapper {
   List<ExamMarkRecord> toMarks(List<dynamic> items) =>
       items.map((item) => toMark(item as Map<String, dynamic>)).toList();
 
+  /// EXM-1 — request body for the bulk marks save. Non-present entries send
+  /// null marks (the server forces null too).
+  Map<String, dynamic> bulkMarksBody(BulkUpdateExamMarksRequest request) {
+    return {
+      'entries': [
+        for (final entry in request.entries)
+          {
+            'id': entry.markEntryId,
+            'marksObtained':
+                entry.status.isPresent ? entry.marksObtained : null,
+            'status': entry.status.wire,
+          },
+      ],
+    };
+  }
+
+  /// EXM-1 — parse the { updated: [...], failed: [{ id, reason }] } response.
+  BulkExamMarkSaveResult toBulkResult(Map<String, dynamic> data) {
+    final updatedRaw = data['updated'];
+    final failedRaw = data['failed'];
+    return BulkExamMarkSaveResult(
+      updated: [
+        if (updatedRaw is List)
+          for (final raw in updatedRaw)
+            if (raw is Map) toMark(Map<String, dynamic>.from(raw)),
+      ],
+      failed: [
+        if (failedRaw is List)
+          for (final raw in failedRaw)
+            if (raw is Map)
+              BulkExamMarkFailure(
+                markEntryId: (raw['id'] ?? '').toString(),
+                reason: (raw['reason'] ?? '').toString(),
+              ),
+      ],
+    );
+  }
+
+  /// EXM-2 — parse one marks-entry progress row.
+  MarksEntryProgress toProgress(Map<String, dynamic> json) {
+    return MarksEntryProgress(
+      examId: json['examId'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      subject: json['subject'] as String? ?? '',
+      grade: json['grade'] as String? ?? '',
+      sectionName:
+          json['sectionName'] as String? ?? json['section'] as String? ?? '',
+      enteredCount: (json['enteredCount'] as num?)?.toInt() ?? 0,
+      totalCount: (json['totalCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  List<MarksEntryProgress> toProgressList(List<dynamic> items) => items
+      .map((item) => toProgress(item as Map<String, dynamic>))
+      .toList();
+
   PublishedExamResult toPublishedResult(Map<String, dynamic> json) {
     return PublishedExamResult(
       markEntryId: json['markEntryId'] as String? ?? json['id'] as String? ?? '',

@@ -27,7 +27,10 @@ import type { AppConfig } from "../../config.ts";
 import type { AccessTokenClaims } from "../../jwt.ts";
 import { signAccessToken } from "../../jwt.ts";
 import { routeExamAdministration } from "./exam_administration_router.ts";
-import { EXAM_OPERATION_PERMISSIONS } from "./exam_administration_handlers.ts";
+import {
+  EXAM_OPERATION_PERMISSIONS,
+  MARKS_ENTRY_PROGRESS_PERMISSIONS,
+} from "./exam_administration_handlers.ts";
 
 const SECRET = "test-jwt-secret-minimum-32-characters-long";
 const config = { jwtSecret: SECRET } as AppConfig;
@@ -142,4 +145,108 @@ Deno.test("QA-B-034: an unregistered /academics/exams path returns 404", async (
 Deno.test("QA-B-034: a non-/academics/exams path returns null (no match)", async () => {
   const res = await call("GET", "/student/exams", ["viewExams"]);
   assertEquals(res, null);
+});
+
+// ── EXM-1 — POST /academics/exams/{examId}/marks/batch (bulk marks save) ───────
+
+Deno.test("EXM-1: bulk-save slug is manageExamMarks (same guard as single PATCH)", () => {
+  assertEquals(EXAM_OPERATION_PERMISSIONS.bulkUpdateExamMarks, "manageExamMarks");
+});
+
+Deno.test("EXM-1: POST /academics/exams/{id}/marks/batch is denied without manageExamMarks (403)", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/marks/batch",
+    ["viewExams"],
+    { entries: [{ id: "exam-1_01", marksObtained: 40 }] },
+  );
+  assertEquals(res?.status, 403);
+  assertEquals((await res!.json()).error.code, "FORBIDDEN");
+});
+
+Deno.test("EXM-1: POST bulk with manageExamMarks passes the gate → reaches DB (503)", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/marks/batch",
+    ["manageExamMarks"],
+    { entries: [{ id: "exam-1_01", marksObtained: 40 }] },
+  );
+  // Gate + body validation passed → reached the (unconfigured) tenant DB.
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-1: POST bulk rejects a non-array entries body (422) before the DB", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/marks/batch",
+    ["manageExamMarks"],
+    { entries: "nope" },
+  );
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("EXM-1: bulk route rejects an unauthenticated caller (401)", async () => {
+  const req = new Request("https://x/academics/exams/exam-1/marks/batch", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ entries: [] }),
+  });
+  const res = await routeExamAdministration(
+    req,
+    config,
+    "POST",
+    "/academics/exams/exam-1/marks/batch",
+  );
+  assertEquals(res?.status, 401);
+});
+
+// ── EXM-2 — GET /academics/exams/progress (marks-entry progress board) ─────────
+
+Deno.test("EXM-2: progress board grants viewExams OR verifyExamResults", () => {
+  assertEquals(
+    [...MARKS_ENTRY_PROGRESS_PERMISSIONS],
+    ["viewExams", "verifyExamResults"],
+  );
+});
+
+Deno.test("EXM-2: GET /academics/exams/progress reads with viewExams (passes gate → 503)", async () => {
+  const res = await call("GET", "/academics/exams/progress", ["viewExams"]);
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-2: GET /academics/exams/progress reads with verifyExamResults (passes gate → 503)", async () => {
+  const res = await call("GET", "/academics/exams/progress", ["verifyExamResults"]);
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-2: GET /academics/exams/progress is denied without either grant (403)", async () => {
+  const res = await call("GET", "/academics/exams/progress", ["manageExamMarks"]);
+  assertEquals(res?.status, 403);
+  assertEquals((await res!.json()).error.code, "FORBIDDEN");
+});
+
+Deno.test("EXM-2: /progress is matched as the progress board, NOT as GET /academics/exams/{examId}", async () => {
+  // A viewExams reader hitting /progress must not be routed to handleGetExam
+  // (which would 503 via a getExamSession for an exam literally named
+  // "progress"). Both currently 503 pre-DB, so lock the routing by asserting the
+  // manageExamMarks-only caller is DENIED on /progress (viewExams-gated) but a
+  // getExam of a real id would ALSO be denied — instead assert the OR-grant:
+  // verifyExamResults alone (which does NOT grant viewExams / getExam) passes.
+  const res = await call(
+    "GET",
+    "/academics/exams/progress",
+    ["verifyExamResults"],
+  );
+  assertEquals(res?.status, 503); // reached the progress handler, not a 403
+});
+
+Deno.test("EXM-2: progress route rejects an unauthenticated caller (401)", async () => {
+  const req = new Request("https://x/academics/exams/progress", { method: "GET" });
+  const res = await routeExamAdministration(
+    req,
+    config,
+    "GET",
+    "/academics/exams/progress",
+  );
+  assertEquals(res?.status, 401);
 });

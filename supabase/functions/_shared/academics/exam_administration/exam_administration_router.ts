@@ -1,12 +1,14 @@
 import type { AppConfig } from "../../config.ts";
 import { errorEnvelope } from "../../http.ts";
 import {
+  handleBulkUpdateExamMarks,
   handleCreateExam,
   handleGetExam,
   handleListExamMarks,
   handleListExamRemarks,
   handleListExams,
   handleListPublishedResultsForStudent,
+  handleMarksEntryProgress,
   handleOpenMarksEntry,
   handleProcessExamResults,
   handlePublishExamResults,
@@ -28,6 +30,20 @@ export function matchExamAdministrationRoute(
   }
   if (path === "/academics/exams" && method === "POST") {
     return { handler: handleCreateExam, args: [] };
+  }
+
+  // EXM-2 — marks-entry progress board. Matched BEFORE the generic
+  // /academics/exams/{examId} GET so "progress" is not mistaken for an examId.
+  if (path === "/academics/exams/progress" && method === "GET") {
+    return { handler: handleMarksEntryProgress, args: [] };
+  }
+
+  // EXM-1 — fast bulk marks save for one exam.
+  const bulkMarksMatch = path.match(
+    /^\/academics\/exams\/([^/]+)\/marks\/batch$/,
+  );
+  if (bulkMarksMatch && method === "POST") {
+    return { handler: handleBulkUpdateExamMarks, args: [bulkMarksMatch[1]!] };
   }
 
   const publishedStudentMatch = path.match(

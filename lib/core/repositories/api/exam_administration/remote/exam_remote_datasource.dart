@@ -185,6 +185,32 @@ class ExamRemoteDataSource {
     return _mapper.toMark(resolved.data);
   }
 
+  /// EXM-1 — fast bulk marks save for one exam. Partial success: published rows
+  /// are reported in `failed` and never overwritten. Sent as a single POST so a
+  /// full grid of dirty rows lands in one round-trip.
+  Future<BulkExamMarkSaveResult> bulkUpdateMarks({
+    required RepositoryQuery query,
+    required BulkUpdateExamMarksRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ExamApiPaths.marksBatch(request.examId),
+      queryParameters: _queryParams(query),
+      data: _mapper.bulkMarksBody(request),
+    );
+    return _mapper.toBulkResult(_requireData(response));
+  }
+
+  /// EXM-2 — marks-entry progress for the school (exams awaiting marks).
+  Future<List<MarksEntryProgress>> fetchMarksEntryProgress({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.progress,
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toProgressList(_listData(_responseMap(response)));
+  }
+
   Future<List<PublishedExamResult>> fetchPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,

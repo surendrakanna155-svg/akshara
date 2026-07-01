@@ -198,6 +198,52 @@ void main() {
             };
           }
 
+          // EXM-2 — marks-entry progress board.
+          if (path == ExamApiPaths.progress && method == 'GET') {
+            return {
+              'data': [
+                {
+                  'examId': 'exam_api_1',
+                  'title': 'Half-Yearly Mathematics',
+                  'subject': 'Mathematics',
+                  'grade': '8',
+                  'sectionName': 'B',
+                  'enteredCount': 2,
+                  'totalCount': 3,
+                  'pending': 1,
+                },
+              ],
+            };
+          }
+
+          // EXM-1 — fast bulk marks save for one exam.
+          if (examId != null &&
+              path.endsWith('/marks/batch') &&
+              method == 'POST') {
+            final body = options.data as Map<String, dynamic>;
+            final entries = (body['entries'] as List).cast<Map<String, dynamic>>();
+            return {
+              'data': {
+                'examId': examId,
+                'updated': [
+                  for (final e in entries)
+                    {
+                      'id': e['id'],
+                      'examId': examId,
+                      'sisStudentId': 'SIS-STU-10430',
+                      'studentName': 'Student',
+                      'rollNo': '01',
+                      'marksObtained': e['marksObtained'],
+                      'published': false,
+                      'status': e['status'],
+                      'maxMarks': 80,
+                    },
+                ],
+                'failed': <Map<String, dynamic>>[],
+              },
+            };
+          }
+
           final markMatch =
               RegExp(r'/academics/exams/marks/([^/]+)').firstMatch(path);
           if (markMatch != null && method == 'PATCH') {
@@ -250,6 +296,126 @@ void main() {
       final repo = MockExamAdministrationRepository();
       final exam = await repo.getExam(query: query, examId: 'missing');
       expect(exam, isNull);
+    });
+
+    // EXM-1 — fast bulk marks save.
+    test('mock bulk save persists present rows + skips published (partial)',
+        () async {
+      final repo = MockExamAdministrationRepository();
+      final marks = await repo.listMarks(query: query, examId: 'exam_math_8a');
+      final open = marks.firstWhere((m) => m.marksObtained == null);
+
+      final result = await repo.bulkUpdateMarks(
+        query: query,
+        request: BulkUpdateExamMarksRequest(
+          examId: 'exam_math_8a',
+          entries: [
+            BulkExamMarkEntry(markEntryId: open.id, marksObtained: 33),
+            // Missing row → reported, not fatal.
+            const BulkExamMarkEntry(markEntryId: 'nope', marksObtained: 10),
+          ],
+        ),
+      );
+      expect(result.savedCount, 1);
+      expect(result.failedCount, 1);
+      expect(result.failed.first.markEntryId, 'nope');
+
+      final refreshed =
+          await repo.listMarks(query: query, examId: 'exam_math_8a');
+      expect(refreshed.firstWhere((m) => m.id == open.id).marksObtained, 33);
+    });
+
+    // EXM-2 — marks-entry progress board.
+    test('mock progress lists marks_entry exams with entered/total/pending',
+        () async {
+      final repo = MockExamAdministrationRepository();
+      final rows = await repo.listMarksEntryProgress(query: query);
+      // Seeded exam_math_8a is in marks_entry with one open slot.
+      final math = rows.firstWhere((r) => r.examId == 'exam_math_8a');
+      expect(math.totalCount, greaterThan(0));
+      expect(math.pending, greaterThanOrEqualTo(1));
+      expect(math.enteredCount, math.totalCount - math.pending);
+    });
+
+    test('API bulk save parses { updated, failed }', () async {
+      final remote = ExamRemoteDataSource(
+        createFakeDio((options) {
+          if (options.path.endsWith('/marks/batch')) {
+            final body = options.data as Map<String, dynamic>;
+            final entries =
+                (body['entries'] as List).cast<Map<String, dynamic>>();
+            return {
+              'data': {
+                'examId': 'exam_api_1',
+                'updated': [
+                  for (final e in entries)
+                    {
+                      'id': e['id'],
+                      'examId': 'exam_api_1',
+                      'sisStudentId': 'SIS',
+                      'studentName': 'S',
+                      'rollNo': '01',
+                      'marksObtained': e['marksObtained'],
+                      'published': false,
+                      'status': e['status'],
+                      'maxMarks': 80,
+                    },
+                ],
+                'failed': [
+                  {'id': 'bad-1', 'reason': 'already published'},
+                ],
+              },
+            };
+          }
+          return {'data': {}};
+        }),
+        mapper: mapper,
+      );
+      final apiRepo = ApiExamAdministrationRepository(remote: remote);
+      final result = await apiRepo.bulkUpdateMarks(
+        query: query,
+        request: const BulkUpdateExamMarksRequest(
+          examId: 'exam_api_1',
+          entries: [
+            BulkExamMarkEntry(markEntryId: 'exam_api_1_01', marksObtained: 55),
+          ],
+        ),
+      );
+      expect(result.savedCount, 1);
+      expect(result.updated.first.marksObtained, 55);
+      expect(result.failedCount, 1);
+      expect(result.failed.first.reason, 'already published');
+    });
+
+    test('API progress parses the board rows', () async {
+      final remote = ExamRemoteDataSource(
+        createFakeDio((options) {
+          if (options.path == ExamApiPaths.progress) {
+            return {
+              'data': [
+                {
+                  'examId': 'e1',
+                  'title': 'T',
+                  'subject': 'Maths',
+                  'grade': '8',
+                  'sectionName': 'A',
+                  'enteredCount': 4,
+                  'totalCount': 10,
+                  'pending': 6,
+                },
+              ],
+            };
+          }
+          return {'data': []};
+        }),
+        mapper: mapper,
+      );
+      final apiRepo = ApiExamAdministrationRepository(remote: remote);
+      final rows = await apiRepo.listMarksEntryProgress(query: query);
+      expect(rows, hasLength(1));
+      expect(rows.first.enteredCount, 4);
+      expect(rows.first.totalCount, 10);
+      expect(rows.first.pending, 6);
     });
   });
 }

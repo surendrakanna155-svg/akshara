@@ -114,6 +114,25 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
   }
 
   @override
+  Future<BulkExamMarkSaveResult> bulkUpdateMarks({
+    required RepositoryQuery query,
+    required BulkUpdateExamMarksRequest request,
+  }) async {
+    final exam = _store.examById(request.examId);
+    return _store.recordMarksBulk(
+      entries: request.entries,
+      maxMarks: exam?.maxMarks,
+    );
+  }
+
+  @override
+  Future<List<MarksEntryProgress>> listMarksEntryProgress({
+    required RepositoryQuery query,
+  }) async {
+    return _store.marksEntryProgress();
+  }
+
+  @override
   Future<List<PublishedExamResult>> listPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,

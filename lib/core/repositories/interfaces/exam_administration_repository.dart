@@ -53,6 +53,21 @@ abstract class ExamAdministrationRepository {
     required UpdateExamMarkRequest request,
   });
 
+  /// EXM-1 — fast bulk marks save for one exam. Applied per row (published rows
+  /// skipped + reported, never overwritten); partial success. Returns the
+  /// persisted rows and the per-row failures.
+  Future<BulkExamMarkSaveResult> bulkUpdateMarks({
+    required RepositoryQuery query,
+    required BulkUpdateExamMarksRequest request,
+  });
+
+  /// EXM-2 — marks-entry progress board: one row per exam currently in the
+  /// marks_entry phase with entered/total counts, so a coordinator sees who
+  /// still owes marks before processing/publishing.
+  Future<List<MarksEntryProgress>> listMarksEntryProgress({
+    required RepositoryQuery query,
+  });
+
   Future<List<PublishedExamResult>> listPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,

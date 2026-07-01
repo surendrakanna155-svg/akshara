@@ -10,6 +10,12 @@ abstract final class ExamApiPaths {
 
   static String marks(String examId) => '$base/$examId/marks';
 
+  /// EXM-1 — fast bulk marks save for one exam.
+  static String marksBatch(String examId) => '$base/$examId/marks/batch';
+
+  /// EXM-2 — marks-entry progress board (exams awaiting marks for the school).
+  static const String progress = '$base/progress';
+
   static String markEntry(String markEntryId) => '$base/marks/$markEntryId';
 
   static String process(String examId) => '$base/$examId/process';

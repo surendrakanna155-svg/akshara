@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/exams/exam_administration_requests.dart';
 import 'package:akshara_erp/core/exams/exam_administration_store.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
@@ -71,6 +72,76 @@ void main() {
             .processResults('exam_math_8a'),
         throwsA(isA<Object>()),
       );
+    });
+
+    // EXM-1 — fast bulk marks save.
+    test('bulkSaveMarks persists changed rows + reports failures', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.principal),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final pending = await container
+          .read(examMarksListProvider('exam_math_8a').future);
+      final open = pending.firstWhere((m) => m.marksObtained == null);
+
+      final result = await container
+          .read(examMarksMutationProvider.notifier)
+          .bulkSaveMarks(
+            examId: 'exam_math_8a',
+            entries: [
+              BulkExamMarkEntry(markEntryId: open.id, marksObtained: 29),
+              const BulkExamMarkEntry(
+                markEntryId: 'missing-id',
+                marksObtained: 5,
+              ),
+            ],
+          );
+      expect(result.savedCount, 1);
+      expect(result.failedCount, 1);
+
+      final refreshed = await container
+          .read(examMarksListProvider('exam_math_8a').future);
+      expect(refreshed.firstWhere((m) => m.id == open.id).marksObtained, 29);
+    });
+
+    test('bulkSaveMarks is denied without manageExamMarks', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.parent),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        () => container.read(examMarksMutationProvider.notifier).bulkSaveMarks(
+              examId: 'exam_math_8a',
+              entries: const [
+                BulkExamMarkEntry(markEntryId: 'x', marksObtained: 10),
+              ],
+            ),
+        throwsA(isA<Object>()),
+      );
+    });
+
+    // EXM-2 — marks-entry progress board provider.
+    test('examMarksEntryProgressProvider lists exams awaiting marks', () async {
+      final container = ProviderContainer(overrides: providerTestOverrides());
+      addTearDown(container.dispose);
+
+      final rows =
+          await container.read(examMarksEntryProgressProvider.future);
+      final math = rows.firstWhere((r) => r.examId == 'exam_math_8a');
+      expect(math.pending, greaterThanOrEqualTo(1));
+      expect(math.enteredCount, math.totalCount - math.pending);
     });
   });
 }

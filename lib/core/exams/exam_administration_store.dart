@@ -1,6 +1,7 @@
 import '../../features/education/education_models.dart';
 import '../repositories/mock/mock_canonical_student_registry.dart';
 import 'exam_administration_persistence.dart';
+import 'exam_administration_requests.dart';
 import 'exam_grading.dart';
 import 'exam_remark.dart';
 
@@ -219,6 +220,60 @@ class PublishedExamResult {
 
   /// Display code (AB/ML/DB) for a non-present student, else null.
   String? get statusCode => status.displayCode;
+}
+
+/// EXM-2 — marks-entry progress for one exam in the `marks_entry` phase: how
+/// many students already have a decision ([enteredCount]) versus the whole
+/// roster ([totalCount]). A coordinator uses [pending] to see who still owes
+/// marks before processing/publishing. "Entered" includes non-present (AB/ML/DB)
+/// rows — they are decided, not pending.
+class MarksEntryProgress {
+  const MarksEntryProgress({
+    required this.examId,
+    required this.title,
+    required this.subject,
+    required this.grade,
+    required this.sectionName,
+    required this.enteredCount,
+    required this.totalCount,
+  });
+
+  final String examId;
+  final String title;
+  final String subject;
+  final String grade;
+  final String sectionName;
+  final int enteredCount;
+  final int totalCount;
+
+  /// Students who still owe a decision (0 when the roster is complete).
+  int get pending => (totalCount - enteredCount).clamp(0, totalCount);
+
+  /// Fraction complete in [0, 1] for the progress bar (1 when empty roster).
+  double get fraction =>
+      totalCount == 0 ? 1.0 : (enteredCount / totalCount).clamp(0.0, 1.0);
+
+  String get classLabel => '$grade-$sectionName';
+}
+
+/// EXM-1 — outcome of a bulk marks save: the persisted rows and the per-row
+/// failures (published/immutable, out of bounds, conflict, not found, …).
+class BulkExamMarkSaveResult {
+  const BulkExamMarkSaveResult({required this.updated, required this.failed});
+
+  final List<ExamMarkRecord> updated;
+  final List<BulkExamMarkFailure> failed;
+
+  int get savedCount => updated.length;
+  int get failedCount => failed.length;
+}
+
+/// EXM-1 — a single rejected row in a bulk save (with a human reason).
+class BulkExamMarkFailure {
+  const BulkExamMarkFailure({required this.markEntryId, required this.reason});
+
+  final String markEntryId;
+  final String reason;
 }
 
 /// Single source of truth for exam creation → publish chain.
@@ -468,6 +523,33 @@ final class ExamAdministrationStore {
         .toList(growable: false);
   }
 
+  /// EXM-2 — marks-entry progress for every exam currently in the marks_entry
+  /// phase. "Entered" = a present student with a mark OR a non-present (AB/ML/DB)
+  /// student, mirroring the backend's `marks_entered = true` semantics.
+  List<MarksEntryProgress> marksEntryProgress() {
+    ensureSeeded();
+    final result = <MarksEntryProgress>[];
+    for (final exam in _exams.values) {
+      if (exam.phase != ExamLifecyclePhase.marksEntry) continue;
+      final marks = marksForExam(exam.id);
+      final entered = marks
+          .where((m) => !m.status.isPresent || m.marksObtained != null)
+          .length;
+      result.add(
+        MarksEntryProgress(
+          examId: exam.id,
+          title: exam.title,
+          subject: exam.subject,
+          grade: exam.grade,
+          sectionName: exam.section,
+          enteredCount: entered,
+          totalCount: marks.length,
+        ),
+      );
+    }
+    return result;
+  }
+
   List<ExamMarkRecord> activeMarkEntries() {
     ensureSeeded();
     final examId = activeMarksExamId;
@@ -563,6 +645,65 @@ final class ExamAdministrationStore {
     clearCoordinatorVerification(existing.examId);
     _persist();
     return updated;
+  }
+
+  /// EXM-1 — applies a fast bulk marks save, per row, with partial success. A
+  /// published (immutable) row, a missing row, or an out-of-bounds present mark
+  /// is reported in `failed` and never overwritten; the rest persist. Mirrors the
+  /// backend's guarded per-row apply.
+  BulkExamMarkSaveResult recordMarksBulk({
+    required List<BulkExamMarkEntry> entries,
+    int? maxMarks,
+  }) {
+    ensureSeeded();
+    final updated = <ExamMarkRecord>[];
+    final failed = <BulkExamMarkFailure>[];
+    for (final entry in entries) {
+      final existing = _marks[entry.markEntryId];
+      if (existing == null) {
+        failed.add(BulkExamMarkFailure(
+          markEntryId: entry.markEntryId,
+          reason: 'mark entry not found or already published',
+        ));
+        continue;
+      }
+      if (existing.published) {
+        // Published rows are immutable — never overwritten.
+        failed.add(BulkExamMarkFailure(
+          markEntryId: entry.markEntryId,
+          reason: 'mark entry not found or already published',
+        ));
+        continue;
+      }
+      if (entry.status.isPresent) {
+        final marks = entry.marksObtained;
+        if (marks == null || marks < 0 ||
+            (maxMarks != null && marks > maxMarks)) {
+          failed.add(BulkExamMarkFailure(
+            markEntryId: entry.markEntryId,
+            reason: maxMarks != null
+                ? 'marks must be between 0 and $maxMarks'
+                : 'marks required for a present student',
+          ));
+          continue;
+        }
+        final row = existing.copyWith(
+          marksObtained: marks,
+          status: ExamMarkStatus.present,
+        );
+        _marks[entry.markEntryId] = row;
+        clearCoordinatorVerification(existing.examId);
+        updated.add(row);
+      } else {
+        // Non-present: force null marks.
+        final row = existing.copyWith(clearMarks: true, status: entry.status);
+        _marks[entry.markEntryId] = row;
+        clearCoordinatorVerification(existing.examId);
+        updated.add(row);
+      }
+    }
+    _persist();
+    return BulkExamMarkSaveResult(updated: updated, failed: failed);
   }
 
   ExamSession processResults(String examId) {

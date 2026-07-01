@@ -91,6 +91,19 @@ class ApiExamAdministrationRepository implements ExamAdministrationRepository {
       _remote.updateMark(query: query, request: request);
 
   @override
+  Future<BulkExamMarkSaveResult> bulkUpdateMarks({
+    required RepositoryQuery query,
+    required BulkUpdateExamMarksRequest request,
+  }) =>
+      _remote.bulkUpdateMarks(query: query, request: request);
+
+  @override
+  Future<List<MarksEntryProgress>> listMarksEntryProgress({
+    required RepositoryQuery query,
+  }) =>
+      _remote.fetchMarksEntryProgress(query: query);
+
+  @override
   Future<List<PublishedExamResult>> listPublishedResultsForStudent({
     required RepositoryQuery query,
     required String sisStudentId,

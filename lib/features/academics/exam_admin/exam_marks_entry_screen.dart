@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/config/exam_approval_config.dart';
+import '../../../core/exams/exam_administration_requests.dart';
 import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
@@ -13,6 +15,7 @@ import '../../../theme/theme_extensions.dart';
 import 'exam_admin_models.dart';
 import 'exam_administration_provider.dart';
 import 'exam_marks_entry_provider.dart';
+import 'exam_marks_progress_screen.dart';
 import '../../../core/errors/error_text.dart';
 
 /// ERP marks entry and publication chain for a single exam session.
@@ -38,6 +41,20 @@ class ExamMarksEntryScreen extends ConsumerWidget {
           error: (_, __) => const Text('Marks entry'),
         ),
         actions: [
+          // EXM-2 — jump to the marks-entry progress board (who still owes marks).
+          AksharaViewAction(
+            permission: Permission.viewExams,
+            child: IconButton(
+              key: QaTestKeys.examMarksProgressButton,
+              tooltip: 'Marks entry progress',
+              icon: const Icon(Icons.checklist_rtl_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const ExamMarksProgressScreen(),
+                ),
+              ),
+            ),
+          ),
           examAsync.maybeWhen(
             data: (exam) {
               if (exam == null) return const SizedBox.shrink();
@@ -106,7 +123,7 @@ class ExamMarksEntryScreen extends ConsumerWidget {
   }
 }
 
-class _MarksEntryBody extends ConsumerWidget {
+class _MarksEntryBody extends ConsumerStatefulWidget {
   const _MarksEntryBody({
     required this.exam,
     required this.marks,
@@ -118,11 +135,118 @@ class _MarksEntryBody extends ConsumerWidget {
   final bool approvalRequired;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MarksEntryBody> createState() => _MarksEntryBodyState();
+}
+
+class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody> {
+  ExamSession get exam => widget.exam;
+  List<ExamMarkRecord> get marks => widget.marks;
+  bool get approvalRequired => widget.approvalRequired;
+
+  // EXM-1 — one controller + focus node per row so Enter/Tab jumps to the next
+  // row's marks field and "Save all" can read every field. Keyed by mark id so
+  // they survive list rebuilds (a save refresh re-emits the roster).
+  final Map<String, TextEditingController> _controllers = {};
+  final Map<String, FocusNode> _focusNodes = {};
+  bool _savingAll = false;
+
+  bool get _canEdit =>
+      exam.phase == ExamLifecyclePhase.marksEntry ||
+      exam.phase == ExamLifecyclePhase.scheduled;
+
+  TextEditingController _controllerFor(ExamMarkRecord mark) {
+    return _controllers.putIfAbsent(
+      mark.id,
+      () => TextEditingController(text: mark.marksObtained?.toString() ?? ''),
+    );
+  }
+
+  FocusNode _focusFor(String markId) =>
+      _focusNodes.putIfAbsent(markId, FocusNode.new);
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    for (final f in _focusNodes.values) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+  /// EXM-1 — Enter/Tab on a row moves focus to the next editable (present,
+  /// unpublished) row's marks field, so a teacher never leaves the keyboard.
+  void _focusNextRow(int fromIndex) {
+    for (var i = fromIndex + 1; i < marks.length; i++) {
+      final next = marks[i];
+      if (next.status.isPresent && !next.published && _canEdit) {
+        _focusFor(next.id).requestFocus();
+        return;
+      }
+    }
+    // Last editable row: drop focus so the keyboard closes.
+    FocusScope.of(context).unfocus();
+  }
+
+  /// EXM-1 — collect every dirty present row (field differs from persisted marks)
+  /// and POST them as one batch, then show "N saved, M failed" and refresh.
+  Future<void> _saveAll() async {
+    final entries = <BulkExamMarkEntry>[];
+    for (final mark in marks) {
+      if (mark.published || !mark.status.isPresent) continue;
+      final controller = _controllers[mark.id];
+      if (controller == null) continue;
+      final raw = controller.text.trim();
+      final parsed = int.tryParse(raw);
+      final persisted = mark.marksObtained;
+      if (parsed == null) continue; // blank / non-numeric: nothing to save
+      if (parsed == persisted) continue; // unchanged
+      if (parsed < 0 || parsed > exam.maxMarks) continue; // guarded by backend too
+      entries.add(
+        BulkExamMarkEntry(
+          markEntryId: mark.id,
+          marksObtained: parsed,
+          status: ExamMarkStatus.present,
+        ),
+      );
+    }
+    if (entries.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No changed marks to save.')),
+      );
+      return;
+    }
+    setState(() => _savingAll = true);
+    try {
+      final result = await ref
+          .read(examMarksMutationProvider.notifier)
+          .bulkSaveMarks(examId: exam.id, entries: entries);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${result.savedCount} saved, ${result.failedCount} failed',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(aksharaErrorMessage(error))),
+      );
+    } finally {
+      if (mounted) setState(() => _savingAll = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final text = context.aksharaText;
-    final entered = marks.where((m) => m.marksObtained != null).length;
-    final canEdit = exam.phase == ExamLifecyclePhase.marksEntry ||
-        exam.phase == ExamLifecyclePhase.scheduled;
+    final entered = marks
+        .where((m) => !m.status.isPresent || m.marksObtained != null)
+        .length;
+    final canEdit = _canEdit;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -166,8 +290,14 @@ class _MarksEntryBody extends ConsumerWidget {
             itemCount: marks.length,
             separatorBuilder: (_, __) =>
                 const SizedBox(height: AksharaSpacing.s2),
-            itemBuilder: (context, index) =>
-                _MarkEntryRow(mark: marks[index], exam: exam, canEdit: canEdit),
+            itemBuilder: (context, index) => _MarkEntryRow(
+              mark: marks[index],
+              exam: exam,
+              canEdit: canEdit,
+              controller: _controllerFor(marks[index]),
+              focusNode: _focusFor(marks[index].id),
+              onSubmitted: () => _focusNextRow(index),
+            ),
           ),
         ),
         Padding(
@@ -176,6 +306,23 @@ class _MarksEntryBody extends ConsumerWidget {
             spacing: AksharaSpacing.s2,
             runSpacing: AksharaSpacing.s2,
             children: [
+              // EXM-1 — Save all changed rows in one batch.
+              if (canEdit && exam.phase == ExamLifecyclePhase.marksEntry)
+                AksharaViewAction(
+                  permission: Permission.manageExamMarks,
+                  child: FilledButton.icon(
+                    key: QaTestKeys.examAdminMarksSaveAllButton,
+                    onPressed: _savingAll ? null : _saveAll,
+                    icon: _savingAll
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.done_all),
+                    label: const Text('Save all'),
+                  ),
+                ),
               if (exam.phase == ExamLifecyclePhase.marksEntry ||
                   exam.phase == ExamLifecyclePhase.processed)
                 AksharaManageAction(
@@ -310,39 +457,36 @@ class _MarkEntryRow extends ConsumerStatefulWidget {
     required this.mark,
     required this.exam,
     required this.canEdit,
+    required this.controller,
+    required this.focusNode,
+    required this.onSubmitted,
   });
 
   final ExamMarkRecord mark;
   final ExamSession exam;
   final bool canEdit;
 
+  // EXM-1 — owned by the parent grid so Enter/Tab focus chaining + "Save all"
+  // can read every row's field.
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onSubmitted;
+
   @override
   ConsumerState<_MarkEntryRow> createState() => _MarkEntryRowState();
 }
 
 class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
-  late final TextEditingController _controller;
+  TextEditingController get _controller => widget.controller;
   bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(
-      text: widget.mark.marksObtained?.toString() ?? '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
 
   @override
   void didUpdateWidget(covariant _MarkEntryRow oldWidget) {
     super.didUpdateWidget(oldWidget);
     final current = widget.mark.marksObtained?.toString() ?? '';
-    if (_controller.text != current && !_saving) {
+    // Only sync the field to the persisted value when the row is not being
+    // actively edited (focused) or saved — never clobber in-flight typing.
+    if (_controller.text != current && !_saving && !widget.focusNode.hasFocus) {
       _controller.text = current;
     }
   }
@@ -524,14 +668,25 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
                   ? TextField(
                       key: QaTestKeys.examAdminMarkField(widget.mark.id),
                       controller: _controller,
+                      focusNode: widget.focusNode,
                       enabled: widget.canEdit && !widget.mark.published,
                       keyboardType: TextInputType.number,
+                      // EXM-1 — Enter/Tab advances to the next editable row.
+                      textInputAction: TextInputAction.next,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
                       decoration: InputDecoration(
                         labelText: 'Marks',
                         isDense: true,
                         suffixText: '/${widget.exam.maxMarks}',
                       ),
-                      onSubmitted: (_) => _save(),
+                      // Persist this row, then jump focus to the next one so a
+                      // teacher can key straight down the roster.
+                      onSubmitted: (_) async {
+                        await _save();
+                        widget.onSubmitted();
+                      },
                     )
                   // Non-present: field is locked; show the display code instead.
                   : InputDecorator(

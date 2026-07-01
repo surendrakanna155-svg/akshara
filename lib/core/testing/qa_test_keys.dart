@@ -150,6 +150,14 @@ abstract final class QaTestKeys {
   // EXM-D6 — per-row attendance status selector (Present / AB / ML / DB).
   static ValueKey<String> examAdminMarkStatusSelector(String markId) =>
       ValueKey<String>('exam_admin_mark_status_$markId');
+  // EXM-1 — fast bulk marks entry: Save-all button on the marks grid.
+  static const examAdminMarksSaveAllButton =
+      ValueKey<String>('exam_admin_marks_save_all_button');
+  // EXM-2 — marks-entry progress board.
+  static const examMarksProgressButton =
+      ValueKey<String>('exam_marks_progress_button');
+  static ValueKey<String> examMarksProgressCard(String examId) =>
+      ValueKey<String>('exam_marks_progress_card_$examId');
 
   static const financeAssignConcessionButton =
       ValueKey<String>('finance_assign_concession_button');

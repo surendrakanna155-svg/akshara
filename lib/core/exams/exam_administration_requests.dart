@@ -48,3 +48,30 @@ class UpdateExamMarkRequest {
   /// absent/medical/debarred and clears their marks.
   final ExamMarkStatus status;
 }
+
+/// EXM-1 — one entry inside a fast bulk marks save. A non-present ([status] not
+/// present) entry has null [marksObtained] (marks are forced null server-side).
+class BulkExamMarkEntry {
+  const BulkExamMarkEntry({
+    required this.markEntryId,
+    this.marksObtained,
+    this.status = ExamMarkStatus.present,
+  });
+
+  final String markEntryId;
+  final int? marksObtained;
+  final ExamMarkStatus status;
+}
+
+/// EXM-1 — a fast bulk marks save for one exam. Applied per-row server-side:
+/// published rows are skipped + reported (never overwritten), the rest persist
+/// (partial success).
+class BulkUpdateExamMarksRequest {
+  const BulkUpdateExamMarksRequest({
+    required this.examId,
+    required this.entries,
+  });
+
+  final String examId;
+  final List<BulkExamMarkEntry> entries;
+}

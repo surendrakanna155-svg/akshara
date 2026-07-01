@@ -3,6 +3,7 @@ import { envelope, errorEnvelope, jsonResponse, readJson } from "../../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
+  requireAnyPermission,
   requirePermission,
   requireSchoolOperationalScope,
   schoolIdFromClaims,
@@ -32,7 +33,9 @@ import {
   listExamMarks,
   listExamRemarks,
   listExamSessions,
+  listMarksEntryProgress,
   listPublishedResultsForStudent,
+  marksEntryProgressToApi,
   openMarksEntry,
   processExamResults,
   publishExamResults,
@@ -68,7 +71,20 @@ export const EXAM_OPERATION_PERMISSIONS = {
   verifyCoordinator: "verifyExamResults",
   publishResults: "publishExamResults",
   listPublishedForStudent: "viewExams",
+  // EXM-1 bulk marks save reuses the single-mark gate.
+  bulkUpdateExamMarks: "manageExamMarks",
 } as const;
+
+/**
+ * EXM-2 — the marks-entry progress board is a coordinator/leadership read: any
+ * holder of viewExams OR verifyExamResults may see who still owes marks. Kept
+ * as an explicit OR-gate list (not a single slug) so the contract test can lock
+ * both grants.
+ */
+export const MARKS_ENTRY_PROGRESS_PERMISSIONS = [
+  "viewExams",
+  "verifyExamResults",
+] as const;
 
 function mapExamError(error: unknown): Response {
   if (error instanceof ExamNotFoundError) {
@@ -115,6 +131,35 @@ async function withAuth<T>(
   // P1 — enforce the granular exam permission for this operation (not coarse SIS),
   // plus an active school scope.
   const denied = requirePermission(auth.claims, permission) ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const result = await handler(auth.claims);
+    return jsonResponse(envelope(result));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
+    return mapExamError(error);
+  }
+}
+
+/**
+ * OR-gate variant of withAuth: grants when the caller holds ANY of `permissions`
+ * (plus an active school scope). Used by the EXM-2 progress board, readable by
+ * either viewExams or verifyExamResults holders.
+ */
+async function withAnyAuth<T>(
+  req: Request,
+  config: AppConfig,
+  permissions: readonly string[],
+  handler: (claims: ExamClaims) => Promise<T>,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireAnyPermission(auth.claims, [...permissions]) ??
     requireSchoolOperationalScope(auth.claims);
   if (denied) return denied;
 
@@ -195,6 +240,28 @@ export async function handleListExams(
     );
     return rows.map(examSessionToApi);
   });
+}
+
+/**
+ * EXM-2 — marks-entry progress board. One row per exam in the marks_entry phase
+ * with entered/total counts so a coordinator sees who still owes marks before
+ * processing/publishing. Read gated on viewExams OR verifyExamResults.
+ */
+export async function handleMarksEntryProgress(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  return await withAnyAuth(
+    req,
+    config,
+    MARKS_ENTRY_PROGRESS_PERMISSIONS,
+    async (claims) => {
+      const { organizationId, schoolId } = tenantIds(claims);
+      const rows = await withTenantContext(config, claims, (db) =>
+        listMarksEntryProgress(db, organizationId, schoolId));
+      return rows.map(marksEntryProgressToApi);
+    },
+  );
 }
 
 export async function handleGetExam(
@@ -305,6 +372,139 @@ export async function handleListExamMarks(
   });
 }
 
+/**
+ * EXM-D6 — parse + validate a single mark-entry payload (status + marks) exactly
+ * as the single-mark PATCH does. Throws ExamValidationError (422) on a bad
+ * status or bad marks. Shared by handleUpdateExamMark AND the EXM-1 bulk save so
+ * both paths enforce identical bounds / status semantics.
+ */
+function parseMarkPayload(
+  body: Record<string, unknown>,
+): { status: ExamMarkStatus; marksObtained: number; expectedVersion: number | null } {
+  const statusRaw = body.status ?? body.attendance_status;
+  let status: ExamMarkStatus = "present";
+  if (statusRaw != null) {
+    if (!isExamMarkStatus(statusRaw)) {
+      throw new ExamValidationError(
+        `Invalid status: ${String(statusRaw)} (must be one of present, absent, medical_leave, debarred)`,
+      );
+    }
+    status = statusRaw;
+  }
+
+  // marks are REQUIRED + bounds-checked only for a present student; a
+  // non-present student has no meaningful score (marks are forced NULL by the
+  // repository) so any supplied number is ignored, not required.
+  let marksObtained = 0;
+  if (status === "present") {
+    marksObtained = Number(body.marksObtained ?? body.marks_obtained);
+    if (!Number.isFinite(marksObtained)) {
+      throw new ExamValidationError("marksObtained is required");
+    }
+    // RT-08: server-side lower bound. `marks_obtained` is an INTEGER column; a
+    // negative or fractional value would corrupt grades. The upper bound
+    // (<= max_marks) needs the entry's max_marks and is enforced in applyMarkUpdate;
+    // a DB CHECK (exam_mark_entries_marks_bounds) is the backstop for both.
+    if (!Number.isInteger(marksObtained) || marksObtained < 0) {
+      throw new ExamValidationError("marksObtained must be a non-negative integer");
+    }
+  }
+
+  const expectedRaw = body.expectedVersion ?? body.expected_version;
+  return {
+    status,
+    marksObtained,
+    expectedVersion: expectedRaw == null ? null : Number(expectedRaw),
+  };
+}
+
+/**
+ * Applies ONE parsed mark update inside an already-open tenant context. This is
+ * the single guarded save path (RT-08 upper bound, published-immutability via
+ * updateExamMark's `published = false` fence, optimistic-concurrency, P2
+ * subject-teacher scope, per-row audit). Both the single PATCH and the EXM-1
+ * bulk save funnel through here so the integrity guards can never diverge.
+ */
+// deno-lint-ignore no-explicit-any
+async function applyMarkUpdate(
+  db: any,
+  req: Request,
+  claims: ExamClaims,
+  organizationId: string,
+  schoolId: string,
+  markEntryId: string,
+  parsed: { status: ExamMarkStatus; marksObtained: number; expectedVersion: number | null },
+) {
+  // Load the entry once: needed for the RT-08 upper-bound check, the
+  // before→after audit, and reused for the subject-teacher scope check.
+  const mark = await getExamMark(db, organizationId, schoolId, markEntryId);
+  if (!mark) throw new ExamMarkNotFoundError(markEntryId);
+  if (parsed.status === "present" && parsed.marksObtained > mark.max_marks) {
+    throw new ExamValidationError(
+      `marksObtained (${parsed.marksObtained}) exceeds max_marks (${mark.max_marks})`,
+    );
+  }
+  // P2 — a plain subject teacher may only edit marks for exams they teach.
+  if (isSubjectTeacherScoped(claims)) {
+    const session = await getExamSession(db, organizationId, schoolId, mark.exam_id);
+    if (!session) throw new ExamNotFoundError(mark.exam_id);
+    if (
+      !(await teacherTeachesExamSession(
+        db,
+        organizationId,
+        schoolId,
+        claims.sub,
+        session,
+      ))
+    ) {
+      throw new ExamScopeForbiddenError();
+    }
+  }
+  const before = {
+    marksObtained: mark.marks_entered ? mark.marks_obtained : null,
+    status: isExamMarkStatus(mark.status) ? mark.status : "present",
+  };
+  const updated = await updateExamMark(
+    db,
+    organizationId,
+    schoolId,
+    markEntryId,
+    parsed.marksObtained,
+    parsed.expectedVersion,
+    parsed.status,
+  );
+  // Integrity gap (e) — audit the single-mark mutation binding the actor
+  // (claims.sub) to the exam + student and the full before→after of marks
+  // and status (so the original attempt is recoverable). Non-blocking-safe:
+  // a trail failure must not fail the teacher's save.
+  const after = {
+    marksObtained: updated.marks_obtained,
+    status: isExamMarkStatus(updated.status) ? updated.status : "present",
+  };
+  try {
+    await emitMutationAudit(
+      db,
+      claims,
+      examAudit.markUpdated(
+        updated.exam_id,
+        updated.id,
+        updated.student_id,
+        before,
+        after,
+        updated.row_version,
+        `${updated.row_version}`,
+      ),
+      req,
+    );
+  } catch (auditError) {
+    console.error(
+      "exam mark-update audit not recorded:",
+      auditError instanceof Error ? auditError.message : auditError,
+    );
+  }
+  return updated;
+}
+
 export async function handleUpdateExamMark(
   req: Request,
   config: AppConfig,
@@ -313,118 +513,93 @@ export async function handleUpdateExamMark(
   return await withAuth(req, config, "manageExamMarks", async (claims) => {
     const body = await readJson<Record<string, unknown>>(req);
     if (!body) throw new ExamValidationError("JSON body required");
-
-    // EXM-D6 — optional attendance status. Defaults to 'present'; validated
-    // against the enum (422 otherwise). A non-'present' status marks the student
-    // absent/medical/debarred for the exam.
-    const statusRaw = body.status ?? body.attendance_status;
-    let status: ExamMarkStatus = "present";
-    if (statusRaw != null) {
-      if (!isExamMarkStatus(statusRaw)) {
-        throw new ExamValidationError(
-          `Invalid status: ${String(statusRaw)} (must be one of present, absent, medical_leave, debarred)`,
-        );
-      }
-      status = statusRaw;
-    }
-
-    // marks are REQUIRED + bounds-checked only for a present student; a
-    // non-present student has no meaningful score (marks are forced NULL by the
-    // repository) so any supplied number is ignored, not required.
-    let marksObtained = 0;
-    if (status === "present") {
-      marksObtained = Number(body.marksObtained ?? body.marks_obtained);
-      if (!Number.isFinite(marksObtained)) {
-        throw new ExamValidationError("marksObtained is required");
-      }
-      // RT-08: server-side lower bound. `marks_obtained` is an INTEGER column; a
-      // negative or fractional value would corrupt grades. The upper bound
-      // (<= max_marks) needs the entry's max_marks and is enforced below; a DB
-      // CHECK (exam_mark_entries_marks_bounds) is the backstop for both.
-      if (!Number.isInteger(marksObtained) || marksObtained < 0) {
-        throw new ExamValidationError("marksObtained must be a non-negative integer");
-      }
-    }
+    const parsed = parseMarkPayload(body);
 
     const { organizationId, schoolId } = tenantIds(claims);
-    const row = await withTenantContext(config, claims, async (db) => {
-      // Load the entry once: needed for the RT-08 upper-bound check, the
-      // before→after audit, and reused for the subject-teacher scope check.
-      const mark = await getExamMark(db, organizationId, schoolId, markEntryId);
-      if (!mark) throw new ExamMarkNotFoundError(markEntryId);
-      if (status === "present" && marksObtained > mark.max_marks) {
-        throw new ExamValidationError(
-          `marksObtained (${marksObtained}) exceeds max_marks (${mark.max_marks})`,
-        );
-      }
-      // P2 — a plain subject teacher may only edit marks for exams they teach.
-      if (isSubjectTeacherScoped(claims)) {
-        const session = await getExamSession(
-          db,
-          organizationId,
-          schoolId,
-          mark.exam_id,
-        );
-        if (!session) throw new ExamNotFoundError(mark.exam_id);
-        if (
-          !(await teacherTeachesExamSession(
-            db,
-            organizationId,
-            schoolId,
-            claims.sub,
-            session,
-          ))
-        ) {
-          throw new ExamScopeForbiddenError();
-        }
-      }
-      const expectedRaw = body.expectedVersion ?? body.expected_version;
-      const before = {
-        marksObtained: mark.marks_entered ? mark.marks_obtained : null,
-        status: isExamMarkStatus(mark.status) ? mark.status : "present",
-      };
-      const updated = await updateExamMark(
+    const row = await withTenantContext(config, claims, (db) =>
+      applyMarkUpdate(
         db,
+        req,
+        claims,
         organizationId,
         schoolId,
         markEntryId,
-        marksObtained,
-        expectedRaw == null ? null : Number(expectedRaw),
-        status,
-      );
-      // Integrity gap (e) — audit the single-mark mutation binding the actor
-      // (claims.sub) to the exam + student and the full before→after of marks
-      // and status (so the original attempt is recoverable). Non-blocking-safe:
-      // a trail failure must not fail the teacher's save.
-      const after = {
-        marksObtained: updated.marks_obtained,
-        status: isExamMarkStatus(updated.status) ? updated.status : "present",
-      };
-      try {
-        await emitMutationAudit(
-          db,
-          claims,
-          examAudit.markUpdated(
-            updated.exam_id,
-            updated.id,
-            updated.student_id,
-            before,
-            after,
-            updated.row_version,
-            `${updated.row_version}`,
-          ),
-          req,
-        );
-      } catch (auditError) {
-        console.error(
-          "exam mark-update audit not recorded:",
-          auditError instanceof Error ? auditError.message : auditError,
-        );
-      }
-      return updated;
-    });
+        parsed,
+      ));
     return examMarkToApi(row);
   });
+}
+
+/**
+ * EXM-1 — fast bulk marks entry. Applies each entry through the SAME guarded
+ * applyMarkUpdate path (published→skip+report, bounds→validate, status→NULL
+ * marks for non-present, per-row audit). Partial success: a bad row is reported
+ * in `failed` and never mutates; the rest still persist. Returns
+ * { updated: [...], failed: [{ id, reason }] }.
+ */
+export async function handleBulkUpdateExamMarks(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "manageExamMarks", async (claims) => {
+    const body = await readJson<Record<string, unknown>>(req);
+    if (!body) throw new ExamValidationError("JSON body required");
+    const rawEntries = body.entries;
+    if (!Array.isArray(rawEntries)) {
+      throw new ExamValidationError("entries array is required");
+    }
+
+    const { organizationId, schoolId } = tenantIds(claims);
+    const updated: Record<string, unknown>[] = [];
+    const failed: Array<{ id: string; reason: string }> = [];
+
+    await withTenantContext(config, claims, async (db) => {
+      for (const raw of rawEntries) {
+        const entry = (raw ?? {}) as Record<string, unknown>;
+        const id = String(entry.id ?? "");
+        if (!id) {
+          failed.push({ id: "", reason: "id is required" });
+          continue;
+        }
+        try {
+          const parsed = parseMarkPayload(entry);
+          const row = await applyMarkUpdate(
+            db,
+            req,
+            claims,
+            organizationId,
+            schoolId,
+            id,
+            parsed,
+          );
+          updated.push(examMarkToApi(row));
+        } catch (error) {
+          // Per-row isolation: never abort the whole batch on one bad row. A
+          // published row (immutable) surfaces as ExamMarkNotFoundError from the
+          // `published = false` fence and is reported, not overwritten.
+          failed.push({ id, reason: bulkFailureReason(error) });
+        }
+      }
+    });
+
+    return { examId, updated, failed };
+  });
+}
+
+/** Human-readable per-row failure reason for the EXM-1 bulk response. */
+function bulkFailureReason(error: unknown): string {
+  if (error instanceof ExamMarkNotFoundError) {
+    // A missing entry OR a published (immutable) row fenced by `published = false`.
+    return "mark entry not found or already published";
+  }
+  if (error instanceof ExamMarkConflictError) {
+    return "row changed since last read (version conflict)";
+  }
+  if (error instanceof ExamValidationError) return error.message;
+  if (error instanceof ExamScopeForbiddenError) return error.message;
+  if (error instanceof ExamNotFoundError) return error.message;
+  return error instanceof Error ? error.message : "unknown error";
 }
 
 export async function handleProcessExamResults(

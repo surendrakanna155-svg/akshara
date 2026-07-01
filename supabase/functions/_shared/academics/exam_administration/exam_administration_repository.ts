@@ -547,6 +547,104 @@ export async function updateExamMark(
   return row;
 }
 
+/**
+ * EXM-2 — marks-entry progress for a school. One row per exam CURRENTLY in the
+ * `marks_entry` phase, with how many of its provisioned mark slots are "entered".
+ *
+ * "Entered" = `marks_entered = true`, which the repository sets for BOTH a
+ * present student with a saved mark AND a non-present (AB/ML/DB) student (see
+ * updateExamMark). So a coordinator's `pending` count is exactly the students
+ * who still owe a decision before the exam can be processed.
+ */
+export interface MarksEntryProgressRow {
+  exam_id: string;
+  title: string;
+  subject: string;
+  grade: string;
+  section_name: string;
+  entered_count: number;
+  total_count: number;
+}
+
+export async function listMarksEntryProgress(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<MarksEntryProgressRow[]> {
+  const rows = await db.queryObject<{
+    exam_id: string;
+    title: string;
+    subject: string;
+    grade: string;
+    section_name: string;
+    entered_count: string;
+    total_count: string;
+  }>(
+    `SELECT es.id AS exam_id,
+            es.title AS title,
+            es.subject AS subject,
+            es.grade AS grade,
+            es.section_name AS section_name,
+            count(m.id) FILTER (WHERE m.marks_entered = true)::text AS entered_count,
+            count(m.id)::text AS total_count
+       FROM exam_sessions es
+       LEFT JOIN exam_mark_entries m
+         ON m.organization_id = es.organization_id
+        AND m.school_id = es.school_id
+        AND m.exam_id = es.id
+      WHERE es.organization_id = $1
+        AND es.school_id = $2
+        AND es.phase = 'marks_entry'
+      GROUP BY es.id, es.title, es.subject, es.grade, es.section_name
+      ORDER BY es.updated_at DESC`,
+    [organizationId, schoolId],
+  );
+  return rows.map((row) => ({
+    exam_id: row.exam_id,
+    title: row.title,
+    subject: row.subject,
+    grade: row.grade,
+    section_name: row.section_name,
+    entered_count: parseInt(row.entered_count ?? "0", 10),
+    total_count: parseInt(row.total_count ?? "0", 10),
+  }));
+}
+
+export function marksEntryProgressToApi(
+  row: MarksEntryProgressRow,
+): Record<string, unknown> {
+  const entered = row.entered_count;
+  const total = row.total_count;
+  return {
+    examId: row.exam_id,
+    title: row.title,
+    subject: row.subject,
+    grade: row.grade,
+    sectionName: row.section_name,
+    enteredCount: entered,
+    totalCount: total,
+    pending: Math.max(0, total - entered),
+  };
+}
+
+/**
+ * EXM-1 — outcome of applying one entry inside a bulk save. A row that is
+ * rejected (published, not found, out of bounds, bad status, or a concurrency
+ * conflict) is reported in `failed` and never mutates; the remaining entries
+ * still apply (partial success).
+ */
+export interface BulkMarkEntryInput {
+  id: string;
+  marksObtained: number | null;
+  status?: ExamMarkStatus;
+  expectedVersion?: number | null;
+}
+
+export interface BulkMarkUpdateResult {
+  updated: ExamMarkRow[];
+  failed: Array<{ id: string; reason: string }>;
+}
+
 export async function processExamResults(
   db: TenantQueryClient,
   organizationId: string,

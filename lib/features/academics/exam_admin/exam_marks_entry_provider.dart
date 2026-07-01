@@ -77,6 +77,44 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
     return updated;
   }
 
+  /// EXM-1 — fast bulk marks save. Collects the dirty rows into one request and
+  /// applies them per-row server-side (published rows skipped + reported). Returns
+  /// the { updated, failed } result so the screen can show "N saved, M failed".
+  Future<BulkExamMarkSaveResult> bulkSaveMarks({
+    required String examId,
+    required List<BulkExamMarkEntry> entries,
+  }) async {
+    final rbac = ref.read(rbacServiceProvider);
+    if (!rbac.hasPermission(Permission.manageExamMarks)) {
+      throw ApiFailureException(
+        const ApiFailure(
+          type: ApiFailureType.forbidden,
+          message: 'You do not have permission to enter exam marks.',
+          code: 'RBAC_MANAGEEXAMMARKS',
+        ),
+      );
+    }
+    if (entries.isEmpty) {
+      return const BulkExamMarkSaveResult(updated: [], failed: []);
+    }
+
+    if (state.isLoading) throw mutationInProgressFailure();
+    state = const AsyncLoading();
+    late BulkExamMarkSaveResult result;
+    state = await AsyncValue.guard(() async {
+      result = await ref.read(examAdministrationRepositoryProvider).bulkUpdateMarks(
+            query: ref.read(repositoryQueryProvider),
+            request: BulkUpdateExamMarksRequest(
+              examId: examId,
+              entries: entries,
+            ),
+          );
+      ref.read(examAdminRefreshTickProvider.notifier).state++;
+    });
+    if (state.hasError) throw state.error!;
+    return result;
+  }
+
   Future<ExamSession> processResults(String examId) async {
     final rbac = ref.read(rbacServiceProvider);
     if (!rbac.hasPermission(Permission.manageExams)) {
@@ -201,6 +239,17 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
     return count;
   }
 }
+
+/// EXM-2 — marks-entry progress board: exams currently awaiting marks for the
+/// school, each with entered/total counts + a pending count. RBAC-gated at the
+/// screen (viewExams OR verifyExamResults); refreshes with the exam-admin tick.
+final examMarksEntryProgressProvider =
+    FutureProvider<List<MarksEntryProgress>>((ref) async {
+  ref.watch(examAdminRefreshTickProvider);
+  return ref.read(examAdministrationRepositoryProvider).listMarksEntryProgress(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
 
 /// The leadership remark author role for the current user, or null when they are
 /// neither principal nor vice-principal. A user holding both resolves to

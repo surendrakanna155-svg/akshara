@@ -130,5 +130,61 @@ void main() {
         findsNothing,
       );
     });
+
+    // EXM-1 — fast bulk marks entry: the grid Save-all path.
+    testWidgets('EXM-1: Save all persists changed marks in one batch',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp());
+      await tester.pumpAndSettle();
+
+      final store = ExamAdministrationStore.instance;
+      // The seeded exam leaves roll 06 (mark id exam_math_8a_06) unentered.
+      const openMarkId = 'exam_math_8a_06';
+      expect(store.markById(openMarkId)!.marksObtained, isNull);
+
+      // Scroll the open row's field into view (it is below the fold), then type
+      // a new mark into it.
+      final openField = find.byKey(QaTestKeys.examAdminMarkField(openMarkId));
+      await tester.scrollUntilVisible(
+        openField,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(openField, '37');
+      await tester.pumpAndSettle();
+
+      // Press "Save all".
+      final saveAll = find.byKey(QaTestKeys.examAdminMarksSaveAllButton);
+      expect(saveAll, findsOneWidget);
+      await tester.ensureVisible(saveAll);
+      await tester.tap(saveAll);
+      await tester.pumpAndSettle();
+
+      // The batch persisted the changed row and reported the outcome.
+      expect(store.markById(openMarkId)!.marksObtained, 37);
+      expect(find.textContaining('saved'), findsWidgets);
+    });
+
+    testWidgets('EXM-1: Enter on a marks field advances focus to the next row',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp());
+      await tester.pumpAndSettle();
+
+      final firstField = find.byKey(
+        QaTestKeys.examAdminMarkField('exam_math_8a_01'),
+      );
+      await tester.enterText(firstField, '41');
+      // Submit (Enter) — the row saves and focus moves on without throwing.
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+
+      expect(
+        ExamAdministrationStore.instance
+            .markById('exam_math_8a_01')!
+            .marksObtained,
+        41,
+      );
+    });
   });
 }
