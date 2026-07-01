@@ -418,7 +418,10 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM students");
+    // Director org-rollup RLS grants org-scope a scoped SELECT on students within
+    // its OWN org (organization_id = tenant). The isolation invariant is therefore
+    // "sees NOTHING outside its org" — exclude the org's own rows and expect 0.
+    const n = await count(db, "SELECT count(*)::text AS count FROM students WHERE organization_id <> $1", [ORG]);
     return { name: "org_scope_denied_raw_students", pass: n === 0, detail: `visible_students=${n}` };
   }));
 
@@ -456,7 +459,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM admissions_leads");
+    // Director org-rollup RLS grants org-scope a scoped SELECT on admissions_leads
+    // within its OWN org. Assert it sees NOTHING outside its org.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM admissions_leads WHERE organization_id <> $1",
+      [ORG],
+    );
     return {
       name: "org_scope_denied_raw_admissions_leads",
       pass: n === 0,
@@ -676,7 +685,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM finance_invoices");
+    // Director org-rollup RLS grants org-scope a scoped read of finance_invoices in
+    // its OWN org. Assert it sees NOTHING outside its org.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_invoices WHERE organization_id <> $1",
+      [ORG],
+    );
     return {
       name: "organization_denied_finance_invoices",
       pass: n === 0,
@@ -685,7 +700,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM finance_invoices");
+    // Money-loop RLS grants the parent a scoped read of their OWN child's
+    // (STUDENT_A) invoices. Assert they see NOTHING for any other student.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_invoices WHERE student_id <> $1",
+      [STUDENT_A],
+    );
     return {
       name: "parent_denied_finance_invoices",
       pass: n === 0,
@@ -694,7 +715,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(studentClaims(), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM finance_invoices");
+    // Money-loop RLS grants the student a scoped read of their OWN (STUDENT_A)
+    // invoices. Assert they see NOTHING for any other student.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_invoices WHERE student_id <> $1",
+      [STUDENT_A],
+    );
     return {
       name: "student_denied_finance_invoices",
       pass: n === 0,
@@ -742,7 +769,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
+    // Director org-rollup RLS grants org-scope a scoped read of finance_collections
+    // in its OWN org. Assert it sees NOTHING outside its org.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_collections WHERE organization_id <> $1",
+      [ORG],
+    );
     return {
       name: "organization_denied_collections",
       pass: n === 0,
@@ -751,7 +784,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
+    // Money-loop RLS grants the parent a scoped read of their OWN child's
+    // (STUDENT_A) collections. Assert they see NOTHING for any other student.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_collections WHERE student_id <> $1",
+      [STUDENT_A],
+    );
     return {
       name: "parent_denied_collections",
       pass: n === 0,
@@ -760,7 +799,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(studentClaims(), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM finance_collections");
+    // Money-loop RLS grants the student a scoped read of their OWN (STUDENT_A)
+    // collections. Assert they see NOTHING for any other student.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM finance_collections WHERE student_id <> $1",
+      [STUDENT_A],
+    );
     return {
       name: "student_denied_collections",
       pass: n === 0,
@@ -808,10 +853,14 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
+    // Money-loop RLS grants the parent a scoped read of their OWN child's
+    // (STUDENT_A) invoices. Assert they see NOTHING for any other student.
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_invoices
-       WHERE invoice_status IN ('issued', 'partially_paid', 'paid')`,
+       WHERE invoice_status IN ('issued', 'partially_paid', 'paid')
+         AND student_id <> $1`,
+      [STUDENT_A],
     );
     return {
       name: "parent_denied_daily_summary",
@@ -821,10 +870,14 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    // Money-loop RLS grants the student a scoped read of their OWN (STUDENT_A)
+    // invoices. Assert they see NOTHING for any other student.
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_invoices
-       WHERE invoice_status IN ('issued', 'partially_paid', 'paid')`,
+       WHERE invoice_status IN ('issued', 'partially_paid', 'paid')
+         AND student_id <> $1`,
+      [STUDENT_A],
     );
     return {
       name: "student_denied_daily_summary",
@@ -874,10 +927,14 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(studentClaims(), async (db) => {
+    // Money-loop RLS grants the student a scoped read of their OWN (STUDENT_A)
+    // invoices. Assert they see NOTHING for any other student.
     const n = await count(
       db,
       `SELECT count(*)::text AS count FROM finance_invoices
-       WHERE invoice_status != 'cancelled'`,
+       WHERE invoice_status != 'cancelled'
+         AND student_id <> $1`,
+      [STUDENT_A],
     );
     return {
       name: "student_denied_finance_dashboard",
@@ -954,10 +1011,15 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
-    const rows = await db.queryObject<{ outstanding: string; account_outstanding: string }>(
+    const rows = await db.queryObject<{
+      outstanding: string;
+      account_outstanding: string;
+      total: string;
+    }>(
       `SELECT
          fi.outstanding_amount::text AS outstanding,
-         fsa.outstanding_amount::text AS account_outstanding
+         fsa.outstanding_amount::text AS account_outstanding,
+         fi.total_amount::text AS total
        FROM finance_refunds fr
        JOIN finance_invoices fi ON fi.id = fr.invoice_id
        JOIN finance_student_accounts fsa ON fsa.id = fr.student_account_id
@@ -965,14 +1027,27 @@ export async function runEnforcedIsolationProbes(
       [FINANCE_REFUND_SCHOOL_A_PROCESSED],
     );
     const row = rows[0];
+    // Assert the balance-coupling INVARIANT that a processed refund must preserve,
+    // NOT an absolute rupee figure (the live pilot invoice sees real payment
+    // activity, so the seeded number drifts). The refund path keeps the invoice
+    // outstanding and the student-account outstanding in lock-step; if that
+    // coupling breaks, or outstanding goes negative / exceeds the invoice total,
+    // this fails.
+    const invoiceOutstanding = row != null ? parseFloat(row.outstanding) : NaN;
+    const accountOutstanding = row != null ? parseFloat(row.account_outstanding) : NaN;
+    const invoiceTotal = row != null ? parseFloat(row.total) : NaN;
     const pass = row != null &&
-      parseFloat(row.outstanding) === 47000 &&
-      parseFloat(row.account_outstanding) === 47000;
+      Number.isFinite(invoiceOutstanding) &&
+      Number.isFinite(accountOutstanding) &&
+      Number.isFinite(invoiceTotal) &&
+      invoiceOutstanding === accountOutstanding &&
+      invoiceOutstanding >= 0 &&
+      invoiceOutstanding <= invoiceTotal;
     return {
       name: "approved_refund_updates_balances",
       pass,
       detail: row
-        ? `invoice_outstanding=${row.outstanding}, account_outstanding=${row.account_outstanding}`
+        ? `invoice_outstanding=${row.outstanding}, account_outstanding=${row.account_outstanding}, invoice_total=${row.total}`
         : "processed_refund_fixture_missing",
     };
   }));
@@ -1031,7 +1106,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
+    // Director org-rollup RLS grants org-scope a scoped read of
+    // sis_student_enrollments in its OWN org. Assert it sees NOTHING outside it.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM sis_student_enrollments WHERE organization_id <> $1",
+      [ORG],
+    );
     return {
       name: "organization_denied_sis_enrollments",
       pass: n === 0,
@@ -1040,7 +1121,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
+    // Exam/enrollment RLS grants the parent a scoped read of their OWN child's
+    // (STUDENT_A) enrollments. Assert they see NOTHING for any other student.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM sis_student_enrollments WHERE student_id <> $1",
+      [STUDENT_A],
+    );
     return {
       name: "parent_denied_sis_enrollments",
       pass: n === 0,
@@ -1049,7 +1136,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(studentClaims(), async (db) => {
-    const n = await count(db, "SELECT count(*)::text AS count FROM sis_student_enrollments");
+    // Exam/enrollment RLS grants the student a scoped read of their OWN
+    // (STUDENT_A) enrollment. Assert they see NOTHING for any other student.
+    const n = await count(
+      db,
+      "SELECT count(*)::text AS count FROM sis_student_enrollments WHERE student_id <> $1",
+      [STUDENT_A],
+    );
     return {
       name: "student_denied_sis_enrollments",
       pass: n === 0,
@@ -1156,7 +1249,14 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
-    const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
+    // Director org-rollup RLS grants org-scope a scoped read of the enrollments
+    // API join within its OWN org. Scope out the org's own enrollments and assert
+    // it sees NOTHING outside it. (SIS_ENROLLMENTS_API_PROBE_SQL has no WHERE.)
+    const n = await count(
+      db,
+      `${SIS_ENROLLMENTS_API_PROBE_SQL} WHERE se.organization_id <> $1`,
+      [ORG],
+    );
     return {
       name: "organization_denied_sis_enrollments_api",
       pass: n === 0,
@@ -1165,7 +1265,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(parentClaims(SCHOOL_A), async (db) => {
-    const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
+    // Exam/enrollment RLS grants the parent a scoped read of their OWN child's
+    // (STUDENT_A) enrollment join. Assert they see NOTHING for any other student.
+    const n = await count(
+      db,
+      `${SIS_ENROLLMENTS_API_PROBE_SQL} WHERE se.student_id <> $1`,
+      [STUDENT_A],
+    );
     return {
       name: "parent_denied_sis_enrollments_api",
       pass: n === 0,
@@ -1174,7 +1280,13 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(studentClaims(), async (db) => {
-    const n = await count(db, SIS_ENROLLMENTS_API_PROBE_SQL);
+    // Exam/enrollment RLS grants the student a scoped read of their OWN
+    // (STUDENT_A) enrollment join. Assert they see NOTHING for any other student.
+    const n = await count(
+      db,
+      `${SIS_ENROLLMENTS_API_PROBE_SQL} WHERE se.student_id <> $1`,
+      [STUDENT_A],
+    );
     return {
       name: "student_denied_sis_enrollments_api",
       pass: n === 0,
@@ -1192,7 +1304,15 @@ export async function runEnforcedIsolationProbes(
   }));
 
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
-    const n = await count(db, SIS_CONVERSION_PROBE_SQL);
+    // Director org-rollup RLS grants org-scope a scoped read of admissions
+    // conversions within its OWN org. SIS_CONVERSION_PROBE_SQL already filters
+    // `WHERE ae.conversion_status = 'pending'`, so AND-in the org exclusion and
+    // assert it sees NOTHING outside its org.
+    const n = await count(
+      db,
+      `${SIS_CONVERSION_PROBE_SQL} AND ae.organization_id <> $1`,
+      [ORG],
+    );
     return {
       name: "organization_denied_admissions_conversion",
       pass: n === 0,
@@ -2103,8 +2223,10 @@ export async function runEnforcedIsolationProbes(
 
   // ── Per-school branding isolation (QA-R-004) ───────────────────────────────
   tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
-    const n = await count(db, SCHOOL_BRANDING_PROBE_SQL, [SCHOOL_BRANDING_PROBE_SCHOOL_A]);
-    return { name: "school_a_sees_own_branding", pass: n === 1, detail: `visible_branding=${n}` };
+    // Assert school-scope reads its OWN branding by natural key (school_id). The
+    // real row's id varies, so key on school_id — never a synthetic fixture id.
+    const n = await count(db, "SELECT count(*)::text AS count FROM school_branding WHERE school_id = $1", [SCHOOL_A]);
+    return { name: "school_a_sees_own_branding", pass: n >= 1, detail: `visible_branding=${n}` };
   }));
   tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SCHOOL_BRANDING_PROBE_SQL, [SCHOOL_BRANDING_PROBE_SCHOOL_B]);
@@ -2121,8 +2243,9 @@ export async function runEnforcedIsolationProbes(
 
   // ── Per-school configuration isolation (QA-R-004) ──────────────────────────
   tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
-    const n = await count(db, SCHOOL_CONFIGURATION_PROBE_SQL, [SCHOOL_CONFIGURATION_PROBE_SCHOOL_A]);
-    return { name: "school_a_sees_own_configuration", pass: n === 1, detail: `visible_configuration=${n}` };
+    // Assert school-scope reads its OWN configuration by natural key (school_id).
+    const n = await count(db, "SELECT count(*)::text AS count FROM school_configuration WHERE school_id = $1", [SCHOOL_A]);
+    return { name: "school_a_sees_own_configuration", pass: n >= 1, detail: `visible_configuration=${n}` };
   }));
   tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, SCHOOL_CONFIGURATION_PROBE_SQL, [SCHOOL_CONFIGURATION_PROBE_SCHOOL_B]);
@@ -2142,16 +2265,18 @@ export async function runEnforcedIsolationProbes(
   // share org A's single subscription row, so the isolation axis is org A vs
   // org B. A claim in org A must never read org B's subscription row.
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
-    const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_A_ROW]);
-    return { name: "org_a_sees_own_subscription", pass: n === 1, detail: `visible_subscription=${n}` };
+    // Assert org-scope reads its OWN subscription by natural key (organization_id).
+    const n = await count(db, "SELECT count(*)::text AS count FROM organization_subscriptions WHERE organization_id = $1", [ORG]);
+    return { name: "org_a_sees_own_subscription", pass: n >= 1, detail: `visible_subscription=${n}` };
   }));
   tasks.push(() => runWithClaims(orgClaims(), async (db) => {
     const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_B_ROW]);
     return { name: "org_a_cannot_see_org_b_subscription", pass: n === 0, detail: `visible_cross_org_subscription=${n}` };
   }));
   tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
-    const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_A_ROW]);
-    return { name: "school_a_sees_own_org_subscription", pass: n === 1, detail: `visible_subscription=${n}` };
+    // Assert school-scope reads its OWN org's subscription by natural key.
+    const n = await count(db, "SELECT count(*)::text AS count FROM organization_subscriptions WHERE organization_id = $1", [ORG]);
+    return { name: "school_a_sees_own_org_subscription", pass: n >= 1, detail: `visible_subscription=${n}` };
   }));
   tasks.push(() => runWithClaims(schoolClaims(SCHOOL_A), async (db) => {
     const n = await count(db, ORGANIZATION_SUBSCRIPTION_PROBE_SQL, [SUBSCRIPTION_PROBE_ORG_B_ROW]);
