@@ -131,6 +131,28 @@ void applyBulkMark(WidgetRef ref, StudentAttendanceMark mark) {
   ref.read(_teacherAttendanceStudentsProvider.notifier).state = map;
 }
 
+/// ATT-3 — absentees-first fast-mark: mark only the still-UNMARKED students as
+/// present (leaving already-marked absent/late/present rows untouched), so the
+/// teacher only taps the few absentees then fills the rest in one action.
+void fillRemainingAsPresent(WidgetRef ref) {
+  if (ref.read(teacherAttendanceProvider).isSubmitted) return;
+  final classId = ref.read(teacherAttendanceClassProvider);
+  final map = Map<String, List<TeacherAttendanceStudent>>.from(
+    ref.read(_teacherAttendanceStudentsProvider) ??
+        ref.read(teacherAttendanceStudentsFutureProvider).value ??
+        {},
+  );
+  final students = map[classId];
+  if (students == null) return;
+  map[classId] = [
+    for (final student in students)
+      student.mark == StudentAttendanceMark.unmarked
+          ? student.copyWith(mark: StudentAttendanceMark.present)
+          : student,
+  ];
+  ref.read(_teacherAttendanceStudentsProvider.notifier).state = map;
+}
+
 /// Restore an in-progress attendance grid recovered from a local draft (Data
 /// Reliability Platform §5): apply [marks] (studentId → mark) onto the current
 /// roster for [classId] so the teacher resumes exactly where they left off.

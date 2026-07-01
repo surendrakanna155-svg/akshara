@@ -232,6 +232,18 @@ class _AttendanceBodyState extends ConsumerState<_AttendanceBody>
                           ),
                         ],
                       ),
+                      const SizedBox(height: AksharaSpacing.s2),
+                      // ATT-3: absentees-first — mark only the still-unmarked
+                      // students present after tapping the few absentees.
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          key: QaTestKeys.teacherAttendanceFillRemainingButton,
+                          onPressed: () => fillRemainingAsPresent(ref),
+                          icon: const Icon(Icons.done_all_outlined, size: 18),
+                          label: const Text('Fill remaining present'),
+                        ),
+                      ),
                       const SizedBox(height: AksharaSpacing.s3),
                       TextField(
                         key: QaTestKeys.teacherAttendanceSearchField,

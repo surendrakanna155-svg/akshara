@@ -307,6 +307,9 @@ abstract final class QaTestKeys {
   static const teacherAttendanceSearchField =
       ValueKey<String>('teacher_attendance_search_field');
 
+  static const teacherAttendanceFillRemainingButton =
+      ValueKey<String>('teacher_attendance_fill_remaining_button');
+
   // --- Finance E2E journey ---
   static ValueKey<String> financeHandoffQueueRow(String studentName) =>
       ValueKey<String>(
