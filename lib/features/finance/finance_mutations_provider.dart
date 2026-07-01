@@ -25,6 +25,7 @@ import 'finance_audit.dart';
 import 'finance_models.dart';
 import 'receipts/finance_receipt_pdf_service.dart';
 import 'finance_requests.dart';
+import '../school_completion/school_branding_theme_provider.dart';
 import 'invoices/finance_invoices_provider.dart';
 import 'refunds/finance_refunds_provider.dart';
 import 'settings/finance_settings_provider.dart';
@@ -915,9 +916,10 @@ class ExportReceiptPdfNotifier extends AsyncNotifier<Uint8List?> {
               receipt.amount.replaceAll(RegExp(r'[^\d-]'), ''),
             ) ??
             0;
+        final schoolName = ref.read(schoolDisplayNameProvider);
         final bytes = await const FinanceReceiptPdfService().buildReceiptPdf(
           receiptNumber: receipt.receiptNumber,
-          schoolName: 'Akshara Public School',
+          schoolName: schoolName.isEmpty ? 'School' : schoolName,
           title: 'Fee Receipt',
           dateLabel: receipt.receiptDate,
           paymentMethod: 'N/A',
@@ -949,6 +951,100 @@ class ExportReceiptPdfNotifier extends AsyncNotifier<Uint8List?> {
 final exportReceiptPdfProvider =
     AsyncNotifierProvider<ExportReceiptPdfNotifier, Uint8List?>(
   ExportReceiptPdfNotifier.new,
+);
+
+/// FIN-4: admin duplicate-receipt reprint. Builds a correct receipt PDF from
+/// already-loaded collection data (real student/class/mode — unlike the thin
+/// receipt-id path), stamps it DUPLICATE, and audits the reprint. RBAC:
+/// manageFinance.
+class ReprintReceiptNotifier extends AsyncNotifier<Uint8List?> {
+  @override
+  FutureOr<Uint8List?> build() => null;
+
+  Future<Uint8List?> execute({
+    required ReceiptPdfData receipt,
+    required String collectionId,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageFinance(ref);
+      try {
+        final r = ReceiptPdfData(
+          receiptNumber: receipt.receiptNumber,
+          schoolName: receipt.schoolName,
+          title: receipt.title,
+          dateLabel: receipt.dateLabel,
+          paymentMethod: receipt.paymentMethod,
+          statusLabel: receipt.statusLabel,
+          studentName: receipt.studentName,
+          classLabel: receipt.classLabel,
+          lineItems: receipt.lineItems,
+          totalAmount: receipt.totalAmount,
+          copyLabel: 'DUPLICATE',
+          signatoryName: receipt.signatoryName,
+        );
+        final bytes = await const FinanceReceiptPdfService()
+            .buildBatchReceiptsPdf([r]);
+        await recordFinanceAudit(
+          ref,
+          type: AuditEventType.receiptPdfExported,
+          action: 'reprintReceipt',
+          entityId: collectionId,
+          metadata: {
+            'receiptNumber': receipt.receiptNumber,
+            'copy': 'DUPLICATE',
+          },
+        );
+        return bytes;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final reprintReceiptProvider =
+    AsyncNotifierProvider<ReprintReceiptNotifier, Uint8List?>(
+  ReprintReceiptNotifier.new,
+);
+
+/// FIN-5: batch receipt printing ("print today's receipts"). Builds a single
+/// PDF with one page per receipt from the supplied collections and audits the
+/// batch print. RBAC: manageFinance.
+class BatchPrintReceiptsNotifier extends AsyncNotifier<Uint8List?> {
+  @override
+  FutureOr<Uint8List?> build() => null;
+
+  Future<Uint8List?> execute({required List<ReceiptPdfData> receipts}) async {
+    if (state.isLoading) return state.valueOrNull;
+    if (receipts.isEmpty) return null;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageFinance(ref);
+      try {
+        final bytes =
+            await const FinanceReceiptPdfService().buildBatchReceiptsPdf(receipts);
+        await recordFinanceAudit(
+          ref,
+          type: AuditEventType.receiptPdfExported,
+          action: 'batchPrintReceipts',
+          entityId: 'batch',
+          metadata: {'count': '${receipts.length}'},
+        );
+        return bytes;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final batchPrintReceiptsProvider =
+    AsyncNotifierProvider<BatchPrintReceiptsNotifier, Uint8List?>(
+  BatchPrintReceiptsNotifier.new,
 );
 
 /// Assigns a fee concession / scholarship pending principal approval (M-D5).

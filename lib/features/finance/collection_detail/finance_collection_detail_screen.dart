@@ -12,9 +12,12 @@ import '../../../core/testing/qa_test_keys.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../school_completion/school_branding_theme_provider.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../finance_mutations_provider.dart';
 import '../finance_workflow_actions.dart';
+import '../receipts/finance_receipt_pdf_service.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_collection_detail_provider.dart';
@@ -49,6 +52,50 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
       ),
     );
   }
+
+  /// FIN-4: admin duplicate-receipt reprint. Builds a correct DUPLICATE-stamped
+  /// receipt from the loaded collection data and previews it; the write is
+  /// audited server-side via [reprintReceiptProvider].
+  Future<void> _reprintReceipt(
+    BuildContext context,
+    WidgetRef ref,
+    CollectionPayment payment,
+  ) async {
+    final amount =
+        int.tryParse(payment.amount.replaceAll(RegExp(r'[^\d-]'), '')) ?? 0;
+    final schoolName = ref.read(schoolDisplayNameProvider);
+    final receipt = ReceiptPdfData(
+      receiptNumber: payment.receiptNumber,
+      schoolName: schoolName.isEmpty ? 'School' : schoolName,
+      title: 'Fee Receipt',
+      dateLabel: payment.collectedAt,
+      paymentMethod: payment.mode,
+      statusLabel: _receiptStatusLabel(payment.status),
+      studentName: payment.studentName,
+      classLabel: payment.classLabel,
+      lineItems: [ReceiptPdfLineItem(label: 'Fee payment', amount: amount)],
+      totalAmount: amount,
+    );
+    final bytes = await ref.read(reprintReceiptProvider.notifier).execute(
+          receipt: receipt,
+          collectionId: collectionId,
+        );
+    if (!context.mounted) return;
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not generate the receipt.')),
+      );
+      return;
+    }
+    await const FinanceReceiptPdfService().printReceipt(bytes);
+  }
+
+  static String _receiptStatusLabel(CollectionStatus status) => switch (status) {
+        CollectionStatus.completed => 'Paid',
+        CollectionStatus.pending => 'Pending',
+        CollectionStatus.failed => 'Failed',
+        CollectionStatus.refunded => 'Refunded',
+      };
 
   Widget _buildDetailContent(
     BuildContext context,
@@ -116,21 +163,32 @@ class FinanceCollectionDetailScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AksharaSpacing.s6),
-        if (payment.status != CollectionStatus.refunded)
-          AksharaManageAction(
-            permission: Permission.manageFinance,
-            child: OutlinedButton.icon(
-              key: QaTestKeys.financeCancelCollectionButton(collectionId),
-              onPressed: () => executeCancelCollection(
-                context,
-                ref,
-                collectionId: collectionId,
-                receiptNumber: payment.receiptNumber,
+        AksharaManageAction(
+          permission: Permission.manageFinance,
+          child: Wrap(
+            spacing: AksharaSpacing.s3,
+            runSpacing: AksharaSpacing.s2,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _reprintReceipt(context, ref, payment),
+                icon: const Icon(Icons.print_outlined),
+                label: const Text('Reprint receipt (Duplicate)'),
               ),
-              icon: const Icon(Icons.undo_outlined),
-              label: const Text('Cancel collection'),
-            ),
+              if (payment.status != CollectionStatus.refunded)
+                OutlinedButton.icon(
+                  key: QaTestKeys.financeCancelCollectionButton(collectionId),
+                  onPressed: () => executeCancelCollection(
+                    context,
+                    ref,
+                    collectionId: collectionId,
+                    receiptNumber: payment.receiptNumber,
+                  ),
+                  icon: const Icon(Icons.undo_outlined),
+                  label: const Text('Cancel collection'),
+                ),
+            ],
           ),
+        ),
         const SizedBox(height: AksharaSpacing.s6),
         AksharaInsightCard(
           message: detail.aiInsight,

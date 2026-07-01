@@ -3,13 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 
 import '../../../shared/widgets/widgets.dart';
+import '../../school_completion/school_branding_theme_provider.dart';
+import '../finance_mutations_provider.dart';
 import '../finance_workflow_actions.dart';
 import '../finance_journey_context_provider.dart';
+import '../receipts/finance_receipt_pdf_service.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
@@ -190,6 +194,29 @@ class FinanceCollectionsScreen extends ConsumerWidget {
                         icon: const Icon(Icons.payments_outlined),
                         label: const Text('Offline payments'),
                       ),
+                      // FIN-1: daily collection summary export (mode-wise).
+                      OutlinedButton.icon(
+                        onPressed: () => _exportSummary(context, ref, summary),
+                        icon: const Icon(Icons.summarize_outlined),
+                        label: const Text('Export summary'),
+                      ),
+                      // FIN-7: day collection report (transaction-level export).
+                      OutlinedButton.icon(
+                        onPressed: () =>
+                            _exportCollections(context, ref, payments),
+                        icon: const Icon(Icons.download_outlined),
+                        label: const Text('Export collections'),
+                      ),
+                      // FIN-5: batch receipt printing.
+                      AksharaManageAction(
+                        permission: Permission.manageFinance,
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              _printReceipts(context, ref, payments),
+                          icon: const Icon(Icons.print_outlined),
+                          label: const Text('Print receipts'),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -199,6 +226,123 @@ class FinanceCollectionsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// FIN-1: export the day's mode-wise collection summary as a CSV.
+  Future<void> _exportSummary(
+    BuildContext context,
+    WidgetRef ref,
+    DailyCollectionSummary summary,
+  ) async {
+    await ref.read(aksharaReportExportServiceProvider).shareTabularCsv(
+      filename: 'daily_collection_summary.csv',
+      reportTitle: 'Daily Collection Summary — ${summary.dateLabel}',
+      rows: [
+        MapEntry('Date', summary.dateLabel),
+        MapEntry('Total collected', summary.totalCollected),
+        MapEntry('Transactions', '${summary.transactionCount}'),
+        MapEntry('Cash', summary.cashAmount),
+        MapEntry('UPI / Digital', summary.upiAmount),
+        MapEntry('Pending reconciliation', '${summary.pendingReconciliation}'),
+      ],
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Daily collection summary CSV ready')),
+    );
+  }
+
+  /// FIN-7: export the loaded collections as a transaction-level grid CSV.
+  Future<void> _exportCollections(
+    BuildContext context,
+    WidgetRef ref,
+    List<CollectionPayment> payments,
+  ) async {
+    if (payments.isEmpty) return;
+    final rows = [
+      for (final p in payments)
+        [
+          p.receiptNumber,
+          p.studentName,
+          p.admissionNumber,
+          p.classLabel,
+          p.amount,
+          p.mode,
+          p.collectedAt,
+          p.collectedBy,
+          p.status.name,
+        ],
+    ];
+    await ref.read(aksharaReportExportServiceProvider).shareGridCsv(
+      filename: 'day_collections.csv',
+      headers: const [
+        'Receipt',
+        'Student',
+        'Admission No',
+        'Class',
+        'Amount',
+        'Mode',
+        'Collected At',
+        'Collected By',
+        'Status',
+      ],
+      rows: rows,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Day collections CSV ready (${rows.length} rows)')),
+    );
+  }
+
+  /// FIN-5: batch-print receipts for the completed collections in view.
+  Future<void> _printReceipts(
+    BuildContext context,
+    WidgetRef ref,
+    List<CollectionPayment> payments,
+  ) async {
+    final completed = payments
+        .where((p) => p.status == CollectionStatus.completed)
+        .toList();
+    if (completed.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No completed receipts to print.')),
+      );
+      return;
+    }
+    final schoolName = ref.read(schoolDisplayNameProvider);
+    final receipts = [
+      for (final p in completed)
+        ReceiptPdfData(
+          receiptNumber: p.receiptNumber,
+          schoolName: schoolName.isEmpty ? 'School' : schoolName,
+          title: 'Fee Receipt',
+          dateLabel: p.collectedAt,
+          paymentMethod: p.mode,
+          statusLabel: 'Paid',
+          studentName: p.studentName,
+          classLabel: p.classLabel,
+          lineItems: [
+            ReceiptPdfLineItem(
+              label: 'Fee payment',
+              amount:
+                  int.tryParse(p.amount.replaceAll(RegExp(r'[^\d-]'), '')) ?? 0,
+            ),
+          ],
+          totalAmount:
+              int.tryParse(p.amount.replaceAll(RegExp(r'[^\d-]'), '')) ?? 0,
+        ),
+    ];
+    final bytes = await ref
+        .read(batchPrintReceiptsProvider.notifier)
+        .execute(receipts: receipts);
+    if (!context.mounted) return;
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not generate receipts.')),
+      );
+      return;
+    }
+    await const FinanceReceiptPdfService().printReceipt(bytes);
   }
 }
 
