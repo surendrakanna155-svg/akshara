@@ -18,6 +18,9 @@ import {
   listTimetableSlots,
   listGuardianUserIdsForStudent,
   upsertAttendanceSession,
+  AttendanceLockedError,
+  AttendanceClosedDayError,
+  AttendanceRosterMismatchError,
   type AttendanceMarkEntry,
 } from "./pilot_operations_repository.ts";
 
@@ -64,6 +67,20 @@ async function auditMobileWrite(
   );
 }
 
+/** Map attendance integrity failures to precise HTTP responses (gates #1/#5/#6/#7/#8). */
+function mapAttendanceError(error: unknown): Response | null {
+  if (error instanceof AttendanceLockedError) {
+    return errorEnvelope("ATTENDANCE_LOCKED", error.message, 409);
+  }
+  if (error instanceof AttendanceClosedDayError) {
+    return errorEnvelope("ATTENDANCE_DAY_CLOSED", error.message, 422);
+  }
+  if (error instanceof AttendanceRosterMismatchError) {
+    return errorEnvelope("ATTENDANCE_ROSTER_MISMATCH", error.message, 422);
+  }
+  return null;
+}
+
 export async function handleTeacherAttendanceDraft(
   req: Request,
   config: AppConfig,
@@ -92,6 +109,7 @@ export async function handleTeacherAttendanceDraft(
         takenBy: auth.claims.sub,
         status: "draft",
         entries,
+        periodLabel: snakeStr(body, "period_label"),
       });
       await auditMobileWrite(db, auth.claims, req, "attendanceDraftSaved", "attendance_session", saved.sessionId, {
         classId: snakeStr(body, "class_id"),
@@ -106,6 +124,8 @@ export async function handleTeacherAttendanceDraft(
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    const mapped = mapAttendanceError(error);
+    if (mapped) return mapped;
     return errorEnvelope("INTERNAL_ERROR", "Failed to save attendance draft", 500);
   }
 }
@@ -138,6 +158,7 @@ export async function handleTeacherAttendanceSubmit(
         takenBy: auth.claims.sub,
         status: "submitted",
         entries,
+        periodLabel: snakeStr(body, "period_label"),
       });
       await auditMobileWrite(db, auth.claims, req, "attendanceSubmitted", "attendance_session", saved.sessionId, {
         classId: snakeStr(body, "class_id"),
@@ -173,6 +194,8 @@ export async function handleTeacherAttendanceSubmit(
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    const mapped = mapAttendanceError(error);
+    if (mapped) return mapped;
     return errorEnvelope("INTERNAL_ERROR", "Failed to submit attendance", 500);
   }
 }

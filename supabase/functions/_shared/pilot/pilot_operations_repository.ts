@@ -53,6 +53,119 @@ function countMarks(entries: AttendanceMarkEntry[]): {
   return { present, absent, late };
 }
 
+// ── Attendance integrity guards (owner completion gates #1/#5/#6/#7/#8) ───────
+
+/** #1 — a submitted session can only change through the correction workflow. */
+export class AttendanceLockedError extends Error {
+  constructor() {
+    super("Submitted attendance is immutable — use the correction workflow");
+    this.name = "AttendanceLockedError";
+  }
+}
+
+/** #5 / #8 — marking is blocked on a holiday or after academic-year closure. */
+export class AttendanceClosedDayError extends Error {
+  constructor(reason: string) {
+    super(reason);
+    this.name = "AttendanceClosedDayError";
+  }
+}
+
+/** #6 / #7 — the submitted set must exactly equal the active class roster. */
+export class AttendanceRosterMismatchError extends Error {
+  readonly missing: string[];
+  readonly extra: string[];
+  constructor(missing: string[], extra: string[]) {
+    super(
+      `Attendance roster mismatch: ${missing.length} enrolled student(s) not marked, ` +
+        `${extra.length} marked student(s) not on the active roster`,
+    );
+    this.name = "AttendanceRosterMismatchError";
+    this.missing = missing;
+    this.extra = extra;
+  }
+}
+
+/**
+ * #5 (holiday) + #8 (year closure): reject marking for TODAY when the school
+ * calendar has a holiday covering today, or the academic year that contains
+ * today is archived (closed). Applies to draft AND submit.
+ */
+export async function assertAttendanceDayOpen(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<void> {
+  const holiday = await db.queryObject<{ title: string }>(
+    `SELECT title FROM school_calendar_events
+      WHERE organization_id = $1 AND school_id = $2 AND event_type = 'holiday'
+        AND CURRENT_DATE BETWEEN event_date AND COALESCE(end_date, event_date)
+      LIMIT 1`,
+    [organizationId, schoolId],
+  );
+  if (holiday[0]) {
+    throw new AttendanceClosedDayError(
+      `Attendance cannot be marked on a holiday (${holiday[0].title})`,
+    );
+  }
+  const closed = await db.queryObject<{ year_label: string }>(
+    `SELECT year_label FROM academic_years
+      WHERE organization_id = $1 AND school_id = $2
+        AND CURRENT_DATE BETWEEN start_date AND end_date
+        AND status = 'archived'
+      LIMIT 1`,
+    [organizationId, schoolId],
+  );
+  if (closed[0]) {
+    throw new AttendanceClosedDayError(
+      `Academic year ${closed[0].year_label} is closed — attendance is locked`,
+    );
+  }
+}
+
+/**
+ * #6 / #7 — the active roster for a class: current-year, is_current enrollments.
+ * Withdrawn/transferred students (is_current=false) are excluded; newly admitted
+ * students (is_current=true) are included; promotion moves the is_current row to
+ * the new year. Matched on the several class-label conventions the client uses.
+ */
+export async function activeRosterStudentIds(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  classLabel: string,
+): Promise<string[]> {
+  const rows = await db.queryObject<{ student_id: string }>(
+    `SELECT e.student_id FROM sis_student_enrollments e
+       JOIN academic_years ay
+         ON ay.organization_id = e.organization_id
+        AND ay.school_id = e.school_id
+        AND ay.year_label = e.academic_year
+        AND ay.is_current = true
+      WHERE e.organization_id = $1 AND e.school_id = $2 AND e.is_current = true
+        AND (
+          e.class_name = $3
+          OR (e.class_name || '-' || COALESCE(e.section_name, '')) = $3
+          OR (e.class_name || COALESCE(e.section_name, '')) = $3
+        )`,
+    [organizationId, schoolId, classLabel],
+  );
+  return rows.map((r) => r.student_id);
+}
+
+/** Pure roster reconciliation — `missing` = enrolled but unmarked, `extra` =
+ * marked but not on the active roster (withdrawn/transferred/unknown). */
+export function diffRoster(
+  submitted: string[],
+  roster: string[],
+): { missing: string[]; extra: string[] } {
+  const submittedSet = new Set(submitted);
+  const rosterSet = new Set(roster);
+  const missing = [...rosterSet].filter((id) => !submittedSet.has(id));
+  const extra = [...submittedSet].filter((id) => !rosterSet.has(id));
+  return { missing, extra };
+}
+
 export async function upsertAttendanceSession(
   db: TenantQueryClient,
   input: {
@@ -63,34 +176,82 @@ export async function upsertAttendanceSession(
     takenBy: string;
     status: "draft" | "submitted";
     entries: AttendanceMarkEntry[];
+    periodLabel?: string;
   },
 ): Promise<{ sessionId: string; counts: ReturnType<typeof countMarks> }> {
-  const existing = await db.queryObject<{ id: string }>(
-    `SELECT id FROM attendance_sessions
+  const periodLabel = input.periodLabel ?? "";
+
+  // #5 / #8 — holiday / year-closure block (draft and submit).
+  await assertAttendanceDayOpen(db, input.organizationId, input.schoolId);
+
+  // #6 / #7 — on SUBMIT, the marked set must exactly match the active roster
+  // (when the class resolves to current enrollments). Draft may be partial.
+  if (input.status === "submitted") {
+    const roster = await activeRosterStudentIds(
+      db,
+      input.organizationId,
+      input.schoolId,
+      input.classLabel,
+    );
+    if (roster.length > 0) {
+      const { missing, extra } = diffRoster(
+        input.entries.map((e) => e.studentId),
+        roster,
+      );
+      if (missing.length > 0 || extra.length > 0) {
+        throw new AttendanceRosterMismatchError(missing, extra);
+      }
+    }
+  }
+
+  // Session natural key is (school, class, date, period) — NOT the teacher, so a
+  // class has ONE session/day/period regardless of who marks it (#3).
+  const existing = await db.queryObject<{ id: string; status: string }>(
+    `SELECT id, status FROM attendance_sessions
      WHERE organization_id = $1 AND school_id = $2 AND class_label = $3
-       AND session_date = CURRENT_DATE AND taken_by = $4
+       AND session_date = CURRENT_DATE AND period_label = $4
      LIMIT 1`,
-    [input.organizationId, input.schoolId, input.classLabel, input.takenBy],
+    [input.organizationId, input.schoolId, input.classLabel, periodLabel],
   );
+
+  // #1 — a submitted session is immutable via this path.
+  if (existing[0] && existing[0].status === "submitted") {
+    throw new AttendanceLockedError();
+  }
 
   let sessionId: string;
   if (existing[0]) {
     sessionId = existing[0].id;
     await db.queryObject(
-      `UPDATE attendance_sessions SET status = $2, updated_at = timezone('utc', now())
+      `UPDATE attendance_sessions SET status = $2, taken_by = $3,
+         submitted_at = CASE WHEN $2 = 'submitted' THEN timezone('utc', now()) ELSE submitted_at END,
+         updated_at = timezone('utc', now())
        WHERE id = $1`,
-      [sessionId, input.status],
+      [sessionId, input.status, input.takenBy],
     );
     await db.queryObject(`DELETE FROM attendance_records WHERE session_id = $1`, [sessionId]);
   } else {
+    // #2 / #3 — race-safe insert on the unique (org,school,class,date,period)
+    // index. DO UPDATE ... WHERE status <> 'submitted' so a concurrent submit
+    // that already locked the row is NOT overwritten (returns no row → locked).
     const rows = await db.queryObject<{ id: string }>(
       `INSERT INTO attendance_sessions (
-         organization_id, school_id, class_label, taken_by, status
-       ) VALUES ($1, $2, $3, $4, $5)
+         organization_id, school_id, class_label, period_label, taken_by, status, submitted_at
+       ) VALUES ($1, $2, $3, $4, $5, $6,
+         CASE WHEN $6 = 'submitted' THEN timezone('utc', now()) ELSE NULL END)
+       ON CONFLICT (organization_id, school_id, class_label, session_date, period_label)
+       DO UPDATE SET status = EXCLUDED.status, taken_by = EXCLUDED.taken_by,
+         submitted_at = EXCLUDED.submitted_at, updated_at = timezone('utc', now())
+       WHERE attendance_sessions.status <> 'submitted'
        RETURNING id`,
-      [input.organizationId, input.schoolId, input.classLabel, input.takenBy, input.status],
+      [input.organizationId, input.schoolId, input.classLabel, periodLabel, input.takenBy, input.status],
     );
-    sessionId = rows[0]!.id;
+    if (!rows[0]) {
+      // Conflict hit an already-submitted row → immutable.
+      throw new AttendanceLockedError();
+    }
+    sessionId = rows[0].id;
+    await db.queryObject(`DELETE FROM attendance_records WHERE session_id = $1`, [sessionId]);
   }
 
   for (const entry of input.entries) {
