@@ -81,6 +81,10 @@ class SpyDb {
       // setFeeStructureStatus RETURNING * → reflect the status arg ($4).
       return Promise.resolve([{ id: args[0], status: args[3] }] as unknown as T[]);
     }
+    if (sql.includes("finance_fee_concessions")) {
+      // recordFeeConcessionDecision RETURNING id, status ($9 = status).
+      return Promise.resolve([{ id: "con_1", status: args[8] }] as unknown as T[]);
+    }
     // AP-commitment / posting inserts, snapshot replace/insert, domain-effect insert.
     return Promise.resolve([{ id: "gen_1", payload: {} }] as unknown as T[]);
   }
@@ -239,6 +243,55 @@ Deno.test("applyApprovalTypeHandler feeStructure reject → leaves it inactive",
   );
   assertEquals(payload.feeStructureStatus, "inactive");
   assertEquals(spy.captured("UPDATE finance_fee_structures")[0].args[3], "inactive");
+});
+
+const MAKER = "c1000000-0000-4000-8000-000000000009";
+
+Deno.test("feeConcession approve → persists an active concession with maker != checker (FIN-D4)", async () => {
+  const spy = new SpyDb();
+  const payload = await applyApprovalTypeHandler(
+    db(spy),
+    ORG,
+    SCHOOL,
+    approval({
+      type: "feeConcession",
+      entity_type: "fee_concession",
+      entity_id: "con_req",
+      requester_id: MAKER,
+      payload: { studentName: "Asha", amount: "2500", reason: "sibling" },
+    }),
+    "approved",
+    undefined,
+    ACTOR,
+  );
+  assertEquals(payload.concessionStatus, "active");
+  assertEquals(payload.concessionPersisted, true);
+  assertEquals(payload.payableApplied, false);
+  const ins = spy.captured("INSERT INTO finance_fee_concessions");
+  assertEquals(ins.length, 1);
+  assertEquals(ins[0].args[8], "active"); // status
+  assertEquals(ins[0].args[10], MAKER); // maker
+  assertEquals(ins[0].args[11], ACTOR); // checker
+  assert(ins[0].args[10] !== ins[0].args[11], "maker must differ from checker");
+});
+
+Deno.test("feeConcession reject → persists a rejected concession", async () => {
+  const spy = new SpyDb();
+  const payload = await applyApprovalTypeHandler(
+    db(spy),
+    ORG,
+    SCHOOL,
+    approval({
+      type: "feeConcession",
+      requester_id: MAKER,
+      payload: { studentName: "Asha", amount: "2500" },
+    }),
+    "rejected",
+    undefined,
+    ACTOR,
+  );
+  assertEquals(payload.concessionStatus, "rejected");
+  assertEquals(spy.captured("INSERT INTO finance_fee_concessions")[0].args[8], "rejected");
 });
 
 Deno.test("applyApprovalTypeHandler always records the domain effect (audit) alongside the row write", async () => {

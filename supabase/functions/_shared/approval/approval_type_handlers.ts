@@ -22,6 +22,7 @@ import {
 } from "../inventory_finance/inventory_finance_repository.ts";
 import { flipLeaveDecision } from "./leave_decision_effect.ts";
 import { setFeeStructureStatus } from "../finance/finance_structures_repository.ts";
+import { recordFeeConcessionDecision } from "../finance/finance_fee_concessions_repository.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
 import { insertDomainEffect } from "./approval_repository.ts";
 
@@ -166,13 +167,34 @@ export async function applyApprovalTypeHandler(
       }
       break;
 
-    case "feeConcession":
+    case "feeConcession": {
+      // FIN-D4 maker-checker: persist a durable per-student concession on the
+      // checker's decision. Maker (requester) != checker (actor) is guaranteed by
+      // the approval separation-of-duties guard. Previously this was audit-only.
+      const status = effectAction === "approved" ? "active" : "rejected";
+      const p = (request.payload ?? {}) as Record<string, unknown>;
+      const rec = await recordFeeConcessionDecision(db, organizationId, schoolId, {
+        sourceApprovalId: request.id,
+        studentId: p.studentId != null ? String(p.studentId) : null,
+        studentName: String(p.studentName ?? ""),
+        feeAccountRef: String(p.feeAccountId ?? p.feeAccountRef ?? ""),
+        amountLabel: String(p.amount ?? ""),
+        reason: String(p.reason ?? request.summary ?? ""),
+        makerId: request.requester_id ?? null,
+        checkerId: actorId ?? null,
+        status,
+      });
       effectPayload = {
         ...effectPayload,
-        concessionStatus: effectAction === "approved" ? "active" : "rejected",
-        concessionId: request.entity_id,
+        concessionStatus: status,
+        concessionId: rec.id,
+        concessionPersisted: true,
+        // NB: reducing the student's live payable is a follow-up — it needs a
+        // resolved student_id (client sends a name) + fee-statement netting rules.
+        payableApplied: false,
       };
       break;
+    }
 
     case "feeStructure": {
       // Fee structures are created `inactive` when approval is required; approving
