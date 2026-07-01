@@ -207,7 +207,7 @@ void main() {
 
       final result = await container
           .read(cancelCollectionProvider.notifier)
-          .execute(collectionId: 'col_1');
+          .execute(collectionId: 'col_1', reason: 'duplicate entry');
 
       expect(result, isNotNull);
     });

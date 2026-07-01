@@ -900,21 +900,22 @@ Future<void> executeCancelCollection(
   required String collectionId,
   required String receiptNumber,
 }) async {
-  final confirmed = await showAksharaConfirmDialog(
+  // FIN-D3: a cancellation now requires a mandatory reason (captured + audited +
+  // shown in the cancelled register).
+  final reason = await _promptForReason(
     context,
     title: 'Cancel collection',
     message:
-        'Cancel receipt $receiptNumber? The payment will be marked refunded.',
+        'Cancel receipt $receiptNumber? The payment will be reversed. A reason is required.',
     confirmLabel: 'Cancel collection',
-    cancelLabel: 'Keep',
-    destructive: true,
     confirmKey: QaTestKeys.financeCancelCollectionConfirmButton,
   );
-  if (!confirmed || !context.mounted) return;
+  if (reason == null || !context.mounted) return;
 
   try {
     final result = await ref.read(cancelCollectionProvider.notifier).execute(
           collectionId: collectionId,
+          reason: reason,
         );
     if (!context.mounted || result == null) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -927,4 +928,62 @@ Future<void> executeCancelCollection(
     if (!context.mounted) return;
     _showMutationError(context, error);
   }
+}
+
+/// Confirmation dialog that captures a MANDATORY free-text reason (FIN-D3). The
+/// confirm button stays disabled until a non-blank reason is entered; returns
+/// the trimmed reason, or null if the user dismisses.
+Future<String?> _promptForReason(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  Key? confirmKey,
+}) {
+  final controller = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (dialogContext, setState) {
+          final reason = controller.text.trim();
+          return AlertDialog(
+            title: Text(title),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(message),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  minLines: 1,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Reason (required)',
+                    hintText: 'e.g. duplicate entry, wrong amount',
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Keep'),
+              ),
+              FilledButton(
+                key: confirmKey,
+                onPressed: reason.isEmpty
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(reason),
+                child: Text(confirmLabel),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
 }

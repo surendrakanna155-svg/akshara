@@ -17,6 +17,7 @@ import '../dto/create_scholarship_request_dto.dart';
 import '../dto/create_discount_rule_request_dto.dart';
 import '../dto/create_collection_request_dto.dart';
 import '../dto/create_qr_payment_session_request_dto.dart';
+import '../dto/finance_d_features_dto.dart';
 import '../dto/finance_collections_dto.dart';
 import '../dto/finance_dashboard_dto.dart';
 import '../dto/finance_defaulters_dto.dart';
@@ -239,12 +240,102 @@ class FinanceRemoteDataSource {
   Future<FinanceCollectionResultDto> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
+    required String reason,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       FinanceApiPaths.collectionCancel(collectionId),
       queryParameters: _queryParams(query),
+      // FIN-D3: the mandatory cancellation reason travels in the body.
+      data: {'reason': reason},
     );
     return FinanceCollectionResultDto.fromJson(_requireData(response));
+  }
+
+  // ── FIN-D3: cancelled register ─────────────────────────────────────────────
+  Future<CancelledCollectionsResponseDto> fetchCancelledCollections({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.collectionsCancelled,
+      queryParameters: _queryParams(query),
+    );
+    return CancelledCollectionsResponseDto.fromJson(_responseMap(response));
+  }
+
+  // ── FIN-D5: late-fee accrual + waive ───────────────────────────────────────
+  Future<LateFeeAccrualResultDto> accrueLateFees({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.lateFeesAccrue,
+      queryParameters: _queryParams(query),
+    );
+    return LateFeeAccrualResultDto.fromJson(_responseMap(response));
+  }
+
+  Future<FinanceInvoiceDto> waiveLateFee({
+    required RepositoryQuery query,
+    required String invoiceId,
+    required String reason,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.invoiceWaiveLateFee(invoiceId),
+      queryParameters: _queryParams(query),
+      data: {'reason': reason},
+    );
+    return FinanceInvoiceDto.fromJson(_requireData(response));
+  }
+
+  // ── FIN-D1: day-close lock ─────────────────────────────────────────────────
+  Future<DayCloseEntriesResponseDto> fetchDayCloseEntries({
+    required RepositoryQuery query,
+    String? from,
+    String? to,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.dayClose,
+      queryParameters: {
+        ..._queryParams(query),
+        if (from != null && from.isNotEmpty) 'from': from,
+        if (to != null && to.isNotEmpty) 'to': to,
+      },
+    );
+    return DayCloseEntriesResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<DayCloseEntryDto> closeDay({
+    required RepositoryQuery query,
+    String? date,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.dayClose,
+      queryParameters: _queryParams(query),
+      data: {if (date != null && date.isNotEmpty) 'close_date': date},
+    );
+    return DayCloseEntryDto.fromJson(_requireData(response));
+  }
+
+  Future<DayCloseEntryDto> reopenDay({
+    required RepositoryQuery query,
+    required String date,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.dayCloseReopen(date),
+      queryParameters: _queryParams(query),
+    );
+    return DayCloseEntryDto.fromJson(_requireData(response));
+  }
+
+  // ── FIN-2: printable student ledger ────────────────────────────────────────
+  Future<StudentLedgerDto> fetchStudentLedger({
+    required RepositoryQuery query,
+    required String studentAccountId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.studentLedger(studentAccountId),
+      queryParameters: _queryParams(query),
+    );
+    return StudentLedgerDto.fromJson(_responseMap(response));
   }
 
   Future<OfflinePaymentDto> recordOfflinePayment({

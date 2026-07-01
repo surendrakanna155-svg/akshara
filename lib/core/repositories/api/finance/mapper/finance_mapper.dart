@@ -16,6 +16,7 @@ import '../dto/finance_settings_dto.dart';
 import '../dto/finance_student_accounts_dto.dart';
 import '../dto/qr_payment_session_dto.dart';
 import '../dto/finance_recovery_dto.dart';
+import '../dto/finance_d_features_dto.dart';
 import '../dto/scholarship_dto.dart';
 import '../../../../../features/finance/finance_models.dart';
 
@@ -517,6 +518,124 @@ class FinanceMapper {
       createdBy: raw['createdBy'] as String? ?? '',
       createdAt: raw['createdAt'] as String? ?? '',
       updatedAt: raw['updatedAt'] as String? ?? '',
+      lateFeeAmount: raw['lateFeeAmount'] as String? ?? '0',
+      lateFeeAccruedAt: raw['lateFeeAccruedAt'] as String? ?? '',
+    );
+  }
+
+  // ── FIN-D3: cancelled register ─────────────────────────────────────────────
+  List<CancelledCollection> toCancelledCollections(
+    CancelledCollectionsResponseDto dto,
+  ) {
+    return [for (final item in dto.items) _toCancelledCollection(item)];
+  }
+
+  CancelledCollection _toCancelledCollection(CancelledCollectionDto dto) {
+    final raw = dto.raw;
+    return CancelledCollection(
+      id: raw['id'] as String? ?? '',
+      receiptNumber: raw['receiptNumber'] as String? ?? '',
+      studentName: raw['studentName'] as String? ?? '',
+      admissionNumber: raw['admissionNumber'] as String? ?? '',
+      classLabel: raw['classLabel'] as String? ?? '',
+      amount: raw['amount'] as String? ?? '0',
+      mode: raw['mode'] as String? ?? '',
+      collectedAt: raw['collectedAt'] as String? ?? '',
+      reason: raw['reason'] as String? ?? '',
+      cancelledBy: raw['cancelledBy'] as String? ?? '',
+      cancelledByName: raw['cancelledByName'] as String? ?? '',
+      cancelledAt: raw['cancelledAt'] as String? ?? '',
+    );
+  }
+
+  // ── FIN-D5: late-fee accrual result ────────────────────────────────────────
+  LateFeeAccrualResult toLateFeeAccrualResult(LateFeeAccrualResultDto dto) {
+    final raw = dto.raw;
+    return LateFeeAccrualResult(
+      accruedCount: (raw['accruedCount'] as num?)?.toInt() ?? 0,
+      totalLateFee: raw['totalLateFee'] as String? ?? '0',
+    );
+  }
+
+  // ── FIN-D1: day-close entries ──────────────────────────────────────────────
+  List<DayCloseEntry> toDayCloseEntries(DayCloseEntriesResponseDto dto) {
+    return [for (final item in dto.items) toDayCloseEntry(item)];
+  }
+
+  DayCloseEntry toDayCloseEntry(DayCloseEntryDto dto) {
+    final raw = dto.raw;
+    return DayCloseEntry(
+      id: raw['id'] as String? ?? '',
+      closeDate: raw['closeDate'] as String? ?? '',
+      status: (raw['status'] as String?) == 'closed'
+          ? DayCloseStatus.closed
+          : DayCloseStatus.open,
+      closedBy: raw['closedBy'] as String? ?? '',
+      closedAt: raw['closedAt'] as String? ?? '',
+      reopenedBy: raw['reopenedBy'] as String? ?? '',
+      reopenedAt: raw['reopenedAt'] as String? ?? '',
+    );
+  }
+
+  // ── FIN-2: printable student ledger ────────────────────────────────────────
+  StudentLedger toStudentLedger(StudentLedgerDto dto) {
+    final raw = dto.raw;
+    final account = (raw['account'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final invoices = (raw['invoices'] as List?) ?? const [];
+    final payments = (raw['payments'] as List?) ?? const [];
+    final ledger = (raw['ledger'] as List?) ?? const [];
+    return StudentLedger(
+      account: StudentLedgerAccount(
+        id: account['id'] as String? ?? '',
+        studentId: account['studentId'] as String? ?? '',
+        studentName: account['studentName'] as String? ?? '',
+        admissionNumber: account['admissionNumber'] as String? ?? '',
+        classLabel: account['classLabel'] as String? ?? '',
+        academicYear: account['academicYear'] as String? ?? '',
+        totalDue: account['totalDue'] as String? ?? '0',
+        totalPaid: account['totalPaid'] as String? ?? '0',
+        balance: account['balance'] as String? ?? '0',
+        status: account['status'] as String? ?? 'active',
+      ),
+      invoices: [
+        for (final e in invoices)
+          if (e is Map)
+            StudentLedgerInvoice(
+              id: e['id'] as String? ?? '',
+              invoiceNumber: e['invoiceNumber'] as String? ?? '',
+              invoiceDate: e['invoiceDate'] as String? ?? '',
+              dueDate: e['dueDate'] as String? ?? '',
+              totalAmount: e['totalAmount'] as String? ?? '0',
+              outstandingAmount: e['outstandingAmount'] as String? ?? '0',
+              lateFeeAmount: e['lateFeeAmount'] as String? ?? '0',
+              status: e['status'] as String? ?? '',
+            ),
+      ],
+      payments: [
+        for (final e in payments)
+          if (e is Map)
+            StudentLedgerPayment(
+              id: e['id'] as String? ?? '',
+              receiptNumber: e['receiptNumber'] as String? ?? '',
+              date: e['date'] as String? ?? '',
+              mode: e['mode'] as String? ?? '',
+              amount: e['amount'] as String? ?? '0',
+              status: e['status'] as String? ?? '',
+            ),
+      ],
+      ledger: [
+        for (final e in ledger)
+          if (e is Map)
+            StudentLedgerEntry(
+              date: e['date'] as String? ?? '',
+              kind: e['kind'] as String? ?? '',
+              reference: e['reference'] as String? ?? '',
+              description: e['description'] as String? ?? '',
+              debit: e['debit'] as String? ?? '0',
+              credit: e['credit'] as String? ?? '0',
+              balance: e['balance'] as String? ?? '0',
+            ),
+      ],
     );
   }
 

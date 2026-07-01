@@ -45,6 +45,9 @@ class MockRefundsDb {
     notes: null,
     collection_status: "completed",
     collected_by: USER,
+    cancellation_reason: null,
+    cancelled_by: null,
+    cancelled_at: null,
     created_at: "2026-06-07T00:00:00Z",
     updated_at: "2026-06-07T00:00:00Z",
   }];
@@ -63,6 +66,8 @@ class MockRefundsDb {
     total_amount: "50000",
     outstanding_amount: "45000",
     invoice_status: "partially_paid",
+    late_fee_amount: "0",
+    late_fee_accrued_at: null,
     created_by: USER,
     created_at: "2026-06-01T00:00:00Z",
     updated_at: "2026-06-01T00:00:00Z",

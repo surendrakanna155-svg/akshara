@@ -23,6 +23,9 @@ export interface FinanceInvoiceRow {
   total_amount: string;
   outstanding_amount: string;
   invoice_status: InvoiceStatus;
+  // FIN-D5: accrued late fee (0 = not yet accrued) + when it was applied.
+  late_fee_amount: string;
+  late_fee_accrued_at: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;

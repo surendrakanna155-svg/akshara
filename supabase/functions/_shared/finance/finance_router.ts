@@ -6,8 +6,19 @@ import {
   handleDailySummary,
   handleGetCollection,
   handleGetReceipt,
+  handleListCancelledCollections,
   handleListCollections,
 } from "./finance_collections_handlers.ts";
+import {
+  handleAccrueLateFees,
+  handleWaiveLateFee,
+} from "./finance_late_fee_handlers.ts";
+import {
+  handleCloseDay,
+  handleListDayClose,
+  handleReopenDay,
+} from "./finance_day_close_handlers.ts";
+import { handleStudentLedger } from "./finance_ledger_handlers.ts";
 import {
   handleAssignFeePlan,
   handleCancelFeeAssignment,
@@ -173,6 +184,15 @@ export function matchFinanceRoute(
     return { handler: handleGetFeeAssignment, args: [assignmentMatch[1]!] };
   }
 
+  // FIN-2: printable student ledger — matched BEFORE the bare student-account
+  // GET so the /ledger suffix isn't swallowed by the single-segment regex.
+  const studentLedgerMatch = path.match(
+    /^\/finance\/student-accounts\/([^/]+)\/ledger$/,
+  );
+  if (studentLedgerMatch && method === "GET") {
+    return { handler: handleStudentLedger, args: [studentLedgerMatch[1]!] };
+  }
+
   const studentAccountMatch = path.match(/^\/finance\/student-accounts\/([^/]+)$/);
   if (studentAccountMatch && method === "GET") {
     return { handler: handleGetStudentAccount, args: [studentAccountMatch[1]!] };
@@ -187,6 +207,11 @@ export function matchFinanceRoute(
 
   if (path === "/finance/collections/daily-summary" && method === "GET") {
     return { handler: handleDailySummary, args: [] };
+  }
+
+  // FIN-D3: cancelled register — literal, registered before the /{id} regex.
+  if (path === "/finance/collections/cancelled" && method === "GET") {
+    return { handler: handleListCancelledCollections, args: [] };
   }
 
   const cancelCollectionMatch = path.match(/^\/finance\/collections\/([^/]+)\/cancel$/);
@@ -216,6 +241,14 @@ export function matchFinanceRoute(
   const cancelInvoiceMatch = path.match(/^\/finance\/invoices\/([^/]+)\/cancel$/);
   if (cancelInvoiceMatch && method === "POST") {
     return { handler: handleCancelInvoice, args: [cancelInvoiceMatch[1]!] };
+  }
+
+  // FIN-D5: waive a single invoice's accrued late fee.
+  const waiveLateFeeMatch = path.match(
+    /^\/finance\/invoices\/([^/]+)\/waive-late-fee$/,
+  );
+  if (waiveLateFeeMatch && method === "POST") {
+    return { handler: handleWaiveLateFee, args: [waiveLateFeeMatch[1]!] };
   }
 
   const invoiceMatch = path.match(/^\/finance\/invoices\/([^/]+)$/);
@@ -314,6 +347,23 @@ export function matchFinanceRoute(
   }
   if (path === "/finance/recovery/targets" && method === "POST") {
     return { handler: handleUpsertRecoveryTarget, args: [] };
+  }
+
+  // ─── FIN-D5: late-fee accrual ──────────────────────────────────────────────
+  if (path === "/finance/late-fees/accrue" && method === "POST") {
+    return { handler: handleAccrueLateFees, args: [] };
+  }
+
+  // ─── FIN-D1: day-close lock ────────────────────────────────────────────────
+  if (path === "/finance/day-close" && method === "GET") {
+    return { handler: handleListDayClose, args: [] };
+  }
+  if (path === "/finance/day-close" && method === "POST") {
+    return { handler: handleCloseDay, args: [] };
+  }
+  const reopenDayMatch = path.match(/^\/finance\/day-close\/([^/]+)\/reopen$/);
+  if (reopenDayMatch && method === "POST") {
+    return { handler: handleReopenDay, args: [reopenDayMatch[1]!] };
   }
 
   // ─── STF-3: defaulters / reports / settings ────────────────────────────────

@@ -11,8 +11,10 @@ import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { emitMutationAudit, financeAudit } from "../audit/mutation_audit_catalog.ts";
 import {
+  CancellationReasonRequiredError,
   CollectionAmountError,
   CollectionNotFoundError,
+  DayLockedError,
   DuplicateReceiptError,
   InvoiceNotCollectibleError,
   InvalidCollectionTransitionError,
@@ -24,12 +26,14 @@ import {
   getReceipt,
   getStudentAccountById,
   listAllCollectionsForAccount,
+  listCancelledCollections,
   listCollections,
   listReceiptsForAccount,
 } from "./finance_collections_repository.ts";
 import { getInvoice } from "./finance_invoices_repository.ts";
 import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../sms_provider.ts";
 import {
+  cancelledCollectionToApi,
   collectionCreateToApi,
   collectionDetailToApi,
   collectionPaymentToApi,
@@ -135,6 +139,13 @@ function mapCollectionError(error: unknown): Response | null {
     return errorEnvelope("VALIDATION_ERROR", error.message, 422);
   }
   if (error instanceof InvalidCollectionTransitionError) {
+    return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+  }
+  // FIN-D1: back-dated entry into a closed day. FIN-D3: missing cancel reason.
+  if (
+    error instanceof DayLockedError ||
+    error instanceof CancellationReasonRequiredError
+  ) {
     return errorEnvelope("VALIDATION_ERROR", error.message, 422);
   }
   if (error instanceof DuplicateReceiptError) {
@@ -348,13 +359,28 @@ export async function handleCancelCollection(
   const denied = requireFinanceWrite(auth.claims);
   if (denied) return denied;
 
+  // FIN-D3: a cancellation reason is mandatory. Validated (422) before the DB.
+  const body = await readJson<Record<string, unknown>>(req) ?? {};
+  const reason = optionalStr(body, "reason", "reason")?.trim() ?? "";
+  if (reason === "") {
+    return errorEnvelope("VALIDATION_ERROR", "A cancellation reason is required", 422);
+  }
+
   const orgId = organizationIdFromClaims(auth.claims);
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
     const result = await runTenant(config, auth.claims, async (db) => {
-      const cancelled = await cancelCollection(db, orgId, schoolId, collectionId);
-      await emitMutationAudit(db, auth.claims, financeAudit.collectionCancelled(collectionId), req);
+      const cancelled = await cancelCollection(db, orgId, schoolId, collectionId, {
+        reason,
+        cancelledBy: auth.claims.sub,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        financeAudit.collectionCancelled(collectionId, reason),
+        req,
+      );
       return cancelled;
     });
     return jsonResponse(envelope(collectionCreateToApi(result)));
@@ -364,6 +390,33 @@ export async function handleCancelCollection(
     }
     const mapped = mapCollectionError(error);
     if (mapped) return mapped;
+    throw error;
+  }
+}
+
+// FIN-D3 — GET /finance/collections/cancelled (cancelled register).
+export async function handleListCancelledCollections(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireFinanceRead(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const rows = await runTenant(config, auth.claims, async (db) =>
+      await listCancelledCollections(db, orgId, schoolId)
+    );
+    return jsonResponse(envelope({ items: rows.map(cancelledCollectionToApi) }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse();
+    }
     throw error;
   }
 }

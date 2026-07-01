@@ -183,12 +183,92 @@ class ApiFinanceRepository implements FinanceRepository {
   Future<FinanceCollectionResult> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
+    required String reason,
   }) async {
     final dto = await _remote.cancelCollection(
       query: query,
       collectionId: collectionId,
+      reason: reason,
     );
     return _mapper.toCollectionResult(dto);
+  }
+
+  // ── FIN-D3: cancelled register ─────────────────────────────────────────────
+  @override
+  Future<List<CancelledCollection>> getCancelledCollections({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchCancelledCollections(query: query);
+    return _mapper.toCancelledCollections(dto);
+  }
+
+  // ── FIN-D5: late-fee accrual + waive ───────────────────────────────────────
+  @override
+  Future<LateFeeAccrualResult> accrueLateFees({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.accrueLateFees(query: query);
+    return _mapper.toLateFeeAccrualResult(dto);
+  }
+
+  @override
+  Future<FinanceInvoice> waiveLateFee({
+    required RepositoryQuery query,
+    required String invoiceId,
+    required String reason,
+  }) async {
+    final dto = await _remote.waiveLateFee(
+      query: query,
+      invoiceId: invoiceId,
+      reason: reason,
+    );
+    return _mapper.toFinanceInvoice(dto);
+  }
+
+  // ── FIN-D1: day-close lock ─────────────────────────────────────────────────
+  @override
+  Future<List<DayCloseEntry>> getDayCloseEntries({
+    required RepositoryQuery query,
+    String? from,
+    String? to,
+  }) async {
+    final dto = await _remote.fetchDayCloseEntries(
+      query: query,
+      from: from,
+      to: to,
+    );
+    return _mapper.toDayCloseEntries(dto);
+  }
+
+  @override
+  Future<DayCloseEntry> closeDay({
+    required RepositoryQuery query,
+    String? date,
+  }) async {
+    final dto = await _remote.closeDay(query: query, date: date);
+    return _mapper.toDayCloseEntry(dto);
+  }
+
+  @override
+  Future<DayCloseEntry> reopenDay({
+    required RepositoryQuery query,
+    required String date,
+  }) async {
+    final dto = await _remote.reopenDay(query: query, date: date);
+    return _mapper.toDayCloseEntry(dto);
+  }
+
+  // ── FIN-2: printable student ledger ────────────────────────────────────────
+  @override
+  Future<StudentLedger> getStudentLedger({
+    required RepositoryQuery query,
+    required String studentAccountId,
+  }) async {
+    final dto = await _remote.fetchStudentLedger(
+      query: query,
+      studentAccountId: studentAccountId,
+    );
+    return _mapper.toStudentLedger(dto);
   }
 
   @override

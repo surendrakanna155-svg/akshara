@@ -96,6 +96,31 @@ export const FINANCE_SETTINGS_TEMPLATE: SettingSectionTemplate[] = [
         description: "Percentage late fee applied to overdue invoices.",
         editable: true,
       },
+      // FIN-D5 — late-fee accrual controls.
+      {
+        id: "grace_days",
+        label: "Late Fee Grace (days)",
+        defaultValue: "0",
+        description:
+          "Days after the due date before a late fee starts accruing.",
+        editable: true,
+      },
+      {
+        id: "late_fee_flat",
+        label: "Late Fee (flat)",
+        defaultValue: "0",
+        description:
+          "Optional flat amount added on top of the percentage late fee.",
+        editable: true,
+      },
+      {
+        id: "late_fee_cap",
+        label: "Late Fee Cap",
+        defaultValue: "0",
+        description:
+          "Maximum late fee per invoice (0 = no cap).",
+        editable: true,
+      },
     ],
   },
 ];

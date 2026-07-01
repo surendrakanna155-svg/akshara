@@ -1,6 +1,7 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
 import type { FinanceInvoiceRow } from "./finance_invoices_repository.ts";
 import type { PaginationParams, PaginationResult } from "./finance_structures_repository.ts";
+import { isDateLocked } from "./finance_day_close_repository.ts";
 
 export type CollectionStatus =
   | "draft"
@@ -24,6 +25,10 @@ export interface FinanceCollectionRow {
   notes: string | null;
   collection_status: CollectionStatus;
   collected_by: string;
+  // FIN-D3: cancellation trail (null until the collection is cancelled).
+  cancellation_reason: string | null;
+  cancelled_by: string | null;
+  cancelled_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +112,28 @@ export class InvalidCollectionTransitionError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InvalidCollectionTransitionError";
+  }
+}
+
+/**
+ * FIN-D1: raised when a collection (or cancellation) is dated on/before the
+ * latest closed day — a back-dated money movement into a reconciled day is
+ * rejected before any row is written.
+ */
+export class DayLockedError extends Error {
+  constructor(collectionDate: string) {
+    super(
+      `The day ${collectionDate} is closed. Reopen it before recording or cancelling entries dated on/before it.`,
+    );
+    this.name = "DayLockedError";
+  }
+}
+
+/** FIN-D3: raised when a cancellation is attempted without a reason. */
+export class CancellationReasonRequiredError extends Error {
+  constructor() {
+    super("A cancellation reason is required");
+    this.name = "CancellationReasonRequiredError";
   }
 }
 
@@ -267,6 +294,14 @@ export async function createCollection(
 
   const receiptNumber = buildReceiptNumber();
   const collectionDate = input.collectionDate ?? new Date().toISOString().slice(0, 10);
+
+  // FIN-D1: reject a collection dated on/before the latest closed day. Checked
+  // before any row is written (and after the invoice lock so it serializes with
+  // a concurrent day-close). Additive guard — does not alter the payment math.
+  if (await isDateLocked(db, organizationId, schoolId, collectionDate)) {
+    throw new DayLockedError(collectionDate);
+  }
+
   const total = parseAmount(invoice.total_amount);
   const newOutstanding = outstanding - input.amountCollected;
   const newInvoiceStatus = computeInvoiceStatus(newOutstanding, total);
@@ -461,6 +496,47 @@ export async function getCollection(
   return rows[0] ?? null;
 }
 
+// FIN-D3 — cancelled register row (joins actor name + student name).
+export interface CancelledCollectionRow extends CollectionListRow {
+  cancelled_by_name?: string;
+}
+
+/**
+ * FIN-D3: the cancelled register — every cancelled collection with student name,
+ * receipt, amount, date, reason, the user who cancelled it (name) and when.
+ * Ordered by cancellation time (most recent first).
+ */
+export async function listCancelledCollections(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<CancelledCollectionRow[]> {
+  return await db.queryObject<CancelledCollectionRow>(
+    `SELECT fc.*,
+       COALESCE(s.display_name, afh.student_name) AS student_name,
+       afh.admission_number,
+       afh.class_label,
+       cu.display_name AS cancelled_by_name
+     FROM finance_collections fc
+     LEFT JOIN students s
+       ON s.id = fc.student_id AND s.organization_id = fc.organization_id AND s.school_id = fc.school_id
+     LEFT JOIN users cu ON cu.id = fc.cancelled_by
+     LEFT JOIN LATERAL (
+       SELECT student_name, admission_number, class_label
+       FROM admissions_fee_handoffs
+       WHERE student_id = fc.student_id
+         AND organization_id = fc.organization_id
+         AND school_id = fc.school_id
+       ORDER BY created_at DESC
+       LIMIT 1
+     ) afh ON true
+     WHERE fc.organization_id = $1 AND fc.school_id = $2
+       AND fc.collection_status = 'cancelled'
+     ORDER BY fc.cancelled_at DESC NULLS LAST, fc.updated_at DESC`,
+    [organizationId, schoolId],
+  );
+}
+
 export async function getReceipt(
   db: TenantQueryClient,
   organizationId: string,
@@ -486,18 +562,37 @@ export async function getReceipt(
   return { receipt, collection };
 }
 
+export interface CancelCollectionInput {
+  /** FIN-D3: mandatory, non-empty cancellation reason. */
+  reason: string;
+  /** FIN-D3: the acting user (claims.sub). */
+  cancelledBy: string;
+}
+
 export async function cancelCollection(
   db: TenantQueryClient,
   organizationId: string,
   schoolId: string,
   collectionId: string,
+  input: CancelCollectionInput,
 ): Promise<CollectionWithReceipt> {
+  const reason = input.reason?.trim() ?? "";
+  if (reason === "") {
+    throw new CancellationReasonRequiredError();
+  }
+
   const collection = await getCollection(db, organizationId, schoolId, collectionId);
   if (!collection) {
     throw new CollectionNotFoundError(collectionId);
   }
   if (collection.collection_status === "cancelled") {
     throw new InvalidCollectionTransitionError("Collection is already cancelled");
+  }
+
+  // FIN-D1: a collection whose date sits on/before the latest closed day cannot
+  // be cancelled — the money movement it reverses belongs to a reconciled day.
+  if (await isDateLocked(db, organizationId, schoolId, collection.collection_date)) {
+    throw new DayLockedError(collection.collection_date);
   }
 
   const receiptRows = await db.queryObject<FinanceReceiptRow>(
@@ -543,10 +638,13 @@ export async function cancelCollection(
   const updatedCollectionRows = await db.queryObject<FinanceCollectionRow>(
     `UPDATE finance_collections SET
       collection_status = 'cancelled',
+      cancellation_reason = $4,
+      cancelled_by = $5,
+      cancelled_at = timezone('utc', now()),
       updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
      RETURNING *`,
-    [collectionId, organizationId, schoolId],
+    [collectionId, organizationId, schoolId, reason, input.cancelledBy],
   );
 
   const updatedInvoiceRows = await db.queryObject<FinanceInvoiceRow>(

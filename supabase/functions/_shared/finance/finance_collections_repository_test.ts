@@ -329,7 +329,10 @@ Deno.test("cancelCollection reverses balances for completed collection", async (
     paymentMethod: "cash",
     collectedBy: STAFF,
   });
-  await cancelCollection(asDb(db), ORG, SCHOOL_A, created.collection.id);
+  await cancelCollection(asDb(db), ORG, SCHOOL_A, created.collection.id, {
+    reason: "duplicate entry",
+    cancelledBy: STAFF,
+  });
   assertEquals(db.invoices[0]!.outstanding_amount, "50000");
   assertEquals(db.invoices[0]!.invoice_status, "issued");
   assertEquals(db.accounts[0]!.amount_paid, "0");
@@ -343,9 +346,16 @@ Deno.test("cancelCollection rejects already cancelled", async () => {
     paymentMethod: "cash",
     collectedBy: STAFF,
   });
-  await cancelCollection(asDb(db), ORG, SCHOOL_A, created.collection.id);
+  await cancelCollection(asDb(db), ORG, SCHOOL_A, created.collection.id, {
+    reason: "wrong student",
+    cancelledBy: STAFF,
+  });
   await assertRejects(
-    () => cancelCollection(asDb(db), ORG, SCHOOL_A, created.collection.id),
+    () =>
+      cancelCollection(asDb(db), ORG, SCHOOL_A, created.collection.id, {
+        reason: "again",
+        cancelledBy: STAFF,
+      }),
     InvalidCollectionTransitionError,
   );
 });
@@ -380,6 +390,9 @@ Deno.test("collectionPaymentToApi maps client status field", () => {
     notes: null,
     collection_status: "completed",
     collected_by: STAFF,
+    cancellation_reason: null,
+    cancelled_by: null,
+    cancelled_at: null,
     created_at: "2026-06-09T00:00:00.000Z",
     updated_at: "2026-06-09T00:00:00.000Z",
     student_name: "Probe",
@@ -444,6 +457,9 @@ Deno.test("collectionDetailToApi builds timeline and receipt links from db rows"
     notes: null,
     collection_status: "completed",
     collected_by: STAFF,
+    cancellation_reason: null,
+    cancelled_by: null,
+    cancelled_at: null,
     created_at: "2026-06-09T00:00:00.000Z",
     updated_at: "2026-06-09T00:00:00.000Z",
     student_name: "Probe",
@@ -465,6 +481,8 @@ Deno.test("collectionDetailToApi builds timeline and receipt links from db rows"
     total_amount: "50000",
     outstanding_amount: "45000",
     invoice_status: "partially_paid",
+    late_fee_amount: "0",
+    late_fee_accrued_at: null,
     created_by: STAFF,
     created_at: "2026-06-01T00:00:00.000Z",
     updated_at: "2026-06-09T00:00:00.000Z",

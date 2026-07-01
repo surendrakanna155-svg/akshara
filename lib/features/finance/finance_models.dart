@@ -413,6 +413,8 @@ class FinanceInvoice {
     required this.createdBy,
     required this.createdAt,
     required this.updatedAt,
+    this.lateFeeAmount = '0',
+    this.lateFeeAccruedAt = '',
   });
 
   final String id;
@@ -433,6 +435,18 @@ class FinanceInvoice {
   final String createdAt;
   final String updatedAt;
 
+  /// FIN-D5: accrued late fee on this invoice ('0' when none accrued yet).
+  final String lateFeeAmount;
+
+  /// FIN-D5: when the late fee was accrued ('' when none).
+  final String lateFeeAccruedAt;
+
+  /// FIN-D5: true when a non-zero late fee has been accrued on this invoice.
+  bool get hasLateFee {
+    final v = double.tryParse(lateFeeAmount.replaceAll(RegExp(r'[^\d.-]'), ''));
+    return v != null && v > 0;
+  }
+
   FinanceInvoice copyWith({
     InvoiceStatus? invoiceStatus,
     String? invoiceDate,
@@ -440,6 +454,8 @@ class FinanceInvoice {
     String? outstandingAmount,
     String? paidAmount,
     String? updatedAt,
+    String? lateFeeAmount,
+    String? lateFeeAccruedAt,
   }) {
     return FinanceInvoice(
       id: id,
@@ -459,6 +475,8 @@ class FinanceInvoice {
       createdBy: createdBy,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      lateFeeAmount: lateFeeAmount ?? this.lateFeeAmount,
+      lateFeeAccruedAt: lateFeeAccruedAt ?? this.lateFeeAccruedAt,
     );
   }
 }
@@ -954,4 +972,180 @@ class FinanceSettingsData {
 
   final List<FinanceSettingsSection> sections;
   final String academicYear;
+}
+
+// ── FIN-D3: cancelled register ───────────────────────────────────────────────
+@immutable
+class CancelledCollection {
+  const CancelledCollection({
+    required this.id,
+    required this.receiptNumber,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.classLabel,
+    required this.amount,
+    required this.mode,
+    required this.collectedAt,
+    required this.reason,
+    required this.cancelledBy,
+    required this.cancelledByName,
+    required this.cancelledAt,
+  });
+
+  final String id;
+  final String receiptNumber;
+  final String studentName;
+  final String admissionNumber;
+  final String classLabel;
+  final String amount;
+  final String mode;
+  final String collectedAt;
+  final String reason;
+  final String cancelledBy;
+  final String cancelledByName;
+  final String cancelledAt;
+}
+
+// ── FIN-D5: late-fee accrual summary ─────────────────────────────────────────
+@immutable
+class LateFeeAccrualResult {
+  const LateFeeAccrualResult({
+    required this.accruedCount,
+    required this.totalLateFee,
+  });
+
+  final int accruedCount;
+  final String totalLateFee;
+}
+
+// ── FIN-D1: day-close entry ──────────────────────────────────────────────────
+enum DayCloseStatus { open, closed }
+
+@immutable
+class DayCloseEntry {
+  const DayCloseEntry({
+    required this.id,
+    required this.closeDate,
+    required this.status,
+    required this.closedBy,
+    required this.closedAt,
+    required this.reopenedBy,
+    required this.reopenedAt,
+  });
+
+  final String id;
+  final String closeDate;
+  final DayCloseStatus status;
+  final String closedBy;
+  final String closedAt;
+  final String reopenedBy;
+  final String reopenedAt;
+
+  bool get isClosed => status == DayCloseStatus.closed;
+}
+
+// ── FIN-2: printable student ledger / fee statement ──────────────────────────
+@immutable
+class StudentLedgerAccount {
+  const StudentLedgerAccount({
+    required this.id,
+    required this.studentId,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.classLabel,
+    required this.academicYear,
+    required this.totalDue,
+    required this.totalPaid,
+    required this.balance,
+    required this.status,
+  });
+
+  final String id;
+  final String studentId;
+  final String studentName;
+  final String admissionNumber;
+  final String classLabel;
+  final String academicYear;
+  final String totalDue;
+  final String totalPaid;
+  final String balance;
+  final String status;
+}
+
+@immutable
+class StudentLedgerInvoice {
+  const StudentLedgerInvoice({
+    required this.id,
+    required this.invoiceNumber,
+    required this.invoiceDate,
+    required this.dueDate,
+    required this.totalAmount,
+    required this.outstandingAmount,
+    required this.lateFeeAmount,
+    required this.status,
+  });
+
+  final String id;
+  final String invoiceNumber;
+  final String invoiceDate;
+  final String dueDate;
+  final String totalAmount;
+  final String outstandingAmount;
+  final String lateFeeAmount;
+  final String status;
+}
+
+@immutable
+class StudentLedgerPayment {
+  const StudentLedgerPayment({
+    required this.id,
+    required this.receiptNumber,
+    required this.date,
+    required this.mode,
+    required this.amount,
+    required this.status,
+  });
+
+  final String id;
+  final String receiptNumber;
+  final String date;
+  final String mode;
+  final String amount;
+  final String status;
+}
+
+@immutable
+class StudentLedgerEntry {
+  const StudentLedgerEntry({
+    required this.date,
+    required this.kind,
+    required this.reference,
+    required this.description,
+    required this.debit,
+    required this.credit,
+    required this.balance,
+  });
+
+  final String date;
+  final String kind; // 'invoice' | 'payment'
+  final String reference;
+  final String description;
+  final String debit;
+  final String credit;
+  final String balance;
+}
+
+@immutable
+class StudentLedger {
+  const StudentLedger({
+    required this.account,
+    required this.invoices,
+    required this.payments,
+    required this.ledger,
+  });
+
+  final StudentLedgerAccount account;
+  final List<StudentLedgerInvoice> invoices;
+  final List<StudentLedgerPayment> payments;
+  final List<StudentLedgerEntry> ledger;
 }

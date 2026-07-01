@@ -68,6 +68,11 @@ class MockFinanceRepository implements FinanceRepository {
     ],
   };
 
+  // FIN-D3 cancelled register + FIN-D1 day-close, in-memory.
+  final List<CancelledCollection> _cancelledCollections = <CancelledCollection>[];
+  final List<DayCloseEntry> _dayCloseEntries = <DayCloseEntry>[];
+  int _dayCloseSeq = 0;
+
   int _recoverySeq = 100;
   @override
   Future<FinanceDashboardData> getDashboard(
@@ -556,7 +561,12 @@ class MockFinanceRepository implements FinanceRepository {
   Future<FinanceCollectionResult> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
+    required String reason,
   }) async {
+    // FIN-D3: reason is mandatory (mirrors the backend 422 guard).
+    if (reason.trim().isEmpty) {
+      throw StateError('A cancellation reason is required');
+    }
     final paymentIndex =
         _store.payments.indexWhere((item) => item.id == collectionId);
     if (paymentIndex < 0) {
@@ -579,6 +589,25 @@ class MockFinanceRepository implements FinanceRepository {
       classLabel: payment.classLabel,
     );
 
+    // FIN-D3: record it in the cancelled register.
+    _cancelledCollections.insert(
+      0,
+      CancelledCollection(
+        id: payment.id,
+        receiptNumber: payment.receiptNumber,
+        studentName: payment.studentName,
+        admissionNumber: payment.admissionNumber,
+        classLabel: payment.classLabel,
+        amount: payment.amount,
+        mode: payment.mode,
+        collectedAt: payment.collectedAt,
+        reason: reason.trim(),
+        cancelledBy: 'finance_demo',
+        cancelledByName: 'Finance Admin',
+        cancelledAt: DateTime.now().toIso8601String(),
+      ),
+    );
+
     return FinanceCollectionResult(
       collectionId: payment.id,
       invoiceId: '',
@@ -597,6 +626,239 @@ class MockFinanceRepository implements FinanceRepository {
         studentAccountId: '',
       ),
       invoice: _store.invoices.first,
+    );
+  }
+
+  // ── FIN-D3: cancelled register ─────────────────────────────────────────────
+  @override
+  Future<List<CancelledCollection>> getCancelledCollections({
+    required RepositoryQuery query,
+  }) async {
+    return List<CancelledCollection>.unmodifiable(_cancelledCollections);
+  }
+
+  // ── FIN-D5: late-fee accrual + waive ───────────────────────────────────────
+  @override
+  Future<LateFeeAccrualResult> accrueLateFees({
+    required RepositoryQuery query,
+  }) async {
+    // Demo: accrue a flat 2% on issued/partially-paid invoices with no late fee.
+    var count = 0;
+    var total = 0.0;
+    for (var i = 0; i < _store.invoices.length; i++) {
+      final inv = _store.invoices[i];
+      if (inv.invoiceStatus != InvoiceStatus.issued &&
+          inv.invoiceStatus != InvoiceStatus.partiallyPaid) {
+        continue;
+      }
+      if (inv.hasLateFee) continue;
+      final totalAmount =
+          double.tryParse(inv.totalAmount.replaceAll(RegExp(r'[^\d.-]'), '')) ??
+              0;
+      final fee = (totalAmount * 2 / 100);
+      if (fee <= 0) continue;
+      final newOutstanding =
+          (double.tryParse(
+                    inv.outstandingAmount.replaceAll(RegExp(r'[^\d.-]'), ''),
+                  ) ??
+                  0) +
+              fee;
+      _store.invoices[i] = inv.copyWith(
+        lateFeeAmount: fee.toStringAsFixed(2),
+        lateFeeAccruedAt: DateTime.now().toIso8601String(),
+        outstandingAmount: newOutstanding.toStringAsFixed(2),
+      );
+      count += 1;
+      total += fee;
+    }
+    return LateFeeAccrualResult(
+      accruedCount: count,
+      totalLateFee: total.toStringAsFixed(2),
+    );
+  }
+
+  @override
+  Future<FinanceInvoice> waiveLateFee({
+    required RepositoryQuery query,
+    required String invoiceId,
+    required String reason,
+  }) async {
+    if (reason.trim().isEmpty) {
+      throw StateError('A waive reason is required');
+    }
+    final index = _store.invoices.indexWhere((i) => i.id == invoiceId);
+    if (index < 0) {
+      throw StateError('Invoice not found: $invoiceId');
+    }
+    final inv = _store.invoices[index];
+    final lateFee =
+        double.tryParse(inv.lateFeeAmount.replaceAll(RegExp(r'[^\d.-]'), '')) ??
+            0;
+    if (lateFee <= 0) {
+      throw StateError('Invoice has no late fee to waive: $invoiceId');
+    }
+    final outstanding =
+        (double.tryParse(
+                  inv.outstandingAmount.replaceAll(RegExp(r'[^\d.-]'), ''),
+                ) ??
+                0) -
+            lateFee;
+    _store.invoices[index] = inv.copyWith(
+      lateFeeAmount: '0',
+      lateFeeAccruedAt: '',
+      outstandingAmount: (outstanding < 0 ? 0 : outstanding).toStringAsFixed(2),
+    );
+    return _store.invoices[index];
+  }
+
+  // ── FIN-D1: day-close lock ─────────────────────────────────────────────────
+  @override
+  Future<List<DayCloseEntry>> getDayCloseEntries({
+    required RepositoryQuery query,
+    String? from,
+    String? to,
+  }) async {
+    return List<DayCloseEntry>.unmodifiable(_dayCloseEntries);
+  }
+
+  @override
+  Future<DayCloseEntry> closeDay({
+    required RepositoryQuery query,
+    String? date,
+  }) async {
+    final closeDate =
+        (date == null || date.isEmpty) ? _todayIso() : date;
+    _dayCloseEntries.removeWhere((e) => e.closeDate == closeDate);
+    final entry = DayCloseEntry(
+      id: 'dayclose_${_dayCloseSeq++}',
+      closeDate: closeDate,
+      status: DayCloseStatus.closed,
+      closedBy: 'finance_demo',
+      closedAt: DateTime.now().toIso8601String(),
+      reopenedBy: '',
+      reopenedAt: '',
+    );
+    _dayCloseEntries.insert(0, entry);
+    return entry;
+  }
+
+  @override
+  Future<DayCloseEntry> reopenDay({
+    required RepositoryQuery query,
+    required String date,
+  }) async {
+    final index = _dayCloseEntries.indexWhere(
+      (e) => e.closeDate == date && e.status == DayCloseStatus.closed,
+    );
+    if (index < 0) {
+      throw StateError('No closed day found for date: $date');
+    }
+    final prev = _dayCloseEntries[index];
+    final reopened = DayCloseEntry(
+      id: prev.id,
+      closeDate: prev.closeDate,
+      status: DayCloseStatus.open,
+      closedBy: prev.closedBy,
+      closedAt: prev.closedAt,
+      reopenedBy: 'finance_demo',
+      reopenedAt: DateTime.now().toIso8601String(),
+    );
+    _dayCloseEntries[index] = reopened;
+    return reopened;
+  }
+
+  static String _todayIso() => DateTime.now().toIso8601String().substring(0, 10);
+
+  // ── FIN-2: printable student ledger ────────────────────────────────────────
+  @override
+  Future<StudentLedger> getStudentLedger({
+    required RepositoryQuery query,
+    required String studentAccountId,
+  }) async {
+    final account = _store.studentAccounts.firstWhere(
+      (a) => a.id == studentAccountId,
+      orElse: () => _store.studentAccounts.isNotEmpty
+          ? _store.studentAccounts.first
+          : throw StateError('Student account not found: $studentAccountId'),
+    );
+    final invoices = _store.invoices;
+    final payments = _store.payments;
+
+    final ledgerInvoices = [
+      for (final inv in invoices)
+        StudentLedgerInvoice(
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          invoiceDate: inv.invoiceDate,
+          dueDate: inv.dueDate,
+          totalAmount: inv.totalAmount,
+          outstandingAmount: inv.outstandingAmount,
+          lateFeeAmount: inv.lateFeeAmount,
+          status: inv.invoiceStatus.name,
+        ),
+    ];
+    final ledgerPayments = [
+      for (final p in payments)
+        StudentLedgerPayment(
+          id: p.id,
+          receiptNumber: p.receiptNumber,
+          date: p.collectedAt,
+          mode: p.mode,
+          amount: p.amount,
+          status: p.status.name,
+        ),
+    ];
+
+    double parse(String v) =>
+        double.tryParse(v.replaceAll(RegExp(r'[^\d.-]'), '')) ?? 0;
+    var running = 0.0;
+    final entries = <StudentLedgerEntry>[];
+    for (final inv in ledgerInvoices) {
+      running += parse(inv.totalAmount);
+      entries.add(
+        StudentLedgerEntry(
+          date: inv.invoiceDate,
+          kind: 'invoice',
+          reference: inv.invoiceNumber,
+          description: 'Invoice ${inv.invoiceNumber}',
+          debit: inv.totalAmount,
+          credit: '0',
+          balance: running.toStringAsFixed(2),
+        ),
+      );
+    }
+    for (final p in ledgerPayments) {
+      if (p.status == CollectionStatus.refunded.name) continue;
+      running -= parse(p.amount);
+      entries.add(
+        StudentLedgerEntry(
+          date: p.date,
+          kind: 'payment',
+          reference: p.receiptNumber,
+          description: 'Payment ${p.receiptNumber} (${p.mode})',
+          debit: '0',
+          credit: p.amount,
+          balance: running.toStringAsFixed(2),
+        ),
+      );
+    }
+
+    return StudentLedger(
+      account: StudentLedgerAccount(
+        id: account.id,
+        studentId: account.id,
+        studentName: account.studentName,
+        admissionNumber: account.admissionNumber,
+        classLabel: account.classLabel,
+        academicYear: '',
+        totalDue: account.totalDue,
+        totalPaid: account.totalPaid,
+        balance: account.balance,
+        status: account.status.name,
+      ),
+      invoices: ledgerInvoices,
+      payments: ledgerPayments,
+      ledger: entries,
     );
   }
 

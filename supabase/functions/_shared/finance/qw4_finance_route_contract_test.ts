@@ -112,10 +112,16 @@ const routes: RouteCase[] = [
   { method: "PATCH", path: `/finance/fee-assignments/${ID}/cancel`, holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: `/finance/fee-assignments/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "GET", path: `/finance/student-accounts/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
+  // FIN-2: printable student ledger (read → viewFinance)
+  { method: "GET", path: `/finance/student-accounts/${ID}/ledger`, holder: ["viewFinance"], other: ["viewInventory"] },
   // collections
   { method: "GET", path: "/finance/collections", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "POST", path: "/finance/collections", holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: "/finance/collections/daily-summary", holder: ["viewFinance"], other: ["viewInventory"] },
+  // FIN-D3: cancelled register (read → viewFinance)
+  { method: "GET", path: "/finance/collections/cancelled", holder: ["viewFinance"], other: ["viewInventory"] },
+  // FIN-D3: cancel now requires a reason body — a holder with no body trips the
+  // 422 reason-validation that runs after the gate (still gate-passed).
   { method: "POST", path: `/finance/collections/${ID}/cancel`, holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: `/finance/collections/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "GET", path: `/finance/receipts/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
@@ -123,6 +129,8 @@ const routes: RouteCase[] = [
   { method: "GET", path: "/finance/invoices", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "POST", path: `/finance/invoices/${ID}/issue`, holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "POST", path: `/finance/invoices/${ID}/cancel`, holder: ["manageFinance"], other: ["viewFinance"] },
+  // FIN-D5: waive a single invoice's late fee (write → manageFinance)
+  { method: "POST", path: `/finance/invoices/${ID}/waive-late-fee`, holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: `/finance/invoices/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
   // refunds (approve/reject gate on approveRefunds — see QA-B-015)
   { method: "GET", path: "/finance/refunds", holder: ["viewFinance"], other: ["viewInventory"] },
@@ -151,6 +159,12 @@ const routes: RouteCase[] = [
   { method: "POST", path: `/finance/recovery/promises/${ID}/resolve`, holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: "/finance/recovery/targets", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "POST", path: "/finance/recovery/targets", holder: ["manageFinance"], other: ["viewFinance"] },
+  // FIN-D5: late-fee accrual (write → manageFinance)
+  { method: "POST", path: "/finance/late-fees/accrue", holder: ["manageFinance"], other: ["viewFinance"] },
+  // FIN-D1: day-close lock (read → viewFinance; close/reopen → manageFinance)
+  { method: "GET", path: "/finance/day-close", holder: ["viewFinance"], other: ["viewInventory"] },
+  { method: "POST", path: "/finance/day-close", holder: ["manageFinance"], other: ["viewFinance"] },
+  { method: "POST", path: `/finance/day-close/2026-07-01/reopen`, holder: ["manageFinance"], other: ["viewFinance"] },
   // defaulters / reports / settings
   { method: "GET", path: "/finance/defaulters", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "GET", path: "/finance/reports", holder: ["viewFinance"], other: ["viewInventory"] },

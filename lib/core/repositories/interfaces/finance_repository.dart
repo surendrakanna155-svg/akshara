@@ -47,6 +47,47 @@ abstract class FinanceRepository {
   Future<FinanceCollectionResult> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
+    // FIN-D3: a cancellation reason is mandatory.
+    required String reason,
+  });
+
+  // ── FIN-D3: cancelled register ─────────────────────────────────────────────
+  Future<List<CancelledCollection>> getCancelledCollections({
+    required RepositoryQuery query,
+  });
+
+  // ── FIN-D5: late-fee accrual + waive ───────────────────────────────────────
+  Future<LateFeeAccrualResult> accrueLateFees({
+    required RepositoryQuery query,
+  });
+
+  Future<FinanceInvoice> waiveLateFee({
+    required RepositoryQuery query,
+    required String invoiceId,
+    required String reason,
+  });
+
+  // ── FIN-D1: day-close lock ─────────────────────────────────────────────────
+  Future<List<DayCloseEntry>> getDayCloseEntries({
+    required RepositoryQuery query,
+    String? from,
+    String? to,
+  });
+
+  Future<DayCloseEntry> closeDay({
+    required RepositoryQuery query,
+    String? date,
+  });
+
+  Future<DayCloseEntry> reopenDay({
+    required RepositoryQuery query,
+    required String date,
+  });
+
+  // ── FIN-2: printable student ledger ────────────────────────────────────────
+  Future<StudentLedger> getStudentLedger({
+    required RepositoryQuery query,
+    required String studentAccountId,
   });
 
   Future<OfflinePaymentRecord> recordOfflinePayment({

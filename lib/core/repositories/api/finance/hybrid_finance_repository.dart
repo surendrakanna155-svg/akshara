@@ -97,8 +97,62 @@ class HybridFinanceRepository implements FinanceRepository {
   Future<FinanceCollectionResult> cancelCollection({
     required RepositoryQuery query,
     required String collectionId,
+    required String reason,
   }) =>
-      _api.cancelCollection(query: query, collectionId: collectionId);
+      _api.cancelCollection(
+        query: query,
+        collectionId: collectionId,
+        reason: reason,
+      );
+
+  @override
+  Future<List<CancelledCollection>> getCancelledCollections({
+    required RepositoryQuery query,
+  }) =>
+      _api.getCancelledCollections(query: query);
+
+  @override
+  Future<LateFeeAccrualResult> accrueLateFees({
+    required RepositoryQuery query,
+  }) =>
+      _api.accrueLateFees(query: query);
+
+  @override
+  Future<FinanceInvoice> waiveLateFee({
+    required RepositoryQuery query,
+    required String invoiceId,
+    required String reason,
+  }) =>
+      _api.waiveLateFee(query: query, invoiceId: invoiceId, reason: reason);
+
+  @override
+  Future<List<DayCloseEntry>> getDayCloseEntries({
+    required RepositoryQuery query,
+    String? from,
+    String? to,
+  }) =>
+      _api.getDayCloseEntries(query: query, from: from, to: to);
+
+  @override
+  Future<DayCloseEntry> closeDay({
+    required RepositoryQuery query,
+    String? date,
+  }) =>
+      _api.closeDay(query: query, date: date);
+
+  @override
+  Future<DayCloseEntry> reopenDay({
+    required RepositoryQuery query,
+    required String date,
+  }) =>
+      _api.reopenDay(query: query, date: date);
+
+  @override
+  Future<StudentLedger> getStudentLedger({
+    required RepositoryQuery query,
+    required String studentAccountId,
+  }) =>
+      _api.getStudentLedger(query: query, studentAccountId: studentAccountId);
 
   @override
   Future<OfflinePaymentRecord> recordOfflinePayment({

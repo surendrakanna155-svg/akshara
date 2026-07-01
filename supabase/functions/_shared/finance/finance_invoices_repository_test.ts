@@ -262,6 +262,8 @@ Deno.test("invoiceToApi maps client-compatible fields", () => {
     total_amount: "50000",
     outstanding_amount: "30000",
     invoice_status: "partially_paid",
+    late_fee_amount: "0",
+    late_fee_accrued_at: null,
     created_by: STAFF,
     created_at: "2026-06-07T00:00:00.000Z",
     updated_at: "2026-06-07T00:00:00.000Z",

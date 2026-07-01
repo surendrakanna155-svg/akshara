@@ -21,6 +21,16 @@ abstract final class FinanceApiPaths {
   static const String intelligenceExecutive = '$base/intelligence/executive';
   static const String scholarships = '$base/scholarships';
 
+  // FIN-D3: cancelled register.
+  static const String collectionsCancelled = '$base/collections/cancelled';
+
+  // FIN-D5: late-fee accrual.
+  static const String lateFeesAccrue = '$base/late-fees/accrue';
+
+  // FIN-D1: day-close lock.
+  static const String dayClose = '$base/day-close';
+  static String dayCloseReopen(String date) => '$dayClose/$date/reopen';
+
   static String collectionDetail(String id) => '$base/collections/$id';
   static String collectionCancel(String id) => '${collectionDetail(id)}/cancel';
   static String offlinePaymentReconcile(String id) =>
@@ -43,6 +53,12 @@ abstract final class FinanceApiPaths {
   static String invoice(String id) => '$invoices/$id';
   static String invoiceIssue(String id) => '${invoice(id)}/issue';
   static String invoiceCancel(String id) => '${invoice(id)}/cancel';
+  // FIN-D5: waive a single invoice's late fee.
+  static String invoiceWaiveLateFee(String id) => '${invoice(id)}/waive-late-fee';
+
+  // FIN-2: printable student ledger / fee statement.
+  static String studentLedger(String studentAccountId) =>
+      '${studentAccount(studentAccountId)}/ledger';
 
   // FIN-R1..R5 — fee-recovery CRM.
   static const String recovery = '$base/recovery';

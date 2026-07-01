@@ -865,7 +865,7 @@ class CancelCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
   FutureOr<FinanceCollectionResult?> build() => null;
 
   Future<FinanceCollectionResult?> execute(
-      {required String collectionId}) async {
+      {required String collectionId, required String reason}) async {
     if (state.isLoading) return state.valueOrNull;
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
@@ -876,6 +876,7 @@ class CancelCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
         auditType: AuditEventType.collectionCancelled,
         entityId: collectionId,
         entityIdForAudit: (result) => result.collectionId,
+        metadata: {'reason': reason},
         invalidateCollections: true,
         invalidateOfflinePayments: true,
         invalidateStudentAccounts: true,
@@ -883,6 +884,7 @@ class CancelCollectionNotifier extends AsyncNotifier<FinanceCollectionResult?> {
         action: () => ref.read(financeRepositoryProvider).cancelCollection(
               query: ref.read(repositoryQueryProvider),
               collectionId: collectionId,
+              reason: reason,
             ),
       );
     });

@@ -16,6 +16,7 @@ import {
 import type { DailySummaryData, StudentAccountSnapshot } from "./finance_collections_repository.ts";
 import type { FinanceDashboardSnapshot } from "./finance_dashboard_repository.ts";
 import type { RefundListRow } from "./finance_refunds_repository.ts";
+import type { StudentLedger } from "./finance_ledger_repository.ts";
 
 export interface FinanceFeeStructureRow {
   id: string;
@@ -229,6 +230,8 @@ export function invoiceToApi(row: FinanceInvoiceRow): Record<string, unknown> {
     outstandingAmount: formatAmount(row.outstanding_amount),
     paidAmount: paidAmount(row.total_amount, row.outstanding_amount),
     invoiceStatus: row.invoice_status,
+    lateFeeAmount: formatAmount(row.late_fee_amount ?? "0"),
+    lateFeeAccruedAt: row.late_fee_accrued_at ?? "",
     termLabel: "Annual",
     createdBy: row.created_by,
     createdAt: row.created_at,
@@ -265,6 +268,27 @@ export function collectionPaymentToApi(row: CollectionListRow): Record<string, u
     collectedBy: row.collected_by,
     status: collectionStatusToApi(row.collection_status),
     classLabel: row.class_label ?? "",
+  };
+}
+
+// FIN-D3 — cancelled register entry (student, receipt, amount, date, reason,
+// who cancelled it + when).
+export function cancelledCollectionToApi(
+  row: CollectionListRow & { cancelled_by_name?: string; cancelled_by?: string | null; cancelled_at?: string | null; cancellation_reason?: string | null },
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    receiptNumber: row.receipt_number,
+    studentName: row.student_name ?? "",
+    admissionNumber: row.admission_number ?? "",
+    classLabel: row.class_label ?? "",
+    amount: formatAmount(row.amount_collected),
+    mode: row.payment_method,
+    collectedAt: row.collection_date,
+    reason: row.cancellation_reason ?? "",
+    cancelledBy: row.cancelled_by ?? "",
+    cancelledByName: row.cancelled_by_name ?? "",
+    cancelledAt: row.cancelled_at ?? "",
   };
 }
 
@@ -403,6 +427,113 @@ export function dashboardToApi(data: FinanceDashboardSnapshot): Record<string, u
       status: row.status,
       requestedAt: row.requested_at,
     })),
+  };
+}
+
+// FIN-2 — printable student fee statement / ledger. Chronologically merges
+// invoices (debits) and completed collections (credits) into a running-balance
+// ledger, plus the raw invoice/payment lists and an account summary.
+export function studentLedgerToApi(ledger: StudentLedger): Record<string, unknown> {
+  const { account, invoices, collections } = ledger;
+
+  const invoiceRows = invoices.map((inv) => ({
+    id: inv.id,
+    invoiceNumber: inv.invoice_number,
+    invoiceDate: inv.invoice_date,
+    dueDate: inv.due_date,
+    totalAmount: formatAmount(inv.total_amount),
+    outstandingAmount: formatAmount(inv.outstanding_amount),
+    lateFeeAmount: formatAmount(inv.late_fee_amount ?? "0"),
+    status: inv.invoice_status,
+  }));
+
+  const paymentRows = collections.map((c) => ({
+    id: c.id,
+    receiptNumber: c.receipt_number,
+    date: c.collection_date,
+    mode: c.payment_method,
+    amount: formatAmount(c.amount_collected),
+    status: collectionStatusToApi(c.collection_status),
+  }));
+
+  // Build a running-balance ledger: an invoice debits (raises balance owed), a
+  // completed collection credits (reduces it). Cancelled collections do not move
+  // the balance. Sorted by date then a stable debit-before-credit tiebreak.
+  interface LedgerEntry {
+    date: string;
+    kind: "invoice" | "payment";
+    reference: string;
+    description: string;
+    debit: number;
+    credit: number;
+    order: number;
+  }
+  const entries: LedgerEntry[] = [];
+  for (const inv of invoices) {
+    entries.push({
+      date: inv.invoice_date,
+      kind: "invoice",
+      reference: inv.invoice_number,
+      description: `Invoice ${inv.invoice_number}`,
+      debit: parseFloat(inv.total_amount) || 0,
+      credit: 0,
+      order: 0,
+    });
+  }
+  for (const c of collections) {
+    if (c.collection_status === "cancelled") continue;
+    entries.push({
+      date: c.collection_date,
+      kind: "payment",
+      reference: c.receipt_number,
+      description: `Payment ${c.receipt_number} (${c.payment_method})`,
+      debit: 0,
+      credit: parseFloat(c.amount_collected) || 0,
+      order: 1,
+    });
+  }
+  entries.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return a.order - b.order;
+  });
+
+  let running = 0;
+  const ledgerRows = entries.map((e) => {
+    running += e.debit - e.credit;
+    return {
+      date: e.date,
+      kind: e.kind,
+      reference: e.reference,
+      description: e.description,
+      debit: formatAmount(e.debit),
+      credit: formatAmount(e.credit),
+      balance: formatAmount(running),
+    };
+  });
+
+  return {
+    account: {
+      id: account.id,
+      studentId: account.student_id,
+      studentName: account.student_name,
+      admissionNumber: account.admission_number,
+      classLabel: account.class_label,
+      academicYear: account.academic_year,
+      totalDue: formatAmount(account.total_fee),
+      totalPaid: formatAmount(account.amount_paid),
+      balance: formatAmount(account.outstanding_amount),
+      status: account.status === "closed" ? "closed" : "active",
+    },
+    invoices: invoiceRows,
+    payments: paymentRows,
+    ledger: ledgerRows,
+    summary: {
+      totalDue: formatAmount(account.total_fee),
+      totalPaid: formatAmount(account.amount_paid),
+      balance: formatAmount(account.outstanding_amount),
+      invoiceCount: invoiceRows.length,
+      paymentCount: paymentRows.length,
+    },
   };
 }
 
