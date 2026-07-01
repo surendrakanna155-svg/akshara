@@ -14,6 +14,7 @@ import {
   handleParentSendMessage,
   handleProcessNotificationQueue,
   handleRegisterDeviceToken,
+  handleRunScheduledBroadcasts,
   handleStudentNotifications,
   handleTeacherMessageThreads,
   handleTeacherSendMessage,
@@ -49,6 +50,11 @@ export function matchCommunicationRoute(
   // the more-specific path matches first.
   if (method === "GET" && path === "/communications/broadcasts/history") {
     return { handler: handleBroadcastHistory };
+  }
+  // XCT-2: dispatch due scheduled broadcasts (cron/ops entry point). Exact-path
+  // match, so order vs the create route is irrelevant, but keep it adjacent.
+  if (method === "POST" && path === "/communications/broadcasts/run-scheduled") {
+    return { handler: handleRunScheduledBroadcasts };
   }
   if (method === "POST" && path === "/communications/broadcasts") {
     return { handler: handleCreateBroadcast };

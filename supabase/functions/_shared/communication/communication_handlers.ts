@@ -20,6 +20,8 @@ import {
   listNotificationTemplates,
   listUserMessageThreads,
   listUserNotifications,
+  runDueScheduledBroadcasts,
+  scheduleBroadcastMessage,
   sendBroadcastMessage,
   sendDirectMessage,
   updateNotificationTemplate,
@@ -291,7 +293,30 @@ export async function handleCreateBroadcast(
     return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
   }
 
+  const scheduledAt = optionalSnakeStr(body, "scheduledAt") ??
+    optionalSnakeStr(body, "scheduled_at");
+
   try {
+    // XCT-2 / COM-4: when a scheduledAt is supplied, persist the broadcast in the
+    // 'scheduled' state instead of sending now — the runner dispatches it when its
+    // time arrives (recipients resolved at dispatch, not authoring, time).
+    if (scheduledAt && scheduledAt.trim() !== "") {
+      const scheduled = await withTenantContext(config, auth.claims, async (db) =>
+        await scheduleBroadcastMessage(
+          db,
+          auth.claims,
+          {
+            audience: snakeStr(body, "audience"),
+            title: snakeStr(body, "title"),
+            body: snakeStr(body, "body"),
+            scheduledAt,
+          },
+          req,
+        )
+      );
+      return jsonResponse(envelope(scheduled), { status: 201 });
+    }
+
     const result = await withTenantContext(config, auth.claims, async (db) =>
       await sendBroadcastMessage(
         db,
@@ -315,6 +340,39 @@ export async function handleCreateBroadcast(
       return errorEnvelope("VALIDATION_ERROR", error.message, 422);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to send broadcast", 500);
+  }
+}
+
+/**
+ * XCT-2: POST /communications/broadcasts/run-scheduled — dispatch every
+ * scheduled broadcast whose time has arrived for the caller's org. Gated by the
+ * `manageCommunications` ops permission (same as the delivery-queue processor).
+ * Idempotent; the periodic trigger (cron) that calls it is a deployment concern.
+ */
+export async function handleRunScheduledBroadcasts(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "manageCommunications");
+  if (denied) return denied;
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) =>
+      await runDueScheduledBroadcasts(db, auth.claims, req)
+    );
+    // Push the freshly-enqueued deliveries out of the synchronous request.
+    await scheduleNotificationDrain(config, auth.claims);
+    return jsonResponse(envelope(result));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to run scheduled broadcasts", 500);
   }
 }
 

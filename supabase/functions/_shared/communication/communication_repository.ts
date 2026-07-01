@@ -530,6 +530,73 @@ export async function createBroadcast(
 }
 
 /**
+ * XCT-2: create a broadcast in the `scheduled` state (status='scheduled',
+ * `scheduled_at` set) WITHOUT resolving recipients or enqueuing deliveries yet.
+ * Recipient resolution is deferred to dispatch time (see
+ * {@link claimDueScheduledBroadcasts}) so audience membership is current when the
+ * message actually goes out, not when it was authored.
+ */
+export async function createScheduledBroadcast(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string | null;
+    audience: string;
+    title: string;
+    body: string;
+    createdBy: string;
+    scheduledAt: string;
+  },
+): Promise<CommBroadcastRow> {
+  const rows = await db.queryObject<CommBroadcastRow>(
+    `INSERT INTO comm_broadcasts (
+       organization_id, school_id, audience, title, body, status, scheduled_at, created_by
+     ) VALUES ($1, $2, $3, $4, $5, 'scheduled', $6, $7)
+     RETURNING *`,
+    [
+      input.organizationId,
+      input.schoolId,
+      input.audience,
+      input.title,
+      input.body,
+      input.scheduledAt,
+      input.createdBy,
+    ],
+  );
+  return rows[0]!;
+}
+
+/**
+ * XCT-2 scheduled-job runner core: atomically CLAIM the due scheduled broadcasts
+ * for one org and flip them `scheduled` → `sending` in a single statement.
+ * `FOR UPDATE SKIP LOCKED` makes it safe to run concurrently / re-entrantly — a
+ * broadcast is claimed by exactly one runner pass, so it can never be
+ * double-sent. Only rows whose `scheduled_at` has arrived are returned.
+ */
+export async function claimDueScheduledBroadcasts(
+  db: TenantQueryClient,
+  orgId: string,
+  limit = 50,
+): Promise<CommBroadcastRow[]> {
+  return await db.queryObject<CommBroadcastRow>(
+    `UPDATE comm_broadcasts
+        SET status = 'sending', updated_at = timezone('utc', now())
+      WHERE id IN (
+        SELECT id FROM comm_broadcasts
+         WHERE organization_id = $1
+           AND status = 'scheduled'
+           AND scheduled_at IS NOT NULL
+           AND scheduled_at <= timezone('utc', now())
+         ORDER BY scheduled_at ASC
+         LIMIT $2
+         FOR UPDATE SKIP LOCKED
+      )
+      RETURNING *`,
+    [orgId, limit],
+  );
+}
+
+/**
  * MJ-C6b: list past broadcasts from the SAME table {@link createBroadcast}
  * writes to (`comm_broadcasts`), scoped to the caller's org (and school when
  * present). Each row carries its real recipient count from `comm_recipients`.

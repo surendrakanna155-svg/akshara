@@ -2,7 +2,9 @@ import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_repository.ts";
 import {
+  claimDueScheduledBroadcasts,
   createBroadcast,
+  createScheduledBroadcast,
   createThread,
   enqueueDeliveriesBatch,
   finalizeBroadcast,
@@ -12,6 +14,7 @@ import {
   listMessagesForThread,
   listThreadsForUser,
   resolveBroadcastRecipients,
+  type CommBroadcastRow,
   type CommMessageRow,
   type CommThreadRow,
 } from "./communication_repository.ts";
@@ -302,6 +305,180 @@ export async function sendBroadcastMessage(
     recipientCount: recipients.length,
     droppedOverCap: dropped,
     status: "queued",
+  };
+}
+
+// --- XCT-2: scheduled broadcasts (foundation for every module reminder) -------
+
+/**
+ * XCT-2: validate + normalize a client-supplied scheduled-send timestamp to a
+ * UTC ISO string. Rejects empty / unparseable values so a bad payload fails
+ * loud (422) instead of silently inserting a NULL/garbage `scheduled_at` that
+ * the runner would never pick up.
+ */
+export function parseScheduledAt(value: string | undefined | null): string {
+  const raw = (value ?? "").trim();
+  if (raw === "") {
+    throw new CommunicationValidationError("scheduledAt is required to schedule a broadcast");
+  }
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    throw new CommunicationValidationError(`Invalid scheduledAt timestamp: ${raw}`);
+  }
+  return date.toISOString();
+}
+
+/**
+ * XCT-2: author a broadcast for later delivery. Persists a `scheduled` row and
+ * audits it; recipients are NOT resolved yet (that happens when
+ * {@link runDueScheduledBroadcasts} dispatches it, so the audience is current).
+ */
+export async function scheduleBroadcastMessage(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  input: { audience: string; title: string; body: string; scheduledAt: string },
+  req?: Request,
+): Promise<Record<string, unknown>> {
+  if (claims.scope !== "school" && claims.scope !== "organization") {
+    throw new CommunicationValidationError("Broadcast requires school or organization scope");
+  }
+  const audience = normalizeBroadcastAudience(input.audience);
+  const scheduledAt = parseScheduledAt(input.scheduledAt);
+  if (input.title.trim() === "" || input.body.trim() === "") {
+    throw new CommunicationValidationError("Broadcast title and body are required");
+  }
+
+  const broadcast = await createScheduledBroadcast(db, {
+    organizationId: claims.tenant_id,
+    schoolId: claims.school_id ?? null,
+    audience,
+    title: input.title,
+    body: input.body,
+    createdBy: claims.sub,
+    scheduledAt,
+  });
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "broadcastScheduled",
+      category: "workflow",
+      entityType: "comm_broadcast",
+      entityId: broadcast.id,
+      metadata: { audience: input.audience, scheduledAt },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      eventType: "broadcast.scheduled",
+      payload: { broadcastId: broadcast.id, audience: input.audience, scheduledAt },
+      sourceModule: "communication",
+      idempotencyKey: `broadcast.scheduled:${broadcast.id}`,
+    },
+    req,
+  );
+
+  return {
+    broadcastId: broadcast.id,
+    audience: broadcast.audience,
+    title: broadcast.title,
+    scheduledAt,
+    status: "scheduled",
+  };
+}
+
+/**
+ * Shared fan-out for an already-persisted broadcast row (used by the scheduled
+ * runner). Resolves the audience NOW, writes recipients + queues 'pending'
+ * deliveries in two batch INSERTs, then marks the broadcast 'sent'. The queue is
+ * drained out-of-band by the caller (same as the immediate path).
+ */
+async function fanOutExistingBroadcast(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  broadcast: CommBroadcastRow,
+): Promise<{ recipientCount: number; droppedOverCap: number; resolvedCount: number }> {
+  const schoolId = broadcast.school_id ?? claims.school_id ?? null;
+  const resolved = await resolveBroadcastRecipients(
+    db,
+    claims.tenant_id,
+    schoolId,
+    broadcast.audience,
+  );
+  const recipients = resolved.slice(0, MAX_BROADCAST_RECIPIENTS);
+  const dropped = resolved.length - recipients.length;
+
+  await insertBroadcastRecipientsBatch(db, broadcast.id, claims.tenant_id, recipients);
+  await enqueueDeliveriesBatch(db, {
+    organizationId: claims.tenant_id,
+    schoolId: schoolId ?? "a2000000-0000-4000-8000-000000000001",
+    recipientUserIds: recipients,
+    channel: "push",
+    category: "announcement",
+    renderedSubject: broadcast.title,
+    renderedBody: broadcast.body,
+  });
+  await finalizeBroadcast(db, broadcast.id);
+
+  return {
+    recipientCount: recipients.length,
+    droppedOverCap: dropped,
+    resolvedCount: resolved.length,
+  };
+}
+
+/**
+ * XCT-2 scheduled-job runner: dispatch every scheduled broadcast whose time has
+ * arrived for the caller's org. Claims them atomically (no double-send), fans
+ * each out to its current audience, and audits each dispatch. Idempotent and
+ * re-entrant — safe to invoke on a cron/timer OR on demand. The periodic trigger
+ * itself (pg_cron / VPS cron hitting the endpoint) is a deployment concern.
+ */
+export async function runDueScheduledBroadcasts(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  req?: Request,
+  limit = 50,
+): Promise<Record<string, unknown>> {
+  const claimed = await claimDueScheduledBroadcasts(db, claims.tenant_id, limit);
+  const dispatched: string[] = [];
+  let totalRecipients = 0;
+
+  for (const broadcast of claimed) {
+    const result = await fanOutExistingBroadcast(db, claims, broadcast);
+    totalRecipients += result.recipientCount;
+    dispatched.push(broadcast.id);
+
+    await recordMutationAudit(
+      db,
+      claims,
+      {
+        eventType: "scheduledBroadcastSent",
+        category: "workflow",
+        entityType: "comm_broadcast",
+        entityId: broadcast.id,
+        metadata: {
+          audience: broadcast.audience,
+          recipientCount: result.recipientCount,
+          droppedOverCap: result.droppedOverCap,
+          scheduledAt: broadcast.scheduled_at,
+        },
+        correlationId: req ? correlationIdFromRequest(req) : undefined,
+      },
+      {
+        eventType: "broadcast.sent",
+        payload: { broadcastId: broadcast.id, audience: broadcast.audience, scheduled: true },
+        sourceModule: "communication",
+        idempotencyKey: `broadcast.sent:${broadcast.id}`,
+      },
+      req,
+    );
+  }
+
+  return {
+    processed: dispatched.length,
+    broadcastIds: dispatched,
+    totalRecipients,
   };
 }
 
