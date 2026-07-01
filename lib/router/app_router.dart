@@ -763,6 +763,13 @@ GoRouter createAppRouter({
             ),
             routes: [
               GoRoute(
+                path: 'reports',
+                name: 'examReports',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: examReportsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: ':examId/marks',
                 name: 'examAdministrationMarks',
                 pageBuilder: (context, state) => NoTransitionPage(

@@ -23,6 +23,9 @@ export interface ExamSessionRow {
   max_marks: number;
   phase: ExamPhase;
   exam_type: string;
+  // EXM-6 — optional soft deadline for entering marks. NULL when unset. The
+  // teacher reminder rides a future reminder-rule engine (XCT-2), not here.
+  marks_entry_deadline: string | null;
   coordinator_verified_by: string | null;
   coordinator_verified_at: string | null;
   rejection_comment: string | null;
@@ -181,6 +184,8 @@ export function examSessionToApi(row: ExamSessionRow): Record<string, unknown> {
     maxMarks: row.max_marks,
     phase: row.phase,
     examType: row.exam_type,
+    // EXM-6 — surfaced on the exam DTO; null when no deadline is set.
+    marksEntryDeadline: row.marks_entry_deadline,
     coordinatorVerified: row.coordinator_verified_by != null,
     coordinatorVerifiedBy: row.coordinator_verified_by,
     rejectionComment: row.rejection_comment,
@@ -284,6 +289,8 @@ export interface CreateExamInput {
   maxMarks: number;
   examType: string;
   createdBy?: string;
+  // EXM-6 — optional ISO-8601 marks-entry deadline (null when unset).
+  marksEntryDeadline?: string | null;
 }
 
 export async function createExamSession(
@@ -309,8 +316,8 @@ export async function createExamSession(
     `INSERT INTO exam_sessions (
        id, organization_id, school_id, title, subject, grade, section_name,
        term_label, date_label, time_label, venue_label, syllabus_label,
-       max_marks, phase, exam_type, created_by
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'draft', $14, $15)
+       max_marks, phase, exam_type, created_by, marks_entry_deadline
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'draft', $14, $15, $16)
      RETURNING *`,
     [
       id,
@@ -328,6 +335,7 @@ export async function createExamSession(
       input.maxMarks,
       input.examType,
       createdBy,
+      input.marksEntryDeadline ?? null,
     ],
   );
   return rows[0]!;
@@ -409,12 +417,48 @@ export async function scheduleExamSession(
   organizationId: string,
   schoolId: string,
   examId: string,
+  // EXM-6 — when provided, (re)sets the marks-entry deadline as part of
+  // scheduling. `undefined` leaves the existing value untouched; an explicit
+  // `null` clears it.
+  marksEntryDeadline?: string | null,
 ): Promise<ExamSessionRow> {
   const session = await getExamSession(db, organizationId, schoolId, examId);
   if (!session) throw new ExamNotFoundError(examId);
+  if (marksEntryDeadline !== undefined) {
+    await setMarksEntryDeadline(
+      db,
+      organizationId,
+      schoolId,
+      examId,
+      marksEntryDeadline,
+    );
+  }
   const updated = await updateExamPhase(db, organizationId, schoolId, examId, "scheduled");
   await provisionMarkSlots(db, organizationId, schoolId, updated);
   return updated;
+}
+
+/**
+ * EXM-6 — sets (or clears, with null) an exam's marks-entry deadline. Does NOT
+ * touch phase; used by scheduleExamSession and callable standalone.
+ */
+export async function setMarksEntryDeadline(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+  marksEntryDeadline: string | null,
+): Promise<ExamSessionRow> {
+  const rows = await db.queryObject<ExamSessionRow>(
+    `UPDATE exam_sessions
+     SET marks_entry_deadline = $4, updated_at = timezone('utc', now())
+     WHERE organization_id = $1 AND school_id = $2 AND id = $3
+     RETURNING *`,
+    [organizationId, schoolId, examId, marksEntryDeadline],
+  );
+  const row = rows[0];
+  if (!row) throw new ExamNotFoundError(examId);
+  return row;
 }
 
 export async function openMarksEntry(
@@ -564,6 +608,9 @@ export interface MarksEntryProgressRow {
   section_name: string;
   entered_count: number;
   total_count: number;
+  // EXM-6 — the exam's marks-entry deadline (null when unset), so the progress
+  // board / marks-entry banner can flag exams approaching / past their deadline.
+  marks_entry_deadline: string | null;
 }
 
 export async function listMarksEntryProgress(
@@ -579,12 +626,14 @@ export async function listMarksEntryProgress(
     section_name: string;
     entered_count: string;
     total_count: string;
+    marks_entry_deadline: string | null;
   }>(
     `SELECT es.id AS exam_id,
             es.title AS title,
             es.subject AS subject,
             es.grade AS grade,
             es.section_name AS section_name,
+            es.marks_entry_deadline AS marks_entry_deadline,
             count(m.id) FILTER (WHERE m.marks_entered = true)::text AS entered_count,
             count(m.id)::text AS total_count
        FROM exam_sessions es
@@ -595,7 +644,7 @@ export async function listMarksEntryProgress(
       WHERE es.organization_id = $1
         AND es.school_id = $2
         AND es.phase = 'marks_entry'
-      GROUP BY es.id, es.title, es.subject, es.grade, es.section_name
+      GROUP BY es.id, es.title, es.subject, es.grade, es.section_name, es.marks_entry_deadline
       ORDER BY es.updated_at DESC`,
     [organizationId, schoolId],
   );
@@ -607,6 +656,7 @@ export async function listMarksEntryProgress(
     section_name: row.section_name,
     entered_count: parseInt(row.entered_count ?? "0", 10),
     total_count: parseInt(row.total_count ?? "0", 10),
+    marks_entry_deadline: row.marks_entry_deadline,
   }));
 }
 
@@ -624,6 +674,8 @@ export function marksEntryProgressToApi(
     enteredCount: entered,
     totalCount: total,
     pending: Math.max(0, total - entered),
+    // EXM-6 — deadline surfaced on the progress payload (null when unset).
+    marksEntryDeadline: row.marks_entry_deadline,
   };
 }
 
@@ -800,6 +852,520 @@ export async function listPublishedResultsForStudent(
     subject: row.session_subject,
     };
   });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXM-3 / EXM-4 / EXM-5 / EXM-7 — read-only exam reports.
+//
+// 🔴 CRITICAL correctness rule (frozen): a row whose status != 'present'
+// (marks_obtained IS NULL; codes AB/ML/DB) is EXCLUDED from every statistic —
+// totals, averages, percent, ranking, pass/fail, and grade distribution — and
+// is only ever DISPLAYED via its status code, never counted. This mirrors the
+// Flutter reference semantics in lib/core/exams/exam_report_card.dart
+// (`countsTowardStats` / `_classRank`). The SQL below enforces this by:
+//   • aggregating totals/averages ONLY over `status = 'present'` rows, and
+//   • ranking students by present-only totals (a fully-non-present student is
+//     NOT ranked and never shifts another student's rank).
+// A published (or processed) exam contributes its marks; unpublished/draft
+// exams never leak into a report.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Term exams considered "reportable": published OR processed (verified). */
+const REPORTABLE_PHASES = ["published", "processed"] as const;
+
+/** Default pass threshold (%) when no school setting exists — see EXM-5. */
+export const DEFAULT_PASS_MARK_PERCENT = 40;
+
+// --- EXM-3 — Tabulation register (students × subjects for a class + term) ---
+
+export interface TabulationSubjectResult {
+  subject: string;
+  // Marks the student scored in that subject, or null for a non-present row.
+  marks: number | null;
+  maxMarks: number;
+  // Display code (AB/ML/DB) for a non-present row, else null. NEVER counted.
+  statusCode: string | null;
+}
+
+export interface TabulationStudentRow {
+  studentId: string;
+  studentCode: string;
+  studentName: string;
+  rollNumber: string | null;
+  // Per-subject results keyed by subject (present marks or an AB/ML/DB code).
+  perSubject: Record<string, TabulationSubjectResult>;
+  // Totals over PRESENT subjects only.
+  total: number;
+  totalMax: number;
+  percent: number;
+  // 1-based rank by present-only total %, or null when the student is not ranked
+  // (no present result this term).
+  rank: number | null;
+}
+
+export interface TabulationRegister {
+  classLabel: string;
+  term: string;
+  // Subject columns in a stable order (first-seen order across the term's exams).
+  subjects: string[];
+  students: TabulationStudentRow[];
+}
+
+/**
+ * EXM-3 — tabulation register: every student in [classLabel] across the term's
+ * reportable exams, one column per subject. Present marks aggregate into a total,
+ * percent + rank; a non-present cell (AB/ML/DB) shows its code and is EXCLUDED
+ * from the student's total / percent / rank.
+ *
+ * `classLabel` is "<grade>-<section>" (e.g. "8-A"), matching the mark-entry
+ * class_label; a plain grade (e.g. "8") matches all sections of that grade.
+ */
+export async function loadTabulationRegister(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  classLabel: string,
+  term: string,
+): Promise<TabulationRegister> {
+  const rows = await db.queryObject<{
+    student_id: string;
+    student_code: string | null;
+    student_name: string | null;
+    roll_number: string | null;
+    subject: string;
+    marks_obtained: number | null;
+    max_marks: number;
+    status: string;
+    exam_updated_at: string;
+  }>(
+    `SELECT m.student_id AS student_id,
+            m.student_code AS student_code,
+            m.student_name AS student_name,
+            m.roll_number AS roll_number,
+            es.subject AS subject,
+            m.marks_obtained AS marks_obtained,
+            m.max_marks AS max_marks,
+            m.status AS status,
+            es.updated_at AS exam_updated_at
+       FROM exam_mark_entries m
+       JOIN exam_sessions es
+         ON es.organization_id = m.organization_id
+        AND es.school_id = m.school_id
+        AND es.id = m.exam_id
+      WHERE m.organization_id = $1
+        AND m.school_id = $2
+        AND (m.class_label = $3 OR es.grade = $3)
+        AND es.term_label = $4
+        AND es.phase = ANY($5)
+      ORDER BY es.updated_at ASC, m.roll_number NULLS LAST, m.id`,
+    [organizationId, schoolId, classLabel, term, REPORTABLE_PHASES],
+  );
+
+  // Subject columns in first-seen (exam) order.
+  const subjects: string[] = [];
+  const byStudent = new Map<string, TabulationStudentRow>();
+
+  for (const r of rows) {
+    if (!subjects.includes(r.subject)) subjects.push(r.subject);
+
+    let student = byStudent.get(r.student_id);
+    if (!student) {
+      student = {
+        studentId: r.student_id,
+        studentCode: r.student_code ?? r.student_id,
+        studentName: r.student_name ?? "",
+        rollNumber: r.roll_number,
+        perSubject: {},
+        total: 0,
+        totalMax: 0,
+        percent: 0,
+        rank: null,
+      };
+      byStudent.set(r.student_id, student);
+    }
+
+    const status = isExamMarkStatus(r.status) ? r.status : "present";
+    const present = status === "present" && r.marks_obtained != null;
+    student.perSubject[r.subject] = {
+      subject: r.subject,
+      marks: present ? r.marks_obtained : null,
+      maxMarks: r.max_marks,
+      statusCode: examStatusDisplayCode(status),
+    };
+    // 🔴 EXCLUSION — only a present row contributes to total / max / percent.
+    if (present) {
+      student.total += r.marks_obtained!;
+      student.totalMax += r.max_marks;
+    }
+  }
+
+  const students = [...byStudent.values()];
+  for (const s of students) {
+    s.percent = s.totalMax > 0 ? (s.total / s.totalMax) * 100 : 0;
+  }
+
+  // Rank by present-only percent. A student with NO present result this term
+  // (totalMax === 0) is NOT ranked (rank stays null) and is not in the pool, so
+  // absent students never shift another student's rank.
+  const ranked = students.filter((s) => s.totalMax > 0);
+  for (const s of ranked) {
+    const ahead = ranked.filter((o) => o.percent > s.percent + 1e-9).length;
+    s.rank = ahead + 1;
+  }
+
+  return { classLabel, term, subjects, students };
+}
+
+export function tabulationRegisterToApi(
+  register: TabulationRegister,
+): Record<string, unknown> {
+  return {
+    classLabel: register.classLabel,
+    term: register.term,
+    subjects: register.subjects,
+    students: register.students.map((s) => ({
+      studentId: s.studentId,
+      sisStudentId: s.studentCode,
+      studentName: s.studentName,
+      rollNo: s.rollNumber,
+      perSubject: Object.fromEntries(
+        Object.entries(s.perSubject).map(([subject, r]) => [
+          subject,
+          {
+            marks: r.marks,
+            maxMarks: r.maxMarks,
+            statusCode: r.statusCode,
+          },
+        ]),
+      ),
+      total: s.total,
+      totalMax: s.totalMax,
+      percent: Math.round(s.percent * 100) / 100,
+      rank: s.rank,
+    })),
+  };
+}
+
+// --- EXM-4 — Subject toppers (per exam) + Merit list (per class + term) ---
+
+export interface TopperRow {
+  studentId: string;
+  studentCode: string;
+  studentName: string;
+  rollNumber: string | null;
+  marks: number;
+  maxMarks: number;
+  percent: number;
+  rank: number;
+}
+
+/**
+ * EXM-4a — top-N students by marks for ONE exam. PRESENT rows only: a
+ * non-present student (AB/ML/DB) has no score and is never a topper.
+ */
+export async function loadExamToppers(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+  limit: number,
+): Promise<TopperRow[]> {
+  const session = await getExamSession(db, organizationId, schoolId, examId);
+  if (!session) throw new ExamNotFoundError(examId);
+
+  const rows = await db.queryObject<{
+    student_id: string;
+    student_code: string | null;
+    student_name: string | null;
+    roll_number: string | null;
+    marks_obtained: number;
+    max_marks: number;
+  }>(
+    // 🔴 EXCLUSION — status = 'present' AND marks_obtained IS NOT NULL only.
+    `SELECT m.student_id AS student_id,
+            m.student_code AS student_code,
+            m.student_name AS student_name,
+            m.roll_number AS roll_number,
+            m.marks_obtained AS marks_obtained,
+            m.max_marks AS max_marks
+       FROM exam_mark_entries m
+      WHERE m.organization_id = $1
+        AND m.school_id = $2
+        AND m.exam_id = $3
+        AND m.status = 'present'
+        AND m.marks_obtained IS NOT NULL
+      ORDER BY m.marks_obtained DESC, m.roll_number NULLS LAST, m.id
+      LIMIT $4`,
+    [organizationId, schoolId, examId, Math.max(1, limit)],
+  );
+
+  return rows.map((r, index) => ({
+    studentId: r.student_id,
+    studentCode: r.student_code ?? r.student_id,
+    studentName: r.student_name ?? "",
+    rollNumber: r.roll_number,
+    marks: r.marks_obtained,
+    maxMarks: r.max_marks,
+    percent: r.max_marks > 0
+      ? Math.round((r.marks_obtained / r.max_marks) * 10000) / 100
+      : 0,
+    // Dense-ish 1-based position by descending marks (ties keep query order).
+    rank: index + 1,
+  }));
+}
+
+export function topperToApi(row: TopperRow): Record<string, unknown> {
+  return {
+    studentId: row.studentId,
+    sisStudentId: row.studentCode,
+    studentName: row.studentName,
+    rollNo: row.rollNumber,
+    marks: row.marks,
+    maxMarks: row.maxMarks,
+    percent: row.percent,
+    rank: row.rank,
+  };
+}
+
+export interface MeritRow {
+  studentId: string;
+  studentCode: string;
+  studentName: string;
+  rollNumber: string | null;
+  total: number;
+  totalMax: number;
+  percent: number;
+  rank: number;
+}
+
+/**
+ * EXM-4b — merit list: students in [classLabel] ranked by their term total %
+ * across the term's reportable exams. Built on present-only totals (reuses the
+ * tabulation aggregation), so a non-present subject never inflates/deflates a
+ * ranking and a fully-non-present student is excluded from the merit list.
+ */
+export async function loadMeritList(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  classLabel: string,
+  term: string,
+): Promise<MeritRow[]> {
+  const register = await loadTabulationRegister(
+    db,
+    organizationId,
+    schoolId,
+    classLabel,
+    term,
+  );
+  // Only ranked students (at least one present result) appear on the merit list.
+  const ranked = register.students.filter((s) => s.rank != null);
+  ranked.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+  return ranked.map((s) => ({
+    studentId: s.studentId,
+    studentCode: s.studentCode,
+    studentName: s.studentName,
+    rollNumber: s.rollNumber,
+    total: s.total,
+    totalMax: s.totalMax,
+    percent: Math.round(s.percent * 100) / 100,
+    rank: s.rank!,
+  }));
+}
+
+export function meritRowToApi(row: MeritRow): Record<string, unknown> {
+  return {
+    studentId: row.studentId,
+    sisStudentId: row.studentCode,
+    studentName: row.studentName,
+    rollNo: row.rollNumber,
+    total: row.total,
+    totalMax: row.totalMax,
+    percent: row.percent,
+    rank: row.rank,
+  };
+}
+
+// --- EXM-5 — Pass/fail + grade distribution (per exam) ---
+
+export interface ExamDistribution {
+  examId: string;
+  passMarkPercent: number;
+  passMarkSource: string;
+  passCount: number;
+  failCount: number;
+  gradeBreakdown: Array<{ grade: string; count: number }>;
+  // Number of PRESENT rows the distribution was computed over.
+  presentCount: number;
+  // Number of non-present rows (shown for context, EXCLUDED from all counts).
+  excludedCount: number;
+}
+
+/**
+ * EXM-5 — pass/fail split + grade-letter distribution for one exam.
+ *
+ * 🔴 EXCLUSION — computed over PRESENT rows only. A non-present student (AB/ML/DB)
+ * is counted in [excludedCount] for transparency but NEVER in passCount,
+ * failCount, or any grade bucket.
+ *
+ * Pass threshold source (documented): the school's exam/finance settings do not
+ * currently expose a configurable exam pass mark (there is no such column/table),
+ * so the default is [DEFAULT_PASS_MARK_PERCENT] (40%). `passMarkSource` records
+ * which source was used so the client can label it; when a setting is later added
+ * this function can read it and set the source accordingly.
+ */
+export async function loadExamDistribution(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+): Promise<ExamDistribution> {
+  const session = await getExamSession(db, organizationId, schoolId, examId);
+  if (!session) throw new ExamNotFoundError(examId);
+
+  const passMarkPercent = DEFAULT_PASS_MARK_PERCENT;
+  const passMarkSource = "default";
+
+  const rows = await db.queryObject<{
+    marks_obtained: number | null;
+    max_marks: number;
+    status: string;
+    grade_letter: string | null;
+  }>(
+    `SELECT m.marks_obtained AS marks_obtained,
+            m.max_marks AS max_marks,
+            m.status AS status,
+            m.grade_letter AS grade_letter
+       FROM exam_mark_entries m
+      WHERE m.organization_id = $1
+        AND m.school_id = $2
+        AND m.exam_id = $3
+        AND m.marks_entered = true`,
+    [organizationId, schoolId, examId],
+  );
+
+  let passCount = 0;
+  let failCount = 0;
+  let presentCount = 0;
+  let excludedCount = 0;
+  const gradeCounts = new Map<string, number>();
+
+  for (const r of rows) {
+    const status = isExamMarkStatus(r.status) ? r.status : "present";
+    // 🔴 EXCLUSION — a non-present row (or a null mark) never enters the stats.
+    if (status !== "present" || r.marks_obtained == null) {
+      excludedCount++;
+      continue;
+    }
+    presentCount++;
+    const percent = r.max_marks > 0
+      ? (r.marks_obtained / r.max_marks) * 100
+      : 0;
+    if (percent >= passMarkPercent) passCount++;
+    else failCount++;
+    // Prefer the persisted (published) grade letter; else derive from percent.
+    const grade = r.grade_letter && r.grade_letter.length > 0
+      ? r.grade_letter
+      : gradeForPercent(percent);
+    gradeCounts.set(grade, (gradeCounts.get(grade) ?? 0) + 1);
+  }
+
+  const gradeBreakdown = [...gradeCounts.entries()]
+    .map(([grade, count]) => ({ grade, count }))
+    .sort((a, b) => b.count - a.count || a.grade.localeCompare(b.grade));
+
+  return {
+    examId,
+    passMarkPercent,
+    passMarkSource,
+    passCount,
+    failCount,
+    gradeBreakdown,
+    presentCount,
+    excludedCount,
+  };
+}
+
+export function examDistributionToApi(
+  dist: ExamDistribution,
+): Record<string, unknown> {
+  return {
+    examId: dist.examId,
+    passMarkPercent: dist.passMarkPercent,
+    passMarkSource: dist.passMarkSource,
+    passCount: dist.passCount,
+    failCount: dist.failCount,
+    gradeBreakdown: dist.gradeBreakdown,
+    presentCount: dist.presentCount,
+    excludedCount: dist.excludedCount,
+  };
+}
+
+// --- EXM-7 — Datesheet (schedule) for a class + term ---
+
+export interface DatesheetRow {
+  examId: string;
+  subject: string;
+  dateLabel: string;
+  timeLabel: string;
+  venueLabel: string;
+  maxMarks: number;
+}
+
+/**
+ * EXM-7 — the exam schedule ("datesheet") for [classLabel] in [term]: one row
+ * per exam session, sorted by date then subject. Read-only; no marks involved,
+ * so no exclusion logic applies here. All phases are included (a datesheet is a
+ * schedule, not a results report) so students/parents can see upcoming exams.
+ */
+export async function loadDatesheet(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  classLabel: string,
+  term: string,
+): Promise<DatesheetRow[]> {
+  const rows = await db.queryObject<{
+    id: string;
+    subject: string;
+    date_label: string;
+    time_label: string;
+    venue_label: string;
+    max_marks: number;
+  }>(
+    `SELECT es.id AS id,
+            es.subject AS subject,
+            es.date_label AS date_label,
+            es.time_label AS time_label,
+            es.venue_label AS venue_label,
+            es.max_marks AS max_marks
+       FROM exam_sessions es
+      WHERE es.organization_id = $1
+        AND es.school_id = $2
+        AND ((es.grade || '-' || es.section_name) = $3 OR es.grade = $3)
+        AND es.term_label = $4
+      ORDER BY es.date_label ASC, es.subject ASC`,
+    [organizationId, schoolId, classLabel, term],
+  );
+  return rows.map((r) => ({
+    examId: r.id,
+    subject: r.subject,
+    dateLabel: r.date_label,
+    timeLabel: r.time_label,
+    venueLabel: r.venue_label,
+    maxMarks: r.max_marks,
+  }));
+}
+
+export function datesheetRowToApi(row: DatesheetRow): Record<string, unknown> {
+  return {
+    examId: row.examId,
+    subject: row.subject,
+    dateLabel: row.dateLabel,
+    timeLabel: row.timeLabel,
+    venueLabel: row.venueLabel,
+    maxMarks: row.maxMarks,
+  };
 }
 
 // --- Exam-session remarks (class-teacher authored, audit trail) ---

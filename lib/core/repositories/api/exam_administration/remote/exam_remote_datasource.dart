@@ -5,6 +5,7 @@ import '../../admissions/dto/api_envelope_dto.dart';
 import '../../../../exams/exam_administration_requests.dart';
 import '../../../../exams/exam_administration_store.dart';
 import '../../../../exams/exam_remark.dart';
+import '../../../../exams/exam_reports.dart';
 import '../../../../reliability/model/mutation_outcome.dart';
 import '../../../../reliability/policy/operation_policy_registry.dart';
 import '../../../../reliability/reliable_datasource_write.dart';
@@ -255,6 +256,72 @@ class ExamRemoteDataSource {
         if (raw is Map)
           ExamRemark.fromJson(Map<String, dynamic>.from(raw)),
     ];
+  }
+
+  // ── EXM-3/4/5/7 — read-only report fetches ───────────────────────────────
+
+  /// EXM-3 — tabulation register for a class over a term.
+  Future<TabulationRegister> fetchTabulation({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.tabulation(classLabel),
+      queryParameters: {..._queryParams(query), 'term': term},
+    );
+    return _mapper.toTabulation(_requireData(response));
+  }
+
+  /// EXM-4a — subject toppers (top-N by marks) for one exam.
+  Future<List<ExamTopper>> fetchToppers({
+    required RepositoryQuery query,
+    required String examId,
+    int limit = 5,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.toppers(examId),
+      queryParameters: {..._queryParams(query), 'limit': limit},
+    );
+    return _mapper.toToppers(_listData(_responseMap(response)));
+  }
+
+  /// EXM-4b — merit list for a class over a term.
+  Future<List<MeritEntry>> fetchMerit({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.merit(classLabel),
+      queryParameters: {..._queryParams(query), 'term': term},
+    );
+    return _mapper.toMeritList(_listData(_responseMap(response)));
+  }
+
+  /// EXM-5 — pass/fail + grade distribution for one exam.
+  Future<ExamGradeDistribution> fetchDistribution({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.distribution(examId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toDistribution(_requireData(response));
+  }
+
+  /// EXM-7 — datesheet (exam schedule) for a class over a term.
+  Future<List<DatesheetRow>> fetchDatesheet({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.datesheet(classLabel),
+      queryParameters: {..._queryParams(query), 'term': term},
+    );
+    return _mapper.toDatesheet(_listData(_responseMap(response)));
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) => {

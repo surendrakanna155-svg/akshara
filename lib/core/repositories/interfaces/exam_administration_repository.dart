@@ -1,6 +1,7 @@
 import '../../exams/exam_administration_requests.dart';
 import '../../exams/exam_administration_store.dart';
 import '../../exams/exam_remark.dart';
+import '../../exams/exam_reports.dart';
 import '../repository_query.dart';
 
 /// Persistence contract for ERP exam administration (scheduling → publish).
@@ -90,5 +91,46 @@ abstract class ExamAdministrationRepository {
   Future<List<ExamRemark>> listRemarks({
     required RepositoryQuery query,
     required String examId,
+  });
+
+  // ── EXM-3/4/5/7 — read-only exam reports (all gated on viewExams) ─────────
+  // 🔴 Non-present (AB/ML/DB) rows are EXCLUDED from every statistic and only
+  // ever displayed via their status code — enforced in the backend queries and
+  // in ExamReportsBuilder for the mock.
+
+  /// EXM-3 — tabulation register: students × subjects grid for [classLabel] over
+  /// [term] (per-student total, percent, present-only rank).
+  Future<TabulationRegister> tabulation({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  });
+
+  /// EXM-4a — top-[limit] students by marks for one exam (present rows only).
+  Future<List<ExamTopper>> examToppers({
+    required RepositoryQuery query,
+    required String examId,
+    int limit,
+  });
+
+  /// EXM-4b — merit list for [classLabel] over [term] (ranked by term total %,
+  /// present-only).
+  Future<List<MeritEntry>> meritList({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  });
+
+  /// EXM-5 — pass/fail split + grade distribution for one exam (present-only).
+  Future<ExamGradeDistribution> examDistribution({
+    required RepositoryQuery query,
+    required String examId,
+  });
+
+  /// EXM-7 — datesheet (exam schedule) for [classLabel] over [term].
+  Future<List<DatesheetRow>> datesheet({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
   });
 }

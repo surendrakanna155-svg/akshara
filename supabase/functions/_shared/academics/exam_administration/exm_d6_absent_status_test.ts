@@ -206,6 +206,7 @@ function session(overrides: Partial<ExamSessionRow> = {}): ExamSessionRow {
     max_marks: 100,
     phase: "processed",
     exam_type: "unit_test",
+    marks_entry_deadline: null,
     coordinator_verified_by: null,
     coordinator_verified_at: null,
     rejection_comment: null,

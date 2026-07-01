@@ -117,6 +117,9 @@ abstract final class RouteNames {
   static const String examAdministration = '/school/exam-administration';
   static String examAdministrationMarksPath(String examId) =>
       '$examAdministration/$examId/marks';
+  // EXM-3/4/5/7 — Exam Reports area (tabulation / merit+toppers / distribution /
+  // datesheet). Sub-route of exam administration; RBAC-gated on viewExams.
+  static const String examReports = '$examAdministration/reports';
   static const String lessonLogs = '/school/lesson-logs';
   static const String timetableAutomation = '/school/timetables/automate';
   static const String schoolBranding = '/school/branding';
@@ -573,6 +576,7 @@ abstract final class RouteNames {
     schoolCompletionHub,
     subjectsManagement,
     examAdministration,
+    examReports,
     lessonLogs,
     timetableAutomation,
     schoolBranding,

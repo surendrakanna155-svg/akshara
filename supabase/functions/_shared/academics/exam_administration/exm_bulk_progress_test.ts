@@ -35,6 +35,7 @@ class ProgressDb {
       section_name: string;
       entered_count: string;
       total_count: string;
+      marks_entry_deadline?: string | null;
     }>,
   ) {}
   // deno-lint-ignore no-explicit-any
@@ -74,6 +75,7 @@ Deno.test("EXM-2: marksEntryProgressToApi derives pending = total - entered", ()
     section_name: "A",
     entered_count: 18,
     total_count: 30,
+    marks_entry_deadline: null,
   };
   const api = marksEntryProgressToApi(row);
   assertEquals(api.examId, "exam-1");
@@ -92,6 +94,7 @@ Deno.test("EXM-2: pending never goes negative (clamped at 0)", () => {
     section_name: "A",
     entered_count: 5,
     total_count: 3,
+    marks_entry_deadline: null,
   });
   assertEquals(api.pending, 0);
 });

@@ -1,5 +1,6 @@
 import '../../../../exams/exam_administration_requests.dart';
 import '../../../../exams/exam_administration_store.dart';
+import '../../../../exams/exam_reports.dart';
 import '../../education/mapper/education_mapper.dart';
 
 /// Maps exam administration API payloads to domain models.
@@ -25,7 +26,15 @@ class ExamMapper {
       ),
       coordinatorVerified: json['coordinatorVerified'] as bool? ?? false,
       rejectionComment: json['rejectionComment'] as String?,
+      marksEntryDeadline: _parseDate(
+        json['marksEntryDeadline'] ?? json['marks_entry_deadline'],
+      ),
     );
+  }
+
+  DateTime? _parseDate(dynamic raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
   }
 
   List<ExamSession> toSessions(List<dynamic> items) =>
@@ -103,6 +112,9 @@ class ExamMapper {
           json['sectionName'] as String? ?? json['section'] as String? ?? '',
       enteredCount: (json['enteredCount'] as num?)?.toInt() ?? 0,
       totalCount: (json['totalCount'] as num?)?.toInt() ?? 0,
+      marksEntryDeadline: _parseDate(
+        json['marksEntryDeadline'] ?? json['marks_entry_deadline'],
+      ),
     );
   }
 
@@ -146,8 +158,135 @@ class ExamMapper {
       'syllabusLabel': request.syllabusLabel,
       'maxMarks': request.maxMarks,
       'examType': EducationMapper.examTypeToApi(request.examType),
+      // EXM-6 — optional marks-entry deadline (ISO-8601 UTC), omitted when null.
+      if (request.marksEntryDeadline != null)
+        'marksEntryDeadline':
+            request.marksEntryDeadline!.toUtc().toIso8601String(),
     };
   }
+
+  // ── EXM-3/4/5/7 — report DTO parsers ─────────────────────────────────────
+
+  /// EXM-3 — tabulation register: {classLabel, term, subjects[], students[]}.
+  TabulationRegister toTabulation(Map<String, dynamic> json) {
+    final subjects = [
+      for (final s in (json['subjects'] as List? ?? const [])) '$s',
+    ];
+    final students = [
+      for (final raw in (json['students'] as List? ?? const []))
+        if (raw is Map) _toTabulationRow(Map<String, dynamic>.from(raw)),
+    ];
+    return TabulationRegister(
+      classLabel: json['classLabel'] as String? ?? '',
+      term: json['term'] as String? ?? '',
+      subjects: subjects,
+      students: students,
+    );
+  }
+
+  TabulationStudentRow _toTabulationRow(Map<String, dynamic> json) {
+    final perSubjectRaw = json['perSubject'];
+    final cells = <String, TabulationCell>{};
+    if (perSubjectRaw is Map) {
+      perSubjectRaw.forEach((subject, cellRaw) {
+        if (cellRaw is Map) {
+          final c = Map<String, dynamic>.from(cellRaw);
+          cells['$subject'] = TabulationCell(
+            subject: '$subject',
+            marks: (c['marks'] as num?)?.toInt(),
+            maxMarks: (c['maxMarks'] as num?)?.toInt() ?? 0,
+            statusCode: c['statusCode'] as String?,
+          );
+        }
+      });
+    }
+    return TabulationStudentRow(
+      studentId: json['studentId'] as String? ?? json['sisStudentId'] as String? ?? '',
+      sisStudentId: json['sisStudentId'] as String? ?? '',
+      studentName: json['studentName'] as String? ?? '',
+      rollNo: json['rollNo'] as String?,
+      cellsBySubject: cells,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      totalMax: (json['totalMax'] as num?)?.toInt() ?? 0,
+      percent: (json['percent'] as num?)?.toDouble() ?? 0,
+      rank: (json['rank'] as num?)?.toInt(),
+    );
+  }
+
+  /// EXM-4a — one subject topper row.
+  ExamTopper toTopper(Map<String, dynamic> json) {
+    return ExamTopper(
+      sisStudentId: json['sisStudentId'] as String? ?? '',
+      studentName: json['studentName'] as String? ?? '',
+      rollNo: json['rollNo'] as String?,
+      marks: (json['marks'] as num?)?.toInt() ?? 0,
+      maxMarks: (json['maxMarks'] as num?)?.toInt() ?? 0,
+      percent: (json['percent'] as num?)?.toDouble() ?? 0,
+      rank: (json['rank'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  List<ExamTopper> toToppers(List<dynamic> items) => [
+        for (final raw in items)
+          if (raw is Map) toTopper(Map<String, dynamic>.from(raw)),
+      ];
+
+  /// EXM-4b — one merit-list entry.
+  MeritEntry toMeritEntry(Map<String, dynamic> json) {
+    return MeritEntry(
+      sisStudentId: json['sisStudentId'] as String? ?? '',
+      studentName: json['studentName'] as String? ?? '',
+      rollNo: json['rollNo'] as String?,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      totalMax: (json['totalMax'] as num?)?.toInt() ?? 0,
+      percent: (json['percent'] as num?)?.toDouble() ?? 0,
+      rank: (json['rank'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  List<MeritEntry> toMeritList(List<dynamic> items) => [
+        for (final raw in items)
+          if (raw is Map) toMeritEntry(Map<String, dynamic>.from(raw)),
+      ];
+
+  /// EXM-5 — pass/fail + grade distribution.
+  ExamGradeDistribution toDistribution(Map<String, dynamic> json) {
+    return ExamGradeDistribution(
+      examId: json['examId'] as String? ?? '',
+      passMarkPercent:
+          (json['passMarkPercent'] as num?)?.toInt() ?? kDefaultPassMarkPercent,
+      passMarkSource: json['passMarkSource'] as String? ?? 'default',
+      passCount: (json['passCount'] as num?)?.toInt() ?? 0,
+      failCount: (json['failCount'] as num?)?.toInt() ?? 0,
+      gradeBreakdown: [
+        for (final raw in (json['gradeBreakdown'] as List? ?? const []))
+          if (raw is Map)
+            GradeBucket(
+              grade: '${(raw)['grade'] ?? ''}',
+              count: ((raw)['count'] as num?)?.toInt() ?? 0,
+            ),
+      ],
+      presentCount: (json['presentCount'] as num?)?.toInt() ?? 0,
+      excludedCount: (json['excludedCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// EXM-7 — one datesheet schedule row.
+  DatesheetRow toDatesheetRow(Map<String, dynamic> json) {
+    return DatesheetRow(
+      examId: json['examId'] as String? ?? '',
+      subject: json['subject'] as String? ?? '',
+      dateLabel: json['dateLabel'] as String? ?? '',
+      timeLabel: json['timeLabel'] as String? ?? '',
+      venueLabel: json['venueLabel'] as String? ?? '',
+      maxMarks: (json['maxMarks'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  List<DatesheetRow> toDatesheet(List<dynamic> items) => [
+        for (final raw in items)
+          if (raw is Map) toDatesheetRow(Map<String, dynamic>.from(raw)),
+      ];
 
   ExamLifecyclePhase _phaseFromApi(String value) => switch (value) {
         'scheduled' => ExamLifecyclePhase.scheduled,

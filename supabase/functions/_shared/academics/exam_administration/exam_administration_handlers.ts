@@ -15,6 +15,8 @@ import { emitMutationAudit, examAudit } from "../../audit/mutation_audit_catalog
 import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../../sms_provider.ts";
 import {
   createExamSession,
+  datesheetRowToApi,
+  examDistributionToApi,
   type ExamMarkStatus,
   examMarkToApi,
   examSessionToApi,
@@ -35,12 +37,20 @@ import {
   listExamSessions,
   listMarksEntryProgress,
   listPublishedResultsForStudent,
+  loadDatesheet,
+  loadExamDistribution,
+  loadExamToppers,
+  loadMeritList,
+  loadTabulationRegister,
   marksEntryProgressToApi,
+  meritRowToApi,
   openMarksEntry,
   processExamResults,
   publishExamResults,
   scheduleExamSession,
+  tabulationRegisterToApi,
   teacherTeachesExamSession,
+  topperToApi,
   updateExamMark,
   upsertExamRemark,
   verifyCoordinatorResults,
@@ -73,6 +83,12 @@ export const EXAM_OPERATION_PERMISSIONS = {
   listPublishedForStudent: "viewExams",
   // EXM-1 bulk marks save reuses the single-mark gate.
   bulkUpdateExamMarks: "manageExamMarks",
+  // EXM-3/4/5/7 — read-only exam reports (all gated on viewExams).
+  tabulation: "viewExams",
+  toppers: "viewExams",
+  merit: "viewExams",
+  distribution: "viewExams",
+  datesheet: "viewExams",
 } as const;
 
 /**
@@ -293,6 +309,11 @@ export async function handleCreateExam(
     if (!title || !subject || !grade) {
       throw new ExamValidationError("title, subject, and grade are required");
     }
+    // EXM-6 — parse the deadline BEFORE opening the tenant context so a bad value
+    // is rejected 422 up front (never masked by the DB-connection error).
+    const marksEntryDeadline = parseDeadline(
+      body.marksEntryDeadline ?? body.marks_entry_deadline,
+    );
 
     const { organizationId, schoolId } = tenantIds(claims);
     const row = await withTenantContext(config, claims, (db) =>
@@ -309,10 +330,29 @@ export async function handleCreateExam(
         maxMarks: Number(body.maxMarks ?? body.max_marks ?? 100) || 100,
         examType: String(body.examType ?? body.exam_type ?? "unit_test"),
         createdBy: claims.sub,
+        // EXM-6 — optional marks-entry deadline (ISO string), null when omitted.
+        marksEntryDeadline,
       })
     );
     return examSessionToApi(row);
   });
+}
+
+/**
+ * EXM-6 — normalise an incoming marks-entry deadline. A blank/absent value → null
+ * (no deadline); any other value is coerced to a string and validated as a
+ * parseable timestamp (rejected as 422 otherwise so a garbage value never lands).
+ */
+function parseDeadline(raw: unknown): string | null {
+  if (raw == null || raw === "") return null;
+  const value = String(raw).trim();
+  if (value === "") return null;
+  if (Number.isNaN(Date.parse(value))) {
+    throw new ExamValidationError(
+      `marksEntryDeadline is not a valid timestamp: ${value}`,
+    );
+  }
+  return value;
 }
 
 export async function handleScheduleExam(
@@ -321,9 +361,22 @@ export async function handleScheduleExam(
   examId: string,
 ): Promise<Response> {
   return await withAuth(req, config, "manageExams", async (claims) => {
+    // EXM-6 — schedule may (re)set the marks-entry deadline. An absent body
+    // leaves it untouched; an explicit key (even null) applies. A bad timestamp
+    // is rejected 422 before the DB.
+    const body = await readJson<Record<string, unknown>>(req);
+    let deadline: string | null | undefined = undefined;
+    if (
+      body != null &&
+      ("marksEntryDeadline" in body || "marks_entry_deadline" in body)
+    ) {
+      deadline = parseDeadline(
+        body.marksEntryDeadline ?? body.marks_entry_deadline,
+      );
+    }
     const { organizationId, schoolId } = tenantIds(claims);
     const row = await withTenantContext(config, claims, (db) =>
-      scheduleExamSession(db, organizationId, schoolId, examId)
+      scheduleExamSession(db, organizationId, schoolId, examId, deadline)
     );
     return examSessionToApi(row);
   });
@@ -782,5 +835,127 @@ export async function handleListPublishedResultsForStudent(
       listPublishedResultsForStudent(db, organizationId, schoolId, studentId)
     );
     return rows;
+  });
+}
+
+/** Reads the `term` query param (required for the class-scoped term reports). */
+function requireTermParam(req: Request): string {
+  const term = new URL(req.url).searchParams.get("term")?.trim() ?? "";
+  if (!term) throw new ExamValidationError("term query parameter is required");
+  return term;
+}
+
+/**
+ * EXM-3 — tabulation register for a class over a term. Present marks aggregate
+ * into total/percent/rank; a non-present cell (AB/ML/DB) shows its code and is
+ * EXCLUDED from every statistic (enforced in loadTabulationRegister).
+ */
+export async function handleTabulationRegister(
+  req: Request,
+  config: AppConfig,
+  classLabel: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const term = requireTermParam(req);
+    const { organizationId, schoolId } = tenantIds(claims);
+    const register = await withTenantContext(config, claims, (db) =>
+      loadTabulationRegister(
+        db,
+        organizationId,
+        schoolId,
+        decodeURIComponent(classLabel),
+        term,
+      ));
+    return tabulationRegisterToApi(register);
+  });
+}
+
+/**
+ * EXM-4a — top-N students by marks for one exam (present rows only; a
+ * non-present student is never a topper).
+ */
+export async function handleExamToppers(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const limitRaw = new URL(req.url).searchParams.get("limit");
+    const limit = Number(limitRaw ?? 5);
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      loadExamToppers(
+        db,
+        organizationId,
+        schoolId,
+        examId,
+        Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 5,
+      ));
+    return rows.map(topperToApi);
+  });
+}
+
+/**
+ * EXM-4b — merit list: students in a class ranked by term total % (present-only;
+ * a fully-non-present student is excluded).
+ */
+export async function handleMeritList(
+  req: Request,
+  config: AppConfig,
+  classLabel: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const term = requireTermParam(req);
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      loadMeritList(
+        db,
+        organizationId,
+        schoolId,
+        decodeURIComponent(classLabel),
+        term,
+      ));
+    return rows.map(meritRowToApi);
+  });
+}
+
+/**
+ * EXM-5 — pass/fail split + grade distribution for one exam (present rows only;
+ * non-present rows counted only in `excludedCount`, never in the stats).
+ */
+export async function handleExamDistribution(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const dist = await withTenantContext(config, claims, (db) =>
+      loadExamDistribution(db, organizationId, schoolId, examId));
+    return examDistributionToApi(dist);
+  });
+}
+
+/**
+ * EXM-7 — datesheet (exam schedule) for a class over a term. Read-only schedule,
+ * no marks involved.
+ */
+export async function handleDatesheet(
+  req: Request,
+  config: AppConfig,
+  classLabel: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const term = requireTermParam(req);
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      loadDatesheet(
+        db,
+        organizationId,
+        schoolId,
+        decodeURIComponent(classLabel),
+        term,
+      ));
+    return rows.map(datesheetRowToApi);
   });
 }

@@ -15,6 +15,7 @@ class CreateExamAdministrationRequest {
     required this.syllabusLabel,
     required this.maxMarks,
     this.examType = EduExamType.unitTest,
+    this.marksEntryDeadline,
   });
 
   final String title;
@@ -28,6 +29,9 @@ class CreateExamAdministrationRequest {
   final String syllabusLabel;
   final int maxMarks;
   final EduExamType examType;
+
+  /// EXM-6 — optional soft marks-entry deadline (UTC), null when unset.
+  final DateTime? marksEntryDeadline;
 }
 
 /// Domain request to update a mark entry before publish.

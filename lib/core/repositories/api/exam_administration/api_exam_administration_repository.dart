@@ -1,6 +1,7 @@
 import '../../../exams/exam_administration_requests.dart';
 import '../../../exams/exam_administration_store.dart';
 import '../../../exams/exam_remark.dart';
+import '../../../exams/exam_reports.dart';
 import '../../interfaces/exam_administration_repository.dart';
 import '../../repository_query.dart';
 import 'remote/exam_remote_datasource.dart';
@@ -137,4 +138,47 @@ class ApiExamAdministrationRepository implements ExamAdministrationRepository {
     required String examId,
   }) =>
       _remote.fetchRemarks(query: query, examId: examId);
+
+  @override
+  Future<TabulationRegister> tabulation({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) =>
+      _remote.fetchTabulation(
+        query: query,
+        classLabel: classLabel,
+        term: term,
+      );
+
+  @override
+  Future<List<ExamTopper>> examToppers({
+    required RepositoryQuery query,
+    required String examId,
+    int limit = 5,
+  }) =>
+      _remote.fetchToppers(query: query, examId: examId, limit: limit);
+
+  @override
+  Future<List<MeritEntry>> meritList({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) =>
+      _remote.fetchMerit(query: query, classLabel: classLabel, term: term);
+
+  @override
+  Future<ExamGradeDistribution> examDistribution({
+    required RepositoryQuery query,
+    required String examId,
+  }) =>
+      _remote.fetchDistribution(query: query, examId: examId);
+
+  @override
+  Future<List<DatesheetRow>> datesheet({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) =>
+      _remote.fetchDatesheet(query: query, classLabel: classLabel, term: term);
 }

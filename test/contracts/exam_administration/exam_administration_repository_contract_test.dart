@@ -417,6 +417,289 @@ void main() {
       expect(rows.first.totalCount, 10);
       expect(rows.first.pending, 6);
     });
+
+    // ── EXM-6 — marksEntryDeadline round-trips through create ────────────────
+    test('mock createExam persists a marksEntryDeadline', () async {
+      final repo = MockExamAdministrationRepository();
+      final deadline = DateTime.utc(2026, 8, 1, 18, 30);
+      final created = await repo.createExam(
+        query: query,
+        request: CreateExamAdministrationRequest(
+          title: 'Deadline Exam',
+          subject: 'Mathematics',
+          grade: '8',
+          section: 'C',
+          termLabel: 'Term 2',
+          dateLabel: '01 Aug 2026',
+          timeLabel: '9:00 AM',
+          venueLabel: 'Room 8C',
+          syllabusLabel: 'All',
+          maxMarks: 50,
+          marksEntryDeadline: deadline,
+        ),
+      );
+      expect(created.marksEntryDeadline, deadline);
+    });
+
+    test('API createExam sends + parses marksEntryDeadline', () async {
+      final remote = ExamRemoteDataSource(
+        createFakeDio((options) {
+          if (options.path == ExamApiPaths.base &&
+              options.method.toUpperCase() == 'POST') {
+            final body = options.data as Map<String, dynamic>;
+            // Client must have serialized the deadline.
+            expect(body['marksEntryDeadline'], isNotNull);
+            return {
+              'data': {
+                'id': 'exam_api_9',
+                'title': body['title'],
+                'subject': body['subject'],
+                'grade': body['grade'],
+                'section': body['section'],
+                'termLabel': body['termLabel'],
+                'dateLabel': body['dateLabel'],
+                'timeLabel': body['timeLabel'],
+                'venueLabel': body['venueLabel'],
+                'syllabusLabel': body['syllabusLabel'],
+                'maxMarks': body['maxMarks'],
+                'phase': 'draft',
+                'examType': body['examType'],
+                'marksEntryDeadline': body['marksEntryDeadline'],
+              },
+            };
+          }
+          return {'data': {}};
+        }),
+        mapper: mapper,
+      );
+      final apiRepo = ApiExamAdministrationRepository(remote: remote);
+      final created = await apiRepo.createExam(
+        query: query,
+        request: CreateExamAdministrationRequest(
+          title: 'Deadline Exam',
+          subject: 'Mathematics',
+          grade: '8',
+          section: 'C',
+          termLabel: 'Term 2',
+          dateLabel: '01 Aug 2026',
+          timeLabel: '9:00 AM',
+          venueLabel: 'Room 8C',
+          syllabusLabel: 'All',
+          maxMarks: 50,
+          marksEntryDeadline: DateTime.utc(2026, 8, 1, 18, 30),
+        ),
+      );
+      expect(created.marksEntryDeadline, DateTime.utc(2026, 8, 1, 18, 30));
+    });
+
+    // ── EXM-3/4/5/7 — report reads: mock computes + API parses ───────────────
+
+    test('mock tabulation excludes an AB student from totals/rank', () async {
+      final repo = MockExamAdministrationRepository();
+      // Mark roll 03 absent, then publish.
+      await repo.updateMark(
+        query: query,
+        request: const UpdateExamMarkRequest(
+          markEntryId: 'exam_math_8a_03',
+          marksObtained: 0,
+          status: ExamMarkStatus.absent,
+        ),
+      );
+      await repo.publishResults(query: query, examId: 'exam_math_8a');
+
+      final reg = await repo.tabulation(
+        query: query,
+        classLabel: '8-A',
+        term: 'Term 2',
+      );
+      final abStudent = reg.students.firstWhere(
+        (s) => s.cellsBySubject['Mathematics']?.statusCode == 'AB',
+      );
+      expect(abStudent.total, 0);
+      expect(abStudent.rank, isNull);
+    });
+
+    test('mock merit + toppers + distribution over a published exam', () async {
+      final repo = MockExamAdministrationRepository();
+      await repo.publishResults(query: query, examId: 'exam_math_8a');
+
+      final merit =
+          await repo.meritList(query: query, classLabel: '8-A', term: 'Term 2');
+      expect(merit, isNotEmpty);
+      expect(merit.first.rank, 1);
+
+      final toppers = await repo.examToppers(
+        query: query,
+        examId: 'exam_math_8a',
+        limit: 3,
+      );
+      expect(toppers.length, lessThanOrEqualTo(3));
+      expect(toppers.first.rank, 1);
+
+      final dist =
+          await repo.examDistribution(query: query, examId: 'exam_math_8a');
+      expect(dist.presentCount, greaterThan(0));
+      expect(dist.passMarkPercent, 40);
+    });
+
+    test('mock datesheet lists the class + term schedule', () async {
+      final repo = MockExamAdministrationRepository();
+      final rows =
+          await repo.datesheet(query: query, classLabel: '8-A', term: 'Term 2');
+      expect(rows.map((r) => r.subject), contains('Mathematics'));
+    });
+
+    test('API report reads parse the server payloads', () async {
+      final remote = ExamRemoteDataSource(
+        createFakeDio((options) {
+          final path = options.path;
+          if (path.endsWith('/tabulation')) {
+            return {
+              'data': {
+                'classLabel': '8-A',
+                'term': 'Term 2',
+                'subjects': ['Mathematics'],
+                'students': [
+                  {
+                    'studentId': 's1',
+                    'sisStudentId': 'S1',
+                    'studentName': 'Aarav',
+                    'rollNo': '01',
+                    'perSubject': {
+                      'Mathematics': {
+                        'marks': 80,
+                        'maxMarks': 100,
+                        'statusCode': null,
+                      },
+                    },
+                    'total': 80,
+                    'totalMax': 100,
+                    'percent': 80.0,
+                    'rank': 1,
+                  },
+                  {
+                    'studentId': 's2',
+                    'sisStudentId': 'S2',
+                    'studentName': 'Rohan',
+                    'rollNo': '02',
+                    'perSubject': {
+                      'Mathematics': {
+                        'marks': null,
+                        'maxMarks': 100,
+                        'statusCode': 'AB',
+                      },
+                    },
+                    'total': 0,
+                    'totalMax': 0,
+                    'percent': 0.0,
+                    'rank': null,
+                  },
+                ],
+              },
+            };
+          }
+          if (path.endsWith('/toppers')) {
+            return {
+              'data': [
+                {
+                  'sisStudentId': 'S1',
+                  'studentName': 'Aarav',
+                  'rollNo': '01',
+                  'marks': 80,
+                  'maxMarks': 100,
+                  'percent': 80.0,
+                  'rank': 1,
+                },
+              ],
+            };
+          }
+          if (path.endsWith('/merit')) {
+            return {
+              'data': [
+                {
+                  'sisStudentId': 'S1',
+                  'studentName': 'Aarav',
+                  'rollNo': '01',
+                  'total': 80,
+                  'totalMax': 100,
+                  'percent': 80.0,
+                  'rank': 1,
+                },
+              ],
+            };
+          }
+          if (path.endsWith('/distribution')) {
+            return {
+              'data': {
+                'examId': 'exam-1',
+                'passMarkPercent': 40,
+                'passMarkSource': 'default',
+                'passCount': 1,
+                'failCount': 0,
+                'gradeBreakdown': [
+                  {'grade': 'A', 'count': 1},
+                ],
+                'presentCount': 1,
+                'excludedCount': 1,
+              },
+            };
+          }
+          if (path.endsWith('/datesheet')) {
+            return {
+              'data': [
+                {
+                  'examId': 'exam-1',
+                  'subject': 'Mathematics',
+                  'dateLabel': '12 Jun 2026',
+                  'timeLabel': '9:00 AM',
+                  'venueLabel': 'Room 8A',
+                  'maxMarks': 100,
+                },
+              ],
+            };
+          }
+          return {'data': {}};
+        }),
+        mapper: mapper,
+      );
+      final apiRepo = ApiExamAdministrationRepository(remote: remote);
+
+      final reg = await apiRepo.tabulation(
+        query: query,
+        classLabel: '8-A',
+        term: 'Term 2',
+      );
+      expect(reg.subjects, ['Mathematics']);
+      // The AB row parses with a null mark + 'AB' code and null rank.
+      final ab = reg.students.firstWhere((s) => s.sisStudentId == 'S2');
+      expect(ab.cellsBySubject['Mathematics']!.statusCode, 'AB');
+      expect(ab.cellsBySubject['Mathematics']!.marks, isNull);
+      expect(ab.rank, isNull);
+
+      final toppers =
+          await apiRepo.examToppers(query: query, examId: 'exam-1', limit: 5);
+      expect(toppers.single.marks, 80);
+
+      final merit = await apiRepo.meritList(
+        query: query,
+        classLabel: '8-A',
+        term: 'Term 2',
+      );
+      expect(merit.single.rank, 1);
+
+      final dist =
+          await apiRepo.examDistribution(query: query, examId: 'exam-1');
+      expect(dist.passCount, 1);
+      expect(dist.excludedCount, 1);
+      expect(dist.gradeBreakdown.single.grade, 'A');
+
+      final datesheet = await apiRepo.datesheet(
+        query: query,
+        classLabel: '8-A',
+        term: 'Term 2',
+      );
+      expect(datesheet.single.subject, 'Mathematics');
+    });
   });
 }
 

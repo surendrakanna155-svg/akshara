@@ -7,7 +7,9 @@ import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../../../shared/widgets/akshara_view_action.dart';
 import 'exam_admin_models.dart';
+import 'exam_admin_navigation.dart';
 import 'exam_administration_provider.dart';
 import 'exam_settings_provider.dart';
 import 'widgets/exam_create_dialog.dart';
@@ -29,6 +31,16 @@ class ExamAdministrationScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Exam Administration'),
         actions: [
+          // EXM-3/4/5/7 — open the Exam Reports area (gated on viewExams).
+          AksharaViewAction(
+            permission: Permission.viewExams,
+            child: IconButton(
+              key: QaTestKeys.examReportsButton,
+              icon: const Icon(Icons.assessment_outlined),
+              tooltip: 'Exam reports',
+              onPressed: () => openExamReports(context),
+            ),
+          ),
           IconButton(
             key: const Key('exam_settings_button'),
             icon: const Icon(Icons.tune),

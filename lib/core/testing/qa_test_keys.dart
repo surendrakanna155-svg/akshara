@@ -159,6 +159,23 @@ abstract final class QaTestKeys {
   static ValueKey<String> examMarksProgressCard(String examId) =>
       ValueKey<String>('exam_marks_progress_card_$examId');
 
+  // EXM-3/4/5/7 — Exam Reports area (tabulation / merit+toppers /
+  // pass-fail+distribution / datesheet), each with CSV + PDF export.
+  static const examReportsButton =
+      ValueKey<String>('exam_reports_button');
+  static ValueKey<String> examReportsTab(String name) =>
+      ValueKey<String>('exam_reports_tab_$name');
+  static const examReportsClassField =
+      ValueKey<String>('exam_reports_class_field');
+  static const examReportsTermField =
+      ValueKey<String>('exam_reports_term_field');
+  static const examReportsExamSelector =
+      ValueKey<String>('exam_reports_exam_selector');
+  static const examReportsExportCsvButton =
+      ValueKey<String>('exam_reports_export_csv_button');
+  static const examReportsExportPdfButton =
+      ValueKey<String>('exam_reports_export_pdf_button');
+
   static const financeAssignConcessionButton =
       ValueKey<String>('finance_assign_concession_button');
   static const financeAssignConcessionSubmitButton =

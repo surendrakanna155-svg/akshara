@@ -77,6 +77,7 @@ class ExamSession {
     this.examType = EduExamType.unitTest,
     this.coordinatorVerified = false,
     this.rejectionComment,
+    this.marksEntryDeadline,
   });
 
   final String id;
@@ -95,6 +96,11 @@ class ExamSession {
   final bool coordinatorVerified;
   final String? rejectionComment;
 
+  /// EXM-6 — optional soft deadline (UTC) by which subject teachers must enter
+  /// marks. Null when unset. Surfaced as a banner on the marks-entry screen; the
+  /// automated reminder rides a future reminder-rule engine (XCT-2), not here.
+  final DateTime? marksEntryDeadline;
+
   String get classLabel => '$grade-$section';
 
   bool get isUpcoming =>
@@ -107,6 +113,7 @@ class ExamSession {
     EduExamType? examType,
     bool? coordinatorVerified,
     String? rejectionComment,
+    DateTime? marksEntryDeadline,
   }) {
     return ExamSession(
       id: id,
@@ -124,6 +131,7 @@ class ExamSession {
       examType: examType ?? this.examType,
       coordinatorVerified: coordinatorVerified ?? this.coordinatorVerified,
       rejectionComment: rejectionComment ?? this.rejectionComment,
+      marksEntryDeadline: marksEntryDeadline ?? this.marksEntryDeadline,
     );
   }
 }
@@ -236,6 +244,7 @@ class MarksEntryProgress {
     required this.sectionName,
     required this.enteredCount,
     required this.totalCount,
+    this.marksEntryDeadline,
   });
 
   final String examId;
@@ -245,6 +254,10 @@ class MarksEntryProgress {
   final String sectionName;
   final int enteredCount;
   final int totalCount;
+
+  /// EXM-6 — the exam's marks-entry deadline (null when unset), so the progress
+  /// board can flag exams approaching / past their deadline.
+  final DateTime? marksEntryDeadline;
 
   /// Students who still owe a decision (0 when the roster is complete).
   int get pending => (totalCount - enteredCount).clamp(0, totalCount);
@@ -544,6 +557,7 @@ final class ExamAdministrationStore {
           sectionName: exam.section,
           enteredCount: entered,
           totalCount: marks.length,
+          marksEntryDeadline: exam.marksEntryDeadline,
         ),
       );
     }
@@ -574,6 +588,7 @@ final class ExamAdministrationStore {
     required String syllabusLabel,
     required int maxMarks,
     EduExamType examType = EduExamType.unitTest,
+    DateTime? marksEntryDeadline,
   }) {
     ensureSeeded();
     final id = 'exam_${_exams.length + 1}';
@@ -591,6 +606,7 @@ final class ExamAdministrationStore {
       maxMarks: maxMarks,
       phase: ExamLifecyclePhase.draft,
       examType: examType,
+      marksEntryDeadline: marksEntryDeadline,
     );
     _exams[id] = exam;
     _persist();
@@ -998,6 +1014,7 @@ final class ExamAdministrationStore {
         'maxMarks': exam.maxMarks,
         'phase': exam.phase.name,
         'examType': exam.examType.name,
+        'marksEntryDeadline': exam.marksEntryDeadline?.toIso8601String(),
       };
 
   static ExamSession _examFromJson(Map<String, dynamic> json) {
@@ -1015,6 +1032,9 @@ final class ExamAdministrationStore {
       maxMarks: json['maxMarks'] as int,
       phase: ExamLifecyclePhase.values.byName(json['phase'] as String),
       examType: EduExamType.values.byName(json['examType'] as String),
+      marksEntryDeadline: (json['marksEntryDeadline'] as String?) != null
+          ? DateTime.tryParse(json['marksEntryDeadline'] as String)
+          : null,
     );
   }
 

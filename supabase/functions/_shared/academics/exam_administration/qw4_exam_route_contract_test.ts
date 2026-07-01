@@ -67,7 +67,11 @@ async function call(
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  return routeExamAdministration(req, config, method, path);
+  // The router receives the URL PATHNAME (no query string) — mirror production
+  // by stripping any `?term=…` before matching, while the request URL keeps it
+  // so handlers can still read query params.
+  const pathname = path.split("?")[0]!;
+  return routeExamAdministration(req, config, method, pathname);
 }
 
 const validExam = { title: "Term 2 Maths", subject: "Mathematics", grade: "8" };
@@ -249,4 +253,182 @@ Deno.test("EXM-2: progress route rejects an unauthenticated caller (401)", async
     "/academics/exams/progress",
   );
   assertEquals(res?.status, 401);
+});
+
+// ── EXM-3/4/5/7 — read-only exam reports (all gated on viewExams) ───────────────
+
+Deno.test("EXM-reports: the report slugs are all viewExams", () => {
+  assertEquals(EXAM_OPERATION_PERMISSIONS.tabulation, "viewExams");
+  assertEquals(EXAM_OPERATION_PERMISSIONS.toppers, "viewExams");
+  assertEquals(EXAM_OPERATION_PERMISSIONS.merit, "viewExams");
+  assertEquals(EXAM_OPERATION_PERMISSIONS.distribution, "viewExams");
+  assertEquals(EXAM_OPERATION_PERMISSIONS.datesheet, "viewExams");
+});
+
+// EXM-3 — tabulation register.
+Deno.test("EXM-3: GET class/{c}/tabulation is denied without viewExams (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/tabulation?term=Term%202",
+    ["manageExamMarks"],
+  );
+  assertEquals(res?.status, 403);
+  assertEquals((await res!.json()).error.code, "FORBIDDEN");
+});
+
+Deno.test("EXM-3: GET class/{c}/tabulation reads with viewExams (passes gate → 503)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/tabulation?term=Term%202",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-3: GET class/{c}/tabulation without term is rejected (422) before the DB", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/tabulation",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("EXM-3: class/{c}/tabulation is routed as a report, NOT as GET /exams/{examId}", async () => {
+  // "class" must not be mistaken for an examId. A viewExams reader passes the
+  // tabulation gate → 503; the request never falls through to handleGetExam.
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/tabulation?term=Term%202",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+// EXM-4a — subject toppers (per exam).
+Deno.test("EXM-4: GET exams/{id}/toppers is denied without viewExams (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/toppers?limit=5",
+    ["manageExamMarks"],
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("EXM-4: GET exams/{id}/toppers reads with viewExams (passes gate → 503)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/toppers?limit=5",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+// EXM-4b — merit list (per class + term).
+Deno.test("EXM-4: GET class/{c}/merit is denied without viewExams (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/merit?term=Term%202",
+    ["manageExamMarks"],
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("EXM-4: GET class/{c}/merit reads with viewExams (passes gate → 503)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/merit?term=Term%202",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-4: GET class/{c}/merit without term is rejected (422)", async () => {
+  const res = await call("GET", "/academics/exams/class/8-A/merit", ["viewExams"]);
+  assertEquals(res?.status, 422);
+});
+
+// EXM-5 — pass/fail + grade distribution (per exam).
+Deno.test("EXM-5: GET exams/{id}/distribution is denied without viewExams (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/distribution",
+    ["manageExamMarks"],
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("EXM-5: GET exams/{id}/distribution reads with viewExams (passes gate → 503)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/distribution",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+// EXM-7 — datesheet (per class + term).
+Deno.test("EXM-7: GET class/{c}/datesheet is denied without viewExams (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/datesheet?term=Term%202",
+    ["manageExamMarks"],
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("EXM-7: GET class/{c}/datesheet reads with viewExams (passes gate → 503)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/datesheet?term=Term%202",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-7: GET class/{c}/datesheet without term is rejected (422)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/datesheet",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("EXM-reports: a report route rejects an unauthenticated caller (401)", async () => {
+  const req = new Request(
+    "https://x/academics/exams/class/8-A/tabulation?term=Term%202",
+    { method: "GET" },
+  );
+  const res = await routeExamAdministration(
+    req,
+    config,
+    "GET",
+    "/academics/exams/class/8-A/tabulation",
+  );
+  assertEquals(res?.status, 401);
+});
+
+// ── EXM-6 — marks_entry_deadline on create / schedule ──────────────────────────
+
+Deno.test("EXM-6: POST /academics/exams accepts a marksEntryDeadline (passes → 503)", async () => {
+  const res = await call("POST", "/academics/exams", ["manageExams"], {
+    ...validExam,
+    marksEntryDeadline: "2026-08-01T18:30:00Z",
+  });
+  // Gate + validation (incl. deadline parse) passed → reached the DB.
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-6: POST /academics/exams rejects a bad marksEntryDeadline (422) before DB", async () => {
+  const res = await call("POST", "/academics/exams", ["manageExams"], {
+    ...validExam,
+    marksEntryDeadline: "not-a-date",
+  });
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("EXM-6: POST /academics/exams with no deadline still passes (503)", async () => {
+  const res = await call("POST", "/academics/exams", ["manageExams"], validExam);
+  assertEquals(res?.status, 503);
 });

@@ -240,6 +240,20 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody> {
     }
   }
 
+  /// EXM-6 — human message for the marks-entry deadline banner. Flags a passed
+  /// deadline; otherwise states the due date. Dates are rendered in local time.
+  String _deadlineMessage(DateTime deadline) {
+    final local = deadline.toLocal();
+    final d = '${local.year}-${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')}';
+    final t = '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+    final passed = DateTime.now().isAfter(deadline);
+    return passed
+        ? 'Marks-entry deadline passed ($d $t). Please complete entry.'
+        : 'Marks-entry deadline: $d $t';
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = context.aksharaText;
@@ -274,6 +288,15 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody> {
                 '$entered / ${marks.length} marks entered · Max ${exam.maxMarks}',
                 style: text.bodyMedium,
               ),
+              // EXM-6 — surface the marks-entry deadline (if set) as a banner.
+              // The automated teacher reminder rides a future reminder-rule
+              // engine (XCT-2); this is only the informational surface.
+              if (exam.marksEntryDeadline != null) ...[
+                const SizedBox(height: AksharaSpacing.s2),
+                AksharaWarningBanner(
+                  message: _deadlineMessage(exam.marksEntryDeadline!),
+                ),
+              ],
               if (exam.rejectionComment != null) ...[
                 const SizedBox(height: AksharaSpacing.s2),
                 AksharaWarningBanner(

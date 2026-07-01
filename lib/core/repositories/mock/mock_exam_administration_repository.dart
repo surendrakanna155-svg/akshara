@@ -1,6 +1,7 @@
 import '../../exams/exam_administration_requests.dart';
 import '../../exams/exam_administration_store.dart';
 import '../../exams/exam_remark.dart';
+import '../../exams/exam_reports.dart';
 import '../interfaces/exam_administration_repository.dart';
 import '../repository_query.dart';
 
@@ -49,6 +50,7 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
       syllabusLabel: request.syllabusLabel,
       maxMarks: request.maxMarks,
       examType: request.examType,
+      marksEntryDeadline: request.marksEntryDeadline,
     );
   }
 
@@ -165,5 +167,57 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
     required String examId,
   }) async {
     return _store.remarksForExam(examId);
+  }
+
+  @override
+  Future<TabulationRegister> tabulation({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) async {
+    return ExamReportsBuilder.tabulation(
+      _store,
+      classLabel: classLabel,
+      term: term,
+    );
+  }
+
+  @override
+  Future<List<ExamTopper>> examToppers({
+    required RepositoryQuery query,
+    required String examId,
+    int limit = 5,
+  }) async {
+    return ExamReportsBuilder.toppers(_store, examId: examId, limit: limit);
+  }
+
+  @override
+  Future<List<MeritEntry>> meritList({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) async {
+    return ExamReportsBuilder.merit(_store, classLabel: classLabel, term: term);
+  }
+
+  @override
+  Future<ExamGradeDistribution> examDistribution({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    return ExamReportsBuilder.distribution(_store, examId: examId);
+  }
+
+  @override
+  Future<List<DatesheetRow>> datesheet({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) async {
+    return ExamReportsBuilder.datesheet(
+      _store,
+      classLabel: classLabel,
+      term: term,
+    );
   }
 }

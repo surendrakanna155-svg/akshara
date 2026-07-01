@@ -3,16 +3,21 @@ import { errorEnvelope } from "../../http.ts";
 import {
   handleBulkUpdateExamMarks,
   handleCreateExam,
+  handleDatesheet,
+  handleExamDistribution,
+  handleExamToppers,
   handleGetExam,
   handleListExamMarks,
   handleListExamRemarks,
   handleListExams,
   handleListPublishedResultsForStudent,
   handleMarksEntryProgress,
+  handleMeritList,
   handleOpenMarksEntry,
   handleProcessExamResults,
   handlePublishExamResults,
   handleScheduleExam,
+  handleTabulationRegister,
   handleUpdateExamMark,
   handleUpsertExamRemark,
   handleVerifyCoordinator,
@@ -36,6 +41,28 @@ export function matchExamAdministrationRoute(
   // /academics/exams/{examId} GET so "progress" is not mistaken for an examId.
   if (path === "/academics/exams/progress" && method === "GET") {
     return { handler: handleMarksEntryProgress, args: [] };
+  }
+
+  // EXM-3/4b/7 — class + term scoped read reports. Matched BEFORE the generic
+  // /academics/exams/{examId} GET so "class" is never mistaken for an examId.
+  // The class label segment may contain a hyphen (e.g. "8-A") but not a slash.
+  const tabulationMatch = path.match(
+    /^\/academics\/exams\/class\/([^/]+)\/tabulation$/,
+  );
+  if (tabulationMatch && method === "GET") {
+    return { handler: handleTabulationRegister, args: [tabulationMatch[1]!] };
+  }
+  const meritMatch = path.match(
+    /^\/academics\/exams\/class\/([^/]+)\/merit$/,
+  );
+  if (meritMatch && method === "GET") {
+    return { handler: handleMeritList, args: [meritMatch[1]!] };
+  }
+  const datesheetMatch = path.match(
+    /^\/academics\/exams\/class\/([^/]+)\/datesheet$/,
+  );
+  if (datesheetMatch && method === "GET") {
+    return { handler: handleDatesheet, args: [datesheetMatch[1]!] };
   }
 
   // EXM-1 — fast bulk marks save for one exam.
@@ -85,6 +112,9 @@ export function matchExamAdministrationRoute(
     { suffix: "/open-marks", method: "POST", handler: handleOpenMarksEntry },
     { suffix: "/marks", method: "GET", handler: handleListExamMarks },
     { suffix: "/remarks", method: "GET", handler: handleListExamRemarks },
+    // EXM-4a / EXM-5 — exam-scoped read reports.
+    { suffix: "/toppers", method: "GET", handler: handleExamToppers },
+    { suffix: "/distribution", method: "GET", handler: handleExamDistribution },
     { suffix: "/process", method: "POST", handler: handleProcessExamResults },
     {
       suffix: "/verify-coordinator",

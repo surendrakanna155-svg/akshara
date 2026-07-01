@@ -32,4 +32,24 @@ abstract final class ExamApiPaths {
 
   static String remark(String examId, String sisStudentId) =>
       '$base/$examId/remarks/$sisStudentId';
+
+  // ── EXM-3/4/5/7 — read-only exam reports ─────────────────────────────────
+
+  /// EXM-3 — tabulation register for a class over a term (`?term=`).
+  static String tabulation(String classLabel) =>
+      '$base/class/${Uri.encodeComponent(classLabel)}/tabulation';
+
+  /// EXM-4a — top-N students by marks for one exam (`?limit=`).
+  static String toppers(String examId) => '$base/$examId/toppers';
+
+  /// EXM-4b — merit list for a class over a term (`?term=`).
+  static String merit(String classLabel) =>
+      '$base/class/${Uri.encodeComponent(classLabel)}/merit';
+
+  /// EXM-5 — pass/fail + grade distribution for one exam.
+  static String distribution(String examId) => '$base/$examId/distribution';
+
+  /// EXM-7 — datesheet (exam schedule) for a class over a term (`?term=`).
+  static String datesheet(String classLabel) =>
+      '$base/class/${Uri.encodeComponent(classLabel)}/datesheet';
 }
