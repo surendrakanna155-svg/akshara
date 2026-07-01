@@ -14,7 +14,11 @@ services:
     ports: ["127.0.0.1:5433:5432"]
     networks: [akshara-net]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d $${POSTGRES_DB}"]
+      # DB name hardcoded (not $${POSTGRES_DB}) — the compose project has no .env
+      # providing POSTGRES_DB, so the interpolated value was empty at runtime and
+      # `pg_isready -d` failed with "option requires an argument", falsely marking
+      # the container unhealthy. Hardcoding reflects the real DB status.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d akshara_db"]
       interval: 10s
       timeout: 5s
       retries: 12

@@ -21,6 +21,7 @@ import { setRequestContext } from "./request_context.ts";
 import { createServiceClient, type UserRow } from "./db.ts";
 import { resolveStudentLoginTargetWithClient } from "./auth_login_helpers.ts";
 import { envelope, errorEnvelope, jsonResponse, readJson } from "./http.ts";
+import { buildInfo } from "./build_info.ts";
 import { isSmsConfigured, sendOtpSms, type SmsConfig } from "./sms_provider.ts";
 import { evaluateOtpRateLimit } from "./otp_rate_limit.ts";
 
@@ -730,7 +731,10 @@ export async function handlePermissions(
 }
 
 export function handleHealth(): Response {
-  return jsonResponse(envelope({ status: "ok", service: "akshara-api" }));
+  const { version, builtAt } = buildInfo();
+  return jsonResponse(
+    envelope({ status: "ok", service: "akshara-api", version, builtAt }),
+  );
 }
 
 export async function handleReady(config: AppConfig): Promise<Response> {
