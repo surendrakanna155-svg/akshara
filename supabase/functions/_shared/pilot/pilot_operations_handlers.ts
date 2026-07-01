@@ -482,6 +482,11 @@ export async function handleTeacherExamMarkUpdate(
     return jsonResponse(envelope(result));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    // Published marks are immutable on the mobile/pilot path too — corrections
+    // only (matches the academics exam path).
+    if (error instanceof Error && error.message.includes("published and immutable")) {
+      return errorEnvelope("EXAM_MARK_PUBLISHED", error.message, 409);
+    }
     if (error instanceof Error && error.message.includes("not found")) {
       return errorEnvelope("NOT_FOUND", error.message, 404);
     }

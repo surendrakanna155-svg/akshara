@@ -87,6 +87,35 @@ void main() {
       expect(saved.first.text, 'Excellent term — keep it up.');
     });
 
+    testWidgets(
+        'EXM-D6: marking a student Absent (AB) via the status selector clears '
+        'marks and persists the status', (tester) async {
+      await tester.pumpWidget(buildTestApp());
+      await tester.pumpAndSettle();
+
+      final store = ExamAdministrationStore.instance;
+      const markId = 'exam_math_8a_01';
+      // Seeded present with marks.
+      expect(store.markById(markId)!.status, ExamMarkStatus.present);
+      expect(store.markById(markId)!.marksObtained, 42);
+
+      // Open the per-row status selector and pick "Absent (AB)".
+      await tester.tap(
+        find.byKey(QaTestKeys.examAdminMarkStatusSelector(markId)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(ExamMarkStatus.absent.label).last);
+      await tester.pumpAndSettle();
+
+      final updated = store.markById(markId)!;
+      expect(updated.status, ExamMarkStatus.absent);
+      expect(updated.marksObtained, isNull); // marks cleared for an absent student
+      expect(updated.statusCode, 'AB');
+      // The locked cell shows the AB display code instead of a marks field.
+      expect(find.byKey(QaTestKeys.examAdminMarkField(markId)), findsNothing);
+      expect(find.text('AB'), findsWidgets);
+    });
+
     testWidgets('non-leadership staff do not see the remark button',
         (tester) async {
       await tester.pumpWidget(buildTestApp(role: ErpRole.teacher));

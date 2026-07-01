@@ -187,6 +187,138 @@ void main() {
     expect(updated.history.last.text, 'Much improved this term.');
   });
 
+  // EXM-D6 — Absent (AB) / Medical Leave (ML) / Debarred (DB).
+  const karthik = 'SIS-STU-10432'; // roll 03, 8-A, seeded 40/50 = 80%
+  const priya = 'SIS-STU-10433'; // roll 04, 8-A, seeded 38/50 = 76%
+
+  test('EXM-D6: an absent student is shown "AB", excluded from total/average, '
+      'and is NOT ranked', () {
+    // Mark Karthik absent for the maths exam BEFORE publishing.
+    store.recordMark(
+      markEntryId: 'exam_math_8a_03',
+      marksObtained: 0,
+      status: ExamMarkStatus.absent,
+    );
+    store.publishExamResults('exam_math_8a');
+
+    final card = ExamReportCardBuilder.build(
+      store,
+      sisStudentId: karthik,
+      termLabel: term,
+    )!;
+
+    // The maths subject line renders the display code and is excluded from stats.
+    final maths = card.subjects.firstWhere((s) => s.subject == 'Mathematics');
+    expect(maths.status, ExamMarkStatus.absent);
+    expect(maths.statusCode, 'AB');
+    expect(maths.countsTowardStats, isFalse);
+
+    // AB is the student's ONLY subject → nothing counts → zero totals.
+    expect(card.totalScore, 0);
+    expect(card.totalMax, 0);
+    expect(card.overallPercent, 0);
+
+    // An absent student with no present results is NOT ranked.
+    expect(card.isRanked, isFalse);
+    expect(card.rank, 0);
+  });
+
+  test('EXM-D6: an absent classmate does not shift other students\' ranks', () {
+    // Baseline ranks (all present): Ananya 90% (1), Ravi 84% (2),
+    // Karthik 80% (3), Priya 76% (4).
+    // Mark Karthik absent — he leaves the ranking pool entirely.
+    store.recordMark(
+      markEntryId: 'exam_math_8a_03',
+      marksObtained: 0,
+      status: ExamMarkStatus.absent,
+    );
+    store.publishExamResults('exam_math_8a');
+
+    final ananyaCard =
+        ExamReportCardBuilder.build(store, sisStudentId: ananya, termLabel: term)!;
+    final raviCard =
+        ExamReportCardBuilder.build(store, sisStudentId: ravi, termLabel: term)!;
+    final priyaCard =
+        ExamReportCardBuilder.build(store, sisStudentId: priya, termLabel: term)!;
+    final karthikCard =
+        ExamReportCardBuilder.build(store, sisStudentId: karthik, termLabel: term)!;
+
+    // Ananya + Ravi keep their positions (Karthik sat between Ravi and Priya).
+    expect(ananyaCard.rank, 1);
+    expect(raviCard.rank, 2);
+    // Priya moves up to 3 only because a NON-present student left the pool — not
+    // because AB affected the computation; AB itself contributes nothing.
+    expect(priyaCard.rank, 3);
+    // The absent student is not ranked at all.
+    expect(karthikCard.isRanked, isFalse);
+    // Ranked class size counts only present-result holders (3, not 4).
+    expect(ananyaCard.classSize, 3);
+  });
+
+  test('EXM-D6: medical_leave and debarred use ML / DB display codes', () {
+    store.recordMark(
+      markEntryId: 'exam_math_8a_03',
+      marksObtained: 0,
+      status: ExamMarkStatus.medicalLeave,
+    );
+    store.recordMark(
+      markEntryId: 'exam_math_8a_04',
+      marksObtained: 0,
+      status: ExamMarkStatus.debarred,
+    );
+    store.publishExamResults('exam_math_8a');
+
+    final ml =
+        ExamReportCardBuilder.build(store, sisStudentId: karthik, termLabel: term)!;
+    final db =
+        ExamReportCardBuilder.build(store, sisStudentId: priya, termLabel: term)!;
+    expect(ml.subjects.single.statusCode, 'ML');
+    expect(db.subjects.single.statusCode, 'DB');
+    // Neither counts toward stats or ranking.
+    expect(ml.isRanked, isFalse);
+    expect(db.isRanked, isFalse);
+    // Present students still rank normally among themselves.
+    final raviCard =
+        ExamReportCardBuilder.build(store, sisStudentId: ravi, termLabel: term)!;
+    expect(raviCard.rank, 2); // behind Ananya
+    expect(raviCard.classSize, 2); // only Ananya + Ravi are present-ranked
+  });
+
+  test('EXM-D6: a partially-absent student is ranked on their PRESENT subjects '
+      'only', () {
+    // Publish maths for everyone (all present).
+    store.publishExamResults('exam_math_8a');
+    // Ravi sits science but is absent; his science AB must not drag his rank.
+    // (Science is a separate exam in the same term.)
+    store.openMarksEntry('exam_science_8a');
+    store.recordMark(
+      markEntryId: 'exam_science_8a_01', // Ravi
+      marksObtained: 0,
+      status: ExamMarkStatus.absent,
+    );
+    // Give the other classmates a present science mark so science publishes
+    // (every provisioned 8-A slot must be decided: rolls 02, 03, 04, 06).
+    for (final roll in ['02', '03', '04', '06']) {
+      store.recordMark(
+        markEntryId: 'exam_science_8a_$roll',
+        marksObtained: 30,
+        status: ExamMarkStatus.present,
+      );
+    }
+    store.processResults('exam_science_8a');
+    store.publishExamResults('exam_science_8a');
+
+    final raviCard =
+        ExamReportCardBuilder.build(store, sisStudentId: ravi, termLabel: term)!;
+    // Ravi's science line is AB (excluded); his total reflects maths only.
+    final science =
+        raviCard.subjects.firstWhere((s) => s.subject == 'Science');
+    expect(science.statusCode, 'AB');
+    expect(raviCard.totalScore, 42); // maths only, science AB excluded
+    expect(raviCard.totalMax, 50); // maths max only
+    expect(raviCard.isRanked, isTrue); // still ranked on his present subject(s)
+  });
+
   test('rank is always computed but rankShown follows the school setting', () {
     // Default scale hides rank from parents.
     store.publishExamResults('exam_math_8a');

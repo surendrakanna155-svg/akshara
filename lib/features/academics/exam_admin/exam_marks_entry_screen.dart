@@ -348,6 +348,11 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
   }
 
   Future<void> _save() async {
+    // A non-present student has no marks to validate — persist the status only.
+    if (!widget.mark.status.isPresent) {
+      await _persist(marks: 0, status: widget.mark.status);
+      return;
+    }
     final parsed = int.tryParse(_controller.text.trim());
     if (parsed == null) return;
     if (parsed < 0 || parsed > widget.exam.maxMarks) {
@@ -359,11 +364,44 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
       );
       return;
     }
+    await _persist(marks: parsed, status: ExamMarkStatus.present);
+  }
+
+  /// EXM-D6 — the teacher picked a new attendance status for this student.
+  ///  * A non-present status (AB/ML/DB) clears the marks field and saves
+  ///    immediately (no marks needed).
+  ///  * Switching back to Present only UNLOCKS the field — nothing is persisted
+  ///    until the teacher enters marks and saves (the backend requires marks for
+  ///    a present student), so we never write a spurious 0.
+  Future<void> _onStatusChanged(ExamMarkStatus status) async {
+    if (status == widget.mark.status) return;
+    if (!status.isPresent) {
+      _controller.text = '';
+      await _persist(marks: 0, status: status);
+    } else {
+      final parsed = int.tryParse(_controller.text.trim());
+      if (parsed != null && parsed >= 0 && parsed <= widget.exam.maxMarks) {
+        await _persist(marks: parsed, status: ExamMarkStatus.present);
+      } else {
+        // No valid marks yet — prompt the teacher to enter marks then save.
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter marks, then Save.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _persist({
+    required int marks,
+    required ExamMarkStatus status,
+  }) async {
     setState(() => _saving = true);
     try {
       await ref.read(examMarksMutationProvider.notifier).updateMark(
             markEntryId: widget.mark.id,
-            marksObtained: parsed,
+            marksObtained: marks,
+            status: status,
           );
     } catch (error) {
       if (!mounted) return;
@@ -454,20 +492,59 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
                 icon: const Icon(Icons.rate_review_outlined),
                 onPressed: _openLeadershipRemarkDialog,
               ),
+            // EXM-D6 — attendance status selector. A non-present status locks the
+            // marks field and shows the display code (AB/ML/DB).
+            PopupMenuButton<ExamMarkStatus>(
+              key: QaTestKeys.examAdminMarkStatusSelector(widget.mark.id),
+              tooltip: 'Attendance status',
+              enabled: widget.canEdit && !widget.mark.published,
+              initialValue: widget.mark.status,
+              onSelected: _onStatusChanged,
+              itemBuilder: (context) => [
+                for (final status in ExamMarkStatus.values)
+                  PopupMenuItem<ExamMarkStatus>(
+                    value: status,
+                    child: Text(status.label),
+                  ),
+              ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AksharaSpacing.s2,
+                ),
+                child: Text(
+                  widget.mark.status.displayCode ?? 'P',
+                  style: text.labelLarge,
+                ),
+              ),
+            ),
+            const SizedBox(width: AksharaSpacing.s2),
             SizedBox(
               width: 88,
-              child: TextField(
-                key: QaTestKeys.examAdminMarkField(widget.mark.id),
-                controller: _controller,
-                enabled: widget.canEdit && !widget.mark.published,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Marks',
-                  isDense: true,
-                  suffixText: '/${widget.exam.maxMarks}',
-                ),
-                onSubmitted: (_) => _save(),
-              ),
+              child: widget.mark.status.isPresent
+                  ? TextField(
+                      key: QaTestKeys.examAdminMarkField(widget.mark.id),
+                      controller: _controller,
+                      enabled: widget.canEdit && !widget.mark.published,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Marks',
+                        isDense: true,
+                        suffixText: '/${widget.exam.maxMarks}',
+                      ),
+                      onSubmitted: (_) => _save(),
+                    )
+                  // Non-present: field is locked; show the display code instead.
+                  : InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Marks',
+                        isDense: true,
+                        enabled: false,
+                      ),
+                      child: Text(
+                        widget.mark.status.displayCode ?? '',
+                        style: text.bodyLarge,
+                      ),
+                    ),
             ),
             const SizedBox(width: AksharaSpacing.s2),
             AksharaViewAction(

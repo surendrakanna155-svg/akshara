@@ -150,7 +150,13 @@ class ExamRemoteDataSource {
     required RepositoryQuery query,
     required UpdateExamMarkRequest request,
   }) async {
-    final Map<String, dynamic> body = {'marksObtained': request.marksObtained};
+    // EXM-D6 — a non-present student has no marks: send null (the server forces
+    // null too) so the wire payload matches the persisted state.
+    final bool isPresent = request.status.isPresent;
+    final Map<String, dynamic> body = {
+      'marksObtained': isPresent ? request.marksObtained : null,
+      'status': request.status.wire,
+    };
     final ReliableWriter? reliable = _reliable;
     if (reliable == null) {
       final response = await _dio.patch<Map<String, dynamic>>(
@@ -172,7 +178,8 @@ class ExamRemoteDataSource {
       outcome,
       optimistic: () => <String, dynamic>{
         'id': request.markEntryId,
-        'marksObtained': request.marksObtained,
+        'marksObtained': isPresent ? request.marksObtained : null,
+        'status': request.status.wire,
       },
     );
     return _mapper.toMark(resolved.data);

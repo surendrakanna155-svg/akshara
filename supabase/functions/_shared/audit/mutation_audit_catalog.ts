@@ -292,13 +292,78 @@ export const financeAudit = {
       idempotencyKey: `finance.fee_assignment.cancelled:${assignmentId}`,
     },
   }),
-  collectionCancelled: (collectionId: string): MutationAuditSpec => ({
-    ...workflow("collectionCancelled", "finance_collection", collectionId, { collectionId }),
+  // FIN-D3: cancellation now carries the mandatory reason for the register/trail.
+  collectionCancelled: (collectionId: string, reason = ""): MutationAuditSpec => ({
+    ...workflow("collectionCancelled", "finance_collection", collectionId, {
+      collectionId,
+      ...(reason ? { reason } : {}),
+    }),
     domain: {
       eventType: "finance.collection.cancelled",
-      payload: { collectionId },
+      payload: { collectionId, reason },
       sourceModule: "finance",
       idempotencyKey: `finance.collection.cancelled:${collectionId}`,
+    },
+  }),
+  // FIN-D5: a late-fee accrual pass ran (summary of how many/total accrued).
+  lateFeesAccrued: (
+    schoolId: string,
+    accruedCount: number,
+    totalLateFee: number,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("financeLateFeesAccrued", "finance_school", schoolId, {
+      schoolId,
+      accruedCount,
+      totalLateFee,
+    }),
+    domain: {
+      eventType: "finance.late_fees.accrued",
+      payload: { schoolId, accruedCount, totalLateFee },
+      sourceModule: "finance",
+      idempotencyKey: `finance.late_fees.accrued:${schoolId}:${nonce}`,
+    },
+  }),
+  // FIN-D5: a late fee on a specific invoice was waived (with reason).
+  lateFeeWaived: (invoiceId: string, reason: string): MutationAuditSpec => ({
+    ...workflow("financeLateFeeWaived", "finance_invoice", invoiceId, {
+      invoiceId,
+      reason,
+    }),
+    domain: {
+      eventType: "finance.late_fee.waived",
+      payload: { invoiceId, reason },
+      sourceModule: "finance",
+      idempotencyKey: `finance.late_fee.waived:${invoiceId}`,
+    },
+  }),
+  // FIN-D1: a cashier day was closed / reopened (keyed per school+date+action).
+  dayClosed: (schoolId: string, closeDate: string): MutationAuditSpec => ({
+    ...workflow("financeDayClosed", "finance_day_close", schoolId, {
+      schoolId,
+      closeDate,
+    }),
+    domain: {
+      eventType: "finance.day_close.closed",
+      payload: { schoolId, closeDate },
+      sourceModule: "finance",
+      idempotencyKey: `finance.day_close.closed:${schoolId}:${closeDate}`,
+    },
+  }),
+  dayReopened: (
+    schoolId: string,
+    closeDate: string,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("financeDayReopened", "finance_day_close", schoolId, {
+      schoolId,
+      closeDate,
+    }),
+    domain: {
+      eventType: "finance.day_close.reopened",
+      payload: { schoolId, closeDate },
+      sourceModule: "finance",
+      idempotencyKey: `finance.day_close.reopened:${schoolId}:${closeDate}:${nonce}`,
     },
   }),
   invoiceIssued: (invoiceId: string): MutationAuditSpec => ({
@@ -571,6 +636,39 @@ export const academicAudit = {
 // ─── Exam Administration ─────────────────────────────────────────────────────
 
 export const examAudit = {
+  /**
+   * EXM-D6 / integrity gap (e) — a SINGLE mark entry was updated (marks and/or
+   * attendance status). Captures the FULL before→after of BOTH marks_obtained and
+   * status so the original attempt (including an AB/ML/DB) is always recoverable
+   * from the audit trail — the design requirement for a future supplementary /
+   * re-exam without losing history. `nonce` keys the outbox so every legitimate
+   * re-edit of the same cell is recorded (not deduped away); row_version keeps
+   * bumping on the row itself.
+   */
+  markUpdated: (
+    examId: string,
+    markEntryId: string,
+    studentId: string,
+    before: { marksObtained: number | null; status: string },
+    after: { marksObtained: number | null; status: string },
+    rowVersion: number,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("examMarkUpdated", "exam_mark_entry", markEntryId, {
+      examId,
+      markEntryId,
+      studentId,
+      before,
+      after,
+      rowVersion,
+    }),
+    domain: {
+      eventType: "exam.mark.updated",
+      payload: { examId, markEntryId, studentId, before, after, rowVersion },
+      sourceModule: "exam",
+      idempotencyKey: `exam.mark.updated:${markEntryId}:${nonce}`,
+    },
+  }),
   /**
    * Exam results were PUBLISHED (made visible to students/parents) — a critical,
    * non-reversible mutation. `examId` is the exam_session (result set) id; the

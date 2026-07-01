@@ -10,6 +10,7 @@ class ReportCardSubjectLine {
     required this.score,
     required this.maxScore,
     required this.grade,
+    this.status = ExamMarkStatus.present,
   });
 
   final String subject;
@@ -17,6 +18,16 @@ class ReportCardSubjectLine {
   final int score;
   final int maxScore;
   final String grade;
+
+  /// EXM-D6 — attendance status. A non-present subject line shows a display code
+  /// (AB/ML/DB) instead of marks and is EXCLUDED from totals, average and rank.
+  final ExamMarkStatus status;
+
+  /// Whether this line counts toward the report-card total/average.
+  bool get countsTowardStats => status.isPresent;
+
+  /// Display code (AB/ML/DB) for a non-present line, else null.
+  String? get statusCode => status.displayCode;
 
   int get percent =>
       maxScore == 0 ? 0 : ((score / maxScore) * 100).round();
@@ -58,10 +69,15 @@ class ExamReportCard {
   final int totalMax;
   final String overallGrade;
 
-  /// 1-based class rank by term total percentage (always computed).
+  /// 1-based class rank by term total percentage (computed from PRESENT results
+  /// only). EXM-D6 — 0 when the student is NOT ranked (no present results this
+  /// term, e.g. fully absent); see [isRanked].
   final int rank;
 
-  /// Number of classmates (including this student) with results this term.
+  /// Whether this student is ranked this term (has at least one present result).
+  bool get isRanked => rank > 0;
+
+  /// Number of ranked classmates (present-result holders) this term.
   final int classSize;
 
   /// Whether [rank] may be shown to parents/students (per school setting).
@@ -116,10 +132,15 @@ abstract final class ExamReportCardBuilder {
           score: r.scoreObtained,
           maxScore: r.maxScore,
           grade: r.grade,
+          status: r.status,
         ),
     ];
-    final totalScore = mine.fold<int>(0, (sum, r) => sum + r.scoreObtained);
-    final totalMax = mine.fold<int>(0, (sum, r) => sum + r.maxScore);
+    // EXM-D6 — totals, average, percent and overall grade come from PRESENT
+    // subjects only. A non-present line (AB/ML/DB) is shown on the card but
+    // excluded from every statistic.
+    final counted = mine.where((r) => r.countsTowardStats).toList();
+    final totalScore = counted.fold<int>(0, (sum, r) => sum + r.scoreObtained);
+    final totalMax = counted.fold<int>(0, (sum, r) => sum + r.maxScore);
     final overallPercent =
         totalMax == 0 ? 0.0 : (totalScore / totalMax) * 100.0;
     final overallGrade = settings.gradingScale.gradeFor(overallPercent);
@@ -169,7 +190,12 @@ abstract final class ExamReportCardBuilder {
     );
   }
 
-  /// 1-based rank within the student's class by term total %, plus class size.
+  /// 1-based rank within the student's class by term total %, plus the ranked
+  /// class size.
+  ///
+  /// EXM-D6 — a non-present result (AB/ML/DB) is excluded from a student's
+  /// total, and a student with NO present results this term is NOT ranked (not in
+  /// the pool at all), so absent students never shift another student's rank.
   static (int, int) _classRank(
     ExamAdministrationStore store,
     String sisStudentId,
@@ -181,6 +207,9 @@ abstract final class ExamReportCardBuilder {
     final maxByStudent = <String, int>{};
     for (final r in store.allPublishedResults()) {
       if (r.termLabel != termLabel) continue;
+      // Skip non-present results — they contribute nothing to any student's
+      // ranked total.
+      if (!r.countsTowardStats) continue;
       final s = MockCanonicalStudentRegistry.byId(r.sisStudentId);
       if ((s?.classLabel ?? '') != classLabel) continue;
       scoreByStudent[r.sisStudentId] =
@@ -197,6 +226,13 @@ abstract final class ExamReportCardBuilder {
             ? 0.0
             : (scoreByStudent[id]! / maxByStudent[id]!) * 100.0,
     };
+
+    // A fully-absent student (no present results this term) is not ranked:
+    // report rank 0, and don't count them in the ranked class size.
+    if (!percents.containsKey(sisStudentId)) {
+      return (0, percents.length);
+    }
+
     final myPct = percents[sisStudentId] ?? myPercent;
     // Rank = 1 + number of classmates strictly ahead (ties share the better rank).
     final ahead =

@@ -13,6 +13,51 @@ enum ExamLifecyclePhase {
   published,
 }
 
+/// EXM-D6 — a student's attendance status for an exam. A non-[present] status
+/// has NO marks (null) and is shown as a display code (AB/ML/DB); it is EXCLUDED
+/// from totals, averages, percentages, class rank, pass/fail and the grade
+/// distribution.
+enum ExamMarkStatus {
+  present,
+  absent,
+  medicalLeave,
+  debarred;
+
+  /// Wire value shared with the backend (`exam_mark_entries.status`).
+  String get wire => switch (this) {
+        ExamMarkStatus.present => 'present',
+        ExamMarkStatus.absent => 'absent',
+        ExamMarkStatus.medicalLeave => 'medical_leave',
+        ExamMarkStatus.debarred => 'debarred',
+      };
+
+  /// Report-card / cell display code for a non-present status, else null (a
+  /// present student shows their actual marks + computed grade).
+  String? get displayCode => switch (this) {
+        ExamMarkStatus.present => null,
+        ExamMarkStatus.absent => 'AB',
+        ExamMarkStatus.medicalLeave => 'ML',
+        ExamMarkStatus.debarred => 'DB',
+      };
+
+  /// Short human label for the status selector.
+  String get label => switch (this) {
+        ExamMarkStatus.present => 'Present',
+        ExamMarkStatus.absent => 'Absent (AB)',
+        ExamMarkStatus.medicalLeave => 'Medical leave (ML)',
+        ExamMarkStatus.debarred => 'Debarred (DB)',
+      };
+
+  bool get isPresent => this == ExamMarkStatus.present;
+
+  static ExamMarkStatus fromWire(String? value) => switch (value) {
+        'absent' => ExamMarkStatus.absent,
+        'medical_leave' => ExamMarkStatus.medicalLeave,
+        'debarred' => ExamMarkStatus.debarred,
+        _ => ExamMarkStatus.present,
+      };
+}
+
 /// Canonical exam session — single source of truth for scheduling.
 class ExamSession {
   const ExamSession({
@@ -92,6 +137,7 @@ class ExamMarkRecord {
     required this.rollNo,
     this.marksObtained,
     this.published = false,
+    this.status = ExamMarkStatus.present,
   });
 
   final String id;
@@ -99,18 +145,34 @@ class ExamMarkRecord {
   final String sisStudentId;
   final String studentName;
   final String rollNo;
+
+  /// Null for a non-present student (they have no meaningful score) or when a
+  /// present student's mark has not yet been entered.
   final int? marksObtained;
   final bool published;
 
-  ExamMarkRecord copyWith({int? marksObtained, bool? published}) {
+  /// EXM-D6 — attendance status. A non-present status has null [marksObtained]
+  /// and is shown via [ExamMarkStatus.displayCode].
+  final ExamMarkStatus status;
+
+  /// Display code (AB/ML/DB) for a non-present student, else null.
+  String? get statusCode => status.displayCode;
+
+  ExamMarkRecord copyWith({
+    int? marksObtained,
+    bool clearMarks = false,
+    bool? published,
+    ExamMarkStatus? status,
+  }) {
     return ExamMarkRecord(
       id: id,
       examId: examId,
       sisStudentId: sisStudentId,
       studentName: studentName,
       rollNo: rollNo,
-      marksObtained: marksObtained ?? this.marksObtained,
+      marksObtained: clearMarks ? null : (marksObtained ?? this.marksObtained),
       published: published ?? this.published,
+      status: status ?? this.status,
     );
   }
 }
@@ -129,6 +191,7 @@ class PublishedExamResult {
     required this.maxScore,
     required this.grade,
     required this.subject,
+    this.status = ExamMarkStatus.present,
   });
 
   final String markEntryId;
@@ -138,10 +201,24 @@ class PublishedExamResult {
   final String examTitle;
   final String termLabel;
   final String dateLabel;
+
+  /// Raw marks. For a non-present student this is 0 and MUST NOT be read as a
+  /// score — [status] is not [ExamMarkStatus.present], so the row is excluded
+  /// from all aggregation. Use [statusCode] to render AB/ML/DB in the cell.
   final int scoreObtained;
   final int maxScore;
   final String grade;
   final String subject;
+
+  /// EXM-D6 — attendance status. A non-present result is EXCLUDED from totals,
+  /// averages, percent, rank, pass/fail and grade distribution.
+  final ExamMarkStatus status;
+
+  /// Whether this result counts toward totals/average/rank (a present student).
+  bool get countsTowardStats => status.isPresent;
+
+  /// Display code (AB/ML/DB) for a non-present student, else null.
+  String? get statusCode => status.displayCode;
 }
 
 /// Single source of truth for exam creation → publish chain.
@@ -467,6 +544,7 @@ final class ExamAdministrationStore {
   ExamMarkRecord recordMark({
     required String markEntryId,
     required int marksObtained,
+    ExamMarkStatus status = ExamMarkStatus.present,
   }) {
     ensureSeeded();
     final existing = _marks[markEntryId];
@@ -476,7 +554,11 @@ final class ExamAdministrationStore {
     if (existing.published) {
       throw StateError('Cannot edit published mark: $markEntryId');
     }
-    final updated = existing.copyWith(marksObtained: marksObtained);
+    // EXM-D6 — a non-present student has NO score: clear marks. A present student
+    // keeps their entered marks.
+    final updated = status.isPresent
+        ? existing.copyWith(marksObtained: marksObtained, status: status)
+        : existing.copyWith(clearMarks: true, status: status);
     _marks[markEntryId] = updated;
     clearCoordinatorVerification(existing.examId);
     _persist();
@@ -490,7 +572,10 @@ final class ExamAdministrationStore {
       throw StateError('Exam not found: $examId');
     }
     final marks = marksForExam(examId);
-    final pending = marks.where((m) => m.marksObtained == null).toList();
+    // EXM-D6 — a non-present student (AB/ML/DB) is decided, not pending: only a
+    // present student with no marks entered blocks processing.
+    final pending =
+        marks.where((m) => m.status.isPresent && m.marksObtained == null).toList();
     if (pending.isNotEmpty) {
       throw StateError(
         'Marks incomplete: ${pending.length} students pending for $examId',
@@ -513,15 +598,29 @@ final class ExamAdministrationStore {
     }
 
     final marks = marksForExam(examId);
-    final enterable = marks.where((m) => m.marksObtained != null).toList();
+    // EXM-D6 — a row is publishable when a present student has marks OR the
+    // student is non-present (decided AB/ML/DB, no marks needed).
+    final enterable = marks
+        .where((m) => !m.status.isPresent || m.marksObtained != null)
+        .toList();
     if (enterable.isEmpty) {
       throw StateError('No marks entered for exam: $examId');
     }
 
     var publishedCount = 0;
     for (final mark in enterable) {
-      final score = mark.marksObtained!;
-      final percent = exam.maxMarks == 0 ? 0.0 : (score / exam.maxMarks) * 100.0;
+      final isPresent = mark.status.isPresent;
+      // A non-present student has no score; store 0 but the row is excluded from
+      // all stats by [status], and the cell renders the display code.
+      final score = isPresent ? mark.marksObtained! : 0;
+      final percent = (!isPresent || exam.maxMarks == 0)
+          ? 0.0
+          : (score / exam.maxMarks) * 100.0;
+      // A non-present student publishes with their display code (AB/ML/DB), not a
+      // computed letter grade.
+      final grade = isPresent
+          ? _reportSettings.gradingScale.gradeFor(percent)
+          : (mark.status.displayCode ?? '');
       _marks[mark.id] = mark.copyWith(published: true);
       _publishedByMarkId[mark.id] = PublishedExamResult(
         markEntryId: mark.id,
@@ -533,8 +632,9 @@ final class ExamAdministrationStore {
         dateLabel: exam.dateLabel,
         scoreObtained: score,
         maxScore: exam.maxMarks,
-        grade: _reportSettings.gradingScale.gradeFor(percent),
+        grade: grade,
         subject: exam.subject,
+        status: mark.status,
       );
       publishedCount++;
     }
@@ -785,6 +885,7 @@ final class ExamAdministrationStore {
         'rollNo': mark.rollNo,
         'marksObtained': mark.marksObtained,
         'published': mark.published,
+        'status': mark.status.wire,
       };
 
   static ExamMarkRecord _markFromJson(Map<String, dynamic> json) {
@@ -796,6 +897,7 @@ final class ExamAdministrationStore {
       rollNo: json['rollNo'] as String,
       marksObtained: json['marksObtained'] as int?,
       published: json['published'] as bool? ?? false,
+      status: ExamMarkStatus.fromWire(json['status'] as String?),
     );
   }
 
@@ -811,6 +913,7 @@ final class ExamAdministrationStore {
         'maxScore': result.maxScore,
         'grade': result.grade,
         'subject': result.subject,
+        'status': result.status.wire,
       };
 
   static PublishedExamResult _publishedFromJson(Map<String, dynamic> json) {
@@ -822,10 +925,11 @@ final class ExamAdministrationStore {
       examTitle: json['examTitle'] as String,
       termLabel: json['termLabel'] as String,
       dateLabel: json['dateLabel'] as String,
-      scoreObtained: json['scoreObtained'] as int,
+      scoreObtained: json['scoreObtained'] as int? ?? 0,
       maxScore: json['maxScore'] as int,
       grade: json['grade'] as String,
       subject: json['subject'] as String,
+      status: ExamMarkStatus.fromWire(json['status'] as String?),
     );
   }
 }

@@ -109,6 +109,7 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
     return _store.recordMark(
       markEntryId: request.markEntryId,
       marksObtained: request.marksObtained,
+      status: request.status,
     );
   }
 

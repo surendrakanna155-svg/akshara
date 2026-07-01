@@ -625,13 +625,25 @@ export async function updateExamMark(
     student_id: string;
   }>(
     `UPDATE exam_mark_entries
-     SET marks_obtained = $4, updated_by = $5, updated_at = timezone('utc', now())
+     SET marks_obtained = $4, marks_entered = true, updated_by = $5, updated_at = timezone('utc', now())
      WHERE organization_id = $1 AND school_id = $2 AND id = $3
+       AND published = false
      RETURNING *`,
     [orgId, schoolId, markEntryId, marksObtained, updatedBy],
   );
   const row = rows[0];
   if (!row) {
+    // Enforce the SAME published-immutability as the academics path: a published
+    // mark changes only via the correction workflow. Distinguish a published
+    // (locked) row from a genuinely missing one for a precise error.
+    const existing = await db.queryObject<{ published: boolean }>(
+      `SELECT published FROM exam_mark_entries
+       WHERE organization_id = $1 AND school_id = $2 AND id = $3`,
+      [orgId, schoolId, markEntryId],
+    );
+    if (existing[0]?.published) {
+      throw new Error(`Exam mark is published and immutable: ${markEntryId}`);
+    }
     throw new Error(`Exam mark entry not found: ${markEntryId}`);
   }
   return {

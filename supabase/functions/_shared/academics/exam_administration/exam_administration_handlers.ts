@@ -14,6 +14,7 @@ import { emitMutationAudit, examAudit } from "../../audit/mutation_audit_catalog
 import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../../sms_provider.ts";
 import {
   createExamSession,
+  type ExamMarkStatus,
   examMarkToApi,
   examSessionToApi,
   ExamApprovalMismatchError,
@@ -25,6 +26,7 @@ import {
   ExamValidationError,
   examRemarkToApi,
   getExamMark,
+  isExamMarkStatus,
   getExamSession,
   isClassTeacherForExam,
   listExamMarks,
@@ -311,25 +313,46 @@ export async function handleUpdateExamMark(
   return await withAuth(req, config, "manageExamMarks", async (claims) => {
     const body = await readJson<Record<string, unknown>>(req);
     if (!body) throw new ExamValidationError("JSON body required");
-    const marksObtained = Number(body.marksObtained ?? body.marks_obtained);
-    if (!Number.isFinite(marksObtained)) {
-      throw new ExamValidationError("marksObtained is required");
+
+    // EXM-D6 — optional attendance status. Defaults to 'present'; validated
+    // against the enum (422 otherwise). A non-'present' status marks the student
+    // absent/medical/debarred for the exam.
+    const statusRaw = body.status ?? body.attendance_status;
+    let status: ExamMarkStatus = "present";
+    if (statusRaw != null) {
+      if (!isExamMarkStatus(statusRaw)) {
+        throw new ExamValidationError(
+          `Invalid status: ${String(statusRaw)} (must be one of present, absent, medical_leave, debarred)`,
+        );
+      }
+      status = statusRaw;
     }
-    // RT-08: server-side lower bound. `marks_obtained` is an INTEGER column; a
-    // negative or fractional value would corrupt grades. The upper bound
-    // (<= max_marks) needs the entry's max_marks and is enforced below; a DB
-    // CHECK (exam_mark_entries_marks_bounds) is the backstop for both.
-    if (!Number.isInteger(marksObtained) || marksObtained < 0) {
-      throw new ExamValidationError("marksObtained must be a non-negative integer");
+
+    // marks are REQUIRED + bounds-checked only for a present student; a
+    // non-present student has no meaningful score (marks are forced NULL by the
+    // repository) so any supplied number is ignored, not required.
+    let marksObtained = 0;
+    if (status === "present") {
+      marksObtained = Number(body.marksObtained ?? body.marks_obtained);
+      if (!Number.isFinite(marksObtained)) {
+        throw new ExamValidationError("marksObtained is required");
+      }
+      // RT-08: server-side lower bound. `marks_obtained` is an INTEGER column; a
+      // negative or fractional value would corrupt grades. The upper bound
+      // (<= max_marks) needs the entry's max_marks and is enforced below; a DB
+      // CHECK (exam_mark_entries_marks_bounds) is the backstop for both.
+      if (!Number.isInteger(marksObtained) || marksObtained < 0) {
+        throw new ExamValidationError("marksObtained must be a non-negative integer");
+      }
     }
 
     const { organizationId, schoolId } = tenantIds(claims);
     const row = await withTenantContext(config, claims, async (db) => {
-      // Load the entry once: needed for the RT-08 upper-bound check and reused
-      // for the subject-teacher scope check below.
+      // Load the entry once: needed for the RT-08 upper-bound check, the
+      // before→after audit, and reused for the subject-teacher scope check.
       const mark = await getExamMark(db, organizationId, schoolId, markEntryId);
       if (!mark) throw new ExamMarkNotFoundError(markEntryId);
-      if (marksObtained > mark.max_marks) {
+      if (status === "present" && marksObtained > mark.max_marks) {
         throw new ExamValidationError(
           `marksObtained (${marksObtained}) exceeds max_marks (${mark.max_marks})`,
         );
@@ -356,14 +379,49 @@ export async function handleUpdateExamMark(
         }
       }
       const expectedRaw = body.expectedVersion ?? body.expected_version;
-      return await updateExamMark(
+      const before = {
+        marksObtained: mark.marks_entered ? mark.marks_obtained : null,
+        status: isExamMarkStatus(mark.status) ? mark.status : "present",
+      };
+      const updated = await updateExamMark(
         db,
         organizationId,
         schoolId,
         markEntryId,
         marksObtained,
         expectedRaw == null ? null : Number(expectedRaw),
+        status,
       );
+      // Integrity gap (e) — audit the single-mark mutation binding the actor
+      // (claims.sub) to the exam + student and the full before→after of marks
+      // and status (so the original attempt is recoverable). Non-blocking-safe:
+      // a trail failure must not fail the teacher's save.
+      const after = {
+        marksObtained: updated.marks_obtained,
+        status: isExamMarkStatus(updated.status) ? updated.status : "present",
+      };
+      try {
+        await emitMutationAudit(
+          db,
+          claims,
+          examAudit.markUpdated(
+            updated.exam_id,
+            updated.id,
+            updated.student_id,
+            before,
+            after,
+            updated.row_version,
+            `${updated.row_version}`,
+          ),
+          req,
+        );
+      } catch (auditError) {
+        console.error(
+          "exam mark-update audit not recorded:",
+          auditError instanceof Error ? auditError.message : auditError,
+        );
+      }
+      return updated;
     });
     return examMarkToApi(row);
   });

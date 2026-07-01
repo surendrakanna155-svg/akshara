@@ -33,14 +33,21 @@ class ExamMapper {
 
   ExamMarkRecord toMark(Map<String, dynamic> json) {
     final marksRaw = json['marksObtained'] ?? json['marks_obtained'];
+    final status = ExamMarkStatus.fromWire(
+      json['status'] as String? ?? json['attendance_status'] as String?,
+    );
     return ExamMarkRecord(
       id: json['id'] as String,
       examId: json['examId'] as String? ?? '',
       sisStudentId: json['sisStudentId'] as String? ?? '',
       studentName: json['studentName'] as String? ?? '',
       rollNo: json['rollNo'] as String? ?? json['roll_number'] as String? ?? '',
-      marksObtained: marksRaw == null ? null : (marksRaw as num).toInt(),
+      // A non-present student has null marks regardless of any payload value.
+      marksObtained: !status.isPresent
+          ? null
+          : (marksRaw == null ? null : (marksRaw as num).toInt()),
       published: json['published'] as bool? ?? false,
+      status: status,
     );
   }
 
@@ -56,10 +63,13 @@ class ExamMapper {
       examTitle: json['examTitle'] as String? ?? '',
       termLabel: json['termLabel'] as String? ?? '',
       dateLabel: json['dateLabel'] as String? ?? '',
+      // Non-present marks arrive as null; store 0 (the row is excluded from stats
+      // by status, and rendered via the display code).
       scoreObtained: (json['scoreObtained'] as num?)?.toInt() ?? 0,
       maxScore: (json['maxScore'] as num?)?.toInt() ?? 100,
       grade: json['grade'] as String? ?? '',
       subject: json['subject'] as String? ?? '',
+      status: ExamMarkStatus.fromWire(json['status'] as String?),
     );
   }
 

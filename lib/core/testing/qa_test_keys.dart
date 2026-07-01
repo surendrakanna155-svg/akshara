@@ -147,6 +147,9 @@ abstract final class QaTestKeys {
       ValueKey<String>('exam_admin_mark_field_$markId');
   static ValueKey<String> examAdminMarkSaveButton(String markId) =>
       ValueKey<String>('exam_admin_mark_save_$markId');
+  // EXM-D6 — per-row attendance status selector (Present / AB / ML / DB).
+  static ValueKey<String> examAdminMarkStatusSelector(String markId) =>
+      ValueKey<String>('exam_admin_mark_status_$markId');
 
   static const financeAssignConcessionButton =
       ValueKey<String>('finance_assign_concession_button');

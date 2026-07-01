@@ -1,4 +1,5 @@
 import '../../features/education/education_models.dart';
+import 'exam_administration_store.dart';
 
 /// Domain request to create an exam session (draft phase).
 class CreateExamAdministrationRequest {
@@ -34,8 +35,16 @@ class UpdateExamMarkRequest {
   const UpdateExamMarkRequest({
     required this.markEntryId,
     required this.marksObtained,
+    this.status = ExamMarkStatus.present,
   });
 
   final String markEntryId;
+
+  /// The entered marks for a present student. Ignored (forced null) when
+  /// [status] is not [ExamMarkStatus.present].
   final int marksObtained;
+
+  /// EXM-D6 — attendance status. A non-present status marks the student
+  /// absent/medical/debarred and clears their marks.
+  final ExamMarkStatus status;
 }

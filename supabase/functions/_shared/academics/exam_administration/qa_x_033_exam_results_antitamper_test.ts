@@ -59,6 +59,7 @@ function markRow(overrides: Partial<ExamMarkRow> = {}): ExamMarkRow {
     published: false,
     grade_letter: null,
     marks_entered: true,
+    status: "present",
     updated_at: "2026-06-28T00:00:00Z",
     row_version: 3,
     ...overrides,

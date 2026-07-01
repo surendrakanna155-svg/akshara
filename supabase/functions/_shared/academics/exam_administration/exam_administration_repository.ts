@@ -39,7 +39,10 @@ export interface ExamMarkRow {
   exam_id: string;
   exam_title: string;
   class_label: string;
-  marks_obtained: number;
+  // EXM-D6 — NULL for a non-'present' student (absent / medical_leave /
+  // debarred): they have no meaningful score. A present student always has a
+  // (bounds-checked) integer once entered.
+  marks_obtained: number | null;
   max_marks: number;
   student_name: string | null;
   roll_number: string | null;
@@ -47,11 +50,53 @@ export interface ExamMarkRow {
   published: boolean;
   grade_letter: string | null;
   marks_entered: boolean;
+  // EXM-D6 — attendance status for this student's exam entry. 'present' is the
+  // default; a non-'present' status ("absent" / "medical_leave" / "debarred") is
+  // shown as "AB" and EXCLUDED from the average and class rank. marks_obtained is
+  // kept (0 for an absent row) but ignored for stats by this status.
+  status: ExamMarkStatus;
   updated_at: string;
   // Optimistic-concurrency version, bumped on every update (Data Reliability
   // Platform §8.2). Lets a queued offline edit detect that the row changed
   // underneath it (409 CONFLICT carrying this row).
   row_version: number;
+}
+
+/** EXM-D6 — allowed exam attendance statuses (mirrors the DB CHECK constraint). */
+export type ExamMarkStatus =
+  | "present"
+  | "absent"
+  | "medical_leave"
+  | "debarred";
+
+export const EXAM_MARK_STATUSES: readonly ExamMarkStatus[] = [
+  "present",
+  "absent",
+  "medical_leave",
+  "debarred",
+] as const;
+
+export function isExamMarkStatus(value: unknown): value is ExamMarkStatus {
+  return typeof value === "string" &&
+    (EXAM_MARK_STATUSES as readonly string[]).includes(value);
+}
+
+/**
+ * EXM-D6 — display code for a non-present exam status shown on the report card /
+ * result cell in place of a grade. A present student uses their computed grade,
+ * so has no code here.
+ */
+export function examStatusDisplayCode(status: ExamMarkStatus): string | null {
+  switch (status) {
+    case "absent":
+      return "AB";
+    case "medical_leave":
+      return "ML";
+    case "debarred":
+      return "DB";
+    case "present":
+      return null;
+  }
 }
 
 export class ExamNotFoundError extends Error {
@@ -145,16 +190,26 @@ export function examSessionToApi(row: ExamSessionRow): Record<string, unknown> {
 }
 
 export function examMarkToApi(row: ExamMarkRow): Record<string, unknown> {
+  const status: ExamMarkStatus = isExamMarkStatus(row.status)
+    ? row.status
+    : "present";
   return {
     id: row.id,
     examId: row.exam_id,
     sisStudentId: row.student_code ?? row.student_id,
     studentName: row.student_name ?? "",
     rollNo: row.roll_number ?? "",
-    marksObtained: row.marks_entered ? row.marks_obtained : null,
+    // A non-present student has NULL marks (the client renders the display code
+    // AB/ML/DB). A present student shows entered marks once entered.
+    marksObtained: status === "present"
+      ? (row.marks_entered ? row.marks_obtained : null)
+      : null,
     published: row.published,
     grade: row.grade_letter,
     maxMarks: row.max_marks,
+    status,
+    // Display code for a non-present status (AB/ML/DB), null for present.
+    statusCode: examStatusDisplayCode(status),
     rowVersion: row.row_version,
   };
 }
@@ -163,6 +218,9 @@ export function publishedResultToApi(
   row: ExamMarkRow,
   session: ExamSessionRow,
 ): Record<string, unknown> {
+  const status: ExamMarkStatus = isExamMarkStatus(row.status)
+    ? row.status
+    : "present";
   return {
     markEntryId: row.id,
     sisStudentId: row.student_code ?? row.student_id,
@@ -171,11 +229,17 @@ export function publishedResultToApi(
     examTitle: session.title,
     termLabel: session.term_label,
     dateLabel: session.date_label,
+    // NULL for a non-present student — the client renders the display code
+    // instead of a score.
     scoreObtained: row.marks_obtained,
     maxScore: session.max_marks,
-    grade: row.grade_letter ?? gradeForPercent(
-      session.max_marks > 0 ? (row.marks_obtained / session.max_marks) * 100 : 0,
-    ),
+    grade: row.grade_letter ?? (row.marks_obtained != null
+      ? gradeForPercent(
+        session.max_marks > 0 ? (row.marks_obtained / session.max_marks) * 100 : 0,
+      )
+      : (examStatusDisplayCode(status) ?? "")),
+    status,
+    statusCode: examStatusDisplayCode(status),
     subject: session.subject,
   };
 }
@@ -439,6 +503,7 @@ export async function updateExamMark(
   markEntryId: string,
   marksObtained: number,
   expectedVersion?: number | null,
+  status: ExamMarkStatus = "present",
 ): Promise<ExamMarkRow> {
   // Optimistic concurrency (Data Reliability Platform §8.2): when the client
   // sends the row_version its edit was based on, reject with the current row if
@@ -451,16 +516,25 @@ export async function updateExamMark(
       throw new ExamMarkConflictError(markEntryId, current);
     }
   }
+  // EXM-D6 — a non-'present' status (absent / medical_leave / debarred) has NO
+  // meaningful score: force marks_obtained = NULL regardless of any supplied
+  // number. A present student keeps their (bounds-checked) integer. In BOTH
+  // cases marks_entered = true, so a non-present student satisfies the "all
+  // marks entered" process-gate (they are not pending).
+  const persistedMarks: number | null = status === "present"
+    ? marksObtained
+    : null;
   // The `bump_row_version` BEFORE-UPDATE trigger increments row_version; the
   // RETURNING row therefore carries the new version.
   const rows = await db.queryObject<ExamMarkRow>(
     `UPDATE exam_mark_entries
      SET marks_obtained = $4,
          marks_entered = true,
+         status = $5,
          updated_at = timezone('utc', now())
      WHERE organization_id = $1 AND school_id = $2 AND id = $3 AND published = false
      RETURNING *`,
-    [organizationId, schoolId, markEntryId, marksObtained],
+    [organizationId, schoolId, markEntryId, persistedMarks, status],
   );
   const row = rows[0];
   if (!row) throw new ExamMarkNotFoundError(markEntryId);
@@ -558,10 +632,18 @@ export async function publishExamResults(
 
   let publishedCount = 0;
   for (const mark of enterable) {
-    const percent = session.max_marks > 0
+    // EXM-D6 — a non-'present' student publishes with their display code
+    // (AB/ML/DB), not a computed letter grade. A present student's grade is
+    // derived from their (non-null) marks.
+    const status: ExamMarkStatus = isExamMarkStatus(mark.status)
+      ? mark.status
+      : "present";
+    const percent = session.max_marks > 0 && mark.marks_obtained != null
       ? (mark.marks_obtained / session.max_marks) * 100
       : 0;
-    const gradeLetter = gradeForPercent(percent);
+    const gradeLetter = status === "present"
+      ? gradeForPercent(percent)
+      : examStatusDisplayCode(status)!;
     await db.queryObject(
       `UPDATE exam_mark_entries
        SET published = true, grade_letter = $4, updated_at = timezone('utc', now())
@@ -596,7 +678,11 @@ export async function listPublishedResultsForStudent(
     [organizationId, schoolId, studentIdOrCode],
   );
 
-  return rows.map((row) => ({
+  return rows.map((row) => {
+    const status: ExamMarkStatus = isExamMarkStatus(row.status)
+      ? row.status
+      : "present";
+    return {
     markEntryId: row.id,
     sisStudentId: row.student_code ?? row.student_id,
     studentName: row.student_name ?? "",
@@ -606,11 +692,16 @@ export async function listPublishedResultsForStudent(
     dateLabel: row.session_date,
     scoreObtained: row.marks_obtained,
     maxScore: row.session_max,
-    grade: row.grade_letter ?? gradeForPercent(
-      row.session_max > 0 ? (row.marks_obtained / row.session_max) * 100 : 0,
-    ),
+    status,
+    statusCode: examStatusDisplayCode(status),
+    grade: row.grade_letter ?? (row.marks_obtained != null
+      ? gradeForPercent(
+        row.session_max > 0 ? (row.marks_obtained / row.session_max) * 100 : 0,
+      )
+      : (examStatusDisplayCode(status) ?? "")),
     subject: row.session_subject,
-  }));
+    };
+  });
 }
 
 // --- Exam-session remarks (class-teacher authored, audit trail) ---
