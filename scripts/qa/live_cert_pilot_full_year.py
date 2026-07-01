@@ -57,9 +57,14 @@ ADMIN_UID = "a3000000-0000-4000-8000-000000000001"
 SOCK = os.path.expanduser("~/.ssh/akshara-cm.sock")
 TS = str(int(time.time()))
 YEAR_LABEL = "AY-" + TS[-6:]   # unique per run — academic-year label is unique per org
+TEACHER_PH = "91" + TS[-8:]    # unique per-run persona phones — avoids cross-run guardian/student link accretion
+STUDENT_PH = "92" + TS[-8:]
+PARENT_PH = "93" + TS[-8:]
 
-# One throwaway single-school tenant for the full-year walk.
-PILOT = "a2000000-0000-4000-8000-0000000000e1"
+# One throwaway single-school tenant for the full-year walk — UNIQUE per run so
+# no state accretes across runs (stale roster rows would otherwise break exam
+# mark-provision, and reused persona phones would resolve the wrong student).
+PILOT = "a2000000-0000-4000-8000-" + TS.zfill(12)[-12:]
 ALL_SCHOOLS = [PILOT]
 
 results = []   # (stage, label, detail)
@@ -204,17 +209,29 @@ def seed_tenant(tok, school):
                   {"yearLabel": YEAR_LABEL, "startDate": "2026-04-01", "endDate": "2027-03-31",
                    "isCurrent": True, "status": "active"}, school=school)
     seeded["year"] = data(by).get("yearId") or data(by).get("id")
+    # 1b) a class + section UNDER the seeded year — timetable generate schedules
+    #     one row per active section whose class is under the passed academicYearId.
+    sc, bc = http("POST", "/academic/classes", tok,
+                  {"academicYearId": seeded["year"], "className": "Grade 1", "status": "active"},
+                  school=school)
+    class_id = data(bc).get("classId") or data(bc).get("id")
+    section_id = None
+    if class_id:
+        ss, bs = http("POST", "/academic/sections", tok,
+                      {"classId": class_id, "sectionName": "A", "status": "active"}, school=school)
+        section_id = data(bs).get("sectionId") or data(bs).get("id")
+    seeded["section"] = section_id
     # 2) teacher persona at the phone stage 14+ logs in with.
     import_commit(tok, school, "teachers",
-                  [{"displayName": "PFY Teacher", "phone": "9876543213",
+                  [{"displayName": "PFY Teacher", "phone": TEACHER_PH,
                     "role": "teacher", "email": "pfyteacher@example.com"}])
     # 3) parent + student personas linked to a real enrolled student.
     adm = f"PFY-P-{TS[-6:]}"
     import_commit(tok, school, "students",
                   [{"studentName": "PFY Persona Child", "admissionNumber": adm,
                     "classLabel": "Grade 1", "sectionLabel": "A", "academicYear": YEAR_LABEL,
-                    "parentName": "PFY Persona Parent", "parentPhone": "9876543211",
-                    "studentPhone": "9876543212"}])
+                    "parentName": "PFY Persona Parent", "parentPhone": PARENT_PH,
+                    "studentPhone": STUDENT_PH, "rollNumber": "1"}])
     # 4) resolve the seeded student id — the SIS roster exposes `studentId`.
     s, b = http("GET", "/sis/students", tok, school=school)
     roster = items(b)
@@ -225,6 +242,25 @@ def seed_tenant(tok, school):
     if not seeded["student"]:
         seeded["student"] = next((st.get("studentId") or st.get("id")
                                   for st in roster if (st.get("studentId") or st.get("id"))), None)
+    # 4b) assign the teacher to the section (fills timetable periods with a real
+    #     teacher_id) + seed the student's mobile snapshot rows. The four read-only
+    #     /student/* snapshots 404 without an id='default' student_entities row and
+    #     NO API creates them (only the probe student is migration-seeded); the
+    #     content is overlaid from real rows, so a minimal row clears the 404.
+    if seeded["student"]:
+        tid = db(f"select id from users where phone in ('{TEACHER_PH}','+91{TEACHER_PH}') "
+                 "order by created_at desc limit 1")
+        if tid and seeded.get("section"):
+            http("POST", "/academic/teacher-assignments", tok,
+                 {"teacherId": tid, "sectionId": seeded["section"], "role": "subject_teacher"},
+                 school=school)
+        for et in ("snapshot_dashboard", "snapshot_attendance", "snapshot_exams",
+                   "snapshot_timetable", "snapshot_profile"):
+            db("insert into student_entities "
+               "(id, organization_id, school_id, student_id, entity_type, payload) values "
+               f"('default','{ORG}','{school}','{seeded['student']}','{et}', "
+               "jsonb_build_object('studentName','PFY Persona Child','classLabel','Grade 1-A')) "
+               "on conflict do nothing")
     # 5) fee structure -> assignment (auto-issues an 'issued' invoice for §10).
     if seeded["student"]:
         s, b = http("POST", "/finance/fee-structures", tok,
@@ -387,9 +423,9 @@ try:
         rec("13.timetable-publish", "FAIL", "no academic year id")
 
     # ─── Persona logins for the operational + student legs ─────────────────────
-    teacher = login_persona("+919876543213", PILOT)
-    student = login_persona("+919876543212", PILOT)
-    parent = login_persona("+919876543211", PILOT)
+    teacher = login_persona("+91" + TEACHER_PH, PILOT)
+    student = login_persona("+91" + STUDENT_PH, PILOT)
+    parent = login_persona("+91" + PARENT_PH, PILOT)
 
     # ─── Stage 14: attendance mark (teacher submit) ────────────────────────────
     if teacher and student:
@@ -431,10 +467,9 @@ try:
     # ─── Stage 16: homework assign -> submit -> grade -> read ──────────────────
     if teacher and student:
         hw_title = f"PFY HW {TS}"
-        sname = (data(http("GET", "/auth/me", token=student)[1]).get("name")) or "PFY Student"
         s, b = http("POST", "/teacher/homework", teacher,
-                    {"class_label": "1-A", "subject": "Mathematics", "title": hw_title,
-                     "due_label": "Tomorrow", "student_name": sname})
+                    {"class_label": "Grade 1-A", "subject": "Mathematics", "title": hw_title,
+                     "due_label": "Tomorrow", "student_name": "PFY Persona Child"})
         hw_id = data(b).get("id")
         graded_ok = False
         if hw_id:
@@ -448,7 +483,7 @@ try:
                      {"grade": "A", "comment": f"pfy graded {TS}"})
                 s, b = http("GET", "/student/homework", student)
                 g = next((i for i in items(b) if i.get("id") == hw_id), None)
-                graded_ok = g is not None and str(g.get("reviewGrade", "")) == "A"
+            graded_ok = g is not None and str(g.get("reviewGrade", "")) == "A"
         rec("16.homework", "PASS" if hw_id and graded_ok else "FAIL",
             f"hw={str(hw_id)[:10]} grade_visible={graded_ok}")
     else:
@@ -489,7 +524,7 @@ try:
 
     # ─── Stage 20: exam create -> marks -> publish ─────────────────────────────
     s, b = http("POST", "/academics/exams", tok,
-                {"title": f"PFY Exam {TS}", "subject": "Mathematics", "grade": "5", "section": "A",
+                {"title": f"PFY Exam {TS}", "subject": "Mathematics", "grade": "Grade 1", "section": "A",
                  "termLabel": "Term 1", "dateLabel": "QA", "maxMarks": 100, "examType": "unit_test"},
                 school=PILOT)
     exam_id = data(b).get("id") or data(b).get("examId")
