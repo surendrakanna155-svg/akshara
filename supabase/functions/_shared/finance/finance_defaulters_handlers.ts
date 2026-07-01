@@ -9,6 +9,7 @@ import {
 } from "../permission_middleware.ts";
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
+import { listRecentContactsForStudents } from "./finance_recovery_repository.ts";
 
 // STF-3 / INT-2 — GET /finance/defaulters. Aggregates real overdue student
 // accounts into the DefaultersDashboardData contract the Flutter client maps
@@ -66,8 +67,8 @@ export async function handleFinanceDefaulters(
   const schoolId = schoolIdFromClaims(auth.claims);
 
   try {
-    const rows = await withTenantContext(config, auth.claims, (db) =>
-      db.queryObject<DefaulterRow>(
+    const { rows, contacts } = await withTenantContext(config, auth.claims, async (db) => {
+      const defaulterRows = await db.queryObject<DefaulterRow>(
         `SELECT
             fsa.student_id,
             COALESCE(s.display_name, 'Student') AS student_name,
@@ -102,8 +103,36 @@ export async function handleFinanceDefaulters(
          ORDER BY fsa.outstanding_amount DESC
          LIMIT 200`,
         [orgId, schoolId],
-      )
-    );
+      );
+      // FIN-R4: attach real recovery-contact history (was hardcoded empty).
+      const contactRows = await listRecentContactsForStudents(
+        db,
+        orgId,
+        schoolId ?? "",
+        defaulterRows.map((r) => r.student_id),
+      );
+      return { rows: defaulterRows, contacts: contactRows };
+    });
+
+    // Group contacts by student, preserving recency order (most recent first).
+    const contactsByStudent = new Map<string, {
+      id: string;
+      timestamp: string;
+      channel: string;
+      outcome: string;
+      notes: string;
+    }[]>();
+    for (const c of contacts) {
+      const list = contactsByStudent.get(c.student_id) ?? [];
+      list.push({
+        id: c.id,
+        timestamp: c.created_at,
+        channel: c.channel,
+        outcome: c.outcome,
+        notes: c.notes,
+      });
+      contactsByStudent.set(c.student_id, list);
+    }
 
     const defaulters = rows.map((r) => {
       const outstanding = parseFloat(r.outstanding) || 0;
@@ -114,6 +143,7 @@ export async function handleFinanceDefaulters(
         5,
         Math.min(95, 90 - daysOverdue),
       );
+      const history = contactsByStudent.get(r.student_id) ?? [];
       return {
         id: r.student_id,
         studentName: r.student_name,
@@ -122,11 +152,11 @@ export async function handleFinanceDefaulters(
         overdueAmount: formatAmount(outstanding),
         daysOverdue,
         bucket,
-        lastContact: "",
+        lastContact: history.length > 0 ? history[0]!.timestamp : "",
         collectionProbability,
         feeAccountId: r.fee_account_id,
         guardianPhone: r.guardian_phone ?? "",
-        contactHistory: [] as unknown[],
+        contactHistory: history,
       };
     });
 

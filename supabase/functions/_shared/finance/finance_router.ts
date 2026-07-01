@@ -65,6 +65,16 @@ import {
   handleGetQrPaymentSession,
 } from "./finance_qr_handlers.ts";
 import { handleFinanceDefaulters } from "./finance_defaulters_handlers.ts";
+import {
+  handleCreatePromiseToPay,
+  handleListPromisesToPay,
+  handleListRecoveryContacts,
+  handleListRecoveryTargets,
+  handleLogRecoveryContact,
+  handleRecoveryDashboard,
+  handleResolvePromiseToPay,
+  handleUpsertRecoveryTarget,
+} from "./finance_recovery_handlers.ts";
 import { handleFinanceReports } from "./finance_reports_handlers.ts";
 import {
   handleGetSettings,
@@ -272,6 +282,38 @@ export function matchFinanceRoute(
   const qrSessionMatch = path.match(/^\/finance\/payments\/qr\/([^/]+)$/);
   if (qrSessionMatch && method === "GET") {
     return { handler: handleGetQrPaymentSession, args: [qrSessionMatch[1]!] };
+  }
+
+  // ─── FIN-R: fee-recovery CRM ───────────────────────────────────────────────
+  if (path === "/finance/recovery/dashboard" && method === "GET") {
+    return { handler: handleRecoveryDashboard, args: [] };
+  }
+  if (path === "/finance/recovery/contacts" && method === "POST") {
+    return { handler: handleLogRecoveryContact, args: [] };
+  }
+  const recoveryContactsMatch = path.match(
+    /^\/finance\/recovery\/contacts\/([^/]+)$/,
+  );
+  if (recoveryContactsMatch && method === "GET") {
+    return { handler: handleListRecoveryContacts, args: [recoveryContactsMatch[1]!] };
+  }
+  if (path === "/finance/recovery/promises" && method === "GET") {
+    return { handler: handleListPromisesToPay, args: [] };
+  }
+  if (path === "/finance/recovery/promises" && method === "POST") {
+    return { handler: handleCreatePromiseToPay, args: [] };
+  }
+  const ptpResolveMatch = path.match(
+    /^\/finance\/recovery\/promises\/([^/]+)\/resolve$/,
+  );
+  if (ptpResolveMatch && method === "POST") {
+    return { handler: handleResolvePromiseToPay, args: [ptpResolveMatch[1]!] };
+  }
+  if (path === "/finance/recovery/targets" && method === "GET") {
+    return { handler: handleListRecoveryTargets, args: [] };
+  }
+  if (path === "/finance/recovery/targets" && method === "POST") {
+    return { handler: handleUpsertRecoveryTarget, args: [] };
   }
 
   // ─── STF-3: defaulters / reports / settings ────────────────────────────────

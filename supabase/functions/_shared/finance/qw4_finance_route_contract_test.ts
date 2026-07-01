@@ -142,6 +142,15 @@ const routes: RouteCase[] = [
   { method: "POST", path: "/finance/payments/qr", holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "POST", path: `/finance/payments/qr/${ID}/confirm`, holder: ["manageFinance"], other: ["viewFinance"] },
   { method: "GET", path: `/finance/payments/qr/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
+  // FIN-R: fee-recovery CRM (reads gate viewFinance, writes gate manageFinance)
+  { method: "GET", path: "/finance/recovery/dashboard", holder: ["viewFinance"], other: ["viewInventory"] },
+  { method: "POST", path: "/finance/recovery/contacts", holder: ["manageFinance"], other: ["viewFinance"] },
+  { method: "GET", path: `/finance/recovery/contacts/${ID}`, holder: ["viewFinance"], other: ["viewInventory"] },
+  { method: "GET", path: "/finance/recovery/promises", holder: ["viewFinance"], other: ["viewInventory"] },
+  { method: "POST", path: "/finance/recovery/promises", holder: ["manageFinance"], other: ["viewFinance"] },
+  { method: "POST", path: `/finance/recovery/promises/${ID}/resolve`, holder: ["manageFinance"], other: ["viewFinance"] },
+  { method: "GET", path: "/finance/recovery/targets", holder: ["viewFinance"], other: ["viewInventory"] },
+  { method: "POST", path: "/finance/recovery/targets", holder: ["manageFinance"], other: ["viewFinance"] },
   // defaulters / reports / settings
   { method: "GET", path: "/finance/defaulters", holder: ["viewFinance"], other: ["viewInventory"] },
   { method: "GET", path: "/finance/reports", holder: ["viewFinance"], other: ["viewInventory"] },
