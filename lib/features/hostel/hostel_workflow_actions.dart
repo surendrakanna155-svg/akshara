@@ -46,10 +46,10 @@ Future<void> showAdmitHostelStudentDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final sisIdController = TextEditingController(text: 'SIS-STU-10425');
-  final nameController = TextEditingController(text: 'Karthik Sharma');
-  final admissionController = TextEditingController(text: 'ADM-2026-0145');
-  final classController = TextEditingController(text: '8');
+  final sisIdController = TextEditingController();
+  final nameController = TextEditingController();
+  final admissionController = TextEditingController();
+  final classController = TextEditingController();
 
   final confirmed = await showDialog<bool>(
     context: context,
@@ -60,7 +60,10 @@ Future<void> showAdmitHostelStudentDialog(
         children: [
           TextField(
             controller: sisIdController,
-            decoration: const InputDecoration(labelText: 'SIS student ID'),
+            decoration: const InputDecoration(
+              labelText: 'SIS student ID',
+              hintText: 'e.g. SIS-STU-10425',
+            ),
           ),
           TextField(
             controller: nameController,
@@ -122,11 +125,9 @@ Future<void> showAssignHostelRoomDialog(
   WidgetRef ref, {
   HostelStudent? student,
 }) async {
-  final studentIdController = TextEditingController(
-    text: student?.id ?? 'ho_stu_5',
-  );
-  final roomIdController = TextEditingController(text: 'room_4');
-  final bedController = TextEditingController(text: 'B1');
+  final studentIdController = TextEditingController(text: student?.id ?? '');
+  final roomIdController = TextEditingController();
+  final bedController = TextEditingController();
 
   final confirmed = await showDialog<bool>(
     context: context,

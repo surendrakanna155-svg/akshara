@@ -255,9 +255,9 @@ Future<void> showRecordAssetLifecycleEventDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final assetIdController = TextEditingController(text: 'asset_1');
-  final assetTagController = TextEditingController(text: 'INV-AST-1042');
-  final notesController = TextEditingController(text: 'QA lifecycle event');
+  final assetIdController = TextEditingController();
+  final assetTagController = TextEditingController();
+  final notesController = TextEditingController();
 
   final confirmed = await showDialog<bool>(
     context: context,

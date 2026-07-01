@@ -30,6 +30,9 @@ Future<void> createTransportRouteDraft(PatrolIntegrationTester $) async {
   await _ensureKeyTapTarget($, QaTestKeys.transportSaveRouteButton);
   await $.tester.tap(find.byKey(QaTestKeys.transportSaveRouteButton));
   await $.pumpAndSettle(timeout: const Duration(seconds: 5));
+  // Route name no longer pre-fills QA data — type a real name before saving.
+  await $.tester.enterText(find.byType(TextField), 'Route 12 — East');
+  await $.pumpAndSettle(timeout: const Duration(seconds: 5));
   await $(QaTestKeys.transportSaveRouteDialogButton).tap();
   await $.pumpAndSettle(timeout: const Duration(seconds: 10));
   await assertVisibleKey($, QaTestKeys.transportRouteSuccessSnackbar);

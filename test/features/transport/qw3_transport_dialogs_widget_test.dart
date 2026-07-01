@@ -106,6 +106,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('New transport route'), findsOneWidget);
 
+      // The route-name field no longer pre-fills QA data (production hygiene) —
+      // enter a real name before submitting.
+      await tester.enterText(find.byType(TextField), 'Route 12 — East');
       await tester.tap(find.byKey(QaTestKeys.transportSaveRouteDialogButton));
       await settleRiverpodFutures(tester);
       await tester.pump();

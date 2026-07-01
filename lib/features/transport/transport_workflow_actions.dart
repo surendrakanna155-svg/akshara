@@ -11,7 +11,7 @@ Future<void> showCreateTransportRouteDialog(
   BuildContext context,
   WidgetRef ref,
 ) async {
-  final nameController = TextEditingController(text: 'Route QA — East Loop');
+  final nameController = TextEditingController();
 
   final confirmed = await showDialog<bool>(
     context: context,
@@ -19,7 +19,10 @@ Future<void> showCreateTransportRouteDialog(
       title: const Text('New transport route'),
       content: TextField(
         controller: nameController,
-        decoration: const InputDecoration(labelText: 'Route name'),
+        decoration: const InputDecoration(
+          labelText: 'Route name',
+          hintText: 'e.g. Route 12 — East Loop',
+        ),
       ),
       actions: [
         TextButton(
