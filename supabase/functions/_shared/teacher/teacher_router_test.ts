@@ -75,6 +75,9 @@ Deno.test("teacher router matches POST /teacher/parent-communication/concerns", 
 Deno.test("teacher router matches GET /teacher/parent-communication/concerns", async () => {
   await assertMatches("GET", "/teacher/parent-communication/concerns");
 });
+Deno.test("teacher router matches GET /teacher/parent-communication (student timeline)", async () => {
+  await assertMatches("GET", "/teacher/parent-communication");
+});
 Deno.test("teacher router matches POST .../concerns/{id}/dismiss", async () => {
   await assertMatches("POST", "/teacher/parent-communication/concerns/c1/dismiss");
 });

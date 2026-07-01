@@ -377,3 +377,49 @@ export async function handleListPendingConcerns(
     return errorEnvelope("INTERNAL_ERROR", "Failed to load subject concerns", 500);
   }
 }
+
+/**
+ * GET /teacher/parent-communication?sisStudentId= — list THIS teacher's logged
+ * parent communications for a student (newest first). Backs the student
+ * communication timeline, which previously read an in-memory store that is never
+ * populated in API mode (so the timeline rendered empty in production).
+ * Returns `{ items: [...] }`.
+ */
+export async function handleListParentCommunications(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, READ_PERMISSION) ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const sisStudentId = (url.searchParams.get("sisStudentId") ??
+    url.searchParams.get("sis_student_id") ?? "").trim();
+
+  try {
+    const items = await withTenantContext(config, auth.claims, async (db) => {
+      const rows = await listTeacherEntities(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        auth.claims.sub,
+        ENTITY_PARENT_COMM,
+      );
+      const filtered = sisStudentId
+        ? rows.filter((row) => String(row.sisStudentId ?? "") === sisStudentId)
+        : rows;
+      // Newest first (createdAt is an ISO timestamp).
+      return filtered.sort((a, b) =>
+        String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")));
+    });
+    return jsonResponse(envelope({ items }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load parent communications", 500);
+  }
+}

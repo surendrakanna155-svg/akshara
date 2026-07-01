@@ -26,6 +26,7 @@ import {
 import {
   handleDismissSubjectConcern,
   handleFlagSubjectConcern,
+  handleListParentCommunications,
   handleListPendingConcerns,
   handleSendParentCommunication,
 } from "./teacher_parent_communication_handlers.ts";
@@ -58,6 +59,9 @@ function matchTeacherRoute(method: string, path: string): { handler: TeacherHand
   // --- MJ-H13: parent communication + subject concerns ---
   if (path === "/teacher/parent-communication" && method === "POST") {
     return { handler: handleSendParentCommunication };
+  }
+  if (path === "/teacher/parent-communication" && method === "GET") {
+    return { handler: handleListParentCommunications };
   }
   if (path === "/teacher/parent-communication/concerns") {
     if (method === "POST") return { handler: handleFlagSubjectConcern };
