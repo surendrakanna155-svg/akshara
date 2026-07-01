@@ -1,6 +1,11 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleAttendanceConsecutiveAbsence,
+  handleAttendanceMonthlyRegister,
+  handleAttendancePending,
+  handleAttendanceRegister,
+  handleAttendanceShortAttendance,
   handleCreateAttendanceCorrection,
   handleGetAttendanceCorrection,
   handleGetAttendanceSession,
@@ -18,6 +23,27 @@ export function matchAttendanceRoute(
 } | null {
   if (path === "/attendance/sessions" && method === "GET") {
     return { handler: handleListAttendanceSessions, args: [] };
+  }
+
+  // OFFICE / ADMIN reads (ATT-1, ATT-2, ATT-4, ATT-D1, ATT-D2). Exact-string
+  // matches registered before the /attendance/sessions/:id parameterised route
+  // so they can never be captured as a session id. All read-only (viewSis).
+  // The monthly route is listed before the plain register route for clarity;
+  // both are exact-string matches so order between them is not significant.
+  if (path === "/attendance/register/monthly" && method === "GET") {
+    return { handler: handleAttendanceMonthlyRegister, args: [] };
+  }
+  if (path === "/attendance/register" && method === "GET") {
+    return { handler: handleAttendanceRegister, args: [] };
+  }
+  if (path === "/attendance/pending" && method === "GET") {
+    return { handler: handleAttendancePending, args: [] };
+  }
+  if (path === "/attendance/alerts/consecutive-absence" && method === "GET") {
+    return { handler: handleAttendanceConsecutiveAbsence, args: [] };
+  }
+  if (path === "/attendance/alerts/short-attendance" && method === "GET") {
+    return { handler: handleAttendanceShortAttendance, args: [] };
   }
 
   if (path === "/attendance/corrections" && method === "GET") {

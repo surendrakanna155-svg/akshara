@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/academics/timetable/timetable_hub_screen.dart';
 import '../features/management/attendance/attendance_corrections_admin_screen.dart';
+import '../features/management/attendance/office_attendance_screen.dart';
 import '../features/intelligence/management/intelligence_hub_screen.dart';
 import '../features/management/academics/management_academics_screen.dart';
 import '../features/management/admissions/management_admissions_screen.dart';
@@ -112,4 +113,11 @@ Widget managementAttendanceCorrectionsRouteBuilder(
   GoRouterState state,
 ) {
   return const AttendanceCorrectionsAdminScreen();
+}
+
+Widget managementOfficeAttendanceRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const OfficeAttendanceScreen();
 }

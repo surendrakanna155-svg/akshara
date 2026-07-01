@@ -1650,6 +1650,16 @@ GoRouter createAppRouter({
                 ),
               ),
               GoRoute(
+                path: 'office-attendance',
+                name: 'managementOfficeAttendance',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: managementOfficeAttendanceRouteBuilder(
+                    context,
+                    state,
+                  ),
+                ),
+              ),
+              GoRoute(
                 path: 'workflow-automation',
                 name: 'managementWorkflowAutomation',
                 pageBuilder: (context, state) => NoTransitionPage(

@@ -25,6 +25,18 @@ import {
   getAttendanceSession,
   listAttendanceSessions,
 } from "./attendance_sessions_repository.ts";
+import {
+  consecutiveAbsenceRowToApi,
+  getAttendanceRegister,
+  getConsecutiveAbsences,
+  getMonthlyRegister,
+  getPendingAttendance,
+  getShortAttendance,
+  monthlyRegisterToApi,
+  pendingClassRowToApi,
+  registerRowToApi,
+  shortAttendanceRowToApi,
+} from "./attendance_office_repository.ts";
 
 type AuthedClaims = Parameters<typeof requirePermission>[0];
 
@@ -120,6 +132,118 @@ export async function handleGetAttendanceSession(
     );
     if (!row) throw new AttendanceSessionNotFoundError(sessionId);
     return attendanceSessionToApi(row);
+  });
+}
+
+// --- OFFICE / ADMIN reads (ATT-1, ATT-2, ATT-4, ATT-D1, ATT-D2) --------------
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MONTH_RE = /^\d{4}-\d{2}$/;
+
+/** ATT-1 — GET /attendance/register?classLabel=&date= */
+export async function handleAttendanceRegister(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const url = new URL(req.url);
+  const classLabel = (url.searchParams.get("classLabel") ?? "").trim();
+  const date = (url.searchParams.get("date") ?? "").trim();
+  if (!classLabel) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "classLabel is required", 422);
+  }
+  if (!DATE_RE.test(date)) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "date (YYYY-MM-DD) is required", 422);
+  }
+  return await withAuth(req, config, true, async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      getAttendanceRegister(db, organizationId, schoolId, classLabel, date)
+    );
+    return rows.map(registerRowToApi);
+  });
+}
+
+/** ATT-2 — GET /attendance/register/monthly?classLabel=&month=YYYY-MM */
+export async function handleAttendanceMonthlyRegister(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const url = new URL(req.url);
+  const classLabel = (url.searchParams.get("classLabel") ?? "").trim();
+  const month = (url.searchParams.get("month") ?? "").trim();
+  if (!classLabel) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "classLabel is required", 422);
+  }
+  if (!MONTH_RE.test(month)) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "month (YYYY-MM) is required", 422);
+  }
+  return await withAuth(req, config, true, async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const register = await withTenantContext(config, claims, (db) =>
+      getMonthlyRegister(db, organizationId, schoolId, classLabel, month)
+    );
+    return monthlyRegisterToApi(register);
+  });
+}
+
+/** ATT-4 — GET /attendance/pending?date= */
+export async function handleAttendancePending(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const url = new URL(req.url);
+  const date = (url.searchParams.get("date") ?? "").trim();
+  if (!DATE_RE.test(date)) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "date (YYYY-MM-DD) is required", 422);
+  }
+  return await withAuth(req, config, true, async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      getPendingAttendance(db, organizationId, schoolId, date)
+    );
+    return rows.map(pendingClassRowToApi);
+  });
+}
+
+/** ATT-D1 — GET /attendance/alerts/consecutive-absence?days=3 */
+export async function handleAttendanceConsecutiveAbsence(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const url = new URL(req.url);
+  const days = Number.parseInt(url.searchParams.get("days") ?? "3", 10);
+  if (!Number.isFinite(days) || days < 1 || days > 60) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "days must be between 1 and 60", 422);
+  }
+  return await withAuth(req, config, true, async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      getConsecutiveAbsences(db, organizationId, schoolId, days)
+    );
+    return rows.map(consecutiveAbsenceRowToApi);
+  });
+}
+
+/** ATT-D2 — GET /attendance/alerts/short-attendance?threshold=75&windowDays=30 */
+export async function handleAttendanceShortAttendance(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const url = new URL(req.url);
+  const threshold = Number.parseInt(url.searchParams.get("threshold") ?? "75", 10);
+  const windowDays = Number.parseInt(url.searchParams.get("windowDays") ?? "30", 10);
+  if (!Number.isFinite(threshold) || threshold < 1 || threshold > 100) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "threshold must be between 1 and 100", 422);
+  }
+  if (!Number.isFinite(windowDays) || windowDays < 1 || windowDays > 366) {
+    return errorEnvelope("ATTENDANCE_VALIDATION", "windowDays must be between 1 and 366", 422);
+  }
+  return await withAuth(req, config, true, async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      getShortAttendance(db, organizationId, schoolId, threshold, windowDays)
+    );
+    return rows.map(shortAttendanceRowToApi);
   });
 }
 

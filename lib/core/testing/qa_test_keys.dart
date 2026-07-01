@@ -1849,4 +1849,25 @@ abstract final class QaTestKeys {
 
   static ValueKey<String> qaPersonaButton(String label) =>
       ValueKey<String>('qa_persona_$label');
+
+  // --- Office attendance (ATT-1, ATT-2, ATT-4, ATT-D1, ATT-D2) ---
+  static const officeAttendanceClassField =
+      ValueKey<String>('office_attendance_class_field');
+  static const officeAttendanceDateField =
+      ValueKey<String>('office_attendance_date_field');
+  static const officeAttendanceMonthField =
+      ValueKey<String>('office_attendance_month_field');
+  static const officeAttendanceLoadButton =
+      ValueKey<String>('office_attendance_load_button');
+  static const officeAttendanceExportCsvButton =
+      ValueKey<String>('office_attendance_export_csv_button');
+  static const officeAttendanceExportPdfButton =
+      ValueKey<String>('office_attendance_export_pdf_button');
+  static const officeAttendanceThresholdField =
+      ValueKey<String>('office_attendance_threshold_field');
+  static const officeAttendanceConsecutiveDaysField =
+      ValueKey<String>('office_attendance_consecutive_days_field');
+
+  static ValueKey<String> officeAttendanceTab(String tabLabel) =>
+      ValueKey<String>('office_attendance_tab_${normalizeSubNavLabel(tabLabel)}');
 }

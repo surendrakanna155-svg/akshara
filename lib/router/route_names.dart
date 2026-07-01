@@ -339,6 +339,8 @@ abstract final class RouteNames {
   static const String managementApprovals = '/management/approvals';
   static const String managementAttendanceCorrections =
       '/management/attendance-corrections';
+  static const String managementOfficeAttendance =
+      '/management/office-attendance';
   static const String managementWorkflowAutomation =
       '/management/workflow-automation';
   static const String managementSettings = '/management/settings';
@@ -356,6 +358,7 @@ abstract final class RouteNames {
     managementTasks,
     managementApprovals,
     managementAttendanceCorrections,
+    managementOfficeAttendance,
     managementWorkflowAutomation,
     managementSettings,
   ];

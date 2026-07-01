@@ -39,6 +39,7 @@ import 'interfaces/homework_intelligence_repository.dart';
 import 'interfaces/student_360_repository.dart';
 import 'interfaces/exam_administration_repository.dart';
 import 'interfaces/attendance_correction_repository.dart';
+import 'interfaces/attendance_office_repository.dart';
 import 'interfaces/employee_repository.dart';
 import 'interfaces/inventory_distribution_repository.dart';
 import 'interfaces/phase5_repositories.dart';
@@ -74,6 +75,7 @@ import 'mock/mock_homework_intelligence_repository.dart';
 import 'mock/mock_student_360_repository.dart';
 import 'mock/mock_exam_administration_repository.dart';
 import 'mock/mock_attendance_correction_repository.dart';
+import 'mock/mock_attendance_office_repository.dart';
 import 'mock/mock_employee_repository.dart';
 import 'mock/mock_inventory_distribution_repository.dart';
 import 'mock/mock_phase5_repositories.dart';
@@ -220,6 +222,15 @@ final attendanceCorrectionRepositoryProvider =
     return ref.read(apiAttendanceCorrectionRepositoryProvider);
   }
   return MockAttendanceCorrectionRepository();
+});
+
+/// OFFICE / ADMIN attendance reads (ATT-1, ATT-2, ATT-4, ATT-D1, ATT-D2).
+final attendanceOfficeRepositoryProvider =
+    Provider<AttendanceOfficeRepository>((ref) {
+  if (isModuleApiEnabled(ref, attendanceApiEnabledProvider)) {
+    return ref.read(apiAttendanceOfficeRepositoryProvider);
+  }
+  return const MockAttendanceOfficeRepository();
 });
 
 final approvalCenterServiceProvider = Provider<ApprovalCenterService>((ref) {

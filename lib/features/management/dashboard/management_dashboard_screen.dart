@@ -22,6 +22,7 @@ import '../widgets/management_principal_overview_panel.dart';
 import '../widgets/management_module_scaffold.dart';
 import '../widgets/management_segment_panel.dart';
 import '../widgets/management_trend_chart.dart';
+import '../attendance/office_attendance_screen.dart';
 
 /// MG-01 — Management Dashboard.
 class ManagementDashboardScreen extends ConsumerWidget {
@@ -193,6 +194,15 @@ class ManagementDashboardScreen extends ConsumerWidget {
               ],
             ),
           const SizedBox(height: AksharaSpacing.s6),
+          AksharaSectionHeader(
+            title: 'Attendance oversight',
+            trailingLabel: 'Open workspace',
+            onTrailingTap: () =>
+                context.go(RouteNames.managementOfficeAttendance),
+          ),
+          const SizedBox(height: AksharaSpacing.s3),
+          const _AttendancePendingWidget(),
+          const SizedBox(height: AksharaSpacing.s6),
           const AksharaSectionHeader(title: 'Approval queue'),
           const SizedBox(height: AksharaSpacing.s3),
           _ApprovalQueuePreview(items: queuePreview),
@@ -225,6 +235,67 @@ class ManagementDashboardScreen extends ConsumerWidget {
             onAction: () => context.go(RouteNames.managementApprovals),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// ATT-4 — a small "Attendance pending" dashboard widget. Reads the same
+/// office-attendance pending feed (today's classes with no submitted session)
+/// and links into the office attendance workspace. Read-only.
+class _AttendancePendingWidget extends ConsumerWidget {
+  const _AttendancePendingWidget();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(officePendingProvider);
+    return Card(
+      child: InkWell(
+        onTap: () => context.go(RouteNames.managementOfficeAttendance),
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: async.when(
+            loading: () => const Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: AksharaSpacing.s3),
+                Text('Checking attendance…'),
+              ],
+            ),
+            error: (_, __) => Row(
+              children: [
+                Icon(Icons.error_outline, color: context.colors.error),
+                const SizedBox(width: AksharaSpacing.s3),
+                const Expanded(child: Text('Attendance status unavailable')),
+              ],
+            ),
+            data: (rows) {
+              final ok = rows.isEmpty;
+              return Row(
+                children: [
+                  Icon(
+                    ok ? Icons.check_circle_outline : Icons.warning_amber_outlined,
+                    color: ok ? Colors.green : Colors.orange,
+                  ),
+                  const SizedBox(width: AksharaSpacing.s3),
+                  Expanded(
+                    child: Text(
+                      ok
+                          ? 'All classes have submitted attendance today.'
+                          : '${rows.length} ${rows.length == 1 ? 'class has' : 'classes have'} not submitted attendance today.',
+                      style: context.aksharaText.bodyMedium,
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

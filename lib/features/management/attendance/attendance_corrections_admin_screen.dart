@@ -35,6 +35,12 @@ class AttendanceCorrectionsAdminScreen extends ConsumerWidget {
         title: const Text('Attendance corrections'),
         actions: [
           TextButton.icon(
+            onPressed: () =>
+                context.go(RouteNames.managementOfficeAttendance),
+            icon: const Icon(Icons.fact_check_outlined),
+            label: const Text('Office attendance'),
+          ),
+          TextButton.icon(
             onPressed: () => context.go(RouteNames.managementApprovals),
             icon: const Icon(Icons.approval_outlined),
             label: const Text('Approval center'),
