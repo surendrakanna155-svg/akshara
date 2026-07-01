@@ -246,6 +246,29 @@ export async function approvePurchaseOrder(
   };
 }
 
+/**
+ * Rejects a draft purchase order (approval-center reject path). No finance
+ * commitment/posting is created — the PO simply moves to `rejected`. Returns the
+ * PO row, or null when absent; a no-op (returns the row) when it is not a draft.
+ */
+export async function rejectPurchaseOrder(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  purchaseOrderId: string,
+): Promise<PurchaseOrderRow | null> {
+  const po = await getPurchaseOrder(db, organizationId, schoolId, purchaseOrderId);
+  if (!po) return null;
+  if (po.status !== "draft") return po;
+  await db.queryObject(
+    `UPDATE purchase_orders
+        SET status = 'rejected', updated_at = timezone('utc', now())
+      WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+    [purchaseOrderId, organizationId, schoolId],
+  );
+  return await getPurchaseOrder(db, organizationId, schoolId, purchaseOrderId);
+}
+
 export async function receiveGoods(
   db: TenantQueryClient,
   organizationId: string,

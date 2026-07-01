@@ -14,6 +14,13 @@ import {
   updateAttendanceCorrectionStatus,
 } from "../attendance/attendance_correction_repository.ts";
 import { flipHostelLeaveStatus } from "../hostel/hostel_write_handlers.ts";
+import {
+  approvePurchaseOrder,
+  InvalidPurchaseOrderStateError,
+  PurchaseOrderNotFoundError,
+  rejectPurchaseOrder,
+} from "../inventory_finance/inventory_finance_repository.ts";
+import { flipLeaveDecision } from "./leave_decision_effect.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
 import { insertDomainEffect } from "./approval_repository.ts";
 
@@ -105,6 +112,24 @@ export async function applyApprovalTypeHandler(
           ...effectPayload,
           hostelLeaveUpdated: flipped !== null,
         };
+      } else {
+        // Persist the actual leave-status change on the underlying row
+        // (mobile_leave_requests or the HR snapshot_leave snapshot). In API mode
+        // the client adapter side-effect is skipped, so without this the leave
+        // stayed "pending" forever after approval/rejection.
+        const flip = await flipLeaveDecision(
+          db,
+          organizationId,
+          schoolId,
+          request.entity_id,
+          leaveStatus,
+          comment,
+        );
+        effectPayload = {
+          ...effectPayload,
+          leaveRowUpdated: flip.updated,
+          leaveStore: flip.store,
+        };
       }
       break;
     }
@@ -193,13 +218,59 @@ export async function applyApprovalTypeHandler(
       break;
     }
 
-    case "inventoryPo":
+    case "inventoryPo": {
+      const poStatus = effectAction === "approved" ? "approved" : "rejected";
       effectPayload = {
         ...effectPayload,
-        poStatus: effectAction === "approved" ? "approved" : "rejected",
+        poStatus,
         purchaseOrderId: request.entity_id,
       };
+      // Persist the PO decision on the real purchase_orders row. Approve runs the
+      // finance-integrated path (AP commitment + posting); reject just flips the
+      // status. Previously this was audit-only, so an approved PO stayed "draft".
+      try {
+        if (effectAction === "approved" && actorId) {
+          const result = await approvePurchaseOrder(
+            db,
+            organizationId,
+            schoolId,
+            request.entity_id,
+            actorId,
+          );
+          effectPayload = {
+            ...effectPayload,
+            poRowUpdated: true,
+            poStatus: result.purchaseOrder.status,
+            apCommitmentId: result.apCommitmentId,
+            financeIntegrated: true,
+          };
+        } else if (effectAction === "rejected") {
+          const rejected = await rejectPurchaseOrder(
+            db,
+            organizationId,
+            schoolId,
+            request.entity_id,
+          );
+          effectPayload = {
+            ...effectPayload,
+            poRowUpdated: rejected !== null,
+            poStatus: rejected?.status ?? poStatus,
+          };
+        }
+      } catch (error) {
+        // PO absent or no longer a draft (already decided) — keep the audit
+        // effect but flag that the row write was not re-applied.
+        if (
+          error instanceof PurchaseOrderNotFoundError ||
+          error instanceof InvalidPurchaseOrderStateError
+        ) {
+          effectPayload = { ...effectPayload, poRowUpdated: false, poNote: error.message };
+        } else {
+          throw error;
+        }
+      }
       break;
+    }
 
     default:
       effectPayload = {
