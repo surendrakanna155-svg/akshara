@@ -37,6 +37,16 @@ function snakeStr(body: Record<string, unknown>, key: string): string {
   return String(body[key] ?? "");
 }
 
+// ATT-D3 — read an optional ISO date (YYYY-MM-DD) from the body. Returns null
+// when absent or not a plausible ISO date, so a malformed value degrades to a
+// legacy label-only leave rather than a bad INSERT.
+function optionalIsoDate(body: Record<string, unknown>, key: string): string | null {
+  const raw = body[key];
+  if (raw == null) return null;
+  const value = String(raw).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
 async function auditMobileWrite(
   db: Parameters<typeof recordMutationAudit>[0],
   claims: Parameters<typeof recordMutationAudit>[1],
@@ -191,6 +201,9 @@ export async function handleTeacherAttendanceSubmit(
       presentCount: result.counts.present,
       absentCount: result.counts.absent,
       lateCount: result.counts.late,
+      // ATT-D3 — additive; existing clients ignore these extra fields.
+      excusedCount: result.counts.excused,
+      halfDayCount: result.counts.halfDay,
     }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
@@ -223,6 +236,8 @@ export async function handleTeacherLeaveSubmit(
         typeLabel: snakeStr(body, "type_label"),
         fromDateLabel: snakeStr(body, "from_date_label"),
         toDateLabel: snakeStr(body, "to_date_label"),
+        fromDate: optionalIsoDate(body, "from_date"),
+        toDate: optionalIsoDate(body, "to_date"),
         reason: snakeStr(body, "reason"),
       });
       await auditMobileWrite(db, auth.claims, req, "leaveSubmitted", "mobile_leave_request", String(row.id), row);
@@ -263,6 +278,8 @@ export async function handleParentLeaveSubmit(
         typeLabel: snakeStr(body, "type"),
         fromDateLabel: snakeStr(body, "from_date_label"),
         toDateLabel: snakeStr(body, "to_date_label"),
+        fromDate: optionalIsoDate(body, "from_date"),
+        toDate: optionalIsoDate(body, "to_date"),
         reason: snakeStr(body, "reason"),
         hasAttachment: Boolean(body.has_attachment),
         attachmentName: body.attachment_name ? String(body.attachment_name) : null,

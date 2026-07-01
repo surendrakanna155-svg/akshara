@@ -319,6 +319,8 @@ class TeacherMapper {
       presentCount: raw['presentCount'] as int? ?? 0,
       absentCount: raw['absentCount'] as int? ?? 0,
       lateCount: raw['lateCount'] as int? ?? 0,
+      halfDayCount: raw['halfDayCount'] as int? ?? 0,
+      excusedCount: raw['excusedCount'] as int? ?? 0,
     );
   }
 

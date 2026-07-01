@@ -224,6 +224,8 @@ class MockTeacherRepository implements TeacherRepository {
     var present = 0;
     var absent = 0;
     var late = 0;
+    var halfDay = 0;
+    var excused = 0;
     for (final entry in request.entries) {
       switch (entry.mark) {
         case StudentAttendanceMark.present:
@@ -232,6 +234,10 @@ class MockTeacherRepository implements TeacherRepository {
           absent++;
         case StudentAttendanceMark.late:
           late++;
+        case StudentAttendanceMark.halfDay:
+          halfDay++;
+        case StudentAttendanceMark.excused:
+          excused++;
         case StudentAttendanceMark.unmarked:
           break;
       }
@@ -247,6 +253,8 @@ class MockTeacherRepository implements TeacherRepository {
       presentCount: present,
       absentCount: absent,
       lateCount: late,
+      halfDayCount: halfDay,
+      excusedCount: excused,
     );
   }
 

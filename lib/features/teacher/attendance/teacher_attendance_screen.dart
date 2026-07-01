@@ -339,36 +339,71 @@ class _AttendanceKpiRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 88,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: AksharaKpiCard(
-              value: '${data.presentCount}',
-              subtitle: 'Present',
-              accent: KpiAccent.success,
-            ),
+    // Half-day / excused only earn a card once at least one student carries
+    // them, so a plain P/A/L class keeps its clean three-card row.
+    final showSecondaryRow = data.halfDayCount > 0 || data.excusedCount > 0;
+    return Column(
+      children: [
+        SizedBox(
+          height: 88,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: AksharaKpiCard(
+                  value: '${data.presentCount}',
+                  subtitle: 'Present',
+                  accent: KpiAccent.success,
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s2),
+              Expanded(
+                child: AksharaKpiCard(
+                  value: '${data.absentCount}',
+                  subtitle: 'Absent',
+                  accent: KpiAccent.error,
+                ),
+              ),
+              const SizedBox(width: AksharaSpacing.s2),
+              Expanded(
+                child: AksharaKpiCard(
+                  value: '${data.lateCount}',
+                  subtitle: 'Late',
+                  accent: KpiAccent.warning,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AksharaSpacing.s2),
-          Expanded(
-            child: AksharaKpiCard(
-              value: '${data.absentCount}',
-              subtitle: 'Absent',
-              accent: KpiAccent.error,
-            ),
-          ),
-          const SizedBox(width: AksharaSpacing.s2),
-          Expanded(
-            child: AksharaKpiCard(
-              value: '${data.lateCount}',
-              subtitle: 'Late',
-              accent: KpiAccent.warning,
+        ),
+        if (showSecondaryRow) ...[
+          const SizedBox(height: AksharaSpacing.s2),
+          SizedBox(
+            height: 88,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: AksharaKpiCard(
+                    key: QaTestKeys.teacherAttendanceHalfDayKpi,
+                    value: '${data.halfDayCount}',
+                    subtitle: 'Half-day',
+                    accent: KpiAccent.indigo,
+                  ),
+                ),
+                const SizedBox(width: AksharaSpacing.s2),
+                Expanded(
+                  child: AksharaKpiCard(
+                    key: QaTestKeys.teacherAttendanceExcusedKpi,
+                    value: '${data.excusedCount}',
+                    subtitle: 'Excused',
+                    accent: KpiAccent.tertiary,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 }

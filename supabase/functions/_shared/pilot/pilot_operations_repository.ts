@@ -41,16 +41,69 @@ function countMarks(entries: AttendanceMarkEntry[]): {
   present: number;
   absent: number;
   late: number;
+  excused: number;
+  halfDay: number;
 } {
   let present = 0;
   let absent = 0;
   let late = 0;
+  let excused = 0;
+  let halfDay = 0;
   for (const entry of entries) {
     if (entry.mark === "present") present += 1;
     else if (entry.mark === "absent") absent += 1;
     else if (entry.mark === "late") late += 1;
+    else if (entry.mark === "excused") excused += 1;
+    else if (entry.mark === "half_day") halfDay += 1;
   }
-  return { present, absent, late };
+  return { present, absent, late, excused, halfDay };
+}
+
+/** Test-only re-export of the private countMarks (ATT-D3 counting assertions). */
+export const countMarksForTest = countMarks;
+
+/**
+ * ATT-D3 Part B — pure auto-excuse override. Given the marking entries and the
+ * set of student ids that have an APPROVED leave covering the attendance date,
+ * return a NEW entries array where those students' marks are forced to
+ * 'excused'. Kept pure (no DB) so it is unit-testable and so it can run BEFORE
+ * the roster diff / inserts in upsertAttendanceSession WITHOUT touching the
+ * integrity guards. Students already excused are unchanged; excused students
+ * remain in the entries list (they stay on the roster).
+ */
+export function applyApprovedLeaveExcuse(
+  entries: AttendanceMarkEntry[],
+  approvedLeaveStudentIds: ReadonlySet<string>,
+): AttendanceMarkEntry[] {
+  if (approvedLeaveStudentIds.size === 0) return entries;
+  return entries.map((entry) =>
+    approvedLeaveStudentIds.has(entry.studentId) && entry.mark !== "excused"
+      ? { ...entry, mark: "excused" }
+      : entry
+  );
+}
+
+/**
+ * ATT-D3 Part B — the set of student ids with an APPROVED leave whose window
+ * (from_date … to_date) covers TODAY. Legacy label-only leaves (from_date NULL)
+ * are intentionally excluded — they have no machine-readable window so they
+ * cannot auto-excuse. Scoped to the tenant/school under RLS.
+ */
+export async function approvedLeaveStudentIdsForToday(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<Set<string>> {
+  const rows = await db.queryObject<{ student_id: string }>(
+    `SELECT DISTINCT student_id FROM mobile_leave_requests
+      WHERE organization_id = $1 AND school_id = $2
+        AND status = 'approved'
+        AND student_id IS NOT NULL
+        AND from_date IS NOT NULL AND to_date IS NOT NULL
+        AND CURRENT_DATE BETWEEN from_date AND to_date`,
+    [organizationId, schoolId],
+  );
+  return new Set(rows.map((r) => r.student_id));
 }
 
 // ── Attendance integrity guards (owner completion gates #1/#5/#6/#7/#8) ───────
@@ -184,6 +237,22 @@ export async function upsertAttendanceSession(
   // #5 / #8 — holiday / year-closure block (draft and submit).
   await assertAttendanceDayOpen(db, input.organizationId, input.schoolId);
 
+  // ATT-D3 Part B — auto-excuse: on SUBMIT, override the mark to 'excused' for
+  // any student who has an APPROVED leave covering today. This is an ADDITIVE
+  // step applied to the entry marks BEFORE the roster diff and before inserts,
+  // so it does NOT weaken any integrity guard: excused students keep their
+  // studentId (so #6/#7 roster reconciliation still passes), and #1/#5/#8 and
+  // the unique-index insert are untouched below. Draft is left as-marked.
+  let entries = input.entries;
+  if (input.status === "submitted") {
+    const excused = await approvedLeaveStudentIdsForToday(
+      db,
+      input.organizationId,
+      input.schoolId,
+    );
+    entries = applyApprovedLeaveExcuse(entries, excused);
+  }
+
   // #6 / #7 — on SUBMIT, the marked set must exactly match the active roster
   // (when the class resolves to current enrollments). Draft may be partial.
   if (input.status === "submitted") {
@@ -195,7 +264,7 @@ export async function upsertAttendanceSession(
     );
     if (roster.length > 0) {
       const { missing, extra } = diffRoster(
-        input.entries.map((e) => e.studentId),
+        entries.map((e) => e.studentId),
         roster,
       );
       if (missing.length > 0 || extra.length > 0) {
@@ -254,7 +323,7 @@ export async function upsertAttendanceSession(
     await db.queryObject(`DELETE FROM attendance_records WHERE session_id = $1`, [sessionId]);
   }
 
-  for (const entry of input.entries) {
+  for (const entry of entries) {
     await db.queryObject(
       `INSERT INTO attendance_records (
          session_id, organization_id, school_id, student_id, mark
@@ -263,7 +332,7 @@ export async function upsertAttendanceSession(
     );
   }
 
-  return { sessionId, counts: countMarks(input.entries) };
+  return { sessionId, counts: countMarks(entries) };
 }
 
 export async function listGuardianUserIdsForStudent(
@@ -291,6 +360,11 @@ export async function createLeaveRequest(
     typeLabel: string;
     fromDateLabel: string;
     toDateLabel: string;
+    // ATT-D3 Part B — optional machine-readable ISO (YYYY-MM-DD) bounds. When
+    // provided on a leave that is later APPROVED, they let the auto-excuse fire.
+    // Omitted → legacy label-only leave (never auto-excuses).
+    fromDate?: string | null;
+    toDate?: string | null;
     reason: string;
     hasAttachment?: boolean;
     attachmentName?: string | null;
@@ -300,8 +374,8 @@ export async function createLeaveRequest(
     `INSERT INTO mobile_leave_requests (
        organization_id, school_id, requester_user_id, requester_scope,
        student_id, type_label, from_date_label, to_date_label, reason,
-       has_attachment, attachment_name
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       has_attachment, attachment_name, from_date, to_date
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::date,$13::date)
      RETURNING id`,
     [
       input.organizationId,
@@ -315,6 +389,8 @@ export async function createLeaveRequest(
       input.reason,
       input.hasAttachment ?? false,
       input.attachmentName ?? null,
+      input.fromDate ?? null,
+      input.toDate ?? null,
     ],
   );
   const id = rows[0]!.id;
@@ -601,10 +677,13 @@ export async function listTimetableSlots(
   }));
 }
 
+// Map a stored mark to the parent/student calendar status (AttendanceDayStatus
+// on the client). excused + half_day now render as their own distinct cells.
 function markToStatus(mark: string): string {
   if (mark === "absent") return "absent";
   if (mark === "late") return "late";
-  if (mark === "excused") return "present";
+  if (mark === "excused") return "excused";
+  if (mark === "half_day") return "halfDay";
   return "present";
 }
 
@@ -675,14 +754,24 @@ export async function overlayAttendanceSnapshotFromRecords(
   let late = 0;
   const recentLogs: Record<string, unknown>[] = [];
   for (const row of rows) {
-    if (row.mark === "present" || row.mark === "excused") present += 1;
+    // excused/half_day count on the present side so an authorised leave or a
+    // partial day never reads as an absence in the attendance percentage.
+    if (
+      row.mark === "present" || row.mark === "excused" || row.mark === "half_day"
+    ) present += 1;
     else if (row.mark === "absent") absent += 1;
     else if (row.mark === "late") late += 1;
     const date = row.session_date.slice(0, 10);
     recentLogs.push({
       date,
       status: markToStatus(row.mark),
-      detail: row.mark === "absent" ? "Marked absent" : "Marked present",
+      detail: row.mark === "absent"
+        ? "Marked absent"
+        : row.mark === "excused"
+        ? "Excused"
+        : row.mark === "half_day"
+        ? "Half day"
+        : "Marked present",
       detailTitle: date,
       detailBody: `Attendance: ${row.mark}`,
     });
@@ -1483,10 +1572,15 @@ async function listTeacherClassLabels(
   return rows.map((r) => r.class_label);
 }
 
+// Map a stored attendance mark to the client-facing status string. Wire values
+// mirror the DB marks so the Flutter StudentAttendanceMark codec round-trips:
+// present/absent/late/excused/half_day. Anything unknown falls back to present.
 function markToAttendanceStatus(mark: string): string {
   if (mark === "absent") return "absent";
   if (mark === "late") return "late";
-  return "present"; // present or excused
+  if (mark === "excused") return "excused";
+  if (mark === "half_day") return "half_day";
+  return "present";
 }
 
 // --- TEACH-1: attendance class list (GET /teacher/attendance/classes) ---

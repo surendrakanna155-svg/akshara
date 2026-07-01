@@ -310,6 +310,19 @@ abstract final class QaTestKeys {
   static const teacherAttendanceFillRemainingButton =
       ValueKey<String>('teacher_attendance_fill_remaining_button');
 
+  // ATT-D3 — half-day + excused summary cards and per-student mark chips.
+  static const teacherAttendanceHalfDayKpi =
+      ValueKey<String>('teacher_attendance_half_day_kpi');
+
+  static const teacherAttendanceExcusedKpi =
+      ValueKey<String>('teacher_attendance_excused_kpi');
+
+  static ValueKey<String> teacherAttendanceMarkChip(
+    String studentId,
+    String mark,
+  ) =>
+      ValueKey<String>('teacher_attendance_mark_${mark}_$studentId');
+
   // --- Finance E2E journey ---
   static ValueKey<String> financeHandoffQueueRow(String studentName) =>
       ValueKey<String>(

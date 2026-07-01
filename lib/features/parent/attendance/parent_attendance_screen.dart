@@ -216,6 +216,8 @@ class _ParentAttendanceScreenState extends ConsumerState<ParentAttendanceScreen>
       AttendanceDayStatus.present => 'Marked on time',
       AttendanceDayStatus.absent => 'No mark by 10:00 AM',
       AttendanceDayStatus.late => 'Marked late',
+      AttendanceDayStatus.halfDay => 'Half-day attendance',
+      AttendanceDayStatus.excused => 'Excused — approved leave',
       AttendanceDayStatus.holiday => 'Holiday',
       _ => '',
     };

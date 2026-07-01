@@ -240,6 +240,8 @@ class _StudentAttendanceScreenState
       AttendanceDayStatus.present => 'Present for all sessions',
       AttendanceDayStatus.absent => 'Marked absent',
       AttendanceDayStatus.late => 'Late arrival recorded',
+      AttendanceDayStatus.halfDay => 'Half-day attendance',
+      AttendanceDayStatus.excused => 'Excused — approved leave',
       AttendanceDayStatus.holiday => 'School holiday',
       _ => 'No record',
     };

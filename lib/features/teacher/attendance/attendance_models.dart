@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Student attendance mark for TA-02.
-enum StudentAttendanceMark { present, absent, late, unmarked }
+enum StudentAttendanceMark { present, absent, late, halfDay, excused, unmarked }
 
 extension StudentAttendanceMarkX on StudentAttendanceMark {
   String get label {
@@ -9,7 +9,21 @@ extension StudentAttendanceMarkX on StudentAttendanceMark {
       StudentAttendanceMark.present => 'Present',
       StudentAttendanceMark.absent => 'Absent',
       StudentAttendanceMark.late => 'Late',
+      StudentAttendanceMark.halfDay => 'Half-day',
+      StudentAttendanceMark.excused => 'Excused',
       StudentAttendanceMark.unmarked => 'Unmarked',
+    };
+  }
+
+  /// Compact chip glyph used in the marking roster.
+  String get shortLabel {
+    return switch (this) {
+      StudentAttendanceMark.present => 'P',
+      StudentAttendanceMark.absent => 'A',
+      StudentAttendanceMark.late => 'L',
+      StudentAttendanceMark.halfDay => 'H',
+      StudentAttendanceMark.excused => 'E',
+      StudentAttendanceMark.unmarked => '—',
     };
   }
 }
@@ -84,6 +98,10 @@ class TeacherAttendanceData {
       students.where((s) => s.mark == StudentAttendanceMark.absent).length;
   int get lateCount =>
       students.where((s) => s.mark == StudentAttendanceMark.late).length;
+  int get halfDayCount =>
+      students.where((s) => s.mark == StudentAttendanceMark.halfDay).length;
+  int get excusedCount =>
+      students.where((s) => s.mark == StudentAttendanceMark.excused).length;
   int get unmarkedCount =>
       students.where((s) => s.mark == StudentAttendanceMark.unmarked).length;
 }

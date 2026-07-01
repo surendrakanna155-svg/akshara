@@ -7,6 +7,8 @@ enum AttendanceDayStatus {
   present,
   absent,
   late,
+  halfDay,
+  excused,
   holiday,
   empty,
   future,
@@ -35,6 +37,16 @@ extension AttendanceDayStatusStyle on AttendanceDayStatus {
           label: 'Late',
           background: ext.warningContainer,
           foreground: ext.warning,
+        ),
+      AttendanceDayStatus.halfDay => (
+          label: 'Half-day',
+          background: ext.indigoContainer,
+          foreground: ext.indigo,
+        ),
+      AttendanceDayStatus.excused => (
+          label: 'Excused',
+          background: ext.tertiaryContainer,
+          foreground: ext.tertiary,
         ),
       AttendanceDayStatus.holiday => (
           label: 'Holiday',
@@ -451,6 +463,8 @@ class AttendanceMonthData {
       AttendanceDayStatus.late => markedAt != null && markedAt.isNotEmpty
           ? 'Late — marked at $markedAt'
           : 'Late — marked after school start time',
+      AttendanceDayStatus.halfDay => 'Half-day — attended part of the day',
+      AttendanceDayStatus.excused => 'Excused — approved leave on record',
       AttendanceDayStatus.holiday => 'Holiday — no attendance required',
       AttendanceDayStatus.future => 'Future date — attendance not yet recorded',
       AttendanceDayStatus.empty => 'No attendance data',

@@ -57,6 +57,8 @@ class TeacherAttendanceSubmitResult {
     required this.presentCount,
     required this.absentCount,
     required this.lateCount,
+    this.halfDayCount = 0,
+    this.excusedCount = 0,
   });
 
   final String classId;
@@ -64,6 +66,8 @@ class TeacherAttendanceSubmitResult {
   final int presentCount;
   final int absentCount;
   final int lateCount;
+  final int halfDayCount;
+  final int excusedCount;
 }
 
 /// Domain request to review a homework submission.

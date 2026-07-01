@@ -170,6 +170,8 @@ class _CalendarDayCell extends StatelessWidget {
       AttendanceDayStatus.present => 'present',
       AttendanceDayStatus.absent => 'absent',
       AttendanceDayStatus.late => 'late',
+      AttendanceDayStatus.halfDay => 'half-day',
+      AttendanceDayStatus.excused => 'excused',
       AttendanceDayStatus.holiday => 'holiday',
       AttendanceDayStatus.future => 'future',
       AttendanceDayStatus.empty => 'empty',
@@ -194,6 +196,14 @@ class _CalendarDayCell extends StatelessWidget {
         ),
       AttendanceDayStatus.late => (
           background: ext.warningContainer,
+          foreground: colors.onSurface,
+        ),
+      AttendanceDayStatus.halfDay => (
+          background: ext.indigoContainer,
+          foreground: colors.onSurface,
+        ),
+      AttendanceDayStatus.excused => (
+          background: ext.tertiaryContainer,
           foreground: colors.onSurface,
         ),
       AttendanceDayStatus.holiday => (
@@ -243,6 +253,18 @@ class _AttendanceLegend extends StatelessWidget {
             _LegendItem(
               label: 'Late',
               dotColor: ext.warning,
+              textStyle: text.bodySmall,
+            ),
+            const SizedBox(width: AksharaSpacing.s3),
+            _LegendItem(
+              label: 'Half-day',
+              dotColor: ext.indigo,
+              textStyle: text.bodySmall,
+            ),
+            const SizedBox(width: AksharaSpacing.s3),
+            _LegendItem(
+              label: 'Excused',
+              dotColor: ext.tertiary,
               textStyle: text.bodySmall,
             ),
             const SizedBox(width: AksharaSpacing.s3),

@@ -441,6 +441,7 @@ class _MarkBadge extends StatelessWidget {
       'present' => Colors.green,
       'absent' => Colors.red,
       'late' => Colors.orange,
+      'half_day' => Colors.indigo,
       'excused' => Colors.blueGrey,
       _ => Colors.grey,
     };

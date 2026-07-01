@@ -185,6 +185,12 @@ class TeacherRemoteDataSource {
         'lateCount': request.entries
             .where((e) => e.mark == StudentAttendanceMark.late)
             .length,
+        'halfDayCount': request.entries
+            .where((e) => e.mark == StudentAttendanceMark.halfDay)
+            .length,
+        'excusedCount': request.entries
+            .where((e) => e.mark == StudentAttendanceMark.excused)
+            .length,
       },
     );
     return TeacherAttendanceSubmitResponseDto.fromJson(data);

@@ -8,15 +8,22 @@ import '../../../../../shared/semantic_status.dart';
 
 /// Parses Teacher mobile API enum strings and presentation helpers.
 abstract final class TeacherEnumCodec {
+  /// Parse the wire mark string. The backend persists/returns snake_case marks
+  /// (present/absent/late/excused/half_day, matching the attendance_records
+  /// CHECK), so `half_day` is decoded explicitly; the rest match enum `.name`.
   static StudentAttendanceMark parseStudentAttendanceMark(String? value) {
+    if (value == 'half_day') return StudentAttendanceMark.halfDay;
     return StudentAttendanceMark.values.firstWhere(
       (mark) => mark.name == value,
       orElse: () => StudentAttendanceMark.unmarked,
     );
   }
 
+  /// Serialize to the wire mark string. `half_day` is emitted in snake_case so
+  /// the value satisfies the attendance_records CHECK constraint; the rest use
+  /// enum `.name`.
   static String studentAttendanceMarkToApi(StudentAttendanceMark mark) =>
-      mark.name;
+      mark == StudentAttendanceMark.halfDay ? 'half_day' : mark.name;
 
   static HomeworkReviewStatus parseHomeworkReviewStatus(String? value) {
     return HomeworkReviewStatus.values.firstWhere(
