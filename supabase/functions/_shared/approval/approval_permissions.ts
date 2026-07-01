@@ -6,6 +6,7 @@ const APPROVAL_PERMISSION_BY_TYPE: Record<F2ApprovalType, string> = {
   staffLeave: "approveStaffLeave",
   attendanceCorrection: "approveAttendanceCorrection",
   feeConcession: "approveFeeConcession",
+  feeStructure: "approveFeeStructure",
   refund: "approveRefunds",
   inventoryPo: "approvePurchaseOrder",
 };

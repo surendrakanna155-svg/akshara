@@ -13,6 +13,8 @@ import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.t
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { applyApprovalTypeHandler } from "./approval_type_handlers.ts";
 import { flipLeaveDecision } from "./leave_decision_effect.ts";
+import { isF2ApprovalType } from "./approval_types.ts";
+import { approvalPermissionForType } from "./approval_permissions.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
@@ -74,6 +76,10 @@ class SpyDb {
         currency: "INR",
         created_at: "2026-07-01T00:00:00Z",
       }] as unknown as T[]);
+    }
+    if (sql.includes("finance_fee_structures")) {
+      // setFeeStructureStatus RETURNING * → reflect the status arg ($4).
+      return Promise.resolve([{ id: args[0], status: args[3] }] as unknown as T[]);
     }
     // AP-commitment / posting inserts, snapshot replace/insert, domain-effect insert.
     return Promise.resolve([{ id: "gen_1", payload: {} }] as unknown as T[]);
@@ -195,6 +201,44 @@ Deno.test("applyApprovalTypeHandler inventoryPo approve on a non-draft PO → au
   );
   assertEquals(payload.poRowUpdated, false);
   assert(typeof payload.poNote === "string");
+});
+
+Deno.test("feeStructure is now a recognised approval type with an approve permission", () => {
+  assertEquals(isF2ApprovalType("feeStructure"), true);
+  assertEquals(approvalPermissionForType("feeStructure"), "approveFeeStructure");
+});
+
+Deno.test("applyApprovalTypeHandler feeStructure approve → activates the fee_structures row", async () => {
+  const spy = new SpyDb();
+  const payload = await applyApprovalTypeHandler(
+    db(spy),
+    ORG,
+    SCHOOL,
+    approval({ type: "feeStructure", entity_type: "fee_structure", entity_id: "fs_1" }),
+    "approved",
+    undefined,
+    ACTOR,
+  );
+  assertEquals(payload.feeStructureUpdated, true);
+  assertEquals(payload.feeStructureStatus, "active");
+  const upd = spy.captured("UPDATE finance_fee_structures");
+  assertEquals(upd.length, 1);
+  assertEquals(upd[0].args[3], "active");
+});
+
+Deno.test("applyApprovalTypeHandler feeStructure reject → leaves it inactive", async () => {
+  const spy = new SpyDb();
+  const payload = await applyApprovalTypeHandler(
+    db(spy),
+    ORG,
+    SCHOOL,
+    approval({ type: "feeStructure", entity_type: "fee_structure", entity_id: "fs_1" }),
+    "rejected",
+    undefined,
+    ACTOR,
+  );
+  assertEquals(payload.feeStructureStatus, "inactive");
+  assertEquals(spy.captured("UPDATE finance_fee_structures")[0].args[3], "inactive");
 });
 
 Deno.test("applyApprovalTypeHandler always records the domain effect (audit) alongside the row write", async () => {

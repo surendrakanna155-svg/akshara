@@ -42,6 +42,7 @@ export const F2_APPROVAL_TYPES = [
   "staffLeave",
   "attendanceCorrection",
   "feeConcession",
+  "feeStructure",
   "refund",
   "inventoryPo",
 ] as const;

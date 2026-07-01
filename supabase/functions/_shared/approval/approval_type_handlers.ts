@@ -21,6 +21,7 @@ import {
   rejectPurchaseOrder,
 } from "../inventory_finance/inventory_finance_repository.ts";
 import { flipLeaveDecision } from "./leave_decision_effect.ts";
+import { setFeeStructureStatus } from "../finance/finance_structures_repository.ts";
 import type { ApprovalRequestRow } from "./approval_types.ts";
 import { insertDomainEffect } from "./approval_repository.ts";
 
@@ -172,6 +173,28 @@ export async function applyApprovalTypeHandler(
         concessionId: request.entity_id,
       };
       break;
+
+    case "feeStructure": {
+      // Fee structures are created `inactive` when approval is required; approving
+      // must flip the real finance_fee_structures row to `active` (reject leaves
+      // it inactive). Previously feeStructure was not even a recognised approval
+      // type, so this decision never persisted.
+      const activate = effectAction === "approved";
+      const row = await setFeeStructureStatus(
+        db,
+        organizationId,
+        schoolId,
+        request.entity_id,
+        activate ? "active" : "inactive",
+      );
+      effectPayload = {
+        ...effectPayload,
+        feeStructureId: request.entity_id,
+        feeStructureStatus: row?.status ?? (activate ? "active" : "inactive"),
+        feeStructureUpdated: row !== null,
+      };
+      break;
+    }
 
     case "refund": {
       const refundId = String(request.payload.refundId ?? request.entity_id);

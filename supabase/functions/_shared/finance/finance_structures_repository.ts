@@ -161,6 +161,29 @@ export async function getFeeStructure(
   return { structure, items };
 }
 
+/**
+ * Sets a fee structure's status (approval-center decision path). Fee structures
+ * are created `inactive` when approval is required and only go `active` once the
+ * decision is approved; reject leaves them `inactive`. Returns the row, or null
+ * when absent. Idempotent.
+ */
+export async function setFeeStructureStatus(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  structureId: string,
+  status: "active" | "inactive",
+): Promise<FinanceFeeStructureRow | null> {
+  const rows = await db.queryObject<FinanceFeeStructureRow>(
+    `UPDATE finance_fee_structures
+        SET status = $4, updated_at = timezone('utc', now())
+      WHERE id = $1 AND organization_id = $2 AND school_id = $3
+      RETURNING *`,
+    [structureId, organizationId, schoolId, status],
+  );
+  return rows[0] ?? null;
+}
+
 export async function createFeeStructure(
   db: TenantQueryClient,
   organizationId: string,
