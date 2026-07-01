@@ -27,9 +27,13 @@ Run:  python3 scripts/qa/live_cert_multi_school_concurrent.py
 The live SSH ControlMaster socket (~/.ssh/akshara-cm.sock) must be open. If the
 socket or the API is unreachable the script ERRORS in setup — it never greens.
 """
-import json, os, time, subprocess, threading, urllib.request, urllib.error
+import json, os, time, uuid, subprocess, threading, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://akshara.veloraunisexsalon.com")
+# Isolated Track-B run: point API_BASE_URL at the test edge, AKSHARA_DB_NAME at
+# akshara_tenant_test, EDGE_CONTAINER at akshara-edge-test (never touches prod).
+DB_NAME = os.environ.get("AKSHARA_DB_NAME", "akshara_db")
+EDGE_CONTAINER = os.environ.get("EDGE_CONTAINER", "akshara-edge")
 ORG = "a1000000-0000-4000-8000-000000000001"          # pilot org (Professional plan)
 ADMIN_UID = "a3000000-0000-4000-8000-000000000001"     # real users.id (FK-safe sub)
 SOCK = os.path.expanduser("~/.ssh/akshara-cm.sock")
@@ -84,7 +88,7 @@ def db(sql):
     """psql on the pilot Postgres via the ssh ControlMaster socket.
     Mirrors scripts/qa/live_cert_pilot_simulation.py::db."""
     out, _ = ssh(
-        'docker exec akshara-postgres psql -U supabase_admin -d akshara_db -tAc "'
+        'docker exec akshara-postgres psql -U supabase_admin -d ' + DB_NAME + ' -tAc "'
         + sql.replace('"', '\\"') + '"')
     return out.strip()
 
@@ -129,7 +133,7 @@ const t = await new SignJWT({
   primary_role: "schoolAdmin",
   permissions: JSON.parse(Deno.env.get("PERMS")), permissions_version: 1,
   scope: Deno.env.get("SCOPE"), school_group_id: null, student_id: null,
-  child_ids: [], session_id: "cert-multi-concurrent",
+  child_ids: [], session_id: Deno.env.get("SESSIONID"),
 }).setProtectedHeader({ alg: "HS256", typ: "JWT" })
   .setSubject(Deno.env.get("SUB")).setIssuedAt()
   .setExpirationTime(Math.floor(Date.now() / 1000) + 3600).sign(secret);
@@ -141,9 +145,14 @@ PERMS = ["viewSchoolConfiguration", "manageSchoolConfiguration",
 
 
 def mint(school_id, scope="school", sub=ADMIN_UID):
-    env = (f'-e ORG={ORG} -e SCOPE={scope} -e SCHOOLID={school_id} -e SUB={sub} '
+    # A real active session must back the token — session_validation rejects a
+    # token whose session_id is not an active `sessions` row. Insert one, sign with it.
+    sid = str(uuid.uuid4())
+    db(f"insert into sessions (id, user_id, tenant_id, context_school_id) "
+       f"values ('{sid}','{sub}','{ORG}','{school_id}') on conflict (id) do nothing")
+    env = (f'-e ORG={ORG} -e SCOPE={scope} -e SCHOOLID={school_id} -e SUB={sub} -e SESSIONID={sid} '
            f"-e PERMS='{json.dumps(PERMS)}'")
-    out, _ = ssh(f"docker exec -i {env} akshara-edge deno run -A -", stdin=MINT)
+    out, _ = ssh(f"docker exec -i {env} {EDGE_CONTAINER} deno run -A -", stdin=MINT)
     tok = out.splitlines()[-1] if out else ""
     return tok if tok.count(".") == 2 else None
 
@@ -206,10 +215,10 @@ def school_journey(idx, school_id):
 
     # 3. WRITE a uniquely-marked SIS student under this school (the isolation seed)
     s, b = http("POST", "/sis/students", tok,
-                {"fullName": marker, "admissionNumber": marker,
+                {"displayName": marker, "admissionNumber": marker,
                  "classLabel": "Grade 1", "sectionLabel": "A", "academicYear": "2026-27",
                  "gender": "other"}, school=school_id)
-    created = s in (200, 201) and bool(data(b).get("id") or data(b).get("studentId"))
+    created = s in (200, 201) and bool((data(b).get("student") or {}).get("id") or data(b).get("id") or data(b).get("studentId"))
     with journey_lock:
         journey[school_id]["created"] = created
     rec(f"{tag}.sis-write", "PASS" if created else "FAIL", f"HTTP {s} marker={marker}")
@@ -249,8 +258,8 @@ try:
         marker = j.get("marker")
         if not marker:
             continue
-        own = db(f"select count(*) from students where school_id='{sch}' and full_name='{marker}'")
-        elsewhere = db(f"select count(*) from students where school_id<>'{sch}' and full_name='{marker}'")
+        own = db(f"select count(*) from students where school_id='{sch}' and display_name='{marker}'")
+        elsewhere = db(f"select count(*) from students where school_id<>'{sch}' and display_name='{marker}'")
         rec(f"R-003.{j.get('tag')}.row-only-under-own-school",
             "PASS" if own == "1" and elsewhere == "0" else "FAIL",
             f"own={own} elsewhere={elsewhere}")
@@ -263,7 +272,7 @@ try:
         if not tok:
             continue
         s, b = http("GET", "/sis/students", tok, school=sch)
-        names = {str(x.get("fullName") or x.get("full_name") or "") for x in items(b)}
+        names = {str(x.get("displayName") or x.get("fullName") or x.get("full_name") or "") for x in items(b)}
         sees_own = j.get("marker") in names
         others = [journey[o]["marker"] for o in SCHOOLS if o != sch and journey.get(o, {}).get("marker")]
         bleed = [m for m in others if m in names]
@@ -277,7 +286,7 @@ try:
     if N >= 2 and journey.get(SCHOOLS[0], {}).get("tok"):
         tok1 = journey[SCHOOLS[0]]["tok"]
         s, b = http("GET", "/sis/students", tok1, school=SCHOOLS[1])
-        names = {str(x.get("fullName") or x.get("full_name") or "") for x in items(b)}
+        names = {str(x.get("displayName") or x.get("fullName") or x.get("full_name") or "") for x in items(b)}
         leaked = journey.get(SCHOOLS[1], {}).get("marker") in names
         # Authorized outcome: 403 (scope mismatch) OR a 200 that contains NONE of
         # school 2's rows. A 200 that LEAKS school 2's marker is the failure.
@@ -288,6 +297,7 @@ try:
 finally:
     print("\n-- teardown --")
     for sch in SCHOOLS:
+        db(f"delete from sessions where context_school_id='{sch}'")
         db(f"delete from students where school_id='{sch}'")
         db(f"delete from school_membership_roles where school_membership_id in "
            f"(select id from school_memberships where school_id='{sch}')")
