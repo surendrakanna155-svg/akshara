@@ -3,6 +3,21 @@
 One line per `/eos` run. Newest at the bottom. The EOS appends here after every
 evaluation; reports referenced below live in this same directory.
 
+> ## 🔒 Mandatory pre-pilot sequence (owner-set 2026-07-01)
+> After EVERY module + roadmap phase is implemented, run this exact sequence — the
+> **Global Red Team Audit is a hard gate before any Pilot School Simulation**:
+> 1. Complete all roadmap phases (all modules + buildable roadmap gaps).
+> 2. **Global Red Team Audit** — audit every module INDEPENDENTLY (adversarial).
+> 3. Generate a SEPARATE gap report per module.
+> 4. Produce a CONSOLIDATED remediation roadmap.
+> 5. Fix ALL identified gaps.
+> 6. Re-run verification (EOS gate + full suites).
+> 7. Pilot School Simulation.
+> 8. Production Certification.
+>
+> Do NOT start the Red Team Audit until step 1 is fully complete. The bar it applies
+> to every module = the depth of the attendance integrity gates (#1–#8).
+
 | Date | Scope | Gate verdict | Open P0 / P1 | Report |
 |------|-------|--------------|--------------|--------|
 | 2026-06-28 | Data Reliability Platform — Phase 0b (integration + live deploy) | **PASS** (clean) | 0 / 0 | [EOS_DATA_RELIABILITY_PLATFORM_PHASE0B_REPORT.md](EOS_DATA_RELIABILITY_PLATFORM_PHASE0B_REPORT.md) |
