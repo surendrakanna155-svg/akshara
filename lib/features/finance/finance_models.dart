@@ -645,6 +645,117 @@ class DefaultersDashboardData {
   final String aiActionLabel;
 }
 
+/// FIN-R3 — promise-to-pay commitment status.
+enum PromiseToPayStatus { pending, kept, broken, cancelled }
+
+/// FIN-R4 — recovery contact channel.
+enum RecoveryChannel { call, whatsapp, sms, visit, email, other }
+
+/// FIN-R4 — outcome of a recovery contact attempt.
+enum RecoveryOutcome {
+  reached,
+  noAnswer,
+  promised,
+  refused,
+  wrongNumber,
+  partialPaid,
+  other,
+}
+
+/// FIN-R4 — a logged recovery contact attempt returned by the backend.
+@immutable
+class RecoveryContact {
+  const RecoveryContact({
+    required this.id,
+    required this.studentId,
+    required this.channel,
+    required this.outcome,
+    required this.notes,
+    required this.contactedBy,
+    required this.timestamp,
+  });
+
+  final String id;
+  final String studentId;
+  final String channel;
+  final String outcome;
+  final String notes;
+  final String contactedBy;
+  final String timestamp;
+}
+
+/// FIN-R3 — a student's promise to pay by a given date.
+@immutable
+class PromiseToPay {
+  const PromiseToPay({
+    required this.id,
+    required this.studentId,
+    required this.studentName,
+    required this.amount,
+    required this.promiseDate,
+    required this.status,
+    required this.notes,
+    required this.createdAt,
+    this.resolvedAt = '',
+  });
+
+  final String id;
+  final String studentId;
+  final String studentName;
+  final String amount;
+  final String promiseDate;
+  final PromiseToPayStatus status;
+  final String notes;
+  final String createdAt;
+  final String resolvedAt;
+}
+
+/// FIN-R5 — per-collector recovery performance for the current period.
+@immutable
+class CollectorPerformance {
+  const CollectorPerformance({
+    required this.collectorId,
+    required this.collectorName,
+    required this.contactsMade,
+    required this.promisesObtained,
+    required this.collectionsCount,
+    required this.amountRecovered,
+  });
+
+  final String collectorId;
+  final String collectorName;
+  final int contactsMade;
+  final int promisesObtained;
+  final int collectionsCount;
+  final String amountRecovered;
+}
+
+/// FIN-R1/R5 — fee-recovery CRM dashboard aggregates.
+@immutable
+class RecoveryDashboardData {
+  const RecoveryDashboardData({
+    required this.period,
+    required this.ptpPending,
+    required this.ptpDueToday,
+    required this.ptpOverdue,
+    required this.ptpKept,
+    required this.ptpBroken,
+    required this.contactsThisMonth,
+    required this.recoveredThisMonth,
+    required this.collectorPerformance,
+  });
+
+  final String period;
+  final int ptpPending;
+  final int ptpDueToday;
+  final int ptpOverdue;
+  final int ptpKept;
+  final int ptpBroken;
+  final int contactsThisMonth;
+  final String recoveredThisMonth;
+  final List<CollectorPerformance> collectorPerformance;
+}
+
 @immutable
 class RefundRequest {
   const RefundRequest({

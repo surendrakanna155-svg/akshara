@@ -157,6 +157,24 @@ abstract final class QaTestKeys {
   static const financeCreateFeeStructureSubmitButton =
       ValueKey<String>('finance_create_fee_structure_submit_button');
 
+  // FIN-R1..R5 — fee-recovery CRM.
+  static ValueKey<String> financeLogContactButton(String defaulterId) =>
+      ValueKey<String>('finance_log_contact_$defaulterId');
+  static const financeLogContactSubmitButton =
+      ValueKey<String>('finance_log_contact_submit_button');
+  static const financeLogContactSuccessSnackbar =
+      ValueKey<String>('finance_log_contact_success_snackbar');
+  static ValueKey<String> financePromiseToPayButton(String defaulterId) =>
+      ValueKey<String>('finance_promise_to_pay_$defaulterId');
+  static const financePromiseToPaySubmitButton =
+      ValueKey<String>('finance_promise_to_pay_submit_button');
+  static const financePromiseToPaySuccessSnackbar =
+      ValueKey<String>('finance_promise_to_pay_success_snackbar');
+  static ValueKey<String> financeResolvePromiseButton(String promiseId) =>
+      ValueKey<String>('finance_resolve_promise_$promiseId');
+  static const financeExportClassDuesButton =
+      ValueKey<String>('finance_export_class_dues_button');
+
   static const teacherAttendanceCorrectionButton =
       ValueKey<String>('teacher_attendance_correction_button');
   static const teacherAttendanceCorrectionSubmitButton =

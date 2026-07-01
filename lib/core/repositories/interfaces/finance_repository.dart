@@ -176,4 +176,35 @@ abstract class FinanceRepository {
 
   Future<FinanceExecutiveData> getFinanceExecutiveDashboard(
       {required RepositoryQuery query});
+
+  // ── FIN-R1..R5: fee-recovery CRM ───────────────────────────────────────────
+  Future<RecoveryContact> logRecoveryContact({
+    required RepositoryQuery query,
+    required LogRecoveryContactRequest request,
+  });
+
+  Future<List<RecoveryContact>> listRecoveryContacts({
+    required RepositoryQuery query,
+    required String studentId,
+  });
+
+  Future<PromiseToPay> createPromiseToPay({
+    required RepositoryQuery query,
+    required CreatePromiseToPayRequest request,
+  });
+
+  Future<List<PromiseToPay>> listPromisesToPay({
+    required RepositoryQuery query,
+    PromiseToPayStatus? status,
+  });
+
+  Future<PromiseToPay> resolvePromiseToPay({
+    required RepositoryQuery query,
+    required String promiseId,
+    required ResolvePromiseToPayRequest request,
+  });
+
+  Future<RecoveryDashboardData> getRecoveryDashboard({
+    required RepositoryQuery query,
+  });
 }

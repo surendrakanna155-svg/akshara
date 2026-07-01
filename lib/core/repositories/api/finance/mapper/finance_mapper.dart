@@ -15,6 +15,7 @@ import '../dto/finance_reports_dto.dart';
 import '../dto/finance_settings_dto.dart';
 import '../dto/finance_student_accounts_dto.dart';
 import '../dto/qr_payment_session_dto.dart';
+import '../dto/finance_recovery_dto.dart';
 import '../dto/scholarship_dto.dart';
 import '../../../../../features/finance/finance_models.dart';
 
@@ -378,6 +379,72 @@ class FinanceMapper {
           _mapDefaulters(raw['defaulters'] as List<dynamic>? ?? const []),
       aiInsight: raw['aiInsight'] as String? ?? '',
       aiActionLabel: raw['aiActionLabel'] as String? ?? '',
+    );
+  }
+
+  // ── FIN-R1..R5: fee-recovery CRM ──────────────────────────────────────────
+  List<RecoveryContact> toRecoveryContacts(RecoveryContactsResponseDto dto) {
+    return [for (final item in dto.items) toRecoveryContact(item)];
+  }
+
+  RecoveryContact toRecoveryContact(RecoveryContactDto dto) {
+    final raw = dto.raw;
+    return RecoveryContact(
+      id: raw['id'] as String? ?? '',
+      studentId: raw['studentId'] as String? ?? '',
+      channel: raw['channel'] as String? ?? '',
+      outcome: raw['outcome'] as String? ?? '',
+      notes: raw['notes'] as String? ?? '',
+      contactedBy: raw['contactedBy'] as String? ?? '',
+      timestamp: raw['timestamp'] as String? ?? '',
+    );
+  }
+
+  List<PromiseToPay> toPromisesToPay(PromisesToPayResponseDto dto) {
+    return [for (final item in dto.items) toPromiseToPay(item)];
+  }
+
+  PromiseToPay toPromiseToPay(PromiseToPayDto dto) {
+    final raw = dto.raw;
+    return PromiseToPay(
+      id: raw['id'] as String? ?? '',
+      studentId: raw['studentId'] as String? ?? '',
+      studentName: raw['studentName'] as String? ?? '',
+      amount: raw['amount'] as String? ?? '',
+      promiseDate: raw['promiseDate'] as String? ?? '',
+      status: FinanceEnumCodec.parsePromiseToPayStatus(raw['status'] as String?),
+      notes: raw['notes'] as String? ?? '',
+      createdAt: raw['createdAt'] as String? ?? '',
+      resolvedAt: raw['resolvedAt'] as String? ?? '',
+    );
+  }
+
+  RecoveryDashboardData toRecoveryDashboard(RecoveryDashboardDto dto) {
+    final raw = dto.raw;
+    return RecoveryDashboardData(
+      period: raw['period'] as String? ?? '',
+      ptpPending: (raw['ptpPending'] as num?)?.toInt() ?? 0,
+      ptpDueToday: (raw['ptpDueToday'] as num?)?.toInt() ?? 0,
+      ptpOverdue: (raw['ptpOverdue'] as num?)?.toInt() ?? 0,
+      ptpKept: (raw['ptpKept'] as num?)?.toInt() ?? 0,
+      ptpBroken: (raw['ptpBroken'] as num?)?.toInt() ?? 0,
+      contactsThisMonth: (raw['contactsThisMonth'] as num?)?.toInt() ?? 0,
+      recoveredThisMonth: raw['recoveredThisMonth']?.toString() ?? '',
+      collectorPerformance: [
+        for (final item
+            in raw['collectorPerformance'] as List<dynamic>? ?? const [])
+          if (item is Map<String, dynamic>)
+            CollectorPerformance(
+              collectorId: item['collectorId'] as String? ?? '',
+              collectorName: item['collectorName'] as String? ?? '',
+              contactsMade: (item['contactsMade'] as num?)?.toInt() ?? 0,
+              promisesObtained:
+                  (item['promisesObtained'] as num?)?.toInt() ?? 0,
+              collectionsCount:
+                  (item['collectionsCount'] as num?)?.toInt() ?? 0,
+              amountRecovered: item['amountRecovered']?.toString() ?? '',
+            ),
+      ],
     );
   }
 

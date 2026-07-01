@@ -12,6 +12,7 @@ import 'package:akshara_erp/core/repositories/api/finance/dto/finance_settings_d
 import 'package:akshara_erp/core/repositories/api/finance/dto/finance_student_accounts_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/offline_payment_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/dto/qr_payment_session_dto.dart';
+import 'package:akshara_erp/core/repositories/api/finance/dto/finance_recovery_dto.dart';
 import 'package:akshara_erp/core/repositories/api/finance/mapper/finance_mapper.dart';
 import 'package:akshara_erp/core/repositories/api/finance/remote/finance_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/interfaces/finance_repository.dart';
@@ -291,6 +292,122 @@ void main() {
       expect(mapped.invoiceId, mockData.invoiceId);
     });
 
+    test('recovery contact backend envelope maps to domain', () {
+      const mapper = FinanceMapper();
+      final mapped = mapper.toRecoveryContact(
+        RecoveryContactDto.fromJson(const {
+          'id': 'rc_1',
+          'studentId': 'stu_1',
+          'channel': 'whatsapp',
+          'outcome': 'no_answer',
+          'notes': 'Reminder sent',
+          'contactedBy': 'user_1',
+          'timestamp': '2026-07-01T10:00:00Z',
+        }),
+      );
+      expect(mapped.id, 'rc_1');
+      expect(mapped.channel, 'whatsapp');
+      expect(mapped.outcome, 'no_answer');
+    });
+
+    test('promise-to-pay backend envelope maps to domain', () {
+      const mapper = FinanceMapper();
+      final mapped = mapper.toPromiseToPay(
+        PromiseToPayDto.fromJson(const {
+          'id': 'ptp_1',
+          'studentId': 'stu_1',
+          'studentName': 'Priya Sharma',
+          'amount': '650.00',
+          'promiseDate': '2026-07-10',
+          'status': 'pending',
+          'notes': 'After salary',
+          'createdAt': '2026-07-01T10:00:00Z',
+          'resolvedAt': '',
+        }),
+      );
+      expect(mapped.id, 'ptp_1');
+      expect(mapped.status, PromiseToPayStatus.pending);
+      expect(mapped.studentName, 'Priya Sharma');
+    });
+
+    test('recovery dashboard backend envelope maps to domain', () {
+      const mapper = FinanceMapper();
+      final mapped = mapper.toRecoveryDashboard(
+        RecoveryDashboardDto.fromJson(const {
+          'data': {
+            'period': '2026-07',
+            'ptpPending': 3,
+            'ptpDueToday': 1,
+            'ptpOverdue': 2,
+            'ptpKept': 5,
+            'ptpBroken': 1,
+            'contactsThisMonth': 20,
+            'recoveredThisMonth': '95000.00',
+            'collectorPerformance': [
+              {
+                'collectorId': 'user_1',
+                'collectorName': 'Finance Admin',
+                'contactsMade': 12,
+                'promisesObtained': 5,
+                'collectionsCount': 3,
+                'amountRecovered': '95000.00',
+              },
+            ],
+          },
+        }),
+      );
+      expect(mapped.period, '2026-07');
+      expect(mapped.ptpPending, 3);
+      expect(mapped.collectorPerformance.single.collectorName, 'Finance Admin');
+    });
+
+    test('mock recovery: log contact, PTP create/resolve, dashboard', () async {
+      final contact = await mockRepo.logRecoveryContact(
+        query: kQuery,
+        request: const LogRecoveryContactRequest(
+          studentId: 'def_1',
+          channel: RecoveryChannel.call,
+          outcome: RecoveryOutcome.promised,
+          notes: 'Will pay Friday',
+        ),
+      );
+      expect(contact.studentId, 'def_1');
+
+      final contacts = await mockRepo.listRecoveryContacts(
+        query: kQuery,
+        studentId: 'def_1',
+      );
+      expect(contacts, isNotEmpty);
+
+      final promise = await mockRepo.createPromiseToPay(
+        query: kQuery,
+        request: const CreatePromiseToPayRequest(
+          studentId: 'def_1',
+          amount: '65000',
+          promiseDate: '2026-07-15',
+        ),
+      );
+      expect(promise.status, PromiseToPayStatus.pending);
+
+      final resolved = await mockRepo.resolvePromiseToPay(
+        query: kQuery,
+        promiseId: promise.id,
+        request: const ResolvePromiseToPayRequest(
+          status: PromiseToPayStatus.kept,
+        ),
+      );
+      expect(resolved.status, PromiseToPayStatus.kept);
+
+      final pending = await mockRepo.listPromisesToPay(
+        query: kQuery,
+        status: PromiseToPayStatus.pending,
+      );
+      expect(pending.any((p) => p.id == promise.id), isFalse);
+
+      final dashboard = await mockRepo.getRecoveryDashboard(query: kQuery);
+      expect(dashboard.collectorPerformance, isNotEmpty);
+    });
+
     test('getInvoices DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getInvoices(query: kQuery);
       final mapped = const FinanceMapper().toInvoices(
@@ -404,6 +521,11 @@ void main() {
       expect(await mockRepo.getDiscountsDashboard(query: kQuery), isNotNull);
       expect(await mockRepo.getReportsData(query: kQuery), isNotNull);
       expect(await mockRepo.getSettings(query: kQuery), isNotNull);
+      expect(await mockRepo.getRecoveryDashboard(query: kQuery), isNotNull);
+      expect(
+        (await mockRepo.listPromisesToPay(query: kQuery)),
+        isNotEmpty,
+      );
     });
 
     test('ApiFinanceRepository returns mock-equivalent via fake Dio', () async {

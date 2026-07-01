@@ -317,4 +317,51 @@ class HybridFinanceRepository implements FinanceRepository {
   Future<FinanceExecutiveData> getFinanceExecutiveDashboard(
           {required RepositoryQuery query}) =>
       _api.getFinanceExecutiveDashboard(query: query);
+
+  // ── FIN-R1..R5: fee-recovery CRM ───────────────────────────────────────────
+  @override
+  Future<RecoveryContact> logRecoveryContact({
+    required RepositoryQuery query,
+    required LogRecoveryContactRequest request,
+  }) =>
+      _api.logRecoveryContact(query: query, request: request);
+
+  @override
+  Future<List<RecoveryContact>> listRecoveryContacts({
+    required RepositoryQuery query,
+    required String studentId,
+  }) =>
+      _api.listRecoveryContacts(query: query, studentId: studentId);
+
+  @override
+  Future<PromiseToPay> createPromiseToPay({
+    required RepositoryQuery query,
+    required CreatePromiseToPayRequest request,
+  }) =>
+      _api.createPromiseToPay(query: query, request: request);
+
+  @override
+  Future<List<PromiseToPay>> listPromisesToPay({
+    required RepositoryQuery query,
+    PromiseToPayStatus? status,
+  }) =>
+      _api.listPromisesToPay(query: query, status: status);
+
+  @override
+  Future<PromiseToPay> resolvePromiseToPay({
+    required RepositoryQuery query,
+    required String promiseId,
+    required ResolvePromiseToPayRequest request,
+  }) =>
+      _api.resolvePromiseToPay(
+        query: query,
+        promiseId: promiseId,
+        request: request,
+      );
+
+  @override
+  Future<RecoveryDashboardData> getRecoveryDashboard({
+    required RepositoryQuery query,
+  }) =>
+      _api.getRecoveryDashboard(query: query);
 }

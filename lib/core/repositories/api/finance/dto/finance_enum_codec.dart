@@ -169,4 +169,61 @@ class FinanceEnumCodec {
         'refund' => FinanceReportType.refund,
         _ => FinanceReportType.collection,
       };
+
+  static RecoveryChannel parseRecoveryChannel(String? raw) => switch (raw) {
+        'call' => RecoveryChannel.call,
+        'whatsapp' => RecoveryChannel.whatsapp,
+        'sms' => RecoveryChannel.sms,
+        'visit' => RecoveryChannel.visit,
+        'email' => RecoveryChannel.email,
+        _ => RecoveryChannel.other,
+      };
+
+  static String recoveryChannelToApi(RecoveryChannel channel) =>
+      switch (channel) {
+        RecoveryChannel.call => 'call',
+        RecoveryChannel.whatsapp => 'whatsapp',
+        RecoveryChannel.sms => 'sms',
+        RecoveryChannel.visit => 'visit',
+        RecoveryChannel.email => 'email',
+        RecoveryChannel.other => 'other',
+      };
+
+  static RecoveryOutcome parseRecoveryOutcome(String? raw) => switch (raw) {
+        'reached' => RecoveryOutcome.reached,
+        'no_answer' || 'noAnswer' => RecoveryOutcome.noAnswer,
+        'promised' => RecoveryOutcome.promised,
+        'refused' => RecoveryOutcome.refused,
+        'wrong_number' || 'wrongNumber' => RecoveryOutcome.wrongNumber,
+        'partial_paid' || 'partialPaid' => RecoveryOutcome.partialPaid,
+        _ => RecoveryOutcome.other,
+      };
+
+  static String recoveryOutcomeToApi(RecoveryOutcome outcome) =>
+      switch (outcome) {
+        RecoveryOutcome.reached => 'reached',
+        RecoveryOutcome.noAnswer => 'no_answer',
+        RecoveryOutcome.promised => 'promised',
+        RecoveryOutcome.refused => 'refused',
+        RecoveryOutcome.wrongNumber => 'wrong_number',
+        RecoveryOutcome.partialPaid => 'partial_paid',
+        RecoveryOutcome.other => 'other',
+      };
+
+  static PromiseToPayStatus parsePromiseToPayStatus(String? raw) =>
+      switch (raw) {
+        'pending' => PromiseToPayStatus.pending,
+        'kept' => PromiseToPayStatus.kept,
+        'broken' => PromiseToPayStatus.broken,
+        'cancelled' || 'canceled' => PromiseToPayStatus.cancelled,
+        _ => PromiseToPayStatus.pending,
+      };
+
+  static String promiseToPayStatusToApi(PromiseToPayStatus status) =>
+      switch (status) {
+        PromiseToPayStatus.pending => 'pending',
+        PromiseToPayStatus.kept => 'kept',
+        PromiseToPayStatus.broken => 'broken',
+        PromiseToPayStatus.cancelled => 'cancelled',
+      };
 }

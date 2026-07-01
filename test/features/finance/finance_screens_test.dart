@@ -1,7 +1,9 @@
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/finance/collections/finance_collections_provider.dart';
 import 'package:akshara_erp/features/finance/collections/finance_collections_screen.dart';
 import 'package:akshara_erp/features/finance/dashboard/finance_dashboard_provider.dart';
 import 'package:akshara_erp/features/finance/dashboard/finance_dashboard_screen.dart';
+import 'package:akshara_erp/features/finance/defaulters/finance_defaulters_screen.dart';
 import 'package:akshara_erp/features/finance/fee_assignment/finance_fee_assignment_screen.dart';
 import 'package:akshara_erp/features/finance/fee_structures/finance_fee_structures_provider.dart';
 import 'package:akshara_erp/features/finance/fee_structures/finance_fee_structures_screen.dart';
@@ -125,6 +127,26 @@ void main() {
       expect(find.text('Collected today'), findsOneWidget);
       expect(find.text('Payment list'), findsOneWidget);
       expect(find.text('RCP-2026-8841'), findsWidgets);
+    });
+
+    testWidgets(
+        'FinanceDefaultersScreen renders recovery, PTP worklist, and export',
+        (tester) async {
+      await pumpFinanceScreen(tester, const FinanceDefaultersScreen());
+
+      // FIN-R1/R5 recovery section.
+      expect(find.text('Recovery'), findsOneWidget);
+      expect(find.text('PTP pending'), findsOneWidget);
+      expect(find.textContaining('Collector performance'), findsOneWidget);
+      // FIN-R3 promise worklist.
+      expect(find.text('Promises to pay'), findsOneWidget);
+      // FIN-8 export button.
+      expect(
+        find.byKey(QaTestKeys.financeExportClassDuesButton),
+        findsOneWidget,
+      );
+      // Defaulters list still present.
+      expect(find.text('Priya Sharma'), findsWidgets);
     });
 
     testWidgets('FinanceCollectionsScreen shows error state', (tester) async {

@@ -476,4 +476,66 @@ class ApiFinanceRepository implements FinanceRepository {
     final dto = await _remote.fetchFinanceExecutive(query: query);
     return _intelligenceMapper.toExecutive(dto);
   }
+
+  // ── FIN-R1..R5: fee-recovery CRM ───────────────────────────────────────────
+  @override
+  Future<RecoveryContact> logRecoveryContact({
+    required RepositoryQuery query,
+    required LogRecoveryContactRequest request,
+  }) async {
+    final dto = await _remote.logRecoveryContact(query: query, request: request);
+    return _mapper.toRecoveryContact(dto);
+  }
+
+  @override
+  Future<List<RecoveryContact>> listRecoveryContacts({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    final dto = await _remote.fetchRecoveryContacts(
+      query: query,
+      studentId: studentId,
+    );
+    return _mapper.toRecoveryContacts(dto);
+  }
+
+  @override
+  Future<PromiseToPay> createPromiseToPay({
+    required RepositoryQuery query,
+    required CreatePromiseToPayRequest request,
+  }) async {
+    final dto = await _remote.createPromiseToPay(query: query, request: request);
+    return _mapper.toPromiseToPay(dto);
+  }
+
+  @override
+  Future<List<PromiseToPay>> listPromisesToPay({
+    required RepositoryQuery query,
+    PromiseToPayStatus? status,
+  }) async {
+    final dto = await _remote.fetchPromisesToPay(query: query, status: status);
+    return _mapper.toPromisesToPay(dto);
+  }
+
+  @override
+  Future<PromiseToPay> resolvePromiseToPay({
+    required RepositoryQuery query,
+    required String promiseId,
+    required ResolvePromiseToPayRequest request,
+  }) async {
+    final dto = await _remote.resolvePromiseToPay(
+      query: query,
+      promiseId: promiseId,
+      request: request,
+    );
+    return _mapper.toPromiseToPay(dto);
+  }
+
+  @override
+  Future<RecoveryDashboardData> getRecoveryDashboard({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchRecoveryDashboard(query: query);
+    return _mapper.toRecoveryDashboard(dto);
+  }
 }

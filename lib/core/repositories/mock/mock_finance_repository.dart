@@ -18,6 +18,57 @@ String _formatFinanceAmount(double value) => '₹${value.round()}';
 /// In-memory finance data for MVP and Phase 2 screens.
 class MockFinanceRepository implements FinanceRepository {
   final _FinanceMutableStore _store = _FinanceMutableStore();
+
+  // FIN-R1..R5 — fee-recovery CRM in-memory state.
+  final List<PromiseToPay> _promises = [
+    const PromiseToPay(
+      id: 'ptp_1',
+      studentId: 'def_1',
+      studentName: 'Priya Sharma',
+      amount: '₹65000',
+      promiseDate: '2026-07-10',
+      status: PromiseToPayStatus.pending,
+      notes: 'Parent committed to pay after salary credit.',
+      createdAt: '2026-06-28',
+    ),
+    const PromiseToPay(
+      id: 'ptp_2',
+      studentId: 'def_3',
+      studentName: 'Kavya Iyer',
+      amount: '₹26000',
+      promiseDate: '2026-06-25',
+      status: PromiseToPayStatus.pending,
+      notes: 'Partial promise — half of overdue.',
+      createdAt: '2026-06-18',
+    ),
+    const PromiseToPay(
+      id: 'ptp_3',
+      studentId: 'def_2',
+      studentName: 'Ananya Reddy',
+      amount: '₹71667',
+      promiseDate: '2026-06-15',
+      status: PromiseToPayStatus.kept,
+      notes: 'Paid in full on promise date.',
+      createdAt: '2026-06-05',
+      resolvedAt: '2026-06-15',
+    ),
+  ];
+
+  final Map<String, List<RecoveryContact>> _contacts = {
+    'def_1': <RecoveryContact>[
+      const RecoveryContact(
+        id: 'rc_1',
+        studentId: 'def_1',
+        channel: 'whatsapp',
+        outcome: 'no_answer',
+        notes: 'Sent payment reminder with UPI link.',
+        contactedBy: 'finance_demo',
+        timestamp: '2026-05-12T16:30:00Z',
+      ),
+    ],
+  };
+
+  int _recoverySeq = 100;
   @override
   Future<FinanceDashboardData> getDashboard(
       {required RepositoryQuery query}) async {
@@ -1442,6 +1493,153 @@ class MockFinanceRepository implements FinanceRepository {
         'ADM-2026-0135' => '₹2,55,000',
         'ADM-2025-0092' => '₹65,000',
         _ => '—',
+      };
+
+  // ── FIN-R1..R5: fee-recovery CRM ───────────────────────────────────────────
+  @override
+  Future<RecoveryContact> logRecoveryContact({
+    required RepositoryQuery query,
+    required LogRecoveryContactRequest request,
+  }) async {
+    final contact = RecoveryContact(
+      id: 'rc_${_recoverySeq++}',
+      studentId: request.studentId,
+      channel: switch (request.channel) {
+        RecoveryChannel.call => 'call',
+        RecoveryChannel.whatsapp => 'whatsapp',
+        RecoveryChannel.sms => 'sms',
+        RecoveryChannel.visit => 'visit',
+        RecoveryChannel.email => 'email',
+        RecoveryChannel.other => 'other',
+      },
+      outcome: switch (request.outcome) {
+        RecoveryOutcome.reached => 'reached',
+        RecoveryOutcome.noAnswer => 'no_answer',
+        RecoveryOutcome.promised => 'promised',
+        RecoveryOutcome.refused => 'refused',
+        RecoveryOutcome.wrongNumber => 'wrong_number',
+        RecoveryOutcome.partialPaid => 'partial_paid',
+        RecoveryOutcome.other => 'other',
+      },
+      notes: request.notes,
+      contactedBy: 'finance_demo',
+      timestamp: DateTime.now().toUtc().toIso8601String(),
+    );
+    _contacts.putIfAbsent(request.studentId, () => []).insert(0, contact);
+    return contact;
+  }
+
+  @override
+  Future<List<RecoveryContact>> listRecoveryContacts({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    return List<RecoveryContact>.unmodifiable(_contacts[studentId] ?? const []);
+  }
+
+  @override
+  Future<PromiseToPay> createPromiseToPay({
+    required RepositoryQuery query,
+    required CreatePromiseToPayRequest request,
+  }) async {
+    final promise = PromiseToPay(
+      id: 'ptp_${_recoverySeq++}',
+      studentId: request.studentId,
+      studentName: _promiseStudentName(request.studentId),
+      amount: request.amount.startsWith('₹') ? request.amount : '₹${request.amount}',
+      promiseDate: request.promiseDate,
+      status: PromiseToPayStatus.pending,
+      notes: request.notes,
+      createdAt: DateTime.now().toUtc().toIso8601String().split('T').first,
+    );
+    _promises.insert(0, promise);
+    return promise;
+  }
+
+  @override
+  Future<List<PromiseToPay>> listPromisesToPay({
+    required RepositoryQuery query,
+    PromiseToPayStatus? status,
+  }) async {
+    if (status == null) return List<PromiseToPay>.unmodifiable(_promises);
+    return List<PromiseToPay>.unmodifiable(
+      _promises.where((p) => p.status == status),
+    );
+  }
+
+  @override
+  Future<PromiseToPay> resolvePromiseToPay({
+    required RepositoryQuery query,
+    required String promiseId,
+    required ResolvePromiseToPayRequest request,
+  }) async {
+    final index = _promises.indexWhere((p) => p.id == promiseId);
+    if (index == -1) {
+      throw StateError('Promise to pay not found: $promiseId');
+    }
+    final existing = _promises[index];
+    final updated = PromiseToPay(
+      id: existing.id,
+      studentId: existing.studentId,
+      studentName: existing.studentName,
+      amount: existing.amount,
+      promiseDate: existing.promiseDate,
+      status: request.status,
+      notes: existing.notes,
+      createdAt: existing.createdAt,
+      resolvedAt: DateTime.now().toUtc().toIso8601String().split('T').first,
+    );
+    _promises[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<RecoveryDashboardData> getRecoveryDashboard({
+    required RepositoryQuery query,
+  }) async {
+    final pending =
+        _promises.where((p) => p.status == PromiseToPayStatus.pending).length;
+    final kept =
+        _promises.where((p) => p.status == PromiseToPayStatus.kept).length;
+    final broken =
+        _promises.where((p) => p.status == PromiseToPayStatus.broken).length;
+    final contactsCount =
+        _contacts.values.fold<int>(0, (sum, list) => sum + list.length);
+    return RecoveryDashboardData(
+      period: '2026-07',
+      ptpPending: pending,
+      ptpDueToday: 1,
+      ptpOverdue: 1,
+      ptpKept: kept,
+      ptpBroken: broken,
+      contactsThisMonth: contactsCount,
+      recoveredThisMonth: '71667.00',
+      collectorPerformance: const [
+        CollectorPerformance(
+          collectorId: 'user_finance_1',
+          collectorName: 'Finance Admin',
+          contactsMade: 12,
+          promisesObtained: 5,
+          collectionsCount: 3,
+          amountRecovered: '95000.00',
+        ),
+        CollectorPerformance(
+          collectorId: 'user_finance_2',
+          collectorName: 'Recovery Officer',
+          contactsMade: 8,
+          promisesObtained: 3,
+          collectionsCount: 2,
+          amountRecovered: '48000.00',
+        ),
+      ],
+    );
+  }
+
+  String _promiseStudentName(String studentId) => switch (studentId) {
+        'def_1' => 'Priya Sharma',
+        'def_2' => 'Ananya Reddy',
+        'def_3' => 'Kavya Iyer',
+        _ => 'Student',
       };
 }
 

@@ -272,6 +272,50 @@ class UpdateDiscountRuleRequest {
   final DiscountApprovalStatus? status;
 }
 
+/// FIN-R4 — log a recovery contact attempt against a defaulter.
+class LogRecoveryContactRequest {
+  const LogRecoveryContactRequest({
+    required this.studentId,
+    required this.channel,
+    required this.outcome,
+    this.feeAccountId,
+    this.notes = '',
+  });
+
+  final String studentId;
+  final RecoveryChannel channel;
+  final RecoveryOutcome outcome;
+  final String? feeAccountId;
+  final String notes;
+}
+
+/// FIN-R3 — record a student's promise to pay.
+class CreatePromiseToPayRequest {
+  const CreatePromiseToPayRequest({
+    required this.studentId,
+    required this.amount,
+    required this.promiseDate,
+    this.feeAccountId,
+    this.notes = '',
+  });
+
+  final String studentId;
+  final String amount;
+
+  /// YYYY-MM-DD.
+  final String promiseDate;
+  final String? feeAccountId;
+  final String notes;
+}
+
+/// FIN-R3 — resolve a pending promise to pay.
+class ResolvePromiseToPayRequest {
+  const ResolvePromiseToPayRequest({required this.status});
+
+  /// One of kept | broken | cancelled.
+  final PromiseToPayStatus status;
+}
+
 /// Single setting value update within a section.
 class FinanceSettingUpdate {
   const FinanceSettingUpdate({

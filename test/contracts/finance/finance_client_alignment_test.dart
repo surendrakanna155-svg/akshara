@@ -78,6 +78,43 @@ void main() {
       );
     });
 
+    test('recovery paths match deployed routes', () {
+      expect(FinanceApiPaths.recoveryContacts, '/finance/recovery/contacts');
+      expect(
+        FinanceApiPaths.recoveryContactsForStudent('stu-1'),
+        '/finance/recovery/contacts/stu-1',
+      );
+      expect(FinanceApiPaths.recoveryPromises, '/finance/recovery/promises');
+      expect(
+        FinanceApiPaths.recoveryPromiseResolve('ptp-1'),
+        '/finance/recovery/promises/ptp-1/resolve',
+      );
+      expect(FinanceApiPaths.recoveryDashboard, '/finance/recovery/dashboard');
+    });
+
+    test('recovery enum codecs round-trip backend wire values', () {
+      expect(
+        FinanceEnumCodec.recoveryChannelToApi(RecoveryChannel.whatsapp),
+        'whatsapp',
+      );
+      expect(
+        FinanceEnumCodec.recoveryOutcomeToApi(RecoveryOutcome.noAnswer),
+        'no_answer',
+      );
+      expect(
+        FinanceEnumCodec.parseRecoveryOutcome('partial_paid'),
+        RecoveryOutcome.partialPaid,
+      );
+      expect(
+        FinanceEnumCodec.promiseToPayStatusToApi(PromiseToPayStatus.cancelled),
+        'cancelled',
+      );
+      expect(
+        FinanceEnumCodec.parsePromiseToPayStatus('kept'),
+        PromiseToPayStatus.kept,
+      );
+    });
+
     test('backend processed status maps to client enum', () {
       expect(
         FinanceEnumCodec.parseRefundStatus('processed'),

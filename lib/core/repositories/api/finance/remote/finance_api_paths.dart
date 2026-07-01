@@ -43,4 +43,15 @@ abstract final class FinanceApiPaths {
   static String invoice(String id) => '$invoices/$id';
   static String invoiceIssue(String id) => '${invoice(id)}/issue';
   static String invoiceCancel(String id) => '${invoice(id)}/cancel';
+
+  // FIN-R1..R5 — fee-recovery CRM.
+  static const String recovery = '$base/recovery';
+  static const String recoveryContacts = '$recovery/contacts';
+  static const String recoveryPromises = '$recovery/promises';
+  static const String recoveryDashboard = '$recovery/dashboard';
+
+  static String recoveryContactsForStudent(String studentId) =>
+      '$recoveryContacts/$studentId';
+  static String recoveryPromiseResolve(String promiseId) =>
+      '$recoveryPromises/$promiseId/resolve';
 }

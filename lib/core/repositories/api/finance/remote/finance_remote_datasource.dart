@@ -22,8 +22,10 @@ import '../dto/finance_dashboard_dto.dart';
 import '../dto/finance_defaulters_dto.dart';
 import '../dto/finance_discounts_dto.dart';
 import '../dto/finance_fee_structures_dto.dart';
+import '../dto/finance_enum_codec.dart';
 import '../dto/finance_invoices_dto.dart';
 import '../dto/finance_receipt_dto.dart';
+import '../dto/finance_recovery_dto.dart';
 import '../dto/finance_refunds_dto.dart';
 import '../dto/finance_reports_dto.dart';
 import '../dto/finance_settings_dto.dart';
@@ -563,6 +565,96 @@ class FinanceRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return FinanceInvoiceDto.fromJson(_requireData(response));
+  }
+
+  // ── FIN-R1..R5: fee-recovery CRM ───────────────────────────────────────────
+  Future<RecoveryContactDto> logRecoveryContact({
+    required RepositoryQuery query,
+    required LogRecoveryContactRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.recoveryContacts,
+      queryParameters: _queryParams(query),
+      data: {
+        'studentId': request.studentId,
+        if (request.feeAccountId != null && request.feeAccountId!.isNotEmpty)
+          'feeAccountId': request.feeAccountId,
+        'channel': FinanceEnumCodec.recoveryChannelToApi(request.channel),
+        'outcome': FinanceEnumCodec.recoveryOutcomeToApi(request.outcome),
+        'notes': request.notes,
+      },
+    );
+    return RecoveryContactDto.fromJson(_requireData(response));
+  }
+
+  Future<RecoveryContactsResponseDto> fetchRecoveryContacts({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.recoveryContactsForStudent(studentId),
+      queryParameters: _queryParams(query),
+    );
+    return RecoveryContactsResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<PromiseToPayDto> createPromiseToPay({
+    required RepositoryQuery query,
+    required CreatePromiseToPayRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.recoveryPromises,
+      queryParameters: _queryParams(query),
+      data: {
+        'studentId': request.studentId,
+        if (request.feeAccountId != null && request.feeAccountId!.isNotEmpty)
+          'feeAccountId': request.feeAccountId,
+        'amount': request.amount,
+        'promiseDate': request.promiseDate,
+        'notes': request.notes,
+      },
+    );
+    return PromiseToPayDto.fromJson(_requireData(response));
+  }
+
+  Future<PromisesToPayResponseDto> fetchPromisesToPay({
+    required RepositoryQuery query,
+    PromiseToPayStatus? status,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.recoveryPromises,
+      queryParameters: {
+        ..._queryParams(query),
+        if (status != null)
+          'status': FinanceEnumCodec.promiseToPayStatusToApi(status),
+      },
+    );
+    return PromisesToPayResponseDto.fromJson(_responseMap(response));
+  }
+
+  Future<PromiseToPayDto> resolvePromiseToPay({
+    required RepositoryQuery query,
+    required String promiseId,
+    required ResolvePromiseToPayRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      FinanceApiPaths.recoveryPromiseResolve(promiseId),
+      queryParameters: _queryParams(query),
+      data: {
+        'status': FinanceEnumCodec.promiseToPayStatusToApi(request.status),
+      },
+    );
+    return PromiseToPayDto.fromJson(_requireData(response));
+  }
+
+  Future<RecoveryDashboardDto> fetchRecoveryDashboard({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      FinanceApiPaths.recoveryDashboard,
+      queryParameters: _queryParams(query),
+    );
+    return RecoveryDashboardDto.fromJson(_responseMap(response));
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
