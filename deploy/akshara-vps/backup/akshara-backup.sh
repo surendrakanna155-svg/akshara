@@ -32,7 +32,7 @@ ensure_pg_up
 # Classify this run for retention: monthly on the 1st, weekly on Sunday, else daily.
 DOM="$(date -u +%d)"
 DOW="$(date -u +%u)"   # 1=Mon .. 7=Sun
-if [[ "$1" == "manual" || "${1:-}" == "--manual" ]]; then
+if [[ "${1:-}" == "manual" || "${1:-}" == "--manual" ]]; then
   KIND="manual"
 elif [[ "$DOM" == "01" ]]; then
   KIND="monthly"
