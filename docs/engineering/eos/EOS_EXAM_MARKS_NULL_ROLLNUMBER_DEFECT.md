@@ -28,4 +28,11 @@ Make the mark-entry id independent of `roll_number`: use `gen_random_uuid()` (or
 
 ## Sim status
 
-B11 works around this with **realistic data** (the seeded student is given a roll number — a real student has one), so the happy-path pilot cert is green (24/24). This is not a faked pass; the defect is logged here for a targeted fix + a `FINAL_QA_MASTER_TRACKER` row.
+B11 works around this with **realistic data** (the seeded student is given a roll number — a real student has one), so the happy-path pilot cert is green (24/24). This is not a faked pass.
+
+## RESOLUTION — 2026-07-01 (owner-approved, fixed + deployed + verified)
+
+**Fixed.** `exam_administration_repository.ts:285` mark-entry id changed from `$3 || '_' || e.roll_number` → **`$3 || '_' || e.student_id::text`** — `student_id` is always non-null and unique per exam+student, so the id can never be NULL, and it stays deterministic (the `ON CONFLICT (id) DO NOTHING` idempotency is preserved). No schema/migration change; no other code reconstructs the id from roll_number (line 372 only *orders* by it).
+
+**Verified live** on the isolated stack: with the seeded student given **no roll number**, `open-marks` succeeds and `exam-publish` returns `published=1` (previously a 500). `deno check` clean; deployed to both edges. `roll_number` stays a first-class column (still stored + displayed) — only the surrogate id no longer depends on it.
+

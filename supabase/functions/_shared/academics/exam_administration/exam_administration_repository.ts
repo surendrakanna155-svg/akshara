@@ -282,7 +282,13 @@ async function provisionMarkSlots(
        marks_entered
      )
      SELECT
-       $3 || '_' || e.roll_number,
+       -- Key the mark-entry id on student_id (always present + unique per
+       -- exam+student), NOT roll_number: roll_number is optional on import, and
+       -- concatenating a NULL roll_number produced a NULL id -> a NOT-NULL
+       -- violation that 500'd open-marks for the WHOLE class when any student
+       -- lacked a roll number. Still deterministic, so ON CONFLICT (id) keeps
+       -- re-provision idempotent.
+       $3 || '_' || e.student_id::text,
        e.organization_id,
        e.school_id,
        e.student_id,
