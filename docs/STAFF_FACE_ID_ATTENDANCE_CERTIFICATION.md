@@ -1,3 +1,10 @@
+> ⚠️ **SUPERSEDED (2026-07-01).** The device-biometric attendance auth model certified
+> below is **superseded** by [ATTENDANCE_AUTH_DESIGN_DECISION.md](ATTENDANCE_AUTH_DESIGN_DECISION.md)
+> (FINAL) and **re-implemented in B4** (GPS geofence + anti-mock + live camera CV face
+> match; NO device biometric for attendance). See
+> `docs/engineering/eos/EOS_PHASE_B_B4_STAFF_ATTENDANCE_REIMPL_REPORT.md`. The RBAC / audit /
+> ledger / offline scaffolding here is reused; the **auth mechanism is not**.
+
 # Staff Face ID Attendance — COMPLETION CERTIFICATION
 
 **Date:** 2026-06-30 · **Branch:** `feature/data-reliability-platform`

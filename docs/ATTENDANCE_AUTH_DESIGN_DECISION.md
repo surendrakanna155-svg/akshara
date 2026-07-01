@@ -79,13 +79,22 @@ The **as-built O5 feature does not match this decision.** Re-implementation is r
 This is a **build item** (owner-gated, non-trivial: camera-face + location-hardening), **not** part of
 the current documentation update. It is a **P1 gap** against the shipped O5 cert.
 
-## 7. Open clarification for the build phase (not blocking this doc)
+## 7. Live camera face verification — RESOLVED (owner, 2026-07-01)
 
-"**Live camera face verification**" — confirm at build time whether this means (a) **automated
-computer-vision face matching** against an enrolled reference face, or (b) a **live liveness selfie
-capture** recorded as audited proof (no automated match). Either satisfies "camera, not device
-biometric"; the choice affects the build (CV pipeline vs capture+audit). The prior "no CV face matching"
-note in the O5 cert was tied to the superseded device-biometric model and should be re-decided here.
+**Owner decision (2026-07-01): option (a) — automated computer-vision face matching** against a
+**per-staff enrolled reference face**. A check-in is accepted only when the live capture matches the
+enrolled reference above threshold. Implications for the B4 build (now binding):
+
+- **Enrollment:** each staff member enrolls a **reference face embedding** (a float vector, not a raw
+  image — privacy-preserving). Stored per (org, school, user); replaceable; one active per user.
+- **Match is server-authoritative:** the client extracts a live face embedding on-device and sends it;
+  the **server** computes cosine similarity vs the enrolled reference and decides pass/fail. The client
+  cannot simply assert `matched=true`.
+- **Liveness** (anti-photo/replay) is still required alongside the match.
+- The superseded O5 "no CV face matching" note no longer applies.
+
+*(The original open text, for the record: choose (a) automated CV face match vs (b) liveness-capture
+audit only. Owner chose (a).)*
 
 ## 8. Impact on Track B
 

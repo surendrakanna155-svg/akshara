@@ -1457,4 +1457,50 @@ export const staffAttendanceAudit = {
       idempotencyKey: `staff_attendance.check_out.recorded:${checkInId}`,
     },
   }),
+  faceEnrolled: (enrollmentId: string, userId: string): MutationAuditSpec => ({
+    ...workflow("staffFaceEnrolled", "staff_face_enrollment", enrollmentId, { userId }),
+    domain: {
+      eventType: "staff_attendance.face.enrolled",
+      payload: { enrollmentId, userId },
+      sourceModule: "staff_attendance",
+      idempotencyKey: `staff_attendance.face.enrolled:${enrollmentId}`,
+    },
+  }),
+  geofenceConfigured: (schoolId: string, radiusM: number): MutationAuditSpec => ({
+    ...workflow("staffGeofenceConfigured", "school_attendance_geofence", schoolId, { radiusM }),
+    domain: {
+      eventType: "staff_attendance.geofence.configured",
+      payload: { schoolId, radiusM },
+      sourceModule: "staff_attendance",
+      idempotencyKey: `staff_attendance.geofence.configured:${schoolId}:${radiusM}`,
+    },
+  }),
+  manualRequestCreated: (requestId: string, userId: string, eventType: string): MutationAuditSpec => ({
+    ...workflow("staffAttendanceManualRequested", "staff_attendance_request", requestId, {
+      userId,
+      eventType,
+    }),
+    domain: {
+      eventType: "staff_attendance.manual_request.created",
+      payload: { requestId, userId, eventType },
+      sourceModule: "staff_attendance",
+      idempotencyKey: `staff_attendance.manual_request.created:${requestId}`,
+    },
+  }),
+  manualRequestDecided: (
+    requestId: string,
+    approverId: string,
+    status: string,
+  ): MutationAuditSpec => ({
+    ...workflow("staffAttendanceManualDecided", "staff_attendance_request", requestId, {
+      approverId,
+      status,
+    }),
+    domain: {
+      eventType: "staff_attendance.manual_request.decided",
+      payload: { requestId, approverId, status },
+      sourceModule: "staff_attendance",
+      idempotencyKey: `staff_attendance.manual_request.decided:${requestId}:${status}`,
+    },
+  }),
 };

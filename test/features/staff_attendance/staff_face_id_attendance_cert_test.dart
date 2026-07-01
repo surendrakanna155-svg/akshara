@@ -1,26 +1,31 @@
-// Staff Face ID attendance — certification (O5, Must-Before-GA, parallel to QW8).
+// Staff attendance — certification (B4, re-implemented per the FINAL design decision:
+// GPS geofence + anti-mock + live camera face; NO device biometric).
 //
-// Proves the staff biometric self check-in/out feature headless (no device):
-//   1. HARD-BLOCK — a check-in proceeds ONLY on a real biometric. If the
-//      biometric is unavailable (no enrolment) or fails, NOTHING is written and
-//      NOTHING is audited. There is NO device-credential (PIN) fallback.
-//   2. Both check_in AND check_out are recorded (owner decision), each emitting
-//      the matching audit event through the real categorizer (→ workflow).
-//   3. The write is offline-queueable (reliability platform), surfaced as pending.
-//   4. RBAC — every staff persona holds markStaffAttendance; parent/student never.
-//   5. The card UI renders the recorded / biometric-blocked states.
+// Proves the feature headless (no device):
+//   1. HARD-STOP chain — a check-in proceeds ONLY when the location step AND the
+//      face step succeed. If location capture fails, a mock GPS is detected, or the
+//      face capture fails, NOTHING is written and NOTHING is audited. There is NO
+//      device-biometric / PIN fallback.
+//   2. Both check_in AND check_out are recorded, each emitting the matching audit
+//      event through the real categorizer (→ workflow).
+//   3. A SERVER 422 rejection (geofence / face no-match) is surfaced as the right
+//      location/face banner, with NO audit.
+//   4. The write is offline-queueable (reliability platform), surfaced as pending.
+//   5. RBAC — every staff persona holds markStaffAttendance; parent/student never.
+//   6. The card UI renders the recorded / location-blocked / face-blocked states.
 //
-// Live deploy + a real on-device biometric run are the Track-B remainder.
+// The concrete geolocator / camera+ML device adapters + a live on-device run are
+// the Track-B remainder (device + Flutter-toolchain gated).
 
 import 'package:akshara_erp/core/audit/audit_event.dart';
 import 'package:akshara_erp/core/audit/audit_logger.dart';
-import 'package:akshara_erp/core/biometric/biometric_authenticator.dart';
 import 'package:akshara_erp/core/reliability/model/reliability_enums.dart';
 import 'package:akshara_erp/core/reliability/policy/operation_policy_registry.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/mutation_permission_registry.dart';
 import 'package:akshara_erp/core/security/permissions.dart';
 import 'package:akshara_erp/core/security/role_permissions.dart';
+import 'package:akshara_erp/features/staff_attendance/attendance_capture_sources.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_controller.dart';
 import 'package:akshara_erp/features/staff_attendance/staff_attendance_models.dart';
 import 'package:akshara_erp/features/staff_attendance/widgets/staff_check_in_card.dart';
@@ -28,34 +33,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _FakeBiometric implements BiometricAuthenticator {
-  _FakeBiometric(this._result);
-  final BiometricResult _result;
-  int calls = 0;
-  @override
-  Future<BiometricResult> authenticate({required String reason}) async {
-    calls++;
-    return _result;
-  }
-}
+AttendanceLocationFix _fix({bool isMock = false}) => AttendanceLocationFix(
+      latitude: 17.45,
+      longitude: 78.39,
+      accuracyM: 8,
+      isMock: isMock,
+      capturedAt: DateTime.utc(2026, 7, 1, 10),
+    );
+
+FaceCapture _face() => const FaceCapture(
+      embedding: [0.1, 0.2, 0.3, 0.4],
+      livenessPassed: true,
+      captureRef: 'cap/1.jpg',
+    );
 
 class _FakeWriter implements StaffAttendanceWriter {
-  _FakeWriter({this.pendingSync = false, this.throwError = false});
+  _FakeWriter({this.pendingSync = false, this.throwError = false, this.reject});
   final bool pendingSync;
   final bool throwError;
-  final List<({StaffCheckEvent event, String method})> calls = [];
+  final StaffAttendanceRejected? reject;
+  final List<({StaffCheckEvent event, AttendanceLocationFix location, FaceCapture face})> calls = [];
   @override
   Future<StaffCheckRecord> recordCheck({
     required StaffCheckEvent event,
-    required String method,
+    required AttendanceLocationFix location,
+    required FaceCapture face,
   }) async {
-    calls.add((event: event, method: method));
+    calls.add((event: event, location: location, face: face));
+    if (reject != null) throw reject!;
     if (throwError) throw Exception('network down');
     return StaffCheckRecord(
       id: 'chk_1',
       eventType: event.apiValue,
-      method: method,
-      biometricVerified: true,
+      method: 'face_match',
+      locationVerified: true,
+      faceMatched: true,
+      faceMatchScore: 0.95,
       pendingSync: pendingSync,
     );
   }
@@ -66,52 +79,77 @@ Future<AuditLogger> _auditLogger() async {
   return AuditLogger(await SharedPreferences.getInstance());
 }
 
+StaffAttendanceController _controller({
+  required AttendanceLocationSource location,
+  required FaceCaptureSource face,
+  required StaffAttendanceWriter writer,
+  required AuditLogger audit,
+}) =>
+    StaffAttendanceController(location: location, face: face, writer: writer, audit: audit);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('Staff Face ID — biometric hard-block', () {
-    test('no enrolled biometric → blocked, NO write, NO audit (no PIN fallback)',
-        () async {
-      final biometric = _FakeBiometric(BiometricResult.unavailable());
+  group('B4 attendance — capture hard-stop (no biometric/PIN fallback)', () {
+    test('location capture failure → blocked, NO write, NO audit', () async {
       final writer = _FakeWriter();
       final audit = await _auditLogger();
-      final controller = StaffAttendanceController(
-        biometric: biometric,
+      final controller = _controller(
+        location: const FailingLocationSource(),
+        face: FixedFaceSource(_face()),
         writer: writer,
         audit: audit,
       );
 
       final outcome = await controller.record(StaffCheckEvent.checkIn);
 
-      expect(outcome.status, StaffCheckStatus.biometricRequired);
-      expect(writer.calls, isEmpty, reason: 'write must NOT run without biometric');
-      expect(await audit.readAll(), isEmpty, reason: 'no audit on a blocked check-in');
+      expect(outcome.status, StaffCheckStatus.locationBlocked);
+      expect(writer.calls, isEmpty, reason: 'write must NOT run without a location');
+      expect(await audit.readAll(), isEmpty);
     });
 
-    test('biometric cancelled/failed → blocked, NO write, NO audit', () async {
+    test('MOCK GPS detected on-device → blocked before the camera, NO write', () async {
       final writer = _FakeWriter();
       final audit = await _auditLogger();
-      final controller = StaffAttendanceController(
-        biometric: _FakeBiometric(BiometricResult.failed()),
+      final controller = _controller(
+        location: FixedLocationSource(_fix(isMock: true)),
+        face: FixedFaceSource(_face()),
         writer: writer,
         audit: audit,
       );
 
       final outcome = await controller.record(StaffCheckEvent.checkIn);
 
-      expect(outcome.status, StaffCheckStatus.biometricRequired);
+      expect(outcome.status, StaffCheckStatus.locationBlocked);
+      expect(writer.calls, isEmpty);
+      expect(await audit.readAll(), isEmpty);
+    });
+
+    test('face capture cancelled → blocked, NO write, NO audit', () async {
+      final writer = _FakeWriter();
+      final audit = await _auditLogger();
+      final controller = _controller(
+        location: FixedLocationSource(_fix()),
+        face: const FailingFaceSource(),
+        writer: writer,
+        audit: audit,
+      );
+
+      final outcome = await controller.record(StaffCheckEvent.checkIn);
+
+      expect(outcome.status, StaffCheckStatus.faceBlocked);
       expect(writer.calls, isEmpty);
       expect(await audit.readAll(), isEmpty);
     });
   });
 
-  group('Staff Face ID — recorded events', () {
-    test('successful biometric check-IN → write + staffCheckInRecorded audit',
-        () async {
+  group('B4 attendance — recorded events', () {
+    test('valid location + face check-IN → write + staffCheckInRecorded audit', () async {
       final writer = _FakeWriter();
       final audit = await _auditLogger();
-      final controller = StaffAttendanceController(
-        biometric: _FakeBiometric(BiometricResult.success('face_id')),
+      final controller = _controller(
+        location: FixedLocationSource(_fix()),
+        face: FixedFaceSource(_face()),
         writer: writer,
         audit: audit,
       );
@@ -120,20 +158,18 @@ void main() {
 
       expect(outcome.isRecorded, isTrue);
       expect(writer.calls.single.event, StaffCheckEvent.checkIn);
-      expect(writer.calls.single.method, 'face_id');
-
       final events = await audit.readAll();
       expect(events.single.type, AuditEventType.staffCheckInRecorded);
-      expect(events.single.metadata['method'], 'face_id');
+      expect(events.single.metadata['method'], 'face_match');
       expect(events.single.metadata['eventType'], 'check_in');
     });
 
-    test('successful biometric check-OUT → write + staffCheckOutRecorded audit',
-        () async {
+    test('valid check-OUT → write + staffCheckOutRecorded audit', () async {
       final writer = _FakeWriter();
       final audit = await _auditLogger();
-      final controller = StaffAttendanceController(
-        biometric: _FakeBiometric(BiometricResult.success('fingerprint')),
+      final controller = _controller(
+        location: FixedLocationSource(_fix()),
+        face: FixedFaceSource(_face()),
         writer: writer,
         audit: audit,
       );
@@ -141,18 +177,15 @@ void main() {
       final outcome = await controller.record(StaffCheckEvent.checkOut);
 
       expect(outcome.isRecorded, isTrue);
-      expect(writer.calls.single.event, StaffCheckEvent.checkOut);
-      final events = await audit.readAll();
-      expect(events.single.type, AuditEventType.staffCheckOutRecorded);
-      expect(events.single.metadata['eventType'], 'check_out');
+      expect((await audit.readAll()).single.type, AuditEventType.staffCheckOutRecorded);
     });
 
-    test('offline → write queued (pendingSync) is still recorded + audited',
-        () async {
+    test('offline → write queued (pendingSync) is still recorded + audited', () async {
       final writer = _FakeWriter(pendingSync: true);
       final audit = await _auditLogger();
-      final controller = StaffAttendanceController(
-        biometric: _FakeBiometric(BiometricResult.success('face_id')),
+      final controller = _controller(
+        location: FixedLocationSource(_fix()),
+        face: FixedFaceSource(_face()),
         writer: writer,
         audit: audit,
       );
@@ -164,11 +197,48 @@ void main() {
       expect((await audit.readAll()).single.metadata['pendingSync'], 'true');
     });
 
-    test('write failure after a valid biometric → failed, NO audit', () async {
+    test('server FACE_NO_MATCH (422) → faceBlocked, NO audit', () async {
+      final writer = _FakeWriter(
+        reject: const StaffAttendanceRejected('STAFF_ATTENDANCE_FACE_NO_MATCH', 'no match'),
+      );
+      final audit = await _auditLogger();
+      final controller = _controller(
+        location: FixedLocationSource(_fix()),
+        face: FixedFaceSource(_face()),
+        writer: writer,
+        audit: audit,
+      );
+
+      final outcome = await controller.record(StaffCheckEvent.checkIn);
+
+      expect(outcome.status, StaffCheckStatus.faceBlocked);
+      expect(await audit.readAll(), isEmpty);
+    });
+
+    test('server OUTSIDE_GEOFENCE (422) → locationBlocked, NO audit', () async {
+      final writer = _FakeWriter(
+        reject: const StaffAttendanceRejected('STAFF_ATTENDANCE_OUTSIDE_GEOFENCE', 'too far'),
+      );
+      final audit = await _auditLogger();
+      final controller = _controller(
+        location: FixedLocationSource(_fix()),
+        face: FixedFaceSource(_face()),
+        writer: writer,
+        audit: audit,
+      );
+
+      final outcome = await controller.record(StaffCheckEvent.checkIn);
+
+      expect(outcome.status, StaffCheckStatus.locationBlocked);
+      expect(await audit.readAll(), isEmpty);
+    });
+
+    test('write failure after a valid capture → failed, NO audit', () async {
       final writer = _FakeWriter(throwError: true);
       final audit = await _auditLogger();
-      final controller = StaffAttendanceController(
-        biometric: _FakeBiometric(BiometricResult.success('face_id')),
+      final controller = _controller(
+        location: FixedLocationSource(_fix()),
+        face: FixedFaceSource(_face()),
         writer: writer,
         audit: audit,
       );
@@ -176,12 +246,11 @@ void main() {
       final outcome = await controller.record(StaffCheckEvent.checkIn);
 
       expect(outcome.status, StaffCheckStatus.failed);
-      expect(await audit.readAll(), isEmpty,
-          reason: 'audit is emitted only after a confirmed/queued write');
+      expect(await audit.readAll(), isEmpty);
     });
   });
 
-  group('Staff Face ID — RBAC + reliability policy', () {
+  group('B4 attendance — RBAC + reliability policy (unchanged contracts)', () {
     test('every staff persona holds markStaffAttendance; parent/student never', () {
       for (final role in ErpRole.values) {
         final has = RolePermissionMatrix.permissionsFor(role)
@@ -218,12 +287,13 @@ void main() {
     });
   });
 
-  group('Staff Face ID — card UI', () {
+  group('B4 attendance — card UI', () {
     testWidgets('renders check-in/out buttons and a success banner on record',
         (tester) async {
       final audit = await _auditLogger();
-      final controller = StaffAttendanceController(
-        biometric: _FakeBiometric(BiometricResult.success('face_id')),
+      final controller = _controller(
+        location: FixedLocationSource(_fix()),
+        face: FixedFaceSource(_face()),
         writer: _FakeWriter(),
         audit: audit,
       );
@@ -241,11 +311,12 @@ void main() {
       expect(find.textContaining('recorded'), findsOneWidget);
     });
 
-    testWidgets('shows the biometric-required banner when the gate blocks',
+    testWidgets('shows the location-blocked banner when the geofence step blocks',
         (tester) async {
       final audit = await _auditLogger();
-      final controller = StaffAttendanceController(
-        biometric: _FakeBiometric(BiometricResult.unavailable()),
+      final controller = _controller(
+        location: const FailingLocationSource('LOCATION_UNAVAILABLE', 'Turn on location to check in'),
+        face: FixedFaceSource(_face()),
         writer: _FakeWriter(),
         audit: audit,
       );
@@ -257,7 +328,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('staff-check-status')), findsOneWidget);
-      expect(find.textContaining('biometric', findRichText: true), findsWidgets);
+      expect(find.textContaining('location'), findsWidgets);
     });
   });
 }

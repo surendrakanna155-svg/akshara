@@ -1,19 +1,45 @@
-// Staff Face ID attendance router. Single write route: a staff member records
-// their own biometric-gated check-in/out.
+// B4 — staff attendance (RE-IMPLEMENTED) router. Routes:
+//   POST /staff-attendance/check                     record a geofence+face-matched check-in/out
+//   POST /staff-attendance/enroll-face               enrol/replace own reference face
+//   GET  /staff-attendance/geofence                  read the school geofence config
+//   PUT  /staff-attendance/geofence                  set the school geofence config (admin)
+//   POST /staff-attendance/manual-request            raise an audited manual attendance request
+//   POST /staff-attendance/manual-request/decide     approve/reject a manual request (approver)
 
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
-import { handleRecordStaffCheckIn } from "./staff_attendance_handlers.ts";
+import {
+  handleCreateManualRequest,
+  handleDecideManualRequest,
+  handleEnrollFace,
+  handleGetGeofence,
+  handleRecordStaffCheckIn,
+  handleSetGeofence,
+} from "./staff_attendance_handlers.ts";
+
+type Handler = (req: Request, config: AppConfig, ...args: string[]) => Promise<Response>;
 
 export function matchStaffAttendanceRoute(
   method: string,
   path: string,
-): {
-  handler: (req: Request, config: AppConfig, ...args: string[]) => Promise<Response>;
-  args: string[];
-} | null {
+): { handler: Handler; args: string[] } | null {
   if (path === "/staff-attendance/check" && method === "POST") {
     return { handler: handleRecordStaffCheckIn, args: [] };
+  }
+  if (path === "/staff-attendance/enroll-face" && method === "POST") {
+    return { handler: handleEnrollFace, args: [] };
+  }
+  if (path === "/staff-attendance/geofence" && method === "GET") {
+    return { handler: handleGetGeofence, args: [] };
+  }
+  if (path === "/staff-attendance/geofence" && method === "PUT") {
+    return { handler: handleSetGeofence, args: [] };
+  }
+  if (path === "/staff-attendance/manual-request" && method === "POST") {
+    return { handler: handleCreateManualRequest, args: [] };
+  }
+  if (path === "/staff-attendance/manual-request/decide" && method === "POST") {
+    return { handler: handleDecideManualRequest, args: [] };
   }
   return null;
 }
@@ -30,6 +56,5 @@ export async function routeStaffAttendance(
   if (!match) {
     return errorEnvelope("NOT_FOUND", `Route not found: ${method} ${path}`, 404);
   }
-
   return await match.handler(req, config, ...match.args);
 }

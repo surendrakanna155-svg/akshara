@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../staff_attendance_models.dart';
 
-/// Self-service staff check-in/out card (O5). Biometric-gated; the host shows it
-/// only to staff who hold `Permission.markStaffAttendance`. Renders four states:
-/// idle, verifying, recorded, and biometric-blocked / error.
+/// Self-service staff check-in/out card (B4). Attendance is proven by being inside
+/// the school geofence + a live camera face match (NO device biometric); the host
+/// shows it only to staff who hold `Permission.markStaffAttendance`. Renders:
+/// idle, verifying, recorded, and location-blocked / face-blocked / error.
 ///
 /// Takes a deferred [onRecord] callback (rather than a pre-built controller) so
 /// the host resolves the heavy reliability/biometric stack lazily — only on tap,
@@ -49,14 +50,14 @@ class _StaffCheckInCardState extends State<StaffCheckInCard> {
           children: [
             Row(
               children: [
-                const Icon(Icons.fingerprint),
+                const Icon(Icons.location_on),
                 const SizedBox(width: 8),
                 Text('My attendance', style: theme.textTheme.titleMedium),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              'Confirm with Face ID / fingerprint to record your check-in or check-out.',
+              'Be at school and face the camera to record your check-in or check-out.',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
@@ -123,11 +124,17 @@ class _StatusBanner extends StatelessWidget {
               ? '${event?.label ?? 'Attendance'} queued — will sync when online.'
               : '${event?.label ?? 'Attendance'} recorded.',
         ),
-      StaffCheckStatus.biometricRequired => (
+      StaffCheckStatus.locationBlocked => (
           scheme.tertiaryContainer,
           scheme.onTertiaryContainer,
-          Icons.fingerprint,
-          outcome.message ?? 'Biometric verification is required to record attendance.',
+          Icons.location_off,
+          outcome.message ?? 'You must be inside the school geofence to record attendance.',
+        ),
+      StaffCheckStatus.faceBlocked => (
+          scheme.tertiaryContainer,
+          scheme.onTertiaryContainer,
+          Icons.face_retouching_off,
+          outcome.message ?? 'Face not verified. Face the camera in good light and try again.',
         ),
       StaffCheckStatus.failed => (
           scheme.errorContainer,

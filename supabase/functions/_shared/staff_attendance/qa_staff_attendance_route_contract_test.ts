@@ -1,16 +1,18 @@
-// Staff Face ID attendance — ROUTE + RBAC + hard-block contract (DB-free).
+// B4 — staff attendance (RE-IMPLEMENTED) ROUTE + RBAC + shape contract (DB-free).
 //
 // Proven without a live Postgres:
-//   1. PATH-MATCH: POST /staff-attendance/check resolves to a handler; an
-//      unregistered path under the prefix 404s; outside the prefix returns null.
-//   2. RBAC: 401 unauthenticated; 403 without markStaffAttendance; 503 (authorized,
-//      DB-free) with it + a valid body.
-//   3. HARD-BLOCK enforced server-side: an authorized request whose body does NOT
-//      assert biometric verification is rejected 422 BEFORE any DB work — there is
-//      no PIN fallback. A bad event_type is likewise 422.
-//   4. The audit catalog backs both events (staff_attendance source module).
+//   1. PATH-MATCH: the 6 routes resolve to handlers; an unregistered path under
+//      the prefix 404s; outside the prefix returns null.
+//   2. RBAC: 401 unauthenticated; 403 without the right permission; 503 (authorized,
+//      DB-free) with it + a valid body. Approve/geofence-set need the SUPERVISORY
+//      permission (not markStaffAttendance).
+//   3. SHAPE hard-blocks server-side BEFORE any DB work (422): missing location,
+//      missing face embedding, bad event_type. There is NO device-biometric field
+//      anywhere — attendance proof is geofence + live camera face only.
+//   4. The audit catalog backs every event (staff_attendance source module).
 //
-// Live RLS row-isolation + the 200 happy-path = the Track-B remainder.
+// Live geofence/anti-mock/face-match + the 200 happy path = the Track-B remainder
+// (needs a live tenant DB + an on-device camera/GPS run).
 
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { AppConfig } from "../config.ts";
@@ -46,12 +48,26 @@ async function call(
   return routeStaffAttendance(req, config, method, path);
 }
 
-const validBody = { eventType: "check_in", method: "face_id", biometricVerified: true };
+const validCheck = {
+  eventType: "check_in",
+  location: { latitude: 17.45, longitude: 78.39, accuracyM: 8, isMock: false, capturedAt: "2026-07-01T10:00:00Z" },
+  face: { embedding: Array.from({ length: 64 }, () => 0.1), livenessPassed: true },
+};
+const validGeofence = { centerLatitude: 17.45, centerLongitude: 78.39, radiusM: 100, maxAccuracyM: 50 };
 
-Deno.test("staff-attendance: POST /staff-attendance/check path-matches a handler", async () => {
-  const res = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], validBody);
-  assertEquals(res !== null, true);
-  assertEquals(res!.status !== 404, true);
+Deno.test("staff-attendance: the 6 routes path-match handlers (not 404)", async () => {
+  for (const [m, p, perm, body] of [
+    ["POST", "/staff-attendance/check", "markStaffAttendance", validCheck],
+    ["POST", "/staff-attendance/enroll-face", "markStaffAttendance", { embedding: Array.from({ length: 64 }, () => 0.1) }],
+    ["GET", "/staff-attendance/geofence", "markStaffAttendance", undefined],
+    ["PUT", "/staff-attendance/geofence", "manageSchoolGeofence", validGeofence],
+    ["POST", "/staff-attendance/manual-request", "markStaffAttendance", { eventType: "check_in", reason: "camera broke" }],
+    ["POST", "/staff-attendance/manual-request/decide", "approveStaffAttendance", { requestId: "r1", approve: true }],
+  ] as const) {
+    const res = await call(m, p, [perm], body);
+    assertEquals(res !== null, true, `${m} ${p} should resolve`);
+    assertEquals(res!.status !== 404, true, `${m} ${p} should not 404`);
+  }
 });
 
 Deno.test("staff-attendance: unregistered path under prefix 404s; outside prefix is null", async () => {
@@ -68,46 +84,91 @@ Deno.test("staff-attendance: unauthenticated check-in is 401", async () => {
 });
 
 Deno.test("staff-attendance: 403 without markStaffAttendance (parent/student never)", async () => {
-  const denied = await call("POST", "/staff-attendance/check", [], validBody);
+  const denied = await call("POST", "/staff-attendance/check", [], validCheck);
   assertEquals(denied?.status, 403);
   assertEquals((await denied!.json()).error.code, "FORBIDDEN");
 });
 
 Deno.test("staff-attendance: 503 (authorized, DB-free) with markStaffAttendance + valid body", async () => {
-  const allowed = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], validBody);
+  const allowed = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], validCheck);
   assertEquals(allowed?.status, 503);
 });
 
-Deno.test("staff-attendance: HARD-BLOCK — authorized request without biometric is 422 (no PIN fallback)", async () => {
-  const noBio = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], {
+Deno.test("staff-attendance: SHAPE 422 before DB — missing location, missing face, bad event_type", async () => {
+  const noLoc = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], {
     eventType: "check_in",
-    method: "face_id",
-    // biometricVerified omitted
+    face: { embedding: [0.1, 0.2], livenessPassed: true },
   });
-  assertEquals(noBio?.status, 422);
-  assertEquals((await noBio!.json()).error.code, "STAFF_ATTENDANCE_VALIDATION");
+  assertEquals(noLoc?.status, 422);
+  assertEquals((await noLoc!.json()).error.code, "STAFF_ATTENDANCE_LOCATION_REQUIRED");
 
-  const explicitlyFalse = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], {
+  const noFace = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], {
     eventType: "check_in",
-    biometricVerified: false,
+    location: validCheck.location,
   });
-  assertEquals(explicitlyFalse?.status, 422);
+  assertEquals(noFace?.status, 422);
+  assertEquals((await noFace!.json()).error.code, "STAFF_ATTENDANCE_FACE_REQUIRED");
+
+  const badEvent = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], {
+    ...validCheck,
+    eventType: "lunch_break",
+  });
+  assertEquals(badEvent?.status, 422);
+  assertEquals((await badEvent!.json()).error.code, "STAFF_ATTENDANCE_INVALID_EVENT_TYPE");
 });
 
-Deno.test("staff-attendance: invalid event_type is 422 before any DB work", async () => {
-  const bad = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], {
-    eventType: "lunch_break",
+Deno.test("staff-attendance: NO device-biometric field is accepted as proof (superseded model)", async () => {
+  // A body carrying the OLD device-biometric assertion but no location/face is rejected
+  // 422 on shape — biometricVerified is meaningless for attendance now.
+  const legacy = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], {
+    eventType: "check_in",
     biometricVerified: true,
   });
-  assertEquals(bad?.status, 422);
+  assertEquals(legacy?.status, 422);
 });
 
-Deno.test("staff-attendance: audit catalog backs both events (staff_attendance module)", () => {
-  const checkIn = staffAttendanceAudit.checkInRecorded("chk_1", "u1", "face_id");
+Deno.test("staff-attendance: geofence-set + decide need the SUPERVISORY permission, not markStaffAttendance", async () => {
+  // markStaffAttendance alone cannot configure the geofence...
+  const noGeo = await call("PUT", "/staff-attendance/geofence", ["markStaffAttendance"], validGeofence);
+  assertEquals(noGeo?.status, 403);
+  // ...but manageSchoolGeofence can (503 DB-free).
+  const geo = await call("PUT", "/staff-attendance/geofence", ["manageSchoolGeofence"], validGeofence);
+  assertEquals(geo?.status, 503);
+
+  // markStaffAttendance cannot approve a manual request...
+  const noApprove = await call("POST", "/staff-attendance/manual-request/decide", ["markStaffAttendance"], {
+    requestId: "r1", approve: true,
+  });
+  assertEquals(noApprove?.status, 403);
+  // ...but approveStaffAttendance can (503 DB-free).
+  const approve = await call("POST", "/staff-attendance/manual-request/decide", ["approveStaffAttendance"], {
+    requestId: "r1", approve: true,
+  });
+  assertEquals(approve?.status, 503);
+});
+
+Deno.test("staff-attendance: manual request needs a reason (422) but is authorized with markStaffAttendance", async () => {
+  const noReason = await call("POST", "/staff-attendance/manual-request", ["markStaffAttendance"], {
+    eventType: "check_in", reason: "",
+  });
+  assertEquals(noReason?.status, 422);
+  assertEquals((await noReason!.json()).error.code, "STAFF_ATTENDANCE_REASON_REQUIRED");
+});
+
+Deno.test("staff-attendance: audit catalog backs every event (staff_attendance module)", () => {
+  const checkIn = staffAttendanceAudit.checkInRecorded("chk_1", "u1", "face_match");
   assertEquals(checkIn.audit.eventType, "staffCheckInRecorded");
   assertEquals(checkIn.domain.sourceModule, "staff_attendance");
 
-  const checkOut = staffAttendanceAudit.checkOutRecorded("chk_2", "u1", "fingerprint");
-  assertEquals(checkOut.audit.eventType, "staffCheckOutRecorded");
-  assertEquals(checkOut.domain.sourceModule, "staff_attendance");
+  const enrolled = staffAttendanceAudit.faceEnrolled("face_1", "u1");
+  assertEquals(enrolled.domain.eventType, "staff_attendance.face.enrolled");
+
+  const geofence = staffAttendanceAudit.geofenceConfigured("school-1", 100);
+  assertEquals(geofence.domain.sourceModule, "staff_attendance");
+
+  const created = staffAttendanceAudit.manualRequestCreated("req_1", "u1", "check_in");
+  assertEquals(created.domain.eventType, "staff_attendance.manual_request.created");
+
+  const decided = staffAttendanceAudit.manualRequestDecided("req_1", "boss", "approved");
+  assertEquals(decided.domain.eventType, "staff_attendance.manual_request.decided");
 });

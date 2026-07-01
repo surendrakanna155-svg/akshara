@@ -1,30 +1,13 @@
-// Staff Face ID attendance — append-only check-in/out ledger repository.
-// The acting employee is the JWT subject (anti-buddy-punching); the body carries
-// only the event + the biometric method. HARD-BLOCK: a non-biometric-verified
-// event is rejected (there is no PIN fallback).
+// B4 — staff attendance (RE-IMPLEMENTED) repository: geofence config, per-staff
+// face enrollment, the geofence+anti-mock+face-match check-in ledger, and the
+// audited Manual Attendance Request fallback. All DB access; pure validation/math
+// lives in staff_attendance_validation.ts.
 
 import type { TenantQueryClient } from "../tenant_db.ts";
+import type { GeofenceConfig, StaffCheckEventType } from "./staff_attendance_validation.ts";
+import { StaffAttendanceValidationError } from "./staff_attendance_validation.ts";
 
-export type StaffCheckEventType = "check_in" | "check_out";
-
-const EVENT_TYPES: readonly StaffCheckEventType[] = ["check_in", "check_out"];
-
-export class StaffAttendanceValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "StaffAttendanceValidationError";
-  }
-}
-
-export interface RecordStaffCheckInput {
-  userId: string;
-  staffName: string;
-  staffRole: string;
-  employeeRef: string | null;
-  eventType: StaffCheckEventType;
-  method: string;
-  biometricVerified: boolean;
-}
+export { StaffAttendanceValidationError };
 
 export interface StaffCheckInRow {
   id: string;
@@ -37,45 +20,144 @@ export interface StaffCheckInRow {
   event_type: string;
   event_time: string;
   method: string;
-  biometric_verified: boolean;
+  geo_latitude: number | null;
+  geo_longitude: number | null;
+  geo_accuracy_m: number | null;
+  distance_m: number | null;
+  location_verified: boolean;
+  face_match_score: number | null;
+  face_matched: boolean;
+  capture_ref: string | null;
   created_at: string;
 }
 
-/** Parses + validates the request body into the persisted-input shape. */
-export function parseStaffCheckBody(
-  body: Record<string, unknown> | null,
-): { eventType: StaffCheckEventType; method: string; biometricVerified: boolean; staffName: string; employeeRef: string | null } {
-  if (!body) throw new StaffAttendanceValidationError("JSON body required");
-
-  const eventTypeRaw = String(body.eventType ?? body.event_type ?? "").trim();
-  if (!EVENT_TYPES.includes(eventTypeRaw as StaffCheckEventType)) {
-    throw new StaffAttendanceValidationError(
-      `eventType must be one of ${EVENT_TYPES.join(", ")}`,
-    );
-  }
-
-  // HARD-BLOCK: the client only sends a check-in AFTER a successful real
-  // biometric. A request that does not assert biometric verification is refused
-  // (no device-credential / PIN fallback exists for staff check-in).
-  const biometricVerified = body.biometricVerified === true ||
-    body.biometric_verified === true;
-  if (!biometricVerified) {
-    throw new StaffAttendanceValidationError(
-      "Biometric verification is required for staff check-in (no PIN fallback)",
-    );
-  }
-
-  const method = String(body.method ?? "biometric").trim() || "biometric";
-
+// ── Geofence config ──────────────────────────────────────────────────────────
+export async function getGeofenceConfig(
+  db: TenantQueryClient,
+): Promise<GeofenceConfig | null> {
+  const rows = await db.queryObject<{
+    center_latitude: number;
+    center_longitude: number;
+    radius_m: number;
+    max_accuracy_m: number;
+    max_location_age_s: number;
+  }>(
+    `SELECT center_latitude, center_longitude, radius_m, max_accuracy_m, max_location_age_s
+       FROM school_attendance_geofences
+      WHERE organization_id = app_current_tenant_id()
+        AND school_id = app_current_school_id()
+      LIMIT 1`,
+  );
+  const r = rows[0];
+  if (!r) return null;
   return {
-    eventType: eventTypeRaw as StaffCheckEventType,
-    method,
-    biometricVerified,
-    staffName: String(body.staffName ?? body.staff_name ?? "").trim(),
-    employeeRef: body.employeeRef != null || body.employee_ref != null
-      ? String(body.employeeRef ?? body.employee_ref).trim()
-      : null,
+    centerLatitude: r.center_latitude,
+    centerLongitude: r.center_longitude,
+    radiusM: r.radius_m,
+    maxAccuracyM: r.max_accuracy_m,
+    maxLocationAgeS: r.max_location_age_s,
   };
+}
+
+export async function upsertGeofenceConfig(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  userId: string,
+  cfg: GeofenceConfig,
+): Promise<GeofenceConfig> {
+  await db.queryObject(
+    `INSERT INTO school_attendance_geofences (
+       organization_id, school_id, center_latitude, center_longitude,
+       radius_m, max_accuracy_m, max_location_age_s, updated_by, updated_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8, timezone('utc', now()))
+     ON CONFLICT (organization_id, school_id) DO UPDATE SET
+       center_latitude = EXCLUDED.center_latitude,
+       center_longitude = EXCLUDED.center_longitude,
+       radius_m = EXCLUDED.radius_m,
+       max_accuracy_m = EXCLUDED.max_accuracy_m,
+       max_location_age_s = EXCLUDED.max_location_age_s,
+       updated_by = EXCLUDED.updated_by,
+       updated_at = timezone('utc', now())`,
+    [
+      organizationId,
+      schoolId,
+      cfg.centerLatitude,
+      cfg.centerLongitude,
+      cfg.radiusM,
+      cfg.maxAccuracyM,
+      cfg.maxLocationAgeS,
+      userId,
+    ],
+  );
+  return cfg;
+}
+
+// ── Face enrollment ──────────────────────────────────────────────────────────
+export async function getActiveEnrollment(
+  db: TenantQueryClient,
+  userId: string,
+): Promise<number[] | null> {
+  const rows = await db.queryObject<{ embedding: number[] }>(
+    `SELECT embedding
+       FROM staff_face_enrollments
+      WHERE organization_id = app_current_tenant_id()
+        AND school_id = app_current_school_id()
+        AND user_id = $1
+        AND active = TRUE
+      LIMIT 1`,
+    [userId],
+  );
+  const r = rows[0];
+  if (!r) return null;
+  // embedding is stored as JSONB (array of numbers); the driver returns it parsed.
+  return Array.isArray(r.embedding) ? r.embedding.map(Number) : null;
+}
+
+export async function enrollFace(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  userId: string,
+  embedding: number[],
+): Promise<{ id: string; embeddingDim: number; enrolledAt: string }> {
+  // Replace: deactivate any prior active enrollment, then insert the new one.
+  await db.queryObject(
+    `UPDATE staff_face_enrollments SET active = FALSE
+      WHERE organization_id = app_current_tenant_id()
+        AND school_id = app_current_school_id()
+        AND user_id = $1 AND active = TRUE`,
+    [userId],
+  );
+  const id = `face_enr_${crypto.randomUUID()}`;
+  const rows = await db.queryObject<{ enrolled_at: string }>(
+    `INSERT INTO staff_face_enrollments (
+       id, organization_id, school_id, user_id, embedding, embedding_dim, active
+     ) VALUES ($1,$2,$3,$4,$5::jsonb,$6, TRUE)
+     RETURNING enrolled_at`,
+    [id, organizationId, schoolId, userId, JSON.stringify(embedding), embedding.length],
+  );
+  return { id, embeddingDim: embedding.length, enrolledAt: rows[0]!.enrolled_at };
+}
+
+// ── Check-in ledger ──────────────────────────────────────────────────────────
+export interface RecordStaffCheckInput {
+  userId: string;
+  staffName: string;
+  staffRole: string;
+  employeeRef: string | null;
+  eventType: StaffCheckEventType;
+  method: string; // 'face_match' | 'manual'
+  geoLatitude: number | null;
+  geoLongitude: number | null;
+  geoAccuracyM: number | null;
+  distanceM: number | null;
+  mockDetected: boolean;
+  locationVerified: boolean;
+  livenessPassed: boolean;
+  faceMatchScore: number | null;
+  faceMatched: boolean;
+  captureRef: string | null;
 }
 
 export async function recordStaffCheckIn(
@@ -84,21 +166,15 @@ export async function recordStaffCheckIn(
   schoolId: string,
   input: RecordStaffCheckInput,
 ): Promise<StaffCheckInRow> {
-  if (!input.biometricVerified) {
-    throw new StaffAttendanceValidationError(
-      "Biometric verification is required for staff check-in (no PIN fallback)",
-    );
-  }
-  if (!EVENT_TYPES.includes(input.eventType)) {
-    throw new StaffAttendanceValidationError(`Invalid event_type: ${input.eventType}`);
-  }
-
   const id = `staff_chk_${crypto.randomUUID()}`;
   const rows = await db.queryObject<StaffCheckInRow>(
     `INSERT INTO staff_check_ins (
        id, organization_id, school_id, user_id, employee_ref,
-       staff_name, staff_role, event_type, method, biometric_verified
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       staff_name, staff_role, event_type, method,
+       geo_latitude, geo_longitude, geo_accuracy_m, distance_m,
+       mock_location_detected, location_verified, liveness_passed,
+       face_match_score, face_matched, capture_ref, biometric_verified
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19, FALSE)
      RETURNING *`,
     [
       id,
@@ -110,7 +186,16 @@ export async function recordStaffCheckIn(
       input.staffRole,
       input.eventType,
       input.method,
-      input.biometricVerified,
+      input.geoLatitude,
+      input.geoLongitude,
+      input.geoAccuracyM,
+      input.distanceM,
+      input.mockDetected,
+      input.locationVerified,
+      input.livenessPassed,
+      input.faceMatchScore,
+      input.faceMatched,
+      input.captureRef,
     ],
   );
   return rows[0]!;
@@ -122,8 +207,100 @@ export function staffCheckInToApi(row: StaffCheckInRow) {
     eventType: row.event_type,
     eventTime: row.event_time,
     method: row.method,
-    biometricVerified: row.biometric_verified,
     staffName: row.staff_name,
     staffRole: row.staff_role,
+    locationVerified: row.location_verified,
+    distanceM: row.distance_m,
+    faceMatched: row.face_matched,
+    faceMatchScore: row.face_match_score,
   };
+}
+
+// ── Manual attendance request (GA-2) ─────────────────────────────────────────
+export interface AttendanceRequestRow {
+  id: string;
+  user_id: string;
+  staff_name: string;
+  event_type: string;
+  reason: string;
+  status: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  resulting_check_in_id: string | null;
+  created_at: string;
+}
+
+export async function createAttendanceRequest(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: { userId: string; staffName: string; eventType: StaffCheckEventType; reason: string },
+): Promise<AttendanceRequestRow> {
+  const id = `att_req_${crypto.randomUUID()}`;
+  const rows = await db.queryObject<AttendanceRequestRow>(
+    `INSERT INTO staff_attendance_requests (
+       id, organization_id, school_id, user_id, staff_name, event_type, reason, status
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,'pending')
+     RETURNING *`,
+    [id, organizationId, schoolId, input.userId, input.staffName, input.eventType, input.reason],
+  );
+  return rows[0]!;
+}
+
+export async function decideAttendanceRequest(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  requestId: string,
+  approverId: string,
+  approve: boolean,
+): Promise<{ request: AttendanceRequestRow; checkIn: StaffCheckInRow | null }> {
+  const pending = await db.queryObject<AttendanceRequestRow>(
+    `SELECT * FROM staff_attendance_requests
+      WHERE organization_id = app_current_tenant_id()
+        AND school_id = app_current_school_id()
+        AND id = $1 AND status = 'pending'
+      LIMIT 1`,
+    [requestId],
+  );
+  const reqRow = pending[0];
+  if (!reqRow) {
+    throw new StaffAttendanceValidationError("REQUEST_NOT_FOUND", "No pending request with that id");
+  }
+
+  let checkIn: StaffCheckInRow | null = null;
+  let resultingId: string | null = null;
+  if (approve) {
+    checkIn = await recordStaffCheckIn(db, organizationId, schoolId, {
+      userId: reqRow.user_id,
+      staffName: reqRow.staff_name,
+      staffRole: "",
+      employeeRef: null,
+      eventType: reqRow.event_type as StaffCheckEventType,
+      method: "manual",
+      geoLatitude: null,
+      geoLongitude: null,
+      geoAccuracyM: null,
+      distanceM: null,
+      mockDetected: false,
+      locationVerified: false,
+      livenessPassed: false,
+      faceMatchScore: null,
+      faceMatched: false,
+      captureRef: null,
+    });
+    resultingId = checkIn.id;
+  }
+
+  const updated = await db.queryObject<AttendanceRequestRow>(
+    `UPDATE staff_attendance_requests
+        SET status = $2, decided_by = $3, decided_at = timezone('utc', now()),
+            resulting_check_in_id = $4
+      WHERE organization_id = app_current_tenant_id()
+        AND school_id = app_current_school_id()
+        AND id = $1
+      RETURNING *`,
+    [requestId, approve ? "approved" : "rejected", approverId, resultingId],
+  );
+  return { request: updated[0]!, checkIn };
 }
