@@ -1,7 +1,13 @@
 # Akshara ERP — Product Enhancement Backlog
 
-**Revision:** 4 (FROZEN) · **Date:** 2026-06-30 · **Owner:** surendrakanna155@gmail.com
-**Status:** 🔒 **PRODUCT ARCHITECTURE FROZEN** (2026-06-30) — the single source of truth for all product enhancements.
+**Revision:** 5 (FROZEN) · **Date:** 2026-06-30 (rev 4) · 2026-07-01 (rev 5) · **Owner:** surendrakanna155@gmail.com
+**Status:** 🔒 **PRODUCT ARCHITECTURE FROZEN** (2026-06-30; extended 2026-07-01) — the single source of truth for all product enhancements.
+
+> **Rev 5 (2026-07-01) — owner architecture freeze:** added the **Public Student ID — Foundational Identity
+> Architecture** section (a P1 build-first foundation) plus locked decision #5 below. **This is a documentation-only
+> update** — no code, migration, or commit is produced by it. See the new section for the frozen decision, the
+> per-module impact matrix, the ordered implementation checklist, and the documented conflicts with existing
+> architecture (which are recorded, **not** fixed).
 **Scope:** product enhancements, workflow improvements, productivity features, operational improvements **only**.
 
 > Distinct from [`PRODUCT_COMMERCIAL_BACKLOG.md`](PRODUCT_COMMERCIAL_BACKLOG.md) (scope/commercial),
@@ -38,6 +44,14 @@
    **completely separate from login/logout** — login must never affect attendance.
 4. **Parent communication localization is deterministic.** No LLM / OpenAI / runtime translation — a
    predefined multilingual template catalog only.
+5. **Student identity is Public-Student-ID-based, parent-phone-authenticated** (🔒 **FROZEN 2026-07-01**). Every
+   student has a **permanent Public Student ID** `<SCHOOL_CODE>-<RUNNING_NUMBER>` (e.g. `DPSKKP-001`); the
+   **database UUID stays the only canonical PK** and never changes; the Public Student ID is a **display/lookup
+   id only** and also never changes. **School Code is set once at School Creation, editable before confirmation,
+   then LOCKED forever** (it never changes even if the school name changes). **A student is assumed NOT to own a
+   phone — student phone is NEVER required**; **parent phone remains the primary auth contact**, and future
+   student login = `Student Login ID` + **OTP to the parent mobile**. Full design, module impact, checklist, and
+   conflicts: **[Public Student ID — Foundational Identity Architecture](#public-student-id-foundational-identity-architecture)** below.
 
 Also honoured (PRODUCT_COMMERCIAL_BACKLOG O1–O10): payments engines + monetization = Phase 2; live GPS bus
 tracking = Phase 2; white-label/custom-domain = Phase 2; reception/gate-pass/visitor module = Future Vision.
@@ -70,6 +84,18 @@ banded so implementation can be sequenced:
 - **GA-D3 Check-Out: NOT mandatory.** Open days surface as "No Check-Out"; **Principal/HR Manual-Close** with mandatory reason + audit (built into GA-2). Board shows Working Now · No Check-Out · Manual Closed.
 - **GA-D4 Mid-day exit:** supported — Check-In → Official Duty / Field Visit / Meeting → Return → Check-Out, fully audited (an official-duty exit is **not** a check-out).
 - These four were the last open decisions; **Appendix A now has no open staff-attendance items**.
+
+## Revision-5 change (owner architecture freeze — 2026-07-01)
+
+1. **New foundation section — Public Student ID.** A frozen product-architecture decision was added as a P1,
+   build-first foundation (see [Public Student ID — Foundational Identity Architecture](#public-student-id-foundational-identity-architecture)):
+   permanent `<SCHOOL_CODE>-<RUNNING_NUMBER>` display id · UUID remains canonical PK · School Code set-once /
+   editable-before-confirm / **locked forever** · student phone never required · future student login via OTP to
+   parent. Includes the **per-module impact matrix**, an **ordered implementation checklist**, and a
+   **documented conflicts** list (recorded, not fixed).
+2. **Appendix ADM-D3 (admission-number scheme) is now subsumed** by the Public Student ID decision — see the
+   note on ADM-D3 in Appendix A and conflict **C1/C8** in the new section.
+3. Locked product decision **#5** added above. No other bands, counts, or module tables changed.
 
 ## Revision-3 changes (final owner decisions — this freeze)
 
@@ -151,6 +177,147 @@ These unlock most reports and all reminders below. **No module may invent its ow
 | **XCT-1** | **Shared Export / file-generation pipeline** (PDF + CSV/Excel) | Unblocks ~20 module reports; replaces a platform-wide dead stub | Every "Export/Download" button calls `showAksharaExportQueuedSnackBar` (`lib/shared/widgets/akshara_analytics_panel.dart`) — *"file generation pipeline is not connected yet."* Generalise the real per-row path in `lib/core/reports/akshara_report_export_service.dart` | L | P1 |
 | **XCT-2** | **Shared Reminder & scheduling foundation** (scheduled-job runner + in-app reminder/notification centre) | "Foundation first" — every module reminder rides this | No cron/scheduled-job dir under `supabase/functions/`; rails reusable (`transport_write_handlers.ts` → `sendBroadcastMessage`). External push/SMS/WhatsApp delivery **stays owner-gated**; in-app surfacing ships now | L | P1 |
 | **XCT-3** | **Date pickers for all free-text date fields** | Removes data errors across leave/correction/exam-create | Free-text date `TextField`s in `teacher_leave_screen.dart`, `leave_apply_form.dart`, `teacher_attendance_workflow.dart`, `exam_create_dialog.dart` | S | P2 |
+
+---
+
+# Public Student ID: Foundational Identity Architecture
+
+**P1 · Product Architecture · 🔒 FROZEN 2026-07-01**
+
+> **Owner-frozen product-architecture decision (2026-07-01).** This section records the decision **only** — it
+> produces **no code, no migration, and no commit**. It is a **build-first foundation** (same class as XCT-1/2):
+> the Public Student ID and the locked School Code must exist *before* the modules below can standardize on them.
+> Implementation begins only after the owner promotes it out of this backlog. Where existing architecture
+> conflicts with this decision, the conflict is **documented (not fixed)** in *Conflicts with existing
+> architecture* at the end of this section.
+
+## The decision (frozen)
+
+1. **Canonical PK unchanged.** `students.id` (**UUID**) remains the *only* canonical primary key and never
+   changes. Every foreign key / relationship keeps using the UUID. The Public Student ID is **never** a PK or FK.
+2. **Public Student ID** — every student receives one **permanent, human-friendly** identifier:
+   - **Format:** `<SCHOOL_CODE>-<RUNNING_NUMBER>` → e.g. `DPSKKP-001`, `DPSKKP-002`, `KRSNLR-001`.
+   - `<RUNNING_NUMBER>` is a **per-school monotonic sequence** (001, 002, …), zero-padded, allocated once, **never reused**.
+   - **Never changes** once issued — independent of name, class, section, status, or a later school-name change.
+   - It is a **display / lookup identifier only**.
+   - **✅ OWNER-DECIDED 2026-07-01 — does NOT replace the Admission Number** (resolves C1/C8). The
+     `admission_number` **remains a school-managed administrative field** with its own lifecycle; the Public
+     Student ID is the **platform-wide permanent human identity**. They are **two distinct fields, two distinct
+     purposes** — build the Public Student ID as a **new** `public_student_id` column *alongside* `admission_number`
+     (do not migrate/overwrite it).
+3. **School Code** — decided **once** at School Creation:
+   - System **suggests** a code → Administrator **may edit before confirmation** → **validate global uniqueness** →
+     on confirm **LOCK FOREVER**.
+   - **✅ OWNER-DECIDED 2026-07-01 — globally unique across the entire Akshara platform** (resolves C4), **not**
+     per-organization. Creation must validate the code is unused platform-wide before it can be confirmed.
+   - **Never changes** even if the school **name** changes later.
+4. **No student phone required.** A student is assumed **not to own a phone**. Student phone is **NEVER required**
+   for any normal school operation. **Parent phone remains the primary authentication contact.**
+5. **Student login (future-ready).** `Student Login ID` **+ OTP sent to the parent mobile number** — the parent
+   authorizes the login; the student never needs a personal phone. A **"Trusted Device"** option *may* follow
+   after the first OTP verification. *(Future — **not** GA; captured so nothing is built that assumes a student phone.)*
+
+## Sub-items
+
+| ID | Title | Pri | Cx | Scope |
+|----|-------|-----|----|-------|
+| **PSID-1** | **School Code lifecycle + lock** | P1 | M | Suggest a code at School Creation (derive from school name → uppercase alpha token); allow **edit before confirmation**; **validate GLOBAL uniqueness** (platform-wide, not per-org — owner-decided) before confirm; on confirm **lock forever** (add a `code_locked_at`-style marker). Block every later change at handler + DB + RLS. Code survives a school-name change. |
+| **PSID-2** | **Public Student ID model + running-number generator** | P1 | M | Add a permanent, unique **`public_student_id`** field **alongside** (not replacing) `admission_number` + a **per-school atomic running-number sequence** (concurrency-safe, gap-tolerant, zero-padded). Assign at the **single** student-creation choke point (admissions enrollment, onboarding CSV import, org-builder provisioning) so every path produces one. |
+| **PSID-3** | **Immutability enforcement** | P1 | S | Public Student ID becomes **read-only** everywhere. Remove the admin edit path; reject updates at DB (trigger/constraint) + RLS + handler; any exceptional change is audit-logged. UUID stays PK. |
+| **PSID-4** | **Existing-student backfill / migration strategy** | P1 | M | Deterministically assign Public Student IDs to already-enrolled students (define ordering — e.g. by enrollment date then admission number). One-time, idempotent, fully logged. *(Design only here; migration authored at implementation time.)* |
+| **PSID-5** | **Display standardization across all modules** | P1 | L | The Public Student ID replaces the raw UUID as the human identifier on **every** student-facing surface (see the impact matrix). No screen/report/print shows the UUID as the human id. |
+| **PSID-6** | **Import / export + print-format standardization** | P1 | M | CSV/Excel **import** templates accept & echo Public Student ID; **exports** and all **print formats** (receipts, cards, tickets, certificates) include it. Bulk import/export keyed on it (UUID stays internal). |
+| **PSID-7** | **Search + global search** | P1 | S | Public Student ID is a first-class search key in student search **and** global search — exact and prefix match. |
+| **PSID-8** | **API contracts + audit logs** | P1 | M | Every student-bearing API response carries `public_student_id`; APIs accept it as a lookup alias (UUID still canonical). Audit-log entries reference it for human traceability. |
+| **PSID-9** | **Student login — Login ID + OTP to parent** | Fut | M | Future-ready: `Student Login ID` + OTP to **parent** mobile; optional Trusted Device after first verify. Must never require a student phone. *(Not GA.)* |
+| **PSID-10** | **QR / Barcode encodes Public Student ID** | Fut | M | Future ID-card QR/barcode encodes the Public Student ID (fast lookup at library/attendance/gate). *(Not GA.)* |
+
+## Per-module impact matrix (every place that must eventually use / display the Public Student ID)
+
+> "Ev." = a concrete current-code anchor where a raw UUID / `admission_number` is used today (from the architecture
+> map). Absence of an anchor ≠ out of scope — it just means the surface isn't built yet.
+
+| Module / surface | What must use / display the Public Student ID | Ev. (today) |
+|---|---|---|
+| **Admissions / Front-office** | Show Public Student ID once enrolled; enrollment issues it (not the random `ADM-…`). | `admissions_repository.ts:856` generates `ADM-<YEAR>-<UUID>` |
+| **Student Search** | Searchable + shown in every result row. | `sis_registry_provider.dart:144` searches `admissionNumber` |
+| **Student Profile / 360 dossier** | Primary identifier in header + dossier + PDF. **Read-only.** | `sis_profile_screen.dart:78`; edit at `sis_profile_edit_sheet.dart:48,162` (must become read-only — see C5) |
+| **Attendance (student)** | Registers/exports key rows by Public Student ID. | Office register (ATT-1/ATT-2) |
+| **Homework** | Submission / "not submitted" lists identify students by it (HWK-2). | — |
+| **Exams / Marks** | Mark sheets, tabulation registers, progress boards use it (EXM-1/2/3). | — |
+| **Progress / Report Cards** | Printed on the card as the student identifier. | Report-card PDF (built) |
+| **Hall Tickets / Admit Cards** | Printed on the ticket (EXM-D4). | — |
+| **Fee Management / Finance** | Ledgers, statements, defaulter/recovery lists key on it (FIN-2/7/8, FIN-R*). | `mock_finance_repository.dart` uses `ADM-…` |
+| **Payment Receipts** | Printed on the receipt (FIN-3). | `finance_receipt_pdf_service.dart` |
+| **Transport** | Stop/route rosters & transport-fee demand identify students by it (TRN-3/9). | `pickupStop` roster |
+| **Library** | Member card + issue/return history keyed on it (LIB-1/6). | — |
+| **Inventory references** | Any student-linked issue/consumption reference. | — |
+| **Medical** | Medical record / certificate references the student by it. | — |
+| **Discipline** | Incident / conduct records reference it. | — |
+| **Certificates** (Bonafide / Study / Conduct) | Printed on the certificate (SIS-1). | — |
+| **Transfer Certificate (TC)** | Printed on the TC; TC register lists it (SIS-D1). | — |
+| **ID Cards** | The **primary printed identifier** (+ future QR, PSID-10) (SIS-D2). | — |
+| **Parent App** | Shown per child in the child-switcher / profile. | `lib/features/parent/` |
+| **Student App** | Shown on the student's own profile; basis of the future Login ID (PSID-9). | `lib/features/student_app/` |
+| **Teacher App** | Rosters, mark entry, homework review show it. | `lib/features/teacher/` |
+| **Principal** | Approval/exception lists & drill-downs identify students by it. | — |
+| **Director (multi-school)** | Cross-school views disambiguate students by it (school-code prefix helps). | — |
+| **Bulk Import** | CSV/Excel template accepts + echoes it (PSID-6). | `onboarding_repository.ts` import template |
+| **Bulk Export** | Every student export includes it (PSID-6, rides XCT-1). | — |
+| **Reports** | Every student-level report row carries it. | rides XCT-1 |
+| **Analytics** | Student drill-downs label by it (not UUID). | — |
+| **QR / Barcode (future)** | Encodes the Public Student ID (PSID-10). | — |
+| **API contracts** | `public_student_id` in every student DTO/response; accepted as lookup (PSID-8). | student DTOs in `sis_models.dart` |
+| **Audit logs** | Reference it for human traceability (PSID-8). | — |
+| **Notifications** | Student-referencing messages identify by it (never the UUID). | — |
+| **Global search** | First-class key (PSID-7). | — |
+| **Excel / CSV / Print formats** | All templates + print layouts include it (PSID-6). | — |
+
+## Implementation checklist (ordered — so nothing is missed later)
+
+**Phase 0 — decisions & data foundation (must precede any surface work):**
+- [ ] **Resolve C1/C8** — does the Public Student ID **replace** `admission_number`, or is it a **new parallel** field? (owner)
+- [ ] **Resolve C4** — is `<SCHOOL_CODE>` **globally unique** or **org-unique**? (needed for global unambiguity / QR / API) (owner)
+- [ ] **PSID-1** — School-Code suggestion algorithm; edit-before-confirm UI; lock-on-save; block later changes at handler + DB + RLS.
+- [ ] **PSID-2** — per-school atomic running-number sequence + `public_student_id` unique field + index; assign at the single student-creation choke point (enrollment / import / provisioning).
+- [ ] **PSID-3** — make the id read-only; DB trigger/constraint + RLS + handler reject updates; audit any override.
+- [ ] **PSID-4** — deterministic, idempotent backfill for existing students (documented ordering).
+
+**Phase 1 — surface standardization (the "becomes the standard" work):**
+- [ ] **PSID-5** — profile / 360 / search / dashboards / rosters display it (make profile field read-only).
+- [ ] **PSID-6** — print & documents: ID cards, report/progress cards, hall tickets, receipts, TC, bonafide/conduct; CSV/Excel import & export templates.
+- [ ] **PSID-7** — student search + global search key on it (exact + prefix).
+- [ ] Finance / Transport / Library / Inventory / Medical / Discipline / Certificates reference it.
+- [ ] Parent / Student / Teacher / Principal / Director surfaces display it.
+- [ ] **PSID-8** — API responses carry `public_student_id` + accept it as a lookup; audit logs + notifications reference it.
+
+**Phase 2 / Future (captured so nothing blocks them):**
+- [ ] **PSID-9** — student login: `Student Login ID` + OTP to **parent** mobile; Trusted-Device follow-up.
+- [ ] **PSID-10** — QR/Barcode on ID cards encodes the Public Student ID.
+
+**Definition of done (verification):**
+- [ ] No screen / report / print / export / search presents the raw **UUID** as the human identifier.
+- [ ] Public Student ID is **immutable** — an attempted edit is rejected **and** audited.
+- [ ] School Code **lock** proven — an attempted change after confirmation is rejected.
+- [ ] **Student phone is never required** anywhere (import, enrollment, login).
+
+## Conflicts with existing architecture (documented — **not** fixed)
+
+Per the freeze rule, these are **recorded only**; resolution happens when the owner promotes this into implementation.
+
+| # | Conflict | Current reality (evidence) | Why it conflicts |
+|---|---|---|---|
+| **C1** | **No Public Student ID exists; format differs.** | Human id today = `student_profiles.admission_number` = `ADM-<YEAR>-<8-char random UUID>` — `admissions_repository.ts:856`. RT-02 enforces `UNIQUE (school_id, admission_number)` — `20260814000000_red_team_wave1_transactional_integrity.sql:40`. | New format is `<SCHOOL_CODE>-<RUNNING_NUMBER>`. **Open decision:** replace `admission_number`, or add a **new** `public_student_id` column alongside it. |
+| **C2** | **"Running number" ≠ today's random slice.** | The trailing token is `crypto.randomUUID().slice(0,8)` — **not** a sequential per-school counter (`admissions_repository.ts:856-857`). | New design needs a **monotonic per-school sequence** with concurrency safety; no such sequence/counter exists. |
+| **C3** | **School Code has no lock.** | `schools.code` exists (`20260607100000_core_platform_schema.sql:19-29`, `UNIQUE (organization_id, code)`) but is **mutable** — no `locked_at`/`confirmed_at`, nothing blocks `UPDATE`. | If the code changes after IDs are issued, **every** Public Student ID silently breaks. The lock is mandatory. |
+| **C4** | **School-Code uniqueness is org-scoped, not global.** | `UNIQUE (organization_id, code)` — two different organizations may both pick `DPS`. | Public Student IDs are only **globally** unambiguous (QR/barcode, cross-org, API) if the School Code is globally unique. **Decision needed.** |
+| **C5** | **Admin can currently edit the human id.** | `sis_profile_edit_sheet.dart:48,162` populates and submits `admissionNumber` on edit. | New design says the id **never changes** — the edit path must be removed / made read-only. |
+| **C6** | **Student login OTP goes to the student's own phone.** | `auth_handlers.ts:219-245` + `auth_login_helpers.ts` resolve a student by `student_code`/`admission_number` and send OTP to the **student's** `users.phone`; a phone-less student cannot log in. | New design routes the OTP to the **parent** mobile and assumes **no student phone**. Direct conflict with the future login path. |
+| **C7** | **A third identifier (`student_code`) coexists.** | `students.student_code` = `STU-<8-char UUID>`, `UNIQUE (school_id, student_code)` (`20260609100000_phase2_rls_scope.sql:17`). | With UUID (PK) + `admission_number` + `student_code`, adding a fourth id needs an explicit keep/retire/merge call to avoid identifier sprawl. |
+| **C8** | **Appendix ADM-D3 (admission-number scheme) is now in tension.** | ADM-D3 proposes a configurable `PREFIX/YEAR/serial` scheme with per-year reset (Appendix A). | The Public Student ID is a **school-code + non-resetting running number** and is **permanent** — it overlaps and partly contradicts ADM-D3. Reconcile alongside C1. |
+| **C9** | **`roll_number` is *not* the permanent id** (clarification). | `sis_student_enrollments.roll_number` is year/class-scoped and mutable (`20260613000000_sis_slice0_foundation.sql:72`). | Must stay distinct from the Public Student ID — it is neither permanent nor school-wide. |
+
+**Already compatible (no conflict):** UUID as canonical PK matches the current schema exactly; student phone being optional is already true (`onboarding_repository.ts` — `studentPhone` optional, `parentPhone` required), so "never require student phone" needs **no** schema change.
 
 ---
 
@@ -269,6 +436,7 @@ Intelligence (workload/burnout — shipped). *(HR Excel bulk import is tracked �
 | **HR-5** | Headcount-by-department report/export — rides XCT-1 | P3 | S–M | 4,6 | Tile exports metadata only; `topDepartment` computed but not a report |
 | **HR-6** | Monthly staff attendance **muster** export (employee × day grid) — rides XCT-1, **feeds from GA-1** | P1 | M | 4,6 | No muster/register export; the canonical monthly HR/payroll attestation |
 | **HR-7** | Employee directory export (code/name/dept/designation/phone/join/status) — rides XCT-1 | P2 | S | 4,6 | No export on the employees screen |
+| **HR-8** | **Automatic Employee Provisioning** — on successful **Teacher/Staff onboarding**, automatically provision or synchronize the corresponding `employees` record so the HR/Payroll module stays consistent | **P1** | M | — | **Operational gap (found 2026-07-01, live Track B).** Onboarding creates `users` + `school_memberships(role)` but **NOT** an `employees` row; the one-time back-fill (`20260622200000`) has **no ongoing sync**, so newly-onboarded teachers/staff never appear in HR/Payroll (muster/salary/payslip) until an admin adds them manually. ⚠ **HR/Payroll enhancement ONLY — must NOT change the canonical teacher identity** (`users` + `school_memberships(role='teacher')` stays canonical; `employees` remains an HR projection, per the 2026-07-01 owner decision). Sync on onboarding commit (teacher + staff paths) + a one-time reconcile for existing gaps. |
 
 *(Staff document-expiry tracking, probation-end follow-up, leave-on-behalf balance rule → Appendix A.
 Birthday/anniversary greeting **removed** as weak — see change log.)*
@@ -506,7 +674,7 @@ see the GA section's "Frozen config defaults" table and GA-2. **No open decision
 |----|-----------------|---------------------|--------|
 | **ADM-D1** | "Mark Lost" reason taxonomy + lost-reasons report | Small fixed picklist (fees-high/competitor/distance/other) | P2 |
 | **ADM-D2** | Duplicate-lead by phone — warn vs hard-block | Warn-only with "open existing" | P2 |
-| **ADM-D3** | Admission-number scheme — human sequential (PREFIX/YEAR/serial) + reset-per-year? ⚠ back-compat with existing `ADM-…` | Configurable prefix + per-year serial; keep old numbers valid | P1 |
+| **ADM-D3** | Admission-number scheme — human sequential (PREFIX/YEAR/serial) + reset-per-year? ⚠ back-compat with existing `ADM-…`. **⚠ SUBSUMED 2026-07-01** by the [Public Student ID](#public-student-id-foundational-identity-architecture) freeze (school-code + **non-resetting** permanent running number). Resolve **with** conflicts **C1/C8** — decide whether the admission number *is* the Public Student ID or a separate admissions-only number. | Configurable prefix + per-year serial; keep old numbers valid — **reconcile against the Public Student ID first** | P1 |
 | **ADM-D4** | Offer/admission-confirmation letter — template/branding/fields | Standard template + branding (admission no/class/fee/reporting date) | P2 |
 
 ### Student Information
@@ -591,6 +759,7 @@ Honesty/quality issues found while reviewing — they belong in the QA tracker:
 - **FutureVision.md / ImplementationRoadmap.md** — future capabilities (many shipped ✅). Excluded.
 - **IDEAS_BACKLOG.md** — TTS, AI School Builder, posters/holiday-calendar **authoring**, deployment model, backup follow-ups. Excluded (PAR-D5 adds only the parent **read** side).
 - **FINAL_QA_ROADMAP.md / FINAL_QA_MASTER_TRACKER.md / QW1–QW8 / EOS ledger** — **frozen**; defects above route there, not here.
+- **[Public Student ID — Foundational Identity Architecture](#public-student-id-foundational-identity-architecture)** (rev 5) — a P1 build-first foundation frozen 2026-07-01. It **subsumes** Appendix **ADM-D3** and is cross-referenced on the roadmap ([`Vision/ImplementationRoadmap.md`](Vision/ImplementationRoadmap.md), "Foundational architecture"). It touches nearly every module (see its impact matrix) but changes **no** existing band, count, or module table — it is an additive foundation.
 
 **Next step:** owner reviews this → resolves Appendix A → approves → *then* the roadmap is updated and
 implementation begins. Nothing is started, committed, or roadmapped by this document.
