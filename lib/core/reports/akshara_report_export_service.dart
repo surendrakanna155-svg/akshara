@@ -444,6 +444,115 @@ class AksharaReportExportService {
     final name = filename.endsWith('.csv') ? filename : '$filename.csv';
     return Printing.sharePdf(bytes: bytes, filename: name);
   }
+
+  // --- Multi-column grid exports (XCT-1) --------------------------------------
+  // The key/value builders above collapse a record into "Field,Value" pairs.
+  // Real module reports (tabulation register students×subjects, monthly muster
+  // employee×day, transaction-level day collection, salary register) need a
+  // proper grid: one header row + one data row per record. These are the shared
+  // primitive every such report rides on — no module invents its own.
+
+  /// Builds a multi-column grid CSV (header row + one row per record).
+  String buildGridReportCsv({
+    required List<String> headers,
+    required List<List<String>> rows,
+  }) {
+    final buffer = StringBuffer()..writeln(headers.map(_escapeCsv).join(','));
+    for (final row in rows) {
+      buffer.writeln(row.map(_escapeCsv).join(','));
+    }
+    return buffer.toString();
+  }
+
+  Uint8List buildGridReportCsvBytes({
+    required List<String> headers,
+    required List<List<String>> rows,
+  }) {
+    return Uint8List.fromList(
+      utf8.encode(buildGridReportCsv(headers: headers, rows: rows)),
+    );
+  }
+
+  Future<void> shareGridCsv({
+    required String filename,
+    required List<String> headers,
+    required List<List<String>> rows,
+  }) {
+    final bytes = buildGridReportCsvBytes(headers: headers, rows: rows);
+    final name = filename.endsWith('.csv') ? filename : '$filename.csv';
+    return Printing.sharePdf(bytes: bytes, filename: name);
+  }
+
+  /// Builds a multi-column grid PDF (paginated table). Columns at index
+  /// [rightAlignFrom] and beyond are right-aligned (for numeric/amount columns).
+  Future<Uint8List> buildGridReportPdf({
+    required String reportTitle,
+    required String moduleLabel,
+    required List<String> headers,
+    required List<List<String>> rows,
+    String? generatedAtLabel,
+    int? rightAlignFrom,
+  }) async {
+    final document = pw.Document();
+    final Map<int, pw.Alignment> cellAlignments = {};
+    if (rightAlignFrom != null) {
+      for (var i = rightAlignFrom; i < headers.length; i++) {
+        cellAlignments[i] = pw.Alignment.centerRight;
+      }
+    }
+    document.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(AksharaSpacing.s6),
+        build: (context) => [
+          pw.Text(
+            reportTitle,
+            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(moduleLabel, style: const pw.TextStyle(fontSize: 12)),
+          if (generatedAtLabel != null) ...[
+            pw.SizedBox(height: 4),
+            pw.Text('Generated: $generatedAtLabel',
+                style: const pw.TextStyle(fontSize: 10)),
+          ],
+          pw.SizedBox(height: 16),
+          pw.TableHelper.fromTextArray(
+            headers: headers,
+            data: rows,
+            border: pw.TableBorder.all(color: PdfColors.grey400),
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+            cellAlignment: pw.Alignment.centerLeft,
+            cellAlignments: cellAlignments,
+            cellStyle: const pw.TextStyle(fontSize: 9),
+          ),
+        ],
+      ),
+    );
+    return document.save();
+  }
+
+  Future<void> shareGridPdf({
+    required String filename,
+    required String reportTitle,
+    required String moduleLabel,
+    required List<String> headers,
+    required List<List<String>> rows,
+    String? generatedAtLabel,
+    int? rightAlignFrom,
+  }) async {
+    final bytes = await buildGridReportPdf(
+      reportTitle: reportTitle,
+      moduleLabel: moduleLabel,
+      headers: headers,
+      rows: rows,
+      generatedAtLabel: generatedAtLabel,
+      rightAlignFrom: rightAlignFrom,
+    );
+    final name = filename.endsWith('.pdf') ? filename : '$filename.pdf';
+    await Printing.sharePdf(bytes: bytes, filename: name);
+  }
 }
 
 final aksharaReportExportServiceProvider = Provider<AksharaReportExportService>(

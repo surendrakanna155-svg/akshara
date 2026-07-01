@@ -26,4 +26,57 @@ void main() {
       expect(String.fromCharCodes(bytes), contains('Refunds'));
     });
   });
+
+  group('AksharaReportExportService grid (XCT-1)', () {
+    const service = AksharaReportExportService();
+
+    test('buildGridReportCsv emits header row + one row per record', () {
+      final csv = service.buildGridReportCsv(
+        headers: const ['Source', 'Leads', 'Converted'],
+        rows: const [
+          ['Website', '40', '12'],
+          ['Referral', '25', '9'],
+        ],
+      );
+      final lines = csv.trim().split('\n');
+      expect(lines.length, 3); // header + 2 data rows
+      expect(lines.first, 'Source,Leads,Converted');
+      expect(lines[1], 'Website,40,12');
+    });
+
+    test('buildGridReportCsv escapes commas and quotes in any column', () {
+      final csv = service.buildGridReportCsv(
+        headers: const ['Item', 'Note'],
+        rows: const [
+          ['Chalk, box', 'has "quotes"'],
+        ],
+      );
+      expect(csv, contains('"Chalk, box","has ""quotes"""'));
+    });
+
+    test('buildGridReportCsvBytes returns utf8 bytes', () {
+      final bytes = service.buildGridReportCsvBytes(
+        headers: const ['A', 'B'],
+        rows: const [
+          ['1', '2'],
+        ],
+      );
+      expect(String.fromCharCodes(bytes), contains('A,B'));
+    });
+
+    test('buildGridReportPdf produces a non-empty PDF document', () async {
+      final bytes = await service.buildGridReportPdf(
+        reportTitle: 'Tabulation Register',
+        moduleLabel: 'Exams',
+        headers: const ['Student', 'Maths', 'Science', 'Total'],
+        rows: const [
+          ['Asha', '88', '91', '179'],
+          ['Ravi', '76', '84', '160'],
+        ],
+        rightAlignFrom: 1,
+      );
+      expect(bytes.length, greaterThan(0));
+      expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
+    });
+  });
 }

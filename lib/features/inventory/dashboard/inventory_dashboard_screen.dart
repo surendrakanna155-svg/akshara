@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/async/erp_async_state.dart';
@@ -39,7 +40,7 @@ class InventoryDashboardScreen extends ConsumerWidget {
       filterTrailing: AksharaManageAction(
         permission: Permission.manageInventory,
         child: OutlinedButton.icon(
-          onPressed: () => showAksharaExportQueuedSnackBar(context),
+          onPressed: () => _exportLowStock(context, ref),
           icon: const Icon(Icons.download_outlined, size: 18),
           label: const Text('Export'),
         ),
@@ -52,6 +53,51 @@ class InventoryDashboardScreen extends ConsumerWidget {
         onRetry: () => retryErpFuture(ref, inventoryDashboardFutureProvider),
         builder: (data) => _buildDashboardContent(context, data),
       ),
+    );
+  }
+
+  /// INV-01 export (XCT-1) — low-stock / reorder list as a real grid CSV
+  /// (the actionable procurement report; superset of what the alerts card shows).
+  Future<void> _exportLowStock(BuildContext context, WidgetRef ref) async {
+    final data = ref.read(inventoryDashboardFutureProvider).valueOrNull;
+    if (data == null) {
+      showAksharaExportQueuedSnackBar(
+        context,
+        label: 'Inventory data still loading — try again in a moment.',
+      );
+      return;
+    }
+    if (data.stockAlerts.isEmpty) {
+      showAksharaExportQueuedSnackBar(
+        context,
+        label: 'No low-stock items to export.',
+      );
+      return;
+    }
+    final rows = [
+      for (final a in data.stockAlerts)
+        [
+          a.itemName,
+          a.category,
+          a.department,
+          '${a.currentStock}',
+          '${a.reorderLevel}',
+        ],
+    ];
+    await ref.read(aksharaReportExportServiceProvider).shareGridCsv(
+      filename: 'inventory_low_stock.csv',
+      headers: const [
+        'Item',
+        'Category',
+        'Department',
+        'Current Stock',
+        'Reorder Level',
+      ],
+      rows: rows,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Low-stock CSV ready (${rows.length} items)')),
     );
   }
 
