@@ -13,6 +13,8 @@ import '../../school_completion/school_branding_theme_provider.dart';
 import '../finance_mutations_provider.dart';
 import '../finance_workflow_actions.dart';
 import '../finance_journey_context_provider.dart';
+import '../policy/finance_policy_actions.dart';
+import '../policy/finance_policy_provider.dart';
 import '../receipts/finance_receipt_pdf_service.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -114,8 +116,61 @@ class FinanceCollectionsScreen extends ConsumerWidget {
                   label: const Text('QR Pay'),
                 ),
               ),
+              // FIN-D5 / FIN-D3: policy actions kept in a compact overflow menu
+              // so the mobile action row never overflows (~390px width history).
+              AksharaManageAction(
+                permission: Permission.manageFinance,
+                child: PopupMenuButton<String>(
+                  key: QaTestKeys.financeCollectionsPolicyMenu,
+                  tooltip: 'More collection actions',
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'accrue':
+                        accrueLateFees(context, ref);
+                      case 'cancelled':
+                        exportCancelledRegister(context, ref);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem<String>(
+                      key: QaTestKeys.financeAccrueLateFeesButton,
+                      value: 'accrue',
+                      child: ListTile(
+                        leading: Icon(Icons.schedule_outlined),
+                        title: Text('Accrue late fees'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const PopupMenuItem<String>(
+                      key: QaTestKeys.financeCancelledRegisterButton,
+                      value: 'cancelled',
+                      child: ListTile(
+                        leading: Icon(Icons.receipt_long_outlined),
+                        title: Text('Cancelled register'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AksharaSpacing.s3,
+                      vertical: AksharaSpacing.s2,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.more_horiz),
+                        SizedBox(width: AksharaSpacing.s1),
+                        Text('More'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
+          const SizedBox(height: AksharaSpacing.s4),
+          const _DayCloseControl(),
           const SizedBox(height: AksharaSpacing.s4),
           Semantics(
             label: 'Receipt lookup',
@@ -343,6 +398,82 @@ class FinanceCollectionsScreen extends ConsumerWidget {
       return;
     }
     await const FinanceReceiptPdfService().printReceipt(bytes);
+  }
+}
+
+/// FIN-D1 — day-close lock control. Shows the latest closed day (if any) and
+/// offers Close-day / Reopen actions to finance managers.
+class _DayCloseControl extends ConsumerWidget {
+  const _DayCloseControl();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entriesAsync = ref.watch(financeDayCloseEntriesFutureProvider);
+    final colors = context.colors;
+    final text = context.aksharaText;
+
+    final entries = entriesAsync.valueOrNull ?? const <DayCloseEntry>[];
+    // Latest closed day (repository surfaces most-recent first).
+    DayCloseEntry? latestClosed;
+    for (final entry in entries) {
+      if (entry.isClosed) {
+        latestClosed = entry;
+        break;
+      }
+    }
+
+    final statusLabel = latestClosed == null
+        ? 'No day closed yet'
+        : 'Last closed day: ${latestClosed.closeDate}';
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AksharaSpacing.s3),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        child: Row(
+          children: [
+            Icon(Icons.lock_clock_outlined, color: colors.primary),
+            const SizedBox(width: AksharaSpacing.s3),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Day-close lock', style: text.titleSmall),
+                  const SizedBox(height: AksharaSpacing.s1),
+                  Text(statusLabel, style: text.bodySmall),
+                ],
+              ),
+            ),
+            AksharaManageAction(
+              permission: Permission.manageFinance,
+              child: Wrap(
+                spacing: AksharaSpacing.s2,
+                children: [
+                  if (latestClosed != null)
+                    OutlinedButton.icon(
+                      key: QaTestKeys.financeReopenDayButton,
+                      onPressed: () =>
+                          reopenDay(context, ref, date: latestClosed!.closeDate),
+                      icon: const Icon(Icons.lock_open_outlined, size: 18),
+                      label: const Text('Reopen'),
+                    ),
+                  FilledButton.icon(
+                    key: QaTestKeys.financeCloseDayButton,
+                    onPressed: () => closeDay(context, ref),
+                    icon: const Icon(Icons.lock_outline, size: 18),
+                    label: const Text('Close day'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

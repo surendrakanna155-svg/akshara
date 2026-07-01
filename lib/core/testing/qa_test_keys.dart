@@ -175,6 +175,32 @@ abstract final class QaTestKeys {
   static const financeExportClassDuesButton =
       ValueKey<String>('finance_export_class_dues_button');
 
+  // FIN-D1 / FIN-D3 / FIN-D5 / FIN-2 — collections policy + ledger actions.
+  static const financeCollectionsPolicyMenu =
+      ValueKey<String>('finance_collections_policy_menu');
+  static const financeAccrueLateFeesButton =
+      ValueKey<String>('finance_accrue_late_fees_button');
+  static const financeAccrueLateFeesSnackbar =
+      ValueKey<String>('finance_accrue_late_fees_snackbar');
+  static const financeCancelledRegisterButton =
+      ValueKey<String>('finance_cancelled_register_button');
+  static const financeCloseDayButton =
+      ValueKey<String>('finance_close_day_button');
+  static const financeReopenDayButton =
+      ValueKey<String>('finance_reopen_day_button');
+  static const financeDayCloseSnackbar =
+      ValueKey<String>('finance_day_close_snackbar');
+  static const financeExportStatementButton =
+      ValueKey<String>('finance_export_statement_button');
+  static const financeExportStatementSnackbar =
+      ValueKey<String>('finance_export_statement_snackbar');
+  static ValueKey<String> financeWaiveLateFeeButton(String invoiceId) =>
+      ValueKey<String>('finance_waive_late_fee_$invoiceId');
+  static const financeWaiveLateFeeConfirmButton =
+      ValueKey<String>('finance_waive_late_fee_confirm_button');
+  static const financeWaiveLateFeeSnackbar =
+      ValueKey<String>('finance_waive_late_fee_snackbar');
+
   static const teacherAttendanceCorrectionButton =
       ValueKey<String>('teacher_attendance_correction_button');
   static const teacherAttendanceCorrectionSubmitButton =

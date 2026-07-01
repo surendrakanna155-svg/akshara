@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_failure.dart';
+import '../../../core/errors/api_failure_mapper.dart';
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../../school_completion/school_branding_theme_provider.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
+import '../policy/finance_policy_provider.dart';
 import '../widgets/finance_kpi_row.dart';
 import '../widgets/finance_module_scaffold.dart';
 import 'finance_student_accounts_provider.dart';
@@ -229,13 +235,13 @@ class _AccountListTile extends StatelessWidget {
   }
 }
 
-class _AccountSummaryPanel extends StatelessWidget {
+class _AccountSummaryPanel extends ConsumerWidget {
   const _AccountSummaryPanel({required this.account});
 
   final StudentFeeAccount account;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -244,7 +250,16 @@ class _AccountSummaryPanel extends StatelessWidget {
           '${account.admissionNumber} · Class ${account.classLabel}',
           style: context.aksharaText.bodyMedium,
         ),
-        const SizedBox(height: AksharaSpacing.s4),
+        const SizedBox(height: AksharaSpacing.s3),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: QaTestKeys.financeExportStatementButton,
+            onPressed: () => _exportStatement(context, ref),
+            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+            label: const Text('Export statement'),
+          ),
+        ),
         const SizedBox(height: AksharaSpacing.s4),
         FinanceKpiRow(
           desktopColumns: 4,
@@ -318,6 +333,81 @@ class _AccountSummaryPanel extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// FIN-2 — builds a printable fee-statement (ledger) PDF for this account and
+  /// opens the OS print/preview sheet. The ledger table carries every debit /
+  /// credit line with a running balance; a header block carries account totals.
+  Future<void> _exportStatement(BuildContext context, WidgetRef ref) async {
+    final StudentLedger ledger;
+    try {
+      ledger = await ref.read(studentLedgerFutureProvider(account.id).future);
+    } catch (error) {
+      if (!context.mounted) return;
+      final failure = error is ApiFailureException
+          ? error.failure
+          : apiFailureMapper.fromException(error);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(failure.message)),
+      );
+      return;
+    }
+    if (!context.mounted) return;
+
+    final acc = ledger.account;
+    final schoolName = ref.read(schoolDisplayNameProvider);
+    final rows = <List<String>>[
+      for (final entry in ledger.ledger)
+        [
+          entry.date,
+          entry.reference,
+          entry.description,
+          entry.debit,
+          entry.credit,
+          entry.balance,
+        ],
+    ];
+
+    final service = ref.read(aksharaReportExportServiceProvider);
+    try {
+      final bytes = await service.buildGridReportPdf(
+        reportTitle: 'Fee Statement — ${acc.studentName}',
+        moduleLabel: '${acc.admissionNumber} · Class ${acc.classLabel} · '
+            '${acc.academicYear}  |  Due ${acc.totalDue} · '
+            'Paid ${acc.totalPaid} · Balance ${acc.balance}'
+            '${schoolName.isEmpty ? '' : '  |  $schoolName'}',
+        headers: const [
+          'Date',
+          'Reference',
+          'Description',
+          'Debit',
+          'Credit',
+          'Balance',
+        ],
+        rows: rows,
+        rightAlignFrom: 3,
+      );
+      if (!context.mounted) return;
+      await service.previewPdf(
+        documentName: 'fee_statement_${acc.admissionNumber}',
+        bytes: bytes,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.financeExportStatementSnackbar,
+          content: Text('Fee statement ready for ${acc.studentName}'),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      final failure = error is ApiFailureException
+          ? error.failure
+          : apiFailureMapper.fromException(error);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(failure.message)),
+      );
+    }
   }
 
   static String _statusLabel(FeeAccountStatus status) => switch (status) {

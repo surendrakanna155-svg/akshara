@@ -10,6 +10,7 @@ import '../../../theme/theme_extensions.dart';
 import '../finance_async_state.dart';
 import '../finance_models.dart';
 import '../finance_workflow_actions.dart';
+import '../policy/finance_policy_actions.dart';
 import 'finance_invoices_provider.dart';
 
 /// Invoice issue / cancel actions for draft and open invoices (P0 #6).
@@ -93,11 +94,44 @@ class _InvoiceActionCard extends ConsumerWidget {
               'Status: ${invoice.invoiceStatus.name}',
               style: text.bodySmall,
             ),
+            // FIN-D5: surface any accrued late fee so it is user-visible.
+            if (invoice.hasLateFee)
+              Padding(
+                padding: const EdgeInsets.only(top: AksharaSpacing.s1),
+                child: Row(
+                  children: [
+                    Icon(Icons.schedule_outlined,
+                        size: 16, color: colors.error),
+                    const SizedBox(width: AksharaSpacing.s1),
+                    Text(
+                      'Late fee: ₹${invoice.lateFeeAmount}',
+                      style: text.bodySmall.copyWith(color: colors.error),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: AksharaSpacing.s3),
             Wrap(
               spacing: AksharaSpacing.s2,
               runSpacing: AksharaSpacing.s2,
               children: [
+                // FIN-D5: waive an accrued late fee (mandatory reason).
+                if (invoice.hasLateFee)
+                  AksharaManageAction(
+                    permission: Permission.manageFinance,
+                    child: OutlinedButton.icon(
+                      key: QaTestKeys.financeWaiveLateFeeButton(invoice.id),
+                      onPressed: () => showWaiveLateFeeDialog(
+                        context,
+                        ref,
+                        invoiceId: invoice.id,
+                        invoiceNumber: invoice.invoiceNumber,
+                        lateFeeAmount: invoice.lateFeeAmount,
+                      ),
+                      icon: const Icon(Icons.money_off_outlined, size: 18),
+                      label: const Text('Waive late fee'),
+                    ),
+                  ),
                 if (canIssue)
                   AksharaManageAction(
                     permission: Permission.manageFinance,
