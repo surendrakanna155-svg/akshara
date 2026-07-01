@@ -46,7 +46,11 @@ socket or the API is unreachable the script ERRORS in setup — it never greens.
 """
 import json, os, time, base64, subprocess, urllib.request, urllib.error
 
-BASE = "https://akshara.veloraunisexsalon.com"
+BASE = os.environ.get("API_BASE_URL", "https://akshara.veloraunisexsalon.com")
+# Target DB for the direct-psql helper. Default = production akshara_db; set to
+# akshara_tenant_test (with API_BASE_URL pointed at the isolated test edge) to run
+# this sim entirely against the isolated Track-B validation stack (never prod).
+DB_NAME = os.environ.get("AKSHARA_DB_NAME", "akshara_db")
 ORG = "a1000000-0000-4000-8000-000000000001"          # pilot org (Professional plan)
 ADMIN = "+919876543210"
 ADMIN_UID = "a3000000-0000-4000-8000-000000000001"
@@ -94,7 +98,7 @@ def db(sql):
     """Run psql on the pilot Postgres via the ssh ControlMaster socket.
     Mirrors scripts/qa/live_cert_pilot_simulation.py::db."""
     cmd = ["ssh", "-o", "ControlPath=" + SOCK, "akshara",
-           f'docker exec akshara-postgres psql -U supabase_admin -d akshara_db -tAc "{sql}"']
+           f'docker exec akshara-postgres psql -U supabase_admin -d {DB_NAME} -tAc "{sql}"']
     return subprocess.run(cmd, capture_output=True, text=True, timeout=60).stdout.strip()
 
 
