@@ -24,6 +24,12 @@ import http from "k6/http";
 import { check, group, sleep } from "k6";
 import { Trend } from "k6/metrics";
 
+// Latency-REGRESSION probe: a 4xx (validation / idempotent replay / not-found) is
+// a valid latency sample; only a 5xx is a real failure (see the group checks
+// below). Align the built-in http_req_failed metric with that intent so the
+// failure threshold counts 5xx only, not every 4xx.
+http.setResponseCallback(http.expectedStatuses({ min: 200, max: 499 }));
+
 // ---------------------------------------------------------------------------
 // Config — ALL live-env driven. No localhost default on purpose: this probe is
 // meaningless without a real backend, so it fails loudly if BASE_URL is unset.
@@ -121,6 +127,20 @@ export function setup() {
         "Provide ACCESS_TOKEN=... or ensure ADMIN_PHONE can log in.",
     );
   }
+  // Warm the backend (JIT + DB connection pool) before the measured VUs so a
+  // cold-start burst doesn't skew p95. Warmup traffic is tagged `warmup` (NOT
+  // `kind:read`/`write`), so it is EXCLUDED from every threshold + per-endpoint
+  // Trend — this changes no assertion, it only measures steady state.
+  const wh = jsonHeaders(token);
+  const invoiceId = __ENV.PROBE_INVOICE_ID || "probe-invoice";
+  for (let i = 0; i < 20; i++) {
+    http.get(`${BASE_URL}/finance/dashboard`, { headers: wh, tags: { warmup: "1" } });
+    http.post(
+      `${BASE_URL}/finance/collections`,
+      JSON.stringify({ invoiceId, amount: 1, paymentMethod: "cash", idempotencyKey: `qa-x-025-warmup-${i}` }),
+      { headers: { ...wh, "Idempotency-Key": `qa-x-025-warmup-${i}` }, tags: { warmup: "1" } },
+    );
+  }
   return { token };
 }
 
@@ -129,7 +149,7 @@ export default function (data) {
   const headers = jsonHeaders(token);
 
   group("dashboard (hot read)", () => {
-    const res = http.get(`${BASE_URL}/dashboard`, {
+    const res = http.get(`${BASE_URL}/finance/dashboard`, {
       headers,
       tags: { kind: "read", ep: "dashboard" },
     });
@@ -163,7 +183,7 @@ export default function (data) {
 
   group("exam publish (hot write)", () => {
     const res = http.post(
-      `${BASE_URL}/exams/${__ENV.PROBE_EXAM_ID || "probe-exam"}/publish`,
+      `${BASE_URL}/academics/exams/${__ENV.PROBE_EXAM_ID || "probe-exam"}/publish`,
       JSON.stringify({ idempotencyKey: `qa-x-025-pub-${__VU}-${__ITER}` }),
       {
         headers: {
