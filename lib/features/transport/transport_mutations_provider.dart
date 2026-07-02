@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/audit/audit_event.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/repositories/interfaces/transport_repository.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
@@ -306,4 +307,308 @@ class NotifyRouteDelayNotifier
 final notifyRouteDelayProvider = AsyncNotifierProvider<NotifyRouteDelayNotifier,
     TransportDelayNotificationResult?>(
   NotifyRouteDelayNotifier.new,
+);
+
+// ─── TRN-1/TRN-2: vehicle CRUD ────────────────────────────────────────────────
+
+class VehicleMutationNotifier extends AsyncNotifier<TransportVehicle?> {
+  @override
+  FutureOr<TransportVehicle?> build() => null;
+
+  Future<TransportVehicle?> create(CreateTransportVehicleRequest request) =>
+      _run((repo) => repo.createVehicle(
+            query: ref.read(repositoryQueryProvider),
+            request: request,
+          ));
+
+  Future<TransportVehicle?> edit(UpdateTransportVehicleRequest request) =>
+      _run((repo) => repo.updateVehicle(
+            query: ref.read(repositoryQueryProvider),
+            request: request,
+          ));
+
+  Future<TransportVehicle?> _run(
+    Future<TransportVehicle> Function(TransportRepository repo) action,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result = await action(ref.read(transportRepositoryProvider));
+        ref
+          ..invalidate(transportVehiclesFutureProvider)
+          ..invalidate(transportDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final vehicleMutationProvider =
+    AsyncNotifierProvider<VehicleMutationNotifier, TransportVehicle?>(
+  VehicleMutationNotifier.new,
+);
+
+class DeleteVehicleNotifier extends AsyncNotifier<bool> {
+  @override
+  FutureOr<bool> build() => false;
+
+  Future<void> execute(DeleteTransportVehicleRequest request) async {
+    if (state.isLoading) return;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        await ref.read(transportRepositoryProvider).deleteVehicle(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref
+          ..invalidate(transportVehiclesFutureProvider)
+          ..invalidate(transportDashboardFutureProvider);
+        return true;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+  }
+}
+
+final deleteVehicleProvider =
+    AsyncNotifierProvider<DeleteVehicleNotifier, bool>(
+  DeleteVehicleNotifier.new,
+);
+
+// ─── TRN-1/TRN-2: driver CRUD ─────────────────────────────────────────────────
+
+class DriverMutationNotifier extends AsyncNotifier<TransportDriver?> {
+  @override
+  FutureOr<TransportDriver?> build() => null;
+
+  Future<TransportDriver?> create(CreateTransportDriverRequest request) =>
+      _run((repo) => repo.createDriver(
+            query: ref.read(repositoryQueryProvider),
+            request: request,
+          ));
+
+  Future<TransportDriver?> edit(UpdateTransportDriverRequest request) =>
+      _run((repo) => repo.updateDriver(
+            query: ref.read(repositoryQueryProvider),
+            request: request,
+          ));
+
+  Future<TransportDriver?> _run(
+    Future<TransportDriver> Function(TransportRepository repo) action,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result = await action(ref.read(transportRepositoryProvider));
+        ref.invalidate(transportDriversFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final driverMutationProvider =
+    AsyncNotifierProvider<DriverMutationNotifier, TransportDriver?>(
+  DriverMutationNotifier.new,
+);
+
+class DeleteDriverNotifier extends AsyncNotifier<bool> {
+  @override
+  FutureOr<bool> build() => false;
+
+  Future<void> execute(DeleteTransportDriverRequest request) async {
+    if (state.isLoading) return;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        await ref.read(transportRepositoryProvider).deleteDriver(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        ref.invalidate(transportDriversFutureProvider);
+        return true;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+  }
+}
+
+final deleteDriverProvider =
+    AsyncNotifierProvider<DeleteDriverNotifier, bool>(
+  DeleteDriverNotifier.new,
+);
+
+// ─── TRN-4: stop editor ───────────────────────────────────────────────────────
+
+class StopEditorNotifier extends AsyncNotifier<TransportRoute?> {
+  @override
+  FutureOr<TransportRoute?> build() => null;
+
+  Future<TransportRoute?> add(AddTransportStopRequest request) =>
+      _run((repo) => repo.addStop(
+            query: ref.read(repositoryQueryProvider),
+            request: request,
+          ));
+
+  Future<TransportRoute?> editStop(UpdateTransportStopRequest request) =>
+      _run((repo) => repo.updateStop(
+            query: ref.read(repositoryQueryProvider),
+            request: request,
+          ));
+
+  Future<TransportRoute?> remove(RemoveTransportStopRequest request) =>
+      _run((repo) => repo.removeStop(
+            query: ref.read(repositoryQueryProvider),
+            request: request,
+          ));
+
+  Future<TransportRoute?> reorder(ReorderTransportStopsRequest request) =>
+      _run((repo) => repo.reorderStops(
+            query: ref.read(repositoryQueryProvider),
+            request: request,
+          ));
+
+  Future<TransportRoute?> _run(
+    Future<TransportRoute> Function(TransportRepository repo) action,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result = await action(ref.read(transportRepositoryProvider));
+        ref.invalidate(transportRoutesFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final stopEditorProvider =
+    AsyncNotifierProvider<StopEditorNotifier, TransportRoute?>(
+  StopEditorNotifier.new,
+);
+
+// ─── TRN-5: bulk allocation ───────────────────────────────────────────────────
+
+class BulkAllocateTransportNotifier
+    extends AsyncNotifier<BulkAllocationResult?> {
+  @override
+  FutureOr<BulkAllocationResult?> build() => null;
+
+  Future<BulkAllocationResult?> execute(
+    BulkAllocateTransportRequest request,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        final result =
+            await ref.read(transportRepositoryProvider).bulkAllocateTransport(
+                  query: ref.read(repositoryQueryProvider),
+                  request: request,
+                );
+        ref
+          ..invalidate(transportAllocationsFutureProvider)
+          ..invalidate(transportRoutesFutureProvider)
+          ..invalidate(transportVehiclesFutureProvider)
+          ..invalidate(transportDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final bulkAllocateTransportProvider = AsyncNotifierProvider<
+    BulkAllocateTransportNotifier, BulkAllocationResult?>(
+  BulkAllocateTransportNotifier.new,
+);
+
+// ─── TRN-8: document-expiry reminder ──────────────────────────────────────────
+
+class SendDocumentExpiryReminderNotifier extends AsyncNotifier<int?> {
+  @override
+  FutureOr<int?> build() => null;
+
+  Future<int?> execute(
+    SendTransportDocumentExpiryReminderRequest request,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        return await ref
+            .read(transportRepositoryProvider)
+            .sendTransportDocumentExpiryReminder(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final sendDocumentExpiryReminderProvider =
+    AsyncNotifierProvider<SendDocumentExpiryReminderNotifier, int?>(
+  SendDocumentExpiryReminderNotifier.new,
+);
+
+// ─── TRN-9: raise a Finance transport-fee demand ──────────────────────────────
+
+class RaiseTransportDemandNotifier
+    extends AsyncNotifier<TransportDemandResult?> {
+  @override
+  FutureOr<TransportDemandResult?> build() => null;
+
+  Future<TransportDemandResult?> execute(
+    RaiseTransportDemandRequest request,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageTransport(ref);
+      try {
+        return await ref
+            .read(transportRepositoryProvider)
+            .raiseTransportDemand(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final raiseTransportDemandProvider = AsyncNotifierProvider<
+    RaiseTransportDemandNotifier, TransportDemandResult?>(
+  RaiseTransportDemandNotifier.new,
 );

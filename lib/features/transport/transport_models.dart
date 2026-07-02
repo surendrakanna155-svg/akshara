@@ -147,6 +147,10 @@ class TransportVehicle {
     required this.fitnessExpiry,
     required this.status,
     required this.occupancyPercent,
+    this.model = '',
+    this.pucExpiry = '',
+    this.permitExpiry = '',
+    this.roadTaxExpiry = '',
   });
 
   final String id;
@@ -155,10 +159,19 @@ class TransportVehicle {
   final int capacity;
   final String routeName;
   final String gpsDeviceId;
+
+  /// TRN-2 — ISO YYYY-MM-DD document-expiry dates. Legacy free-text values may
+  /// still be present (kept as-is; never migrated). Empty string = not set.
   final String insuranceExpiry;
   final String fitnessExpiry;
+  final String pucExpiry;
+  final String permitExpiry;
+  final String roadTaxExpiry;
   final TransportVehicleStatus status;
   final int occupancyPercent;
+
+  /// Optional vehicle model/make (surfaced only in create/edit forms).
+  final String model;
 }
 
 @immutable
@@ -442,4 +455,137 @@ class TransportTrackingPlaceholderData {
   final String mapPlaceholderLabel;
   final String integrationNote;
   final String parentAppRoute;
+}
+
+// ─── TRN-3: stop-wise route roster ────────────────────────────────────────────
+
+@immutable
+class RosterStudent {
+  const RosterStudent({
+    required this.sisStudentId,
+    required this.studentName,
+    required this.classLabel,
+    required this.stop,
+  });
+
+  final String sisStudentId;
+  final String studentName;
+  final String classLabel;
+  final String stop;
+}
+
+@immutable
+class RosterStopGroup {
+  const RosterStopGroup({
+    required this.stop,
+    required this.sequence,
+    required this.students,
+  });
+
+  final String stop;
+  final int sequence;
+  final List<RosterStudent> students;
+}
+
+@immutable
+class RouteRoster {
+  const RouteRoster({
+    required this.routeId,
+    required this.routeName,
+    required this.stopCount,
+    required this.studentCount,
+    required this.stops,
+  });
+
+  final String routeId;
+  final String routeName;
+  final int stopCount;
+  final int studentCount;
+  final List<RosterStopGroup> stops;
+}
+
+// ─── TRN-5: bulk allocation result ────────────────────────────────────────────
+
+@immutable
+class SkippedAllocation {
+  const SkippedAllocation({required this.studentId, required this.reason});
+
+  final String studentId;
+  final String reason;
+}
+
+@immutable
+class BulkAllocationResult {
+  const BulkAllocationResult({
+    required this.routeId,
+    required this.assigned,
+    required this.skipped,
+    required this.capacityOverridden,
+  });
+
+  final String routeId;
+  final List<String> assigned;
+  final List<SkippedAllocation> skipped;
+  final bool capacityOverridden;
+
+  int get assignedCount => assigned.length;
+  int get skippedCount => skipped.length;
+}
+
+// ─── TRN-9: raise a Finance transport-fee demand ──────────────────────────────
+
+@immutable
+class TransportDemandResult {
+  const TransportDemandResult({
+    required this.id,
+    required this.sisStudentId,
+    required this.routeId,
+    required this.feeStructureId,
+    required this.academicYear,
+    required this.term,
+    required this.invoiceId,
+    required this.accountId,
+    required this.idempotent,
+  });
+
+  final String id;
+  final String sisStudentId;
+  final String routeId;
+  final String feeStructureId;
+  final String academicYear;
+  final String term;
+  final String invoiceId;
+  final String accountId;
+
+  /// True when the demand already existed (re-raise) — nothing new was billed.
+  final bool idempotent;
+}
+
+// ─── TRN-2/TRN-8: document-expiry tracking (client-side view helper) ──────────
+
+/// A single tracked document (vehicle insurance/fitness/puc/permit/roadTax or a
+/// driver licence) with its parsed ISO expiry and days-to-expiry.
+@immutable
+class TransportDocumentExpiry {
+  const TransportDocumentExpiry({
+    required this.subject,
+    required this.document,
+    required this.expiresOn,
+    required this.daysUntil,
+  });
+
+  /// e.g. "Bus BUS-07" or "Driver Ramesh Kumar".
+  final String subject;
+
+  /// e.g. "Insurance", "Fitness", "PUC", "Permit", "Road tax", "Licence".
+  final String document;
+
+  /// ISO YYYY-MM-DD.
+  final String expiresOn;
+
+  /// Whole days from today (negative = already expired).
+  final int daysUntil;
+
+  bool get isExpired => daysUntil < 0;
+  bool get isSoon => daysUntil >= 0 && daysUntil <= 30;
 }

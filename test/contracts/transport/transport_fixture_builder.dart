@@ -240,6 +240,66 @@ class TransportFixtureBuilder {
     return envelope(occupancyItem(metrics));
   }
 
+  // ── TRN-3: roster (read, {data}-wrapped) ──────────────────────────────────
+  Map<String, dynamic> rosterEnvelope(RouteRoster roster) {
+    return envelope({
+      'routeId': roster.routeId,
+      'routeName': roster.routeName,
+      'stopCount': roster.stopCount,
+      'studentCount': roster.studentCount,
+      'stops': [
+        for (final group in roster.stops)
+          {
+            'stop': group.stop,
+            'sequence': group.sequence,
+            'students': [
+              for (final s in group.students)
+                {
+                  'sisStudentId': s.sisStudentId,
+                  'studentName': s.studentName,
+                  'classLabel': s.classLabel,
+                  'stop': s.stop,
+                },
+            ],
+          },
+      ],
+    });
+  }
+
+  // ── TRN-5: bulk allocation (write, unwrapped payload) ─────────────────────
+  Map<String, dynamic> bulkAllocationResult(BulkAllocationResult result) {
+    return {
+      'routeId': result.routeId,
+      'assigned': result.assigned,
+      'assignedCount': result.assignedCount,
+      'skipped': [
+        for (final s in result.skipped)
+          {'studentId': s.studentId, 'reason': s.reason},
+      ],
+      'capacityOverridden': result.capacityOverridden,
+    };
+  }
+
+  // ── TRN-8: document-expiry reminder (write, unwrapped payload) ────────────
+  Map<String, dynamic> documentExpiryReminder(int reminded) {
+    return {'reminded': reminded, 'withinDays': 30, 'expiries': const []};
+  }
+
+  // ── TRN-9: raised demand (write, unwrapped payload) ───────────────────────
+  Map<String, dynamic> demandResult(TransportDemandResult result) {
+    return {
+      'id': result.id,
+      'sisStudentId': result.sisStudentId,
+      'routeId': result.routeId,
+      'feeStructureId': result.feeStructureId,
+      'academicYear': result.academicYear,
+      'term': result.term,
+      'invoiceId': result.invoiceId,
+      'accountId': result.accountId,
+      if (result.idempotent) 'idempotent': true,
+    };
+  }
+
   List<Map<String, dynamic>> _trendPoints(List<TransportTrendPoint> points) {
     return [
       for (final point in points)

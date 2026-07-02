@@ -165,4 +165,133 @@ class ApiTransportRepository implements TransportRepository {
     final dto = await _remote.notifyRouteDelay(query: query, request: request);
     return _mapper.toDelayNotification(dto);
   }
+
+  @override
+  Future<TransportVehicle> createVehicle({
+    required RepositoryQuery query,
+    required CreateTransportVehicleRequest request,
+  }) async {
+    final dto = await _remote.createVehicle(query: query, request: request);
+    return _mapper.toVehicle(dto);
+  }
+
+  @override
+  Future<TransportVehicle> updateVehicle({
+    required RepositoryQuery query,
+    required UpdateTransportVehicleRequest request,
+  }) async {
+    final dto = await _remote.updateVehicle(query: query, request: request);
+    return _mapper.toVehicle(dto);
+  }
+
+  @override
+  Future<void> deleteVehicle({
+    required RepositoryQuery query,
+    required DeleteTransportVehicleRequest request,
+  }) async {
+    await _remote.deleteVehicle(query: query, request: request);
+  }
+
+  @override
+  Future<TransportDriver> createDriver({
+    required RepositoryQuery query,
+    required CreateTransportDriverRequest request,
+  }) async {
+    final dto = await _remote.createDriver(query: query, request: request);
+    return _mapper.toDriver(dto);
+  }
+
+  @override
+  Future<TransportDriver> updateDriver({
+    required RepositoryQuery query,
+    required UpdateTransportDriverRequest request,
+  }) async {
+    final dto = await _remote.updateDriver(query: query, request: request);
+    return _mapper.toDriver(dto);
+  }
+
+  @override
+  Future<void> deleteDriver({
+    required RepositoryQuery query,
+    required DeleteTransportDriverRequest request,
+  }) async {
+    await _remote.deleteDriver(query: query, request: request);
+  }
+
+  @override
+  Future<RouteRoster> getRouteRoster({
+    required RepositoryQuery query,
+    required String routeId,
+  }) async {
+    final dto = await _remote.fetchRouteRoster(query: query, routeId: routeId);
+    return _mapper.toRoster(dto);
+  }
+
+  @override
+  Future<TransportRoute> addStop({
+    required RepositoryQuery query,
+    required AddTransportStopRequest request,
+  }) async {
+    final dto = await _remote.addStop(query: query, request: request);
+    return _mapper.toRoute(dto);
+  }
+
+  @override
+  Future<TransportRoute> updateStop({
+    required RepositoryQuery query,
+    required UpdateTransportStopRequest request,
+  }) async {
+    final dto = await _remote.updateStop(query: query, request: request);
+    return _mapper.toRoute(dto);
+  }
+
+  @override
+  Future<TransportRoute> removeStop({
+    required RepositoryQuery query,
+    required RemoveTransportStopRequest request,
+  }) async {
+    final dto = await _remote.removeStop(query: query, request: request);
+    return _mapper.toRoute(dto);
+  }
+
+  @override
+  Future<TransportRoute> reorderStops({
+    required RepositoryQuery query,
+    required ReorderTransportStopsRequest request,
+  }) async {
+    final dto = await _remote.reorderStops(query: query, request: request);
+    return _mapper.toRoute(dto);
+  }
+
+  @override
+  Future<BulkAllocationResult> bulkAllocateTransport({
+    required RepositoryQuery query,
+    required BulkAllocateTransportRequest request,
+  }) async {
+    final dto =
+        await _remote.bulkAllocateTransport(query: query, request: request);
+    return _mapper.toBulkAllocationResult(dto);
+  }
+
+  @override
+  Future<int> sendTransportDocumentExpiryReminder({
+    required RepositoryQuery query,
+    required SendTransportDocumentExpiryReminderRequest request,
+  }) async {
+    final dto = await _remote.sendDocumentExpiryReminder(
+      query: query,
+      request: request,
+    );
+    return _mapper.toDocumentExpiryReminderCount(dto);
+  }
+
+  @override
+  Future<TransportDemandResult> raiseTransportDemand({
+    required RepositoryQuery query,
+    required RaiseTransportDemandRequest request,
+  }) async {
+    final dto =
+        await _remote.raiseTransportDemand(query: query, request: request);
+    return _mapper.toDemandResult(dto);
+  }
 }

@@ -200,3 +200,48 @@ class OccupancyMetricsDto {
 
   final Map<String, dynamic> raw;
 }
+
+/// TRN-3 — stop-wise route roster (read; wrapped in `{data}`).
+class TransportRosterDto {
+  const TransportRosterDto({required this.raw});
+
+  factory TransportRosterDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return TransportRosterDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+/// TRN-5 — bulk allocation result (write; already-unwrapped `{data}` payload).
+class BulkAllocationResultDto {
+  const BulkAllocationResultDto({required this.raw});
+
+  factory BulkAllocationResultDto.fromJson(Map<String, dynamic> json) {
+    return BulkAllocationResultDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+/// TRN-8 — document-expiry reminder result (write; unwrapped payload).
+class TransportDocumentExpiryReminderDto {
+  const TransportDocumentExpiryReminderDto({required this.raw});
+
+  factory TransportDocumentExpiryReminderDto.fromJson(Map<String, dynamic> json) {
+    return TransportDocumentExpiryReminderDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+/// TRN-9 — raised Finance transport-fee demand (write; unwrapped payload).
+class TransportDemandResultDto {
+  const TransportDemandResultDto({required this.raw});
+
+  factory TransportDemandResultDto.fromJson(Map<String, dynamic> json) {
+    return TransportDemandResultDto(raw: json);
+  }
+
+  final Map<String, dynamic> raw;
+}

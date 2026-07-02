@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -9,6 +11,8 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../transport_models.dart';
 import '../transport_providers.dart';
+import '../transport_vehicle_actions.dart';
+import '../widgets/transport_document_expiry_section.dart';
 import '../widgets/transport_kpi_row.dart';
 import '../widgets/transport_module_scaffold.dart';
 
@@ -40,6 +44,7 @@ class TransportVehiclesScreen extends ConsumerWidget {
           ref.read(transportVehiclesFilterProvider.notifier).state = index,
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
@@ -50,13 +55,27 @@ class TransportVehiclesScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
     required List<TransportVehicle> vehicles,
     required PaginatedResult<TransportVehicle>? pageResult,
   }) {
+    final addButton = Align(
+      alignment: Alignment.centerRight,
+      child: AksharaManageAction(
+        permission: Permission.manageTransport,
+        child: FilledButton.icon(
+          key: QaTestKeys.transportAddVehicleButton,
+          onPressed: () => showVehicleFormDialog(context, ref),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Register vehicle'),
+        ),
+      ),
+    );
+
     if (isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
@@ -69,9 +88,16 @@ class TransportVehiclesScreen extends ConsumerWidget {
     }
 
     if (isEmpty || vehicles.isEmpty) {
-      return const AksharaEmptyState(
-        message: 'No vehicles match the selected filters.',
-        icon: Icons.directions_bus_outlined,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          addButton,
+          const SizedBox(height: AksharaSpacing.s4),
+          const AksharaEmptyState(
+            message: 'No vehicles match the selected filters.',
+            icon: Icons.directions_bus_outlined,
+          ),
+        ],
       );
     }
 
@@ -81,6 +107,8 @@ class TransportVehiclesScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        addButton,
+        const SizedBox(height: AksharaSpacing.s4),
         TransportKpiRow(
           desktopColumns: 3,
           kpis: [
@@ -116,18 +144,20 @@ class TransportVehiclesScreen extends ConsumerWidget {
           result: pageResult,
           pageProvider: transportVehiclesPageProvider,
         ),
+        const SizedBox(height: AksharaSpacing.s6),
+        const TransportDocumentExpirySection(),
       ],
     );
   }
 }
 
-class _VehiclesTable extends StatelessWidget {
+class _VehiclesTable extends ConsumerWidget {
   const _VehiclesTable({required this.vehicles});
 
   final List<TransportVehicle> vehicles;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
@@ -148,6 +178,7 @@ class _VehiclesTable extends StatelessWidget {
         DataColumn(label: Text('GPS')),
         DataColumn(label: Text('Occupancy')),
         DataColumn(label: Text('Status')),
+        DataColumn(label: Text('Actions')),
       ],
       rowCount: vehicles.length,
       dataRowMinHeight: 56,
@@ -163,6 +194,7 @@ class _VehiclesTable extends StatelessWidget {
             DataCell(Text(vehicle.gpsDeviceId)),
             DataCell(Text('${vehicle.occupancyPercent}%')),
             DataCell(_VehicleStatusChip(status: vehicle.status)),
+            DataCell(_VehicleActions(vehicle: vehicle)),
           ],
         );
       },
@@ -170,13 +202,45 @@ class _VehiclesTable extends StatelessWidget {
   }
 }
 
-class _VehicleCard extends StatelessWidget {
+class _VehicleActions extends ConsumerWidget {
+  const _VehicleActions({required this.vehicle});
+
+  final TransportVehicle vehicle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AksharaManageAction(
+      permission: Permission.manageTransport,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: QaTestKeys.transportEditVehicleButton(vehicle.id),
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            tooltip: 'Edit vehicle',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => showVehicleFormDialog(context, ref, vehicle: vehicle),
+          ),
+          IconButton(
+            key: QaTestKeys.transportDeleteVehicleButton(vehicle.id),
+            icon: const Icon(Icons.delete_outline, size: 18),
+            tooltip: 'Delete vehicle',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => confirmDeleteVehicle(context, ref, vehicle),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VehicleCard extends ConsumerWidget {
   const _VehicleCard({required this.vehicle});
 
   final TransportVehicle vehicle;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -200,6 +264,10 @@ class _VehicleCard extends StatelessWidget {
               Text(
                 '${vehicle.routeName} · ${vehicle.occupancyPercent}% occupancy',
                 style: text.bodySmall,
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: _VehicleActions(vehicle: vehicle),
               ),
             ],
           ),

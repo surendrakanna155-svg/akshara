@@ -40,6 +40,7 @@ class AssignStudentTransportRequest {
     this.admissionNumber = '',
     this.sisStudentId = '',
     this.classLabel = '',
+    this.allowOverCapacity = false,
   });
 
   final String allocationId;
@@ -54,6 +55,247 @@ class AssignStudentTransportRequest {
   final String admissionNumber;
   final String sisStudentId;
   final String classLabel;
+
+  /// TRN-7 — when true, override the route's vehicle capacity guard (the backend
+  /// returns 409 CAPACITY_EXCEEDED without it). Set on the confirm-dialog retry.
+  final bool allowOverCapacity;
+
+  AssignStudentTransportRequest copyWith({bool? allowOverCapacity}) {
+    return AssignStudentTransportRequest(
+      allocationId: allocationId,
+      routeId: routeId,
+      pickupStop: pickupStop,
+      dropStop: dropStop,
+      studentName: studentName,
+      admissionNumber: admissionNumber,
+      sisStudentId: sisStudentId,
+      classLabel: classLabel,
+      allowOverCapacity: allowOverCapacity ?? this.allowOverCapacity,
+    );
+  }
+}
+
+// ─── TRN-1/TRN-2: vehicle & driver CRUD ───────────────────────────────────────
+
+class CreateTransportVehicleRequest {
+  const CreateTransportVehicleRequest({
+    required this.registration,
+    this.model = '',
+    this.capacity = 0,
+    this.status = TransportVehicleStatus.active,
+    this.insuranceExpiry = '',
+    this.fitnessExpiry = '',
+    this.pucExpiry = '',
+    this.permitExpiry = '',
+    this.roadTaxExpiry = '',
+  });
+
+  final String registration;
+  final String model;
+  final int capacity;
+  final TransportVehicleStatus status;
+
+  /// ISO YYYY-MM-DD; empty = omit the field on the write.
+  final String insuranceExpiry;
+  final String fitnessExpiry;
+  final String pucExpiry;
+  final String permitExpiry;
+  final String roadTaxExpiry;
+}
+
+class UpdateTransportVehicleRequest {
+  const UpdateTransportVehicleRequest({
+    required this.id,
+    this.registration,
+    this.model,
+    this.capacity,
+    this.status,
+    this.insuranceExpiry,
+    this.fitnessExpiry,
+    this.pucExpiry,
+    this.permitExpiry,
+    this.roadTaxExpiry,
+  });
+
+  final String id;
+
+  /// Null = leave unchanged; a value (incl. empty string for dates) = set it.
+  final String? registration;
+  final String? model;
+  final int? capacity;
+  final TransportVehicleStatus? status;
+  final String? insuranceExpiry;
+  final String? fitnessExpiry;
+  final String? pucExpiry;
+  final String? permitExpiry;
+  final String? roadTaxExpiry;
+}
+
+class DeleteTransportVehicleRequest {
+  const DeleteTransportVehicleRequest({required this.id});
+
+  final String id;
+}
+
+class CreateTransportDriverRequest {
+  const CreateTransportDriverRequest({
+    required this.name,
+    required this.licenseNumber,
+    this.phone = '',
+    this.status = TransportDriverStatus.active,
+    this.licenseExpiry = '',
+  });
+
+  final String name;
+  final String licenseNumber;
+  final String phone;
+  final TransportDriverStatus status;
+  final String licenseExpiry;
+}
+
+class UpdateTransportDriverRequest {
+  const UpdateTransportDriverRequest({
+    required this.id,
+    this.name,
+    this.licenseNumber,
+    this.phone,
+    this.status,
+    this.licenseExpiry,
+  });
+
+  final String id;
+  final String? name;
+  final String? licenseNumber;
+  final String? phone;
+  final TransportDriverStatus? status;
+  final String? licenseExpiry;
+}
+
+class DeleteTransportDriverRequest {
+  const DeleteTransportDriverRequest({required this.id});
+
+  final String id;
+}
+
+// ─── TRN-4: stop editor ───────────────────────────────────────────────────────
+
+class AddTransportStopRequest {
+  const AddTransportStopRequest({
+    required this.routeId,
+    required this.name,
+    this.pickupTime = '',
+    this.dropTime = '',
+  });
+
+  final String routeId;
+  final String name;
+  final String pickupTime;
+  final String dropTime;
+}
+
+class UpdateTransportStopRequest {
+  const UpdateTransportStopRequest({
+    required this.routeId,
+    required this.stopId,
+    this.name,
+    this.pickupTime,
+    this.dropTime,
+  });
+
+  final String routeId;
+  final String stopId;
+  final String? name;
+  final String? pickupTime;
+  final String? dropTime;
+}
+
+class RemoveTransportStopRequest {
+  const RemoveTransportStopRequest({
+    required this.routeId,
+    required this.stopId,
+  });
+
+  final String routeId;
+  final String stopId;
+}
+
+class ReorderTransportStopsRequest {
+  const ReorderTransportStopsRequest({
+    required this.routeId,
+    required this.stopOrder,
+  });
+
+  final String routeId;
+
+  /// The full permutation of the route's current stop ids in the new order.
+  final List<String> stopOrder;
+}
+
+// ─── TRN-5: bulk allocation ───────────────────────────────────────────────────
+
+class BulkAllocateTransportRequest {
+  const BulkAllocateTransportRequest({
+    required this.routeId,
+    required this.pickupStop,
+    required this.dropStop,
+    this.sisStudentIds = const [],
+    this.className,
+    this.sectionName,
+    this.shift = TransportShift.both,
+    this.allowOverCapacity = false,
+  });
+
+  final String routeId;
+  final String pickupStop;
+  final String dropStop;
+
+  /// Explicit student ids OR resolve from [className]/[sectionName].
+  final List<String> sisStudentIds;
+  final String? className;
+  final String? sectionName;
+  final TransportShift shift;
+  final bool allowOverCapacity;
+
+  BulkAllocateTransportRequest copyWith({bool? allowOverCapacity}) {
+    return BulkAllocateTransportRequest(
+      routeId: routeId,
+      pickupStop: pickupStop,
+      dropStop: dropStop,
+      sisStudentIds: sisStudentIds,
+      className: className,
+      sectionName: sectionName,
+      shift: shift,
+      allowOverCapacity: allowOverCapacity ?? this.allowOverCapacity,
+    );
+  }
+}
+
+// ─── TRN-8: document-expiry reminder ──────────────────────────────────────────
+
+class SendTransportDocumentExpiryReminderRequest {
+  const SendTransportDocumentExpiryReminderRequest({this.withinDays = 30});
+
+  final int withinDays;
+}
+
+// ─── TRN-9: raise a Finance transport-fee demand ──────────────────────────────
+
+class RaiseTransportDemandRequest {
+  const RaiseTransportDemandRequest({
+    required this.sisStudentId,
+    required this.routeId,
+    required this.feeStructureId,
+    required this.academicYear,
+    this.term = 'annual',
+    this.allocationId = '',
+  });
+
+  final String sisStudentId;
+  final String routeId;
+  final String feeStructureId;
+  final String academicYear;
+  final String term;
+  final String allocationId;
 }
 
 class RecordTransportAttendanceRequest {

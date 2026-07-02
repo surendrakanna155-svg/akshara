@@ -15,6 +15,7 @@ import '../transport_models.dart';
 import '../transport_providers.dart';
 import '../transport_workflow_actions.dart';
 import '../widgets/transport_module_scaffold.dart';
+import 'transport_bulk_allocation_sheet.dart';
 
 /// TR-05 — Student Allocation (SIS-linked).
 class TransportAllocationScreen extends ConsumerWidget {
@@ -35,6 +36,8 @@ class TransportAllocationScreen extends ConsumerWidget {
     final allocations = ref.watch(transportFilteredAllocationsProvider);
     final filterIndex = ref.watch(transportAllocationFilterProvider);
     final pageResult = ref.watch(transportAllocationsPageResultProvider);
+    // Ensure routes are loaded before the bulk-allocate sheet reads them.
+    final routes = ref.watch(transportRoutesProvider);
 
     return TransportModuleScaffold(
       screen: TransportScreen.allocation,
@@ -49,10 +52,25 @@ class TransportAllocationScreen extends ConsumerWidget {
             alignment: Alignment.centerRight,
             child: AksharaManageAction(
               permission: Permission.manageTransport,
-              child: OutlinedButton.icon(
-                onPressed: () => context.go(RouteNames.sisStudents),
-                icon: const Icon(Icons.badge_outlined, size: 18),
-                label: const Text('SIS registry'),
+              child: Wrap(
+                spacing: AksharaSpacing.s2,
+                children: [
+                  FilledButton.icon(
+                    key: QaTestKeys.transportBulkAllocateButton,
+                    onPressed: () => showBulkAllocationSheet(
+                      context,
+                      ref,
+                      routes: routes,
+                    ),
+                    icon: const Icon(Icons.groups_outlined, size: 18),
+                    label: const Text('Bulk allocate'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go(RouteNames.sisStudents),
+                    icon: const Icon(Icons.badge_outlined, size: 18),
+                    label: const Text('SIS registry'),
+                  ),
+                ],
               ),
             ),
           ),

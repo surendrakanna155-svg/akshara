@@ -4,6 +4,7 @@ import 'package:akshara_erp/core/repositories/api/transport/remote/transport_rem
 import 'package:akshara_erp/core/repositories/mock/mock_transport_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
 import 'package:akshara_erp/features/transport/transport_providers.dart';
+import 'package:akshara_erp/features/transport/transport_requests.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../contracts/transport/transport_fixture_builder.dart';
@@ -99,6 +100,78 @@ void main() {
 
       final data = await container.read(transportDashboardFutureProvider.future);
       expect(data.kpis, isNotEmpty);
+    });
+
+    // ── TRN-3/5/9 new endpoints through the remote datasource ───────────────
+    test('remote datasource reads the stop-wise roster', () async {
+      final roster = await mockRepo.getRouteRoster(
+        query: kQuery,
+        routeId: 'route_12',
+      );
+      final remote = TransportRemoteDataSource(
+        createFakeDio((_) => _fixtures.rosterEnvelope(roster)),
+      );
+      final dto = await remote.fetchRouteRoster(
+        query: kQuery,
+        routeId: 'route_12',
+      );
+      expect(dto.raw['routeId'], 'route_12');
+      expect(dto.raw['stops'], isA<List<dynamic>>());
+    });
+
+    test('remote datasource creates a vehicle (write round-trip)', () async {
+      final remote = TransportRemoteDataSource(
+        createFakeDio(
+          (_) => {
+            'data': {
+              'id': 'veh_new',
+              'registration': 'TS 22 ZZ 9999',
+              'capacity': 40,
+              'status': 'active',
+              'insuranceExpiry': '2027-01-31',
+            },
+          },
+        ),
+      );
+      final dto = await remote.createVehicle(
+        query: kQuery,
+        request: const CreateTransportVehicleRequest(
+          registration: 'TS 22 ZZ 9999',
+          capacity: 40,
+          insuranceExpiry: '2027-01-31',
+        ),
+      );
+      expect(dto.raw['registration'], 'TS 22 ZZ 9999');
+    });
+
+    test('remote datasource raises a transport demand (idempotent flag)', () async {
+      final remote = TransportRemoteDataSource(
+        createFakeDio(
+          (_) => {
+            'data': {
+              'id': 'demand_1',
+              'sisStudentId': 'SIS-1',
+              'routeId': 'route_12',
+              'feeStructureId': 'fee_1',
+              'academicYear': '2026-27',
+              'term': 'annual',
+              'invoiceId': 'inv_1',
+              'accountId': 'acct_1',
+              'idempotent': true,
+            },
+          },
+        ),
+      );
+      final dto = await remote.raiseTransportDemand(
+        query: kQuery,
+        request: const RaiseTransportDemandRequest(
+          sisStudentId: 'SIS-1',
+          routeId: 'route_12',
+          feeStructureId: 'fee_1',
+          academicYear: '2026-27',
+        ),
+      );
+      expect(dto.raw['idempotent'], isTrue);
     });
   });
 }

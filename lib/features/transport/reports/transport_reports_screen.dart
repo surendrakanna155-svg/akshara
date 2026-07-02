@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/error_text.dart';
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
@@ -14,6 +16,7 @@ import '../transport_providers.dart';
 import '../widgets/transport_module_scaffold.dart';
 import '../widgets/transport_segment_panel.dart';
 import '../widgets/transport_trend_chart.dart';
+import 'transport_report_exporters.dart';
 
 /// TR-08 — Reports.
 class TransportReportsScreen extends ConsumerWidget {
@@ -31,6 +34,7 @@ class TransportReportsScreen extends ConsumerWidget {
       showFilterBar: false,
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
@@ -40,7 +44,8 @@ class TransportReportsScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
@@ -74,26 +79,32 @@ class TransportReportsScreen extends ConsumerWidget {
       children: [
         const AksharaSectionHeader(title: 'Report catalog'),
         const SizedBox(height: AksharaSpacing.s3),
-        _ReportCatalogList(items: data.catalog),
+        const _ReportCatalogList(),
         const SizedBox(height: AksharaSpacing.s4),
         Wrap(
           spacing: AksharaSpacing.s3,
           runSpacing: AksharaSpacing.s3,
           children: [
             OutlinedButton.icon(
+              onPressed: () => _exportStudentList(context, ref, asPdf: false),
+              icon: const Icon(Icons.table_view_outlined),
+              label: const Text('Export student list (CSV)'),
+            ),
+            OutlinedButton.icon(
               key: QaTestKeys.transportReportExportPdfButton,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    key: QaTestKeys.transportReportExportSuccessSnackbar,
-                    content: Text(
-                      'Transport occupancy report export queued (${data.catalog.first.title})',
-                    ),
-                  ),
-                );
-              },
+              onPressed: () => _exportStudentList(context, ref, asPdf: true),
               icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('Export route occupancy PDF'),
+              label: const Text('Export student list (PDF)'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _exportVehicleList(context, ref, asPdf: false),
+              icon: const Icon(Icons.table_view_outlined),
+              label: const Text('Export vehicle list (CSV)'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _exportVehicleList(context, ref, asPdf: true),
+              icon: const Icon(Icons.picture_as_pdf_outlined),
+              label: const Text('Export vehicle list (PDF)'),
             ),
           ],
         ),
@@ -142,25 +153,105 @@ class TransportReportsScreen extends ConsumerWidget {
       ],
     );
   }
-}
 
-class _ReportCatalogList extends StatelessWidget {
-  const _ReportCatalogList({required this.items});
+  Future<void> _exportStudentList(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool asPdf,
+  }) async {
+    final allocations = ref.read(transportAllocationsProvider) ?? const [];
+    final exporters =
+        TransportReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      if (asPdf) {
+        await exporters.shareStudentListPdf(allocations);
+      } else {
+        await exporters.shareStudentListCsv(allocations);
+      }
+      if (context.mounted) {
+        _showExportSuccess(context, 'Student transport list');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        _showExportError(context, error);
+      }
+    }
+  }
 
-  final List<TransportReportCatalogItem> items;
+  Future<void> _exportVehicleList(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool asPdf,
+  }) async {
+    final vehicles = ref.read(transportVehiclesProvider) ?? const [];
+    final exporters =
+        TransportReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      if (asPdf) {
+        await exporters.shareVehicleListPdf(vehicles);
+      } else {
+        await exporters.shareVehicleListCsv(vehicles);
+      }
+      if (context.mounted) {
+        _showExportSuccess(context, 'Vehicle list');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        _showExportError(context, error);
+      }
+    }
+  }
 
-  void _queueExport(BuildContext context, TransportReportCatalogItem item) {
+  void _showExportSuccess(BuildContext context, String label) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         key: QaTestKeys.transportReportExportSuccessSnackbar,
-        content: Text('Report export queued (${item.title})'),
+        content: Text('$label export ready'),
       ),
     );
   }
 
+  void _showExportError(BuildContext context, Object error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(aksharaErrorMessage(error))),
+    );
+  }
+}
+
+class _ReportCatalogList extends ConsumerWidget {
+  const _ReportCatalogList();
+
+  Future<void> _export(
+    BuildContext context,
+    WidgetRef ref,
+    TransportReportCatalogItem item,
+  ) async {
+    final allocations = ref.read(transportAllocationsProvider) ?? const [];
+    final exporters =
+        TransportReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      await exporters.shareStudentListPdf(allocations);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            key: QaTestKeys.transportReportExportSuccessSnackbar,
+            content: Text('${item.title} export ready'),
+          ),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(aksharaErrorMessage(error))),
+        );
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
+    final items = ref.watch(transportReportsProvider)?.catalog ?? const [];
 
     return Semantics(
       container: true,
@@ -180,7 +271,7 @@ class _ReportCatalogList extends StatelessWidget {
                 trailing: IconButton(
                   icon: const Icon(Icons.download_outlined),
                   tooltip: 'Download report',
-                  onPressed: () => _queueExport(context, item),
+                  onPressed: () => _export(context, ref, item),
                 ),
               ),
             ),

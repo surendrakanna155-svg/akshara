@@ -6,6 +6,7 @@ import '../../core/repositories/paginated_result.dart';
 import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/async/erp_async_state.dart';
+import 'transport_document_expiry.dart';
 import 'transport_models.dart';
 
 // TR-01 Dashboard
@@ -359,5 +360,27 @@ final transportSettingsProvider = Provider<TransportSettingsData?>((ref) {
     ref,
     ref.watch(transportSettingsFutureProvider),
     manualLoading: ref.watch(transportSettingsLoadingProvider), manualError: ref.watch(transportSettingsErrorProvider), manualEmpty: false,
+  );
+});
+
+// TRN-3 — stop-wise route roster (per route id).
+final transportRouteRosterProvider =
+    FutureProvider.family<RouteRoster, String>((ref, routeId) async {
+  return ref.read(transportRepositoryProvider).getRouteRoster(
+        query: ref.watch(repositoryQueryProvider),
+        routeId: routeId,
+      );
+});
+
+// TRN-2/TRN-8 — document-expiry tracker (derived from vehicles + drivers).
+final transportDocumentExpiriesProvider =
+    FutureProvider<List<TransportDocumentExpiry>>((ref) async {
+  final repo = ref.read(transportRepositoryProvider);
+  final query = ref.watch(repositoryQueryProvider);
+  final vehicles = await repo.getVehicles(query: query);
+  final drivers = await repo.getDrivers(query: query);
+  return TransportDocumentExpiryScanner.scan(
+    vehicles: vehicles.items,
+    drivers: drivers.items,
   );
 });

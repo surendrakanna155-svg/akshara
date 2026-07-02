@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../core/errors/api_failure.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../router/route_names.dart';
+import '../finance/fee_structures/finance_fee_structures_provider.dart';
+import '../finance/finance_models.dart';
 import 'transport_models.dart';
 import 'transport_mutations_provider.dart';
+import 'transport_providers.dart';
 import 'transport_requests.dart';
 import '../../core/errors/error_text.dart';
 
@@ -364,31 +370,82 @@ Future<void> showAssignStudentTransportDialog(
     return;
   }
 
-  try {
-    final updated =
-        await ref.read(assignStudentTransportProvider.notifier).execute(
-              AssignStudentTransportRequest(
-                allocationId: allocation.id,
-                routeId: selectedRouteId,
-                pickupStop: pickup,
-                dropStop: drop,
-                studentName: allocation.studentName,
-                admissionNumber: allocation.admissionNumber,
-                sisStudentId: allocation.sisStudentId,
-                classLabel: allocation.classLabel,
-              ),
-            );
-    if (!context.mounted || updated == null) return;
+  await _assignWithCapacityGuard(
+    context,
+    ref,
+    AssignStudentTransportRequest(
+      allocationId: allocation.id,
+      routeId: selectedRouteId,
+      pickupStop: pickup,
+      dropStop: drop,
+      studentName: allocation.studentName,
+      admissionNumber: allocation.admissionNumber,
+      sisStudentId: allocation.sisStudentId,
+      classLabel: allocation.classLabel,
+    ),
+  );
+}
+
+/// TRN-7 — runs the assign mutation; if the backend returns 409
+/// CAPACITY_EXCEEDED, shows a confirm dialog and retries with
+/// `allowOverCapacity: true`.
+Future<void> _assignWithCapacityGuard(
+  BuildContext context,
+  WidgetRef ref,
+  AssignStudentTransportRequest request,
+) async {
+  final updated =
+      await ref.read(assignStudentTransportProvider.notifier).execute(request);
+  if (!context.mounted) return;
+
+  final state = ref.read(assignStudentTransportProvider);
+  if (state.hasError) {
+    final error = state.error;
+    if (!request.allowOverCapacity &&
+        error is ApiFailureException &&
+        error.failure.code == 'CAPACITY_EXCEEDED') {
+      final override = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Route over capacity'),
+          content: const Text(
+            'This route is over its vehicle capacity. Assign anyway?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: QaTestKeys.transportCapacityOverrideConfirmButton,
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Assign anyway'),
+            ),
+          ],
+        ),
+      );
+      if (override == true && context.mounted) {
+        await _assignWithCapacityGuard(
+          context,
+          ref,
+          request.copyWith(allowOverCapacity: true),
+        );
+      }
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        key: QaTestKeys.transportAssignSuccessSnackbar,
-        content: Text('${updated.studentName} assigned to ${updated.routeName}'),
-      ),
+      SnackBar(content: Text(aksharaErrorMessage(error ?? 'Assign failed.'))),
     );
-  } catch (error) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
+    return;
   }
+
+  if (updated == null) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      key: QaTestKeys.transportAssignSuccessSnackbar,
+      content: Text('${updated.studentName} assigned to ${updated.routeName}'),
+    ),
+  );
 }
 
 Future<void> showTransferStudentTransportDialog(
@@ -531,6 +588,193 @@ Future<void> removeStudentFromRoute(
       SnackBar(
         key: QaTestKeys.transportRemoveSuccessSnackbar,
         content: Text('${updated.studentName} removed from route'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(aksharaErrorMessage(error))));
+  }
+}
+
+// ─── TRN-9: raise a Finance transport-fee demand ──────────────────────────────
+
+/// Opens the raise-transport-demand flow. Transport DEFINES the fee and RAISES a
+/// Finance demand here — it NEVER collects payment (Finance owns collection).
+Future<void> showRaiseTransportDemandDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final assigned = (ref.read(transportAllocationsProvider) ?? const [])
+      .where((a) => a.isAssigned)
+      .toList();
+  if (assigned.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Assign a student to a route before raising a demand.'),
+      ),
+    );
+    return;
+  }
+
+  final transportStructures = ref
+      .read(financeFeeStructuresProvider)
+      .where(
+        (structure) => structure.categories
+            .any((line) => line.category == FeeStructureCategory.transport),
+      )
+      .toList();
+  if (transportStructures.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'No transport fee structure found in Finance. Create one in Finance first.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  var selectedStudentId = assigned.first.sisStudentId;
+  var selectedStructureId = transportStructures.first.id;
+  final yearController =
+      TextEditingController(text: transportStructures.first.academicYear);
+  final termController = TextEditingController(text: 'annual');
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Raise transport fee demand'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Transport defines the fee and raises a demand. '
+                        'Finance collects payment — no payment is taken here.',
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).pop(false);
+                            context.go(RouteNames.financeFeeStructures);
+                          },
+                          icon: const Icon(Icons.open_in_new, size: 18),
+                          label: const Text('Open Finance'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedStudentId,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Student'),
+                items: [
+                  for (final allocation in assigned)
+                    DropdownMenuItem<String>(
+                      value: allocation.sisStudentId,
+                      child: Text(
+                        '${allocation.studentName} · ${allocation.routeName}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) =>
+                    setState(() => selectedStudentId = value ?? selectedStudentId),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: selectedStructureId,
+                isExpanded: true,
+                decoration:
+                    const InputDecoration(labelText: 'Transport fee structure'),
+                items: [
+                  for (final structure in transportStructures)
+                    DropdownMenuItem<String>(
+                      value: structure.id,
+                      child: Text(
+                        structure.name,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) => setState(
+                    () => selectedStructureId = value ?? selectedStructureId),
+              ),
+              TextField(
+                controller: yearController,
+                decoration: const InputDecoration(labelText: 'Academic year'),
+              ),
+              TextField(
+                controller: termController,
+                decoration: const InputDecoration(labelText: 'Term'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.transportRaiseDemandSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Raise demand'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final academicYear = yearController.text.trim();
+  final term = termController.text.trim();
+  if (academicYear.isEmpty || term.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Academic year and term are required.')),
+    );
+    return;
+  }
+
+  final allocation =
+      assigned.firstWhere((a) => a.sisStudentId == selectedStudentId);
+
+  try {
+    final result = await ref.read(raiseTransportDemandProvider.notifier).execute(
+          RaiseTransportDemandRequest(
+            sisStudentId: allocation.sisStudentId,
+            routeId: allocation.routeId,
+            feeStructureId: selectedStructureId,
+            academicYear: academicYear,
+            term: term,
+            allocationId: allocation.id,
+          ),
+        );
+    if (!context.mounted || result == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.transportRaiseDemandSuccessSnackbar,
+        content: Text(
+          result.idempotent
+              ? 'Demand already raised (no new charge) — invoice ${result.invoiceId}'
+              : 'Transport fee demand raised — invoice ${result.invoiceId}',
+        ),
       ),
     );
   } catch (error) {

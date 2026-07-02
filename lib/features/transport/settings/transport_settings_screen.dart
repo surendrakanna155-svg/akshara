@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
+import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../transport_models.dart';
 import '../transport_providers.dart';
+import '../transport_workflow_actions.dart';
 import '../widgets/transport_module_scaffold.dart';
 
 /// TR-09 — Transport Settings.
@@ -68,10 +72,61 @@ class TransportSettingsScreen extends ConsumerWidget {
           style: context.aksharaText.bodyMedium,
         ),
         const SizedBox(height: AksharaSpacing.s6),
+        const _TransportFeeDemandSection(),
+        const SizedBox(height: AksharaSpacing.s6),
         for (final section in data.sections) ...[
           _SettingsSection(section: section),
           const SizedBox(height: AksharaSpacing.s6),
         ],
+      ],
+    );
+  }
+}
+
+/// TRN-9 — entry point for the raise-transport-fee-demand flow. Transport
+/// defines the fee and raises a Finance demand; Finance collects the payment.
+class _TransportFeeDemandSection extends ConsumerWidget {
+  const _TransportFeeDemandSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = context.aksharaText;
+    final colors = context.colors;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AksharaSectionHeader(title: 'Transport fee & demands'),
+        const SizedBox(height: AksharaSpacing.s3),
+        Card(
+          elevation: 0,
+          child: Padding(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Transport defines the fee and raises a demand. Finance '
+                  'collects payment — no payment is taken here.',
+                  style: text.bodyMedium.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AksharaSpacing.s4),
+                AksharaManageAction(
+                  permission: Permission.manageTransport,
+                  child: FilledButton.icon(
+                    key: QaTestKeys.transportRaiseDemandButton,
+                    onPressed: () =>
+                        showRaiseTransportDemandDialog(context, ref),
+                    icon: const Icon(Icons.receipt_long, size: 18),
+                    label: const Text('Raise transport fee demand'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

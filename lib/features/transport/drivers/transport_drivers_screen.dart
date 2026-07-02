@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/paginated_result.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/widgets/whatsapp_contact_button.dart';
 
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../transport_driver_actions.dart';
 import '../transport_models.dart';
 import '../transport_providers.dart';
 import '../widgets/transport_module_scaffold.dart';
@@ -40,6 +43,7 @@ class TransportDriversScreen extends ConsumerWidget {
           ref.read(transportDriversFilterProvider.notifier).state = index,
       body: _buildBody(
         context,
+        ref,
         isLoading: isLoading,
         isError: isError,
         isEmpty: isEmpty,
@@ -50,13 +54,27 @@ class TransportDriversScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required bool isLoading,
     required bool isError,
     required bool isEmpty,
     required List<TransportDriver> drivers,
     required PaginatedResult<TransportDriver>? pageResult,
   }) {
+    final addButton = Align(
+      alignment: Alignment.centerRight,
+      child: AksharaManageAction(
+        permission: Permission.manageTransport,
+        child: FilledButton.icon(
+          key: QaTestKeys.transportAddDriverButton,
+          onPressed: () => showDriverFormDialog(context, ref),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Add driver'),
+        ),
+      ),
+    );
+
     if (isLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s12),
@@ -69,15 +87,24 @@ class TransportDriversScreen extends ConsumerWidget {
     }
 
     if (isEmpty || drivers.isEmpty) {
-      return const AksharaEmptyState(
-        message: 'No drivers match the selected filters.',
-        icon: Icons.person_outline,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          addButton,
+          const SizedBox(height: AksharaSpacing.s4),
+          const AksharaEmptyState(
+            message: 'No drivers match the selected filters.',
+            icon: Icons.person_outline,
+          ),
+        ],
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        addButton,
+        const SizedBox(height: AksharaSpacing.s4),
         const AksharaSectionHeader(title: 'Driver roster'),
         const SizedBox(height: AksharaSpacing.s3),
         _DriversTable(drivers: drivers),
@@ -90,13 +117,13 @@ class TransportDriversScreen extends ConsumerWidget {
   }
 }
 
-class _DriversTable extends StatelessWidget {
+class _DriversTable extends ConsumerWidget {
   const _DriversTable({required this.drivers});
 
   final List<TransportDriver> drivers;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (AdminLayout.useCardLayout(context)) {
       return Column(
         children: [
@@ -118,7 +145,7 @@ class _DriversTable extends StatelessWidget {
         DataColumn(label: Text('Attendance')),
         DataColumn(label: Text('Rating')),
         DataColumn(label: Text('Status')),
-        DataColumn(label: Text('Contact')),
+        DataColumn(label: Text('Actions')),
       ],
       rowCount: drivers.length,
       dataRowMinHeight: 56,
@@ -135,12 +162,7 @@ class _DriversTable extends StatelessWidget {
             DataCell(Text(driver.attendancePercent)),
             DataCell(Text(driver.rating)),
             DataCell(_DriverStatusChip(status: driver.status)),
-            DataCell(WhatsAppContactButton(
-              phone: driver.phone,
-              style: WhatsAppButtonStyle.icon,
-              label: 'WhatsApp ${driver.name}',
-              message: _driverMessage(driver),
-            )),
+            DataCell(_DriverActions(driver: driver)),
           ],
         );
       },
@@ -148,13 +170,57 @@ class _DriversTable extends StatelessWidget {
   }
 }
 
-class _DriverCard extends StatelessWidget {
+class _DriverActions extends ConsumerWidget {
+  const _DriverActions({required this.driver});
+
+  final TransportDriver driver;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        WhatsAppContactButton(
+          phone: driver.phone,
+          style: WhatsAppButtonStyle.icon,
+          label: 'WhatsApp ${driver.name}',
+          message: _driverMessage(driver),
+        ),
+        AksharaManageAction(
+          permission: Permission.manageTransport,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                key: QaTestKeys.transportEditDriverButton(driver.id),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                tooltip: 'Edit driver',
+                visualDensity: VisualDensity.compact,
+                onPressed: () =>
+                    showDriverFormDialog(context, ref, driver: driver),
+              ),
+              IconButton(
+                key: QaTestKeys.transportDeleteDriverButton(driver.id),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                tooltip: 'Delete driver',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => confirmDeleteDriver(context, ref, driver),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DriverCard extends ConsumerWidget {
   const _DriverCard({required this.driver});
 
   final TransportDriver driver;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -179,15 +245,8 @@ class _DriverCard extends StatelessWidget {
                 'Rating ${driver.rating} · Attendance ${driver.attendancePercent}',
                 style: text.bodySmall,
               ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: WhatsAppContactButton(
-                  phone: driver.phone,
-                  style: WhatsAppButtonStyle.text,
-                  label: 'WhatsApp',
-                  message: _driverMessage(driver),
-                ),
-              ),
+              const SizedBox(height: AksharaSpacing.s2),
+              _DriverActions(driver: driver),
             ],
           ),
         ),

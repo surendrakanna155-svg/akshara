@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/errors/api_failure.dart';
+import '../../../features/transport/transport_document_expiry.dart';
 import '../../../features/transport/transport_models.dart';
 import '../../../features/transport/transport_requests.dart';
 import '../../../router/route_names.dart';
@@ -419,56 +421,64 @@ class MockTransportRepository implements TransportRepository {
   }) async =>
       paginateList(await _loadVehicles(), query);
 
+  static const _seedDrivers = [
+    TransportDriver(
+      id: 'drv_1',
+      name: 'Ramesh Kumar',
+      licenseNumber: 'DL-TS-2018-4521',
+      licenseExpiry: 'Mar 2028',
+      phone: '+91 98765 22001',
+      assignedBus: 'BUS-07',
+      attendancePercent: '98%',
+      rating: '4.8',
+      status: TransportDriverStatus.active,
+    ),
+    TransportDriver(
+      id: 'drv_2',
+      name: 'Suresh Naidu',
+      licenseNumber: 'DL-TS-2016-8832',
+      licenseExpiry: 'Jun 2027',
+      phone: '+91 91234 33002',
+      assignedBus: 'BUS-03',
+      attendancePercent: '96%',
+      rating: '4.5',
+      status: TransportDriverStatus.active,
+    ),
+    TransportDriver(
+      id: 'drv_3',
+      name: 'Vijay Reddy',
+      licenseNumber: 'DL-TS-2019-1102',
+      licenseExpiry: 'Dec 2028',
+      phone: '+91 99887 44003',
+      assignedBus: 'BUS-02',
+      attendancePercent: '100%',
+      rating: '4.9',
+      status: TransportDriverStatus.active,
+    ),
+    TransportDriver(
+      id: 'drv_4',
+      name: 'Kiran Das',
+      licenseNumber: 'DL-TS-2015-7744',
+      licenseExpiry: 'Apr 2026',
+      phone: '+91 94440 55004',
+      assignedBus: '—',
+      attendancePercent: '0%',
+      rating: '4.2',
+      status: TransportDriverStatus.onLeave,
+    ),
+  ];
+
+  Future<List<TransportDriver>> _loadDrivers() async {
+    final store = MockTransportWriteStore.instance;
+    store.drivers ??= List<TransportDriver>.from(_seedDrivers);
+    return store.drivers!;
+  }
+
   @override
   Future<PaginatedResult<TransportDriver>> getDrivers({
     required RepositoryQuery query,
   }) async =>
-      paginateList(const [
-        TransportDriver(
-          id: 'drv_1',
-          name: 'Ramesh Kumar',
-          licenseNumber: 'DL-TS-2018-4521',
-          licenseExpiry: 'Mar 2028',
-          phone: '+91 98765 22001',
-          assignedBus: 'BUS-07',
-          attendancePercent: '98%',
-          rating: '4.8',
-          status: TransportDriverStatus.active,
-        ),
-        TransportDriver(
-          id: 'drv_2',
-          name: 'Suresh Naidu',
-          licenseNumber: 'DL-TS-2016-8832',
-          licenseExpiry: 'Jun 2027',
-          phone: '+91 91234 33002',
-          assignedBus: 'BUS-03',
-          attendancePercent: '96%',
-          rating: '4.5',
-          status: TransportDriverStatus.active,
-        ),
-        TransportDriver(
-          id: 'drv_3',
-          name: 'Vijay Reddy',
-          licenseNumber: 'DL-TS-2019-1102',
-          licenseExpiry: 'Dec 2028',
-          phone: '+91 99887 44003',
-          assignedBus: 'BUS-02',
-          attendancePercent: '100%',
-          rating: '4.9',
-          status: TransportDriverStatus.active,
-        ),
-        TransportDriver(
-          id: 'drv_4',
-          name: 'Kiran Das',
-          licenseNumber: 'DL-TS-2015-7744',
-          licenseExpiry: 'Apr 2026',
-          phone: '+91 94440 55004',
-          assignedBus: '—',
-          attendancePercent: '0%',
-          rating: '4.2',
-          status: TransportDriverStatus.onLeave,
-        ),
-      ], query);
+      paginateList(await _loadDrivers(), query);
 
   @override
   Future<PaginatedResult<StudentTransportAllocation>> getAllocations({
@@ -827,15 +837,29 @@ class MockTransportRepository implements TransportRepository {
     required List<StudentTransportAllocation> allocations,
     required List<TransportVehicle> vehicles,
     required String routeId,
+    int adding = 1,
+    bool allowOverCapacity = false,
   }) {
     final route = _requireActiveRoute(routeId);
     final vehicle = vehicles.firstWhere(
       (v) => v.busNumber == route.assignedBus,
       orElse: () => throw StateError('Assigned vehicle not found'),
     );
+    if (vehicle.capacity <= 0) return; // unbounded
     final count = _studentsOnRoute(allocations, routeId);
-    if (count >= vehicle.capacity) {
-      throw StateError('Route capacity exceeded');
+    if (count + adding > vehicle.capacity && !allowOverCapacity) {
+      // TRN-7 — surface the same typed failure the API path does, so the UI's
+      // capacity-override confirm dialog fires in mock mode too.
+      throw ApiFailureException(
+        ApiFailure(
+          type: ApiFailureType.unknown,
+          message:
+              'Route ${route.name} is at capacity ($count/${vehicle.capacity}); '
+              'assign anyway?',
+          code: 'CAPACITY_EXCEEDED',
+          statusCode: 409,
+        ),
+      );
     }
   }
 
@@ -935,6 +959,7 @@ class MockTransportRepository implements TransportRepository {
       allocations: allocations,
       vehicles: vehicles,
       routeId: request.routeId,
+      allowOverCapacity: request.allowOverCapacity,
     );
 
     final updated = StudentTransportAllocation(
@@ -1057,5 +1082,517 @@ class MockTransportRepository implements TransportRepository {
     allocations[index] = updated;
     await _syncRouteAndVehicleMetrics();
     return updated;
+  }
+
+  // ─── TRN-1/TRN-2: vehicle CRUD ──────────────────────────────────────────────
+
+  int _vehicleCounter = 500;
+
+  String _regKey(String value) => value.trim().toUpperCase();
+
+  @override
+  Future<TransportVehicle> createVehicle({
+    required RepositoryQuery query,
+    required CreateTransportVehicleRequest request,
+  }) async {
+    final vehicles = await _loadVehicles();
+    final key = _regKey(request.registration);
+    if (vehicles.any((v) => _regKey(v.registration) == key)) {
+      throw ApiFailureException(
+        ApiFailure(
+          type: ApiFailureType.unknown,
+          message:
+              'A vehicle with registration ${request.registration} already exists',
+          code: 'DUPLICATE_REGISTRATION',
+          statusCode: 409,
+        ),
+      );
+    }
+    final vehicle = TransportVehicle(
+      id: 'veh_${++_vehicleCounter}',
+      busNumber: request.registration,
+      registration: request.registration,
+      capacity: request.capacity,
+      routeName: '—',
+      gpsDeviceId: '—',
+      insuranceExpiry: request.insuranceExpiry,
+      fitnessExpiry: request.fitnessExpiry,
+      pucExpiry: request.pucExpiry,
+      permitExpiry: request.permitExpiry,
+      roadTaxExpiry: request.roadTaxExpiry,
+      model: request.model,
+      status: request.status,
+      occupancyPercent: 0,
+    );
+    vehicles.insert(0, vehicle);
+    return vehicle;
+  }
+
+  @override
+  Future<TransportVehicle> updateVehicle({
+    required RepositoryQuery query,
+    required UpdateTransportVehicleRequest request,
+  }) async {
+    final vehicles = await _loadVehicles();
+    final index = vehicles.indexWhere((v) => v.id == request.id);
+    if (index < 0) throw StateError('Vehicle not found');
+    final current = vehicles[index];
+    final registration = request.registration ?? current.registration;
+    if (request.registration != null) {
+      final key = _regKey(request.registration!);
+      if (vehicles.any((v) => v.id != request.id && _regKey(v.registration) == key)) {
+        throw ApiFailureException(
+          ApiFailure(
+            type: ApiFailureType.unknown,
+            message:
+                'A vehicle with registration ${request.registration} already exists',
+            code: 'DUPLICATE_REGISTRATION',
+            statusCode: 409,
+          ),
+        );
+      }
+    }
+    final updated = TransportVehicle(
+      id: current.id,
+      busNumber: current.busNumber,
+      registration: registration,
+      capacity: request.capacity ?? current.capacity,
+      routeName: current.routeName,
+      gpsDeviceId: current.gpsDeviceId,
+      insuranceExpiry: request.insuranceExpiry ?? current.insuranceExpiry,
+      fitnessExpiry: request.fitnessExpiry ?? current.fitnessExpiry,
+      pucExpiry: request.pucExpiry ?? current.pucExpiry,
+      permitExpiry: request.permitExpiry ?? current.permitExpiry,
+      roadTaxExpiry: request.roadTaxExpiry ?? current.roadTaxExpiry,
+      model: request.model ?? current.model,
+      status: request.status ?? current.status,
+      occupancyPercent: current.occupancyPercent,
+    );
+    vehicles[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> deleteVehicle({
+    required RepositoryQuery query,
+    required DeleteTransportVehicleRequest request,
+  }) async {
+    final vehicles = await _loadVehicles();
+    final index = vehicles.indexWhere((v) => v.id == request.id);
+    if (index < 0) throw StateError('Vehicle not found');
+    final vehicle = vehicles[index];
+    final reg = _regKey(vehicle.registration);
+    final busNo = _regKey(vehicle.busNumber);
+    // The backend blocks by registration; the mock seed conflates registration
+    // and bus number on assignedBus, so match either to keep the guard faithful.
+    final referencing = _routes.where(
+      (r) =>
+          r.status == TransportRouteStatus.active &&
+          ((reg.isNotEmpty && _regKey(r.assignedBus) == reg) ||
+              (busNo.isNotEmpty && _regKey(r.assignedBus) == busNo)),
+    );
+    if (referencing.isNotEmpty) {
+      throw ApiFailureException(
+        ApiFailure(
+          type: ApiFailureType.unknown,
+          message:
+              'Cannot delete vehicle ${vehicle.registration}: it is assigned to '
+              'active route ${referencing.first.name}',
+          code: 'VEHICLE_IN_USE',
+          statusCode: 409,
+        ),
+      );
+    }
+    vehicles.removeAt(index);
+  }
+
+  // ─── TRN-1/TRN-2: driver CRUD ───────────────────────────────────────────────
+
+  int _driverCounter = 500;
+
+  @override
+  Future<TransportDriver> createDriver({
+    required RepositoryQuery query,
+    required CreateTransportDriverRequest request,
+  }) async {
+    final drivers = await _loadDrivers();
+    final key = _regKey(request.licenseNumber);
+    if (drivers.any((d) => _regKey(d.licenseNumber) == key)) {
+      throw ApiFailureException(
+        ApiFailure(
+          type: ApiFailureType.unknown,
+          message: 'A driver with licence ${request.licenseNumber} already exists',
+          code: 'DUPLICATE_LICENSE',
+          statusCode: 409,
+        ),
+      );
+    }
+    final driver = TransportDriver(
+      id: 'drv_${++_driverCounter}',
+      name: request.name,
+      licenseNumber: request.licenseNumber,
+      licenseExpiry: request.licenseExpiry,
+      phone: request.phone,
+      assignedBus: '—',
+      attendancePercent: '0%',
+      rating: '—',
+      status: request.status,
+    );
+    drivers.insert(0, driver);
+    return driver;
+  }
+
+  @override
+  Future<TransportDriver> updateDriver({
+    required RepositoryQuery query,
+    required UpdateTransportDriverRequest request,
+  }) async {
+    final drivers = await _loadDrivers();
+    final index = drivers.indexWhere((d) => d.id == request.id);
+    if (index < 0) throw StateError('Driver not found');
+    final current = drivers[index];
+    if (request.licenseNumber != null) {
+      final key = _regKey(request.licenseNumber!);
+      if (drivers.any(
+        (d) => d.id != request.id && _regKey(d.licenseNumber) == key,
+      )) {
+        throw ApiFailureException(
+          ApiFailure(
+            type: ApiFailureType.unknown,
+            message:
+                'A driver with licence ${request.licenseNumber} already exists',
+            code: 'DUPLICATE_LICENSE',
+            statusCode: 409,
+          ),
+        );
+      }
+    }
+    final updated = TransportDriver(
+      id: current.id,
+      name: request.name ?? current.name,
+      licenseNumber: request.licenseNumber ?? current.licenseNumber,
+      licenseExpiry: request.licenseExpiry ?? current.licenseExpiry,
+      phone: request.phone ?? current.phone,
+      assignedBus: current.assignedBus,
+      attendancePercent: current.attendancePercent,
+      rating: current.rating,
+      status: request.status ?? current.status,
+    );
+    drivers[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> deleteDriver({
+    required RepositoryQuery query,
+    required DeleteTransportDriverRequest request,
+  }) async {
+    final drivers = await _loadDrivers();
+    final index = drivers.indexWhere((d) => d.id == request.id);
+    if (index < 0) throw StateError('Driver not found');
+    drivers.removeAt(index);
+  }
+
+  // ─── TRN-3: stop-wise roster ────────────────────────────────────────────────
+
+  @override
+  Future<RouteRoster> getRouteRoster({
+    required RepositoryQuery query,
+    required String routeId,
+  }) async {
+    final routeIndex = _routes.indexWhere((r) => r.id == routeId);
+    if (routeIndex < 0) throw StateError('Route not found');
+    final route = _routes[routeIndex];
+    final allocations = await _loadAllocations();
+    final onRoute = allocations.where((a) => a.routeId == routeId).toList();
+
+    final seqByStop = <String, int>{};
+    for (final s in route.stops) {
+      if (s.name.trim().isNotEmpty) seqByStop[s.name] = s.sequence;
+    }
+
+    final grouped = <String, List<RosterStudent>>{};
+    for (final a in onRoute) {
+      final stopName =
+          a.pickupStop.trim().isEmpty ? '(unassigned stop)' : a.pickupStop.trim();
+      grouped.putIfAbsent(stopName, () => []).add(
+            RosterStudent(
+              sisStudentId: a.sisStudentId,
+              studentName: a.studentName,
+              classLabel: a.classLabel,
+              stop: stopName,
+            ),
+          );
+    }
+
+    final groups = grouped.entries
+        .map(
+          (e) => RosterStopGroup(
+            stop: e.key,
+            sequence: seqByStop[e.key] ?? 1 << 30,
+            students: e.value
+              ..sort((x, y) => x.studentName.compareTo(y.studentName)),
+          ),
+        )
+        .toList()
+      ..sort((a, b) {
+        final bySeq = a.sequence.compareTo(b.sequence);
+        return bySeq != 0 ? bySeq : a.stop.compareTo(b.stop);
+      });
+
+    return RouteRoster(
+      routeId: route.id,
+      routeName: route.name,
+      stopCount: route.stops.length,
+      studentCount: onRoute.length,
+      stops: groups,
+    );
+  }
+
+  // ─── TRN-4: stop editor ─────────────────────────────────────────────────────
+
+  int _stopCounter = 900;
+
+  TransportRoute _rewriteStops(
+    TransportRoute route,
+    List<TransportStop> stops,
+  ) {
+    final resequenced = [
+      for (var i = 0; i < stops.length; i++)
+        TransportStop(
+          id: stops[i].id,
+          name: stops[i].name,
+          sequence: i + 1,
+          scheduledTime: stops[i].scheduledTime,
+          status: stops[i].status,
+          latitude: stops[i].latitude,
+          longitude: stops[i].longitude,
+        ),
+    ];
+    return TransportRoute(
+      id: route.id,
+      name: route.name,
+      stopCount: resequenced.length,
+      distanceKm: route.distanceKm,
+      amDeparture: route.amDeparture,
+      pmDeparture: route.pmDeparture,
+      assignedBus: route.assignedBus,
+      studentCount: route.studentCount,
+      status: route.status,
+      stops: resequenced,
+      shift: route.shift,
+    );
+  }
+
+  TransportRoute _mutateRouteStops(
+    String routeId,
+    List<TransportStop> Function(List<TransportStop>) mutate,
+  ) {
+    final index = _routes.indexWhere((r) => r.id == routeId);
+    if (index < 0) throw StateError('Route not found');
+    final route = _routes[index];
+    final next = _rewriteStops(route, mutate(List.of(route.stops)));
+    _routes[index] = next;
+    return next;
+  }
+
+  @override
+  Future<TransportRoute> addStop({
+    required RepositoryQuery query,
+    required AddTransportStopRequest request,
+  }) async {
+    return _mutateRouteStops(request.routeId, (stops) {
+      stops.add(
+        TransportStop(
+          id: 'stop_${++_stopCounter}',
+          name: request.name,
+          sequence: stops.length + 1,
+          scheduledTime: request.pickupTime,
+          status: TransportStopStatus.upcoming,
+          latitude: 0,
+          longitude: 0,
+        ),
+      );
+      return stops;
+    });
+  }
+
+  @override
+  Future<TransportRoute> updateStop({
+    required RepositoryQuery query,
+    required UpdateTransportStopRequest request,
+  }) async {
+    return _mutateRouteStops(request.routeId, (stops) {
+      final i = stops.indexWhere((s) => s.id == request.stopId);
+      if (i < 0) throw StateError('Stop not found');
+      final s = stops[i];
+      stops[i] = TransportStop(
+        id: s.id,
+        name: request.name ?? s.name,
+        sequence: s.sequence,
+        scheduledTime: request.pickupTime ?? s.scheduledTime,
+        status: s.status,
+        latitude: s.latitude,
+        longitude: s.longitude,
+      );
+      return stops;
+    });
+  }
+
+  @override
+  Future<TransportRoute> removeStop({
+    required RepositoryQuery query,
+    required RemoveTransportStopRequest request,
+  }) async {
+    return _mutateRouteStops(request.routeId, (stops) {
+      final next = stops.where((s) => s.id != request.stopId).toList();
+      if (next.length == stops.length) throw StateError('Stop not found');
+      return next;
+    });
+  }
+
+  @override
+  Future<TransportRoute> reorderStops({
+    required RepositoryQuery query,
+    required ReorderTransportStopsRequest request,
+  }) async {
+    return _mutateRouteStops(request.routeId, (stops) {
+      final byId = {for (final s in stops) s.id: s};
+      if (request.stopOrder.length != stops.length ||
+          request.stopOrder.any((id) => !byId.containsKey(id))) {
+        throw StateError('stopOrder must be a permutation of the route stops');
+      }
+      return [for (final id in request.stopOrder) byId[id]!];
+    });
+  }
+
+  // ─── TRN-5: bulk allocation ─────────────────────────────────────────────────
+
+  @override
+  Future<BulkAllocationResult> bulkAllocateTransport({
+    required RepositoryQuery query,
+    required BulkAllocateTransportRequest request,
+  }) async {
+    final allocations = await _loadAllocations();
+    final vehicles = await _loadVehicles();
+    final route = _requireActiveRoute(request.routeId);
+
+    // Resolve targets: explicit ids, else match existing allocation rows by class.
+    final List<StudentTransportAllocation> targets;
+    if (request.sisStudentIds.isNotEmpty) {
+      targets = allocations
+          .where((a) => request.sisStudentIds.contains(a.sisStudentId))
+          .toList();
+    } else if (request.className != null) {
+      targets = allocations
+          .where((a) => a.classLabel == request.className)
+          .toList();
+    } else {
+      throw StateError('Provide either sisStudentIds or a className');
+    }
+
+    final alreadyOnRoute = allocations
+        .where((a) => a.routeId == request.routeId)
+        .map((a) => a.sisStudentId)
+        .toSet();
+    final newcomers =
+        targets.where((t) => !alreadyOnRoute.contains(t.sisStudentId)).length;
+
+    _assertRouteCapacity(
+      allocations: allocations,
+      vehicles: vehicles,
+      routeId: request.routeId,
+      adding: newcomers,
+      allowOverCapacity: request.allowOverCapacity,
+    );
+
+    final assigned = <String>[];
+    final skipped = <SkippedAllocation>[];
+    for (final t in targets) {
+      if (t.sisStudentId.isEmpty) {
+        skipped.add(SkippedAllocation(studentId: t.id, reason: 'empty student id'));
+        continue;
+      }
+      final i = allocations.indexWhere((a) => a.id == t.id);
+      allocations[i] = StudentTransportAllocation(
+        id: t.id,
+        studentName: t.studentName,
+        admissionNumber: t.admissionNumber,
+        classLabel: t.classLabel,
+        pickupStop: request.pickupStop,
+        dropStop: request.dropStop,
+        routeId: route.id,
+        routeName: route.name,
+        busNumber: route.assignedBus,
+        shift: t.shift,
+        sisStudentId: t.sisStudentId,
+      );
+      assigned.add(t.sisStudentId);
+    }
+    await _syncRouteAndVehicleMetrics();
+    return BulkAllocationResult(
+      routeId: request.routeId,
+      assigned: assigned,
+      skipped: skipped,
+      capacityOverridden: request.allowOverCapacity && newcomers > 0,
+    );
+  }
+
+  // ─── TRN-8: document-expiry reminder ────────────────────────────────────────
+
+  @override
+  Future<int> sendTransportDocumentExpiryReminder({
+    required RepositoryQuery query,
+    required SendTransportDocumentExpiryReminderRequest request,
+  }) async {
+    final vehicles = await _loadVehicles();
+    final drivers = await _loadDrivers();
+    final expiries = TransportDocumentExpiryScanner.scan(
+      vehicles: vehicles,
+      drivers: drivers,
+    );
+    return expiries
+        .where((e) => e.daysUntil <= request.withinDays)
+        .length;
+  }
+
+  // ─── TRN-9: raise a Finance transport-fee demand ────────────────────────────
+
+  @override
+  Future<TransportDemandResult> raiseTransportDemand({
+    required RepositoryQuery query,
+    required RaiseTransportDemandRequest request,
+  }) async {
+    final store = MockTransportWriteStore.instance;
+    final key =
+        '${request.sisStudentId}::${request.routeId}::${request.academicYear}::${request.term}';
+    final prior = store.demands[key];
+    if (prior != null) {
+      return TransportDemandResult(
+        id: prior.id,
+        sisStudentId: prior.sisStudentId,
+        routeId: prior.routeId,
+        feeStructureId: prior.feeStructureId,
+        academicYear: prior.academicYear,
+        term: prior.term,
+        invoiceId: prior.invoiceId,
+        accountId: prior.accountId,
+        idempotent: true,
+      );
+    }
+    final id = 'demand_${DateTime.now().microsecondsSinceEpoch}';
+    final result = TransportDemandResult(
+      id: id,
+      sisStudentId: request.sisStudentId,
+      routeId: request.routeId,
+      feeStructureId: request.feeStructureId,
+      academicYear: request.academicYear,
+      term: request.term,
+      invoiceId: 'inv_$id',
+      accountId: 'acct_${request.sisStudentId}',
+      idempotent: false,
+    );
+    store.demands[key] = result;
+    return result;
   }
 }

@@ -12,6 +12,7 @@ import '../transport_models.dart';
 import '../transport_providers.dart';
 import '../transport_workflow_actions.dart';
 import '../widgets/transport_module_scaffold.dart';
+import 'transport_stop_editor.dart';
 
 /// TR-02 — Routes Management.
 class TransportRoutesScreen extends ConsumerWidget {
@@ -162,20 +163,37 @@ class _RoutesTable extends ConsumerWidget {
             DataCell(Text('${route.studentCount}')),
             DataCell(_RouteStatusChip(status: route.status)),
             DataCell(
-              route.status == TransportRouteStatus.draft
-                  ? AksharaManageAction(
-                      permission: Permission.manageTransport,
-                      child: TextButton(
+              AksharaManageAction(
+                permission: Permission.manageTransport,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: QaTestKeys.transportEditStopsButton(route.id),
+                      icon: const Icon(Icons.edit_road_outlined, size: 18),
+                      tooltip: 'Edit stops',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => showTransportStopEditor(
+                        context,
+                        this.ref,
+                        route: route,
+                      ),
+                    ),
+                    if (route.status == TransportRouteStatus.draft)
+                      IconButton(
                         key: QaTestKeys.transportActivateRouteButton(route.id),
+                        icon: const Icon(Icons.play_circle_outline, size: 18),
+                        tooltip: 'Activate route',
+                        visualDensity: VisualDensity.compact,
                         onPressed: () => showActivateTransportRouteDialog(
                           context,
                           this.ref,
                           route: route,
                         ),
-                        child: const Text('Activate'),
                       ),
-                    )
-                  : const SizedBox.shrink(),
+                  ],
+                ),
+              ),
             ),
           ],
         );
@@ -220,24 +238,37 @@ class _RouteCard extends ConsumerWidget {
                 'AM ${route.amDeparture} · PM ${route.pmDeparture} · ${route.studentCount} students',
                 style: text.bodySmall,
               ),
-              if (route.status == TransportRouteStatus.draft) ...[
-                const SizedBox(height: AksharaSpacing.s3),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: AksharaManageAction(
-                    permission: Permission.manageTransport,
-                    child: TextButton(
-                      key: QaTestKeys.transportActivateRouteButton(route.id),
-                      onPressed: () => showActivateTransportRouteDialog(
-                        context,
-                        ref,
-                        route: route,
+              const SizedBox(height: AksharaSpacing.s3),
+              Align(
+                alignment: Alignment.centerRight,
+                child: AksharaManageAction(
+                  permission: Permission.manageTransport,
+                  child: Wrap(
+                    spacing: AksharaSpacing.s2,
+                    children: [
+                      TextButton(
+                        key: QaTestKeys.transportEditStopsButton(route.id),
+                        onPressed: () => showTransportStopEditor(
+                          context,
+                          ref,
+                          route: route,
+                        ),
+                        child: const Text('Stops'),
                       ),
-                      child: const Text('Activate'),
-                    ),
+                      if (route.status == TransportRouteStatus.draft)
+                        TextButton(
+                          key: QaTestKeys.transportActivateRouteButton(route.id),
+                          onPressed: () => showActivateTransportRouteDialog(
+                            context,
+                            ref,
+                            route: route,
+                          ),
+                          child: const Text('Activate'),
+                        ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ),

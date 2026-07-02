@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/errors/api_failure.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_transport_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_transport_write_store.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
@@ -134,7 +135,9 @@ void main() {
             vehicle,
       ];
 
-      expect(
+      // TRN-7 — over-capacity now surfaces a typed CAPACITY_EXCEEDED failure
+      // (409) the UI can catch to offer an override, instead of a raw StateError.
+      await expectLater(
         () => repo.assignStudentTransport(
           query: query,
           request: const AssignStudentTransportRequest(
@@ -144,8 +147,27 @@ void main() {
             dropStop: 'Akshara Main Gate',
           ),
         ),
-        throwsA(isA<StateError>()),
+        throwsA(
+          isA<ApiFailureException>().having(
+            (e) => e.failure.code,
+            'code',
+            'CAPACITY_EXCEEDED',
+          ),
+        ),
       );
+
+      // TRN-7 — allowOverCapacity overrides the guard and assigns anyway.
+      final assigned = await repo.assignStudentTransport(
+        query: query,
+        request: const AssignStudentTransportRequest(
+          allocationId: 'alloc_5',
+          routeId: 'route_12',
+          pickupStop: 'Lake View Colony',
+          dropStop: 'Akshara Main Gate',
+          allowOverCapacity: true,
+        ),
+      );
+      expect(assigned.isAssigned, isTrue);
     });
   });
 

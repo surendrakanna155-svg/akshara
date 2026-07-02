@@ -62,6 +62,10 @@ class TransportMapper {
       gpsDeviceId: raw['gpsDeviceId'] as String? ?? '',
       insuranceExpiry: raw['insuranceExpiry'] as String? ?? '',
       fitnessExpiry: raw['fitnessExpiry'] as String? ?? '',
+      pucExpiry: raw['pucExpiry'] as String? ?? '',
+      permitExpiry: raw['permitExpiry'] as String? ?? '',
+      roadTaxExpiry: raw['roadTaxExpiry'] as String? ?? '',
+      model: raw['model'] as String? ?? '',
       status: TransportEnumCodec.parseVehicleStatus(raw['status'] as String?),
       occupancyPercent: raw['occupancyPercent'] as int? ?? 0,
     );
@@ -139,6 +143,77 @@ class TransportMapper {
     return TransportDelayNotificationResult(
       routeName: raw['routeName'] as String? ?? '',
       recipientCount: (raw['recipientCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// TRN-3 — stop-wise roster (students grouped by stop, ordered by sequence).
+  RouteRoster toRoster(TransportRosterDto dto) {
+    final raw = dto.raw;
+    return RouteRoster(
+      routeId: raw['routeId'] as String? ?? '',
+      routeName: raw['routeName'] as String? ?? '',
+      stopCount: (raw['stopCount'] as num?)?.toInt() ?? 0,
+      studentCount: (raw['studentCount'] as num?)?.toInt() ?? 0,
+      stops: [
+        for (final group in raw['stops'] as List<dynamic>? ?? const [])
+          if (group is Map<String, dynamic>)
+            RosterStopGroup(
+              stop: group['stop'] as String? ?? '',
+              sequence: (group['sequence'] as num?)?.toInt() ?? 0,
+              students: [
+                for (final s in group['students'] as List<dynamic>? ?? const [])
+                  if (s is Map<String, dynamic>)
+                    RosterStudent(
+                      sisStudentId: s['sisStudentId'] as String? ?? '',
+                      studentName: s['studentName'] as String? ?? '',
+                      classLabel: s['classLabel'] as String? ?? '',
+                      stop: s['stop'] as String? ?? '',
+                    ),
+              ],
+            ),
+      ],
+    );
+  }
+
+  /// TRN-5 — {routeId, assigned:[ids], skipped:[{studentId, reason}], ...}.
+  BulkAllocationResult toBulkAllocationResult(BulkAllocationResultDto dto) {
+    final raw = dto.raw;
+    return BulkAllocationResult(
+      routeId: raw['routeId'] as String? ?? '',
+      assigned: [
+        for (final id in raw['assigned'] as List<dynamic>? ?? const [])
+          if (id != null) '$id',
+      ],
+      skipped: [
+        for (final s in raw['skipped'] as List<dynamic>? ?? const [])
+          if (s is Map<String, dynamic>)
+            SkippedAllocation(
+              studentId: s['studentId'] as String? ?? '',
+              reason: s['reason'] as String? ?? '',
+            ),
+      ],
+      capacityOverridden: raw['capacityOverridden'] as bool? ?? false,
+    );
+  }
+
+  /// TRN-8 — {reminded:N, ...}.
+  int toDocumentExpiryReminderCount(TransportDocumentExpiryReminderDto dto) {
+    return (dto.raw['reminded'] as num?)?.toInt() ?? 0;
+  }
+
+  /// TRN-9 — raised Finance demand (`idempotent:true` on a re-raise).
+  TransportDemandResult toDemandResult(TransportDemandResultDto dto) {
+    final raw = dto.raw;
+    return TransportDemandResult(
+      id: raw['id'] as String? ?? '',
+      sisStudentId: raw['sisStudentId'] as String? ?? '',
+      routeId: raw['routeId'] as String? ?? '',
+      feeStructureId: raw['feeStructureId'] as String? ?? '',
+      academicYear: raw['academicYear'] as String? ?? '',
+      term: raw['term'] as String? ?? '',
+      invoiceId: raw['invoiceId'] as String? ?? '',
+      accountId: raw['accountId'] as String? ?? '',
+      idempotent: raw['idempotent'] as bool? ?? false,
     );
   }
 

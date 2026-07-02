@@ -720,6 +720,90 @@ abstract final class QaTestKeys {
   static const transportReportExportSuccessSnackbar =
       ValueKey<String>('transport_report_export_success_snackbar');
 
+  // --- TRN-1/TRN-2 vehicle CRUD ---
+  static const transportAddVehicleButton =
+      ValueKey<String>('transport_add_vehicle_button');
+  static ValueKey<String> transportEditVehicleButton(String id) =>
+      ValueKey<String>('transport_edit_vehicle_button_$id');
+  static ValueKey<String> transportDeleteVehicleButton(String id) =>
+      ValueKey<String>('transport_delete_vehicle_button_$id');
+  static const transportVehicleRegistrationField =
+      ValueKey<String>('transport_vehicle_registration_field');
+  static const transportVehicleCapacityField =
+      ValueKey<String>('transport_vehicle_capacity_field');
+  static const transportVehicleDialogSubmitButton =
+      ValueKey<String>('transport_vehicle_dialog_submit_button');
+  static const transportVehicleDeleteConfirmButton =
+      ValueKey<String>('transport_vehicle_delete_confirm_button');
+  static const transportVehicleSavedSnackbar =
+      ValueKey<String>('transport_vehicle_saved_snackbar');
+  static const transportVehicleDeletedSnackbar =
+      ValueKey<String>('transport_vehicle_deleted_snackbar');
+
+  // --- TRN-1/TRN-2 driver CRUD ---
+  static const transportAddDriverButton =
+      ValueKey<String>('transport_add_driver_button');
+  static ValueKey<String> transportEditDriverButton(String id) =>
+      ValueKey<String>('transport_edit_driver_button_$id');
+  static ValueKey<String> transportDeleteDriverButton(String id) =>
+      ValueKey<String>('transport_delete_driver_button_$id');
+  static const transportDriverNameField =
+      ValueKey<String>('transport_driver_name_field');
+  static const transportDriverLicenseField =
+      ValueKey<String>('transport_driver_license_field');
+  static const transportDriverDialogSubmitButton =
+      ValueKey<String>('transport_driver_dialog_submit_button');
+  static const transportDriverDeleteConfirmButton =
+      ValueKey<String>('transport_driver_delete_confirm_button');
+  static const transportDriverSavedSnackbar =
+      ValueKey<String>('transport_driver_saved_snackbar');
+  static const transportDriverDeletedSnackbar =
+      ValueKey<String>('transport_driver_deleted_snackbar');
+
+  // --- TRN-4 stop editor ---
+  static ValueKey<String> transportEditStopsButton(String routeId) =>
+      ValueKey<String>('transport_edit_stops_button_$routeId');
+  static const transportAddStopButton =
+      ValueKey<String>('transport_add_stop_button');
+  static const transportStopNameField =
+      ValueKey<String>('transport_stop_name_field');
+  static const transportStopDialogSubmitButton =
+      ValueKey<String>('transport_stop_dialog_submit_button');
+  static ValueKey<String> transportRemoveStopButton(String stopId) =>
+      ValueKey<String>('transport_remove_stop_button_$stopId');
+  static ValueKey<String> transportStopMoveUpButton(String stopId) =>
+      ValueKey<String>('transport_stop_move_up_button_$stopId');
+  static ValueKey<String> transportStopMoveDownButton(String stopId) =>
+      ValueKey<String>('transport_stop_move_down_button_$stopId');
+  static const transportStopSavedSnackbar =
+      ValueKey<String>('transport_stop_saved_snackbar');
+
+  // --- TRN-5 bulk allocation ---
+  static const transportBulkAllocateButton =
+      ValueKey<String>('transport_bulk_allocate_button');
+  static const transportBulkAllocateSubmitButton =
+      ValueKey<String>('transport_bulk_allocate_submit_button');
+  static const transportBulkAllocateSuccessSnackbar =
+      ValueKey<String>('transport_bulk_allocate_success_snackbar');
+
+  // --- TRN-7 capacity override ---
+  static const transportCapacityOverrideConfirmButton =
+      ValueKey<String>('transport_capacity_override_confirm_button');
+
+  // --- TRN-8 document-expiry reminder ---
+  static const transportSendExpiryReminderButton =
+      ValueKey<String>('transport_send_expiry_reminder_button');
+  static const transportExpiryReminderSnackbar =
+      ValueKey<String>('transport_expiry_reminder_snackbar');
+
+  // --- TRN-9 raise transport-fee demand ---
+  static const transportRaiseDemandButton =
+      ValueKey<String>('transport_raise_demand_button');
+  static const transportRaiseDemandSubmitButton =
+      ValueKey<String>('transport_raise_demand_submit_button');
+  static const transportRaiseDemandSuccessSnackbar =
+      ValueKey<String>('transport_raise_demand_success_snackbar');
+
   static const inventoryRecordLifecycleButton =
       ValueKey<String>('inventory_record_lifecycle_button');
 
