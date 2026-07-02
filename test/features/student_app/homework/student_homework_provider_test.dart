@@ -49,4 +49,64 @@ void main() {
       expect(container.read(studentHomeworkItemsProvider), isEmpty);
     });
   });
+
+  group('HWK-1 overdue derivation (StudentHomeworkItem.effectiveStatus)', () {
+    final today = DateTime(2026, 7, 10);
+
+    test('pending + past dueDate reads as overdue', () {
+      final result = deriveStudentHomeworkStatus(
+        StudentHomeworkStatus.pending,
+        '2026-07-09',
+        today: today,
+      );
+      expect(result, StudentHomeworkStatus.overdue);
+    });
+
+    test('pending + dueDate today is NOT overdue', () {
+      expect(
+        deriveStudentHomeworkStatus(
+          StudentHomeworkStatus.pending,
+          '2026-07-10',
+          today: today,
+        ),
+        StudentHomeworkStatus.pending,
+      );
+    });
+
+    test('submitted/reviewed are terminal — never overdue', () {
+      for (final s in [
+        StudentHomeworkStatus.submitted,
+        StudentHomeworkStatus.reviewed,
+      ]) {
+        expect(
+          deriveStudentHomeworkStatus(s, '2026-01-01', today: today),
+          s,
+        );
+      }
+    });
+
+    test('no dueDate keeps the raw status (legacy label-only homework)', () {
+      expect(
+        deriveStudentHomeworkStatus(
+          StudentHomeworkStatus.pending,
+          null,
+          today: today,
+        ),
+        StudentHomeworkStatus.pending,
+      );
+    });
+
+    test('effectiveStatus on the item flips a past-due pending item to overdue',
+        () {
+      const item = StudentHomeworkItem(
+        id: 'hw-1',
+        subject: 'Math',
+        title: 'Algebra',
+        dueLabel: 'Due 01 Jan',
+        dueDate: '2000-01-01',
+        status: StudentHomeworkStatus.pending,
+      );
+      expect(item.effectiveStatus, StudentHomeworkStatus.overdue);
+    });
+  });
 }

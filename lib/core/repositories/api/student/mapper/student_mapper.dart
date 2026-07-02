@@ -61,6 +61,7 @@ class StudentMapper {
       subject: raw['subject'] as String? ?? '',
       title: raw['title'] as String? ?? '',
       dueLabel: raw['dueLabel'] as String? ?? '',
+      dueDate: raw['dueDate'] as String?,
       status: StudentEnumCodec.parseHomeworkStatus(raw['status'] as String?),
       attachmentLabel: raw['attachmentLabel'] as String?,
       submittedLabel: raw['submittedLabel'] as String?,

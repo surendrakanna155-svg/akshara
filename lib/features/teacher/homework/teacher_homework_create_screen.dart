@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
@@ -28,8 +29,12 @@ class _TeacherHomeworkCreateScreenState
   final _classController = TextEditingController();
   final _subjectController = TextEditingController();
   final _titleController = TextEditingController();
-  final _dueController = TextEditingController();
   final _studentController = TextEditingController();
+
+  // HWK-1 — a real due date chosen via a Material date picker (replaces the old
+  // free-text due label). Null until the teacher picks one; Create is blocked
+  // until it is set.
+  DateTime? _dueDate;
 
   @override
   void initState() {
@@ -47,9 +52,44 @@ class _TeacherHomeworkCreateScreenState
     _classController.dispose();
     _subjectController.dispose();
     _titleController.dispose();
-    _dueController.dispose();
     _studentController.dispose();
     super.dispose();
+  }
+
+  /// ISO `YYYY-MM-DD` for the picked date (what the backend validates + stores).
+  String? get _dueDateIso {
+    final date = _dueDate;
+    if (date == null) return null;
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  /// Human "08 Jul 2026" label shown in the field and derived alongside the ISO.
+  String _formatDue(DateTime date) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final d = date.day.toString().padLeft(2, '0');
+    return '$d ${months[date.month - 1]} ${date.year}';
+  }
+
+  Future<void> _pickDueDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dueDate ?? today,
+      // Allow a small past window (warn-not-block on the backend) plus a full
+      // academic year ahead.
+      firstDate: today.subtract(const Duration(days: 30)),
+      lastDate: today.add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() => _dueDate = picked);
+    }
   }
 
   @override
@@ -107,13 +147,32 @@ class _TeacherHomeworkCreateScreenState
                     (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: AksharaSpacing.s3),
-              TextFormField(
-                controller: _dueController,
-                decoration: const InputDecoration(
-                  labelText: 'Due label',
-                  hintText: 'e.g. Due next Monday',
-                  border: OutlineInputBorder(),
-                ),
+              FormField<DateTime>(
+                validator: (_) =>
+                    _dueDate == null ? 'Pick a due date' : null,
+                builder: (field) {
+                  return InkWell(
+                    key: QaTestKeys.teacherHomeworkDueDateField,
+                    onTap: () async {
+                      await _pickDueDate();
+                      field.didChange(_dueDate);
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Due date',
+                        border: const OutlineInputBorder(),
+                        errorText: field.errorText,
+                        suffixIcon: const Icon(Icons.calendar_today_outlined),
+                      ),
+                      child: Text(
+                        _dueDate == null
+                            ? 'Select a due date'
+                            : _formatDue(_dueDate!),
+                        style: context.aksharaText.bodyLarge,
+                      ),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: AksharaSpacing.s3),
               TextFormField(
@@ -125,8 +184,11 @@ class _TeacherHomeworkCreateScreenState
               ),
               const SizedBox(height: AksharaSpacing.s5),
               FilledButton(
+                key: QaTestKeys.teacherHomeworkCreateButton,
                 onPressed: () async {
                   if (!(_formKey.currentState?.validate() ?? false)) return;
+                  final dueIso = _dueDateIso;
+                  if (dueIso == null) return;
 
                   final messenger = ScaffoldMessenger.of(context);
                   final router = GoRouter.of(context);
@@ -140,7 +202,8 @@ class _TeacherHomeworkCreateScreenState
                             classLabel: _classController.text.trim(),
                             subject: _subjectController.text.trim(),
                             title: _titleController.text.trim(),
-                            dueLabel: _dueController.text.trim(),
+                            dueDate: dueIso,
+                            dueLabel: _formatDue(_dueDate!),
                             studentName:
                                 studentName.isEmpty ? null : studentName,
                           ),

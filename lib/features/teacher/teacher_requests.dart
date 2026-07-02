@@ -222,13 +222,22 @@ class TeacherHomeworkCreateRequest {
     required this.classLabel,
     required this.subject,
     required this.title,
-    required this.dueLabel,
+    required this.dueDate,
+    this.dueLabel = '',
     this.studentName,
   });
 
   final String classLabel;
   final String subject;
   final String title;
+
+  /// HWK-1 — the real machine-readable due date in ISO `YYYY-MM-DD` form,
+  /// chosen via a date picker. Required on the pilot create path; the backend
+  /// rejects a blank/invalid value with 422.
+  final String dueDate;
+
+  /// Optional human label ("Due 08 Jul"). When blank the backend derives it
+  /// from [dueDate] so existing renderers keep working.
   final String dueLabel;
 
   /// Optional. Null/empty = delivered to the whole class.

@@ -43,13 +43,13 @@ final parentHomeworkItemsProvider = Provider<List<ParentHomeworkItem>>((ref) {
   return switch (filter) {
     HomeworkFilter.all => baseItems,
     HomeworkFilter.pending => baseItems
-        .where((item) => item.status == ParentHomeworkStatus.pending)
+        .where((item) => item.effectiveStatus == ParentHomeworkStatus.pending)
         .toList(growable: false),
     HomeworkFilter.submitted => baseItems
-        .where((item) => item.status.isSubmitted)
+        .where((item) => item.effectiveStatus.isSubmitted)
         .toList(growable: false),
     HomeworkFilter.overdue => baseItems
-        .where((item) => item.status == ParentHomeworkStatus.overdue)
+        .where((item) => item.effectiveStatus == ParentHomeworkStatus.overdue)
         .toList(growable: false),
   };
 });

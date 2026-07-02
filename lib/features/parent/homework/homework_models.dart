@@ -44,6 +44,7 @@ class ParentHomeworkItem {
     required this.title,
     required this.dueLabel,
     required this.status,
+    this.dueDate,
     this.reviewGrade,
     this.reviewComment,
   });
@@ -52,6 +53,11 @@ class ParentHomeworkItem {
   final String subject;
   final String title;
   final String dueLabel;
+
+  /// HWK-1 — the real machine-readable due date (ISO `YYYY-MM-DD`), when the
+  /// assignment carries one. Null for legacy label-only homework.
+  final String? dueDate;
+
   final ParentHomeworkStatus status;
 
   /// Teacher's grade + comment once reviewed (null otherwise).
@@ -59,6 +65,30 @@ class ParentHomeworkItem {
   final String? reviewComment;
 
   bool get isReviewed => reviewGrade != null;
+
+  /// HWK-1 — display status derived from the real [dueDate]: a still-pending
+  /// item past its due date reads as overdue. Mirrors the backend derivation.
+  ParentHomeworkStatus get effectiveStatus =>
+      deriveParentHomeworkStatus(status, dueDate);
+}
+
+/// Pure client-side overdue derivation (belt-and-suspenders to the backend
+/// overlay). Kept top-level so it is unit-testable.
+ParentHomeworkStatus deriveParentHomeworkStatus(
+  ParentHomeworkStatus rawStatus,
+  String? isoDueDate, {
+  DateTime? today,
+}) {
+  if (rawStatus != ParentHomeworkStatus.pending) return rawStatus;
+  if (isoDueDate == null) return rawStatus;
+  final due = DateTime.tryParse(isoDueDate);
+  if (due == null) return rawStatus;
+  final now = today ?? DateTime.now();
+  final todayDate = DateTime(now.year, now.month, now.day);
+  final dueDate = DateTime(due.year, due.month, due.day);
+  return dueDate.isBefore(todayDate)
+      ? ParentHomeworkStatus.overdue
+      : rawStatus;
 }
 
 /// Parent homework screen payload with KPI-friendly helpers.
@@ -80,15 +110,17 @@ class ParentHomeworkData {
   final String insightActionLabel;
   final int unreadNotifications;
 
-  int get pendingCount =>
-      items.where((item) => item.status == ParentHomeworkStatus.pending).length;
-  int get submittedCount =>
-      items.where((item) => item.status.isSubmitted).length;
-  int get reviewedCount => items
-      .where((item) => item.status == ParentHomeworkStatus.reviewed)
+  int get pendingCount => items
+      .where((item) => item.effectiveStatus == ParentHomeworkStatus.pending)
       .length;
-  int get overdueCount =>
-      items.where((item) => item.status == ParentHomeworkStatus.overdue).length;
+  int get submittedCount =>
+      items.where((item) => item.effectiveStatus.isSubmitted).length;
+  int get reviewedCount => items
+      .where((item) => item.effectiveStatus == ParentHomeworkStatus.reviewed)
+      .length;
+  int get overdueCount => items
+      .where((item) => item.effectiveStatus == ParentHomeworkStatus.overdue)
+      .length;
 
   factory ParentHomeworkData.mock() {
     return const ParentHomeworkData(

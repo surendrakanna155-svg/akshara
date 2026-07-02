@@ -1,11 +1,23 @@
-import { assert, assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import {
+  assert,
+  assertEquals,
+  assertRejects,
+} from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
+  deriveHomeworkDisplayStatus,
+  dueDateToLabel,
+  HomeworkAlreadySubmittedError,
+  HomeworkNotDeliveredError,
   insertHomeworkAssignment,
+  isDueDateInPast,
+  overlayParentHomeworkDueState,
   overlayStudentHomeworkFromSubmissions,
   overlayTeacherHomeworkSubmissions,
   parseClassLabel,
   reviewHomework,
+  submitHomework,
+  validateDueDate,
 } from "./pilot_operations_repository.ts";
 
 interface Capture {
@@ -242,6 +254,7 @@ Deno.test("insertHomeworkAssignment targets only the matching class when enrollm
     subject: "Math",
     title: "Algebra",
     dueLabel: "Tomorrow",
+    dueDate: "2026-07-10",
     studentName: null,
   });
 
@@ -286,6 +299,7 @@ Deno.test("insertHomeworkAssignment falls back to all active students when no en
     subject: "Math",
     title: "Algebra",
     dueLabel: "Tomorrow",
+    dueDate: "2026-07-10",
     studentName: null,
   });
 
@@ -315,6 +329,7 @@ Deno.test("insertHomeworkAssignment named-student branch targets one student", a
     subject: "Math",
     title: "Algebra",
     dueLabel: "Tomorrow",
+    dueDate: "2026-07-10",
     studentName: "Asha Rao",
   });
 
@@ -324,4 +339,247 @@ Deno.test("insertHomeworkAssignment named-student branch targets one student", a
     c.sql.includes("count(*)::text AS total FROM sis_student_enrollments")
   );
   assertEquals(enrollCount, undefined);
+});
+
+// --- HWK-1: due_date propagates into the delivered homework_item payload ---
+
+Deno.test("insertHomeworkAssignment carries dueDate into teacher + student payloads", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([
+    { match: "INSERT INTO teacher_entities", rows: [] },
+    { match: "lower(display_name) = lower($3)", rows: [{ id: "stu-named" }] },
+    { match: "INSERT INTO student_entities", rows: [] },
+  ], captures);
+
+  await insertHomeworkAssignment(db, {
+    organizationId: "org",
+    schoolId: "school",
+    teacherId: "teacher-1",
+    homeworkId: "hw_due",
+    classLabel: "8-A",
+    subject: "Math",
+    title: "Algebra",
+    dueLabel: "Due 10 Jul",
+    dueDate: "2026-07-10",
+    studentName: "Asha Rao",
+  });
+
+  const teacherInsert = captures.find((c) =>
+    c.sql.includes("INSERT INTO teacher_entities")
+  );
+  assert(teacherInsert, "expected the teacher_entities insert");
+  assert(
+    teacherInsert!.sql.includes("'dueDate'"),
+    "teacher payload must carry dueDate",
+  );
+  assertEquals(teacherInsert!.args[7], "2026-07-10"); // dueDate bound param
+
+  const studentInsert = captures.find((c) =>
+    c.sql.includes("INSERT INTO student_entities")
+  );
+  assert(studentInsert, "expected the student_entities insert");
+  assert(
+    studentInsert!.sql.includes("'dueDate'"),
+    "student payload must carry dueDate",
+  );
+  assertEquals(studentInsert!.args[7], "2026-07-10"); // dueDate bound param
+});
+
+// --- Cross-class scope: submit is rejected for a non-delivered assignment ---
+
+Deno.test("submitHomework rejects when the assignment was not delivered to the student", async () => {
+  const captures: Capture[] = [];
+  // The delivery-probe SELECT returns no row → not delivered to this student.
+  const db = mockDb([
+    { match: "FROM student_entities", rows: [] },
+  ], captures);
+
+  await assertRejects(
+    () =>
+      submitHomework(db, {
+        organizationId: "org",
+        schoolId: "school",
+        studentId: "stu-1",
+        homeworkId: "hw-other-class",
+        notes: "done",
+      }),
+    HomeworkNotDeliveredError,
+  );
+
+  // Never attempted the INSERT once the delivery check failed.
+  const insert = captures.find((c) =>
+    c.sql.includes("INSERT INTO homework_submissions")
+  );
+  assertEquals(insert, undefined);
+});
+
+Deno.test("submitHomework inserts once the assignment was delivered", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([
+    { match: "FROM student_entities", rows: [{ id: "hw-1" }] },
+    { match: "INSERT INTO homework_submissions", rows: [{ id: "sub-1" }] },
+  ], captures);
+
+  const result = await submitHomework(db, {
+    organizationId: "org",
+    schoolId: "school",
+    studentId: "stu-1",
+    homeworkId: "hw-1",
+    notes: "done",
+  });
+
+  assertEquals(result.status, "submitted");
+  const insert = captures.find((c) =>
+    c.sql.includes("INSERT INTO homework_submissions")
+  );
+  assert(insert, "expected the submission insert");
+  // Plain INSERT (no ON CONFLICT upsert) so a dup raises a unique violation.
+  assert(
+    !insert!.sql.includes("ON CONFLICT"),
+    "submit must not upsert — a dup must surface as a conflict",
+  );
+});
+
+// --- Duplicate submission surfaces as a 409-mappable error, not a 500 ---
+
+Deno.test("submitHomework maps a unique violation to HomeworkAlreadySubmittedError", async () => {
+  // Custom throwing mock: delivery probe passes, then the INSERT raises a PG
+  // unique_violation (SQLSTATE 23505) as the driver would on a dup.
+  const db = {
+    queryObject: <T>(sql: string) => {
+      if (sql.includes("FROM student_entities")) {
+        return Promise.resolve([{ id: "hw-1" }] as T[]);
+      }
+      if (sql.includes("INSERT INTO homework_submissions")) {
+        const err = new Error(
+          "duplicate key value violates unique constraint",
+        ) as Error & { code: string };
+        err.code = "23505";
+        throw err;
+      }
+      return Promise.resolve([] as T[]);
+    },
+  } as unknown as TenantQueryClient;
+
+  await assertRejects(
+    () =>
+      submitHomework(db, {
+        organizationId: "org",
+        schoolId: "school",
+        studentId: "stu-1",
+        homeworkId: "hw-1",
+        notes: "again",
+      }),
+    HomeworkAlreadySubmittedError,
+  );
+});
+
+Deno.test("submitHomework rethrows a non-unique DB error unchanged", async () => {
+  const db = {
+    queryObject: <T>(sql: string) => {
+      if (sql.includes("FROM student_entities")) {
+        return Promise.resolve([{ id: "hw-1" }] as T[]);
+      }
+      if (sql.includes("INSERT INTO homework_submissions")) {
+        throw new Error("connection reset");
+      }
+      return Promise.resolve([] as T[]);
+    },
+  } as unknown as TenantQueryClient;
+
+  await assertRejects(
+    () =>
+      submitHomework(db, {
+        organizationId: "org",
+        schoolId: "school",
+        studentId: "stu-1",
+        homeworkId: "hw-1",
+        notes: "x",
+      }),
+    Error,
+    "connection reset",
+  );
+});
+
+// --- HWK-1: due_date validation ---
+
+Deno.test("validateDueDate accepts a real ISO date, rejects blank/garbage/impossible", () => {
+  assertEquals(validateDueDate("2026-07-10"), "2026-07-10");
+  assertEquals(validateDueDate("  2026-07-10  "), "2026-07-10");
+  assertEquals(validateDueDate(""), null);
+  assertEquals(validateDueDate(null), null);
+  assertEquals(validateDueDate("next Monday"), null);
+  assertEquals(validateDueDate("2026-13-01"), null); // no 13th month
+  assertEquals(validateDueDate("2026-02-30"), null); // Feb 30 never exists
+  assertEquals(validateDueDate("07/10/2026"), null); // wrong format
+});
+
+Deno.test("dueDateToLabel renders a human Due label from an ISO date", () => {
+  assertEquals(dueDateToLabel("2026-07-08"), "Due 08 Jul");
+  assertEquals(dueDateToLabel("garbage"), "");
+});
+
+Deno.test("isDueDateInPast is true only for a date strictly before today", () => {
+  const today = new Date(Date.UTC(2026, 6, 10)); // 2026-07-10
+  assert(isDueDateInPast("2026-07-09", today));
+  assert(!isDueDateInPast("2026-07-10", today)); // today is not past
+  assert(!isDueDateInPast("2026-07-11", today));
+});
+
+// --- HWK-1: overdue derivation ---
+
+Deno.test("deriveHomeworkDisplayStatus flips pending→overdue when past due", () => {
+  const today = new Date(Date.UTC(2026, 6, 10)); // 2026-07-10
+  // pending + past due → overdue
+  assertEquals(deriveHomeworkDisplayStatus("pending", "2026-07-09", today), "overdue");
+  // pending + due today → still pending (not overdue)
+  assertEquals(deriveHomeworkDisplayStatus("pending", "2026-07-10", today), "pending");
+  // pending + future → pending
+  assertEquals(deriveHomeworkDisplayStatus("pending", "2026-07-20", today), "pending");
+  // submitted/reviewed are terminal — never overdue even if past due
+  assertEquals(deriveHomeworkDisplayStatus("submitted", "2026-07-01", today), "submitted");
+  assertEquals(deriveHomeworkDisplayStatus("reviewed", "2026-07-01", today), "reviewed");
+  // no dueDate → keep raw status (legacy label-only homework)
+  assertEquals(deriveHomeworkDisplayStatus("pending", null, today), "pending");
+});
+
+Deno.test("overlayStudentHomeworkFromSubmissions derives overdue for a pending item past due", async () => {
+  const captures: Capture[] = [];
+  const items = [
+    // pending, past due, no submission → should become overdue
+    { id: "hw-1", subject: "Math", title: "Algebra", dueLabel: "x", dueDate: "2000-01-01", status: "pending" },
+    // pending, no dueDate → stays pending (legacy)
+    { id: "hw-2", subject: "Sci", title: "Lab", dueLabel: "y", status: "pending" },
+  ];
+  const result = await overlayStudentHomeworkFromSubmissions(
+    // no submission rows at all
+    mockDb([{ match: "FROM homework_submissions", rows: [] }], captures),
+    "org",
+    "school",
+    "stu-1",
+    items,
+  );
+  assertEquals(result[0].status, "overdue");
+  assertEquals(result[1].status, "pending");
+});
+
+Deno.test("overlayParentHomeworkDueState derives overdue on snapshot items", () => {
+  const today = new Date(Date.UTC(2026, 6, 10));
+  const snapshot = {
+    childName: "Ravi",
+    items: [
+      { id: "hw-1", status: "pending", dueDate: "2026-07-01" }, // past → overdue
+      { id: "hw-2", status: "pending", dueDate: "2026-07-20" }, // future → pending
+      { id: "hw-3", status: "submitted", dueDate: "2026-07-01" }, // terminal → submitted
+      { id: "hw-4", status: "pending" }, // no dueDate → pending
+    ],
+  };
+  const result = overlayParentHomeworkDueState(snapshot, today);
+  const items = result.items as Array<Record<string, unknown>>;
+  assertEquals(items[0].status, "overdue");
+  assertEquals(items[1].status, "pending");
+  assertEquals(items[2].status, "submitted");
+  assertEquals(items[3].status, "pending");
+  // identity fields preserved
+  assertEquals(result.childName, "Ravi");
 });

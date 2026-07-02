@@ -373,6 +373,7 @@ class ParentMapper {
             subject: item['subject'] as String? ?? '',
             title: item['title'] as String? ?? '',
             dueLabel: item['dueLabel'] as String? ?? '',
+            dueDate: item['dueDate'] as String?,
             status: ParentEnumCodec.parseHomeworkStatus(item['status'] as String?),
           ),
     ];

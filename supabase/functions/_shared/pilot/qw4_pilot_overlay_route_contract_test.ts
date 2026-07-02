@@ -139,6 +139,7 @@ Deno.test("QA-B-045: teacher homework create passes WITH manageHomework + valid 
     class_label: "8-A",
     subject: "Math",
     title: "HW",
+    due_date: "2026-07-10",
   });
   assertEquals(res?.status, 503);
 });

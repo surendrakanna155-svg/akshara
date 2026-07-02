@@ -146,12 +146,16 @@ class TeacherHomeworkCreateRequestDto {
     TeacherHomeworkCreateRequest request,
   ) {
     final studentName = request.studentName?.trim();
+    final dueLabel = request.dueLabel.trim();
     return TeacherHomeworkCreateRequestDto(
       raw: {
         'class_label': request.classLabel,
         'subject': request.subject,
         'title': request.title,
-        'due_label': request.dueLabel,
+        // HWK-1 — real ISO due date; the backend validates it (422 on blank/bad).
+        'due_date': request.dueDate,
+        // Optional human label; when blank the backend derives it from due_date.
+        if (dueLabel.isNotEmpty) 'due_label': dueLabel,
         if (studentName != null && studentName.isNotEmpty)
           'student_name': studentName,
       },

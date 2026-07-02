@@ -24,9 +24,11 @@ class HomeworkListRow extends StatelessWidget {
     final colors = context.colors;
     final text = context.aksharaText;
 
+    // HWK-1 — render overdue derived from the real due date, not the raw status.
+    final status = item.effectiveStatus;
     return Semantics(
       button: onTap != null,
-      label: '${item.subject}: ${item.title}. ${item.status.label}',
+      label: '${item.subject}: ${item.title}. ${status.label}',
       child: Material(
         color: colors.surface,
         shape: RoundedRectangleBorder(
@@ -92,8 +94,8 @@ class HomeworkListRow extends StatelessWidget {
                   ),
                   const SizedBox(width: AksharaSpacing.s2),
                   AksharaStatusChip(
-                    label: item.status.label,
-                    tone: _toneForStatus(item.status),
+                    label: status.label,
+                    tone: _toneForStatus(status),
                     size: AksharaStatusChipSize.compact,
                   ),
                 ],

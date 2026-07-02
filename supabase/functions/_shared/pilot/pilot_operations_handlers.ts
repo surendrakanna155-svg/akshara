@@ -18,9 +18,14 @@ import {
   listTimetableSlots,
   listGuardianUserIdsForStudent,
   upsertAttendanceSession,
+  validateDueDate,
+  dueDateToLabel,
+  isDueDateInPast,
   AttendanceLockedError,
   AttendanceClosedDayError,
   AttendanceRosterMismatchError,
+  HomeworkNotDeliveredError,
+  HomeworkAlreadySubmittedError,
   type AttendanceMarkEntry,
 } from "./pilot_operations_repository.ts";
 
@@ -322,6 +327,15 @@ export async function handleStudentHomeworkSubmit(
     return jsonResponse(envelope(result), { status: 201 });
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    // Cross-class scope: assignment was not delivered to this student → 404 (do
+    // not confirm the id exists for another class).
+    if (error instanceof HomeworkNotDeliveredError) {
+      return errorEnvelope("HOMEWORK_NOT_DELIVERED", error.message, 404);
+    }
+    // Idempotency: a second submission of the same assignment → 409, not 500.
+    if (error instanceof HomeworkAlreadySubmittedError) {
+      return errorEnvelope("HOMEWORK_ALREADY_SUBMITTED", error.message, 409);
+    }
     return errorEnvelope("INTERNAL_ERROR", "Failed to submit homework", 500);
   }
 }
@@ -392,7 +406,25 @@ export async function handleTeacherHomeworkCreate(
       422,
     );
   }
-  const dueLabel = String(body.due_label ?? body.dueLabel ?? "").trim() || "—";
+
+  // HWK-1 — a real due date replaces the free-text label on the pilot path. It
+  // is REQUIRED and must be a valid calendar date (YYYY-MM-DD); a blank or
+  // unparseable value is a 422. A past due date is allowed (warn-not-block): we
+  // flag it in the response (`dueDateInPast`) but still create the homework.
+  const dueDateRaw = body.due_date ?? body.dueDate;
+  const dueDate = validateDueDate(dueDateRaw);
+  if (!dueDate) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "due_date is required and must be a valid date (YYYY-MM-DD)",
+      422,
+    );
+  }
+  // Prefer an explicit label if the client sent one; otherwise derive a human
+  // "Due 08 Jun" label from the real date so existing renderers still work.
+  const explicitLabel = String(body.due_label ?? body.dueLabel ?? "").trim();
+  const dueLabel = explicitLabel.length > 0 ? explicitLabel : dueDateToLabel(dueDate);
+  const dueDateInPast = isDueDateInPast(dueDate);
   const studentNameRaw = String(body.student_name ?? body.studentName ?? "").trim();
   const studentName = studentNameRaw.length > 0 ? studentNameRaw : null;
   const homeworkId = `hw_${crypto.randomUUID()}`;
@@ -408,6 +440,7 @@ export async function handleTeacherHomeworkCreate(
         subject,
         title,
         dueLabel,
+        dueDate,
         studentName,
       });
       await auditMobileWrite(
@@ -417,7 +450,7 @@ export async function handleTeacherHomeworkCreate(
         "homeworkCreated",
         "homework_assignment",
         created.id,
-        { classLabel, subject, deliveredCount: created.deliveredCount },
+        { classLabel, subject, dueDate, deliveredCount: created.deliveredCount },
       );
       return created;
     });
@@ -428,6 +461,8 @@ export async function handleTeacherHomeworkCreate(
         classLabel,
         subject,
         dueLabel,
+        dueDate,
+        dueDateInPast,
         deliveredCount: result.deliveredCount,
       }),
     );

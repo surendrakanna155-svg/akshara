@@ -525,6 +525,17 @@ export function createStudentScopedReadHandlers(
             resolved as Record<string, unknown>,
           );
         }
+        if (entityType === "snapshot_homework") {
+          // HWK-1 — derive overdue from each item's real dueDate rather than a
+          // free-text label. Pure over the resolved snapshot; no-op for items
+          // without a dueDate (legacy label-only homework).
+          const { overlayParentHomeworkDueState } = await import(
+            "../pilot/pilot_operations_repository.ts"
+          );
+          return overlayParentHomeworkDueState(
+            resolved as Record<string, unknown>,
+          );
+        }
         return resolved;
       });
       return jsonResponse(envelope(snapshot));

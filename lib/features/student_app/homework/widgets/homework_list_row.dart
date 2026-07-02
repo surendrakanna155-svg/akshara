@@ -21,12 +21,14 @@ class HomeworkListRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.aksharaText;
-    final statusStyle = _statusStyle(context, item.status);
+    // HWK-1 — the badge reflects overdue derived from the real due date.
+    final status = item.effectiveStatus;
+    final statusStyle = _statusStyle(context, status);
 
     return Semantics(
       container: true,
       label:
-          '${item.subject}, ${item.title}, ${item.status.label}${item.hasAttachment ? ', has attachment' : ''}',
+          '${item.subject}, ${item.title}, ${status.label}${item.hasAttachment ? ', has attachment' : ''}',
       child: Material(
         color: colors.surface,
         shape: RoundedRectangleBorder(
@@ -97,7 +99,8 @@ class HomeworkListRow extends StatelessWidget {
                 ),
               ],
               if (onSubmit != null &&
-                  item.status == StudentHomeworkStatus.pending) ...[
+                  (status == StudentHomeworkStatus.pending ||
+                      status == StudentHomeworkStatus.overdue)) ...[
                 const SizedBox(height: AksharaSpacing.s3),
                 Align(
                   alignment: Alignment.centerRight,

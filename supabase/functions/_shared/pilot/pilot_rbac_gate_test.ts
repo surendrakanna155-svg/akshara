@@ -123,7 +123,12 @@ Deno.test("homework review is denied without manageHomework", async () => {
 Deno.test("homework create passes the gate WITH manageHomework", async () => {
   const token = await tokenWith(["manageHomework"]);
   const res = await handleTeacherHomeworkCreate(
-    post("/teacher/homework", token, { class_label: "8-A", subject: "Math", title: "HW" }),
+    post("/teacher/homework", token, {
+      class_label: "8-A",
+      subject: "Math",
+      title: "HW",
+      due_date: "2026-07-10",
+    }),
     config,
   );
   assertEquals(res.status, 503);

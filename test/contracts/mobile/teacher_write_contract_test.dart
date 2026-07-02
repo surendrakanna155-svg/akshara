@@ -27,6 +27,41 @@ void main() {
       expect((json['entries'] as List).first['mark'], 'present');
     });
 
+    test('homework create request serializes due_date (HWK-1) in snake_case', () {
+      final json = TeacherHomeworkCreateRequestDto.fromDomain(
+        const TeacherHomeworkCreateRequest(
+          classLabel: '8-A',
+          subject: 'Mathematics',
+          title: 'Algebra worksheet',
+          dueDate: '2026-07-10',
+        ),
+      ).toJson();
+      expect(json['class_label'], '8-A');
+      expect(json['subject'], 'Mathematics');
+      expect(json['title'], 'Algebra worksheet');
+      expect(json['due_date'], '2026-07-10');
+      // No explicit label → omitted so the backend derives it from due_date.
+      expect(json.containsKey('due_label'), isFalse);
+      // No student name → whole-class delivery (key omitted).
+      expect(json.containsKey('student_name'), isFalse);
+    });
+
+    test('homework create request keeps an explicit due_label + student_name', () {
+      final json = TeacherHomeworkCreateRequestDto.fromDomain(
+        const TeacherHomeworkCreateRequest(
+          classLabel: '8-A',
+          subject: 'Mathematics',
+          title: 'Algebra worksheet',
+          dueDate: '2026-07-10',
+          dueLabel: 'Due 10 Jul 2026',
+          studentName: 'Asha Rao',
+        ),
+      ).toJson();
+      expect(json['due_date'], '2026-07-10');
+      expect(json['due_label'], 'Due 10 Jul 2026');
+      expect(json['student_name'], 'Asha Rao');
+    });
+
     test('homework review request serializes grade and comment', () {
       final json = TeacherHomeworkReviewRequestDto.fromDomain(
         const TeacherHomeworkReviewRequest(

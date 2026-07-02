@@ -1999,4 +1999,10 @@ abstract final class QaTestKeys {
 
   static ValueKey<String> officeAttendanceTab(String tabLabel) =>
       ValueKey<String>('office_attendance_tab_${normalizeSubNavLabel(tabLabel)}');
+
+  // --- Teacher homework create (HWK-1 real due date) ---
+  static const teacherHomeworkDueDateField =
+      ValueKey<String>('teacher_homework_due_date_field');
+  static const teacherHomeworkCreateButton =
+      ValueKey<String>('teacher_homework_create_button');
 }

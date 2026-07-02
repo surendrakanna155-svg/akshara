@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_create_screen.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_provider.dart';
 import 'package:akshara_erp/features/teacher/homework/teacher_homework_screen.dart';
@@ -76,17 +77,20 @@ void main() {
       await tester.enterText(classField, '');
       await tester.enterText(subjectField, '');
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+      await tester.tap(find.byKey(QaTestKeys.teacherHomeworkCreateButton));
       await tester.pumpAndSettle();
 
-      // Three required fields (class, subject, title) report errors and the
+      // Three text required fields (class, subject, title) report 'Required' and
+      // the (HWK-1) due-date field reports its own 'Pick a due date' error; the
       // screen stays put — no navigation to the homework list.
       expect(find.text('Required'), findsNWidgets(3));
+      expect(find.text('Pick a due date'), findsOneWidget);
       expect(find.text('homework-list'), findsNothing);
       expect(find.text('Create Homework'), findsOneWidget);
     });
 
-    testWidgets('valid form fires Create and navigates to the homework list',
+    testWidgets(
+        'valid form with a picked due date fires Create and navigates to the list',
         (tester) async {
       await _pumpRouter(tester, const TeacherHomeworkCreateScreen());
 
@@ -97,14 +101,23 @@ void main() {
       await tester.enterText(
           find.widgetWithText(TextFormField, 'Assignment title (English)'),
           'Algebra worksheet');
-      await tester.enterText(
-          find.widgetWithText(TextFormField, 'Due label'), 'Due next Monday');
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+      // HWK-1 — pick a real due date via the Material date picker (defaults to
+      // today), then confirm with OK.
+      await tester.tap(find.byKey(QaTestKeys.teacherHomeworkDueDateField));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      // The field now shows a formatted date instead of the placeholder.
+      expect(find.text('Select a due date'), findsNothing);
+
+      await tester.tap(find.byKey(QaTestKeys.teacherHomeworkCreateButton));
       await tester.pumpAndSettle();
 
       // No validation errors; create succeeded and routed to the list.
       expect(find.text('Required'), findsNothing);
+      expect(find.text('Pick a due date'), findsNothing);
       expect(find.text('homework-list'), findsOneWidget);
     });
   });

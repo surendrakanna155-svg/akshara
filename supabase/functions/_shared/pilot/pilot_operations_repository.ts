@@ -496,6 +496,44 @@ export async function listParentLeaveRequests(
   };
 }
 
+// ── Homework submission integrity guards (security hardening) ────────────────
+
+/**
+ * Cross-class scope guard: a student may only submit against an assignment that
+ * was actually DELIVERED to them (a `homework_item` entity exists for this
+ * student_id + homework_id). Without this a student could POST a homework_id
+ * belonging to another class/student and get a row written for their own
+ * student_id — a horizontal privilege leak on the shared `homework_id` space.
+ */
+export class HomeworkNotDeliveredError extends Error {
+  constructor() {
+    super("Homework assignment was not delivered to this student");
+    this.name = "HomeworkNotDeliveredError";
+  }
+}
+
+/**
+ * A student has already submitted this assignment. Surfaced as 409 instead of a
+ * silent overwrite (previously ON CONFLICT DO UPDATE) or a raw 500 unique
+ * violation — a re-submit is an explicit conflict the client must handle.
+ */
+export class HomeworkAlreadySubmittedError extends Error {
+  constructor() {
+    super("Homework has already been submitted");
+    this.name = "HomeworkAlreadySubmittedError";
+  }
+}
+
+// Postgres unique_violation SQLSTATE.
+const PG_UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const code = (error as { code?: unknown; fields?: { code?: unknown } }).code ??
+    (error as { fields?: { code?: unknown } }).fields?.code;
+  return code === PG_UNIQUE_VIOLATION;
+}
+
 export async function submitHomework(
   db: TenantQueryClient,
   input: {
@@ -507,23 +545,45 @@ export async function submitHomework(
     attachmentLabel?: string | null;
   },
 ): Promise<Record<string, unknown>> {
-  const rows = await db.queryObject<{ id: string }>(
-    `INSERT INTO homework_submissions (
-       organization_id, school_id, student_id, homework_id, notes, attachment_label
-     ) VALUES ($1,$2,$3,$4,$5,$6)
-     ON CONFLICT (organization_id, school_id, student_id, homework_id)
-     DO UPDATE SET notes = EXCLUDED.notes, attachment_label = EXCLUDED.attachment_label,
-       status = 'submitted', updated_at = timezone('utc', now())
-     RETURNING id`,
-    [
-      input.organizationId,
-      input.schoolId,
-      input.studentId,
-      input.homeworkId,
-      input.notes,
-      input.attachmentLabel ?? null,
-    ],
+  // Cross-class scope: the assignment must have been delivered to THIS student.
+  // A student can only see/submit their own delivered `homework_item` entities
+  // (student_entities RLS scopes reads to the student), so a missing row means
+  // the homework_id was never assigned to them — reject rather than persist a
+  // submission against another class's assignment.
+  const delivered = await db.queryObject<{ id: string }>(
+    `SELECT id FROM student_entities
+     WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
+       AND entity_type = 'homework_item' AND id = $4
+     LIMIT 1`,
+    [input.organizationId, input.schoolId, input.studentId, input.homeworkId],
   );
+  if (!delivered[0]) {
+    throw new HomeworkNotDeliveredError();
+  }
+
+  // Plain INSERT (no ON CONFLICT): a duplicate submission raises the unique
+  // violation on idx_homework_submissions_student_hw, which we map to a 409.
+  try {
+    await db.queryObject<{ id: string }>(
+      `INSERT INTO homework_submissions (
+         organization_id, school_id, student_id, homework_id, notes, attachment_label
+       ) VALUES ($1,$2,$3,$4,$5,$6)
+       RETURNING id`,
+      [
+        input.organizationId,
+        input.schoolId,
+        input.studentId,
+        input.homeworkId,
+        input.notes,
+        input.attachmentLabel ?? null,
+      ],
+    );
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new HomeworkAlreadySubmittedError();
+    }
+    throw error;
+  }
   return {
     id: input.homeworkId,
     homeworkId: input.homeworkId,
@@ -1319,10 +1379,21 @@ export async function overlayStudentHomeworkFromSubmissions(
 
   return items.map((item) => {
     const sub = byHomework.get(String(item.id ?? ""));
-    if (!sub) return item;
+    // HWK-1 — derive overdue from the real dueDate carried in the item payload.
+    // A pending item past its due date reads as 'overdue'; a submitted/reviewed
+    // one never does. Items with no dueDate keep their raw status (legacy).
+    const dueDate = (item.dueDate as string | null | undefined) ?? null;
+    if (!sub) {
+      const rawStatus = String(item.status ?? "pending");
+      const displayStatus = deriveHomeworkDisplayStatus(rawStatus, dueDate);
+      return displayStatus === rawStatus
+        ? item
+        : { ...item, status: displayStatus };
+    }
+    const displayStatus = deriveHomeworkDisplayStatus(sub.status, dueDate);
     const overlay: Record<string, unknown> = {
       ...item,
-      status: sub.status,
+      status: displayStatus,
       submittedLabel: sub.submitted_label ?? item.submittedLabel ?? "Submitted",
     };
     if (sub.status === "reviewed") {
@@ -1437,6 +1508,105 @@ export function parseClassLabel(
   return { className: trimmed, sectionName: null };
 }
 
+// --- HWK-1 real due date helpers (pilot homework path) ---
+//
+// The pilot homework assignment previously carried only a free-text `dueLabel`
+// ("Due next Monday"), so nothing could compute whether a task was actually
+// overdue. These pure helpers give the create path a real, validated ISO
+// due_date and the read path a deterministic overdue derivation. Kept pure (no
+// DB) so they unit-test without a database.
+
+const MONTH_SHORT = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+] as const;
+
+/**
+ * Validate a due date. Accepts a real calendar date in strict ISO YYYY-MM-DD
+ * form (also verifies the components round-trip, so "2026-02-30" is rejected).
+ * Returns the normalised ISO string, or null when blank/unparseable — the
+ * handler maps a null on a required due date to 422.
+ */
+export function validateDueDate(raw: unknown): string | null {
+  if (raw == null) return null;
+  const value = String(raw).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [y, m, d] = value.split("-").map((p) => parseInt(p, 10));
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (
+    date.getUTCFullYear() !== y ||
+    date.getUTCMonth() !== m - 1 ||
+    date.getUTCDate() !== d
+  ) {
+    return null;
+  }
+  return value;
+}
+
+/** True when the ISO due date is strictly before today (past). Warn-not-block:
+ * the create path allows a past date; this only powers a client-side warning. */
+export function isDueDateInPast(isoDueDate: string, today = new Date()): boolean {
+  const validated = validateDueDate(isoDueDate);
+  if (!validated) return false;
+  const todayIso = today.toISOString().slice(0, 10);
+  return validated < todayIso;
+}
+
+/** Human "Due 08 Jun" label derived from an ISO due date, for backward-compat
+ * rendering alongside the machine-readable dueDate. */
+export function dueDateToLabel(isoDueDate: string): string {
+  const validated = validateDueDate(isoDueDate);
+  if (!validated) return "";
+  const [, m, d] = validated.split("-").map((p) => parseInt(p, 10));
+  return `Due ${String(d).padStart(2, "0")} ${MONTH_SHORT[m - 1]}`;
+}
+
+/**
+ * Deterministic homework display state from the real due date + submission
+ * status. `overdue` = still pending AND the due date is strictly before today;
+ * a submitted/reviewed item is never overdue. Items with no dueDate keep their
+ * raw status (legacy label-only assignments). Pure so it is unit-testable and
+ * so both the student and parent overlays derive overdue identically.
+ */
+export function deriveHomeworkDisplayStatus(
+  rawStatus: string,
+  isoDueDate: string | null | undefined,
+  today = new Date(),
+): string {
+  const status = rawStatus || "pending";
+  // Handed-in states are terminal — never overdue.
+  if (status === "submitted" || status === "reviewed" || status === "returned") {
+    return status;
+  }
+  if (status !== "pending") return status;
+  if (!isoDueDate) return status;
+  return isDueDateInPast(isoDueDate, today) ? "overdue" : status;
+}
+
+/**
+ * HWK-1 — derive overdue on the parent homework snapshot items from their real
+ * `dueDate` (mirrors the student overlay). Pure over the snapshot's items array:
+ * a pending item whose dueDate is past reads as 'overdue'; items with no dueDate
+ * keep their status (legacy label-only). No DB access — the parent snapshot is
+ * already resolved under RLS before this runs.
+ */
+export function overlayParentHomeworkDueState(
+  snapshot: Record<string, unknown>,
+  today = new Date(),
+): Record<string, unknown> {
+  const items = snapshot.items;
+  if (!Array.isArray(items)) return snapshot;
+  const mapped = items.map((raw) => {
+    if (typeof raw !== "object" || raw === null) return raw;
+    const item = raw as Record<string, unknown>;
+    const dueDate = (item.dueDate as string | null | undefined) ?? null;
+    const rawStatus = String(item.status ?? "pending");
+    const displayStatus = deriveHomeworkDisplayStatus(rawStatus, dueDate, today);
+    return displayStatus === rawStatus ? item : { ...item, status: displayStatus };
+  });
+  return { ...snapshot, items: mapped };
+}
+
 // --- Teacher homework CREATE (TCH-1 / MJ-H8) ---
 //
 // Persists a homework assignment as a durable `homework_assignment` entity for
@@ -1461,17 +1631,25 @@ export async function insertHomeworkAssignment(
     subject: string;
     title: string;
     dueLabel: string;
+    // HWK-1 — real machine-readable ISO (YYYY-MM-DD) due date. Persisted into
+    // both the teacher assignment and each student homework_item payload so the
+    // student/parent surfaces can compute overdue from a real date instead of a
+    // free-text label. Null keeps a legacy label-only assignment (back-compat).
+    dueDate: string | null;
     studentName: string | null;
   },
 ): Promise<{ id: string; deliveredCount: number }> {
   // teacher_entities is teacher-scoped (PK + RLS include teacher_id =
   // app_current_user_id()), so the assignment is owned by the creating teacher.
+  // dueDate is stored as a top-level payload key; when null it degrades to a
+  // label-only assignment (jsonb value 'null', which the client reads as absent).
   await db.queryObject(
     `INSERT INTO teacher_entities (id, organization_id, school_id, teacher_id, entity_type, payload)
-     VALUES ($1, $2, $3, $8::uuid, 'homework_assignment',
+     VALUES ($1, $2, $3, $9::uuid, 'homework_assignment',
        jsonb_build_object(
          'id', $1::text, 'title', $4::text, 'classLabel', $5::text,
-         'subject', $6::text, 'dueLabel', $7::text, 'pendingReviews', 0))
+         'subject', $6::text, 'dueLabel', $7::text, 'dueDate', $8::text,
+         'pendingReviews', 0))
      ON CONFLICT (organization_id, school_id, teacher_id, entity_type, id)
        DO UPDATE SET payload = EXCLUDED.payload`,
     [
@@ -1482,6 +1660,7 @@ export async function insertHomeworkAssignment(
       input.classLabel,
       input.subject,
       input.dueLabel,
+      input.dueDate,
       input.teacherId,
     ],
   );
@@ -1535,7 +1714,7 @@ export async function insertHomeworkAssignment(
        VALUES ($1, $2, $3, $4::uuid, 'homework_item',
          jsonb_build_object(
            'id', $1::text, 'subject', $5::text, 'title', $6::text,
-           'dueLabel', $7::text, 'status', 'pending'))
+           'dueLabel', $7::text, 'dueDate', $8::text, 'status', 'pending'))
        ON CONFLICT (organization_id, school_id, student_id, entity_type, id)
          DO UPDATE SET payload = EXCLUDED.payload`,
       [
@@ -1546,6 +1725,7 @@ export async function insertHomeworkAssignment(
         input.subject,
         input.title,
         input.dueLabel,
+        input.dueDate,
       ],
     );
   }
