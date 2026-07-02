@@ -280,3 +280,77 @@ class HrEmployeeDirectory {
 
   bool get isEmpty => rows.isEmpty;
 }
+
+// ---------------------------------------------------------------------------
+// HR-D1 — Staff document-expiry report
+// ---------------------------------------------------------------------------
+
+class HrExpiringDocumentRow {
+  const HrExpiringDocumentRow({
+    required this.employeeId,
+    required this.employee,
+    required this.code,
+    required this.docType,
+    required this.docName,
+    required this.expiryDate,
+    required this.daysToExpiry,
+  });
+
+  final String employeeId;
+  final String employee;
+  final String code;
+  final String docType;
+  final String docName;
+  final String expiryDate; // yyyy-mm-dd
+  final int daysToExpiry; // negative once expired
+}
+
+class HrExpiringDocumentsReport {
+  const HrExpiringDocumentsReport({
+    required this.withinDays,
+    required this.asOf,
+    required this.rows,
+  });
+
+  final int withinDays;
+  final String asOf;
+  final List<HrExpiringDocumentRow> rows;
+
+  bool get isEmpty => rows.isEmpty;
+}
+
+// ---------------------------------------------------------------------------
+// HR-D2 — Probation-ending report
+// ---------------------------------------------------------------------------
+
+class HrProbationEndingRow {
+  const HrProbationEndingRow({
+    required this.employeeId,
+    required this.employee,
+    required this.code,
+    required this.department,
+    required this.probationEndDate,
+    required this.daysToEnd,
+  });
+
+  final String employeeId;
+  final String employee;
+  final String code;
+  final String department;
+  final String probationEndDate; // yyyy-mm-dd
+  final int daysToEnd; // negative once lapsed
+}
+
+class HrProbationEndingReport {
+  const HrProbationEndingReport({
+    required this.withinDays,
+    required this.asOf,
+    required this.rows,
+  });
+
+  final int withinDays;
+  final String asOf;
+  final List<HrProbationEndingRow> rows;
+
+  bool get isEmpty => rows.isEmpty;
+}

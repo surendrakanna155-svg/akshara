@@ -16,9 +16,16 @@ abstract final class HrApiPaths {
   static String rejectLeave(String leaveRequestId) =>
       '$base/leave/$leaveRequestId/reject';
 
+  /// HR-3 — batch approve/reject.
+  static const String leaveBatchDecide = '$base/leave/batch-decide';
+
   static String employeeDetail(String employeeId) => '$base/employees/$employeeId';
   static String employeeStatus(String employeeId) =>
       '$base/employees/$employeeId/status';
+
+  /// HR-D2 — probation confirm/extend.
+  static String employeeProbation(String employeeId) =>
+      '$base/employees/$employeeId/probation';
 
   // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
   static const String payrollRegister = '$payroll/register';
@@ -27,4 +34,8 @@ abstract final class HrApiPaths {
   static const String leaveBalances = '$leave/balances';
   static const String headcount = '$base/reports/headcount';
   static const String employeeDirectory = '$employees/export';
+
+  // --- Final HR slice reports (HR-D1 / HR-D2) ------------------------------
+  static const String documentsExpiring = '$base/documents/expiring';
+  static const String probationEnding = '$base/probation/ending';
 }

@@ -11,6 +11,9 @@ class CreateHrLeaveRequest {
     required this.days,
     required this.reason,
     this.approver = 'HR Manager',
+    this.onBehalf = false,
+    this.halfDay = false,
+    this.override = false,
   });
 
   final String employeeId;
@@ -19,15 +22,61 @@ class CreateHrLeaveRequest {
   final HrLeaveType leaveType;
   final String fromDate;
   final String toDate;
+
+  /// Whole days requested. Fractional half-day is expressed via [halfDay] (which
+  /// the backend records as 0.5) so this stays an int for the common whole-day path.
   final int days;
   final String reason;
   final String approver;
+
+  /// HR-D3 — a manager filing this leave FOR the employee (records `createdBy`).
+  final bool onBehalf;
+
+  /// HR-D3 — a half-day request (0.5 day) rather than whole days.
+  final bool halfDay;
+
+  /// HR-D3 — allow the request even though it exceeds the employee's balance
+  /// (the backend refuses over-balance requests with 409 unless this is set).
+  final bool override;
 }
 
 class ApproveLeaveRequest {
   const ApproveLeaveRequest({this.comment = ''});
 
   final String comment;
+}
+
+/// HR-3 — approve or reject many leave requests at once.
+class BatchDecideHrLeaveRequest {
+  const BatchDecideHrLeaveRequest({
+    required this.ids,
+    required this.approve,
+    this.reason = '',
+  });
+
+  final List<String> ids;
+  final bool approve;
+  final String reason;
+}
+
+/// HR-D2 — confirm an employee off probation, or extend it to a new end date.
+class SetHrEmployeeProbationRequest {
+  const SetHrEmployeeProbationRequest.confirm({required this.employeeId})
+      : extend = false,
+        probationEndDate = null;
+
+  const SetHrEmployeeProbationRequest.extend({
+    required this.employeeId,
+    required String this.probationEndDate,
+  }) : extend = true;
+
+  final String employeeId;
+
+  /// true → extend (with [probationEndDate]); false → confirm (clear probation).
+  final bool extend;
+  final String? probationEndDate;
+
+  String get action => extend ? 'extend' : 'confirm';
 }
 
 class ProcessHrPayrollRunRequest {

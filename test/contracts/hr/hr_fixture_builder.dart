@@ -370,6 +370,57 @@ class HrFixtureBuilder {
     });
   }
 
+  // --- Final HR slice (HR-3 / HR-D1 / HR-D2) -------------------------------
+
+  Map<String, dynamic> batchDecisionEnvelope(HrBatchLeaveDecision decision) {
+    return envelope({
+      'decided': [
+        for (final id in decision.decided) {'id': id, 'status': 'approved'},
+      ],
+      'skipped': [
+        for (final s in decision.skipped) {'id': s.id, 'reason': s.reason},
+      ],
+    });
+  }
+
+  Map<String, dynamic> expiringDocumentsEnvelope(
+      HrExpiringDocumentsReport report) {
+    return envelope({
+      'withinDays': report.withinDays,
+      'asOf': report.asOf,
+      'rows': [
+        for (final r in report.rows)
+          {
+            'employeeId': r.employeeId,
+            'employee': r.employee,
+            'code': r.code,
+            'docType': r.docType,
+            'docName': r.docName,
+            'expiryDate': r.expiryDate,
+            'daysToExpiry': r.daysToExpiry,
+          },
+      ],
+    });
+  }
+
+  Map<String, dynamic> probationEndingEnvelope(HrProbationEndingReport report) {
+    return envelope({
+      'withinDays': report.withinDays,
+      'asOf': report.asOf,
+      'rows': [
+        for (final r in report.rows)
+          {
+            'employeeId': r.employeeId,
+            'employee': r.employee,
+            'code': r.code,
+            'department': r.department,
+            'probationEndDate': r.probationEndDate,
+            'daysToEnd': r.daysToEnd,
+          },
+      ],
+    });
+  }
+
   Map<String, dynamic> settingsEnvelope(HrSettingsData data) {
     return envelope({
       'defaultDepartment': HrEnumCodec.departmentToApi(data.defaultDepartment),

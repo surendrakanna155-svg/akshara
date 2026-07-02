@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/testing/qa_test_keys.dart';
 import 'hr_models.dart';
 import 'hr_mutations_provider.dart';
+import 'hr_providers.dart';
 import 'hr_requests.dart';
 import '../../core/errors/error_text.dart';
 
@@ -136,6 +137,193 @@ Future<void> showCreateHrLeaveDialog(BuildContext context, WidgetRef ref) async 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(aksharaErrorMessage(error))),
+    );
+  }
+}
+
+/// HR-D3 — a manager applies leave FOR an employee, with a half-day option and
+/// an over-balance override confirm. The first submit is attempted WITHOUT
+/// override; if the backend refuses it as over-balance, the manager is shown an
+/// explicit confirm and the request is re-submitted with `override: true`.
+Future<void> showApplyLeaveOnBehalfDialog(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  // Ensure the employee list is loaded (the leave screen does not watch it), so
+  // the on-behalf picker always has choices.
+  var employees = ref.read(hrEmployeesProvider);
+  if (employees.isEmpty) {
+    final page = await ref.read(hrEmployeesFutureProvider.future);
+    employees = page.items;
+  }
+  if (!context.mounted) return;
+  final reasonController = TextEditingController();
+  final fromController = TextEditingController();
+  final toController = TextEditingController();
+  final daysController = TextEditingController(text: '1');
+  HrEmployee? employee = employees.isNotEmpty ? employees.first : null;
+  var leaveType = HrLeaveType.casual;
+  var halfDay = false;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Apply leave on behalf'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<HrEmployee>(
+                initialValue: employee,
+                decoration: const InputDecoration(labelText: 'Employee'),
+                items: [
+                  for (final e in employees)
+                    DropdownMenuItem(value: e, child: Text(e.name)),
+                ],
+                onChanged: (v) => setState(() => employee = v ?? employee),
+              ),
+              DropdownButtonFormField<HrLeaveType>(
+                initialValue: leaveType,
+                decoration: const InputDecoration(labelText: 'Leave type'),
+                items: [
+                  for (final t in HrLeaveType.values)
+                    DropdownMenuItem(value: t, child: Text(_hrLeaveTypeLabel(t))),
+                ],
+                onChanged: (v) => setState(() => leaveType = v ?? leaveType),
+              ),
+              TextField(
+                controller: fromController,
+                decoration: const InputDecoration(
+                  labelText: 'From date (YYYY-MM-DD)',
+                ),
+              ),
+              TextField(
+                controller: toController,
+                decoration: const InputDecoration(
+                  labelText: 'To date (YYYY-MM-DD)',
+                ),
+              ),
+              TextField(
+                controller: daysController,
+                enabled: !halfDay,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Number of days'),
+              ),
+              CheckboxListTile(
+                key: QaTestKeys.hrOnBehalfHalfDayCheckbox,
+                value: halfDay,
+                onChanged: (v) => setState(() => halfDay = v ?? false),
+                title: const Text('Half day'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(labelText: 'Reason'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.hrOnBehalfSubmitButton,
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+  final selected = employee;
+  if (selected == null) return;
+
+  CreateHrLeaveRequest buildRequest({required bool override}) => CreateHrLeaveRequest(
+        employeeId: selected.id,
+        employeeName: selected.name,
+        department: selected.department,
+        leaveType: leaveType,
+        fromDate: fromController.text.trim(),
+        toDate: toController.text.trim(),
+        days: int.tryParse(daysController.text.trim()) ?? 1,
+        reason: reasonController.text.trim(),
+        onBehalf: true,
+        halfDay: halfDay,
+        override: override,
+      );
+
+  Future<bool> submit({required bool override}) async {
+    await ref
+        .read(createHrLeaveProvider.notifier)
+        .execute(buildRequest(override: override));
+    return !ref.read(createHrLeaveProvider).hasError;
+  }
+
+  final ok = await submit(override: false);
+  if (!context.mounted) return;
+  if (ok) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hrOnBehalfSuccessSnackbar,
+        content: Text('Leave applied on behalf of ${selected.name}'),
+      ),
+    );
+    return;
+  }
+
+  // The first attempt failed — most likely an over-balance refusal. Offer an
+  // explicit override confirm and, if accepted, re-submit with override.
+  final overrideConfirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Over leave balance'),
+      content: Text(
+        'This leave exceeds ${selected.name}\'s balance for '
+        '${_hrLeaveTypeLabel(leaveType)} leave. Apply anyway with an override? '
+        'The override is recorded in the audit log.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.hrOnBehalfOverrideConfirmButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Override & apply'),
+        ),
+      ],
+    ),
+  );
+  if (overrideConfirmed != true || !context.mounted) return;
+
+  final overrideOk = await submit(override: true);
+  if (!context.mounted) return;
+  if (overrideOk) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hrOnBehalfSuccessSnackbar,
+        content: Text(
+          'Leave applied (balance overridden) for ${selected.name}',
+        ),
+      ),
+    );
+  } else {
+    final error = ref.read(createHrLeaveProvider).error;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error == null
+              ? 'Unable to apply leave on behalf.'
+              : aksharaErrorMessage(error),
+        ),
+      ),
     );
   }
 }
@@ -356,6 +544,112 @@ Future<void> showEditHrEmployeeDialog(
       SnackBar(
         key: QaTestKeys.hrEmployeeUpdatedSnackbar,
         content: Text('Employee ${updated.name} updated'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(aksharaErrorMessage(error))),
+    );
+  }
+}
+
+/// HR-D2 — confirm an employee off probation (status → active).
+Future<void> confirmHrEmployeeProbation(
+  BuildContext context,
+  WidgetRef ref,
+  HrEmployee employee,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Confirm employee'),
+      content: Text(
+        'Confirm ${employee.name} off probation? Their status becomes Active.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.hrProbationConfirmButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Confirm'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final updated =
+        await ref.read(setHrEmployeeProbationProvider.notifier).execute(
+              SetHrEmployeeProbationRequest.confirm(employeeId: employee.id),
+            );
+    if (!context.mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hrProbationSuccessSnackbar,
+        content: Text('${updated.name} confirmed off probation'),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(aksharaErrorMessage(error))),
+    );
+  }
+}
+
+/// HR-D2 — extend an employee's probation to a new end date.
+Future<void> extendHrEmployeeProbation(
+  BuildContext context,
+  WidgetRef ref,
+  HrEmployee employee, {
+  String? currentEndDate,
+}) async {
+  final dateController = TextEditingController(text: currentEndDate ?? '');
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Extend probation'),
+      content: TextField(
+        controller: dateController,
+        decoration: const InputDecoration(
+          labelText: 'New probation end date (YYYY-MM-DD)',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.hrProbationExtendButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Extend'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  final date = dateController.text.trim();
+  if (date.isEmpty) return;
+
+  try {
+    final updated =
+        await ref.read(setHrEmployeeProbationProvider.notifier).execute(
+              SetHrEmployeeProbationRequest.extend(
+                employeeId: employee.id,
+                probationEndDate: date,
+              ),
+            );
+    if (!context.mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.hrProbationSuccessSnackbar,
+        content: Text('${updated.name} probation extended to $date'),
       ),
     );
   } catch (error) {

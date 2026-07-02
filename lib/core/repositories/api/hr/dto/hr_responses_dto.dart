@@ -205,3 +205,35 @@ class HrEmployeeDirectoryDto {
 
   final Map<String, dynamic> raw;
 }
+
+// --- Final HR slice (HR-3 / HR-D1 / HR-D2) --------------------------------
+
+class HrBatchLeaveDecisionDto {
+  const HrBatchLeaveDecisionDto({required this.raw});
+
+  factory HrBatchLeaveDecisionDto.fromJson(Map<String, dynamic> json) {
+    return HrBatchLeaveDecisionDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class HrExpiringDocumentsDto {
+  const HrExpiringDocumentsDto({required this.raw});
+
+  factory HrExpiringDocumentsDto.fromJson(Map<String, dynamic> json) {
+    return HrExpiringDocumentsDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class HrProbationEndingDto {
+  const HrProbationEndingDto({required this.raw});
+
+  factory HrProbationEndingDto.fromJson(Map<String, dynamic> json) {
+    return HrProbationEndingDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}

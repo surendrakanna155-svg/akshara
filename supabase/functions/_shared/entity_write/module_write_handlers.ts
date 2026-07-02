@@ -247,6 +247,34 @@ export function intOr(
   return fallback;
 }
 
+/**
+ * Fractional-number counterpart to {@link intOr}. Reads a finite number from the
+ * body preserving fractional values (e.g. a half-day leave of 0.5). Rejects a
+ * magnitude beyond {@link MAX_INT_MAGNITUDE} the same way `intOr` does, so an
+ * absurd/overflowing value is never persisted. Returns `fallback` when no key
+ * carries a finite number.
+ */
+export function numOr(
+  body: Record<string, unknown>,
+  fallback: number,
+  ...keys: string[]
+): number {
+  for (const key of keys) {
+    if (key in body && body[key] != null) {
+      const num = Number(body[key]);
+      if (Number.isFinite(num)) {
+        if (Math.abs(num) > MAX_INT_MAGNITUDE) {
+          throw new WriteValidationError(
+            `${key} is out of the allowed numeric range`,
+          );
+        }
+        return num;
+      }
+    }
+  }
+  return fallback;
+}
+
 export function boolOr(
   body: Record<string, unknown>,
   fallback: boolean,

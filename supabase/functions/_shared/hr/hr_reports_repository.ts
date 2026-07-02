@@ -509,6 +509,144 @@ export interface DirectoryRow {
   status: string;
 }
 
+// ===========================================================================
+// HR-D1 — Staff document-expiry
+// ===========================================================================
+//
+// A staff document is `{ type, name, expiry_date? }` stored inside the employee's
+// JSONB payload under `documents[]` (entity_type 'employee' in hr_entities — the
+// same place the employee-detail read already sources documents from). No real
+// documents table exists, so the expiry field lives in the JSONB payload and NO
+// migration is needed. The report scans every employee's documents and returns
+// those expiring within a rolling window. (The automated 30-day reminder rides a
+// future XCT-2 rule-engine; this slice ships the field + the report only.)
+
+/** Known staff document types (documented default set; other strings pass through). */
+export const STAFF_DOCUMENT_TYPES = [
+  "police_verification",
+  "medical",
+  "contract",
+  "licence",
+] as const;
+
+export interface ExpiringDocumentRow {
+  employeeId: string;
+  employee: string;
+  code: string;
+  docType: string;
+  docName: string;
+  expiryDate: string; // yyyy-mm-dd
+  daysToExpiry: number; // may be negative (already expired)
+}
+
+export interface ExpiringDocumentsReport {
+  withinDays: number;
+  asOf: string; // yyyy-mm-dd the window is computed against
+  rows: ExpiringDocumentRow[];
+}
+
+/** yyyy-mm-dd difference in whole days (b - a); null on a malformed date. */
+export function daysBetween(a: string, b: string): number | null {
+  const da = Date.parse(a + "T00:00:00Z");
+  const db = Date.parse(b + "T00:00:00Z");
+  if (Number.isNaN(da) || Number.isNaN(db)) return null;
+  return Math.round((db - da) / 86_400_000);
+}
+
+/**
+ * Pure: builds the expiring-documents report from the raw employee payloads.
+ * A document is included when it has a parseable `expiry_date`/`expiryDate` that
+ * falls on or before `asOf + withinDays` (already-expired docs, daysToExpiry < 0,
+ * are included too so nothing overdue is hidden). Rows are sorted soonest-first.
+ */
+export function buildExpiringDocuments(
+  employees: Array<Record<string, unknown>>,
+  withinDays: number,
+  asOf: string,
+): ExpiringDocumentsReport {
+  const rows: ExpiringDocumentRow[] = [];
+  for (const emp of employees) {
+    const documents = asArray(emp.documents);
+    const employeeId = text(emp, "id");
+    const employeeName = text(emp, "name", "displayName", "display_name");
+    const code = text(emp, "employeeCode", "employee_code", "code");
+    for (const doc of documents) {
+      const expiryDate = text(doc, "expiryDate", "expiry_date");
+      if (expiryDate === "") continue;
+      const daysToExpiry = daysBetween(asOf, expiryDate);
+      if (daysToExpiry === null) continue;
+      if (daysToExpiry > withinDays) continue; // outside the look-ahead window
+      rows.push({
+        employeeId,
+        employee: employeeName,
+        code,
+        docType: text(doc, "type", "docType", "doc_type"),
+        docName: text(doc, "name", "title", "docName"),
+        expiryDate,
+        daysToExpiry,
+      });
+    }
+  }
+  rows.sort((a, b) => a.daysToExpiry - b.daysToExpiry);
+  return { withinDays, asOf, rows };
+}
+
+// ===========================================================================
+// HR-D2 — Probation-end follow-up
+// ===========================================================================
+//
+// An employee on probation carries a `probationEndDate` (yyyy-mm-dd) on its JSONB
+// payload (entity_type 'employee'). The report lists everyone whose probation
+// ends within a rolling window so HR can confirm or extend before it lapses. The
+// canonical write path (POST /hr/employees/{id}/probation) updates the same JSONB
+// payload; migration 20260835000000 also adds a probation_end_date column to the
+// real `employees` projection for future reporting consistency.
+
+export interface ProbationEndingRow {
+  employeeId: string;
+  employee: string;
+  code: string;
+  department: string;
+  probationEndDate: string; // yyyy-mm-dd
+  daysToEnd: number; // may be negative (already lapsed)
+}
+
+export interface ProbationEndingReport {
+  withinDays: number;
+  asOf: string;
+  rows: ProbationEndingRow[];
+}
+
+/**
+ * Pure: lists employees whose `probationEndDate` falls on or before
+ * `asOf + withinDays`. Already-lapsed probations (daysToEnd < 0) are included so a
+ * missed confirmation is never hidden. Rows are sorted soonest-first.
+ */
+export function buildProbationEnding(
+  employees: Array<Record<string, unknown>>,
+  withinDays: number,
+  asOf: string,
+): ProbationEndingReport {
+  const rows: ProbationEndingRow[] = [];
+  for (const emp of employees) {
+    const probationEndDate = text(emp, "probationEndDate", "probation_end_date");
+    if (probationEndDate === "") continue;
+    const daysToEnd = daysBetween(asOf, probationEndDate);
+    if (daysToEnd === null) continue;
+    if (daysToEnd > withinDays) continue;
+    rows.push({
+      employeeId: text(emp, "id"),
+      employee: text(emp, "name", "displayName", "display_name"),
+      code: text(emp, "employeeCode", "employee_code", "code"),
+      department: text(emp, "department", "primary_department"),
+      probationEndDate,
+      daysToEnd,
+    });
+  }
+  rows.sort((a, b) => a.daysToEnd - b.daysToEnd);
+  return { withinDays, asOf, rows };
+}
+
 // ---------------------------------------------------------------------------
 // DB reads — thin wrappers that fetch the real rows and hand them to the pure
 // transforms above. All queries are school-scoped by the tenant RLS context.
@@ -701,6 +839,29 @@ export function loadLeaveSnapshot(
   schoolId: string,
 ): Promise<Record<string, unknown>> {
   return getSnapshotOrEmpty(db, organizationId, schoolId, "snapshot_leave");
+}
+
+/**
+ * Loads every employee JSONB payload for this school (entity_type 'employee' in
+ * hr_entities). Used by the HR-D1 document-expiry + HR-D2 probation-ending
+ * reports, which read fields (documents[], probationEndDate) that live on the
+ * JSONB payload alongside the rest of the employee CRUD.
+ */
+export async function loadEmployeePayloads(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+): Promise<Array<Record<string, unknown>>> {
+  const rows = await db.queryObject<{ payload: Record<string, unknown> }>(
+    `SELECT payload
+     FROM hr_entities
+     WHERE organization_id = $1
+       AND school_id = $2
+       AND entity_type = 'employee'
+     ORDER BY id`,
+    [organizationId, schoolId],
+  );
+  return rows.map((r) => r.payload ?? {});
 }
 
 /** Loads active/all employees for the headcount view. */

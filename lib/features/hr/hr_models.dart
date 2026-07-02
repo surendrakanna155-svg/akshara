@@ -135,12 +135,24 @@ class HrEmployeeDocument {
     required this.title,
     required this.uploadedOn,
     required this.status,
+    this.docType,
+    this.expiryDate,
+    this.daysToExpiry,
   });
 
   final String id;
   final String title;
   final String uploadedOn;
   final String status;
+
+  /// HR-D1 — document type (e.g. police_verification, medical, contract, licence).
+  final String? docType;
+
+  /// HR-D1 — optional expiry date (yyyy-mm-dd). Null when the document never expires.
+  final String? expiryDate;
+
+  /// HR-D1 — whole days until [expiryDate] (negative once expired), or null.
+  final int? daysToExpiry;
 }
 
 @immutable
@@ -247,6 +259,27 @@ class HrLeaveRequest {
   final int days;
   final HrLeaveStatus status;
   final String approver;
+  final String reason;
+}
+
+/// HR-3 — the outcome of a batch approve/reject: which requests were decided and
+/// which were skipped (already-decided / absent), with a reason per skip.
+@immutable
+class HrBatchLeaveDecision {
+  const HrBatchLeaveDecision({required this.decided, required this.skipped});
+
+  final List<String> decided;
+  final List<HrBatchLeaveSkip> skipped;
+
+  int get decidedCount => decided.length;
+  int get skippedCount => skipped.length;
+}
+
+@immutable
+class HrBatchLeaveSkip {
+  const HrBatchLeaveSkip({required this.id, required this.reason});
+
+  final String id;
   final String reason;
 }
 

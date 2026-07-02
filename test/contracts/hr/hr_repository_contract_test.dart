@@ -4,7 +4,10 @@ import 'package:akshara_erp/core/repositories/api/hr/mapper/hr_mapper.dart';
 import 'package:akshara_erp/core/repositories/api/hr/remote/hr_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/interfaces/hr_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_hr_repository.dart';
+import 'package:akshara_erp/core/repositories/mock/mock_hr_write_store.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/hr/hr_models.dart';
+import 'package:akshara_erp/features/hr/hr_requests.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,6 +23,7 @@ void main() {
     late ApiHrRepository apiRepo;
 
     setUp(() {
+      MockHrWriteStore.instance.reset();
       mockRepo = MockHrRepository();
       apiRepo = ApiHrRepository(
         remote: HrRemoteDataSource(Dio()),
@@ -195,6 +199,83 @@ void main() {
       if (mapped.rows.isNotEmpty) {
         expect(mapped.rows.first.code, mockData.rows.first.code);
       }
+    });
+
+    // --- Final HR slice (HR-3 / HR-D1 / HR-D2) ----------------------------
+
+    test('batchDecideLeave DTO mapping matches mock output (HR-3)', () async {
+      // A mix of pending + already-decided ids exercises partial success.
+      final leave = await mockRepo.getLeave(query: kQuery);
+      final pending = leave.requests
+          .where((r) => r.status == HrLeaveStatus.pending)
+          .toList();
+      final decided = leave.requests
+          .where((r) => r.status != HrLeaveStatus.pending)
+          .toList();
+      final ids = <String>[
+        if (pending.isNotEmpty) pending.first.id,
+        if (decided.isNotEmpty) decided.first.id,
+        'lv_missing',
+      ];
+      final mockResult = await mockRepo.batchDecideLeave(
+        query: kQuery,
+        request: BatchDecideHrLeaveRequest(ids: ids, approve: true),
+      );
+      // At least the pending one decided; the decided + missing skipped.
+      expect(mockResult.decidedCount, pending.isNotEmpty ? 1 : 0);
+      expect(mockResult.skippedCount, greaterThanOrEqualTo(1));
+
+      final mapped = _mapper.toBatchLeaveDecision(
+        HrBatchLeaveDecisionDto.fromJson(
+          _fixtures.batchDecisionEnvelope(mockResult),
+        ),
+      );
+      expect(mapped.decided, mockResult.decided);
+      expect(mapped.skipped.length, mockResult.skipped.length);
+    });
+
+    test('getExpiringDocuments DTO mapping matches mock output (HR-D1)', () async {
+      final mockData = await mockRepo.getExpiringDocuments(query: kQuery);
+      final mapped = _mapper.toExpiringDocuments(
+        HrExpiringDocumentsDto.fromJson(
+          _fixtures.expiringDocumentsEnvelope(mockData),
+        ),
+      );
+      expect(mapped.withinDays, mockData.withinDays);
+      expect(mapped.rows.length, mockData.rows.length);
+      // Every mapped row carries an expiry date + a days-to-expiry number.
+      for (final r in mapped.rows) {
+        expect(r.expiryDate.isNotEmpty, isTrue);
+      }
+    });
+
+    test('getProbationEnding DTO mapping matches mock output (HR-D2)', () async {
+      final mockData = await mockRepo.getProbationEnding(query: kQuery);
+      final mapped = _mapper.toProbationEnding(
+        HrProbationEndingDto.fromJson(
+          _fixtures.probationEndingEnvelope(mockData),
+        ),
+      );
+      expect(mapped.withinDays, mockData.withinDays);
+      expect(mapped.rows.length, mockData.rows.length);
+    });
+
+    test('setEmployeeProbation confirm returns an active employee (HR-D2)', () async {
+      // Seed a probation date via extend, then confirm clears it → active.
+      final employees = await mockRepo.getEmployees(query: kQuery);
+      final target = employees.items.first;
+      await mockRepo.setEmployeeProbation(
+        query: kQuery,
+        request: SetHrEmployeeProbationRequest.extend(
+          employeeId: target.id,
+          probationEndDate: '2026-08-01',
+        ),
+      );
+      final confirmed = await mockRepo.setEmployeeProbation(
+        query: kQuery,
+        request: SetHrEmployeeProbationRequest.confirm(employeeId: target.id),
+      );
+      expect(confirmed.status, HrEmployeeStatus.active);
     });
   });
 }

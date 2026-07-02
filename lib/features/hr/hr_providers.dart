@@ -7,6 +7,7 @@ import '../../core/repositories/repository_query.dart';
 import '../../core/repositories/repository_providers.dart';
 import '../../shared/async/erp_async_state.dart';
 import 'hr_models.dart';
+import 'hr_report_models.dart';
 
 // HR-01 Dashboard
 final hrDashboardLoadingProvider = StateProvider<bool>((ref) => false);
@@ -289,4 +290,20 @@ final hrSettingsProvider = Provider<HrSettingsData?>((ref) {
     ref.watch(hrSettingsFutureProvider),
     manualLoading: ref.watch(hrSettingsLoadingProvider), manualError: ref.watch(hrSettingsErrorProvider), manualEmpty: false,
   );
+});
+
+// HR-D1 — staff documents expiring within 30 days.
+final hrExpiringDocumentsFutureProvider =
+    FutureProvider<HrExpiringDocumentsReport>((ref) async {
+  return ref.read(hrRepositoryProvider).getExpiringDocuments(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+// HR-D2 — employees whose probation ends within 15 days.
+final hrProbationEndingFutureProvider =
+    FutureProvider<HrProbationEndingReport>((ref) async {
+  return ref.read(hrRepositoryProvider).getProbationEnding(
+        query: ref.watch(repositoryQueryProvider),
+      );
 });

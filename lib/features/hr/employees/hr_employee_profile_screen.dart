@@ -155,6 +155,21 @@ class HrEmployeeProfileScreen extends ConsumerWidget {
                                 deactivateHrEmployee(context, ref, employee),
                             child: const Text('Deactivate'),
                           ),
+                        // HR-D2 — probation follow-up: confirm or extend.
+                        if (employee.status == HrEmployeeStatus.probation) ...[
+                          FilledButton(
+                            key: QaTestKeys.hrProbationConfirmAction,
+                            onPressed: () =>
+                                confirmHrEmployeeProbation(context, ref, employee),
+                            child: const Text('Confirm'),
+                          ),
+                          OutlinedButton(
+                            key: QaTestKeys.hrProbationExtendAction,
+                            onPressed: () =>
+                                extendHrEmployeeProbation(context, ref, employee),
+                            child: const Text('Extend probation'),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -342,7 +357,7 @@ class _DocumentsList extends StatelessWidget {
                 subtitle: Text(
                   '${documents[i].uploadedOn} · ${documents[i].status}',
                 ),
-                trailing: const Icon(Icons.description_outlined),
+                trailing: _DocumentExpiryTrailing(document: documents[i]),
               ),
               if (i < documents.length - 1) const Divider(height: 1),
             ],
@@ -350,5 +365,31 @@ class _DocumentsList extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// HR-D1 — a "days to expiry" badge for a document that carries an expiry date;
+/// falls back to the neutral document icon when the document never expires.
+class _DocumentExpiryTrailing extends StatelessWidget {
+  const _DocumentExpiryTrailing({required this.document});
+
+  final HrEmployeeDocument document;
+
+  @override
+  Widget build(BuildContext context) {
+    final expiry = document.expiryDate;
+    if (expiry == null || expiry.isEmpty) {
+      return const Icon(Icons.description_outlined);
+    }
+    // Prefer the backend-computed daysToExpiry; derive from the date otherwise.
+    final days = document.daysToExpiry ??
+        DateTime.tryParse(expiry)?.difference(DateTime.now()).inDays;
+    final (label, tone) = switch (days) {
+      null => ('Expires $expiry', KpiAccent.neutral),
+      final d when d < 0 => ('Expired', KpiAccent.error),
+      final d when d <= 30 => ('$d days', KpiAccent.warning),
+      final d => ('$d days', KpiAccent.success),
+    };
+    return AksharaStatusChip(label: label, tone: tone);
   }
 }

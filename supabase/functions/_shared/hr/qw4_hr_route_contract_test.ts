@@ -67,11 +67,18 @@ const REGISTERED: Array<[string, string]> = [
   ["GET", "/hr/leave/balances"],
   ["GET", "/hr/reports/headcount"],
   ["GET", "/hr/employees/export"],
+  // HR-D1 / HR-D2 reports.
+  ["GET", "/hr/documents/expiring"],
+  ["GET", "/hr/probation/ending"],
   ["GET", "/hr/employees/emp-1"],
   ["POST", "/hr/employees"],
   ["POST", "/hr/leave"],
+  // HR-3 batch decide.
+  ["POST", "/hr/leave/batch-decide"],
   ["POST", "/hr/leave/lv-1/approve"],
   ["POST", "/hr/leave/lv-1/reject"],
+  // HR-D2 probation confirm/extend.
+  ["POST", "/hr/employees/emp-1/probation"],
   ["POST", "/hr/performance"],
   ["POST", "/hr/recruitment"],
   ["POST", "/hr/payroll/run"],
@@ -133,6 +140,44 @@ Deno.test("QA-B-022: POST /hr/payroll/run requires manageHr (403 non-holder, 503
   assertEquals((await denied!.json()).error.code, "FORBIDDEN");
   const allowed = await call(routeHr, "POST", "/hr/payroll/run", ["manageHr"], { runId: "run-1" });
   assertEquals(allowed?.status, 503);
+});
+
+// --- Final HR slice (HR-3 / HR-D1 / HR-D2 / HR-D3) route + RBAC contract ------
+
+Deno.test("HR-3: POST /hr/leave/batch-decide requires manageHr (403 non-holder, 503 holder)", async () => {
+  const body = { ids: ["lv-1"], decision: "approve" };
+  const denied = await call(routeHr, "POST", "/hr/leave/batch-decide", ["viewHr"], body);
+  assertEquals(denied?.status, 403);
+  assertEquals((await denied!.json()).error.code, "FORBIDDEN");
+  const allowed = await call(routeHr, "POST", "/hr/leave/batch-decide", ["manageHr"], body);
+  assertEquals(allowed?.status, 503);
+});
+
+Deno.test("HR-3: batch-decide is not swallowed by the /hr/leave/{id}/approve match", async () => {
+  // batch-decide has no /approve|/reject suffix, so it must reach the batch
+  // handler (503 for a holder), never the single-decision handler or a 404.
+  const res = await call(routeHr, "POST", "/hr/leave/batch-decide", ["manageHr"], {
+    ids: ["lv-1"],
+    decision: "reject",
+  });
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("HR-D2: POST /hr/employees/{id}/probation requires manageHr (403 non-holder, 503 holder)", async () => {
+  const body = { action: "confirm" };
+  const denied = await call(routeHr, "POST", "/hr/employees/emp-1/probation", ["viewHr"], body);
+  assertEquals(denied?.status, 403);
+  const allowed = await call(routeHr, "POST", "/hr/employees/emp-1/probation", ["manageHr"], body);
+  assertEquals(allowed?.status, 503);
+});
+
+Deno.test("HR-D1/HR-D2 reports gate viewHr (403 non-holder, 503 holder)", async () => {
+  for (const path of ["/hr/documents/expiring?withinDays=30", "/hr/probation/ending?withinDays=15"]) {
+    const denied = await call(routeHr, "GET", path, ["viewFinance"]);
+    assertEquals(denied?.status, 403, `${path} should 403 without viewHr`);
+    const allowed = await call(routeHr, "GET", path, ["viewHr"]);
+    assertEquals(allowed?.status, 503, `${path} holder should reach unconfigured DB (503)`);
+  }
 });
 
 Deno.test("QA-B-022: module.hr_payroll 402 gate is wired via withEntitlement on the /hr prefix", async () => {

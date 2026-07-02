@@ -515,13 +515,44 @@ class MockHrRepository implements HrRepository {
     return List.from(store.leaveRequests!);
   }
 
+  /// Org leave entitlement (days/year) mirrored from the backend policy so the
+  /// mock's over-balance warn/override (HR-D3) matches the API path.
+  static const Map<HrLeaveType, int> _leaveEntitlement = {
+    HrLeaveType.casual: 12,
+    HrLeaveType.sick: 12,
+    HrLeaveType.earned: 15,
+  };
+
   @override
   Future<HrLeaveRequest> createLeaveRequest({
     required RepositoryQuery query,
     required CreateHrLeaveRequest request,
   }) async {
     final store = MockHrWriteStore.instance;
-    await _loadLeaveRequests();
+    final existing = await _loadLeaveRequests();
+
+    // HR-D3 — half-day is 0.5; whole days otherwise. The int model keeps at least
+    // 1 for a whole-day request; half-day is flagged via [request.halfDay].
+    final requestedDays = request.halfDay ? 1 : request.days;
+
+    // HR-D3 — over-balance check: sum already approved/pending days of this type
+    // for this employee. Exceeding the entitlement is refused unless overridden.
+    final entitlement = _leaveEntitlement[request.leaveType] ?? 12;
+    final booked = existing
+        .where((r) =>
+            r.employeeId == request.employeeId &&
+            r.leaveType == request.leaveType &&
+            (r.status == HrLeaveStatus.approved ||
+                r.status == HrLeaveStatus.pending))
+        .fold<int>(0, (sum, r) => sum + r.days);
+    final wouldExceed = (booked + requestedDays) > entitlement;
+    if (wouldExceed && !request.override) {
+      throw StateError(
+        'Leave request exceeds balance ($booked/$entitlement booked). '
+        'Confirm the override to allow.',
+      );
+    }
+
     final id = store.nextLeaveId();
     final leave = HrLeaveRequest(
       id: id,
@@ -531,13 +562,45 @@ class MockHrRepository implements HrRepository {
       leaveType: request.leaveType,
       fromDate: request.fromDate,
       toDate: request.toDate,
-      days: request.days,
+      days: requestedDays,
       status: HrLeaveStatus.pending,
       approver: request.approver,
       reason: request.reason,
     );
     store.leaveRequests!.insert(0, leave);
     return leave;
+  }
+
+  @override
+  Future<HrBatchLeaveDecision> batchDecideLeave({
+    required RepositoryQuery query,
+    required BatchDecideHrLeaveRequest request,
+  }) async {
+    await _loadLeaveRequests();
+    final status =
+        request.approve ? HrLeaveStatus.approved : HrLeaveStatus.rejected;
+    final decided = <String>[];
+    final skipped = <HrBatchLeaveSkip>[];
+    final seen = <String>{};
+    for (final id in request.ids) {
+      if (seen.contains(id)) {
+        skipped.add(HrBatchLeaveSkip(id: id, reason: 'Duplicate id in request'));
+        continue;
+      }
+      seen.add(id);
+      try {
+        _resolveLeaveRequest(
+          leaveRequestId: id,
+          status: status,
+          comment: request.reason,
+        );
+        decided.add(id);
+      } on StateError catch (error) {
+        // Non-pending / absent rows are reported, never flipped.
+        skipped.add(HrBatchLeaveSkip(id: id, reason: error.message));
+      }
+    }
+    return HrBatchLeaveDecision(decided: decided, skipped: skipped);
   }
 
   @override
@@ -826,6 +889,57 @@ class MockHrRepository implements HrRepository {
       phone: current.phone,
       joinDate: current.joinDate,
       status: request.status,
+      teacherAppLinked: current.teacherAppLinked,
+      classLabel: current.classLabel,
+    );
+    employees[index] = updated;
+    return updated;
+  }
+
+  /// HR-D2 — lazily seeds representative probation end dates so the probation
+  /// report + the confirm/extend action have data offline. Keyed by employee id.
+  Future<Map<String, String>> _loadProbationDates() async {
+    final store = MockHrWriteStore.instance;
+    store.probationEndDates ??= <String, String>{
+      // A newly-added mock teacher still on probation, ending soon.
+      'HR-EMP-108': '2026-07-10',
+    };
+    return store.probationEndDates!;
+  }
+
+  @override
+  Future<HrEmployee> setEmployeeProbation({
+    required RepositoryQuery query,
+    required SetHrEmployeeProbationRequest request,
+  }) async {
+    final employees = await _loadEmployees();
+    final probation = await _loadProbationDates();
+    final index = employees.indexWhere((e) => e.id == request.employeeId);
+    if (index < 0) {
+      throw StateError('Employee not found');
+    }
+    final current = employees[index];
+
+    final HrEmployeeStatus nextStatus;
+    if (request.extend) {
+      probation[request.employeeId] = request.probationEndDate!;
+      nextStatus = HrEmployeeStatus.probation;
+    } else {
+      probation.remove(request.employeeId);
+      nextStatus = HrEmployeeStatus.active;
+    }
+
+    final updated = HrEmployee(
+      id: current.id,
+      name: current.name,
+      employeeCode: current.employeeCode,
+      department: current.department,
+      role: current.role,
+      designation: current.designation,
+      email: current.email,
+      phone: current.phone,
+      joinDate: current.joinDate,
+      status: nextStatus,
       teacherAppLinked: current.teacherAppLinked,
       classLabel: current.classLabel,
     );
@@ -1288,6 +1402,117 @@ class MockHrRepository implements HrRepository {
             status: e.status.name,
           ),
       ],
+    );
+  }
+
+  // --- Final HR slice reports (HR-D1 / HR-D2) ------------------------------
+
+  /// HR-D1 — lazily seeds per-employee documents (some with expiry) so the
+  /// document-expiry report + the "days to expiry" badge have data offline.
+  Future<Map<String, List<HrEmployeeDocument>>> _loadDocuments() async {
+    final store = MockHrWriteStore.instance;
+    store.employeeDocuments ??= <String, List<HrEmployeeDocument>>{
+      'HR-EMP-101': const [
+        HrEmployeeDocument(
+          id: 'doc_1',
+          title: 'Offer letter',
+          uploadedOn: '2019-05-20',
+          status: 'Verified',
+          docType: 'contract',
+        ),
+        HrEmployeeDocument(
+          id: 'doc_pv_1',
+          title: 'Police verification',
+          uploadedOn: '2024-06-01',
+          status: 'Verified',
+          docType: 'police_verification',
+          expiryDate: '2026-07-20',
+        ),
+      ],
+      'HR-EMP-104': const [
+        HrEmployeeDocument(
+          id: 'doc_lic_1',
+          title: 'Driving licence',
+          uploadedOn: '2022-03-10',
+          status: 'Verified',
+          docType: 'licence',
+          expiryDate: '2026-06-25',
+        ),
+      ],
+    };
+    return store.employeeDocuments!;
+  }
+
+  /// yyyy-mm-dd difference in whole days (b - a); null on a malformed date.
+  static int? _daysBetween(String a, String b) {
+    final da = DateTime.tryParse(a);
+    final db = DateTime.tryParse(b);
+    if (da == null || db == null) return null;
+    return db.difference(da).inDays;
+  }
+
+  @override
+  Future<HrExpiringDocumentsReport> getExpiringDocuments({
+    required RepositoryQuery query,
+    int withinDays = 30,
+  }) async {
+    final employees = await _loadEmployees();
+    final docsByEmployee = await _loadDocuments();
+    final asOf = DateTime.now().toIso8601String().substring(0, 10);
+    final rows = <HrExpiringDocumentRow>[];
+    for (final emp in employees) {
+      for (final doc in docsByEmployee[emp.id] ?? const <HrEmployeeDocument>[]) {
+        final expiry = doc.expiryDate;
+        if (expiry == null || expiry.isEmpty) continue;
+        final days = _daysBetween(asOf, expiry);
+        if (days == null || days > withinDays) continue;
+        rows.add(HrExpiringDocumentRow(
+          employeeId: emp.id,
+          employee: emp.name,
+          code: emp.employeeCode,
+          docType: doc.docType ?? '',
+          docName: doc.title,
+          expiryDate: expiry,
+          daysToExpiry: days,
+        ));
+      }
+    }
+    rows.sort((a, b) => a.daysToExpiry.compareTo(b.daysToExpiry));
+    return HrExpiringDocumentsReport(
+      withinDays: withinDays,
+      asOf: asOf,
+      rows: rows,
+    );
+  }
+
+  @override
+  Future<HrProbationEndingReport> getProbationEnding({
+    required RepositoryQuery query,
+    int withinDays = 15,
+  }) async {
+    final employees = await _loadEmployees();
+    final probation = await _loadProbationDates();
+    final asOf = DateTime.now().toIso8601String().substring(0, 10);
+    final rows = <HrProbationEndingRow>[];
+    for (final emp in employees) {
+      final end = probation[emp.id];
+      if (end == null || end.isEmpty) continue;
+      final days = _daysBetween(asOf, end);
+      if (days == null || days > withinDays) continue;
+      rows.add(HrProbationEndingRow(
+        employeeId: emp.id,
+        employee: emp.name,
+        code: emp.employeeCode,
+        department: emp.department.name,
+        probationEndDate: end,
+        daysToEnd: days,
+      ));
+    }
+    rows.sort((a, b) => a.daysToEnd.compareTo(b.daysToEnd));
+    return HrProbationEndingReport(
+      withinDays: withinDays,
+      asOf: asOf,
+      rows: rows,
     );
   }
 }

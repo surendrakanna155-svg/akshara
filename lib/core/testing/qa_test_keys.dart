@@ -575,6 +575,46 @@ abstract final class QaTestKeys {
   static const hrReportExportSuccessSnackbar =
       ValueKey<String>('hr_report_export_success_snackbar');
 
+  // HR-3 — batch leave approve/reject (multi-select).
+  static ValueKey<String> hrLeaveSelectCheckbox(String leaveRequestId) =>
+      ValueKey<String>('hr_leave_select_$leaveRequestId');
+  static const hrBatchApproveButton =
+      ValueKey<String>('hr_batch_approve_button');
+  static const hrBatchRejectButton =
+      ValueKey<String>('hr_batch_reject_button');
+  static const hrBatchDecideSnackbar =
+      ValueKey<String>('hr_batch_decide_snackbar');
+
+  // HR-D3 — apply leave on behalf (half-day + over-balance override).
+  static const hrApplyOnBehalfButton =
+      ValueKey<String>('hr_apply_on_behalf_button');
+  static const hrOnBehalfHalfDayCheckbox =
+      ValueKey<String>('hr_on_behalf_half_day_checkbox');
+  static const hrOnBehalfSubmitButton =
+      ValueKey<String>('hr_on_behalf_submit_button');
+  static const hrOnBehalfOverrideConfirmButton =
+      ValueKey<String>('hr_on_behalf_override_confirm_button');
+  static const hrOnBehalfSuccessSnackbar =
+      ValueKey<String>('hr_on_behalf_success_snackbar');
+
+  // HR-D2 — probation confirm/extend.
+  static const hrProbationConfirmAction =
+      ValueKey<String>('hr_probation_confirm_action');
+  static const hrProbationExtendAction =
+      ValueKey<String>('hr_probation_extend_action');
+  static const hrProbationConfirmButton =
+      ValueKey<String>('hr_probation_confirm_button');
+  static const hrProbationExtendButton =
+      ValueKey<String>('hr_probation_extend_button');
+  static const hrProbationSuccessSnackbar =
+      ValueKey<String>('hr_probation_success_snackbar');
+
+  // HR-D1 / HR-D2 reports.
+  static const hrExpiringDocsExportButton =
+      ValueKey<String>('hr_expiring_docs_export_button');
+  static const hrProbationEndingExportButton =
+      ValueKey<String>('hr_probation_ending_export_button');
+
   static const inventoryCreatePoButton =
       ValueKey<String>('inventory_create_po_button');
 

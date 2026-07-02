@@ -263,9 +263,14 @@ class HrMapper {
         if (item is Map<String, dynamic>)
           HrEmployeeDocument(
             id: item['id'] as String? ?? '',
-            title: item['title'] as String? ?? '',
+            title: (item['title'] ?? item['name']) as String? ?? '',
             uploadedOn: item['uploadedOn'] as String? ?? '',
             status: item['status'] as String? ?? '',
+            docType: (item['docType'] ?? item['type']) as String?,
+            expiryDate: (item['expiryDate'] ?? item['expiry_date']) as String?,
+            daysToExpiry: item['daysToExpiry'] is num
+                ? (item['daysToExpiry'] as num).toInt()
+                : null,
           ),
     ];
   }
@@ -574,6 +579,60 @@ class HrMapper {
             phone: _str(r['phone']),
             joinDate: _str(r['joinDate']),
             status: _str(r['status']),
+          ),
+      ],
+    );
+  }
+
+  // --- Final HR slice (HR-3 / HR-D1 / HR-D2) -------------------------------
+
+  HrBatchLeaveDecision toBatchLeaveDecision(HrBatchLeaveDecisionDto dto) {
+    final raw = dto.raw;
+    return HrBatchLeaveDecision(
+      decided: [
+        for (final d in _mapList(raw['decided'])) _str(d['id']),
+      ],
+      skipped: [
+        for (final s in _mapList(raw['skipped']))
+          HrBatchLeaveSkip(id: _str(s['id']), reason: _str(s['reason'])),
+      ],
+    );
+  }
+
+  HrExpiringDocumentsReport toExpiringDocuments(HrExpiringDocumentsDto dto) {
+    final raw = dto.raw;
+    return HrExpiringDocumentsReport(
+      withinDays: _int(raw['withinDays']),
+      asOf: _str(raw['asOf']),
+      rows: [
+        for (final r in _mapList(raw['rows']))
+          HrExpiringDocumentRow(
+            employeeId: _str(r['employeeId']),
+            employee: _str(r['employee']),
+            code: _str(r['code']),
+            docType: _str(r['docType']),
+            docName: _str(r['docName']),
+            expiryDate: _str(r['expiryDate']),
+            daysToExpiry: _int(r['daysToExpiry']),
+          ),
+      ],
+    );
+  }
+
+  HrProbationEndingReport toProbationEnding(HrProbationEndingDto dto) {
+    final raw = dto.raw;
+    return HrProbationEndingReport(
+      withinDays: _int(raw['withinDays']),
+      asOf: _str(raw['asOf']),
+      rows: [
+        for (final r in _mapList(raw['rows']))
+          HrProbationEndingRow(
+            employeeId: _str(r['employeeId']),
+            employee: _str(r['employee']),
+            code: _str(r['code']),
+            department: _str(r['department']),
+            probationEndDate: _str(r['probationEndDate']),
+            daysToEnd: _int(r['daysToEnd']),
           ),
       ],
     );

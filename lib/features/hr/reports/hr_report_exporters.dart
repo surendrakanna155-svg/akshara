@@ -290,4 +290,86 @@ class HrReportExporters {
       generatedAtLabel: DateTime.now().toIso8601String(),
     );
   }
+
+  // --- HR-D1 staff document-expiry -------------------------------------------
+
+  static const List<String> expiringDocsHeaders = [
+    'Code',
+    'Employee',
+    'Document type',
+    'Document',
+    'Expiry date',
+    'Days to expiry',
+  ];
+
+  static List<List<String>> expiringDocsRows(HrExpiringDocumentsReport report) {
+    return [
+      for (final r in report.rows)
+        [
+          r.code,
+          r.employee,
+          r.docType,
+          r.docName,
+          r.expiryDate,
+          '${r.daysToExpiry}',
+        ],
+    ];
+  }
+
+  Future<void> shareExpiringDocsCsv(HrExpiringDocumentsReport report) {
+    return _service.shareGridCsv(
+      filename: 'expiring_documents',
+      headers: expiringDocsHeaders,
+      rows: expiringDocsRows(report),
+    );
+  }
+
+  Future<void> shareExpiringDocsPdf(HrExpiringDocumentsReport report) {
+    return _service.shareGridPdf(
+      filename: 'expiring_documents',
+      reportTitle: 'Expiring staff documents',
+      moduleLabel: 'HR · Documents · within ${report.withinDays} days',
+      headers: expiringDocsHeaders,
+      rows: expiringDocsRows(report),
+      generatedAtLabel: DateTime.now().toIso8601String(),
+      rightAlignFrom: 5,
+    );
+  }
+
+  // --- HR-D2 probation-ending ------------------------------------------------
+
+  static const List<String> probationEndingHeaders = [
+    'Code',
+    'Employee',
+    'Department',
+    'Probation ends',
+    'Days to end',
+  ];
+
+  static List<List<String>> probationEndingRows(HrProbationEndingReport report) {
+    return [
+      for (final r in report.rows)
+        [r.code, r.employee, r.department, r.probationEndDate, '${r.daysToEnd}'],
+    ];
+  }
+
+  Future<void> shareProbationEndingCsv(HrProbationEndingReport report) {
+    return _service.shareGridCsv(
+      filename: 'probation_ending',
+      headers: probationEndingHeaders,
+      rows: probationEndingRows(report),
+    );
+  }
+
+  Future<void> shareProbationEndingPdf(HrProbationEndingReport report) {
+    return _service.shareGridPdf(
+      filename: 'probation_ending',
+      reportTitle: 'Probation ending',
+      moduleLabel: 'HR · Employees · within ${report.withinDays} days',
+      headers: probationEndingHeaders,
+      rows: probationEndingRows(report),
+      generatedAtLabel: DateTime.now().toIso8601String(),
+      rightAlignFrom: 4,
+    );
+  }
 }

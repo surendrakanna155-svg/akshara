@@ -103,6 +103,9 @@ class ApiHrRepository implements HrRepository {
         'days': request.days,
         'reason': request.reason,
         'approver': request.approver,
+        if (request.onBehalf) 'onBehalf': true,
+        if (request.halfDay) 'halfDay': true,
+        if (request.override) 'override': true,
       },
     );
     return _mapper.toLeaveRequest(dto);
@@ -134,6 +137,22 @@ class ApiHrRepository implements HrRepository {
       comment: request.comment,
     );
     return _mapper.toLeaveRequest(dto);
+  }
+
+  @override
+  Future<HrBatchLeaveDecision> batchDecideLeave({
+    required RepositoryQuery query,
+    required BatchDecideHrLeaveRequest request,
+  }) async {
+    final dto = await _remote.batchDecideLeave(
+      query: query,
+      data: {
+        'ids': request.ids,
+        'decision': request.approve ? 'approve' : 'reject',
+        if (request.reason.isNotEmpty) 'reason': request.reason,
+      },
+    );
+    return _mapper.toBatchLeaveDecision(dto);
   }
 
   @override
@@ -203,6 +222,23 @@ class ApiHrRepository implements HrRepository {
     return _mapper.toEmployee(dto);
   }
 
+  @override
+  Future<HrEmployee> setEmployeeProbation({
+    required RepositoryQuery query,
+    required SetHrEmployeeProbationRequest request,
+  }) async {
+    final dto = await _remote.setEmployeeProbation(
+      query: query,
+      employeeId: request.employeeId,
+      data: {
+        'action': request.action,
+        if (request.probationEndDate != null)
+          'probationEndDate': request.probationEndDate,
+      },
+    );
+    return _mapper.toEmployee(dto);
+  }
+
   // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
 
   @override
@@ -252,5 +288,29 @@ class ApiHrRepository implements HrRepository {
   }) async {
     final dto = await _remote.fetchEmployeeDirectory(query: query);
     return _mapper.toEmployeeDirectory(dto);
+  }
+
+  @override
+  Future<HrExpiringDocumentsReport> getExpiringDocuments({
+    required RepositoryQuery query,
+    int withinDays = 30,
+  }) async {
+    final dto = await _remote.fetchExpiringDocuments(
+      query: query,
+      withinDays: withinDays,
+    );
+    return _mapper.toExpiringDocuments(dto);
+  }
+
+  @override
+  Future<HrProbationEndingReport> getProbationEnding({
+    required RepositoryQuery query,
+    int withinDays = 15,
+  }) async {
+    final dto = await _remote.fetchProbationEnding(
+      query: query,
+      withinDays: withinDays,
+    );
+    return _mapper.toProbationEnding(dto);
   }
 }

@@ -60,3 +60,19 @@ final hrEmployeeDirectoryProvider =
       .read(hrRepositoryProvider)
       .getEmployeeDirectory(query: ref.watch(repositoryQueryProvider));
 });
+
+/// HR-D1 — staff documents expiring within 30 days (export report).
+final hrExpiringDocumentsExportProvider =
+    FutureProvider<HrExpiringDocumentsReport>((ref) async {
+  return ref
+      .read(hrRepositoryProvider)
+      .getExpiringDocuments(query: ref.watch(repositoryQueryProvider));
+});
+
+/// HR-D2 — employees whose probation ends within 15 days (export report).
+final hrProbationEndingExportProvider =
+    FutureProvider<HrProbationEndingReport>((ref) async {
+  return ref
+      .read(hrRepositoryProvider)
+      .getProbationEnding(query: ref.watch(repositoryQueryProvider));
+});

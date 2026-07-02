@@ -141,6 +141,18 @@ class HrRemoteDataSource {
     return HrLeaveRequestDto.fromJson(_responseMap(response));
   }
 
+  Future<HrBatchLeaveDecisionDto> batchDecideLeave({
+    required RepositoryQuery query,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.leaveBatchDecide,
+      queryParameters: _queryParams(query),
+      data: data,
+    );
+    return HrBatchLeaveDecisionDto.fromJson(_responseMap(response));
+  }
+
   Future<HrPayrollRunDto> processPayrollRun({
     required RepositoryQuery query,
     required Map<String, dynamic> data,
@@ -189,6 +201,19 @@ class HrRemoteDataSource {
       HrApiPaths.employeeStatus(employeeId),
       queryParameters: _queryParams(query),
       data: {'status': status},
+    );
+    return HrEmployeeDto.fromJson(_writeData(response));
+  }
+
+  Future<HrEmployeeDto> setEmployeeProbation({
+    required RepositoryQuery query,
+    required String employeeId,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      HrApiPaths.employeeProbation(employeeId),
+      queryParameters: _queryParams(query),
+      data: data,
     );
     return HrEmployeeDto.fromJson(_writeData(response));
   }
@@ -256,6 +281,28 @@ class HrRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return HrEmployeeDirectoryDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrExpiringDocumentsDto> fetchExpiringDocuments({
+    required RepositoryQuery query,
+    required int withinDays,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HrApiPaths.documentsExpiring,
+      queryParameters: {..._queryParams(query), 'withinDays': withinDays},
+    );
+    return HrExpiringDocumentsDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrProbationEndingDto> fetchProbationEnding({
+    required RepositoryQuery query,
+    required int withinDays,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HrApiPaths.probationEnding,
+      queryParameters: {..._queryParams(query), 'withinDays': withinDays},
+    );
+    return HrProbationEndingDto.fromJson(_responseMap(response));
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {

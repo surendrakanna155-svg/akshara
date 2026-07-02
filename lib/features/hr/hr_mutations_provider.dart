@@ -198,6 +198,90 @@ final rejectHrLeaveProvider =
   RejectHrLeaveNotifier.new,
 );
 
+class BatchDecideHrLeaveNotifier extends AsyncNotifier<HrBatchLeaveDecision?> {
+  @override
+  FutureOr<HrBatchLeaveDecision?> build() => null;
+
+  Future<HrBatchLeaveDecision?> execute(BatchDecideHrLeaveRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertApproveHrLeave(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).batchDecideLeave(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        // One audit row per REAL decision (skipped rows were never changed).
+        for (final id in result.decided) {
+          await recordHrAudit(
+            ref,
+            type: request.approve
+                ? AuditEventType.leaveRequestApproved
+                : AuditEventType.leaveRequestRejected,
+            employeeId: '',
+            metadata: {'leaveRequestId': id, 'batch': 'true'},
+          );
+        }
+        ref
+          ..invalidate(hrLeaveFutureProvider)
+          ..invalidate(hrDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final batchDecideHrLeaveProvider =
+    AsyncNotifierProvider<BatchDecideHrLeaveNotifier, HrBatchLeaveDecision?>(
+  BatchDecideHrLeaveNotifier.new,
+);
+
+class SetHrEmployeeProbationNotifier extends AsyncNotifier<HrEmployee?> {
+  @override
+  FutureOr<HrEmployee?> build() => null;
+
+  Future<HrEmployee?> execute(SetHrEmployeeProbationRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      assertManageHr(ref);
+      try {
+        final result = await ref.read(hrRepositoryProvider).setEmployeeProbation(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            );
+        await recordHrAudit(
+          ref,
+          type: AuditEventType.employeeStatusChanged,
+          employeeId: result.id,
+          metadata: {
+            'probationAction': request.action,
+            if (request.probationEndDate != null)
+              'probationEndDate': request.probationEndDate!,
+          },
+        );
+        ref
+          ..invalidate(hrEmployeesFutureProvider)
+          ..invalidate(hrEmployeeDetailFutureProvider(request.employeeId))
+          ..invalidate(hrDashboardFutureProvider);
+        return result;
+      } catch (error) {
+        throw ApiFailureException(apiFailureMapper.fromException(error));
+      }
+    });
+    return state.valueOrNull;
+  }
+}
+
+final setHrEmployeeProbationProvider =
+    AsyncNotifierProvider<SetHrEmployeeProbationNotifier, HrEmployee?>(
+  SetHrEmployeeProbationNotifier.new,
+);
+
 class ProcessHrPayrollRunNotifier extends AsyncNotifier<HrPayrollRun?> {
   @override
   FutureOr<HrPayrollRun?> build() => null;

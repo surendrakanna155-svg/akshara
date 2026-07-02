@@ -14,19 +14,23 @@ import {
 import {
   handleAttendanceMuster,
   handleEmployeeDirectory,
+  handleExpiringDocuments,
   handleHeadcount,
   handleLeaveBalances,
   handlePayslips,
+  handleProbationEnding,
   handleSalaryRegister,
 } from "./hr_reports_handlers.ts";
 import {
   handleApproveLeaveRequest,
+  handleBatchDecideLeave,
   handleCreateEmployee,
   handleCreateLeaveRequest,
   handleCreatePerformanceReview,
   handleCreateRecruitmentOpening,
   handleProcessPayrollRun,
   handleRejectLeaveRequest,
+  handleSetEmployeeProbation,
   handleSetEmployeeStatus,
   handleUpdateEmployee,
   handleUpdatePerformanceReview,
@@ -66,6 +70,13 @@ function matchHrRoute(
     if (path === "/hr/reports/headcount") {
       return { handler: handleHeadcount, args: [] };
     }
+    // HR-D1 staff document-expiry + HR-D2 probation-ending reports.
+    if (path === "/hr/documents/expiring") {
+      return { handler: handleExpiringDocuments, args: [] };
+    }
+    if (path === "/hr/probation/ending") {
+      return { handler: handleProbationEnding, args: [] };
+    }
     // --- end HR reporting reads ---
     if (path === "/hr/employees") {
       return { handler: handleEmployees, args: [] };
@@ -103,6 +114,15 @@ function matchHrRoute(
     }
     if (path === "/hr/leave") {
       return { handler: handleCreateLeaveRequest, args: [] };
+    }
+    // HR-3 batch leave decide (registered before the id/approve|reject matches).
+    if (path === "/hr/leave/batch-decide") {
+      return { handler: handleBatchDecideLeave, args: [] };
+    }
+    // HR-D2 probation confirm/extend.
+    const probationMatch = path.match(/^\/hr\/employees\/([^/]+)\/probation$/);
+    if (probationMatch) {
+      return { handler: handleSetEmployeeProbation, args: [probationMatch[1]!] };
     }
     // --- A6 writes (AgentC) ---
     const leaveApproveMatch = path.match(/^\/hr\/leave\/([^/]+)\/approve$/);

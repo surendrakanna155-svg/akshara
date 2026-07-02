@@ -109,6 +109,16 @@ class HybridHrRepository implements HrRepository {
       );
 
   @override
+  Future<HrBatchLeaveDecision> batchDecideLeave({
+    required RepositoryQuery query,
+    required BatchDecideHrLeaveRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.batchDecideLeave(query: query, request: request),
+        mockCall: () => _mock.batchDecideLeave(query: query, request: request),
+      );
+
+  @override
   Future<HrPayrollRun> processPayrollRun({
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,
@@ -148,6 +158,16 @@ class HybridHrRepository implements HrRepository {
         mockCall: () => _mock.setEmployeeStatus(query: query, request: request),
       );
 
+  @override
+  Future<HrEmployee> setEmployeeProbation({
+    required RepositoryQuery query,
+    required SetHrEmployeeProbationRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.setEmployeeProbation(query: query, request: request),
+        mockCall: () => _mock.setEmployeeProbation(query: query, request: request),
+      );
+
   // --- HR reporting / export reads (HR-1/2/4/5/6/7). Reads go to the API. ----
 
   @override
@@ -182,4 +202,18 @@ class HybridHrRepository implements HrRepository {
   @override
   Future<HrEmployeeDirectory> getEmployeeDirectory({required RepositoryQuery query}) =>
       _api.getEmployeeDirectory(query: query);
+
+  @override
+  Future<HrExpiringDocumentsReport> getExpiringDocuments({
+    required RepositoryQuery query,
+    int withinDays = 30,
+  }) =>
+      _api.getExpiringDocuments(query: query, withinDays: withinDays);
+
+  @override
+  Future<HrProbationEndingReport> getProbationEnding({
+    required RepositoryQuery query,
+    int withinDays = 15,
+  }) =>
+      _api.getProbationEnding(query: query, withinDays: withinDays);
 }

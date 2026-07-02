@@ -33,6 +33,12 @@ abstract class HrRepository {
     required ApproveLeaveRequest request,
   });
 
+  /// HR-3 — batch approve/reject leave requests (partial success).
+  Future<HrBatchLeaveDecision> batchDecideLeave({
+    required RepositoryQuery query,
+    required BatchDecideHrLeaveRequest request,
+  });
+
   Future<HrPayrollRun> processPayrollRun({
     required RepositoryQuery query,
     required ProcessHrPayrollRunRequest request,
@@ -51,6 +57,12 @@ abstract class HrRepository {
   Future<HrEmployee> setEmployeeStatus({
     required RepositoryQuery query,
     required SetHrEmployeeStatusRequest request,
+  });
+
+  /// HR-D2 — confirm or extend an employee's probation.
+  Future<HrEmployee> setEmployeeProbation({
+    required RepositoryQuery query,
+    required SetHrEmployeeProbationRequest request,
   });
 
   // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
@@ -81,4 +93,16 @@ abstract class HrRepository {
 
   /// HR-7 — employee directory rows.
   Future<HrEmployeeDirectory> getEmployeeDirectory({required RepositoryQuery query});
+
+  /// HR-D1 — staff documents expiring within [withinDays] (default 30).
+  Future<HrExpiringDocumentsReport> getExpiringDocuments({
+    required RepositoryQuery query,
+    int withinDays = 30,
+  });
+
+  /// HR-D2 — employees whose probation ends within [withinDays] (default 15).
+  Future<HrProbationEndingReport> getProbationEnding({
+    required RepositoryQuery query,
+    int withinDays = 15,
+  });
 }

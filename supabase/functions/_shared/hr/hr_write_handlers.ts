@@ -1,7 +1,9 @@
 import type { AppConfig } from "../config.ts";
 import {
+  boolOr,
   createModuleWriteHandlers,
   intOr,
+  numOr,
   requireStr,
   str,
   WriteNotFoundError,
@@ -116,34 +118,197 @@ export async function handleSetEmployeeStatus(
   });
 }
 
+/** Default annual leave entitlement (days) used when a policy row is absent. */
+const DEFAULT_LEAVE_ENTITLEMENT = 12;
+
+/**
+ * HR-D3 — pure over-balance check for a new leave request. Sums THIS employee's
+ * already-APPROVED leave days of the same type (plus any still-pending days, so a
+ * stack of pending requests cannot silently blow the balance) and compares the
+ * running total + the requested days against the org entitlement for that type.
+ * Returns whether the request would exceed the balance and the numbers behind it.
+ * Kept pure so the warn/override decision is unit-testable DB-free.
+ */
+export function checkLeaveBalance(
+  snapshot: Record<string, unknown>,
+  settings: Record<string, unknown>,
+  employeeId: string,
+  leaveType: string,
+  requestedDays: number,
+): { exceeds: boolean; entitlement: number; alreadyBooked: number; remaining: number } {
+  const requests = Array.isArray(snapshot.requests)
+    ? snapshot.requests as Array<Record<string, unknown>>
+    : [];
+  const policy = Array.isArray(settings.leavePolicy)
+    ? settings.leavePolicy as Array<Record<string, unknown>>
+    : [];
+  const policyRow = policy.find((p) => String(p.leaveType ?? p.leave_type ?? "") === leaveType);
+  const entitlement = policyRow != null && Number.isFinite(Number(policyRow.entitlement))
+    ? Number(policyRow.entitlement)
+    : DEFAULT_LEAVE_ENTITLEMENT;
+
+  const alreadyBooked = requests
+    .filter((r) =>
+      String(r.employeeId ?? r.employee_id ?? "") === employeeId &&
+      String(r.leaveType ?? r.leave_type ?? "") === leaveType &&
+      (String(r.status ?? "") === "approved" || String(r.status ?? "") === "pending")
+    )
+    .reduce((sum, r) => sum + (Number(r.days ?? 0) || 0), 0);
+
+  const remaining = Math.max(0, entitlement - alreadyBooked);
+  const exceeds = (alreadyBooked + requestedDays) > entitlement;
+  return { exceeds, entitlement, alreadyBooked, remaining };
+}
+
+const ISO_DATE_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+
+/**
+ * POST /hr/employees/{id}/probation (manageHr) — HR-D2 probation follow-up.
+ * Body: `{ action: 'confirm' | 'extend', probationEndDate? }`.
+ *   • confirm → clears probation (probationEndDate = null) and sets status active.
+ *   • extend  → sets a NEW probationEndDate (required, ISO yyyy-mm-dd) and keeps
+ *               the employee on probation.
+ * Audited either way. Operates on the employee's JSONB payload (entity_type
+ * 'employee'), where the rest of the employee CRUD lives.
+ */
+export async function handleSetEmployeeProbation(
+  req: Request,
+  config: AppConfig,
+  employeeId: string,
+): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const action = requireStr(body, "action");
+    if (action !== "confirm" && action !== "extend") {
+      throw new WriteValidationError("action must be 'confirm' or 'extend'");
+    }
+    const existing = await writeStore.find(db, organizationId, schoolId, "employee", employeeId);
+    if (!existing) {
+      throw new WriteNotFoundError(`Employee not found: ${employeeId}`);
+    }
+
+    let next: Record<string, unknown>;
+    let newProbationEnd: string | null = null;
+    if (action === "confirm") {
+      // Confirmed off probation → active, probation cleared.
+      next = { ...existing, status: "active", probationEndDate: null };
+    } else {
+      const probationEndDate = str(body, "probationEndDate", "probation_end_date");
+      if (!probationEndDate || !ISO_DATE_RE.test(probationEndDate)) {
+        throw new WriteValidationError(
+          "probationEndDate is required as yyyy-mm-dd when extending probation",
+        );
+      }
+      newProbationEnd = probationEndDate;
+      next = { ...existing, status: "probation", probationEndDate };
+    }
+
+    const saved = await writeStore.replace(
+      db,
+      organizationId,
+      schoolId,
+      "employee",
+      employeeId,
+      next,
+    );
+    await emitMutationAudit(
+      db,
+      claims,
+      moduleEntityAudit("hr.employee.probation_updated", "hr_employee", employeeId, {
+        action,
+        probationEndDate: newProbationEnd,
+      }),
+      request,
+    );
+    return { payload: saved ?? next, status: 200 };
+  });
+}
+
 /**
  * POST /hr/leave — submit a new leave request. Leave requests live inside the
  * `snapshot_leave` snapshot under the `requests` array, so this appends a new
  * pending request and recomputes `pendingCount`.
+ *
+ * HR-D3 — a manager (manageHr) may create a request ON BEHALF of an employee:
+ * pass `onBehalf: true`; the acting user is recorded on `createdBy`. Half-day is
+ * supported either via `halfDay: true` (recorded, and a whole-day `days` is
+ * halved to 0.5) or by sending a fractional `days` directly (e.g. 0.5). If the
+ * request would exceed the employee's balance for that leave type it is REFUSED
+ * with 409 `LEAVE_BALANCE_EXCEEDED` UNLESS the caller passes `override: true`,
+ * in which case it is allowed and the override is flagged on the row + AUDITED.
  */
 export async function handleCreateLeaveRequest(req: Request, config: AppConfig): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
     const { db, organizationId, schoolId, body, claims, req: request } = ctx;
     const id = crypto.randomUUID();
+    const employeeId = requireStr(body, "employeeId", "employee_id");
+    const leaveType = str(body, "leaveType", "leave_type") ?? "casual";
+    const onBehalf = boolOr(body, false, "onBehalf", "on_behalf");
+    const halfDay = boolOr(body, false, "halfDay", "half_day");
+    const override = boolOr(body, false, "override");
+
+    // Half-day support: an explicit halfDay flag forces 0.5; otherwise honour a
+    // fractional `days` value (e.g. 0.5) sent directly, defaulting to 1 whole day.
+    let days = numOr(body, 1, "days");
+    if (halfDay) days = 0.5;
+    if (days <= 0) {
+      throw new WriteValidationError("days must be greater than 0");
+    }
+
     const newRequest: Record<string, unknown> = {
       id,
-      employeeId: requireStr(body, "employeeId", "employee_id"),
+      employeeId,
       employeeName: str(body, "employeeName", "employee_name") ?? "",
       department: str(body, "department") ?? "academics",
-      leaveType: str(body, "leaveType", "leave_type") ?? "casual",
+      leaveType,
       fromDate: str(body, "fromDate", "from_date") ?? isoDate(new Date()),
       toDate: str(body, "toDate", "to_date") ?? isoDate(new Date()),
-      days: intOr(body, 1, "days"),
+      days,
+      halfDay,
       status: "pending",
       approver: str(body, "approver") ?? "HR Manager",
       reason: str(body, "reason") ?? "",
+      onBehalf,
+      // The acting manager is always recorded when known (identity, not just for
+      // on-behalf rows) so who filed a request is never ambiguous.
+      createdBy: claims.sub ?? "",
     };
+
+    // The over-balance check + append run inside the SAME locked snapshot mutation
+    // so the balance is evaluated against a consistent, up-to-date requests list.
+    const outcome: {
+      overBalance: boolean;
+      info: { exceeds: boolean; entitlement: number; alreadyBooked: number; remaining: number };
+      guardError: WriteValidationError | null;
+    } = {
+      overBalance: false,
+      info: { exceeds: false, entitlement: DEFAULT_LEAVE_ENTITLEMENT, alreadyBooked: 0, remaining: DEFAULT_LEAVE_ENTITLEMENT },
+      guardError: null,
+    };
+    const settings = await getSnapshotOrEmptyForWrite(db, organizationId, schoolId, "snapshot_settings");
     await writeStore.mutateSnapshot(
       db,
       organizationId,
       schoolId,
       "snapshot_leave",
       (current) => {
+        const info = checkLeaveBalance(current, settings, employeeId, leaveType, days);
+        outcome.info = info;
+        if (info.exceeds && !override) {
+          outcome.guardError = new WriteValidationError(
+            `Leave request exceeds ${employeeId}'s ${leaveType} balance ` +
+              `(${info.alreadyBooked}/${info.entitlement} booked, requesting ${days}). ` +
+              `Re-send with override to allow.`,
+            409,
+            "LEAVE_BALANCE_EXCEEDED",
+          );
+          return current; // do not append on a refused request
+        }
+        outcome.overBalance = info.exceeds; // exceeds && override → allowed override
+        if (outcome.overBalance) {
+          newRequest.overrideBalance = true;
+          newRequest.overrideBy = claims.sub ?? "";
+        }
         const requests = Array.isArray(current.requests)
           ? current.requests as Array<Record<string, unknown>>
           : [];
@@ -154,16 +319,64 @@ export async function handleCreateLeaveRequest(req: Request, config: AppConfig):
         return { ...current, requests: nextRequests, pendingCount };
       },
     );
+
+    if (outcome.guardError !== null) {
+      throw outcome.guardError;
+    }
+    const overBalance = outcome.overBalance;
+    const balanceInfo = outcome.info;
+
     await emitMutationAudit(
       db,
       claims,
       moduleEntityAudit("hr.leave_request.created", "hr_leave_request", id, {
-        employeeId: newRequest.employeeId,
+        employeeId,
+        onBehalf,
+        halfDay,
       }),
       request,
     );
+
+    // A balance override is a distinct, deliberate act — audit it separately so a
+    // reviewer can find every over-balance grant.
+    if (overBalance) {
+      await emitMutationAudit(
+        db,
+        claims,
+        moduleEntityAudit("hr.leave_request.balance_overridden", "hr_leave_request", id, {
+          employeeId,
+          leaveType,
+          requestedDays: days,
+          entitlement: balanceInfo.entitlement,
+          alreadyBooked: balanceInfo.alreadyBooked,
+        }),
+        request,
+      );
+    }
+
     return { payload: newRequest, status: 201 };
   });
+}
+
+/**
+ * Loads a snapshot payload for a write path, returning {} when the snapshot does
+ * not yet exist for this school (so a fresh school with no configured leave
+ * policy degrades to the default entitlement instead of failing the write).
+ */
+async function getSnapshotOrEmptyForWrite(
+  db: Parameters<typeof writeStore.find>[0],
+  organizationId: string,
+  schoolId: string,
+  snapshotEntityType: string,
+): Promise<Record<string, unknown>> {
+  const found = await writeStore.find(
+    db,
+    organizationId,
+    schoolId,
+    snapshotEntityType,
+    "default",
+  );
+  return found ?? {};
 }
 
 /**
@@ -209,6 +422,126 @@ export function applyLeaveDecision(
     (r) => String(r.status ?? "") === "pending",
   ).length;
   return { next: { ...current, requests: nextRequests, pendingCount }, updated };
+}
+
+/**
+ * HR-3 — pure batch leave-decision transform. Applies {@link applyLeaveDecision}
+ * to each id in turn against a SINGLE evolving snapshot, so the per-row 409
+ * `LEAVE_ALREADY_DECIDED` / 404 guard fires exactly as it does for a single
+ * decision. Partial success by design: an id that is already decided (or absent)
+ * is recorded under `skipped` with its reason and is NEVER flipped — the loop
+ * continues to the next id. Returns the final snapshot + the list of decided ids
+ * (for the caller to audit one row per real decision) + the skipped list.
+ *
+ * Kept pure (snapshot in → snapshot out) so the partial-success behaviour is
+ * unit-testable DB-free.
+ */
+export function applyBatchLeaveDecision(
+  current: Record<string, unknown>,
+  leaveRequestIds: string[],
+  status: "approved" | "rejected",
+  comment: string,
+): {
+  next: Record<string, unknown>;
+  decided: Array<Record<string, unknown>>;
+  skipped: Array<{ id: string; reason: string }>;
+} {
+  let snapshot = current;
+  const decided: Array<Record<string, unknown>> = [];
+  const skipped: Array<{ id: string; reason: string }> = [];
+  const seen = new Set<string>();
+
+  for (const id of leaveRequestIds) {
+    // A duplicate id in the request body is skipped — the first occurrence
+    // already decided it, so the second would hit the freshly-decided guard.
+    if (seen.has(id)) {
+      skipped.push({ id, reason: "Duplicate id in request" });
+      continue;
+    }
+    seen.add(id);
+    try {
+      const result = applyLeaveDecision(snapshot, id, status, comment);
+      snapshot = result.next;
+      decided.push(result.updated);
+    } catch (error) {
+      if (
+        error instanceof WriteValidationError ||
+        error instanceof WriteNotFoundError
+      ) {
+        // Non-pending / absent rows are reported, never flipped. Keep going.
+        skipped.push({ id, reason: error.message });
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return { next: snapshot, decided, skipped };
+}
+
+/**
+ * POST /hr/leave/batch-decide (manageHr) — decide many leave requests at once.
+ * Body: `{ ids: string[], decision: 'approve' | 'reject', reason? }`. Loops the
+ * existing per-row guard (409 already-decided / 404 absent → skipped), audits one
+ * row per REAL decision, and returns `{ decided, skipped }` for partial success.
+ */
+export async function handleBatchDecideLeave(req: Request, config: AppConfig): Promise<Response> {
+  return await runWrite(req, config, async (ctx) => {
+    const { db, organizationId, schoolId, body, claims, req: request } = ctx;
+    const rawIds = body.ids;
+    if (!Array.isArray(rawIds) || rawIds.length === 0) {
+      throw new WriteValidationError("ids must be a non-empty array");
+    }
+    const ids = rawIds
+      .map((value) => String(value ?? "").trim())
+      .filter((value) => value.length > 0);
+    if (ids.length === 0) {
+      throw new WriteValidationError("ids must contain at least one non-empty id");
+    }
+    const decision = requireStr(body, "decision");
+    if (decision !== "approve" && decision !== "reject") {
+      throw new WriteValidationError("decision must be 'approve' or 'reject'");
+    }
+    const status: "approved" | "rejected" = decision === "approve" ? "approved" : "rejected";
+    const comment = str(body, "reason", "comment") ?? "";
+
+    let decided: Array<Record<string, unknown>> = [];
+    let skipped: Array<{ id: string; reason: string }> = [];
+    await writeStore.mutateSnapshot(
+      db,
+      organizationId,
+      schoolId,
+      "snapshot_leave",
+      (currentSnap) => {
+        const result = applyBatchLeaveDecision(currentSnap, ids, status, comment);
+        decided = result.decided;
+        skipped = result.skipped;
+        return result.next;
+      },
+    );
+
+    // One audit row per REAL decision (skipped rows were never changed).
+    for (const row of decided) {
+      const id = String(row.id ?? "");
+      await emitMutationAudit(
+        db,
+        claims,
+        moduleEntityAudit(`hr.leave_request.${status}`, "hr_leave_request", id, {
+          status,
+          batch: true,
+        }),
+        request,
+      );
+    }
+
+    return {
+      payload: {
+        decided: decided.map((row) => ({ id: String(row.id ?? ""), status })),
+        skipped,
+      },
+      status: 200,
+    };
+  });
 }
 
 async function decideLeaveRequest(

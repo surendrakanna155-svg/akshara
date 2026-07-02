@@ -18,13 +18,16 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import {
+  buildExpiringDocuments,
   buildHeadcount,
   buildLeaveBalanceReport,
   buildPayslips,
+  buildProbationEnding,
   buildSalaryRegister,
   inferMuster,
   loadCheckInEvents,
   loadDirectoryEmployees,
+  loadEmployeePayloads,
   loadHeadcountEmployees,
   loadHolidayDays,
   loadLeavePolicy,
@@ -161,5 +164,44 @@ export function handleEmployeeDirectory(req: Request, config: AppConfig): Promis
   return handleHrReport(req, config, "Failed to build employee directory", async (db, orgId, schoolId) => {
     const rows = await loadDirectoryEmployees(db, orgId, schoolId);
     return { rows } as unknown as Record<string, unknown>;
+  });
+}
+
+/** ISO yyyy-mm-dd for "today" (UTC) — the window anchor for the two HR-D reports. */
+function isoToday(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Parses a positive `withinDays` query param, clamped to [1, 365] with a default. */
+function parseWithinDays(url: URL, fallback: number): number {
+  const raw = parseInt(url.searchParams.get("withinDays") ?? "", 10);
+  if (!Number.isFinite(raw) || raw <= 0) return fallback;
+  return Math.min(365, raw);
+}
+
+/**
+ * GET /hr/documents/expiring?withinDays=30 — HR-D1 staff documents expiring within
+ * the window. Reads each employee's JSONB `documents[]` and returns
+ * `{ employee, code, docType, docName, expiryDate, daysToExpiry }`. Default 30-day
+ * look-ahead. The automated reminder rides a future XCT-2 rule-engine.
+ */
+export function handleExpiringDocuments(req: Request, config: AppConfig): Promise<Response> {
+  return handleHrReport(req, config, "Failed to build expiring documents", async (db, orgId, schoolId, url) => {
+    const withinDays = parseWithinDays(url, 30);
+    const employees = await loadEmployeePayloads(db, orgId, schoolId);
+    return buildExpiringDocuments(employees, withinDays, isoToday()) as unknown as Record<string, unknown>;
+  });
+}
+
+/**
+ * GET /hr/probation/ending?withinDays=15 — HR-D2 employees whose probation ends
+ * within the window. Reads each employee's JSONB `probationEndDate`. Default
+ * 15-day look-ahead.
+ */
+export function handleProbationEnding(req: Request, config: AppConfig): Promise<Response> {
+  return handleHrReport(req, config, "Failed to build probation ending", async (db, orgId, schoolId, url) => {
+    const withinDays = parseWithinDays(url, 15);
+    const employees = await loadEmployeePayloads(db, orgId, schoolId);
+    return buildProbationEnding(employees, withinDays, isoToday()) as unknown as Record<string, unknown>;
   });
 }

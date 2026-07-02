@@ -271,6 +271,38 @@ class _LiveReportExports extends ConsumerWidget {
             icon: const Icon(Icons.table_view_outlined),
             label: const Text('Leave balances Excel'),
           ),
+          // HR-D1 — staff documents expiring within 30 days.
+          OutlinedButton.icon(
+            key: QaTestKeys.hrExpiringDocsExportButton,
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final report =
+                    await ref.read(hrExpiringDocumentsExportProvider.future);
+                await e.shareExpiringDocsPdf(report);
+              },
+              'Expiring documents PDF ready',
+            ),
+            icon: const Icon(Icons.event_busy_outlined),
+            label: const Text('Expiring documents PDF'),
+          ),
+          // HR-D2 — employees whose probation ends within 15 days.
+          OutlinedButton.icon(
+            key: QaTestKeys.hrProbationEndingExportButton,
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final report =
+                    await ref.read(hrProbationEndingExportProvider.future);
+                await e.shareProbationEndingPdf(report);
+              },
+              'Probation ending PDF ready',
+            ),
+            icon: const Icon(Icons.timelapse_outlined),
+            label: const Text('Probation ending PDF'),
+          ),
         ],
       ),
     );
