@@ -63,7 +63,12 @@ class StudentMapper {
       dueLabel: raw['dueLabel'] as String? ?? '',
       dueDate: raw['dueDate'] as String?,
       status: StudentEnumCodec.parseHomeworkStatus(raw['status'] as String?),
-      attachmentLabel: raw['attachmentLabel'] as String?,
+      // HWK-4 — the teacher's assignment attachment rides `attachmentName`/
+      // `attachmentRef` on the delivered item payload; keep the legacy
+      // `attachmentLabel` key as a fallback.
+      attachmentLabel:
+          raw['attachmentName'] as String? ?? raw['attachmentLabel'] as String?,
+      attachmentRef: raw['attachmentRef'] as String?,
       submittedLabel: raw['submittedLabel'] as String?,
       reviewGrade: raw['reviewGrade'] as String?,
       reviewComment: raw['reviewComment'] as String?,

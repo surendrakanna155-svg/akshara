@@ -147,9 +147,17 @@ class TeacherHomeworkCreateRequestDto {
   ) {
     final studentName = request.studentName?.trim();
     final dueLabel = request.dueLabel.trim();
+    final attachmentName = request.attachmentName?.trim();
+    final attachmentRef = request.attachmentRef?.trim();
+    // HWK-3 — de-dupe the multi-section list; fall back to the single class label.
+    final classLabels = {
+      for (final label in request.classLabels) label.trim(),
+    }..removeWhere((l) => l.isEmpty);
     return TeacherHomeworkCreateRequestDto(
       raw: {
         'class_label': request.classLabel,
+        // HWK-3 — multi-section assign (server fans out one delivery per class).
+        if (classLabels.isNotEmpty) 'class_labels': classLabels.toList(),
         'subject': request.subject,
         'title': request.title,
         // HWK-1 — real ISO due date; the backend validates it (422 on blank/bad).
@@ -158,6 +166,11 @@ class TeacherHomeworkCreateRequestDto {
         if (dueLabel.isNotEmpty) 'due_label': dueLabel,
         if (studentName != null && studentName.isNotEmpty)
           'student_name': studentName,
+        // HWK-4 — optional teacher attachment reference (not a real upload).
+        if (attachmentName != null && attachmentName.isNotEmpty)
+          'attachment_name': attachmentName,
+        if (attachmentRef != null && attachmentRef.isNotEmpty)
+          'attachment_ref': attachmentRef,
       },
     );
   }

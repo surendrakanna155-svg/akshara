@@ -375,6 +375,16 @@ class ParentMapper {
             dueLabel: item['dueLabel'] as String? ?? '',
             dueDate: item['dueDate'] as String?,
             status: ParentEnumCodec.parseHomeworkStatus(item['status'] as String?),
+            // HWK-4 teacher attachment + HWK-7 child submission note/attachment,
+            // surfaced from the real-state overlay.
+            attachmentLabel: item['attachmentName'] as String? ??
+                item['attachmentLabel'] as String?,
+            attachmentRef: item['attachmentRef'] as String?,
+            reviewGrade: item['reviewGrade'] as String?,
+            reviewComment: item['reviewComment'] as String?,
+            submissionNote: item['submissionNote'] as String?,
+            submissionAttachmentLabel:
+                item['submissionAttachmentLabel'] as String?,
           ),
     ];
   }

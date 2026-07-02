@@ -69,3 +69,62 @@ class TeacherHomeworkAssignment {
       .where((s) => s.status == HomeworkReviewStatus.pending)
       .length;
 }
+
+/// HWK-2 — a student the assignment was delivered to who has NOT submitted.
+@immutable
+class HomeworkNonSubmitter {
+  const HomeworkNonSubmitter({required this.studentId, required this.name});
+
+  final String studentId;
+  final String name;
+}
+
+/// HWK-6 — result of a bulk mark-reviewed action (partial success).
+@immutable
+class HomeworkBulkReviewResult {
+  const HomeworkBulkReviewResult({
+    required this.reviewed,
+    required this.skipped,
+    required this.reviewedIds,
+  });
+
+  final int reviewed;
+  final int skipped;
+  final List<String> reviewedIds;
+}
+
+/// HWK-D1 — result of the manual parent no-submit nudge.
+@immutable
+class HomeworkNotifyResult {
+  const HomeworkNotifyResult({
+    required this.studentsPending,
+    required this.notificationsQueued,
+  });
+
+  final int studentsPending;
+  final int notificationsQueued;
+}
+
+/// HWK-5 — one row of the teacher homework history / export.
+@immutable
+class TeacherHomeworkHistoryItem {
+  const TeacherHomeworkHistoryItem({
+    required this.id,
+    required this.title,
+    required this.classLabel,
+    required this.subject,
+    required this.dueLabel,
+    required this.submittedCount,
+    required this.totalCount,
+    this.dueDate,
+  });
+
+  final String id;
+  final String title;
+  final String classLabel;
+  final String subject;
+  final String dueLabel;
+  final int submittedCount;
+  final int totalCount;
+  final String? dueDate;
+}

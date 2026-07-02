@@ -245,4 +245,46 @@ class ApiTeacherRepository implements TeacherRepository {
   }) async {
     return _remote.createHomework(query: query, request: request);
   }
+
+  @override
+  Future<List<HomeworkNonSubmitter>> getHomeworkNonSubmitters({
+    required RepositoryQuery query,
+    required String homeworkId,
+  }) async {
+    return _remote.fetchHomeworkNonSubmitters(query: query, homeworkId: homeworkId);
+  }
+
+  @override
+  Future<HomeworkBulkReviewResult> bulkReviewHomework({
+    required RepositoryQuery query,
+    required TeacherHomeworkBulkReviewRequest request,
+  }) async {
+    return _remote.bulkReviewHomework(query: query, request: request);
+  }
+
+  @override
+  Future<HomeworkNotifyResult> notifyHomeworkNonSubmitters({
+    required RepositoryQuery query,
+    required String homeworkId,
+    String? message,
+  }) async {
+    return _remote.notifyHomeworkNonSubmitters(
+      query: query,
+      homeworkId: homeworkId,
+      message: message,
+    );
+  }
+
+  @override
+  Future<List<TeacherHomeworkHistoryItem>> getHomeworkHistory({
+    required RepositoryQuery query,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    return _remote.fetchHomeworkHistory(
+      query: query,
+      fromDate: fromDate,
+      toDate: toDate,
+    );
+  }
 }

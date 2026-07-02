@@ -87,6 +87,19 @@ async function post(
   return routePilotOperations(req, config, "POST", path);
 }
 
+async function get(
+  c: AccessTokenClaims | null,
+  path: string,
+): Promise<Response | null> {
+  const headers: Record<string, string> = {};
+  if (c) headers.authorization = `Bearer ${await signAccessToken(SECRET, c, 900)}`;
+  const req = new Request(`https://x${path}`, { method: "GET", headers });
+  // The real dispatcher routes on the pathname only (query stripped); mirror it
+  // so a "?from=..." on the URL never breaks the exact-path route match.
+  const routePathname = new URL(`https://x${path}`).pathname;
+  return routePilotOperations(req, config, "GET", routePathname);
+}
+
 // ── Teacher attendance submit: teacher-only ──────────────────────────────────
 
 Deno.test("QA-B-045: teacher attendance submit is denied a non-teacher persona (403)", async () => {
@@ -142,6 +155,67 @@ Deno.test("QA-B-045: teacher homework create passes WITH manageHomework + valid 
     due_date: "2026-07-10",
   });
   assertEquals(res?.status, 503);
+});
+
+// ── HWK-2/5/6/D1 homework management routes: teacher-only + manageHomework ────
+
+Deno.test("HWK-2: non-submitters GET is denied a non-teacher persona (403)", async () => {
+  for (const c of [student(), parent(["student-1"])]) {
+    const res = await get(c, "/teacher/homework/hw-1/non-submitters");
+    assertEquals(res?.status, 403, `scope ${c.scope} must not read non-submitters`);
+  }
+});
+
+Deno.test("HWK-2: non-submitters GET is denied a teacher WITHOUT manageHomework (403)", async () => {
+  const res = await get(teacher(["viewAdminHub"]), "/teacher/homework/hw-1/non-submitters");
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("HWK-2: non-submitters GET passes WITH manageHomework (503 to DB)", async () => {
+  const res = await get(teacher(["manageHomework"]), "/teacher/homework/hw-1/non-submitters");
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("HWK-5: homework history GET passes WITH manageHomework (503 to DB)", async () => {
+  const res = await get(teacher(["manageHomework"]), "/teacher/homework/history?from=2026-07-01");
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("HWK-5: homework history GET is denied a non-teacher persona (403)", async () => {
+  const res = await get(student(), "/teacher/homework/history");
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("HWK-6: bulk-review POST passes WITH manageHomework (503 to DB)", async () => {
+  const res = await post(teacher(["manageHomework"]), "/teacher/homework/bulk-review", {
+    homework_id: "hw-1",
+    grade: "A",
+  });
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("HWK-6: bulk-review POST is denied a teacher WITHOUT manageHomework (403)", async () => {
+  const res = await post(teacher(["viewAdminHub"]), "/teacher/homework/bulk-review", {
+    homework_id: "hw-1",
+    grade: "A",
+  });
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("HWK-D1: notify-non-submitters POST passes WITH manageHomework (503 to DB)", async () => {
+  const res = await post(
+    teacher(["manageHomework"]),
+    "/teacher/homework/hw-1/notify-non-submitters",
+    {},
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("HWK-D1: notify-non-submitters POST is denied a non-teacher persona (403)", async () => {
+  for (const c of [student(), parent(["student-1"])]) {
+    const res = await post(c, "/teacher/homework/hw-1/notify-non-submitters", {});
+    assertEquals(res?.status, 403);
+  }
 });
 
 // ── Student homework submit: student-only ────────────────────────────────────

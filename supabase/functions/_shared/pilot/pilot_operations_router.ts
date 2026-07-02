@@ -6,7 +6,11 @@ import {
   handleTeacherAttendanceDraft,
   handleTeacherAttendanceSubmit,
   handleTeacherExamMarkUpdate,
+  handleTeacherHomeworkBulkReview,
   handleTeacherHomeworkCreate,
+  handleTeacherHomeworkHistory,
+  handleTeacherHomeworkNonSubmitters,
+  handleTeacherHomeworkNotifyNonSubmitters,
   handleTeacherHomeworkReview,
   handleTeacherLeaveSubmit,
 } from "./pilot_operations_handlers.ts";
@@ -34,11 +38,46 @@ function matchPilotRoute(
     return { handler: handleTeacherHomeworkCreate };
   }
 
+  // HWK-5 — homework history (static path; matched BEFORE the {homeworkId}
+  // sub-routes so "history" is never mistaken for a homework id).
+  if (method === "GET" && path === "/teacher/homework/history") {
+    return { handler: handleTeacherHomeworkHistory };
+  }
+  // HWK-6 — bulk mark-reviewed (static path; before the review-by-submission
+  // matcher, which requires a /submissions/ segment anyway).
+  if (method === "POST" && path === "/teacher/homework/bulk-review") {
+    return { handler: handleTeacherHomeworkBulkReview };
+  }
+
   const reviewMatch = path.match(/^\/teacher\/homework\/submissions\/([^/]+)\/review$/);
   if (method === "POST" && reviewMatch) {
     const submissionId = decodeURIComponent(reviewMatch[1]!);
     return {
       handler: (req, config) => handleTeacherHomeworkReview(req, config, submissionId),
+    };
+  }
+
+  // HWK-2 — not-submitted list for an assignment.
+  const nonSubmittersMatch = path.match(
+    /^\/teacher\/homework\/([^/]+)\/non-submitters$/,
+  );
+  if (method === "GET" && nonSubmittersMatch) {
+    const homeworkId = decodeURIComponent(nonSubmittersMatch[1]!);
+    return {
+      handler: (req, config) =>
+        handleTeacherHomeworkNonSubmitters(req, config, homeworkId),
+    };
+  }
+
+  // HWK-D1 — manual teacher-triggered no-submit nudge to parents.
+  const notifyMatch = path.match(
+    /^\/teacher\/homework\/([^/]+)\/notify-non-submitters$/,
+  );
+  if (method === "POST" && notifyMatch) {
+    const homeworkId = decodeURIComponent(notifyMatch[1]!);
+    return {
+      handler: (req, config) =>
+        handleTeacherHomeworkNotifyNonSubmitters(req, config, homeworkId),
     };
   }
 

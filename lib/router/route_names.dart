@@ -49,6 +49,7 @@ abstract final class RouteNames {
   static const String teacherTimetable = '/teacher/timetable';
   static const String teacherHomework = '/teacher/homework';
   static const String teacherHomeworkCreate = '/teacher/homework/create';
+  static const String teacherHomeworkHistory = '/teacher/homework/history';
   static const String teacherExams = '/teacher/exams';
   static const String teacherMessages = '/teacher/messages';
   static const String teacherParentCommunication = '/teacher/parent-communication';

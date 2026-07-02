@@ -57,6 +57,7 @@ import '../features/teacher/communication/teacher_parent_communication_screen.da
 import '../features/teacher/exams/teacher_exams_screen.dart';
 import '../features/teacher/homework/teacher_homework_screen.dart';
 import '../features/teacher/homework/teacher_homework_create_screen.dart';
+import '../features/teacher/homework/teacher_homework_history_screen.dart';
 import '../features/teacher/leave/teacher_leave_screen.dart';
 import '../features/teacher/profile/teacher_profile_screen.dart';
 import '../features/teacher/settings/teacher_settings_screen.dart';
@@ -445,6 +446,13 @@ GoRouter createAppRouter({
             name: 'teacherHomeworkCreate',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: TeacherHomeworkCreateScreen(),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherHomeworkHistory,
+            name: 'teacherHomeworkHistory',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: TeacherHomeworkHistoryScreen(),
             ),
           ),
           GoRoute(

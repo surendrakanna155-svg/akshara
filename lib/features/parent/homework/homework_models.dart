@@ -47,6 +47,10 @@ class ParentHomeworkItem {
     this.dueDate,
     this.reviewGrade,
     this.reviewComment,
+    this.attachmentLabel,
+    this.attachmentRef,
+    this.submissionNote,
+    this.submissionAttachmentLabel,
   });
 
   final String id;
@@ -64,7 +68,19 @@ class ParentHomeworkItem {
   final String? reviewGrade;
   final String? reviewComment;
 
+  /// HWK-4 — the teacher's attachment on the assignment (reference/label, not a
+  /// real uploaded file). [attachmentLabel] is the display name; [attachmentRef]
+  /// an optional URL/reference.
+  final String? attachmentLabel;
+  final String? attachmentRef;
+
+  /// HWK-7 — the child's own submission note + attachment reference, once handed
+  /// in. Null before submission.
+  final String? submissionNote;
+  final String? submissionAttachmentLabel;
+
   bool get isReviewed => reviewGrade != null;
+  bool get hasTeacherAttachment => attachmentLabel != null;
 
   /// HWK-1 — display status derived from the real [dueDate]: a still-pending
   /// item past its due date reads as overdue. Mirrors the backend derivation.

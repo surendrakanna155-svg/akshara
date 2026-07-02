@@ -5,12 +5,16 @@ import {
 } from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import {
+  bulkReviewHomework,
   deriveHomeworkDisplayStatus,
   dueDateToLabel,
   HomeworkAlreadySubmittedError,
   HomeworkNotDeliveredError,
   insertHomeworkAssignment,
   isDueDateInPast,
+  listHomeworkNonSubmitters,
+  listTeacherHomeworkHistory,
+  notifyHomeworkNonSubmitters,
   overlayParentHomeworkDueState,
   overlayStudentHomeworkFromSubmissions,
   overlayTeacherHomeworkSubmissions,
@@ -19,6 +23,7 @@ import {
   submitHomework,
   validateDueDate,
 } from "./pilot_operations_repository.ts";
+import { parseHomeworkClassLabels } from "./pilot_operations_handlers.ts";
 
 interface Capture {
   sql: string;
@@ -582,4 +587,307 @@ Deno.test("overlayParentHomeworkDueState derives overdue on snapshot items", () 
   assertEquals(items[3].status, "pending");
   // identity fields preserved
   assertEquals(result.childName, "Ravi");
+});
+
+// --- HWK-2: not-submitted list = delivered roster minus submissions ---
+
+Deno.test("listHomeworkNonSubmitters returns delivered students with no submission", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([
+    {
+      // The LEFT JOIN already filters to hs.id IS NULL in SQL; the mock just
+      // returns the two students the query would surface.
+      match: "FROM student_entities se",
+      rows: [
+        { student_id: "stu-1", name: "Asha Rao" },
+        { student_id: "stu-2", name: "Ravi Kumar" },
+      ],
+    },
+  ], captures);
+
+  const result = await listHomeworkNonSubmitters(db, "org", "school", "hw-1");
+  assertEquals(result, [
+    { studentId: "stu-1", name: "Asha Rao" },
+    { studentId: "stu-2", name: "Ravi Kumar" },
+  ]);
+  // scoped by the homework id + is a LEFT JOIN filtered to unsubmitted rows
+  const query = captures[0]!;
+  assertEquals(query.args[0], "org");
+  assertEquals(query.args[1], "school");
+  assertEquals(query.args[2], "hw-1");
+  assert(
+    query.sql.includes("LEFT JOIN homework_submissions") &&
+      query.sql.includes("hs.id IS NULL"),
+    "must LEFT JOIN submissions and keep only the never-submitted rows",
+  );
+});
+
+Deno.test("listHomeworkNonSubmitters returns empty when everyone submitted", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([{ match: "FROM student_entities se", rows: [] }], captures);
+  const result = await listHomeworkNonSubmitters(db, "org", "school", "hw-1");
+  assertEquals(result, []);
+});
+
+// --- HWK-6: bulk review reuses reviewHomework per row (partial success) ---
+
+Deno.test("bulkReviewHomework reviews explicit ids and reports skipped for misses", async () => {
+  const captures: Capture[] = [];
+  // sub-1 + sub-2 update to a real row (reviewed); sub-3 matches no row.
+  const db = mockDb([
+    {
+      match: "UPDATE homework_submissions",
+      rows: (args) => {
+        const id = String(args[0]);
+        if (id === "sub-3") return [];
+        return [{ id, homework_id: "hw-1", student_id: `stu-${id}` }];
+      },
+    },
+    { match: "FROM students", rows: [{ display_name: "Asha Rao" }] },
+    { match: "UPDATE student_entities", rows: [] },
+  ], captures);
+
+  const result = await bulkReviewHomework(db, "org", "school", {
+    homeworkId: "hw-1",
+    submissionIds: ["sub-1", "sub-2", "sub-3"],
+    grade: "A",
+    comment: "ok",
+    reviewerId: "teacher-1",
+  });
+
+  assertEquals(result.reviewed, 2);
+  assertEquals(result.skipped, 1);
+  assertEquals(result.reviewedIds.sort(), ["sub-1", "sub-2"]);
+  // each reviewed row also wrote back to student_entities (reused review path)
+  const writeBacks = captures.filter((c) =>
+    c.sql.includes("UPDATE student_entities")
+  );
+  assertEquals(writeBacks.length, 2);
+});
+
+Deno.test("bulkReviewHomework with no ids resolves all pending submissions of the assignment", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([
+    {
+      // the "all pending for this homework" resolver
+      match: "status = 'submitted'",
+      rows: [{ id: "sub-a" }, { id: "sub-b" }],
+    },
+    {
+      match: "UPDATE homework_submissions",
+      rows: (args) => [{
+        id: String(args[0]),
+        homework_id: "hw-9",
+        student_id: "stu-x",
+      }],
+    },
+    { match: "FROM students", rows: [{ display_name: "Kid" }] },
+    { match: "UPDATE student_entities", rows: [] },
+  ], captures);
+
+  const result = await bulkReviewHomework(db, "org", "school", {
+    homeworkId: "hw-9",
+    submissionIds: [],
+    grade: "B",
+    comment: "",
+    reviewerId: "teacher-1",
+  });
+
+  assertEquals(result.reviewed, 2);
+  assertEquals(result.skipped, 0);
+  // it first resolved the pending set for the homework id
+  const resolver = captures.find((c) => c.sql.includes("status = 'submitted'"));
+  assert(resolver, "expected the pending-submissions resolver query");
+  assertEquals(resolver!.args[2], "hw-9");
+});
+
+// --- HWK-5: teacher homework history with per-assignment counts + date range ---
+
+Deno.test("listTeacherHomeworkHistory maps counts + passes the date-range filter", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([
+    {
+      match: "FROM teacher_entities te",
+      rows: [
+        {
+          id: "hw-1",
+          title: "Algebra",
+          class_label: "8-A",
+          subject: "Math",
+          due_label: "Due 10 Jul",
+          due_date: "2026-07-10",
+          delivered: 30,
+          submitted: 22,
+        },
+      ],
+    },
+  ], captures);
+
+  const result = await listTeacherHomeworkHistory(
+    db,
+    "org",
+    "school",
+    "teacher-1",
+    { fromDate: "2026-07-01", toDate: "2026-07-31" },
+    { page: 1, pageSize: 50 },
+  );
+
+  assertEquals(result.total, 1);
+  assertEquals(result.items[0], {
+    id: "hw-1",
+    title: "Algebra",
+    classLabel: "8-A",
+    subject: "Math",
+    dueLabel: "Due 10 Jul",
+    dueDate: "2026-07-10",
+    submittedCount: 22,
+    totalCount: 30,
+  });
+  // teacher-scoped + the ISO range bound to the query
+  const query = captures[0]!;
+  assertEquals(query.args[2], "teacher-1");
+  assertEquals(query.args[3], "2026-07-01");
+  assertEquals(query.args[4], "2026-07-31");
+});
+
+// --- HWK-4: attachment reference rides the create payload ---
+
+Deno.test("insertHomeworkAssignment carries the teacher attachment into both payloads", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([
+    { match: "INSERT INTO teacher_entities", rows: [] },
+    { match: "lower(display_name) = lower($3)", rows: [{ id: "stu-named" }] },
+    { match: "INSERT INTO student_entities", rows: [] },
+  ], captures);
+
+  await insertHomeworkAssignment(db, {
+    organizationId: "org",
+    schoolId: "school",
+    teacherId: "teacher-1",
+    homeworkId: "hw_att",
+    classLabel: "8-A",
+    subject: "Math",
+    title: "Algebra",
+    dueLabel: "Due 10 Jul",
+    dueDate: "2026-07-10",
+    studentName: "Asha Rao",
+    attachmentName: "worksheet.pdf",
+    attachmentRef: "https://drive.example/xyz",
+  });
+
+  const teacherInsert = captures.find((c) =>
+    c.sql.includes("INSERT INTO teacher_entities")
+  );
+  assert(teacherInsert!.sql.includes("'attachmentName'"));
+  assertEquals(teacherInsert!.args[9], "worksheet.pdf");
+  assertEquals(teacherInsert!.args[10], "https://drive.example/xyz");
+
+  const studentInsert = captures.find((c) =>
+    c.sql.includes("INSERT INTO student_entities")
+  );
+  assert(studentInsert!.sql.includes("'attachmentName'"));
+  assertEquals(studentInsert!.args[8], "worksheet.pdf");
+  assertEquals(studentInsert!.args[9], "https://drive.example/xyz");
+});
+
+// --- HWK-7: submit persists note + attachment reference ---
+
+Deno.test("submitHomework persists notes + attachment_label on the submission", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([
+    { match: "FROM student_entities", rows: [{ id: "hw-1" }] },
+    { match: "INSERT INTO homework_submissions", rows: [{ id: "sub-1" }] },
+  ], captures);
+
+  await submitHomework(db, {
+    organizationId: "org",
+    schoolId: "school",
+    studentId: "stu-1",
+    homeworkId: "hw-1",
+    notes: "Done, revised twice",
+    attachmentLabel: "answer.jpg",
+  });
+
+  const insert = captures.find((c) =>
+    c.sql.includes("INSERT INTO homework_submissions")
+  );
+  assert(insert, "expected the submission insert");
+  assertEquals(insert!.args[4], "Done, revised twice"); // notes
+  assertEquals(insert!.args[5], "answer.jpg"); // attachment_label
+});
+
+// --- HWK-3: multi-section fan-out target parsing (pure) ---
+
+Deno.test("parseHomeworkClassLabels reads a class_labels array, trims + de-dupes", () => {
+  assertEquals(
+    parseHomeworkClassLabels({ class_labels: ["8-A", " 8-B ", "8-A", ""] }),
+    ["8-A", "8-B"],
+  );
+});
+
+Deno.test("parseHomeworkClassLabels falls back to a single class_label (back-compat)", () => {
+  assertEquals(parseHomeworkClassLabels({ class_label: "9-C" }), ["9-C"]);
+});
+
+Deno.test("parseHomeworkClassLabels returns empty when nothing is targeted", () => {
+  assertEquals(parseHomeworkClassLabels({}), []);
+  assertEquals(parseHomeworkClassLabels({ class_label: "   " }), []);
+});
+
+// --- HWK-D1: notify fan-out enqueues one push per guardian of each non-submitter ---
+
+Deno.test("notifyHomeworkNonSubmitters enqueues to every non-submitter's guardians", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([
+    {
+      match: "FROM student_entities se",
+      rows: [
+        { student_id: "stu-1", name: "Asha Rao" },
+        { student_id: "stu-2", name: "Ravi Kumar" },
+      ],
+    },
+    {
+      // listGuardianUserIdsForStudent: stu-1 has 2 guardians, stu-2 has 1.
+      match: "FROM student_guardians",
+      rows: (args) =>
+        String(args[2]) === "stu-1"
+          ? [{ guardian_user_id: "g1" }, { guardian_user_id: "g2" }]
+          : [{ guardian_user_id: "g3" }],
+    },
+  ], captures);
+
+  const enqueued: string[] = [];
+  const summary = await notifyHomeworkNonSubmitters(
+    db,
+    "org",
+    "school",
+    "hw-1",
+    (guardianUserId) => {
+      enqueued.push(guardianUserId);
+      return Promise.resolve();
+    },
+  );
+
+  assertEquals(summary.studentsPending, 2);
+  assertEquals(summary.notificationsQueued, 3);
+  assertEquals(enqueued.sort(), ["g1", "g2", "g3"]);
+});
+
+Deno.test("notifyHomeworkNonSubmitters queues nothing when everyone submitted", async () => {
+  const captures: Capture[] = [];
+  const db = mockDb([{ match: "FROM student_entities se", rows: [] }], captures);
+  let called = false;
+  const summary = await notifyHomeworkNonSubmitters(
+    db,
+    "org",
+    "school",
+    "hw-1",
+    () => {
+      called = true;
+      return Promise.resolve();
+    },
+  );
+  assertEquals(summary.studentsPending, 0);
+  assertEquals(summary.notificationsQueued, 0);
+  assertEquals(called, false);
 });

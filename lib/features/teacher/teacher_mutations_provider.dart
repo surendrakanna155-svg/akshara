@@ -182,6 +182,71 @@ final reviewTeacherHomeworkProvider =
   ReviewTeacherHomeworkNotifier.new,
 );
 
+/// HWK-6 — bulk mark homework submissions reviewed.
+class BulkReviewTeacherHomeworkNotifier
+    extends AsyncNotifier<HomeworkBulkReviewResult?> {
+  @override
+  FutureOr<HomeworkBulkReviewResult?> build() => null;
+
+  Future<HomeworkBulkReviewResult?> execute(
+    TeacherHomeworkBulkReviewRequest request,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        auditAction: 'bulkReviewHomework',
+        entityId: request.homeworkId,
+        invalidateHomework: true,
+        action: () => ref.read(teacherRepositoryProvider).bulkReviewHomework(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final bulkReviewTeacherHomeworkProvider =
+    AsyncNotifierProvider<BulkReviewTeacherHomeworkNotifier,
+        HomeworkBulkReviewResult?>(
+  BulkReviewTeacherHomeworkNotifier.new,
+);
+
+/// HWK-D1 — manual parent no-submit nudge for an assignment.
+class NotifyHomeworkNonSubmittersNotifier
+    extends AsyncNotifier<HomeworkNotifyResult?> {
+  @override
+  FutureOr<HomeworkNotifyResult?> build() => null;
+
+  Future<HomeworkNotifyResult?> execute(String homeworkId, {String? message}) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        auditAction: 'notifyHomeworkNonSubmitters',
+        entityId: homeworkId,
+        action: () =>
+            ref.read(teacherRepositoryProvider).notifyHomeworkNonSubmitters(
+                  query: ref.read(repositoryQueryProvider),
+                  homeworkId: homeworkId,
+                  message: message,
+                ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final notifyHomeworkNonSubmittersProvider =
+    AsyncNotifierProvider<NotifyHomeworkNonSubmittersNotifier,
+        HomeworkNotifyResult?>(
+  NotifyHomeworkNonSubmittersNotifier.new,
+);
+
 class UpdateTeacherExamMarkNotifier extends AsyncNotifier<ExamMarkEntry?> {
   @override
   FutureOr<ExamMarkEntry?> build() => null;

@@ -41,6 +41,7 @@ class StudentHomeworkItem {
     required this.status,
     this.dueDate,
     this.attachmentLabel,
+    this.attachmentRef,
     this.submittedLabel,
     this.reviewGrade,
     this.reviewComment,
@@ -56,7 +57,12 @@ class StudentHomeworkItem {
   final String? dueDate;
 
   final StudentHomeworkStatus status;
+
+  /// HWK-4 — the TEACHER's attachment on the assignment (a reference/label, not
+  /// a real uploaded file — no homework storage bucket yet). [attachmentLabel]
+  /// is the display name; [attachmentRef] is an optional URL/reference.
   final String? attachmentLabel;
+  final String? attachmentRef;
   final String? submittedLabel;
 
   /// Teacher's grade + comment once the submission is reviewed (null otherwise).

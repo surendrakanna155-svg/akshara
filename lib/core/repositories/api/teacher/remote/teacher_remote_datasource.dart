@@ -374,6 +374,109 @@ class TeacherRemoteDataSource {
     );
   }
 
+  // HWK-2 — not-submitted list. Response: { homeworkId, notSubmittedCount,
+  // items: [{ studentId, name }] }.
+  Future<List<HomeworkNonSubmitter>> fetchHomeworkNonSubmitters({
+    required RepositoryQuery query,
+    required String homeworkId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      TeacherApiPaths.homeworkNonSubmitters(homeworkId),
+      queryParameters: _queryParams(query),
+    );
+    final data = _requireData(response);
+    final items = (data['items'] as List<dynamic>? ?? const []);
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>)
+          HomeworkNonSubmitter(
+            studentId: (item['studentId'] ?? '').toString(),
+            name: (item['name'] ?? 'Student').toString(),
+          ),
+    ];
+  }
+
+  // HWK-6 — bulk mark-reviewed. Response: { reviewed, skipped, reviewedIds }.
+  Future<HomeworkBulkReviewResult> bulkReviewHomework({
+    required RepositoryQuery query,
+    required TeacherHomeworkBulkReviewRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.homeworkBulkReview,
+      queryParameters: _queryParams(query),
+      data: {
+        'homework_id': request.homeworkId,
+        if (request.submissionIds.isNotEmpty)
+          'submission_ids': request.submissionIds,
+        'grade': request.grade,
+        'comment': request.comment,
+      },
+    );
+    final data = _requireData(response);
+    return HomeworkBulkReviewResult(
+      reviewed: (data['reviewed'] as num?)?.toInt() ?? 0,
+      skipped: (data['skipped'] as num?)?.toInt() ?? 0,
+      reviewedIds: [
+        for (final id in (data['reviewedIds'] as List<dynamic>? ?? const []))
+          id.toString(),
+      ],
+    );
+  }
+
+  // HWK-D1 — manual parent no-submit nudge. Response: { studentsPending,
+  // notificationsQueued }.
+  Future<HomeworkNotifyResult> notifyHomeworkNonSubmitters({
+    required RepositoryQuery query,
+    required String homeworkId,
+    String? message,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      TeacherApiPaths.homeworkNotifyNonSubmitters(homeworkId),
+      queryParameters: _queryParams(query),
+      data: {
+        if (message != null && message.trim().isNotEmpty) 'message': message.trim(),
+      },
+    );
+    final data = _requireData(response);
+    return HomeworkNotifyResult(
+      studentsPending: (data['studentsPending'] as num?)?.toInt() ?? 0,
+      notificationsQueued: (data['notificationsQueued'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  // HWK-5 — homework history (optional ISO date range). Response:
+  // { items: [{ id, title, classLabel, subject, dueLabel, dueDate,
+  //   submittedCount, totalCount }], pagination }.
+  Future<List<TeacherHomeworkHistoryItem>> fetchHomeworkHistory({
+    required RepositoryQuery query,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    final params = _queryParams(query);
+    if (fromDate != null && fromDate.isNotEmpty) params['from'] = fromDate;
+    if (toDate != null && toDate.isNotEmpty) params['to'] = toDate;
+    final response = await _dio.get<Map<String, dynamic>>(
+      TeacherApiPaths.homeworkHistory,
+      queryParameters: params,
+    );
+    final data = _requireData(response);
+    final items = (data['items'] as List<dynamic>? ?? const []);
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>)
+          TeacherHomeworkHistoryItem(
+            id: (item['id'] ?? '').toString(),
+            title: (item['title'] ?? '').toString(),
+            classLabel: (item['classLabel'] ?? '').toString(),
+            subject: (item['subject'] ?? '').toString(),
+            dueLabel: (item['dueLabel'] ?? '').toString(),
+            dueDate: item['dueDate'] as String?,
+            submittedCount: (item['submittedCount'] as num?)?.toInt() ?? 0,
+            totalCount: (item['totalCount'] as num?)?.toInt() ?? 0,
+          ),
+    ];
+  }
+
   /// Routes a pilot-critical write through the reliability platform when a
   /// [ReliableWriter] is available; otherwise performs a direct Dio call
   /// (legacy/online-only). Returns the response `data` map the caller parses:

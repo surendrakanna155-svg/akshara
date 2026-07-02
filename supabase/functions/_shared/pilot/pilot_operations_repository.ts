@@ -654,6 +654,11 @@ export async function reviewHomework(
   }
 
   return {
+    // `matched` (additive, non-breaking) tells callers whether an actual row was
+    // updated — HWK-6 bulk review relies on this to count reviewed vs skipped,
+    // since the `submission` shape below always reports status 'reviewed' even on
+    // a miss (it echoes the requested id for a stable client shape).
+    matched: row != null,
     submission: {
       id: row?.id ?? submissionId,
       studentName,
@@ -1607,6 +1612,101 @@ export function overlayParentHomeworkDueState(
   return { ...snapshot, items: mapped };
 }
 
+/**
+ * HWK-4 + HWK-7 — enrich the parent homework snapshot items with the child's
+ * REAL homework state, scoped to the parent's linked child under RLS:
+ *   • the teacher's assignment attachment (attachmentName/attachmentRef) from the
+ *     delivered `homework_item` payload (HWK-4);
+ *   • the child's submission note + attachment, plus status/grade/comment, from
+ *     `homework_submissions` (HWK-7 + review).
+ * Items are keyed by homework id. Items with no matching real row are left as-is
+ * (identity + due-state preserved). The overdue derivation is applied afterwards
+ * by overlayParentHomeworkDueState (the caller runs both).
+ */
+export async function overlayParentHomeworkFromRealState(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+  snapshot: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const items = snapshot.items;
+  if (!Array.isArray(items) || items.length === 0) return snapshot;
+
+  const homeworkIds = items
+    .map((raw) =>
+      typeof raw === "object" && raw !== null
+        ? String((raw as Record<string, unknown>).id ?? "")
+        : ""
+    )
+    .filter((id) => id.length > 0);
+  if (homeworkIds.length === 0) return snapshot;
+
+  // Teacher attachment carried on the delivered item payload for this child.
+  const itemRows = await db.queryObject<{
+    id: string;
+    attachment_name: string | null;
+    attachment_ref: string | null;
+  }>(
+    `SELECT id,
+            payload->>'attachmentName' AS attachment_name,
+            payload->>'attachmentRef' AS attachment_ref
+       FROM student_entities
+      WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
+        AND entity_type = 'homework_item'
+        AND id = ANY($4::text[])`,
+    [orgId, schoolId, studentId, homeworkIds],
+  );
+  const attachmentByHw = new Map<string, { name: string | null; ref: string | null }>();
+  for (const r of itemRows) {
+    attachmentByHw.set(r.id, { name: r.attachment_name, ref: r.attachment_ref });
+  }
+
+  // The child's own submission (note + attachment + status/grade/comment).
+  const subRows = await db.queryObject<{
+    homework_id: string;
+    status: string;
+    grade: string | null;
+    comment: string | null;
+    notes: string | null;
+    attachment_label: string | null;
+    submitted_label: string | null;
+  }>(
+    `SELECT homework_id, status, grade, comment, notes, attachment_label,
+            to_char(submitted_at, 'DD Mon YYYY') AS submitted_label
+       FROM homework_submissions
+      WHERE organization_id = $1 AND school_id = $2 AND student_id = $3::uuid
+        AND homework_id = ANY($4::text[])`,
+    [orgId, schoolId, studentId, homeworkIds],
+  );
+  const subByHw = new Map<string, typeof subRows[number]>();
+  for (const r of subRows) subByHw.set(r.homework_id, r);
+
+  const mapped = items.map((raw) => {
+    if (typeof raw !== "object" || raw === null) return raw;
+    const item = { ...(raw as Record<string, unknown>) };
+    const id = String(item.id ?? "");
+    const attachment = attachmentByHw.get(id);
+    if (attachment) {
+      if (attachment.name) item.attachmentName = attachment.name;
+      if (attachment.ref) item.attachmentRef = attachment.ref;
+    }
+    const sub = subByHw.get(id);
+    if (sub) {
+      item.status = sub.status;
+      if (sub.grade != null) item.reviewGrade = sub.grade;
+      if (sub.comment != null) item.reviewComment = sub.comment;
+      if (sub.notes != null && sub.notes.length > 0) item.submissionNote = sub.notes;
+      if (sub.attachment_label != null) {
+        item.submissionAttachmentLabel = sub.attachment_label;
+      }
+      if (sub.submitted_label != null) item.submittedLabel = sub.submitted_label;
+    }
+    return item;
+  });
+  return { ...snapshot, items: mapped };
+}
+
 // --- Teacher homework CREATE (TCH-1 / MJ-H8) ---
 //
 // Persists a homework assignment as a durable `homework_assignment` entity for
@@ -1637,18 +1737,30 @@ export async function insertHomeworkAssignment(
     // free-text label. Null keeps a legacy label-only assignment (back-compat).
     dueDate: string | null;
     studentName: string | null;
+    // HWK-4 — an OPTIONAL teacher attachment carried on the assignment. There is
+    // no homework storage bucket yet, so this is a reference/label (a name plus
+    // an optional URL/reference the teacher pastes — e.g. a shared-drive link),
+    // NOT a real file upload. Both keys are stored on the teacher assignment and
+    // on every delivered student homework_item payload so the student/parent
+    // homework detail can surface it. Null keeps a plain assignment.
+    attachmentName?: string | null;
+    attachmentRef?: string | null;
   },
 ): Promise<{ id: string; deliveredCount: number }> {
+  const attachmentName = input.attachmentName?.trim() || null;
+  const attachmentRef = input.attachmentRef?.trim() || null;
   // teacher_entities is teacher-scoped (PK + RLS include teacher_id =
   // app_current_user_id()), so the assignment is owned by the creating teacher.
   // dueDate is stored as a top-level payload key; when null it degrades to a
   // label-only assignment (jsonb value 'null', which the client reads as absent).
+  // HWK-4 attachmentName/attachmentRef ride the same payload (null when absent).
   await db.queryObject(
     `INSERT INTO teacher_entities (id, organization_id, school_id, teacher_id, entity_type, payload)
      VALUES ($1, $2, $3, $9::uuid, 'homework_assignment',
        jsonb_build_object(
          'id', $1::text, 'title', $4::text, 'classLabel', $5::text,
          'subject', $6::text, 'dueLabel', $7::text, 'dueDate', $8::text,
+         'attachmentName', $10::text, 'attachmentRef', $11::text,
          'pendingReviews', 0))
      ON CONFLICT (organization_id, school_id, teacher_id, entity_type, id)
        DO UPDATE SET payload = EXCLUDED.payload`,
@@ -1662,6 +1774,8 @@ export async function insertHomeworkAssignment(
       input.dueLabel,
       input.dueDate,
       input.teacherId,
+      attachmentName,
+      attachmentRef,
     ],
   );
 
@@ -1714,7 +1828,9 @@ export async function insertHomeworkAssignment(
        VALUES ($1, $2, $3, $4::uuid, 'homework_item',
          jsonb_build_object(
            'id', $1::text, 'subject', $5::text, 'title', $6::text,
-           'dueLabel', $7::text, 'dueDate', $8::text, 'status', 'pending'))
+           'dueLabel', $7::text, 'dueDate', $8::text,
+           'attachmentName', $9::text, 'attachmentRef', $10::text,
+           'status', 'pending'))
        ON CONFLICT (organization_id, school_id, student_id, entity_type, id)
          DO UPDATE SET payload = EXCLUDED.payload`,
       [
@@ -1726,11 +1842,227 @@ export async function insertHomeworkAssignment(
         input.title,
         input.dueLabel,
         input.dueDate,
+        attachmentName,
+        attachmentRef,
       ],
     );
   }
 
   return { id: input.homeworkId, deliveredCount: targets.length };
+}
+
+// --- HWK-2 not-submitted list ------------------------------------------------
+//
+// The delivered roster for an assignment IS the set of students who received a
+// `homework_item` entity for that homework_id (that is how insertHomeworkAssignment
+// targets a class). LEFT JOIN homework_submissions to find who has NOT submitted.
+// Scoped to the tenant/school under RLS (teacher/school scope reads all rows in
+// its own school). Returns the missing students {studentId, name} for the
+// teacher's "Not submitted (N)" tab. Ordered by student name for stable display.
+export async function listHomeworkNonSubmitters(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  homeworkId: string,
+): Promise<Array<{ studentId: string; name: string }>> {
+  const rows = await db.queryObject<{ student_id: string; name: string }>(
+    `SELECT se.student_id::text AS student_id,
+            COALESCE(s.display_name, 'Student') AS name
+       FROM student_entities se
+       LEFT JOIN students s ON s.id = se.student_id
+         AND s.organization_id = se.organization_id
+         AND s.school_id = se.school_id
+       LEFT JOIN homework_submissions hs ON hs.homework_id = se.id
+         AND hs.organization_id = se.organization_id
+         AND hs.school_id = se.school_id
+         AND hs.student_id = se.student_id
+      WHERE se.organization_id = $1 AND se.school_id = $2
+        AND se.entity_type = 'homework_item'
+        AND se.id = $3
+        AND hs.id IS NULL
+      ORDER BY name`,
+    [orgId, schoolId, homeworkId],
+  );
+  return rows.map((r) => ({ studentId: r.student_id, name: r.name }));
+}
+
+// --- HWK-D1 parent no-submit nudge (manual, teacher-triggered) ---------------
+//
+// For each non-submitter of `homeworkId`, resolve their active guardian user ids
+// and enqueue ONE notification per guardian via the supplied `enqueue` callback
+// (the handler passes enqueueNotificationRequested so we avoid importing the
+// communication service into the repository — no circular dep, and this stays
+// unit-testable with a mock enqueue). Returns how many students were pending and
+// how many notifications were queued. The teacher-authored (or default) message
+// body is passed straight through by the caller.
+export async function notifyHomeworkNonSubmitters(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  homeworkId: string,
+  enqueue: (guardianUserId: string) => Promise<void>,
+): Promise<{ studentsPending: number; notificationsQueued: number }> {
+  const nonSubmitters = await listHomeworkNonSubmitters(
+    db,
+    orgId,
+    schoolId,
+    homeworkId,
+  );
+  let notificationsQueued = 0;
+  for (const student of nonSubmitters) {
+    const guardians = await listGuardianUserIdsForStudent(
+      db,
+      orgId,
+      schoolId,
+      student.studentId,
+    );
+    for (const guardianUserId of guardians) {
+      await enqueue(guardianUserId);
+      notificationsQueued += 1;
+    }
+  }
+  return { studentsPending: nonSubmitters.length, notificationsQueued };
+}
+
+// --- HWK-6 bulk review -------------------------------------------------------
+//
+// Mark many submissions reviewed in one action. Callers pass either an explicit
+// list of submission ids, or (submissionIds omitted / empty) request ALL still-
+// pending ('submitted') submissions of a homework_id. Each row is graded via the
+// SAME reviewHomework path (so the student_entities write-back + name resolution
+// stay identical to single review) — no bypass. Returns a partial-success
+// summary {reviewed, skipped}: a submission that no longer exists / is already
+// reviewed / errors is skipped, not fatal.
+export async function bulkReviewHomework(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  input: {
+    homeworkId: string;
+    submissionIds: string[];
+    grade: string;
+    comment: string;
+    reviewerId: string;
+  },
+): Promise<{ reviewed: number; skipped: number; reviewedIds: string[] }> {
+  let ids = input.submissionIds.filter((id) => id.trim().length > 0);
+  // All-for-assignment: resolve the still-pending submissions of this homework.
+  if (ids.length === 0) {
+    const rows = await db.queryObject<{ id: string }>(
+      `SELECT id::text AS id FROM homework_submissions
+        WHERE organization_id = $1 AND school_id = $2
+          AND homework_id = $3 AND status = 'submitted'`,
+      [orgId, schoolId, input.homeworkId],
+    );
+    ids = rows.map((r) => r.id);
+  }
+
+  const reviewedIds: string[] = [];
+  let skipped = 0;
+  for (const submissionId of ids) {
+    try {
+      const result = await reviewHomework(db, orgId, schoolId, submissionId, {
+        grade: input.grade,
+        comment: input.comment,
+        reviewerId: input.reviewerId,
+      });
+      // reviewHomework echoes the requested id (status 'reviewed') even when no
+      // row matched, so trust its `matched` flag to count a real update only.
+      if (result.matched === true) {
+        reviewedIds.push(submissionId);
+      } else {
+        skipped += 1;
+      }
+    } catch {
+      skipped += 1;
+    }
+  }
+  return { reviewed: reviewedIds.length, skipped, reviewedIds };
+}
+
+// --- HWK-5 homework history / export ----------------------------------------
+//
+// The teacher's homework history: their own `homework_assignment` entities
+// (teacher-scoped by RLS) with real submitted/total counts, optionally filtered
+// to an inclusive ISO date range on the assignment's real due_date (fromDate /
+// toDate). `total` = students the assignment was delivered to (homework_item
+// rows for that homework_id); `submitted` = how many have a submission. The
+// CSV export (client-side, via the shared export service) rides these rows.
+export async function listTeacherHomeworkHistory(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  teacherUserId: string,
+  filter: { fromDate?: string | null; toDate?: string | null },
+  pagination: { page: number; pageSize: number },
+): Promise<{
+  items: Array<Record<string, unknown>>;
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+}> {
+  const fromDate = filter.fromDate ?? null;
+  const toDate = filter.toDate ?? null;
+  const rows = await db.queryObject<{
+    id: string;
+    title: string;
+    class_label: string;
+    subject: string;
+    due_label: string;
+    due_date: string | null;
+    delivered: number;
+    submitted: number;
+  }>(
+    `SELECT te.id::text AS id,
+            COALESCE(te.payload->>'title', '') AS title,
+            COALESCE(te.payload->>'classLabel', '') AS class_label,
+            COALESCE(te.payload->>'subject', '') AS subject,
+            COALESCE(te.payload->>'dueLabel', '') AS due_label,
+            NULLIF(te.payload->>'dueDate', '') AS due_date,
+            (
+              SELECT count(*)::int FROM student_entities se
+               WHERE se.organization_id = te.organization_id
+                 AND se.school_id = te.school_id
+                 AND se.entity_type = 'homework_item'
+                 AND se.id = te.id
+            ) AS delivered,
+            (
+              SELECT count(*)::int FROM homework_submissions hs
+               WHERE hs.organization_id = te.organization_id
+                 AND hs.school_id = te.school_id
+                 AND hs.homework_id = te.id
+            ) AS submitted
+       FROM teacher_entities te
+      WHERE te.organization_id = $1 AND te.school_id = $2
+        AND te.teacher_id = $3::uuid
+        AND te.entity_type = 'homework_assignment'
+        AND ($4::date IS NULL OR NULLIF(te.payload->>'dueDate','')::date >= $4::date)
+        AND ($5::date IS NULL OR NULLIF(te.payload->>'dueDate','')::date <= $5::date)
+      ORDER BY NULLIF(te.payload->>'dueDate','')::date DESC NULLS LAST, te.created_at DESC`,
+    [orgId, schoolId, teacherUserId, fromDate, toDate],
+  );
+
+  const all = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    classLabel: r.class_label,
+    subject: r.subject,
+    dueLabel: r.due_label,
+    dueDate: r.due_date,
+    submittedCount: r.submitted,
+    totalCount: r.delivered,
+  }));
+  const total = all.length;
+  const start = Math.max(0, (pagination.page - 1) * pagination.pageSize);
+  const items = all.slice(start, start + pagination.pageSize);
+  return {
+    items,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    total,
+    hasMore: start + items.length < total,
+  };
 }
 
 // ===========================================================================

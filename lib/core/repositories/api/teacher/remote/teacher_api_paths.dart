@@ -22,6 +22,17 @@ abstract final class TeacherApiPaths {
   static String homeworkReview(String submissionId) =>
       '$base/homework/submissions/$submissionId/review';
 
+  // HWK-2 — not-submitted list for an assignment.
+  static String homeworkNonSubmitters(String homeworkId) =>
+      '$base/homework/$homeworkId/non-submitters';
+  // HWK-D1 — manual parent no-submit nudge for an assignment.
+  static String homeworkNotifyNonSubmitters(String homeworkId) =>
+      '$base/homework/$homeworkId/notify-non-submitters';
+  // HWK-6 — bulk mark-reviewed.
+  static const String homeworkBulkReview = '$base/homework/bulk-review';
+  // HWK-5 — homework history (supports ?from=&to=).
+  static const String homeworkHistory = '$base/homework/history';
+
   static String examMark(String markEntryId) => '$base/exams/marks/$markEntryId';
 
   static String examPublish(String examId) => '$base/exams/$examId/publish';

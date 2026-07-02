@@ -7,6 +7,40 @@ import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
 import 'homework_models.dart';
 
+/// HWK-2 — the not-submitted students for the currently selected assignment.
+/// Re-fetches whenever the selected assignment changes.
+final teacherHomeworkNonSubmittersProvider =
+    FutureProvider<List<HomeworkNonSubmitter>>((ref) async {
+  final homeworkId = ref.watch(teacherHomeworkAssignmentProvider);
+  if (homeworkId.isEmpty) return const [];
+  return ref.read(teacherRepositoryProvider).getHomeworkNonSubmitters(
+        query: ref.read(repositoryQueryProvider),
+        homeworkId: homeworkId,
+      );
+});
+
+/// HWK-5 — the inclusive ISO (`YYYY-MM-DD`) date range for the homework history
+/// filter. Null bounds = unbounded on that side.
+class HomeworkHistoryRange {
+  const HomeworkHistoryRange({this.fromDate, this.toDate});
+  final String? fromDate;
+  final String? toDate;
+}
+
+final teacherHomeworkHistoryRangeProvider =
+    StateProvider<HomeworkHistoryRange>((ref) => const HomeworkHistoryRange());
+
+/// HWK-5 — the teacher's homework history for the selected date range.
+final teacherHomeworkHistoryProvider =
+    FutureProvider<List<TeacherHomeworkHistoryItem>>((ref) async {
+  final range = ref.watch(teacherHomeworkHistoryRangeProvider);
+  return ref.read(teacherRepositoryProvider).getHomeworkHistory(
+        query: ref.read(repositoryQueryProvider),
+        fromDate: range.fromDate,
+        toDate: range.toDate,
+      );
+});
+
 final teacherHomeworkAssignmentProvider = StateProvider<String>(
   (ref) => 'hw_8a_1',
 );

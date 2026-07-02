@@ -547,6 +547,98 @@ class MockTeacherRepository implements TeacherRepository {
     return SchoolHomeworkStore.instance.toTeacherAssignment(record);
   }
 
+  @override
+  Future<List<HomeworkNonSubmitter>> getHomeworkNonSubmitters({
+    required RepositoryQuery query,
+    required String homeworkId,
+  }) async {
+    // HWK-2 — in the mock, the "not submitted" set is the assignment's
+    // pending-status submissions turned into name rows.
+    final assignments = await getHomeworkAssignments(query: query);
+    final match = assignments.where((a) => a.id == homeworkId);
+    if (match.isEmpty) return const [];
+    return [
+      for (final s in match.first.submissions)
+        if (s.status == HomeworkReviewStatus.pending)
+          HomeworkNonSubmitter(studentId: s.id, name: s.studentName),
+    ];
+  }
+
+  @override
+  Future<HomeworkBulkReviewResult> bulkReviewHomework({
+    required RepositoryQuery query,
+    required TeacherHomeworkBulkReviewRequest request,
+  }) async {
+    // HWK-6 — mark each targeted (or all pending) submission reviewed in-store.
+    final assignments = await getHomeworkAssignments(query: query);
+    final match = assignments.where((a) => a.id == request.homeworkId);
+    final pending = match.isEmpty
+        ? const <HomeworkSubmission>[]
+        : match.first.submissions
+            .where((s) => s.status == HomeworkReviewStatus.pending)
+            .toList();
+    final targetIds = request.submissionIds.isNotEmpty
+        ? request.submissionIds
+        : pending.map((s) => s.id).toList();
+    final reviewedIds = <String>[];
+    for (final id in targetIds) {
+      final existing = pending.where((s) => s.id == id);
+      if (existing.isEmpty) continue;
+      _store.reviewedSubmissions[id] = existing.first.copyWith(
+        status: HomeworkReviewStatus.reviewed,
+        grade: request.grade.isEmpty ? 'A' : request.grade,
+        comment: request.comment.isEmpty ? null : request.comment,
+      );
+      reviewedIds.add(id);
+    }
+    return HomeworkBulkReviewResult(
+      reviewed: reviewedIds.length,
+      skipped: targetIds.length - reviewedIds.length,
+      reviewedIds: reviewedIds,
+    );
+  }
+
+  @override
+  Future<HomeworkNotifyResult> notifyHomeworkNonSubmitters({
+    required RepositoryQuery query,
+    required String homeworkId,
+    String? message,
+  }) async {
+    // HWK-D1 — one queued notification per pending student (mock: 1 guardian ea).
+    final pending =
+        await getHomeworkNonSubmitters(query: query, homeworkId: homeworkId);
+    return HomeworkNotifyResult(
+      studentsPending: pending.length,
+      notificationsQueued: pending.length,
+    );
+  }
+
+  @override
+  Future<List<TeacherHomeworkHistoryItem>> getHomeworkHistory({
+    required RepositoryQuery query,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    // HWK-5 — history rows derived from the mock assignments (counts from the
+    // submissions map). The date-range filter is honoured when items carry a
+    // dueDate; mock assignments have none, so the range is a passthrough.
+    final assignments = await getHomeworkAssignments(query: query);
+    return [
+      for (final a in assignments)
+        TeacherHomeworkHistoryItem(
+          id: a.id,
+          title: a.title,
+          classLabel: a.classLabel,
+          subject: '',
+          dueLabel: a.dueLabel,
+          submittedCount: a.submissions
+              .where((s) => s.status != HomeworkReviewStatus.pending)
+              .length,
+          totalCount: a.submissions.length,
+        ),
+    ];
+  }
+
   Future<void> _ensureLeaveHistory() async {
     _store.leaveRequests ??= List<TeacherLeaveRequest>.from(_mockHistory());
   }

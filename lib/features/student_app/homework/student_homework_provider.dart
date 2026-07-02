@@ -64,9 +64,25 @@ final studentHomeworkProvider = Provider<StudentHomeworkData>((ref) {
   );
 });
 
-Future<bool> submitStudentHomework(WidgetRef ref, String homeworkId) async {
+/// HWK-7 — submit a student's homework with an OPTIONAL note + attachment
+/// reference (a label, not a real uploaded file — no homework storage bucket
+/// yet). Both persist onto the `homework_submissions` row so the teacher review
+/// and parent view can surface them.
+Future<bool> submitStudentHomework(
+  WidgetRef ref,
+  String homeworkId, {
+  String notes = '',
+  String? attachmentLabel,
+}) async {
+  final trimmedAttachment = attachmentLabel?.trim();
   final result = await ref.read(submitStudentHomeworkProvider.notifier).execute(
-        StudentHomeworkSubmitRequest(homeworkId: homeworkId),
+        StudentHomeworkSubmitRequest(
+          homeworkId: homeworkId,
+          notes: notes.trim(),
+          attachmentLabel: (trimmedAttachment == null || trimmedAttachment.isEmpty)
+              ? null
+              : trimmedAttachment,
+        ),
       );
   if (result != null) {
     ref.invalidate(studentHomeworkFutureProvider);

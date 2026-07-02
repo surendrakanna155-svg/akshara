@@ -670,6 +670,37 @@ export const examAudit = {
     },
   }),
   /**
+   * EXM-D2 — a grace / moderation adjustment (a signed delta) was recorded for a
+   * (exam, student) by a coordinator, BEFORE publish. The ORIGINAL mark is never
+   * overwritten; the delta + reason + the resulting effective mark are captured so
+   * the moderation is fully auditable (and reversible by recording an offsetting
+   * delta). `adjustmentId` keys the outbox so every distinct adjustment is
+   * recorded exactly once.
+   */
+  markGraceApplied: (
+    examId: string,
+    studentId: string,
+    adjustmentId: string,
+    delta: number,
+    reason: string,
+    effectiveMark: number | null,
+  ): MutationAuditSpec => ({
+    ...workflow("examMarkGraceApplied", "exam_mark_adjustment", adjustmentId, {
+      examId,
+      studentId,
+      adjustmentId,
+      delta,
+      reason,
+      effectiveMark,
+    }),
+    domain: {
+      eventType: "exam.mark.grace_applied",
+      payload: { examId, studentId, adjustmentId, delta, reason, effectiveMark },
+      sourceModule: "exam",
+      idempotencyKey: `exam.mark.grace_applied:${adjustmentId}`,
+    },
+  }),
+  /**
    * Exam results were PUBLISHED (made visible to students/parents) — a critical,
    * non-reversible mutation. `examId` is the exam_session (result set) id; the
    * approver who authorized the publish (when an approval gate is used) and the

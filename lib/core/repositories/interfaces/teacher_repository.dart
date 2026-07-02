@@ -109,4 +109,31 @@ abstract class TeacherRepository {
     required RepositoryQuery query,
     required TeacherHomeworkCreateRequest request,
   });
+
+  /// HWK-2 — students the assignment was delivered to who have NOT submitted.
+  Future<List<HomeworkNonSubmitter>> getHomeworkNonSubmitters({
+    required RepositoryQuery query,
+    required String homeworkId,
+  });
+
+  /// HWK-6 — bulk mark submissions reviewed (partial success).
+  Future<HomeworkBulkReviewResult> bulkReviewHomework({
+    required RepositoryQuery query,
+    required TeacherHomeworkBulkReviewRequest request,
+  });
+
+  /// HWK-D1 — manual parent no-submit nudge for an assignment.
+  Future<HomeworkNotifyResult> notifyHomeworkNonSubmitters({
+    required RepositoryQuery query,
+    required String homeworkId,
+    String? message,
+  });
+
+  /// HWK-5 — the teacher's homework history, optionally filtered to a due-date
+  /// range (inclusive ISO `YYYY-MM-DD`).
+  Future<List<TeacherHomeworkHistoryItem>> getHomeworkHistory({
+    required RepositoryQuery query,
+    String? fromDate,
+    String? toDate,
+  });
 }

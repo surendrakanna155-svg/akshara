@@ -151,6 +151,24 @@ export function createParentScopedReadHandlers(
             resolved,
           );
         }
+        if (entityType === "snapshot_homework") {
+          // HWK-4 + HWK-7 — enrich each item with the child's REAL homework state
+          // (teacher attachment + the child's submission note/attachment/grade),
+          // then derive overdue from the real dueDate (HWK-1). Both scoped to the
+          // linked child under RLS.
+          const {
+            overlayParentHomeworkFromRealState,
+            overlayParentHomeworkDueState,
+          } = await import("../pilot/pilot_operations_repository.ts");
+          const enriched = await overlayParentHomeworkFromRealState(
+            db,
+            orgId,
+            schoolId,
+            studentIdResult,
+            resolved,
+          );
+          return overlayParentHomeworkDueState(enriched);
+        }
         return resolved;
       });
       return jsonResponse(envelope(snapshot));

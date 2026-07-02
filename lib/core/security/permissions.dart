@@ -174,6 +174,8 @@ enum Permission {
   verifyExamResults,
   approveExamResults,
   publishExamResults,
+  // EXM-D2 — grace / moderation (coordinator-level; not a plain marks teacher).
+  moderateExamMarks,
 
   // Phase D M-D4 — Attendance & leave governance
   markAttendance,

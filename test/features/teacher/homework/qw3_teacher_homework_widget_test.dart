@@ -70,20 +70,19 @@ void main() {
         (tester) async {
       await _pumpRouter(tester, const TeacherHomeworkCreateScreen());
 
-      // Clear the prefilled class + subject so the form is empty.
-      final classField =
-          find.widgetWithText(TextFormField, 'Class label');
-      final subjectField = find.widgetWithText(TextFormField, 'Subject');
-      await tester.enterText(classField, '');
-      await tester.enterText(subjectField, '');
+      // Clear the prefilled subject so the form is empty. (HWK-3: the class
+      // prefill lands as a chip, so the class requirement is already satisfied
+      // — the empty subject + title + missing due date must still block submit.)
+      await tester.enterText(
+          find.widgetWithText(TextFormField, 'Subject'), '');
 
       await tester.tap(find.byKey(QaTestKeys.teacherHomeworkCreateButton));
       await tester.pumpAndSettle();
 
-      // Three text required fields (class, subject, title) report 'Required' and
-      // the (HWK-1) due-date field reports its own 'Pick a due date' error; the
-      // screen stays put — no navigation to the homework list.
-      expect(find.text('Required'), findsNWidgets(3));
+      // Subject + title report 'Required' and the (HWK-1) due-date field reports
+      // its own 'Pick a due date' error; the screen stays put — no navigation
+      // to the homework list.
+      expect(find.text('Required'), findsNWidgets(2));
       expect(find.text('Pick a due date'), findsOneWidget);
       expect(find.text('homework-list'), findsNothing);
       expect(find.text('Create Homework'), findsOneWidget);

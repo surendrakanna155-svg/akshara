@@ -30,6 +30,14 @@ class _TeacherHomeworkCreateScreenState
   final _subjectController = TextEditingController();
   final _titleController = TextEditingController();
   final _studentController = TextEditingController();
+  // HWK-4 — optional teacher attachment (reference/label, not a real upload).
+  final _attachmentNameController = TextEditingController();
+  final _attachmentRefController = TextEditingController();
+
+  // HWK-3 — multi-section assign: the teacher builds up a list of target
+  // class-sections. The class text field + "Add" button append to this set; the
+  // homework is delivered to each. An empty list falls back to the single field.
+  final List<String> _classLabels = [];
 
   // HWK-1 — a real due date chosen via a Material date picker (replaces the old
   // free-text due label). Null until the teacher picks one; Create is blocked
@@ -40,10 +48,11 @@ class _TeacherHomeworkCreateScreenState
   void initState() {
     super.initState();
     final teaching = ref.read(resolvedTeacherTeachingContextProvider);
-    _classController.text = teaching.classTeacherClassLabel ??
+    final prefill = teaching.classTeacherClassLabel ??
         (teaching.teachingClassLabels.isNotEmpty
             ? teaching.teachingClassLabels.first
             : '');
+    if (prefill.isNotEmpty) _classLabels.add(prefill);
     _subjectController.text = teaching.primarySubject;
   }
 
@@ -53,7 +62,18 @@ class _TeacherHomeworkCreateScreenState
     _subjectController.dispose();
     _titleController.dispose();
     _studentController.dispose();
+    _attachmentNameController.dispose();
+    _attachmentRefController.dispose();
     super.dispose();
+  }
+
+  void _addClassLabel() {
+    final value = _classController.text.trim();
+    if (value.isEmpty) return;
+    if (!_classLabels.contains(value)) {
+      setState(() => _classLabels.add(value));
+    }
+    _classController.clear();
   }
 
   /// ISO `YYYY-MM-DD` for the picked date (what the backend validates + stores).
@@ -116,15 +136,52 @@ class _TeacherHomeworkCreateScreenState
                 style: context.aksharaText.bodyMedium,
               ),
               const SizedBox(height: AksharaSpacing.s4),
-              TextFormField(
-                controller: _classController,
-                decoration: const InputDecoration(
-                  labelText: 'Class label',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
+              // HWK-3 — multi-section: add one or more class-sections.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      key: QaTestKeys.teacherHomeworkClassChipsField,
+                      controller: _classController,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _addClassLabel(),
+                      decoration: const InputDecoration(
+                        labelText: 'Class label',
+                        hintText: 'e.g. 8-A',
+                        border: OutlineInputBorder(),
+                      ),
+                      // Only required when no chips have been added yet.
+                      validator: (v) => (_classLabels.isEmpty &&
+                              (v == null || v.trim().isEmpty))
+                          ? 'Add at least one class'
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: AksharaSpacing.s2),
+                  IconButton.filledTonal(
+                    key: QaTestKeys.teacherHomeworkAddClassButton,
+                    onPressed: _addClassLabel,
+                    icon: const Icon(Icons.add),
+                    tooltip: 'Add class',
+                  ),
+                ],
               ),
+              if (_classLabels.isNotEmpty) ...[
+                const SizedBox(height: AksharaSpacing.s2),
+                Wrap(
+                  spacing: AksharaSpacing.s2,
+                  runSpacing: AksharaSpacing.s1,
+                  children: [
+                    for (final label in _classLabels)
+                      InputChip(
+                        label: Text(label),
+                        onDeleted: () =>
+                            setState(() => _classLabels.remove(label)),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: AksharaSpacing.s3),
               TextFormField(
                 controller: _subjectController,
@@ -182,30 +239,67 @@ class _TeacherHomeworkCreateScreenState
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: AksharaSpacing.s3),
+              // HWK-4 — optional teacher attachment (reference/label, not a real
+              // file upload: paste a name + an optional link/reference).
+              TextFormField(
+                key: QaTestKeys.teacherHomeworkAttachmentNameField,
+                controller: _attachmentNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Attachment name (optional)',
+                  hintText: 'e.g. worksheet.pdf',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: AksharaSpacing.s3),
+              TextFormField(
+                key: QaTestKeys.teacherHomeworkAttachmentRefField,
+                controller: _attachmentRefController,
+                decoration: const InputDecoration(
+                  labelText: 'Attachment reference / link (optional)',
+                  hintText: 'e.g. shared drive link',
+                  border: OutlineInputBorder(),
+                ),
+              ),
               const SizedBox(height: AksharaSpacing.s5),
               FilledButton(
                 key: QaTestKeys.teacherHomeworkCreateButton,
                 onPressed: () async {
+                  // HWK-3 — fold any typed-but-not-added class into the list so
+                  // a teacher who types a class and taps Create isn't dropped.
+                  final typed = _classController.text.trim();
+                  if (typed.isNotEmpty && !_classLabels.contains(typed)) {
+                    setState(() => _classLabels.add(typed));
+                    _classController.clear();
+                  }
                   if (!(_formKey.currentState?.validate() ?? false)) return;
+                  if (_classLabels.isEmpty) return;
                   final dueIso = _dueDateIso;
                   if (dueIso == null) return;
 
                   final messenger = ScaffoldMessenger.of(context);
                   final router = GoRouter.of(context);
                   final studentName = _studentController.text.trim();
+                  final attachmentName = _attachmentNameController.text.trim();
+                  final attachmentRef = _attachmentRefController.text.trim();
 
                   try {
                     await ref
                         .read(createTeacherHomeworkProvider.notifier)
                         .execute(
                           TeacherHomeworkCreateRequest(
-                            classLabel: _classController.text.trim(),
+                            classLabel: _classLabels.first,
+                            classLabels: List<String>.from(_classLabels),
                             subject: _subjectController.text.trim(),
                             title: _titleController.text.trim(),
                             dueDate: dueIso,
                             dueLabel: _formatDue(_dueDate!),
                             studentName:
                                 studentName.isEmpty ? null : studentName,
+                            attachmentName:
+                                attachmentName.isEmpty ? null : attachmentName,
+                            attachmentRef:
+                                attachmentRef.isEmpty ? null : attachmentRef,
                           ),
                         );
 

@@ -225,6 +225,9 @@ class TeacherHomeworkCreateRequest {
     required this.dueDate,
     this.dueLabel = '',
     this.studentName,
+    this.classLabels = const [],
+    this.attachmentName,
+    this.attachmentRef,
   });
 
   final String classLabel;
@@ -242,6 +245,34 @@ class TeacherHomeworkCreateRequest {
 
   /// Optional. Null/empty = delivered to the whole class.
   final String? studentName;
+
+  /// HWK-3 — multi-section assign: target several class-sections in one action.
+  /// When non-empty this overrides [classLabel] (the backend fans out one
+  /// assignment delivery per class). [classLabel] stays the back-compat single.
+  final List<String> classLabels;
+
+  /// HWK-4 — an OPTIONAL teacher attachment on the assignment (a reference/label,
+  /// not a real uploaded file — no homework storage bucket yet). [attachmentName]
+  /// is the display name; [attachmentRef] an optional URL/reference.
+  final String? attachmentName;
+  final String? attachmentRef;
+}
+
+/// HWK-6 — domain request to bulk mark homework submissions reviewed. When
+/// [submissionIds] is empty, ALL still-pending submissions of [homeworkId] are
+/// reviewed.
+class TeacherHomeworkBulkReviewRequest {
+  const TeacherHomeworkBulkReviewRequest({
+    required this.homeworkId,
+    this.submissionIds = const [],
+    this.grade = '',
+    this.comment = '',
+  });
+
+  final String homeworkId;
+  final List<String> submissionIds;
+  final String grade;
+  final String comment;
 }
 
 /// Subject teacher escalates concern to class teacher (no direct parent send).

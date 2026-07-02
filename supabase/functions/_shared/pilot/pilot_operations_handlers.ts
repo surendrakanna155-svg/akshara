@@ -13,7 +13,11 @@ import {
   createLeaveRequest,
   insertHomeworkAssignment,
   reviewHomework,
+  bulkReviewHomework,
   submitHomework,
+  listHomeworkNonSubmitters,
+  notifyHomeworkNonSubmitters,
+  listTeacherHomeworkHistory,
   updateExamMark,
   listTimetableSlots,
   listGuardianUserIdsForStudent,
@@ -40,6 +44,26 @@ function parseAttendanceEntries(body: Record<string, unknown>): AttendanceMarkEn
 
 function snakeStr(body: Record<string, unknown>, key: string): string {
   return String(body[key] ?? "");
+}
+
+/**
+ * HWK-3 — resolve the target class-sections from a create body. Accepts a
+ * `class_labels`/`classLabels` array (multi-section assign) OR a single
+ * `class_label`/`classLabel` (back-compat). Trims, drops blanks and de-dupes so
+ * one class is never fanned out twice. Exported pure so the fan-out targeting is
+ * unit-testable without a database.
+ */
+export function parseHomeworkClassLabels(
+  body: Record<string, unknown>,
+): string[] {
+  const rawLabels = body.class_labels ?? body.classLabels;
+  const singleLabel = String(body.class_label ?? body.classLabel ?? "").trim();
+  const candidates = Array.isArray(rawLabels)
+    ? rawLabels.map((v) => String(v).trim())
+    : singleLabel
+    ? [singleLabel]
+    : [];
+  return Array.from(new Set(candidates.filter((v) => v.length > 0)));
 }
 
 // ATT-D3 — read an optional ISO date (YYYY-MM-DD) from the body. Returns null
@@ -396,13 +420,18 @@ export async function handleTeacherHomeworkCreate(
   const body = await readJson<Record<string, unknown>>(req);
   if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
 
-  const classLabel = String(body.class_label ?? body.classLabel ?? "").trim();
+  // HWK-3 — multi-section assign. The teacher may target several class-sections
+  // in ONE action: `class_labels` is a de-duped array; a single `class_label`
+  // stays supported (back-compat). Each targeted class gets its OWN assignment
+  // delivery (one homework_assignment + one homework_item fan-out per class), so
+  // per-class submission tracking (HWK-2/5/6) stays clean.
+  const classLabels = parseHomeworkClassLabels(body);
   const subject = String(body.subject ?? "").trim();
   const title = String(body.title ?? "").trim();
-  if (!classLabel || !subject || !title) {
+  if (classLabels.length === 0 || !subject || !title) {
     return errorEnvelope(
       "VALIDATION_ERROR",
-      "class_label, subject and title are required",
+      "class_label(s), subject and title are required",
       422,
     );
   }
@@ -427,43 +456,73 @@ export async function handleTeacherHomeworkCreate(
   const dueDateInPast = isDueDateInPast(dueDate);
   const studentNameRaw = String(body.student_name ?? body.studentName ?? "").trim();
   const studentName = studentNameRaw.length > 0 ? studentNameRaw : null;
-  const homeworkId = `hw_${crypto.randomUUID()}`;
+  // HWK-4 — optional teacher attachment (reference/label, not a real file
+  // upload; no homework bucket exists yet). Both keys are optional and degrade
+  // to null when absent.
+  const attachmentName =
+    String(body.attachment_name ?? body.attachmentName ?? "").trim() || null;
+  const attachmentRef =
+    String(body.attachment_ref ?? body.attachmentRef ?? "").trim() || null;
 
   try {
-    const result = await withTenantContext(config, auth.claims, async (db) => {
-      const created = await insertHomeworkAssignment(db, {
-        organizationId: auth.claims.tenant_id,
-        schoolId: auth.claims.school_id!,
-        teacherId: auth.claims.sub,
-        homeworkId,
-        classLabel,
-        subject,
-        title,
-        dueLabel,
-        dueDate,
-        studentName,
-      });
-      await auditMobileWrite(
-        db,
-        auth.claims,
-        req,
-        "homeworkCreated",
-        "homework_assignment",
-        created.id,
-        { classLabel, subject, dueDate, deliveredCount: created.deliveredCount },
-      );
-      return created;
+    const created = await withTenantContext(config, auth.claims, async (db) => {
+      const perClass: Array<
+        { id: string; classLabel: string; deliveredCount: number }
+      > = [];
+      // One assignment delivery per targeted class (each with its own id).
+      for (const classLabel of classLabels) {
+        const homeworkId = `hw_${crypto.randomUUID()}`;
+        const one = await insertHomeworkAssignment(db, {
+          organizationId: auth.claims.tenant_id,
+          schoolId: auth.claims.school_id!,
+          teacherId: auth.claims.sub,
+          homeworkId,
+          classLabel,
+          subject,
+          title,
+          dueLabel,
+          dueDate,
+          studentName,
+          attachmentName,
+          attachmentRef,
+        });
+        await auditMobileWrite(
+          db,
+          auth.claims,
+          req,
+          "homeworkCreated",
+          "homework_assignment",
+          one.id,
+          { classLabel, subject, dueDate, deliveredCount: one.deliveredCount },
+        );
+        perClass.push({
+          id: one.id,
+          classLabel,
+          deliveredCount: one.deliveredCount,
+        });
+      }
+      return perClass;
     });
+
+    const totalDelivered = created.reduce((sum, c) => sum + c.deliveredCount, 0);
+    // Back-compat: the single-class response keeps its flat {id, classLabel,
+    // deliveredCount} shape (existing client mapper reads these). The per-class
+    // breakdown rides `classes` for the multi-section create UI.
+    const first = created[0]!;
     return jsonResponse(
       envelope({
-        id: result.id,
+        id: first.id,
         title,
-        classLabel,
+        classLabel: first.classLabel,
         subject,
         dueLabel,
         dueDate,
         dueDateInPast,
-        deliveredCount: result.deliveredCount,
+        attachmentName,
+        attachmentRef,
+        deliveredCount: first.deliveredCount,
+        classes: created,
+        totalDeliveredCount: totalDelivered,
       }),
     );
   } catch (error) {
@@ -471,6 +530,255 @@ export async function handleTeacherHomeworkCreate(
       return tenantDbNotConfiguredResponse(error);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to create homework", 500);
+  }
+}
+
+// HWK-2 — GET /teacher/homework/{homeworkId}/non-submitters
+//
+// The delivered roster (student_entities homework_item for this homework_id)
+// LEFT JOIN homework_submissions → students who have NOT submitted. Powers the
+// teacher review screen's "Not submitted (N)" tab. School/teacher scope +
+// manageHomework (same gate as create/review). RLS scopes rows to the school.
+export async function handleTeacherHomeworkNonSubmitters(
+  req: Request,
+  config: AppConfig,
+  homeworkId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "school" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
+  }
+  const denied = requirePermission(auth.claims, "manageHomework");
+  if (denied) return denied;
+
+  try {
+    const items = await withTenantContext(config, auth.claims, async (db) =>
+      await listHomeworkNonSubmitters(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        homeworkId,
+      )
+    );
+    return jsonResponse(
+      envelope({
+        homeworkId,
+        notSubmittedCount: items.length,
+        items: items.map((i) => ({ studentId: i.studentId, name: i.name })),
+      }),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load non-submitters", 500);
+  }
+}
+
+// HWK-5 — GET /teacher/homework/history?from=YYYY-MM-DD&to=YYYY-MM-DD
+//
+// The teacher's own homework assignments with real submitted/total counts,
+// optionally filtered to an inclusive due-date range. The CSV export is built
+// client-side from these rows via the shared export service. School/teacher
+// scope + manageHomework. Paginated.
+export async function handleTeacherHomeworkHistory(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "school" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
+  }
+  const denied = requirePermission(auth.claims, "manageHomework");
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const fromDate = optionalIsoDate(
+    { from: url.searchParams.get("from") ?? undefined },
+    "from",
+  );
+  const toDate = optionalIsoDate(
+    { to: url.searchParams.get("to") ?? undefined },
+    "to",
+  );
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+  const pageSize = Math.min(
+    200,
+    Math.max(1, parseInt(url.searchParams.get("pageSize") ?? "50", 10) || 50),
+  );
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) =>
+      await listTeacherHomeworkHistory(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        auth.claims.sub,
+        { fromDate, toDate },
+        { page, pageSize },
+      )
+    );
+    return jsonResponse(
+      envelope({
+        items: result.items,
+        pagination: {
+          page: result.page,
+          pageSize: result.pageSize,
+          total: result.total,
+          hasMore: result.hasMore,
+        },
+      }),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load homework history", 500);
+  }
+}
+
+// HWK-6 — POST /teacher/homework/bulk-review
+//
+// Mark many submissions reviewed in one action. Body: { homework_id, grade,
+// comment, submission_ids?[] }. An empty/omitted submission_ids means "all
+// still-pending submissions for this homework_id". Reuses reviewHomework per
+// row (same student_entities write-back), returning a partial-success summary.
+export async function handleTeacherHomeworkBulkReview(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "school" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
+  }
+  const denied = requirePermission(auth.claims, "manageHomework");
+  if (denied) return denied;
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
+
+  const homeworkId = snakeStr(body, "homework_id") || snakeStr(body, "homeworkId");
+  const rawIds = body.submission_ids ?? body.submissionIds;
+  const submissionIds = Array.isArray(rawIds)
+    ? rawIds.map((v) => String(v)).filter((v) => v.trim().length > 0)
+    : [];
+  if (!homeworkId && submissionIds.length === 0) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "homework_id or submission_ids is required",
+      422,
+    );
+  }
+  const grade = snakeStr(body, "grade");
+  const comment = snakeStr(body, "comment");
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const summary = await bulkReviewHomework(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        { homeworkId, submissionIds, grade, comment, reviewerId: auth.claims.sub },
+      );
+      await auditMobileWrite(
+        db,
+        auth.claims,
+        req,
+        "homeworkBulkReviewed",
+        "homework_assignment",
+        homeworkId || "bulk",
+        { reviewed: summary.reviewed, skipped: summary.skipped, grade },
+      );
+      return summary;
+    });
+    return jsonResponse(
+      envelope({
+        homeworkId,
+        reviewed: result.reviewed,
+        skipped: result.skipped,
+        reviewedIds: result.reviewedIds,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to bulk-review homework", 500);
+  }
+}
+
+// HWK-D1 — POST /teacher/homework/{homeworkId}/notify-non-submitters
+//
+// The MANUAL teacher-triggered no-submit nudge (opt-in). For each non-submitter
+// (HWK-2 query) resolve their guardian user ids and enqueue a push notification
+// (category 'academic'), reusing the same enqueueNotificationRequested path the
+// absence alerts use. Audited. (An automatic post-due nudge rides a future
+// XCT-2 rule engine — this endpoint is the deliberate teacher action.)
+export async function handleTeacherHomeworkNotifyNonSubmitters(
+  req: Request,
+  config: AppConfig,
+  homeworkId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "school" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Teacher scope required", 403);
+  }
+  const denied = requirePermission(auth.claims, "manageHomework");
+  if (denied) return denied;
+
+  // Optional teacher-authored message; a deterministic default otherwise.
+  const body = (await readJson<Record<string, unknown>>(req)) ?? {};
+  const messageBody = (String(body.message ?? "").trim() || null) ??
+    "Homework is still pending — please help your child submit it.";
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const summary = await notifyHomeworkNonSubmitters(
+        db,
+        auth.claims.tenant_id,
+        auth.claims.school_id!,
+        homeworkId,
+        (guardianUserId) =>
+          enqueueNotificationRequested(
+            db,
+            auth.claims.tenant_id,
+            auth.claims.school_id!,
+            guardianUserId,
+            "Homework reminder",
+            messageBody,
+            "academic",
+          ).then(() => undefined),
+      );
+      await auditMobileWrite(
+        db,
+        auth.claims,
+        req,
+        "homeworkNonSubmittersNotified",
+        "homework_assignment",
+        homeworkId,
+        summary,
+      );
+      return summary;
+    });
+    return jsonResponse(
+      envelope({
+        homeworkId,
+        studentsPending: result.studentsPending,
+        notificationsQueued: result.notificationsQueued,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    return errorEnvelope(
+      "INTERNAL_ERROR",
+      "Failed to notify non-submitters",
+      500,
+    );
   }
 }
 

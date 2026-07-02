@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
@@ -139,14 +140,16 @@ class StudentHomeworkScreen extends ConsumerWidget {
                                     for (var i = 0; i < data.items.length; i++) ...[
                                       HomeworkListRow(
                                         item: data.items[i],
-                                        onSubmit: data.items[i].status ==
-                                                StudentHomeworkStatus.pending
-                                            ? () async {
-                                                await submitStudentHomework(
+                                        onSubmit: data.items[i]
+                                                    .effectiveStatus ==
+                                                StudentHomeworkStatus.pending ||
+                                            data.items[i].effectiveStatus ==
+                                                StudentHomeworkStatus.overdue
+                                            ? () => _showSubmitSheet(
+                                                  context,
                                                   ref,
-                                                  data.items[i].id,
-                                                );
-                                              }
+                                                  data.items[i],
+                                                )
                                             : null,
                                       ),
                                       if (i < data.items.length - 1)
@@ -163,6 +166,85 @@ class StudentHomeworkScreen extends ConsumerWidget {
                     );
                   },
                 ),
+    );
+  }
+
+  /// HWK-7 — the submit sheet lets a student add an OPTIONAL note + attachment
+  /// reference (a label/URL, not a real uploaded file — no homework storage
+  /// bucket yet) before handing in. Both persist onto the submission so the
+  /// teacher review and parent view can surface them.
+  void _showSubmitSheet(
+    BuildContext context,
+    WidgetRef ref,
+    StudentHomeworkItem item,
+  ) {
+    final noteController = TextEditingController();
+    final attachmentController = TextEditingController();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          AksharaSpacing.s4,
+          AksharaSpacing.s2,
+          AksharaSpacing.s4,
+          MediaQuery.paddingOf(sheetContext).bottom + AksharaSpacing.s4,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Submit ${item.title}',
+                style: sheetContext.aksharaText.titleMedium),
+            const SizedBox(height: AksharaSpacing.s3),
+            TextField(
+              key: QaTestKeys.studentHomeworkNoteField,
+              controller: noteController,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Note (optional)',
+                hintText: 'Anything the teacher should know',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            TextField(
+              key: QaTestKeys.studentHomeworkAttachmentField,
+              controller: attachmentController,
+              decoration: const InputDecoration(
+                labelText: 'Attachment reference (optional)',
+                hintText: 'e.g. answer photo link or file name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: AksharaSpacing.s4),
+            FilledButton(
+              key: QaTestKeys.studentHomeworkSubmitConfirmButton,
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(sheetContext);
+                final ok = await submitStudentHomework(
+                  ref,
+                  item.id,
+                  notes: noteController.text,
+                  attachmentLabel: attachmentController.text,
+                );
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      ok ? 'Homework submitted.' : 'Could not submit homework.',
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Submit homework'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

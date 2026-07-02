@@ -1,4 +1,5 @@
 import 'package:akshara_erp/core/repositories/mock/mock_student_write_store.dart';
+import 'package:akshara_erp/core/testing/qa_test_keys.dart';
 import 'package:akshara_erp/features/student_app/homework/student_homework_provider.dart';
 import 'package:akshara_erp/features/student_app/homework/student_homework_screen.dart';
 import 'package:akshara_erp/features/student_app/homework/widgets/homework_list_row.dart';
@@ -51,30 +52,40 @@ void main() {
 
       expect(find.text('Homework'), findsOneWidget);
       expect(find.byType(HomeworkListRow), findsWidgets);
-      // The pending item exposes its subject + attachment + Submit action.
+      // The pending item exposes its subject + attachment.
       expect(find.text('Mathematics'), findsOneWidget);
       expect(find.text('worksheet_5_2.pdf'), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Submit'), findsOneWidget);
+      // HWK-7 — two actionable items expose a Submit action: hw-1 (pending) and
+      // hw-2 (overdue — late submission is now allowed).
+      expect(find.widgetWithText(FilledButton, 'Submit'), findsNWidgets(2));
     });
 
-    testWidgets('tapping Submit transitions the item to the submitted state',
+    testWidgets('submitting via the HWK-7 sheet transitions the item',
         (tester) async {
       await _pump(tester);
 
-      // Exactly one pending Submit action before the tap.
-      expect(find.widgetWithText(FilledButton, 'Submit'), findsOneWidget);
+      // Two actionable Submit actions before the tap (pending + overdue).
+      expect(find.widgetWithText(FilledButton, 'Submit'), findsNWidgets(2));
 
+      // Tap the first (pending) item's Submit → the HWK-7 submit sheet opens.
       final submit = find.widgetWithText(FilledButton, 'Submit').first;
       await tester.ensureVisible(submit);
       await tester.pumpAndSettle();
       await tester.tap(submit);
       await tester.pumpAndSettle();
 
-      // After the submit mutation the only pending row flips to submitted: its
-      // Submit action is gone. (The mock stamps "Submitted just now", but the
-      // demo localization mapper drops submittedLabel — see FINDINGS P2 — so we
-      // assert on the status transition, not the dropped label.)
-      expect(find.widgetWithText(FilledButton, 'Submit'), findsNothing);
+      // The sheet offers optional note + attachment fields and a confirm button.
+      expect(
+        find.byKey(QaTestKeys.studentHomeworkSubmitConfirmButton),
+        findsOneWidget,
+      );
+      await tester
+          .tap(find.byKey(QaTestKeys.studentHomeworkSubmitConfirmButton));
+      await tester.pumpAndSettle();
+
+      // After the submit mutation the pending row flips to submitted, so only
+      // the still-overdue item's Submit action remains.
+      expect(find.widgetWithText(FilledButton, 'Submit'), findsOneWidget);
     });
 
     testWidgets('forced error renders the error surface with retry',

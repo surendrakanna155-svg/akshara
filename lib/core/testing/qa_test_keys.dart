@@ -2005,4 +2005,41 @@ abstract final class QaTestKeys {
       ValueKey<String>('teacher_homework_due_date_field');
   static const teacherHomeworkCreateButton =
       ValueKey<String>('teacher_homework_create_button');
+
+  // --- HWK-3 multi-section create ---
+  static const teacherHomeworkAddClassButton =
+      ValueKey<String>('teacher_homework_add_class_button');
+  static const teacherHomeworkClassChipsField =
+      ValueKey<String>('teacher_homework_class_chips_field');
+  // --- HWK-4 teacher attachment on create ---
+  static const teacherHomeworkAttachmentNameField =
+      ValueKey<String>('teacher_homework_attachment_name_field');
+  static const teacherHomeworkAttachmentRefField =
+      ValueKey<String>('teacher_homework_attachment_ref_field');
+
+  // --- HWK-2 teacher not-submitted tab / HWK-6 bulk review / HWK-D1 nudge ---
+  static const teacherHomeworkTabSubmissions =
+      ValueKey<String>('teacher_homework_tab_submissions');
+  static const teacherHomeworkTabNotSubmitted =
+      ValueKey<String>('teacher_homework_tab_not_submitted');
+  static const teacherHomeworkBulkReviewButton =
+      ValueKey<String>('teacher_homework_bulk_review_button');
+  static const teacherHomeworkNotifyButton =
+      ValueKey<String>('teacher_homework_notify_button');
+  static ValueKey<String> teacherHomeworkSubmissionCheckbox(String id) =>
+      ValueKey<String>('teacher_homework_submission_checkbox_$id');
+
+  // --- HWK-5 homework history + export ---
+  static const teacherHomeworkHistoryExportButton =
+      ValueKey<String>('teacher_homework_history_export_button');
+
+  // --- HWK-7 student submit note + attachment ---
+  static const studentHomeworkSubmitButton =
+      ValueKey<String>('student_homework_submit_button');
+  static const studentHomeworkNoteField =
+      ValueKey<String>('student_homework_note_field');
+  static const studentHomeworkAttachmentField =
+      ValueKey<String>('student_homework_attachment_field');
+  static const studentHomeworkSubmitConfirmButton =
+      ValueKey<String>('student_homework_submit_confirm_button');
 }
