@@ -117,5 +117,71 @@ class HybridLibraryRepository implements LibraryRepository {
         apiCall: () => _api.waiveFine(query: query, request: request),
         mockCall: () => _mock.waiveFine(query: query, request: request),
       );
+
+  @override
+  Future<LibraryBook> updateLibraryBook({
+    required RepositoryQuery query,
+    required String id,
+    required UpdateLibraryBookRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.updateLibraryBook(query: query, id: id, request: request),
+        mockCall: () => _mock.updateLibraryBook(query: query, id: id, request: request),
+      );
+
+  @override
+  Future<void> deleteLibraryBook({
+    required RepositoryQuery query,
+    required String id,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.deleteLibraryBook(query: query, id: id),
+        mockCall: () => _mock.deleteLibraryBook(query: query, id: id),
+      );
+
+  @override
+  Future<ImportResult> bulkImportBooks({
+    required RepositoryQuery query,
+    required BulkImportBooksRequest request,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.bulkImportBooks(query: query, request: request),
+        mockCall: () => _mock.bulkImportBooks(query: query, request: request),
+      );
+
+  @override
+  Future<LibraryIssueRecord> renewLibraryLoan({
+    required RepositoryQuery query,
+    required String issueId,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.renewLibraryLoan(query: query, issueId: issueId),
+        mockCall: () => _mock.renewLibraryLoan(query: query, issueId: issueId),
+      );
+
+  @override
+  Future<List<OverdueLoan>> getOverdueLoans({required RepositoryQuery query}) =>
+      _api.getOverdueLoans(query: query);
+
+  @override
+  Future<int> sendOverdueReminder({required RepositoryQuery query}) =>
+      withMockWriteFallback(
+        apiCall: () => _api.sendOverdueReminder(query: query),
+        mockCall: () => _mock.sendOverdueReminder(query: query),
+      );
+
+  @override
+  Future<LibrarySettings> getLibrarySettings({required RepositoryQuery query}) =>
+      _api.getLibrarySettings(query: query);
+
+  @override
+  Future<LibrarySettings> updateLibrarySettings({
+    required RepositoryQuery query,
+    required LibrarySettings settings,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.updateLibrarySettings(query: query, settings: settings),
+        mockCall: () => _mock.updateLibrarySettings(query: query, settings: settings),
+      );
 }
 

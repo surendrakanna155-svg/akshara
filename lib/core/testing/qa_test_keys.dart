@@ -1134,6 +1134,84 @@ abstract final class QaTestKeys {
   static const libraryWaiveFineSuccessSnackbar =
       ValueKey<String>('library_waive_fine_success_snackbar');
 
+  // LIB-2 — catalog edit / delete / import.
+  static ValueKey<String> libraryEditBookButton(String bookId) =>
+      ValueKey<String>('library_edit_book_$bookId');
+
+  static const libraryEditBookDialogSubmitButton =
+      ValueKey<String>('library_edit_book_dialog_submit_button');
+
+  static const libraryEditBookSuccessSnackbar =
+      ValueKey<String>('library_edit_book_success_snackbar');
+
+  static ValueKey<String> libraryDeleteBookButton(String bookId) =>
+      ValueKey<String>('library_delete_book_$bookId');
+
+  static const libraryDeleteBookConfirmButton =
+      ValueKey<String>('library_delete_book_confirm_button');
+
+  static const libraryDeleteBookSuccessSnackbar =
+      ValueKey<String>('library_delete_book_success_snackbar');
+
+  static const libraryImportBooksButton =
+      ValueKey<String>('library_import_books_button');
+
+  static const libraryImportBooksTextField =
+      ValueKey<String>('library_import_books_text_field');
+
+  static const libraryImportBooksSubmitButton =
+      ValueKey<String>('library_import_books_submit_button');
+
+  static const libraryImportBooksResultSnackbar =
+      ValueKey<String>('library_import_books_result_snackbar');
+
+  // LIB-3 — manual ISBN entry on the issue / return dialogs.
+  static const libraryIssueIsbnField =
+      ValueKey<String>('library_issue_isbn_field');
+
+  static const libraryReturnIsbnField =
+      ValueKey<String>('library_return_isbn_field');
+
+  // LIB-4 — per-row renew.
+  static ValueKey<String> libraryRenewLoanButton(String issueId) =>
+      ValueKey<String>('library_renew_loan_$issueId');
+
+  static const libraryRenewLoanSuccessSnackbar =
+      ValueKey<String>('library_renew_loan_success_snackbar');
+
+  // LIB-5 — send overdue reminders.
+  static const librarySendRemindersButton =
+      ValueKey<String>('library_send_reminders_button');
+
+  static const librarySendRemindersSuccessSnackbar =
+      ValueKey<String>('library_send_reminders_success_snackbar');
+
+  // LIB-1 — overdue list export.
+  static const libraryOverdueExportCsvButton =
+      ValueKey<String>('library_overdue_export_csv_button');
+
+  static const libraryOverdueExportPdfButton =
+      ValueKey<String>('library_overdue_export_pdf_button');
+
+  // LIB-D1 — settings.
+  static const librarySettingsButton =
+      ValueKey<String>('library_settings_button');
+
+  static const librarySettingsMaxBooksField =
+      ValueKey<String>('library_settings_max_books_field');
+
+  static const librarySettingsMaxRenewalsField =
+      ValueKey<String>('library_settings_max_renewals_field');
+
+  static const librarySettingsFineThresholdField =
+      ValueKey<String>('library_settings_fine_threshold_field');
+
+  static const librarySettingsSubmitButton =
+      ValueKey<String>('library_settings_submit_button');
+
+  static const librarySettingsSuccessSnackbar =
+      ValueKey<String>('library_settings_success_snackbar');
+
   static const alumniAddButton = ValueKey<String>('alumni_add_button');
 
   static const alumniAddDialogSubmitButton =

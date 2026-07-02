@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../repository_query.dart';
+import '../../../../../features/library/library_models.dart';
 import '../../../../../features/library/library_requests.dart';
 import '../../admissions/dto/api_envelope_dto.dart';
 import '../dto/library_enum_codec.dart';
@@ -185,6 +186,115 @@ class LibraryRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return _writeData(response);
+  }
+
+  /// LIB-2 — PUT /library/catalog/:id (body carries isbn; server keeps it unique).
+  Future<LibraryBookDto> updateBook({
+    required RepositoryQuery query,
+    required String bookId,
+    required UpdateLibraryBookRequest request,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      LibraryApiPaths.catalogBook(bookId),
+      queryParameters: _queryParams(query),
+      data: {
+        'isbn': request.isbn,
+        'title': request.title,
+        'author': request.author,
+        'category': request.category,
+        'totalCopies': request.totalCopies,
+        'shelf': request.shelf,
+      },
+    );
+    return LibraryBookDto(raw: _writeData(response));
+  }
+
+  /// LIB-2 — DELETE /library/catalog/:id (rejected while a copy is on loan).
+  Future<void> deleteBook({
+    required RepositoryQuery query,
+    required String bookId,
+  }) async {
+    await _dio.delete<Map<String, dynamic>>(
+      LibraryApiPaths.catalogBook(bookId),
+      queryParameters: _queryParams(query),
+    );
+  }
+
+  /// LIB-2 — POST /library/catalog/import with `{rows:[…]}`.
+  Future<ImportResultRaw> bulkImportBooks({
+    required RepositoryQuery query,
+    required BulkImportBooksRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      LibraryApiPaths.catalogImport,
+      queryParameters: _queryParams(query),
+      data: {'rows': [for (final row in request.rows) row.toJson()]},
+    );
+    return ImportResultRaw(raw: _writeData(response));
+  }
+
+  /// LIB-4 — POST /library/issues/:id/renew (returns the updated loan).
+  Future<LibraryIssueRecordDto> renewLoan({
+    required RepositoryQuery query,
+    required String issueId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      LibraryApiPaths.renewLoan(issueId),
+      queryParameters: _queryParams(query),
+    );
+    return LibraryIssueRecordDto(raw: _writeData(response));
+  }
+
+  /// LIB-1 — GET /library/overdue (open overdue loans + accrued fines).
+  Future<LibraryOverdueResponseDto> fetchOverdue({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      LibraryApiPaths.overdue,
+      queryParameters: _queryParams(query),
+    );
+    return LibraryOverdueResponseDto.fromJson(_responseMap(response));
+  }
+
+  /// LIB-5 — POST /library/reminders/overdue (returns `{recipientCount}`).
+  Future<int> sendOverdueReminder({required RepositoryQuery query}) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      LibraryApiPaths.overdueReminders,
+      queryParameters: _queryParams(query),
+    );
+    final data = _writeData(response);
+    final count = data['recipientCount'];
+    if (count is int) return count;
+    if (count is num) return count.toInt();
+    return int.tryParse('${count ?? 0}') ?? 0;
+  }
+
+  /// LIB-D1 — GET /library/settings.
+  Future<LibrarySettingsDto> fetchSettings({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      LibraryApiPaths.settings,
+      queryParameters: _queryParams(query),
+    );
+    return LibrarySettingsDto.fromJson(_responseMap(response));
+  }
+
+  /// LIB-D1 — PUT /library/settings.
+  Future<LibrarySettingsDto> updateSettings({
+    required RepositoryQuery query,
+    required LibrarySettings settings,
+  }) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      LibraryApiPaths.settings,
+      queryParameters: _queryParams(query),
+      data: {
+        'maxBooksPerMember': settings.maxBooksPerMember,
+        'maxRenewals': settings.maxRenewals,
+        'blockOnFineThreshold': settings.blockOnFineThreshold,
+      },
+    );
+    return LibrarySettingsDto.fromJson(_responseMap(response));
   }
 
   Map<String, dynamic> _queryParams(RepositoryQuery query) {

@@ -226,6 +226,92 @@ class LibraryDigitalResource {
   final String? resourceUrl;
 }
 
+/// LIB-1 — an open overdue loan row (from `GET /library/overdue`), carrying the
+/// accrued fine so far so the client can render + export the overdue list.
+/// Dates / money stay [String] like the other read models.
+@immutable
+class OverdueLoan {
+  const OverdueLoan({
+    required this.issueId,
+    required this.memberName,
+    required this.memberType,
+    required this.bookTitle,
+    required this.isbn,
+    required this.dueDate,
+    required this.daysOverdue,
+    required this.accruedFine,
+    this.sisStudentId,
+  });
+
+  final String issueId;
+  final String memberName;
+  final LibraryMemberType memberType;
+  final String bookTitle;
+  final String isbn;
+  final String dueDate;
+  final int daysOverdue;
+
+  /// Accrued fine so far, pre-formatted (e.g. `₹45`).
+  final String accruedFine;
+  final String? sisStudentId;
+}
+
+/// LIB-D1 — circulation guardrail settings (`GET/PUT /library/settings`).
+@immutable
+class LibrarySettings {
+  const LibrarySettings({
+    required this.maxBooksPerMember,
+    required this.maxRenewals,
+    required this.blockOnFineThreshold,
+  });
+
+  /// Owner-agreed defaults, mirroring backend DEFAULT_LIBRARY_SETTINGS.
+  static const LibrarySettings defaults = LibrarySettings(
+    maxBooksPerMember: 2,
+    maxRenewals: 2,
+    blockOnFineThreshold: 100,
+  );
+
+  final int maxBooksPerMember;
+  final int maxRenewals;
+
+  /// Issue is blocked once a member's outstanding fine exceeds this (in ₹).
+  final int blockOnFineThreshold;
+
+  LibrarySettings copyWith({
+    int? maxBooksPerMember,
+    int? maxRenewals,
+    int? blockOnFineThreshold,
+  }) {
+    return LibrarySettings(
+      maxBooksPerMember: maxBooksPerMember ?? this.maxBooksPerMember,
+      maxRenewals: maxRenewals ?? this.maxRenewals,
+      blockOnFineThreshold: blockOnFineThreshold ?? this.blockOnFineThreshold,
+    );
+  }
+}
+
+/// LIB-2 — a single failed row from a bulk import (`row` is 1-based).
+@immutable
+class ImportFailure {
+  const ImportFailure({required this.row, required this.reason});
+
+  final int row;
+  final String reason;
+}
+
+/// LIB-2 — the result of `POST /library/catalog/import`: how many rows were
+/// imported and, for a partial import, exactly which rows failed and why.
+@immutable
+class ImportResult {
+  const ImportResult({required this.imported, required this.failed});
+
+  final int imported;
+  final List<ImportFailure> failed;
+
+  int get failedCount => failed.length;
+}
+
 @immutable
 class LibraryReportCatalogItem {
   const LibraryReportCatalogItem({

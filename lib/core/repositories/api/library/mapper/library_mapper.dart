@@ -266,6 +266,69 @@ class LibraryMapper {
     ];
   }
 
+  /// LIB-1 — map the overdue-list response DTO to domain [OverdueLoan]s.
+  List<OverdueLoan> toOverdueLoans(LibraryOverdueResponseDto dto) {
+    return [for (final item in dto.items) _toOverdueLoan(item)];
+  }
+
+  OverdueLoan _toOverdueLoan(Map<String, dynamic> raw) {
+    return OverdueLoan(
+      issueId: raw['issueId'] as String? ?? '',
+      memberName: raw['memberName'] as String? ?? '',
+      memberType: LibraryEnumCodec.parseMemberType(raw['memberType'] as String?),
+      bookTitle: raw['bookTitle'] as String? ?? '',
+      isbn: raw['isbn'] as String? ?? '',
+      dueDate: raw['dueDate'] as String? ?? '',
+      daysOverdue: raw['daysOverdue'] as int? ?? 0,
+      accruedFine: raw['fineAmount'] as String? ?? '',
+      sisStudentId: raw['sisStudentId'] as String?,
+    );
+  }
+
+  /// LIB-D1 — map the settings DTO to domain [LibrarySettings] (numeric fields;
+  /// falls back to defaults for any missing/non-numeric key).
+  LibrarySettings toSettings(LibrarySettingsDto dto) {
+    final raw = dto.raw;
+    return LibrarySettings(
+      maxBooksPerMember: _asInt(
+        raw['maxBooksPerMember'],
+        LibrarySettings.defaults.maxBooksPerMember,
+      ),
+      maxRenewals: _asInt(
+        raw['maxRenewals'],
+        LibrarySettings.defaults.maxRenewals,
+      ),
+      blockOnFineThreshold: _asInt(
+        raw['blockOnFineThreshold'],
+        LibrarySettings.defaults.blockOnFineThreshold,
+      ),
+    );
+  }
+
+  /// LIB-2 — map the bulk-import write response `{imported, failed:[{row,reason}]}`.
+  ImportResult toImportResult(Map<String, dynamic> raw) {
+    final rawFailed = raw['failed'];
+    return ImportResult(
+      imported: _asInt(raw['imported'], 0),
+      failed: [
+        if (rawFailed is List)
+          for (final f in rawFailed)
+            if (f is Map<String, dynamic>)
+              ImportFailure(
+                row: _asInt(f['row'], 0),
+                reason: f['reason'] as String? ?? 'Import failed',
+              ),
+      ],
+    );
+  }
+
+  int _asInt(dynamic value, int fallback) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
   List<String> _stringList(dynamic value) {
     if (value is! List) return const [];
     return [

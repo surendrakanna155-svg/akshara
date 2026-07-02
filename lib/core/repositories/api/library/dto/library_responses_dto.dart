@@ -147,3 +147,40 @@ class LibraryReportsResponseDto {
 
   final Map<String, dynamic> raw;
 }
+
+/// LIB-1 — `GET /library/overdue` → `{items:[…], count}` inside the envelope.
+class LibraryOverdueResponseDto {
+  const LibraryOverdueResponseDto({required this.items});
+
+  factory LibraryOverdueResponseDto.fromJson(Map<String, dynamic> json) {
+    final data = ApiEnvelopeDto.fromJson(json).requireData();
+    final rawItems = data['items'];
+    return LibraryOverdueResponseDto(
+      items: [
+        if (rawItems is List)
+          for (final item in rawItems)
+            if (item is Map<String, dynamic>) item,
+      ],
+    );
+  }
+
+  final List<Map<String, dynamic>> items;
+}
+
+/// LIB-2 — the unwrapped `{imported, failed:[…]}` bulk-import write payload.
+class ImportResultRaw {
+  const ImportResultRaw({required this.raw});
+
+  final Map<String, dynamic> raw;
+}
+
+/// LIB-D1 — `GET/PUT /library/settings` → a flat settings map in the envelope.
+class LibrarySettingsDto {
+  const LibrarySettingsDto({required this.raw});
+
+  factory LibrarySettingsDto.fromJson(Map<String, dynamic> json) {
+    return LibrarySettingsDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}

@@ -296,3 +296,47 @@ final libraryReportsProvider = Provider<LibraryReportsData?>((ref) {
     manualLoading: ref.watch(libraryReportsLoadingProvider), manualError: ref.watch(libraryReportsErrorProvider), manualEmpty: ref.watch(libraryReportsEmptyProvider),
   );
 });
+
+// LIB-1 Overdue loans
+final libraryOverdueLoadingProvider = StateProvider<bool>((ref) => false);
+final libraryOverdueErrorProvider = StateProvider<bool>((ref) => false);
+final libraryOverdueEmptyProvider = StateProvider<bool>((ref) => false);
+
+final libraryOverdueFutureProvider =
+    FutureProvider<List<OverdueLoan>>((ref) async {
+  return await ref
+      .read(libraryRepositoryProvider)
+      .getOverdueLoans(query: ref.watch(repositoryQueryProvider));
+});
+
+final libraryOverdueProvider = Provider<List<OverdueLoan>?>((ref) {
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(libraryOverdueFutureProvider),
+    manualLoading: ref.watch(libraryOverdueLoadingProvider),
+    manualError: ref.watch(libraryOverdueErrorProvider),
+    manualEmpty: ref.watch(libraryOverdueEmptyProvider),
+  );
+});
+
+// LIB-D1 Settings
+final librarySettingsLoadingProvider = StateProvider<bool>((ref) => false);
+final librarySettingsErrorProvider = StateProvider<bool>((ref) => false);
+final librarySettingsEmptyProvider = StateProvider<bool>((ref) => false);
+
+final librarySettingsFutureProvider =
+    FutureProvider<LibrarySettings>((ref) async {
+  return await ref
+      .read(libraryRepositoryProvider)
+      .getLibrarySettings(query: ref.watch(repositoryQueryProvider));
+});
+
+final librarySettingsProvider = Provider<LibrarySettings?>((ref) {
+  return watchRepositoryFuture(
+    ref,
+    ref.watch(librarySettingsFutureProvider),
+    manualLoading: ref.watch(librarySettingsLoadingProvider),
+    manualError: ref.watch(librarySettingsErrorProvider),
+    manualEmpty: ref.watch(librarySettingsEmptyProvider),
+  );
+});

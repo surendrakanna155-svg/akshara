@@ -79,3 +79,58 @@ class WaiveLibraryFineRequest {
 
   final String fineId;
 }
+
+/// LIB-2 — edit an existing catalogue book (`PUT /library/catalog/:id`). ISBN is
+/// included; the server keeps it unique (self-exempt).
+class UpdateLibraryBookRequest {
+  const UpdateLibraryBookRequest({
+    required this.isbn,
+    required this.title,
+    required this.author,
+    required this.category,
+    required this.totalCopies,
+    required this.shelf,
+  });
+
+  final String isbn;
+  final String title;
+  final String author;
+  final String category;
+  final int totalCopies;
+  final String shelf;
+}
+
+/// LIB-2 — a single book row for the bulk importer.
+class ImportBookRow {
+  const ImportBookRow({
+    required this.title,
+    required this.author,
+    required this.isbn,
+    this.category,
+    this.totalCopies,
+    this.shelf,
+  });
+
+  final String title;
+  final String author;
+  final String isbn;
+  final String? category;
+  final int? totalCopies;
+  final String? shelf;
+
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'author': author,
+        'isbn': isbn,
+        if (category != null && category!.isNotEmpty) 'category': category,
+        if (totalCopies != null) 'totalCopies': totalCopies,
+        if (shelf != null && shelf!.isNotEmpty) 'shelf': shelf,
+      };
+}
+
+/// LIB-2 — bulk-import books (`POST /library/catalog/import`).
+class BulkImportBooksRequest {
+  const BulkImportBooksRequest({required this.rows});
+
+  final List<ImportBookRow> rows;
+}

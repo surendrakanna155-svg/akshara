@@ -121,4 +121,66 @@ class ApiLibraryRepository implements LibraryRepository {
     final raw = await _remote.waiveFine(query: query, request: request);
     return _mapper.toFineFromEntity(raw);
   }
+
+  @override
+  Future<LibraryBook> updateLibraryBook({
+    required RepositoryQuery query,
+    required String id,
+    required UpdateLibraryBookRequest request,
+  }) async {
+    final dto = await _remote.updateBook(query: query, bookId: id, request: request);
+    return _mapper.toBook(dto);
+  }
+
+  @override
+  Future<void> deleteLibraryBook({
+    required RepositoryQuery query,
+    required String id,
+  }) {
+    return _remote.deleteBook(query: query, bookId: id);
+  }
+
+  @override
+  Future<ImportResult> bulkImportBooks({
+    required RepositoryQuery query,
+    required BulkImportBooksRequest request,
+  }) async {
+    final raw = await _remote.bulkImportBooks(query: query, request: request);
+    return _mapper.toImportResult(raw.raw);
+  }
+
+  @override
+  Future<LibraryIssueRecord> renewLibraryLoan({
+    required RepositoryQuery query,
+    required String issueId,
+  }) async {
+    final dto = await _remote.renewLoan(query: query, issueId: issueId);
+    return _mapper.toIssueRecord(dto);
+  }
+
+  @override
+  Future<List<OverdueLoan>> getOverdueLoans({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchOverdue(query: query);
+    return _mapper.toOverdueLoans(dto);
+  }
+
+  @override
+  Future<int> sendOverdueReminder({required RepositoryQuery query}) {
+    return _remote.sendOverdueReminder(query: query);
+  }
+
+  @override
+  Future<LibrarySettings> getLibrarySettings({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchSettings(query: query);
+    return _mapper.toSettings(dto);
+  }
+
+  @override
+  Future<LibrarySettings> updateLibrarySettings({
+    required RepositoryQuery query,
+    required LibrarySettings settings,
+  }) async {
+    final dto = await _remote.updateSettings(query: query, settings: settings);
+    return _mapper.toSettings(dto);
+  }
 }

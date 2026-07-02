@@ -29,6 +29,13 @@ class MockLibraryRepository implements LibraryRepository {
   int _resourceCounter = 5;
   int _memberCounter = 5;
 
+  /// LIB-D1 — in-memory circulation settings (starts at the owner defaults).
+  LibrarySettings _settings = LibrarySettings.defaults;
+
+  /// LIB-4 — per-issue renewal counter so the mock can enforce the cap without
+  /// widening the [LibraryIssueRecord] read model.
+  final Map<String, int> _renewalCounts = <String, int>{};
+
   static const _seedIssues = [
     LibraryIssueRecord(
       id: 'iss_1',
@@ -810,5 +817,215 @@ class MockLibraryRepository implements LibraryRepository {
     );
     _fines[index] = waived;
     return waived;
+  }
+
+  @override
+  Future<LibraryBook> updateLibraryBook({
+    required RepositoryQuery query,
+    required String id,
+    required UpdateLibraryBookRequest request,
+  }) async {
+    final index = _books.indexWhere((book) => book.id == id);
+    if (index < 0) {
+      throw StateError('Book not found: $id');
+    }
+    final isbn = request.isbn.trim();
+    final title = request.title.trim();
+    if (isbn.isEmpty || title.isEmpty) {
+      throw StateError('ISBN and title are required');
+    }
+    // ISBN stays unique per school; a book may keep its OWN isbn (skip self).
+    if (_books.any((book) => book.id != id && book.isbn == isbn)) {
+      throw StateError('A book with ISBN $isbn already exists');
+    }
+
+    final existing = _books[index];
+    final onLoan =
+        (existing.totalCopies - existing.availableCopies).clamp(0, existing.totalCopies);
+    final nextTotal = request.totalCopies < onLoan
+        ? onLoan
+        : (request.totalCopies < 1 ? 1 : request.totalCopies);
+    final nextAvailable = (nextTotal - onLoan).clamp(0, nextTotal);
+
+    final updated = LibraryBook(
+      id: id,
+      isbn: isbn,
+      title: title,
+      author: request.author.trim(),
+      category: request.category.trim(),
+      totalCopies: nextTotal,
+      availableCopies: nextAvailable,
+      shelf: request.shelf.trim(),
+      status: nextAvailable <= 0
+          ? LibraryBookStatus.issued
+          : LibraryBookStatus.available,
+    );
+    _books[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> deleteLibraryBook({
+    required RepositoryQuery query,
+    required String id,
+  }) async {
+    final index = _books.indexWhere((book) => book.id == id);
+    if (index < 0) {
+      throw StateError('Book not found: $id');
+    }
+    final isbn = _books[index].isbn;
+    // Block deletion while any copy is on an active loan (mirrors backend).
+    final onLoan = _issues.any(
+      (issue) =>
+          issue.isbn == isbn && issue.status != LibraryLoanStatus.returned,
+    );
+    if (onLoan) {
+      throw StateError(
+        'Cannot delete a book while a copy is on an active loan — return it first',
+      );
+    }
+    _books.removeAt(index);
+  }
+
+  @override
+  Future<ImportResult> bulkImportBooks({
+    required RepositoryQuery query,
+    required BulkImportBooksRequest request,
+  }) async {
+    if (request.rows.isEmpty) {
+      throw StateError('books must be a non-empty array of book rows');
+    }
+    final seenIsbns = {
+      for (final book in _books)
+        if (book.isbn.isNotEmpty) book.isbn,
+    };
+    var imported = 0;
+    final failed = <ImportFailure>[];
+
+    for (var i = 0; i < request.rows.length; i++) {
+      final rowNum = i + 1;
+      final row = request.rows[i];
+      final isbn = row.isbn.trim();
+      final title = row.title.trim();
+      if (isbn.isEmpty || title.isEmpty) {
+        failed.add(ImportFailure(row: rowNum, reason: 'ISBN and title are required'));
+        continue;
+      }
+      if (seenIsbns.contains(isbn)) {
+        failed.add(ImportFailure(
+          row: rowNum,
+          reason: 'A book with this ISBN already exists',
+        ));
+        continue;
+      }
+      final total = (row.totalCopies ?? 1) < 1 ? 1 : row.totalCopies!;
+      _bookCounter += 1;
+      _books.insert(
+        0,
+        LibraryBook(
+          id: 'bk_$_bookCounter',
+          isbn: isbn,
+          title: title,
+          author: row.author.trim(),
+          category: (row.category ?? '').trim().isEmpty
+              ? 'General'
+              : row.category!.trim(),
+          totalCopies: total,
+          availableCopies: total,
+          shelf: (row.shelf ?? '').trim().isEmpty ? 'Unshelved' : row.shelf!.trim(),
+          status: LibraryBookStatus.available,
+        ),
+      );
+      seenIsbns.add(isbn);
+      imported += 1;
+    }
+    return ImportResult(imported: imported, failed: failed);
+  }
+
+  @override
+  Future<LibraryIssueRecord> renewLibraryLoan({
+    required RepositoryQuery query,
+    required String issueId,
+  }) async {
+    final index = _issues.indexWhere((issue) => issue.id == issueId);
+    if (index < 0) {
+      throw StateError('Issue not found: $issueId');
+    }
+    final issue = _issues[index];
+    if (issue.status == LibraryLoanStatus.returned) {
+      throw StateError('Cannot renew a returned loan');
+    }
+    final currentRenewals = _renewalCounts[issueId] ?? 0;
+    if (currentRenewals >= _settings.maxRenewals) {
+      throw StateError('Renewal limit reached');
+    }
+    _renewalCounts[issueId] = currentRenewals + 1;
+
+    // Renewal clears an overdue loan back to active and pushes the due date.
+    final renewed = LibraryIssueRecord(
+      id: issue.id,
+      memberName: issue.memberName,
+      memberType: issue.memberType,
+      bookTitle: issue.bookTitle,
+      isbn: issue.isbn,
+      issuedDate: issue.issuedDate,
+      dueDate: '27 Jun 2026',
+      status: LibraryLoanStatus.active,
+      sisStudentId: issue.sisStudentId,
+    );
+    _issues[index] = renewed;
+    return renewed;
+  }
+
+  @override
+  Future<List<OverdueLoan>> getOverdueLoans({
+    required RepositoryQuery query,
+  }) async {
+    // Mirror the backend `overdueList` shape: open loans marked overdue, each
+    // with an accrued fine (mock uses a fixed 2-day accrual like returns).
+    return [
+      for (final issue in _issues)
+        if (issue.status == LibraryLoanStatus.overdue)
+          OverdueLoan(
+            issueId: issue.id,
+            memberName: issue.memberName,
+            memberType: issue.memberType,
+            bookTitle: issue.bookTitle,
+            isbn: issue.isbn,
+            dueDate: issue.dueDate,
+            daysOverdue: 2,
+            accruedFine: '₹10',
+            sisStudentId: issue.sisStudentId,
+          ),
+    ];
+  }
+
+  @override
+  Future<int> sendOverdueReminder({required RepositoryQuery query}) async {
+    return _issues
+        .where((issue) => issue.status == LibraryLoanStatus.overdue)
+        .length;
+  }
+
+  @override
+  Future<LibrarySettings> getLibrarySettings({
+    required RepositoryQuery query,
+  }) async {
+    return _settings;
+  }
+
+  @override
+  Future<LibrarySettings> updateLibrarySettings({
+    required RepositoryQuery query,
+    required LibrarySettings settings,
+  }) async {
+    _settings = LibrarySettings(
+      maxBooksPerMember:
+          settings.maxBooksPerMember < 1 ? 1 : settings.maxBooksPerMember,
+      maxRenewals: settings.maxRenewals < 0 ? 0 : settings.maxRenewals,
+      blockOnFineThreshold:
+          settings.blockOnFineThreshold < 0 ? 0 : settings.blockOnFineThreshold,
+    );
+    return _settings;
   }
 }
