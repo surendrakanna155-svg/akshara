@@ -496,6 +496,186 @@ export async function listParentLeaveRequests(
   };
 }
 
+// ── PAR-D1 / PAR-3 — parent leave mutations (cancel + attachment) ────────────
+
+/**
+ * PAR-D1 — a leave the parent tried to cancel does not exist for them, or is no
+ * longer pending. Both surface distinctly to the handler: NOT_FOUND (the id is
+ * not one of this parent's own-child pending leaves) vs a non-pending status
+ * (already decided → immutable, mirroring the leave-decision-immutability rule).
+ */
+export class ParentLeaveNotFoundError extends Error {
+  constructor(leaveId: string) {
+    super(`Leave request not found: ${leaveId}`);
+    this.name = "ParentLeaveNotFoundError";
+  }
+}
+
+/** PAR-D1 — the leave exists but is already approved/rejected/cancelled. */
+export class ParentLeaveNotPendingError extends Error {
+  readonly status: string;
+  constructor(status: string) {
+    super(
+      `Leave request is '${status}' and can no longer be cancelled — only a pending request may be withdrawn`,
+    );
+    this.name = "ParentLeaveNotPendingError";
+    this.status = status;
+  }
+}
+
+/**
+ * Load a leave request that MUST belong to this parent and one of their own
+ * children. Ownership is enforced two ways (defence in depth):
+ *   1. `requester_user_id = requesterUserId` — the RLS parent policy already
+ *      restricts a parent to leaves they themselves submitted, but we re-assert
+ *      it here so the guard holds even under a service-role/test client.
+ *   2. `student_id = ANY(childIds)` — the caller's JWT `child_ids` (the own-child
+ *      choke point). A leave for a child no longer linked to this parent is
+ *      treated as not-found, never mutated.
+ * Returns null when no such row exists (→ NOT_FOUND, no cross-family leak).
+ */
+async function loadOwnChildLeave(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  requesterUserId: string,
+  childIds: string[],
+  leaveId: string,
+): Promise<{ id: string; student_id: string | null; status: string } | null> {
+  if (childIds.length === 0) return null;
+  const rows = await db.queryObject<
+    { id: string; student_id: string | null; status: string }
+  >(
+    `SELECT id, student_id, status
+       FROM mobile_leave_requests
+      WHERE organization_id = $1 AND school_id = $2
+        AND id = $3::uuid
+        AND requester_scope = 'parent'
+        AND requester_user_id = $4::uuid
+        AND student_id = ANY($5::uuid[])
+      LIMIT 1`,
+    [organizationId, schoolId, leaveId, requesterUserId, childIds],
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * PAR-D1 — withdraw a PENDING leave the parent submitted for their own child.
+ * Own-child scoped (see {@link loadOwnChildLeave}) and pending-only: an already
+ * approved/rejected/cancelled request is immutable (→ 409), mirroring the
+ * leave-decision-immutability rule. Flips status to 'cancelled' and returns the
+ * canonical row so the parent's leave history (GET /parent/leave) reflects it.
+ */
+export async function cancelParentLeaveRequest(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string;
+    requesterUserId: string;
+    childIds: string[];
+    leaveId: string;
+  },
+): Promise<{ id: string; studentId: string | null; status: string }> {
+  const existing = await loadOwnChildLeave(
+    db,
+    input.organizationId,
+    input.schoolId,
+    input.requesterUserId,
+    input.childIds,
+    input.leaveId,
+  );
+  if (!existing) {
+    throw new ParentLeaveNotFoundError(input.leaveId);
+  }
+  if (existing.status !== "pending") {
+    throw new ParentLeaveNotPendingError(existing.status);
+  }
+  // Conditional UPDATE (WHERE status = 'pending') closes the race with a
+  // concurrent school-side approval: if the row was decided between the load and
+  // the write, no row is returned and we treat it as no-longer-pending (409).
+  const rows = await db.queryObject<{ id: string; student_id: string | null }>(
+    `UPDATE mobile_leave_requests
+        SET status = 'cancelled', updated_at = timezone('utc', now())
+      WHERE organization_id = $1 AND school_id = $2
+        AND id = $3::uuid
+        AND requester_user_id = $4::uuid
+        AND status = 'pending'
+      RETURNING id, student_id`,
+    [input.organizationId, input.schoolId, input.leaveId, input.requesterUserId],
+  );
+  const updated = rows[0];
+  if (!updated) {
+    // Lost the race — the row was decided concurrently; still immutable.
+    throw new ParentLeaveNotPendingError("approved");
+  }
+  return { id: updated.id, studentId: updated.student_id, status: "cancelled" };
+}
+
+/**
+ * PAR-3 — attach a medical certificate reference to a leave the parent submitted
+ * for their own child. Own-child scoped (see {@link loadOwnChildLeave}). Follows
+ * the HWK-7 "attachment reference, real upload pending storage" pattern: the
+ * reference (storage path / file name) is persisted on the existing
+ * `has_attachment` + `attachment_name` columns so GET /parent/leave surfaces it;
+ * wiring a real parent-leave storage bucket is the residual. Allowed while the
+ * leave is still pending — an already-decided leave is immutable (→ 409), the
+ * same rule as cancel. A parent can NEVER attach to another child's leave.
+ */
+export async function attachParentLeaveDocument(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string;
+    requesterUserId: string;
+    childIds: string[];
+    leaveId: string;
+    attachmentName: string;
+    storagePath: string | null;
+  },
+): Promise<{ id: string; studentId: string | null; attachmentName: string }> {
+  const existing = await loadOwnChildLeave(
+    db,
+    input.organizationId,
+    input.schoolId,
+    input.requesterUserId,
+    input.childIds,
+    input.leaveId,
+  );
+  if (!existing) {
+    throw new ParentLeaveNotFoundError(input.leaveId);
+  }
+  if (existing.status !== "pending") {
+    throw new ParentLeaveNotPendingError(existing.status);
+  }
+  const rows = await db.queryObject<{ id: string; student_id: string | null }>(
+    `UPDATE mobile_leave_requests
+        SET has_attachment = true,
+            attachment_name = $5,
+            updated_at = timezone('utc', now())
+      WHERE organization_id = $1 AND school_id = $2
+        AND id = $3::uuid
+        AND requester_user_id = $4::uuid
+        AND status = 'pending'
+      RETURNING id, student_id`,
+    [
+      input.organizationId,
+      input.schoolId,
+      input.leaveId,
+      input.requesterUserId,
+      input.attachmentName,
+    ],
+  );
+  const updated = rows[0];
+  if (!updated) {
+    throw new ParentLeaveNotPendingError("approved");
+  }
+  return {
+    id: updated.id,
+    studentId: updated.student_id,
+    attachmentName: input.attachmentName,
+  };
+}
+
 // ── Homework submission integrity guards (security hardening) ────────────────
 
 /**

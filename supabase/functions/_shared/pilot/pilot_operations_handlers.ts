@@ -8,9 +8,12 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_repository.ts";
+import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { enqueueNotificationRequested } from "../communication/notification_service.ts";
 import {
   createLeaveRequest,
+  cancelParentLeaveRequest,
+  attachParentLeaveDocument,
   insertHomeworkAssignment,
   reviewHomework,
   bulkReviewHomework,
@@ -30,6 +33,8 @@ import {
   AttendanceRosterMismatchError,
   HomeworkNotDeliveredError,
   HomeworkAlreadySubmittedError,
+  ParentLeaveNotFoundError,
+  ParentLeaveNotPendingError,
   type AttendanceMarkEntry,
 } from "./pilot_operations_repository.ts";
 
@@ -320,6 +325,151 @@ export async function handleParentLeaveSubmit(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to submit leave", 500);
+  }
+}
+
+/**
+ * Map the shared parent-leave mutation errors to precise HTTP responses:
+ *   - not found / not one of the caller's own-child leaves → 404 (no cross-family
+ *     leak — we never confirm the id belongs to another parent);
+ *   - already decided (approved/rejected/cancelled) → 409 (immutable, mirroring
+ *     the leave-decision-immutability rule).
+ * Returns null when the error is not a parent-leave guard error.
+ */
+function mapParentLeaveError(error: unknown): Response | null {
+  if (error instanceof ParentLeaveNotFoundError) {
+    return errorEnvelope("NOT_FOUND", error.message, 404);
+  }
+  if (error instanceof ParentLeaveNotPendingError) {
+    return errorEnvelope("LEAVE_NOT_PENDING", error.message, 409);
+  }
+  return null;
+}
+
+/**
+ * PAR-D1 — POST /parent/leave/:id/cancel
+ *
+ * A parent withdraws a PENDING leave they submitted for their OWN child (owner
+ * default: cancel is allowed before approval). Own-child scoping is enforced in
+ * the repository against the caller's JWT `child_ids` AND `requester_user_id`
+ * (never a client-supplied student id); pending-only immutability rejects an
+ * already-decided request with 409. Audited as `parent.leave.cancelled`.
+ */
+export async function handleParentLeaveCancel(
+  req: Request,
+  config: AppConfig,
+  leaveId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "parent" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Parent scope required", 403);
+  }
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const cancelled = await cancelParentLeaveRequest(db, {
+        organizationId: auth.claims.tenant_id,
+        schoolId: auth.claims.school_id!,
+        requesterUserId: auth.claims.sub,
+        childIds: auth.claims.child_ids,
+        leaveId,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        moduleEntityAudit("parent.leave.cancelled", "mobile_leave_request", cancelled.id, {
+          studentId: cancelled.studentId,
+          status: cancelled.status,
+        }),
+        req,
+      );
+      return cancelled;
+    });
+    return jsonResponse(
+      envelope({ id: result.id, status: result.status }),
+      { status: 200 },
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    const mapped = mapParentLeaveError(error);
+    if (mapped) return mapped;
+    return errorEnvelope("INTERNAL_ERROR", "Failed to cancel leave", 500);
+  }
+}
+
+/**
+ * PAR-3 — POST /parent/leave/:id/attachment
+ *
+ * A parent attaches a medical-certificate reference to a PENDING leave they
+ * submitted for their OWN child. Own-child scoped + pending-only (same guards as
+ * cancel). Following the established HWK-7 "attachment reference, real upload
+ * pending storage" pattern, the attachment reference (storage path / file name)
+ * is persisted on the leave's existing `has_attachment` + `attachment_name`
+ * columns so GET /parent/leave surfaces it; wiring a real parent-leave storage
+ * bucket is the documented residual. Audited as `parent.leave.attachment.added`.
+ * A parent can NEVER attach to another child's leave.
+ */
+export async function handleParentLeaveAttachment(
+  req: Request,
+  config: AppConfig,
+  leaveId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  if (auth.claims.scope !== "parent" || !auth.claims.school_id) {
+    return errorEnvelope("FORBIDDEN", "Parent scope required", 403);
+  }
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) return errorEnvelope("VALIDATION_ERROR", "Invalid JSON", 422);
+
+  // The attachment reference: a human file name / label (required) and an
+  // optional storage path (the presigned object path, once real upload is
+  // wired). The reference is never a client-supplied student id — the child is
+  // resolved server-side from the leave row itself.
+  const attachmentName =
+    String(body.attachment_name ?? body.attachmentName ?? body.file_name ?? "").trim();
+  if (!attachmentName) {
+    return errorEnvelope("VALIDATION_ERROR", "attachment_name is required", 422);
+  }
+  const storagePath =
+    String(body.storage_path ?? body.storagePath ?? "").trim() || null;
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      const attached = await attachParentLeaveDocument(db, {
+        organizationId: auth.claims.tenant_id,
+        schoolId: auth.claims.school_id!,
+        requesterUserId: auth.claims.sub,
+        childIds: auth.claims.child_ids,
+        leaveId,
+        attachmentName,
+        storagePath,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        moduleEntityAudit("parent.leave.attachment.added", "mobile_leave_request", attached.id, {
+          studentId: attached.studentId,
+          attachmentName: attached.attachmentName,
+        }),
+        req,
+      );
+      return attached;
+    });
+    return jsonResponse(
+      envelope({
+        id: result.id,
+        hasAttachment: true,
+        attachmentName: result.attachmentName,
+      }),
+      { status: 200 },
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    const mapped = mapParentLeaveError(error);
+    if (mapped) return mapped;
+    return errorEnvelope("INTERNAL_ERROR", "Failed to attach leave document", 500);
   }
 }
 

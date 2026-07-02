@@ -1,6 +1,8 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleParentLeaveAttachment,
+  handleParentLeaveCancel,
   handleParentLeaveSubmit,
   handleStudentHomeworkSubmit,
   handleTeacherAttendanceDraft,
@@ -30,6 +32,23 @@ function matchPilotRoute(
   }
   if (method === "POST" && path === "/parent/leave") {
     return { handler: handleParentLeaveSubmit };
+  }
+  // PAR-D1 — parent withdraws a PENDING leave for their own child. Matched
+  // BEFORE the generic leave path is exhausted; the :id segment is url-decoded.
+  const parentLeaveCancelMatch = path.match(/^\/parent\/leave\/([^/]+)\/cancel$/);
+  if (method === "POST" && parentLeaveCancelMatch) {
+    const leaveId = decodeURIComponent(parentLeaveCancelMatch[1]!);
+    return { handler: (req, config) => handleParentLeaveCancel(req, config, leaveId) };
+  }
+  // PAR-3 — parent attaches a medical-certificate reference to a PENDING leave.
+  const parentLeaveAttachmentMatch = path.match(
+    /^\/parent\/leave\/([^/]+)\/attachment$/,
+  );
+  if (method === "POST" && parentLeaveAttachmentMatch) {
+    const leaveId = decodeURIComponent(parentLeaveAttachmentMatch[1]!);
+    return {
+      handler: (req, config) => handleParentLeaveAttachment(req, config, leaveId),
+    };
   }
   if (method === "POST" && path === "/student/homework/submit") {
     return { handler: handleStudentHomeworkSubmit };

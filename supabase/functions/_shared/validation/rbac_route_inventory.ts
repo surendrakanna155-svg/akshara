@@ -108,6 +108,12 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/teacher/attendance/submit", permission: "markAttendance", scope: "school", module: "teacher" },
   { method: "PUT", path: "/teacher/exams/marks/:id", permission: "manageExamMarks", scope: "school", module: "teacher" },
   { method: "POST", path: "/parent/attendance/corrections", permission: null, scope: "parent", module: "attendance" },
+  // Parent leave: submit + PAR-D1 cancel + PAR-3 attachment. Persona-scoped (no
+  // permission slug); own-child ownership is enforced server-side against the
+  // caller's JWT child_ids and the mobile_leave_requests RLS parent policy.
+  { method: "POST", path: "/parent/leave", permission: null, scope: "parent", module: "parent" },
+  { method: "POST", path: "/parent/leave/:id/cancel", permission: null, scope: "parent", module: "parent" },
+  { method: "POST", path: "/parent/leave/:id/attachment", permission: null, scope: "parent", module: "parent" },
   { method: "POST", path: "/staff-attendance/check", permission: "markStaffAttendance", scope: "school", module: "staff_attendance" },
   // TCH-9: read-only SELF attendance history — same universal staff self-service gate as /check.
   { method: "GET", path: "/staff-attendance/my-history", permission: "markStaffAttendance", scope: "school", module: "staff_attendance" },
