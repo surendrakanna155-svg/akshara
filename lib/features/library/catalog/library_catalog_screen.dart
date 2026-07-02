@@ -43,11 +43,23 @@ class LibraryCatalogScreen extends ConsumerWidget {
           ref.read(libraryCatalogFilterProvider.notifier).state = index,
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
-        child: FilledButton.icon(
-          key: QaTestKeys.libraryAddBookButton,
-          onPressed: () => showAddLibraryBookDialog(context, ref),
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Add book'),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              key: QaTestKeys.libraryImportBooksButton,
+              onPressed: () => showImportLibraryBooksSheet(context, ref),
+              icon: const Icon(Icons.upload_file_outlined),
+              tooltip: 'Import books (CSV)',
+            ),
+            const SizedBox(width: AksharaSpacing.s2),
+            FilledButton.icon(
+              key: QaTestKeys.libraryAddBookButton,
+              onPressed: () => showAddLibraryBookDialog(context, ref),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add book'),
+            ),
+          ],
         ),
       ),
       body: _buildBody(
@@ -170,6 +182,7 @@ class _CatalogTable extends StatelessWidget {
               DataColumn(label: Text('Available')),
               DataColumn(label: Text('Shelf')),
               DataColumn(label: Text('Status')),
+              DataColumn(label: Text('Actions')),
             ],
             rows: [
               for (final book in books)
@@ -183,10 +196,44 @@ class _CatalogTable extends StatelessWidget {
                     DataCell(Text('${book.availableCopies}')),
                     DataCell(Text(book.shelf)),
                     DataCell(_BookStatusChip(status: book.status)),
+                    DataCell(_BookActions(book: book)),
                   ],
                 ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// LIB-2 — per-book Edit / Delete actions, manageLibrary-gated.
+class _BookActions extends StatelessWidget {
+  const _BookActions({required this.book});
+
+  final LibraryBook book;
+
+  @override
+  Widget build(BuildContext context) {
+    return AksharaManageAction(
+      permission: Permission.manageLibrary,
+      child: Consumer(
+        builder: (context, ref, _) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              key: QaTestKeys.libraryEditBookButton(book.id),
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              tooltip: 'Edit book',
+              onPressed: () => showEditLibraryBookDialog(context, ref, book),
+            ),
+            IconButton(
+              key: QaTestKeys.libraryDeleteBookButton(book.id),
+              icon: const Icon(Icons.delete_outline, size: 20),
+              tooltip: 'Delete book',
+              onPressed: () => deleteLibraryBook(context, ref, book),
+            ),
+          ],
         ),
       ),
     );
@@ -218,7 +265,13 @@ class _BookCard extends StatelessWidget {
                 style: text.bodySmall,
               ),
               const SizedBox(height: AksharaSpacing.s2),
-              _BookStatusChip(status: book.status),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _BookStatusChip(status: book.status),
+                  _BookActions(book: book),
+                ],
+              ),
             ],
           ),
         ),

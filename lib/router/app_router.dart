@@ -1885,6 +1885,13 @@ GoRouter createAppRouter({
                   child: libraryReportsRouteBuilder(context, state),
                 ),
               ),
+              GoRoute(
+                path: 'overdue',
+                name: 'libraryOverdue',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: libraryOverdueRouteBuilder(context, state),
+                ),
+              ),
             ],
           ),
           GoRoute(

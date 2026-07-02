@@ -6,6 +6,7 @@ import '../features/library/dashboard/library_dashboard_screen.dart';
 import '../features/library/fines/library_fines_screen.dart';
 import '../features/library/issues/library_issues_screen.dart';
 import '../features/library/members/library_members_screen.dart';
+import '../features/library/overdue/library_overdue_screen.dart';
 import '../features/library/reports/library_reports_screen.dart';
 import '../features/library/resources/library_resources_screen.dart';
 import '../features/library/returns/library_returns_screen.dart';
@@ -72,4 +73,11 @@ Widget libraryReportsRouteBuilder(
   GoRouterState state,
 ) {
   return const LibraryReportsScreen();
+}
+
+Widget libraryOverdueRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const LibraryOverdueScreen();
 }

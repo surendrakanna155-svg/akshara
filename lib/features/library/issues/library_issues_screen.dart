@@ -103,9 +103,23 @@ class LibraryIssuesScreen extends ConsumerWidget {
           pageProvider: libraryIssuesPageProvider,
         ),
         const SizedBox(height: AksharaSpacing.s6),
+        // LIB-5 — send in-app overdue reminders to members with overdue loans.
+        AksharaManageAction(
+          permission: Permission.manageLibrary,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FilledButton.tonalIcon(
+              key: QaTestKeys.librarySendRemindersButton,
+              onPressed: () => sendLibraryOverdueReminders(context, ref),
+              icon: const Icon(Icons.notifications_active_outlined, size: 18),
+              label: const Text('Send overdue reminders'),
+            ),
+          ),
+        ),
+        const SizedBox(height: AksharaSpacing.s4),
         AksharaInsightCard(
           message:
-              'Students view active loans in Student App (My Books). Overdue reminders sent via notifications placeholder.',
+              'Students view active loans in Student App (My Books). Use "Send overdue reminders" to notify members with overdue books.',
           actionLabel: 'Student app',
           icon: Icons.school_outlined,
           semanticLabelPrefix: 'Student app integration',
@@ -234,11 +248,25 @@ class _IssueActions extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return OutlinedButton(
-      key: QaTestKeys.libraryReturnBookButton(issue.id),
-      onPressed: () => returnLibraryIssue(context, ref, issue),
-      style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-      child: const Text('Return'),
+    return Wrap(
+      spacing: AksharaSpacing.s2,
+      children: [
+        // LIB-4 — renew is offered on active loans only (an overdue loan is
+        // returned/paid, not renewed).
+        if (issue.status == LibraryLoanStatus.active)
+          OutlinedButton(
+            key: QaTestKeys.libraryRenewLoanButton(issue.id),
+            onPressed: () => renewLibraryLoan(context, ref, issue),
+            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+            child: const Text('Renew'),
+          ),
+        OutlinedButton(
+          key: QaTestKeys.libraryReturnBookButton(issue.id),
+          onPressed: () => returnLibraryIssue(context, ref, issue),
+          style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
+          child: const Text('Return'),
+        ),
+      ],
     );
   }
 }

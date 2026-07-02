@@ -6,6 +6,7 @@ import '../../../theme/mesh_background.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_shell.dart';
+import '../../admin/models/admin_nav_models.dart';
 import '../library_models.dart';
 import '../library_navigation.dart';
 import 'library_sub_nav.dart';
@@ -20,6 +21,7 @@ class LibraryModuleScaffold extends StatelessWidget {
     this.selectedFilterIndex = 0,
     this.onFilterSelected,
     this.filterTrailing,
+    this.breadcrumbsOverride,
   });
 
   final LibraryScreen screen;
@@ -30,10 +32,14 @@ class LibraryModuleScaffold extends StatelessWidget {
   final ValueChanged<int>? onFilterSelected;
   final Widget? filterTrailing;
 
+  /// LIB-1 — a secondary screen (e.g. Overdue loans) that is not a sub-nav tab
+  /// can supply its own breadcrumb trail; the sub-nav still highlights [screen].
+  final List<AdminBreadcrumb>? breadcrumbsOverride;
+
   @override
   Widget build(BuildContext context) {
     return AdminContentScaffold(
-      breadcrumbs: libraryBreadcrumbs(screen),
+      breadcrumbs: breadcrumbsOverride ?? libraryBreadcrumbs(screen),
       showFilterBar: showFilterBar,
       filters: filters,
       selectedFilterIndex: selectedFilterIndex,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -11,6 +12,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../library_models.dart';
 import '../library_providers.dart';
+import '../library_workflow_actions.dart';
 import '../widgets/library_kpi_row.dart';
 import '../widgets/library_module_scaffold.dart';
 import '../widgets/library_segment_panel.dart';
@@ -39,10 +41,23 @@ class LibraryDashboardScreen extends ConsumerWidget {
           ref.read(libraryDashboardFilterProvider.notifier).state = index,
       filterTrailing: AksharaManageAction(
         permission: Permission.manageLibrary,
-        child: OutlinedButton.icon(
-          onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'Library dashboard'),
-          icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
-          label: const Text('Scan issue'),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              key: QaTestKeys.librarySettingsButton,
+              onPressed: () => showLibrarySettingsDialog(context, ref),
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Library settings',
+            ),
+            const SizedBox(width: AksharaSpacing.s2),
+            FilledButton.icon(
+              key: QaTestKeys.libraryIssueScanButton,
+              onPressed: () => showIssueLibraryBookDialog(context, ref),
+              icon: const Icon(Icons.qr_code_scanner_outlined, size: 18),
+              label: const Text('Issue book'),
+            ),
+          ],
         ),
       ),
       body: ErpAsyncBody<LibraryDashboardData>(
@@ -70,7 +85,7 @@ class LibraryDashboardScreen extends ConsumerWidget {
           AksharaWarningBanner(
             message: data.overdueTitles.first,
             actionLabel: 'View overdue',
-            onAction: () => context.go(RouteNames.libraryIssues),
+            onAction: () => context.go(RouteNames.libraryOverdue),
           ),
         if (data.overdueTitles.isNotEmpty)
           const SizedBox(height: AksharaSpacing.s4),

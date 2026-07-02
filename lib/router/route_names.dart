@@ -420,6 +420,9 @@ abstract final class RouteNames {
   static const String libraryResources = '/library/resources';
   static const String libraryReports = '/library/reports';
 
+  /// LIB-1 — secondary Overdue-loans report screen (not a sub-nav tab).
+  static const String libraryOverdue = '/library/overdue';
+
   /// All library module routes (LB-01 → LB-08).
   static const List<String> libraryModuleRoutes = [
     libraryDashboard,

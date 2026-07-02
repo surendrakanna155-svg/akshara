@@ -41,6 +41,22 @@ List<AdminBreadcrumb> libraryBreadcrumbs(LibraryScreen screen) {
   ];
 }
 
+/// LIB-1 — breadcrumbs for a secondary library screen that is not a sub-nav tab
+/// (e.g. the Overdue loans report).
+List<AdminBreadcrumb> librarySecondaryBreadcrumbs(String label) {
+  return [
+    const AdminBreadcrumb(
+      label: 'Admin Hub',
+      route: RouteNames.admin,
+    ),
+    const AdminBreadcrumb(
+      label: 'Library',
+      route: RouteNames.libraryDashboard,
+    ),
+    AdminBreadcrumb(label: label),
+  ];
+}
+
 LibraryScreen? libraryScreenForLocation(String location) {
   for (final screen in kLibraryNavScreens) {
     if (location == screen.route) {

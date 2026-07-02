@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/operational_action_feedback.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
@@ -14,6 +16,7 @@ import '../library_providers.dart';
 import '../widgets/library_module_scaffold.dart';
 import '../widgets/library_segment_panel.dart';
 import '../widgets/library_trend_chart.dart';
+import 'library_report_exporters.dart';
 
 /// LB-08 — Library Reports.
 class LibraryReportsScreen extends ConsumerWidget {
@@ -122,13 +125,17 @@ class LibraryReportsScreen extends ConsumerWidget {
   }
 }
 
-class _ReportCatalogList extends StatelessWidget {
+/// LIB-1 — the overdue-loans report catalog id (`RPT-LB-002`); its download
+/// button drives the real CSV/PDF export instead of the preview stub.
+const String _overdueReportId = 'rpt_overdue';
+
+class _ReportCatalogList extends ConsumerWidget {
   const _ReportCatalogList({required this.items});
 
   final List<LibraryReportCatalogItem> items;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final text = context.aksharaText;
 
     return Semantics(
@@ -146,16 +153,70 @@ class _ReportCatalogList extends StatelessWidget {
                   '${item.description} · Last: ${item.lastGenerated}',
                   style: text.bodySmall,
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.download_outlined),
-                  tooltip: 'Download report',
-                  onPressed: () => showAksharaReportExportPreviewSnackBar(context, reportName: 'Library report'),
-                ),
+                trailing: item.id == _overdueReportId
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            key: QaTestKeys.libraryOverdueExportCsvButton,
+                            icon: const Icon(Icons.table_view_outlined),
+                            tooltip: 'Download CSV',
+                            onPressed: () =>
+                                _exportOverdue(context, ref, asPdf: false),
+                          ),
+                          IconButton(
+                            key: QaTestKeys.libraryOverdueExportPdfButton,
+                            icon: const Icon(Icons.picture_as_pdf_outlined),
+                            tooltip: 'Download PDF',
+                            onPressed: () =>
+                                _exportOverdue(context, ref, asPdf: true),
+                          ),
+                        ],
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.download_outlined),
+                        tooltip: 'Download report',
+                        onPressed: () => showAksharaReportExportPreviewSnackBar(
+                          context,
+                          reportName: 'Library report',
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: AksharaSpacing.s2),
           ],
         ],
+      ),
+    );
+  }
+
+  /// LIB-1 — real overdue-loans export (CSV / PDF, shared XCT-1 grid template).
+  Future<void> _exportOverdue(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool asPdf,
+  }) async {
+    final loans = await ref.read(libraryOverdueFutureProvider.future);
+    if (!context.mounted) return;
+    if (loans.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No overdue loans to export.')),
+      );
+      return;
+    }
+    final exporters =
+        LibraryReportExporters(ref.read(aksharaReportExportServiceProvider));
+    if (asPdf) {
+      await exporters.shareOverduePdf(loans);
+    } else {
+      await exporters.shareOverdueCsv(loans);
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Overdue loans ${asPdf ? 'PDF' : 'CSV'} ready (${loans.length} rows)',
+        ),
       ),
     );
   }
