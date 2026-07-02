@@ -18,7 +18,9 @@ import {
   computeReports,
   listAllEntities,
   membersWithLiveLoans,
+  overdueList,
 } from "./library_aggregations.ts";
+import { normalizeSettings, SETTINGS_ENTITY } from "./library_write_handlers.ts";
 
 const { handleSnapshot, handleList } = createModuleReadHandlers("viewLibrary", libraryStore);
 
@@ -172,6 +174,49 @@ export async function handleReports(req: Request, config: AppConfig): Promise<Re
     async (db, orgId, schoolId) => {
       const issues = await listAllEntities(db, orgId, schoolId, "issue");
       return computeReports(issues);
+    },
+  );
+}
+
+/**
+ * GET /library/overdue — LIB-1: the open overdue loans with per-row accrued
+ * fine, so the client can render + export the overdue list. Recomputed live
+ * from the issue rows (viewLibrary).
+ */
+export async function handleOverdue(req: Request, config: AppConfig): Promise<Response> {
+  return await handleComputed(
+    req,
+    config,
+    "Failed to load overdue loans",
+    async (db, orgId, schoolId) => {
+      const issues = await listAllEntities(db, orgId, schoolId, "issue");
+      const items = overdueList(issues);
+      return { items, count: items.length };
+    },
+  );
+}
+
+/**
+ * GET /library/settings — LIB-D1: the circulation guardrail settings, defaulted
+ * when never configured (viewLibrary).
+ */
+export async function handleSettings(req: Request, config: AppConfig): Promise<Response> {
+  return await handleComputed(
+    req,
+    config,
+    "Failed to load library settings",
+    async (db, orgId, schoolId) => {
+      let raw: Record<string, unknown> | null = null;
+      try {
+        raw = await libraryStore.getSnapshot(db, orgId, schoolId, SETTINGS_ENTITY) as
+          | Record<string, unknown>
+          | null;
+      } catch (error) {
+        // A fresh school has never saved settings — return the defaults rather
+        // than 500. Any other error propagates.
+        if (!(error instanceof libraryStore.SnapshotNotFoundError)) throw error;
+      }
+      return normalizeSettings(raw);
     },
   );
 }

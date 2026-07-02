@@ -1,13 +1,16 @@
 // QW4 · QA-B-023 — Library module ROUTE + RBAC + entitlement contract (DB-free).
 //
 // Proven without a live Postgres:
-//   1. PATH-MATCH: every registered library route (8 GET + 6 POST = 14) resolves
-//      to a handler (status !== 404); unregistered under /library 404s; outside
-//      the prefix returns null.
+//   1. PATH-MATCH: every registered library route (10 GET + 9 POST + 2 PUT +
+//      1 DELETE = 22) resolves to a handler (status !== 404); unregistered under
+//      /library 404s; outside the prefix returns null.
 //   2. module.library 402 gate wired via withEntitlement on the /library prefix
 //      (DB-free 503; pure 402 in qw4_entitlement_402_matrix_test.ts).
 //   3. POST /library/issues (issue book) and POST /library/returns (return book)
 //      are 403 for a non-holder of manageLibrary, 503 for a holder.
+//   4. LIB-2/4/5/D1 new writes (catalog edit/delete/import, renew, reminders,
+//      settings PUT) are 403 without manageLibrary; new reads (overdue,
+//      settings GET) are 403 without viewLibrary.
 //
 // Live RLS row isolation + 200 happy-path = live-cert remainder.
 
@@ -55,21 +58,30 @@ const REGISTERED: Array<[string, string]> = [
   ["GET", "/library/fines"],
   ["GET", "/library/digital-resources"],
   ["GET", "/library/reports"],
+  ["GET", "/library/overdue"],
+  ["GET", "/library/settings"],
   ["POST", "/library/catalog"],
+  ["POST", "/library/catalog/import"],
   ["POST", "/library/issues"],
+  ["POST", "/library/issues/iss-1/renew"],
   ["POST", "/library/returns"],
   ["POST", "/library/members"],
   ["POST", "/library/digital-resources"],
+  ["POST", "/library/reminders/overdue"],
   ["POST", "/library/fines/fine-1/waive"],
+  ["PUT", "/library/catalog/book-1"],
+  ["PUT", "/library/settings"],
+  ["DELETE", "/library/catalog/book-1"],
 ];
 
-Deno.test("QA-B-023: all 14 library routes path-match to a handler (not 404)", async () => {
+Deno.test("QA-B-023: all 22 library routes path-match to a handler (not 404)", async () => {
   const perms = ["viewLibrary", "manageLibrary"];
   for (const [method, path] of REGISTERED) {
     const res = await call(routeLibrary, method, path, perms);
     assertEquals(res !== null, true, `${method} ${path} returned null`);
     assertEquals(res!.status !== 404, true, `${method} ${path} unexpectedly 404'd`);
   }
+  assertEquals(REGISTERED.length, 22);
 });
 
 Deno.test("QA-B-023: unregistered path under /library 404s; path outside prefix is null", async () => {
@@ -112,4 +124,39 @@ Deno.test("QA-B-023: unauthenticated library read is 401", async () => {
   const req = new Request("https://x/library/dashboard", { method: "GET" });
   const res = await routeLibrary(req, config, "GET", "/library/dashboard");
   assertEquals(res?.status, 401);
+});
+
+// ── New LIB-2/4/5/D1 routes — RBAC contract ─────────────────────────────────
+
+const NEW_WRITE_ROUTES: Array<[string, string, unknown]> = [
+  ["POST", "/library/catalog/import", { books: [{ isbn: "1", title: "T", author: "A" }] }],
+  ["POST", "/library/issues/iss-1/renew", {}],
+  ["POST", "/library/reminders/overdue", {}],
+  ["PUT", "/library/catalog/book-1", { title: "New" }],
+  ["PUT", "/library/settings", { maxBooksPerMember: 3 }],
+  ["DELETE", "/library/catalog/book-1", undefined],
+];
+
+Deno.test("QA-B-023: new library WRITES are 403 without manageLibrary, 503 with it", async () => {
+  for (const [method, path, body] of NEW_WRITE_ROUTES) {
+    const denied = await call(routeLibrary, method, path, ["viewLibrary"], body);
+    assertEquals(denied?.status, 403, `${method} ${path} should 403 without manageLibrary`);
+    assertEquals((await denied!.json()).error.code, "FORBIDDEN");
+    const allowed = await call(routeLibrary, method, path, ["manageLibrary"], body);
+    assertEquals(allowed?.status, 503, `${method} ${path} should 503 for a holder (DB-free)`);
+  }
+});
+
+Deno.test("QA-B-023: new library READS (overdue, settings) are 403 without viewLibrary", async () => {
+  for (const path of ["/library/overdue", "/library/settings"]) {
+    const denied = await call(routeLibrary, "GET", path, ["manageFinance"]);
+    assertEquals(denied?.status, 403, `GET ${path} should 403 without viewLibrary`);
+  }
+});
+
+Deno.test("QA-B-023: new library READS are 503 for a viewLibrary holder (DB-free)", async () => {
+  for (const path of ["/library/overdue", "/library/settings"]) {
+    const allowed = await call(routeLibrary, "GET", path, ["viewLibrary"]);
+    assertEquals(allowed?.status, 503, `GET ${path} should 503 for a viewLibrary holder`);
+  }
 });

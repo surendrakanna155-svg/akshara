@@ -66,6 +66,25 @@ export interface EntityWriteStore {
     mutate: (current: Record<string, unknown>) => Record<string, unknown>,
     snapshotId?: string,
   ) => Promise<Record<string, unknown>>;
+  /**
+   * Atomic read-modify-write of a SINGLE existing entity row keyed by
+   * (entity_type, id). Locks the row (`SELECT … FOR UPDATE`) before reading,
+   * so concurrent mutators of the same row are serialized instead of
+   * last-writer-wins (which lost-updated a shared counter such as a library
+   * book's `availableCopies` under concurrent issue/return). Runs inside the
+   * caller's single tenant transaction, so the lock is held until commit.
+   * Returns the persisted payload, or `null` when the row does not exist (the
+   * `mutate` callback is NOT invoked in that case — the caller decides how to
+   * handle an absent row).
+   */
+  mutateEntity: (
+    db: TenantQueryClient,
+    organizationId: string,
+    schoolId: string,
+    entityType: string,
+    id: string,
+    mutate: (current: Record<string, unknown>) => Record<string, unknown>,
+  ) => Promise<Record<string, unknown> | null>;
 }
 
 export function createEntityWriteStore(
@@ -255,6 +274,36 @@ export function createEntityWriteStore(
     return replaced ?? next;
   }
 
+  async function mutateEntity(
+    db: TenantQueryClient,
+    organizationId: string,
+    schoolId: string,
+    entityType: string,
+    id: string,
+    mutate: (current: Record<string, unknown>) => Record<string, unknown>,
+  ): Promise<Record<string, unknown> | null> {
+    // Reuse lockSnapshot's `SELECT … FOR UPDATE` — it locks by
+    // (entity_type, id), which is exactly what a single-row RMW needs.
+    const existing = await lockSnapshot(
+      db,
+      organizationId,
+      schoolId,
+      entityType,
+      id,
+    );
+    if (existing === null) return null;
+    const next = mutate(existing);
+    const replaced = await replace(
+      db,
+      organizationId,
+      schoolId,
+      entityType,
+      id,
+      next,
+    );
+    return replaced ?? next;
+  }
+
   return {
     tableName,
     moduleLabel,
@@ -264,5 +313,6 @@ export function createEntityWriteStore(
     findAll,
     remove,
     mutateSnapshot,
+    mutateEntity,
   };
 }

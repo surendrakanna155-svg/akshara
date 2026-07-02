@@ -99,6 +99,60 @@ export function activeLoansFor(memberName: string, issues: Row[]): number {
 }
 
 /**
+ * LIB-D1 — a member's total OUTSTANDING (un-waived) fine, in rupees. Sums both
+ * halves of the fines view for that member: (a) persisted `fine` entities that
+ * are still `outstanding` (raised on an overdue return, not yet waived), and
+ * (b) the live accruing fine on still-open overdue loans. Mirrors the disjoint
+ * split in {@link computeFines} so a fine is never double-counted. Used to
+ * enforce the issue-block-on-fine-threshold guardrail.
+ */
+export function outstandingFineForMember(
+  memberName: string,
+  issues: Row[],
+  fineEntities: Row[] = [],
+  now: Date = new Date(),
+): number {
+  let total = 0;
+  for (const fine of fineEntities) {
+    if (asStr(fine.memberName) !== memberName) continue;
+    if (asStr(fine.status, "outstanding") === "waived") continue;
+    total += asInt(fine.amount, 0);
+  }
+  for (const loan of openLoans(issues, now)) {
+    if (loan.daysOverdue <= 0) continue;
+    if (asStr(loan.issue.memberName) !== memberName) continue;
+    total += loan.daysOverdue * FINE_PER_DAY;
+  }
+  return total;
+}
+
+/**
+ * LIB-1 — the open (un-returned) overdue loans as flat rows for the client
+ * overdue list / export, each carrying the accrued fine so far. Only genuinely
+ * overdue (daysOverdue > 0) loans are included.
+ */
+export function overdueList(issues: Row[], now: Date = new Date()): Row[] {
+  return openLoans(issues, now)
+    .filter((loan) => loan.daysOverdue > 0)
+    .map((loan) => ({
+      issueId: asStr(loan.issue.id),
+      memberName: asStr(loan.issue.memberName),
+      memberType: asStr(loan.issue.memberType, "student"),
+      bookTitle: asStr(loan.issue.bookTitle),
+      isbn: asStr(loan.issue.isbn),
+      dueDate: asStr(loan.issue.dueDate),
+      daysOverdue: loan.daysOverdue,
+      fineAmount: rupees(loan.daysOverdue * FINE_PER_DAY),
+      sisStudentId: (loan.issue.sisStudentId as string | null) ?? null,
+    }));
+}
+
+/** LIB-5 — the open overdue loans as {@link OpenLoan} (issue + daysOverdue). */
+export function overdueOpenLoans(issues: Row[], now: Date = new Date()): OpenLoan[] {
+  return openLoans(issues, now).filter((loan) => loan.daysOverdue > 0);
+}
+
+/**
  * Overlay a live `activeLoans` count onto each member payload so the Members
  * list / loan-count reflects reality instead of a never-incremented seed.
  */

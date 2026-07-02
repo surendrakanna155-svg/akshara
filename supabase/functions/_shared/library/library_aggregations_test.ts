@@ -8,6 +8,9 @@ import {
   FINE_PER_DAY,
   listAllEntities,
   membersWithLiveLoans,
+  outstandingFineForMember,
+  overdueList,
+  overdueOpenLoans,
 } from "./library_aggregations.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
@@ -235,4 +238,54 @@ Deno.test("listAllEntities: returns every payload of a type (no pagination cap)"
 
   const catalog = await listAllEntities(db, ORG, SCHOOL, "catalog");
   assertEquals(catalog.length, 1);
+});
+
+// --- LIB-1 overdue list + LIB-D1 outstanding-fine helper ---------------------
+
+Deno.test("overdueList: only open overdue loans, each with accrued fine", () => {
+  const issues = [
+    issue({ memberName: "Arjun", bookTitle: "Beta", isbn: "111", dueDate: daysFromNow(-3) }), // overdue 3d
+    issue({ memberName: "Priya", bookTitle: "Gamma", dueDate: daysFromNow(5) }), // not overdue
+    issue({ memberName: "Arjun", bookTitle: "Old", dueDate: daysFromNow(-10), status: "returned" }), // returned
+  ];
+  const list = overdueList(issues, NOW);
+  assertEquals(list.length, 1);
+  assertEquals(list[0].memberName, "Arjun");
+  assertEquals(list[0].bookTitle, "Beta");
+  assertEquals(list[0].isbn, "111");
+  assertEquals(list[0].daysOverdue, 3);
+  assertEquals(list[0].fineAmount, `₹${3 * FINE_PER_DAY}`);
+});
+
+Deno.test("overdueList / overdueOpenLoans: fresh school => empty", () => {
+  assertEquals(overdueList([], NOW), []);
+  assertEquals(overdueOpenLoans([], NOW).length, 0);
+});
+
+Deno.test("overdueOpenLoans: returns issue + daysOverdue for open overdue loans only", () => {
+  const issues = [
+    issue({ dueDate: daysFromNow(-2) }), // overdue
+    issue({ dueDate: daysFromNow(-2), status: "returned" }), // returned -> excluded
+    issue({ dueDate: daysFromNow(1) }), // not overdue
+  ];
+  const open = overdueOpenLoans(issues, NOW);
+  assertEquals(open.length, 1);
+  assertEquals(open[0].daysOverdue, 2);
+});
+
+Deno.test("outstandingFineForMember: sums persisted outstanding + live overdue, excludes waived", () => {
+  const issues = [
+    issue({ memberName: "Arjun", dueDate: daysFromNow(-4) }), // live overdue 4d = ₹20
+    issue({ memberName: "Arjun", dueDate: daysFromNow(-1), status: "returned" }), // returned -> no live fine
+    issue({ memberName: "Priya", dueDate: daysFromNow(-10) }), // other member
+  ];
+  const fines = [
+    { memberName: "Arjun", amount: 30, status: "outstanding" },
+    { memberName: "Arjun", amount: 100, status: "waived" }, // excluded
+    { memberName: "Priya", amount: 50, status: "outstanding" }, // other member
+  ];
+  // Arjun: 30 (persisted outstanding) + 4*FINE_PER_DAY (live) = 30 + 20 = 50.
+  assertEquals(outstandingFineForMember("Arjun", issues, fines, NOW), 30 + 4 * FINE_PER_DAY);
+  // A member with no fines => 0.
+  assertEquals(outstandingFineForMember("Nobody", issues, fines, NOW), 0);
 });
