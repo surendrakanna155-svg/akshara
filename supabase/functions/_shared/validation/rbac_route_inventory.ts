@@ -90,6 +90,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/alumni/dashboard", permission: "viewAlumni", scope: "school", module: "alumni" },
   { method: "POST", path: "/alumni/donations", permission: "manageAlumni", scope: "school", module: "alumni" },
   { method: "GET", path: "/management/dashboard", permission: "viewManagement", scope: "school", module: "management" },
+  // PRI-1 — Approval Center batch decide. viewManagement is the REACHABILITY
+  // gate only; per-item type-specific approve permission + scope + SoD govern
+  // each id's actual authority (a lacking type is skipped, not a blanket 403).
+  { method: "POST", path: "/approvals/batch-decide", permission: "viewManagement", scope: "school", module: "approvals" },
   { method: "GET", path: "/control-center/dashboard", permission: "viewControlCenter", scope: "organization", module: "control_center" },
   { method: "GET", path: "/parent/dashboard", permission: null, scope: "parent", module: "parent" },
   { method: "POST", path: "/parent/payments/initiate", permission: null, scope: "parent", module: "parent" },

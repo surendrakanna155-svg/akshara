@@ -1,6 +1,7 @@
 import type { AppConfig } from "../config.ts";
 import {
   handleApproveApproval,
+  handleBatchDecideApprovals,
   handleCancelApproval,
   handleFindPendingByEntity,
   handleGetApproval,
@@ -33,6 +34,12 @@ function matchApprovalRoute(
   }
   if (path === "/approvals/audit" && method === "POST") {
     return { handler: handleRecordApprovalAudit, args: [] };
+  }
+  // PRI-1 — batch multi-select decisions. MUST be matched before the `/{id}`
+  // matchers below so the literal 'batch-decide' segment is not captured as an
+  // approval id.
+  if (path === "/approvals/batch-decide" && method === "POST") {
+    return { handler: handleBatchDecideApprovals, args: [] };
   }
 
   const detailMatch = path.match(/^\/approvals\/([^/]+)$/);
