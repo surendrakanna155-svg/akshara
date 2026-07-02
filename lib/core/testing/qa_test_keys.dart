@@ -553,6 +553,28 @@ abstract final class QaTestKeys {
   static const hrPayrollExportSuccessSnackbar =
       ValueKey<String>('hr_payroll_export_success_snackbar');
 
+  // HR reporting / export (HR-1/2/4/5/6/7).
+  static const hrSalaryRegisterExportButton =
+      ValueKey<String>('hr_salary_register_export_button');
+
+  static const hrPayslipsExportButton =
+      ValueKey<String>('hr_payslips_export_button');
+
+  static const hrMusterExportButton =
+      ValueKey<String>('hr_muster_export_button');
+
+  static const hrLeaveBalancesExportButton =
+      ValueKey<String>('hr_leave_balances_export_button');
+
+  static const hrHeadcountExportButton =
+      ValueKey<String>('hr_headcount_export_button');
+
+  static const hrDirectoryExportButton =
+      ValueKey<String>('hr_directory_export_button');
+
+  static const hrReportExportSuccessSnackbar =
+      ValueKey<String>('hr_report_export_success_snackbar');
+
   static const inventoryCreatePoButton =
       ValueKey<String>('inventory_create_po_button');
 

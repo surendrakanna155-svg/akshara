@@ -1,3 +1,4 @@
+import 'package:akshara_erp/core/reports/akshara_report_export_service.dart';
 import 'package:akshara_erp/core/security/erp_role.dart';
 import 'package:akshara_erp/core/security/rbac_service.dart';
 import 'package:akshara_erp/core/security/user_permissions.dart';
@@ -13,6 +14,29 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../test_helpers.dart';
 
+/// Fake so the platform `printing` plugin is not driven when a grid export fires.
+class _FakeGridExportService extends AksharaReportExportService {
+  const _FakeGridExportService();
+
+  @override
+  Future<void> shareGridPdf({
+    required String filename,
+    required String reportTitle,
+    required String moduleLabel,
+    required List<String> headers,
+    required List<List<String>> rows,
+    String? generatedAtLabel,
+    int? rightAlignFrom,
+  }) async {}
+
+  @override
+  Future<void> shareGridCsv({
+    required String filename,
+    required List<String> headers,
+    required List<List<String>> rows,
+  }) async {}
+}
+
 Future<void> _pump(WidgetTester tester, Widget screen) async {
   tester.view.physicalSize = const Size(1440, 900);
   tester.view.devicePixelRatio = 1.0;
@@ -26,6 +50,8 @@ Future<void> _pump(WidgetTester tester, Widget screen) async {
         userPermissionsProvider.overrideWithValue(
           UserPermissions.forRole(ErpRole.superAdmin),
         ),
+        aksharaReportExportServiceProvider
+            .overrideWithValue(const _FakeGridExportService()),
       ]),
       child: MaterialApp(
         theme: AksharaAppTheme.light(),
@@ -69,11 +95,18 @@ Future<void> _tapKey(WidgetTester tester, Key key) async {
 
 void main() {
   group('Phase 2 report export widgets', () {
-    testWidgets('HR payroll export PDF shows success snackbar', (tester) async {
+    testWidgets('HR salary register export shows success snackbar',
+        (tester) async {
       await _pump(tester, const HrPayrollScreen());
-      expect(find.byKey(QaTestKeys.hrPayrollExportPdfButton), findsOneWidget);
-      await _tapKey(tester, QaTestKeys.hrPayrollExportPdfButton);
-      expect(find.byKey(QaTestKeys.hrPayrollExportSuccessSnackbar), findsOneWidget);
+      expect(
+        find.byKey(QaTestKeys.hrSalaryRegisterExportButton),
+        findsOneWidget,
+      );
+      await _tapKey(tester, QaTestKeys.hrSalaryRegisterExportButton);
+      expect(
+        find.byKey(QaTestKeys.hrReportExportSuccessSnackbar),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Inventory reports export PDF shows success snackbar', (

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../core/repositories/paginated_result.dart';
@@ -13,6 +14,8 @@ import '../../admin/admin_layout.dart';
 import '../hr_workflow_actions.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
+import '../reports/hr_export_providers.dart';
+import '../reports/hr_report_exporters.dart';
 import '../widgets/hr_module_scaffold.dart';
 
 /// HR-02 — Employees.
@@ -44,17 +47,34 @@ class HrEmployeesScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: AksharaManageAction(
-              permission: Permission.manageHr,
-              child: FilledButton.icon(
-                key: QaTestKeys.hrCreateEmployeeButton,
-                onPressed: () => showCreateHrEmployeeDialog(context, ref),
-                icon: const Icon(Icons.person_add_outlined, size: 18),
-                label: const Text('Add employee'),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: AksharaSpacing.s3,
+            runSpacing: AksharaSpacing.s3,
+            children: [
+              // HR-7 — employee directory export (CSV + PDF), on the viewHr-gated
+              // screen; open to any HR viewer, not gated behind manageHr.
+              OutlinedButton.icon(
+                key: QaTestKeys.hrDirectoryExportButton,
+                onPressed: () => _exportDirectory(context, ref, asPdf: true),
+                icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                label: const Text('Directory PDF'),
               ),
-            ),
+              OutlinedButton.icon(
+                onPressed: () => _exportDirectory(context, ref, asPdf: false),
+                icon: const Icon(Icons.table_chart_outlined, size: 18),
+                label: const Text('Directory Excel'),
+              ),
+              AksharaManageAction(
+                permission: Permission.manageHr,
+                child: FilledButton.icon(
+                  key: QaTestKeys.hrCreateEmployeeButton,
+                  onPressed: () => showCreateHrEmployeeDialog(context, ref),
+                  icon: const Icon(Icons.person_add_outlined, size: 18),
+                  label: const Text('Add employee'),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AksharaSpacing.s4),
           _buildBody(
@@ -69,6 +89,40 @@ class HrEmployeesScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// HR-7 — fetches the employee directory and shares it as a grid PDF or CSV
+  /// via the shared XCT-1 export service.
+  Future<void> _exportDirectory(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool asPdf,
+  }) async {
+    final exporters =
+        HrReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      final directory = await ref.read(hrEmployeeDirectoryProvider.future);
+      if (asPdf) {
+        await exporters.shareDirectoryPdf(directory);
+      } else {
+        await exporters.shareDirectoryCsv(directory);
+      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.hrReportExportSuccessSnackbar,
+          content: Text(
+            'Employee directory ${asPdf ? 'PDF' : 'Excel CSV'} ready '
+            '(${directory.rows.length} staff)',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to export the directory.')),
+      );
+    }
   }
 
   Widget _buildBody(

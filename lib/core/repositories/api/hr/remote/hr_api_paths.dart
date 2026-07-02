@@ -19,4 +19,12 @@ abstract final class HrApiPaths {
   static String employeeDetail(String employeeId) => '$base/employees/$employeeId';
   static String employeeStatus(String employeeId) =>
       '$base/employees/$employeeId/status';
+
+  // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
+  static const String payrollRegister = '$payroll/register';
+  static const String payrollPayslips = '$payroll/payslips';
+  static const String attendanceMuster = '$attendance/muster';
+  static const String leaveBalances = '$leave/balances';
+  static const String headcount = '$base/reports/headcount';
+  static const String employeeDirectory = '$employees/export';
 }

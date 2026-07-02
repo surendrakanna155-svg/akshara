@@ -1,5 +1,6 @@
 import 'package:akshara_erp/core/repositories/api/hr/dto/hr_enum_codec.dart';
 import 'package:akshara_erp/features/hr/hr_models.dart';
+import 'package:akshara_erp/features/hr/hr_report_models.dart';
 
 /// Builds API-shaped JSON envelopes from HR domain models for contract tests.
 class HrFixtureBuilder {
@@ -241,6 +242,130 @@ class HrFixtureBuilder {
       ],
       'completionTrend': [
         for (final point in data.completionTrend) trendPoint(point),
+      ],
+    });
+  }
+
+  // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
+
+  Map<String, dynamic> salaryRegisterEnvelope(HrSalaryRegister register) {
+    return envelope({
+      'runId': register.runId,
+      'period': register.period,
+      'rows': [
+        for (final r in register.rows)
+          {
+            'employeeId': r.employeeId,
+            'code': r.code,
+            'name': r.name,
+            'dept': r.dept,
+            'basicPay': r.basicPay,
+            'allowances': r.allowances,
+            'deductions': r.deductions,
+            'netPay': r.netPay,
+          },
+      ],
+      'totals': {
+        'basicPay': register.totals.basicPay,
+        'allowances': register.totals.allowances,
+        'deductions': register.totals.deductions,
+        'netPay': register.totals.netPay,
+      },
+    });
+  }
+
+  Map<String, dynamic> payslipsEnvelope(HrPayslipBundle bundle) {
+    List<Map<String, dynamic>> lines(List<HrPayslipLine> ls) =>
+        [for (final l in ls) {'label': l.label, 'amount': l.amount}];
+    return envelope({
+      'runId': bundle.runId,
+      'period': bundle.period,
+      'payslips': [
+        for (final p in bundle.payslips)
+          {
+            'employeeId': p.employeeId,
+            'code': p.code,
+            'name': p.name,
+            'dept': p.dept,
+            'earnings': lines(p.earnings),
+            'deductionLines': lines(p.deductionLines),
+            'grossEarnings': p.grossEarnings,
+            'totalDeductions': p.totalDeductions,
+            'netPay': p.netPay,
+          },
+      ],
+    });
+  }
+
+  Map<String, dynamic> musterEnvelope(HrAttendanceMuster muster) {
+    return envelope({
+      'month': muster.month,
+      'daysInMonth': muster.daysInMonth,
+      'lateAfter': muster.lateAfter,
+      'holidayDays': muster.holidayDays,
+      'rows': [
+        for (final r in muster.rows)
+          {
+            'employeeId': r.employeeId,
+            'code': r.code,
+            'name': r.name,
+            'dept': r.dept,
+            'dailyStatus': [for (final s in r.dailyStatus) s.code],
+            'presentCount': r.presentCount,
+            'percent': r.percent,
+          },
+      ],
+    });
+  }
+
+  Map<String, dynamic> leaveBalancesEnvelope(HrLeaveBalanceReport report) {
+    return envelope({
+      'leaveTypes': report.leaveTypes,
+      'rows': [
+        for (final r in report.rows)
+          {
+            'employeeId': r.employeeId,
+            'code': r.code,
+            'name': r.name,
+            'dept': r.dept,
+            'balances': [
+              for (final b in r.balances)
+                {
+                  'leaveType': b.leaveType,
+                  'available': b.available,
+                  'used': b.used,
+                  'remaining': b.remaining,
+                },
+            ],
+          },
+      ],
+    });
+  }
+
+  Map<String, dynamic> headcountEnvelope(HrHeadcountReport report) {
+    return envelope({
+      'total': report.total,
+      'rows': [
+        for (final r in report.rows)
+          {'department': r.department, 'count': r.count},
+      ],
+    });
+  }
+
+  Map<String, dynamic> directoryEnvelope(HrEmployeeDirectory directory) {
+    return envelope({
+      'rows': [
+        for (final r in directory.rows)
+          {
+            'employeeId': r.employeeId,
+            'code': r.code,
+            'name': r.name,
+            'dept': r.dept,
+            'designation': r.designation,
+            'phone': r.phone,
+            'joinDate': r.joinDate,
+            'status': r.status,
+          },
       ],
     });
   }

@@ -2,6 +2,7 @@ import '../../interfaces/hr_repository.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/hr/hr_models.dart';
+import '../../../../features/hr/hr_report_models.dart';
 import '../../../../features/hr/hr_requests.dart';
 import 'dto/hr_enum_codec.dart';
 import 'mapper/hr_mapper.dart';
@@ -200,5 +201,56 @@ class ApiHrRepository implements HrRepository {
       status: HrEnumCodec.employeeStatusToApi(request.status),
     );
     return _mapper.toEmployee(dto);
+  }
+
+  // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
+
+  @override
+  Future<HrSalaryRegister> getSalaryRegister({
+    required RepositoryQuery query,
+    required String runId,
+  }) async {
+    final dto = await _remote.fetchSalaryRegister(query: query, runId: runId);
+    return _mapper.toSalaryRegister(dto);
+  }
+
+  @override
+  Future<HrPayslipBundle> getPayslips({
+    required RepositoryQuery query,
+    required String runId,
+  }) async {
+    final dto = await _remote.fetchPayslips(query: query, runId: runId);
+    return _mapper.toPayslips(dto);
+  }
+
+  @override
+  Future<HrAttendanceMuster> getAttendanceMuster({
+    required RepositoryQuery query,
+    required String month,
+  }) async {
+    final dto = await _remote.fetchAttendanceMuster(query: query, month: month);
+    return _mapper.toAttendanceMuster(dto);
+  }
+
+  @override
+  Future<HrLeaveBalanceReport> getLeaveBalances({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchLeaveBalances(query: query);
+    return _mapper.toLeaveBalances(dto);
+  }
+
+  @override
+  Future<HrHeadcountReport> getHeadcount({required RepositoryQuery query}) async {
+    final dto = await _remote.fetchHeadcount(query: query);
+    return _mapper.toHeadcount(dto);
+  }
+
+  @override
+  Future<HrEmployeeDirectory> getEmployeeDirectory({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.fetchEmployeeDirectory(query: query);
+    return _mapper.toEmployeeDirectory(dto);
   }
 }

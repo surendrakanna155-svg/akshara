@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -11,6 +12,8 @@ import '../../admin/admin_layout.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
 import '../hr_workflow_actions.dart';
+import '../reports/hr_export_providers.dart';
+import '../reports/hr_report_exporters.dart';
 import '../widgets/hr_module_scaffold.dart';
 import '../widgets/hr_trend_chart.dart';
 
@@ -99,27 +102,7 @@ class HrPayrollScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AksharaSpacing.s4),
-        Wrap(
-          spacing: AksharaSpacing.s3,
-          runSpacing: AksharaSpacing.s3,
-          children: [
-            OutlinedButton.icon(
-              key: QaTestKeys.hrPayrollExportPdfButton,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    key: QaTestKeys.hrPayrollExportSuccessSnackbar,
-                    content: Text(
-                      'Payroll summary export queued (${data.runs.length} runs)',
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.picture_as_pdf_outlined),
-              label: const Text('Export payroll summary PDF'),
-            ),
-          ],
-        ),
+        _PayrollExportBar(runs: data.runs),
         const SizedBox(height: AksharaSpacing.s4),
         const AksharaSectionHeader(title: 'Payroll runs'),
         const SizedBox(height: AksharaSpacing.s3),
@@ -143,6 +126,127 @@ class HrPayrollScreen extends ConsumerWidget {
           onAction: () => context.go(data.financeRoute),
         ),
       ],
+    );
+  }
+}
+
+/// HR-1 salary register + HR-2 payslip exports (replaces the old stub snackbar).
+/// Both derive from the selected payroll run and ride the shared XCT-1 grid
+/// export service (CSV + PDF). Visible on the already viewHr-gated HR payroll
+/// screen; a fresh school with no runs shows nothing to export.
+class _PayrollExportBar extends ConsumerWidget {
+  const _PayrollExportBar({required this.runs});
+
+  final List<HrPayrollRun> runs;
+
+  /// Prefers a processed/paid run (real salary lines), else the first run.
+  HrPayrollRun? get _exportRun {
+    if (runs.isEmpty) return null;
+    final processed = runs.where((r) =>
+        r.status == HrPayrollStatus.processed ||
+        r.status == HrPayrollStatus.paid);
+    return processed.isNotEmpty ? processed.first : runs.first;
+  }
+
+  Future<void> _run(
+    BuildContext context,
+    WidgetRef ref,
+    Future<void> Function(HrReportExporters exporters) action,
+    String successLabel,
+  ) async {
+    final run = _exportRun;
+    if (run == null) return;
+    final exporters =
+        HrReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      await action(exporters);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.hrReportExportSuccessSnackbar,
+          content: Text(successLabel),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to build the export.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final run = _exportRun;
+    if (run == null) return const SizedBox.shrink();
+    return Semantics(
+      label: 'Payroll report export actions',
+      child: Wrap(
+        spacing: AksharaSpacing.s3,
+        runSpacing: AksharaSpacing.s3,
+        children: [
+          OutlinedButton.icon(
+            key: QaTestKeys.hrSalaryRegisterExportButton,
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final register = await ref.read(
+                  hrSalaryRegisterProvider(run.id).future,
+                );
+                await e.shareSalaryRegisterPdf(register);
+              },
+              'Salary register (${run.period}) PDF ready',
+            ),
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            label: const Text('Salary register PDF'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final register = await ref.read(
+                  hrSalaryRegisterProvider(run.id).future,
+                );
+                await e.shareSalaryRegisterCsv(register);
+              },
+              'Salary register (${run.period}) Excel CSV ready',
+            ),
+            icon: const Icon(Icons.table_chart_outlined),
+            label: const Text('Salary register Excel'),
+          ),
+          OutlinedButton.icon(
+            key: QaTestKeys.hrPayslipsExportButton,
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final bundle =
+                    await ref.read(hrPayslipsProvider(run.id).future);
+                await e.sharePayslipsBundlePdf(bundle);
+              },
+              'Payslip bundle (${run.period}) PDF ready',
+            ),
+            icon: const Icon(Icons.receipt_long_outlined),
+            label: const Text('Payslips PDF'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final bundle =
+                    await ref.read(hrPayslipsProvider(run.id).future);
+                await e.sharePayslipsCsv(bundle);
+              },
+              'Payslips (${run.period}) Excel CSV ready',
+            ),
+            icon: const Icon(Icons.table_view_outlined),
+            label: const Text('Payslips Excel'),
+          ),
+        ],
+      ),
     );
   }
 }

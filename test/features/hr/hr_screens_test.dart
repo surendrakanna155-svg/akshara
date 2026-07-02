@@ -126,7 +126,9 @@ void main() {
       expect(find.text('Payroll runs'), findsOneWidget);
       expect(find.text('Priya Sharma'), findsOneWidget);
       expect(find.byKey(QaTestKeys.hrProcessPayrollButton), findsOneWidget);
-      expect(find.byKey(QaTestKeys.hrPayrollExportPdfButton), findsOneWidget);
+      // HR-1 salary register + HR-2 payslip exports replace the old stub button.
+      expect(find.byKey(QaTestKeys.hrSalaryRegisterExportButton), findsOneWidget);
+      expect(find.byKey(QaTestKeys.hrPayslipsExportButton), findsOneWidget);
     });
 
     testWidgets('HrRecruitmentScreen renders pipeline', (tester) async {

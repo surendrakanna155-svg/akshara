@@ -1,4 +1,5 @@
 import '../../../features/hr/hr_models.dart';
+import '../../../features/hr/hr_report_models.dart';
 import '../../../features/hr/hr_requests.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
@@ -51,4 +52,33 @@ abstract class HrRepository {
     required RepositoryQuery query,
     required SetHrEmployeeStatusRequest request,
   });
+
+  // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
+
+  /// HR-1 — salary register for one payroll run (rows + column totals).
+  Future<HrSalaryRegister> getSalaryRegister({
+    required RepositoryQuery query,
+    required String runId,
+  });
+
+  /// HR-2 — per-employee payslip data for one payroll run.
+  Future<HrPayslipBundle> getPayslips({
+    required RepositoryQuery query,
+    required String runId,
+  });
+
+  /// HR-6 — monthly attendance muster (employee × day, inferred from check-ins).
+  Future<HrAttendanceMuster> getAttendanceMuster({
+    required RepositoryQuery query,
+    required String month, // YYYY-MM
+  });
+
+  /// HR-4 — per employee × leave-type balance report.
+  Future<HrLeaveBalanceReport> getLeaveBalances({required RepositoryQuery query});
+
+  /// HR-5 — active headcount grouped by department.
+  Future<HrHeadcountReport> getHeadcount({required RepositoryQuery query});
+
+  /// HR-7 — employee directory rows.
+  Future<HrEmployeeDirectory> getEmployeeDirectory({required RepositoryQuery query});
 }

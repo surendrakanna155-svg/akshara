@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/async/erp_async_state.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
 import '../../../shared/widgets/akshara_surface_card.dart';
@@ -10,6 +11,8 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../hr_models.dart';
 import '../widgets/hr_module_scaffold.dart';
+import 'hr_export_providers.dart';
+import 'hr_report_exporters.dart';
 import 'hr_reports_provider.dart';
 
 /// HR-10 — HR reports catalog (headcount, attendance, leave, payroll).
@@ -151,9 +154,15 @@ class HrReportsScreen extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: AksharaSpacing.s6),
+        const AksharaSectionHeader(title: 'Live report exports'),
+        const SizedBox(height: AksharaSpacing.s3),
+        const _LiveReportExports(),
       ],
     );
   }
+
+  // (kept below the widget so the class body stays readable)
 
   /// Builds the export rows for the selected report tile from live HR reports
   /// data (headline metric + the selected report's catalog metadata).
@@ -167,5 +176,103 @@ class HrReportsScreen extends ConsumerWidget {
       MapEntry('Description', selected.description),
       MapEntry('Headline metric', data.headlineMetric),
     ];
+  }
+}
+
+/// HR-4 (leave balances) + HR-5 (headcount) live exports — each fetched from the
+/// backend on tap and shared as a grid CSV / PDF via the shared XCT-1 service.
+class _LiveReportExports extends ConsumerWidget {
+  const _LiveReportExports();
+
+  Future<void> _run(
+    BuildContext context,
+    WidgetRef ref,
+    Future<void> Function(HrReportExporters exporters) action,
+    String label,
+  ) async {
+    final exporters =
+        HrReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      await action(exporters);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.hrReportExportSuccessSnackbar,
+          content: Text(label),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to build the export.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Semantics(
+      label: 'Live HR report export actions',
+      child: Wrap(
+        spacing: AksharaSpacing.s3,
+        runSpacing: AksharaSpacing.s3,
+        children: [
+          OutlinedButton.icon(
+            key: QaTestKeys.hrHeadcountExportButton,
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final report = await ref.read(hrHeadcountProvider.future);
+                await e.shareHeadcountPdf(report);
+              },
+              'Headcount by department PDF ready',
+            ),
+            icon: const Icon(Icons.groups_outlined),
+            label: const Text('Headcount PDF'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final report = await ref.read(hrHeadcountProvider.future);
+                await e.shareHeadcountCsv(report);
+              },
+              'Headcount by department Excel CSV ready',
+            ),
+            icon: const Icon(Icons.table_chart_outlined),
+            label: const Text('Headcount Excel'),
+          ),
+          OutlinedButton.icon(
+            key: QaTestKeys.hrLeaveBalancesExportButton,
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final report = await ref.read(hrLeaveBalancesProvider.future);
+                await e.shareLeaveBalancesPdf(report);
+              },
+              'Leave balances PDF ready',
+            ),
+            icon: const Icon(Icons.event_available_outlined),
+            label: const Text('Leave balances PDF'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => _run(
+              context,
+              ref,
+              (e) async {
+                final report = await ref.read(hrLeaveBalancesProvider.future);
+                await e.shareLeaveBalancesCsv(report);
+              },
+              'Leave balances Excel CSV ready',
+            ),
+            icon: const Icon(Icons.table_view_outlined),
+            label: const Text('Leave balances Excel'),
+          ),
+        ],
+      ),
+    );
   }
 }

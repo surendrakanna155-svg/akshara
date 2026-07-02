@@ -12,6 +12,14 @@ import {
   handleSettings,
 } from "./hr_handlers.ts";
 import {
+  handleAttendanceMuster,
+  handleEmployeeDirectory,
+  handleHeadcount,
+  handleLeaveBalances,
+  handlePayslips,
+  handleSalaryRegister,
+} from "./hr_reports_handlers.ts";
+import {
   handleApproveLeaveRequest,
   handleCreateEmployee,
   handleCreateLeaveRequest,
@@ -36,6 +44,29 @@ function matchHrRoute(
     if (path === "/hr/dashboard") {
       return { handler: handleDashboard, args: [] };
     }
+    // --- HR reporting / export reads (HR-1/2/4/5/6/7). Registered BEFORE the
+    //     generic /hr/employees/{id} + /hr/payroll matches so the literal
+    //     report paths ("export", "register", "payslips", "muster") are not
+    //     swallowed by the id/detail catch-alls. ---
+    if (path === "/hr/employees/export") {
+      return { handler: handleEmployeeDirectory, args: [] };
+    }
+    if (path === "/hr/payroll/register") {
+      return { handler: handleSalaryRegister, args: [] };
+    }
+    if (path === "/hr/payroll/payslips") {
+      return { handler: handlePayslips, args: [] };
+    }
+    if (path === "/hr/attendance/muster") {
+      return { handler: handleAttendanceMuster, args: [] };
+    }
+    if (path === "/hr/leave/balances") {
+      return { handler: handleLeaveBalances, args: [] };
+    }
+    if (path === "/hr/reports/headcount") {
+      return { handler: handleHeadcount, args: [] };
+    }
+    // --- end HR reporting reads ---
     if (path === "/hr/employees") {
       return { handler: handleEmployees, args: [] };
     }

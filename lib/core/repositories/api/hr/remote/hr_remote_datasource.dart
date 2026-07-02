@@ -193,6 +193,71 @@ class HrRemoteDataSource {
     return HrEmployeeDto.fromJson(_writeData(response));
   }
 
+  // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
+
+  Future<HrSalaryRegisterDto> fetchSalaryRegister({
+    required RepositoryQuery query,
+    required String runId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HrApiPaths.payrollRegister,
+      queryParameters: {..._queryParams(query), 'runId': runId},
+    );
+    return HrSalaryRegisterDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrPayslipsDto> fetchPayslips({
+    required RepositoryQuery query,
+    required String runId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HrApiPaths.payrollPayslips,
+      queryParameters: {..._queryParams(query), 'runId': runId},
+    );
+    return HrPayslipsDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrAttendanceMusterDto> fetchAttendanceMuster({
+    required RepositoryQuery query,
+    required String month,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HrApiPaths.attendanceMuster,
+      queryParameters: {..._queryParams(query), 'month': month},
+    );
+    return HrAttendanceMusterDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrLeaveBalancesDto> fetchLeaveBalances({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HrApiPaths.leaveBalances,
+      queryParameters: _queryParams(query),
+    );
+    return HrLeaveBalancesDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrHeadcountDto> fetchHeadcount({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HrApiPaths.headcount,
+      queryParameters: _queryParams(query),
+    );
+    return HrHeadcountDto.fromJson(_responseMap(response));
+  }
+
+  Future<HrEmployeeDirectoryDto> fetchEmployeeDirectory({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      HrApiPaths.employeeDirectory,
+      queryParameters: _queryParams(query),
+    );
+    return HrEmployeeDirectoryDto.fromJson(_responseMap(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) {
     return {
       'tenantId': query.tenantId,

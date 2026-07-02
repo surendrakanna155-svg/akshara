@@ -45,7 +45,10 @@ async function call(
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
-  return router(req, config, method, path);
+  // The router matches on the pathname only; the query string is read from the
+  // request URL by the handler (mirrors how api/index.ts routes).
+  const pathname = new URL(`https://x${path}`).pathname;
+  return router(req, config, method, pathname);
 }
 
 const REGISTERED: Array<[string, string]> = [
@@ -57,6 +60,13 @@ const REGISTERED: Array<[string, string]> = [
   ["GET", "/hr/recruitment"],
   ["GET", "/hr/performance"],
   ["GET", "/hr/settings"],
+  // HR reporting / export reads (HR-1/2/4/5/6/7).
+  ["GET", "/hr/payroll/register"],
+  ["GET", "/hr/payroll/payslips"],
+  ["GET", "/hr/attendance/muster"],
+  ["GET", "/hr/leave/balances"],
+  ["GET", "/hr/reports/headcount"],
+  ["GET", "/hr/employees/export"],
   ["GET", "/hr/employees/emp-1"],
   ["POST", "/hr/employees"],
   ["POST", "/hr/leave"],
@@ -71,13 +81,43 @@ const REGISTERED: Array<[string, string]> = [
   ["PATCH", "/hr/employees/emp-1/status"],
 ];
 
-Deno.test("QA-B-022: all 20 HR routes path-match to a handler (not 404)", async () => {
+Deno.test("QA-B-022: all HR routes path-match to a handler (not 404)", async () => {
   const perms = ["viewHr", "manageHr"];
   for (const [method, path] of REGISTERED) {
     const res = await call(routeHr, method, path, perms);
     assertEquals(res !== null, true, `${method} ${path} returned null`);
     assertEquals(res!.status !== 404, true, `${method} ${path} unexpectedly 404'd`);
   }
+});
+
+// HR reporting / export reads (HR-1/2/4/5/6/7) — all gate viewHr, all resolve to
+// their report handler (503 for a holder = gate passed, reached the unconfigured
+// tenant DB), and 403 for a non-holder.
+const HR_REPORT_ROUTES: string[] = [
+  "/hr/payroll/register?runId=run-1",
+  "/hr/payroll/payslips?runId=run-1",
+  "/hr/attendance/muster?month=2026-06",
+  "/hr/leave/balances",
+  "/hr/reports/headcount",
+  "/hr/employees/export",
+];
+
+Deno.test("HR reports: each report route gates viewHr (403 non-holder, 503 holder)", async () => {
+  for (const path of HR_REPORT_ROUTES) {
+    const denied = await call(routeHr, "GET", path, ["viewFinance"]);
+    assertEquals(denied?.status, 403, `${path} should 403 without viewHr`);
+    const allowed = await call(routeHr, "GET", path, ["viewHr"]);
+    assertEquals(allowed?.status, 503, `${path} holder should reach unconfigured DB (503)`);
+  }
+});
+
+Deno.test("HR reports: literal report paths are not swallowed by id/detail matches", async () => {
+  // /hr/employees/export must reach the directory handler, NOT employee-detail;
+  // both reach the DB seam (503) so we assert they are not 404 and are gated.
+  const directory = await call(routeHr, "GET", "/hr/employees/export", ["viewHr"]);
+  assertEquals(directory?.status, 503);
+  const register = await call(routeHr, "GET", "/hr/payroll/register?runId=r", ["viewHr"]);
+  assertEquals(register?.status, 503);
 });
 
 Deno.test("QA-B-022: unregistered path under /hr 404s; path outside prefix is null", async () => {

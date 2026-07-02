@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../features/auth/auth_provider.dart';
 import '../../../features/hr/hr_models.dart';
+import '../../../features/hr/hr_report_models.dart';
 import '../../../features/hr/hr_requests.dart';
 import '../../../router/route_names.dart';
 import '../interfaces/hr_repository.dart';
@@ -1051,6 +1052,241 @@ class MockHrRepository implements HrRepository {
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
+  // Derived from the same mock employees / payroll / leave data so the offline
+  // path renders a representative report and mock↔API parity holds.
+
+  /// Parses a formatted rupee string (e.g. "₹45,000") into a number.
+  static num _rupees(String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9.]'), '');
+    return num.tryParse(digits) ?? 0;
+  }
+
+  @override
+  Future<HrSalaryRegister> getSalaryRegister({
+    required RepositoryQuery query,
+    required String runId,
+  }) async {
+    final payroll = await getPayroll(query: query);
+    final rows = [
+      for (final e in payroll.entries)
+        HrSalaryRegisterRow(
+          employeeId: e.employeeId,
+          code: e.employeeId,
+          name: e.employeeName,
+          dept: e.department.name,
+          basicPay: _rupees(e.basicPay),
+          allowances: _rupees(e.allowances),
+          deductions: _rupees(e.deductions),
+          netPay: _rupees(e.netPay),
+        ),
+    ];
+    final totals = rows.fold<List<num>>(
+      [0, 0, 0, 0],
+      (acc, r) => [
+        acc[0] + r.basicPay,
+        acc[1] + r.allowances,
+        acc[2] + r.deductions,
+        acc[3] + r.netPay,
+      ],
+    );
+    final run = payroll.runs.where((r) => r.id == runId);
+    return HrSalaryRegister(
+      runId: runId,
+      period: run.isEmpty ? '' : run.first.period,
+      rows: rows,
+      totals: HrSalaryRegisterTotals(
+        basicPay: totals[0],
+        allowances: totals[1],
+        deductions: totals[2],
+        netPay: totals[3],
+      ),
+    );
+  }
+
+  @override
+  Future<HrPayslipBundle> getPayslips({
+    required RepositoryQuery query,
+    required String runId,
+  }) async {
+    final register = await getSalaryRegister(query: query, runId: runId);
+    return HrPayslipBundle(
+      runId: register.runId,
+      period: register.period,
+      payslips: [
+        for (final r in register.rows)
+          HrPayslip(
+            employeeId: r.employeeId,
+            code: r.code,
+            name: r.name,
+            dept: r.dept,
+            earnings: [
+              HrPayslipLine(label: 'Basic pay', amount: r.basicPay),
+              HrPayslipLine(label: 'Allowances', amount: r.allowances),
+            ],
+            deductionLines: [
+              HrPayslipLine(label: 'Deductions', amount: r.deductions),
+            ],
+            grossEarnings: r.basicPay + r.allowances,
+            totalDeductions: r.deductions,
+            netPay: r.netPay,
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<HrAttendanceMuster> getAttendanceMuster({
+    required RepositoryQuery query,
+    required String month,
+  }) async {
+    // Representative single-day sample from the mock attendance records, expanded
+    // to a full-month grid so the muster view renders without a live ledger.
+    final parts = month.split('-');
+    final year = int.tryParse(parts.isNotEmpty ? parts[0] : '') ?? 2026;
+    final mon = int.tryParse(parts.length > 1 ? parts[1] : '') ?? 6;
+    final days = DateTime(year, mon + 1, 0).day;
+    final employees = await _loadEmployees();
+
+    HrMusterStatus statusFor(HrAttendanceStatus? s) => switch (s) {
+          HrAttendanceStatus.present => HrMusterStatus.present,
+          HrAttendanceStatus.late => HrMusterStatus.late_,
+          _ => HrMusterStatus.absent,
+        };
+
+    final rows = <HrMusterRow>[];
+    for (final emp in employees) {
+      final record = _attendanceRecords
+          .where((r) => r.employeeId == emp.id)
+          .cast<HrAttendanceRecord?>()
+          .firstWhere((r) => true, orElse: () => null);
+      final dayStatus = statusFor(record?.status);
+      final daily = <HrMusterStatus>[];
+      var present = 0;
+      for (var d = 1; d <= days; d++) {
+        // Weekends (Sat/Sun) non-working, otherwise the sampled status.
+        final weekday = DateTime(year, mon, d).weekday;
+        if (weekday == DateTime.saturday || weekday == DateTime.sunday) {
+          daily.add(HrMusterStatus.nonWorking);
+        } else {
+          daily.add(dayStatus);
+          if (dayStatus == HrMusterStatus.present ||
+              dayStatus == HrMusterStatus.late_) {
+            present++;
+          }
+        }
+      }
+      final working = daily.where((s) => s != HrMusterStatus.nonWorking).length;
+      rows.add(HrMusterRow(
+        employeeId: emp.id,
+        code: emp.employeeCode,
+        name: emp.name,
+        dept: emp.department.name,
+        dailyStatus: daily,
+        presentCount: present,
+        percent: working > 0 ? ((present / working) * 100).round() : 0,
+      ));
+    }
+
+    return HrAttendanceMuster(
+      month: month,
+      daysInMonth: days,
+      lateAfter: '09:15',
+      holidayDays: const [],
+      rows: rows,
+    );
+  }
+
+  @override
+  Future<HrLeaveBalanceReport> getLeaveBalances({
+    required RepositoryQuery query,
+  }) async {
+    const policy = [
+      ('casual', 12),
+      ('sick', 12),
+      ('earned', 15),
+    ];
+    final employees = await _loadEmployees();
+    final requests = await _loadLeaveRequests();
+    String typeName(HrLeaveType t) => switch (t) {
+          HrLeaveType.casual => 'casual',
+          HrLeaveType.sick => 'sick',
+          HrLeaveType.earned => 'earned',
+          _ => 'casual',
+        };
+    return HrLeaveBalanceReport(
+      leaveTypes: [for (final p in policy) p.$1],
+      rows: [
+        for (final emp in employees)
+          HrLeaveBalanceRow(
+            employeeId: emp.id,
+            code: emp.employeeCode,
+            name: emp.name,
+            dept: emp.department.name,
+            balances: [
+              for (final p in policy)
+                () {
+                  final used = requests
+                      .where((r) =>
+                          r.employeeId == emp.id &&
+                          r.status == HrLeaveStatus.approved &&
+                          typeName(r.leaveType) == p.$1)
+                      .fold<num>(0, (sum, r) => sum + r.days);
+                  return HrLeaveBalanceCell(
+                    leaveType: p.$1,
+                    available: p.$2,
+                    used: used,
+                    remaining: (p.$2 - used) < 0 ? 0 : (p.$2 - used),
+                  );
+                }(),
+            ],
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<HrHeadcountReport> getHeadcount({required RepositoryQuery query}) async {
+    final employees = await _loadEmployees();
+    final counts = <String, int>{};
+    var total = 0;
+    for (final e in employees) {
+      if (e.status != HrEmployeeStatus.active) continue;
+      counts.update(e.department.name, (v) => v + 1, ifAbsent: () => 1);
+      total++;
+    }
+    final rows = counts.entries
+        .map((e) => HrHeadcountRow(department: e.key, count: e.value))
+        .toList()
+      ..sort((a, b) =>
+          b.count.compareTo(a.count) == 0
+              ? a.department.compareTo(b.department)
+              : b.count.compareTo(a.count));
+    return HrHeadcountReport(rows: rows, total: total);
+  }
+
+  @override
+  Future<HrEmployeeDirectory> getEmployeeDirectory({
+    required RepositoryQuery query,
+  }) async {
+    final employees = await _loadEmployees();
+    return HrEmployeeDirectory(
+      rows: [
+        for (final e in employees)
+          HrDirectoryRow(
+            employeeId: e.id,
+            code: e.employeeCode,
+            name: e.name,
+            dept: e.department.name,
+            designation: e.designation,
+            phone: e.phone,
+            joinDate: e.joinDate,
+            status: e.status.name,
+          ),
       ],
     );
   }

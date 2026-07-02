@@ -141,3 +141,67 @@ class HrSettingsResponseDto {
 
   final Map<String, dynamic> raw;
 }
+
+// --- HR reporting / export reads (HR-1/2/4/5/6/7) --------------------------
+// Each report unwraps the {data, error} envelope to a `raw` map/list the mapper
+// projects into a report view-model.
+
+class HrSalaryRegisterDto {
+  const HrSalaryRegisterDto({required this.raw});
+
+  factory HrSalaryRegisterDto.fromJson(Map<String, dynamic> json) {
+    return HrSalaryRegisterDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class HrPayslipsDto {
+  const HrPayslipsDto({required this.raw});
+
+  factory HrPayslipsDto.fromJson(Map<String, dynamic> json) {
+    return HrPayslipsDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class HrAttendanceMusterDto {
+  const HrAttendanceMusterDto({required this.raw});
+
+  factory HrAttendanceMusterDto.fromJson(Map<String, dynamic> json) {
+    return HrAttendanceMusterDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class HrLeaveBalancesDto {
+  const HrLeaveBalancesDto({required this.raw});
+
+  factory HrLeaveBalancesDto.fromJson(Map<String, dynamic> json) {
+    return HrLeaveBalancesDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class HrHeadcountDto {
+  const HrHeadcountDto({required this.raw});
+
+  factory HrHeadcountDto.fromJson(Map<String, dynamic> json) {
+    return HrHeadcountDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
+class HrEmployeeDirectoryDto {
+  const HrEmployeeDirectoryDto({required this.raw});
+
+  factory HrEmployeeDirectoryDto.fromJson(Map<String, dynamic> json) {
+    return HrEmployeeDirectoryDto(raw: ApiEnvelopeDto.fromJson(json).requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}

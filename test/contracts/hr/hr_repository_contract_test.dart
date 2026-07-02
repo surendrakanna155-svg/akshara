@@ -123,5 +123,78 @@ void main() {
       );
       expect(mapped.sections.length, mockData.sections.length);
     });
+
+    // --- HR reporting / export reads (HR-1/2/4/5/6/7) -----------------------
+
+    test('getSalaryRegister DTO mapping matches mock output (HR-1)', () async {
+      final mockData =
+          await mockRepo.getSalaryRegister(query: kQuery, runId: 'pay_run_1');
+      final mapped = _mapper.toSalaryRegister(
+        HrSalaryRegisterDto.fromJson(_fixtures.salaryRegisterEnvelope(mockData)),
+      );
+      expect(mapped.rows.length, mockData.rows.length);
+      expect(mapped.totals.netPay, mockData.totals.netPay);
+      // Totals equal the column sum of the mapped rows.
+      final sum = mapped.rows.fold<num>(0, (a, r) => a + r.netPay);
+      expect(mapped.totals.netPay, sum);
+    });
+
+    test('getPayslips DTO mapping matches mock output (HR-2)', () async {
+      final mockData =
+          await mockRepo.getPayslips(query: kQuery, runId: 'pay_run_1');
+      final mapped = _mapper.toPayslips(
+        HrPayslipsDto.fromJson(_fixtures.payslipsEnvelope(mockData)),
+      );
+      expect(mapped.payslips.length, mockData.payslips.length);
+      if (mapped.payslips.isNotEmpty) {
+        final p = mapped.payslips.first;
+        expect(p.grossEarnings, p.earnings.fold<num>(0, (a, l) => a + l.amount));
+      }
+    });
+
+    test('getAttendanceMuster DTO mapping matches mock output (HR-6)', () async {
+      final mockData =
+          await mockRepo.getAttendanceMuster(query: kQuery, month: '2026-06');
+      final mapped = _mapper.toAttendanceMuster(
+        HrAttendanceMusterDto.fromJson(_fixtures.musterEnvelope(mockData)),
+      );
+      expect(mapped.month, '2026-06');
+      expect(mapped.daysInMonth, mockData.daysInMonth);
+      expect(mapped.rows.length, mockData.rows.length);
+      if (mapped.rows.isNotEmpty) {
+        expect(mapped.rows.first.dailyStatus.length, mapped.daysInMonth);
+      }
+    });
+
+    test('getLeaveBalances DTO mapping matches mock output (HR-4)', () async {
+      final mockData = await mockRepo.getLeaveBalances(query: kQuery);
+      final mapped = _mapper.toLeaveBalances(
+        HrLeaveBalancesDto.fromJson(_fixtures.leaveBalancesEnvelope(mockData)),
+      );
+      expect(mapped.leaveTypes, mockData.leaveTypes);
+      expect(mapped.rows.length, mockData.rows.length);
+    });
+
+    test('getHeadcount DTO mapping matches mock output (HR-5)', () async {
+      final mockData = await mockRepo.getHeadcount(query: kQuery);
+      final mapped = _mapper.toHeadcount(
+        HrHeadcountDto.fromJson(_fixtures.headcountEnvelope(mockData)),
+      );
+      expect(mapped.total, mockData.total);
+      expect(mapped.rows.length, mockData.rows.length);
+      // Grouped counts sum to the total.
+      expect(mapped.rows.fold<int>(0, (a, r) => a + r.count), mapped.total);
+    });
+
+    test('getEmployeeDirectory DTO mapping matches mock output (HR-7)', () async {
+      final mockData = await mockRepo.getEmployeeDirectory(query: kQuery);
+      final mapped = _mapper.toEmployeeDirectory(
+        HrEmployeeDirectoryDto.fromJson(_fixtures.directoryEnvelope(mockData)),
+      );
+      expect(mapped.rows.length, mockData.rows.length);
+      if (mapped.rows.isNotEmpty) {
+        expect(mapped.rows.first.code, mockData.rows.first.code);
+      }
+    });
   });
 }

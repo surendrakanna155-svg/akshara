@@ -3,6 +3,7 @@ import '../../mock/mock_hr_repository.dart';
 import '../../paginated_result.dart';
 import '../../repository_query.dart';
 import '../../../../features/hr/hr_models.dart';
+import '../../../../features/hr/hr_report_models.dart';
 import '../../../../features/hr/hr_requests.dart';
 import 'api_hr_repository.dart';
 import '../hybrid_write_fallback.dart';
@@ -146,4 +147,39 @@ class HybridHrRepository implements HrRepository {
         apiCall: () => _api.setEmployeeStatus(query: query, request: request),
         mockCall: () => _mock.setEmployeeStatus(query: query, request: request),
       );
+
+  // --- HR reporting / export reads (HR-1/2/4/5/6/7). Reads go to the API. ----
+
+  @override
+  Future<HrSalaryRegister> getSalaryRegister({
+    required RepositoryQuery query,
+    required String runId,
+  }) =>
+      _api.getSalaryRegister(query: query, runId: runId);
+
+  @override
+  Future<HrPayslipBundle> getPayslips({
+    required RepositoryQuery query,
+    required String runId,
+  }) =>
+      _api.getPayslips(query: query, runId: runId);
+
+  @override
+  Future<HrAttendanceMuster> getAttendanceMuster({
+    required RepositoryQuery query,
+    required String month,
+  }) =>
+      _api.getAttendanceMuster(query: query, month: month);
+
+  @override
+  Future<HrLeaveBalanceReport> getLeaveBalances({required RepositoryQuery query}) =>
+      _api.getLeaveBalances(query: query);
+
+  @override
+  Future<HrHeadcountReport> getHeadcount({required RepositoryQuery query}) =>
+      _api.getHeadcount(query: query);
+
+  @override
+  Future<HrEmployeeDirectory> getEmployeeDirectory({required RepositoryQuery query}) =>
+      _api.getEmployeeDirectory(query: query);
 }

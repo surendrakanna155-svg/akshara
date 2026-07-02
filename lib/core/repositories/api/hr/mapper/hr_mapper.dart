@@ -1,4 +1,5 @@
 import '../../../../../features/hr/hr_models.dart';
+import '../../../../../features/hr/hr_report_models.dart';
 import '../dto/hr_enum_codec.dart';
 import '../dto/hr_responses_dto.dart';
 
@@ -412,5 +413,169 @@ class HrMapper {
       for (final item in value)
         if (item != null) '$item',
     ];
+  }
+
+  // --- HR reporting / export reads (HR-1/2/4/5/6/7) -------------------------
+
+  static num _num(dynamic value) {
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static int _int(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  static String _str(dynamic value) => value?.toString() ?? '';
+
+  List<Map<String, dynamic>> _mapList(dynamic value) {
+    if (value is! List) return const [];
+    return [
+      for (final item in value)
+        if (item is Map<String, dynamic>) item,
+    ];
+  }
+
+  HrSalaryRegister toSalaryRegister(HrSalaryRegisterDto dto) {
+    final raw = dto.raw;
+    final totals = raw['totals'] as Map<String, dynamic>? ?? const {};
+    return HrSalaryRegister(
+      runId: _str(raw['runId']),
+      period: _str(raw['period']),
+      rows: [
+        for (final r in _mapList(raw['rows']))
+          HrSalaryRegisterRow(
+            employeeId: _str(r['employeeId']),
+            code: _str(r['code']),
+            name: _str(r['name']),
+            dept: _str(r['dept']),
+            basicPay: _num(r['basicPay']),
+            allowances: _num(r['allowances']),
+            deductions: _num(r['deductions']),
+            netPay: _num(r['netPay']),
+          ),
+      ],
+      totals: HrSalaryRegisterTotals(
+        basicPay: _num(totals['basicPay']),
+        allowances: _num(totals['allowances']),
+        deductions: _num(totals['deductions']),
+        netPay: _num(totals['netPay']),
+      ),
+    );
+  }
+
+  HrPayslipBundle toPayslips(HrPayslipsDto dto) {
+    final raw = dto.raw;
+    List<HrPayslipLine> lines(dynamic value) => [
+          for (final l in _mapList(value))
+            HrPayslipLine(label: _str(l['label']), amount: _num(l['amount'])),
+        ];
+    return HrPayslipBundle(
+      runId: _str(raw['runId']),
+      period: _str(raw['period']),
+      payslips: [
+        for (final p in _mapList(raw['payslips']))
+          HrPayslip(
+            employeeId: _str(p['employeeId']),
+            code: _str(p['code']),
+            name: _str(p['name']),
+            dept: _str(p['dept']),
+            earnings: lines(p['earnings']),
+            deductionLines: lines(p['deductionLines']),
+            grossEarnings: _num(p['grossEarnings']),
+            totalDeductions: _num(p['totalDeductions']),
+            netPay: _num(p['netPay']),
+          ),
+      ],
+    );
+  }
+
+  HrAttendanceMuster toAttendanceMuster(HrAttendanceMusterDto dto) {
+    final raw = dto.raw;
+    return HrAttendanceMuster(
+      month: _str(raw['month']),
+      daysInMonth: _int(raw['daysInMonth']),
+      lateAfter: _str(raw['lateAfter']),
+      holidayDays: [
+        for (final d in (raw['holidayDays'] as List<dynamic>? ?? const [])) _int(d),
+      ],
+      rows: [
+        for (final r in _mapList(raw['rows']))
+          HrMusterRow(
+            employeeId: _str(r['employeeId']),
+            code: _str(r['code']),
+            name: _str(r['name']),
+            dept: _str(r['dept']),
+            dailyStatus: [
+              for (final s in (r['dailyStatus'] as List<dynamic>? ?? const []))
+                HrMusterStatus.fromCode(_str(s)),
+            ],
+            presentCount: _int(r['presentCount']),
+            percent: _int(r['percent']),
+          ),
+      ],
+    );
+  }
+
+  HrLeaveBalanceReport toLeaveBalances(HrLeaveBalancesDto dto) {
+    final raw = dto.raw;
+    return HrLeaveBalanceReport(
+      leaveTypes: _stringList(raw['leaveTypes']),
+      rows: [
+        for (final r in _mapList(raw['rows']))
+          HrLeaveBalanceRow(
+            employeeId: _str(r['employeeId']),
+            code: _str(r['code']),
+            name: _str(r['name']),
+            dept: _str(r['dept']),
+            balances: [
+              for (final b in _mapList(r['balances']))
+                HrLeaveBalanceCell(
+                  leaveType: _str(b['leaveType']),
+                  available: _num(b['available']),
+                  used: _num(b['used']),
+                  remaining: _num(b['remaining']),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  HrHeadcountReport toHeadcount(HrHeadcountDto dto) {
+    final raw = dto.raw;
+    return HrHeadcountReport(
+      total: _int(raw['total']),
+      rows: [
+        for (final r in _mapList(raw['rows']))
+          HrHeadcountRow(
+            department: _str(r['department']),
+            count: _int(r['count']),
+          ),
+      ],
+    );
+  }
+
+  HrEmployeeDirectory toEmployeeDirectory(HrEmployeeDirectoryDto dto) {
+    final raw = dto.raw;
+    return HrEmployeeDirectory(
+      rows: [
+        for (final r in _mapList(raw['rows']))
+          HrDirectoryRow(
+            employeeId: _str(r['employeeId']),
+            code: _str(r['code']),
+            name: _str(r['name']),
+            dept: _str(r['dept']),
+            designation: _str(r['designation']),
+            phone: _str(r['phone']),
+            joinDate: _str(r['joinDate']),
+            status: _str(r['status']),
+          ),
+      ],
+    );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
@@ -13,6 +15,9 @@ import '../../staff_attendance/staff_attendance_providers.dart';
 import '../../staff_attendance/widgets/staff_check_in_card.dart';
 import '../hr_models.dart';
 import '../hr_providers.dart';
+import '../hr_report_models.dart';
+import '../reports/hr_export_providers.dart';
+import '../reports/hr_report_exporters.dart';
 import '../widgets/hr_module_scaffold.dart';
 import '../widgets/hr_segment_panel.dart';
 import '../widgets/hr_trend_chart.dart';
@@ -56,6 +61,11 @@ class HrAttendanceScreen extends ConsumerWidget {
               onRecord: (event) =>
                   ref.read(staffAttendanceControllerProvider).record(event),
             ),
+            const SizedBox(height: AksharaSpacing.s4),
+            // HR-6 — monthly attendance muster export (inferred from the
+            // staff_check_ins ledger server-side). Always available on this
+            // viewHr-gated screen, independent of the attendance list state.
+            const _MusterExportBar(),
             const SizedBox(height: AksharaSpacing.s6),
             _buildBody(
               context,
@@ -144,6 +154,84 @@ class HrAttendanceScreen extends ConsumerWidget {
             ],
           ),
       ],
+    );
+  }
+}
+
+/// HR-6 — monthly attendance muster export bar. Fetches the muster for the
+/// selected month (defaults to the current month) on tap and shares it as a
+/// grid CSV / PDF via the shared XCT-1 export service.
+class _MusterExportBar extends ConsumerWidget {
+  const _MusterExportBar();
+
+  Future<void> _run(
+    BuildContext context,
+    WidgetRef ref,
+    Future<void> Function(HrReportExporters exporters, HrAttendanceMuster muster)
+        action,
+    String label,
+  ) async {
+    final month = ref.read(hrMusterMonthProvider);
+    final exporters =
+        HrReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      final muster = await ref.read(hrAttendanceMusterProvider(month).future);
+      await action(exporters, muster);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.hrReportExportSuccessSnackbar,
+          content: Text(label),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to build the muster export.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final month = ref.watch(hrMusterMonthProvider);
+    return Semantics(
+      label: 'Attendance muster export actions',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Monthly muster · $month',
+              style: context.aksharaText.titleSmall),
+          const SizedBox(height: AksharaSpacing.s2),
+          Wrap(
+            spacing: AksharaSpacing.s3,
+            runSpacing: AksharaSpacing.s3,
+            children: [
+              OutlinedButton.icon(
+                key: QaTestKeys.hrMusterExportButton,
+                onPressed: () => _run(
+                  context,
+                  ref,
+                  (e, m) => e.shareMusterPdf(m),
+                  'Attendance muster ($month) PDF ready',
+                ),
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: const Text('Muster PDF'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _run(
+                  context,
+                  ref,
+                  (e, m) => e.shareMusterCsv(m),
+                  'Attendance muster ($month) Excel CSV ready',
+                ),
+                icon: const Icon(Icons.table_chart_outlined),
+                label: const Text('Muster Excel'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
