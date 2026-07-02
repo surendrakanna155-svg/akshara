@@ -113,3 +113,91 @@ final saveTemplateProvider =
     AsyncNotifierProvider<SaveTemplateNotifier, CommunicationTemplate?>(
   SaveTemplateNotifier.new,
 );
+
+/// COM-3: re-enqueue a broadcast to its unread recipients. Holds the number of
+/// recipients re-targeted from the last successful call.
+class ResendBroadcastNotifier extends AsyncNotifier<int?> {
+  @override
+  FutureOr<int?> build() => null;
+
+  Future<int?> execute(String broadcastId) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      _assertManageCommunication(ref);
+      final resent =
+          await ref.read(communicationRepositoryProvider).resendBroadcastToUnread(
+                query: ref.read(repositoryQueryProvider),
+                broadcastId: broadcastId,
+              );
+      ref.invalidate(communicationBroadcastReportFutureProvider(broadcastId));
+      ref.invalidate(communicationBroadcastHistoryFutureProvider);
+      return resent;
+    });
+    return state.valueOrNull;
+  }
+}
+
+final resendBroadcastProvider =
+    AsyncNotifierProvider<ResendBroadcastNotifier, int?>(
+  ResendBroadcastNotifier.new,
+);
+
+/// COM-2: save a named audience segment.
+class SaveAudienceSegmentNotifier extends AsyncNotifier<AudienceSegment?> {
+  @override
+  FutureOr<AudienceSegment?> build() => null;
+
+  Future<AudienceSegment?> execute({
+    required String name,
+    required String audienceType,
+    String? className,
+    String? sectionName,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      _assertManageCommunication(ref);
+      final segment =
+          await ref.read(communicationRepositoryProvider).createAudienceSegment(
+                query: ref.read(repositoryQueryProvider),
+                name: name,
+                audienceType: audienceType,
+                className: className,
+                sectionName: sectionName,
+              );
+      ref.invalidate(communicationAudienceSegmentsFutureProvider);
+      return segment;
+    });
+    return state.valueOrNull;
+  }
+}
+
+final saveAudienceSegmentProvider =
+    AsyncNotifierProvider<SaveAudienceSegmentNotifier, AudienceSegment?>(
+  SaveAudienceSegmentNotifier.new,
+);
+
+/// COM-2: delete a saved audience segment.
+class DeleteAudienceSegmentNotifier extends AsyncNotifier<void> {
+  @override
+  FutureOr<void> build() {}
+
+  Future<void> execute(String id) async {
+    if (state.isLoading) return;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      _assertManageCommunication(ref);
+      await ref.read(communicationRepositoryProvider).deleteAudienceSegment(
+            query: ref.read(repositoryQueryProvider),
+            id: id,
+          );
+      ref.invalidate(communicationAudienceSegmentsFutureProvider);
+    });
+  }
+}
+
+final deleteAudienceSegmentProvider =
+    AsyncNotifierProvider<DeleteAudienceSegmentNotifier, void>(
+  DeleteAudienceSegmentNotifier.new,
+);

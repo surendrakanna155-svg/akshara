@@ -1295,6 +1295,24 @@ abstract final class QaTestKeys {
       ValueKey<String>('communication_template_save_button');
   static const communicationBroadcastHistoryList =
       ValueKey<String>('communication_broadcast_history_list');
+  static const communicationAudiencePicker =
+      ValueKey<String>('communication_audience_picker');
+  static const communicationAudienceClassField =
+      ValueKey<String>('communication_audience_class_field');
+  static const communicationAudienceSectionField =
+      ValueKey<String>('communication_audience_section_field');
+  static const communicationSegmentPicker =
+      ValueKey<String>('communication_segment_picker');
+  static const communicationRequiresAckSwitch =
+      ValueKey<String>('communication_requires_ack_switch');
+  static const communicationScheduleToggle =
+      ValueKey<String>('communication_schedule_toggle');
+  static const communicationBroadcastReportResendButton =
+      ValueKey<String>('communication_broadcast_report_resend_button');
+  static const communicationBroadcastReportExportButton =
+      ValueKey<String>('communication_broadcast_report_export_button');
+  static ValueKey<String> notificationAcknowledgeButton(String id) =>
+      ValueKey<String>('notification_acknowledge_button_$id');
 
   static const substituteDayFilter = ValueKey<String>('substitute_day_filter');
   static const substituteClassFilter =

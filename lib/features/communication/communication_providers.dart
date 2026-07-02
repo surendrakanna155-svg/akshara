@@ -17,3 +17,20 @@ final communicationBroadcastHistoryFutureProvider =
         query: ref.watch(repositoryQueryProvider),
       );
 });
+
+/// COM-2: the caller's school's saved audience segments.
+final communicationAudienceSegmentsFutureProvider =
+    FutureProvider<List<AudienceSegment>>((ref) async {
+  return ref.read(communicationRepositoryProvider).listAudienceSegments(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+/// COM-1: per-broadcast delivery & read report, keyed by broadcast id.
+final communicationBroadcastReportFutureProvider =
+    FutureProvider.family<BroadcastDeliveryReport, String>((ref, broadcastId) {
+  return ref.read(communicationRepositoryProvider).getBroadcastReport(
+        query: ref.watch(repositoryQueryProvider),
+        broadcastId: broadcastId,
+      );
+});

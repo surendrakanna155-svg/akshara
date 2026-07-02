@@ -145,4 +145,75 @@ class ApiCommunicationRepository implements CommunicationRepository {
     );
     return _mapper.toBroadcastResult(dto);
   }
+
+  @override
+  Future<BroadcastDeliveryReport> getBroadcastReport({
+    required RepositoryQuery query,
+    required String broadcastId,
+  }) async {
+    final dto = await _remote.getBroadcastReport(
+      query: query,
+      broadcastId: broadcastId,
+    );
+    return _mapper.toBroadcastReport(dto);
+  }
+
+  @override
+  Future<int> resendBroadcastToUnread({
+    required RepositoryQuery query,
+    required String broadcastId,
+  }) async {
+    final dto = await _remote.resendBroadcastToUnread(
+      query: query,
+      broadcastId: broadcastId,
+    );
+    return _mapper.toResendCount(dto);
+  }
+
+  @override
+  Future<List<AudienceSegment>> listAudienceSegments({
+    required RepositoryQuery query,
+  }) async {
+    final dto = await _remote.listAudienceSegments(query: query);
+    return [for (final item in dto.items) _mapper.toAudienceSegment(item)];
+  }
+
+  @override
+  Future<AudienceSegment> createAudienceSegment({
+    required RepositoryQuery query,
+    required String name,
+    required String audienceType,
+    String? className,
+    String? sectionName,
+  }) async {
+    final dto = await _remote.createAudienceSegment(
+      query: query,
+      request: CreateAudienceSegmentRequestDto.fromArgs(
+        name: name,
+        audienceType: audienceType,
+        className: className,
+        sectionName: sectionName,
+      ),
+    );
+    return _mapper.toAudienceSegment(dto);
+  }
+
+  @override
+  Future<void> deleteAudienceSegment({
+    required RepositoryQuery query,
+    required String id,
+  }) async {
+    await _remote.deleteAudienceSegment(query: query, id: id);
+  }
+
+  @override
+  Future<void> acknowledgeNotification({
+    required RepositoryQuery query,
+    required String deliveryId,
+  }) async {
+    await _remote.acknowledgeNotification(
+      query: query,
+      deliveryId: deliveryId,
+    );
+  }
 }

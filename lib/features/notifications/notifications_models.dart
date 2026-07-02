@@ -86,6 +86,8 @@ class AppNotification {
     this.isArchived = false,
     this.isUrgent = false,
     this.childContext,
+    this.requiresAck = false,
+    this.acknowledgedAt,
   });
 
   final String id;
@@ -100,9 +102,19 @@ class AppNotification {
   /// Shown as chip when parent has multiple children (NT mobile spec).
   final String? childContext;
 
+  /// COM-D1: this delivery requires the recipient to acknowledge it.
+  final bool requiresAck;
+
+  /// COM-D1: when the recipient acknowledged it (null = not yet acknowledged).
+  final DateTime? acknowledgedAt;
+
+  /// COM-D1: an acknowledgement is still outstanding.
+  bool get needsAcknowledgement => requiresAck && acknowledgedAt == null;
+
   AppNotification copyWith({
     bool? isRead,
     bool? isArchived,
+    DateTime? acknowledgedAt,
   }) {
     return AppNotification(
       id: id,
@@ -114,6 +126,8 @@ class AppNotification {
       isArchived: isArchived ?? this.isArchived,
       isUrgent: isUrgent,
       childContext: childContext,
+      requiresAck: requiresAck,
+      acknowledgedAt: acknowledgedAt ?? this.acknowledgedAt,
     );
   }
 }

@@ -79,6 +79,70 @@ class CommunicationRemoteDataSource {
     return BroadcastResponseDto.fromJson(_requireData(response));
   }
 
+  Future<BroadcastReportResponseDto> getBroadcastReport({
+    required RepositoryQuery query,
+    required String broadcastId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      CommunicationApiPaths.broadcastReport(broadcastId),
+      queryParameters: _queryParams(query),
+    );
+    return BroadcastReportResponseDto.fromJson(_requireData(response));
+  }
+
+  Future<ResendBroadcastResponseDto> resendBroadcastToUnread({
+    required RepositoryQuery query,
+    required String broadcastId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      CommunicationApiPaths.broadcastResend(broadcastId),
+      queryParameters: _queryParams(query),
+    );
+    return ResendBroadcastResponseDto.fromJson(_requireData(response));
+  }
+
+  Future<AudienceSegmentsResponseDto> listAudienceSegments({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      CommunicationApiPaths.audienceSegments,
+      queryParameters: _queryParams(query),
+    );
+    return AudienceSegmentsResponseDto.fromJson(_requireData(response));
+  }
+
+  Future<AudienceSegmentDto> createAudienceSegment({
+    required RepositoryQuery query,
+    required CreateAudienceSegmentRequestDto request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      CommunicationApiPaths.audienceSegments,
+      queryParameters: _queryParams(query),
+      data: request.toJson(),
+    );
+    return AudienceSegmentDto.fromJson(_requireData(response));
+  }
+
+  Future<void> deleteAudienceSegment({
+    required RepositoryQuery query,
+    required String id,
+  }) async {
+    await _dio.delete<Map<String, dynamic>>(
+      CommunicationApiPaths.audienceSegment(id),
+      queryParameters: _queryParams(query),
+    );
+  }
+
+  Future<void> acknowledgeNotification({
+    required RepositoryQuery query,
+    required String deliveryId,
+  }) async {
+    await _dio.post<Map<String, dynamic>>(
+      CommunicationApiPaths.notificationAcknowledge(deliveryId),
+      queryParameters: _queryParams(query),
+    );
+  }
+
   Future<void> markNotificationRead({
     required RepositoryQuery query,
     required String notificationId,

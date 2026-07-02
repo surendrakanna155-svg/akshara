@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/testing/qa_test_keys.dart';
 import '../../theme/radius.dart';
 import '../../theme/spacing.dart';
 import '../../theme/theme_extensions.dart';
@@ -115,6 +116,11 @@ class NotificationsScreen extends ConsumerWidget {
                                         .read(notificationsProvider.notifier)
                                         .markRead(item.id);
                                   },
+                                  onAcknowledge: () {
+                                    ref
+                                        .read(notificationsProvider.notifier)
+                                        .acknowledge(item.id);
+                                  },
                                   onDismissed: (action) {
                                     final notifier =
                                         ref.read(notificationsProvider.notifier);
@@ -145,11 +151,13 @@ class _NotificationRow extends StatelessWidget {
   const _NotificationRow({
     required this.notification,
     required this.onTap,
+    required this.onAcknowledge,
     required this.onDismissed,
   });
 
   final AppNotification notification;
   final VoidCallback onTap;
+  final VoidCallback onAcknowledge;
   final void Function(_DismissAction action) onDismissed;
 
   @override
@@ -195,7 +203,9 @@ class _NotificationRow extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: Container(
-            height: NotificationsScreen._rowHeight,
+            constraints: const BoxConstraints(
+              minHeight: NotificationsScreen._rowHeight,
+            ),
             decoration: BoxDecoration(
               border: Border(
                 left: BorderSide(
@@ -286,6 +296,13 @@ class _NotificationRow extends StatelessWidget {
                           ),
                         ),
                       ],
+                      if (notification.requiresAck) ...[
+                        const SizedBox(height: AksharaSpacing.s2),
+                        _AcknowledgeAffordance(
+                          notification: notification,
+                          onAcknowledge: onAcknowledge,
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -330,6 +347,57 @@ class _NotificationRow extends StatelessWidget {
       NotificationCategory.approval => ext.success,
       _ => colors.primary,
     };
+  }
+}
+
+/// COM-D1: recipient acknowledgement affordance. Shows an "Acknowledge" button
+/// while an acknowledgement is outstanding, and an "Acknowledged" state once the
+/// recipient has confirmed it.
+class _AcknowledgeAffordance extends StatelessWidget {
+  const _AcknowledgeAffordance({
+    required this.notification,
+    required this.onAcknowledge,
+  });
+
+  final AppNotification notification;
+  final VoidCallback onAcknowledge;
+
+  @override
+  Widget build(BuildContext context) {
+    final ext = context.akshara;
+    final text = context.aksharaText;
+    if (notification.needsAcknowledgement) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          key: QaTestKeys.notificationAcknowledgeButton(notification.id),
+          onPressed: onAcknowledge,
+          icon: const Icon(Icons.check_circle_outline, size: 18),
+          label: const Text('Acknowledge'),
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AksharaSpacing.s3,
+              vertical: AksharaSpacing.s1,
+            ),
+          ),
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.check_circle, size: 16, color: ext.success),
+        const SizedBox(width: AksharaSpacing.s1),
+        Text(
+          'Acknowledged',
+          style: text.labelSmall.copyWith(
+            color: ext.success,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }
 

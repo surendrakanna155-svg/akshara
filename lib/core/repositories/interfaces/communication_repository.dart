@@ -50,6 +50,45 @@ abstract class CommunicationRepository {
     required RepositoryQuery query,
     required BroadcastRequest request,
   });
+
+  /// COM-1: per-broadcast delivery & read report (counts + unread roster).
+  Future<BroadcastDeliveryReport> getBroadcastReport({
+    required RepositoryQuery query,
+    required String broadcastId,
+  });
+
+  /// COM-3: re-enqueue a broadcast to its unread recipients. Returns the number
+  /// of recipients re-targeted (`resent`).
+  Future<int> resendBroadcastToUnread({
+    required RepositoryQuery query,
+    required String broadcastId,
+  });
+
+  /// COM-2: list the caller's school's saved audience segments.
+  Future<List<AudienceSegment>> listAudienceSegments({
+    required RepositoryQuery query,
+  });
+
+  /// COM-2: save a named audience segment. Class audiences require [className].
+  Future<AudienceSegment> createAudienceSegment({
+    required RepositoryQuery query,
+    required String name,
+    required String audienceType,
+    String? className,
+    String? sectionName,
+  });
+
+  /// COM-2: delete a saved audience segment by id.
+  Future<void> deleteAudienceSegment({
+    required RepositoryQuery query,
+    required String id,
+  });
+
+  /// COM-D1: record the caller's acknowledgement of one of their OWN deliveries.
+  Future<void> acknowledgeNotification({
+    required RepositoryQuery query,
+    required String deliveryId,
+  });
 }
 
 class CommunicationTemplate {
@@ -75,11 +114,27 @@ class BroadcastRequest {
     required this.audience,
     required this.title,
     required this.body,
+    this.audienceClass,
+    this.audienceSection,
+    this.requiresAck = false,
+    this.scheduledAt,
   });
 
   final String audience;
   final String title;
   final String body;
+
+  /// COM-2/COM-4: class target for `class_parents` / `class_students`.
+  final String? audienceClass;
+
+  /// Optional section within [audienceClass].
+  final String? audienceSection;
+
+  /// COM-D1: when true, recipients must acknowledge the notice.
+  final bool requiresAck;
+
+  /// COM-4: ISO-8601 send-time. When present the broadcast is SCHEDULED, not sent.
+  final String? scheduledAt;
 }
 
 class BroadcastResult {
@@ -142,4 +197,75 @@ class BroadcastHistoryItem {
   final String status;
   final int recipientCount;
   final DateTime sentAt;
+}
+
+/// COM-1: aggregate delivery/read counts for a broadcast report.
+class BroadcastDeliveryCounts {
+  const BroadcastDeliveryCounts({
+    this.total = 0,
+    this.sent = 0,
+    this.failed = 0,
+    this.pending = 0,
+    this.read = 0,
+    this.unread = 0,
+    this.acknowledged = 0,
+  });
+
+  final int total;
+  final int sent;
+  final int failed;
+  final int pending;
+  final int read;
+  final int unread;
+  final int acknowledged;
+}
+
+/// COM-1: a recipient who has been sent the broadcast but has not read it yet.
+class UnreadRecipient {
+  const UnreadRecipient({required this.userId, required this.name});
+
+  final String userId;
+  final String name;
+}
+
+/// COM-1: full per-broadcast delivery & read report (summary + counts + roster).
+class BroadcastDeliveryReport {
+  const BroadcastDeliveryReport({
+    required this.id,
+    required this.title,
+    required this.audience,
+    required this.status,
+    required this.counts,
+    this.requiresAck = false,
+    this.sentAt,
+    this.scheduledAt,
+    this.unreadRecipients = const [],
+  });
+
+  final String id;
+  final String title;
+  final String audience;
+  final String status;
+  final bool requiresAck;
+  final DateTime? sentAt;
+  final DateTime? scheduledAt;
+  final BroadcastDeliveryCounts counts;
+  final List<UnreadRecipient> unreadRecipients;
+}
+
+/// COM-2: a saved audience segment (named, reusable broadcast target).
+class AudienceSegment {
+  const AudienceSegment({
+    required this.id,
+    required this.name,
+    required this.audienceType,
+    this.className,
+    this.sectionName,
+  });
+
+  final String id;
+  final String name;
+  final String audienceType;
+  final String? className;
+  final String? sectionName;
 }

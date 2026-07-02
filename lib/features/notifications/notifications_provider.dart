@@ -113,6 +113,29 @@ class NotificationsNotifier extends Notifier<List<AppNotification>> {
     state = [for (final item in state) item.copyWith(isRead: true)];
   }
 
+  /// COM-D1: record the recipient's acknowledgement of a required-ack notice.
+  /// Optimistically stamps [AppNotification.acknowledgedAt] and marks it read.
+  Future<void> acknowledge(String id) async {
+    final now = DateTime.now();
+    if (_useApi) {
+      try {
+        await ref.read(communicationRepositoryProvider).acknowledgeNotification(
+              query: ref.read(repositoryQueryProvider),
+              deliveryId: id,
+            );
+      } catch (_) {
+        // Keep optimistic local update on API failure.
+      }
+    }
+    state = [
+      for (final item in state)
+        if (item.id == id)
+          item.copyWith(isRead: true, acknowledgedAt: now)
+        else
+          item,
+    ];
+  }
+
   void archive(String id) {
     state = [
       for (final item in state)

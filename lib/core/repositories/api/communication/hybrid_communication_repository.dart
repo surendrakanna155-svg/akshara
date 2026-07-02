@@ -97,4 +97,54 @@ class HybridCommunicationRepository implements CommunicationRepository {
     required BroadcastRequest request,
   }) =>
       _delegate.sendBroadcast(query: query, request: request);
+
+  @override
+  Future<BroadcastDeliveryReport> getBroadcastReport({
+    required RepositoryQuery query,
+    required String broadcastId,
+  }) =>
+      _delegate.getBroadcastReport(query: query, broadcastId: broadcastId);
+
+  @override
+  Future<int> resendBroadcastToUnread({
+    required RepositoryQuery query,
+    required String broadcastId,
+  }) =>
+      _delegate.resendBroadcastToUnread(query: query, broadcastId: broadcastId);
+
+  @override
+  Future<List<AudienceSegment>> listAudienceSegments({
+    required RepositoryQuery query,
+  }) =>
+      _delegate.listAudienceSegments(query: query);
+
+  @override
+  Future<AudienceSegment> createAudienceSegment({
+    required RepositoryQuery query,
+    required String name,
+    required String audienceType,
+    String? className,
+    String? sectionName,
+  }) =>
+      _delegate.createAudienceSegment(
+        query: query,
+        name: name,
+        audienceType: audienceType,
+        className: className,
+        sectionName: sectionName,
+      );
+
+  @override
+  Future<void> deleteAudienceSegment({
+    required RepositoryQuery query,
+    required String id,
+  }) =>
+      _delegate.deleteAudienceSegment(query: query, id: id);
+
+  @override
+  Future<void> acknowledgeNotification({
+    required RepositoryQuery query,
+    required String deliveryId,
+  }) =>
+      _delegate.acknowledgeNotification(query: query, deliveryId: deliveryId);
 }
