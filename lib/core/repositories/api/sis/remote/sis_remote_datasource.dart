@@ -10,11 +10,14 @@ import '../dto/enrollment_request_dto.dart';
 import '../dto/sis_academic_assignment_dto.dart';
 import '../dto/sis_conversion_dto.dart';
 import '../dto/sis_dashboard_dto.dart';
+import '../dto/sis_enum_codec.dart';
 import '../dto/sis_student_profile_dto.dart';
 import '../dto/sis_students_dto.dart';
+import '../dto/sis_transfers_dto.dart';
 import '../dto/upload_student_document_request_dto.dart';
 import '../dto/update_student_request_dto.dart';
 import '../dto/update_student_status_request_dto.dart';
+import '../dto/verify_student_document_request_dto.dart';
 import '../mapper/sis_mapper.dart';
 import 'sis_api_paths.dart';
 
@@ -44,6 +47,25 @@ class SisRemoteDataSource {
       queryParameters: _queryParams(query),
     );
     return SisStudentsResponseDto.fromJson(_responseMap(response));
+  }
+
+  /// SIS-5 — GET /sis/transfers?from&to&status (paginated like /sis/students).
+  Future<SisTransfersResponseDto> fetchStudentTransfers({
+    required RepositoryQuery query,
+    String? fromDate,
+    String? toDate,
+    SisStudentStatus? status,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      SisApiPaths.transfers,
+      queryParameters: {
+        ..._queryParams(query),
+        if (fromDate != null && fromDate.isNotEmpty) 'from': fromDate,
+        if (toDate != null && toDate.isNotEmpty) 'to': toDate,
+        if (status != null) 'status': SisEnumCodec.studentStatusToApi(status),
+      },
+    );
+    return SisTransfersResponseDto.fromJson(_responseMap(response));
   }
 
   Future<SisStudentProfileDto> fetchStudentProfile({
@@ -111,6 +133,22 @@ class SisRemoteDataSource {
       SisApiPaths.studentDocuments(studentId),
       queryParameters: _queryParams(query),
       data: UploadStudentDocumentRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toDocumentSummary(_requireData(response));
+  }
+
+  /// SIS-3 — PATCH /sis/students/{id}/documents/{docId}/verify. Response is
+  /// the updated document envelope incl. status / verifiedBy / verifiedAt.
+  Future<SisDocumentSummary> verifyStudentDocument({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+    required VerifyStudentDocumentRequest request,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      SisApiPaths.studentDocumentVerify(studentId, documentId),
+      queryParameters: _queryParams(query),
+      data: VerifyStudentDocumentRequestDto.fromDomain(request).toJson(),
     );
     return _mapper.toDocumentSummary(_requireData(response));
   }

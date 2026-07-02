@@ -5,11 +5,13 @@ import 'package:akshara_erp/core/repositories/api/sis/dto/sis_conversion_dto.dar
 import 'package:akshara_erp/core/repositories/api/sis/dto/sis_dashboard_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/sis_student_profile_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/sis_students_dto.dart';
+import 'package:akshara_erp/core/repositories/api/sis/dto/sis_transfers_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/mapper/sis_mapper.dart';
 import 'package:akshara_erp/core/repositories/api/sis/remote/sis_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/interfaces/sis_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_sis_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/sis/sis_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -150,6 +152,67 @@ void main() {
       expect(
         mapped.queue.first.enrollment.studentName,
         mockData.queue.first.enrollment.studentName,
+      );
+    });
+
+    test('listStudentTransfers DTO mapping matches mock output', () async {
+      final mockData = await mockRepo.listStudentTransfers(query: kQuery);
+      expect(mockData.items, isNotEmpty);
+
+      final mapped = _mapper.toTransferRecords(
+        SisTransfersResponseDto.fromJson(
+          _fixtures.transfersEnvelope(mockData),
+        ),
+      );
+
+      expect(mapped.length, mockData.items.length);
+      final first = mapped.first;
+      final expected = mockData.items.first;
+      expect(first.studentId, expected.studentId);
+      expect(first.studentName, expected.studentName);
+      expect(first.admissionNumber, expected.admissionNumber);
+      expect(first.classLabel, expected.classLabel);
+      expect(first.section, expected.section);
+      expect(first.academicYear, expected.academicYear);
+      expect(first.status, expected.status);
+      expect(first.exitedAt, expected.exitedAt);
+    });
+
+    test('listStudentTransfers pagination envelope round-trips', () async {
+      final mockData = await mockRepo.listStudentTransfers(query: kQuery);
+      final dto = SisTransfersResponseDto.fromJson(
+        _fixtures.transfersEnvelope(mockData),
+      );
+      expect(dto.pagination, isNotNull);
+      expect(dto.pagination!.page, mockData.page);
+      expect(dto.pagination!.total, mockData.total);
+      expect(dto.pagination!.hasMore, mockData.hasMore);
+    });
+
+    test('mock listStudentTransfers filters by status and date range',
+        () async {
+      final alumni = await mockRepo.listStudentTransfers(
+        query: kQuery,
+        status: SisStudentStatus.alumni,
+      );
+      expect(alumni.items, isNotEmpty);
+      expect(
+        alumni.items.every(
+          (record) => record.status == SisStudentStatus.alumni,
+        ),
+        isTrue,
+      );
+
+      final ranged = await mockRepo.listStudentTransfers(
+        query: kQuery,
+        fromDate: '2026-01-01',
+        toDate: '2026-12-31',
+      );
+      expect(
+        ranged.items.every(
+          (record) => record.exitedAt.compareTo('2026-01-01') >= 0,
+        ),
+        isTrue,
       );
     });
 

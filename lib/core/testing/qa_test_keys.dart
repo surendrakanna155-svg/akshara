@@ -89,6 +89,8 @@ abstract final class QaTestKeys {
       ValueKey<String>('sis_registry_search_field');
   static const sisRegistryExportButton =
       ValueKey<String>('sis_registry_export_button');
+  static const sisRegistryExportPdfButton =
+      ValueKey<String>('sis_registry_export_pdf_button');
   static const sisRegistryExportSuccessSnackbar =
       ValueKey<String>('sis_registry_export_success_snackbar');
 
@@ -102,6 +104,28 @@ abstract final class QaTestKeys {
       ValueKey<String>('sis_upload_document_submit_button');
   static const sisDocumentUploadSuccessSnackbar =
       ValueKey<String>('sis_document_upload_success_snackbar');
+
+  // SIS-3 — document verify / reject.
+  static ValueKey<String> sisDocumentVerifyButton(String documentId) =>
+      ValueKey<String>('sis_document_verify_$documentId');
+  static ValueKey<String> sisDocumentRejectButton(String documentId) =>
+      ValueKey<String>('sis_document_reject_$documentId');
+  static const sisDocumentVerifyNoteField =
+      ValueKey<String>('sis_document_verify_note_field');
+  static const sisDocumentVerifySubmitButton =
+      ValueKey<String>('sis_document_verify_submit_button');
+  static const sisDocumentVerifySuccessSnackbar =
+      ValueKey<String>('sis_document_verify_success_snackbar');
+
+  // SIS-5 — transfers / exit log.
+  static const sisTransfersDateRangeButton =
+      ValueKey<String>('sis_transfers_date_range_button');
+  static const sisTransfersExportCsvButton =
+      ValueKey<String>('sis_transfers_export_csv_button');
+  static const sisTransfersExportPdfButton =
+      ValueKey<String>('sis_transfers_export_pdf_button');
+  static const sisTransfersExportSuccessSnackbar =
+      ValueKey<String>('sis_transfers_export_success_snackbar');
 
   static const sisBulkAssignButton =
       ValueKey<String>('sis_bulk_assign_button');

@@ -100,6 +100,42 @@ class ApiSisRepository implements SisRepository {
   }
 
   @override
+  Future<SisDocumentSummary> verifyStudentDocument({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+    required VerifyStudentDocumentRequest request,
+  }) async {
+    return _remote.verifyStudentDocument(
+      query: query,
+      studentId: studentId,
+      documentId: documentId,
+      request: request,
+    );
+  }
+
+  @override
+  Future<PaginatedResult<SisTransferRecord>> listStudentTransfers({
+    required RepositoryQuery query,
+    String? fromDate,
+    String? toDate,
+    SisStudentStatus? status,
+  }) async {
+    final dto = await _remote.fetchStudentTransfers(
+      query: query,
+      fromDate: fromDate,
+      toDate: toDate,
+      status: status,
+    );
+    return PaginatedResult.fromDto(
+      items: _mapper.toTransferRecords(dto),
+      pagination: dto.pagination,
+      fallbackPage: query.page,
+      fallbackPageSize: query.pageSize,
+    );
+  }
+
+  @override
   Future<SisStudent> updateStudentStatus({
     required RepositoryQuery query,
     required String studentId,

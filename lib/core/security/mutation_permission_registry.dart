@@ -158,6 +158,13 @@ class MutationPermissionRegistry {
       permission: Permission.manageSis,
       kind: 'manage',
     ),
+    // SIS-3 — document verify/reject decision.
+    MutationPermissionEntry(
+      moduleId: 'sis',
+      mutationId: 'verifyStudentDocument',
+      permission: Permission.manageSis,
+      kind: 'manage',
+    ),
     MutationPermissionEntry(
       moduleId: 'sis',
       mutationId: 'previewYearTransition',

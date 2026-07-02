@@ -26,6 +26,37 @@ class MockSisRepository implements SisRepository {
       status: 'Verified',
       uploadedAt: 'Jan 2026',
     ),
+    // SIS-3: pending document awaiting a manageSis verify/reject decision.
+    SisDocumentSummary(
+      id: 'SIS-DOC-903',
+      type: 'Transfer Certificate',
+      status: 'pending',
+      uploadedAt: 'Feb 2026',
+    ),
+  ];
+
+  // SIS-5: seed exit-log rows (transferred / alumni) for the transfers screen.
+  static const List<SisTransferRecord> _seedTransfers = [
+    SisTransferRecord(
+      studentId: 'SIS-STU-10390',
+      studentName: 'Rahul Verma',
+      admissionNumber: 'ADM-2024-0031',
+      classLabel: '9',
+      section: 'B',
+      academicYear: '2025–26',
+      status: SisStudentStatus.transferred,
+      exitedAt: '2026-03-14',
+    ),
+    SisTransferRecord(
+      studentId: 'SIS-STU-10322',
+      studentName: 'Sneha Gupta',
+      admissionNumber: 'ADM-2019-0007',
+      classLabel: '12',
+      section: 'A',
+      academicYear: '2024–25',
+      status: SisStudentStatus.alumni,
+      exitedAt: '2025-04-30',
+    ),
   ];
 
   static const List<SisStudent> _seedStudents = [
@@ -560,6 +591,90 @@ class MockSisRepository implements SisRepository {
     _store.documentsForStudent(studentId).insert(0, document);
     return document;
   }
+
+  @override
+  Future<SisDocumentSummary> verifyStudentDocument({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+    required VerifyStudentDocumentRequest request,
+  }) async {
+    await _ensureStudentDocuments(query);
+    final documents = _store.documentsForStudent(studentId);
+    final index = documents.indexWhere((document) => document.id == documentId);
+    if (index < 0) throw StateError('Document not found: $documentId');
+    final existing = documents[index];
+    final updated = SisDocumentSummary(
+      id: existing.id,
+      type: existing.type,
+      status: request.decision.name,
+      uploadedAt: existing.uploadedAt,
+      verifiedBy: 'school.admin@akshara.demo',
+      verifiedAt: _todayIso(),
+    );
+    documents[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<PaginatedResult<SisTransferRecord>> listStudentTransfers({
+    required RepositoryQuery query,
+    String? fromDate,
+    String? toDate,
+    SisStudentStatus? status,
+  }) async {
+    await _ensureStudents(query);
+    // Seed rows + any student flipped to transferred/alumni at runtime.
+    final seedIds = {for (final record in _seedTransfers) record.studentId};
+    final records = <SisTransferRecord>[
+      ..._seedTransfers,
+      for (final student in _store.students!)
+        if (!seedIds.contains(student.id) &&
+            (student.status == SisStudentStatus.transferred ||
+                student.status == SisStudentStatus.alumni))
+          SisTransferRecord(
+            studentId: student.id,
+            studentName: student.studentName,
+            admissionNumber: student.admissionNumber,
+            classLabel: student.classLabel,
+            section: student.section,
+            academicYear: student.academicYear,
+            status: student.status,
+            exitedAt: _todayIso(),
+          ),
+    ];
+
+    var filtered = TenantMockScope.filter(query: query, items: records);
+    if (status != null) {
+      filtered =
+          filtered.where((record) => record.status == status).toList();
+    }
+    if (fromDate != null && fromDate.isNotEmpty) {
+      filtered = filtered
+          .where((record) => _exitDate(record).compareTo(fromDate) >= 0)
+          .toList();
+    }
+    if (toDate != null && toDate.isNotEmpty) {
+      filtered = filtered
+          .where((record) => _exitDate(record).compareTo(toDate) <= 0)
+          .toList();
+    }
+
+    return PaginatedResult.fromItems(
+      filtered,
+      page: query.page,
+      pageSize: query.pageSize,
+    );
+  }
+
+  static String _todayIso() =>
+      DateTime.now().toIso8601String().substring(0, 10);
+
+  /// ISO date part of the exit timestamp, for lexicographic range filters.
+  static String _exitDate(SisTransferRecord record) =>
+      record.exitedAt.length >= 10
+          ? record.exitedAt.substring(0, 10)
+          : record.exitedAt;
 
   @override
   Future<SisStudent> updateStudentStatus({

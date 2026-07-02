@@ -148,6 +148,41 @@ final uploadStudentDocumentProvider =
   UploadStudentDocumentNotifier.new,
 );
 
+/// SIS-3 — verifies or rejects a pending student document (manageSis).
+/// Invalidates the student profile (documents live on it) on success.
+class VerifyStudentDocumentNotifier extends AsyncNotifier<SisDocumentSummary?> {
+  @override
+  FutureOr<SisDocumentSummary?> build() => null;
+
+  Future<SisDocumentSummary?> execute({
+    required String studentId,
+    required String documentId,
+    required VerifyStudentDocumentRequest request,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageSis(ref),
+        invalidateStudentId: studentId,
+        action: () => ref.read(sisRepositoryProvider).verifyStudentDocument(
+              query: ref.read(repositoryQueryProvider),
+              studentId: studentId,
+              documentId: documentId,
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final verifyStudentDocumentProvider =
+    AsyncNotifierProvider<VerifyStudentDocumentNotifier, SisDocumentSummary?>(
+  VerifyStudentDocumentNotifier.new,
+);
+
 class UpdateStudentStatusNotifier extends AsyncNotifier<SisStudent?> {
   @override
   FutureOr<SisStudent?> build() => null;

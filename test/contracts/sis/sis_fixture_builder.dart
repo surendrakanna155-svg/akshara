@@ -1,4 +1,5 @@
 import 'package:akshara_erp/core/repositories/api/sis/dto/sis_enum_codec.dart';
+import 'package:akshara_erp/core/repositories/paginated_result.dart';
 import 'package:akshara_erp/features/sis/sis_models.dart';
 
 /// Builds API-shaped JSON envelopes from SIS domain models for contract tests.
@@ -112,6 +113,9 @@ class SisFixtureBuilder {
             'type': document.type,
             'status': document.status,
             'uploadedAt': document.uploadedAt,
+            // SIS-3: reviewer metadata (null until verified/rejected).
+            'verifiedBy': document.verifiedBy,
+            'verifiedAt': document.verifiedAt,
           },
       ],
       'timeline': [
@@ -180,4 +184,35 @@ class SisFixtureBuilder {
   Map<String, dynamic> studentEnvelope(SisStudent student) => envelope(
         studentItem(student),
       );
+
+  /// SIS-5 — one GET /sis/transfers row using the deployed response keys.
+  Map<String, dynamic> transferItem(SisTransferRecord record) => {
+        'studentId': record.studentId,
+        'studentCode': record.studentId,
+        'displayName': record.studentName,
+        'status': SisEnumCodec.studentStatusToApi(record.status),
+        'admissionNumber': record.admissionNumber,
+        'academicYear': record.academicYear,
+        'className': record.classLabel,
+        'sectionName': record.section,
+        'rollNumber': '',
+        'transitionedAt': record.exitedAt,
+        'createdAt': record.exitedAt,
+      };
+
+  /// SIS-5 — paginated transfers envelope (same shape as /sis/students).
+  Map<String, dynamic> transfersEnvelope(
+    PaginatedResult<SisTransferRecord> result,
+  ) =>
+      {
+        'data': {
+          'items': [for (final record in result.items) transferItem(record)],
+          'pagination': {
+            'page': result.page,
+            'pageSize': result.pageSize,
+            'total': result.total,
+            'hasMore': result.hasMore,
+          },
+        },
+      };
 }

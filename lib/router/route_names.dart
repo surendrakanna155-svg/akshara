@@ -282,6 +282,9 @@ abstract final class RouteNames {
   static const String sisReshuffle = '/sis/reshuffle';
   static const String sisSectionBalance = '/sis/section-balance';
   static const String sisContinuity = '/sis/continuity';
+
+  /// SIS-5 — transfers / exit log.
+  static const String sisTransfers = '/sis/transfers';
   static const String onboardingHub = '/sis/onboarding';
   static const String unifiedOnboarding = '/admin/onboarding/unified';
   static const String studentOnboarding = '/admin/onboarding/students';
@@ -301,6 +304,7 @@ abstract final class RouteNames {
     sisReshuffle,
     sisSectionBalance,
     sisContinuity,
+    sisTransfers,
     onboardingHub,
   ];
 

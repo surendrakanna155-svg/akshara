@@ -74,7 +74,9 @@ void main() {
       await pumpSisScreen(tester, const SisRegistryScreen());
 
       expect(find.text('Arjun Patel'), findsWidgets);
-      expect(find.text('Export'), findsOneWidget);
+      // SIS-2: grid export upgraded to explicit CSV + PDF variants.
+      expect(find.text('Export CSV'), findsOneWidget);
+      expect(find.text('Export PDF'), findsOneWidget);
     });
 
     testWidgets('SisRegistryScreen shows empty state', (tester) async {

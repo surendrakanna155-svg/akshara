@@ -89,3 +89,83 @@ Future<void> showSisDocumentUploadDialog(
     );
   }
 }
+
+/// SIS-3 — confirm dialog (with optional reviewer note) that verifies or
+/// rejects a pending student document via [verifyStudentDocumentProvider].
+Future<void> showSisDocumentVerifyDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  required SisStudentProfile profile,
+  required SisDocumentSummary document,
+  required SisDocumentDecision decision,
+}) async {
+  final documentId = document.id;
+  if (documentId == null) return;
+  final noteController = TextEditingController();
+  final isVerify = decision == SisDocumentDecision.verified;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(isVerify ? 'Verify document' : 'Reject document'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(document.type),
+          const SizedBox(height: 12),
+          TextField(
+            key: QaTestKeys.sisDocumentVerifyNoteField,
+            controller: noteController,
+            decoration: const InputDecoration(
+              labelText: 'Note (optional)',
+              hintText: 'e.g. rejection reason',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: QaTestKeys.sisDocumentVerifySubmitButton,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(isVerify ? 'Verify' : 'Reject'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final note = noteController.text.trim();
+    final updated =
+        await ref.read(verifyStudentDocumentProvider.notifier).execute(
+              studentId: profile.student.id,
+              documentId: documentId,
+              request: VerifyStudentDocumentRequest(
+                decision: decision,
+                note: note.isEmpty ? null : note,
+              ),
+            );
+    if (!context.mounted || updated == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.sisDocumentVerifySuccessSnackbar,
+        content: Text(
+          isVerify
+              ? 'Document verified: ${updated.type}'
+              : 'Document rejected: ${updated.type}',
+        ),
+      ),
+    );
+  } catch (error) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(aksharaErrorMessage(error))),
+    );
+  }
+}

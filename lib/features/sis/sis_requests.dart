@@ -69,6 +69,22 @@ class UploadStudentDocumentRequest {
   final String status;
 }
 
+/// SIS-3 — the two allowed review outcomes for a pending student document.
+enum SisDocumentDecision { verified, rejected }
+
+/// Domain request to verify or reject a student document (SIS-3).
+class VerifyStudentDocumentRequest {
+  const VerifyStudentDocumentRequest({
+    required this.decision,
+    this.note,
+  });
+
+  final SisDocumentDecision decision;
+
+  /// Optional reviewer note (e.g. rejection reason).
+  final String? note;
+}
+
 /// Domain request to change a student's lifecycle status.
 class UpdateStudentStatusRequest {
   const UpdateStudentStatusRequest({required this.status});

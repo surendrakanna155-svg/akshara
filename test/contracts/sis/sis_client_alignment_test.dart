@@ -26,6 +26,14 @@ void main() {
           SisApiPaths.studentDocuments('abc'), '/sis/students/abc/documents');
       expect(SisApiPaths.admissionsConversion, '/sis/admissions-conversion');
     });
+
+    test('transfers and document-verify routes match deployed backend', () {
+      expect(SisApiPaths.transfers, '/sis/transfers');
+      expect(
+        SisApiPaths.studentDocumentVerify('abc', 'doc1'),
+        '/sis/students/abc/documents/doc1/verify',
+      );
+    });
   });
 
   group('SIS DTO alignment', () {
@@ -140,6 +148,92 @@ void main() {
       expect(student.classLabel, '5');
     });
 
+    test('directory item maps primary guardian contact (SIS-2)', () {
+      final student = mapper.toStudentFromDirectory({
+        'studentId': 'stu-1',
+        'displayName': 'Staging Student',
+        'admissionNumber': 'ADM-001',
+        'status': 'active',
+        'guardianName': 'Parent One',
+        'guardianPhone': '+919876543210',
+        'guardianCount': 1,
+      });
+      expect(student.guardianName, 'Parent One');
+      expect(student.phone, '+919876543210');
+
+      // Backend sends empty strings when no primary guardian is on record.
+      final orphan = mapper.toStudentFromDirectory({
+        'studentId': 'stu-2',
+        'displayName': 'No Guardian',
+        'status': 'active',
+        'guardianName': '',
+        'guardianPhone': '',
+      });
+      expect(orphan.guardianName, isEmpty);
+      expect(orphan.phone, isEmpty);
+    });
+
+    test('maps deployed transfer list item (SIS-5)', () {
+      final record = mapper.toTransferRecord({
+        'studentId': 'stu-9',
+        'studentCode': 'STU-2024-00009',
+        'displayName': 'Exited Student',
+        'status': 'graduated',
+        'admissionNumber': 'ADM-009',
+        'academicYear': '2024-25',
+        'className': '12',
+        'sectionName': 'A',
+        'rollNumber': '9',
+        'transitionedAt': '2026-03-31T10:00:00.000Z',
+        'createdAt': '2020-06-01T00:00:00.000Z',
+      });
+      expect(record.studentId, 'stu-9');
+      expect(record.studentName, 'Exited Student');
+      expect(record.admissionNumber, 'ADM-009');
+      expect(record.classLabel, '12');
+      expect(record.section, 'A');
+      expect(record.academicYear, '2024-25');
+      expect(record.status, SisStudentStatus.alumni);
+      expect(record.exitedAt, '2026-03-31T10:00:00.000Z');
+
+      final transferred = mapper.toTransferRecord({
+        'studentId': 'stu-10',
+        'displayName': 'Moved Student',
+        'status': 'transferred',
+        'transitionedAt': '2026-01-15T08:00:00.000Z',
+      });
+      expect(transferred.status, SisStudentStatus.transferred);
+    });
+
+    test('maps deployed verified document envelope (SIS-3)', () {
+      final document = mapper.toDocumentSummary({
+        'id': 'doc-1',
+        'type': 'Transfer Certificate',
+        'documentType': 'Transfer Certificate',
+        'status': 'verified',
+        'fileUri': null,
+        'uploadedAt': '2026-06-01T00:00:00.000Z',
+        'verifiedAt': '2026-06-02T00:00:00.000Z',
+        'verifiedBy': 'user-1',
+      });
+      expect(document.id, 'doc-1');
+      expect(document.type, 'Transfer Certificate');
+      expect(document.status, 'verified');
+      expect(document.verifiedBy, 'user-1');
+      expect(document.verifiedAt, '2026-06-02T00:00:00.000Z');
+
+      final pending = mapper.toDocumentSummary({
+        'id': 'doc-2',
+        'documentType': 'Aadhaar',
+        'status': 'pending',
+        'uploadedAt': '2026-06-01T00:00:00.000Z',
+        'verifiedAt': null,
+        'verifiedBy': null,
+      });
+      expect(pending.type, 'Aadhaar');
+      expect(pending.verifiedBy, isNull);
+    });
+
     test('maps deployed student detail envelope', () {
       final student = mapper.toStudentFromDetail({
         'student': {
@@ -228,6 +322,8 @@ void main() {
         'lib/core/repositories/api/sis/hybrid_sis_repository.dart',
       ).readAsStringSync();
       expect(content, contains('_api.getDashboard'));
+      expect(content, contains('_api.verifyStudentDocument'));
+      expect(content, contains('_api.listStudentTransfers'));
     });
 
     test('sisApiEnabledProvider is false without dart defines', () {

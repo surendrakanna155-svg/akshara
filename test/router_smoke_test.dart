@@ -211,6 +211,7 @@ void main() {
         (RouteNames.sisStudentDetail('SIS-STU-10421'), 'Arjun Patel'),
         (RouteNames.sisAcademicAssignment, 'Academic assignment'),
         (RouteNames.sisAdmissionsConversion, 'Admissions conversion'),
+        (RouteNames.sisTransfers, 'Rahul Verma'),
         (RouteNames.hrDashboard, 'Total Employees'),
         (RouteNames.hrEmployees, 'Employee directory'),
         (RouteNames.hrEmployeeDetail('HR-EMP-101'), 'Priya Sharma'),

@@ -14,6 +14,7 @@ import '../../admin/admin_layout.dart';
 import '../sis_async_state.dart';
 import '../sis_models.dart';
 import '../sis_navigation.dart';
+import '../sis_requests.dart';
 import '../sis_workflow_actions.dart';
 import '../widgets/sis_kpi_row.dart';
 import '../widgets/sis_module_scaffold.dart';
@@ -149,6 +150,14 @@ class SisStudentProfileScreen extends ConsumerWidget {
                 ref,
                 profile: profile,
               ),
+              onDecideDocument: (document, decision) =>
+                  showSisDocumentVerifyDialog(
+                context,
+                ref,
+                profile: profile,
+                document: document,
+                decision: decision,
+              ),
             ),
           ),
         ] else
@@ -186,6 +195,14 @@ class SisStudentProfileScreen extends ConsumerWidget {
                       context,
                       ref,
                       profile: profile,
+                    ),
+                    onDecideDocument: (document, decision) =>
+                        showSisDocumentVerifyDialog(
+                      context,
+                      ref,
+                      profile: profile,
+                      document: document,
+                      decision: decision,
                     ),
                   ),
                 ),
@@ -342,10 +359,15 @@ class _DocumentsList extends StatelessWidget {
   const _DocumentsList({
     required this.documents,
     this.onUploadDocument,
+    this.onDecideDocument,
   });
 
   final List<SisDocumentSummary> documents;
   final VoidCallback? onUploadDocument;
+
+  /// SIS-3 — invoked with the pending document + verify/reject decision.
+  final void Function(SisDocumentSummary document, SisDocumentDecision decision)?
+      onDecideDocument;
 
   @override
   Widget build(BuildContext context) {
@@ -369,11 +391,85 @@ class _DocumentsList extends StatelessWidget {
             const SizedBox(height: AksharaSpacing.s2),
           ],
           for (final doc in documents)
-            ListTile(
-              title: Text(doc.type),
-              subtitle: Text('${doc.status} · ${doc.uploadedAt}'),
-              dense: true,
+            _DocumentRow(document: doc, onDecide: onDecideDocument),
+        ],
+      ),
+    );
+  }
+}
+
+/// SIS-3 — one document row: type + status chip, uploaded/verified metadata,
+/// and Verify / Reject actions (manageSis-gated) while the document is pending.
+class _DocumentRow extends StatelessWidget {
+  const _DocumentRow({required this.document, this.onDecide});
+
+  final SisDocumentSummary document;
+  final void Function(SisDocumentSummary document, SisDocumentDecision decision)?
+      onDecide;
+
+  bool get _isPending => document.status.trim().toLowerCase() == 'pending';
+
+  (String, KpiAccent) get _statusChip =>
+      switch (document.status.trim().toLowerCase()) {
+        'verified' => ('Verified', KpiAccent.success),
+        'rejected' => ('Rejected', KpiAccent.error),
+        'pending' => ('Pending', KpiAccent.warning),
+        _ => (document.status, KpiAccent.neutral),
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    final (statusLabel, statusTone) = _statusChip;
+    final verifiedBy = document.verifiedBy;
+    final documentId = document.id;
+    final canDecide = _isPending && onDecide != null && documentId != null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(document.type, style: text.titleSmall)),
+              AksharaStatusChip(label: statusLabel, tone: statusTone),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            verifiedBy == null || verifiedBy.isEmpty
+                ? 'Uploaded ${document.uploadedAt}'
+                : 'Uploaded ${document.uploadedAt} · '
+                    '$statusLabel by $verifiedBy',
+            style: text.bodySmall,
+          ),
+          if (canDecide) ...[
+            const SizedBox(height: AksharaSpacing.s2),
+            AksharaManageAction(
+              permission: Permission.manageSis,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OutlinedButton.icon(
+                    key: QaTestKeys.sisDocumentVerifyButton(documentId),
+                    onPressed: () =>
+                        onDecide!(document, SisDocumentDecision.verified),
+                    icon: const Icon(Icons.check_circle_outline, size: 16),
+                    label: const Text('Verify'),
+                  ),
+                  const SizedBox(width: AksharaSpacing.s2),
+                  OutlinedButton.icon(
+                    key: QaTestKeys.sisDocumentRejectButton(documentId),
+                    onPressed: () =>
+                        onDecide!(document, SisDocumentDecision.rejected),
+                    icon: const Icon(Icons.cancel_outlined, size: 16),
+                    label: const Text('Reject'),
+                  ),
+                ],
+              ),
             ),
+          ],
         ],
       ),
     );

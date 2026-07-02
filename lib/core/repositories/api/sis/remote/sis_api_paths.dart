@@ -7,6 +7,9 @@ abstract final class SisApiPaths {
   static const String enrollments = '$base/enrollments';
   static const String admissionsConversion = '$base/admissions-conversion';
 
+  /// SIS-5 — GET transfers / exit log.
+  static const String transfers = '$base/transfers';
+
   /// @deprecated Use [enrollments] — retained for mock/catalog references only.
   static const String academicAssignment = '$base/academic-assignment';
 
@@ -17,6 +20,10 @@ abstract final class SisApiPaths {
 
   static String studentDocuments(String studentId) =>
       '$base/students/$studentId/documents';
+
+  /// SIS-3 — PATCH verify/reject a student document.
+  static String studentDocumentVerify(String studentId, String documentId) =>
+      '$base/students/$studentId/documents/$documentId/verify';
 
   static String enrollment(String enrollmentId) =>
       '$base/enrollments/$enrollmentId';

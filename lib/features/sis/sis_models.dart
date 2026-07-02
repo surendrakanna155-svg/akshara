@@ -11,7 +11,8 @@ enum SisScreen {
   promotion,
   reshuffle,
   sectionBalance,
-  continuity;
+  continuity,
+  transfers;
 
   String get label => switch (this) {
         SisScreen.dashboard => 'Dashboard',
@@ -22,6 +23,7 @@ enum SisScreen {
         SisScreen.reshuffle => 'Reshuffle',
         SisScreen.sectionBalance => 'Section Balance',
         SisScreen.continuity => 'Continuity',
+        SisScreen.transfers => 'Transfers & Exits',
       };
 }
 
@@ -232,12 +234,49 @@ class SisDocumentSummary {
     required this.type,
     required this.status,
     required this.uploadedAt,
+    this.verifiedBy,
+    this.verifiedAt,
   });
 
   final String? id;
   final String type;
+
+  /// Backend lifecycle status: pending / verified / rejected.
   final String status;
   final String uploadedAt;
+
+  /// SIS-3 — set once a manageSis user verifies or rejects the document.
+  final String? verifiedBy;
+  final String? verifiedAt;
+}
+
+/// SIS-5 — one row in the transfers / exit log (a student who has left:
+/// transferred out or graduated to alumni), with last-enrollment context.
+@immutable
+class SisTransferRecord {
+  const SisTransferRecord({
+    required this.studentId,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.classLabel,
+    required this.section,
+    required this.academicYear,
+    required this.status,
+    required this.exitedAt,
+  });
+
+  final String studentId;
+  final String studentName;
+
+  /// May be empty when the exited student had no admission number on record.
+  final String admissionNumber;
+  final String classLabel;
+  final String section;
+  final String academicYear;
+  final SisStudentStatus status;
+
+  /// ISO timestamp (or date) of the exit transition.
+  final String exitedAt;
 }
 
 @immutable

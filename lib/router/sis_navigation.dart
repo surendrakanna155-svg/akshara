@@ -11,6 +11,7 @@ import '../features/sis/admissions_conversion/sis_admissions_conversion_screen.d
 import '../features/sis/dashboard/sis_dashboard_screen.dart';
 import '../features/sis/profile/sis_profile_screen.dart';
 import '../features/sis/registry/sis_registry_screen.dart';
+import '../features/sis/transfers/sis_transfers_screen.dart';
 import 'route_names.dart';
 
 String? sisRootRedirect(BuildContext context, GoRouterState state) {
@@ -61,6 +62,10 @@ Widget sisSectionBalanceRouteBuilder(BuildContext context, GoRouterState state) 
 
 Widget sisContinuityRouteBuilder(BuildContext context, GoRouterState state) {
   return const ContinuityMigrationScreen();
+}
+
+Widget sisTransfersRouteBuilder(BuildContext context, GoRouterState state) {
+  return const SisTransfersScreen();
 }
 
 Widget sisOnboardingRouteBuilder(BuildContext context, GoRouterState state) {

@@ -1492,6 +1492,13 @@ GoRouter createAppRouter({
                 ),
               ),
               GoRoute(
+                path: 'transfers',
+                name: 'sisTransfers',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: sisTransfersRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: 'onboarding',
                 name: 'sisOnboarding',
                 pageBuilder: (context, state) => NoTransitionPage(

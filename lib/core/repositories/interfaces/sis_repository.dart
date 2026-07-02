@@ -40,6 +40,26 @@ abstract class SisRepository {
     required UploadStudentDocumentRequest request,
   });
 
+  /// SIS-3 — marks a pending student document verified or rejected
+  /// (manageSis). Returns the updated document incl. status / verifiedBy.
+  Future<SisDocumentSummary> verifyStudentDocument({
+    required RepositoryQuery query,
+    required String studentId,
+    required String documentId,
+    required VerifyStudentDocumentRequest request,
+  });
+
+  /// SIS-5 — date-ranged, exportable list of exited students (transferred /
+  /// alumni) with last-enrollment context (viewSis). Page/pageSize ride on
+  /// [query]; [fromDate]/[toDate] are ISO dates; [status] narrows to
+  /// transferred or alumni.
+  Future<PaginatedResult<SisTransferRecord>> listStudentTransfers({
+    required RepositoryQuery query,
+    String? fromDate,
+    String? toDate,
+    SisStudentStatus? status,
+  });
+
   Future<SisStudent> updateStudentStatus({
     required RepositoryQuery query,
     required String studentId,

@@ -6,6 +6,7 @@ import '../dto/sis_dashboard_dto.dart';
 import '../dto/sis_enum_codec.dart';
 import '../dto/sis_student_profile_dto.dart';
 import '../dto/sis_students_dto.dart';
+import '../dto/sis_transfers_dto.dart';
 
 /// Maps SIS API DTOs to domain models.
 class SisMapper {
@@ -157,8 +158,15 @@ class SisMapper {
       dateOfBirth: raw['dateOfBirth'] as String? ??
           raw['date_of_birth'] as String? ??
           '',
-      guardianName: raw['guardianName'] as String? ?? '',
-      phone: raw['phone'] as String? ?? '',
+      // SIS-2: the directory row carries the PRIMARY guardian contact
+      // (guardianName + guardianPhone; empty string when none on record).
+      guardianName: raw['guardianName'] as String? ??
+          raw['guardian_name'] as String? ??
+          '',
+      phone: raw['guardianPhone'] as String? ??
+          raw['guardian_phone'] as String? ??
+          raw['phone'] as String? ??
+          '',
       email: raw['email'] as String? ?? '',
       enrolledAt: raw['createdAt'] as String? ??
           raw['created_at'] as String? ??
@@ -268,9 +276,46 @@ class SisMapper {
   SisDocumentSummary toDocumentSummary(Map<String, dynamic> raw) {
     return SisDocumentSummary(
       id: raw['id'] as String?,
-      type: raw['type'] as String? ?? '',
+      type: raw['type'] as String? ?? raw['documentType'] as String? ?? '',
       status: raw['status'] as String? ?? '',
       uploadedAt: raw['uploadedAt'] as String? ?? '',
+      verifiedBy: raw['verifiedBy'] as String?,
+      verifiedAt: raw['verifiedAt'] as String?,
+    );
+  }
+
+  /// SIS-5 — maps GET /sis/transfers rows to domain transfer records.
+  List<SisTransferRecord> toTransferRecords(SisTransfersResponseDto dto) {
+    return [for (final item in dto.items) toTransferRecord(item.raw)];
+  }
+
+  SisTransferRecord toTransferRecord(Map<String, dynamic> raw) {
+    return SisTransferRecord(
+      studentId:
+          raw['studentId'] as String? ?? raw['student_id'] as String? ?? '',
+      studentName: raw['displayName'] as String? ??
+          raw['display_name'] as String? ??
+          raw['studentName'] as String? ??
+          '',
+      admissionNumber: raw['admissionNumber'] as String? ??
+          raw['admission_number'] as String? ??
+          '',
+      classLabel: raw['className'] as String? ??
+          raw['class_name'] as String? ??
+          raw['classLabel'] as String? ??
+          '',
+      section: raw['sectionName'] as String? ??
+          raw['section_name'] as String? ??
+          raw['section'] as String? ??
+          '',
+      academicYear: raw['academicYear'] as String? ??
+          raw['academic_year'] as String? ??
+          '',
+      status: SisEnumCodec.parseStudentStatus(raw['status'] as String?),
+      exitedAt: raw['transitionedAt'] as String? ??
+          raw['transitioned_at'] as String? ??
+          raw['exitedAt'] as String? ??
+          '',
     );
   }
 
@@ -510,13 +555,7 @@ class SisMapper {
   List<SisDocumentSummary> _mapDocuments(List<dynamic> items) {
     return [
       for (final item in items)
-        if (item is Map<String, dynamic>)
-          SisDocumentSummary(
-            id: item['id'] as String?,
-            type: item['type'] as String? ?? '',
-            status: item['status'] as String? ?? '',
-            uploadedAt: item['uploadedAt'] as String? ?? '',
-          ),
+        if (item is Map<String, dynamic>) toDocumentSummary(item),
     ];
   }
 

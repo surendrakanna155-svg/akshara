@@ -4,6 +4,7 @@ import 'package:akshara_erp/core/repositories/api/sis/dto/create_student_request
 import 'package:akshara_erp/core/repositories/api/sis/dto/upload_student_document_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/update_student_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/update_student_status_request_dto.dart';
+import 'package:akshara_erp/core/repositories/api/sis/dto/verify_student_document_request_dto.dart';
 import 'package:akshara_erp/core/repositories/interfaces/sis_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_sis_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
@@ -69,6 +70,25 @@ void main() {
       ).toJson();
       expect(json['studentId'], 'SIS-STU-10421');
       expect(json['className'], '10');
+    });
+
+    test('verify document request serializes status and optional note', () {
+      final withNote = VerifyStudentDocumentRequestDto.fromDomain(
+        const VerifyStudentDocumentRequest(
+          decision: SisDocumentDecision.verified,
+          note: 'Original sighted',
+        ),
+      ).toJson();
+      expect(withNote['status'], 'verified');
+      expect(withNote['note'], 'Original sighted');
+
+      final withoutNote = VerifyStudentDocumentRequestDto.fromDomain(
+        const VerifyStudentDocumentRequest(
+          decision: SisDocumentDecision.rejected,
+        ),
+      ).toJson();
+      expect(withoutNote['status'], 'rejected');
+      expect(withoutNote.containsKey('note'), isFalse);
     });
 
     test('admissions conversion payload includes enrollment id', () {
@@ -173,6 +193,60 @@ void main() {
         studentId: studentId,
       );
       expect(profile.documents.first.type, 'Transfer Certificate');
+    });
+
+    test('verifyStudentDocument flips the pending document to verified',
+        () async {
+      const studentId = 'SIS-STU-10421';
+      const documentId = 'SIS-DOC-903';
+      final updated = await repo.verifyStudentDocument(
+        query: kQuery,
+        studentId: studentId,
+        documentId: documentId,
+        request: const VerifyStudentDocumentRequest(
+          decision: SisDocumentDecision.verified,
+          note: 'Checked against original',
+        ),
+      );
+      expect(updated.id, documentId);
+      expect(updated.status, 'verified');
+      expect(updated.verifiedBy, isNotNull);
+      expect(updated.verifiedAt, isNotNull);
+
+      final profile = await repo.getStudentProfile(
+        query: kQuery,
+        studentId: studentId,
+      );
+      final persisted =
+          profile.documents.firstWhere((doc) => doc.id == documentId);
+      expect(persisted.status, 'verified');
+    });
+
+    test('verifyStudentDocument rejects and unknown document throws',
+        () async {
+      const studentId = 'SIS-STU-10418';
+      const documentId = 'SIS-DOC-903';
+      final updated = await repo.verifyStudentDocument(
+        query: kQuery,
+        studentId: studentId,
+        documentId: documentId,
+        request: const VerifyStudentDocumentRequest(
+          decision: SisDocumentDecision.rejected,
+        ),
+      );
+      expect(updated.status, 'rejected');
+
+      expect(
+        () => repo.verifyStudentDocument(
+          query: kQuery,
+          studentId: studentId,
+          documentId: 'SIS-DOC-MISSING',
+          request: const VerifyStudentDocumentRequest(
+            decision: SisDocumentDecision.verified,
+          ),
+        ),
+        throwsStateError,
+      );
     });
 
     test('convertAdmissionsEnrollment creates student and marks converted',

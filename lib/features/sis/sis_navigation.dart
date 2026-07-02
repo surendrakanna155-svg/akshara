@@ -12,6 +12,7 @@ const List<SisScreen> kSisNavScreens = [
   SisScreen.reshuffle,
   SisScreen.sectionBalance,
   SisScreen.continuity,
+  SisScreen.transfers,
 ];
 
 extension SisScreenRoutes on SisScreen {
@@ -24,6 +25,7 @@ extension SisScreenRoutes on SisScreen {
         SisScreen.reshuffle => RouteNames.sisReshuffle,
         SisScreen.sectionBalance => RouteNames.sisSectionBalance,
         SisScreen.continuity => RouteNames.sisContinuity,
+        SisScreen.transfers => RouteNames.sisTransfers,
       };
 }
 

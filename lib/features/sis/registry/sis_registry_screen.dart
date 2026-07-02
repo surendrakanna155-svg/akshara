@@ -14,6 +14,7 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
+import '../reports/sis_report_exporters.dart';
 import '../sis_async_state.dart';
 import '../sis_models.dart';
 import '../widgets/sis_module_scaffold.dart';
@@ -56,6 +57,30 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
     }
   }
 
+  Future<void> _exportRegistry(
+    List<SisStudent> students, {
+    required bool pdf,
+  }) async {
+    final exporters = SisReportExporters(
+      ref.read(aksharaReportExportServiceProvider),
+    );
+    if (pdf) {
+      await exporters.shareRegistryPdf(students);
+    } else {
+      await exporters.shareRegistryCsv(students);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: QaTestKeys.sisRegistryExportSuccessSnackbar,
+        content: Text(
+          'SIS registry ${pdf ? 'PDF' : 'CSV'} ready '
+          '(${students.length} students)',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewState = ref.watch(sisRegistryViewStateProvider);
@@ -73,40 +98,29 @@ class _SisRegistryScreenState extends ConsumerState<SisRegistryScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton.icon(
-              key: QaTestKeys.sisRegistryExportButton,
-              onPressed: students.isEmpty
-                  ? null
-                  : () async {
-                      final service =
-                          ref.read(aksharaReportExportServiceProvider);
-                      final rows = [
-                        for (final student in students)
-                          MapEntry(
-                            student.admissionNumber,
-                            '${student.studentName} · ${student.classLabel}-${student.section} · ${student.status.name}',
-                          ),
-                      ];
-                      await service.shareTabularCsv(
-                        filename: 'sis_registry.csv',
-                        reportTitle: 'SIS Student Registry',
-                        rows: rows,
-                      );
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          key: QaTestKeys.sisRegistryExportSuccessSnackbar,
-                          content: Text(
-                            'SIS registry CSV ready (${students.length} students)',
-                          ),
-                        ),
-                      );
-                    },
-              icon: const Icon(Icons.download_outlined),
-              label: const Text('Export'),
-            ),
+          // SIS-2: true multi-column grid export (XCT-1) incl. primary
+          // guardian contact — CSV and PDF ride the shared grid primitive.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                key: QaTestKeys.sisRegistryExportButton,
+                onPressed: students.isEmpty
+                    ? null
+                    : () => _exportRegistry(students, pdf: false),
+                icon: const Icon(Icons.download_outlined),
+                label: const Text('Export CSV'),
+              ),
+              const SizedBox(width: AksharaSpacing.s2),
+              OutlinedButton.icon(
+                key: QaTestKeys.sisRegistryExportPdfButton,
+                onPressed: students.isEmpty
+                    ? null
+                    : () => _exportRegistry(students, pdf: true),
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+                label: const Text('Export PDF'),
+              ),
+            ],
           ),
           const SizedBox(height: AksharaSpacing.s3),
           Semantics(
@@ -507,6 +521,18 @@ class _StudentMobileCard extends StatelessWidget {
                   '${student.admissionNumber} · Class ${student.classLabel}-${student.section}',
                   style: text.bodySmall,
                 ),
+                // SIS-2: primary guardian contact where available.
+                if (student.guardianName.isNotEmpty ||
+                    student.phone.isNotEmpty)
+                  Text(
+                    [
+                      if (student.guardianName.isNotEmpty)
+                        student.guardianName,
+                      if (student.phone.isNotEmpty) student.phone,
+                    ].join(' · '),
+                    style: text.bodySmall
+                        .copyWith(color: colors.onSurfaceVariant),
+                  ),
                 const SizedBox(height: AksharaSpacing.s2),
                 _StudentStatusChip(status: student.status),
                 if (student.isPlaceholder) ...[
