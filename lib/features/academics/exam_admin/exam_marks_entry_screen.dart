@@ -7,6 +7,7 @@ import '../../../core/config/exam_approval_config.dart';
 import '../../../core/exams/exam_administration_requests.dart';
 import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/security/rbac_service.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -634,10 +635,107 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
     }
   }
 
+  /// EXM-D2 — coordinator grace / moderation for THIS student. A signed delta +
+  /// a mandatory reason. The ORIGINAL mark is preserved (a separate audited
+  /// record); the effective total updates on refresh. Never shown to parents.
+  Future<void> _openGraceDialog() async {
+    final deltaController = TextEditingController();
+    final reasonController = TextEditingController();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Grace / moderation · ${widget.mark.studentName}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Adjust the mark by a signed amount. The original mark is kept; '
+              'only the coordinator sees this adjustment.',
+              style: context.aksharaText.bodySmall,
+            ),
+            const SizedBox(height: AksharaSpacing.s3),
+            TextField(
+              key: QaTestKeys.examAdminGraceDeltaField,
+              controller: deltaController,
+              keyboardType: const TextInputType.numberWithOptions(signed: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^-?\d*')),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Delta (e.g. 5 or -2)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: AksharaSpacing.s2),
+            TextField(
+              key: QaTestKeys.examAdminGraceReasonField,
+              controller: reasonController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Reason (required)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            key: QaTestKeys.examAdminGraceSubmitButton,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    final delta = int.tryParse(deltaController.text.trim());
+    if (delta == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a whole-number delta.')),
+      );
+      return;
+    }
+    try {
+      final result =
+          await ref.read(examMarksMutationProvider.notifier).recordGraceMark(
+                examId: widget.exam.id,
+                sisStudentId: widget.mark.sisStudentId,
+                delta: delta,
+                reason: reasonController.text,
+              );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Grace applied · effective ${result.effectiveMark}/${result.maxMarks}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(aksharaErrorMessage(error))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = context.aksharaText;
     final canRemark = ref.watch(canAuthorLeadershipExamRemarkProvider);
+    // EXM-D2 — grace is a coordinator action, only before publish, and only for a
+    // present student who has an entered mark to moderate.
+    final canModerate =
+        ref.watch(rbacServiceProvider).hasPermission(Permission.moderateExamMarks);
+    final showGrace = canModerate &&
+        widget.exam.phase == ExamLifecyclePhase.processed &&
+        widget.mark.status.isPresent &&
+        widget.mark.marksObtained != null;
 
     return Card(
       elevation: 0,
@@ -652,6 +750,13 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
             Expanded(
               child: Text(widget.mark.studentName, style: text.bodyLarge),
             ),
+            if (showGrace)
+              IconButton(
+                key: QaTestKeys.examAdminGraceButton(widget.mark.id),
+                tooltip: 'Grace / moderation',
+                icon: const Icon(Icons.tune_outlined),
+                onPressed: _openGraceDialog,
+              ),
             if (canRemark)
               IconButton(
                 key: QaTestKeys.examLeadershipRemarkButton(widget.mark.id),

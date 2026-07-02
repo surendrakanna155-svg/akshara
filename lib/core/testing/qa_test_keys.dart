@@ -176,6 +176,29 @@ abstract final class QaTestKeys {
   static const examReportsExportPdfButton =
       ValueKey<String>('exam_reports_export_pdf_button');
 
+  // EXM-D1 — batch report-card print (coordinator, post-publish).
+  static const examReportsPrintCardsButton =
+      ValueKey<String>('exam_reports_print_cards_button');
+  // EXM-D4 — hall ticket / admit-card download for the selected exam.
+  static const examReportsHallTicketsButton =
+      ValueKey<String>('exam_reports_hall_tickets_button');
+  // EXM-D5 — seating: generate + print the chart for the selected exam.
+  static const examReportsSeatingButton =
+      ValueKey<String>('exam_reports_seating_button');
+  static const examSeatingGenerateButton =
+      ValueKey<String>('exam_seating_generate_button');
+  static const examSeatingPrintButton =
+      ValueKey<String>('exam_seating_print_button');
+  // EXM-D2 — grace / moderation, per student on the marks-entry screen.
+  static ValueKey<String> examAdminGraceButton(String markId) =>
+      ValueKey<String>('exam_admin_grace_$markId');
+  static const examAdminGraceDeltaField =
+      ValueKey<String>('exam_admin_grace_delta_field');
+  static const examAdminGraceReasonField =
+      ValueKey<String>('exam_admin_grace_reason_field');
+  static const examAdminGraceSubmitButton =
+      ValueKey<String>('exam_admin_grace_submit_button');
+
   static const financeAssignConcessionButton =
       ValueKey<String>('finance_assign_concession_button');
   static const financeAssignConcessionSubmitButton =

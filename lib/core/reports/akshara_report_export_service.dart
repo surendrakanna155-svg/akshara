@@ -86,7 +86,21 @@ class AksharaReportExportService {
     String? generatedAtLabel,
   }) async {
     final document = pw.Document();
+    document.addPage(_reportCardPage(
+      card: card,
+      schoolName: schoolName,
+      generatedAtLabel: generatedAtLabel,
+    ));
+    return document.save();
+  }
 
+  /// The single report-card page (shared by [buildReportCardPdf] and the EXM-D1
+  /// batch builder so a printed bundle is byte-for-byte the same layout).
+  pw.Page _reportCardPage({
+    required ExamReportCard card,
+    required String schoolName,
+    String? generatedAtLabel,
+  }) {
     pw.Widget detail(String label, String value) => pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 2),
           child: pw.Row(children: [
@@ -110,8 +124,7 @@ class AksharaReportExportService {
               style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
         );
 
-    document.addPage(
-      pw.Page(
+    return pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(AksharaSpacing.s7),
         build: (context) => pw.Column(
@@ -200,9 +213,7 @@ class AksharaReportExportService {
             ],
           ],
         ),
-      ),
     );
-    return document.save();
   }
 
   /// A titled report-card remark block (text box + optional author byline).
@@ -231,6 +242,134 @@ class AksharaReportExportService {
                   const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
         ),
     ];
+  }
+
+  /// EXM-D1 — builds a single multi-page report-card PDF, ONE card per page, from
+  /// a batch of already-computed [cards] (published results for a class + term).
+  /// Reuses the exact single-card layout ([_reportCardPage]) so a printed bundle
+  /// is identical to a single card. Rank is shown only when [rankShown].
+  Future<Uint8List> buildBatchReportCardsPdf({
+    required List<ExamReportCard> cards,
+    required String schoolName,
+    String? generatedAtLabel,
+  }) async {
+    final document = pw.Document();
+    for (final card in cards) {
+      document.addPage(_reportCardPage(
+        card: card,
+        schoolName: schoolName,
+        generatedAtLabel: generatedAtLabel,
+      ));
+    }
+    return document.save();
+  }
+
+  /// EXM-D4 — builds a single multi-page hall-ticket (admit-card) PDF, ONE ticket
+  /// per page, for a class/exam. Standard template: school header, student, exam
+  /// details, instructions.
+  Future<Uint8List> buildHallTicketsPdf({
+    required List<HallTicketPrintData> tickets,
+    required String schoolName,
+    String? generatedAtLabel,
+  }) async {
+    final document = pw.Document();
+    for (final t in tickets) {
+      document.addPage(_hallTicketPage(
+        ticket: t,
+        schoolName: schoolName,
+        generatedAtLabel: generatedAtLabel,
+      ));
+    }
+    return document.save();
+  }
+
+  pw.Page _hallTicketPage({
+    required HallTicketPrintData ticket,
+    required String schoolName,
+    String? generatedAtLabel,
+  }) {
+    pw.Widget detail(String label, String value) => pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 2),
+          child: pw.Row(children: [
+            pw.SizedBox(
+              width: 90,
+              child: pw.Text(label,
+                  style: const pw.TextStyle(
+                      fontSize: 10, color: PdfColors.grey700)),
+            ),
+            pw.Expanded(
+                child:
+                    pw.Text(value, style: const pw.TextStyle(fontSize: 10))),
+          ]),
+        );
+
+    return pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(AksharaSpacing.s7),
+      build: (context) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          pw.Text(schoolName,
+              style:
+                  pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 2),
+          pw.Text('Hall Ticket / Admit Card',
+              style: const pw.TextStyle(fontSize: 12)),
+          pw.Divider(color: PdfColors.grey400),
+          detail('Student', ticket.studentName),
+          detail('Roll No', ticket.rollNo ?? '—'),
+          detail('Class', ticket.classLabel),
+          detail('Student ID', ticket.sisStudentId),
+          pw.SizedBox(height: 8),
+          detail('Exam', ticket.examTitle),
+          detail('Subject', ticket.subject),
+          detail('Date', ticket.dateLabel),
+          detail('Time', ticket.timeLabel),
+          detail('Venue', ticket.venueLabel),
+          detail('Max marks', '${ticket.maxMarks}'),
+          pw.SizedBox(height: 14),
+          pw.Text('Instructions',
+              style:
+                  pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 4),
+          for (final line in ticket.instructions)
+            pw.Bullet(text: line, style: const pw.TextStyle(fontSize: 10)),
+          pw.Spacer(),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Container(
+                width: 130,
+                height: 44,
+                decoration:
+                    pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
+                alignment: pw.Alignment.center,
+                child: pw.Text('Invigilator signature',
+                    style: const pw.TextStyle(
+                        fontSize: 8, color: PdfColors.grey600)),
+              ),
+              pw.Container(
+                width: 110,
+                height: 44,
+                decoration:
+                    pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
+                alignment: pw.Alignment.center,
+                child: pw.Text('School seal',
+                    style: const pw.TextStyle(
+                        fontSize: 8, color: PdfColors.grey600)),
+              ),
+            ],
+          ),
+          if (generatedAtLabel != null) ...[
+            pw.SizedBox(height: 8),
+            pw.Text('Generated: $generatedAtLabel',
+                style: const pw.TextStyle(
+                    fontSize: 8, color: PdfColors.grey600)),
+          ],
+        ],
+      ),
+    );
   }
 
   /// Builds and opens the OS share sheet for a report card PDF.
@@ -558,3 +697,34 @@ class AksharaReportExportService {
 final aksharaReportExportServiceProvider = Provider<AksharaReportExportService>(
   (ref) => const AksharaReportExportService(),
 );
+
+/// EXM-D4 — a print-ready hall ticket (admit card). A plain view-model so the
+/// export service stays decoupled from the exam domain models; the UI maps a
+/// [HallTicket] onto this before printing.
+class HallTicketPrintData {
+  const HallTicketPrintData({
+    required this.sisStudentId,
+    required this.studentName,
+    required this.rollNo,
+    required this.classLabel,
+    required this.subject,
+    required this.examTitle,
+    required this.dateLabel,
+    required this.timeLabel,
+    required this.venueLabel,
+    required this.maxMarks,
+    required this.instructions,
+  });
+
+  final String sisStudentId;
+  final String studentName;
+  final String? rollNo;
+  final String classLabel;
+  final String subject;
+  final String examTitle;
+  final String dateLabel;
+  final String timeLabel;
+  final String venueLabel;
+  final int maxMarks;
+  final List<String> instructions;
+}

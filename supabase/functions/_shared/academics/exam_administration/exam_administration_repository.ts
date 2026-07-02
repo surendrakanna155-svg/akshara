@@ -46,6 +46,12 @@ export interface ExamMarkRow {
   // debarred): they have no meaningful score. A present student always has a
   // (bounds-checked) integer once entered.
   marks_obtained: number | null;
+  // EXM-D2 — the EFFECTIVE (original + grace) mark, baked ONLY at publish. NULL
+  // until published / for a non-present student. The ORIGINAL marks_obtained is
+  // never overwritten; parents/students read effective_marks (no grace breakdown).
+  // Optional on the TS type (older fixtures / pre-migration rows omit it); the
+  // read paths always fall back to `?? marks_obtained`.
+  effective_marks?: number | null;
   max_marks: number;
   student_name: string | null;
   roll_number: string | null;
@@ -226,6 +232,12 @@ export function publishedResultToApi(
   const status: ExamMarkStatus = isExamMarkStatus(row.status)
     ? row.status
     : "present";
+  // 🔴 EXM-D2 — parents/students see the EFFECTIVE (grace-applied) score, never
+  // the original + the adjustment breakdown. effective_marks is baked at publish;
+  // fall back to marks_obtained for pre-grace / legacy rows.
+  const effective = status === "present"
+    ? (row.effective_marks ?? row.marks_obtained)
+    : null;
   return {
     markEntryId: row.id,
     sisStudentId: row.student_code ?? row.student_id,
@@ -236,11 +248,11 @@ export function publishedResultToApi(
     dateLabel: session.date_label,
     // NULL for a non-present student — the client renders the display code
     // instead of a score.
-    scoreObtained: row.marks_obtained,
+    scoreObtained: effective,
     maxScore: session.max_marks,
-    grade: row.grade_letter ?? (row.marks_obtained != null
+    grade: row.grade_letter ?? (effective != null
       ? gradeForPercent(
-        session.max_marks > 0 ? (row.marks_obtained / session.max_marks) * 100 : 0,
+        session.max_marks > 0 ? (effective / session.max_marks) * 100 : 0,
       )
       : (examStatusDisplayCode(status) ?? "")),
     status,
@@ -784,21 +796,39 @@ export async function publishExamResults(
   for (const mark of enterable) {
     // EXM-D6 — a non-'present' student publishes with their display code
     // (AB/ML/DB), not a computed letter grade. A present student's grade is
-    // derived from their (non-null) marks.
+    // derived from their EFFECTIVE (original + grace) marks.
     const status: ExamMarkStatus = isExamMarkStatus(mark.status)
       ? mark.status
       : "present";
-    const percent = session.max_marks > 0 && mark.marks_obtained != null
-      ? (mark.marks_obtained / session.max_marks) * 100
+    // 🔴 EXM-D2 — bake the effective mark = clamp(original + Σgrace, 0, max).
+    // The ORIGINAL marks_obtained is NEVER overwritten (audit-safe); the grade +
+    // the parent-visible effective_marks reflect grace, WITHOUT the breakdown.
+    let effectiveMark: number | null = null;
+    if (status === "present" && mark.marks_obtained != null) {
+      const totalDelta = await sumAdjustments(
+        db,
+        organizationId,
+        schoolId,
+        examId,
+        mark.student_id,
+      );
+      effectiveMark = clampEffectiveMark(
+        mark.marks_obtained + totalDelta,
+        mark.max_marks,
+      );
+    }
+    const percent = session.max_marks > 0 && effectiveMark != null
+      ? (effectiveMark / session.max_marks) * 100
       : 0;
     const gradeLetter = status === "present"
       ? gradeForPercent(percent)
       : examStatusDisplayCode(status)!;
     await db.queryObject(
       `UPDATE exam_mark_entries
-       SET published = true, grade_letter = $4, updated_at = timezone('utc', now())
+       SET published = true, grade_letter = $4, effective_marks = $5,
+           updated_at = timezone('utc', now())
        WHERE organization_id = $1 AND school_id = $2 AND id = $3`,
-      [organizationId, schoolId, mark.id, gradeLetter],
+      [organizationId, schoolId, mark.id, gradeLetter, effectiveMark],
     );
     publishedCount++;
   }
@@ -832,6 +862,11 @@ export async function listPublishedResultsForStudent(
     const status: ExamMarkStatus = isExamMarkStatus(row.status)
       ? row.status
       : "present";
+    // 🔴 EXM-D2 — surface the EFFECTIVE (grace-applied) score to parent/student,
+    // never the original + the per-delta breakdown.
+    const effective = status === "present"
+      ? (row.effective_marks ?? row.marks_obtained)
+      : null;
     return {
     markEntryId: row.id,
     sisStudentId: row.student_code ?? row.student_id,
@@ -840,13 +875,13 @@ export async function listPublishedResultsForStudent(
     examTitle: row.session_title,
     termLabel: row.session_term,
     dateLabel: row.session_date,
-    scoreObtained: row.marks_obtained,
+    scoreObtained: effective,
     maxScore: row.session_max,
     status,
     statusCode: examStatusDisplayCode(status),
-    grade: row.grade_letter ?? (row.marks_obtained != null
+    grade: row.grade_letter ?? (effective != null
       ? gradeForPercent(
-        row.session_max > 0 ? (row.marks_obtained / row.session_max) * 100 : 0,
+        row.session_max > 0 ? (effective / row.session_max) * 100 : 0,
       )
       : (examStatusDisplayCode(status) ?? "")),
     subject: row.session_subject,
@@ -938,12 +973,14 @@ export async function loadTabulationRegister(
     status: string;
     exam_updated_at: string;
   }>(
+    // EXM-D2 — a published row's grace-applied effective mark drives the stats;
+    // an un-published (processed) row has no effective_marks yet → original.
     `SELECT m.student_id AS student_id,
             m.student_code AS student_code,
             m.student_name AS student_name,
             m.roll_number AS roll_number,
             es.subject AS subject,
-            m.marks_obtained AS marks_obtained,
+            COALESCE(m.effective_marks, m.marks_obtained) AS marks_obtained,
             m.max_marks AS max_marks,
             m.status AS status,
             es.updated_at AS exam_updated_at
@@ -1082,11 +1119,12 @@ export async function loadExamToppers(
     max_marks: number;
   }>(
     // 🔴 EXCLUSION — status = 'present' AND marks_obtained IS NOT NULL only.
+    // EXM-D2 — rank by the effective (grace-applied) mark once published.
     `SELECT m.student_id AS student_id,
             m.student_code AS student_code,
             m.student_name AS student_name,
             m.roll_number AS roll_number,
-            m.marks_obtained AS marks_obtained,
+            COALESCE(m.effective_marks, m.marks_obtained) AS marks_obtained,
             m.max_marks AS max_marks
        FROM exam_mark_entries m
       WHERE m.organization_id = $1
@@ -1094,7 +1132,7 @@ export async function loadExamToppers(
         AND m.exam_id = $3
         AND m.status = 'present'
         AND m.marks_obtained IS NOT NULL
-      ORDER BY m.marks_obtained DESC, m.roll_number NULLS LAST, m.id
+      ORDER BY COALESCE(m.effective_marks, m.marks_obtained) DESC, m.roll_number NULLS LAST, m.id
       LIMIT $4`,
     [organizationId, schoolId, examId, Math.max(1, limit)],
   );
@@ -1232,7 +1270,9 @@ export async function loadExamDistribution(
     status: string;
     grade_letter: string | null;
   }>(
-    `SELECT m.marks_obtained AS marks_obtained,
+    // EXM-D2 — the effective (grace-applied) mark drives pass/fail + grade once
+    // published; an un-published row uses its original mark.
+    `SELECT COALESCE(m.effective_marks, m.marks_obtained) AS marks_obtained,
             m.max_marks AS max_marks,
             m.status AS status,
             m.grade_letter AS grade_letter
@@ -1501,6 +1541,181 @@ export async function isClassTeacherForExam(
   return parseInt(rows[0]?.count ?? "0", 10) > 0;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// EXM-D2 — Grace marks / moderation (coordinator, at verify; audited; hidden
+// from parents/students).
+//
+// 🔴 Integrity (frozen): the ORIGINAL entered mark on exam_mark_entries is NEVER
+// overwritten. Each grace is a SEPARATE row in exam_mark_adjustments. The
+// EFFECTIVE mark = clamp(original + SUM(deltas), 0, max_marks), applied to the
+// computed grade/totals at publish/report time. Grace is allowed ONLY before
+// publish (phase processed/coordinator_verified); it is rejected once published.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export class ExamGracePhaseError extends Error {
+  constructor(phase: string) {
+    super(
+      `Grace / moderation is only allowed before publish (current phase: ${phase}).`,
+    );
+    this.name = "ExamGracePhaseError";
+  }
+}
+
+export interface ExamMarkAdjustmentRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  exam_id: string;
+  student_id: string;
+  delta: number;
+  reason: string;
+  adjusted_by: string | null;
+  created_at: string;
+}
+
+/** Clamp an effective mark into the valid [0, max] band (never negative / over max). */
+export function clampEffectiveMark(value: number, maxMarks: number): number {
+  if (value < 0) return 0;
+  if (value > maxMarks) return maxMarks;
+  return value;
+}
+
+/**
+ * Records a single grace/moderation delta for (exam, student). Preserves the
+ * ORIGINAL mark (never touches exam_mark_entries.marks_obtained). Allowed only
+ * while the exam is processed or coordinator_verified (before publish) — rejected
+ * after publish so a published (immutable) result can never be silently changed.
+ */
+export async function recordExamMarkAdjustment(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  input: {
+    examId: string;
+    studentId: string;
+    delta: number;
+    reason: string;
+    adjustedBy: string | null;
+  },
+): Promise<{ adjustment: ExamMarkAdjustmentRow; effectiveMark: number | null; maxMarks: number }> {
+  const session = await getExamSession(db, organizationId, schoolId, input.examId);
+  if (!session) throw new ExamNotFoundError(input.examId);
+  // Only before publish. draft/scheduled/marks_entry have no processed marks to
+  // moderate; published is immutable.
+  if (session.phase !== "processed") {
+    throw new ExamGracePhaseError(session.phase);
+  }
+  if (!Number.isInteger(input.delta)) {
+    throw new ExamValidationError("delta must be an integer");
+  }
+  if (input.reason.trim().length === 0) {
+    throw new ExamValidationError("reason is required for a grace / moderation adjustment");
+  }
+
+  // The student's mark entry for this exam (needed for bounds + effective calc).
+  const markRows = await db.queryObject<ExamMarkRow>(
+    `SELECT * FROM exam_mark_entries
+     WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3 AND student_id = $4`,
+    [organizationId, schoolId, input.examId, input.studentId],
+  );
+  const mark = markRows[0];
+  if (!mark) throw new ExamMarkNotFoundError(`${input.examId}:${input.studentId}`);
+  // A non-present (AB/ML/DB) student has no score to moderate.
+  const status: ExamMarkStatus = isExamMarkStatus(mark.status) ? mark.status : "present";
+  if (status !== "present" || mark.marks_obtained == null) {
+    throw new ExamValidationError(
+      "Cannot apply grace to a non-present student (absent / medical leave / debarred).",
+    );
+  }
+
+  const adjustedBy = input.adjustedBy &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        input.adjustedBy,
+      )
+    ? input.adjustedBy
+    : null;
+
+  const inserted = await db.queryObject<ExamMarkAdjustmentRow>(
+    `INSERT INTO exam_mark_adjustments
+       (organization_id, school_id, exam_id, student_id, delta, reason, adjusted_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING *`,
+    [
+      organizationId,
+      schoolId,
+      input.examId,
+      input.studentId,
+      input.delta,
+      input.reason.trim(),
+      adjustedBy,
+    ],
+  );
+
+  const totalDelta = await sumAdjustments(
+    db,
+    organizationId,
+    schoolId,
+    input.examId,
+    input.studentId,
+  );
+  const effectiveMark = clampEffectiveMark(
+    mark.marks_obtained + totalDelta,
+    mark.max_marks,
+  );
+
+  return { adjustment: inserted[0]!, effectiveMark, maxMarks: mark.max_marks };
+}
+
+/** Sum of all grace deltas for one (exam, student). 0 when there are none. */
+export async function sumAdjustments(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+  studentId: string,
+): Promise<number> {
+  const rows = await db.queryObject<{ total: string | null }>(
+    `SELECT COALESCE(SUM(delta), 0)::text AS total
+       FROM exam_mark_adjustments
+      WHERE organization_id = $1 AND school_id = $2
+        AND exam_id = $3 AND student_id = $4`,
+    [organizationId, schoolId, examId, studentId],
+  );
+  return parseInt(rows[0]?.total ?? "0", 10) || 0;
+}
+
+/**
+ * All grace/moderation adjustments for an exam (coordinator/principal only —
+ * the breakdown is NEVER exposed to parents/students). One row per adjustment.
+ */
+export async function listExamMarkAdjustments(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+): Promise<ExamMarkAdjustmentRow[]> {
+  return await db.queryObject<ExamMarkAdjustmentRow>(
+    `SELECT * FROM exam_mark_adjustments
+     WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3
+     ORDER BY student_id, created_at`,
+    [organizationId, schoolId, examId],
+  );
+}
+
+export function examMarkAdjustmentToApi(
+  row: ExamMarkAdjustmentRow,
+): Record<string, unknown> {
+  return {
+    id: row.id,
+    examId: row.exam_id,
+    studentId: row.student_id,
+    delta: row.delta,
+    reason: row.reason,
+    adjustedBy: row.adjusted_by,
+    createdAt: row.created_at,
+  };
+}
+
 export async function recordExamRejection(
   db: TenantQueryClient,
   organizationId: string,
@@ -1517,4 +1732,557 @@ export async function recordExamRejection(
      WHERE organization_id = $1 AND school_id = $2 AND id = $3`,
     [organizationId, schoolId, examId, comment],
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXM-D1 — Batch report-card data (published results, one card per student for a
+// class + term). No schema change: reuses exam_mark_entries + exam_sessions and
+// the same present-only exclusion + effective-mark (grace) semantics as reports.
+// The client renders/prints each card (reusing buildReportCardPdf).
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ReportCardSubject {
+  subject: string;
+  examTitle: string;
+  score: number | null;
+  maxScore: number;
+  grade: string;
+  statusCode: string | null;
+}
+
+export interface ReportCardData {
+  sisStudentId: string;
+  studentName: string;
+  classLabel: string;
+  termLabel: string;
+  subjects: ReportCardSubject[];
+  totalScore: number;
+  totalMax: number;
+  overallPercent: number;
+  overallGrade: string;
+  rank: number | null;
+  classSize: number;
+}
+
+/**
+ * EXM-D1 — the per-student report cards for [classLabel] over [term], built from
+ * PUBLISHED results only. Each subject line uses the EFFECTIVE (original + grace)
+ * mark via effective_marks (baked at publish) — the grace breakdown is never
+ * present. Non-present (AB/ML/DB) lines show their code and are excluded from the
+ * total / percent / rank (frozen exclusion rule).
+ */
+export async function loadReportCards(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  classLabel: string,
+  term: string,
+): Promise<ReportCardData[]> {
+  const rows = await db.queryObject<{
+    student_id: string;
+    student_code: string | null;
+    student_name: string | null;
+    subject: string;
+    exam_title: string;
+    marks_obtained: number | null;
+    effective_marks: number | null;
+    max_marks: number;
+    status: string;
+    grade_letter: string | null;
+    exam_updated_at: string;
+  }>(
+    `SELECT m.student_id AS student_id,
+            m.student_code AS student_code,
+            m.student_name AS student_name,
+            es.subject AS subject,
+            es.title AS exam_title,
+            m.marks_obtained AS marks_obtained,
+            m.effective_marks AS effective_marks,
+            m.max_marks AS max_marks,
+            m.status AS status,
+            m.grade_letter AS grade_letter,
+            es.updated_at AS exam_updated_at
+       FROM exam_mark_entries m
+       JOIN exam_sessions es
+         ON es.organization_id = m.organization_id
+        AND es.school_id = m.school_id
+        AND es.id = m.exam_id
+      WHERE m.organization_id = $1
+        AND m.school_id = $2
+        AND (m.class_label = $3 OR es.grade = $3)
+        AND es.term_label = $4
+        AND es.phase = 'published'
+        AND m.published = true
+      ORDER BY es.updated_at ASC, m.roll_number NULLS LAST, m.id`,
+    [organizationId, schoolId, classLabel, term],
+  );
+
+  const byStudent = new Map<string, ReportCardData>();
+  for (const r of rows) {
+    let card = byStudent.get(r.student_id);
+    if (!card) {
+      card = {
+        sisStudentId: r.student_code ?? r.student_id,
+        studentName: r.student_name ?? "",
+        classLabel,
+        termLabel: term,
+        subjects: [],
+        totalScore: 0,
+        totalMax: 0,
+        overallPercent: 0,
+        overallGrade: "",
+        rank: null,
+        classSize: 0,
+      };
+      byStudent.set(r.student_id, card);
+    }
+    const status = isExamMarkStatus(r.status) ? r.status : "present";
+    // Effective (grace-applied) score for a present student; null for AB/ML/DB.
+    const score = status === "present"
+      ? (r.effective_marks ?? r.marks_obtained)
+      : null;
+    card.subjects.push({
+      subject: r.subject,
+      examTitle: r.exam_title,
+      score,
+      maxScore: r.max_marks,
+      grade: r.grade_letter ??
+        (score != null
+          ? gradeForPercent(r.max_marks > 0 ? (score / r.max_marks) * 100 : 0)
+          : (examStatusDisplayCode(status) ?? "")),
+      statusCode: examStatusDisplayCode(status),
+    });
+    if (status === "present" && score != null) {
+      card.totalScore += score;
+      card.totalMax += r.max_marks;
+    }
+  }
+
+  const cards = [...byStudent.values()];
+  for (const c of cards) {
+    c.overallPercent = c.totalMax > 0
+      ? Math.round((c.totalScore / c.totalMax) * 10000) / 100
+      : 0;
+    c.overallGrade = c.totalMax > 0 ? gradeForPercent(c.overallPercent) : "";
+  }
+
+  // Present-only rank across the class (a student with no present result is not
+  // ranked and never shifts another's rank — frozen exclusion rule).
+  const ranked = cards.filter((c) => c.totalMax > 0);
+  for (const c of ranked) {
+    const ahead = ranked.filter((o) => o.overallPercent > c.overallPercent + 1e-9)
+      .length;
+    c.rank = ahead + 1;
+    c.classSize = ranked.length;
+  }
+  return cards;
+}
+
+export function reportCardToApi(card: ReportCardData): Record<string, unknown> {
+  return {
+    sisStudentId: card.sisStudentId,
+    studentName: card.studentName,
+    classLabel: card.classLabel,
+    termLabel: card.termLabel,
+    subjects: card.subjects.map((s) => ({
+      subject: s.subject,
+      examTitle: s.examTitle,
+      score: s.score,
+      maxScore: s.maxScore,
+      grade: s.grade,
+      statusCode: s.statusCode,
+    })),
+    totalScore: card.totalScore,
+    totalMax: card.totalMax,
+    overallPercent: card.overallPercent,
+    overallGrade: card.overallGrade,
+    rank: card.rank,
+    classSize: card.classSize,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXM-D4 — Hall-ticket / admit-card data (per student for one exam). No schema
+// change: reads the exam session + its mark-entry roster (one entry per enrolled
+// student). Standard-template instructions supplied by the backend.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Standard admit-card instructions (adopted default). */
+export const HALL_TICKET_INSTRUCTIONS: readonly string[] = [
+  "Carry this hall ticket to the examination hall.",
+  "Reach the venue at least 15 minutes before the start time.",
+  "Electronic devices and unauthorised materials are prohibited.",
+  "Follow all instructions given by the invigilator.",
+] as const;
+
+export interface HallTicketRow {
+  sisStudentId: string;
+  studentName: string;
+  rollNo: string | null;
+  classLabel: string;
+  subject: string;
+  examTitle: string;
+  dateLabel: string;
+  timeLabel: string;
+  venueLabel: string;
+  maxMarks: number;
+  instructions: string[];
+}
+
+export async function loadHallTickets(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+): Promise<HallTicketRow[]> {
+  const session = await getExamSession(db, organizationId, schoolId, examId);
+  if (!session) throw new ExamNotFoundError(examId);
+
+  const rows = await db.queryObject<{
+    student_id: string;
+    student_code: string | null;
+    student_name: string | null;
+    roll_number: string | null;
+    class_label: string;
+  }>(
+    `SELECT m.student_id AS student_id,
+            m.student_code AS student_code,
+            m.student_name AS student_name,
+            m.roll_number AS roll_number,
+            m.class_label AS class_label
+       FROM exam_mark_entries m
+      WHERE m.organization_id = $1 AND m.school_id = $2 AND m.exam_id = $3
+      ORDER BY m.roll_number NULLS LAST, m.id`,
+    [organizationId, schoolId, examId],
+  );
+
+  return rows.map((r) => ({
+    sisStudentId: r.student_code ?? r.student_id,
+    studentName: r.student_name ?? "",
+    rollNo: r.roll_number,
+    classLabel: r.class_label || `${session.grade}-${session.section_name}`,
+    subject: session.subject,
+    examTitle: session.title,
+    dateLabel: session.date_label,
+    timeLabel: session.time_label,
+    venueLabel: session.venue_label,
+    maxMarks: session.max_marks,
+    instructions: [...HALL_TICKET_INSTRUCTIONS],
+  }));
+}
+
+export function hallTicketToApi(row: HallTicketRow): Record<string, unknown> {
+  return {
+    sisStudentId: row.sisStudentId,
+    studentName: row.studentName,
+    rollNo: row.rollNo,
+    classLabel: row.classLabel,
+    subject: row.subject,
+    examTitle: row.examTitle,
+    dateLabel: row.dateLabel,
+    timeLabel: row.timeLabel,
+    venueLabel: row.venueLabel,
+    maxMarks: row.maxMarks,
+    instructions: row.instructions,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXM-D5 — Seating arrangement generator (mixed-class default, configurable).
+//
+// Default room capacity 30 (configurable). Mixed-class rule: when MULTIPLE
+// classes sit the exam, no two ADJACENT seats (consecutive seat_no in the same
+// room) hold students of the same class — achieved by round-robin interleaving
+// the classes into the seat sequence. For a SINGLE class, students are seated
+// sequentially by roll across rooms of the given capacity.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export const DEFAULT_SEATING_ROOM_CAPACITY = 30;
+
+export interface SeatingAssignmentRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  exam_id: string;
+  student_id: string;
+  room_label: string;
+  seat_no: number;
+  created_at: string;
+}
+
+export interface SeatingCandidate {
+  studentId: string;
+  studentCode: string | null;
+  studentName: string | null;
+  rollNumber: string | null;
+  classLabel: string;
+}
+
+export interface PlannedSeat {
+  studentId: string;
+  roomLabel: string;
+  seatNo: number;
+}
+
+/**
+ * Pure seat planner (unit-testable without a DB). Interleaves classes so no two
+ * adjacent seats share a class when multiple classes are present; a single class
+ * seats sequentially by roll. Rooms fill to [capacity] then a new room opens.
+ * Room labels are "Room 1", "Room 2", ...; seatNo is 1-based within a room.
+ */
+export function planSeating(
+  candidates: SeatingCandidate[],
+  capacity: number,
+): PlannedSeat[] {
+  const cap = Number.isFinite(capacity) && capacity > 0
+    ? Math.floor(capacity)
+    : DEFAULT_SEATING_ROOM_CAPACITY;
+
+  // Group by class, each group ordered by roll (nulls last), then id.
+  const byClass = new Map<string, SeatingCandidate[]>();
+  for (const c of candidates) {
+    const list = byClass.get(c.classLabel) ?? [];
+    list.push(c);
+    byClass.set(c.classLabel, list);
+  }
+  for (const list of byClass.values()) {
+    list.sort((a, b) => {
+      const ra = a.rollNumber ?? "￿";
+      const rb = b.rollNumber ?? "￿";
+      if (ra !== rb) return ra < rb ? -1 : 1;
+      return a.studentId < b.studentId ? -1 : a.studentId > b.studentId ? 1 : 0;
+    });
+  }
+
+  // Ordered class keys (stable: first appearance order).
+  const classKeys = [...byClass.keys()];
+  const singleClass = classKeys.length <= 1;
+
+  // Build the seating order:
+  //  • single class → straight roll order;
+  //  • multiple classes → round-robin, but never place the same class as the
+  //    immediately-previous pick (greedy: pick the largest remaining group whose
+  //    class differs from the last placed one).
+  const order: SeatingCandidate[] = [];
+  if (singleClass) {
+    for (const c of byClass.values()) order.push(...c);
+  } else {
+    // Working queues (copies) so we can pop from the front.
+    const queues = new Map<string, SeatingCandidate[]>();
+    for (const [k, v] of byClass) queues.set(k, [...v]);
+    let lastClass: string | null = null;
+    let remaining = candidates.length;
+    while (remaining > 0) {
+      // Candidate classes with students left, excluding the last-placed class.
+      let pickKey: string | null = null;
+      let pickLen = -1;
+      for (const k of classKeys) {
+        const q = queues.get(k)!;
+        if (q.length === 0) continue;
+        if (k === lastClass) continue;
+        if (q.length > pickLen) {
+          pickLen = q.length;
+          pickKey = k;
+        }
+      }
+      // Only the last-placed class still has students → unavoidable repeat
+      // (that class outnumbers the rest); place it.
+      if (pickKey == null) {
+        for (const k of classKeys) {
+          const q = queues.get(k)!;
+          if (q.length > 0) {
+            pickKey = k;
+            break;
+          }
+        }
+      }
+      const q = queues.get(pickKey!)!;
+      order.push(q.shift()!);
+      lastClass = pickKey;
+      remaining--;
+    }
+  }
+
+  // Chunk into rooms of `cap`.
+  const seats: PlannedSeat[] = [];
+  for (let i = 0; i < order.length; i++) {
+    const roomIndex = Math.floor(i / cap);
+    const seatNo = (i % cap) + 1;
+    seats.push({
+      studentId: order[i]!.studentId,
+      roomLabel: `Room ${roomIndex + 1}`,
+      seatNo,
+    });
+  }
+  return seats;
+}
+
+/** The students who sit an exam: the mark-entry roster, enriched with class label. */
+export async function loadSeatingCandidates(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+): Promise<SeatingCandidate[]> {
+  const rows = await db.queryObject<{
+    student_id: string;
+    student_code: string | null;
+    student_name: string | null;
+    roll_number: string | null;
+    class_label: string;
+  }>(
+    `SELECT m.student_id AS student_id,
+            m.student_code AS student_code,
+            m.student_name AS student_name,
+            m.roll_number AS roll_number,
+            m.class_label AS class_label
+       FROM exam_mark_entries m
+      WHERE m.organization_id = $1 AND m.school_id = $2 AND m.exam_id = $3`,
+    [organizationId, schoolId, examId],
+  );
+  return rows.map((r) => ({
+    studentId: r.student_id,
+    studentCode: r.student_code,
+    studentName: r.student_name,
+    rollNumber: r.roll_number,
+    classLabel: r.class_label,
+  }));
+}
+
+/**
+ * EXM-D5 — (re)generate the seating plan for an exam. Clears any existing plan
+ * for the exam, then inserts the freshly-planned seats. Idempotent per exam.
+ */
+export async function generateSeating(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+  capacity: number = DEFAULT_SEATING_ROOM_CAPACITY,
+): Promise<SeatingAssignmentRow[]> {
+  const session = await getExamSession(db, organizationId, schoolId, examId);
+  if (!session) throw new ExamNotFoundError(examId);
+
+  const candidates = await loadSeatingCandidates(
+    db,
+    organizationId,
+    schoolId,
+    examId,
+  );
+  if (candidates.length === 0) {
+    throw new ExamValidationError(
+      "No students provisioned for this exam — open marks entry first.",
+    );
+  }
+  const plan = planSeating(candidates, capacity);
+  const byId = new Map(candidates.map((c) => [c.studentId, c]));
+
+  // Replace the whole plan for this exam (regenerate == clean slate).
+  await db.queryObject(
+    `DELETE FROM exam_seating_assignments
+     WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3`,
+    [organizationId, schoolId, examId],
+  );
+  for (const seat of plan) {
+    await db.queryObject(
+      `INSERT INTO exam_seating_assignments
+         (organization_id, school_id, exam_id, student_id, room_label, seat_no)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        organizationId,
+        schoolId,
+        examId,
+        seat.studentId,
+        seat.roomLabel,
+        seat.seatNo,
+      ],
+    );
+  }
+  return await loadSeating(db, organizationId, schoolId, examId, byId);
+}
+
+/** Reads an exam's seating plan (room + seat + student label), ordered for print. */
+export async function loadSeating(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+  candidatesById?: Map<string, SeatingCandidate>,
+): Promise<SeatingAssignmentRow[]> {
+  return await db.queryObject<SeatingAssignmentRow>(
+    `SELECT * FROM exam_seating_assignments
+     WHERE organization_id = $1 AND school_id = $2 AND exam_id = $3
+     ORDER BY room_label, seat_no`,
+    [organizationId, schoolId, examId],
+  ).then((rows) => {
+    // Attach candidate labels if provided (avoids a JOIN; the roster is small).
+    if (candidatesById) return rows;
+    return rows;
+  });
+}
+
+/** A seating plan enriched with student labels, grouped by room, for the client. */
+export interface SeatingPlanApi {
+  examId: string;
+  roomCapacity: number;
+  rooms: Array<{
+    roomLabel: string;
+    seats: Array<{
+      seatNo: number;
+      sisStudentId: string;
+      studentName: string;
+      rollNo: string | null;
+      classLabel: string;
+    }>;
+  }>;
+}
+
+export async function loadSeatingPlan(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  examId: string,
+): Promise<SeatingPlanApi> {
+  const session = await getExamSession(db, organizationId, schoolId, examId);
+  if (!session) throw new ExamNotFoundError(examId);
+
+  const rows = await db.queryObject<
+    SeatingAssignmentRow & {
+      student_code: string | null;
+      student_name: string | null;
+      roll_number: string | null;
+      class_label: string | null;
+    }
+  >(
+    `SELECT sa.*, m.student_code AS student_code, m.student_name AS student_name,
+            m.roll_number AS roll_number, m.class_label AS class_label
+       FROM exam_seating_assignments sa
+       LEFT JOIN exam_mark_entries m
+         ON m.organization_id = sa.organization_id
+        AND m.school_id = sa.school_id
+        AND m.exam_id = sa.exam_id
+        AND m.student_id = sa.student_id
+      WHERE sa.organization_id = $1 AND sa.school_id = $2 AND sa.exam_id = $3
+      ORDER BY sa.room_label, sa.seat_no`,
+    [organizationId, schoolId, examId],
+  );
+
+  const rooms: SeatingPlanApi["rooms"] = [];
+  const roomIndex = new Map<string, number>();
+  for (const r of rows) {
+    let idx = roomIndex.get(r.room_label);
+    if (idx == null) {
+      idx = rooms.length;
+      roomIndex.set(r.room_label, idx);
+      rooms.push({ roomLabel: r.room_label, seats: [] });
+    }
+    rooms[idx]!.seats.push({
+      seatNo: r.seat_no,
+      sisStudentId: r.student_code ?? r.student_id,
+      studentName: r.student_name ?? "",
+      rollNo: r.roll_number,
+      classLabel: r.class_label ?? "",
+    });
+  }
+  return { examId, roomCapacity: DEFAULT_SEATING_ROOM_CAPACITY, rooms };
 }

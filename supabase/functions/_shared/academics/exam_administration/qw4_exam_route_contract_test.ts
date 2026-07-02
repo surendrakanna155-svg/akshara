@@ -432,3 +432,223 @@ Deno.test("EXM-6: POST /academics/exams with no deadline still passes (503)", as
   const res = await call("POST", "/academics/exams", ["manageExams"], validExam);
   assertEquals(res?.status, 503);
 });
+
+// ── EXM-D1 — GET /academics/exams/class/{c}/report-cards (batch cards) ──────────
+
+Deno.test("EXM-D1: report-cards slug is viewExams", () => {
+  assertEquals(EXAM_OPERATION_PERMISSIONS.reportCards, "viewExams");
+});
+
+Deno.test("EXM-D1: GET class/{c}/report-cards is denied without viewExams (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/report-cards?term=Term%202",
+    ["manageExamMarks"],
+  );
+  assertEquals(res?.status, 403);
+  assertEquals((await res!.json()).error.code, "FORBIDDEN");
+});
+
+Deno.test("EXM-D1: GET class/{c}/report-cards reads with viewExams (passes gate → 503)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/report-cards?term=Term%202",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-D1: GET class/{c}/report-cards without term is rejected (422) before the DB", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/report-cards",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("EXM-D1: report-cards is routed as a report, NOT as GET /exams/{examId}", async () => {
+  // "class" must never be mistaken for an examId; a viewExams reader passes the
+  // report-cards gate → 503.
+  const res = await call(
+    "GET",
+    "/academics/exams/class/8-A/report-cards?term=Term%202",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+// ── EXM-D2 — POST /academics/exams/{id}/students/{sid}/grace (moderation) ───────
+
+Deno.test("EXM-D2: grace + adjustments slugs are moderateExamMarks", () => {
+  assertEquals(EXAM_OPERATION_PERMISSIONS.graceMark, "moderateExamMarks");
+  assertEquals(EXAM_OPERATION_PERMISSIONS.listAdjustments, "moderateExamMarks");
+});
+
+Deno.test("EXM-D2: POST grace is denied without moderateExamMarks (403)", async () => {
+  // A plain marks-entry teacher CANNOT moderate.
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/students/stu-1/grace",
+    ["viewExams", "manageExamMarks"],
+    { delta: 5, reason: "Re-eval" },
+  );
+  assertEquals(res?.status, 403);
+  assertEquals((await res!.json()).error.code, "FORBIDDEN");
+});
+
+Deno.test("EXM-D2: POST grace with moderateExamMarks passes the gate → 503", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/students/stu-1/grace",
+    ["moderateExamMarks"],
+    { delta: 5, reason: "Re-evaluation grace" },
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-D2: POST grace rejects a missing reason (422) before the DB", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/students/stu-1/grace",
+    ["moderateExamMarks"],
+    { delta: 5 },
+  );
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("EXM-D2: POST grace rejects a non-integer delta (422) before the DB", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/students/stu-1/grace",
+    ["moderateExamMarks"],
+    { delta: 2.5, reason: "half mark" },
+  );
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("EXM-D2: grace route rejects an unauthenticated caller (401)", async () => {
+  const req = new Request(
+    "https://x/academics/exams/exam-1/students/stu-1/grace",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ delta: 5, reason: "x" }),
+    },
+  );
+  const res = await routeExamAdministration(
+    req,
+    config,
+    "POST",
+    "/academics/exams/exam-1/students/stu-1/grace",
+  );
+  assertEquals(res?.status, 401);
+});
+
+Deno.test("EXM-D2: GET adjustments is denied without moderateExamMarks (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/adjustments",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("EXM-D2: GET adjustments with moderateExamMarks passes the gate → 503", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/adjustments",
+    ["moderateExamMarks"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+// ── EXM-D4 — GET /academics/exams/{id}/hall-tickets (admit cards) ───────────────
+
+Deno.test("EXM-D4: hall-tickets slug is viewExams", () => {
+  assertEquals(EXAM_OPERATION_PERMISSIONS.hallTickets, "viewExams");
+});
+
+Deno.test("EXM-D4: GET hall-tickets is denied without viewExams (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/hall-tickets",
+    ["manageExamMarks"],
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("EXM-D4: GET hall-tickets reads with viewExams (passes gate → 503)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/hall-tickets",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});
+
+// ── EXM-D5 — seating: generate (manage) + read (view) ──────────────────────────
+
+Deno.test("EXM-D5: seating slugs are manageExams (generate) + viewExams (read)", () => {
+  assertEquals(EXAM_OPERATION_PERMISSIONS.generateSeating, "manageExams");
+  assertEquals(EXAM_OPERATION_PERMISSIONS.getSeating, "viewExams");
+});
+
+Deno.test("EXM-D5: POST seating/generate is denied without manageExams (403)", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/seating/generate",
+    ["viewExams"],
+    { capacity: 30 },
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("EXM-D5: POST seating/generate with manageExams passes the gate → 503", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/seating/generate",
+    ["manageExams"],
+    { capacity: 30 },
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-D5: POST seating/generate rejects a bad capacity (422) before the DB", async () => {
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/seating/generate",
+    ["manageExams"],
+    { capacity: 0 },
+  );
+  assertEquals(res?.status, 422);
+});
+
+Deno.test("EXM-D5: seating/generate is NOT mistaken for GET /exams/{examId}", async () => {
+  // The two-segment suffix must route to the seating handler, not handleGetExam.
+  const res = await call(
+    "POST",
+    "/academics/exams/exam-1/seating/generate",
+    ["manageExams"],
+    { capacity: 30 },
+  );
+  assertEquals(res?.status, 503);
+});
+
+Deno.test("EXM-D5: GET seating is denied without viewExams (403)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/seating",
+    ["manageExamMarks"],
+  );
+  assertEquals(res?.status, 403);
+});
+
+Deno.test("EXM-D5: GET seating reads with viewExams (passes gate → 503)", async () => {
+  const res = await call(
+    "GET",
+    "/academics/exams/exam-1/seating",
+    ["viewExams"],
+  );
+  assertEquals(res?.status, 503);
+});

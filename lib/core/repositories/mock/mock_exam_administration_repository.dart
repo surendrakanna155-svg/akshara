@@ -220,4 +220,64 @@ class MockExamAdministrationRepository implements ExamAdministrationRepository {
       term: term,
     );
   }
+
+  // ── EXM-D1/D2/D4/D5 — final exams slice ────────────────────────────────────
+
+  @override
+  Future<List<ReportCardData>> reportCards({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) async {
+    return _store.reportCards(classLabel: classLabel, term: term);
+  }
+
+  @override
+  Future<GraceMarkResult> recordGraceMark({
+    required RepositoryQuery query,
+    required String examId,
+    required String sisStudentId,
+    required int delta,
+    required String reason,
+  }) async {
+    return _store.recordGraceAdjustment(
+      examId: examId,
+      sisStudentId: sisStudentId,
+      delta: delta,
+      reason: reason,
+    );
+  }
+
+  @override
+  Future<List<ExamMarkAdjustment>> listAdjustments({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    return _store.adjustmentsForExam(examId);
+  }
+
+  @override
+  Future<List<HallTicket>> hallTickets({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    return _store.hallTickets(examId);
+  }
+
+  @override
+  Future<SeatingPlan> generateSeating({
+    required RepositoryQuery query,
+    required String examId,
+    int capacity = kDefaultSeatingRoomCapacity,
+  }) async {
+    return _store.generateSeating(examId, capacity: capacity);
+  }
+
+  @override
+  Future<SeatingPlan> seating({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    return _store.seatingFor(examId);
+  }
 }

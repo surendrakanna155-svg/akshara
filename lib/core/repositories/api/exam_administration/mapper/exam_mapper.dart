@@ -288,6 +288,138 @@ class ExamMapper {
           if (raw is Map) toDatesheetRow(Map<String, dynamic>.from(raw)),
       ];
 
+  // ── EXM-D1/D2/D4/D5 — final exams slice parsers ──────────────────────────
+
+  /// EXM-D1 — one per-student report card (published, effective marks).
+  ReportCardData toReportCard(Map<String, dynamic> json) {
+    return ReportCardData(
+      sisStudentId: json['sisStudentId'] as String? ?? '',
+      studentName: json['studentName'] as String? ?? '',
+      classLabel: json['classLabel'] as String? ?? '',
+      termLabel: json['termLabel'] as String? ?? '',
+      subjects: [
+        for (final raw in (json['subjects'] as List? ?? const []))
+          if (raw is Map) _toReportCardSubject(Map<String, dynamic>.from(raw)),
+      ],
+      totalScore: (json['totalScore'] as num?)?.toInt() ?? 0,
+      totalMax: (json['totalMax'] as num?)?.toInt() ?? 0,
+      overallPercent: (json['overallPercent'] as num?)?.toDouble() ?? 0,
+      overallGrade: json['overallGrade'] as String? ?? '',
+      rank: (json['rank'] as num?)?.toInt(),
+      classSize: (json['classSize'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  ReportCardSubject _toReportCardSubject(Map<String, dynamic> json) {
+    return ReportCardSubject(
+      subject: json['subject'] as String? ?? '',
+      examTitle: json['examTitle'] as String? ?? '',
+      score: (json['score'] as num?)?.toInt(),
+      maxScore: (json['maxScore'] as num?)?.toInt() ?? 0,
+      grade: json['grade'] as String? ?? '',
+      statusCode: json['statusCode'] as String?,
+    );
+  }
+
+  List<ReportCardData> toReportCards(List<dynamic> items) => [
+        for (final raw in items)
+          if (raw is Map) toReportCard(Map<String, dynamic>.from(raw)),
+      ];
+
+  /// EXM-D2 — one grace / moderation adjustment record.
+  ExamMarkAdjustment toAdjustment(Map<String, dynamic> json) {
+    return ExamMarkAdjustment(
+      id: json['id'] as String? ?? '',
+      examId: json['examId'] as String? ?? '',
+      sisStudentId: json['studentId'] as String? ??
+          json['sisStudentId'] as String? ?? '',
+      delta: (json['delta'] as num?)?.toInt() ?? 0,
+      reason: json['reason'] as String? ?? '',
+      adjustedBy: json['adjustedBy'] as String?,
+      createdAt: _parseDate(json['createdAt']),
+    );
+  }
+
+  List<ExamMarkAdjustment> toAdjustments(List<dynamic> items) => [
+        for (final raw in items)
+          if (raw is Map) toAdjustment(Map<String, dynamic>.from(raw)),
+      ];
+
+  /// EXM-D2 — the grace-record response { adjustment, effectiveMark, maxMarks }.
+  GraceMarkResult toGraceResult(Map<String, dynamic> json) {
+    final adjRaw = json['adjustment'];
+    return GraceMarkResult(
+      adjustment: adjRaw is Map
+          ? toAdjustment(Map<String, dynamic>.from(adjRaw))
+          : const ExamMarkAdjustment(
+              id: '', examId: '', sisStudentId: '', delta: 0, reason: ''),
+      effectiveMark: (json['effectiveMark'] as num?)?.toInt(),
+      maxMarks: (json['maxMarks'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// EXM-D2 — request body for a grace adjustment.
+  Map<String, dynamic> graceBody({required int delta, required String reason}) {
+    return {'delta': delta, 'reason': reason};
+  }
+
+  /// EXM-D4 — one hall ticket (admit card).
+  HallTicket toHallTicket(Map<String, dynamic> json) {
+    return HallTicket(
+      sisStudentId: json['sisStudentId'] as String? ?? '',
+      studentName: json['studentName'] as String? ?? '',
+      rollNo: json['rollNo'] as String?,
+      classLabel: json['classLabel'] as String? ?? '',
+      subject: json['subject'] as String? ?? '',
+      examTitle: json['examTitle'] as String? ?? '',
+      dateLabel: json['dateLabel'] as String? ?? '',
+      timeLabel: json['timeLabel'] as String? ?? '',
+      venueLabel: json['venueLabel'] as String? ?? '',
+      maxMarks: (json['maxMarks'] as num?)?.toInt() ?? 0,
+      instructions: [
+        for (final s in (json['instructions'] as List? ?? const [])) '$s',
+      ],
+    );
+  }
+
+  List<HallTicket> toHallTickets(List<dynamic> items) => [
+        for (final raw in items)
+          if (raw is Map) toHallTicket(Map<String, dynamic>.from(raw)),
+      ];
+
+  /// EXM-D5 — the seating plan { examId, roomCapacity, rooms[] }.
+  SeatingPlan toSeatingPlan(Map<String, dynamic> json) {
+    return SeatingPlan(
+      examId: json['examId'] as String? ?? '',
+      roomCapacity: (json['roomCapacity'] as num?)?.toInt() ??
+          kDefaultSeatingRoomCapacity,
+      rooms: [
+        for (final raw in (json['rooms'] as List? ?? const []))
+          if (raw is Map) _toSeatingRoom(Map<String, dynamic>.from(raw)),
+      ],
+    );
+  }
+
+  SeatingRoom _toSeatingRoom(Map<String, dynamic> json) {
+    return SeatingRoom(
+      roomLabel: json['roomLabel'] as String? ?? '',
+      seats: [
+        for (final raw in (json['seats'] as List? ?? const []))
+          if (raw is Map) _toSeatingSeat(Map<String, dynamic>.from(raw)),
+      ],
+    );
+  }
+
+  SeatingSeat _toSeatingSeat(Map<String, dynamic> json) {
+    return SeatingSeat(
+      seatNo: (json['seatNo'] as num?)?.toInt() ?? 0,
+      sisStudentId: json['sisStudentId'] as String? ?? '',
+      studentName: json['studentName'] as String? ?? '',
+      rollNo: json['rollNo'] as String?,
+      classLabel: json['classLabel'] as String? ?? '',
+    );
+  }
+
   ExamLifecyclePhase _phaseFromApi(String value) => switch (value) {
         'scheduled' => ExamLifecyclePhase.scheduled,
         'marks_entry' => ExamLifecyclePhase.marksEntry,

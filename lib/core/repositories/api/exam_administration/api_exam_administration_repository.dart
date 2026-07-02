@@ -181,4 +181,67 @@ class ApiExamAdministrationRepository implements ExamAdministrationRepository {
     required String term,
   }) =>
       _remote.fetchDatesheet(query: query, classLabel: classLabel, term: term);
+
+  // ── EXM-D1/D2/D4/D5 — final exams slice ────────────────────────────────────
+
+  @override
+  Future<List<ReportCardData>> reportCards({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) =>
+      _remote.fetchReportCards(
+        query: query,
+        classLabel: classLabel,
+        term: term,
+      );
+
+  @override
+  Future<GraceMarkResult> recordGraceMark({
+    required RepositoryQuery query,
+    required String examId,
+    required String sisStudentId,
+    required int delta,
+    required String reason,
+  }) =>
+      _remote.recordGraceMark(
+        query: query,
+        examId: examId,
+        sisStudentId: sisStudentId,
+        delta: delta,
+        reason: reason,
+      );
+
+  @override
+  Future<List<ExamMarkAdjustment>> listAdjustments({
+    required RepositoryQuery query,
+    required String examId,
+  }) =>
+      _remote.fetchAdjustments(query: query, examId: examId);
+
+  @override
+  Future<List<HallTicket>> hallTickets({
+    required RepositoryQuery query,
+    required String examId,
+  }) =>
+      _remote.fetchHallTickets(query: query, examId: examId);
+
+  @override
+  Future<SeatingPlan> generateSeating({
+    required RepositoryQuery query,
+    required String examId,
+    int capacity = kDefaultSeatingRoomCapacity,
+  }) =>
+      _remote.generateSeating(
+        query: query,
+        examId: examId,
+        capacity: capacity,
+      );
+
+  @override
+  Future<SeatingPlan> seating({
+    required RepositoryQuery query,
+    required String examId,
+  }) =>
+      _remote.fetchSeating(query: query, examId: examId);
 }

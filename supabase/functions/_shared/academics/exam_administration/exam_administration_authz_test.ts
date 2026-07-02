@@ -160,6 +160,45 @@ Deno.test("P1 — oversight role can verify, approve, and publish", () => {
 });
 
 // ---------------------------------------------------------------------------
+// EXM-D2 — grace / moderation gated on the new granular moderateExamMarks slug
+// ---------------------------------------------------------------------------
+
+Deno.test("EXM-D2 — grace + adjustments require moderateExamMarks", () => {
+  assertEquals(EXAM_OPERATION_PERMISSIONS.graceMark, "moderateExamMarks");
+  assertEquals(EXAM_OPERATION_PERMISSIONS.listAdjustments, "moderateExamMarks");
+});
+
+Deno.test("EXM-D2 — a plain marks teacher CANNOT moderate; a coordinator can", () => {
+  // A teacher who can enter/submit marks still cannot record grace.
+  const teacher = claims([
+    "viewExams",
+    "manageExamMarks",
+    "submitExamResults",
+  ]);
+  assertEquals(
+    requirePermission(teacher, EXAM_OPERATION_PERMISSIONS.graceMark)?.status,
+    403,
+  );
+  // The coordinator/oversight grant (moderateExamMarks) is allowed.
+  const coordinator = claims([
+    "viewExams",
+    "verifyExamResults",
+    "moderateExamMarks",
+  ]);
+  assertEquals(
+    requirePermission(coordinator, EXAM_OPERATION_PERMISSIONS.graceMark),
+    null,
+  );
+  assertEquals(
+    requirePermission(
+      coordinator,
+      EXAM_OPERATION_PERMISSIONS.listAdjustments,
+    ),
+    null,
+  );
+});
+
+// ---------------------------------------------------------------------------
 // P2 — subject-teacher scoping of marks read/update
 // ---------------------------------------------------------------------------
 

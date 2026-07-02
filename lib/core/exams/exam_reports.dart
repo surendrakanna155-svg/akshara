@@ -1,5 +1,21 @@
 import 'exam_administration_store.dart';
 
+// EXM-D1/D2/D4/D5 domain models (ExamMarkAdjustment, GraceMarkResult,
+// ReportCardData/ReportCardSubject, HallTicket, SeatingPlan/Room/Seat) live in
+// exam_administration_store.dart (alongside the other exam domain models) to keep
+// the store free of a circular import. They are re-exported here so the data
+// layer keeps importing them from exam_reports.dart.
+export 'exam_administration_store.dart'
+    show
+        ExamMarkAdjustment,
+        GraceMarkResult,
+        ReportCardData,
+        ReportCardSubject,
+        HallTicket,
+        SeatingPlan,
+        SeatingRoom,
+        SeatingSeat;
+
 /// EXM-3 / EXM-4 / EXM-5 / EXM-7 — read-only exam report models + the pure
 /// computation that builds them.
 ///

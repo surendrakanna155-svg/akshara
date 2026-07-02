@@ -16,7 +16,10 @@ import { isSmsConfigured, sendTransactionalSms, type SmsConfig } from "../../sms
 import {
   createExamSession,
   datesheetRowToApi,
+  DEFAULT_SEATING_ROOM_CAPACITY,
   examDistributionToApi,
+  ExamGracePhaseError,
+  examMarkAdjustmentToApi,
   type ExamMarkStatus,
   examMarkToApi,
   examSessionToApi,
@@ -28,10 +31,13 @@ import {
   ExamScopeForbiddenError,
   ExamValidationError,
   examRemarkToApi,
+  generateSeating,
   getExamMark,
+  hallTicketToApi,
   isExamMarkStatus,
   getExamSession,
   isClassTeacherForExam,
+  listExamMarkAdjustments,
   listExamMarks,
   listExamRemarks,
   listExamSessions,
@@ -40,13 +46,18 @@ import {
   loadDatesheet,
   loadExamDistribution,
   loadExamToppers,
+  loadHallTickets,
   loadMeritList,
+  loadReportCards,
+  loadSeatingPlan,
   loadTabulationRegister,
   marksEntryProgressToApi,
   meritRowToApi,
   openMarksEntry,
   processExamResults,
   publishExamResults,
+  recordExamMarkAdjustment,
+  reportCardToApi,
   scheduleExamSession,
   tabulationRegisterToApi,
   teacherTeachesExamSession,
@@ -89,6 +100,17 @@ export const EXAM_OPERATION_PERMISSIONS = {
   merit: "viewExams",
   distribution: "viewExams",
   datesheet: "viewExams",
+  // EXM-D1 — batch report cards (published) — coordinator read.
+  reportCards: "viewExams",
+  // EXM-D2 — grace / moderation. Recording a delta needs the new granular
+  // coordinator gate; listing the breakdown is coordinator-only too.
+  graceMark: "moderateExamMarks",
+  listAdjustments: "moderateExamMarks",
+  // EXM-D4 — hall tickets (admit cards) — read.
+  hallTickets: "viewExams",
+  // EXM-D5 — seating: generating a plan is a manage action; reading it is a read.
+  generateSeating: "manageExams",
+  getSeating: "viewExams",
 } as const;
 
 /**
@@ -114,6 +136,10 @@ function mapExamError(error: unknown): Response {
   }
   if (error instanceof ExamValidationError) {
     return errorEnvelope("EXAM_VALIDATION", error.message, 422);
+  }
+  if (error instanceof ExamGracePhaseError) {
+    // Grace after publish (or before processed) — the results are locked.
+    return errorEnvelope("EXAM_GRACE_PHASE", error.message, 409);
   }
   if (error instanceof ExamApprovalRequiredError) {
     return errorEnvelope("EXAM_APPROVAL_REQUIRED", error.message, 403);
@@ -957,5 +983,178 @@ export async function handleDatesheet(
         term,
       ));
     return rows.map(datesheetRowToApi);
+  });
+}
+
+/**
+ * EXM-D1 — batch report-card data for a class + term (published results only).
+ * Returns the per-student card the client renders/prints (reusing the
+ * report-card PDF builder). Grace is already baked into the effective mark; the
+ * per-delta breakdown is never included.
+ */
+export async function handleReportCards(
+  req: Request,
+  config: AppConfig,
+  classLabel: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const term = requireTermParam(req);
+    const { organizationId, schoolId } = tenantIds(claims);
+    const cards = await withTenantContext(config, claims, (db) =>
+      loadReportCards(
+        db,
+        organizationId,
+        schoolId,
+        decodeURIComponent(classLabel),
+        term,
+      ));
+    return cards.map(reportCardToApi);
+  });
+}
+
+/**
+ * EXM-D2 — record a grace / moderation delta for one (exam, student). Gated on
+ * the new granular `moderateExamMarks` (coordinator). Allowed only before publish
+ * (processed phase); rejected after publish. Audited via emitMutationAudit. The
+ * ORIGINAL mark is preserved; the response returns the resulting effective mark.
+ */
+export async function handleGraceMark(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+  studentId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "moderateExamMarks", async (claims) => {
+    const body = await readJson<Record<string, unknown>>(req);
+    if (!body) throw new ExamValidationError("JSON body required");
+    const deltaRaw = body.delta;
+    const delta = Number(deltaRaw);
+    if (!Number.isFinite(delta) || !Number.isInteger(delta)) {
+      throw new ExamValidationError("delta must be an integer");
+    }
+    const reason = String(body.reason ?? "").trim();
+    if (!reason) {
+      throw new ExamValidationError("reason is required");
+    }
+
+    const { organizationId, schoolId } = tenantIds(claims);
+    return await withTenantContext(config, claims, async (db) => {
+      const result = await recordExamMarkAdjustment(
+        db,
+        organizationId,
+        schoolId,
+        { examId, studentId, delta, reason, adjustedBy: claims.sub },
+      );
+      // Audit the moderation (non-blocking-safe): binds the actor to the delta +
+      // reason + resulting effective mark so the change is fully traceable.
+      try {
+        await emitMutationAudit(
+          db,
+          claims,
+          examAudit.markGraceApplied(
+            examId,
+            studentId,
+            result.adjustment.id,
+            delta,
+            reason,
+            result.effectiveMark,
+          ),
+          req,
+        );
+      } catch (auditError) {
+        console.error(
+          "exam grace-mark audit not recorded:",
+          auditError instanceof Error ? auditError.message : auditError,
+        );
+      }
+      return {
+        adjustment: examMarkAdjustmentToApi(result.adjustment),
+        effectiveMark: result.effectiveMark,
+        maxMarks: result.maxMarks,
+      };
+    });
+  });
+}
+
+/**
+ * EXM-D2 — the full grace / moderation breakdown for an exam (coordinator only —
+ * NEVER exposed to parents/students). One row per recorded adjustment.
+ */
+export async function handleListAdjustments(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "moderateExamMarks", async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      listExamMarkAdjustments(db, organizationId, schoolId, examId));
+    return rows.map(examMarkAdjustmentToApi);
+  });
+}
+
+/**
+ * EXM-D4 — per-student hall tickets (admit cards) for one exam. Standard template
+ * fields + adopted-default instructions; the client builds each PDF.
+ */
+export async function handleHallTickets(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const rows = await withTenantContext(config, claims, (db) =>
+      loadHallTickets(db, organizationId, schoolId, examId));
+    return rows.map(hallTicketToApi);
+  });
+}
+
+/**
+ * EXM-D5 — (re)generate the seating plan for an exam (manage gate). Mixed-class
+ * default (no two adjacent same-class seats when multiple classes sit); single
+ * class seats sequentially by roll. Room capacity defaults to 30 (`?capacity=`
+ * or body `capacity`).
+ */
+export async function handleGenerateSeating(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "manageExams", async (claims) => {
+    const body = await readJson<Record<string, unknown>>(req);
+    const capRaw = body?.capacity ??
+      new URL(req.url).searchParams.get("capacity");
+    const capacity = capRaw == null || capRaw === ""
+      ? DEFAULT_SEATING_ROOM_CAPACITY
+      : Number(capRaw);
+    if (!Number.isFinite(capacity) || capacity <= 0) {
+      throw new ExamValidationError("capacity must be a positive number");
+    }
+    const { organizationId, schoolId } = tenantIds(claims);
+    return await withTenantContext(config, claims, async (db) => {
+      await generateSeating(
+        db,
+        organizationId,
+        schoolId,
+        examId,
+        Math.floor(capacity),
+      );
+      return loadSeatingPlan(db, organizationId, schoolId, examId);
+    });
+  });
+}
+
+/** EXM-D5 — read the current seating plan for an exam (grouped by room). */
+export async function handleGetSeating(
+  req: Request,
+  config: AppConfig,
+  examId: string,
+): Promise<Response> {
+  return await withAuth(req, config, "viewExams", async (claims) => {
+    const { organizationId, schoolId } = tenantIds(claims);
+    const plan = await withTenantContext(config, claims, (db) =>
+      loadSeatingPlan(db, organizationId, schoolId, examId));
+    return plan;
   });
 }

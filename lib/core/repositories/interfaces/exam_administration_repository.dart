@@ -133,4 +133,53 @@ abstract class ExamAdministrationRepository {
     required String classLabel,
     required String term,
   });
+
+  // ── EXM-D1/D2/D4/D5 — final exams slice ───────────────────────────────────
+
+  /// EXM-D1 — batch report-card data for [classLabel] over [term] (published
+  /// results only). One card per student; the client renders/prints the bundle.
+  Future<List<ReportCardData>> reportCards({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  });
+
+  /// EXM-D2 — records a grace / moderation adjustment (a signed [delta] with a
+  /// mandatory [reason]) for one (exam, student). The ORIGINAL mark is preserved;
+  /// returns the record + the resulting effective mark. Coordinator-only; allowed
+  /// only before publish.
+  Future<GraceMarkResult> recordGraceMark({
+    required RepositoryQuery query,
+    required String examId,
+    required String sisStudentId,
+    required int delta,
+    required String reason,
+  });
+
+  /// EXM-D2 — the grace / moderation breakdown for an exam (coordinator-only —
+  /// NEVER shown to parents/students).
+  Future<List<ExamMarkAdjustment>> listAdjustments({
+    required RepositoryQuery query,
+    required String examId,
+  });
+
+  /// EXM-D4 — per-student hall tickets (admit cards) for one exam.
+  Future<List<HallTicket>> hallTickets({
+    required RepositoryQuery query,
+    required String examId,
+  });
+
+  /// EXM-D5 — (re)generates the seating plan for an exam (mixed-class default;
+  /// configurable room [capacity]). Returns the generated plan.
+  Future<SeatingPlan> generateSeating({
+    required RepositoryQuery query,
+    required String examId,
+    int capacity,
+  });
+
+  /// EXM-D5 — the current seating plan for an exam (grouped by room).
+  Future<SeatingPlan> seating({
+    required RepositoryQuery query,
+    required String examId,
+  });
 }

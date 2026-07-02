@@ -115,6 +115,52 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
     return result;
   }
 
+  /// EXM-D2 — records a grace / moderation delta for one (exam, student).
+  /// Coordinator-only (moderateExamMarks). Allowed only before publish; the
+  /// ORIGINAL mark is preserved. Returns the record + the resulting effective mark.
+  Future<GraceMarkResult> recordGraceMark({
+    required String examId,
+    required String sisStudentId,
+    required int delta,
+    required String reason,
+  }) async {
+    final rbac = ref.read(rbacServiceProvider);
+    if (!rbac.hasPermission(Permission.moderateExamMarks)) {
+      throw ApiFailureException(
+        const ApiFailure(
+          type: ApiFailureType.forbidden,
+          message: 'You do not have permission to moderate exam marks.',
+          code: 'RBAC_MODERATEEXAMMARKS',
+        ),
+      );
+    }
+    if (reason.trim().isEmpty) {
+      throw ApiFailureException(
+        const ApiFailure(
+          type: ApiFailureType.unknown,
+          message: 'A reason is required for a grace / moderation adjustment.',
+          code: 'EXAM_GRACE_REASON_REQUIRED',
+        ),
+      );
+    }
+
+    if (state.isLoading) throw mutationInProgressFailure();
+    state = const AsyncLoading();
+    late GraceMarkResult result;
+    state = await AsyncValue.guard(() async {
+      result = await ref.read(examAdministrationRepositoryProvider).recordGraceMark(
+            query: ref.read(repositoryQueryProvider),
+            examId: examId,
+            sisStudentId: sisStudentId,
+            delta: delta,
+            reason: reason.trim(),
+          );
+      ref.read(examAdminRefreshTickProvider.notifier).state++;
+    });
+    if (state.hasError) throw state.error!;
+    return result;
+  }
+
   Future<ExamSession> processResults(String examId) async {
     final rbac = ref.read(rbacServiceProvider);
     if (!rbac.hasPermission(Permission.manageExams)) {

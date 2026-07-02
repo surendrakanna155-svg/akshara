@@ -6,7 +6,12 @@ import {
   handleDatesheet,
   handleExamDistribution,
   handleExamToppers,
+  handleGenerateSeating,
   handleGetExam,
+  handleGetSeating,
+  handleGraceMark,
+  handleHallTickets,
+  handleListAdjustments,
   handleListExamMarks,
   handleListExamRemarks,
   handleListExams,
@@ -16,6 +21,7 @@ import {
   handleOpenMarksEntry,
   handleProcessExamResults,
   handlePublishExamResults,
+  handleReportCards,
   handleScheduleExam,
   handleTabulationRegister,
   handleUpdateExamMark,
@@ -64,6 +70,13 @@ export function matchExamAdministrationRoute(
   if (datesheetMatch && method === "GET") {
     return { handler: handleDatesheet, args: [datesheetMatch[1]!] };
   }
+  // EXM-D1 — batch report cards for a class + term (published results).
+  const reportCardsMatch = path.match(
+    /^\/academics\/exams\/class\/([^/]+)\/report-cards$/,
+  );
+  if (reportCardsMatch && method === "GET") {
+    return { handler: handleReportCards, args: [reportCardsMatch[1]!] };
+  }
 
   // EXM-1 — fast bulk marks save for one exam.
   const bulkMarksMatch = path.match(
@@ -98,6 +111,17 @@ export function matchExamAdministrationRoute(
     };
   }
 
+  // EXM-D2 — grace / moderation for one (exam, student).
+  const graceMatch = path.match(
+    /^\/academics\/exams\/([^/]+)\/students\/([^/]+)\/grace$/,
+  );
+  if (graceMatch && method === "POST") {
+    return {
+      handler: handleGraceMark,
+      args: [graceMatch[1]!, graceMatch[2]!],
+    };
+  }
+
   const examMatch = path.match(/^\/academics\/exams\/([^/]+)$/);
   if (examMatch && method === "GET") {
     return { handler: handleGetExam, args: [examMatch[1]!] };
@@ -115,6 +139,14 @@ export function matchExamAdministrationRoute(
     // EXM-4a / EXM-5 — exam-scoped read reports.
     { suffix: "/toppers", method: "GET", handler: handleExamToppers },
     { suffix: "/distribution", method: "GET", handler: handleExamDistribution },
+    // EXM-D2 — grace / moderation breakdown (coordinator-only read).
+    { suffix: "/adjustments", method: "GET", handler: handleListAdjustments },
+    // EXM-D4 — hall tickets (admit cards).
+    { suffix: "/hall-tickets", method: "GET", handler: handleHallTickets },
+    // EXM-D5 — seating: (re)generate + read. `/seating/generate` is a distinct
+    // suffix from `/seating`, so both are matched unambiguously here.
+    { suffix: "/seating/generate", method: "POST", handler: handleGenerateSeating },
+    { suffix: "/seating", method: "GET", handler: handleGetSeating },
     { suffix: "/process", method: "POST", handler: handleProcessExamResults },
     {
       suffix: "/verify-coordinator",

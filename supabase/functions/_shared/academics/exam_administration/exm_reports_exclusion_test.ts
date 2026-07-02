@@ -72,9 +72,12 @@ class ReportDb {
       );
     }
     // Toppers — present-only filter already in SQL; the fake pre-filters too.
+    // EXM-D2 — the SELECT/ORDER now use COALESCE(effective_marks, marks_obtained);
+    // key on the stable present-only filter fragment instead.
     if (
       sql.includes("FROM exam_mark_entries m") &&
-      sql.includes("ORDER BY m.marks_obtained DESC")
+      sql.includes("AND m.marks_obtained IS NOT NULL") &&
+      sql.includes("LIMIT $4")
     ) {
       const present = this.marks
         .filter((m) => m.status === "present" && m.marks_obtained != null)

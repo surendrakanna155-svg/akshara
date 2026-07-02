@@ -52,4 +52,27 @@ abstract final class ExamApiPaths {
   /// EXM-7 — datesheet (exam schedule) for a class over a term (`?term=`).
   static String datesheet(String classLabel) =>
       '$base/class/${Uri.encodeComponent(classLabel)}/datesheet';
+
+  // ── EXM-D1/D2/D4/D5 — final exams slice ────────────────────────────────────
+
+  /// EXM-D1 — batch report cards for a class over a term (`?term=`).
+  static String reportCards(String classLabel) =>
+      '$base/class/${Uri.encodeComponent(classLabel)}/report-cards';
+
+  /// EXM-D2 — record a grace / moderation delta for one (exam, student).
+  static String grace(String examId, String sisStudentId) =>
+      '$base/$examId/students/${Uri.encodeComponent(sisStudentId)}/grace';
+
+  /// EXM-D2 — grace / moderation breakdown for an exam (coordinator-only).
+  static String adjustments(String examId) => '$base/$examId/adjustments';
+
+  /// EXM-D4 — hall tickets (admit cards) for an exam.
+  static String hallTickets(String examId) => '$base/$examId/hall-tickets';
+
+  /// EXM-D5 — (re)generate the seating plan for an exam.
+  static String seatingGenerate(String examId) =>
+      '$base/$examId/seating/generate';
+
+  /// EXM-D5 — read the seating plan for an exam.
+  static String seating(String examId) => '$base/$examId/seating';
 }

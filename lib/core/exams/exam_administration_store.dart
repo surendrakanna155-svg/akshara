@@ -289,6 +289,278 @@ class BulkExamMarkFailure {
   final String reason;
 }
 
+/// EXM-D2 — one recorded grace / moderation adjustment for a (exam, student).
+/// The ORIGINAL entered mark is never overwritten; this is a separate audited
+/// record. The breakdown is coordinator/principal-only (never shown to parents).
+class ExamMarkAdjustment {
+  const ExamMarkAdjustment({
+    required this.id,
+    required this.examId,
+    required this.sisStudentId,
+    required this.delta,
+    required this.reason,
+    this.adjustedBy,
+    this.createdAt,
+  });
+
+  final String id;
+  final String examId;
+  final String sisStudentId;
+
+  /// Signed delta (grace is usually positive; a downward moderation is allowed).
+  final int delta;
+  final String reason;
+  final String? adjustedBy;
+  final DateTime? createdAt;
+}
+
+/// EXM-D2 — the outcome of recording a grace adjustment: the stored record plus
+/// the resulting EFFECTIVE mark (original + Σdeltas, bounds-capped). The original
+/// is preserved; the client reflects the effective in totals.
+class GraceMarkResult {
+  const GraceMarkResult({
+    required this.adjustment,
+    required this.effectiveMark,
+    required this.maxMarks,
+  });
+
+  final ExamMarkAdjustment adjustment;
+  final int? effectiveMark;
+  final int maxMarks;
+}
+
+/// EXM-D1 — one subject line on a batch report card (published, effective mark).
+class ReportCardSubject {
+  const ReportCardSubject({
+    required this.subject,
+    required this.examTitle,
+    required this.score,
+    required this.maxScore,
+    required this.grade,
+    required this.statusCode,
+  });
+
+  final String subject;
+  final String examTitle;
+
+  /// Effective (grace-applied) marks, or null for a non-present (AB/ML/DB) line.
+  final int? score;
+  final int maxScore;
+  final String grade;
+  final String? statusCode;
+}
+
+/// EXM-D1 — a per-student report card for a class + term (published results).
+class ReportCardData {
+  const ReportCardData({
+    required this.sisStudentId,
+    required this.studentName,
+    required this.classLabel,
+    required this.termLabel,
+    required this.subjects,
+    required this.totalScore,
+    required this.totalMax,
+    required this.overallPercent,
+    required this.overallGrade,
+    required this.rank,
+    required this.classSize,
+  });
+
+  final String sisStudentId;
+  final String studentName;
+  final String classLabel;
+  final String termLabel;
+  final List<ReportCardSubject> subjects;
+  final int totalScore;
+  final int totalMax;
+  final double overallPercent;
+  final String overallGrade;
+
+  /// 1-based class rank (present-only), or null when the student is not ranked.
+  final int? rank;
+  final int classSize;
+}
+
+/// EXM-D4 — a per-student hall ticket (admit card) for one exam.
+class HallTicket {
+  const HallTicket({
+    required this.sisStudentId,
+    required this.studentName,
+    required this.rollNo,
+    required this.classLabel,
+    required this.subject,
+    required this.examTitle,
+    required this.dateLabel,
+    required this.timeLabel,
+    required this.venueLabel,
+    required this.maxMarks,
+    required this.instructions,
+  });
+
+  final String sisStudentId;
+  final String studentName;
+  final String? rollNo;
+  final String classLabel;
+  final String subject;
+  final String examTitle;
+  final String dateLabel;
+  final String timeLabel;
+  final String venueLabel;
+  final int maxMarks;
+  final List<String> instructions;
+}
+
+/// EXM-D5 — one seat in a room's seating plan.
+class SeatingSeat {
+  const SeatingSeat({
+    required this.seatNo,
+    required this.sisStudentId,
+    required this.studentName,
+    required this.rollNo,
+    required this.classLabel,
+  });
+
+  final int seatNo;
+  final String sisStudentId;
+  final String studentName;
+  final String? rollNo;
+  final String classLabel;
+}
+
+/// EXM-D5 — one room in the seating plan, seats ordered by seat number.
+class SeatingRoom {
+  const SeatingRoom({required this.roomLabel, required this.seats});
+
+  final String roomLabel;
+  final List<SeatingSeat> seats;
+}
+
+/// EXM-D5 — the full seating plan for an exam (rooms of a configurable capacity).
+class SeatingPlan {
+  const SeatingPlan({
+    required this.examId,
+    required this.roomCapacity,
+    required this.rooms,
+  });
+
+  final String examId;
+  final int roomCapacity;
+  final List<SeatingRoom> rooms;
+
+  int get totalSeats => rooms.fold<int>(0, (sum, r) => sum + r.seats.length);
+}
+
+/// Standard admit-card instructions (adopted default; mirrors the backend).
+const List<String> kHallTicketInstructions = [
+  'Carry this hall ticket to the examination hall.',
+  'Reach the venue at least 15 minutes before the start time.',
+  'Electronic devices and unauthorised materials are prohibited.',
+  'Follow all instructions given by the invigilator.',
+];
+
+/// Default seating room capacity (adopted default; mirrors the backend).
+const int kDefaultSeatingRoomCapacity = 30;
+
+/// EXM-D5 — a student who sits an exam, fed to the seating planner.
+class SeatingCandidate {
+  const SeatingCandidate({
+    required this.sisStudentId,
+    required this.studentName,
+    required this.rollNo,
+    required this.classLabel,
+  });
+
+  final String sisStudentId;
+  final String studentName;
+  final String? rollNo;
+  final String classLabel;
+}
+
+/// EXM-D5 — pure seating planner (mirrors the backend `planSeating`). Interleaves
+/// classes so no two ADJACENT seats share a class when multiple classes sit; a
+/// single class seats sequentially by roll. Rooms fill to [capacity] then a new
+/// room opens. Room labels are "Room 1", "Room 2", …; seatNo is 1-based per room.
+abstract final class ExamSeatingPlanner {
+  static SeatingPlan plan({
+    required String examId,
+    required List<SeatingCandidate> candidates,
+    required int capacity,
+  }) {
+    final cap = capacity > 0 ? capacity : kDefaultSeatingRoomCapacity;
+
+    // Group by class, each ordered by roll (nulls last) then id.
+    final byClass = <String, List<SeatingCandidate>>{};
+    for (final c in candidates) {
+      (byClass[c.classLabel] ??= <SeatingCandidate>[]).add(c);
+    }
+    for (final list in byClass.values) {
+      list.sort((a, b) {
+        final ra = a.rollNo ?? '￿';
+        final rb = b.rollNo ?? '￿';
+        if (ra != rb) return ra.compareTo(rb);
+        return a.sisStudentId.compareTo(b.sisStudentId);
+      });
+    }
+
+    final classKeys = byClass.keys.toList();
+    final order = <SeatingCandidate>[];
+    if (classKeys.length <= 1) {
+      for (final list in byClass.values) {
+        order.addAll(list);
+      }
+    } else {
+      // Round-robin greedy: never place the same class as the previous pick;
+      // among eligible classes pick the largest remaining group.
+      final queues = <String, List<SeatingCandidate>>{
+        for (final e in byClass.entries) e.key: List.of(e.value),
+      };
+      String? lastClass;
+      var remaining = candidates.length;
+      while (remaining > 0) {
+        String? pickKey;
+        var pickLen = -1;
+        for (final k in classKeys) {
+          final q = queues[k]!;
+          if (q.isEmpty || k == lastClass) continue;
+          if (q.length > pickLen) {
+            pickLen = q.length;
+            pickKey = k;
+          }
+        }
+        // Only the last-placed class has students left → unavoidable repeat.
+        pickKey ??= classKeys.firstWhere((k) => queues[k]!.isNotEmpty);
+        order.add(queues[pickKey]!.removeAt(0));
+        lastClass = pickKey;
+        remaining--;
+      }
+    }
+
+    // Chunk into rooms of `cap`.
+    final rooms = <SeatingRoom>[];
+    List<SeatingSeat>? currentSeats;
+    for (var i = 0; i < order.length; i++) {
+      final roomIndex = i ~/ cap;
+      final seatNo = (i % cap) + 1;
+      if (seatNo == 1) {
+        currentSeats = <SeatingSeat>[];
+        rooms.add(SeatingRoom(
+          roomLabel: 'Room ${roomIndex + 1}',
+          seats: currentSeats,
+        ));
+      }
+      final c = order[i];
+      currentSeats!.add(SeatingSeat(
+        seatNo: seatNo,
+        sisStudentId: c.sisStudentId,
+        studentName: c.studentName,
+        rollNo: c.rollNo,
+        classLabel: c.classLabel,
+      ));
+    }
+    return SeatingPlan(examId: examId, roomCapacity: cap, rooms: rooms);
+  }
+}
+
 /// Single source of truth for exam creation → publish chain.
 final class ExamAdministrationStore {
   ExamAdministrationStore._();
@@ -301,6 +573,12 @@ final class ExamAdministrationStore {
   final Map<String, String> _rejectionCommentsByExamId = {};
   final Map<String, String> _coordinatorVerifiedByExamId = {};
   final Map<String, ExamRemark> _remarksByKey = {};
+  // EXM-D2 — grace / moderation adjustments, keyed by exam id. Each is a separate
+  // audited record; the ORIGINAL mark on the ExamMarkRecord is NEVER overwritten.
+  final Map<String, List<ExamMarkAdjustment>> _adjustmentsByExam = {};
+  // EXM-D5 — generated seating plans, keyed by exam id (mock only).
+  final Map<String, SeatingPlan> _seatingByExam = {};
+  int _adjustmentSeq = 0;
   bool _seeded = false;
   ExamAdministrationPersistence? _persistence;
 
@@ -344,6 +622,9 @@ final class ExamAdministrationStore {
     _rejectionCommentsByExamId.clear();
     _coordinatorVerifiedByExamId.clear();
     _remarksByKey.clear();
+    _adjustmentsByExam.clear();
+    _seatingByExam.clear();
+    _adjustmentSeq = 0;
     _reportSettings = ExamReportSettings.standard();
     _seeded = false;
     if (clearPersistence) {
@@ -767,9 +1048,16 @@ final class ExamAdministrationStore {
     var publishedCount = 0;
     for (final mark in enterable) {
       final isPresent = mark.status.isPresent;
-      // A non-present student has no score; store 0 but the row is excluded from
-      // all stats by [status], and the cell renders the display code.
-      final score = isPresent ? mark.marksObtained! : 0;
+      // 🔴 EXM-D2 — a present student's published score is the EFFECTIVE mark
+      // (original + Σgrace, bounds-capped). The ORIGINAL mark on the record is
+      // never overwritten; parents/students see only the effective value, never
+      // the grace breakdown. A non-present student has no score (0, excluded).
+      final score = isPresent
+          ? clampEffectiveMark(
+              mark.marksObtained! + adjustmentTotalFor(exam.id, mark.sisStudentId),
+              exam.maxMarks,
+            )
+          : 0;
       final percent = (!isPresent || exam.maxMarks == 0)
           ? 0.0
           : (score / exam.maxMarks) * 100.0;
@@ -818,6 +1106,266 @@ final class ExamAdministrationStore {
   PublishedExamResult? resultForMarkEntry(String markEntryId) {
     ensureSeeded();
     return _publishedByMarkId[markEntryId];
+  }
+
+  // ── EXM-D2 — grace / moderation ─────────────────────────────────────────────
+  // 🔴 A grace adjustment is a SEPARATE record; the ORIGINAL mark on the
+  // ExamMarkRecord is NEVER overwritten. The effective mark = clamp(original +
+  // Σdeltas, 0, max). Allowed only before publish (processed phase).
+
+  /// Clamps an effective mark into [0, max].
+  static int clampEffectiveMark(int value, int maxMarks) {
+    if (value < 0) return 0;
+    if (value > maxMarks) return maxMarks;
+    return value;
+  }
+
+  /// Sum of all grace deltas for a (exam, student). 0 when none.
+  int adjustmentTotalFor(String examId, String sisStudentId) {
+    ensureSeeded();
+    final list = _adjustmentsByExam[examId];
+    if (list == null) return 0;
+    return list
+        .where((a) => a.sisStudentId == sisStudentId)
+        .fold<int>(0, (sum, a) => sum + a.delta);
+  }
+
+  /// The effective (original + grace) mark for a present student's mark entry,
+  /// bounds-capped; null for a non-present student or an entry with no marks yet.
+  int? effectiveMarkFor(String markEntryId) {
+    ensureSeeded();
+    final mark = _marks[markEntryId];
+    if (mark == null || !mark.status.isPresent || mark.marksObtained == null) {
+      return null;
+    }
+    final exam = _exams[mark.examId];
+    final max = exam?.maxMarks ?? mark.marksObtained!;
+    final total = adjustmentTotalFor(mark.examId, mark.sisStudentId);
+    return clampEffectiveMark(mark.marksObtained! + total, max);
+  }
+
+  /// All grace adjustments for an exam (coordinator-only breakdown).
+  List<ExamMarkAdjustment> adjustmentsForExam(String examId) {
+    ensureSeeded();
+    return List.unmodifiable(_adjustmentsByExam[examId] ?? const []);
+  }
+
+  /// EXM-D2 — records a grace / moderation delta for a (exam, student). Preserves
+  /// the ORIGINAL mark. Allowed only while the exam is processed (before publish).
+  /// Returns the record + the resulting effective mark.
+  GraceMarkResult recordGraceAdjustment({
+    required String examId,
+    required String sisStudentId,
+    required int delta,
+    required String reason,
+    String? adjustedBy,
+  }) {
+    ensureSeeded();
+    final exam = _exams[examId];
+    if (exam == null) {
+      throw StateError('Exam not found: $examId');
+    }
+    if (exam.phase != ExamLifecyclePhase.processed) {
+      throw StateError(
+        'Grace / moderation is only allowed before publish (current phase: '
+        '${exam.phase.name}).',
+      );
+    }
+    if (reason.trim().isEmpty) {
+      throw StateError('reason is required for a grace / moderation adjustment');
+    }
+    // The student's present mark entry for this exam.
+    final mark = marksForExam(examId).where((m) => m.sisStudentId == sisStudentId).cast<ExamMarkRecord?>().firstWhere(
+          (m) => true,
+          orElse: () => null,
+        );
+    if (mark == null) {
+      throw StateError('Mark entry not found for student: $sisStudentId');
+    }
+    if (!mark.status.isPresent || mark.marksObtained == null) {
+      throw StateError(
+        'Cannot apply grace to a non-present student (absent / medical / debarred).',
+      );
+    }
+    final adjustment = ExamMarkAdjustment(
+      id: 'adj_${++_adjustmentSeq}',
+      examId: examId,
+      sisStudentId: sisStudentId,
+      delta: delta,
+      reason: reason.trim(),
+      adjustedBy: adjustedBy,
+      createdAt: DateTime.now().toUtc(),
+    );
+    (_adjustmentsByExam[examId] ??= <ExamMarkAdjustment>[]).add(adjustment);
+    final effective = clampEffectiveMark(
+      mark.marksObtained! + adjustmentTotalFor(examId, sisStudentId),
+      exam.maxMarks,
+    );
+    _persist();
+    return GraceMarkResult(
+      adjustment: adjustment,
+      effectiveMark: effective,
+      maxMarks: exam.maxMarks,
+    );
+  }
+
+  // ── EXM-D1 — batch report cards (published; effective marks) ─────────────────
+
+  /// EXM-D1 — per-student report cards for [classLabel] over [term], from
+  /// PUBLISHED results only. Subject scores use the EFFECTIVE (grace-applied)
+  /// mark; non-present lines show their code and are excluded from totals/rank.
+  List<ReportCardData> reportCards({
+    required String classLabel,
+    required String term,
+  }) {
+    ensureSeeded();
+    // Group published results for this class + term by student.
+    final byStudent = <String, List<PublishedExamResult>>{};
+    for (final r in _publishedByMarkId.values) {
+      if (r.termLabel != term) continue;
+      final exam = _exams[r.examId];
+      if (exam == null) continue;
+      if (exam.classLabel != classLabel && exam.grade != classLabel) continue;
+      (byStudent[r.sisStudentId] ??= <PublishedExamResult>[]).add(r);
+    }
+
+    final cards = <ReportCardData>[];
+    for (final entry in byStudent.entries) {
+      final results = entry.value;
+      var total = 0;
+      var totalMax = 0;
+      final subjects = <ReportCardSubject>[];
+      for (final r in results) {
+        final present = r.countsTowardStats;
+        final score = present ? r.scoreObtained : null;
+        subjects.add(ReportCardSubject(
+          subject: r.subject,
+          examTitle: r.examTitle,
+          score: score,
+          maxScore: r.maxScore,
+          grade: r.grade,
+          statusCode: present ? null : r.statusCode,
+        ));
+        if (present && score != null) {
+          total += score;
+          totalMax += r.maxScore;
+        }
+      }
+      final percent = totalMax == 0 ? 0.0 : (total / totalMax) * 100.0;
+      cards.add(ReportCardData(
+        sisStudentId: entry.key,
+        studentName: results.first.studentName,
+        classLabel: classLabel,
+        termLabel: term,
+        subjects: subjects,
+        totalScore: total,
+        totalMax: totalMax,
+        overallPercent: (percent * 100).round() / 100,
+        overallGrade:
+            totalMax == 0 ? '' : _reportSettings.gradingScale.gradeFor(percent),
+        rank: null,
+        classSize: 0,
+      ));
+    }
+
+    // Present-only rank across the class.
+    final ranked = cards.where((c) => c.totalMax > 0).toList();
+    final withRank = <ReportCardData>[];
+    for (final c in cards) {
+      if (c.totalMax == 0) {
+        withRank.add(c);
+        continue;
+      }
+      final ahead =
+          ranked.where((o) => o.overallPercent > c.overallPercent + 1e-9).length;
+      withRank.add(ReportCardData(
+        sisStudentId: c.sisStudentId,
+        studentName: c.studentName,
+        classLabel: c.classLabel,
+        termLabel: c.termLabel,
+        subjects: c.subjects,
+        totalScore: c.totalScore,
+        totalMax: c.totalMax,
+        overallPercent: c.overallPercent,
+        overallGrade: c.overallGrade,
+        rank: ahead + 1,
+        classSize: ranked.length,
+      ));
+    }
+    return withRank;
+  }
+
+  // ── EXM-D4 — hall tickets (admit cards) ─────────────────────────────────────
+
+  /// EXM-D4 — per-student hall tickets for one exam (its mark-entry roster).
+  List<HallTicket> hallTickets(String examId) {
+    ensureSeeded();
+    final exam = _exams[examId];
+    if (exam == null) {
+      throw StateError('Exam not found: $examId');
+    }
+    return [
+      for (final m in marksForExam(examId))
+        HallTicket(
+          sisStudentId: m.sisStudentId,
+          studentName: m.studentName,
+          rollNo: m.rollNo.isEmpty ? null : m.rollNo,
+          classLabel: exam.classLabel,
+          subject: exam.subject,
+          examTitle: exam.title,
+          dateLabel: exam.dateLabel,
+          timeLabel: exam.timeLabel,
+          venueLabel: exam.venueLabel,
+          maxMarks: exam.maxMarks,
+          instructions: kHallTicketInstructions,
+        ),
+    ];
+  }
+
+  // ── EXM-D5 — seating arrangement ────────────────────────────────────────────
+
+  /// EXM-D5 — (re)generates the seating plan for an exam and stores it.
+  SeatingPlan generateSeating(
+    String examId, {
+    int capacity = kDefaultSeatingRoomCapacity,
+  }) {
+    ensureSeeded();
+    final exam = _exams[examId];
+    if (exam == null) {
+      throw StateError('Exam not found: $examId');
+    }
+    final roster = marksForExam(examId);
+    if (roster.isEmpty) {
+      throw StateError('No students provisioned for exam: $examId');
+    }
+    final candidates = [
+      for (final m in roster)
+        SeatingCandidate(
+          sisStudentId: m.sisStudentId,
+          studentName: m.studentName,
+          rollNo: m.rollNo.isEmpty ? null : m.rollNo,
+          classLabel: exam.classLabel,
+        ),
+    ];
+    final plan = ExamSeatingPlanner.plan(
+      examId: examId,
+      candidates: candidates,
+      capacity: capacity,
+    );
+    _seatingByExam[examId] = plan;
+    _persist();
+    return plan;
+  }
+
+  /// EXM-D5 — the current seating plan for an exam (empty when none generated).
+  SeatingPlan seatingFor(String examId) {
+    ensureSeeded();
+    return _seatingByExam[examId] ??
+        SeatingPlan(
+          examId: examId,
+          roomCapacity: kDefaultSeatingRoomCapacity,
+          rooms: const [],
+        );
   }
 
   // --- Exam-session remarks ---

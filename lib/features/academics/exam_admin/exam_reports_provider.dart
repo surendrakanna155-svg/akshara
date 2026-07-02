@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/exams/exam_administration_store.dart';
+import '../../../core/exams/exam_grading.dart';
 import '../../../core/exams/exam_reports.dart';
 import '../../../core/repositories/interfaces/exam_administration_repository.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/repositories/repository_query.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../../school_completion/school_branding_theme_provider.dart';
 import 'exam_administration_provider.dart';
 
 /// EXM-3/4/5/7 — state + reads for the Exam Reports area.
@@ -95,6 +97,26 @@ ExamAdministrationRepository _repo(Ref ref) =>
     ref.read(examAdministrationRepositoryProvider);
 RepositoryQuery _query(Ref ref) => ref.read(repositoryQueryProvider);
 
+/// The exam repository (for the EXM-D5 seating generate action from the screen).
+final examReportsRepositoryProvider =
+    Provider<ExamAdministrationRepository>((ref) =>
+        ref.read(examAdministrationRepositoryProvider));
+
+/// The active repository query (tenant/school scope) for the reports screen.
+final examReportsQueryProvider =
+    Provider<RepositoryQuery>((ref) => ref.read(repositoryQueryProvider));
+
+/// School name for the printed report-card / hall-ticket header.
+final examReportsSchoolNameProvider = Provider<String>((ref) {
+  final name = ref.watch(schoolDisplayNameProvider);
+  return name.isNotEmpty ? name : 'School';
+});
+
+/// The per-school grading / rank-visibility settings applied to report cards.
+final examReportSettingsProvider = Provider<ExamReportSettings>(
+  (ref) => ExamAdministrationStore.instance.reportSettings,
+);
+
 // ── EXM-3 — tabulation register ──────────────────────────────────────────────
 
 final examTabulationProvider = FutureProvider<TabulationRegister>((ref) async {
@@ -149,4 +171,37 @@ final examDatesheetProvider = FutureProvider<List<DatesheetRow>>((ref) async {
     classLabel: classLabel,
     term: term,
   );
+});
+
+// ── EXM-D1 — batch report cards (published, effective marks) ──────────────────
+
+/// EXM-D1 — the per-student report cards for the selected class + term. Used by
+/// the "Print report cards" action to build the multi-page bundle.
+final examReportCardsProvider = FutureProvider<List<ReportCardData>>((ref) async {
+  ref.watch(examAdminRefreshTickProvider);
+  final classLabel = ref.watch(examReportsClassProvider);
+  final term = ref.watch(examReportsTermProvider);
+  return _repo(ref).reportCards(
+    query: _query(ref),
+    classLabel: classLabel,
+    term: term,
+  );
+});
+
+// ── EXM-D4 — hall tickets (admit cards) for the selected exam ─────────────────
+
+final examHallTicketsProvider = FutureProvider<List<HallTicket>>((ref) async {
+  ref.watch(examAdminRefreshTickProvider);
+  final examId = ref.watch(examReportsExamIdProvider);
+  if (examId == null) return const [];
+  return _repo(ref).hallTickets(query: _query(ref), examId: examId);
+});
+
+// ── EXM-D5 — seating plan for the selected exam ───────────────────────────────
+
+final examSeatingProvider = FutureProvider<SeatingPlan?>((ref) async {
+  ref.watch(examAdminRefreshTickProvider);
+  final examId = ref.watch(examReportsExamIdProvider);
+  if (examId == null) return null;
+  return _repo(ref).seating(query: _query(ref), examId: examId);
 });

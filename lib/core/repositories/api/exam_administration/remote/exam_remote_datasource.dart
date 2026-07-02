@@ -324,6 +324,87 @@ class ExamRemoteDataSource {
     return _mapper.toDatesheet(_listData(_responseMap(response)));
   }
 
+  // ── EXM-D1/D2/D4/D5 — final exams slice ──────────────────────────────────
+
+  /// EXM-D1 — batch report cards for a class over a term.
+  Future<List<ReportCardData>> fetchReportCards({
+    required RepositoryQuery query,
+    required String classLabel,
+    required String term,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.reportCards(classLabel),
+      queryParameters: {..._queryParams(query), 'term': term},
+    );
+    return _mapper.toReportCards(_listData(_responseMap(response)));
+  }
+
+  /// EXM-D2 — record a grace / moderation delta for one (exam, student).
+  Future<GraceMarkResult> recordGraceMark({
+    required RepositoryQuery query,
+    required String examId,
+    required String sisStudentId,
+    required int delta,
+    required String reason,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ExamApiPaths.grace(examId, sisStudentId),
+      queryParameters: _queryParams(query),
+      data: _mapper.graceBody(delta: delta, reason: reason),
+    );
+    return _mapper.toGraceResult(_requireData(response));
+  }
+
+  /// EXM-D2 — grace / moderation breakdown for an exam (coordinator-only).
+  Future<List<ExamMarkAdjustment>> fetchAdjustments({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.adjustments(examId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toAdjustments(_listData(_responseMap(response)));
+  }
+
+  /// EXM-D4 — hall tickets (admit cards) for an exam.
+  Future<List<HallTicket>> fetchHallTickets({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.hallTickets(examId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toHallTickets(_listData(_responseMap(response)));
+  }
+
+  /// EXM-D5 — (re)generate the seating plan for an exam.
+  Future<SeatingPlan> generateSeating({
+    required RepositoryQuery query,
+    required String examId,
+    int capacity = kDefaultSeatingRoomCapacity,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ExamApiPaths.seatingGenerate(examId),
+      queryParameters: _queryParams(query),
+      data: {'capacity': capacity},
+    );
+    return _mapper.toSeatingPlan(_requireData(response));
+  }
+
+  /// EXM-D5 — read the seating plan for an exam.
+  Future<SeatingPlan> fetchSeating({
+    required RepositoryQuery query,
+    required String examId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ExamApiPaths.seating(examId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toSeatingPlan(_requireData(response));
+  }
+
   Map<String, dynamic> _queryParams(RepositoryQuery query) => {
         'tenantId': query.tenantId,
         'schoolId': query.schoolId,
