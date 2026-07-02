@@ -65,7 +65,8 @@ export async function getDashboard(
        (SELECT count(*)::text FROM admissions_leads
         WHERE organization_id = $1 AND school_id = $2 AND stage = 'school_visit') AS visits_scheduled,
        (SELECT count(*)::text FROM admissions_leads
-        WHERE organization_id = $1 AND school_id = $2 AND stage = 'confirmed') AS confirmed,
+        WHERE organization_id = $1 AND school_id = $2
+          AND stage IN ('confirmed', 'admission_confirmed')) AS confirmed,
        (SELECT count(*)::text FROM admissions_leads
         WHERE organization_id = $1 AND school_id = $2 AND stage = 'joined') AS joined`,
     [organizationId, schoolId],
@@ -92,7 +93,13 @@ export async function getDashboard(
   );
   const stageCounts: Record<string, number> = {};
   for (const stage of PIPELINE_STAGES) stageCounts[stage] = 0;
-  for (const row of stageRows) stageCounts[row.stage] = Number(row.count);
+  for (const row of stageRows) {
+    // Normalize the settings-default 'admission_confirmed' spelling into the
+    // canonical 'confirmed' pipeline bucket so the funnel/reports agree with the
+    // KPI counter (which already unions both spellings).
+    const stage = row.stage === "admission_confirmed" ? "confirmed" : row.stage;
+    stageCounts[stage] = (stageCounts[stage] ?? 0) + Number(row.count);
+  }
 
   const sourceRows = await db.queryObject<{ source: string; count: string }>(
     `SELECT source, count(*)::text AS count FROM admissions_leads

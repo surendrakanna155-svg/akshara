@@ -52,5 +52,9 @@ export function reportsToApi(
       count: row.count,
       percent: row.percent,
     })),
+    lostReasons: snapshot.lostReasons.map((row) => ({
+      reason: row.reason,
+      count: row.count,
+    })),
   };
 }

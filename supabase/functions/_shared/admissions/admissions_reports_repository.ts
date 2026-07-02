@@ -29,7 +29,13 @@ export interface AdmissionsReportsSnapshot {
     conversionRate: number;
   }>;
   applicationStatus: Array<{ status: string; count: number; percent: number }>;
+  // ADM-D1: why leads are lost — count by lost_reason (fixed picklist).
+  lostReasons: Array<{ reason: string; count: number }>;
 }
+
+// Mirrors LEAD_LOST_REASONS in admissions_repository.ts; kept local so the
+// rollup always reports all buckets (including zeros) in a stable order.
+const LOST_REASONS = ["fees_high", "competitor", "distance", "other"] as const;
 
 export async function getReports(
   db: TenantQueryClient,
@@ -133,5 +139,35 @@ export async function getReports(
       : 0,
   }));
 
-  return { dashboard, sourceAnalysis, counselorPerformance, applicationStatus };
+  // ADM-D1: lost-reason rollup. Counts only leads that were marked lost with a
+  // reason; all four buckets are always present (zero-filled) for a stable UI.
+  const lostRows = await db.queryObject<{ lost_reason: string; count: string }>(
+    `SELECT lost_reason, count(*)::text AS count
+     FROM admissions_leads
+     WHERE organization_id = $1 AND school_id = $2
+       AND stage = 'lost' AND lost_reason IS NOT NULL
+     GROUP BY lost_reason`,
+    [organizationId, schoolId],
+  );
+  const lostCounts: Record<string, number> = {};
+  for (const reason of LOST_REASONS) lostCounts[reason] = 0;
+  for (const row of lostRows) {
+    // Fold any unexpected legacy value into 'other' so the total stays honest.
+    const reason = (LOST_REASONS as readonly string[]).includes(row.lost_reason)
+      ? row.lost_reason
+      : "other";
+    lostCounts[reason] = (lostCounts[reason] ?? 0) + Number(row.count);
+  }
+  const lostReasons = LOST_REASONS.map((reason) => ({
+    reason,
+    count: lostCounts[reason] ?? 0,
+  }));
+
+  return {
+    dashboard,
+    sourceAnalysis,
+    counselorPerformance,
+    applicationStatus,
+    lostReasons,
+  };
 }

@@ -6,7 +6,10 @@ import {
   handleApproveAdmission,
   handleApproveDocument,
   handleAssignLeadCounselor,
+  handleBulkLeadActions,
   handleChangeLeadStage,
+  handleCheckDuplicateLead,
+  handleCompleteFollowUp,
   handleCreateApplication,
   handleCreateLead,
   handleGetApplication,
@@ -14,8 +17,11 @@ import {
   handleListApplications,
   handleListDocuments,
   handleListLeads,
+  handleMarkLeadLost,
+  handleOfferLetter,
   handleRejectAdmission,
   handleRejectDocument,
+  handleRescheduleFollowUp,
   handleSubmitApplication,
   handleListApprovedHandoffs,
   handleSendToFinance,
@@ -35,6 +41,7 @@ import {
   handleEnrollmentPrefill,
   handlePendingEnrollments,
   handleReports,
+  handleSaveSettings,
   handleSettings,
 } from "./admissions_extras_handlers.ts";
 
@@ -61,6 +68,10 @@ function matchAdmissionsRoute(
   if (path === "/admissions/settings" && method === "GET") {
     return { handler: handleSettings, args: [] };
   }
+  // #6: persist the admissions settings snapshot.
+  if (path === "/admissions/settings" && method === "POST") {
+    return { handler: handleSaveSettings, args: [] };
+  }
   if (path === "/admissions/approval-queue" && method === "GET") {
     return { handler: handleApprovalQueue, args: [] };
   }
@@ -73,10 +84,45 @@ function matchAdmissionsRoute(
   if (path === "/admissions/leads" && method === "POST") {
     return { handler: handleCreateLead, args: [] };
   }
+  // ADM-3: bulk assign/stage. Declared before the parametrized /leads/{id}
+  // routes so "bulk" is never mistaken for a lead id.
+  if (path === "/admissions/leads/bulk" && method === "POST") {
+    return { handler: handleBulkLeadActions, args: [] };
+  }
+  // ADM-D2: warn-only duplicate lookup by phone. Static path, declared early.
+  if (path === "/admissions/leads/check-duplicate" && method === "GET") {
+    return { handler: handleCheckDuplicateLead, args: [] };
+  }
 
   const leadAssignMatch = path.match(/^\/admissions\/leads\/([^/]+)\/assign$/);
   if (leadAssignMatch && method === "PATCH") {
     return { handler: handleAssignLeadCounselor, args: [leadAssignMatch[1]!] };
+  }
+
+  // ADM-D1: mark a lead lost with a reason.
+  const leadLostMatch = path.match(/^\/admissions\/leads\/([^/]+)\/lost$/);
+  if (leadLostMatch && method === "PATCH") {
+    return { handler: handleMarkLeadLost, args: [leadLostMatch[1]!] };
+  }
+
+  // ADM-4: follow-up complete / reschedule (leadId + followupId).
+  const followUpCompleteMatch = path.match(
+    /^\/admissions\/leads\/([^/]+)\/followups\/([^/]+)\/complete$/,
+  );
+  if (followUpCompleteMatch && method === "POST") {
+    return {
+      handler: handleCompleteFollowUp,
+      args: [followUpCompleteMatch[1]!, followUpCompleteMatch[2]!],
+    };
+  }
+  const followUpRescheduleMatch = path.match(
+    /^\/admissions\/leads\/([^/]+)\/followups\/([^/]+)\/reschedule$/,
+  );
+  if (followUpRescheduleMatch && method === "POST") {
+    return {
+      handler: handleRescheduleFollowUp,
+      args: [followUpRescheduleMatch[1]!, followUpRescheduleMatch[2]!],
+    };
   }
 
   const leadStageMatch = path.match(/^\/admissions\/leads\/([^/]+)\/stage$/);
@@ -170,6 +216,14 @@ function matchAdmissionsRoute(
 
   if (path === "/admissions/enrollments" && method === "POST") {
     return { handler: handleSubmitEnrollment, args: [] };
+  }
+
+  // ADM-D4: offer-letter data for an enrollment (read; PDF render client-side).
+  const offerLetterMatch = path.match(
+    /^\/admissions\/enrollments\/([^/]+)\/offer-letter$/,
+  );
+  if (offerLetterMatch && method === "GET") {
+    return { handler: handleOfferLetter, args: [offerLetterMatch[1]!] };
   }
 
   if (path === "/admissions/handoffs/approved" && method === "GET") {

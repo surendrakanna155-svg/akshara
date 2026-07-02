@@ -350,6 +350,44 @@ async function buildResultFromState(
   };
 }
 
+/**
+ * Funnel-vocab fix — advance the originating lead to stage='joined' exactly
+ * once when a conversion commits. The dashboard/reports conversionRate counts
+ * stage='joined', but nothing on the conversion path ever set it, so the rate
+ * read a permanent 0. Linkage: admissions_enrollments.application_id →
+ * admissions_applications.lead_id → admissions_leads.id.
+ *
+ * Idempotency: the UPDATE only fires when the lead is not already 'joined'
+ * (`AND stage <> 'joined'`), so replaying a committed conversion is a no-op.
+ * A conversion with no lead linkage (walk-in / null application) is skipped.
+ * No money math — this only moves the CRM stage label.
+ */
+async function markOriginatingLeadJoined(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  enrollmentId: string,
+): Promise<void> {
+  const rows = await db.queryObject<{ lead_id: string | null }>(
+    `SELECT app.lead_id AS lead_id
+     FROM admissions_enrollments e
+     INNER JOIN admissions_applications app ON app.id = e.application_id
+     WHERE e.id = $1 AND e.organization_id = $2 AND e.school_id = $3`,
+    [enrollmentId, organizationId, schoolId],
+  );
+  const leadId = rows[0]?.lead_id ?? null;
+  if (!leadId) return;
+
+  await db.queryObject(
+    `UPDATE admissions_leads SET
+      stage = 'joined',
+      updated_at = timezone('utc', now())
+     WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       AND stage <> 'joined'`,
+    [leadId, organizationId, schoolId],
+  );
+}
+
 export async function convertAdmissionsEnrollment(
   db: TenantQueryClient,
   organizationId: string,
@@ -410,6 +448,11 @@ export async function convertAdmissionsEnrollment(
      WHERE id = $2 AND organization_id = $3 AND school_id = $4`,
     [input.convertedBy, enrollmentId, organizationId, schoolId],
   );
+
+  // Funnel-vocab: a committed conversion advances the originating lead to
+  // 'joined' so the dashboard/reports conversionRate reflects reality. Guarded
+  // to fire exactly once (idempotent path above returns before reaching here).
+  await markOriginatingLeadJoined(db, organizationId, schoolId, enrollmentId);
 
   const updated = await lockAdmissionsEnrollment(
     db,

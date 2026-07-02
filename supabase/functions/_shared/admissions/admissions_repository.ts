@@ -217,6 +217,157 @@ export async function changeLeadStage(
   return rows[0] ?? null;
 }
 
+// ─── ADM-D1: mark lead lost + reason (fixed picklist) ────────────────────────
+
+/** Allowed lost reasons (Appendix default: small fixed picklist). */
+export const LEAD_LOST_REASONS = [
+  "fees_high",
+  "competitor",
+  "distance",
+  "other",
+] as const;
+export type LeadLostReason = (typeof LEAD_LOST_REASONS)[number];
+
+export function isValidLostReason(value: string): value is LeadLostReason {
+  return (LEAD_LOST_REASONS as readonly string[]).includes(value);
+}
+
+/**
+ * Move a lead to stage='lost' and record the reason. The reason is validated
+ * against LEAD_LOST_REASONS at the handler layer; this write trusts a
+ * pre-validated value.
+ */
+export async function markLeadLost(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadId: string,
+  reason: LeadLostReason,
+): Promise<AdmissionsLeadRow | null> {
+  const rows = await db.queryObject<AdmissionsLeadRow>(
+    `UPDATE admissions_leads SET
+      stage = 'lost',
+      lost_reason = $4,
+      updated_at = timezone('utc', now())
+    WHERE id = $1 AND organization_id = $2 AND school_id = $3
+    RETURNING *`,
+    [leadId, organizationId, schoolId, reason],
+  );
+  return rows[0] ?? null;
+}
+
+// ─── ADM-D2: duplicate-lead lookup by phone (warn-only) ──────────────────────
+
+export interface DuplicateLeadMatch {
+  leadId: string;
+  studentName: string;
+  parentName: string;
+  stage: string;
+}
+
+/**
+ * Return any existing leads that share a phone number so the client can warn
+ * the operator and offer "open existing". Warn-only — createLead is unchanged
+ * and never hard-blocks on a duplicate.
+ */
+export async function findLeadsByPhone(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  phone: string,
+): Promise<DuplicateLeadMatch[]> {
+  const rows = await db.queryObject<{
+    id: string;
+    student_name: string;
+    parent_name: string;
+    stage: string;
+  }>(
+    `SELECT id, student_name, parent_name, stage
+     FROM admissions_leads
+     WHERE organization_id = $1 AND school_id = $2 AND phone = $3
+     ORDER BY created_at DESC
+     LIMIT 20`,
+    [organizationId, schoolId, phone],
+  );
+  return rows.map((row) => ({
+    leadId: row.id,
+    studentName: row.student_name,
+    parentName: row.parent_name,
+    stage: row.stage,
+  }));
+}
+
+// ─── ADM-3: bulk lead actions ────────────────────────────────────────────────
+
+export interface BulkLeadOutcome {
+  updated: string[];
+  skipped: Array<{ leadId: string; reason: string }>;
+}
+
+/**
+ * Assign a counselor to many leads in one call. Loops the existing per-lead
+ * assign logic; a lead that does not resolve (wrong school / missing) is
+ * skipped with a reason rather than failing the whole batch. Per-lead audit +
+ * activity are emitted by the caller via the returned updated ids.
+ */
+export async function bulkAssignLeads(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadIds: string[],
+  counselor: string,
+): Promise<{ outcome: BulkLeadOutcome; rows: AdmissionsLeadRow[] }> {
+  const outcome: BulkLeadOutcome = { updated: [], skipped: [] };
+  const rows: AdmissionsLeadRow[] = [];
+  for (const leadId of leadIds) {
+    const updated = await assignLeadCounselor(
+      db,
+      organizationId,
+      schoolId,
+      leadId,
+      counselor,
+    );
+    if (!updated) {
+      outcome.skipped.push({ leadId, reason: "not_found" });
+      continue;
+    }
+    outcome.updated.push(leadId);
+    rows.push(updated);
+  }
+  return { outcome, rows };
+}
+
+/**
+ * Change the pipeline stage of many leads in one call. Same partial-success
+ * contract as bulkAssignLeads.
+ */
+export async function bulkChangeLeadStage(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  leadIds: string[],
+  stage: string,
+): Promise<{ outcome: BulkLeadOutcome; rows: AdmissionsLeadRow[] }> {
+  const outcome: BulkLeadOutcome = { updated: [], skipped: [] };
+  const rows: AdmissionsLeadRow[] = [];
+  for (const leadId of leadIds) {
+    const updated = await changeLeadStage(
+      db,
+      organizationId,
+      schoolId,
+      leadId,
+      stage,
+    );
+    if (!updated) {
+      outcome.skipped.push({ leadId, reason: "not_found" });
+      continue;
+    }
+    outcome.updated.push(leadId);
+    rows.push(updated);
+  }
+  return { outcome, rows };
+}
+
 export interface AddLeadActivityInput {
   activityType: string;
   title: string;
@@ -317,6 +468,76 @@ export async function listLeadFollowUps(
      ORDER BY created_at DESC`,
     [leadId, organizationId, schoolId],
   );
+}
+
+// ─── ADM-4: follow-up complete / reschedule ──────────────────────────────────
+// The status/completed_label columns exist but were never written. These give
+// the follow-up its lifecycle: pending → completed (with an outcome label) or a
+// reschedule to a new due label. Both are scoped by org + school.
+
+/**
+ * Mark a follow-up completed. Optionally records the completed_label /
+ * outcome. Returns null when the follow-up id is not visible to this tenant.
+ */
+export async function completeFollowUp(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  followupId: string,
+  outcome: string,
+): Promise<AdmissionsLeadFollowUpRow | null> {
+  const completedLabel = formatCompletedLabel();
+  const rows = await db.queryObject<AdmissionsLeadFollowUpRow>(
+    `UPDATE admissions_lead_follow_ups SET
+      status = 'completed',
+      completed_label = $4,
+      outcome = COALESCE(NULLIF($5, ''), outcome),
+      updated_at = timezone('utc', now())
+    WHERE id = $1 AND organization_id = $2 AND school_id = $3
+    RETURNING *`,
+    [followupId, organizationId, schoolId, completedLabel, outcome],
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Reschedule a follow-up to a new due label. Resets status to 'pending' (a
+ * reschedule reopens the task) and keeps the lead's scalar next-follow-up label
+ * in sync so the pipeline view stays honest.
+ */
+export async function rescheduleFollowUp(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  followupId: string,
+  newLabel: string,
+): Promise<AdmissionsLeadFollowUpRow | null> {
+  const rows = await db.queryObject<AdmissionsLeadFollowUpRow>(
+    `UPDATE admissions_lead_follow_ups SET
+      scheduled_label = $4,
+      status = 'pending',
+      updated_at = timezone('utc', now())
+    WHERE id = $1 AND organization_id = $2 AND school_id = $3
+    RETURNING *`,
+    [followupId, organizationId, schoolId, newLabel],
+  );
+  const updated = rows[0] ?? null;
+  if (updated) {
+    await db.queryObject(
+      `UPDATE admissions_leads SET
+        next_follow_up_label = $4,
+        updated_at = timezone('utc', now())
+      WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+      [updated.lead_id, organizationId, schoolId, newLabel],
+    );
+  }
+  return updated;
+}
+
+function formatCompletedLabel(): string {
+  // ISO date (YYYY-MM-DD) keeps the label deterministic and locale-free; the
+  // client formats it for display alongside the other admissions date labels.
+  return new Date().toISOString().slice(0, 10);
 }
 
 // ─── Applications ────────────────────────────────────────────────────────────
@@ -819,6 +1040,67 @@ export async function getEnrollmentPrefillApplication(
   return rows[0] ?? null;
 }
 
+// ─── ADM-D4: offer-letter data (read) ────────────────────────────────────────
+
+export interface OfferLetterData {
+  enrollmentId: string;
+  studentName: string;
+  admissionNumber: string | null;
+  className: string;
+  section: string;
+  academicYear: string;
+  guardianName: string;
+  reportingDateLabel: string;
+  recommendedFeePlanId: string | null;
+  handoffStatus: string | null;
+}
+
+/**
+ * Standard offer-letter template data for an enrollment. This is a READ — the
+ * PDF render is client-side. Money math stays in finance: we surface only the
+ * recommended fee plan reference from the handoff, not a computed amount.
+ * Returns null when the enrollment id is not visible to this tenant.
+ */
+export async function getOfferLetterData(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  enrollmentId: string,
+): Promise<OfferLetterData | null> {
+  const rows = await db.queryObject<
+    AdmissionsEnrollmentRow & {
+      recommended_fee_plan_id: string | null;
+      handoff_status: string | null;
+    }
+  >(
+    `SELECT e.*,
+            h.recommended_fee_plan_id AS recommended_fee_plan_id,
+            h.handoff_status AS handoff_status
+     FROM admissions_enrollments e
+     LEFT JOIN admissions_fee_handoffs h ON h.enrollment_id = e.id
+     WHERE e.id = $1 AND e.organization_id = $2 AND e.school_id = $3
+     LIMIT 1`,
+    [enrollmentId, organizationId, schoolId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+
+  return {
+    enrollmentId: row.id,
+    studentName: row.student_name,
+    admissionNumber: row.admission_number,
+    className: row.seeking_class,
+    section: row.section,
+    academicYear: row.academic_year,
+    guardianName: row.guardian_name,
+    // Standard-template reporting date: the enrollment submission date. The
+    // client formats it; we pass the ISO date so it stays locale-free.
+    reportingDateLabel: String(row.submitted_at).slice(0, 10),
+    recommendedFeePlanId: row.recommended_fee_plan_id,
+    handoffStatus: row.handoff_status,
+  };
+}
+
 export interface EnrollmentSubmitInput {
   applicationId: string | null;
   studentFullName: string;
@@ -841,12 +1123,81 @@ export interface EnrollmentSubmitInput {
   needsHostel: boolean;
 }
 
+// Postgres unique_violation SQLSTATE — the admissions_enrollments_application_uniq
+// partial index raises this on a racing double-submit for the same application.
+const PG_UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const code = (error as { code?: unknown; fields?: { code?: unknown } }).code ??
+    (error as { fields?: { code?: unknown } }).fields?.code;
+  return code === PG_UNIQUE_VIOLATION;
+}
+
+/**
+ * Return the already-committed enrollment for an application, if any. Used both
+ * for the idempotency guard (before creating a new student) and to recover the
+ * winning row after a racing INSERT hits the unique index.
+ */
+export async function getEnrollmentByApplicationId(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  applicationId: string,
+): Promise<AdmissionsEnrollmentRow | null> {
+  const rows = await db.queryObject<AdmissionsEnrollmentRow>(
+    `SELECT * FROM admissions_enrollments
+     WHERE application_id = $1 AND organization_id = $2 AND school_id = $3
+     LIMIT 1`,
+    [applicationId, organizationId, schoolId],
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * P0 money fix — enrollment idempotency.
+ *
+ * A double-click / retry on an approved application must NOT mint a second
+ * students row + admission number + fee handoff (duplicate payables). This is
+ * enforced in three layers:
+ *   1. Lock anchor: when an application_id is present we take a
+ *      `SELECT ... FOR UPDATE` on the admissions_applications row so two
+ *      concurrent submits for the same application serialize.
+ *   2. Guard: after acquiring the lock we re-check for an existing enrollment
+ *      and, if found, return it unchanged (no new student/handoff).
+ *   3. Backstop: the admissions_enrollments_application_uniq partial unique
+ *      index makes a racing INSERT raise 23505, which we map to the same
+ *      idempotent return (never a 500).
+ *
+ * Walk-in enrollments (application_id = null) have no dedup key and are always
+ * treated as distinct — matching the partial index `WHERE application_id IS NOT NULL`.
+ */
 export async function submitEnrollment(
   db: TenantQueryClient,
   organizationId: string,
   schoolId: string,
   input: EnrollmentSubmitInput,
 ): Promise<AdmissionsEnrollmentRow> {
+  // ── Idempotency guard (layers 1 + 2) ──────────────────────────────────────
+  if (input.applicationId) {
+    // Lock anchor: serialize concurrent submits on the same application. The
+    // application row is guaranteed to exist for an approved application; the
+    // lock is held until this transaction commits/rolls back.
+    await db.queryObject(
+      `SELECT id FROM admissions_applications
+       WHERE id = $1 AND organization_id = $2 AND school_id = $3
+       FOR UPDATE`,
+      [input.applicationId, organizationId, schoolId],
+    );
+    const existing = await getEnrollmentByApplicationId(
+      db,
+      organizationId,
+      schoolId,
+      input.applicationId,
+    );
+    if (existing) return existing;
+  }
+
   const guardianRows = await db.queryObject<{ guardian_user_id: string | null }>(
     `SELECT app.lookup_guardian_user_for_enrollment($1) AS guardian_user_id`,
     [normalizePhone(input.phone)],
@@ -895,40 +1246,63 @@ export async function submitEnrollment(
     { mode: "admissions" },
   );
 
-  const enrollRows = await db.queryObject<AdmissionsEnrollmentRow>(
-    `INSERT INTO admissions_enrollments (
-      organization_id, school_id, application_id, student_id, guardian_user_id,
-      student_name, seeking_class, section, academic_year,
-      academic_year_id, class_id, section_id,
-      guardian_name, phone, gender, date_of_birth,
-      conversion_status, admission_number, submitted_at
-    ) VALUES (
-      $1, $2, $3, $4, $5,
-      $6, $7, $8, $9, $10, $11, $12,
-      $13, $14, $15, $16,
-      'pending', $17, timezone('utc', now())
-    )
-    RETURNING *`,
-    [
-      organizationId,
-      schoolId,
-      input.applicationId,
-      studentId,
-      guardianUserId,
-      input.studentFullName,
-      placement.className,
-      placement.sectionName ?? "",
-      placement.academicYear,
-      placement.academicYearId,
-      placement.classId,
-      placement.sectionId,
-      input.guardianName,
-      input.phone,
-      input.gender,
-      input.dateOfBirth,
-      admissionNumber,
-    ],
-  );
+  // Layer 3 backstop: even with the lock anchor, insert under a SAVEPOINT so a
+  // racing 23505 on admissions_enrollments_application_uniq is recoverable
+  // WITHOUT aborting the whole transaction — we roll back to the savepoint and
+  // return the winning enrollment (idempotent), never surfacing a 500. The
+  // just-created student row is left orphaned but harmless (no admission number
+  // was minted for it, and it is never handed off to finance).
+  await db.queryObject(`SAVEPOINT admissions_enroll_insert`);
+  let enrollRows: AdmissionsEnrollmentRow[];
+  try {
+    enrollRows = await db.queryObject<AdmissionsEnrollmentRow>(
+      `INSERT INTO admissions_enrollments (
+        organization_id, school_id, application_id, student_id, guardian_user_id,
+        student_name, seeking_class, section, academic_year,
+        academic_year_id, class_id, section_id,
+        guardian_name, phone, gender, date_of_birth,
+        conversion_status, admission_number, submitted_at
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9, $10, $11, $12,
+        $13, $14, $15, $16,
+        'pending', $17, timezone('utc', now())
+      )
+      RETURNING *`,
+      [
+        organizationId,
+        schoolId,
+        input.applicationId,
+        studentId,
+        guardianUserId,
+        input.studentFullName,
+        placement.className,
+        placement.sectionName ?? "",
+        placement.academicYear,
+        placement.academicYearId,
+        placement.classId,
+        placement.sectionId,
+        input.guardianName,
+        input.phone,
+        input.gender,
+        input.dateOfBirth,
+        admissionNumber,
+      ],
+    );
+    await db.queryObject(`RELEASE SAVEPOINT admissions_enroll_insert`);
+  } catch (error) {
+    if (isUniqueViolation(error) && input.applicationId) {
+      await db.queryObject(`ROLLBACK TO SAVEPOINT admissions_enroll_insert`);
+      const existing = await getEnrollmentByApplicationId(
+        db,
+        organizationId,
+        schoolId,
+        input.applicationId,
+      );
+      if (existing) return existing;
+    }
+    throw error;
+  }
 
   if (input.applicationId) {
     await db.queryObject(

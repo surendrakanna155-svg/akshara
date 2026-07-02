@@ -30,6 +30,7 @@ import { reportsToApi } from "./admissions_reports_mapper.ts";
 import {
   addApprovalNote,
   getAdmissionsSettings,
+  saveAdmissionsSettings,
 } from "./admissions_settings_repository.ts";
 
 function parsePagination(url: URL): { page: number; pageSize: number } {
@@ -104,6 +105,51 @@ export async function handleSettings(
       getAdmissionsSettings(db, orgId, schoolId)
     );
     return jsonResponse(envelope(settings));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+// ─── #6: POST /admissions/settings — persist the settings snapshot ───────────
+
+export async function handleSaveSettings(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  // Accept either the settings object directly or wrapped under `settings`.
+  const settings = (body.settings && typeof body.settings === "object")
+    ? body.settings as Record<string, unknown>
+    : body;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const saved = await runTenant(config, auth.claims, async (db) => {
+      const result = await saveAdmissionsSettings(db, orgId, schoolId, settings);
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.settingsSaved(schoolId, new Date().toISOString()),
+        req,
+      );
+      return result;
+    });
+    return jsonResponse(envelope(saved));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);

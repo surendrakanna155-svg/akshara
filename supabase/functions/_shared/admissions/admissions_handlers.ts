@@ -44,20 +44,29 @@ import {
   addLeadActivity,
   addLeadFollowUp,
   assignLeadCounselor,
+  bulkAssignLeads,
+  bulkChangeLeadStage,
   changeLeadStage,
+  completeFollowUp,
   createApplication,
   createLead,
   ensureApprovalForApplication,
+  findLeadsByPhone,
   getApplicationById,
   getApprovalById,
   getDocumentById,
   getDocumentStoragePath,
   getLeadById,
+  getOfferLetterData,
+  isValidLostReason,
+  LEAD_LOST_REASONS,
   listApplications,
   listDocuments,
   listLeadActivities,
   listLeadFollowUps,
   listLeads,
+  markLeadLost,
+  rescheduleFollowUp,
   reviewDocument,
   setApprovalDecision,
   submitApplication,
@@ -305,6 +314,216 @@ export async function handleChangeLeadStage(
   }
 }
 
+// ─── ADM-3: bulk lead actions ────────────────────────────────────────────────
+
+export async function handleBulkLeadActions(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  const rawIds = body.leadIds ?? body.lead_ids;
+  const leadIds = Array.isArray(rawIds)
+    ? rawIds.map((v) => String(v)).filter((v) => v.length > 0)
+    : [];
+  if (leadIds.length === 0) {
+    return errorEnvelope("VALIDATION_ERROR", "leadIds must be a non-empty array", 422);
+  }
+
+  const action = snakeStr(body, "action");
+  if (action !== "assign" && action !== "stage") {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "action must be 'assign' or 'stage'",
+      422,
+    );
+  }
+
+  const counselor = snakeStr(body, "counselor");
+  const stage = snakeStr(body, "stage");
+  if (action === "assign" && !counselor) {
+    return errorEnvelope("VALIDATION_ERROR", "counselor is required for action 'assign'", 422);
+  }
+  if (action === "stage" && !stage) {
+    return errorEnvelope("VALIDATION_ERROR", "stage is required for action 'stage'", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const outcome = await runTenant(config, auth.claims, async (db) => {
+      if (action === "assign") {
+        const { outcome, rows } = await bulkAssignLeads(
+          db,
+          orgId,
+          schoolId,
+          leadIds,
+          counselor,
+        );
+        // Per-lead activity + audit for each lead actually updated.
+        for (const row of rows) {
+          const activity = await addLeadActivity(db, orgId, schoolId, row.id, {
+            activityType: "assignment",
+            title: `Assigned to ${counselor}`,
+            description: `Lead assigned to counselor ${counselor} (bulk).`,
+            actor: counselor,
+          });
+          await emitMutationAudit(
+            db,
+            auth.claims,
+            admissionsAudit.leadAssigned(row.id, counselor, activity.id),
+            req,
+          );
+        }
+        return outcome;
+      }
+      const { outcome, rows } = await bulkChangeLeadStage(
+        db,
+        orgId,
+        schoolId,
+        leadIds,
+        stage,
+      );
+      for (const row of rows) {
+        const activity = await addLeadActivity(db, orgId, schoolId, row.id, {
+          activityType: "stageChange",
+          title: `Stage moved to ${humanizeStage(stage)}`,
+          description: `Pipeline stage updated to ${humanizeStage(stage)} (bulk).`,
+          actor: row.counselor || auth.claims.primary_role,
+        });
+        await emitMutationAudit(
+          db,
+          auth.claims,
+          admissionsAudit.leadStageChanged(row.id, stage, activity.id),
+          req,
+        );
+      }
+      return outcome;
+    });
+    return jsonResponse(envelope({
+      updated: outcome.updated,
+      skipped: outcome.skipped,
+      updatedCount: outcome.updated.length,
+      skippedCount: outcome.skipped.length,
+    }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+// ─── ADM-D1: mark lead lost + reason ─────────────────────────────────────────
+
+export async function handleMarkLeadLost(
+  req: Request,
+  config: AppConfig,
+  leadId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  const reason = snakeStr(body, "reason");
+  if (!isValidLostReason(reason)) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      `reason must be one of: ${LEAD_LOST_REASONS.join(", ")}`,
+      422,
+    );
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const lead = await runTenant(config, auth.claims, async (db) => {
+      const updated = await markLeadLost(db, orgId, schoolId, leadId, reason);
+      if (!updated) return null;
+      await addLeadActivity(db, orgId, schoolId, leadId, {
+        activityType: "stageChange",
+        title: "Marked lost",
+        description: `Lead marked lost — reason: ${reason}.`,
+        actor: updated.counselor || auth.claims.primary_role,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.leadLost(leadId, reason),
+        req,
+      );
+      return updated;
+    });
+    if (!lead) {
+      return errorEnvelope("NOT_FOUND", `Lead not found: ${leadId}`, 404);
+    }
+    return jsonResponse(envelope(leadToApi(lead)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+// ─── ADM-D2: duplicate-lead lookup by phone (warn-only) ──────────────────────
+
+export async function handleCheckDuplicateLead(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "viewAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const phone = (url.searchParams.get("phone") ?? "").trim();
+  if (!phone) {
+    return errorEnvelope("VALIDATION_ERROR", "phone query parameter is required", 422);
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const matches = await runTenant(config, auth.claims, (db) =>
+      findLeadsByPhone(db, orgId, schoolId, phone)
+    );
+    return jsonResponse(envelope({
+      phone,
+      hasDuplicate: matches.length > 0,
+      matches,
+    }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
 export async function handleAddLeadFollowUp(
   req: Request,
   config: AppConfig,
@@ -362,6 +581,124 @@ export async function handleAddLeadFollowUp(
       return errorEnvelope("NOT_FOUND", `Lead not found: ${leadId}`, 404);
     }
     return jsonResponse(envelope(followUpToApi(result)), { status: 201 });
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+// ─── ADM-4: follow-up complete / reschedule ──────────────────────────────────
+
+export async function handleCompleteFollowUp(
+  req: Request,
+  config: AppConfig,
+  leadId: string,
+  followupId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req) ?? {};
+  const outcome = snakeStr(body, "outcome");
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const updated = await completeFollowUp(db, orgId, schoolId, followupId, outcome);
+      if (!updated) return null;
+      await addLeadActivity(db, orgId, schoolId, updated.lead_id, {
+        activityType: "followUp",
+        title: "Follow-up completed",
+        description: outcome || updated.task,
+        actor: updated.counselor || auth.claims.primary_role,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.followUpCompleted(
+          updated.lead_id,
+          followupId,
+          updated.updated_at,
+        ),
+        req,
+      );
+      return updated;
+    });
+    if (!result) {
+      return errorEnvelope("NOT_FOUND", `Follow-up not found: ${followupId}`, 404);
+    }
+    return jsonResponse(envelope(followUpToApi(result)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    throw error;
+  }
+}
+
+export async function handleRescheduleFollowUp(
+  req: Request,
+  config: AppConfig,
+  leadId: string,
+  followupId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "manageAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+  const newLabel = snakeStr(body, "scheduled_label") || snakeStr(body, "new_label");
+  if (!newLabel) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "scheduled_label (new due label) is required",
+      422,
+    );
+  }
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, async (db) => {
+      const updated = await rescheduleFollowUp(db, orgId, schoolId, followupId, newLabel);
+      if (!updated) return null;
+      await addLeadActivity(db, orgId, schoolId, updated.lead_id, {
+        activityType: "followUp",
+        title: `Follow-up rescheduled · ${newLabel}`,
+        description: updated.task,
+        actor: updated.counselor || auth.claims.primary_role,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        admissionsAudit.followUpRescheduled(
+          updated.lead_id,
+          followupId,
+          updated.updated_at,
+        ),
+        req,
+      );
+      return updated;
+    });
+    if (!result) {
+      return errorEnvelope("NOT_FOUND", `Follow-up not found: ${followupId}`, 404);
+    }
+    return jsonResponse(envelope(followUpToApi(result)));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
@@ -1218,6 +1555,51 @@ export async function handleSubmitEnrollment(
     }
     if (error instanceof CatalogMismatchError) {
       return errorEnvelope("CATALOG_MISMATCH", error.message, 422);
+    }
+    throw error;
+  }
+}
+
+// ─── ADM-D4: offer letter (read) ─────────────────────────────────────────────
+
+export async function handleOfferLetter(
+  req: Request,
+  config: AppConfig,
+  enrollmentId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requirePermission(auth.claims, "viewAdmissions") ??
+    requireSchoolOperationalScope(auth.claims);
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const data = await runTenant(config, auth.claims, (db) =>
+      getOfferLetterData(db, orgId, schoolId, enrollmentId)
+    );
+    if (!data) {
+      return errorEnvelope("NOT_FOUND", `Enrollment not found: ${enrollmentId}`, 404);
+    }
+    // Standard offer-letter template field set. PDF render is client-side.
+    return jsonResponse(envelope({
+      enrollmentId: data.enrollmentId,
+      studentName: data.studentName,
+      admissionNumber: data.admissionNumber,
+      className: data.className,
+      section: data.section,
+      academicYear: data.academicYear,
+      guardianName: data.guardianName,
+      reportingDateLabel: data.reportingDateLabel,
+      recommendedFeePlanId: data.recommendedFeePlanId,
+      handoffStatus: data.handoffStatus,
+    }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
     }
     throw error;
   }

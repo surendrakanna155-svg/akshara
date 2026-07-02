@@ -128,6 +128,64 @@ export const admissionsAudit = {
       idempotencyKey: `admissions.lead.note_added:${activityId}`,
     },
   }),
+  // ADM-D1 — a lead was marked lost with a reason from the fixed picklist.
+  leadLost: (leadId: string, reason: string): MutationAuditSpec => ({
+    ...workflow("leadLost", "lead", leadId, { leadId, reason }),
+    domain: {
+      eventType: "admissions.lead.lost",
+      payload: { leadId, reason },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.lead.lost:${leadId}`,
+    },
+  }),
+  // ADM-4 — a follow-up was completed. `nonce` keys the outbox so a legitimate
+  // re-complete of a re-opened follow-up is recorded, not deduped away.
+  followUpCompleted: (
+    leadId: string,
+    followupId: string,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("leadFollowUpCompleted", "lead_follow_up", followupId, {
+      leadId,
+      followupId,
+    }),
+    domain: {
+      eventType: "admissions.lead.follow_up_completed",
+      payload: { leadId, followupId },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.lead.follow_up_completed:${followupId}:${nonce}`,
+    },
+  }),
+  // ADM-4 — a follow-up was rescheduled to a new due label.
+  followUpRescheduled: (
+    leadId: string,
+    followupId: string,
+    nonce: string,
+  ): MutationAuditSpec => ({
+    ...workflow("leadFollowUpRescheduled", "lead_follow_up", followupId, {
+      leadId,
+      followupId,
+    }),
+    domain: {
+      eventType: "admissions.lead.follow_up_rescheduled",
+      payload: { leadId, followupId },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.lead.follow_up_rescheduled:${followupId}:${nonce}`,
+    },
+  }),
+  // #6 — admissions settings snapshot saved (single row per school). `nonce`
+  // keys the outbox so each save is recorded (the row is updated in place).
+  settingsSaved: (schoolId: string, nonce: string): MutationAuditSpec => ({
+    ...workflow("admissionsSettingsSaved", "admissions_settings", schoolId, {
+      schoolId,
+    }),
+    domain: {
+      eventType: "admissions.settings.saved",
+      payload: { schoolId },
+      sourceModule: "admissions",
+      idempotencyKey: `admissions.settings.saved:${schoolId}:${nonce}`,
+    },
+  }),
   applicationCreated: (applicationId: string): MutationAuditSpec => ({
     ...workflow("applicationSubmitted", "application", applicationId, { applicationId }),
     domain: {
