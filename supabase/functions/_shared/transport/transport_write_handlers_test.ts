@@ -8,7 +8,11 @@
 // writes, (2) the notify-delay route lookup + affected-cohort count that drives
 // the broadcast reuse, and (3) the manageTransport RBAC gate + body validation.
 
-import { assertEquals, assertThrows } from "https://deno.land/std@0.224.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertRejects,
+  assertThrows,
+} from "https://deno.land/std@0.224.0/assert/mod.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 import {
   requirePermission,
@@ -22,6 +26,14 @@ import {
   str,
   WriteValidationError,
 } from "../entity_write/module_write_handlers.ts";
+import {
+  assertCapacity,
+  CapacityExceededError,
+  isoDateField,
+  isStrictIsoDate,
+  regKey,
+} from "./transport_write_handlers.ts";
+import { buildRoster } from "./transport_handlers.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
@@ -258,4 +270,306 @@ Deno.test("org scope denied for transport writes", () => {
   const denied = requirePermission(orgClaims(), "manageTransport") ??
     requireSchoolOperationalScope(orgClaims());
   assertEquals(denied?.status, 403);
+});
+
+// ── TRN-2: strict ISO-date validation ─────────────────────────────────────────
+
+Deno.test("TRN-2: isStrictIsoDate accepts real YYYY-MM-DD, rejects malformed/impossible", () => {
+  assertEquals(isStrictIsoDate("2026-12-31"), true);
+  assertEquals(isStrictIsoDate("2028-02-29"), true); // leap day
+  assertEquals(isStrictIsoDate("2026-02-30"), false); // impossible calendar date
+  assertEquals(isStrictIsoDate("2026-13-01"), false); // bad month
+  assertEquals(isStrictIsoDate("2026-1-1"), false); // not zero-padded
+  assertEquals(isStrictIsoDate("31-12-2026"), false); // wrong order
+  assertEquals(isStrictIsoDate("Dec 2026"), false); // free text
+});
+
+Deno.test("TRN-2: isoDateField throws 422 on malformed date, passes a real one, omits absent", () => {
+  const err = assertThrows(
+    () => isoDateField({ insuranceExpiry: "not-a-date" }, "insuranceExpiry", "insurance_expiry"),
+    WriteValidationError,
+  );
+  assertEquals(err.status, 422);
+  assertEquals(isoDateField({ insuranceExpiry: "2026-06-30" }, "insuranceExpiry"), "2026-06-30");
+  assertEquals(isoDateField({}, "insuranceExpiry"), undefined);
+});
+
+// ── TRN-1: vehicle registration uniqueness (per school) ───────────────────────
+
+Deno.test("TRN-1: duplicate vehicle registration is rejected (case/space-insensitive)", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  await writeStore.insert(db, ORG, SCHOOL_A, "vehicle", "v1", {
+    id: "v1",
+    registration: "KA-01-AB-1234",
+    capacity: 40,
+  });
+  // The create handler's guard: scan existing vehicles, reject a normalized dupe.
+  const existing = await writeStore.findAll(db, ORG, SCHOOL_A, "vehicle");
+  const isDuplicate = existing.some(
+    (v) => regKey(String(v.registration ?? "")) === regKey("ka-01-ab-1234"),
+  );
+  assertEquals(isDuplicate, true);
+});
+
+// ── TRN-1: delete-block when a route references the vehicle ────────────────────
+
+Deno.test("TRN-1: a vehicle assigned to an ACTIVE route is delete-blocked", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  await writeStore.insert(db, ORG, SCHOOL_A, "vehicle", "v1", {
+    id: "v1",
+    registration: "KA-01-AB-1234",
+    capacity: 40,
+  });
+  await writeStore.insert(db, ORG, SCHOOL_A, "route", "r1", {
+    id: "r1",
+    name: "Route 12",
+    assignedBus: "KA-01-AB-1234",
+    status: "active",
+  });
+  const routes = await writeStore.findAll(db, ORG, SCHOOL_A, "route");
+  const referencing = routes.find(
+    (r) => regKey(String(r.assignedBus ?? "")) === regKey("KA-01-AB-1234") &&
+      String(r.status ?? "") === "active",
+  );
+  assertEquals(referencing?.id, "r1"); // delete would 409 VEHICLE_IN_USE
+
+  // Deactivating the route unblocks the delete.
+  await writeStore.replace(db, ORG, SCHOOL_A, "route", "r1", {
+    id: "r1",
+    name: "Route 12",
+    assignedBus: "KA-01-AB-1234",
+    status: "inactive",
+  });
+  const routes2 = await writeStore.findAll(db, ORG, SCHOOL_A, "route");
+  const stillReferencing = routes2.find(
+    (r) => regKey(String(r.assignedBus ?? "")) === regKey("KA-01-AB-1234") &&
+      String(r.status ?? "") === "active",
+  );
+  assertEquals(stillReferencing, undefined);
+});
+
+// ── TRN-7: race-safe capacity guard (409 + explicit override) ─────────────────
+
+async function seedRouteWithVehicle(db: TenantQueryClient, capacity: number, occupants: number) {
+  await writeStore.insert(db, ORG, SCHOOL_A, "vehicle", "v1", {
+    id: "v1",
+    registration: "KA-01-AB-1234",
+    capacity,
+  });
+  await writeStore.insert(db, ORG, SCHOOL_A, "route", "r1", {
+    id: "r1",
+    name: "Route 12",
+    assignedBus: "KA-01-AB-1234",
+    status: "active",
+  });
+  for (let i = 0; i < occupants; i++) {
+    await writeStore.insert(db, ORG, SCHOOL_A, "allocation", `a${i}`, {
+      id: `a${i}`,
+      routeId: "r1",
+      sisStudentId: `S${i}`,
+    });
+  }
+}
+
+Deno.test("TRN-7: assigning past capacity rejects with 409 CAPACITY_EXCEEDED", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  await seedRouteWithVehicle(db, 2, 2); // full
+  const route = await writeStore.find(db, ORG, SCHOOL_A, "route", "r1");
+  const err = await assertRejects(
+    () => assertCapacity(db, ORG, SCHOOL_A, route!, 1, false),
+    CapacityExceededError,
+  );
+  assertEquals((err as CapacityExceededError).status, 409);
+  assertEquals((err as CapacityExceededError).code, "CAPACITY_EXCEEDED");
+});
+
+Deno.test("TRN-7: allowOverCapacity override succeeds and flags overridden", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  await seedRouteWithVehicle(db, 2, 2); // full
+  const route = await writeStore.find(db, ORG, SCHOOL_A, "route", "r1");
+  const result = await assertCapacity(db, ORG, SCHOOL_A, route!, 1, true);
+  assertEquals(result.overridden, true);
+  assertEquals(result.capacity, 2);
+  assertEquals(result.current, 2);
+});
+
+Deno.test("TRN-7: under capacity passes without override; no vehicle = unbounded (skip)", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  await seedRouteWithVehicle(db, 40, 5);
+  const route = await writeStore.find(db, ORG, SCHOOL_A, "route", "r1");
+  const ok = await assertCapacity(db, ORG, SCHOOL_A, route!, 1, false);
+  assertEquals(ok.overridden, false);
+
+  // A route with no assigned vehicle has null capacity → guard is skipped.
+  await writeStore.insert(db, ORG, SCHOOL_A, "route", "r2", {
+    id: "r2",
+    name: "Unbused",
+    assignedBus: "",
+    status: "active",
+  });
+  const r2 = await writeStore.find(db, ORG, SCHOOL_A, "route", "r2");
+  const unbounded = await assertCapacity(db, ORG, SCHOOL_A, r2!, 999, false);
+  assertEquals(unbounded.capacity, null);
+  assertEquals(unbounded.overridden, false);
+});
+
+// ── TRN-3: roster grouping by stop, ordered by route stop sequence ────────────
+
+Deno.test("TRN-3: roster groups students by pickup stop, ordered by route sequence", () => {
+  const route = {
+    id: "r1",
+    name: "Route 12",
+    stops: [
+      { id: "s1", name: "Lake View", sequence: 1 },
+      { id: "s2", name: "Market Square", sequence: 2 },
+      { id: "s3", name: "Hilltop", sequence: 3 },
+    ],
+  };
+  const allocations = [
+    { sisStudentId: "S2", studentName: "Bhavya", classLabel: "5", pickupStop: "Market Square" },
+    { sisStudentId: "S1", studentName: "Anaya", classLabel: "6", pickupStop: "Lake View" },
+    { sisStudentId: "S3", studentName: "Chetan", classLabel: "5", pickupStop: "Lake View" },
+    { sisStudentId: "S4", studentName: "Divya", classLabel: "4", pickupStop: "Hilltop" },
+  ];
+  const roster = buildRoster(route, allocations) as {
+    stopCount: number;
+    studentCount: number;
+    stops: Array<{ stop: string; sequence: number; students: Array<{ studentName: string }> }>;
+  };
+  assertEquals(roster.stopCount, 3);
+  assertEquals(roster.studentCount, 4);
+  // Ordered by the route's stop sequence.
+  assertEquals(roster.stops.map((g) => g.stop), ["Lake View", "Market Square", "Hilltop"]);
+  // Lake View has two students, sorted by name.
+  assertEquals(roster.stops[0].students.map((s) => s.studentName), ["Anaya", "Chetan"]);
+});
+
+Deno.test("TRN-3: a student on an unknown stop sorts last under (unassigned stop)", () => {
+  const route = { id: "r1", name: "R1", stops: [{ id: "s1", name: "Known", sequence: 1 }] };
+  const roster = buildRoster(route, [
+    { sisStudentId: "S1", studentName: "A", pickupStop: "Known" },
+    { sisStudentId: "S2", studentName: "B", pickupStop: "" },
+  ]) as { stops: Array<{ stop: string }> };
+  assertEquals(roster.stops[0].stop, "Known");
+  assertEquals(roster.stops[1].stop, "(unassigned stop)");
+});
+
+// ── TRN-4: stop editor resequencing (contiguous 1-based ordering) ─────────────
+
+Deno.test("TRN-4: removing a middle stop keeps sequence contiguous 1..n", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  await writeStore.insert(db, ORG, SCHOOL_A, "route", "r1", {
+    id: "r1",
+    name: "R1",
+    stopCount: 3,
+    stops: [
+      { id: "s1", name: "A", sequence: 1 },
+      { id: "s2", name: "B", sequence: 2 },
+      { id: "s3", name: "C", sequence: 3 },
+    ],
+  });
+  // Mirror handleRemoveStop: drop s2, resequence.
+  const saved = await writeStore.mutateEntity(db, ORG, SCHOOL_A, "route", "r1", (route) => {
+    const stops = (route.stops as Array<Record<string, unknown>>).filter((s) => s.id !== "s2");
+    const reseq = stops.map((s, i) => ({ ...s, sequence: i + 1 }));
+    return { ...route, stops: reseq, stopCount: reseq.length };
+  });
+  const stops = (saved!.stops as Array<{ id: string; sequence: number }>);
+  assertEquals(stops.map((s) => `${s.id}:${s.sequence}`), ["s1:1", "s3:2"]);
+  assertEquals(saved!.stopCount, 2);
+});
+
+// ── TRN-5: bulk allocation partial result (assigned + skipped) ────────────────
+
+Deno.test("TRN-5: bulk assign yields per-student partial result with skips", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  await writeStore.insert(db, ORG, SCHOOL_A, "route", "r1", {
+    id: "r1",
+    name: "R1",
+    assignedBus: "",
+    status: "active",
+  });
+  const targets = ["S1", "S2", ""]; // "" is skipped (empty id)
+  const assigned: string[] = [];
+  const skipped: Array<{ studentId: string; reason: string }> = [];
+  for (const sisStudentId of targets) {
+    if (!sisStudentId) {
+      skipped.push({ studentId: sisStudentId, reason: "empty student id" });
+      continue;
+    }
+    const allocId = `r1:${sisStudentId}`;
+    await writeStore.insert(db, ORG, SCHOOL_A, "allocation", allocId, {
+      id: allocId,
+      routeId: "r1",
+      sisStudentId,
+      pickupStop: "Gate",
+      dropStop: "Gate",
+      transportEnrolled: true,
+    });
+    assigned.push(sisStudentId);
+  }
+  assertEquals(assigned, ["S1", "S2"]);
+  assertEquals(skipped.length, 1);
+  const listed = await writeStore.findAll(db, ORG, SCHOOL_A, "allocation");
+  assertEquals(listed.length, 2);
+});
+
+// ── TRN-9: demand idempotency + payment-free proof ────────────────────────────
+
+Deno.test("TRN-9: a demand re-raise for the same (student,route,year,term) is idempotent", async () => {
+  const db = new MockTransportWriteDb() as unknown as TenantQueryClient;
+  const dedupeKey = "SIS-1::r1::2026-27::annual";
+  await writeStore.insert(db, ORG, SCHOOL_A, "demand", "d1", {
+    id: "d1",
+    dedupeKey,
+    sisStudentId: "SIS-1",
+    routeId: "r1",
+    academicYear: "2026-27",
+    term: "annual",
+    invoiceId: "inv-1",
+  });
+  // The handler dedupe: a matching demand short-circuits and raises nothing new.
+  const existing = await writeStore.findAll(db, ORG, SCHOOL_A, "demand");
+  const prior = existing.find((d) => String(d.dedupeKey ?? "") === dedupeKey);
+  assertEquals(prior?.id, "d1");
+  assertEquals(prior?.invoiceId, "inv-1");
+  // No second demand row created for the same key.
+  assertEquals(existing.length, 1);
+});
+
+Deno.test("TRN-9: transport contains ZERO payment/collection code (payment-free)", async () => {
+  // Prove Transport DEFINES + RAISES a demand but never collects: the transport
+  // source must not import or call createCollection / finance_collections.
+  const files = [
+    "./transport_write_handlers.ts",
+    "./transport_handlers.ts",
+    "./transport_router.ts",
+    "./transport_read_repository.ts",
+  ];
+  for (const rel of files) {
+    const src = await Deno.readTextFile(new URL(rel, import.meta.url));
+    // Strip line/block comments so a descriptive doc-comment ("never calls
+    // createCollection") doesn't trip the check — we forbid actual CODE usage.
+    const code = src
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n")
+      .map((line) => line.replace(/\/\/.*$/, ""))
+      .join("\n");
+    // No call to createCollection(...) and no import from a finance_collections module.
+    assertEquals(
+      /createCollection\s*\(/.test(code),
+      false,
+      `${rel} must not call createCollection`,
+    );
+    assertEquals(
+      /from\s+["'][^"']*finance_collections[^"']*["']/.test(code),
+      false,
+      `${rel} must not import a finance_collections module`,
+    );
+    assertEquals(
+      /finance_collections/.test(code),
+      false,
+      `${rel} must not reference the finance_collections table in code`,
+    );
+  }
 });

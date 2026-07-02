@@ -7,7 +7,6 @@ import {
 import { assignmentToApi, studentAccountToApi } from "./finance_mapper.ts";
 import {
   DuplicateAssignmentError,
-  DuplicateStudentAccountError,
   HandoffNotReadyError,
   assignFeeStructure,
   assignFromHandoff,
@@ -56,9 +55,16 @@ class MockAssignmentsDb {
       return (found ? [{ name: found.name, academic_year: found.academic_year }] : []) as T[];
     }
     if (sql.includes("SUM(amount)")) {
-      return [{ total: "50000" }] as T[];
+      // Sum this structure's own items (args[0] = fee_structure_id) so a second,
+      // different structure invoices its own amount (TRN-9), not a hardcoded one.
+      const sum = this.items
+        .filter((it) => it.fee_structure_id === args[0])
+        .reduce((acc, it) => acc + parseFloat(String(it.amount)), 0);
+      return [{ total: String(sum) }] as T[];
     }
     if (sql.includes("FROM finance_student_accounts") && sql.includes("student_id = $1") && sql.includes("academic_year = $2")) {
+      // TRN-9: the get-or-create lookup now selects the full account row (SELECT *)
+      // so it can be reused, not just its id.
       const found = this.accounts.find((a) =>
         a.student_id === args[0] && a.academic_year === args[1]
       );
@@ -163,6 +169,21 @@ class MockAssignmentsDb {
       row.assignment_status = "cancelled";
       return [row as T];
     }
+    if (
+      sql.includes("UPDATE finance_student_accounts SET") &&
+      sql.includes("total_fee = total_fee +")
+    ) {
+      // TRN-9 reuse bump: fold a second structure's total into the shared account.
+      const row = this.accounts.find((a) => a.id === args[1]);
+      if (row) {
+        row.total_fee = String(Number(row.total_fee) + Number(args[0]));
+        row.outstanding_amount = String(
+          Number(row.outstanding_amount) + Number(args[0]),
+        );
+        row.status = "open";
+      }
+      return (row ? [row] : []) as T[];
+    }
     if (sql.includes("UPDATE finance_student_accounts SET") && sql.includes("closed")) {
       const row = this.accounts.find((a) => a.fee_assignment_id === args[0]);
       if (row) row.status = "closed";
@@ -237,24 +258,56 @@ Deno.test("assignFeeStructure prevents duplicate assignment", async () => {
   );
 });
 
-Deno.test("assignFeeStructure prevents duplicate student account year", async () => {
+Deno.test("TRN-9: assigning a DIFFERENT structure reuses the student's existing per-year account", async () => {
+  // Owner decision: tuition + transport coexist as MULTIPLE invoices under ONE
+  // finance_student_accounts row. Assigning a second, different structure to a
+  // student who already has an account must SUCCEED and REUSE that account (no
+  // second account row, no DuplicateStudentAccountError).
   const db = new MockAssignmentsDb();
-  db.accounts.push({
-    id: "existing",
-    student_id: STUDENT,
+  const TRANSPORT_STRUCTURE = "b7000000-0000-4000-8000-000000000099";
+  db.structures.push({
+    id: TRANSPORT_STRUCTURE,
+    name: "Transport Fee",
     academic_year: "2026-27",
+    status: "active",
+  });
+  db.items.push({
+    fee_structure_id: TRANSPORT_STRUCTURE,
+    amount: "12000",
     organization_id: ORG,
     school_id: SCHOOL_A,
   });
-  await assertRejects(
-    () => assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
-      studentId: STUDENT,
-      feeStructureId: STRUCTURE,
-      academicYear: "2026-27",
-      assignedBy: STAFF,
-    }),
-    DuplicateStudentAccountError,
-  );
+
+  // First structure → opens the account.
+  await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+  });
+  assertEquals(db.accounts.length, 1);
+
+  // Second, DIFFERENT structure → reuses the SAME account, raises a NEW invoice.
+  const second = await assignFeeStructure(asDb(db), ORG, SCHOOL_A, {
+    studentId: STUDENT,
+    feeStructureId: TRANSPORT_STRUCTURE,
+    academicYear: "2026-27",
+    assignedBy: STAFF,
+  });
+  // Still ONE account row — reused, not duplicated.
+  assertEquals(db.accounts.length, 1);
+  // But TWO assignments and TWO invoices now hang off it.
+  assertEquals(db.assignments.length, 2);
+  assertEquals(db.invoices.length, 2);
+  // The reused account now AGGREGATES both structures (tuition 50000 + transport
+  // 12000) so its authoritative balance — which collections decrement and the
+  // dashboard/defaulters read — reflects the student's true total dues.
+  assertEquals(second.account.total_fee, "62000");
+  assertEquals(second.account.outstanding_amount, "62000");
+  assertEquals(second.account.amount_paid, "0");
+  // The second invoice carries the transport structure's own outstanding.
+  assertEquals(second.invoice.total_amount, "12000");
+  assertEquals(second.invoice.outstanding_amount, "12000");
 });
 
 Deno.test("cancelAssignment marks assignment and account closed", async () => {

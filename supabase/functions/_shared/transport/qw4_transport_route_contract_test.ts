@@ -54,7 +54,7 @@ async function call(
   return router(req, config, method, path);
 }
 
-// The complete registered surface of routeTransport (17 routes).
+// The complete registered surface of routeTransport (37 routes after TRN-1..9).
 const REGISTERED: Array<[string, string]> = [
   ["GET", "/transport/dashboard"],
   ["GET", "/transport/routes"],
@@ -66,16 +66,30 @@ const REGISTERED: Array<[string, string]> = [
   ["GET", "/transport/reports"],
   ["GET", "/transport/settings"],
   ["GET", "/transport/occupancy-metrics"],
+  ["GET", "/transport/routes/route-1/roster"], // TRN-3
   ["POST", "/transport/routes"],
   ["POST", "/transport/allocations"],
+  ["POST", "/transport/allocations/bulk"], // TRN-5
   ["POST", "/transport/attendance"],
   ["POST", "/transport/notify-delay"],
+  ["POST", "/transport/vehicles"], // TRN-1
+  ["POST", "/transport/drivers"], // TRN-1
+  ["POST", "/transport/reminders/document-expiry"], // TRN-8
+  ["POST", "/transport/demands"], // TRN-9
   ["POST", "/transport/routes/route-1/activate"],
+  ["POST", "/transport/routes/route-1/stops"], // TRN-4
+  ["POST", "/transport/routes/route-1/stops/reorder"], // TRN-4
   ["POST", "/transport/allocations/alloc-1/transfer"],
+  ["PUT", "/transport/vehicles/veh-1"], // TRN-1
+  ["PUT", "/transport/drivers/drv-1"], // TRN-1
+  ["PUT", "/transport/routes/route-1/stops/stop-1"], // TRN-4
+  ["DELETE", "/transport/vehicles/veh-1"], // TRN-1
+  ["DELETE", "/transport/drivers/drv-1"], // TRN-1
+  ["DELETE", "/transport/routes/route-1/stops/stop-1"], // TRN-4
   ["DELETE", "/transport/allocations/alloc-1"],
 ];
 
-Deno.test("QA-B-020: all 17 transport routes path-match to a handler (not 404)", async () => {
+Deno.test("QA-B-020: all transport routes path-match to a handler (not 404)", async () => {
   // A holder token; any registered route must resolve past the router into the
   // handler/gate (status !== 404). 404 here would mean a missing/typo'd route.
   const perms = ["viewTransport", "manageTransport"];
@@ -141,4 +155,38 @@ Deno.test("QA-B-020: unauthenticated transport read is 401", async () => {
   const req = new Request("https://x/transport/dashboard", { method: "GET" });
   const res = await routeTransport(req, config, "GET", "/transport/dashboard");
   assertEquals(res?.status, 401);
+});
+
+// ── TRN-1..9: new write routes require manageTransport (403), pass to DB (503) ──
+
+const NEW_WRITE_ROUTES: Array<[string, string, unknown]> = [
+  ["POST", "/transport/vehicles", { registration: "KA-01-AB-1234" }],
+  ["PUT", "/transport/vehicles/veh-1", { capacity: 40 }],
+  ["DELETE", "/transport/vehicles/veh-1", undefined],
+  ["POST", "/transport/drivers", { name: "D", licenseNumber: "L1" }],
+  ["PUT", "/transport/drivers/drv-1", { phone: "9" }],
+  ["DELETE", "/transport/drivers/drv-1", undefined],
+  ["POST", "/transport/routes/route-1/stops", { name: "Stop" }],
+  ["PUT", "/transport/routes/route-1/stops/stop-1", { name: "Stop" }],
+  ["DELETE", "/transport/routes/route-1/stops/stop-1", undefined],
+  ["POST", "/transport/routes/route-1/stops/reorder", { stopOrder: ["s1"] }],
+  ["POST", "/transport/allocations/bulk", { routeId: "r1", pickupStop: "A", dropStop: "B", sisStudentIds: ["S1"] }],
+  ["POST", "/transport/reminders/document-expiry", {}],
+  ["POST", "/transport/demands", { sisStudentId: "S1", routeId: "r1", feeStructureId: "f1", academicYear: "2026-27" }],
+];
+
+Deno.test("QA-B-020: TRN-1..9 write routes are 403 without manageTransport, 503 with it", async () => {
+  for (const [method, path, body] of NEW_WRITE_ROUTES) {
+    const denied = await call(routeTransport, method, path, ["viewTransport"], body);
+    assertEquals(denied?.status, 403, `${method} ${path} should 403 without manageTransport`);
+    const allowed = await call(routeTransport, method, path, ["manageTransport"], body);
+    assertEquals(allowed?.status, 503, `${method} ${path} should reach DB (503) with manageTransport`);
+  }
+});
+
+Deno.test("QA-B-020: TRN-3 roster read is 403 without viewTransport, 503 with it", async () => {
+  const denied = await call(routeTransport, "GET", "/transport/routes/route-1/roster", ["viewFinance"]);
+  assertEquals(denied?.status, 403);
+  const allowed = await call(routeTransport, "GET", "/transport/routes/route-1/roster", ["viewTransport"]);
+  assertEquals(allowed?.status, 503);
 });

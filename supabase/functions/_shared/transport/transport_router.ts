@@ -7,6 +7,7 @@ import {
   handleDrivers,
   handleOccupancyMetrics,
   handleReports,
+  handleRouteRoster,
   handleRoutes,
   handleSettings,
   handleTracking,
@@ -14,12 +15,25 @@ import {
 } from "./transport_handlers.ts";
 import {
   handleActivateRoute,
+  handleAddStop,
   handleAssignStudentTransport,
+  handleBulkAllocateTransport,
+  handleCreateDriver,
   handleCreateRoute,
+  handleCreateVehicle,
+  handleDeleteDriver,
+  handleDeleteVehicle,
+  handleDocumentExpiryReminder,
   handleNotifyRouteDelay,
+  handleRaiseTransportDemand,
   handleRecordAttendance,
+  handleRemoveStop,
   handleRemoveStudentTransport,
+  handleReorderStops,
   handleTransferStudentTransport,
+  handleUpdateDriver,
+  handleUpdateStop,
+  handleUpdateVehicle,
 } from "./transport_write_handlers.ts";
 
 type RouteHandler = (req: Request, config: AppConfig) => Promise<Response>;
@@ -39,7 +53,12 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
       "/transport/occupancy-metrics": handleOccupancyMetrics,
     };
     const handler = routes[path] as RouteHandler | undefined;
-    return handler ? { handler } : null;
+    if (handler) return { handler };
+    // TRN-3: stop-wise roster read.
+    if (/^\/transport\/routes\/[^/]+\/roster$/.test(path)) {
+      return { handler: handleRouteRoster };
+    }
+    return null;
   }
 
   if (method === "POST") {
@@ -49,6 +68,10 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     if (path === "/transport/allocations") {
       return { handler: handleAssignStudentTransport };
     }
+    // TRN-5: bulk allocation.
+    if (path === "/transport/allocations/bulk") {
+      return { handler: handleBulkAllocateTransport };
+    }
     // --- A6 writes (AgentC) ---
     if (path === "/transport/attendance") {
       return { handler: handleRecordAttendance };
@@ -57,8 +80,30 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     if (path === "/transport/notify-delay") {
       return { handler: handleNotifyRouteDelay };
     }
+    // TRN-1: vehicle & driver create.
+    if (path === "/transport/vehicles") {
+      return { handler: handleCreateVehicle };
+    }
+    if (path === "/transport/drivers") {
+      return { handler: handleCreateDriver };
+    }
+    // TRN-8: document-expiry reminder.
+    if (path === "/transport/reminders/document-expiry") {
+      return { handler: handleDocumentExpiryReminder };
+    }
+    // TRN-9: raise a Finance transport-fee demand.
+    if (path === "/transport/demands") {
+      return { handler: handleRaiseTransportDemand };
+    }
     if (/^\/transport\/routes\/[^/]+\/activate$/.test(path)) {
       return { handler: handleActivateRoute };
+    }
+    // TRN-4: stop editor (reorder is a fixed sub-path; add is the collection POST).
+    if (/^\/transport\/routes\/[^/]+\/stops\/reorder$/.test(path)) {
+      return { handler: handleReorderStops };
+    }
+    if (/^\/transport\/routes\/[^/]+\/stops$/.test(path)) {
+      return { handler: handleAddStop };
     }
     if (/^\/transport\/allocations\/[^/]+\/transfer$/.test(path)) {
       return { handler: handleTransferStudentTransport };
@@ -66,7 +111,33 @@ function matchTransportRoute(method: string, path: string): { handler: RouteHand
     return null;
   }
 
+  if (method === "PUT") {
+    // TRN-1: vehicle & driver update.
+    if (/^\/transport\/vehicles\/[^/]+$/.test(path)) {
+      return { handler: handleUpdateVehicle };
+    }
+    if (/^\/transport\/drivers\/[^/]+$/.test(path)) {
+      return { handler: handleUpdateDriver };
+    }
+    // TRN-4: update a stop.
+    if (/^\/transport\/routes\/[^/]+\/stops\/[^/]+$/.test(path)) {
+      return { handler: handleUpdateStop };
+    }
+    return null;
+  }
+
   if (method === "DELETE") {
+    // TRN-4: remove a stop (more specific — match before the allocation delete).
+    if (/^\/transport\/routes\/[^/]+\/stops\/[^/]+$/.test(path)) {
+      return { handler: handleRemoveStop };
+    }
+    // TRN-1: vehicle & driver delete.
+    if (/^\/transport\/vehicles\/[^/]+$/.test(path)) {
+      return { handler: handleDeleteVehicle };
+    }
+    if (/^\/transport\/drivers\/[^/]+$/.test(path)) {
+      return { handler: handleDeleteDriver };
+    }
     if (/^\/transport\/allocations\/[^/]+$/.test(path)) {
       return { handler: handleRemoveStudentTransport };
     }

@@ -134,14 +134,24 @@ async function createAssignmentAndAccount(
     throw new DuplicateAssignmentError();
   }
 
-  const existingAccount = await db.queryObject<{ id: string }>(
-    `SELECT id FROM finance_student_accounts
+  // TRN-9 (owner decision): a student's per-year finance account is a SHARED
+  // container — tuition + transport (and any other structure) coexist as
+  // MULTIPLE invoices under ONE finance_student_accounts row. So GET-OR-CREATE
+  // the account instead of throwing on a pre-existing one: reuse the existing
+  // account when the student already has one for this academic year, and only
+  // create a fresh account when this is the student's first structure this year.
+  // The per-(student, structure, year) UNIQUE on finance_fee_assignments (guarded
+  // above) still makes assigning the SAME structure twice idempotent-by-rejection;
+  // this change only unblocks assigning a DIFFERENT structure to a student who
+  // already has an account. The account's aggregate money columns (total_fee /
+  // amount_paid / outstanding_amount) are NOT re-derived here — each structure
+  // raises its own invoice with its own outstanding, which stays authoritative.
+  const existingAccount = await db.queryObject<FinanceStudentAccountRow>(
+    `SELECT * FROM finance_student_accounts
      WHERE student_id = $1 AND academic_year = $2 AND organization_id = $3 AND school_id = $4`,
     [input.studentId, input.academicYear, organizationId, schoolId],
   );
-  if (existingAccount[0]) {
-    throw new DuplicateStudentAccountError();
-  }
+  const reuseAccount = existingAccount[0] ?? null;
 
   const totalFee = await sumStructureFees(
     db,
@@ -150,30 +160,27 @@ async function createAssignmentAndAccount(
     input.feeStructureId,
   );
 
-  let assignmentRows: FinanceFeeAssignmentRow[];
-  try {
-    assignmentRows = await db.queryObject<FinanceFeeAssignmentRow>(
-      `INSERT INTO finance_fee_assignments (
-        organization_id, school_id, student_id, fee_structure_id,
-        academic_year, assignment_status, assigned_by
-      ) VALUES ($1, $2, $3, $4, $5, 'active', $6)
-      RETURNING *`,
-      [
-        organizationId,
-        schoolId,
-        input.studentId,
-        input.feeStructureId,
-        input.academicYear,
-        input.assignedBy,
-      ],
-    );
-  } catch (error) {
-    throw error;
-  }
+  const assignmentRows = await db.queryObject<FinanceFeeAssignmentRow>(
+    `INSERT INTO finance_fee_assignments (
+      organization_id, school_id, student_id, fee_structure_id,
+      academic_year, assignment_status, assigned_by
+    ) VALUES ($1, $2, $3, $4, $5, 'active', $6)
+    RETURNING *`,
+    [
+      organizationId,
+      schoolId,
+      input.studentId,
+      input.feeStructureId,
+      input.academicYear,
+      input.assignedBy,
+    ],
+  );
 
   const assignment = assignmentRows[0]!;
 
-  const accountRows = await db.queryObject<FinanceStudentAccountRow>(
+  // Get-or-create: reuse the student's existing per-year account when present,
+  // otherwise open a new one seeded from THIS structure's total.
+  const account = reuseAccount ?? (await db.queryObject<FinanceStudentAccountRow>(
     `INSERT INTO finance_student_accounts (
       organization_id, school_id, student_id, fee_assignment_id,
       academic_year, total_fee, amount_paid, outstanding_amount, status
@@ -187,9 +194,7 @@ async function createAssignmentAndAccount(
       input.academicYear,
       totalFee,
     ],
-  );
-
-  const account = accountRows[0]!;
+  ))[0]!;
 
   const invoice = await createAnnualInvoice(db, organizationId, schoolId, {
     studentId: input.studentId,
@@ -199,12 +204,37 @@ async function createAssignmentAndAccount(
     createdBy: input.assignedBy,
   });
 
+  // When the per-year account is REUSED (a second/third structure for the same
+  // student+year), fold THIS structure's total into the shared account container
+  // so its aggregate columns stay authoritative: collections decrement
+  // finance_student_accounts.outstanding_amount (finance_collections_repository),
+  // and the dashboard + defaulters/recovery read it. Without this the account
+  // would under-report the student's true dues by the new structure's amount and
+  // a later collection against the new invoice would drive the account balance
+  // wrong. A freshly-INSERTED account already carries this structure's total, so
+  // only the reuse path needs the bump. amount_paid is untouched (new invoice = 0
+  // paid); status re-opens because there is fresh outstanding.
+  let effectiveAccount = account;
+  if (reuseAccount) {
+    const bumped = await db.queryObject<FinanceStudentAccountRow>(
+      `UPDATE finance_student_accounts SET
+         total_fee = total_fee + $1,
+         outstanding_amount = outstanding_amount + $1,
+         status = 'open',
+         updated_at = timezone('utc', now())
+       WHERE id = $2 AND organization_id = $3 AND school_id = $4
+       RETURNING *`,
+      [totalFee, reuseAccount.id, organizationId, schoolId],
+    );
+    effectiveAccount = bumped[0] ?? account;
+  }
+
   return await enrichAssignmentWithAccount(
     db,
     organizationId,
     schoolId,
     assignment,
-    account,
+    effectiveAccount,
     invoice,
   );
 }
