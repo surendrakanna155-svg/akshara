@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../../parent/timetable/timetable_models.dart';
 import '../../parent/timetable/widgets/day_selector_strip.dart';
+import '../reports/teacher_report_exporters.dart';
+import '../reports/teacher_report_share_sheet.dart';
 import 'teacher_timetable_provider.dart';
 import 'widgets/timetable_period_row.dart';
 import '../../../theme/breakpoints.dart';
@@ -34,6 +38,27 @@ class TeacherTimetableScreen extends ConsumerWidget {
         unreadNotifications: data.unreadNotifications,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
+        additionalActions: [
+          // TCH-7 — share/export the weekly timetable (XCT-1 grid CSV/PDF).
+          IconButton(
+            key: QaTestKeys.teacherTimetableExportButton,
+            tooltip: 'Export timetable',
+            onPressed: data.days.isEmpty
+                ? null
+                : () {
+                    final exporters = TeacherReportExporters(
+                      ref.read(aksharaReportExportServiceProvider),
+                    );
+                    showTeacherExportSheet(
+                      context,
+                      title: 'Export weekly timetable',
+                      onCsv: () => exporters.shareTimetableCsv(data),
+                      onPdf: () => exporters.shareTimetablePdf(data),
+                    );
+                  },
+            icon: const Icon(Icons.ios_share_outlined),
+          ),
+        ],
       ),
       body: isLoading
           ? const AksharaLoadingState()

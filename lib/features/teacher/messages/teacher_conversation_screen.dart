@@ -7,6 +7,7 @@ import '../../../theme/theme_extensions.dart';
 import 'message_models.dart';
 import '../teacher_requests.dart';
 import '../teacher_mutations_provider.dart';
+import '../teacher_unread_provider.dart';
 import 'teacher_messages_provider.dart';
 
 /// TA-06 conversation thread view.
@@ -31,7 +32,7 @@ class TeacherConversationScreen extends ConsumerWidget {
       appBar: AksharaAppBar(
         titleText: thread?.parentName ?? 'Conversation',
         subtitle: thread?.studentName,
-        unreadNotifications: 1,
+        unreadNotifications: ref.watch(teacherUnreadNotificationsProvider),
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),

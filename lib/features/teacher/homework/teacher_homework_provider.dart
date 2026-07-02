@@ -45,6 +45,14 @@ final teacherHomeworkAssignmentProvider = StateProvider<String>(
   (ref) => 'hw_8a_1',
 );
 
+/// TCH-6 — the review-list filter. `pendingOnly` is set when the teacher opens
+/// homework via the dashboard "HW to review" deep-link (`?filter=pending`), so
+/// the review screen lands directly on the still-unreviewed submissions.
+enum HomeworkReviewFilter { all, pendingOnly }
+
+final teacherHomeworkReviewFilterProvider =
+    StateProvider<HomeworkReviewFilter>((ref) => HomeworkReviewFilter.all);
+
 final teacherHomeworkLoadingProvider = StateProvider<bool>((ref) => false);
 final teacherHomeworkErrorProvider = StateProvider<bool>((ref) => false);
 final teacherHomeworkEmptyProvider = StateProvider<bool>((ref) => false);

@@ -101,6 +101,7 @@ void main() {
       const routes = <(String, String)>[
         (RouteNames.teacherDashboard, 'Dashboard'),
         (RouteNames.teacherAttendance, 'Mark Attendance'),
+        (RouteNames.teacherMyAttendance, 'My Attendance'),
         (RouteNames.teacherTimetable, 'Timetable'),
         (RouteNames.teacherHomework, 'Homework Review'),
         (RouteNames.teacherExams, 'Exams'),

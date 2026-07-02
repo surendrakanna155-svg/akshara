@@ -1,4 +1,5 @@
 import '../../../../../features/teacher/attendance/attendance_models.dart';
+import '../../../../../features/teacher/attendance/my_attendance_models.dart';
 import '../../../../../features/teacher/dashboard/teacher_dashboard_provider.dart';
 import '../../../../../features/teacher/exams/exam_models.dart';
 import '../../../../../features/teacher/homework/homework_models.dart';
@@ -285,6 +286,52 @@ class TeacherMapper {
     return [for (final item in dto.items) toMessageThread(item)];
   }
 
+  MyAttendanceHistory toMyAttendanceHistory(MyAttendanceHistoryDto dto) {
+    final raw = dto.raw;
+    return MyAttendanceHistory(
+      month: raw['month'] as String? ?? '',
+      days: _mapMyAttendanceDays(raw['days'] as List<dynamic>? ?? const []),
+      summary: _mapMyAttendanceSummary(
+        raw['summary'] as Map<String, dynamic>? ?? const {},
+      ),
+      today: _mapMyAttendanceDay(raw['today']),
+      yesterday: _mapMyAttendanceDay(raw['yesterday']),
+    );
+  }
+
+  List<MyAttendanceDay> _mapMyAttendanceDays(List<dynamic> items) {
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>) _requireMyAttendanceDay(item),
+    ];
+  }
+
+  MyAttendanceDay? _mapMyAttendanceDay(dynamic raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    return _requireMyAttendanceDay(raw);
+  }
+
+  MyAttendanceDay _requireMyAttendanceDay(Map<String, dynamic> raw) {
+    return MyAttendanceDay(
+      date: raw['date'] as String? ?? '',
+      checkIn: raw['checkIn'] as String?,
+      checkOut: raw['checkOut'] as String?,
+      workingMinutes: (raw['workingMinutes'] as num?)?.toInt(),
+      status: MyAttendanceStatusX.fromCode(raw['status'] as String?),
+      manualOverride: raw['manualOverride'] as bool? ?? false,
+    );
+  }
+
+  MyAttendanceSummary _mapMyAttendanceSummary(Map<String, dynamic> raw) {
+    return MyAttendanceSummary(
+      presentDays: (raw['presentDays'] as num?)?.toInt() ?? 0,
+      lateDays: (raw['lateDays'] as num?)?.toInt() ?? 0,
+      absentDays: (raw['absentDays'] as num?)?.toInt() ?? 0,
+      workingDaysInMonth: (raw['workingDaysInMonth'] as num?)?.toInt() ?? 0,
+      avgWorkingMinutes: (raw['avgWorkingMinutes'] as num?)?.toInt(),
+    );
+  }
+
   MessageThread toMessageThread(MessageThreadDto dto) {
     final raw = dto.raw;
     return MessageThread(
@@ -467,6 +514,9 @@ class TeacherMapper {
             classLabel: item['classLabel'] as String? ?? '',
             roomLabel: item['roomLabel'] as String? ?? '',
             status: TeacherEnumCodec.parseClassScheduleStatus(item['status'] as String?),
+            substituteTeacherUserId: item['substituteTeacherUserId'] as String?,
+            substituteTeacherName: item['substituteTeacherName'] as String?,
+            coveringForTeacherName: item['coveringForTeacherName'] as String?,
           ),
     ];
   }

@@ -1,5 +1,6 @@
 import 'package:akshara_erp/core/repositories/api/teacher/dto/teacher_enum_codec.dart';
 import 'package:akshara_erp/features/teacher/attendance/attendance_models.dart';
+import 'package:akshara_erp/features/teacher/attendance/my_attendance_models.dart';
 import 'package:akshara_erp/features/teacher/dashboard/teacher_dashboard_provider.dart';
 import 'package:akshara_erp/features/teacher/exams/exam_models.dart';
 import 'package:akshara_erp/features/teacher/homework/homework_models.dart';
@@ -197,6 +198,33 @@ class TeacherFixtureBuilder {
       'casualRemaining': data.casualRemaining,
       'sickRemaining': data.sickRemaining,
       'earnedRemaining': data.earnedRemaining,
+    });
+  }
+
+  // TCH-9 — the self-attendance history payload.
+  Map<String, dynamic> myAttendanceDay(MyAttendanceDay day) => {
+        'date': day.date,
+        'checkIn': day.checkIn,
+        'checkOut': day.checkOut,
+        'workingMinutes': day.workingMinutes,
+        'status': day.status.name,
+        'manualOverride': day.manualOverride,
+      };
+
+  Map<String, dynamic> myAttendanceEnvelope(MyAttendanceHistory data) {
+    return envelope({
+      'month': data.month,
+      'days': [for (final d in data.days) myAttendanceDay(d)],
+      'summary': {
+        'presentDays': data.summary.presentDays,
+        'lateDays': data.summary.lateDays,
+        'absentDays': data.summary.absentDays,
+        'workingDaysInMonth': data.summary.workingDaysInMonth,
+        'avgWorkingMinutes': data.summary.avgWorkingMinutes,
+      },
+      'today': data.today == null ? null : myAttendanceDay(data.today!),
+      'yesterday':
+          data.yesterday == null ? null : myAttendanceDay(data.yesterday!),
     });
   }
 

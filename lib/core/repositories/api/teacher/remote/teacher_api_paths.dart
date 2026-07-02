@@ -19,6 +19,10 @@ abstract final class TeacherApiPaths {
   static const String attendanceDraft = '$base/attendance/draft';
   static const String attendanceSubmit = '$base/attendance/submit';
 
+  // TCH-9 — the caller's OWN staff attendance history (self-scoped, read-only).
+  // Supports ?month=YYYY-MM (defaults to the current month server-side).
+  static const String myAttendanceHistory = '/staff-attendance/my-history';
+
   static String homeworkReview(String submissionId) =>
       '$base/homework/submissions/$submissionId/review';
 

@@ -10,22 +10,52 @@ import '../../../theme/theme_extensions.dart';
 import '../communication/teacher_teaching_context_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
+import '../teacher_unread_provider.dart';
 import 'homework_models.dart';
 import 'teacher_homework_provider.dart';
 import 'widgets/homework_submission_row.dart';
 import '../../../theme/breakpoints.dart';
 
 /// Teacher homework review — TA-04.
-class TeacherHomeworkScreen extends ConsumerWidget {
-  const TeacherHomeworkScreen({super.key, this.onNotificationsTap});
+class TeacherHomeworkScreen extends ConsumerStatefulWidget {
+  const TeacherHomeworkScreen({
+    super.key,
+    this.onNotificationsTap,
+    this.initialPendingOnly = false,
+  });
 
   final VoidCallback? onNotificationsTap;
+
+  /// TCH-6 — when true (the `?filter=pending` deep-link from the "HW to review"
+  /// task), the review list opens filtered to still-unreviewed submissions.
+  final bool initialPendingOnly;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
   static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeacherHomeworkScreen> createState() =>
+      _TeacherHomeworkScreenState();
+}
+
+class _TeacherHomeworkScreenState extends ConsumerState<TeacherHomeworkScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Apply the deep-link filter once, after the first frame, so it survives the
+    // navigation into this screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(teacherHomeworkReviewFilterProvider.notifier).state =
+          widget.initialPendingOnly
+              ? HomeworkReviewFilter.pendingOnly
+              : HomeworkReviewFilter.all;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final onNotificationsTap = widget.onNotificationsTap;
     final assignments = ref.watch(teacherHomeworkAssignmentsProvider);
     final selected = ref.watch(teacherHomeworkProvider);
     final isLoading = ref.watch(teacherHomeworkLoadingProvider);
@@ -37,7 +67,7 @@ class TeacherHomeworkScreen extends ConsumerWidget {
       appBar: AksharaAppBar(
         titleText: 'Homework Review',
         subtitle: teaching.appBarSubtitle,
-        unreadNotifications: 1,
+        unreadNotifications: ref.watch(teacherUnreadNotificationsProvider),
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
         additionalActions: [
@@ -368,7 +398,7 @@ class _HomeworkBodyState extends ConsumerState<_HomeworkBody> {
   }
 }
 
-class _SubmissionsTab extends StatelessWidget {
+class _SubmissionsTab extends ConsumerWidget {
   const _SubmissionsTab({
     required this.assignment,
     required this.selected,
@@ -388,10 +418,17 @@ class _SubmissionsTab extends StatelessWidget {
   final double pad;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final pendingSubmissions = assignment.submissions
         .where((s) => s.status == HomeworkReviewStatus.pending)
         .toList();
+
+    // TCH-6 — when the pending-only deep-link filter is active, the list shows
+    // just the unreviewed submissions.
+    final pendingOnly = ref.watch(teacherHomeworkReviewFilterProvider) ==
+        HomeworkReviewFilter.pendingOnly;
+    final visibleSubmissions =
+        pendingOnly ? pendingSubmissions : assignment.submissions;
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -408,6 +445,19 @@ class _SubmissionsTab extends StatelessWidget {
             trailingLabel: assignment.dueLabel,
             fixedHeight: false,
           ),
+          if (pendingOnly) ...[
+            const SizedBox(height: AksharaSpacing.s2),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: InputChip(
+                avatar: const Icon(Icons.filter_alt_outlined, size: 18),
+                label: const Text('Pending review only'),
+                onDeleted: () => ref
+                    .read(teacherHomeworkReviewFilterProvider.notifier)
+                    .state = HomeworkReviewFilter.all,
+              ),
+            ),
+          ],
           const SizedBox(height: AksharaSpacing.s2),
           Row(
             children: [
@@ -435,28 +485,32 @@ class _SubmissionsTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AksharaSpacing.s3),
-          if (assignment.submissions.isEmpty)
-            const AksharaEmptyState(
-              message: 'No submissions yet.',
-              icon: Icons.assignment_outlined,
+          if (visibleSubmissions.isEmpty)
+            AksharaEmptyState(
+              message: pendingOnly
+                  ? 'No submissions pending review.'
+                  : 'No submissions yet.',
+              icon: pendingOnly
+                  ? Icons.task_alt_outlined
+                  : Icons.assignment_outlined,
               compact: true,
             )
           else
             Column(
               children: [
-                for (var i = 0; i < assignment.submissions.length; i++) ...[
+                for (var i = 0; i < visibleSubmissions.length; i++) ...[
                   Row(
                     children: [
-                      if (assignment.submissions[i].status ==
+                      if (visibleSubmissions[i].status ==
                           HomeworkReviewStatus.pending)
                         Checkbox(
                           key: QaTestKeys.teacherHomeworkSubmissionCheckbox(
-                            assignment.submissions[i].id,
+                            visibleSubmissions[i].id,
                           ),
                           value:
-                              selected.contains(assignment.submissions[i].id),
+                              selected.contains(visibleSubmissions[i].id),
                           onChanged: (value) => onToggle(
-                            assignment.submissions[i].id,
+                            visibleSubmissions[i].id,
                             value ?? false,
                           ),
                         )
@@ -464,16 +518,16 @@ class _SubmissionsTab extends StatelessWidget {
                         const SizedBox(width: 48),
                       Expanded(
                         child: HomeworkSubmissionRow(
-                          submission: assignment.submissions[i],
-                          onReview: assignment.submissions[i].status ==
+                          submission: visibleSubmissions[i],
+                          onReview: visibleSubmissions[i].status ==
                                   HomeworkReviewStatus.pending
-                              ? () => onReview(assignment.submissions[i])
+                              ? () => onReview(visibleSubmissions[i])
                               : null,
                         ),
                       ),
                     ],
                   ),
-                  if (i < assignment.submissions.length - 1)
+                  if (i < visibleSubmissions.length - 1)
                     Divider(color: context.colors.outlineVariant),
                 ],
               ],

@@ -446,6 +446,26 @@ abstract final class QaTestKeys {
   ) =>
       ValueKey<String>('teacher_attendance_mark_${mark}_$studentId');
 
+  // TCH-9 — My Attendance (read-only staff self-service).
+  static const teacherMyAttendanceScreen =
+      ValueKey<String>('teacher_my_attendance_screen');
+
+  static const teacherMyAttendancePrevMonthButton =
+      ValueKey<String>('teacher_my_attendance_prev_month');
+
+  static const teacherMyAttendanceNextMonthButton =
+      ValueKey<String>('teacher_my_attendance_next_month');
+
+  static ValueKey<String> teacherMyAttendanceDayRow(String date) =>
+      ValueKey<String>('teacher_my_attendance_day_$date');
+
+  // TCH-3 / TCH-7 — XCT-1 export triggers on teacher attendance & timetable.
+  static const teacherAttendanceExportButton =
+      ValueKey<String>('teacher_attendance_export_button');
+
+  static const teacherTimetableExportButton =
+      ValueKey<String>('teacher_timetable_export_button');
+
   // --- Finance E2E journey ---
   static ValueKey<String> financeHandoffQueueRow(String studentName) =>
       ValueKey<String>(

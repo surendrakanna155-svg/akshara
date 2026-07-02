@@ -14,6 +14,7 @@ import '../../academics/exam_admin/exam_administration_provider.dart';
 import '../communication/teacher_teaching_context_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
+import '../teacher_unread_provider.dart';
 import 'exam_models.dart';
 
 final teacherExamSectionProvider = StateProvider<TeacherExamSection>(
@@ -112,12 +113,13 @@ List<ExamMarkEntry> _marks(Ref ref) {
 }
 
 final teacherExamsProvider = Provider<TeacherExamsData>((ref) {
+  final unread = ref.watch(teacherUnreadNotificationsProvider);
   if (ref.watch(teacherExamsEmptyProvider)) {
-    return const TeacherExamsData(
-      upcomingExams: [],
-      markEntries: [],
+    return TeacherExamsData(
+      upcomingExams: const [],
+      markEntries: const [],
       classAveragePercent: 0,
-      unreadNotifications: 1,
+      unreadNotifications: unread,
     );
   }
 
@@ -145,7 +147,7 @@ final teacherExamsProvider = Provider<TeacherExamsData>((ref) {
     upcomingExams: upcoming,
     markEntries: marks,
     classAveragePercent: avg,
-    unreadNotifications: 1,
+    unreadNotifications: unread,
   );
 });
 

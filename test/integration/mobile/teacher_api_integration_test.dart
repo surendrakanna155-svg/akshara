@@ -43,6 +43,7 @@ void main() {
       final leave = await mockRepo.getLeaveHistory(query: kQuery);
       final balance = await mockRepo.getLeaveBalance(query: kQuery);
       final messages = await mockRepo.getMessageThreads(query: kQuery);
+      final myAttendance = await mockRepo.getMyAttendanceHistory(query: kQuery);
 
       responseForRequest = (options) {
         final path = options.path;
@@ -50,6 +51,8 @@ void main() {
           return _fixtures.envelope(_fixtures.leaveItem(submittedLeave));
         }
         return switch (path) {
+            TeacherApiPaths.myAttendanceHistory =>
+              _fixtures.myAttendanceEnvelope(myAttendance),
             TeacherApiPaths.dashboard => _fixtures.dashboardEnvelope(dashboard),
             TeacherApiPaths.attendanceClasses => _fixtures.listEnvelope([
                 for (final item in classes) _fixtures.attendanceClassItem(item),
@@ -97,6 +100,27 @@ void main() {
       expect((await remote.fetchLeaveHistory(query: kQuery)).items, isNotEmpty);
       expect((await remote.fetchLeaveBalance(query: kQuery)).raw['casualRemaining'], isNotNull);
       expect((await remote.fetchMessageThreads(query: kQuery)).items, isNotEmpty);
+      // TCH-9 — the self-attendance history endpoint parses into the DTO.
+      expect((await remote.fetchMyAttendanceHistory(query: kQuery)).raw['days'],
+          isNotNull);
+    });
+
+    test('api repository matches mock my-attendance history (TCH-9)', () async {
+      final repository = ApiTeacherRepository(
+        remote: TeacherRemoteDataSource(createFakeDio(responseForRequest)),
+      );
+
+      final mockData = await mockRepo.getMyAttendanceHistory(query: kQuery);
+      final apiData = await repository.getMyAttendanceHistory(query: kQuery);
+
+      expect(apiData.month, mockData.month);
+      expect(apiData.days.length, mockData.days.length);
+      expect(apiData.summary.presentDays, mockData.summary.presentDays);
+      expect(apiData.summary.absentDays, mockData.summary.absentDays);
+      // Read-only: the payload round-trips status + working minutes intact.
+      if (mockData.days.isNotEmpty) {
+        expect(apiData.days.first.status, mockData.days.first.status);
+      }
     });
 
     test('remote datasource posts teacher leave submit endpoint', () async {

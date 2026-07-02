@@ -8,6 +8,7 @@ import '../../../core/tenant/tenant_provider.dart';
 import '../communication/teacher_teaching_context_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
+import '../teacher_unread_provider.dart';
 import 'attendance_models.dart';
 
 final teacherAttendanceClassProvider = StateProvider<String>(
@@ -61,12 +62,13 @@ Map<String, List<TeacherAttendanceStudent>> _studentsMap(Ref ref) {
 final teacherAttendanceProvider = Provider<TeacherAttendanceData>((ref) {
   ref.watch(_attendanceSyncBridgeProvider);
   ref.watch(attendanceSyncRevisionProvider);
+  final unread = ref.watch(teacherUnreadNotificationsProvider);
   if (ref.watch(teacherAttendanceEmptyProvider)) {
-    return const TeacherAttendanceData(
-      classes: [],
-      students: [],
+    return TeacherAttendanceData(
+      classes: const [],
+      students: const [],
       selectedClassId: '',
-      unreadNotifications: 1,
+      unreadNotifications: unread,
     );
   }
 
@@ -87,7 +89,7 @@ final teacherAttendanceProvider = Provider<TeacherAttendanceData>((ref) {
     classes: classes,
     students: students,
     selectedClassId: classId,
-    unreadNotifications: 1,
+    unreadNotifications: unread,
     draftSavedAt: ref.watch(teacherAttendanceDraftSavedProvider),
     isSubmitted: ref.watch(teacherAttendanceSubmittedProvider) ||
         MockAttendanceSyncStore.instance.hasTeacherSubmission,

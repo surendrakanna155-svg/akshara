@@ -1,4 +1,5 @@
 import '../../../features/teacher/attendance/attendance_models.dart';
+import '../../../features/teacher/attendance/my_attendance_models.dart';
 import '../../../features/teacher/dashboard/teacher_dashboard_provider.dart';
 import '../../../features/teacher/exams/exam_models.dart';
 import '../../../features/teacher/homework/homework_models.dart';
@@ -135,5 +136,14 @@ abstract class TeacherRepository {
     required RepositoryQuery query,
     String? fromDate,
     String? toDate,
+  });
+
+  /// TCH-9 — the caller's OWN staff attendance history for a month (defaults to
+  /// the current month when [month] is null). READ-ONLY, self-scoped: the server
+  /// derives it from the append-only check-in ledger and never returns another
+  /// user's rows.
+  Future<MyAttendanceHistory> getMyAttendanceHistory({
+    required RepositoryQuery query,
+    String? month,
   });
 }

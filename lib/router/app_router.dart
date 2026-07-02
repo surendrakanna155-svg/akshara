@@ -50,6 +50,7 @@ import '../features/student_app/profile/student_profile_screen.dart';
 import '../features/student_app/shell/student_shell.dart';
 import '../features/student_app/timetable/student_timetable_screen.dart';
 import '../features/teacher/attendance/teacher_attendance_screen.dart';
+import '../features/teacher/attendance/teacher_my_attendance_screen.dart';
 import '../features/teacher/dashboard/teacher_dashboard_screen.dart';
 import '../features/teacher/dashboard/teacher_class_teacher_dashboard_screen.dart';
 import '../features/teacher/student_risk/teacher_student_risk_screen.dart';
@@ -425,6 +426,13 @@ GoRouter createAppRouter({
             name: 'teacherAttendance',
             pageBuilder: (context, state) => NoTransitionPage(
               child: teacherAttendanceRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.teacherMyAttendance,
+            name: 'teacherMyAttendance',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: teacherMyAttendanceRouteBuilder(context, state),
             ),
           ),
           GoRoute(
@@ -2729,7 +2737,20 @@ VoidCallback _teacherNotificationsTap(BuildContext context) =>
 
 Widget teacherAttendanceRouteBuilder(
     BuildContext context, GoRouterState state) {
+  // TCH-1 — honour the ?class=<label> deep-link from a today-period tap by
+  // pre-selecting that class in the roster.
+  final preselect = state.uri.queryParameters['class'];
   return TeacherAttendanceScreen(
+    onNotificationsTap: _teacherNotificationsTap(context),
+    preselectClassLabel:
+        (preselect != null && preselect.isNotEmpty) ? preselect : null,
+  );
+}
+
+/// TCH-9 — the teacher's OWN staff attendance history (read-only).
+Widget teacherMyAttendanceRouteBuilder(
+    BuildContext context, GoRouterState state) {
+  return TeacherMyAttendanceScreen(
     onNotificationsTap: _teacherNotificationsTap(context),
   );
 }
@@ -2741,8 +2762,11 @@ Widget teacherTimetableRouteBuilder(BuildContext context, GoRouterState state) {
 }
 
 Widget teacherHomeworkRouteBuilder(BuildContext context, GoRouterState state) {
+  // TCH-6 — honour the ?filter=pending deep-link from the "HW to review" task.
+  final pendingOnly = state.uri.queryParameters['filter'] == 'pending';
   return TeacherHomeworkScreen(
     onNotificationsTap: _teacherNotificationsTap(context),
+    initialPendingOnly: pendingOnly,
   );
 }
 

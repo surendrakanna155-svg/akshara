@@ -46,6 +46,8 @@ abstract final class RouteNames {
   static const String teacherClassTeacherDashboard =
       '/teacher/class-teacher-dashboard';
   static const String teacherAttendance = '/teacher/attendance';
+  // TCH-9 — the teacher's OWN staff attendance history (read-only).
+  static const String teacherMyAttendance = '/teacher/my-attendance';
   static const String teacherTimetable = '/teacher/timetable';
   static const String teacherHomework = '/teacher/homework';
   static const String teacherHomeworkCreate = '/teacher/homework/create';

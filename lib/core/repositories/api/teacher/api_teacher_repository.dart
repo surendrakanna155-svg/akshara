@@ -1,4 +1,5 @@
 import '../../../../features/teacher/attendance/attendance_models.dart';
+import '../../../../features/teacher/attendance/my_attendance_models.dart';
 import '../../../../features/teacher/dashboard/teacher_dashboard_provider.dart';
 import '../../../../features/teacher/exams/exam_models.dart';
 import '../../../../features/teacher/homework/homework_models.dart';
@@ -286,5 +287,14 @@ class ApiTeacherRepository implements TeacherRepository {
       fromDate: fromDate,
       toDate: toDate,
     );
+  }
+
+  @override
+  Future<MyAttendanceHistory> getMyAttendanceHistory({
+    required RepositoryQuery query,
+    String? month,
+  }) async {
+    final dto = await _remote.fetchMyAttendanceHistory(query: query, month: month);
+    return _mapper.toMyAttendanceHistory(dto);
   }
 }

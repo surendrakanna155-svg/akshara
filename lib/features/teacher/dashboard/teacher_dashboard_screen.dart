@@ -7,6 +7,7 @@ import '../../../theme/spacing.dart';
 import 'teacher_dashboard_provider.dart';
 import 'widgets/attendance_summary_card.dart';
 import 'widgets/class_teacher_card.dart';
+import 'widgets/cover_alert_card.dart';
 import 'widgets/pending_tasks_section.dart';
 import 'widgets/today_schedule_card.dart';
 
@@ -119,6 +120,8 @@ class _MobileBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // TCH-4 — cover-duty alert (self-hiding when there is no cover today).
+        CoverAlertCard(onOpenTimetable: () => onNavigate('timetable')),
         TodayScheduleCard(
           classes: data.todaySchedule,
           onTimetableTap: () => onNavigate('timetable'),
@@ -172,6 +175,8 @@ class _TabletSplitBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // TCH-4 — cover-duty alert (self-hiding when there is no cover today).
+        CoverAlertCard(onOpenTimetable: () => onNavigate('timetable')),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -10,6 +10,7 @@ import '../../../theme/theme_extensions.dart';
 import '../communication/teacher_teaching_context_provider.dart';
 import '../teacher_mutations_provider.dart';
 import '../teacher_requests.dart';
+import '../teacher_unread_provider.dart';
 
 /// TA-04 — Homework create persisted via [createTeacherHomeworkProvider].
 class TeacherHomeworkCreateScreen extends ConsumerStatefulWidget {
@@ -120,7 +121,7 @@ class _TeacherHomeworkCreateScreenState
         titleText: 'Create Homework',
         showAi: true,
         showProfile: true,
-        unreadNotifications: 1,
+        unreadNotifications: ref.watch(teacherUnreadNotificationsProvider),
         onAiTap: () => context.push(RouteNames.aiAssistant),
         onNotificationsTap: () => context.push(RouteNames.parentNotifications),
         onProfileTap: () => context.go(RouteNames.teacherDashboard),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -38,29 +40,41 @@ class TeacherTodayScreen extends ConsumerWidget {
                     borderRadius: AksharaRadius.card,
                     side: BorderSide(color: colors.outlineVariant),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AksharaSpacing.s3),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('${p.periodLabel} · ${p.classLabel}',
-                                  style: text.titleSmall),
-                              const SizedBox(height: 2),
-                              Text(p.subject,
-                                  style: text.bodySmall.copyWith(
-                                      color: colors.onSurfaceVariant)),
-                            ],
+                  child: InkWell(
+                    // TCH-1 — tapping a period jumps to attendance marking with
+                    // this class pre-selected.
+                    borderRadius: AksharaRadius.card,
+                    onTap: () => context.go(
+                      '${RouteNames.teacherAttendance}'
+                      '?class=${Uri.encodeQueryComponent(p.classLabel)}',
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(AksharaSpacing.s3),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${p.periodLabel} · ${p.classLabel}',
+                                    style: text.titleSmall),
+                                const SizedBox(height: 2),
+                                Text(p.subject,
+                                    style: text.bodySmall.copyWith(
+                                        color: colors.onSurfaceVariant)),
+                              ],
+                            ),
                           ),
-                        ),
-                        if (p.isSubstitute)
-                          AksharaStatusChip(
-                            label: 'Covering ${p.originalTeacherName}',
-                            tone: KpiAccent.warning,
-                          ),
-                      ],
+                          if (p.isSubstitute)
+                            AksharaStatusChip(
+                              label: 'Covering ${p.originalTeacherName}',
+                              tone: KpiAccent.warning,
+                            ),
+                          const SizedBox(width: AksharaSpacing.s2),
+                          Icon(Icons.chevron_right,
+                              color: colors.onSurfaceVariant),
+                        ],
+                      ),
                     ),
                   ),
                 );

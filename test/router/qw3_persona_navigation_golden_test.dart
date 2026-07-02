@@ -112,8 +112,10 @@ void main() {
   // ── Teacher ────────────────────────────────────────────────────────────────
   const teacherMap = <String, String>{
     'mark_attendance': RouteNames.teacherAttendance,
-    'staff_check_in': RouteNames.teacherAttendance,
-    'staff_check_in_now': RouteNames.teacherAttendance,
+    // TCH-9 — the check-in card now opens the read-only My Attendance history.
+    'my_attendance': RouteNames.teacherMyAttendance,
+    'staff_check_in': RouteNames.teacherMyAttendance,
+    'staff_check_in_now': RouteNames.teacherMyAttendance,
     'create_homework': RouteNames.teacherHomeworkCreate,
     'hw_review': RouteNames.teacherHomework,
     'homework': RouteNames.teacherHomework,

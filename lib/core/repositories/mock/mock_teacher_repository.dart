@@ -1,4 +1,5 @@
 import '../../../features/teacher/attendance/attendance_models.dart';
+import '../../../features/teacher/attendance/my_attendance_models.dart';
 import '../../../features/teacher/dashboard/teacher_dashboard_provider.dart';
 import '../../../features/teacher/exams/exam_models.dart';
 import '../../../features/teacher/homework/homework_models.dart';
@@ -171,7 +172,8 @@ class MockTeacherRepository implements TeacherRepository {
       teacherName: 'Priya Sharma',
       weekRangeLabel: '1 Jun - 5 Jun 2026',
       days: days,
-      unreadNotifications: 1,
+      // Real unread count is applied in teacherTimetableProvider; never fabricate.
+      unreadNotifications: 0,
     );
   }
 
@@ -639,6 +641,21 @@ class MockTeacherRepository implements TeacherRepository {
     ];
   }
 
+  @override
+  Future<MyAttendanceHistory> getMyAttendanceHistory({
+    required RepositoryQuery query,
+    String? month,
+  }) async {
+    // TCH-9 — a deterministic self-history for the requested month (defaults to
+    // the current month), mirroring the backend's day semantics: present/late/
+    // absent on working days, Sundays are holidays, future days are omitted.
+    final now = DateTime.now();
+    final resolvedMonth = (month == null || month.isEmpty)
+        ? '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}'
+        : month;
+    return _buildMockMyAttendance(resolvedMonth, now);
+  }
+
   Future<void> _ensureLeaveHistory() async {
     _store.leaveRequests ??= List<TeacherLeaveRequest>.from(_mockHistory());
   }
@@ -865,6 +882,8 @@ List<TeacherTimetableDay> _mockDays() {
           classLabel: '8-A',
           roomLabel: 'Room 204',
           status: ClassScheduleStatus.upcoming,
+          // TCH-4 — this teacher is covering Mrs. Rao's class this period.
+          coveringForTeacherName: 'Mrs. Rao',
         ),
       ],
     ),
@@ -930,6 +949,109 @@ List<TeacherLeaveRequest> _mockHistory() {
 
 
 
+
+/// TCH-9 mock — builds a deterministic self-history for [month] (`YYYY-MM`),
+/// treating [asOf] as "today". Mirrors the backend contract: Sundays are
+/// holidays; working days are present, except a repeating late/absent pattern
+/// so the summary chips and day list have something to show; days after `asOf`
+/// (when `asOf` is in [month]) are omitted so the current month never reports
+/// the future as absent.
+MyAttendanceHistory _buildMockMyAttendance(String month, DateTime asOf) {
+  final parts = month.split('-');
+  final year = int.tryParse(parts.isNotEmpty ? parts[0] : '') ?? asOf.year;
+  final mon = int.tryParse(parts.length > 1 ? parts[1] : '') ?? asOf.month;
+  final daysInMonth = DateTime(year, mon + 1, 0).day;
+
+  final asOfDay = DateTime(asOf.year, asOf.month, asOf.day);
+  final isCurrentMonth = asOf.year == year && asOf.month == mon;
+
+  final days = <MyAttendanceDay>[];
+  var presentDays = 0;
+  var lateDays = 0;
+  var absentDays = 0;
+  var workingDaysInMonth = 0;
+  var minutesSum = 0;
+  var minutesCount = 0;
+
+  String two(int v) => v.toString().padLeft(2, '0');
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    final date = DateTime(year, mon, d);
+    final iso = '${two(year).padLeft(4, '0')}-${two(mon)}-${two(d)}';
+    final isHoliday = date.weekday == DateTime.sunday;
+    if (!isHoliday) workingDaysInMonth++;
+    if (isCurrentMonth && date.isAfter(asOfDay)) continue;
+
+    if (isHoliday) {
+      days.add(MyAttendanceDay(date: iso, status: MyAttendanceStatus.holiday));
+      continue;
+    }
+
+    // Deterministic pattern: every 7th working-ish day absent, every 5th late.
+    final absent = d % 7 == 0;
+    final late = !absent && d % 5 == 0;
+
+    if (absent) {
+      absentDays++;
+      days.add(MyAttendanceDay(date: iso, status: MyAttendanceStatus.absent));
+      continue;
+    }
+
+    final inHour = late ? 9 : 8;
+    final inMinute = late ? 35 : 55;
+    final checkIn = '${iso}T${two(inHour)}:${two(inMinute)}:00Z';
+    final checkOut = '${iso}T16:${two(late ? 40 : 30)}:00Z';
+    final workingMinutes =
+        DateTime.parse(checkOut).difference(DateTime.parse(checkIn)).inMinutes;
+    minutesSum += workingMinutes;
+    minutesCount++;
+    if (late) {
+      lateDays++;
+    } else {
+      presentDays++;
+    }
+    days.add(
+      MyAttendanceDay(
+        date: iso,
+        checkIn: checkIn,
+        checkOut: checkOut,
+        workingMinutes: workingMinutes,
+        status: late ? MyAttendanceStatus.late : MyAttendanceStatus.present,
+        manualOverride: d % 11 == 0,
+      ),
+    );
+  }
+
+  MyAttendanceDay? findDay(DateTime? target) {
+    if (target == null) return null;
+    final iso =
+        '${two(target.year).padLeft(4, '0')}-${two(target.month)}-${two(target.day)}';
+    for (final day in days) {
+      if (day.date == iso) return day;
+    }
+    return null;
+  }
+
+  final today = isCurrentMonth ? findDay(asOfDay) : null;
+  final yesterday = isCurrentMonth
+      ? findDay(asOfDay.subtract(const Duration(days: 1)))
+      : null;
+
+  return MyAttendanceHistory(
+    month: month,
+    days: days,
+    summary: MyAttendanceSummary(
+      presentDays: presentDays,
+      lateDays: lateDays,
+      absentDays: absentDays,
+      workingDaysInMonth: workingDaysInMonth,
+      avgWorkingMinutes:
+          minutesCount > 0 ? (minutesSum / minutesCount).round() : null,
+    ),
+    today: today,
+    yesterday: yesterday,
+  );
+}
 
 List<MessageThread> _mockThreads() {
   return const [

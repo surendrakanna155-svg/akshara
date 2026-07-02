@@ -8,6 +8,7 @@ import '../../../theme/theme_extensions.dart';
 import 'leave_models.dart';
 import 'teacher_leave_provider.dart';
 import '../communication/teacher_teaching_context_provider.dart';
+import '../teacher_unread_provider.dart';
 import '../../../theme/breakpoints.dart';
 
 /// Teacher leave requests — TA-07.
@@ -34,7 +35,7 @@ class TeacherLeaveScreen extends ConsumerWidget {
       appBar: AksharaAppBar(
         titleText: 'Leave',
         subtitle: teaching.teacherName,
-        unreadNotifications: 1,
+        unreadNotifications: ref.watch(teacherUnreadNotificationsProvider),
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),

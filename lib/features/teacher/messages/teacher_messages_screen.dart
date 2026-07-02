@@ -9,6 +9,7 @@ import '../../../theme/theme_extensions.dart';
 import 'message_models.dart';
 import 'teacher_messages_provider.dart';
 import '../communication/teacher_teaching_context_provider.dart';
+import '../teacher_unread_provider.dart';
 import '../../../theme/breakpoints.dart';
 
 /// Teacher messages inbox — TA-06.
@@ -39,7 +40,7 @@ class TeacherMessagesScreen extends ConsumerWidget {
       appBar: AksharaAppBar(
         titleText: 'Messages',
         subtitle: teaching.teacherName,
-        unreadNotifications: 1,
+        unreadNotifications: ref.watch(teacherUnreadNotificationsProvider),
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
       ),

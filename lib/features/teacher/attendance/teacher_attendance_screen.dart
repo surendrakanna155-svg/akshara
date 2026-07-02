@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/reliability/drafts/draft_autosave.dart';
 import '../../../core/reliability/drafts/draft_model.dart';
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/security/permissions.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_view_action.dart';
@@ -10,6 +11,8 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
 import '../communication/teacher_teaching_context_provider.dart';
+import '../reports/teacher_report_exporters.dart';
+import '../reports/teacher_report_share_sheet.dart';
 import 'attendance_models.dart';
 import 'teacher_attendance_provider.dart';
 import 'teacher_attendance_workflow.dart';
@@ -18,16 +21,60 @@ import 'widgets/student_attendance_row.dart';
 import '../../../theme/breakpoints.dart';
 
 /// Teacher attendance marking — TA-02.
-class TeacherAttendanceScreen extends ConsumerWidget {
-  const TeacherAttendanceScreen({super.key, this.onNotificationsTap});
+class TeacherAttendanceScreen extends ConsumerStatefulWidget {
+  const TeacherAttendanceScreen({
+    super.key,
+    this.onNotificationsTap,
+    this.preselectClassLabel,
+  });
 
   final VoidCallback? onNotificationsTap;
+
+  /// TCH-1 — a class label (e.g. `8-A`) to pre-select on entry, from a tapped
+  /// today-period. The first roster class whose label matches wins.
+  final String? preselectClassLabel;
 
   static const double _tabletBreakpoint = AksharaBreakpoints.tabletMinWidth;
   static const double _tabletMaxContentWidth = AksharaBreakpoints.compactContentMaxWidth;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TeacherAttendanceScreen> createState() =>
+      _TeacherAttendanceScreenState();
+}
+
+class _TeacherAttendanceScreenState
+    extends ConsumerState<TeacherAttendanceScreen> {
+  int _preselectAttempts = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final label = widget.preselectClassLabel;
+    if (label == null) return;
+    // Pre-select once the roster classes have resolved.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _preselect(label));
+  }
+
+  void _preselect(String label) {
+    if (!mounted) return;
+    final classes = ref.read(teacherAttendanceProvider).classes;
+    for (final c in classes) {
+      if (c.label == label) {
+        ref.read(teacherAttendanceClassProvider.notifier).state = c.id;
+        return;
+      }
+    }
+    // Roster may still be loading — retry a bounded number of frames until it
+    // resolves, then give up (label not in this teacher's roster).
+    if (classes.isEmpty && _preselectAttempts < 10) {
+      _preselectAttempts++;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _preselect(label));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final onNotificationsTap = widget.onNotificationsTap;
     final data = ref.watch(teacherAttendanceProvider);
     final isLoading = ref.watch(teacherAttendanceLoadingProvider);
     final hasError = ref.watch(teacherAttendanceErrorProvider);
@@ -41,6 +88,27 @@ class TeacherAttendanceScreen extends ConsumerWidget {
         unreadNotifications: data.unreadNotifications,
         trailingPadding: true,
         onNotificationsTap: onNotificationsTap,
+        additionalActions: [
+          // TCH-3 — export the class register + summary (XCT-1 grid CSV/PDF).
+          IconButton(
+            key: QaTestKeys.teacherAttendanceExportButton,
+            tooltip: 'Export register',
+            onPressed: data.students.isEmpty
+                ? null
+                : () {
+                    final exporters = TeacherReportExporters(
+                      ref.read(aksharaReportExportServiceProvider),
+                    );
+                    showTeacherExportSheet(
+                      context,
+                      title: 'Export attendance register',
+                      onCsv: () => exporters.shareAttendanceRegisterCsv(data),
+                      onPdf: () => exporters.shareAttendanceRegisterPdf(data),
+                    );
+                  },
+            icon: const Icon(Icons.ios_share_outlined),
+          ),
+        ],
       ),
       body: isLoading
           ? const AksharaLoadingState(semanticLabel: 'Loading attendance')

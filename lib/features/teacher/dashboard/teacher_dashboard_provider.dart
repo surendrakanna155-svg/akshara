@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/communication/parent_communication_governance.dart';
 import '../../../core/communication/teacher_student_risk_service.dart';
+import '../../../core/exams/exam_administration_store.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
@@ -153,12 +154,18 @@ class TeacherDashboardData {
   factory TeacherDashboardData.mock() {
     final context = TeacherTeachingContext.demoClassTeacher();
     final attention = TeacherStudentRiskService.attentionForClass(context);
+    // TCH-2 — marks still to enter, from the same marks-entry source that backs
+    // /teacher/exams/marks (exams in the marks_entry phase with unfilled marks).
+    final marksPending = ExamAdministrationStore.instance
+        .marksEntryProgress()
+        .fold<int>(0, (sum, p) => sum + (p.totalCount - p.enteredCount));
     return TeacherDashboardData(
       teacherName: 'Priya Sharma',
       greetingEyebrow: 'Friday, 5 Jun',
       greetingHeadline: 'Good morning, Priya',
       periodLabel: 'Period 3 · 10:30',
-      unreadNotifications: 1,
+      // Live mode surfaces the backend's real count; the mock never fabricates 1.
+      unreadNotifications: 0,
       checkIn: const StaffCheckInInfo(
         status: StaffCheckInStatus.checkedIn,
         checkedInAt: '9:02 AM',
@@ -206,6 +213,14 @@ class TeacherDashboardData {
           count: 5,
           label: 'HW to review',
         ),
+        // TCH-2 — deep-links to the exams marks-entry surface when > 0.
+        if (marksPending > 0)
+          PendingTask(
+            id: 'marks_pending',
+            icon: Icons.grading_outlined,
+            count: marksPending,
+            label: 'Marks to enter',
+          ),
         const PendingTask(
           id: 'unread_messages',
           icon: Icons.chat_bubble_outline,
@@ -229,10 +244,22 @@ class TeacherDashboardData {
           label: 'Attendance',
           icon: Icons.fact_check_outlined,
         ),
+        // TCH-5 — quick action to create homework straight from home.
+        const TeacherQuickAction(
+          id: 'create_homework',
+          label: 'Create HW',
+          icon: Icons.post_add_outlined,
+        ),
         const TeacherQuickAction(
           id: 'homework',
           label: 'Homework',
           icon: Icons.assignment_outlined,
+        ),
+        // TCH-9 — the teacher's own attendance history (read-only).
+        const TeacherQuickAction(
+          id: 'my_attendance',
+          label: 'My attendance',
+          icon: Icons.badge_outlined,
         ),
         const TeacherQuickAction(
           id: 'timetable',

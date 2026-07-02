@@ -247,6 +247,20 @@ class MessageThreadDto {
   final Map<String, dynamic> raw;
 }
 
+/// TCH-9 — the caller's OWN staff attendance history. The server wraps its
+/// `{ month, days, summary, today, yesterday }` payload in the standard API
+/// envelope; the mapper reads [raw] directly.
+class MyAttendanceHistoryDto {
+  const MyAttendanceHistoryDto({required this.raw});
+
+  factory MyAttendanceHistoryDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return MyAttendanceHistoryDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
 class TeacherMessagesResponseDto {
   const TeacherMessagesResponseDto({
     required this.items,

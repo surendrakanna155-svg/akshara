@@ -75,15 +75,43 @@ class TimetablePeriodRow extends StatelessWidget {
                         color: colors.onSurfaceVariant,
                       ),
                     ),
+                    // TCH-4 — cover line: whose class this covers, or who is
+                    // covering it, when a substitution applies to this period.
+                    if (period.isCoveringForSomeone) ...[
+                      const SizedBox(height: AksharaSpacing.s1),
+                      Text(
+                        'Covering ${period.coveringForTeacherName}',
+                        style: text.bodySmall.copyWith(color: colors.tertiary),
+                      ),
+                    ] else if (period.isCovered) ...[
+                      const SizedBox(height: AksharaSpacing.s1),
+                      Text(
+                        'Covered by ${period.substituteTeacherName ?? 'substitute'}',
+                        style: text.bodySmall.copyWith(color: colors.tertiary),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(width: AksharaSpacing.s2),
-              AksharaStatusChip(
-                label: statusStyle.label,
-                background: statusStyle.background,
-                foreground: statusStyle.foreground,
-                size: AksharaStatusChipSize.compact,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  AksharaStatusChip(
+                    label: statusStyle.label,
+                    background: statusStyle.background,
+                    foreground: statusStyle.foreground,
+                    size: AksharaStatusChipSize.compact,
+                  ),
+                  if (period.isCovered || period.isCoveringForSomeone) ...[
+                    const SizedBox(height: AksharaSpacing.s1),
+                    AksharaStatusChip(
+                      label: period.isCoveringForSomeone ? 'Cover' : 'Substitute',
+                      tone: KpiAccent.warning,
+                      size: AksharaStatusChipSize.compact,
+                    ),
+                  ],
+                ],
               ),
             ],
           ),

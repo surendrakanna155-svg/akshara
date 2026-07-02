@@ -142,6 +142,20 @@ class TeacherRemoteDataSource {
     return TeacherMessagesResponseDto.fromJson(_responseMap(response));
   }
 
+  // TCH-9 — the caller's OWN staff attendance history (self-scoped, read-only).
+  Future<MyAttendanceHistoryDto> fetchMyAttendanceHistory({
+    required RepositoryQuery query,
+    String? month,
+  }) async {
+    final params = _queryParams(query);
+    if (month != null && month.isNotEmpty) params['month'] = month;
+    final response = await _dio.get<Map<String, dynamic>>(
+      TeacherApiPaths.myAttendanceHistory,
+      queryParameters: params,
+    );
+    return MyAttendanceHistoryDto.fromJson(_responseMap(response));
+  }
+
   Future<TeacherAttendanceDraftResponseDto> saveAttendanceDraft({
     required RepositoryQuery query,
     required TeacherAttendanceDraftRequest request,

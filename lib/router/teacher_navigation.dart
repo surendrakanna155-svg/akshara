@@ -13,15 +13,26 @@ void handleTeacherNavigation(
 }) {
   switch (actionId) {
     case 'mark_attendance':
+      context.go(RouteNames.teacherAttendance);
+    // TCH-9 — the check-in card / "My attendance" tile opens the read-only
+    // self-service attendance history (own check-ins), not the class roster.
+    case 'my_attendance':
     case 'staff_check_in':
     case 'staff_check_in_now':
-      context.go(RouteNames.teacherAttendance);
+      context.go(RouteNames.teacherMyAttendance);
     case 'create_homework':
       context.go(RouteNames.teacherHomeworkCreate);
       break;
+    // TCH-6 — the "HW to review" task lands on the still-unreviewed submissions.
     case 'hw_review':
+      context.go('${RouteNames.teacherHomework}?filter=pending');
+      break;
     case 'homework':
       context.go(RouteNames.teacherHomework);
+      break;
+    // TCH-2 — "Marks to enter" opens the exams marks-entry surface.
+    case 'marks_pending':
+      context.go(RouteNames.teacherExams);
       break;
     case 'timetable':
       context.go(RouteNames.teacherTimetable);

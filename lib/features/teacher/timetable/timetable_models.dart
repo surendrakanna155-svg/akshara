@@ -12,6 +12,9 @@ class TeacherTimetablePeriod {
     required this.classLabel,
     required this.roomLabel,
     required this.status,
+    this.substituteTeacherUserId,
+    this.substituteTeacherName,
+    this.coveringForTeacherName,
   });
 
   final String id;
@@ -21,6 +24,26 @@ class TeacherTimetablePeriod {
   final String classLabel;
   final String roomLabel;
   final ClassScheduleStatus status;
+
+  /// TCH-4 — when this period is covered by a substitute, the substitute's user
+  /// id / display name (from the daily-substitution overlay). Null when the
+  /// regularly-assigned teacher takes the class.
+  final String? substituteTeacherUserId;
+  final String? substituteTeacherName;
+
+  /// TCH-4 — set on the covering teacher's own view: whose class they are
+  /// covering (the original teacher's name).
+  final String? coveringForTeacherName;
+
+  /// True when this period is a substitution (has a substitute assigned).
+  bool get isCovered =>
+      (substituteTeacherUserId != null &&
+          substituteTeacherUserId!.isNotEmpty) ||
+      (substituteTeacherName != null && substituteTeacherName!.isNotEmpty);
+
+  /// True on the covering teacher's own view — they are picking up this class.
+  bool get isCoveringForSomeone =>
+      coveringForTeacherName != null && coveringForTeacherName!.isNotEmpty;
 }
 
 @immutable

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/repository_future.dart';
 import '../../../core/repositories/repository_providers.dart';
 import '../../../core/tenant/tenant_provider.dart';
+import '../teacher_unread_provider.dart';
 import 'timetable_models.dart';
 
 final teacherTimetableDayProvider = StateProvider<String>((ref) => 'fri');
@@ -15,12 +16,13 @@ final teacherTimetableFutureProvider = FutureProvider<TeacherTimetableData>((ref
 });
 
 final teacherTimetableProvider = Provider<TeacherTimetableData>((ref) {
+  final unread = ref.watch(teacherUnreadNotificationsProvider);
   if (ref.watch(teacherTimetableEmptyProvider)) {
-    return const TeacherTimetableData(
+    return TeacherTimetableData(
       teacherName: 'Priya Sharma',
       weekRangeLabel: '1 Jun - 5 Jun 2026',
-      days: [],
-      unreadNotifications: 1,
+      days: const [],
+      unreadNotifications: unread,
     );
   }
 
@@ -37,7 +39,7 @@ final teacherTimetableProvider = Provider<TeacherTimetableData>((ref) {
         teacherName: 'Priya Sharma',
         weekRangeLabel: '1 Jun - 5 Jun 2026',
         days: [],
-        unreadNotifications: 1,
+        unreadNotifications: 0,
       );
 
   final days = base.days
@@ -48,6 +50,6 @@ final teacherTimetableProvider = Provider<TeacherTimetableData>((ref) {
     teacherName: base.teacherName,
     weekRangeLabel: base.weekRangeLabel,
     days: days,
-    unreadNotifications: base.unreadNotifications,
+    unreadNotifications: unread,
   );
 });
