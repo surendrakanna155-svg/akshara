@@ -131,6 +131,10 @@ const AUDIT_EXEMPT_MODULES: Record<string, string> = {
   // Parent attendance corrections are submissions into the school's correction
   // queue; the audited mutation is the staff APPROVAL, not the parent submit.
   attendance: "parent correction submission (audited at staff approval)",
+  // Approval decisions (single + PRI-1 batch approve/reject/cancel) write to the
+  // dedicated `approval_audit_entries` ledger via `insertAuditEntry` — one row per
+  // decision — rather than the mutation catalog. That ledger is the audit path.
+  approvals: "dedicated approval_audit_entries ledger (insertAuditEntry per decision)",
 };
 
 /** Named catalog groups, asserted non-empty so the import set cannot rot. */
