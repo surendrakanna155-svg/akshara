@@ -14,6 +14,8 @@ import {
   createStudentDocument,
   documentToApi,
   listStudentDocuments,
+  StudentDocumentNotFoundError,
+  verifyStudentDocument,
 } from "./sis_documents_repository.ts";
 import { resolveStudentId } from "./sis_student_resolver.ts";
 import { StudentNotFoundError } from "./sis_students_repository.ts";
@@ -131,5 +133,75 @@ export async function handleUploadStudentDocument(
     }
     console.error("handleUploadStudentDocument error:", error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to upload student document", 500);
+  }
+}
+
+/**
+ * SIS-3 — PATCH /sis/students/{id}/documents/{docId}/verify. Marks a document
+ * verified or rejected (manageSis + school scope). Body: { status:
+ * 'verified'|'rejected', note? }. 404 when the student or document is not in the
+ * caller's school scope.
+ */
+export async function handleVerifyStudentDocument(
+  req: Request,
+  config: AppConfig,
+  studentIdOrCode: string,
+  docId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireSisWrite(auth.claims);
+  if (denied) return denied;
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = (await readJson<Record<string, unknown>>(req)) ?? {};
+  } catch {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  const rawStatus = optionalStr(body, "status");
+  if (rawStatus !== "verified" && rawStatus !== "rejected") {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "status must be 'verified' or 'rejected'",
+      422,
+    );
+  }
+  const note = optionalStr(body, "note", "reason");
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const verified = await runTenant(config, auth.claims, async (db) => {
+      const resolved = await resolveStudentId(db, orgId, schoolId, studentIdOrCode);
+      if (!resolved) throw new StudentNotFoundError(studentIdOrCode);
+      const row = await verifyStudentDocument(db, orgId, schoolId, docId, {
+        status: rawStatus,
+        verifierId: auth.claims.sub,
+        note: note ?? null,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        sisAudit.documentVerified(row.id, resolved, rawStatus, note),
+        req,
+      );
+      return row;
+    });
+    return jsonResponse(envelope(documentToApi(verified)));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof StudentNotFoundError) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (error instanceof StudentDocumentNotFoundError) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    console.error("handleVerifyStudentDocument error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to verify student document", 500);
   }
 }

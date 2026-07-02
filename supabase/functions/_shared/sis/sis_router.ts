@@ -11,12 +11,14 @@ import {
   handleCreateStudent,
   handleGetStudent,
   handleListStudents,
+  handleListStudentTransfers,
   handleUpdateStudent,
   handleUpdateStudentStatus,
 } from "./sis_handlers.ts";
 import {
   handleListStudentDocuments,
   handleUploadStudentDocument,
+  handleVerifyStudentDocument,
 } from "./sis_document_handlers.ts";
 import {
   handleGetStudent360Profile,
@@ -41,6 +43,10 @@ export function matchSisRoute(
     return { handler: handleCreateStudent, args: [] };
   }
 
+  if (path === "/sis/transfers" && method === "GET") {
+    return { handler: handleListStudentTransfers, args: [] };
+  }
+
   if (path === "/sis/enrollments" && method === "GET") {
     return { handler: handleListEnrollments, args: [] };
   }
@@ -60,6 +66,16 @@ export function matchSisRoute(
   const statusMatch = path.match(/^\/sis\/students\/([^/]+)\/status$/);
   if (statusMatch && method === "PATCH") {
     return { handler: handleUpdateStudentStatus, args: [statusMatch[1]!] };
+  }
+
+  const documentVerifyMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/documents\/([^/]+)\/verify$/,
+  );
+  if (documentVerifyMatch && method === "PATCH") {
+    return {
+      handler: handleVerifyStudentDocument,
+      args: [documentVerifyMatch[1]!, documentVerifyMatch[2]!],
+    };
   }
 
   const documentsMatch = path.match(/^\/sis\/students\/([^/]+)\/documents$/);

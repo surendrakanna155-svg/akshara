@@ -19,10 +19,12 @@ import {
   listEnvelope,
   studentDetailToApi,
   studentDirectoryItemToApi,
+  studentTransferItemToApi,
 } from "./sis_mapper.ts";
 import type {
   CreateStudentInput,
   StudentListFilters,
+  StudentTransferFilters,
   UpdateStudentInput,
 } from "./sis_students_repository.ts";
 import {
@@ -30,6 +32,7 @@ import {
   DuplicateAdmissionNumberError,
   getStudent,
   listStudents,
+  listStudentTransfers,
   StudentNotFoundError,
   updateStudent,
   updateStudentStatus,
@@ -64,6 +67,23 @@ function parseListFilters(url: URL): StudentListFilters {
     status: (() => {
       const raw = get("status", "status");
       if (raw === "prospect") return "inactive";
+      return raw;
+    })(),
+  };
+}
+
+function parseTransferFilters(url: URL): StudentTransferFilters {
+  const get = (camel: string, snake: string): string | undefined => {
+    const value = url.searchParams.get(camel) ?? url.searchParams.get(snake);
+    return value?.trim() || undefined;
+  };
+  return {
+    fromDate: get("from", "fromDate") ?? get("from_date", "from_date"),
+    toDate: get("to", "toDate") ?? get("to_date", "to_date"),
+    status: (() => {
+      const raw = get("status", "status");
+      // API `graduated` is stored as `alumni`; normalise so the DB filter matches.
+      if (raw === "graduated") return "alumni";
       return raw;
     })(),
   };
@@ -206,6 +226,54 @@ export async function handleListStudents(
     }
     console.error("handleListStudents error:", error);
     return errorEnvelope("INTERNAL_ERROR", "Failed to list students", 500);
+  }
+}
+
+/**
+ * SIS-5 — GET /sis/transfers?from&to&status. Date-ranged, exportable list of
+ * students who have exited (transferred / graduated), with their last-enrollment
+ * context and an exit timestamp. viewSis + school scope. CSV export is
+ * client-side (XCT-1); this returns the rows only.
+ */
+export async function handleListStudentTransfers(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  const denied = requireSisRead(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const pagination = parsePagination(url);
+  const filters = parseTransferFilters(url);
+  const orgId = organizationIdFromClaims(auth.claims);
+  const schoolId = schoolIdFromClaims(auth.claims);
+
+  try {
+    const result = await runTenant(config, auth.claims, (db) =>
+      listStudentTransfers(db, orgId, schoolId, filters, pagination)
+    );
+    return jsonResponse(
+      envelope(
+        listEnvelope(
+          result.items.map(studentTransferItemToApi),
+          {
+            page: result.page,
+            pageSize: result.pageSize,
+            total: result.total,
+            hasMore: result.hasMore,
+          },
+        ),
+      ),
+    );
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    console.error("handleListStudentTransfers error:", error);
+    return errorEnvelope("INTERNAL_ERROR", "Failed to list student transfers", 500);
   }
 }
 

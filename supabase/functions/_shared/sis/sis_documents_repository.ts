@@ -23,6 +23,19 @@ export interface CreateStudentDocumentInput {
   uploadedBy: string;
 }
 
+export interface VerifyStudentDocumentInput {
+  status: "verified" | "rejected";
+  verifierId: string;
+  note?: string | null;
+}
+
+export class StudentDocumentNotFoundError extends Error {
+  constructor(docId: string) {
+    super(`Student document not found: ${docId}`);
+    this.name = "StudentDocumentNotFoundError";
+  }
+}
+
 export async function listStudentDocuments(
   db: TenantQueryClient,
   organizationId: string,
@@ -63,6 +76,39 @@ export async function createStudentDocument(
   return rows[0]!;
 }
 
+/**
+ * SIS-3 — verify (or reject) a previously uploaded student document. Stamps
+ * `status`, `verified_by`, and `verified_at` on the row. Scoped to org+school so
+ * a caller can never touch another school's row (RLS also enforces this, but the
+ * explicit WHERE keeps the 404 semantics deterministic without relying on RLS).
+ * Throws {@link StudentDocumentNotFoundError} when no row matches (404).
+ *
+ * `note` is accepted for API symmetry but there is no column to persist it on
+ * `student_documents`; it is surfaced only through the emitted audit metadata.
+ */
+export async function verifyStudentDocument(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  docId: string,
+  input: VerifyStudentDocumentInput,
+): Promise<StudentDocumentRow> {
+  const rows = await db.queryObject<StudentDocumentRow>(
+    `UPDATE student_documents
+        SET status = $4,
+            verified_by = $5::uuid,
+            verified_at = timezone('utc', now())
+      WHERE id = $1::uuid
+        AND organization_id = $2
+        AND school_id = $3
+      RETURNING *`,
+    [docId, organizationId, schoolId, input.status, input.verifierId],
+  );
+  const row = rows[0];
+  if (!row) throw new StudentDocumentNotFoundError(docId);
+  return row;
+}
+
 export function documentToApi(row: StudentDocumentRow): Record<string, unknown> {
   return {
     id: row.id,
@@ -72,5 +118,6 @@ export function documentToApi(row: StudentDocumentRow): Record<string, unknown> 
     fileUri: row.file_uri,
     uploadedAt: row.uploaded_at,
     verifiedAt: row.verified_at,
+    verifiedBy: row.verified_by,
   };
 }

@@ -74,6 +74,20 @@ Deno.test("sis admissionsConverted catalog references student and enrollment", (
   assertEquals(spec.domain.payload.enrollmentId, "enr-1");
 });
 
+Deno.test("sis documentVerified catalog binds document + student + status", () => {
+  const spec = sisAudit.documentVerified("doc-1", "stu-1", "verified", "ok");
+  assertEquals(spec.audit.eventType, "sisDocumentVerified");
+  assertEquals(spec.audit.category, "workflow");
+  assertEquals(spec.audit.entityType, "student_document");
+  assertEquals(spec.audit.entityId, "doc-1");
+  assertEquals(spec.audit.metadata?.studentId, "stu-1");
+  assertEquals(spec.audit.metadata?.status, "verified");
+  assertEquals(spec.audit.metadata?.note, "ok");
+  assertEquals(spec.domain.eventType, "sis.document.verified");
+  assertEquals(spec.domain.sourceModule, "sis");
+  assertEquals(spec.domain.idempotencyKey, "sis.document.verified:doc-1:verified");
+});
+
 Deno.test("academic yearCreated catalog uses academic module", () => {
   const spec = academicAudit.yearCreated("yr-1");
   assertEquals(spec.domain.sourceModule, "academic");

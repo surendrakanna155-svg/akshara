@@ -1,4 +1,8 @@
-import type { StudentDetailData, StudentDirectoryRow } from "./sis_students_repository.ts";
+import type {
+  StudentDetailData,
+  StudentDirectoryRow,
+  StudentTransferRow,
+} from "./sis_students_repository.ts";
 import type { AdmissionsConversionResult } from "./sis_conversion_repository.ts";
 import type { EnrollmentListRow } from "./sis_enrollments_repository.ts";
 import type { SisDashboardSnapshot } from "./sis_dashboard_repository.ts";
@@ -35,9 +39,29 @@ export function studentDirectoryItemToApi(row: StudentDirectoryRow): Record<stri
     className: row.class_name ?? "",
     sectionName: row.section_name ?? "",
     rollNumber: row.roll_number ?? "",
+    // SIS-2: primary guardian contact for the richer registry export.
+    guardianName: row.guardian_name ?? "",
+    guardianPhone: row.guardian_phone ?? "",
     guardianCount: parseInt(row.guardian_count, 10) || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+// SIS-5: transfer / exit log row → API (backs the exportable exit register).
+export function studentTransferItemToApi(row: StudentTransferRow): Record<string, unknown> {
+  return {
+    studentId: row.student_id,
+    studentCode: row.student_code,
+    displayName: row.display_name,
+    status: statusFromDb(row.status),
+    admissionNumber: row.admission_number ?? "",
+    academicYear: row.academic_year ?? "",
+    className: row.class_name ?? "",
+    sectionName: row.section_name ?? "",
+    rollNumber: row.roll_number ?? "",
+    transitionedAt: row.transitioned_at,
+    createdAt: row.created_at,
   };
 }
 

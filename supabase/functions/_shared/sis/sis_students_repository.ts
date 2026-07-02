@@ -28,9 +28,31 @@ export interface StudentDirectoryRow {
   class_name: string | null;
   section_name: string | null;
   roll_number: string | null;
+  guardian_name: string | null;
+  guardian_phone: string | null;
   guardian_count: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface StudentTransferFilters {
+  fromDate?: string;
+  toDate?: string;
+  status?: string;
+}
+
+export interface StudentTransferRow {
+  student_id: string;
+  student_code: string;
+  display_name: string;
+  status: string;
+  admission_number: string | null;
+  academic_year: string | null;
+  class_name: string | null;
+  section_name: string | null;
+  roll_number: string | null;
+  transitioned_at: string;
+  created_at: string;
 }
 
 export interface StudentCoreRow {
@@ -173,6 +195,33 @@ function listSelectSql(): string {
     se.class_name,
     se.section_name,
     se.roll_number,
+    -- SIS-2: primary guardian display_name + phone for the richer registry
+    -- export. LEFT-JOIN semantics via correlated subqueries so students with no
+    -- primary (or no active) guardian still list with null name/phone.
+    (
+      SELECT u.display_name
+      FROM student_guardians sg
+      JOIN users u ON u.id = sg.guardian_user_id
+      WHERE sg.student_id = s.id
+        AND sg.organization_id = s.organization_id
+        AND sg.school_id = s.school_id
+        AND sg.status = 'active'
+        AND sg.is_primary = true
+      ORDER BY sg.created_at ASC
+      LIMIT 1
+    ) AS guardian_name,
+    (
+      SELECT u.phone
+      FROM student_guardians sg
+      JOIN users u ON u.id = sg.guardian_user_id
+      WHERE sg.student_id = s.id
+        AND sg.organization_id = s.organization_id
+        AND sg.school_id = s.school_id
+        AND sg.status = 'active'
+        AND sg.is_primary = true
+      ORDER BY sg.created_at ASC
+      LIMIT 1
+    ) AS guardian_phone,
     (
       SELECT count(*)::text
       FROM student_guardians sg
@@ -264,6 +313,122 @@ export async function listStudents(
   pagination: PaginationParams,
 ): Promise<PaginationResult<StudentDirectoryRow>> {
   return await searchStudents(db, organizationId, schoolId, filters, pagination);
+}
+
+// SIS-5 — transfer / exit terminal statuses (see sis_status_codec:
+// TERMINAL_DB_STATUSES). `alumni` is the DB storage for graduated.
+const TRANSFER_DB_STATUSES = ["transferred", "alumni"] as const;
+
+function transferFromSql(): string {
+  // Join the student's LAST enrollment (highest created_at) — for a transferred
+  // /alumni student `is_current` is typically already false, so `listFromSql`'s
+  // `is_current = true` join would drop the class/section context. LATERAL picks
+  // the most recent enrollment regardless of current-flag.
+  return `FROM students s
+  LEFT JOIN LATERAL (
+    SELECT se.academic_year, se.class_name, se.section_name, se.roll_number
+    FROM sis_student_enrollments se
+    WHERE se.student_id = s.id
+      AND se.organization_id = s.organization_id
+      AND se.school_id = s.school_id
+    ORDER BY se.created_at DESC
+    LIMIT 1
+  ) se ON true`;
+}
+
+function transferWhereSql(): string {
+  // Timestamp source: `students.updated_at`. transferred/alumni are terminal
+  // (no further transitions per the status codec), so the row's last update is
+  // its exit timestamp — the only reliable per-row timestamp without joining the
+  // append-only audit log. Documented choice; range filter is inclusive of the
+  // whole `toDate` day via a strict-upper-bound on the next day.
+  return `WHERE s.organization_id = $1
+    AND s.school_id = $2
+    AND s.status = ANY($3::text[])
+    AND ($4::text IS NULL OR s.status = $4)
+    AND ($5::timestamptz IS NULL OR s.updated_at >= $5::timestamptz)
+    AND ($6::timestamptz IS NULL OR s.updated_at < ($6::timestamptz + interval '1 day'))`;
+}
+
+function transferArgs(
+  organizationId: string,
+  schoolId: string,
+  filters: StudentTransferFilters,
+): unknown[] {
+  // `status` filter is honoured only when it is itself a transfer status; any
+  // other value would return nothing, so treat it as unset.
+  const statusFilter =
+    filters.status && (TRANSFER_DB_STATUSES as readonly string[]).includes(filters.status)
+      ? filters.status
+      : null;
+  return [
+    organizationId,
+    schoolId,
+    TRANSFER_DB_STATUSES,
+    statusFilter,
+    filters.fromDate?.trim() || null,
+    filters.toDate?.trim() || null,
+  ];
+}
+
+/**
+ * SIS-5 — date-ranged list of students who have exited (status transferred or
+ * alumni/graduated), with their last enrollment context and an exit timestamp,
+ * paginated like {@link listStudents}. Backing surface for the exportable
+ * transfer/exit log (CSV export is client-side XCT-1).
+ */
+export async function listStudentTransfers(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  filters: StudentTransferFilters,
+  pagination: PaginationParams,
+): Promise<PaginationResult<StudentTransferRow>> {
+  const limit = Math.min(Math.max(pagination.pageSize, 1), 100);
+  const offset = offsetFor(pagination.page, limit);
+  const args = transferArgs(organizationId, schoolId, filters);
+
+  const total = await db.queryCount(
+    `SELECT count(*)::text AS count
+     ${transferFromSql()}
+     ${transferWhereSql()}`,
+    args,
+  );
+
+  const items = await db.queryObject<StudentTransferRow>(
+    `SELECT
+        s.id AS student_id,
+        s.student_code,
+        s.display_name,
+        s.status,
+        (
+          SELECT sp.admission_number
+          FROM student_profiles sp
+          WHERE sp.student_id = s.id
+            AND sp.organization_id = s.organization_id
+            AND sp.school_id = s.school_id
+          LIMIT 1
+        ) AS admission_number,
+        se.academic_year,
+        se.class_name,
+        se.section_name,
+        se.roll_number,
+        s.updated_at AS transitioned_at,
+        s.created_at
+     ${transferFromSql()}
+     ${transferWhereSql()}
+     ORDER BY s.updated_at DESC, s.display_name ASC
+     LIMIT $7 OFFSET $8`,
+    [...args, limit, offset],
+  );
+
+  return {
+    items,
+    total,
+    page: pagination.page,
+    pageSize: limit,
+    hasMore: offset + items.length < total,
+  };
 }
 
 export async function getStudent(

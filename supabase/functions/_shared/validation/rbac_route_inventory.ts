@@ -21,6 +21,8 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/finance/refunds/:id/approve", permission: "approveRefunds", scope: "school", module: "finance" },
   { method: "GET", path: "/sis/dashboard", permission: "viewSis", scope: "school", module: "sis" },
   { method: "POST", path: "/sis/students", permission: "manageSis", scope: "school", module: "sis" },
+  { method: "GET", path: "/sis/transfers", permission: "viewSis", scope: "school", module: "sis" },
+  { method: "PATCH", path: "/sis/students/:id/documents/:docId/verify", permission: "manageSis", scope: "school", module: "sis" },
   { method: "GET", path: "/academic/years", permission: "viewSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/preview", permission: "manageSis", scope: "school", module: "academic" },
   { method: "POST", path: "/academic/transitions/:id/execute", permission: "manageSis", scope: "school", module: "academic" },

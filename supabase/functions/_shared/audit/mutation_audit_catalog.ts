@@ -511,6 +511,25 @@ export const sisAudit = {
       idempotencyKey: `sis.student.status:${studentId}:${status}`,
     },
   }),
+  documentVerified: (
+    documentId: string,
+    studentId: string,
+    status: string,
+    note?: string | null,
+  ): MutationAuditSpec => ({
+    ...workflow("sisDocumentVerified", "student_document", documentId, {
+      documentId,
+      studentId,
+      status,
+      ...(note ? { note } : {}),
+    }),
+    domain: {
+      eventType: "sis.document.verified",
+      payload: { documentId, studentId, status },
+      sourceModule: "sis",
+      idempotencyKey: `sis.document.verified:${documentId}:${status}`,
+    },
+  }),
   enrollmentCreated: (enrollmentId: string): MutationAuditSpec => ({
     ...workflow("sisEnrollmentCreated", "sis_enrollment", enrollmentId, { enrollmentId }),
     domain: {
