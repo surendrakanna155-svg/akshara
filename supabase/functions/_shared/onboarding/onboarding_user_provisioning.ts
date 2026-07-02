@@ -88,6 +88,94 @@ export async function ensureSchoolMembership(
   );
 }
 
+/**
+ * Derives the deterministic employee_code from a user UUID, matching the v9.6
+ * backfill scheme (`'EMP-' || first 8 hex chars of the UUID, dashes stripped`).
+ * Stable per user, so re-provisioning never changes an employee's code.
+ */
+export function employeeCodeForUser(userId: string): string {
+  return `EMP-${userId.replace(/-/g, "").slice(0, 8)}`;
+}
+
+export interface EmployeeProvisionInput {
+  displayName: string;
+  email?: string | null;
+  phone?: string | null;
+  primaryDepartment?: string | null;
+}
+
+/**
+ * HR-8 — Automatic Employee Provisioning.
+ *
+ * Projects a staff `users` row into the HR `employees` table for (org, school,
+ * user). Called from the teacher/staff onboarding commit path AFTER
+ * ensureSchoolMembership, so canonical identity (`users` + `school_memberships`)
+ * is already established and remains the source of truth — `employees` is a pure
+ * HR projection.
+ *
+ * Idempotent via `ON CONFLICT (organization_id, school_id, user_id) DO NOTHING`
+ * (the partial unique index added in 20260834000000): a re-import creates no
+ * duplicate. On conflict the display_name / email / phone are refreshed so the
+ * projection stays in sync — but employee_code and user_id are NEVER changed
+ * (an employee's HR code and identity link are permanent).
+ *
+ * Returns the employee id and whether a NEW row was created (created=false on a
+ * re-import / conflict).
+ */
+export async function provisionEmployee(
+  db: TenantQueryClient,
+  organizationId: string,
+  schoolId: string,
+  userId: string,
+  input: EmployeeProvisionInput,
+): Promise<{ employeeId: string; created: boolean }> {
+  const employeeCode = employeeCodeForUser(userId);
+  const displayName = input.displayName.trim() || "Staff Member";
+  const primaryDepartment = (input.primaryDepartment ?? "").trim() || "General";
+  const email = input.email?.trim() || null;
+  const phone = input.phone?.trim() || null;
+
+  const inserted = await db.queryObject<{ id: string }>(
+    `INSERT INTO employees (
+       organization_id, school_id, user_id, employee_code, display_name,
+       email, phone, status, primary_department
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8)
+     ON CONFLICT (organization_id, school_id, user_id) WHERE user_id IS NOT NULL
+     DO NOTHING
+     RETURNING id`,
+    [
+      organizationId,
+      schoolId,
+      userId,
+      employeeCode,
+      displayName,
+      email,
+      phone,
+      primaryDepartment,
+    ],
+  );
+
+  if (inserted[0]) {
+    return { employeeId: inserted[0].id, created: true };
+  }
+
+  // Conflict: the employee already exists for this (org, school, user).
+  // Refresh the mutable HR projection fields (display_name / email / phone),
+  // but NEVER touch employee_code or user_id (permanent identity). email/phone
+  // are only overwritten when a fresh value is supplied (COALESCE keeps prior).
+  const updated = await db.queryObject<{ id: string }>(
+    `UPDATE employees
+       SET display_name = $4,
+           email = COALESCE($5, email),
+           phone = COALESCE($6, phone),
+           primary_department = COALESCE(primary_department, $7)
+     WHERE organization_id = $1 AND school_id = $2 AND user_id = $3
+     RETURNING id`,
+    [organizationId, schoolId, userId, displayName, email, phone, primaryDepartment],
+  );
+  return { employeeId: updated[0]!.id, created: false };
+}
+
 export async function linkStudentGuardian(
   db: TenantQueryClient,
   organizationId: string,

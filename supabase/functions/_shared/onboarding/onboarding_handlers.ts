@@ -248,7 +248,7 @@ export async function handleCommitImportJob(
 
   try {
     const job = await withTenantContext(config, auth.claims, async (db) => {
-      const committed = await commitImportJob(db, orgId, schoolId, jobId);
+      const committed = await commitImportJob(db, orgId, schoolId, jobId, auth.claims, req);
       await recordMutationAudit(db, auth.claims, {
         eventType: "onboardingImportCommitted",
         category: "onboarding",

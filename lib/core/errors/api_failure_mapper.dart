@@ -103,14 +103,36 @@ class ApiFailureMapper {
       );
     }
 
+    // Other 4xx (e.g. 409 conflict, 422 validation): the backend returns a
+    // precise, user-actionable message in the `{error:{code,message}}` envelope
+    // (e.g. PAYROLL_RUN_ALREADY_PROCESSED, PAYROLL_ENTRY_INVALID,
+    // LEAVE_ALREADY_DECIDED). Surface that server message rather than a generic
+    // one, so money-safety / integrity conflicts reach the user verbatim.
+    final serverError = _serverError(error.response?.data);
     return ApiFailure(
       type: ApiFailureType.unknown,
-      message: 'Something went wrong. Please try again.',
-      code: 'HTTP_${status ?? 'ERROR'}',
+      message: serverError?.message ?? 'Something went wrong. Please try again.',
+      code: serverError?.code ?? 'HTTP_${status ?? 'ERROR'}',
       statusCode: status,
       correlationId: id,
       cause: error,
     );
+  }
+
+  /// Extracts the `{error:{code,message}}` envelope from a response body when
+  /// present. Tolerant of the body being a Map, a non-Map, or missing.
+  ({String? code, String? message})? _serverError(Object? data) {
+    if (data is! Map) return null;
+    final error = data['error'];
+    if (error is! Map) return null;
+    final message = error['message'];
+    final code = error['code'];
+    final messageStr = message is String && message.trim().isNotEmpty
+        ? message.trim()
+        : null;
+    final codeStr = code is String && code.trim().isNotEmpty ? code.trim() : null;
+    if (messageStr == null && codeStr == null) return null;
+    return (code: codeStr, message: messageStr);
   }
 }
 

@@ -56,5 +56,72 @@ void main() {
       expect(failure.type, ApiFailureType.timeout);
       expect(failure.isRetryable, isTrue);
     });
+
+    test('surfaces the server message + code for a 409 conflict', () {
+      final failure = mapper.fromException(
+        DioException(
+          requestOptions: RequestOptions(path: '/hr/payroll/run'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/hr/payroll/run'),
+            statusCode: 409,
+            data: {
+              'data': null,
+              'error': {
+                'code': 'PAYROLL_RUN_ALREADY_PROCESSED',
+                'message':
+                    'Payroll run pay_1 is already processed; re-processing is not allowed',
+              },
+            },
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+      expect(failure.statusCode, 409);
+      expect(failure.code, 'PAYROLL_RUN_ALREADY_PROCESSED');
+      expect(
+        failure.message,
+        'Payroll run pay_1 is already processed; re-processing is not allowed',
+      );
+    });
+
+    test('surfaces the server message + code for a 422 validation error', () {
+      final failure = mapper.fromException(
+        DioException(
+          requestOptions: RequestOptions(path: '/hr/payroll/run'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/hr/payroll/run'),
+            statusCode: 422,
+            data: {
+              'data': null,
+              'error': {
+                'code': 'PAYROLL_ENTRY_INVALID',
+                'message': 'Payroll entry invalid for employee EMP-1',
+              },
+            },
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+      expect(failure.statusCode, 422);
+      expect(failure.code, 'PAYROLL_ENTRY_INVALID');
+      expect(failure.message, 'Payroll entry invalid for employee EMP-1');
+    });
+
+    test('falls back to a generic message when the 4xx body has no envelope', () {
+      final failure = mapper.fromException(
+        DioException(
+          requestOptions: RequestOptions(path: '/hr/leave/lv_1/approve'),
+          response: Response(
+            requestOptions: RequestOptions(path: '/hr/leave/lv_1/approve'),
+            statusCode: 409,
+            data: 'plain text',
+          ),
+          type: DioExceptionType.badResponse,
+        ),
+      );
+      expect(failure.statusCode, 409);
+      expect(failure.message, 'Something went wrong. Please try again.');
+      expect(failure.code, 'HTTP_409');
+    });
   });
 }

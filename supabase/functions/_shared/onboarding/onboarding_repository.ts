@@ -1,4 +1,6 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import type { AccessTokenClaims } from "../jwt.ts";
+import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   createImportedStudent,
   createPlaceholderStudent,
@@ -9,6 +11,7 @@ import {
   isValidAadhaar,
   normalizeAadhaar,
   normalizeImportPhone,
+  provisionEmployee,
   rollbackImportedStudent,
   type StudentImportRow,
   type TeacherImportRow,
@@ -322,6 +325,8 @@ export async function commitImportJob(
   organizationId: string,
   schoolId: string,
   jobId: string,
+  claims?: AccessTokenClaims,
+  req?: Request,
 ): Promise<ImportJobRow> {
   const jobRows = await db.queryObject<ImportJobRow>(
     `SELECT * FROM onboarding_import_jobs
@@ -389,7 +394,40 @@ export async function commitImportJob(
           parsed.row.displayName,
           parsed.row.email,
         );
+        // Canonical identity FIRST: users + school_memberships(role) is the
+        // source of truth for who this person is and what they can do.
         await ensureSchoolMembership(db, userId, schoolId, parsed.row.role);
+        // HR-8: AFTER membership, project this staff user into the HR
+        // `employees` table. Pure HR projection — does NOT change identity.
+        // Idempotent (ON CONFLICT DO NOTHING via the partial unique index), so a
+        // re-import creates no duplicate employee row.
+        const provisioned = await provisionEmployee(
+          db,
+          organizationId,
+          schoolId,
+          userId,
+          {
+            displayName: parsed.row.displayName,
+            email: parsed.row.email ?? null,
+            phone: parsed.row.phone,
+            primaryDepartment: null,
+          },
+        );
+        // Audit only a genuinely new provisioning (a re-import is a no-op and
+        // must not emit a fresh "created" audit).
+        if (claims && provisioned.created) {
+          await emitMutationAudit(
+            db,
+            claims,
+            moduleEntityAudit(
+              "hr.employee.provisioned",
+              "hr_employee",
+              provisioned.employeeId,
+              { userId, source: "onboarding_import", role: parsed.row.role },
+            ),
+            req,
+          );
+        }
         await db.queryObject(
           `UPDATE onboarding_import_rows
            SET status = 'committed', created_entity_id = $2

@@ -5,6 +5,7 @@ import {
   requireStr,
   str,
   WriteNotFoundError,
+  WriteValidationError,
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
@@ -170,6 +171,46 @@ export async function handleCreateLeaveRequest(req: Request, config: AppConfig):
  * (requests live under the `requests` array) and recomputes `pendingCount`.
  * Shared by approve/reject. Returns the updated request, or throws when absent.
  */
+/**
+ * Pure leave-decision transform (integrity gap c — decision immutability).
+ * A leave request may only be decided while it is still 'pending'. Once
+ * approved/rejected its status is FROZEN: re-approving, re-rejecting, or flipping
+ * an approved leave to rejected (or vice-versa) is refused. Returns the next
+ * snapshot + the updated request; throws:
+ *   • WriteNotFoundError (404) when the request id is absent, or
+ *   • WriteValidationError(409, LEAVE_ALREADY_DECIDED) when it is not pending.
+ * Kept pure (snapshot in → snapshot out) so the guard is unit-testable DB-free.
+ */
+export function applyLeaveDecision(
+  current: Record<string, unknown>,
+  leaveRequestId: string,
+  status: "approved" | "rejected",
+  comment: string,
+): { next: Record<string, unknown>; updated: Record<string, unknown> } {
+  const requests = Array.isArray(current.requests)
+    ? current.requests as Array<Record<string, unknown>>
+    : [];
+  const index = requests.findIndex((r) => String(r.id ?? "") === leaveRequestId);
+  if (index < 0) {
+    throw new WriteNotFoundError(`Leave request not found: ${leaveRequestId}`);
+  }
+  const currentStatus = String(requests[index]!.status ?? "");
+  if (currentStatus !== "pending") {
+    throw new WriteValidationError(
+      `Leave request already ${currentStatus}; a decided request cannot be changed`,
+      409,
+      "LEAVE_ALREADY_DECIDED",
+    );
+  }
+  const updated = { ...requests[index], status, decisionComment: comment };
+  const nextRequests = [...requests];
+  nextRequests[index] = updated;
+  const pendingCount = nextRequests.filter(
+    (r) => String(r.status ?? "") === "pending",
+  ).length;
+  return { next: { ...current, requests: nextRequests, pendingCount }, updated };
+}
+
 async function decideLeaveRequest(
   req: Request,
   config: AppConfig,
@@ -180,29 +221,38 @@ async function decideLeaveRequest(
     const { db, organizationId, schoolId, body, claims, req: request } = ctx;
     const comment = str(body, "comment") ?? "";
 
+    // The guard raises inside the mutator; capture it and re-throw AFTER the
+    // snapshot resolves so a rejected decision never mutates the snapshot.
     let updated: Record<string, unknown> | null = null;
+    let guardError: WriteValidationError | WriteNotFoundError | null = null;
     await writeStore.mutateSnapshot(
       db,
       organizationId,
       schoolId,
       "snapshot_leave",
       (current) => {
-        const requests = Array.isArray(current.requests)
-          ? current.requests as Array<Record<string, unknown>>
-          : [];
-        const index = requests.findIndex((r) => String(r.id ?? "") === leaveRequestId);
-        if (index < 0) return current;
-        updated = { ...requests[index], status, decisionComment: comment };
-        const nextRequests = [...requests];
-        nextRequests[index] = updated;
-        const pendingCount = nextRequests.filter(
-          (r) => String(r.status ?? "") === "pending",
-        ).length;
-        return { ...current, requests: nextRequests, pendingCount };
+        try {
+          const result = applyLeaveDecision(current, leaveRequestId, status, comment);
+          updated = result.updated;
+          return result.next;
+        } catch (error) {
+          if (
+            error instanceof WriteValidationError ||
+            error instanceof WriteNotFoundError
+          ) {
+            guardError = error;
+            return current; // do not mutate on a rejected decision
+          }
+          throw error;
+        }
       },
     );
 
+    if (guardError !== null) {
+      throw guardError;
+    }
     if (updated === null) {
+      // Defensive — applyLeaveDecision always sets `updated` or throws.
       throw new WriteNotFoundError(`Leave request not found: ${leaveRequestId}`);
     }
 
@@ -369,10 +419,126 @@ export async function handleUpdateRecruitmentOpening(
   });
 }
 
+/** Coerces a JSONB numeric field to a finite number (0 when absent/non-numeric). */
+function money(entry: Record<string, unknown>, ...keys: string[]): number {
+  for (const key of keys) {
+    if (key in entry && entry[key] != null) {
+      const n = Number(entry[key]);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Money-safety guards for a payroll run's entries (integrity gap b). For every
+ * entry that will be marked processed this validates:
+ *   1. netPay === basicPay + allowances - deductions (within a 1-unit rounding
+ *      tolerance — amounts are whole rupees, so this absorbs float noise only).
+ *   2. netPay >= 0 — a processed run never disburses a negative net.
+ *   3. each employee appears at most once (per-run per-employee uniqueness) — an
+ *      employee listed twice in one run would be double-paid.
+ * Throws a 422 `PAYROLL_ENTRY_INVALID` naming the first offending employee.
+ */
+export function validatePayrollEntries(entries: Array<Record<string, unknown>>): void {
+  const ROUNDING_TOLERANCE = 1;
+  const seenEmployees = new Set<string>();
+  for (const entry of entries) {
+    const employeeId = String(entry.employeeId ?? entry.employee_id ?? "");
+    const employeeLabel = employeeId ||
+      String(entry.employeeName ?? entry.employee_name ?? entry.id ?? "unknown");
+
+    if (employeeId) {
+      if (seenEmployees.has(employeeId)) {
+        throw new WriteValidationError(
+          `Payroll entry invalid: employee ${employeeLabel} appears more than once in this run`,
+          422,
+          "PAYROLL_ENTRY_INVALID",
+        );
+      }
+      seenEmployees.add(employeeId);
+    }
+
+    const basicPay = money(entry, "basicPay", "basic_pay");
+    const allowances = money(entry, "allowances");
+    const deductions = money(entry, "deductions");
+    const netPay = money(entry, "netPay", "net_pay");
+    const expectedNet = basicPay + allowances - deductions;
+
+    if (Math.abs(netPay - expectedNet) > ROUNDING_TOLERANCE) {
+      throw new WriteValidationError(
+        `Payroll entry invalid for employee ${employeeLabel}: ` +
+          `netPay ${netPay} != basicPay ${basicPay} + allowances ${allowances} - deductions ${deductions} (= ${expectedNet})`,
+        422,
+        "PAYROLL_ENTRY_INVALID",
+      );
+    }
+    if (netPay < 0) {
+      throw new WriteValidationError(
+        `Payroll entry invalid for employee ${employeeLabel}: netPay ${netPay} is negative`,
+        422,
+        "PAYROLL_ENTRY_INVALID",
+      );
+    }
+  }
+}
+
+/**
+ * Pure payroll-run process transform (integrity gaps a + b — money-safety).
+ * Given the current `snapshot_payroll` document, marks the run `runId` processed:
+ *   (a) A run already 'processed' is NOT re-processed — re-running would silently
+ *       overwrite the processed record and risk a DOUBLE-PAY. Refused with 409
+ *       `PAYROLL_RUN_ALREADY_PROCESSED`.
+ *   (b) Every per-employee entry is validated (via validatePayrollEntries) BEFORE
+ *       the run is marked processed. Refused with 422 `PAYROLL_ENTRY_INVALID`.
+ * A run absent from `runs` is appended (first process). Returns the next snapshot
+ * + the processed run record. Kept pure so the guards are unit-testable DB-free.
+ */
+export function applyPayrollRun(
+  current: Record<string, unknown>,
+  runId: string,
+  processedOn: string,
+): { next: Record<string, unknown>; processedRun: Record<string, unknown> } {
+  const runs = Array.isArray(current.runs)
+    ? current.runs as Array<Record<string, unknown>>
+    : [];
+  const entries = Array.isArray(current.entries)
+    ? current.entries as Array<Record<string, unknown>>
+    : [];
+  const index = runs.findIndex((run) => String(run.id ?? "") === runId);
+
+  // (a) Re-process guard — never overwrite an already-processed run.
+  if (index >= 0 && String(runs[index]!.status ?? "") === "processed") {
+    throw new WriteValidationError(
+      `Payroll run ${runId} is already processed; re-processing is not allowed`,
+      409,
+      "PAYROLL_RUN_ALREADY_PROCESSED",
+    );
+  }
+
+  // (b) Validate every per-employee salary line before disbursing.
+  validatePayrollEntries(entries);
+
+  if (index >= 0) {
+    const processedRun = { ...runs[index], status: "processed", processedOn };
+    const nextRuns = [...runs];
+    nextRuns[index] = processedRun;
+    return { next: { ...current, runs: nextRuns }, processedRun };
+  }
+  const processedRun: Record<string, unknown> = {
+    id: runId,
+    status: "processed",
+    processedOn,
+  };
+  return { next: { ...current, runs: [...runs, processedRun] }, processedRun };
+}
+
 /**
  * POST /hr/payroll/run — process a payroll run. Runs live inside the
- * `snapshot_payroll` snapshot under the `runs` array, so this marks the
- * matching run processed (or appends one when absent).
+ * `snapshot_payroll` snapshot under the `runs` array, with per-employee salary
+ * lines under the `entries` array. Money-safety guards live in applyPayrollRun
+ * (gap a: 409 re-process; gap b: 422 invalid/duplicate entry). Code-level guards
+ * on the JSONB payload — no schema change.
  */
 export async function handleProcessPayrollRun(req: Request, config: AppConfig): Promise<Response> {
   return await runWrite(req, config, async (ctx) => {
@@ -380,36 +546,40 @@ export async function handleProcessPayrollRun(req: Request, config: AppConfig): 
     const runId = requireStr(body, "runId", "run_id");
     const processedOn = str(body, "processedOn", "processed_on") ?? isoDate(new Date());
 
-    let processedRun: Record<string, unknown> = {
-      id: runId,
-      status: "processed",
-      processedOn,
-    };
+    let processedRun: Record<string, unknown> | null = null;
+    // The guard raises inside the mutator; capture it and re-throw AFTER the
+    // snapshot resolves so a rejected run never mutates the snapshot.
+    let guardError: WriteValidationError | null = null;
     await writeStore.mutateSnapshot(
       db,
       organizationId,
       schoolId,
       "snapshot_payroll",
       (current) => {
-        const runs = Array.isArray(current.runs)
-          ? current.runs as Array<Record<string, unknown>>
-          : [];
-        const index = runs.findIndex((run) => String(run.id ?? "") === runId);
-        if (index >= 0) {
-          processedRun = { ...runs[index], status: "processed", processedOn };
-          const nextRuns = [...runs];
-          nextRuns[index] = processedRun;
-          return { ...current, runs: nextRuns };
+        try {
+          const result = applyPayrollRun(current, runId, processedOn);
+          processedRun = result.processedRun;
+          return result.next;
+        } catch (error) {
+          if (error instanceof WriteValidationError) {
+            guardError = error;
+            return current; // do not mutate on a rejected run
+          }
+          throw error;
         }
-        return { ...current, runs: [...runs, processedRun] };
       },
     );
+
+    if (guardError !== null) {
+      throw guardError;
+    }
+
     await emitMutationAudit(
       db,
       claims,
       moduleEntityAudit("hr.payroll_run.processed", "hr_payroll_run", runId, { processedOn }),
       request,
     );
-    return { payload: processedRun, status: 201 };
+    return { payload: processedRun!, status: 201 };
   });
 }
