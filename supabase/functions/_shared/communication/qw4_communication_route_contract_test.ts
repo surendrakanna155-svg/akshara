@@ -79,7 +79,7 @@ async function call(
   return await routeCommunication(req, config, method, path);
 }
 
-// ── 19 registered routes: assert each resolves + passes its own gate ──────────
+// ── 24 registered routes: assert each resolves + passes its own gate ──────────
 // `pass` = perms + scope that should clear the gate (→ 503 or, for writes with
 // no body, 422). `den` = perms + scope that should be denied (→ 403).
 interface RouteCase {
@@ -111,9 +111,38 @@ const routes: RouteCase[] = [
     pass: { perms: ["sendBroadcast"], scope: "school" },
     den: { perms: ["viewCommunications"], scope: "school" },
   },
+  // COM-1: per-broadcast delivery/read report (parametrized id) → sendBroadcast.
+  {
+    method: "GET", path: "/communications/broadcasts/bcast-1/report",
+    pass: { perms: ["sendBroadcast"], scope: "school" },
+    den: { perms: ["viewCommunications"], scope: "school" },
+  },
+  // COM-3: resend-to-unread (parametrized id) → sendBroadcast.
+  {
+    method: "POST", path: "/communications/broadcasts/bcast-1/resend",
+    pass: { perms: ["sendBroadcast"], scope: "school" },
+    den: { perms: ["viewCommunications"], scope: "school" },
+  },
   {
     method: "POST", path: "/communications/broadcasts",
     pass: { perms: ["sendBroadcast"], scope: "school", body: { audience: "all", title: "x", body: "y" } },
+    den: { perms: ["viewCommunications"], scope: "school" },
+  },
+  // COM-2: saved audience segments — GET is read-gated (viewCommunications),
+  // POST/DELETE are send-gated (sendBroadcast).
+  {
+    method: "GET", path: "/communications/audience-segments",
+    pass: { perms: ["viewCommunications"], scope: "school" },
+    den: { perms: ["viewAdminHub"], scope: "school" },
+  },
+  {
+    method: "POST", path: "/communications/audience-segments",
+    pass: { perms: ["sendBroadcast"], scope: "school", body: { name: "Grade 5", audience_type: "class_parents", class_name: "5" } },
+    den: { perms: ["viewCommunications"], scope: "school" },
+  },
+  {
+    method: "DELETE", path: "/communications/audience-segments/seg-1",
+    pass: { perms: ["sendBroadcast"], scope: "school" },
     den: { perms: ["viewCommunications"], scope: "school" },
   },
   {
@@ -192,7 +221,7 @@ const routes: RouteCase[] = [
 ];
 
 Deno.test("QA-B-017: every registered communication route resolves and enforces its gate (perm or scope)", async () => {
-  assertEquals(routes.length, 19, "expected exactly 19 registered communication routes under test");
+  assertEquals(routes.length, 24, "expected exactly 24 registered communication routes under test");
   for (const r of routes) {
     const passRes = await call(r.method, r.path, r.pass.perms, r.pass.scope, r.pass.body);
     const gatePassed = passRes?.status === 503 || passRes?.status === 422;
@@ -208,6 +237,39 @@ Deno.test("QA-B-017: every registered communication route resolves and enforces 
       `${r.method} ${r.path} with denied creds expected 403 but got ${denRes?.status}`,
     );
   }
+});
+
+// COM-D1: the acknowledge route is recipient-owned — ANY authenticated scope may
+// ack their OWN delivery (no permission slug, no scope gate). It therefore has no
+// 403 path; it clears its gate under parent/student/school and reaches the DB
+// (503), and an unauthenticated caller is 401.
+Deno.test("COM-D1: POST /communications/notifications/:id/acknowledge clears its gate for any authenticated recipient scope", async () => {
+  for (const scope of ["parent", "student", "school"] as AuthScope[]) {
+    const res = await call(
+      "POST",
+      "/communications/notifications/deliv-1/acknowledge",
+      [],
+      scope,
+    );
+    assertEquals(
+      res?.status,
+      503,
+      `acknowledge with scope ${scope} expected gate-passed (503) but got ${res?.status}`,
+    );
+  }
+});
+
+Deno.test("COM-D1: POST /communications/notifications/:id/acknowledge rejects an unauthenticated caller (401)", async () => {
+  const req = new Request("https://x/communications/notifications/deliv-1/acknowledge", {
+    method: "POST",
+  });
+  const res = await routeCommunication(
+    req,
+    config,
+    "POST",
+    "/communications/notifications/deliv-1/acknowledge",
+  );
+  assertEquals(res?.status, 401);
 });
 
 Deno.test("QA-B-017: an unregistered in-prefix communication path returns 404 NOT_FOUND", async () => {

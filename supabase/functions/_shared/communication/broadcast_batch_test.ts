@@ -22,8 +22,9 @@ function fakeDb(): { db: TenantQueryClient; calls: Captured[] } {
     queryObject(sql: string, args: unknown[] = []): Promise<any[]> {
       calls.push({ sql, args });
       // enqueueDeliveriesBatch reads rows.length to count queued rows: return one
-      // row per recipient (args beyond the 7 fixed params — incl. route, NOT-1).
-      const recipientCount = Math.max(0, args.length - 7);
+      // row per recipient (args beyond the 9 fixed params — incl. route (NOT-1),
+      // broadcast_id (COM-1) and requires_ack (COM-D1)).
+      const recipientCount = Math.max(0, args.length - 9);
       return Promise.resolve(
         Array.from({ length: recipientCount }, (_, i) => ({ id: `d-${i}` })),
       );
@@ -68,11 +69,12 @@ Deno.test("enqueueDeliveriesBatch issues one multi-row INSERT and counts rows", 
   const { sql, args } = calls[0];
   assert(sql.includes("INSERT INTO notification_deliveries"));
   assert(sql.includes("'pending'"));
-  // 7 fixed params (incl. route, NULL when unset — NOT-1), then one user param
-  // per recipient.
+  // 9 fixed params (route NULL when unset — NOT-1; broadcast_id NULL when unset —
+  // COM-1; requires_ack false when unset — COM-D1), then one user param per
+  // recipient.
   assertEquals(
     args,
-    ["org", "school", "push", "announcement", "Title", "Body", null, "u1", "u2"],
+    ["org", "school", "push", "announcement", "Title", "Body", null, null, false, "u1", "u2"],
   );
 });
 
@@ -90,8 +92,31 @@ Deno.test("enqueueDeliveriesBatch carries the deep-link route when set (NOT-1)",
   });
   const { sql, args } = calls[0];
   assert(sql.includes("route"));
-  // route is the 7th fixed param, before the per-recipient user ids.
-  assertEquals(args, ["org", "school", "push", "announcement", "Title", "Body", "/parent/notices", "u1"]);
+  // route is the 7th fixed param, broadcast_id the 8th (NULL here), requires_ack
+  // the 9th (false here), before the per-recipient user ids.
+  assertEquals(args, ["org", "school", "push", "announcement", "Title", "Body", "/parent/notices", null, false, "u1"]);
+});
+
+Deno.test("enqueueDeliveriesBatch stamps the broadcast_id when set (COM-1)", async () => {
+  const { db, calls } = fakeDb();
+  await enqueueDeliveriesBatch(db, {
+    organizationId: "org",
+    schoolId: "school",
+    recipientUserIds: ["u1"],
+    channel: "push",
+    category: "announcement",
+    renderedSubject: "Title",
+    renderedBody: "Body",
+    broadcastId: "bcast-1",
+  });
+  const { sql, args } = calls[0];
+  assert(sql.includes("broadcast_id"));
+  // broadcast_id is the 8th fixed param, requires_ack the 9th (false here),
+  // before the per-recipient user ids.
+  assertEquals(
+    args,
+    ["org", "school", "push", "announcement", "Title", "Body", null, "bcast-1", false, "u1"],
+  );
 });
 
 Deno.test("enqueueDeliveriesBatch no-ops on empty cohort", async () => {

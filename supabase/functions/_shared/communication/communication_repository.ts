@@ -81,13 +81,82 @@ export interface CommBroadcastRow {
   organization_id: string;
   school_id: string | null;
   audience: string;
+  /** COM-2: class this broadcast targets when audience is class_parents/class_students. */
+  audience_class: string | null;
+  /** COM-2: optional section within audience_class (null = whole class). */
+  audience_section: string | null;
   title: string;
   body: string;
   status: string;
+  /** COM-D1: whether recipients must explicitly acknowledge this broadcast. */
+  requires_ack: boolean;
   scheduled_at: string | null;
   sent_at: string | null;
   created_by: string;
   created_at: string;
+}
+
+/** COM-2: a saved, reusable named audience (class/section) for a school. */
+export interface CommAudienceSegmentRow {
+  id: string;
+  organization_id: string;
+  school_id: string;
+  name: string;
+  audience_type: string;
+  class_name: string | null;
+  section_name: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+/**
+ * COM-1/COM-3: thrown when a broadcast id is not visible in the caller's
+ * org+school. Handlers map this to a 404 (never leak whether the id exists in a
+ * different tenant/school).
+ */
+export class BroadcastNotFoundError extends Error {
+  constructor(broadcastId: string) {
+    super(`Broadcast not found: ${broadcastId}`);
+    this.name = "BroadcastNotFoundError";
+  }
+}
+
+/** COM-1: aggregate delivery/read counters for one broadcast, computed off the
+ * authoritative `notification_deliveries` ledger. */
+export interface BroadcastDeliveryCounts {
+  total: number;
+  sent: number;
+  failed: number;
+  pending: number;
+  read: number;
+  unread: number;
+  /** COM-D1: number of deliveries whose recipient has acknowledged the notice
+   * (acknowledged_at IS NOT NULL). Meaningful when requiresAck is true. */
+  acknowledged: number;
+}
+
+/** COM-1: identity of a recipient who has been delivered a broadcast but has not
+ * yet read it. */
+export interface UnreadBroadcastRecipient {
+  userId: string;
+  name: string;
+}
+
+/** COM-1: full per-broadcast delivery & read report (broadcast summary +
+ * aggregate counts + the unread-recipient roster). */
+export interface BroadcastDeliveryReport {
+  broadcast: {
+    id: string;
+    title: string;
+    audience: string;
+    status: string;
+    /** COM-D1: whether this broadcast required recipient acknowledgement. */
+    requires_ack: boolean;
+    sent_at: string | null;
+    scheduled_at: string | null;
+  };
+  counts: BroadcastDeliveryCounts;
+  unreadRecipients: UnreadBroadcastRecipient[];
 }
 
 export async function listTemplates(
@@ -302,6 +371,20 @@ export async function enqueueDeliveriesBatch(
     renderedSubject: string | null;
     renderedBody: string;
     route?: string | null;
+    /**
+     * COM-1: when set, stamps every enqueued delivery with the originating
+     * broadcast so per-broadcast delivery/read reports (see
+     * {@link getBroadcastDeliveryReport}) can tie the ledger back to the
+     * broadcast. Left NULL for direct-message / absence-alert enqueues.
+     */
+    broadcastId?: string | null;
+    /**
+     * COM-D1: when true, every enqueued delivery is flagged
+     * `requires_ack = true` so the recipient's app renders the acknowledge
+     * affordance and the delivery can be counted toward the acknowledgement
+     * total in the report. Defaults false (direct messages / absence alerts).
+     */
+    requiresAck?: boolean;
   },
 ): Promise<number> {
   if (input.recipientUserIds.length === 0) return 0;
@@ -313,15 +396,18 @@ export async function enqueueDeliveriesBatch(
     input.renderedSubject,
     input.renderedBody,
     input.route ?? null,
+    input.broadcastId ?? null,
+    input.requiresAck ?? false,
   ];
   const values = input.recipientUserIds.map((userId, i) => {
     params.push(userId);
-    return `($1, $2, $${i + 8}, $3, $4, $5, $6, $7, 'pending')`;
+    return `($1, $2, $${i + 10}, $3, $4, $5, $6, $7, $8, $9, 'pending')`;
   });
   const rows = await db.queryObject<{ id: string }>(
     `INSERT INTO notification_deliveries (
        organization_id, school_id, recipient_user_id, channel,
-       category, rendered_subject, rendered_body, route, status
+       category, rendered_subject, rendered_body, route, broadcast_id,
+       requires_ack, status
      ) VALUES ${values.join(", ")}
      RETURNING id`,
     params,
@@ -507,6 +593,9 @@ export async function createBroadcast(
     organizationId: string;
     schoolId: string | null;
     audience: string;
+    audienceClass?: string | null;
+    audienceSection?: string | null;
+    requiresAck?: boolean;
     title: string;
     body: string;
     createdBy: string;
@@ -514,13 +603,17 @@ export async function createBroadcast(
 ): Promise<CommBroadcastRow> {
   const rows = await db.queryObject<CommBroadcastRow>(
     `INSERT INTO comm_broadcasts (
-       organization_id, school_id, audience, title, body, status, created_by
-     ) VALUES ($1, $2, $3, $4, $5, 'sending', $6)
+       organization_id, school_id, audience, audience_class, audience_section,
+       requires_ack, title, body, status, created_by
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'sending', $9)
      RETURNING *`,
     [
       input.organizationId,
       input.schoolId,
       input.audience,
+      input.audienceClass ?? null,
+      input.audienceSection ?? null,
+      input.requiresAck ?? false,
       input.title,
       input.body,
       input.createdBy,
@@ -542,6 +635,9 @@ export async function createScheduledBroadcast(
     organizationId: string;
     schoolId: string | null;
     audience: string;
+    audienceClass?: string | null;
+    audienceSection?: string | null;
+    requiresAck?: boolean;
     title: string;
     body: string;
     createdBy: string;
@@ -550,13 +646,17 @@ export async function createScheduledBroadcast(
 ): Promise<CommBroadcastRow> {
   const rows = await db.queryObject<CommBroadcastRow>(
     `INSERT INTO comm_broadcasts (
-       organization_id, school_id, audience, title, body, status, scheduled_at, created_by
-     ) VALUES ($1, $2, $3, $4, $5, 'scheduled', $6, $7)
+       organization_id, school_id, audience, audience_class, audience_section,
+       requires_ack, title, body, status, scheduled_at, created_by
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'scheduled', $9, $10)
      RETURNING *`,
     [
       input.organizationId,
       input.schoolId,
       input.audience,
+      input.audienceClass ?? null,
+      input.audienceSection ?? null,
+      input.requiresAck ?? false,
       input.title,
       input.body,
       input.scheduledAt,
@@ -620,6 +720,145 @@ export async function listBroadcastHistory(
       LIMIT $3 OFFSET $4`,
     [orgId, schoolId, limit, offset],
   );
+}
+
+/**
+ * COM-1: per-broadcast delivery & read report. The broadcast is first verified
+ * to exist in the caller's org+school (org-wide broadcasts have school_id NULL)
+ * — a miss throws {@link BroadcastNotFoundError} so the handler returns 404
+ * without leaking cross-tenant existence. Counts are aggregated from the
+ * authoritative `notification_deliveries` ledger (status flipped by the drain,
+ * is_read flipped by the mark-read handlers); `comm_recipients.delivery_status`
+ * is deliberately NOT consulted (it is the intended-audience record and stays
+ * 'pending'). The unread roster joins delivered-but-unread rows to the canonical
+ * `users.display_name`.
+ */
+export async function getBroadcastDeliveryReport(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  broadcastId: string,
+): Promise<BroadcastDeliveryReport> {
+  const broadcastRows = await db.queryObject<{
+    id: string;
+    title: string;
+    audience: string;
+    status: string;
+    requires_ack: boolean;
+    sent_at: string | null;
+    scheduled_at: string | null;
+  }>(
+    `SELECT id, title, audience, status, requires_ack, sent_at, scheduled_at
+       FROM comm_broadcasts
+      WHERE id = $1
+        AND organization_id = $2
+        AND (school_id = $3 OR school_id IS NULL)`,
+    [broadcastId, orgId, schoolId],
+  );
+  const broadcast = broadcastRows[0];
+  if (!broadcast) throw new BroadcastNotFoundError(broadcastId);
+
+  const countRows = await db.queryObject<{
+    total: string;
+    sent: string;
+    failed: string;
+    pending: string;
+    read: string;
+    unread: string;
+    acknowledged: string;
+  }>(
+    `SELECT
+        count(*)::text AS total,
+        count(*) FILTER (WHERE status = 'sent')::text AS sent,
+        count(*) FILTER (WHERE status = 'failed')::text AS failed,
+        count(*) FILTER (WHERE status = 'pending')::text AS pending,
+        count(*) FILTER (WHERE is_read = true)::text AS read,
+        count(*) FILTER (WHERE status = 'sent' AND is_read = false)::text AS unread,
+        count(*) FILTER (WHERE acknowledged_at IS NOT NULL)::text AS acknowledged
+       FROM notification_deliveries
+      WHERE broadcast_id = $1`,
+    [broadcastId],
+  );
+  const c = countRows[0];
+  const counts: BroadcastDeliveryCounts = {
+    total: Number(c?.total ?? 0),
+    sent: Number(c?.sent ?? 0),
+    failed: Number(c?.failed ?? 0),
+    pending: Number(c?.pending ?? 0),
+    read: Number(c?.read ?? 0),
+    unread: Number(c?.unread ?? 0),
+    acknowledged: Number(c?.acknowledged ?? 0),
+  };
+
+  const unreadRows = await db.queryObject<{ user_id: string; name: string }>(
+    `SELECT nd.recipient_user_id AS user_id,
+            COALESCE(u.display_name, '') AS name
+       FROM notification_deliveries nd
+       LEFT JOIN users u ON u.id = nd.recipient_user_id
+      WHERE nd.broadcast_id = $1
+        AND nd.status = 'sent'
+        AND nd.is_read = false
+      ORDER BY name
+      LIMIT 500`,
+    [broadcastId],
+  );
+
+  return {
+    broadcast: {
+      id: broadcast.id,
+      title: broadcast.title,
+      audience: broadcast.audience,
+      status: broadcast.status,
+      requires_ack: broadcast.requires_ack ?? false,
+      sent_at: broadcast.sent_at,
+      scheduled_at: broadcast.scheduled_at,
+    },
+    counts,
+    unreadRecipients: unreadRows.map((r) => ({ userId: r.user_id, name: r.name })),
+  };
+}
+
+/**
+ * COM-3: distinct recipient ids that were delivered a broadcast ('sent') but
+ * have not read it yet, from the authoritative `notification_deliveries` ledger.
+ * These are the re-send targets for {@link resendBroadcastToUnread}.
+ */
+export async function listUnreadBroadcastRecipientIds(
+  db: TenantQueryClient,
+  orgId: string,
+  broadcastId: string,
+): Promise<string[]> {
+  const rows = await db.queryObject<{ recipient_user_id: string }>(
+    `SELECT DISTINCT recipient_user_id
+       FROM notification_deliveries
+      WHERE broadcast_id = $1
+        AND organization_id = $2
+        AND status = 'sent'
+        AND is_read = false`,
+    [broadcastId, orgId],
+  );
+  return rows.map((r) => r.recipient_user_id);
+}
+
+/** COM-3: load a broadcast scoped to the caller's org+school (org-wide rows have
+ * school_id NULL) for the resend path; throws {@link BroadcastNotFoundError}
+ * (→ 404) when not visible. */
+export async function getBroadcastInScope(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  broadcastId: string,
+): Promise<CommBroadcastRow> {
+  const rows = await db.queryObject<CommBroadcastRow>(
+    `SELECT * FROM comm_broadcasts
+      WHERE id = $1
+        AND organization_id = $2
+        AND (school_id = $3 OR school_id IS NULL)`,
+    [broadcastId, orgId, schoolId],
+  );
+  const row = rows[0];
+  if (!row) throw new BroadcastNotFoundError(broadcastId);
+  return row;
 }
 
 export async function finalizeBroadcast(
@@ -749,7 +988,48 @@ export async function resolveBroadcastRecipients(
   orgId: string,
   schoolId: string | null,
   audience: string,
+  opts?: { className?: string | null; sectionName?: string | null },
 ): Promise<string[]> {
+  const className = (opts?.className ?? "").trim();
+  const sectionName = (opts?.sectionName ?? "").trim() || null;
+
+  // COM-2: guardians of one class (optionally one section). A null/empty section
+  // means "every section of the class". Empty class → [] (the handler validates
+  // 422 up front, but resolve defensively too so a bad row never fans out to the
+  // whole school).
+  if (audience === "class_parents") {
+    if (!className || !schoolId) return [];
+    const rows = await db.queryObject<{ guardian_user_id: string }>(
+      `SELECT DISTINCT sg.guardian_user_id
+         FROM sis_student_enrollments e
+         JOIN student_guardians sg ON sg.student_id = e.student_id
+        WHERE e.school_id = $1
+          AND e.is_current = true
+          AND e.class_name = $2
+          AND ($3::text IS NULL OR e.section_name = $3)
+          AND sg.status = 'active'
+          AND sg.organization_id = $4`,
+      [schoolId, className, sectionName, orgId],
+    );
+    return rows.map((r) => r.guardian_user_id);
+  }
+
+  // COM-2: the students of one class (optionally one section). students.id ==
+  // users.id, so the enrollment's student_id is the recipient user id.
+  if (audience === "class_students") {
+    if (!className || !schoolId) return [];
+    const rows = await db.queryObject<{ user_id: string }>(
+      `SELECT DISTINCT e.student_id AS user_id
+         FROM sis_student_enrollments e
+        WHERE e.school_id = $1
+          AND e.is_current = true
+          AND e.class_name = $2
+          AND ($3::text IS NULL OR e.section_name = $3)`,
+      [schoolId, className, sectionName],
+    );
+    return rows.map((r) => r.user_id);
+  }
+
   if (!schoolId) {
     const rows = await db.queryObject<{ user_id: string }>(
       `SELECT DISTINCT user_id FROM school_memberships sm
@@ -837,4 +1117,99 @@ export async function getNotificationDeliveryMetrics(
     else if (row.status === "failed") failed += count;
   }
   return { sent, pending, failed, total: sent + pending + failed };
+}
+
+/**
+ * COM-D1: record a recipient's acknowledgement of one delivery. Sets
+ * `acknowledged_at` (the receipt timestamp) and marks it read, scoped to the
+ * caller's own delivery row (org + recipient). The recipient RLS policy already
+ * enforces ownership; the explicit `recipient_user_id = $2` predicate is
+ * defense-in-depth so even a service-role caller can only ack the owner's row.
+ * Returns the acked id, or null when no such delivery is visible → the handler
+ * maps that to a 404 (never leaks whether the id exists for another recipient).
+ */
+export async function acknowledgeDelivery(
+  db: TenantQueryClient,
+  orgId: string,
+  userId: string,
+  deliveryId: string,
+): Promise<{ id: string; acknowledged_at: string } | null> {
+  const rows = await db.queryObject<{ id: string; acknowledged_at: string }>(
+    `UPDATE notification_deliveries
+        SET acknowledged_at = timezone('utc', now()),
+            is_read = true,
+            updated_at = timezone('utc', now())
+      WHERE id = $1::uuid
+        AND recipient_user_id = $2
+        AND organization_id = $3
+      RETURNING id, acknowledged_at`,
+    [deliveryId, userId, orgId],
+  );
+  return rows[0] ?? null;
+}
+
+/** COM-2: list the saved audience segments for the caller's school. */
+export async function listAudienceSegments(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+): Promise<CommAudienceSegmentRow[]> {
+  return await db.queryObject<CommAudienceSegmentRow>(
+    `SELECT * FROM comm_audience_segments
+      WHERE organization_id = $1 AND school_id = $2
+      ORDER BY name`,
+    [orgId, schoolId],
+  );
+}
+
+/** COM-2: persist a new saved audience segment for the caller's school. */
+export async function createAudienceSegment(
+  db: TenantQueryClient,
+  input: {
+    organizationId: string;
+    schoolId: string;
+    name: string;
+    audienceType: string;
+    className: string | null;
+    sectionName: string | null;
+    createdBy: string;
+  },
+): Promise<CommAudienceSegmentRow> {
+  const rows = await db.queryObject<CommAudienceSegmentRow>(
+    `INSERT INTO comm_audience_segments (
+       organization_id, school_id, name, audience_type,
+       class_name, section_name, created_by
+     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING *`,
+    [
+      input.organizationId,
+      input.schoolId,
+      input.name,
+      input.audienceType,
+      input.className,
+      input.sectionName,
+      input.createdBy,
+    ],
+  );
+  return rows[0]!;
+}
+
+/**
+ * COM-2: delete a saved audience segment scoped to the caller's school. Returns
+ * the deleted id, or null when no matching segment is visible → the handler maps
+ * that to a 404.
+ */
+export async function deleteAudienceSegment(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  id: string,
+): Promise<string | null> {
+  const rows = await db.queryObject<{ id: string }>(
+    `DELETE FROM comm_audience_segments
+      WHERE id = $1::uuid AND organization_id = $2 AND school_id = $3
+      RETURNING id`,
+    [id, orgId, schoolId],
+  );
+  return rows[0]?.id ?? null;
 }

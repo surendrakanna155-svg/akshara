@@ -14,19 +14,29 @@ import {
 } from "../audit/audit_repository.ts";
 import type { AccessTokenClaims } from "../jwt.ts";
 import {
+  acknowledgeNotification,
   CommunicationValidationError,
+  createAudienceSegmentEntry,
   createNotificationTemplate,
+  deleteAudienceSegmentEntry,
+  getBroadcastReport,
+  listAudienceSegmentEntries,
   listBroadcastHistoryEntries,
   listNotificationTemplates,
   listUserMessageThreads,
   listUserNotifications,
+  NotificationNotFoundError,
+  resendBroadcastToUnread,
   runDueScheduledBroadcasts,
   scheduleBroadcastMessage,
   sendBroadcastMessage,
   sendDirectMessage,
   updateNotificationTemplate,
 } from "./communication_service.ts";
-import { getNotificationDeliveryMetrics } from "./communication_repository.ts";
+import {
+  BroadcastNotFoundError,
+  getNotificationDeliveryMetrics,
+} from "./communication_repository.ts";
 import { processDeliveryQueue } from "./notification_service.ts";
 import {
   loadCommunicationWebhookConfig,
@@ -113,6 +123,15 @@ function snakeStr(body: Record<string, unknown>, key: string): string {
 function optionalSnakeStr(body: Record<string, unknown>, key: string): string | undefined {
   const value = body[key];
   return value == null ? undefined : String(value);
+}
+
+/** Read a boolean-ish flag from a request body (true when `true` or "true"). */
+function boolFlag(body: Record<string, unknown>, ...keys: string[]): boolean {
+  for (const key of keys) {
+    const value = body[key];
+    if (value === true || value === "true") return true;
+  }
+  return false;
 }
 
 export async function handleListTemplates(
@@ -279,6 +298,190 @@ export async function handleBroadcastHistory(
   }
 }
 
+/**
+ * COM-1: GET /communications/broadcasts/{id}/report — per-broadcast delivery &
+ * read report computed off the authoritative `notification_deliveries` ledger.
+ * Same permission gate as broadcast history (`sendBroadcast`). A broadcast id
+ * that isn't visible in the caller's org+school → 404 (never leaks cross-tenant
+ * existence). The id is passed in already-decoded by the router.
+ */
+export async function handleBroadcastReport(
+  req: Request,
+  config: AppConfig,
+  broadcastId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "sendBroadcast");
+  if (denied) return denied;
+
+  try {
+    const report = await withTenantContext(config, auth.claims, async (db) =>
+      await getBroadcastReport(db, auth.claims, broadcastId)
+    );
+    return jsonResponse(envelope(report));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof BroadcastNotFoundError) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load broadcast report", 500);
+  }
+}
+
+/**
+ * COM-3: POST /communications/broadcasts/{id}/resend — re-enqueue the broadcast
+ * to every recipient who was delivered it but hasn't read it. Same permission
+ * gate as broadcast send (`sendBroadcast`). Not-found → 404. The freshly-queued
+ * deliveries are drained off the request path (same as the immediate send). The
+ * id is passed in already-decoded by the router.
+ */
+export async function handleResendBroadcast(
+  req: Request,
+  config: AppConfig,
+  broadcastId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "sendBroadcast");
+  if (denied) return denied;
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) =>
+      await resendBroadcastToUnread(db, auth.claims, broadcastId, req)
+    );
+    // Push the freshly-enqueued deliveries out of the synchronous request.
+    await scheduleNotificationDrain(config, auth.claims);
+    return jsonResponse(envelope({ broadcastId, resent: result.resent }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof BroadcastNotFoundError) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to resend broadcast", 500);
+  }
+}
+
+/**
+ * COM-2: GET /communications/audience-segments — list the caller's school's
+ * saved audience segments. Gated by `viewCommunications` (read gate).
+ */
+export async function handleListAudienceSegments(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "viewCommunications");
+  if (denied) return denied;
+
+  try {
+    const items = await withTenantContext(config, auth.claims, async (db) =>
+      await listAudienceSegmentEntries(db, auth.claims)
+    );
+    return jsonResponse(envelope({ items }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to load audience segments", 500);
+  }
+}
+
+/**
+ * COM-2: POST /communications/audience-segments — save a named audience segment.
+ * Gated by `sendBroadcast` (same gate as authoring a broadcast). Validates the
+ * name/type/class in the service (→ 422).
+ */
+export async function handleCreateAudienceSegment(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "sendBroadcast");
+  if (denied) return denied;
+
+  const body = await readJson<Record<string, unknown>>(req);
+  if (!body) {
+    return errorEnvelope("VALIDATION_ERROR", "Invalid JSON body", 422);
+  }
+
+  try {
+    const segment = await withTenantContext(config, auth.claims, async (db) =>
+      await createAudienceSegmentEntry(
+        db,
+        auth.claims,
+        {
+          name: snakeStr(body, "name"),
+          audienceType: snakeStr(body, "audience_type") || snakeStr(body, "audienceType"),
+          className: optionalSnakeStr(body, "class_name") ??
+            optionalSnakeStr(body, "className") ?? null,
+          sectionName: optionalSnakeStr(body, "section_name") ??
+            optionalSnakeStr(body, "sectionName") ?? null,
+        },
+        req,
+      )
+    );
+    return jsonResponse(envelope(segment), { status: 201 });
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to create audience segment", 500);
+  }
+}
+
+/**
+ * COM-2: DELETE /communications/audience-segments/{id} — delete a saved segment.
+ * Gated by `sendBroadcast`. Not-found → 404. The id is passed in already-decoded
+ * by the router.
+ */
+export async function handleDeleteAudienceSegment(
+  req: Request,
+  config: AppConfig,
+  segmentId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requirePermission(auth.claims, "sendBroadcast");
+  if (denied) return denied;
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) =>
+      await deleteAudienceSegmentEntry(db, auth.claims, segmentId, req)
+    );
+    return jsonResponse(envelope(result));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof NotificationNotFoundError) {
+      return errorEnvelope("NOT_FOUND", "Audience segment not found", 404);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to delete audience segment", 500);
+  }
+}
+
 export async function handleCreateBroadcast(
   req: Request,
   config: AppConfig,
@@ -296,6 +499,14 @@ export async function handleCreateBroadcast(
   const scheduledAt = optionalSnakeStr(body, "scheduledAt") ??
     optionalSnakeStr(body, "scheduled_at");
 
+  // COM-2 / COM-D1: the class/section target + acknowledge flag accept both
+  // snake_case (client wire) and camelCase spellings.
+  const audienceClass = optionalSnakeStr(body, "audience_class") ??
+    optionalSnakeStr(body, "audienceClass") ?? null;
+  const audienceSection = optionalSnakeStr(body, "audience_section") ??
+    optionalSnakeStr(body, "audienceSection") ?? null;
+  const requiresAck = boolFlag(body, "requires_ack", "requiresAck");
+
   try {
     // XCT-2 / COM-4: when a scheduledAt is supplied, persist the broadcast in the
     // 'scheduled' state instead of sending now — the runner dispatches it when its
@@ -310,6 +521,9 @@ export async function handleCreateBroadcast(
             title: snakeStr(body, "title"),
             body: snakeStr(body, "body"),
             scheduledAt,
+            audienceClass,
+            audienceSection,
+            requiresAck,
           },
           req,
         )
@@ -325,6 +539,9 @@ export async function handleCreateBroadcast(
           audience: snakeStr(body, "audience"),
           title: snakeStr(body, "title"),
           body: snakeStr(body, "body"),
+          audienceClass,
+          audienceSection,
+          requiresAck,
         },
         req,
       )
@@ -623,6 +840,41 @@ export async function handleMarkNotificationRead(
       return tenantDbNotConfiguredResponse(error);
     }
     return errorEnvelope("INTERNAL_ERROR", "Failed to mark notification read", 500);
+  }
+}
+
+/**
+ * COM-D1: POST /communications/notifications/{id}/acknowledge — record the
+ * caller's acknowledgement of one of their OWN deliveries (the signed receipt).
+ * Any authenticated caller may ack, but only their own row (the recipient RLS
+ * policy + the explicit recipient predicate enforce ownership); a delivery not
+ * visible to the caller → 404. The delivery id is passed in already-decoded by
+ * the router.
+ */
+export async function handleAcknowledgeNotification(
+  req: Request,
+  config: AppConfig,
+  deliveryId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) =>
+      await acknowledgeNotification(db, auth.claims, deliveryId, req)
+    );
+    return jsonResponse(envelope(result));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) {
+      return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof NotificationNotFoundError) {
+      return errorEnvelope("NOT_FOUND", error.message, 404);
+    }
+    if (error instanceof CommunicationValidationError) {
+      return errorEnvelope("VALIDATION_ERROR", error.message, 422);
+    }
+    return errorEnvelope("INTERNAL_ERROR", "Failed to acknowledge notification", 500);
   }
 }
 

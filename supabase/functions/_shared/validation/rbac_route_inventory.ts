@@ -64,7 +64,16 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/communications/templates", permission: "sendBroadcast", scope: "school", module: "communication" },
   { method: "PUT", path: "/communications/templates/:id", permission: "sendBroadcast", scope: "school", module: "communication" },
   { method: "GET", path: "/communications/broadcasts/history", permission: "sendBroadcast", scope: "school", module: "communication" },
+  { method: "GET", path: "/communications/broadcasts/:id/report", permission: "sendBroadcast", scope: "school", module: "communication" },
+  { method: "POST", path: "/communications/broadcasts/:id/resend", permission: "sendBroadcast", scope: "school", module: "communication" },
   { method: "POST", path: "/communications/broadcasts", permission: "sendBroadcast", scope: "school", module: "communication" },
+  // COM-2: saved audience segments (view=read gate, create/delete=send gate).
+  { method: "GET", path: "/communications/audience-segments", permission: "viewCommunications", scope: "school", module: "communication" },
+  { method: "POST", path: "/communications/audience-segments", permission: "sendBroadcast", scope: "school", module: "communication" },
+  { method: "DELETE", path: "/communications/audience-segments/:id", permission: "sendBroadcast", scope: "school", module: "communication" },
+  // COM-D1: acknowledge a delivery (signed receipt). Recipient-owned, like
+  // mark-read — no permission slug; the recipient RLS policy enforces ownership.
+  { method: "POST", path: "/communications/notifications/:id/acknowledge", permission: null, scope: "parent", module: "communication" },
   { method: "GET", path: "/parent/notifications", permission: null, scope: "parent", module: "communication" },
   { method: "GET", path: "/student/notifications", permission: null, scope: "student", module: "communication" },
   { method: "GET", path: "/education/question-bank", permission: "viewEducation", scope: "school", module: "education" },

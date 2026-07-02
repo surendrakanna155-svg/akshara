@@ -2,18 +2,27 @@ import type { AccessTokenClaims } from "../jwt.ts";
 import type { TenantQueryClient } from "../tenant_db.ts";
 import { correlationIdFromRequest, recordMutationAudit } from "../audit/audit_repository.ts";
 import {
+  acknowledgeDelivery,
+  type BroadcastDeliveryReport,
   claimDueScheduledBroadcasts,
+  createAudienceSegment,
   createBroadcast,
   createScheduledBroadcast,
   createThread,
+  deleteAudienceSegment,
   enqueueDeliveriesBatch,
   finalizeBroadcast,
+  getBroadcastDeliveryReport,
+  getBroadcastInScope,
   getThread,
   insertBroadcastRecipientsBatch,
   insertMessage,
+  listAudienceSegments,
   listMessagesForThread,
   listThreadsForUser,
+  listUnreadBroadcastRecipientIds,
   resolveBroadcastRecipients,
+  type CommAudienceSegmentRow,
   type CommBroadcastRow,
   type CommMessageRow,
   type CommThreadRow,
@@ -34,6 +43,24 @@ export class CommunicationValidationError extends Error {
     this.name = "CommunicationValidationError";
   }
 }
+
+/**
+ * COM-D1: thrown when the acknowledged notification is not visible to the caller
+ * (wrong recipient / wrong tenant / missing). Handlers map this to a 404 so we
+ * never leak whether the delivery exists for another recipient.
+ */
+export class NotificationNotFoundError extends Error {
+  constructor(deliveryId: string) {
+    super(`Notification not found: ${deliveryId}`);
+    this.name = "NotificationNotFoundError";
+  }
+}
+
+/**
+ * COM-2: audiences whose recipients are one specific class (optionally one
+ * section). Authoring one of these REQUIRES an audience_class.
+ */
+const CLASS_AUDIENCES = new Set(["class_parents", "class_students"]);
 
 function requireSchool(claims: AccessTokenClaims): string {
   if (!claims.school_id) {
@@ -99,6 +126,8 @@ export function deliveryToNotificationApi(row: {
   is_read: boolean;
   child_context: string | null;
   created_at: string;
+  requires_ack?: boolean;
+  acknowledged_at?: string | null;
 }): Record<string, unknown> {
   return {
     id: row.id,
@@ -109,6 +138,10 @@ export function deliveryToNotificationApi(row: {
     isRead: row.is_read,
     isUrgent: row.category === "fee",
     childContext: row.child_context,
+    // COM-D1 — the recipient app renders an "Acknowledge" affordance when the
+    // notice requires acknowledgement and hasn't been acknowledged yet.
+    requiresAck: row.requires_ack ?? false,
+    acknowledgedAt: row.acknowledged_at ?? null,
   };
 }
 
@@ -165,12 +198,25 @@ export async function sendDirectMessage(
     thread = existing;
   } else {
     const isTeacher = input.senderRole === "teacher";
+    // Integrity: a NEW thread must name its counterparty so every thread has
+    // BOTH participants. Without this a parent/teacher could open a
+    // half-populated thread that, under the now participant-only RLS (migration
+    // 20260837000000), nobody but the author could ever see — an orphaned,
+    // unreachable conversation. Replies (with a threadId) are unaffected.
+    const counterparty = (input.counterpartyUserId ?? "").trim();
+    if (!counterparty) {
+      throw new CommunicationValidationError(
+        isTeacher
+          ? "A recipient parent is required to start a conversation"
+          : "A recipient teacher is required to start a conversation",
+      );
+    }
     thread = await createThread(db, {
       organizationId: claims.tenant_id,
       schoolId,
       subject: input.subject ?? null,
-      parentUserId: isTeacher ? input.counterpartyUserId ?? null : claims.sub,
-      teacherUserId: isTeacher ? claims.sub : input.counterpartyUserId ?? null,
+      parentUserId: isTeacher ? counterparty : claims.sub,
+      teacherUserId: isTeacher ? claims.sub : counterparty,
       studentId: claims.child_ids[0] ?? null,
       preview: input.body.trim(),
     });
@@ -230,7 +276,14 @@ export async function sendDirectMessage(
 export async function sendBroadcastMessage(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
-  input: { audience: string; title: string; body: string },
+  input: {
+    audience: string;
+    title: string;
+    body: string;
+    audienceClass?: string | null;
+    audienceSection?: string | null;
+    requiresAck?: boolean;
+  },
   req?: Request,
 ): Promise<Record<string, unknown>> {
   if (claims.scope !== "school" && claims.scope !== "organization") {
@@ -238,10 +291,23 @@ export async function sendBroadcastMessage(
   }
   const schoolId = claims.school_id;
   const audience = normalizeBroadcastAudience(input.audience);
+  // COM-2: a class_* audience is meaningless without a class — reject up front
+  // (422) rather than silently fanning out to nobody.
+  const audienceClass = (input.audienceClass ?? "").trim() || null;
+  const audienceSection = (input.audienceSection ?? "").trim() || null;
+  if (CLASS_AUDIENCES.has(audience) && !audienceClass) {
+    throw new CommunicationValidationError(
+      "audience_class is required for a class broadcast",
+    );
+  }
+  const requiresAck = input.requiresAck === true;
   const broadcast = await createBroadcast(db, {
     organizationId: claims.tenant_id,
     schoolId,
     audience,
+    audienceClass,
+    audienceSection,
+    requiresAck,
     title: input.title,
     body: input.body,
     createdBy: claims.sub,
@@ -252,6 +318,7 @@ export async function sendBroadcastMessage(
     claims.tenant_id,
     schoolId,
     audience,
+    { className: audienceClass, sectionName: audienceSection },
   );
   // PERF-1: bound the cohort, then write recipients + push deliveries in two
   // multi-row INSERTs instead of 2 round-trips per recipient. The actual
@@ -270,6 +337,8 @@ export async function sendBroadcastMessage(
     category: "announcement",
     renderedSubject: input.title,
     renderedBody: input.body,
+    broadcastId: broadcast.id, // COM-1: tie the delivery ledger to this broadcast
+    requiresAck, // COM-D1: flag each delivery when the notice must be acknowledged
   });
   await finalizeBroadcast(db, broadcast.id);
 
@@ -283,6 +352,9 @@ export async function sendBroadcastMessage(
       entityId: broadcast.id,
       metadata: {
         audience: input.audience,
+        audienceClass,
+        audienceSection,
+        requiresAck,
         recipientCount: recipients.length,
         resolvedCount: resolved.length,
         droppedOverCap: dropped,
@@ -301,6 +373,9 @@ export async function sendBroadcastMessage(
   return {
     broadcastId: broadcast.id,
     audience: broadcast.audience,
+    audienceClass: broadcast.audience_class,
+    audienceSection: broadcast.audience_section,
+    requiresAck: broadcast.requires_ack,
     title: broadcast.title,
     recipientCount: recipients.length,
     droppedOverCap: dropped,
@@ -336,7 +411,15 @@ export function parseScheduledAt(value: string | undefined | null): string {
 export async function scheduleBroadcastMessage(
   db: TenantQueryClient,
   claims: AccessTokenClaims,
-  input: { audience: string; title: string; body: string; scheduledAt: string },
+  input: {
+    audience: string;
+    title: string;
+    body: string;
+    scheduledAt: string;
+    audienceClass?: string | null;
+    audienceSection?: string | null;
+    requiresAck?: boolean;
+  },
   req?: Request,
 ): Promise<Record<string, unknown>> {
   if (claims.scope !== "school" && claims.scope !== "organization") {
@@ -347,11 +430,24 @@ export async function scheduleBroadcastMessage(
   if (input.title.trim() === "" || input.body.trim() === "") {
     throw new CommunicationValidationError("Broadcast title and body are required");
   }
+  // COM-2: same class-audience guard as the immediate path — a scheduled
+  // class_* broadcast must carry the class it targets.
+  const audienceClass = (input.audienceClass ?? "").trim() || null;
+  const audienceSection = (input.audienceSection ?? "").trim() || null;
+  if (CLASS_AUDIENCES.has(audience) && !audienceClass) {
+    throw new CommunicationValidationError(
+      "audience_class is required for a class broadcast",
+    );
+  }
+  const requiresAck = input.requiresAck === true;
 
   const broadcast = await createScheduledBroadcast(db, {
     organizationId: claims.tenant_id,
     schoolId: claims.school_id ?? null,
     audience,
+    audienceClass,
+    audienceSection,
+    requiresAck,
     title: input.title,
     body: input.body,
     createdBy: claims.sub,
@@ -366,7 +462,7 @@ export async function scheduleBroadcastMessage(
       category: "workflow",
       entityType: "comm_broadcast",
       entityId: broadcast.id,
-      metadata: { audience: input.audience, scheduledAt },
+      metadata: { audience: input.audience, audienceClass, audienceSection, requiresAck, scheduledAt },
       correlationId: req ? correlationIdFromRequest(req) : undefined,
     },
     {
@@ -381,6 +477,9 @@ export async function scheduleBroadcastMessage(
   return {
     broadcastId: broadcast.id,
     audience: broadcast.audience,
+    audienceClass: broadcast.audience_class,
+    audienceSection: broadcast.audience_section,
+    requiresAck: broadcast.requires_ack,
     title: broadcast.title,
     scheduledAt,
     status: "scheduled",
@@ -399,11 +498,15 @@ async function fanOutExistingBroadcast(
   broadcast: CommBroadcastRow,
 ): Promise<{ recipientCount: number; droppedOverCap: number; resolvedCount: number }> {
   const schoolId = broadcast.school_id ?? claims.school_id ?? null;
+  // COM-2 / COM-D1: the class/section + ack flag are read off the persisted
+  // broadcast row so the scheduled dispatch honours what was authored (audience
+  // membership is still resolved NOW, at dispatch time, not at authoring time).
   const resolved = await resolveBroadcastRecipients(
     db,
     claims.tenant_id,
     schoolId,
     broadcast.audience,
+    { className: broadcast.audience_class, sectionName: broadcast.audience_section },
   );
   const recipients = resolved.slice(0, MAX_BROADCAST_RECIPIENTS);
   const dropped = resolved.length - recipients.length;
@@ -417,6 +520,8 @@ async function fanOutExistingBroadcast(
     category: "announcement",
     renderedSubject: broadcast.title,
     renderedBody: broadcast.body,
+    broadcastId: broadcast.id, // COM-1: tie the delivery ledger to this broadcast
+    requiresAck: broadcast.requires_ack === true, // COM-D1: carry the ack flag
   });
   await finalizeBroadcast(db, broadcast.id);
 
@@ -708,4 +813,292 @@ export async function listBroadcastHistoryEntries(
     recipientCount: b.recipient_count,
     sentAt: b.sent_at ?? b.created_at,
   }));
+}
+
+/**
+ * COM-1: per-broadcast delivery & read report for the caller's org+school. Reads
+ * the authoritative `notification_deliveries` ledger via
+ * {@link getBroadcastDeliveryReport}; a broadcast that isn't visible in scope
+ * throws {@link BroadcastNotFoundError} (→ 404 in the handler). Returns the
+ * broadcast summary, aggregate counts, and the unread-recipient roster in the
+ * API's camelCase shape.
+ */
+export async function getBroadcastReport(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  broadcastId: string,
+): Promise<Record<string, unknown>> {
+  const schoolId = requireSchool(claims);
+  const report: BroadcastDeliveryReport = await getBroadcastDeliveryReport(
+    db,
+    claims.tenant_id,
+    schoolId,
+    broadcastId,
+  );
+  return {
+    broadcast: {
+      id: report.broadcast.id,
+      title: report.broadcast.title,
+      audience: report.broadcast.audience,
+      status: report.broadcast.status,
+      requiresAck: report.broadcast.requires_ack,
+      sentAt: report.broadcast.sent_at,
+      scheduledAt: report.broadcast.scheduled_at,
+    },
+    // COM-D1: counts now include `acknowledged` (deliveries with a receipt) so
+    // the UI can show progress against `requiresAck`.
+    counts: report.counts,
+    unreadRecipients: report.unreadRecipients,
+  };
+}
+
+/**
+ * COM-3: re-enqueue a broadcast's push delivery to every recipient who was
+ * delivered it ('sent') but has not read it yet. Reads the unread set from the
+ * authoritative `notification_deliveries` ledger and re-enqueues 'pending'
+ * deliveries (same channel/category/subject/body/route) STAMPED with the same
+ * broadcast_id, so the resend is itself tracked in the report. A resend is
+ * intentionally repeatable, so the audit event carries a fresh nonce rather than
+ * a deterministic idempotency key. Returns the number of recipients re-targeted
+ * (0 when everyone has read it). The freshly-queued deliveries are drained
+ * out-of-band by the handler (same as the immediate broadcast path).
+ */
+export async function resendBroadcastToUnread(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  broadcastId: string,
+  req?: Request,
+): Promise<{ resent: number }> {
+  const schoolId = requireSchool(claims);
+  const broadcast = await getBroadcastInScope(
+    db,
+    claims.tenant_id,
+    schoolId,
+    broadcastId,
+  );
+
+  const unreadIds = await listUnreadBroadcastRecipientIds(
+    db,
+    claims.tenant_id,
+    broadcast.id,
+  );
+  if (unreadIds.length === 0) {
+    return { resent: 0 };
+  }
+
+  await enqueueDeliveriesBatch(db, {
+    organizationId: claims.tenant_id,
+    schoolId: broadcast.school_id ?? schoolId,
+    recipientUserIds: unreadIds,
+    channel: "push",
+    category: "announcement",
+    renderedSubject: broadcast.title,
+    renderedBody: broadcast.body,
+    broadcastId: broadcast.id, // COM-3: keep the resend tracked under the same broadcast
+  });
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "broadcastResent",
+      category: "workflow",
+      entityType: "comm_broadcast",
+      entityId: broadcast.id,
+      metadata: { broadcastId: broadcast.id, resent: unreadIds.length },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      eventType: "broadcast.resent",
+      payload: { broadcastId: broadcast.id, resent: unreadIds.length },
+      sourceModule: "communication",
+      // Resend is intentionally repeatable → unique nonce, not a deterministic key.
+      idempotencyKey: `broadcast.resent:${broadcast.id}:${crypto.randomUUID()}`,
+    },
+    req,
+  );
+
+  return { resent: unreadIds.length };
+}
+
+// --- COM-D1: acknowledgement (signed-receipt) ---------------------------------
+
+/**
+ * COM-D1: record the caller's acknowledgement of one of THEIR OWN notification
+ * deliveries. Scoped to (tenant, recipient=self); a delivery not visible to the
+ * caller throws {@link NotificationNotFoundError} (→ 404). The mutation-audit
+ * event `notification.acknowledged` (actor=self, target=deliveryId, timestamp)
+ * IS the authoritative, immutable signed-receipt log; `acknowledged_at` on the
+ * delivery row is the queryable projection the per-broadcast report counts.
+ */
+export async function acknowledgeNotification(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  deliveryId: string,
+  req?: Request,
+): Promise<{ deliveryId: string; acknowledgedAt: string }> {
+  const id = (deliveryId ?? "").trim();
+  if (!id) {
+    throw new CommunicationValidationError("notification id is required");
+  }
+  const row = await acknowledgeDelivery(db, claims.tenant_id, claims.sub, id);
+  if (!row) {
+    throw new NotificationNotFoundError(id);
+  }
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "notificationAcknowledged",
+      category: "workflow",
+      entityType: "notification_delivery",
+      entityId: row.id,
+      metadata: { deliveryId: row.id, acknowledgedAt: row.acknowledged_at },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      // This domain event is the signed receipt: actor=claims.sub (in the audit
+      // row's user context), target=deliveryId, timestamp=acknowledged_at.
+      eventType: "notification.acknowledged",
+      payload: { deliveryId: row.id, acknowledgedAt: row.acknowledged_at },
+      sourceModule: "communication",
+      idempotencyKey: `notification.acknowledged:${row.id}`,
+    },
+    req,
+  );
+
+  return { deliveryId: row.id, acknowledgedAt: row.acknowledged_at };
+}
+
+// --- COM-2: saved audience segments -------------------------------------------
+
+function segmentToApi(s: CommAudienceSegmentRow): Record<string, unknown> {
+  return {
+    id: s.id,
+    name: s.name,
+    audienceType: s.audience_type,
+    className: s.class_name,
+    sectionName: s.section_name,
+    createdAt: s.created_at,
+  };
+}
+
+/** COM-2: list the saved audience segments for the caller's school. */
+export async function listAudienceSegmentEntries(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+): Promise<Record<string, unknown>[]> {
+  const schoolId = requireSchool(claims);
+  const rows = await listAudienceSegments(db, claims.tenant_id, schoolId);
+  return rows.map(segmentToApi);
+}
+
+/**
+ * COM-2: create a saved audience segment for the caller's school, validating the
+ * name + audience type and (for class audiences) the class. Audits the write.
+ */
+export async function createAudienceSegmentEntry(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  input: {
+    name: string;
+    audienceType: string;
+    className?: string | null;
+    sectionName?: string | null;
+  },
+  req?: Request,
+): Promise<Record<string, unknown>> {
+  const schoolId = requireSchool(claims);
+  const name = (input.name ?? "").trim();
+  if (!name) {
+    throw new CommunicationValidationError("Segment name is required");
+  }
+  const audienceType = normalizeBroadcastAudience((input.audienceType ?? "").trim());
+  if (!audienceType) {
+    throw new CommunicationValidationError("audience_type is required");
+  }
+  const className = (input.className ?? "").trim() || null;
+  const sectionName = (input.sectionName ?? "").trim() || null;
+  if (CLASS_AUDIENCES.has(audienceType) && !className) {
+    throw new CommunicationValidationError(
+      "class_name is required for a class segment",
+    );
+  }
+
+  const row = await createAudienceSegment(db, {
+    organizationId: claims.tenant_id,
+    schoolId,
+    name,
+    audienceType,
+    className,
+    sectionName,
+    createdBy: claims.sub,
+  });
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "audienceSegmentCreated",
+      category: "workflow",
+      entityType: "comm_audience_segment",
+      entityId: row.id,
+      metadata: { name: row.name, audienceType: row.audience_type },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      eventType: "communication.audience_segment.created",
+      payload: { segmentId: row.id, name: row.name },
+      sourceModule: "communication",
+      idempotencyKey: `communication.audience_segment.created:${row.id}`,
+    },
+    req,
+  );
+
+  return segmentToApi(row);
+}
+
+/**
+ * COM-2: delete a saved audience segment scoped to the caller's school. Throws
+ * {@link NotificationNotFoundError} (→ 404) when no matching segment exists.
+ * Audits the delete.
+ */
+export async function deleteAudienceSegmentEntry(
+  db: TenantQueryClient,
+  claims: AccessTokenClaims,
+  segmentId: string,
+  req?: Request,
+): Promise<{ id: string }> {
+  const schoolId = requireSchool(claims);
+  const id = (segmentId ?? "").trim();
+  if (!id) {
+    throw new CommunicationValidationError("Segment id is required");
+  }
+  const deleted = await deleteAudienceSegment(db, claims.tenant_id, schoolId, id);
+  if (!deleted) {
+    throw new NotificationNotFoundError(id);
+  }
+
+  await recordMutationAudit(
+    db,
+    claims,
+    {
+      eventType: "audienceSegmentDeleted",
+      category: "workflow",
+      entityType: "comm_audience_segment",
+      entityId: deleted,
+      metadata: { segmentId: deleted },
+      correlationId: req ? correlationIdFromRequest(req) : undefined,
+    },
+    {
+      eventType: "communication.audience_segment.deleted",
+      payload: { segmentId: deleted },
+      sourceModule: "communication",
+      idempotencyKey: `communication.audience_segment.deleted:${deleted}:${Date.now()}`,
+    },
+    req,
+  );
+
+  return { id: deleted };
 }
