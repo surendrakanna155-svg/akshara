@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/error_text.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../router/route_names.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../finance/inventory_finance/inventory_finance_models.dart';
 import '../inventory_models.dart';
+import '../inventory_stock_provider.dart';
 import '../widgets/inventory_module_scaffold.dart';
 import 'inventory_intelligence_provider.dart';
 import '../../../core/errors/api_failure_mapper.dart';
@@ -15,6 +21,7 @@ class InventoryCopilotScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(inventoryCopilotProvider);
+    final lowStock = ref.watch(inventoryLowStockFutureProvider);
 
     return InventoryModuleScaffold(
       screen: InventoryScreen.copilot,
@@ -73,10 +80,85 @@ class InventoryCopilotScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const Divider(height: 32),
+            const Text('Low stock — raise PO',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            lowStock.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Text(aksharaErrorMessage(e)),
+              data: (rows) => rows.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Text('All items are above their reorder level.'),
+                    )
+                  : Column(
+                      children: [
+                        for (final row in rows)
+                          _LowStockRecommendationCard(row: row),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// INV-4 — a copilot low-stock recommendation row with a Raise-PO action that
+/// calls the EXISTING createPurchaseOrder against the row's
+/// sku + recommendedQuantity + vendorId.
+class _LowStockRecommendationCard extends ConsumerWidget {
+  const _LowStockRecommendationCard({required this.row});
+
+  final LowStockRow row;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      elevation: 0,
+      child: ListTile(
+        title: Text(row.itemName),
+        subtitle: Text(
+          '${row.sku} · ${row.quantityOnHand}/${row.reorderLevel} · '
+          'recommend ${row.recommendedQuantity}',
+        ),
+        trailing: AksharaManageAction(
+          permission: Permission.createInventoryPo,
+          auditRoute: RouteNames.inventoryCopilot,
+          child: FilledButton.tonal(
+            key: QaTestKeys.inventoryLowStockRaisePoButton(row.sku),
+            onPressed: () => _raisePo(context, ref),
+            child: const Text('Raise PO'),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _raisePo(BuildContext context, WidgetRef ref) async {
+    try {
+      final po =
+          await ref.read(raisePoFromLowStockProvider.notifier).execute(row);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.inventoryLowStockRaisePoSuccessSnackbar,
+          content: Text(
+            'Draft PO ${po.poNumber} raised for ${row.sku} '
+            '(${row.recommendedQuantity} units)',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(aksharaErrorMessage(error))),
+      );
+    }
   }
 }
 

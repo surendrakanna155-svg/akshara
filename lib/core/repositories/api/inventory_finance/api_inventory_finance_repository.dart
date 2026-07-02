@@ -152,4 +152,103 @@ class ApiInventoryFinanceRepository implements InventoryFinanceRepository {
     );
     return _mapper.toReceiveResult(data);
   }
+
+  // ── INV-1..7 — Store STOCK module ──
+
+  @override
+  Future<StockIssue> issueStock({
+    required RepositoryQuery query,
+    required IssueStockRequest request,
+  }) async {
+    final dto = await _remote.issueStock(query: query, request: request);
+    return _mapper.toStockIssue(dto);
+  }
+
+  @override
+  Future<StockAdjustmentResult> adjustStock({
+    required RepositoryQuery query,
+    required AdjustStockRequest request,
+  }) async {
+    final dto = await _remote.adjustStock(query: query, request: request);
+    return _mapper.toStockAdjustmentResult(dto);
+  }
+
+  @override
+  Future<StockAdjustmentDecision> approveStockAdjustment({
+    required RepositoryQuery query,
+    required String adjustmentId,
+    String? comment,
+  }) async {
+    final dto = await _remote.approveStockAdjustment(
+      query: query,
+      adjustmentId: adjustmentId,
+      comment: comment,
+    );
+    return _mapper.toStockAdjustmentDecision(dto);
+  }
+
+  @override
+  Future<StockAdjustmentDecision> rejectStockAdjustment({
+    required RepositoryQuery query,
+    required String adjustmentId,
+    String? comment,
+  }) async {
+    final dto = await _remote.rejectStockAdjustment(
+      query: query,
+      adjustmentId: adjustmentId,
+      comment: comment,
+    );
+    return _mapper.toStockAdjustmentDecision(dto);
+  }
+
+  @override
+  Future<List<StockAdjustment>> listPendingAdjustments({
+    required RepositoryQuery query,
+  }) async {
+    final items = await _remote.listPendingAdjustments(query: query);
+    return _mapper.toStockAdjustments(items);
+  }
+
+  @override
+  Future<StockCountResult> recordStockCount({
+    required RepositoryQuery query,
+    required RecordStockCountRequest request,
+  }) async {
+    final dto = await _remote.recordStockCount(query: query, request: request);
+    return _mapper.toStockCountResult(dto);
+  }
+
+  @override
+  Future<StockItem> upsertStockItem({
+    required RepositoryQuery query,
+    required UpsertStockItemRequest request,
+  }) async {
+    final dto = await _remote.upsertStockItem(query: query, request: request);
+    return _mapper.toStockItem(dto);
+  }
+
+  @override
+  Future<List<StockItem>> listStockItems({
+    required RepositoryQuery query,
+  }) async {
+    final items = await _remote.listStockItems(query: query);
+    return _mapper.toStockItems(items);
+  }
+
+  @override
+  Future<List<LowStockRow>> listLowStock({
+    required RepositoryQuery query,
+  }) async {
+    final items = await _remote.listLowStock(query: query);
+    return _mapper.toLowStockRows(items);
+  }
+
+  @override
+  Future<List<StockRegisterRow>> listStockRegister({
+    required RepositoryQuery query,
+    String? sku,
+  }) async {
+    final items = await _remote.listStockRegister(query: query, sku: sku);
+    return _mapper.toStockRegisterRows(items);
+  }
 }

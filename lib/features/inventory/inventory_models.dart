@@ -9,6 +9,8 @@ enum InventoryScreen {
   maintenance,
   procurement,
   vendors,
+  stock,
+  stockApprovals,
   reports,
   copilot,
   lifecycle;
@@ -21,6 +23,8 @@ enum InventoryScreen {
         InventoryScreen.maintenance => 'Maintenance',
         InventoryScreen.procurement => 'Procurement',
         InventoryScreen.vendors => 'Vendors',
+        InventoryScreen.stock => 'Store & Stock',
+        InventoryScreen.stockApprovals => 'Write-offs',
         InventoryScreen.reports => 'Reports',
         InventoryScreen.copilot => 'Inventory Copilot',
         InventoryScreen.lifecycle => 'Asset Lifecycle',

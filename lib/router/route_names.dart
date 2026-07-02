@@ -442,6 +442,8 @@ abstract final class RouteNames {
   static const String inventoryMaintenance = '/inventory/maintenance';
   static const String inventoryProcurement = '/inventory/procurement';
   static const String inventoryVendors = '/inventory/vendors';
+  static const String inventoryStock = '/inventory/stock';
+  static const String inventoryStockApprovals = '/inventory/stock-approvals';
   static const String inventoryReports = '/inventory/reports';
   static const String inventoryCopilot = '/inventory/copilot';
   static const String inventoryLifecycle = '/inventory/lifecycle';
@@ -455,6 +457,8 @@ abstract final class RouteNames {
     inventoryMaintenance,
     inventoryProcurement,
     inventoryVendors,
+    inventoryStock,
+    inventoryStockApprovals,
     inventoryReports,
     inventoryCopilot,
     inventoryLifecycle,

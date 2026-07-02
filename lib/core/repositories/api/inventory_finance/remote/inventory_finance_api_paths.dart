@@ -19,4 +19,17 @@ abstract final class InventoryFinanceApiPaths {
       '$procurementOrders/$id/approve';
   static String receiveGoods(String id) => '$procurementOrders/$id/receive';
   static const String stockValuation = '/inventory/stock/valuation';
+
+  // ── INV-1..7 — Store STOCK module ──
+  static const String stockIssue = '/inventory/stock/issue';
+  static const String stockAdjust = '/inventory/stock/adjust';
+  static const String stockAdjustments = '/inventory/stock/adjustments';
+  static String approveStockAdjustment(String id) =>
+      '$stockAdjustments/$id/approve';
+  static String rejectStockAdjustment(String id) =>
+      '$stockAdjustments/$id/reject';
+  static const String stockCount = '/inventory/stock/count';
+  static const String stockItems = '/inventory/stock/items';
+  static const String stockRegister = '/inventory/stock/register';
+  static const String lowStock = '/inventory/stock/low-stock';
 }

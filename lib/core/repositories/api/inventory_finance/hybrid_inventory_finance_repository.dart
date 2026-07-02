@@ -107,4 +107,83 @@ class HybridInventoryFinanceRepository implements InventoryFinanceRepository {
         purchaseOrderId: purchaseOrderId,
         request: request,
       );
+
+  // ── INV-1..7 — Store STOCK module ──
+
+  @override
+  Future<StockIssue> issueStock({
+    required RepositoryQuery query,
+    required IssueStockRequest request,
+  }) =>
+      _api.issueStock(query: query, request: request);
+
+  @override
+  Future<StockAdjustmentResult> adjustStock({
+    required RepositoryQuery query,
+    required AdjustStockRequest request,
+  }) =>
+      _api.adjustStock(query: query, request: request);
+
+  @override
+  Future<StockAdjustmentDecision> approveStockAdjustment({
+    required RepositoryQuery query,
+    required String adjustmentId,
+    String? comment,
+  }) =>
+      _api.approveStockAdjustment(
+        query: query,
+        adjustmentId: adjustmentId,
+        comment: comment,
+      );
+
+  @override
+  Future<StockAdjustmentDecision> rejectStockAdjustment({
+    required RepositoryQuery query,
+    required String adjustmentId,
+    String? comment,
+  }) =>
+      _api.rejectStockAdjustment(
+        query: query,
+        adjustmentId: adjustmentId,
+        comment: comment,
+      );
+
+  @override
+  Future<List<StockAdjustment>> listPendingAdjustments({
+    required RepositoryQuery query,
+  }) =>
+      _api.listPendingAdjustments(query: query);
+
+  @override
+  Future<StockCountResult> recordStockCount({
+    required RepositoryQuery query,
+    required RecordStockCountRequest request,
+  }) =>
+      _api.recordStockCount(query: query, request: request);
+
+  @override
+  Future<StockItem> upsertStockItem({
+    required RepositoryQuery query,
+    required UpsertStockItemRequest request,
+  }) =>
+      _api.upsertStockItem(query: query, request: request);
+
+  @override
+  Future<List<StockItem>> listStockItems({
+    required RepositoryQuery query,
+  }) =>
+      _api.listStockItems(query: query);
+
+  @override
+  Future<List<LowStockRow>> listLowStock({
+    required RepositoryQuery query,
+  }) =>
+      _api.listLowStock(query: query);
+
+  @override
+  Future<List<StockRegisterRow>> listStockRegister({
+    required RepositoryQuery query,
+    String? sku,
+  }) =>
+      _api.listStockRegister(query: query, sku: sku);
 }

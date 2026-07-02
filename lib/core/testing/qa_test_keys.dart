@@ -815,6 +815,97 @@ abstract final class QaTestKeys {
 
   static const inventoryReportExportSuccessSnackbar =
       ValueKey<String>('inventory_report_export_success_snackbar');
+
+  // ── INV-1..7 — Store STOCK module ──
+  static const inventoryStockScreen =
+      ValueKey<String>('inventory_stock_screen');
+  static const inventoryStockIssueButton =
+      ValueKey<String>('inventory_stock_issue_button');
+  static const inventoryStockIssueSkuField =
+      ValueKey<String>('inventory_stock_issue_sku_field');
+  static const inventoryStockIssueQtyField =
+      ValueKey<String>('inventory_stock_issue_qty_field');
+  static const inventoryStockIssueIssuedToField =
+      ValueKey<String>('inventory_stock_issue_issued_to_field');
+  static const inventoryStockIssueReasonField =
+      ValueKey<String>('inventory_stock_issue_reason_field');
+  static const inventoryStockIssueSubmitButton =
+      ValueKey<String>('inventory_stock_issue_submit_button');
+  static const inventoryStockIssueSuccessSnackbar =
+      ValueKey<String>('inventory_stock_issue_success_snackbar');
+  static const inventoryStockIssueErrorText =
+      ValueKey<String>('inventory_stock_issue_error_text');
+
+  static const inventoryStockAdjustButton =
+      ValueKey<String>('inventory_stock_adjust_button');
+  static const inventoryStockAdjustSkuField =
+      ValueKey<String>('inventory_stock_adjust_sku_field');
+  static const inventoryStockAdjustQtyField =
+      ValueKey<String>('inventory_stock_adjust_qty_field');
+  static const inventoryStockAdjustReasonField =
+      ValueKey<String>('inventory_stock_adjust_reason_field');
+  static const inventoryStockAdjustTypeDropdown =
+      ValueKey<String>('inventory_stock_adjust_type_dropdown');
+  static const inventoryStockAdjustSubmitButton =
+      ValueKey<String>('inventory_stock_adjust_submit_button');
+  static const inventoryStockAdjustAppliedSnackbar =
+      ValueKey<String>('inventory_stock_adjust_applied_snackbar');
+  static const inventoryStockAdjustPendingSnackbar =
+      ValueKey<String>('inventory_stock_adjust_pending_snackbar');
+
+  static const inventoryStockCountButton =
+      ValueKey<String>('inventory_stock_count_button');
+  static const inventoryStockCountSkuField =
+      ValueKey<String>('inventory_stock_count_sku_field');
+  static const inventoryStockCountQtyField =
+      ValueKey<String>('inventory_stock_count_qty_field');
+  static const inventoryStockCountSubmitButton =
+      ValueKey<String>('inventory_stock_count_submit_button');
+  static const inventoryStockCountVarianceText =
+      ValueKey<String>('inventory_stock_count_variance_text');
+
+  static const inventoryStockApprovalsScreen =
+      ValueKey<String>('inventory_stock_approvals_screen');
+  static ValueKey<String> inventoryStockApprovalRow(String adjustmentId) =>
+      ValueKey<String>('inventory_stock_approval_row_$adjustmentId');
+  static ValueKey<String> inventoryStockApproveButton(String adjustmentId) =>
+      ValueKey<String>('inventory_stock_approve_$adjustmentId');
+  static ValueKey<String> inventoryStockRejectButton(String adjustmentId) =>
+      ValueKey<String>('inventory_stock_reject_$adjustmentId');
+  static const inventoryStockApproveSuccessSnackbar =
+      ValueKey<String>('inventory_stock_approve_success_snackbar');
+  static const inventoryStockRejectSuccessSnackbar =
+      ValueKey<String>('inventory_stock_reject_success_snackbar');
+  static const inventoryStockApproveErrorSnackbar =
+      ValueKey<String>('inventory_stock_approve_error_snackbar');
+
+  static const inventoryStockItemsScreen =
+      ValueKey<String>('inventory_stock_items_screen');
+  static const inventoryStockItemAddButton =
+      ValueKey<String>('inventory_stock_item_add_button');
+  static const inventoryStockItemSkuField =
+      ValueKey<String>('inventory_stock_item_sku_field');
+  static const inventoryStockItemNameField =
+      ValueKey<String>('inventory_stock_item_name_field');
+  static const inventoryStockItemReorderField =
+      ValueKey<String>('inventory_stock_item_reorder_field');
+  static const inventoryStockItemTypeDropdown =
+      ValueKey<String>('inventory_stock_item_type_dropdown');
+  static const inventoryStockItemSubmitButton =
+      ValueKey<String>('inventory_stock_item_submit_button');
+  static const inventoryStockItemSavedSnackbar =
+      ValueKey<String>('inventory_stock_item_saved_snackbar');
+
+  static ValueKey<String> inventoryLowStockRaisePoButton(String sku) =>
+      ValueKey<String>('inventory_low_stock_raise_po_$sku');
+  static const inventoryLowStockRaisePoSuccessSnackbar =
+      ValueKey<String>('inventory_low_stock_raise_po_success_snackbar');
+
+  static const inventoryStockRegisterExportCsvButton =
+      ValueKey<String>('inventory_stock_register_export_csv_button');
+  static const inventoryStockRegisterExportPdfButton =
+      ValueKey<String>('inventory_stock_register_export_pdf_button');
+
   static const inventoryDistributionScreen =
       ValueKey<String>('inventory_distribution_screen');
   static const inventoryDistributionCreateFab =

@@ -224,6 +224,181 @@ class InventoryFinanceRemoteDataSource {
     return parseInventoryFinanceEnvelope(_responseMap(response));
   }
 
+  // ── INV-1..7 — Store STOCK module ──
+
+  Future<StockIssueDto> issueStock({
+    required RepositoryQuery query,
+    required IssueStockRequest request,
+  }) async {
+    final issueNumber = (request.issueNumber?.trim().isNotEmpty ?? false)
+        ? request.issueNumber!.trim()
+        : _generatedNumber('ISS');
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.stockIssue,
+      queryParameters: _queryParams(query),
+      data: {
+        'issueNumber': issueNumber,
+        if (request.issuedTo != null) 'issuedTo': request.issuedTo,
+        if (request.reason != null) 'reason': request.reason,
+        'lines': [
+          {'sku': request.sku, 'quantity': request.quantity},
+        ],
+      },
+    );
+    return StockIssueDto.fromJson(
+      parseInventoryFinanceEnvelope(_responseMap(response)),
+    );
+  }
+
+  Future<StockAdjustmentResultDto> adjustStock({
+    required RepositoryQuery query,
+    required AdjustStockRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.stockAdjust,
+      queryParameters: _queryParams(query),
+      data: {
+        'sku': request.sku,
+        'quantity': request.qty,
+        'movementType': request.movementType,
+        'reason': request.reason,
+        if (request.unitCostPaise != null) 'unitCost': request.unitCostPaise,
+      },
+    );
+    return StockAdjustmentResultDto.fromJson(
+      parseInventoryFinanceEnvelope(_responseMap(response)),
+    );
+  }
+
+  Future<StockAdjustmentDecisionDto> approveStockAdjustment({
+    required RepositoryQuery query,
+    required String adjustmentId,
+    String? comment,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.approveStockAdjustment(adjustmentId),
+      queryParameters: _queryParams(query),
+      data: {if (comment != null) 'comment': comment},
+    );
+    return StockAdjustmentDecisionDto.fromJson(
+      parseInventoryFinanceEnvelope(_responseMap(response)),
+    );
+  }
+
+  Future<StockAdjustmentDecisionDto> rejectStockAdjustment({
+    required RepositoryQuery query,
+    required String adjustmentId,
+    String? comment,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.rejectStockAdjustment(adjustmentId),
+      queryParameters: _queryParams(query),
+      data: {if (comment != null) 'comment': comment},
+    );
+    return StockAdjustmentDecisionDto.fromJson(
+      parseInventoryFinanceEnvelope(_responseMap(response)),
+    );
+  }
+
+  Future<List<StockAdjustmentDto>> listPendingAdjustments({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.stockAdjustments,
+      queryParameters: _queryParams(query),
+    );
+    return parseInventoryFinanceItems(_responseMap(response))
+        .map(StockAdjustmentDto.fromJson)
+        .toList();
+  }
+
+  Future<StockCountResultDto> recordStockCount({
+    required RepositoryQuery query,
+    required RecordStockCountRequest request,
+  }) async {
+    final sessionNumber = (request.sessionNumber?.trim().isNotEmpty ?? false)
+        ? request.sessionNumber!.trim()
+        : _generatedNumber('CNT');
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.stockCount,
+      queryParameters: _queryParams(query),
+      data: {
+        'sessionNumber': sessionNumber,
+        if (request.notes != null) 'notes': request.notes,
+        'lines': [
+          {'sku': request.sku, 'countedQty': request.countedQty},
+        ],
+      },
+    );
+    return StockCountResultDto.fromJson(
+      parseInventoryFinanceEnvelope(_responseMap(response)),
+    );
+  }
+
+  Future<StockItemDto> upsertStockItem({
+    required RepositoryQuery query,
+    required UpsertStockItemRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.stockItems,
+      queryParameters: _queryParams(query),
+      data: {
+        'sku': request.sku,
+        if (request.itemName != null) 'itemName': request.itemName,
+        'itemType': request.itemType,
+        'reorderLevel': request.reorderLevel,
+        if (request.unitCostPaise != null) 'unitCost': request.unitCostPaise,
+      },
+    );
+    return StockItemDto.fromJson(
+      parseInventoryFinanceEnvelope(_responseMap(response)),
+    );
+  }
+
+  Future<List<StockItemDto>> listStockItems({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.stockItems,
+      queryParameters: _queryParams(query),
+    );
+    return parseInventoryFinanceItems(_responseMap(response))
+        .map(StockItemDto.fromJson)
+        .toList();
+  }
+
+  Future<List<LowStockRowDto>> listLowStock({
+    required RepositoryQuery query,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.lowStock,
+      queryParameters: _queryParams(query),
+    );
+    return parseInventoryFinanceItems(_responseMap(response))
+        .map(LowStockRowDto.fromJson)
+        .toList();
+  }
+
+  Future<List<StockRegisterRowDto>> listStockRegister({
+    required RepositoryQuery query,
+    String? sku,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      InventoryFinanceApiPaths.stockRegister,
+      queryParameters: {
+        ..._queryParams(query),
+        if (sku != null && sku.trim().isNotEmpty) 'sku': sku.trim(),
+      },
+    );
+    return parseInventoryFinanceItems(_responseMap(response))
+        .map(StockRegisterRowDto.fromJson)
+        .toList();
+  }
+
+  String _generatedNumber(String prefix) {
+    return '$prefix-${DateTime.now().millisecondsSinceEpoch}';
+  }
+
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
     return response.data ?? const {};
   }

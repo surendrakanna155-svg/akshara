@@ -410,3 +410,310 @@ List<Map<String, dynamic>> parseInventoryFinanceItems(Map<String, dynamic> json)
   final items = data['items'] as List<dynamic>? ?? const [];
   return items.map((item) => item as Map<String, dynamic>).toList();
 }
+
+// ── INV-1..7 — Store STOCK module DTOs ──
+
+class StockIssueDto {
+  StockIssueDto({
+    required this.issueId,
+    required this.issueNumber,
+    required this.posted,
+    required this.movementIds,
+    required this.lowStockCount,
+  });
+
+  factory StockIssueDto.fromJson(Map<String, dynamic> json) {
+    final rawMovements = json['movementIds'] as List<dynamic>? ?? const [];
+    return StockIssueDto(
+      issueId: json['issueId'] as String? ?? '',
+      issueNumber: json['issueNumber'] as String? ?? '',
+      posted: json['posted'] as bool? ?? false,
+      movementIds: rawMovements.map((m) => m as String).toList(),
+      lowStockCount: json['lowStockCount'] as int? ?? 0,
+    );
+  }
+
+  final String issueId;
+  final String issueNumber;
+  final bool posted;
+  final List<String> movementIds;
+  final int lowStockCount;
+}
+
+class StockAdjustmentResultDto {
+  StockAdjustmentResultDto({
+    required this.applied,
+    required this.movementId,
+    required this.adjustmentId,
+    required this.qtyBefore,
+    required this.qtyAfter,
+    required this.status,
+  });
+
+  factory StockAdjustmentResultDto.fromJson(Map<String, dynamic> json) {
+    return StockAdjustmentResultDto(
+      applied: json['applied'] as bool? ?? false,
+      movementId: json['movementId'] as String?,
+      adjustmentId: json['adjustmentId'] as String?,
+      qtyBefore: json['qtyBefore'] as int? ?? 0,
+      qtyAfter: json['qtyAfter'] as int? ?? 0,
+      status: json['status'] as String? ?? 'pending',
+    );
+  }
+
+  final bool applied;
+  final String? movementId;
+  final String? adjustmentId;
+  final int qtyBefore;
+  final int qtyAfter;
+  final String status;
+}
+
+class StockAdjustmentDto {
+  StockAdjustmentDto({
+    required this.id,
+    required this.sku,
+    required this.qty,
+    required this.movementType,
+    required this.reason,
+    required this.status,
+    required this.referenceType,
+    required this.referenceId,
+    required this.makerId,
+    required this.checkerId,
+    required this.decisionComment,
+    required this.createdAt,
+  });
+
+  factory StockAdjustmentDto.fromJson(Map<String, dynamic> json) {
+    return StockAdjustmentDto(
+      id: json['id'] as String? ?? '',
+      sku: json['sku'] as String? ?? '',
+      qty: json['qty'] as int? ?? 0,
+      movementType: json['movement_type'] as String? ??
+          json['movementType'] as String? ??
+          '',
+      reason: json['reason'] as String? ?? '',
+      status: json['status'] as String? ?? 'pending',
+      referenceType:
+          json['reference_type'] as String? ?? json['referenceType'] as String?,
+      referenceId:
+          json['reference_id'] as String? ?? json['referenceId'] as String?,
+      makerId: json['maker_id'] as String? ?? json['makerId'] as String?,
+      checkerId: json['checker_id'] as String? ?? json['checkerId'] as String?,
+      decisionComment: json['decision_comment'] as String? ??
+          json['decisionComment'] as String?,
+      createdAt:
+          json['created_at'] as String? ?? json['createdAt'] as String? ?? '',
+    );
+  }
+
+  final String id;
+  final String sku;
+  final int qty;
+  final String movementType;
+  final String reason;
+  final String status;
+  final String? referenceType;
+  final String? referenceId;
+  final String? makerId;
+  final String? checkerId;
+  final String? decisionComment;
+  final String createdAt;
+}
+
+class StockAdjustmentDecisionDto {
+  StockAdjustmentDecisionDto({
+    required this.adjustmentId,
+    required this.sku,
+    required this.status,
+    required this.movementId,
+    required this.qtyBefore,
+    required this.qtyAfter,
+  });
+
+  factory StockAdjustmentDecisionDto.fromJson(Map<String, dynamic> json) {
+    return StockAdjustmentDecisionDto(
+      adjustmentId: json['adjustmentId'] as String? ?? '',
+      sku: json['sku'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      movementId: json['movementId'] as String?,
+      qtyBefore: json['qtyBefore'] as int? ?? 0,
+      qtyAfter: json['qtyAfter'] as int? ?? 0,
+    );
+  }
+
+  final String adjustmentId;
+  final String sku;
+  final String status;
+  final String? movementId;
+  final int qtyBefore;
+  final int qtyAfter;
+}
+
+class StockCountLineResultDto {
+  StockCountLineResultDto({
+    required this.sku,
+    required this.countedQty,
+    required this.systemQty,
+    required this.variance,
+    required this.outcome,
+    required this.movementId,
+    required this.adjustmentId,
+  });
+
+  factory StockCountLineResultDto.fromJson(Map<String, dynamic> json) {
+    return StockCountLineResultDto(
+      sku: json['sku'] as String? ?? '',
+      countedQty: json['countedQty'] as int? ?? 0,
+      systemQty: json['systemQty'] as int? ?? 0,
+      variance: json['variance'] as int? ?? 0,
+      outcome: json['outcome'] as String? ?? 'no_change',
+      movementId: json['movementId'] as String?,
+      adjustmentId: json['adjustmentId'] as String?,
+    );
+  }
+
+  final String sku;
+  final int countedQty;
+  final int systemQty;
+  final int variance;
+  final String outcome;
+  final String? movementId;
+  final String? adjustmentId;
+}
+
+class StockCountResultDto {
+  StockCountResultDto({
+    required this.sessionId,
+    required this.sessionNumber,
+    required this.posted,
+    required this.lines,
+  });
+
+  factory StockCountResultDto.fromJson(Map<String, dynamic> json) {
+    final rawLines = json['lines'] as List<dynamic>? ?? const [];
+    return StockCountResultDto(
+      sessionId: json['sessionId'] as String? ?? '',
+      sessionNumber: json['sessionNumber'] as String? ?? '',
+      posted: json['posted'] as bool? ?? false,
+      lines: rawLines
+          .map((l) => StockCountLineResultDto.fromJson(l as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  final String sessionId;
+  final String sessionNumber;
+  final bool posted;
+  final List<StockCountLineResultDto> lines;
+}
+
+class StockItemDto {
+  StockItemDto({
+    required this.sku,
+    required this.itemName,
+    required this.itemType,
+    required this.reorderLevel,
+    required this.quantityOnHand,
+    required this.weightedAvgCost,
+  });
+
+  factory StockItemDto.fromJson(Map<String, dynamic> json) {
+    return StockItemDto(
+      sku: json['sku'] as String? ?? '',
+      itemName: json['item_name'] as String? ?? json['itemName'] as String?,
+      itemType: json['item_type'] as String? ??
+          json['itemType'] as String? ??
+          'consumable',
+      reorderLevel:
+          json['reorder_level'] as int? ?? json['reorderLevel'] as int? ?? 0,
+      quantityOnHand: json['quantity_on_hand'] as int? ??
+          json['quantityOnHand'] as int? ??
+          0,
+      weightedAvgCost: json['weighted_avg_cost'] as int? ??
+          json['weightedAvgCost'] as int? ??
+          0,
+    );
+  }
+
+  final String sku;
+  final String? itemName;
+  final String itemType;
+  final int reorderLevel;
+  final int quantityOnHand;
+  final int weightedAvgCost;
+}
+
+class LowStockRowDto {
+  LowStockRowDto({
+    required this.sku,
+    required this.itemName,
+    required this.quantityOnHand,
+    required this.reorderLevel,
+    required this.recommendedQuantity,
+    required this.vendorId,
+  });
+
+  factory LowStockRowDto.fromJson(Map<String, dynamic> json) {
+    return LowStockRowDto(
+      sku: json['sku'] as String? ?? '',
+      itemName: json['itemName'] as String? ?? json['sku'] as String? ?? '',
+      quantityOnHand: json['quantityOnHand'] as int? ?? 0,
+      reorderLevel: json['reorderLevel'] as int? ?? 0,
+      recommendedQuantity: json['recommendedQuantity'] as int? ?? 0,
+      vendorId: json['vendorId'] as String?,
+    );
+  }
+
+  final String sku;
+  final String itemName;
+  final int quantityOnHand;
+  final int reorderLevel;
+  final int recommendedQuantity;
+  final String? vendorId;
+}
+
+class StockRegisterRowDto {
+  StockRegisterRowDto({
+    required this.id,
+    required this.sku,
+    required this.movementType,
+    required this.quantityDelta,
+    required this.qtyBefore,
+    required this.qtyAfter,
+    required this.reason,
+    required this.referenceType,
+    required this.referenceId,
+    required this.createdBy,
+    required this.createdAt,
+  });
+
+  factory StockRegisterRowDto.fromJson(Map<String, dynamic> json) {
+    return StockRegisterRowDto(
+      id: json['id'] as String? ?? '',
+      sku: json['sku'] as String? ?? '',
+      movementType: json['movementType'] as String? ?? '',
+      quantityDelta: json['quantityDelta'] as int? ?? 0,
+      qtyBefore: json['qtyBefore'] as int? ?? 0,
+      qtyAfter: json['qtyAfter'] as int? ?? 0,
+      reason: json['reason'] as String? ?? '',
+      referenceType: json['referenceType'] as String?,
+      referenceId: json['referenceId'] as String?,
+      createdBy: json['createdBy'] as String?,
+      createdAt: json['createdAt'] as String? ?? '',
+    );
+  }
+
+  final String id;
+  final String sku;
+  final String movementType;
+  final int quantityDelta;
+  final int qtyBefore;
+  final int qtyAfter;
+  final String reason;
+  final String? referenceType;
+  final String? referenceId;
+  final String? createdBy;
+  final String createdAt;
+}

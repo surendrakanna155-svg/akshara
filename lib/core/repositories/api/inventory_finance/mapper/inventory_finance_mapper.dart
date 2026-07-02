@@ -222,4 +222,132 @@ class InventoryFinanceMapper {
       grnNumber: data['grnNumber'] as String? ?? '',
     );
   }
+
+  // ── INV-1..7 — Store STOCK module ──
+
+  StockIssue toStockIssue(StockIssueDto dto) {
+    return StockIssue(
+      issueId: dto.issueId,
+      issueNumber: dto.issueNumber,
+      posted: dto.posted,
+      movementIds: dto.movementIds,
+      lowStockCount: dto.lowStockCount,
+    );
+  }
+
+  StockAdjustmentResult toStockAdjustmentResult(StockAdjustmentResultDto dto) {
+    return StockAdjustmentResult(
+      applied: dto.applied,
+      movementId: dto.movementId,
+      adjustmentId: dto.adjustmentId,
+      qtyBefore: dto.qtyBefore,
+      qtyAfter: dto.qtyAfter,
+      status: stockAdjustmentStatusFromWire(dto.status),
+    );
+  }
+
+  StockAdjustment toStockAdjustment(StockAdjustmentDto dto) {
+    return StockAdjustment(
+      id: dto.id,
+      sku: dto.sku,
+      qty: dto.qty,
+      movementType: dto.movementType,
+      reason: dto.reason,
+      status: stockAdjustmentStatusFromWire(dto.status),
+      referenceType: dto.referenceType,
+      referenceId: dto.referenceId,
+      makerId: dto.makerId,
+      checkerId: dto.checkerId,
+      decisionComment: dto.decisionComment,
+      createdAt: DateTime.tryParse(dto.createdAt) ?? DateTime(1970),
+    );
+  }
+
+  List<StockAdjustment> toStockAdjustments(List<StockAdjustmentDto> items) {
+    return items.map(toStockAdjustment).toList();
+  }
+
+  StockAdjustmentDecision toStockAdjustmentDecision(
+    StockAdjustmentDecisionDto dto,
+  ) {
+    return StockAdjustmentDecision(
+      adjustmentId: dto.adjustmentId,
+      sku: dto.sku,
+      status: stockAdjustmentStatusFromWire(dto.status),
+      movementId: dto.movementId,
+      qtyBefore: dto.qtyBefore,
+      qtyAfter: dto.qtyAfter,
+    );
+  }
+
+  StockCountResult toStockCountResult(StockCountResultDto dto) {
+    return StockCountResult(
+      sessionId: dto.sessionId,
+      sessionNumber: dto.sessionNumber,
+      posted: dto.posted,
+      lines: dto.lines
+          .map(
+            (l) => StockCountLineResult(
+              sku: l.sku,
+              countedQty: l.countedQty,
+              systemQty: l.systemQty,
+              variance: l.variance,
+              outcome: l.outcome,
+              movementId: l.movementId,
+              adjustmentId: l.adjustmentId,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  StockItem toStockItem(StockItemDto dto) {
+    return StockItem(
+      sku: dto.sku,
+      itemName: dto.itemName,
+      itemType: stockItemTypeFromWire(dto.itemType),
+      reorderLevel: dto.reorderLevel,
+      quantityOnHand: dto.quantityOnHand,
+      weightedAvgCost: formatInventoryFinancePaise(dto.weightedAvgCost),
+    );
+  }
+
+  List<StockItem> toStockItems(List<StockItemDto> items) {
+    return items.map(toStockItem).toList();
+  }
+
+  List<LowStockRow> toLowStockRows(List<LowStockRowDto> items) {
+    return items
+        .map(
+          (dto) => LowStockRow(
+            sku: dto.sku,
+            itemName: dto.itemName,
+            quantityOnHand: dto.quantityOnHand,
+            reorderLevel: dto.reorderLevel,
+            recommendedQuantity: dto.recommendedQuantity,
+            vendorId: dto.vendorId,
+          ),
+        )
+        .toList();
+  }
+
+  List<StockRegisterRow> toStockRegisterRows(List<StockRegisterRowDto> items) {
+    return items
+        .map(
+          (dto) => StockRegisterRow(
+            id: dto.id,
+            sku: dto.sku,
+            movementType: dto.movementType,
+            quantityDelta: dto.quantityDelta,
+            qtyBefore: dto.qtyBefore,
+            qtyAfter: dto.qtyAfter,
+            reason: dto.reason,
+            referenceType: dto.referenceType,
+            referenceId: dto.referenceId,
+            createdBy: dto.createdBy,
+            createdAt: DateTime.tryParse(dto.createdAt) ?? DateTime(1970),
+          ),
+        )
+        .toList();
+  }
 }

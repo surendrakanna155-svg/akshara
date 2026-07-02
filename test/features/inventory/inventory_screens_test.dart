@@ -15,6 +15,7 @@ import 'package:akshara_erp/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../helpers/provider_test_overrides.dart';
 import '../../test_helpers.dart';
 
 void useViewport(WidgetTester tester, Size size) {
@@ -47,6 +48,12 @@ Future<void> pumpInventoryScreen(
 }
 
 void main() {
+  // The copilot screen now surfaces an RBAC-gated "Raise PO" action on live
+  // low-stock rows, so the RBAC/prefs stack must be initialized.
+  setUpAll(() async {
+    await initProviderTestPrefs();
+  });
+
   group('Inventory screens — desktop', () {
     testWidgets('InventoryDashboardScreen renders KPIs', (tester) async {
       await pumpInventoryScreen(tester, const InventoryDashboardScreen());

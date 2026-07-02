@@ -68,4 +68,70 @@ abstract class InventoryFinanceRepository {
     required String purchaseOrderId,
     required ReceiveInventoryGoodsRequest request,
   });
+
+  // ── INV-1..7 — Store STOCK module ──
+
+  /// INV-1 — post an issue slip (posted immediately; rejects below on-hand with
+  /// 422 InsufficientStock; idempotent on issueNumber).
+  Future<StockIssue> issueStock({
+    required RepositoryQuery query,
+    required IssueStockRequest request,
+  });
+
+  /// INV-3 — record a manual adjustment. `adjust_in`/`opening` apply now;
+  /// `adjust_out` returns a pending maker-checker adjustment.
+  Future<StockAdjustmentResult> adjustStock({
+    required RepositoryQuery query,
+    required AdjustStockRequest request,
+  });
+
+  /// Maker-checker approve of a value-reducing adjustment. The approver must
+  /// differ from the maker (409 SELF_APPROVE_DENIED on self-approve).
+  Future<StockAdjustmentDecision> approveStockAdjustment({
+    required RepositoryQuery query,
+    required String adjustmentId,
+    String? comment,
+  });
+
+  /// Maker-checker reject of a value-reducing adjustment (no stock change).
+  Future<StockAdjustmentDecision> rejectStockAdjustment({
+    required RepositoryQuery query,
+    required String adjustmentId,
+    String? comment,
+  });
+
+  /// Pending value-reducing adjustments awaiting a checker.
+  Future<List<StockAdjustment>> listPendingAdjustments({
+    required RepositoryQuery query,
+  });
+
+  /// INV-6 — post a physical count session (positive variance applies; negative
+  /// variance returns a pending adjustment).
+  Future<StockCountResult> recordStockCount({
+    required RepositoryQuery query,
+    required RecordStockCountRequest request,
+  });
+
+  /// INV-2 — upsert a consumable/asset registry item + reorder level.
+  Future<StockItem> upsertStockItem({
+    required RepositoryQuery query,
+    required UpsertStockItemRequest request,
+  });
+
+  /// INV-2 — the consumable/asset registry.
+  Future<List<StockItem>> listStockItems({
+    required RepositoryQuery query,
+  });
+
+  /// INV-4 — items where qty < reorder_level, each carrying a recommended
+  /// top-up quantity + default vendor for raising a PO.
+  Future<List<LowStockRow>> listLowStock({
+    required RepositoryQuery query,
+  });
+
+  /// INV-5 — the immutable stock register (ledger), newest first.
+  Future<List<StockRegisterRow>> listStockRegister({
+    required RepositoryQuery query,
+    String? sku,
+  });
 }

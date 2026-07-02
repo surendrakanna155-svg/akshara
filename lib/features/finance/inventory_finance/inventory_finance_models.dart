@@ -278,3 +278,267 @@ String formatInventoryFinancePaise(int paise) {
   final rupees = paise / 100;
   return '₹${rupees.toStringAsFixed(2)}';
 }
+
+// ── INV-1..7 — Store STOCK module domain models ──
+//
+// The stock module (issue slips, manual adjustments with maker-checker,
+// physical counts, consumable registry, low-stock, and the immutable stock
+// register) mirrors the backend
+// `supabase/functions/_shared/inventory_finance/inventory_stock_*` contract.
+
+/// Value-reducing adjustment states. `pending` write-offs await a *different*
+/// user's approval (separation of duties); `approved` decremented stock,
+/// `rejected` did not.
+enum StockAdjustmentStatus { pending, approved, rejected, applied }
+
+StockAdjustmentStatus stockAdjustmentStatusFromWire(String? wire) =>
+    switch (wire) {
+      'approved' => StockAdjustmentStatus.approved,
+      'rejected' => StockAdjustmentStatus.rejected,
+      'applied' => StockAdjustmentStatus.applied,
+      _ => StockAdjustmentStatus.pending,
+    };
+
+/// INV-2 item classification.
+enum StockItemType { asset, consumable }
+
+StockItemType stockItemTypeFromWire(String? wire) =>
+    wire == 'asset' ? StockItemType.asset : StockItemType.consumable;
+
+String stockItemTypeToWire(StockItemType type) =>
+    type == StockItemType.asset ? 'asset' : 'consumable';
+
+/// INV-1 — the result of posting an issue slip.
+@immutable
+class StockIssue {
+  const StockIssue({
+    required this.issueId,
+    required this.issueNumber,
+    required this.posted,
+    required this.movementIds,
+    required this.lowStockCount,
+  });
+
+  final String issueId;
+  final String issueNumber;
+  final bool posted;
+  final List<String> movementIds;
+
+  /// SKUs that dropped to/below their reorder level as a result of this issue.
+  final int lowStockCount;
+}
+
+/// INV-3 — the result of a manual adjustment. `adjust_in`/`opening` apply
+/// immediately ([applied] true); `adjust_out` (value-reducing) returns a
+/// [StockAdjustmentStatus.pending] adjustment that a different user must approve.
+@immutable
+class StockAdjustmentResult {
+  const StockAdjustmentResult({
+    required this.applied,
+    required this.movementId,
+    required this.adjustmentId,
+    required this.qtyBefore,
+    required this.qtyAfter,
+    required this.status,
+  });
+
+  final bool applied;
+  final String? movementId;
+  final String? adjustmentId;
+  final int qtyBefore;
+  final int qtyAfter;
+  final StockAdjustmentStatus status;
+
+  bool get isPending => status == StockAdjustmentStatus.pending;
+}
+
+/// A value-reducing stock adjustment awaiting (or having received) a checker
+/// decision. Carries [makerId] (who raised it) and [checkerId] (who decided) so
+/// the UI can enforce/surface the self-approve rule.
+@immutable
+class StockAdjustment {
+  const StockAdjustment({
+    required this.id,
+    required this.sku,
+    required this.qty,
+    required this.movementType,
+    required this.reason,
+    required this.status,
+    required this.referenceType,
+    required this.referenceId,
+    required this.makerId,
+    required this.checkerId,
+    required this.decisionComment,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String sku;
+  final int qty;
+  final String movementType;
+  final String reason;
+  final StockAdjustmentStatus status;
+  final String? referenceType;
+  final String? referenceId;
+  final String? makerId;
+  final String? checkerId;
+  final String? decisionComment;
+  final DateTime createdAt;
+
+  String get sourceLabel => switch (referenceType) {
+        'stock_count_session' => 'Stock count',
+        'manual_adjustment' => 'Manual write-off',
+        _ => referenceType ?? 'Adjustment',
+      };
+}
+
+/// The outcome of an approve/reject decision on a pending adjustment.
+@immutable
+class StockAdjustmentDecision {
+  const StockAdjustmentDecision({
+    required this.adjustmentId,
+    required this.sku,
+    required this.status,
+    required this.movementId,
+    required this.qtyBefore,
+    required this.qtyAfter,
+  });
+
+  final String adjustmentId;
+  final String sku;
+  final StockAdjustmentStatus status;
+  final String? movementId;
+  final int qtyBefore;
+  final int qtyAfter;
+}
+
+/// INV-6 — one line of a physical count result: variance vs. system.
+@immutable
+class StockCountLineResult {
+  const StockCountLineResult({
+    required this.sku,
+    required this.countedQty,
+    required this.systemQty,
+    required this.variance,
+    required this.outcome,
+    required this.movementId,
+    required this.adjustmentId,
+  });
+
+  final String sku;
+  final int countedQty;
+  final int systemQty;
+  final int variance;
+
+  /// `no_change` · `applied_in` (positive variance applied) · `pending_adjustment`
+  /// (negative variance queued for maker-checker).
+  final String outcome;
+  final String? movementId;
+  final String? adjustmentId;
+
+  bool get isPendingAdjustment => outcome == 'pending_adjustment';
+}
+
+/// INV-6 — the result of posting a stock-count session.
+@immutable
+class StockCountResult {
+  const StockCountResult({
+    required this.sessionId,
+    required this.sessionNumber,
+    required this.posted,
+    required this.lines,
+  });
+
+  final String sessionId;
+  final String sessionNumber;
+  final bool posted;
+  final List<StockCountLineResult> lines;
+
+  int get pendingAdjustmentCount =>
+      lines.where((l) => l.isPendingAdjustment).length;
+}
+
+/// INV-2 — a consumable/asset stock item + its reorder level.
+@immutable
+class StockItem {
+  const StockItem({
+    required this.sku,
+    required this.itemName,
+    required this.itemType,
+    required this.reorderLevel,
+    required this.quantityOnHand,
+    required this.weightedAvgCost,
+  });
+
+  final String sku;
+  final String? itemName;
+  final StockItemType itemType;
+  final int reorderLevel;
+  final int quantityOnHand;
+  final String weightedAvgCost;
+
+  bool get isBelowReorder =>
+      reorderLevel > 0 && quantityOnHand < reorderLevel;
+}
+
+/// INV-4 — a SKU at/below its reorder level. Carries the recommended top-up
+/// quantity and a default vendor so the client can raise a PO against the
+/// existing procurement endpoint.
+@immutable
+class LowStockRow {
+  const LowStockRow({
+    required this.sku,
+    required this.itemName,
+    required this.quantityOnHand,
+    required this.reorderLevel,
+    required this.recommendedQuantity,
+    required this.vendorId,
+  });
+
+  final String sku;
+  final String itemName;
+  final int quantityOnHand;
+  final int reorderLevel;
+  final int recommendedQuantity;
+  final String? vendorId;
+}
+
+/// INV-5 — one immutable row of the stock register (ledger).
+@immutable
+class StockRegisterRow {
+  const StockRegisterRow({
+    required this.id,
+    required this.sku,
+    required this.movementType,
+    required this.quantityDelta,
+    required this.qtyBefore,
+    required this.qtyAfter,
+    required this.reason,
+    required this.referenceType,
+    required this.referenceId,
+    required this.createdBy,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String sku;
+  final String movementType;
+  final int quantityDelta;
+  final int qtyBefore;
+  final int qtyAfter;
+  final String reason;
+  final String? referenceType;
+  final String? referenceId;
+  final String? createdBy;
+  final DateTime createdAt;
+
+  String get movementLabel => switch (movementType) {
+        'grn' => 'Goods receipt',
+        'issue' => 'Issue',
+        'adjust_in' => 'Adjust in',
+        'adjust_out' => 'Adjust out',
+        'count_variance' => 'Count variance',
+        'opening' => 'Opening',
+        _ => movementType,
+      };
+}

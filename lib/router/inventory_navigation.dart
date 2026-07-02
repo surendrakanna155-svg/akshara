@@ -8,6 +8,8 @@ import '../features/inventory/dashboard/inventory_dashboard_screen.dart';
 import '../features/inventory/maintenance/inventory_maintenance_screen.dart';
 import '../features/inventory/procurement/inventory_procurement_screen.dart';
 import '../features/inventory/reports/inventory_reports_screen.dart';
+import '../features/inventory/stock/inventory_stock_approvals_screen.dart';
+import '../features/inventory/stock/inventory_stock_screen.dart';
 import '../features/inventory/vendors/inventory_vendors_screen.dart';
 import '../features/inventory/intelligence/inventory_copilot_screen.dart';
 import '../features/inventory/intelligence/inventory_lifecycle_screen.dart';
@@ -67,6 +69,20 @@ Widget inventoryVendorsRouteBuilder(
   GoRouterState state,
 ) {
   return const InventoryVendorsScreen();
+}
+
+Widget inventoryStockRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const InventoryStockScreen();
+}
+
+Widget inventoryStockApprovalsRouteBuilder(
+  BuildContext context,
+  GoRouterState state,
+) {
+  return const InventoryStockApprovalsScreen();
 }
 
 Widget inventoryReportsRouteBuilder(

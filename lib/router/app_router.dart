@@ -1949,6 +1949,20 @@ GoRouter createAppRouter({
                 ),
               ),
               GoRoute(
+                path: 'stock',
+                name: 'inventoryStock',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: inventoryStockRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
+                path: 'stock-approvals',
+                name: 'inventoryStockApprovals',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: inventoryStockApprovalsRouteBuilder(context, state),
+                ),
+              ),
+              GoRoute(
                 path: 'reports',
                 name: 'inventoryReports',
                 pageBuilder: (context, state) => NoTransitionPage(
