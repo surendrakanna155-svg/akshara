@@ -30,6 +30,14 @@ export interface DirectorSchoolRow {
   revenueCr: number;
   admissionsQtd: number;
   feeCollectionPercent: number;
+  // DIR-2 — consolidated collection report: the raw money inputs behind
+  // feeCollectionPercent, surfaced per school (in rupees) so the client can
+  // render a per-school + org-total collection view. `outstandingInr` is the
+  // still-uncollected receivable (billed − collected). Additive to the certified
+  // /director/schools contract — existing fields are unchanged.
+  billedInr: number;
+  collectedInr: number;
+  outstandingInr: number;
   healthScore: number;
   status: DirectorSchoolStatus;
 }
@@ -142,6 +150,11 @@ export async function getSchoolRows(
   return schools.map((s) => {
     const bill = billing.get(s.id);
     const feePct = bill ? pct(bill.collected, bill.billed) : 0;
+    // DIR-2 — same billed/collected computed above; outstanding is the residual
+    // receivable. Never negative (collected can't exceed billed here).
+    const billedInr = Math.round(bill?.billed ?? 0);
+    const collectedInr = Math.round(bill?.collected ?? 0);
+    const outstandingInr = Math.max(0, billedInr - collectedInr);
     const att = attendance.get(s.id);
     const acad = academic.get(s.id);
 
@@ -163,10 +176,64 @@ export async function getSchoolRows(
       revenueCr: round1((revenue.get(s.id)?.amt ?? 0) / CRORE),
       admissionsQtd: admissions.get(s.id)?.cnt ?? 0,
       feeCollectionPercent: feePct,
+      billedInr,
+      collectedInr,
+      outstandingInr,
       healthScore,
       status: statusForHealth(healthScore),
     };
   });
+}
+
+// ─── DIR-2: consolidated collection report (per-school + org totals) ─────────
+// Reuses the exact billed/collected/outstanding already computed on each school
+// row (no re-derivation), so the money math stays consistent with the certified
+// /director/schools contract. Backs the optional GET /director/collections.
+
+export interface DirectorCollectionRow {
+  schoolId: string;
+  name: string;
+  feeCollectionPercent: number;
+  billedInr: number;
+  collectedInr: number;
+  outstandingInr: number;
+}
+
+export interface DirectorCollectionReport {
+  schools: DirectorCollectionRow[];
+  totals: {
+    billedInr: number;
+    collectedInr: number;
+    outstandingInr: number;
+    feeCollectionPercent: number;
+  };
+}
+
+export async function getCollectionReport(
+  db: TenantQueryClient,
+  orgId: string,
+): Promise<DirectorCollectionReport> {
+  const rows = await getSchoolRows(db, orgId);
+  const schools: DirectorCollectionRow[] = rows.map((s) => ({
+    schoolId: s.schoolId,
+    name: s.schoolName,
+    feeCollectionPercent: s.feeCollectionPercent,
+    billedInr: s.billedInr,
+    collectedInr: s.collectedInr,
+    outstandingInr: s.outstandingInr,
+  }));
+  const billedInr = schools.reduce((sum, s) => sum + s.billedInr, 0);
+  const collectedInr = schools.reduce((sum, s) => sum + s.collectedInr, 0);
+  const outstandingInr = schools.reduce((sum, s) => sum + s.outstandingInr, 0);
+  return {
+    schools,
+    totals: {
+      billedInr,
+      collectedInr,
+      outstandingInr,
+      feeCollectionPercent: pct(collectedInr, billedInr),
+    },
+  };
 }
 
 // ─── Revenue ────────────────────────────────────────────────────────────────
@@ -579,6 +646,140 @@ export async function upsertMetricInput(
     ],
   );
   return rows.length > 0 ? mapMetricInput(rows[0]) : null;
+}
+
+// ─── DIR-D1: per-school read-only drill-down snapshot ────────────────────────
+// The director "Open Management Portal" action opens an AUDITED, READ-ONLY
+// per-school snapshot — NOT impersonation, NOT a token/persona switch, NO
+// writes. The schoolId MUST belong to the director's org (reuses the metric-
+// inputs school-belongs-to-org guard). A foreign school returns null → the
+// handler answers 404 (never leaking another org's data). Every figure is a
+// school-level aggregate over the same org-read RLS SELECTs used elsewhere —
+// no student/parent PII.
+
+export interface DirectorSchoolSnapshot {
+  schoolId: string;
+  schoolName: string;
+  location: string;
+  students: number;
+  attendancePercent: number;
+  feeCollectionPercent: number;
+  billedInr: number;
+  collectedInr: number;
+  outstandingInr: number;
+  admissions: {
+    inquiries: number;
+    applications: number;
+    enrolled: number;
+    conversionPercent: number;
+  };
+  academic: {
+    passPercent: number;
+    gradedEntries: number;
+  };
+  healthScore: number;
+  status: DirectorSchoolStatus;
+}
+
+export async function getSchoolSnapshot(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+): Promise<DirectorSchoolSnapshot | null> {
+  // Same explicit school-belongs-to-org guard as upsertMetricInput (:549-554):
+  // a foreign school must never resolve, even though org-scope RLS already
+  // fences reads to this organization.
+  const owned = await db.queryObject<{ name: string; location: string }>(
+    `SELECT name,
+            COALESCE(NULLIF(settings->>'city', ''), NULLIF(settings->>'location', ''), '') AS location
+     FROM schools
+     WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`,
+    [schoolId, orgId],
+  );
+  if (owned.length === 0) return null;
+
+  const [students] = await db.queryObject<{ cnt: number }>(
+    `SELECT count(*)::int AS cnt FROM students
+     WHERE organization_id = $1 AND school_id = $2 AND status = 'active'`,
+    [orgId, schoolId],
+  );
+  const [billing] = await db.queryObject<{ billed: number; collected: number }>(
+    `SELECT COALESCE(sum(total_amount), 0)::float8 AS billed,
+            COALESCE(sum(total_amount - outstanding_amount), 0)::float8 AS collected
+     FROM finance_invoices
+     WHERE organization_id = $1 AND school_id = $2
+       AND invoice_status IN ('issued', 'partially_paid', 'paid')`,
+    [orgId, schoolId],
+  );
+  const [attendance] = await db.queryObject<{ present: number; total: number }>(
+    `SELECT count(*) FILTER (WHERE mark <> 'absent')::int AS present,
+            count(*)::int AS total
+     FROM attendance_records WHERE organization_id = $1 AND school_id = $2`,
+    [orgId, schoolId],
+  );
+  const [academic] = await db.queryObject<{ pass: number; total: number }>(
+    `SELECT count(*) FILTER (WHERE marks_obtained >= max_marks * 0.4)::int AS pass,
+            count(*)::int AS total
+     FROM exam_mark_entries WHERE organization_id = $1 AND school_id = $2`,
+    [orgId, schoolId],
+  );
+  const [funnel] = await db.queryObject<{
+    inquiries: number;
+    applications: number;
+    enrolled: number;
+  }>(
+    `SELECT
+       (SELECT count(*)::int FROM admissions_leads
+          WHERE organization_id = $1 AND school_id = $2) AS inquiries,
+       (SELECT count(*)::int FROM admissions_applications
+          WHERE organization_id = $1 AND school_id = $2 AND status <> 'draft') AS applications,
+       (SELECT count(*)::int FROM admissions_enrollments
+          WHERE organization_id = $1 AND school_id = $2) AS enrolled`,
+    [orgId, schoolId],
+  );
+
+  const billed = Math.round(billing?.billed ?? 0);
+  const collected = Math.round(billing?.collected ?? 0);
+  const outstandingInr = Math.max(0, billed - collected);
+  const feeCollectionPercent = pct(collected, billed);
+  const attendancePercent = pct(attendance?.present ?? 0, attendance?.total ?? 0);
+  const passPercent = pct(academic?.pass ?? 0, academic?.total ?? 0);
+  const inquiries = funnel?.inquiries ?? 0;
+  const enrolled = funnel?.enrolled ?? 0;
+
+  // Health mirrors getSchoolRows: a weighted index of the signals with data.
+  const parts: { v: number; w: number }[] = [];
+  if (billed > 0) parts.push({ v: feeCollectionPercent, w: 0.4 });
+  if ((attendance?.total ?? 0) > 0) parts.push({ v: attendancePercent, w: 0.3 });
+  if ((academic?.total ?? 0) > 0) parts.push({ v: passPercent, w: 0.3 });
+  const weight = parts.reduce((sum, p) => sum + p.w, 0);
+  const healthScore = weight > 0
+    ? Math.round(parts.reduce((sum, p) => sum + p.v * p.w, 0) / weight)
+    : 75;
+
+  return {
+    schoolId,
+    schoolName: owned[0].name,
+    location: owned[0].location,
+    students: students?.cnt ?? 0,
+    attendancePercent,
+    feeCollectionPercent,
+    billedInr: billed,
+    collectedInr: collected,
+    outstandingInr,
+    admissions: {
+      inquiries,
+      applications: funnel?.applications ?? 0,
+      enrolled,
+      conversionPercent: pct(enrolled, inquiries),
+    },
+    academic: {
+      passPercent,
+      gradedEntries: academic?.total ?? 0,
+    },
+    healthScore,
+    status: statusForHealth(healthScore),
+  };
 }
 
 // ─── Executive summary (deterministic from real aggregates; AI = Batch 8) ───

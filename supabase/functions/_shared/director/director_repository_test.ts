@@ -4,12 +4,15 @@ import {
   buildBoardPack,
   buildExecutiveSummary,
   getAdmissions,
+  getCollectionReport,
   getMarketing,
   getMetricInputs,
   getSchoolRows,
+  getSchoolSnapshot,
   upsertMetricInput,
 } from "./director_repository.ts";
 import { refineExecutiveSummaryWithClaude } from "./director_ai.ts";
+import { directorAudit } from "../audit/mutation_audit_catalog.ts";
 
 const ORG = "a1000000-0000-4000-8000-000000000001";
 const SCHOOL_A = "a2000000-0000-4000-8000-000000000001";
@@ -108,6 +111,10 @@ Deno.test("getSchoolRows computes health, fee% and status from real signals", as
   assertEquals(north.students, 1200);
   assertEquals(north.revenueCr, 3.2);
   assertEquals(north.feeCollectionPercent, 95);
+  // DIR-2 — money inputs behind fee% surfaced per school; outstanding = billed − collected.
+  assertEquals(north.billedInr, 40_000_000);
+  assertEquals(north.collectedInr, 38_000_000);
+  assertEquals(north.outstandingInr, 2_000_000);
   // health = 0.4*95 + 0.3*90 + 0.3*80 = 38 + 27 + 24 = 89 → topPerformer
   assertEquals(north.healthScore, 89);
   assertEquals(north.status, "topPerformer");
@@ -119,8 +126,36 @@ Deno.test("getSchoolRows gives a new school a neutral baseline, not a fake score
   assertEquals(east.students, 40);
   assertEquals(east.revenueCr, 0);
   assertEquals(east.feeCollectionPercent, 0);
+  // DIR-2 — a school with no invoices reports honest zeros, not fabricated debt.
+  assertEquals(east.billedInr, 0);
+  assertEquals(east.collectedInr, 0);
+  assertEquals(east.outstandingInr, 0);
   assertEquals(east.healthScore, 75); // no graded/financial data → onboarding baseline
   assertEquals(east.status, "onTrack");
+});
+
+// ─── DIR-2 — consolidated collection report (per-school + org totals) ────────
+
+Deno.test("getCollectionReport surfaces per-school money + consistent org totals", async () => {
+  const report = await getCollectionReport(db(), ORG);
+  assertEquals(report.schools.length, 2);
+
+  const north = report.schools.find((s) => s.name === "Akshara North");
+  assertEquals(north?.billedInr, 40_000_000);
+  assertEquals(north?.collectedInr, 38_000_000);
+  assertEquals(north?.outstandingInr, 2_000_000);
+  assertEquals(north?.feeCollectionPercent, 95);
+
+  const east = report.schools.find((s) => s.name === "Akshara East");
+  assertEquals(east?.billedInr, 0);
+  assertEquals(east?.outstandingInr, 0);
+
+  // Totals are the sum of the per-school rows (no re-derivation): 40M billed,
+  // 38M collected, 2M outstanding → 95% org-wide realization.
+  assertEquals(report.totals.billedInr, 40_000_000);
+  assertEquals(report.totals.collectedInr, 38_000_000);
+  assertEquals(report.totals.outstandingInr, 2_000_000);
+  assertEquals(report.totals.feeCollectionPercent, 95);
 });
 
 Deno.test("getMarketing reports honest zeros when no spend is entered", async () => {
@@ -223,6 +258,108 @@ Deno.test("getMetricInputs returns entered rows mapped to the domain shape", asy
   assertEquals(rows[0].studentCapacity, 1500);
 });
 
+// ─── DIR-D1 — per-school read-only drill-down snapshot ──────────────────────
+
+/**
+ * Mock for the single-school snapshot queries. `owned` toggles the school-
+ * belongs-to-org guard: when false the guard SELECT returns no row and
+ * getSchoolSnapshot must short-circuit to null WITHOUT ever running the
+ * aggregate queries (the foreign-school-never-leaks guarantee).
+ */
+class SnapshotDb {
+  ranAggregate = false;
+  constructor(private readonly opts: { owned: boolean }) {}
+  // deno-lint-ignore require-await
+  async queryObject<T>(sql: string, _args: unknown[] = []): Promise<T[]> {
+    const has = (...frags: string[]) => frags.every((f) => sql.includes(f));
+
+    // The school-belongs-to-org guard (name + location) — reused metric-inputs check.
+    if (has("SELECT name", "FROM schools", "AND organization_id = $2")) {
+      return (this.opts.owned ? [{ name: "Akshara North", location: "Hyderabad" }] : []) as T[];
+    }
+    // Any of these running means the guard let a lookup through.
+    if (has("FROM students", "AND school_id = $2")) {
+      this.ranAggregate = true;
+      return [{ cnt: 1200 }] as T[];
+    }
+    if (has("FROM finance_invoices", "AND school_id = $2")) {
+      this.ranAggregate = true;
+      return [{ billed: 40_000_000, collected: 38_000_000 }] as T[];
+    }
+    if (has("FROM attendance_records", "AND school_id = $2")) {
+      this.ranAggregate = true;
+      return [{ present: 90, total: 100 }] as T[];
+    }
+    if (has("FROM exam_mark_entries", "AND school_id = $2")) {
+      this.ranAggregate = true;
+      return [{ pass: 80, total: 100 }] as T[];
+    }
+    if (has("AS inquiries", "AS enrolled", "school_id = $2")) {
+      this.ranAggregate = true;
+      return [{ inquiries: 150, applications: 90, enrolled: 45 }] as T[];
+    }
+    return [] as T[];
+  }
+  // deno-lint-ignore require-await
+  async queryCount(): Promise<number> {
+    return 0;
+  }
+  get raw(): never {
+    throw new Error("unused");
+  }
+}
+
+Deno.test("getSchoolSnapshot returns an audited read-only snapshot for an owned school", async () => {
+  const mock = new SnapshotDb({ owned: true });
+  const snap = await getSchoolSnapshot(mock as unknown as TenantQueryClient, ORG, SCHOOL_A);
+  assertEquals(snap?.schoolId, SCHOOL_A);
+  assertEquals(snap?.schoolName, "Akshara North");
+  assertEquals(snap?.students, 1200);
+  assertEquals(snap?.attendancePercent, 90);
+  assertEquals(snap?.feeCollectionPercent, 95);
+  assertEquals(snap?.billedInr, 40_000_000);
+  assertEquals(snap?.collectedInr, 38_000_000);
+  assertEquals(snap?.outstandingInr, 2_000_000);
+  assertEquals(snap?.admissions.enrolled, 45);
+  assertEquals(snap?.admissions.conversionPercent, 30); // 45/150
+  assertEquals(snap?.academic.passPercent, 80);
+  // health = 0.4*95 + 0.3*90 + 0.3*80 = 89
+  assertEquals(snap?.healthScore, 89);
+  assertEquals(snap?.status, "topPerformer");
+});
+
+Deno.test("DIR-D1: the drilldown emits a director.school.drilldown READ audit action", () => {
+  // The "read-through with audit" requirement: a GET that audits. The spec is a
+  // read-category event keyed on schoolId + timestamp (nonce), carrying the
+  // target school so actor+schoolId+timestamp are captured on emit.
+  const spec = directorAudit.schoolDrilldown(SCHOOL_A, "2026-07-02T10:00:00.000Z");
+  assertEquals(spec.audit.eventType, "director.school.drilldown");
+  assertEquals(spec.audit.category, "read");
+  assertEquals(spec.audit.entityType, "school");
+  assertEquals(spec.audit.entityId, SCHOOL_A);
+  assertEquals(spec.domain.eventType, "director.school.drilldown");
+  assertEquals(spec.domain.sourceModule, "director");
+  assertEquals(spec.domain.payload.schoolId, SCHOOL_A);
+  // Nonce keys the outbox so each distinct view is recorded, not deduped.
+  assertEquals(
+    spec.domain.idempotencyKey,
+    `director.school.drilldown:${SCHOOL_A}:2026-07-02T10:00:00.000Z`,
+  );
+});
+
+Deno.test("getSchoolSnapshot refuses a school outside the org (null, no aggregate leak)", async () => {
+  const mock = new SnapshotDb({ owned: false });
+  const snap = await getSchoolSnapshot(
+    mock as unknown as TenantQueryClient,
+    ORG,
+    "a2000000-0000-4000-8000-00000000ffff",
+  );
+  assertEquals(snap, null);
+  // The guard short-circuits: no per-school aggregate query ever ran, so no
+  // other org's data could have been read.
+  assertEquals(mock.ranAggregate, false);
+});
+
 Deno.test("buildBoardPack assembles a real document from live aggregates", async () => {
   const pack = await buildBoardPack(db(), ORG, "rpt-1", new Date("2026-06-15T00:00:00Z"));
   assertEquals(pack?.title, "Board Pack");
@@ -265,6 +402,9 @@ Deno.test("buildExecutiveSummary summarizes real aggregates without PII", () => 
         revenueCr: 3.2,
         admissionsQtd: 18,
         feeCollectionPercent: 95,
+        billedInr: 40_000_000,
+        collectedInr: 38_000_000,
+        outstandingInr: 2_000_000,
         healthScore: 89,
         status: "topPerformer",
       },
@@ -276,6 +416,9 @@ Deno.test("buildExecutiveSummary summarizes real aggregates without PII", () => 
         revenueCr: 0,
         admissionsQtd: 0,
         feeCollectionPercent: 0,
+        billedInr: 0,
+        collectedInr: 0,
+        outstandingInr: 0,
         healthScore: 50,
         status: "critical",
       },

@@ -3,6 +3,7 @@ import { errorEnvelope } from "../http.ts";
 import {
   handleAcknowledgeCompliance,
   handleAdmissions,
+  handleCollections,
   handleCompliance,
   handleDashboard,
   handleExportReport,
@@ -14,12 +15,14 @@ import {
   handleRevenue,
   handleSaveMetricInput,
   handleSchools,
+  handleSchoolSnapshot,
   handleSummary,
 } from "./director_handlers.ts";
 
 const GET_ROUTES: Record<string, (req: Request, config: AppConfig) => Promise<Response>> = {
   "/director/dashboard": handleDashboard,
   "/director/schools": handleSchools,
+  "/director/collections": handleCollections,
   "/director/portfolio": handlePortfolio,
   "/director/revenue": handleRevenue,
   "/director/growth": handleGrowth,
@@ -29,6 +32,10 @@ const GET_ROUTES: Record<string, (req: Request, config: AppConfig) => Promise<Re
   "/director/reports": handleReports,
   "/director/metric-inputs": handleMetricInputs,
 };
+
+// DIR-D1 — per-school drill-down snapshot (parameterized GET; matched before the
+// static GET table so `:schoolId` is captured, not treated as a literal key).
+const SNAPSHOT_RE = /^\/director\/schools\/([^/]+)\/snapshot$/;
 
 const ACK_RE = /^\/director\/compliance\/([^/]+)\/acknowledge$/;
 const EXPORT_RE = /^\/director\/reports\/([^/]+)\/export$/;
@@ -42,6 +49,10 @@ export async function routeDirector(
   if (!path.startsWith("/director")) return null;
 
   if (method === "GET") {
+    const snapshot = SNAPSHOT_RE.exec(path);
+    if (snapshot) {
+      return await handleSchoolSnapshot(req, config, decodeURIComponent(snapshot[1]));
+    }
     const handler = GET_ROUTES[path];
     return handler ? await handler(req, config) : null;
   }

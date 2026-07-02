@@ -71,6 +71,34 @@ export function moduleEntityAudit(
   };
 }
 
+// ─── Director portal ─────────────────────────────────────────────────────────
+
+export const directorAudit = {
+  /**
+   * DIR-D1 — the director opened an audited, READ-ONLY per-school drill-down
+   * ("Open Management Portal"). This is intentionally a READ that audits: the
+   * "read-through with audit" requirement. Category is `read` (no state changed);
+   * the event captures the actor (via claims on emit), the target schoolId and a
+   * timestamp. `nonce` keys the outbox so every distinct view is recorded, not
+   * deduped away.
+   */
+  schoolDrilldown: (schoolId: string, nonce: string): MutationAuditSpec => ({
+    audit: {
+      eventType: "director.school.drilldown",
+      category: "read",
+      entityType: "school",
+      entityId: schoolId,
+      metadata: { schoolId, viewedAt: nonce },
+    },
+    domain: {
+      eventType: "director.school.drilldown",
+      payload: { schoolId, viewedAt: nonce },
+      sourceModule: "director",
+      idempotencyKey: `director.school.drilldown:${schoolId}:${nonce}`,
+    },
+  }),
+};
+
 // ─── Admissions ─────────────────────────────────────────────────────────────
 
 export const admissionsAudit = {

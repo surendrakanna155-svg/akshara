@@ -55,14 +55,15 @@ async function call(
   return res;
 }
 
-// The 12 registered director routes (10 GET aggregates + 2 JSON-write POSTs).
+// The registered director GET aggregates (incl. DIR-2 /director/collections).
 const GET_ROUTES = [
-  "/director/dashboard", "/director/schools", "/director/portfolio", "/director/revenue",
+  "/director/dashboard", "/director/schools", "/director/collections",
+  "/director/portfolio", "/director/revenue",
   "/director/growth", "/director/marketing", "/director/admissions", "/director/compliance",
   "/director/reports", "/director/metric-inputs",
 ];
 
-Deno.test("QA-B-027: all 12 director routes match the router (never 404 NOT_FOUND)", async () => {
+Deno.test("QA-B-027: all director routes match the router (never 404 NOT_FOUND)", async () => {
   // GET aggregates: holder reaches the unconfigured DB → 503 (matched, authorized).
   for (const path of GET_ROUTES) {
     const res = await call("GET", path, ["viewDirectorPortal"]);
@@ -135,6 +136,53 @@ Deno.test("QA-B-027: POST /director/summary is denied for a non-holder (403 FORB
 Deno.test("QA-B-027: POST /director/summary passes the gate for a holder (503 DB-free)", async () => {
   const res = await call("POST", "/director/summary", ["viewDirectorPortal"], { focusArea: "dashboard" });
   assertEquals(res.status, 503);
+});
+
+// ─── DIR-2 — consolidated collections route contract ────────────────────────
+Deno.test("DIR-2: GET /director/collections denies a non-holder (403 FORBIDDEN)", async () => {
+  const res = await call("GET", "/director/collections", ["viewInventory"]);
+  assertEquals(res.status, 403);
+  const env = await res.json();
+  assertEquals(env.error.code, "FORBIDDEN");
+});
+
+Deno.test("DIR-2: GET /director/collections passes the gate for a holder (503 DB-free)", async () => {
+  const res = await call("GET", "/director/collections", ["viewDirectorPortal"]);
+  assertEquals(res.status, 503);
+});
+
+Deno.test("DIR-2: a school-scope token is denied (403) the consolidated collections", async () => {
+  const res = await call("GET", "/director/collections", ["viewDirectorPortal"], undefined, {
+    scope: "school", school_id: "school-1",
+  });
+  assertEquals(res.status, 403);
+});
+
+// ─── DIR-D1 — per-school drill-down snapshot route contract ──────────────────
+const SNAPSHOT = "/director/schools/school-1/snapshot";
+
+Deno.test("DIR-D1: snapshot route matches the router (parameterized GET, never 404)", async () => {
+  // Holder reaches the unconfigured DB → 503 (matched + authorized). Proves the
+  // SNAPSHOT_RE matcher runs before the static GET table (no 404/null).
+  const res = await call("GET", SNAPSHOT, ["viewDirectorPortal"]);
+  assertEquals(res.status, 503);
+});
+
+Deno.test("DIR-D1: snapshot is denied for a non-holder (403 FORBIDDEN)", async () => {
+  const res = await call("GET", SNAPSHOT, ["viewInventory"]);
+  assertEquals(res.status, 403);
+  const env = await res.json();
+  assertEquals(env.error.code, "FORBIDDEN");
+});
+
+Deno.test("DIR-D1: a school-scope token is denied (403) the snapshot", async () => {
+  // Same viewDirectorPortal permission, scope:"school" → requireOrgScope 403.
+  const res = await call("GET", SNAPSHOT, ["viewDirectorPortal"], undefined, {
+    scope: "school", school_id: "school-1",
+  });
+  assertEquals(res.status, 403);
+  const env = await res.json();
+  assertEquals(env.error.code, "FORBIDDEN");
 });
 
 // ─── QA-B-059 — org-scope deny leg (locally verifiable) ─────────────────────────

@@ -248,6 +248,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   // Director portal (org-scope multi-school aggregation).
   { method: "GET", path: "/director/summary", permission: "viewDirectorPortal", scope: "organization", module: "director" },
   { method: "POST", path: "/director/metric-inputs", permission: "manageDirectorPortal", scope: "organization", module: "director" },
+  // DIR-2 — consolidated collection report (per-school fee%/billed/collected/outstanding + org totals).
+  { method: "GET", path: "/director/collections", permission: "viewDirectorPortal", scope: "organization", module: "director" },
+  // DIR-D1 — audited read-only per-school drill-down ("Open Management Portal").
+  { method: "GET", path: "/director/schools/:schoolId/snapshot", permission: "viewDirectorPortal", scope: "organization", module: "director" },
   // Organization builder (Enterprise feature.organization_builder gated at runtime).
   { method: "GET", path: "/platform/org-builder/packs", permission: "viewOrganizationBuilder", scope: "organization", module: "organization_builder" },
   { method: "POST", path: "/platform/org-builder/provision", permission: "manageOrganizationBuilder", scope: "organization", module: "organization_builder" },

@@ -21,12 +21,13 @@ import {
   withTenantContext,
 } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
-import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
+import { directorAudit, emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import {
   acknowledgeCompliance,
   buildBoardPack,
   buildExecutiveSummary,
   getAdmissions,
+  getCollectionReport,
   getCompliance,
   getDashboard,
   getGrowth,
@@ -35,6 +36,7 @@ import {
   getRevenue,
   getReports,
   getSchoolRows,
+  getSchoolSnapshot,
   markReportGenerated,
   type MetricInputDraft,
   upsertMetricInput,
@@ -93,6 +95,14 @@ export function handleSchools(req: Request, config: AppConfig): Promise<Response
   }));
 }
 
+// DIR-2 — consolidated collection report: per-school fee%/billed/collected/
+// outstanding + org totals. Same viewDirectorPortal + org-scope gate as the
+// other reads; money math reuses the certified getSchoolRows billed/collected.
+export function handleCollections(req: Request, config: AppConfig): Promise<Response> {
+  return read(req, config, "Failed to load consolidated collections", (db, orgId) =>
+    getCollectionReport(db, orgId));
+}
+
 export function handlePortfolio(req: Request, config: AppConfig): Promise<Response> {
   return read(req, config, "Failed to load portfolio analytics", (db, orgId) =>
     getGrowth(db, orgId, new Date()));
@@ -134,6 +144,45 @@ export function handleMetricInputs(req: Request, config: AppConfig): Promise<Res
   return read(req, config, "Failed to load metric inputs", async (db, orgId) => ({
     items: await getMetricInputs(db, orgId),
   }));
+}
+
+// DIR-D1 — per-school read-only drill-down ("Open Management Portal"): an
+// AUDITED, READ-ONLY snapshot — NOT impersonation, NOT a persona/token switch,
+// NO writes. Gate = viewDirectorPortal + org scope (same as every director
+// read). The schoolId MUST belong to the caller's org: getSchoolSnapshot reuses
+// the explicit school-belongs-to-org guard and returns null for a foreign or
+// unknown school → 404 here (never leaking another org's data). On a real hit we
+// emit the `director.school.drilldown` READ audit (actor from claims, schoolId,
+// timestamp) — the "read-through with audit" requirement.
+export async function handleSchoolSnapshot(
+  req: Request,
+  config: AppConfig,
+  schoolId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = gate(auth.claims, "viewDirectorPortal");
+  if (denied) return denied;
+
+  const orgId = organizationIdFromClaims(auth.claims);
+  try {
+    const snapshot = await withTenantContext(config, auth.claims, async (db) => {
+      const result = await getSchoolSnapshot(db, orgId, schoolId);
+      if (result) {
+        await emitMutationAudit(
+          db,
+          auth.claims,
+          directorAudit.schoolDrilldown(schoolId, new Date().toISOString()),
+          req,
+        );
+      }
+      return result;
+    });
+    if (!snapshot) return errorEnvelope("NOT_FOUND", "School not found in this organization", 404);
+    return jsonResponse(envelope(snapshot));
+  } catch (error) {
+    return failure(error, "Failed to load school snapshot");
+  }
 }
 
 export async function handleSummary(req: Request, config: AppConfig): Promise<Response> {
