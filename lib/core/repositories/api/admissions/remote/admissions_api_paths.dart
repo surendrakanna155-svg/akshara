@@ -22,6 +22,12 @@ abstract final class AdmissionsApiPaths {
   static const String documentsUploadPresign = '$base/documents/upload/presign';
   static const String handoffsSend = '$base/handoffs/send';
 
+  // ADM-3: bulk assign / stage change over many leads.
+  static const String leadsBulk = '$leads/bulk';
+
+  // ADM-D2: warn-only duplicate lookup by phone.
+  static const String leadsCheckDuplicate = '$leads/check-duplicate';
+
   static String documentDownload(String documentId) =>
       '$documents/$documentId/download';
 
@@ -30,6 +36,19 @@ abstract final class AdmissionsApiPaths {
   static String leadStage(String leadId) => '${lead(leadId)}/stage';
   static String leadFollowUps(String leadId) => '${lead(leadId)}/followups';
   static String leadNotes(String leadId) => '${lead(leadId)}/notes';
+
+  // ADM-D1: mark a lead lost with a reason.
+  static String leadLost(String leadId) => '${lead(leadId)}/lost';
+
+  // ADM-4: complete / reschedule a scheduled follow-up.
+  static String followUpComplete(String leadId, String followUpId) =>
+      '${leadFollowUps(leadId)}/$followUpId/complete';
+  static String followUpReschedule(String leadId, String followUpId) =>
+      '${leadFollowUps(leadId)}/$followUpId/reschedule';
+
+  // ADM-D4: offer-letter data for an approved enrollment.
+  static String enrollmentOfferLetter(String enrollmentId) =>
+      '$enrollments/$enrollmentId/offer-letter';
 
   static String application(String applicationId) =>
       '$applications/$applicationId';

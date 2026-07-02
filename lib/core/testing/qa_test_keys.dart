@@ -79,6 +79,54 @@ abstract final class QaTestKeys {
   static const admissionsApprovedSnackbar =
       ValueKey<String>('admissions_approved_snackbar');
 
+  // --- ADM-3: bulk lead actions ---
+  static const admissionsBulkAssignButton =
+      ValueKey<String>('admissions_bulk_assign_button');
+  static const admissionsBulkStageButton =
+      ValueKey<String>('admissions_bulk_stage_button');
+  static const admissionsBulkActionSnackbar =
+      ValueKey<String>('admissions_bulk_action_snackbar');
+
+  // --- ADM-4: follow-up actions (dashboard) ---
+  static const admissionsFollowUpCompleteButton =
+      ValueKey<String>('admissions_followup_complete_button');
+  static const admissionsFollowUpRescheduleButton =
+      ValueKey<String>('admissions_followup_reschedule_button');
+  static const admissionsFollowUpCallButton =
+      ValueKey<String>('admissions_followup_call_button');
+  static const admissionsFollowUpActionSnackbar =
+      ValueKey<String>('admissions_followup_action_snackbar');
+
+  // --- ADM-5: new-application lead picker ---
+  static const admissionsLeadPickerConfirmButton =
+      ValueKey<String>('admissions_lead_picker_confirm_button');
+  static ValueKey<String> admissionsLeadPickerOption(String leadId) =>
+      ValueKey<String>('admissions_lead_picker_option_$leadId');
+
+  // --- ADM-D1: mark lost ---
+  static const admissionsMarkLostConfirmButton =
+      ValueKey<String>('admissions_mark_lost_confirm_button');
+  static const admissionsMarkLostSnackbar =
+      ValueKey<String>('admissions_mark_lost_snackbar');
+
+  // --- ADM-D2: duplicate-phone warning ---
+  static const admissionsDuplicateWarningBanner =
+      ValueKey<String>('admissions_duplicate_warning_banner');
+  static const admissionsDuplicateOpenExistingButton =
+      ValueKey<String>('admissions_duplicate_open_existing_button');
+
+  // --- ADM-D4: offer letter ---
+  static const admissionsOfferLetterButton =
+      ValueKey<String>('admissions_offer_letter_button');
+  static const admissionsOfferLetterSnackbar =
+      ValueKey<String>('admissions_offer_letter_snackbar');
+
+  // --- #6: settings save ---
+  static const admissionsSettingsSaveButton =
+      ValueKey<String>('admissions_settings_save_button');
+  static const admissionsSettingsSavedSnackbar =
+      ValueKey<String>('admissions_settings_saved_snackbar');
+
   static const sisConvertEnrollmentButton =
       ValueKey<String>('sis_convert_enrollment_button');
 

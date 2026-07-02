@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_failure.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/security/rbac_service.dart';
 import '../../../core/widgets/whatsapp_contact_button.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_content_scaffold.dart';
 import '../../admin/admin_layout.dart';
 import '../../admin/admin_shell.dart';
+import '../admissions_models.dart';
 import '../admissions_workflow_actions.dart';
 import '../admissions_navigation.dart';
 import '../widgets/admissions_sub_nav.dart';
@@ -129,6 +131,15 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
                       'Hello ${profile.lead.parentName}, this is regarding '
                       '${profile.lead.studentName}\'s admission enquiry. ',
                   unavailableMessage: 'No contact number on this lead.',
+                  // ADM-2: auto-log the contact once WhatsApp opens (manage-grade
+                  // write; only wired when the operator can mutate admissions).
+                  onSent: ref.watch(canManageAdmissionsProvider)
+                      ? () => autoLogWhatsAppNote(
+                            ref,
+                            leadId: leadId,
+                            studentName: profile.lead.studentName,
+                          )
+                      : null,
                 ),
                 AksharaManageAction(
                   permission: Permission.manageAdmissions,
@@ -192,6 +203,17 @@ class AdmissionsLeadDetailScreen extends ConsumerWidget {
                     label: const Text('Change stage'),
                   ),
                 ),
+                // ADM-D1: mark the lead lost with a fixed-picklist reason.
+                if (profile.lead.stage != LeadStage.lost)
+                  AksharaManageAction(
+                    permission: Permission.manageAdmissions,
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          showMarkLeadLostDialog(context, ref, profile.lead),
+                      icon: const Icon(Icons.do_not_disturb_on_outlined),
+                      label: const Text('Mark lost'),
+                    ),
+                  ),
               ],
             ),
           ],

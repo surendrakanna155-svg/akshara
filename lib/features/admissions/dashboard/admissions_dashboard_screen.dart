@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/security/rbac_service.dart';
 import '../../../router/route_names.dart';
 import '../../../shared/widgets/akshara_insight_card.dart';
 import '../../../shared/widgets/akshara_section_header.dart';
@@ -10,6 +11,7 @@ import '../../admin/admin_layout.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_navigation.dart';
+import '../admissions_workflow_actions.dart';
 import '../widgets/admissions_chart_panel.dart';
 import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_dashboard_provider.dart';
@@ -49,16 +51,18 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
           ref,
           admissionsDashboardFutureProvider,
         ),
-        builder: (data) => _buildDashboardContent(context, data),
+        builder: (data) => _buildDashboardContent(context, ref, data),
       ),
     );
   }
 
   Widget _buildDashboardContent(
     BuildContext context,
+    WidgetRef ref,
     AdmissionsDashboardData data,
   ) {
     final isMobile = AdminLayout.isMobile(context);
+    final canManage = ref.watch(canManageAdmissionsProvider);
     final chartHeight = isMobile ? 296.0 : 320.0;
 
     return Column(
@@ -112,6 +116,11 @@ class AdmissionsDashboardScreen extends ConsumerWidget {
         const SizedBox(height: AksharaSpacing.s3),
         AdmissionsFollowupsTable(
           followUps: data.followUps,
+          // ADM-4: complete / reschedule / call from the dashboard. Gated to
+          // manage-grade users (complete/reschedule are writes).
+          onAction: canManage
+              ? (item) => showFollowUpActionSheet(context, ref, item)
+              : null,
         ),
         const SizedBox(height: AksharaSpacing.s6),
         const AksharaSectionHeader(title: 'Counselor leaderboard'),

@@ -106,6 +106,66 @@ void main() {
 
       expect(container.read(uploadDocumentProvider).hasError, isTrue);
     });
+
+    test('bulkLeadAction fails without manageAdmissions', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(bulkLeadActionProvider.notifier).execute(
+            const BulkLeadActionRequest.assign(
+              leadIds: ['LD-1'],
+              counselor: 'X',
+            ),
+          );
+
+      expect(container.read(bulkLeadActionProvider).hasError, isTrue);
+    });
+
+    test('markLeadLost fails without manageAdmissions', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(markLeadLostProvider.notifier).execute(
+            leadId: 'LD-1',
+            request: const MarkLeadLostRequest(reason: LeadLostReason.other),
+          );
+
+      expect(container.read(markLeadLostProvider).hasError, isTrue);
+    });
+
+    test('saveSettings fails without manageAdmissions', () async {
+      final container = ProviderContainer(
+        overrides: [
+          ...providerTestOverrides(),
+          userPermissionsProvider.overrideWithValue(
+            UserPermissions.forRole(ErpRole.financeAdmin),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = MockAdmissionsRepository();
+      final settings = await repo.getSettings(query: RepositoryQuery.demo);
+      await container.read(saveAdmissionsSettingsProvider.notifier).execute(
+            SaveAdmissionsSettingsRequest(settings: settings),
+          );
+
+      expect(container.read(saveAdmissionsSettingsProvider).hasError, isTrue);
+    });
   });
 
   group('Admissions audit events', () {
@@ -159,6 +219,25 @@ void main() {
       expect(
         AdmissionsApiPaths.documentDownload('DOC-1'),
         '/admissions/documents/DOC-1/download',
+      );
+      // ADM-3 / ADM-4 / ADM-D1 / ADM-D2 / ADM-D4 endpoints.
+      expect(AdmissionsApiPaths.leadsBulk, '/admissions/leads/bulk');
+      expect(
+        AdmissionsApiPaths.leadsCheckDuplicate,
+        '/admissions/leads/check-duplicate',
+      );
+      expect(AdmissionsApiPaths.leadLost('LD-1'), '/admissions/leads/LD-1/lost');
+      expect(
+        AdmissionsApiPaths.followUpComplete('LD-1', 'FU-1'),
+        '/admissions/leads/LD-1/followups/FU-1/complete',
+      );
+      expect(
+        AdmissionsApiPaths.followUpReschedule('LD-1', 'FU-1'),
+        '/admissions/leads/LD-1/followups/FU-1/reschedule',
+      );
+      expect(
+        AdmissionsApiPaths.enrollmentOfferLetter('enr_1'),
+        '/admissions/enrollments/enr_1/offer-letter',
       );
     });
   });

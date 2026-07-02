@@ -136,6 +136,7 @@ class AdmissionsFixtureBuilder {
         'handoffStatus': _handoffStatus(handoff.handoffStatus),
         'previewStudentId': handoff.previewStudentId,
         'sisHandoffLabel': handoff.sisHandoffLabel,
+        'enrollmentId': handoff.enrollmentId,
       };
 
   Map<String, dynamic> feeStructureItem(FeeStructureOption option) => {
@@ -187,6 +188,13 @@ class AdmissionsFixtureBuilder {
             'status': _applicationStatus(row.status),
             'count': row.count,
             'percent': row.percent,
+          },
+      ],
+      'lostReasons': [
+        for (final row in data.lostReasons)
+          {
+            'reason': row.reason.apiValue,
+            'count': row.count,
           },
       ],
     });

@@ -291,6 +291,157 @@ final addLeadNoteProvider =
   AddLeadNoteNotifier.new,
 );
 
+/// ADM-3: bulk assign a counselor / change stage over many leads.
+class BulkLeadActionNotifier extends AsyncNotifier<BulkLeadActionResult?> {
+  @override
+  FutureOr<BulkLeadActionResult?> build() => null;
+
+  Future<BulkLeadActionResult?> execute(BulkLeadActionRequest request) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageAdmissions(ref),
+        auditType: request.action == BulkLeadAction.assign
+            ? AuditEventType.leadAssigned
+            : AuditEventType.leadStageChanged,
+        entityId: 'bulk',
+        metadata: {
+          'action': request.action.name,
+          'count': '${request.leadIds.length}',
+          if (request.counselor != null) 'counselor': request.counselor!,
+          if (request.stage != null) 'stage': request.stage!.name,
+        },
+        invalidateLeads: true,
+        action: () => ref.read(admissionsRepositoryProvider).bulkLeadAction(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final bulkLeadActionProvider =
+    AsyncNotifierProvider<BulkLeadActionNotifier, BulkLeadActionResult?>(
+  BulkLeadActionNotifier.new,
+);
+
+/// ADM-D1: mark a lead lost with a fixed-picklist reason.
+class MarkLeadLostNotifier extends AsyncNotifier<AdmissionsLead?> {
+  @override
+  FutureOr<AdmissionsLead?> build() => null;
+
+  Future<AdmissionsLead?> execute({
+    required String leadId,
+    required MarkLeadLostRequest request,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageAdmissions(ref),
+        auditType: AuditEventType.leadStageChanged,
+        entityId: leadId,
+        metadata: {'action': 'markLost', 'reason': request.reason.apiValue},
+        invalidateLeads: true,
+        action: () => ref.read(admissionsRepositoryProvider).markLeadLost(
+              query: ref.read(repositoryQueryProvider),
+              leadId: leadId,
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final markLeadLostProvider =
+    AsyncNotifierProvider<MarkLeadLostNotifier, AdmissionsLead?>(
+  MarkLeadLostNotifier.new,
+);
+
+/// ADM-4: complete a scheduled follow-up (optionally recording an outcome).
+class CompleteFollowUpNotifier extends AsyncNotifier<LeadFollowUpRecord?> {
+  @override
+  FutureOr<LeadFollowUpRecord?> build() => null;
+
+  Future<LeadFollowUpRecord?> execute({
+    required String leadId,
+    required String followUpId,
+    CompleteFollowUpRequest request = const CompleteFollowUpRequest(),
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageAdmissions(ref),
+        auditType: AuditEventType.followupAdded,
+        entityId: leadId,
+        metadata: {'action': 'followUpCompleted', 'followUpId': followUpId},
+        invalidateLeads: true,
+        action: () => ref.read(admissionsRepositoryProvider).completeFollowUp(
+              query: ref.read(repositoryQueryProvider),
+              leadId: leadId,
+              followUpId: followUpId,
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final completeFollowUpProvider =
+    AsyncNotifierProvider<CompleteFollowUpNotifier, LeadFollowUpRecord?>(
+  CompleteFollowUpNotifier.new,
+);
+
+/// ADM-4: reschedule a follow-up to a new due label.
+class RescheduleFollowUpNotifier extends AsyncNotifier<LeadFollowUpRecord?> {
+  @override
+  FutureOr<LeadFollowUpRecord?> build() => null;
+
+  Future<LeadFollowUpRecord?> execute({
+    required String leadId,
+    required String followUpId,
+    required RescheduleFollowUpRequest request,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageAdmissions(ref),
+        auditType: AuditEventType.followupAdded,
+        entityId: leadId,
+        metadata: {
+          'action': 'followUpRescheduled',
+          'followUpId': followUpId,
+        },
+        invalidateLeads: true,
+        action: () =>
+            ref.read(admissionsRepositoryProvider).rescheduleFollowUp(
+                  query: ref.read(repositoryQueryProvider),
+                  leadId: leadId,
+                  followUpId: followUpId,
+                  request: request,
+                ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final rescheduleFollowUpProvider =
+    AsyncNotifierProvider<RescheduleFollowUpNotifier, LeadFollowUpRecord?>(
+  RescheduleFollowUpNotifier.new,
+);
+
 class SubmitApplicationNotifier extends AsyncNotifier<AdmissionsApplication?> {
   @override
   FutureOr<AdmissionsApplication?> build() => null;
@@ -659,3 +810,46 @@ final updateAdmissionsSettingsProvider = AsyncNotifierProvider<
     UpdateAdmissionsSettingsNotifier, AdmissionsSettingsData?>(
   UpdateAdmissionsSettingsNotifier.new,
 );
+
+/// #6: persist the full admissions settings snapshot (POST /admissions/settings).
+class SaveAdmissionsSettingsNotifier
+    extends AsyncNotifier<AdmissionsSettingsData?> {
+  @override
+  FutureOr<AdmissionsSettingsData?> build() => null;
+
+  Future<AdmissionsSettingsData?> execute(
+    SaveAdmissionsSettingsRequest request,
+  ) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _runMutation(
+        ref,
+        assertPermission: () => assertManageAdmissions(ref),
+        auditType: AuditEventType.leadUpdated,
+        entityId: 'admissionsSettings',
+        metadata: const {'action': 'saveSettings'},
+        invalidateSettings: true,
+        action: () => ref.read(admissionsRepositoryProvider).saveSettings(
+              query: ref.read(repositoryQueryProvider),
+              request: request,
+            ),
+      );
+    });
+    return state.valueOrNull;
+  }
+}
+
+final saveAdmissionsSettingsProvider = AsyncNotifierProvider<
+    SaveAdmissionsSettingsNotifier, AdmissionsSettingsData?>(
+  SaveAdmissionsSettingsNotifier.new,
+);
+
+/// ADM-D4: offer-letter template data for an approved enrollment (read).
+final admissionsOfferLetterProvider =
+    FutureProvider.family<OfferLetterData, String>((ref, enrollmentId) async {
+  return ref.read(admissionsRepositoryProvider).getOfferLetter(
+        query: ref.read(repositoryQueryProvider),
+        enrollmentId: enrollmentId,
+      );
+});

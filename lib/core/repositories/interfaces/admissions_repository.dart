@@ -29,6 +29,13 @@ abstract class AdmissionsRepository {
     required RepositoryQuery query,
     required UpdateAdmissionsSettingsRequest request,
   });
+
+  /// #6: persist the full admissions settings snapshot
+  /// (`POST /admissions/settings`) and return the saved state.
+  Future<AdmissionsSettingsData> saveSettings({
+    required RepositoryQuery query,
+    required SaveAdmissionsSettingsRequest request,
+  });
   Future<EnrollmentFormState> getEnrollmentPrefill(
       {required RepositoryQuery query});
 
@@ -54,6 +61,46 @@ abstract class AdmissionsRepository {
     required RepositoryQuery query,
     required String leadId,
     required AssignCounselorRequest request,
+  });
+
+  /// ADM-3: bulk assign a counselor / change stage over many leads
+  /// (`POST /admissions/leads/bulk`) → `{updated, skipped}` partial-success.
+  Future<BulkLeadActionResult> bulkLeadAction({
+    required RepositoryQuery query,
+    required BulkLeadActionRequest request,
+  });
+
+  /// ADM-D1: mark a lead lost with a fixed-picklist reason
+  /// (`PATCH /admissions/leads/{id}/lost`).
+  Future<AdmissionsLead> markLeadLost({
+    required RepositoryQuery query,
+    required String leadId,
+    required MarkLeadLostRequest request,
+  });
+
+  /// ADM-4: complete a scheduled follow-up
+  /// (`POST /admissions/leads/{id}/followups/{followupId}/complete`).
+  Future<LeadFollowUpRecord> completeFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required String followUpId,
+    required CompleteFollowUpRequest request,
+  });
+
+  /// ADM-4: reschedule a follow-up to a new due label
+  /// (`POST /admissions/leads/{id}/followups/{followupId}/reschedule`).
+  Future<LeadFollowUpRecord> rescheduleFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required String followUpId,
+    required RescheduleFollowUpRequest request,
+  });
+
+  /// ADM-D2: warn-only duplicate lookup by phone
+  /// (`GET /admissions/leads/check-duplicate?phone=`).
+  Future<DuplicateLeadCheckResult> checkDuplicateByPhone({
+    required RepositoryQuery query,
+    required String phone,
   });
 
   Future<AdmissionsLead> changeLeadStage({
@@ -158,6 +205,14 @@ abstract class AdmissionsRepository {
   Future<ApprovedStudentHandoff> sendToFinance({
     required RepositoryQuery query,
     required FinanceHandoffRequest request,
+  });
+
+  /// ADM-D4: offer-letter template data for an approved enrollment
+  /// (`GET /admissions/enrollments/{id}/offer-letter`); the client renders the
+  /// PDF from these fields.
+  Future<OfferLetterData> getOfferLetter({
+    required RepositoryQuery query,
+    required String enrollmentId,
   });
 
   Future<ApprovedStudentHandoff> updateHandoffStatus({

@@ -22,6 +22,8 @@ import '../dto/document_verification_request_dto.dart';
 import '../dto/enrollment_request_dto.dart';
 import '../dto/finance_handoff_request_dto.dart';
 import '../dto/followup_request_dto.dart';
+import '../dto/lead_action_request_dto.dart';
+import '../dto/save_admissions_settings_request_dto.dart';
 import '../dto/update_admissions_settings_request_dto.dart';
 import '../dto/update_lead_request_dto.dart';
 import '../mapper/admissions_mapper.dart';
@@ -264,6 +266,103 @@ class AdmissionsRemoteDataSource {
       data: LeadNoteRequestDto.fromDomain(request).toJson(),
     );
     return _mapper.toLeadActivityItem(_requireData(response));
+  }
+
+  /// ADM-3: bulk assign a counselor / change stage over many leads.
+  Future<BulkLeadActionResult> bulkLeadAction({
+    required RepositoryQuery query,
+    required BulkLeadActionRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AdmissionsApiPaths.leadsBulk,
+      queryParameters: _queryParams(query),
+      data: BulkLeadActionRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toBulkLeadActionResult(_requireData(response));
+  }
+
+  /// ADM-D1: mark a lead lost with a fixed-picklist reason.
+  Future<AdmissionsLead> markLeadLost({
+    required RepositoryQuery query,
+    required String leadId,
+    required MarkLeadLostRequest request,
+  }) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      AdmissionsApiPaths.leadLost(leadId),
+      queryParameters: _queryParams(query),
+      data: MarkLeadLostRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toLead(AdmissionsLeadDto.fromJson(_requireData(response)));
+  }
+
+  /// ADM-4: complete a scheduled follow-up (optionally recording an outcome).
+  Future<LeadFollowUpRecord> completeFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required String followUpId,
+    required CompleteFollowUpRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AdmissionsApiPaths.followUpComplete(leadId, followUpId),
+      queryParameters: _queryParams(query),
+      data: CompleteFollowUpRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toFollowUpRecord(_requireData(response));
+  }
+
+  /// ADM-4: reschedule a follow-up to a new due label.
+  Future<LeadFollowUpRecord> rescheduleFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required String followUpId,
+    required RescheduleFollowUpRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      AdmissionsApiPaths.followUpReschedule(leadId, followUpId),
+      queryParameters: _queryParams(query),
+      data: RescheduleFollowUpRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toFollowUpRecord(_requireData(response));
+  }
+
+  /// ADM-D2: warn-only duplicate lookup by phone.
+  Future<DuplicateLeadCheckResult> checkDuplicateByPhone({
+    required RepositoryQuery query,
+    required String phone,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      AdmissionsApiPaths.leadsCheckDuplicate,
+      queryParameters: {..._queryParams(query), 'phone': phone},
+    );
+    return _mapper.toDuplicateLeadCheck(_requireData(response));
+  }
+
+  /// ADM-D4: offer-letter template data for an approved enrollment.
+  Future<OfferLetterData> fetchOfferLetter({
+    required RepositoryQuery query,
+    required String enrollmentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      AdmissionsApiPaths.enrollmentOfferLetter(enrollmentId),
+      queryParameters: _queryParams(query),
+    );
+    return _mapper.toOfferLetter(_requireData(response));
+  }
+
+  /// #6: persist the full admissions settings snapshot.
+  Future<AdmissionsSettingsData> saveSettings({
+    required RepositoryQuery query,
+    required SaveAdmissionsSettingsRequest request,
+  }) async {
+    await _dio.post<Map<String, dynamic>>(
+      AdmissionsApiPaths.settings,
+      queryParameters: _queryParams(query),
+      data: SaveAdmissionsSettingsRequestDto.fromDomain(request.settings)
+          .toJson(),
+    );
+    // The POST returns the saved settings object; re-read through the shared
+    // GET mapper so the client always reflects the persisted server state.
+    return fetchSettings(query: query).then(_mapper.toSettings);
   }
 
   Future<AdmissionsApplication> createApplication({

@@ -148,6 +148,13 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
       _remote.updateSettings(query: query, request: request);
 
   @override
+  Future<AdmissionsSettingsData> saveSettings({
+    required RepositoryQuery query,
+    required SaveAdmissionsSettingsRequest request,
+  }) =>
+      _remote.saveSettings(query: query, request: request);
+
+  @override
   Future<EnrollmentFormState> getEnrollmentPrefill({
     required RepositoryQuery query,
   }) async {
@@ -184,6 +191,56 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
     required AssignCounselorRequest request,
   }) =>
       _remote.assignCounselor(query: query, leadId: leadId, request: request);
+
+  @override
+  Future<BulkLeadActionResult> bulkLeadAction({
+    required RepositoryQuery query,
+    required BulkLeadActionRequest request,
+  }) =>
+      _remote.bulkLeadAction(query: query, request: request);
+
+  @override
+  Future<AdmissionsLead> markLeadLost({
+    required RepositoryQuery query,
+    required String leadId,
+    required MarkLeadLostRequest request,
+  }) =>
+      _remote.markLeadLost(query: query, leadId: leadId, request: request);
+
+  @override
+  Future<LeadFollowUpRecord> completeFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required String followUpId,
+    required CompleteFollowUpRequest request,
+  }) =>
+      _remote.completeFollowUp(
+        query: query,
+        leadId: leadId,
+        followUpId: followUpId,
+        request: request,
+      );
+
+  @override
+  Future<LeadFollowUpRecord> rescheduleFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required String followUpId,
+    required RescheduleFollowUpRequest request,
+  }) =>
+      _remote.rescheduleFollowUp(
+        query: query,
+        leadId: leadId,
+        followUpId: followUpId,
+        request: request,
+      );
+
+  @override
+  Future<DuplicateLeadCheckResult> checkDuplicateByPhone({
+    required RepositoryQuery query,
+    required String phone,
+  }) =>
+      _remote.checkDuplicateByPhone(query: query, phone: phone);
 
   @override
   Future<AdmissionsLead> changeLeadStage({
@@ -363,6 +420,13 @@ class ApiAdmissionsRepository implements AdmissionsRepository {
     required FinanceHandoffRequest request,
   }) =>
       _remote.sendToFinance(query: query, request: request);
+
+  @override
+  Future<OfferLetterData> getOfferLetter({
+    required RepositoryQuery query,
+    required String enrollmentId,
+  }) =>
+      _remote.fetchOfferLetter(query: query, enrollmentId: enrollmentId);
 
   @override
   Future<ApprovedStudentHandoff> updateHandoffStatus({

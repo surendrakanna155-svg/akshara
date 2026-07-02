@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../theme/spacing.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../admissions_navigation.dart';
@@ -79,7 +80,13 @@ class AdmissionsReportsScreen extends ConsumerWidget {
       case AdmissionsReportTab.funnel:
         title = 'Admissions Funnel';
         headers = const ['Stage', 'Count'];
-        rows = [for (final s in data.funnelSegments) [s.label, '${s.value}']];
+        rows = [
+          for (final s in data.funnelSegments) [s.label, '${s.value}'],
+          // ADM-D1: append the lost-reasons rollup so the funnel export is
+          // complete (mirrors the on-screen lost-reasons card).
+          for (final r in data.lostReasons)
+            ['Lost · ${r.reason.label}', '${r.count}'],
+        ];
       case AdmissionsReportTab.sources:
         title = 'Lead Sources';
         headers = const ['Source', 'Leads', 'Converted', 'Conversion %'];
@@ -141,10 +148,18 @@ class AdmissionsReportsScreen extends ConsumerWidget {
 
   Widget _buildTabContent(AdmissionsReportsData data, AdmissionsReportTab tab) {
     return switch (tab) {
-      AdmissionsReportTab.funnel => AdmissionsChartPanel(
-          title: 'Conversion funnel',
-          segments: data.funnelSegments,
-          height: 320,
+      // ADM-D1: the funnel tab also carries the lost-reasons rollup card.
+      AdmissionsReportTab.funnel => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AdmissionsChartPanel(
+              title: 'Conversion funnel',
+              segments: data.funnelSegments,
+              height: 320,
+            ),
+            const SizedBox(height: AksharaSpacing.s6),
+            AdmissionsLostReasonsCard(rows: data.lostReasons),
+          ],
         ),
       AdmissionsReportTab.sources => AdmissionsSourceReportTable(
           rows: data.sourceAnalysis,

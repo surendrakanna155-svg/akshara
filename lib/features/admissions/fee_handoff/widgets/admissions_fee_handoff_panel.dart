@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/security/permissions.dart';
+import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../shared/widgets/akshara_status_chip.dart';
 import '../../../../shared/widgets/akshara_manage_action.dart';
 import '../../../../theme/spacing.dart';
@@ -16,12 +17,17 @@ class AdmissionsFeeHandoffPanel extends ConsumerWidget {
     required this.feeStructures,
     this.onFeeStructureChanged,
     this.onSendToFinance,
+    this.onGenerateOfferLetter,
   });
 
   final ApprovedStudentHandoff handoff;
   final List<FeeStructureOption> feeStructures;
   final ValueChanged<String>? onFeeStructureChanged;
   final VoidCallback? onSendToFinance;
+
+  /// ADM-D4: generate + print/share the offer letter for this approved
+  /// enrollment. Null (or no enrollment id) hides the action.
+  final VoidCallback? onGenerateOfferLetter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -109,6 +115,19 @@ class AdmissionsFeeHandoffPanel extends ConsumerWidget {
                   child: const Text('Send to Finance'),
                 ),
               ),
+              // ADM-D4: offer letter for the approved enrollment (read + client
+              // PDF). Shown only when the handoff resolves to an enrollment.
+              if (onGenerateOfferLetter != null &&
+                  handoff.enrollmentId != null &&
+                  handoff.enrollmentId!.isNotEmpty) ...[
+                const SizedBox(height: AksharaSpacing.s2),
+                OutlinedButton.icon(
+                  key: QaTestKeys.admissionsOfferLetterButton,
+                  onPressed: onGenerateOfferLetter,
+                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                  label: const Text('Offer letter'),
+                ),
+              ],
             ],
           ),
         ),

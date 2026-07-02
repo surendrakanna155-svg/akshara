@@ -14,6 +14,11 @@ final admissionsLeadsEmptyProvider = StateProvider<bool>((ref) => false);
 final admissionsLeadsFilterProvider = StateProvider<int>((ref) => 0);
 final admissionsLeadsPageProvider = StateProvider<int>((ref) => 1);
 
+/// ADM-3: the set of lead ids the operator has ticked for a bulk action.
+/// Cleared after a successful bulk action or when leads reload.
+final admissionsSelectedLeadsProvider =
+    StateProvider<Set<String>>((ref) => <String>{});
+
 final admissionsLeadsQueryProvider = Provider<RepositoryQuery>((ref) {
   final baseQuery = ref.watch(repositoryQueryProvider);
   final page = ref.watch(admissionsLeadsPageProvider);

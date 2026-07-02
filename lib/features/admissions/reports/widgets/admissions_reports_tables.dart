@@ -122,6 +122,47 @@ class AdmissionsApplicationReportTable extends StatelessWidget {
   }
 }
 
+/// ADM-D1: lost-reasons rollup card — why leads were lost, by fixed-picklist
+/// reason. Rendered under the Funnel tab; consumes the reports lost-reasons
+/// rollup exposed by the backend.
+class AdmissionsLostReasonsCard extends StatelessWidget {
+  const AdmissionsLostReasonsCard({super.key, required this.rows});
+
+  final List<LostReasonRow> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = rows.fold<int>(0, (sum, row) => sum + row.count);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AksharaSectionHeader(title: 'Why leads are lost'),
+        const SizedBox(height: AksharaSpacing.s3),
+        if (total == 0)
+          const AksharaEmptyState(
+            message: 'No lost leads in this period.',
+            icon: Icons.sentiment_satisfied_alt_outlined,
+          )
+        else
+          _ReportTable(
+            semanticLabel: 'Lost-reason analysis',
+            columns: const ['Reason', 'Count', 'Share'],
+            rows: [
+              for (final row in rows)
+                [
+                  row.reason.label,
+                  '${row.count}',
+                  total > 0
+                      ? '${(row.count / total * 100).toStringAsFixed(1)}%'
+                      : '0%',
+                ],
+            ],
+          ),
+      ],
+    );
+  }
+}
+
 class _ReportTable extends StatelessWidget {
   const _ReportTable({
     required this.semanticLabel,

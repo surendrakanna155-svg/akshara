@@ -9,12 +9,14 @@ import '../../../router/route_names.dart';
 import '../admissions_async_state.dart';
 import '../admissions_models.dart';
 import '../../../core/security/permissions.dart';
+import '../../../core/security/rbac_service.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../theme/spacing.dart';
 import '../admissions_navigation.dart';
 import '../admissions_workflow_actions.dart';
 import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_leads_provider.dart';
+import 'widgets/admissions_bulk_action_bar.dart';
 import 'widgets/admissions_leads_table.dart';
 
 /// AD-02 — Lead Management (CRM system of record).
@@ -32,6 +34,25 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
     final viewState = ref.watch(admissionsLeadsViewStateProvider);
     final pageResult = ref.watch(admissionsLeadsPageResultProvider);
     final filterIndex = ref.watch(admissionsLeadsFilterProvider);
+    final selectedLeadIds = ref.watch(admissionsSelectedLeadsProvider);
+    // ADM-3: bulk mutations are manage-grade; selection is only offered when the
+    // operator can act on it.
+    final canManage = ref.watch(canManageAdmissionsProvider);
+
+    // Drop any selected ids that are no longer on the current page (e.g. after a
+    // reload/pagination) so the bulk bar never acts on a stale selection.
+    ref.listen<PaginatedResult<AdmissionsLead>?>(
+      admissionsLeadsPageResultProvider,
+      (previous, next) {
+        if (next == null) return;
+        final visible = next.items.map((lead) => lead.id).toSet();
+        final current = ref.read(admissionsSelectedLeadsProvider);
+        final pruned = current.intersection(visible);
+        if (pruned.length != current.length) {
+          ref.read(admissionsSelectedLeadsProvider.notifier).state = pruned;
+        }
+      },
+    );
 
     return AdmissionsModuleScaffold(
       screen: AdmissionsScreen.leads,
@@ -71,8 +92,39 @@ class AdmissionsLeadsScreen extends ConsumerWidget {
             builder: (result) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (canManage && selectedLeadIds.isNotEmpty)
+                  AdmissionsBulkActionBar(
+                    selectedCount: selectedLeadIds.length,
+                    onAssign: () => showBulkAssignDialog(
+                      context,
+                      ref,
+                      selectedLeadIds.toList(),
+                    ),
+                    onChangeStage: () => showBulkStageDialog(
+                      context,
+                      ref,
+                      selectedLeadIds.toList(),
+                    ),
+                    onClear: () => ref
+                        .read(admissionsSelectedLeadsProvider.notifier)
+                        .state = <String>{},
+                  ),
                 AdmissionsLeadsTable(
                   leads: result.items,
+                  selectedLeadIds: selectedLeadIds,
+                  onSelectChanged: canManage
+                      ? (lead, selected) {
+                          final next = {...selectedLeadIds};
+                          if (selected) {
+                            next.add(lead.id);
+                          } else {
+                            next.remove(lead.id);
+                          }
+                          ref
+                              .read(admissionsSelectedLeadsProvider.notifier)
+                              .state = next;
+                        }
+                      : null,
                   onView: (lead) =>
                       context.push(RouteNames.admissionsLeadDetail(lead.id)),
                   onAssign: (lead) =>

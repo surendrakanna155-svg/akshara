@@ -15,11 +15,19 @@ class AdmissionsLeadsTable extends StatelessWidget {
     required this.leads,
     this.onView,
     this.onAssign,
+    this.selectedLeadIds = const <String>{},
+    this.onSelectChanged,
   });
 
   final List<AdmissionsLead> leads;
   final void Function(AdmissionsLead lead)? onView;
   final void Function(AdmissionsLead lead)? onAssign;
+
+  /// ADM-3: ids currently ticked for a bulk action.
+  final Set<String> selectedLeadIds;
+
+  /// ADM-3: called when a row's checkbox toggles. Null disables selection.
+  final void Function(AdmissionsLead lead, bool selected)? onSelectChanged;
 
   static const _columns = [
     DataColumn(label: Text('ID')),
@@ -45,6 +53,8 @@ class AdmissionsLeadsTable extends StatelessWidget {
               lead: lead,
               onView: onView,
               onAssign: onAssign,
+              selected: selectedLeadIds.contains(lead.id),
+              onSelectChanged: onSelectChanged,
             ),
             const SizedBox(height: AksharaSpacing.s3),
           ],
@@ -55,7 +65,7 @@ class AdmissionsLeadsTable extends StatelessWidget {
     return AksharaVirtualizedDataTable(
       columns: _columns,
       rowCount: leads.length,
-      showCheckboxColumn: true,
+      showCheckboxColumn: onSelectChanged != null,
       dataRowMinHeight: 56,
       semanticLabel: 'Leads table, ${leads.length} records',
       rowBuilder: (index) => _buildRow(context, leads[index]),
@@ -64,6 +74,10 @@ class AdmissionsLeadsTable extends StatelessWidget {
 
   DataRow _buildRow(BuildContext context, AdmissionsLead lead) {
     return DataRow(
+      selected: selectedLeadIds.contains(lead.id),
+      onSelectChanged: onSelectChanged == null
+          ? null
+          : (value) => onSelectChanged!(lead, value ?? false),
       cells: [
         DataCell(Text(lead.id)),
         DataCell(
@@ -116,11 +130,15 @@ class _LeadMobileCard extends StatelessWidget {
     required this.lead,
     this.onView,
     this.onAssign,
+    this.selected = false,
+    this.onSelectChanged,
   });
 
   final AdmissionsLead lead;
   final void Function(AdmissionsLead lead)? onView;
   final void Function(AdmissionsLead lead)? onAssign;
+  final bool selected;
+  final void Function(AdmissionsLead lead, bool selected)? onSelectChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +157,19 @@ class _LeadMobileCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  if (onSelectChanged != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: AksharaSpacing.s2),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: selected,
+                          onChanged: (value) =>
+                              onSelectChanged!(lead, value ?? false),
+                        ),
+                      ),
+                    ),
                   Text(
                     lead.id,
                     style: text.labelLarge.copyWith(fontWeight: FontWeight.w600),

@@ -23,6 +23,38 @@ enum LeadStage {
       };
 }
 
+/// ADM-D1: fixed picklist of reasons a lead is marked lost. Mirrors the backend
+/// `LEAD_LOST_REASONS` contract (`fees_high` | `competitor` | `distance` |
+/// `other`).
+enum LeadLostReason {
+  feesHigh,
+  competitor,
+  distance,
+  other;
+
+  String get label => switch (this) {
+        LeadLostReason.feesHigh => 'Fees too high',
+        LeadLostReason.competitor => 'Chose competitor',
+        LeadLostReason.distance => 'Distance',
+        LeadLostReason.other => 'Other',
+      };
+
+  /// Wire code used by the backend (`fees_high` | `competitor` | …).
+  String get apiValue => switch (this) {
+        LeadLostReason.feesHigh => 'fees_high',
+        LeadLostReason.competitor => 'competitor',
+        LeadLostReason.distance => 'distance',
+        LeadLostReason.other => 'other',
+      };
+
+  static LeadLostReason fromApi(String? raw) => switch (raw) {
+        'fees_high' => LeadLostReason.feesHigh,
+        'competitor' => LeadLostReason.competitor,
+        'distance' => LeadLostReason.distance,
+        _ => LeadLostReason.other,
+      };
+}
+
 /// Lead temperature score chip.
 enum LeadScore {
   hot,
@@ -170,6 +202,7 @@ class AdmissionsFollowUp {
     required this.counselor,
     required this.priority,
     required this.status,
+    this.leadId = '',
   });
 
   final String id;
@@ -179,6 +212,15 @@ class AdmissionsFollowUp {
   final String counselor;
   final FollowUpPriority priority;
   final FollowUpStatus status;
+
+  /// The lead this dashboard follow-up belongs to. The dashboard derives its
+  /// "due today" rows from leads (`admissions_leads.next_follow_up_label`), so
+  /// the row `id` is the lead id; [leadId] mirrors it for action wiring
+  /// (ADM-4). Falls back to [id] when the payload omits an explicit leadId.
+  final String leadId;
+
+  /// Resolved lead id for actions — explicit [leadId] if present, else [id].
+  String get resolvedLeadId => leadId.isNotEmpty ? leadId : id;
 }
 
 @immutable
@@ -906,6 +948,7 @@ class ApprovedStudentHandoff {
     required this.handoffStatus,
     required this.previewStudentId,
     required this.sisHandoffLabel,
+    this.enrollmentId,
   });
 
   final String id;
@@ -919,6 +962,10 @@ class ApprovedStudentHandoff {
   final FeeHandoffStatus handoffStatus;
   final String previewStudentId;
   final String sisHandoffLabel;
+
+  /// ADM-D4: the enrollment this handoff belongs to. Required to fetch the
+  /// offer-letter data (`GET /admissions/enrollments/{id}/offer-letter`).
+  final String? enrollmentId;
 }
 
 // --- Phase 3: AD-09 Admissions Reports ---
@@ -975,6 +1022,20 @@ class ApplicationStatusReportRow {
   final double percent;
 }
 
+/// ADM-D1: one row of the lost-reasons rollup exposed by `/admissions/reports`.
+/// The [reason] is one of the fixed picklist codes
+/// (`fees_high` | `competitor` | `distance` | `other`).
+@immutable
+class LostReasonRow {
+  const LostReasonRow({
+    required this.reason,
+    required this.count,
+  });
+
+  final LeadLostReason reason;
+  final int count;
+}
+
 @immutable
 class AdmissionsReportsData {
   const AdmissionsReportsData({
@@ -982,12 +1043,16 @@ class AdmissionsReportsData {
     required this.sourceAnalysis,
     required this.counselorPerformance,
     required this.applicationStatus,
+    this.lostReasons = const [],
   });
 
   final List<ChartSegment> funnelSegments;
   final List<SourceLeadAnalysisRow> sourceAnalysis;
   final List<CounselorPerformanceRow> counselorPerformance;
   final List<ApplicationStatusReportRow> applicationStatus;
+
+  /// ADM-D1: lost-reason rollup (four fixed buckets, zero-filled server-side).
+  final List<LostReasonRow> lostReasons;
 }
 
 // --- Phase 3: AD-10 Admissions Settings ---
@@ -1078,4 +1143,101 @@ class AdmissionsSettingsData {
   final List<ApplicationWorkflowConfig> workflowSteps;
   final List<CounselorAssignmentRule> assignmentRules;
   final List<NotificationTemplate> notificationTemplates;
+}
+
+// --- ADM-3: bulk lead actions ---
+
+/// One lead that a bulk action skipped, with the reason (e.g. `not_found`).
+@immutable
+class BulkLeadSkip {
+  const BulkLeadSkip({required this.leadId, required this.reason});
+
+  final String leadId;
+  final String reason;
+}
+
+/// Result of `POST /admissions/leads/bulk` — the ids updated and the ones
+/// skipped (partial-success contract).
+@immutable
+class BulkLeadActionResult {
+  const BulkLeadActionResult({
+    required this.updated,
+    required this.skipped,
+  });
+
+  final List<String> updated;
+  final List<BulkLeadSkip> skipped;
+
+  int get updatedCount => updated.length;
+  int get skippedCount => skipped.length;
+}
+
+// --- ADM-D2: duplicate-lead lookup by phone (warn-only) ---
+
+/// One existing lead sharing a phone number, surfaced by the duplicate check.
+@immutable
+class DuplicateLeadMatch {
+  const DuplicateLeadMatch({
+    required this.leadId,
+    required this.studentName,
+    required this.parentName,
+    required this.stage,
+  });
+
+  final String leadId;
+  final String studentName;
+  final String parentName;
+  final LeadStage stage;
+}
+
+/// Result of `GET /admissions/leads/check-duplicate?phone=` — warn-only.
+@immutable
+class DuplicateLeadCheckResult {
+  const DuplicateLeadCheckResult({
+    required this.phone,
+    required this.hasDuplicate,
+    required this.matches,
+  });
+
+  final String phone;
+  final bool hasDuplicate;
+  final List<DuplicateLeadMatch> matches;
+
+  static const empty = DuplicateLeadCheckResult(
+    phone: '',
+    hasDuplicate: false,
+    matches: [],
+  );
+}
+
+// --- ADM-D4: offer-letter data (client renders the PDF) ---
+
+/// Template data for an approved enrollment's offer letter
+/// (`GET /admissions/enrollments/{id}/offer-letter`). The client renders the
+/// PDF from these fields.
+@immutable
+class OfferLetterData {
+  const OfferLetterData({
+    required this.enrollmentId,
+    required this.studentName,
+    required this.admissionNumber,
+    required this.className,
+    required this.section,
+    required this.academicYear,
+    required this.guardianName,
+    required this.reportingDateLabel,
+    this.recommendedFeePlanId,
+    this.handoffStatus,
+  });
+
+  final String enrollmentId;
+  final String studentName;
+  final String admissionNumber;
+  final String className;
+  final String section;
+  final String academicYear;
+  final String guardianName;
+  final String reportingDateLabel;
+  final String? recommendedFeePlanId;
+  final String? handoffStatus;
 }

@@ -59,6 +59,67 @@ class AssignCounselorRequest {
   final String counselor;
 }
 
+/// ADM-3: bulk action over many leads — assign a counselor or change stage.
+/// `action` is either `assign` (requires [counselor]) or `stage`
+/// (requires [stage]).
+enum BulkLeadAction { assign, stage }
+
+class BulkLeadActionRequest {
+  const BulkLeadActionRequest({
+    required this.leadIds,
+    required this.action,
+    this.counselor,
+    this.stage,
+  });
+
+  /// Convenience constructor for the assign-counselor variant.
+  const BulkLeadActionRequest.assign({
+    required this.leadIds,
+    required this.counselor,
+  })  : action = BulkLeadAction.assign,
+        stage = null;
+
+  /// Convenience constructor for the change-stage variant.
+  const BulkLeadActionRequest.stage({
+    required this.leadIds,
+    required this.stage,
+  })  : action = BulkLeadAction.stage,
+        counselor = null;
+
+  final List<String> leadIds;
+  final BulkLeadAction action;
+  final String? counselor;
+  final LeadStage? stage;
+}
+
+/// ADM-D1: mark a lead lost with a fixed-picklist reason.
+class MarkLeadLostRequest {
+  const MarkLeadLostRequest({required this.reason});
+
+  final LeadLostReason reason;
+}
+
+/// ADM-4: complete a scheduled follow-up (optionally recording an outcome).
+class CompleteFollowUpRequest {
+  const CompleteFollowUpRequest({this.outcome = ''});
+
+  final String outcome;
+}
+
+/// ADM-4: reschedule a follow-up to a new due label.
+class RescheduleFollowUpRequest {
+  const RescheduleFollowUpRequest({required this.scheduledLabel});
+
+  final String scheduledLabel;
+}
+
+/// #6: persist the full admissions settings snapshot (POST /admissions/settings).
+class SaveAdmissionsSettingsRequest {
+  const SaveAdmissionsSettingsRequest({required this.settings});
+
+  final AdmissionsSettingsData settings;
+}
+
 /// Changes the pipeline stage for a lead.
 class ChangeLeadStageRequest {
   const ChangeLeadStageRequest({required this.stage});

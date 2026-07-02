@@ -630,6 +630,7 @@ class MockAdmissionsRepository implements AdmissionsRepository {
         handoffStatus: FeeHandoffStatus.sentToFinance,
         previewStudentId: 'SIS-STU-10421',
         sisHandoffLabel: 'Queued for Student SIS',
+        enrollmentId: 'enr_1',
       ),
       ApprovedStudentHandoff(
         id: 'handoff_2',
@@ -838,6 +839,12 @@ class MockAdmissionsRepository implements AdmissionsRepository {
           percent: 11.1,
         ),
       ],
+      lostReasons: [
+        LostReasonRow(reason: LeadLostReason.feesHigh, count: 9),
+        LostReasonRow(reason: LeadLostReason.competitor, count: 6),
+        LostReasonRow(reason: LeadLostReason.distance, count: 4),
+        LostReasonRow(reason: LeadLostReason.other, count: 3),
+      ],
     );
   }
 
@@ -946,6 +953,17 @@ class MockAdmissionsRepository implements AdmissionsRepository {
     );
     _store.settings = next;
     return next;
+  }
+
+  @override
+  Future<AdmissionsSettingsData> saveSettings({
+    required RepositoryQuery query,
+    required SaveAdmissionsSettingsRequest request,
+  }) async {
+    // Mock parity: persist the full snapshot verbatim (the API round-trips it
+    // through GET /admissions/settings after the POST).
+    _store.settings = request.settings;
+    return request.settings;
   }
 
   @override
@@ -1378,6 +1396,113 @@ class MockAdmissionsRepository implements AdmissionsRepository {
   }
 
   @override
+  Future<BulkLeadActionResult> bulkLeadAction({
+    required RepositoryQuery query,
+    required BulkLeadActionRequest request,
+  }) async {
+    await _ensureLeads(query);
+    final updated = <String>[];
+    final skipped = <BulkLeadSkip>[];
+    for (final leadId in request.leadIds) {
+      final index = _store.leads!.indexWhere((lead) => lead.id == leadId);
+      if (index < 0) {
+        skipped.add(BulkLeadSkip(leadId: leadId, reason: 'not_found'));
+        continue;
+      }
+      _store.leads![index] = _store.copyLead(
+        _store.leads![index],
+        counselor: request.action == BulkLeadAction.assign
+            ? request.counselor
+            : null,
+        stage:
+            request.action == BulkLeadAction.stage ? request.stage : null,
+      );
+      updated.add(leadId);
+    }
+    return BulkLeadActionResult(updated: updated, skipped: skipped);
+  }
+
+  @override
+  Future<AdmissionsLead> markLeadLost({
+    required RepositoryQuery query,
+    required String leadId,
+    required MarkLeadLostRequest request,
+  }) async {
+    await _ensureLeads(query);
+    final index = _store.leads!.indexWhere((lead) => lead.id == leadId);
+    if (index < 0) throw StateError('Lead not found: $leadId');
+    final updated = _store.copyLead(
+      _store.leads![index],
+      stage: LeadStage.lost,
+    );
+    _store.leads![index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<LeadFollowUpRecord> completeFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required String followUpId,
+    required CompleteFollowUpRequest request,
+  }) async {
+    await _ensureLeads(query);
+    return LeadFollowUpRecord(
+      id: followUpId,
+      scheduledLabel: 'Scheduled',
+      completedLabel: 'Just now',
+      task: 'Follow-up',
+      counselor: _store.findLead(leadId)?.counselor ?? 'Counselor',
+      status: FollowUpStatus.completed,
+      outcome: request.outcome.isEmpty ? 'Completed' : request.outcome,
+    );
+  }
+
+  @override
+  Future<LeadFollowUpRecord> rescheduleFollowUp({
+    required RepositoryQuery query,
+    required String leadId,
+    required String followUpId,
+    required RescheduleFollowUpRequest request,
+  }) async {
+    await _ensureLeads(query);
+    return LeadFollowUpRecord(
+      id: followUpId,
+      scheduledLabel: request.scheduledLabel,
+      completedLabel: '',
+      task: 'Follow-up',
+      counselor: _store.findLead(leadId)?.counselor ?? 'Counselor',
+      status: FollowUpStatus.pending,
+      outcome: '',
+    );
+  }
+
+  @override
+  Future<DuplicateLeadCheckResult> checkDuplicateByPhone({
+    required RepositoryQuery query,
+    required String phone,
+  }) async {
+    await _ensureLeads(query);
+    final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
+    final matches = <DuplicateLeadMatch>[
+      for (final lead in _store.leads!)
+        if (digits.isNotEmpty &&
+            lead.phone.replaceAll(RegExp(r'[^\d]'), '') == digits)
+          DuplicateLeadMatch(
+            leadId: lead.id,
+            studentName: lead.studentName,
+            parentName: lead.parentName,
+            stage: lead.stage,
+          ),
+    ];
+    return DuplicateLeadCheckResult(
+      phone: phone,
+      hasDuplicate: matches.isNotEmpty,
+      matches: matches,
+    );
+  }
+
+  @override
   Future<LeadFollowUpRecord> addLeadFollowUp({
     required RepositoryQuery query,
     required String leadId,
@@ -1756,6 +1881,32 @@ class MockAdmissionsRepository implements AdmissionsRepository {
     );
     _store.handoffs![index] = updated;
     return updated;
+  }
+
+  @override
+  Future<OfferLetterData> getOfferLetter({
+    required RepositoryQuery query,
+    required String enrollmentId,
+  }) async {
+    await _ensureHandoffs(query);
+    final handoff = _store.findHandoff(enrollmentId) ??
+        (_store.handoffs!.isNotEmpty ? _store.handoffs!.first : null);
+    final enrollment = _store.findEnrollment(enrollmentId);
+    return OfferLetterData(
+      enrollmentId: enrollmentId,
+      studentName:
+          handoff?.studentName ?? enrollment?.studentName ?? 'Student',
+      admissionNumber: handoff?.admissionNumber ??
+          enrollment?.generatedAdmissionNumber ??
+          'ADM-2026-0000',
+      className: handoff?.classLabel ?? enrollment?.seekingClass ?? '',
+      section: enrollment?.section ?? 'A',
+      academicYear: enrollment?.academicYear ?? '2026–27',
+      guardianName: enrollment?.guardianName ?? 'Guardian',
+      reportingDateLabel: '2026-06-15',
+      recommendedFeePlanId: handoff?.selectedFeeStructureId,
+      handoffStatus: handoff?.handoffStatus.name,
+    );
   }
 
   @override

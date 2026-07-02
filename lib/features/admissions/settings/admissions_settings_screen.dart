@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/error_text.dart';
+import '../../../core/security/permissions.dart';
+import '../../../core/testing/qa_test_keys.dart';
+import '../../../shared/widgets/akshara_manage_action.dart';
 import '../../../theme/spacing.dart';
 import '../../admin/admin_layout.dart';
 import '../admissions_async_state.dart';
@@ -30,7 +34,7 @@ class _AdmissionsSettingsScreenState
   Widget build(BuildContext context) {
     final viewState = ref.watch(admissionsSettingsViewStateProvider);
     final isMobile = AdminLayout.isMobile(context);
-    final mutationState = ref.watch(updateAdmissionsSettingsProvider);
+    final mutationState = ref.watch(saveAdmissionsSettingsProvider);
     final isMutationLoading = mutationState.isLoading;
 
     return AdmissionsModuleScaffold(
@@ -281,64 +285,25 @@ class _AdmissionsSettingsScreenState
   Future<void> _save() async {
     final draft = _draft;
     if (draft == null) return;
-    final updates = <AdmissionsSettingUpdate>[
-      for (final stage in draft.leadStages) ...[
-        AdmissionsSettingUpdate(
-          sectionId: 'leadStages',
-          itemId: '${stage.stage.name}.enabled',
-          value: '${stage.enabled}',
-        ),
-        AdmissionsSettingUpdate(
-          sectionId: 'leadStages',
-          itemId: '${stage.stage.name}.autoAdvanceDays',
-          value: '${stage.autoAdvanceDays ?? ''}',
-        ),
-      ],
-      for (final score in draft.leadScores) ...[
-        AdmissionsSettingUpdate(
-          sectionId: 'leadScores',
-          itemId: '${score.score.name}.minEngagement',
-          value: '${score.minEngagement}',
-        ),
-        AdmissionsSettingUpdate(
-          sectionId: 'leadScores',
-          itemId: '${score.score.name}.followUpHours',
-          value: '${score.followUpHours}',
-        ),
-      ],
-      for (final step in draft.workflowSteps) ...[
-        AdmissionsSettingUpdate(
-          sectionId: 'workflowSteps',
-          itemId: '${step.status.name}.enabled',
-          value: '${step.enabled}',
-        ),
-        AdmissionsSettingUpdate(
-          sectionId: 'workflowSteps',
-          itemId: '${step.status.name}.requiresPrincipalApproval',
-          value: '${step.requiresPrincipalApproval}',
-        ),
-      ],
-      for (final rule in draft.assignmentRules)
-        AdmissionsSettingUpdate(
-          sectionId: 'assignmentRules',
-          itemId: '${rule.id}.enabled',
-          value: '${rule.enabled}',
-        ),
-      for (final template in draft.notificationTemplates)
-        AdmissionsSettingUpdate(
-          sectionId: 'notificationTemplates',
-          itemId: '${template.id}.enabled',
-          value: '${template.enabled}',
-        ),
-    ];
     setState(() => _isSaving = true);
     try {
-      await ref.read(updateAdmissionsSettingsProvider.notifier).execute(
-            UpdateAdmissionsSettingsRequest(updates: updates),
+      // #6: persist the full settings snapshot via POST /admissions/settings.
+      // The whole edited draft is sent at once — no per-item update fan-out —
+      // and the notifier round-trips it back through GET for a lossless save.
+      await ref.read(saveAdmissionsSettingsProvider.notifier).execute(
+            SaveAdmissionsSettingsRequest(settings: draft),
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Admissions settings saved')),
+        const SnackBar(
+          key: QaTestKeys.admissionsSettingsSavedSnackbar,
+          content: Text('Admissions settings saved'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(aksharaErrorMessage(error))),
       );
     } finally {
       if (mounted) {
@@ -358,16 +323,20 @@ class _SaveSettingsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: FilledButton.icon(
-        onPressed: isSaving ? null : onSave,
-        icon: isSaving
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.save_outlined),
-        label: Text(isSaving ? 'Saving...' : 'Save settings'),
+      child: AksharaManageAction(
+        permission: Permission.manageAdmissions,
+        child: FilledButton.icon(
+          key: QaTestKeys.admissionsSettingsSaveButton,
+          onPressed: isSaving ? null : onSave,
+          icon: isSaving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save_outlined),
+          label: Text(isSaving ? 'Saving...' : 'Save settings'),
+        ),
       ),
     );
   }

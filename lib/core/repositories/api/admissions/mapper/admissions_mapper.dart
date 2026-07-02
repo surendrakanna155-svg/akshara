@@ -230,6 +230,8 @@ class AdmissionsMapper {
       ),
       previewStudentId: raw['previewStudentId'] as String? ?? '',
       sisHandoffLabel: raw['sisHandoffLabel'] as String? ?? '',
+      enrollmentId: raw['enrollmentId'] as String? ??
+          raw['enrollment_id'] as String?,
     );
   }
 
@@ -288,7 +290,21 @@ class AdmissionsMapper {
       applicationStatus: _mapApplicationStatusReport(
         raw['applicationStatus'] as List<dynamic>? ?? const [],
       ),
+      lostReasons: _mapLostReasons(
+        raw['lostReasons'] as List<dynamic>? ?? const [],
+      ),
     );
+  }
+
+  List<LostReasonRow> _mapLostReasons(List<dynamic> items) {
+    return [
+      for (final item in items)
+        if (item is Map<String, dynamic>)
+          LostReasonRow(
+            reason: LeadLostReason.fromApi(item['reason'] as String?),
+            count: (item['count'] as num?)?.toInt() ?? 0,
+          ),
+    ];
   }
 
   AdmissionsSettingsData toSettings(AdmissionsSettingsDto dto) {
@@ -430,6 +446,12 @@ class AdmissionsMapper {
             status: AdmissionsEnumCodec.parseFollowUpStatus(
               item['status'] as String?,
             ),
+            // Dashboard rows are lead-derived: the row id doubles as the lead id
+            // unless the payload carries an explicit leadId.
+            leadId: item['leadId'] as String? ??
+                item['lead_id'] as String? ??
+                item['id'] as String? ??
+                '',
           ),
     ];
   }
@@ -604,6 +626,65 @@ class AdmissionsMapper {
           raw['admissionNumber'] as String? ??
           raw['admission_number'] as String? ??
           '',
+    );
+  }
+
+  /// ADM-3: maps `{updated, skipped:[{leadId,reason}]}` (+ optional counts).
+  BulkLeadActionResult toBulkLeadActionResult(Map<String, dynamic> raw) {
+    final updated = (raw['updated'] as List<dynamic>? ?? const [])
+        .map((e) => e.toString())
+        .toList(growable: false);
+    final skipped = (raw['skipped'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map((item) => BulkLeadSkip(
+              leadId: item['leadId'] as String? ??
+                  item['lead_id'] as String? ??
+                  '',
+              reason: item['reason'] as String? ?? '',
+            ))
+        .toList(growable: false);
+    return BulkLeadActionResult(updated: updated, skipped: skipped);
+  }
+
+  /// ADM-D2: maps `{phone, hasDuplicate, matches:[{leadId,studentName,stage}]}`.
+  DuplicateLeadCheckResult toDuplicateLeadCheck(Map<String, dynamic> raw) {
+    final matches = (raw['matches'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map((item) => DuplicateLeadMatch(
+              leadId: item['leadId'] as String? ??
+                  item['lead_id'] as String? ??
+                  '',
+              studentName: item['studentName'] as String? ??
+                  item['student_name'] as String? ??
+                  '',
+              parentName: item['parentName'] as String? ??
+                  item['parent_name'] as String? ??
+                  '',
+              stage: AdmissionsEnumCodec.parseLeadStage(
+                item['stage'] as String?,
+              ),
+            ))
+        .toList(growable: false);
+    return DuplicateLeadCheckResult(
+      phone: raw['phone'] as String? ?? '',
+      hasDuplicate: raw['hasDuplicate'] as bool? ?? matches.isNotEmpty,
+      matches: matches,
+    );
+  }
+
+  /// ADM-D4: maps the offer-letter template data for client-side PDF render.
+  OfferLetterData toOfferLetter(Map<String, dynamic> raw) {
+    return OfferLetterData(
+      enrollmentId: raw['enrollmentId'] as String? ?? '',
+      studentName: raw['studentName'] as String? ?? '',
+      admissionNumber: raw['admissionNumber'] as String? ?? '',
+      className: raw['className'] as String? ?? '',
+      section: raw['section'] as String? ?? '',
+      academicYear: raw['academicYear'] as String? ?? '',
+      guardianName: raw['guardianName'] as String? ?? '',
+      reportingDateLabel: raw['reportingDateLabel'] as String? ?? '',
+      recommendedFeePlanId: raw['recommendedFeePlanId'] as String?,
+      handoffStatus: raw['handoffStatus'] as String?,
     );
   }
 }

@@ -23,6 +23,7 @@ class WhatsAppContactButton extends StatelessWidget {
     this.label = 'WhatsApp',
     this.style = WhatsAppButtonStyle.outlined,
     this.unavailableMessage = 'Contact number is unavailable.',
+    this.onSent,
   });
 
   /// The contact's phone (any format; 10-digit national numbers are auto-prefixed
@@ -36,6 +37,12 @@ class WhatsAppContactButton extends StatelessWidget {
   final WhatsAppButtonStyle style;
   final String unavailableMessage;
 
+  /// Fired once WhatsApp has been opened successfully — lets a caller record the
+  /// contact on a timeline (e.g. admissions auto-logs a WhatsApp note). It is a
+  /// best-effort side effect: the user still reviews and sends the message
+  /// themselves, so this signals "reached out via WhatsApp", not "delivered".
+  final Future<void> Function()? onSent;
+
   bool get _hasNumber => WhatsAppLauncher.resolvePhoneDigits(phone ?? '') != null;
 
   Future<void> _open(BuildContext context) async {
@@ -47,12 +54,15 @@ class WhatsAppContactButton extends StatelessWidget {
     }
     final opened =
         await WhatsAppLauncher.openChat(phoneE164: digits, message: message);
-    if (!context.mounted) return;
     if (!opened) {
+      if (!context.mounted) return;
       messenger.showSnackBar(
         const SnackBar(content: Text('Could not open WhatsApp on this device.')),
       );
+      return;
     }
+    // Best-effort timeline log after a successful open (ADM-2).
+    await onSent?.call();
   }
 
   @override

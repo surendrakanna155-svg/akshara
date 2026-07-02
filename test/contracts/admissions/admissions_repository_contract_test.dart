@@ -13,6 +13,7 @@ import 'package:akshara_erp/core/repositories/api/admissions/remote/admissions_r
 import 'package:akshara_erp/core/repositories/interfaces/admissions_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_admissions_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/admissions/admissions_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -160,6 +161,69 @@ void main() {
 
       expect(mapped.funnelSegments.length, mockData.funnelSegments.length);
       expect(mapped.sourceAnalysis.length, mockData.sourceAnalysis.length);
+    });
+
+    test('getReports maps the ADM-D1 lost-reasons rollup', () async {
+      final mockData = await mockRepo.getReports(query: kQuery);
+      final mapped = const AdmissionsMapper().toReports(
+        AdmissionsReportsDto.fromJson(_fixtures.reportsEnvelope(mockData)),
+      );
+
+      expect(mapped.lostReasons.length, mockData.lostReasons.length);
+      expect(mapped.lostReasons.first.reason, mockData.lostReasons.first.reason);
+      expect(mapped.lostReasons.first.count, mockData.lostReasons.first.count);
+    });
+
+    test('bulk lead action result maps updated + skipped', () {
+      final result = const AdmissionsMapper().toBulkLeadActionResult({
+        'updated': ['LD-1', 'LD-2'],
+        'skipped': [
+          {'leadId': 'LD-9', 'reason': 'not_found'},
+        ],
+        'updatedCount': 2,
+        'skippedCount': 1,
+      });
+      expect(result.updated, ['LD-1', 'LD-2']);
+      expect(result.updatedCount, 2);
+      expect(result.skipped.single.leadId, 'LD-9');
+      expect(result.skipped.single.reason, 'not_found');
+    });
+
+    test('duplicate-lead check maps matches + stage', () {
+      final result = const AdmissionsMapper().toDuplicateLeadCheck({
+        'phone': '9876543210',
+        'hasDuplicate': true,
+        'matches': [
+          {
+            'leadId': 'LD-1',
+            'studentName': 'Ananya',
+            'parentName': 'Rajesh',
+            'stage': 'school_visit',
+          },
+        ],
+      });
+      expect(result.hasDuplicate, isTrue);
+      expect(result.matches.single.leadId, 'LD-1');
+      expect(result.matches.single.stage, LeadStage.schoolVisit);
+    });
+
+    test('offer-letter data maps the template fields', () {
+      final letter = const AdmissionsMapper().toOfferLetter({
+        'enrollmentId': 'enr_1',
+        'studentName': 'Ananya Reddy',
+        'admissionNumber': 'ADM-2026-0142',
+        'className': '5',
+        'section': 'A',
+        'academicYear': '2026–27',
+        'guardianName': 'Rajesh Reddy',
+        'reportingDateLabel': '2026-06-15',
+        'recommendedFeePlanId': 'fee_std',
+        'handoffStatus': 'pending',
+      });
+      expect(letter.enrollmentId, 'enr_1');
+      expect(letter.admissionNumber, 'ADM-2026-0142');
+      expect(letter.className, '5');
+      expect(letter.recommendedFeePlanId, 'fee_std');
     });
 
     test('getSettings DTO mapping matches mock output', () async {

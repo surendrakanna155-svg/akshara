@@ -16,6 +16,7 @@ import '../widgets/admissions_module_scaffold.dart';
 import 'admissions_applications_provider.dart';
 import 'widgets/admissions_application_workflow.dart';
 import 'widgets/admissions_applications_table.dart';
+import 'widgets/admissions_lead_picker_dialog.dart';
 import '../../../core/errors/error_text.dart';
 
 /// AD-03 — Applications management with status workflow.
@@ -88,15 +89,20 @@ class AdmissionsApplicationsScreen extends ConsumerWidget {
   }
 
   Future<void> _createApplication(BuildContext context, WidgetRef ref) async {
+    // ADM-5: pick a real lead to seed the application instead of the old
+    // 'New Student' placeholder. Falls back to the last-created lead as the
+    // pre-selection source only through the picker's live list.
+    final lead = await showAdmissionsLeadPickerDialog(context, ref);
+    if (lead == null || !context.mounted) return;
+
     try {
-      final lastLead = ref.read(admissionsLastCreatedLeadProvider);
       final app = await ref.read(createApplicationProvider.notifier).execute(
             CreateApplicationRequest(
-              studentName: lastLead?.studentName ?? 'New Student',
-              classLabel: lastLead?.classLabel ?? '5',
-              parentName: lastLead?.parentName ?? 'New Parent',
-              leadId: lastLead?.id,
-              counselor: lastLead?.counselor ?? '',
+              studentName: lead.studentName,
+              classLabel: lead.classLabel,
+              parentName: lead.parentName,
+              leadId: lead.id,
+              counselor: lead.counselor,
             ),
           );
       if (app != null) {

@@ -72,6 +72,13 @@ class AdmissionsFeeHandoffScreen extends ConsumerWidget {
                               ? feeStructures.first.id
                               : ''),
                     ),
+                    onGenerateOfferLetter: selected.enrollmentId == null
+                        ? null
+                        : () => runGenerateOfferLetter(
+                              context,
+                              ref,
+                              enrollmentId: selected!.enrollmentId!,
+                            ),
                   ),
                 ],
               ],
@@ -108,6 +115,13 @@ class AdmissionsFeeHandoffScreen extends ConsumerWidget {
                               ? feeStructures.first.id
                               : ''),
                     ),
+                        onGenerateOfferLetter: selected.enrollmentId == null
+                            ? null
+                            : () => runGenerateOfferLetter(
+                                  context,
+                                  ref,
+                                  enrollmentId: selected!.enrollmentId!,
+                                ),
                       ),
               ),
             ],
