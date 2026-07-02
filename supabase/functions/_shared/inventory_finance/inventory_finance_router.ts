@@ -10,6 +10,18 @@ import {
   handleReceiveGoods,
   handleStockValuation,
 } from "./inventory_finance_handlers.ts";
+import {
+  handleAdjustStock,
+  handleApproveStockAdjustment,
+  handleIssueStock,
+  handleListPendingAdjustments,
+  handleListStockItems,
+  handleLowStock,
+  handleRecordStockCount,
+  handleRejectStockAdjustment,
+  handleStockRegister,
+  handleUpsertStockItem,
+} from "./inventory_stock_handlers.ts";
 
 export function matchInventoryFinanceRoute(
   method: string,
@@ -45,6 +57,45 @@ export function matchInventoryFinanceRoute(
 
   if (path === "/inventory/stock/valuation" && method === "GET") {
     return { handler: handleStockValuation, args: [] };
+  }
+
+  // ── INV-1..7: Store stock module ──
+  if (path === "/inventory/stock/issue" && method === "POST") {
+    return { handler: handleIssueStock, args: [] };
+  }
+  if (path === "/inventory/stock/adjust" && method === "POST") {
+    return { handler: handleAdjustStock, args: [] };
+  }
+
+  // Maker-checker decisions (match the specific :id sub-paths BEFORE the list).
+  const approveAdjMatch = path.match(/^\/inventory\/stock\/adjustments\/([^/]+)\/approve$/);
+  if (approveAdjMatch && method === "POST") {
+    return { handler: handleApproveStockAdjustment, args: [approveAdjMatch[1]!] };
+  }
+  const rejectAdjMatch = path.match(/^\/inventory\/stock\/adjustments\/([^/]+)\/reject$/);
+  if (rejectAdjMatch && method === "POST") {
+    return { handler: handleRejectStockAdjustment, args: [rejectAdjMatch[1]!] };
+  }
+  if (path === "/inventory/stock/adjustments" && method === "GET") {
+    return { handler: handleListPendingAdjustments, args: [] };
+  }
+
+  if (path === "/inventory/stock/count" && method === "POST") {
+    return { handler: handleRecordStockCount, args: [] };
+  }
+
+  if (path === "/inventory/stock/items" && method === "GET") {
+    return { handler: handleListStockItems, args: [] };
+  }
+  if (path === "/inventory/stock/items" && (method === "POST" || method === "PUT")) {
+    return { handler: handleUpsertStockItem, args: [] };
+  }
+
+  if (path === "/inventory/stock/register" && method === "GET") {
+    return { handler: handleStockRegister, args: [] };
+  }
+  if (path === "/inventory/stock/low-stock" && method === "GET") {
+    return { handler: handleLowStock, args: [] };
   }
 
   return null;

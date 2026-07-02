@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { recordGrnMovement } from "./inventory_stock_repository.ts";
 
 export const INVENTORY_VENDOR_PROBE_SCHOOL_A = "d8000000-0000-4000-8000-000000000001";
 export const INVENTORY_VENDOR_PROBE_SCHOOL_B = "d8000000-0000-4000-8000-000000000002";
@@ -333,6 +334,8 @@ export async function receiveGoods(
       poLine.sku,
       line.quantityReceived,
       poLine.unit_cost,
+      receivedBy,
+      grnId,
     );
   }
 
@@ -357,13 +360,19 @@ async function upsertStockValuation(
   sku: string,
   qtyReceived: number,
   unitCost: number,
+  receivedBy: string | null = null,
+  grnId: string | null = null,
 ): Promise<void> {
+  // Typed-table read-modify-write → hold the row lock across the GRN increment so
+  // two concurrent receipts on the same SKU serialize (mirrors the stock module's
+  // FOR UPDATE discipline; the JSONB mutateEntity lock does not cover this table).
   const existing = await db.queryObject<{
     quantity_on_hand: number;
     weighted_avg_cost: number;
   }>(
     `SELECT quantity_on_hand, weighted_avg_cost FROM inventory_stock_valuations
-     WHERE organization_id = $1 AND school_id = $2 AND sku = $3`,
+     WHERE organization_id = $1 AND school_id = $2 AND sku = $3
+     FOR UPDATE`,
     [organizationId, schoolId, sku],
   );
 
@@ -374,6 +383,15 @@ async function upsertStockValuation(
        ) VALUES ($1, $2, $3, $4, $5)`,
       [organizationId, schoolId, sku, qtyReceived, unitCost],
     );
+    // GRN joins the immutable ledger: qty_before 0 → qty_after qtyReceived.
+    await recordGrnMovement(db, organizationId, schoolId, {
+      sku,
+      qtyReceived,
+      qtyBefore: 0,
+      qtyAfter: qtyReceived,
+      createdBy: receivedBy,
+      referenceId: grnId,
+    });
     return;
   }
 
@@ -391,6 +409,15 @@ async function upsertStockValuation(
      WHERE organization_id = $1 AND school_id = $2 AND sku = $3`,
     [organizationId, schoolId, sku, newQty, newAvg],
   );
+
+  await recordGrnMovement(db, organizationId, schoolId, {
+    sku,
+    qtyReceived,
+    qtyBefore: oldQty,
+    qtyAfter: newQty,
+    createdBy: receivedBy,
+    referenceId: grnId,
+  });
 }
 
 export async function listStockValuations(

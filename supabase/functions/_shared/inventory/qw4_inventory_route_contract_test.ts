@@ -84,6 +84,18 @@ const REGISTERED: Array<[string, string]> = [
   ["POST", `/inventory/procurement/orders/${UUID}/approve`],
   ["POST", `/inventory/procurement/orders/${UUID}/receive`],
   ["GET", "/inventory/stock/valuation"],
+  // INV-1..7: store stock module
+  ["POST", "/inventory/stock/issue"],
+  ["POST", "/inventory/stock/adjust"],
+  ["POST", `/inventory/stock/adjustments/${UUID}/approve`],
+  ["POST", `/inventory/stock/adjustments/${UUID}/reject`],
+  ["GET", "/inventory/stock/adjustments"],
+  ["POST", "/inventory/stock/count"],
+  ["GET", "/inventory/stock/items"],
+  ["POST", "/inventory/stock/items"],
+  ["PUT", "/inventory/stock/items"],
+  ["GET", "/inventory/stock/register"],
+  ["GET", "/inventory/stock/low-stock"],
 ];
 
 Deno.test("QA-B-025: every registered inventory route path-matches to a handler (not 404)", async () => {
@@ -227,5 +239,60 @@ Deno.test("QA-B-026: unauthenticated procurement write is 401", async () => {
     body: JSON.stringify({ vendorId: "v1", poNumber: "PO-1", lines: [{}] }),
   });
   const res = await routeInventory(req, config, "POST", "/inventory/procurement/orders");
+  assertEquals(res?.status, 401);
+});
+
+// ─── INV-1..7 — store stock module RBAC + contract (DB-free) ──────────────────
+
+Deno.test("INV: stock writes require manageInventory (403 without, 503 with valid body)", async () => {
+  const writes: Array<[string, string, unknown]> = [
+    ["POST", "/inventory/stock/issue", { issueNumber: "ISS-1", lines: [{ sku: "PEN-1", quantity: 2 }] }],
+    ["POST", "/inventory/stock/adjust", { sku: "PEN-1", quantity: 3, movementType: "adjust_in", reason: "restock" }],
+    ["POST", `/inventory/stock/adjustments/${UUID}/approve`, {}],
+    ["POST", `/inventory/stock/adjustments/${UUID}/reject`, { comment: "no" }],
+    ["POST", "/inventory/stock/count", { sessionNumber: "CNT-1", lines: [{ sku: "PEN-1", countedQty: 5 }] }],
+    ["POST", "/inventory/stock/items", { sku: "PEN-1", reorderLevel: 10 }],
+    ["PUT", "/inventory/stock/items", { sku: "PEN-1", reorderLevel: 10 }],
+  ];
+  for (const [method, path, body] of writes) {
+    const denied = await call(routeInventory, method, path, ["viewInventory"], body);
+    assertEquals(denied?.status, 403, `${method} ${path} should 403 without manageInventory`);
+    assertEquals((await denied!.json()).error.code, "FORBIDDEN");
+    // Holder with a valid body passes gate + validation → reaches unconfigured DB (503).
+    const allowed = await call(routeInventory, method, path, ["manageInventory"], body);
+    assertEquals(allowed?.status, 503, `${method} ${path} should reach DB (503) for a holder`);
+  }
+});
+
+Deno.test("INV: stock writes 422 on an invalid body before touching the DB", async () => {
+  // Holder, but missing required fields → 422 validation (not 503/500).
+  const badIssue = await call(routeInventory, "POST", "/inventory/stock/issue", ["manageInventory"], { issueNumber: "ISS-1" });
+  assertEquals(badIssue?.status, 422);
+  const badAdjust = await call(routeInventory, "POST", "/inventory/stock/adjust", ["manageInventory"], { sku: "PEN-1", movementType: "bogus", reason: "x" });
+  assertEquals(badAdjust?.status, 422);
+});
+
+Deno.test("INV: stock reads require viewInventory (403 without, 503 with)", async () => {
+  const reads = [
+    "/inventory/stock/adjustments",
+    "/inventory/stock/items",
+    "/inventory/stock/register",
+    "/inventory/stock/low-stock",
+  ];
+  for (const path of reads) {
+    const denied = await call(routeInventory, "GET", path, ["viewFinance"]);
+    assertEquals(denied?.status, 403, `${path} should 403 without viewInventory`);
+    const allowed = await call(routeInventory, "GET", path, ["viewInventory"]);
+    assertEquals(allowed?.status, 503, `${path} should reach DB (503) for a holder`);
+  }
+});
+
+Deno.test("INV: unauthenticated stock issue is 401", async () => {
+  const req = new Request("https://x/inventory/stock/issue", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ issueNumber: "ISS-1", lines: [{ sku: "PEN-1", quantity: 1 }] }),
+  });
+  const res = await routeInventory(req, config, "POST", "/inventory/stock/issue");
   assertEquals(res?.status, 401);
 });
