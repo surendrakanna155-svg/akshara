@@ -1,7 +1,7 @@
 // B4 — staff attendance (RE-IMPLEMENTED) ROUTE + RBAC + shape contract (DB-free).
 //
 // Proven without a live Postgres:
-//   1. PATH-MATCH: the 6 routes resolve to handlers; an unregistered path under
+//   1. PATH-MATCH: the 7 routes resolve to handlers; an unregistered path under
 //      the prefix 404s; outside the prefix returns null.
 //   2. RBAC: 401 unauthenticated; 403 without the right permission; 503 (authorized,
 //      DB-free) with it + a valid body. Approve/geofence-set need the SUPERVISORY
@@ -55,7 +55,7 @@ const validCheck = {
 };
 const validGeofence = { centerLatitude: 17.45, centerLongitude: 78.39, radiusM: 100, maxAccuracyM: 50 };
 
-Deno.test("staff-attendance: the 6 routes path-match handlers (not 404)", async () => {
+Deno.test("staff-attendance: the 7 routes path-match handlers (not 404)", async () => {
   for (const [m, p, perm, body] of [
     ["POST", "/staff-attendance/check", "markStaffAttendance", validCheck],
     ["POST", "/staff-attendance/enroll-face", "markStaffAttendance", { embedding: Array.from({ length: 64 }, () => 0.1) }],
@@ -63,6 +63,7 @@ Deno.test("staff-attendance: the 6 routes path-match handlers (not 404)", async 
     ["PUT", "/staff-attendance/geofence", "manageSchoolGeofence", validGeofence],
     ["POST", "/staff-attendance/manual-request", "markStaffAttendance", { eventType: "check_in", reason: "camera broke" }],
     ["POST", "/staff-attendance/manual-request/decide", "approveStaffAttendance", { requestId: "r1", approve: true }],
+    ["GET", "/staff-attendance/my-history", "markStaffAttendance", undefined],
   ] as const) {
     const res = await call(m, p, [perm], body);
     assertEquals(res !== null, true, `${m} ${p} should resolve`);
@@ -91,6 +92,13 @@ Deno.test("staff-attendance: 403 without markStaffAttendance (parent/student nev
 
 Deno.test("staff-attendance: 503 (authorized, DB-free) with markStaffAttendance + valid body", async () => {
   const allowed = await call("POST", "/staff-attendance/check", ["markStaffAttendance"], validCheck);
+  assertEquals(allowed?.status, 503);
+});
+
+Deno.test("staff-attendance: TCH-9 my-history is self-service — 403 without markStaffAttendance, 503 with it", async () => {
+  const denied = await call("GET", "/staff-attendance/my-history", []);
+  assertEquals(denied?.status, 403);
+  const allowed = await call("GET", "/staff-attendance/my-history", ["markStaffAttendance"]);
   assertEquals(allowed?.status, 503);
 });
 

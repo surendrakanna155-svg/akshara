@@ -5,6 +5,7 @@
 //   PUT  /staff-attendance/geofence                  set the school geofence config (admin)
 //   POST /staff-attendance/manual-request            raise an audited manual attendance request
 //   POST /staff-attendance/manual-request/decide     approve/reject a manual request (approver)
+//   GET  /staff-attendance/my-history                TCH-9: read-only OWN attendance history
 
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
@@ -13,6 +14,7 @@ import {
   handleDecideManualRequest,
   handleEnrollFace,
   handleGetGeofence,
+  handleMyAttendanceHistory,
   handleRecordStaffCheckIn,
   handleSetGeofence,
 } from "./staff_attendance_handlers.ts";
@@ -40,6 +42,9 @@ export function matchStaffAttendanceRoute(
   }
   if (path === "/staff-attendance/manual-request/decide" && method === "POST") {
     return { handler: handleDecideManualRequest, args: [] };
+  }
+  if (path === "/staff-attendance/my-history" && method === "GET") {
+    return { handler: handleMyAttendanceHistory, args: [] };
   }
   return null;
 }

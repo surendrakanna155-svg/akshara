@@ -105,6 +105,8 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "PUT", path: "/teacher/exams/marks/:id", permission: "manageExamMarks", scope: "school", module: "teacher" },
   { method: "POST", path: "/parent/attendance/corrections", permission: null, scope: "parent", module: "attendance" },
   { method: "POST", path: "/staff-attendance/check", permission: "markStaffAttendance", scope: "school", module: "staff_attendance" },
+  // TCH-9: read-only SELF attendance history — same universal staff self-service gate as /check.
+  { method: "GET", path: "/staff-attendance/my-history", permission: "markStaffAttendance", scope: "school", module: "staff_attendance" },
   { method: "GET", path: "/student/dashboard", permission: null, scope: "student", module: "student" },
   { method: "POST", path: "/audit/events/batch", permission: null, scope: "school", module: "audit" },
   { method: "GET", path: "/communications/templates", permission: "viewCommunications", scope: "school", module: "communication" },

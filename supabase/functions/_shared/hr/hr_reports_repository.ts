@@ -235,6 +235,13 @@ export interface MusterEmployee {
   dept: string;
 }
 
+/**
+ * Default late cutoff (minutes-of-day 09:15) — the single shared value used by
+ * the HR-6 muster AND the TCH-9 staff self-service history so the two views
+ * never disagree on what "late" means.
+ */
+export const DEFAULT_LATE_AFTER = "09:15";
+
 export function daysInMonth(month: string): number {
   const [y, m] = month.split("-").map((v) => parseInt(v, 10));
   if (!y || !m) return 0;
@@ -242,7 +249,7 @@ export function daysInMonth(month: string): number {
 }
 
 /** Parses "HH:MM" into minutes-of-day; returns null on a malformed value. */
-function parseHhMm(value: string): number | null {
+export function parseHhMm(value: string): number | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
   if (!match) return null;
   const h = parseInt(match[1]!, 10);
@@ -252,14 +259,14 @@ function parseHhMm(value: string): number | null {
 }
 
 /** UTC minutes-of-day of an ISO timestamp (matches how event_time is stored). */
-function minutesOfDayUtc(iso: string): number | null {
+export function minutesOfDayUtc(iso: string): number | null {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   return d.getUTCHours() * 60 + d.getUTCMinutes();
 }
 
 /** UTC yyyy-mm-dd of an ISO timestamp. */
-function isoDateUtc(iso: string): string {
+export function isoDateUtc(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return d.toISOString().slice(0, 10);
@@ -286,7 +293,7 @@ export function inferMuster(
   events: CheckInEvent[],
   options: { lateAfter?: string; holidayDays?: number[] } = {},
 ): AttendanceMuster {
-  const lateAfter = options.lateAfter ?? "09:15";
+  const lateAfter = options.lateAfter ?? DEFAULT_LATE_AFTER;
   const lateCutoff = parseHhMm(lateAfter) ?? (9 * 60 + 15);
   const holidayDays = options.holidayDays ?? [];
   const holidaySet = new Set(holidayDays);

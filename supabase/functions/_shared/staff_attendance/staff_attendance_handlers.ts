@@ -36,6 +36,12 @@ import {
   type GeofenceConfig,
   type StaffCheckEventType,
 } from "./staff_attendance_validation.ts";
+import {
+  buildMyAttendanceHistory,
+  loadMyApprovedOverrideDates,
+  loadMyCheckInEvents,
+} from "./staff_attendance_my_history.ts";
+import { DEFAULT_LATE_AFTER, loadHolidayDays } from "../hr/hr_reports_repository.ts";
 
 type AuthedClaims = Parameters<typeof requirePermission>[0];
 
@@ -251,6 +257,65 @@ export async function handleSetGeofence(req: Request, config: AppConfig): Promis
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     if (error instanceof StaffAttendanceValidationError) return validationResponse(error);
+    throw error;
+  }
+}
+
+// ── GET /staff-attendance/my-history ─────────────────────────────────────────
+// TCH-9 "My Attendance" (P1): READ-ONLY staff SELF-SERVICE history —
+// Today / Yesterday / This-Month check-in/out times, working minutes, late
+// days and manual overrides. Gated exactly like the self-service check route
+// (markStaffAttendance is universal for staff; parents/students never carry
+// it). SELF-SCOPING IS DOUBLE-ENFORCED: the user id is ALWAYS the JWT subject
+// (claims.sub — never a request parameter), and RLS policy
+// staff_check_ins_self_read (migration 20260841000000) pins visibility to
+// app_current_user_id(). No write path, no state change, no audit mutation.
+
+const MY_HISTORY_MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export async function handleMyAttendanceHistory(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  // Same universal self-service gate as POST /staff-attendance/check.
+  const denied = requireMark(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const nowIso = new Date().toISOString();
+  const month = url.searchParams.get("month")?.trim() || nowIso.slice(0, 7);
+  if (!MY_HISTORY_MONTH_RE.test(month)) {
+    return errorEnvelope("BAD_REQUEST", "month query parameter must be YYYY-MM", 400);
+  }
+  // Late cutoff: the shared HR default (09:15); ?lateAfter=HH:MM override
+  // mirrors GET /hr/attendance/muster so the two views agree.
+  const lateAfter = url.searchParams.get("lateAfter")?.trim() || DEFAULT_LATE_AFTER;
+
+  const claims = auth.claims;
+  const organizationId = organizationIdFromClaims(claims);
+  const schoolId = schoolIdFromClaims(claims);
+  // The subject comes from the verified JWT — NEVER from the request.
+  const userId = subjectOf(claims);
+
+  try {
+    const history = await withTenantContext(config, claims, async (db) => {
+      const [events, holidayDays, overrideDates] = await Promise.all([
+        loadMyCheckInEvents(db, organizationId, schoolId, userId, month),
+        loadHolidayDays(db, organizationId, schoolId, month),
+        loadMyApprovedOverrideDates(db, organizationId, schoolId, userId, month),
+      ]);
+      return buildMyAttendanceHistory(month, events, {
+        lateAfter,
+        holidayDays,
+        overrideDates,
+        asOf: nowIso.slice(0, 10),
+      });
+    });
+    return jsonResponse(envelope(history));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse();
     throw error;
   }
 }

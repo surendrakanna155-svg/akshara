@@ -24,6 +24,7 @@ import {
   buildPayslips,
   buildProbationEnding,
   buildSalaryRegister,
+  DEFAULT_LATE_AFTER,
   inferMuster,
   loadCheckInEvents,
   loadDirectoryEmployees,
@@ -42,8 +43,8 @@ function requireHrRead(claims: Parameters<typeof requirePermission>[0]): Respons
     requireSchoolOperationalScope(claims);
 }
 
-/** Default late cutoff for the muster (minutes-of-day 09:15). Documented in HR-6. */
-const DEFAULT_LATE_AFTER = "09:15";
+// Default late cutoff (09:15) is DEFAULT_LATE_AFTER, shared from
+// hr_reports_repository.ts so HR-6 and the TCH-9 self-history agree.
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
