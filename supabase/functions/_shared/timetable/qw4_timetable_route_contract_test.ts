@@ -135,3 +135,82 @@ Deno.test("QA-B-048: an unauthenticated caller is rejected (401) on a timetable 
   );
   assertEquals(res?.status, 401);
 });
+
+// ─── Gap #8 — persisted substitution routes (contract + RBAC) ──────────────────
+const SUB = ["manageTimetableSubstitution"];
+const VIEW = ["viewAcademicTimetable"];
+const SUB_UUID = "d0500000-0000-4000-8000-0000000000aa";
+
+Deno.test("GAP8: the 4 substitution routes match the router and reach the DB (503) when authorized", async () => {
+  // POST create (manageTimetableSubstitution) with a valid body → gate+validation pass → 503.
+  assertEquals(
+    (await call("POST", "/academic/timetables/substitutions", SUB, {
+      periodId: "d0500000-0000-4000-8000-000000000001",
+      subDate: "2026-07-06",
+      substituteTeacherId: "b0000000-0000-4000-8000-000000000001",
+    })).status,
+    503,
+  );
+  // GET list + candidates (viewAcademicTimetable, ?date required) → 503.
+  assertEquals(
+    (await call("GET", "/academic/timetables/substitutions?date=2026-07-06", VIEW)).status,
+    503,
+  );
+  assertEquals(
+    (await call("GET", "/academic/timetables/substitutions/candidates?date=2026-07-06", VIEW)).status,
+    503,
+  );
+  // DELETE by id (manageTimetableSubstitution) → 503.
+  assertEquals(
+    (await call("DELETE", `/academic/timetables/substitutions/${SUB_UUID}`, SUB)).status,
+    503,
+  );
+});
+
+Deno.test("GAP8: create + delete substitution require manageTimetableSubstitution (403 for view-only)", async () => {
+  const create = await call("POST", "/academic/timetables/substitutions", VIEW, {
+    periodId: "d0500000-0000-4000-8000-000000000001",
+    subDate: "2026-07-06",
+    substituteTeacherId: "b0000000-0000-4000-8000-000000000001",
+  });
+  assertEquals(create.status, 403);
+  assertEquals((await create.json()).error.code, "FORBIDDEN");
+
+  const del = await call("DELETE", `/academic/timetables/substitutions/${SUB_UUID}`, VIEW);
+  assertEquals(del.status, 403);
+  assertEquals((await del.json()).error.code, "FORBIDDEN");
+});
+
+Deno.test("GAP8: substitution reads require viewAcademicTimetable (403 without it)", async () => {
+  const noPerms: string[] = [];
+  assertEquals(
+    (await call("GET", "/academic/timetables/substitutions?date=2026-07-06", noPerms)).status,
+    403,
+  );
+  assertEquals(
+    (await call("GET", "/academic/timetables/substitutions/candidates?date=2026-07-06", noPerms)).status,
+    403,
+  );
+});
+
+Deno.test("GAP8: create rejects a missing field (422) before the DB", async () => {
+  const res = await call("POST", "/academic/timetables/substitutions", SUB, {
+    subDate: "2026-07-06",
+  });
+  assertEquals(res.status, 422);
+});
+
+Deno.test("GAP8: list/candidates require a ?date param (422) before the DB", async () => {
+  assertEquals((await call("GET", "/academic/timetables/substitutions", VIEW)).status, 422);
+  assertEquals(
+    (await call("GET", "/academic/timetables/substitutions/candidates", VIEW)).status,
+    422,
+  );
+});
+
+Deno.test("GAP8: substitutions/candidates matches BEFORE the /:id delete route", async () => {
+  // 'candidates' must resolve to the candidates handler (a GET), never be
+  // swallowed by the DELETE /:id matcher. A GET to it with view perms → 503.
+  const res = await call("GET", "/academic/timetables/substitutions/candidates?date=2026-07-06", VIEW);
+  assertEquals(res.status, 503);
+});

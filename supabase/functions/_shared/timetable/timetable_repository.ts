@@ -2,6 +2,7 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { listTeacherAssignmentsPage } from "../academic/teacher_assignments_repository.ts";
 import { listSectionsPage } from "../academic/sections_repository.ts";
 import {
+  detectAllConflicts,
   generateSectionPeriods,
   type CatalogAssignment,
   type GenerationSectionContext,
@@ -10,6 +11,7 @@ import {
 } from "./timetable_engine.ts";
 import { countOverloadedTeachers, workloadFromSchoolPeriods } from "./timetable_workload.ts";
 import type {
+  TimetableConflict,
   TimetablePeriodInput,
   TimetableRow,
   TimetableStatus,
@@ -27,6 +29,59 @@ export class TimetableNotFoundError extends Error {
   constructor(id: string) {
     super(`Timetable not found: ${id}`);
     this.name = "TimetableNotFoundError";
+  }
+}
+
+/** A move/write would introduce a NEW teacher or room double-booking. */
+export class TimetableClashError extends Error {
+  readonly conflicts: TimetableConflict[];
+  constructor(conflicts: TimetableConflict[]) {
+    super(
+      `Move rejected: introduces ${conflicts.length} new clash(es): ` +
+        conflicts.map((c) => `${c.type}@d${c.dayOfWeek}p${c.periodNumber}`).join(", "),
+    );
+    this.name = "TimetableClashError";
+    this.conflicts = conflicts;
+  }
+}
+
+/** Editing periods of a PUBLISHED timetable is forbidden (app-layer guard). */
+export class TimetablePublishedError extends Error {
+  constructor() {
+    super("Cannot edit periods of a published timetable");
+    this.name = "TimetablePublishedError";
+  }
+}
+
+/**
+ * Stable identity for a conflict so before/after sets can be diffed. Two runs of
+ * detectAllConflicts over equivalent grids produce equal keys for the "same"
+ * clash, letting us reject only NEWLY-introduced double-bookings (a move that
+ * merely leaves a pre-existing clash untouched is not blocked).
+ */
+function conflictKey(c: TimetableConflict): string {
+  return [
+    c.type,
+    c.entityId,
+    c.dayOfWeek,
+    c.periodNumber,
+    [...c.sectionIds].sort().join("+"),
+  ].join(":");
+}
+
+/**
+ * Reject the write if `after` contains a teacher/room clash that was NOT present
+ * in `before`. Section-duplicate conflicts are ignored here (the UNIQUE
+ * (timetable_id, day_of_week, period_number) constraint already prevents a
+ * section double-book at the DB layer).
+ */
+function assertNoNewClashes(before: PeriodWithMeta[], after: PeriodWithMeta[]): void {
+  const relevant = (list: PeriodWithMeta[]) =>
+    detectAllConflicts(list).filter((c) => c.type === "teacher" || c.type === "room");
+  const beforeKeys = new Set(relevant(before).map(conflictKey));
+  const introduced = relevant(after).filter((c) => !beforeKeys.has(conflictKey(c)));
+  if (introduced.length > 0) {
+    throw new TimetableClashError(introduced);
   }
 }
 
@@ -160,7 +215,27 @@ async function replacePeriods(
   schoolId: string,
   timetableId: string,
   periods: TimetablePeriodInput[],
+  context?: { academicYearId: string; sectionId: string },
 ): Promise<void> {
+  // Clash-recheck (delta): reject a replacement that introduces a NEW teacher or
+  // room double-booking vs the current school grid. Only runs when the caller
+  // supplies the year/section context (generation path). The greedy generator
+  // stays greedy — pre-existing clashes are not blocked, only newly-introduced
+  // cross-timetable ones.
+  if (context) {
+    const before = await loadSchoolPeriodsWithMeta(db, orgId, schoolId, context.academicYearId);
+    const replacement: PeriodWithMeta[] = periods.map((p) => ({
+      ...p,
+      timetableId,
+      sectionId: context.sectionId,
+    }));
+    const after = [
+      ...before.filter((p) => p.timetableId !== timetableId),
+      ...replacement,
+    ];
+    assertNoNewClashes(before, after);
+  }
+
   await db.queryObject(
     `DELETE FROM academic_timetable_periods
      WHERE organization_id = $1 AND school_id = $2 AND timetable_id = $3`,
@@ -242,7 +317,10 @@ export async function generateTimetablesForYear(
       daysPerWeek,
       subjects: options?.subjects,
     });
-    await replacePeriods(db, orgId, schoolId, timetable.id, periods);
+    await replacePeriods(db, orgId, schoolId, timetable.id, periods, {
+      academicYearId,
+      sectionId: section.id,
+    });
     created.push(timetable);
   }
 
@@ -334,6 +412,56 @@ export async function moveTimetablePeriod(
     roomLabel?: string;
   },
 ): Promise<{ periodId: string; dayOfWeek: number; periodNumber: number; roomLabel: string }> {
+  // Load the target period + its parent timetable (status, academic_year) so we
+  // can (a) block edits on a published timetable and (b) run the clash-recheck
+  // against the whole school grid for that year.
+  const currentRows = await db.queryObject<{
+    id: string;
+    timetable_id: string;
+    academic_year_id: string;
+    status: TimetableStatus;
+    section_id: string;
+    day_of_week: number;
+    period_number: number;
+    subject_label: string;
+    teacher_id: string | null;
+    teacher_assignment_id: string | null;
+    room_label: string;
+  }>(
+    `SELECT p.id, p.timetable_id, t.academic_year_id, t.status, t.section_id,
+            p.day_of_week, p.period_number, p.subject_label,
+            p.teacher_id, p.teacher_assignment_id, p.room_label
+     FROM academic_timetable_periods p
+     INNER JOIN academic_timetables t ON t.id = p.timetable_id
+     WHERE p.id = $1 AND p.organization_id = $2 AND p.school_id = $3`,
+    [input.periodId, orgId, schoolId],
+  );
+  const current = currentRows[0];
+  if (!current) throw new Error("Period not found");
+
+  // Belt-and-suspenders with the DB trigger reject_published_period_edit().
+  if (current.status === "published") {
+    throw new TimetablePublishedError();
+  }
+
+  // Clash-recheck: build before/after grids and reject a move that introduces a
+  // NEW teacher or room double-booking.
+  const before = await loadSchoolPeriodsWithMeta(db, orgId, schoolId, current.academic_year_id);
+  const nextRoom = input.roomLabel ?? current.room_label;
+  const after = before.map((p) =>
+    p.timetableId === current.timetable_id &&
+      p.dayOfWeek === current.day_of_week &&
+      p.periodNumber === current.period_number
+      ? {
+        ...p,
+        dayOfWeek: input.targetDayOfWeek,
+        periodNumber: input.targetPeriodNumber,
+        roomLabel: nextRoom,
+      }
+      : p
+  );
+  assertNoNewClashes(before, after);
+
   const rows = await db.queryObject<{
     id: string;
     timetable_id: string;

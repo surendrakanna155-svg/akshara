@@ -1,11 +1,15 @@
 import type { AppConfig } from "../config.ts";
 import { errorEnvelope } from "../http.ts";
 import {
+  handleCreateSubstitution,
+  handleDeleteSubstitution,
   handleGenerateTimetables,
   handleGetTimetable,
+  handleListSubstitutions,
   handleListTimetables,
   handleMoveTimetablePeriod,
   handlePublishTimetable,
+  handleSubstitutionCandidates,
   handleTimetableConflicts,
   handleTimetableSummary,
   handleTimetableWorkload,
@@ -39,6 +43,20 @@ export function matchTimetableRoute(
   }
   if (path === "/academic/timetables/periods/move" && method === "POST") {
     return { handler: handleMoveTimetablePeriod, args: [] };
+  }
+  // ─── Substitutions (roadmap gap #8) — matched BEFORE the /:id detail route ──
+  if (path === "/academic/timetables/substitutions/candidates" && method === "GET") {
+    return { handler: handleSubstitutionCandidates, args: [] };
+  }
+  if (path === "/academic/timetables/substitutions" && method === "POST") {
+    return { handler: handleCreateSubstitution, args: [] };
+  }
+  if (path === "/academic/timetables/substitutions" && method === "GET") {
+    return { handler: handleListSubstitutions, args: [] };
+  }
+  const subDeleteMatch = path.match(/^\/academic\/timetables\/substitutions\/([^/]+)$/);
+  if (subDeleteMatch && method === "DELETE" && UUID_SEGMENT.test(subDeleteMatch[1]!)) {
+    return { handler: handleDeleteSubstitution, args: [subDeleteMatch[1]!] };
   }
   if (path === "/academic/timetables" && method === "GET") {
     return { handler: handleListTimetables, args: [] };

@@ -1,5 +1,6 @@
 import type { AppConfig } from "../config.ts";
 import { recordServerAuditEvent } from "../audit/audit_repository.ts";
+import { academicAudit, emitMutationAudit } from "../audit/mutation_audit_catalog.ts";
 import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
 import {
   authenticateRequest,
@@ -21,9 +22,18 @@ import {
   listTimetables,
   moveTimetablePeriod,
   publishTimetableById,
+  TimetableClashError,
   TimetableNotFoundError,
+  TimetablePublishedError,
   validateTimetableById,
 } from "./timetable_repository.ts";
+import {
+  createSubstitution,
+  deleteSubstitution,
+  listSubstitutions,
+  listTeachersOnLeave,
+  SubstitutionValidationError,
+} from "./substitution_repository.ts";
 
 function requireTimetableView(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "viewAcademicTimetable") ??
@@ -37,6 +47,13 @@ function requireTimetableManage(claims: Parameters<typeof requirePermission>[0])
 
 function requireTimetablePublish(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "publishAcademicTimetable") ??
+    requireSchoolOperationalScope(claims);
+}
+
+function requireSubstitutionManage(
+  claims: Parameters<typeof requirePermission>[0],
+): Response | null {
+  return requirePermission(claims, "manageTimetableSubstitution") ??
     requireSchoolOperationalScope(claims);
 }
 
@@ -389,9 +406,176 @@ export async function handleMoveTimetablePeriod(req: Request, config: AppConfig)
     });
     return jsonResponse(envelope(moved));
   } catch (error) {
+    if (error instanceof TimetablePublishedError) {
+      return errorEnvelope("TIMETABLE_PUBLISHED", error.message, 409);
+    }
+    if (error instanceof TimetableClashError) {
+      return errorEnvelope("TIMETABLE_CLASH", error.message, 409);
+    }
     if (error instanceof Error && error.message.includes("not found")) {
       return errorEnvelope("NOT_FOUND", error.message, 404);
     }
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    throw error;
+  }
+}
+
+export async function handleCreateSubstitution(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireSubstitutionManage(auth.claims);
+  if (denied) return denied;
+
+  const body = await readJson<{
+    periodId?: string;
+    subDate?: string;
+    substituteTeacherId?: string;
+    reason?: string;
+  }>(req);
+  if (!body?.periodId?.trim() || !body.subDate?.trim() || !body.substituteTeacherId?.trim()) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      "periodId, subDate, and substituteTeacherId required",
+      422,
+    );
+  }
+
+  try {
+    const sub = await withTenantContext(config, auth.claims, async (db) => {
+      const created = await createSubstitution(db, {
+        orgId: organizationIdFromClaims(auth.claims),
+        schoolId: schoolIdFromClaims(auth.claims),
+        periodId: body.periodId!.trim(),
+        subDate: body.subDate!.trim(),
+        substituteTeacherId: body.substituteTeacherId!.trim(),
+        reason: body.reason?.trim(),
+        createdBy: auth.claims.sub,
+      });
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        academicAudit.timetableSubstituted(created.id, "assigned", {
+          periodId: created.period_id,
+          subDate: created.sub_date,
+          substituteTeacherId: created.substitute_teacher_id,
+        }),
+        req,
+      );
+      return created;
+    });
+    return jsonResponse(envelope({ substitution: sub }), { status: 201 });
+  } catch (error) {
+    if (error instanceof SubstitutionValidationError) {
+      return errorEnvelope(error.code, error.message, error.httpStatus);
+    }
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    throw error;
+  }
+}
+
+export async function handleListSubstitutions(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireTimetableView(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const date = url.searchParams.get("date")?.trim();
+  if (!date) {
+    return errorEnvelope("VALIDATION_ERROR", "date query param required (YYYY-MM-DD)", 422);
+  }
+
+  try {
+    const data = await withTenantContext(config, auth.claims, async (db) => {
+      const orgId = organizationIdFromClaims(auth.claims);
+      const schoolId = schoolIdFromClaims(auth.claims);
+      const substitutions = await listSubstitutions(db, orgId, schoolId, { date });
+      const onLeave = await listTeachersOnLeave(db, orgId, schoolId, date);
+      return { date, substitutions, onLeave };
+    });
+    return jsonResponse(envelope(data));
+  } catch (error) {
+    if (error instanceof SubstitutionValidationError) {
+      return errorEnvelope(error.code, error.message, error.httpStatus);
+    }
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    throw error;
+  }
+}
+
+export async function handleSubstitutionCandidates(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireTimetableView(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const date = url.searchParams.get("date")?.trim();
+  if (!date) {
+    return errorEnvelope("VALIDATION_ERROR", "date query param required (YYYY-MM-DD)", 422);
+  }
+
+  try {
+    const data = await withTenantContext(config, auth.claims, async (db) => {
+      const orgId = organizationIdFromClaims(auth.claims);
+      const schoolId = schoolIdFromClaims(auth.claims);
+      const onLeave = await listTeachersOnLeave(db, orgId, schoolId, date);
+      return { date, onLeave };
+    });
+    return jsonResponse(envelope(data));
+  } catch (error) {
+    if (error instanceof SubstitutionValidationError) {
+      return errorEnvelope(error.code, error.message, error.httpStatus);
+    }
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    throw error;
+  }
+}
+
+export async function handleDeleteSubstitution(
+  req: Request,
+  config: AppConfig,
+  substitutionId: string,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireSubstitutionManage(auth.claims);
+  if (denied) return denied;
+
+  try {
+    const removed = await withTenantContext(config, auth.claims, async (db) => {
+      const deleted = await deleteSubstitution(
+        db,
+        organizationIdFromClaims(auth.claims),
+        schoolIdFromClaims(auth.claims),
+        substitutionId,
+      );
+      if (!deleted) return null;
+      await emitMutationAudit(
+        db,
+        auth.claims,
+        academicAudit.timetableSubstituted(deleted.id, "removed", {
+          periodId: deleted.period_id,
+          subDate: deleted.sub_date,
+        }),
+        req,
+      );
+      return deleted;
+    });
+    if (!removed) {
+      return errorEnvelope("NOT_FOUND", "Substitution not found", 404);
+    }
+    return jsonResponse(envelope({ substitution: removed }));
+  } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     throw error;
   }

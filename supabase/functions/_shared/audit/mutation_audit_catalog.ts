@@ -736,6 +736,28 @@ export const academicAudit = {
       idempotencyKey: `academic.teacher_assignment.updated:${assignmentId}`,
     },
   }),
+  /**
+   * Roadmap gap #8 — a persisted per-day timetable substitution was assigned or
+   * removed (`action` distinguishes). `substitutionId` is the row id;
+   * idempotency key folds in the action so an assign and a later delete are
+   * distinct audit events for the same substitution.
+   */
+  timetableSubstituted: (
+    substitutionId: string,
+    action: "assigned" | "removed",
+    metadata: Record<string, unknown> = {},
+  ): MutationAuditSpec => ({
+    ...workflow("academicTimetableSubstituted", "academic_timetable_substitution", substitutionId, {
+      action,
+      ...metadata,
+    }),
+    domain: {
+      eventType: "academic.timetable.substituted",
+      payload: { substitutionId, action, ...metadata },
+      sourceModule: "academic",
+      idempotencyKey: `academic.timetable.substituted:${substitutionId}:${action}`,
+    },
+  }),
 };
 
 // ─── Exam Administration ─────────────────────────────────────────────────────
