@@ -32,6 +32,7 @@ export interface AdmissionsApplicationRow {
   counselor: string;
   status: string;
   submitted_at: string | null;
+  submitted_by: string | null;
   created_at: string;
   updated_at: string;
   documents_complete?: number;
@@ -70,6 +71,8 @@ export interface AdmissionsApprovalRow {
   decision: string;
   ai_score: number;
   submitted_at: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
   created_at: string;
   updated_at: string;
   documents_complete?: number;

@@ -43,6 +43,7 @@ import {
 import {
   addLeadActivity,
   addLeadFollowUp,
+  AdmissionsSelfApproveDeniedError,
   assignLeadCounselor,
   bulkAssignLeads,
   bulkChangeLeadStage,
@@ -1079,6 +1080,7 @@ export async function handleSubmitApplication(
         orgId,
         schoolId,
         applicationId,
+        auth.claims.sub,
       );
       if (!submitted) return null;
       await ensureApprovalForApplication(db, orgId, schoolId, applicationId);
@@ -1430,7 +1432,17 @@ export async function handleApproveAdmission(
 
   try {
     const approval = await runTenant(config, auth.claims, async (db) => {
-      const updated = await setApprovalDecision(db, orgId, schoolId, approvalId, "approved");
+      // SoD: setApprovalDecision throws BEFORE flipping the application to
+      // 'approved' (and thus before any fee handoff / payable) if the submitter
+      // is approving their own application.
+      const updated = await setApprovalDecision(
+        db,
+        orgId,
+        schoolId,
+        approvalId,
+        "approved",
+        auth.claims.sub,
+      );
       if (!updated) return null;
       await emitMutationAudit(db, auth.claims, admissionsAudit.admissionApproved(approvalId), req);
       return updated;
@@ -1442,6 +1454,9 @@ export async function handleApproveAdmission(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    if (error instanceof AdmissionsSelfApproveDeniedError) {
+      return errorEnvelope("SELF_APPROVE_DENIED", error.message, 409);
     }
     throw error;
   }
@@ -1464,7 +1479,16 @@ export async function handleRejectAdmission(
 
   try {
     const approval = await runTenant(config, auth.claims, async (db) => {
-      const updated = await setApprovalDecision(db, orgId, schoolId, approvalId, "rejected");
+      // Reject is not SoD-guarded (rejecting your own application creates no
+      // payable) — but we still record the checker via decided_by/decided_at.
+      const updated = await setApprovalDecision(
+        db,
+        orgId,
+        schoolId,
+        approvalId,
+        "rejected",
+        auth.claims.sub,
+      );
       if (!updated) return null;
       await emitMutationAudit(db, auth.claims, admissionsAudit.admissionRejected(approvalId), req);
       return updated;

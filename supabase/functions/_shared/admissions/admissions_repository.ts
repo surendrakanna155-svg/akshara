@@ -12,6 +12,21 @@ import type {
   AdmissionsLeadRow,
 } from "./admissions_mapper.ts";
 
+/**
+ * Separation of duties on admissions approval: the person who SUBMITTED an
+ * application (the maker) may not also APPROVE it (the checker), because approval
+ * creates a fee handoff (a payable). Mirrors the FIN-D4 / generic-approval SoD
+ * guard (ApprovalSelfApproveDeniedError). Mapped to SELF_APPROVE_DENIED / 409.
+ */
+export class AdmissionsSelfApproveDeniedError extends Error {
+  constructor(public readonly approvalId: string) {
+    super(
+      `Application submitter cannot approve their own admission: ${approvalId}`,
+    );
+    this.name = "AdmissionsSelfApproveDeniedError";
+  }
+}
+
 export interface PaginationParams {
   page: number;
   pageSize: number;
@@ -683,16 +698,20 @@ export async function submitApplication(
   organizationId: string,
   schoolId: string,
   applicationId: string,
+  submittedBy: string,
 ): Promise<AdmissionsApplicationRow | null> {
+  // submitted_by = the "maker" for the approval SoD guard: whoever moved the
+  // draft → submitted cannot later approve their own application (setApprovalDecision).
   const rows = await db.queryObject<AdmissionsApplicationRow>(
     `UPDATE admissions_applications SET
       status = 'submitted',
       submitted_at = timezone('utc', now()),
+      submitted_by = $4,
       updated_at = timezone('utc', now())
     WHERE id = $1 AND organization_id = $2 AND school_id = $3
       AND status = 'draft'
     RETURNING *`,
-    [applicationId, organizationId, schoolId],
+    [applicationId, organizationId, schoolId, submittedBy],
   );
   return rows[0] ?? null;
 }
@@ -898,14 +917,39 @@ export async function setApprovalDecision(
   schoolId: string,
   approvalId: string,
   decision: "approved" | "rejected",
+  checkerId: string,
 ): Promise<AdmissionsApprovalRow | null> {
+  // Load the approval → application FIRST to resolve the "maker" (submitter) and
+  // enforce separation of duties BEFORE any decision write — so the approve path
+  // (which flips the application to 'approved' and unblocks the fee handoff /
+  // payable) never runs when the submitter is approving their own application.
+  const existing = await getApprovalById(db, organizationId, schoolId, approvalId);
+  if (!existing) return null;
+
+  if (decision === "approved") {
+    const makerRows = await db.queryObject<{ submitted_by: string | null }>(
+      `SELECT submitted_by FROM admissions_applications
+       WHERE id = $1 AND organization_id = $2 AND school_id = $3`,
+      [existing.application_id, organizationId, schoolId],
+    );
+    const maker = makerRows[0]?.submitted_by ?? null;
+    // Fire only when the maker is recorded (rows submitted before the SoD
+    // migration have submitted_by = NULL), matching the FIN-D4 / inventory guard
+    // shape (maker_id && maker === checker).
+    if (maker && maker === checkerId) {
+      throw new AdmissionsSelfApproveDeniedError(approvalId);
+    }
+  }
+
   const rows = await db.queryObject<AdmissionsApprovalRow>(
     `UPDATE admissions_approvals SET
       decision = $4,
+      decided_by = $5,
+      decided_at = timezone('utc', now()),
       updated_at = timezone('utc', now())
     WHERE id = $1 AND organization_id = $2 AND school_id = $3
     RETURNING *`,
-    [approvalId, organizationId, schoolId, decision],
+    [approvalId, organizationId, schoolId, decision, checkerId],
   );
   const approval = rows[0];
   if (!approval) return null;
