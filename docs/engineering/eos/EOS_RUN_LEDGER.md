@@ -3,20 +3,29 @@
 One line per `/eos` run. Newest at the bottom. The EOS appends here after every
 evaluation; reports referenced below live in this same directory.
 
-> ## 🔒 Mandatory pre-pilot sequence (owner-set 2026-07-01)
-> After EVERY module + roadmap phase is implemented, run this exact sequence — the
-> **Global Red Team Audit is a hard gate before any Pilot School Simulation**:
-> 1. Complete all roadmap phases (all modules + buildable roadmap gaps).
-> 2. **Global Red Team Audit** — audit every module INDEPENDENTLY (adversarial).
-> 3. Generate a SEPARATE gap report per module.
-> 4. Produce a CONSOLIDATED remediation roadmap.
-> 5. Fix ALL identified gaps.
-> 6. Re-run verification (EOS gate + full suites).
-> 7. Pilot School Simulation.
-> 8. Production Certification.
+> ## 🔒 Mandatory pre-pilot sequence — REVISED (owner-set 2026-07-01, **re-ordered 2026-07-03**)
+> **2026-07-03 owner re-order:** the single comprehensive Global Red Team must run AFTER
+> the Adaptive-AI wave, so the whole product (including Adaptive AI) is audited ONCE — not
+> Red-Teamed, then perturbed by a major AI wave, then Red-Teamed again. Run this exact order:
+> 1. **Finish all remaining buildable roadmap gaps** (#8 Smart Timetable, #9 Workload, #3 Student Risk)
+>    — plus the owner-approved queued waves: Identity/PSID cluster (dedicated wave), Admissions
+>    approval maker-checker, PAR-D3 fee certificate ([[akshara-decision-queue]]).
+> 2. **Fable UI/UX Audit** (complete it).
+> 3. **Implement all approved UI/UX improvements.**
+> 4. **Dedicated "Adaptive AI & Product Intelligence" wave** — dynamic dashboards, role-based
+>    intelligence, proactive insights, priority cards, workflow suggestions, caching, API
+>    optimization. (Do NOT start until steps 1–3 are done. See [[adaptive-ai-product-intelligence-vision]].)
+> 5. **ONE comprehensive Global Red Team (/eos) audit** — the COMPLETE product incl. Adaptive AI;
+>    audit every module INDEPENDENTLY (adversarial); a SEPARATE gap report per module + a
+>    CONSOLIDATED remediation roadmap. Hard gate before any Pilot Simulation.
+> 6. **Fix EVERY Red Team finding** → re-verify (EOS gate + full suites).
+> 7. **Full Pilot School Simulation.**
+> 8. **Production Certification.**
 >
-> Do NOT start the Red Team Audit until step 1 is fully complete. The bar it applies
-> to every module = the depth of the attendance integrity gates (#1–#8).
+> Do NOT start the Global Red Team (step 5) until steps 1–4 are fully complete. The bar it
+> applies to every module = the depth of the attendance integrity gates (#1–#8).
+> (Superseded order was: gaps → Red Team → remediation → Pilot → Prod. The Fable UI/UX audit,
+> UI improvements, and Adaptive-AI wave are now inserted BEFORE the single Red Team.)
 
 | Date | Scope | Gate verdict | Open P0 / P1 | Report |
 |------|-------|--------------|--------------|--------|
