@@ -39,6 +39,8 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "GET", path: "/academic/timetables/substitutions", permission: "viewAcademicTimetable", scope: "school", module: "academic" },
   { method: "GET", path: "/academic/timetables/substitutions/candidates", permission: "viewAcademicTimetable", scope: "school", module: "academic" },
   { method: "DELETE", path: "/academic/timetables/substitutions/:id", permission: "manageTimetableSubstitution", scope: "school", module: "academic" },
+  // Smart Timetable — unified per-teacher workload rollup (roadmap gap #9).
+  { method: "GET", path: "/academic/timetables/workload/rollup", permission: "viewAcademicTimetable", scope: "school", module: "academic" },
   { method: "GET", path: "/transport/dashboard", permission: "viewTransport", scope: "school", module: "transport" },
   { method: "POST", path: "/transport/attendance", permission: "manageTransport", scope: "school", module: "transport" },
   { method: "POST", path: "/transport/notify-delay", permission: "manageTransport", scope: "school", module: "transport" },

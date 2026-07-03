@@ -66,6 +66,47 @@ Deno.test("QA-B-030: the 7 timetable routes match the router", async () => {
   })).status, 503);
 });
 
+// ─── Gap #9 — unified workload rollup route (contract + RBAC) ──────────────────
+Deno.test("GAP9: /workload/rollup matches the router and reaches the DB (503) with viewAcademicTimetable", async () => {
+  const v = ["viewAcademicTimetable"];
+  assertEquals(
+    (await call("GET", "/academic/timetables/workload/rollup?academicYearId=ay-1", v)).status,
+    503,
+  );
+});
+
+Deno.test("GAP9: /workload/rollup requires ?academicYearId (422) before the DB", async () => {
+  const v = ["viewAcademicTimetable"];
+  assertEquals((await call("GET", "/academic/timetables/workload/rollup", v)).status, 422);
+});
+
+Deno.test("GAP9: /workload/rollup requires viewAcademicTimetable (403 without it)", async () => {
+  const res = await call("GET", "/academic/timetables/workload/rollup?academicYearId=ay-1", []);
+  assertEquals(res.status, 403);
+  assertEquals((await res.json()).error.code, "FORBIDDEN");
+});
+
+Deno.test("GAP9: /workload/rollup does NOT shadow the legacy /workload route (both 503)", async () => {
+  // Back-compat: the rollup is a distinct sibling; the flat /workload still works.
+  const v = ["viewAcademicTimetable"];
+  assertEquals(
+    (await call("GET", "/academic/timetables/workload?academicYearId=ay-1", v)).status,
+    503,
+  );
+  assertEquals(
+    (await call("GET", "/academic/timetables/workload/rollup?academicYearId=ay-1", v)).status,
+    503,
+  );
+});
+
+Deno.test("GAP9: /workload/rollup is not swallowed by the /:id detail matcher", async () => {
+  // 'workload' is not a UUID, so /academic/timetables/workload/rollup must
+  // resolve to the rollup handler, never the GET /:id detail route.
+  const v = ["viewAcademicTimetable"];
+  const res = await call("GET", "/academic/timetables/workload/rollup?academicYearId=ay-1", v);
+  assertEquals(res.status, 503); // reached DB (authorized + valid), not 404/NOT_FOUND
+});
+
 Deno.test("QA-B-030: an unregistered timetable path returns 404 NOT_FOUND", async () => {
   const res = await call("GET", "/academic/timetables/nope/extra", ["viewAcademicTimetable"]);
   assertEquals(res.status, 404);

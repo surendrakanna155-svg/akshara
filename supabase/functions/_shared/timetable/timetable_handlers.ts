@@ -34,6 +34,7 @@ import {
   listTeachersOnLeave,
   SubstitutionValidationError,
 } from "./substitution_repository.ts";
+import { buildTeacherWorkloadRollup } from "./workload_rollup.ts";
 
 function requireTimetableView(claims: Parameters<typeof requirePermission>[0]): Response | null {
   return requirePermission(claims, "viewAcademicTimetable") ??
@@ -136,6 +137,44 @@ export async function handleTimetableWorkload(req: Request, config: AppConfig): 
       );
     });
     return jsonResponse(envelope({ items }));
+  } catch (error) {
+    if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
+    throw error;
+  }
+}
+
+/**
+ * Roadmap gap #9 — unified per-teacher workload rollup. Unlike /workload (a flat
+ * scheduled-period count with an empty sections[]), this returns the ONE
+ * reconciled rollup: periodCount + populated sections[] + subjectIds +
+ * over/under/balanced status per teacher, plus a school aggregate. Principal
+ * scope, single school. Read-only, back-compat sibling of /workload.
+ */
+export async function handleTimetableWorkloadRollup(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  const auth = await authenticateRequest(req, config);
+  if (!auth.ok) return auth.response;
+  const denied = requireTimetableView(auth.claims);
+  if (denied) return denied;
+
+  const url = new URL(req.url);
+  const academicYearId = url.searchParams.get("academicYearId")?.trim();
+  if (!academicYearId) {
+    return errorEnvelope("VALIDATION_ERROR", "academicYearId query param required", 422);
+  }
+
+  try {
+    const result = await withTenantContext(config, auth.claims, async (db) => {
+      return await buildTeacherWorkloadRollup(
+        db,
+        organizationIdFromClaims(auth.claims),
+        schoolIdFromClaims(auth.claims),
+        academicYearId,
+      );
+    });
+    return jsonResponse(envelope({ teachers: result.teachers, summary: result.summary }));
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) return tenantDbNotConfiguredResponse(error);
     throw error;

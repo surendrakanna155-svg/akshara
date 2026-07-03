@@ -13,6 +13,7 @@ import {
   handleTimetableConflicts,
   handleTimetableSummary,
   handleTimetableWorkload,
+  handleTimetableWorkloadRollup,
   handleValidateTimetable,
 } from "./timetable_handlers.ts";
 
@@ -31,6 +32,11 @@ export function matchTimetableRoute(
   }
   if (path === "/academic/timetables/workload" && method === "GET") {
     return { handler: handleTimetableWorkload, args: [] };
+  }
+  // Roadmap gap #9 — unified per-teacher workload rollup (matched after the
+  // legacy /workload so both coexist; distinct path so no back-compat break).
+  if (path === "/academic/timetables/workload/rollup" && method === "GET") {
+    return { handler: handleTimetableWorkloadRollup, args: [] };
   }
   if (path === "/academic/timetables/conflicts" && method === "GET") {
     return { handler: handleTimetableConflicts, args: [] };
