@@ -5,6 +5,7 @@ import 'package:akshara_erp/core/repositories/api/timetable/remote/timetable_rem
 import 'package:akshara_erp/core/repositories/interfaces/timetable_repository.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_timetable_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/academics/timetable/timetable_models.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -69,6 +70,83 @@ void main() {
       );
       expect(mapped.teacherName, mockData.first.teacherName);
       expect(mapped.isOverloaded, mockData.first.isOverloaded);
+    });
+
+    test('mock and api implement the substitution methods', () {
+      expect(mockRepo.listSubstitutions, isA<Function>());
+      expect(apiRepo.listSubstitutions, isA<Function>());
+      expect(mockRepo.createSubstitution, isA<Function>());
+      expect(apiRepo.createSubstitution, isA<Function>());
+      expect(mockRepo.deleteSubstitution, isA<Function>());
+      expect(apiRepo.deleteSubstitution, isA<Function>());
+    });
+
+    test('daily-substitutions DTO tolerates the camelCase list shape', () {
+      const bundle = DailySubstitutionsBundle(
+        date: '2026-07-03',
+        substitutions: [
+          TimetableSubstitution(
+            id: 'sub_1',
+            periodId: 'period_x',
+            subDate: '2026-07-03',
+            originalTeacherId: 'HR-EMP-101',
+            substituteTeacherId: 'HR-EMP-102',
+            reason: 'sick',
+            dayOfWeek: 5,
+            periodNumber: 2,
+            subjectLabel: 'Science',
+            roomLabel: 'Lab 1',
+          ),
+        ],
+        onLeave: [TimetableTeacherOnLeave(teacherId: 'HR-EMP-101')],
+      );
+      final data = _fixtures.dailySubstitutionsEnvelope(bundle)['data']
+          as Map<String, dynamic>;
+      final mapped = _mapper.toDailyBundle(DailySubstitutionsDto.fromJson(data));
+      expect(mapped.date, '2026-07-03');
+      expect(mapped.substitutions.single.periodNumber, 2);
+      expect(mapped.substitutions.single.substituteTeacherId, 'HR-EMP-102');
+      expect(mapped.onLeave.single.teacherId, 'HR-EMP-101');
+    });
+
+    test('create-substitution DTO tolerates the snake_case row shape', () {
+      const created = TimetableSubstitution(
+        id: 'sub_9',
+        periodId: 'period_y',
+        subDate: '2026-07-03',
+        originalTeacherId: 'HR-EMP-101',
+        substituteTeacherId: 'HR-EMP-103',
+        reason: 'leave',
+      );
+      final row = (_fixtures.createSubstitutionEnvelope(created)['data']
+          as Map<String, dynamic>)['substitution'] as Map<String, dynamic>;
+      final mapped = _mapper.toSubstitution(TimetableSubstitutionDto.fromJson(row));
+      expect(mapped.id, 'sub_9');
+      expect(mapped.periodId, 'period_y');
+      expect(mapped.substituteTeacherId, 'HR-EMP-103');
+    });
+
+    test('mock create/list/delete round-trips a substitution', () async {
+      final created = await mockRepo.createSubstitution(
+        query: kQuery,
+        request: const CreateSubstitutionRequest(
+          periodId: 'period_tt_mock_1_1',
+          subDate: '2026-07-03',
+          substituteTeacherId: 'sub-teacher-1',
+        ),
+      );
+      final listed = await mockRepo.listSubstitutions(
+        query: kQuery,
+        date: '2026-07-03',
+      );
+      expect(listed.substitutions.map((s) => s.id), contains(created.id));
+
+      await mockRepo.deleteSubstitution(query: kQuery, id: created.id);
+      final afterDelete = await mockRepo.listSubstitutions(
+        query: kQuery,
+        date: '2026-07-03',
+      );
+      expect(afterDelete.substitutions.map((s) => s.id), isNot(contains(created.id)));
     });
   });
 }

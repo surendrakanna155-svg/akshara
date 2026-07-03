@@ -8,6 +8,8 @@ abstract final class TimetableApiPaths {
   static const String movePeriod = '/academic/timetables/periods/move';
   static const String reassignPeriodTeacher =
       '/academic/timetables/periods/reassign-teacher';
+  static const String substitutions = '/academic/timetables/substitutions';
   static String detail(String id) => '$timetables/$id';
   static String publish(String id) => '$timetables/$id/publish';
+  static String substitution(String id) => '$substitutions/$id';
 }

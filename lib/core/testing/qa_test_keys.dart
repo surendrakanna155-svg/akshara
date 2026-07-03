@@ -1708,6 +1708,28 @@ abstract final class QaTestKeys {
       ValueKey<String>('substitute_assign_button');
   static const substituteAssignSuccessSnackbar =
       ValueKey<String>('substitute_assign_success_snackbar');
+
+  // Daily substitutions (real backend wiring).
+  static const dailySubstitutionsAddButton =
+      ValueKey<String>('daily_substitutions_add_button');
+  static const dailySubstitutionsPeriodPicker =
+      ValueKey<String>('daily_substitutions_period_picker');
+  static const dailySubstitutionsTeacherPicker =
+      ValueKey<String>('daily_substitutions_teacher_picker');
+  static const dailySubstitutionsSaveButton =
+      ValueKey<String>('daily_substitutions_save_button');
+  static const dailySubstitutionsCreatedSnackbar =
+      ValueKey<String>('daily_substitutions_created_snackbar');
+  static const dailySubstitutionsBusyError =
+      ValueKey<String>('daily_substitutions_busy_error');
+  static const dailySubstitutionsDeletedSnackbar =
+      ValueKey<String>('daily_substitutions_deleted_snackbar');
+  static ValueKey<String> dailySubstitutionDeleteButton(String id) =>
+      ValueKey<String>('daily_substitution_delete_button_$id');
+  static ValueKey<String> dailySubstitutionRow(String id) =>
+      ValueKey<String>('daily_substitution_row_$id');
+  static const teacherTodayCoverBanner =
+      ValueKey<String>('teacher_today_cover_banner');
   static const teacherReassignmentSourceFilter =
       ValueKey<String>('teacher_reassignment_source_filter');
   static const teacherReassignmentSubmitButton =

@@ -191,3 +191,111 @@ class ReassignPeriodTeacherRequest {
   final String periodId;
   final String teacherId;
 }
+
+/// A dated cover overlay on a published period: "for THIS period, on THIS date,
+/// [substituteTeacher] stands in for [originalTeacher]". Resolved per-date by the
+/// backend (`academic_timetable_substitutions`) — never edits the base grid.
+@immutable
+class TimetableSubstitution {
+  const TimetableSubstitution({
+    required this.id,
+    required this.periodId,
+    required this.subDate,
+    this.originalTeacherId,
+    this.originalTeacherName,
+    this.substituteTeacherId,
+    this.substituteTeacherName,
+    this.reason = '',
+    this.status = 'assigned',
+    this.sectionId,
+    this.dayOfWeek,
+    this.periodNumber,
+    this.subjectLabel,
+    this.roomLabel,
+  });
+
+  final String id;
+  final String periodId;
+
+  /// The date this cover applies to (YYYY-MM-DD).
+  final String subDate;
+
+  final String? originalTeacherId;
+  final String? originalTeacherName;
+  final String? substituteTeacherId;
+  final String? substituteTeacherName;
+  final String reason;
+
+  /// Lifecycle marker — 'assigned' for an active cover.
+  final String status;
+
+  // Period context resolved server-side (list endpoint only).
+  final String? sectionId;
+  final int? dayOfWeek;
+  final int? periodNumber;
+  final String? subjectLabel;
+  final String? roomLabel;
+}
+
+/// A teacher derived server-side as on approved leave for a date.
+@immutable
+class TimetableTeacherOnLeave {
+  const TimetableTeacherOnLeave({
+    required this.teacherId,
+    this.fromDate,
+    this.toDate,
+    this.reason = '',
+  });
+
+  final String teacherId;
+  final String? fromDate;
+  final String? toDate;
+  final String reason;
+}
+
+/// The resolved cover picture for a single date: active substitutions plus the
+/// server-derived on-leave teachers.
+@immutable
+class DailySubstitutionsBundle {
+  const DailySubstitutionsBundle({
+    required this.date,
+    required this.substitutions,
+    required this.onLeave,
+  });
+
+  final String date;
+  final List<TimetableSubstitution> substitutions;
+  final List<TimetableTeacherOnLeave> onLeave;
+
+  static const empty = DailySubstitutionsBundle(
+    date: '',
+    substitutions: [],
+    onLeave: [],
+  );
+}
+
+@immutable
+class CreateSubstitutionRequest {
+  const CreateSubstitutionRequest({
+    required this.periodId,
+    required this.subDate,
+    required this.substituteTeacherId,
+    this.reason,
+  });
+
+  final String periodId;
+  final String subDate;
+  final String substituteTeacherId;
+  final String? reason;
+}
+
+/// Thrown when the backend rejects a substitution because the chosen substitute
+/// is already teaching that slot on that date (409 SUBSTITUTE_BUSY).
+class SubstituteBusyException implements Exception {
+  const SubstituteBusyException([this.message = 'That teacher is already teaching this period.']);
+
+  final String message;
+
+  @override
+  String toString() => 'SubstituteBusyException: $message';
+}

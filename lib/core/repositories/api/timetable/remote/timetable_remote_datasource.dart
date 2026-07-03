@@ -142,6 +142,80 @@ class TimetableRemoteDataSource {
     return TimetablePeriodDto.fromJson(parseTimetableEnvelope(_responseMap(response)));
   }
 
+  Future<DailySubstitutionsDto> fetchSubstitutions({
+    required RepositoryQuery query,
+    required String date,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      TimetableApiPaths.substitutions,
+      queryParameters: {..._queryParams(query), 'date': date},
+    );
+    return DailySubstitutionsDto.fromJson(parseTimetableEnvelope(_responseMap(response)));
+  }
+
+  Future<TimetableSubstitutionDto> createSubstitution({
+    required RepositoryQuery query,
+    required String periodId,
+    required String subDate,
+    required String substituteTeacherId,
+    String? reason,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        TimetableApiPaths.substitutions,
+        queryParameters: _queryParams(query),
+        data: {
+          'periodId': periodId,
+          'subDate': subDate,
+          'substituteTeacherId': substituteTeacherId,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
+      final data = parseTimetableEnvelope(_responseMap(response));
+      final raw = data['substitution'] as Map<String, dynamic>? ?? data;
+      return TimetableSubstitutionDto.fromJson(raw);
+    } on DioException catch (error) {
+      final code = _errorCode(error);
+      if (code == 'SUBSTITUTE_BUSY') {
+        throw SubstituteBusyException(_errorMessage(error));
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> deleteSubstitution({
+    required RepositoryQuery query,
+    required String id,
+  }) async {
+    await _dio.delete<Map<String, dynamic>>(
+      TimetableApiPaths.substitution(id),
+      queryParameters: _queryParams(query),
+    );
+  }
+
+  /// Pulls the backend error code out of a `{data:null, error:{code,message}}`
+  /// envelope on a non-2xx response.
+  String? _errorCode(DioException error) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final err = data['error'];
+      if (err is Map<String, dynamic>) return err['code'] as String?;
+    }
+    return null;
+  }
+
+  String _errorMessage(DioException error) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final err = data['error'];
+      if (err is Map<String, dynamic>) {
+        final message = err['message'] as String?;
+        if (message != null && message.isNotEmpty) return message;
+      }
+    }
+    return 'That teacher is already teaching this period.';
+  }
+
   Map<String, dynamic> _responseMap(Response<Map<String, dynamic>> response) {
     return response.data ?? const {};
   }

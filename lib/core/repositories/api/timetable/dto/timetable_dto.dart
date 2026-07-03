@@ -164,6 +164,106 @@ class TimetableConflictDto {
   final String entityId;
 }
 
+/// One resolved/created substitution row. Tolerates BOTH the camelCase
+/// `ResolvedSubstitution` shape from the list endpoint and the snake_case
+/// `SubstitutionRow` shape returned by create/delete.
+class TimetableSubstitutionDto {
+  TimetableSubstitutionDto({
+    required this.id,
+    required this.periodId,
+    required this.subDate,
+    this.originalTeacherId,
+    this.substituteTeacherId,
+    this.reason = '',
+    this.sectionId,
+    this.dayOfWeek,
+    this.periodNumber,
+    this.subjectLabel,
+    this.roomLabel,
+  });
+
+  factory TimetableSubstitutionDto.fromJson(Map<String, dynamic> json) {
+    String? str(String camel, String snake) =>
+        (json[camel] ?? json[snake]) as String?;
+    int? intOf(String camel, String snake) =>
+        (json[camel] ?? json[snake]) as int?;
+    return TimetableSubstitutionDto(
+      id: json['id'] as String? ?? '',
+      periodId: str('periodId', 'period_id') ?? '',
+      subDate: str('subDate', 'sub_date') ?? '',
+      originalTeacherId: str('originalTeacherId', 'original_teacher_id'),
+      substituteTeacherId: str('substituteTeacherId', 'substitute_teacher_id'),
+      reason: json['reason'] as String? ?? '',
+      sectionId: str('sectionId', 'section_id'),
+      dayOfWeek: intOf('dayOfWeek', 'day_of_week'),
+      periodNumber: intOf('periodNumber', 'period_number'),
+      subjectLabel: str('subjectLabel', 'subject_label'),
+      roomLabel: str('roomLabel', 'room_label'),
+    );
+  }
+
+  final String id;
+  final String periodId;
+  final String subDate;
+  final String? originalTeacherId;
+  final String? substituteTeacherId;
+  final String reason;
+  final String? sectionId;
+  final int? dayOfWeek;
+  final int? periodNumber;
+  final String? subjectLabel;
+  final String? roomLabel;
+}
+
+class TimetableTeacherOnLeaveDto {
+  TimetableTeacherOnLeaveDto({
+    required this.teacherId,
+    this.fromDate,
+    this.toDate,
+    this.reason = '',
+  });
+
+  factory TimetableTeacherOnLeaveDto.fromJson(Map<String, dynamic> json) {
+    return TimetableTeacherOnLeaveDto(
+      teacherId: (json['teacherId'] ?? json['teacher_id']) as String? ?? '',
+      fromDate: (json['fromDate'] ?? json['from_date']) as String?,
+      toDate: (json['toDate'] ?? json['to_date']) as String?,
+      reason: json['reason'] as String? ?? '',
+    );
+  }
+
+  final String teacherId;
+  final String? fromDate;
+  final String? toDate;
+  final String reason;
+}
+
+class DailySubstitutionsDto {
+  DailySubstitutionsDto({
+    required this.date,
+    required this.substitutions,
+    required this.onLeave,
+  });
+
+  factory DailySubstitutionsDto.fromJson(Map<String, dynamic> json) {
+    final rawSubs = json['substitutions'] as List<dynamic>? ?? const [];
+    final rawLeave = json['onLeave'] as List<dynamic>? ?? const [];
+    return DailySubstitutionsDto(
+      date: json['date'] as String? ?? '',
+      substitutions: rawSubs
+          .map((s) => TimetableSubstitutionDto.fromJson(s as Map<String, dynamic>))
+          .toList(),
+      onLeave: rawLeave
+          .map((l) => TimetableTeacherOnLeaveDto.fromJson(l as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  final String date;
+  final List<TimetableSubstitutionDto> substitutions;
+  final List<TimetableTeacherOnLeaveDto> onLeave;
+}
+
 class TimetableValidationResultDto {
   TimetableValidationResultDto({
     required this.valid,

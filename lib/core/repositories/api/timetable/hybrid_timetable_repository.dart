@@ -77,4 +77,25 @@ class HybridTimetableRepository implements TimetableRepository {
     required ReassignPeriodTeacherRequest request,
   }) =>
       _api.reassignPeriodTeacher(query: query, request: request);
+
+  @override
+  Future<DailySubstitutionsBundle> listSubstitutions({
+    required RepositoryQuery query,
+    required String date,
+  }) =>
+      _api.listSubstitutions(query: query, date: date);
+
+  @override
+  Future<TimetableSubstitution> createSubstitution({
+    required RepositoryQuery query,
+    required CreateSubstitutionRequest request,
+  }) =>
+      _api.createSubstitution(query: query, request: request);
+
+  @override
+  Future<void> deleteSubstitution({
+    required RepositoryQuery query,
+    required String id,
+  }) =>
+      _api.deleteSubstitution(query: query, id: id);
 }

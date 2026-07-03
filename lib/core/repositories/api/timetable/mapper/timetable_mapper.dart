@@ -65,6 +65,40 @@ class TimetableMapper {
     );
   }
 
+  TimetableSubstitution toSubstitution(TimetableSubstitutionDto dto) {
+    return TimetableSubstitution(
+      id: dto.id,
+      periodId: dto.periodId,
+      subDate: dto.subDate,
+      originalTeacherId: dto.originalTeacherId,
+      substituteTeacherId: dto.substituteTeacherId,
+      reason: dto.reason,
+      status: 'assigned',
+      sectionId: dto.sectionId,
+      dayOfWeek: dto.dayOfWeek,
+      periodNumber: dto.periodNumber,
+      subjectLabel: dto.subjectLabel,
+      roomLabel: dto.roomLabel,
+    );
+  }
+
+  TimetableTeacherOnLeave toTeacherOnLeave(TimetableTeacherOnLeaveDto dto) {
+    return TimetableTeacherOnLeave(
+      teacherId: dto.teacherId,
+      fromDate: dto.fromDate,
+      toDate: dto.toDate,
+      reason: dto.reason,
+    );
+  }
+
+  DailySubstitutionsBundle toDailyBundle(DailySubstitutionsDto dto) {
+    return DailySubstitutionsBundle(
+      date: dto.date,
+      substitutions: dto.substitutions.map(toSubstitution).toList(),
+      onLeave: dto.onLeave.map(toTeacherOnLeave).toList(),
+    );
+  }
+
   TimetableValidationResult toValidation(TimetableValidationResultDto dto) {
     return TimetableValidationResult(
       valid: dto.valid,

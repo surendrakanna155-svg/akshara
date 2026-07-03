@@ -3,6 +3,8 @@ import 'package:akshara_erp/core/repositories/api/timetable/remote/timetable_api
 import 'package:akshara_erp/core/repositories/api/timetable/remote/timetable_remote_datasource.dart';
 import 'package:akshara_erp/core/repositories/mock/mock_timetable_repository.dart';
 import 'package:akshara_erp/core/repositories/repository_query.dart';
+import 'package:akshara_erp/features/academics/timetable/timetable_models.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../contracts/timetable/timetable_fixture_builder.dart';
@@ -76,4 +78,132 @@ void main() {
       expect(apiData.first.periodCount, mockData.first.periodCount);
     });
   });
+
+  group('Substitutions API integration', () {
+    const date = '2026-07-03';
+    const bundle = DailySubstitutionsBundle(
+      date: date,
+      substitutions: [
+        TimetableSubstitution(
+          id: 'sub_live_1',
+          periodId: 'period_1',
+          subDate: date,
+          originalTeacherId: 'HR-EMP-101',
+          substituteTeacherId: 'HR-EMP-102',
+          reason: 'sick',
+          dayOfWeek: 5,
+          periodNumber: 2,
+          subjectLabel: 'Science',
+          roomLabel: 'Lab 1',
+        ),
+      ],
+      onLeave: [TimetableTeacherOnLeave(teacherId: 'HR-EMP-101', reason: 'sick')],
+    );
+
+    test('listSubstitutions maps subs + server on-leave', () async {
+      final dio = createFakeDio((options) {
+        expect(options.path, TimetableApiPaths.substitutions);
+        expect(options.queryParameters['date'], date);
+        return _fixtures.dailySubstitutionsEnvelope(bundle);
+      });
+      final apiRepo = ApiTimetableRepository(remote: TimetableRemoteDataSource(dio));
+
+      final result = await apiRepo.listSubstitutions(query: kQuery, date: date);
+      expect(result.substitutions.single.substituteTeacherId, 'HR-EMP-102');
+      expect(result.substitutions.single.periodNumber, 2);
+      expect(result.onLeave.single.teacherId, 'HR-EMP-101');
+    });
+
+    test('createSubstitution posts and maps the created row', () async {
+      const created = TimetableSubstitution(
+        id: 'sub_live_9',
+        periodId: 'period_1',
+        subDate: date,
+        originalTeacherId: 'HR-EMP-101',
+        substituteTeacherId: 'HR-EMP-103',
+        reason: 'leave',
+      );
+      final dio = createFakeDio((options) {
+        expect(options.method, 'POST');
+        expect(options.data['periodId'], 'period_1');
+        expect(options.data['substituteTeacherId'], 'HR-EMP-103');
+        return _fixtures.createSubstitutionEnvelope(created);
+      });
+      final apiRepo = ApiTimetableRepository(remote: TimetableRemoteDataSource(dio));
+
+      final result = await apiRepo.createSubstitution(
+        query: kQuery,
+        request: const CreateSubstitutionRequest(
+          periodId: 'period_1',
+          subDate: date,
+          substituteTeacherId: 'HR-EMP-103',
+        ),
+      );
+      expect(result.id, 'sub_live_9');
+      expect(result.substituteTeacherId, 'HR-EMP-103');
+    });
+
+    test('createSubstitution surfaces 409 SUBSTITUTE_BUSY as a typed exception',
+        () async {
+      final dio = Dio(BaseOptions(baseUrl: 'https://test.api/v1'));
+      dio.interceptors.add(_RejectingInterceptor(
+        statusCode: 409,
+        body: _fixtures.errorEnvelope(
+          'SUBSTITUTE_BUSY',
+          'Substitute HR-EMP-103 is already teaching period 2 on $date',
+        ),
+      ));
+      final apiRepo = ApiTimetableRepository(remote: TimetableRemoteDataSource(dio));
+
+      expect(
+        () => apiRepo.createSubstitution(
+          query: kQuery,
+          request: const CreateSubstitutionRequest(
+            periodId: 'period_1',
+            subDate: date,
+            substituteTeacherId: 'HR-EMP-103',
+          ),
+        ),
+        throwsA(isA<SubstituteBusyException>()),
+      );
+    });
+
+    test('deleteSubstitution issues a DELETE to the id path', () async {
+      var deleted = false;
+      final dio = createFakeDio((options) {
+        expect(options.method, 'DELETE');
+        expect(options.path, TimetableApiPaths.substitution('sub_live_1'));
+        deleted = true;
+        return _fixtures.envelope({'substitution': {'id': 'sub_live_1'}});
+      });
+      final apiRepo = ApiTimetableRepository(remote: TimetableRemoteDataSource(dio));
+
+      await apiRepo.deleteSubstitution(query: kQuery, id: 'sub_live_1');
+      expect(deleted, isTrue);
+    });
+  });
+}
+
+/// Rejects every request with a canned non-2xx response so the api repo sees a
+/// [DioException] carrying the backend error envelope (used for 409 cases).
+class _RejectingInterceptor extends Interceptor {
+  _RejectingInterceptor({required this.statusCode, required this.body});
+
+  final int statusCode;
+  final Map<String, dynamic> body;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    handler.reject(
+      DioException(
+        requestOptions: options,
+        response: Response(
+          requestOptions: options,
+          statusCode: statusCode,
+          data: body,
+        ),
+        type: DioExceptionType.badResponse,
+      ),
+    );
+  }
 }

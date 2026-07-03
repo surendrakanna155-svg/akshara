@@ -38,6 +38,11 @@ class MockTimetableRepository implements TimetableRepository {
   final List<TimetableEntry> _timetables = [];
   final Map<String, List<TimetablePeriod>> _periods = {};
 
+  /// In-memory substitution overlay, keyed by 'periodId|subDate' to mirror the
+  /// backend's ON CONFLICT (period_id, sub_date) upsert semantics.
+  final Map<String, TimetableSubstitution> _substitutions = {};
+  var _subSeq = 0;
+
   List<TimetablePeriod> _buildPeriods(String timetableId, {bool includeClash = false}) {
     final periods = <TimetablePeriod>[];
     var id = 0;
@@ -308,5 +313,101 @@ class MockTimetableRepository implements TimetableRepository {
       return updated;
     }
     throw StateError('Period not found');
+  }
+
+  TimetablePeriod? _findPeriod(String periodId) {
+    for (final list in _periods.values) {
+      for (final p in list) {
+        if (p.id == periodId) return p;
+      }
+    }
+    return null;
+  }
+
+  /// ISO day-of-week (Mon=1..Sun=7) for a YYYY-MM-DD date, matching the backend.
+  int _isoDayOfWeek(String subDate) {
+    final parsed = DateTime.tryParse(subDate);
+    if (parsed == null) return 1;
+    return parsed.weekday; // Dart: Mon=1..Sun=7
+  }
+
+  @override
+  Future<DailySubstitutionsBundle> listSubstitutions({
+    required RepositoryQuery query,
+    required String date,
+  }) async {
+    final subs = _substitutions.values.where((s) => s.subDate == date).toList()
+      ..sort((a, b) {
+        final byPeriod = (a.periodNumber ?? 0).compareTo(b.periodNumber ?? 0);
+        return byPeriod != 0 ? byPeriod : a.id.compareTo(b.id);
+      });
+    return DailySubstitutionsBundle(
+      date: date,
+      substitutions: subs,
+      onLeave: const [],
+    );
+  }
+
+  @override
+  Future<TimetableSubstitution> createSubstitution({
+    required RepositoryQuery query,
+    required CreateSubstitutionRequest request,
+  }) async {
+    final period = _findPeriod(request.periodId);
+    final dayOfWeek =
+        period?.dayOfWeek ?? _isoDayOfWeek(request.subDate);
+    final periodNumber = period?.periodNumber;
+
+    // SUBSTITUTE_BUSY: is the proposed substitute already teaching (base grid or
+    // an existing same-date cover) in this slot on that date?
+    if (periodNumber != null) {
+      final baseBusy = _periods.values.any(
+        (list) => list.any(
+          (p) =>
+              p.id != request.periodId &&
+              p.dayOfWeek == dayOfWeek &&
+              p.periodNumber == periodNumber &&
+              p.teacherId == request.substituteTeacherId,
+        ),
+      );
+      final coverBusy = _substitutions.values.any(
+        (s) =>
+            s.subDate == request.subDate &&
+            s.periodId != request.periodId &&
+            s.periodNumber == periodNumber &&
+            s.substituteTeacherId == request.substituteTeacherId,
+      );
+      if (baseBusy || coverBusy) {
+        throw const SubstituteBusyException();
+      }
+    }
+
+    final key = '${request.periodId}|${request.subDate}';
+    final existing = _substitutions[key];
+    _subSeq += 1;
+    final sub = TimetableSubstitution(
+      id: existing?.id ?? 'sub_mock_$_subSeq',
+      periodId: request.periodId,
+      subDate: request.subDate,
+      originalTeacherId: period?.teacherId,
+      substituteTeacherId: request.substituteTeacherId,
+      reason: request.reason ?? '',
+      status: 'assigned',
+      sectionId: period?.timetableId,
+      dayOfWeek: dayOfWeek,
+      periodNumber: periodNumber,
+      subjectLabel: period?.subjectLabel,
+      roomLabel: period?.roomLabel,
+    );
+    _substitutions[key] = sub;
+    return sub;
+  }
+
+  @override
+  Future<void> deleteSubstitution({
+    required RepositoryQuery query,
+    required String id,
+  }) async {
+    _substitutions.removeWhere((_, sub) => sub.id == id);
   }
 }

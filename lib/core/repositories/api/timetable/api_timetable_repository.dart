@@ -130,4 +130,36 @@ class ApiTimetableRepository implements TimetableRepository {
     final dto = await _remote.reassignPeriodTeacher(query: query, request: request);
     return _mapper.toPeriod(dto);
   }
+
+  @override
+  Future<DailySubstitutionsBundle> listSubstitutions({
+    required RepositoryQuery query,
+    required String date,
+  }) async {
+    final dto = await _remote.fetchSubstitutions(query: query, date: date);
+    return _mapper.toDailyBundle(dto);
+  }
+
+  @override
+  Future<TimetableSubstitution> createSubstitution({
+    required RepositoryQuery query,
+    required CreateSubstitutionRequest request,
+  }) async {
+    final dto = await _remote.createSubstitution(
+      query: query,
+      periodId: request.periodId,
+      subDate: request.subDate,
+      substituteTeacherId: request.substituteTeacherId,
+      reason: request.reason,
+    );
+    return _mapper.toSubstitution(dto);
+  }
+
+  @override
+  Future<void> deleteSubstitution({
+    required RepositoryQuery query,
+    required String id,
+  }) async {
+    await _remote.deleteSubstitution(query: query, id: id);
+  }
 }

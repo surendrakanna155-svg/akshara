@@ -51,4 +51,24 @@ abstract class TimetableRepository {
     required RepositoryQuery query,
     required ReassignPeriodTeacherRequest request,
   });
+
+  /// Resolved substitutions for [date] (YYYY-MM-DD) plus the server-derived
+  /// on-leave teachers for that day.
+  Future<DailySubstitutionsBundle> listSubstitutions({
+    required RepositoryQuery query,
+    required String date,
+  });
+
+  /// Create (or idempotently re-assign) a dated cover. Throws
+  /// [SubstituteBusyException] when the substitute already teaches that slot.
+  Future<TimetableSubstitution> createSubstitution({
+    required RepositoryQuery query,
+    required CreateSubstitutionRequest request,
+  });
+
+  /// Remove a substitution by id.
+  Future<void> deleteSubstitution({
+    required RepositoryQuery query,
+    required String id,
+  });
 }
