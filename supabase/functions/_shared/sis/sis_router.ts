@@ -21,6 +21,11 @@ import {
   handleVerifyStudentDocument,
 } from "./sis_document_handlers.ts";
 import {
+  handleIssueCertificate,
+  handleIssueTransferCertificate,
+  handleListCertificates,
+} from "./sis_certificate_handlers.ts";
+import {
   handleGetStudent360Profile,
   handleGetStudentTimeline,
 } from "./sis_student_360_handlers.ts";
@@ -85,6 +90,29 @@ export function matchSisRoute(
     }
     if (method === "POST") {
       return { handler: handleUploadStudentDocument, args: [documentsMatch[1]!] };
+    }
+  }
+
+  // SIS-D1 — transfer certificate (TC) engine. Matched BEFORE the generic
+  // /certificates route so the more specific path wins.
+  const transferCertMatch = path.match(
+    /^\/sis\/students\/([^/]+)\/transfer-certificate$/,
+  );
+  if (transferCertMatch && method === "POST") {
+    return {
+      handler: handleIssueTransferCertificate,
+      args: [transferCertMatch[1]!],
+    };
+  }
+
+  // SIS-1 — certificate issuance register (bonafide/study/conduct) + list.
+  const certificatesMatch = path.match(/^\/sis\/students\/([^/]+)\/certificates$/);
+  if (certificatesMatch) {
+    if (method === "GET") {
+      return { handler: handleListCertificates, args: [certificatesMatch[1]!] };
+    }
+    if (method === "POST") {
+      return { handler: handleIssueCertificate, args: [certificatesMatch[1]!] };
     }
   }
 

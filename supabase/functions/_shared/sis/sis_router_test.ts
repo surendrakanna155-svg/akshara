@@ -113,3 +113,68 @@ Deno.test("SIS-3 PATCH document verify is registered as manageSis school route",
   assertEquals(rule!.scope, "school");
   assertEquals(rule!.module, "sis");
 });
+
+// ─── SIS-1 certificates + SIS-D1 transfer-certificate routing ────────────────
+
+Deno.test("sis router matches GET /sis/students/:id/certificates (SIS-1 register)", () => {
+  const studentId = "a4000000-0000-4000-8000-000000000001";
+  const match = matchSisRoute("GET", `/sis/students/${studentId}/certificates`);
+  assertEquals(match?.args, [studentId]);
+  assertEquals(match?.handler.name, "handleListCertificates");
+});
+
+Deno.test("sis router matches POST /sis/students/:id/certificates (SIS-1 issue)", () => {
+  const studentId = "a4000000-0000-4000-8000-000000000001";
+  const match = matchSisRoute("POST", `/sis/students/${studentId}/certificates`);
+  assertEquals(match?.args, [studentId]);
+  assertEquals(match?.handler.name, "handleIssueCertificate");
+});
+
+Deno.test("sis router matches POST /sis/students/:id/transfer-certificate (SIS-D1)", () => {
+  const studentId = "a4000000-0000-4000-8000-000000000001";
+  const match = matchSisRoute(
+    "POST",
+    `/sis/students/${studentId}/transfer-certificate`,
+  );
+  assertEquals(match?.args, [studentId]);
+  assertEquals(match?.handler.name, "handleIssueTransferCertificate");
+});
+
+Deno.test("sis router: transfer-certificate does not resolve to the generic student route", () => {
+  const studentId = "a4000000-0000-4000-8000-000000000001";
+  // The TC path is POST-only; a GET must not fall through to any handler here.
+  const wrongVerb = matchSisRoute(
+    "GET",
+    `/sis/students/${studentId}/transfer-certificate`,
+  );
+  assertEquals(wrongVerb, null);
+  // And the certificates path must not collide with the plain student GET.
+  const studentGet = matchSisRoute("GET", `/sis/students/${studentId}`);
+  assertEquals(studentGet?.handler.name, "handleGetStudent");
+});
+
+Deno.test("SIS-1/D1 certificate routes are registered with correct RBAC", () => {
+  const list = RBAC_ROUTE_INVENTORY.find(
+    (r) => r.method === "GET" && r.path === "/sis/students/:id/certificates",
+  );
+  assertExists(list);
+  assertEquals(list!.permission, "viewSis");
+  assertEquals(list!.scope, "school");
+  assertEquals(list!.module, "sis");
+
+  const issue = RBAC_ROUTE_INVENTORY.find(
+    (r) => r.method === "POST" && r.path === "/sis/students/:id/certificates",
+  );
+  assertExists(issue);
+  assertEquals(issue!.permission, "manageSis");
+  assertEquals(issue!.scope, "school");
+
+  const transfer = RBAC_ROUTE_INVENTORY.find(
+    (r) =>
+      r.method === "POST" &&
+      r.path === "/sis/students/:id/transfer-certificate",
+  );
+  assertExists(transfer);
+  assertEquals(transfer!.permission, "manageSis");
+  assertEquals(transfer!.scope, "school");
+});

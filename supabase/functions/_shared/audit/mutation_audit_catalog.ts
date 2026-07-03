@@ -668,6 +668,54 @@ export const sisAudit = {
       idempotencyKey: `sis.admissions.converted:${enrollmentId}`,
     },
   }),
+  /**
+   * SIS-1 — a bonafide/study/conduct certificate was issued (a recorded
+   * issuance; no status change). `issueId` is the register row id and keys the
+   * outbox so every distinct issuance is captured (re-issuing the same type for
+   * the same student is a NEW register row, hence a new event).
+   */
+  certificateIssued: (
+    issueId: string,
+    studentId: string,
+    type: string,
+  ): MutationAuditSpec => ({
+    ...workflow("sisCertificateIssued", "sis_certificate_issue", issueId, {
+      issueId,
+      studentId,
+      certificateType: type,
+    }),
+    domain: {
+      eventType: "sis.certificate.issued",
+      payload: { issueId, studentId, certificateType: type },
+      sourceModule: "sis",
+      idempotencyKey: `sis.certificate.issued:${issueId}`,
+    },
+  }),
+  /**
+   * SIS-D1 — a Transfer Certificate was issued: the no-dues gate passed, a
+   * per-school sequential serial was allocated, and the student's status was
+   * auto-set to transferred — all in one transaction. `serial` is the allocated
+   * TC serial and keys the outbox (unique per school, never reused).
+   */
+  transferCertificateIssued: (
+    issueId: string,
+    studentId: string,
+    serial: string,
+    reason?: string | null,
+  ): MutationAuditSpec => ({
+    ...workflow("sisTransferCertificateIssued", "sis_certificate_issue", issueId, {
+      issueId,
+      studentId,
+      serial,
+      ...(reason ? { reason } : {}),
+    }),
+    domain: {
+      eventType: "sis.transfer_certificate.issued",
+      payload: { issueId, studentId, serial },
+      sourceModule: "sis",
+      idempotencyKey: `sis.transfer_certificate.issued:${serial}`,
+    },
+  }),
 };
 
 // ─── Academic ───────────────────────────────────────────────────────────────
