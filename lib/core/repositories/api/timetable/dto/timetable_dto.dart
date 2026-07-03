@@ -138,6 +138,91 @@ class TeacherWorkloadDto {
   final bool isOverloaded;
 }
 
+/// One teacher row of the unified workload rollup
+/// (GET /academic/timetables/workload/rollup → `data.teachers[]`).
+class TeacherWorkloadRollupDto {
+  TeacherWorkloadRollupDto({
+    required this.teacherId,
+    required this.teacherName,
+    required this.periodCount,
+    required this.sections,
+    required this.subjectIds,
+    required this.status,
+    required this.isOverloaded,
+  });
+
+  factory TeacherWorkloadRollupDto.fromJson(Map<String, dynamic> json) {
+    List<String> strList(String key) =>
+        (json[key] as List<dynamic>? ?? const [])
+            .map((e) => e.toString())
+            .toList();
+    return TeacherWorkloadRollupDto(
+      teacherId: json['teacherId'] as String? ?? '',
+      teacherName: json['teacherName'] as String? ?? '',
+      periodCount: json['periodCount'] as int? ?? 0,
+      sections: strList('sections'),
+      subjectIds: strList('subjectIds'),
+      status: json['status'] as String? ?? 'balanced',
+      isOverloaded: json['isOverloaded'] as bool? ?? false,
+    );
+  }
+
+  final String teacherId;
+  final String teacherName;
+  final int periodCount;
+  final List<String> sections;
+  final List<String> subjectIds;
+  final String status;
+  final bool isOverloaded;
+}
+
+/// School aggregate of the unified workload rollup (`data.summary`).
+class WorkloadRollupSummaryDto {
+  WorkloadRollupSummaryDto({
+    required this.totalTeachers,
+    required this.overloaded,
+    required this.underloaded,
+    required this.balanced,
+    required this.avgPeriods,
+  });
+
+  factory WorkloadRollupSummaryDto.fromJson(Map<String, dynamic> json) {
+    return WorkloadRollupSummaryDto(
+      totalTeachers: json['totalTeachers'] as int? ?? 0,
+      overloaded: json['overloaded'] as int? ?? 0,
+      underloaded: json['underloaded'] as int? ?? 0,
+      balanced: json['balanced'] as int? ?? 0,
+      avgPeriods: (json['avgPeriods'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  final int totalTeachers;
+  final int overloaded;
+  final int underloaded;
+  final int balanced;
+  final double avgPeriods;
+}
+
+/// The whole rollup envelope data: `{ teachers: [...], summary: {...} }`.
+class WorkloadRollupDto {
+  WorkloadRollupDto({required this.teachers, required this.summary});
+
+  factory WorkloadRollupDto.fromJson(Map<String, dynamic> json) {
+    final rawTeachers = json['teachers'] as List<dynamic>? ?? const [];
+    return WorkloadRollupDto(
+      teachers: rawTeachers
+          .map((t) => TeacherWorkloadRollupDto.fromJson(t as Map<String, dynamic>))
+          .toList(),
+      summary: WorkloadRollupSummaryDto.fromJson(
+        json['summary'] as Map<String, dynamic>? ?? const {},
+      ),
+    );
+  }
+
+  final List<TeacherWorkloadRollupDto> teachers;
+  final WorkloadRollupSummaryDto summary;
+}
+
 class TimetableConflictDto {
   TimetableConflictDto({
     required this.type,

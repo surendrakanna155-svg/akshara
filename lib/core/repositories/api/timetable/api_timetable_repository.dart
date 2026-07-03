@@ -59,6 +59,15 @@ class ApiTimetableRepository implements TimetableRepository {
   }
 
   @override
+  Future<WorkloadRollup> getWorkloadRollup({
+    required RepositoryQuery query,
+    required String academicYearId,
+  }) async {
+    final dto = await _remote.fetchWorkloadRollup(query: query, academicYearId: academicYearId);
+    return _mapper.toWorkloadRollup(dto);
+  }
+
+  @override
   Future<TimetableConflictsBundle> getConflicts({
     required RepositoryQuery query,
     required String academicYearId,

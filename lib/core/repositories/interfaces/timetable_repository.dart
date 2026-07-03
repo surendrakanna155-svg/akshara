@@ -22,6 +22,14 @@ abstract class TimetableRepository {
     required String academicYearId,
   });
 
+  /// Unified per-teacher workload rollup (roadmap gap #9): per-teacher rows with
+  /// populated sections + subjects + over/under/balanced status, plus a school
+  /// aggregate. Back-compat sibling of [getWorkload].
+  Future<WorkloadRollup> getWorkloadRollup({
+    required RepositoryQuery query,
+    required String academicYearId,
+  });
+
   Future<TimetableConflictsBundle> getConflicts({
     required RepositoryQuery query,
     required String academicYearId,

@@ -237,6 +237,29 @@ class _TeacherAllocationTab extends StatelessWidget {
   final List<SubjectWorkloadEntry> workload;
   final Future<void> Function(String teacherId, String subjectId, int periods) onAssign;
 
+  /// Teacher UUID → display name. The catalog can carry several assignment rows
+  /// per teacher (one per class/section); we keep the first non-empty name.
+  Map<String, String> get _teacherNames {
+    final map = <String, String>{};
+    for (final t in teachers) {
+      final name = t.teacherName?.trim();
+      if (name != null && name.isNotEmpty) {
+        map.putIfAbsent(t.teacherId, () => name);
+      }
+    }
+    return map;
+  }
+
+  /// Subject UUID → subject name.
+  Map<String, String> get _subjectNames =>
+      {for (final s in subjects) s.id: s.subjectName};
+
+  String _teacherLabel(String teacherId) =>
+      _teacherNames[teacherId] ?? teacherId;
+
+  String _subjectLabel(String subjectId) =>
+      _subjectNames[subjectId] ?? subjectId;
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -256,7 +279,9 @@ class _TeacherAllocationTab extends StatelessWidget {
         const SizedBox(height: 16),
         ...assignments.map(
           (a) => ListTile(
-            title: Text('Teacher ${a.teacherUserId} · ${a.subjectId}'),
+            title: Text(
+              '${_teacherLabel(a.teacherUserId)} · ${_subjectLabel(a.subjectId)}',
+            ),
             subtitle: Text('${a.periodsPerWeek} periods/week'),
           ),
         ),
@@ -265,7 +290,9 @@ class _TeacherAllocationTab extends StatelessWidget {
         ...workload.map(
           (w) => ListTile(
             dense: true,
-            title: Text('${w.teacherUserId} / ${w.subjectId}'),
+            title: Text(
+              '${_teacherLabel(w.teacherUserId)} / ${_subjectLabel(w.subjectId)}',
+            ),
             trailing: Text(
               '${w.totalPeriods}p',
               style: TextStyle(

@@ -2,6 +2,7 @@ abstract final class TimetableApiPaths {
   static const String timetables = '/academic/timetables';
   static const String summary = '/academic/timetables/summary';
   static const String workload = '/academic/timetables/workload';
+  static const String workloadRollup = '/academic/timetables/workload/rollup';
   static const String conflicts = '/academic/timetables/conflicts';
   static const String generate = '/academic/timetables/generate';
   static const String validate = '/academic/timetables/validate';

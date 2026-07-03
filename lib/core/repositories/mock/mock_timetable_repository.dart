@@ -131,6 +131,53 @@ class MockTimetableRepository implements TimetableRepository {
   }
 
   @override
+  Future<WorkloadRollup> getWorkloadRollup({
+    required RepositoryQuery query,
+    required String academicYearId,
+  }) async {
+    // Plausible unified rollup: one over (>24), one balanced, one under (<10),
+    // with populated sections + subjects — mirroring the live backend shape.
+    return const WorkloadRollup(
+      teachers: [
+        TeacherWorkloadRollup(
+          teacherId: 'mock-teacher-overload',
+          teacherName: 'Staging Teacher A',
+          periodCount: 28,
+          sections: ['mock-section-8-A', 'mock-section-8-B'],
+          subjectIds: ['Mathematics', 'Science'],
+          status: TeacherWorkloadStatus.over,
+          isOverloaded: true,
+        ),
+        TeacherWorkloadRollup(
+          teacherId: 'mock-teacher-1',
+          teacherName: 'Staging Teacher B',
+          periodCount: 18,
+          sections: ['mock-section-8-A'],
+          subjectIds: ['English'],
+          status: TeacherWorkloadStatus.balanced,
+          isOverloaded: false,
+        ),
+        TeacherWorkloadRollup(
+          teacherId: 'mock-teacher-2',
+          teacherName: 'Staging Teacher C',
+          periodCount: 6,
+          sections: ['mock-section-8-B'],
+          subjectIds: ['Activity'],
+          status: TeacherWorkloadStatus.under,
+          isOverloaded: false,
+        ),
+      ],
+      summary: WorkloadRollupSummary(
+        totalTeachers: 3,
+        overloaded: 1,
+        underloaded: 1,
+        balanced: 1,
+        avgPeriods: 17.33,
+      ),
+    );
+  }
+
+  @override
   Future<TimetableConflictsBundle> getConflicts({
     required RepositoryQuery query,
     required String academicYearId,

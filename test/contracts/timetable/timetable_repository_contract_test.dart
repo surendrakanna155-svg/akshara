@@ -72,6 +72,45 @@ void main() {
       expect(mapped.isOverloaded, mockData.first.isOverloaded);
     });
 
+    test('workload-rollup DTO mapping matches mock output (gap #9)', () async {
+      final mockData = await mockRepo.getWorkloadRollup(
+        query: kQuery,
+        academicYearId: 'mock-year-current',
+      );
+      final data = _fixtures.workloadRollupEnvelope(mockData)['data']
+          as Map<String, dynamic>;
+      final mapped = _mapper.toWorkloadRollup(WorkloadRollupDto.fromJson(data));
+
+      // Per-teacher rows: names, populated sections/subjects, status all survive.
+      expect(mapped.teachers, hasLength(mockData.teachers.length));
+      final over = mapped.teachers.firstWhere((t) => t.status == TeacherWorkloadStatus.over);
+      expect(over.teacherName, 'Staging Teacher A');
+      expect(over.isOverloaded, isTrue);
+      expect(over.periodCount, 28);
+      expect(over.sections, isNotEmpty);
+      expect(over.subjectIds, isNotEmpty);
+      expect(
+        mapped.teachers.any((t) => t.status == TeacherWorkloadStatus.under),
+        isTrue,
+      );
+      expect(
+        mapped.teachers.any((t) => t.status == TeacherWorkloadStatus.balanced),
+        isTrue,
+      );
+
+      // Summary aggregate round-trips including the fractional average.
+      expect(mapped.summary.totalTeachers, mockData.summary.totalTeachers);
+      expect(mapped.summary.overloaded, mockData.summary.overloaded);
+      expect(mapped.summary.underloaded, mockData.summary.underloaded);
+      expect(mapped.summary.balanced, mockData.summary.balanced);
+      expect(mapped.summary.avgPeriods, mockData.summary.avgPeriods);
+    });
+
+    test('mock and api implement getWorkloadRollup (gap #9)', () {
+      expect(mockRepo.getWorkloadRollup, isA<Function>());
+      expect(apiRepo.getWorkloadRollup, isA<Function>());
+    });
+
     test('mock and api implement the substitution methods', () {
       expect(mockRepo.listSubstitutions, isA<Function>());
       expect(apiRepo.listSubstitutions, isA<Function>());

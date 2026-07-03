@@ -36,6 +36,16 @@ final timetableWorkloadProvider = FutureProvider<List<TeacherWorkloadEntry>>((re
       );
 });
 
+/// Roadmap gap #9 — the unified per-teacher workload rollup for the hub's active
+/// academic year (same [kTimetableDemoYearId] context every other timetable read
+/// uses). Powers the workload dashboard.
+final timetableWorkloadRollupProvider = FutureProvider<WorkloadRollup>((ref) async {
+  return ref.read(timetableRepositoryProvider).getWorkloadRollup(
+        query: ref.watch(timetableQueryProvider),
+        academicYearId: kTimetableDemoYearId,
+      );
+});
+
 final timetableConflictsProvider = FutureProvider<TimetableConflictsBundle>((ref) async {
   return ref.read(timetableRepositoryProvider).getConflicts(
         query: ref.watch(timetableQueryProvider),
@@ -77,6 +87,7 @@ class TimetableMutationsNotifier extends AsyncNotifier<void> {
       ref.invalidate(timetableListProvider);
       ref.invalidate(timetableConflictsProvider);
       ref.invalidate(timetableWorkloadProvider);
+      ref.invalidate(timetableWorkloadRollupProvider);
     });
   }
 
@@ -111,5 +122,6 @@ void invalidateTimetableReads(WidgetRef ref) {
   ref.invalidate(timetableSummaryProvider);
   ref.invalidate(timetableListProvider);
   ref.invalidate(timetableWorkloadProvider);
+  ref.invalidate(timetableWorkloadRollupProvider);
   ref.invalidate(timetableConflictsProvider);
 }

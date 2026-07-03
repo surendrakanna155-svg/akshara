@@ -125,6 +125,97 @@ class TeacherWorkloadEntry {
   final bool isOverloaded;
 }
 
+/// Over / under / balanced classification for the unified workload rollup, in
+/// the exact vocabulary the backend uses (`workload_rollup.ts`).
+enum TeacherWorkloadStatus { over, under, balanced }
+
+extension TeacherWorkloadStatusApi on TeacherWorkloadStatus {
+  static TeacherWorkloadStatus fromApi(String value) {
+    for (final status in TeacherWorkloadStatus.values) {
+      if (status.name == value) return status;
+    }
+    return TeacherWorkloadStatus.balanced;
+  }
+}
+
+/// One teacher's row in the unified per-teacher workload rollup (roadmap gap #9).
+/// Unlike [TeacherWorkloadEntry] (a flat period count) this carries the populated
+/// [sections] + [subjectIds] and the over/under/balanced [status].
+@immutable
+class TeacherWorkloadRollup {
+  const TeacherWorkloadRollup({
+    required this.teacherId,
+    required this.teacherName,
+    required this.periodCount,
+    required this.sections,
+    required this.subjectIds,
+    required this.status,
+    required this.isOverloaded,
+  });
+
+  final String teacherId;
+  final String teacherName;
+
+  /// Scheduled periods per week (canonical: academic_timetable_periods).
+  final int periodCount;
+
+  /// DISTINCT sections this teacher is scheduled to teach.
+  final List<String> sections;
+
+  /// DISTINCT subjects: union of scheduled subject labels + assignment catalog.
+  final List<String> subjectIds;
+
+  final TeacherWorkloadStatus status;
+  final bool isOverloaded;
+}
+
+/// School aggregate for the unified workload rollup.
+@immutable
+class WorkloadRollupSummary {
+  const WorkloadRollupSummary({
+    required this.totalTeachers,
+    required this.overloaded,
+    required this.underloaded,
+    required this.balanced,
+    required this.avgPeriods,
+  });
+
+  final int totalTeachers;
+  final int overloaded;
+  final int underloaded;
+  final int balanced;
+
+  /// Mean scheduled periods across teachers (0 when there are no teachers).
+  final double avgPeriods;
+
+  static const empty = WorkloadRollupSummary(
+    totalTeachers: 0,
+    overloaded: 0,
+    underloaded: 0,
+    balanced: 0,
+    avgPeriods: 0,
+  );
+}
+
+/// The unified per-teacher workload rollup for a school + academic year: the
+/// per-teacher rows plus the school aggregate. Honest empty: [teachers] is `[]`
+/// and [summary] is all-zero when no timetable exists for the year.
+@immutable
+class WorkloadRollup {
+  const WorkloadRollup({
+    required this.teachers,
+    required this.summary,
+  });
+
+  final List<TeacherWorkloadRollup> teachers;
+  final WorkloadRollupSummary summary;
+
+  static const empty = WorkloadRollup(
+    teachers: [],
+    summary: WorkloadRollupSummary.empty,
+  );
+}
+
 @immutable
 class TimetableValidationResult {
   const TimetableValidationResult({

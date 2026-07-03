@@ -52,6 +52,35 @@ class TimetableMapper {
     );
   }
 
+  TeacherWorkloadRollup toWorkloadRollupRow(TeacherWorkloadRollupDto dto) {
+    return TeacherWorkloadRollup(
+      teacherId: dto.teacherId,
+      teacherName: dto.teacherName,
+      periodCount: dto.periodCount,
+      sections: dto.sections,
+      subjectIds: dto.subjectIds,
+      status: TeacherWorkloadStatusApi.fromApi(dto.status),
+      isOverloaded: dto.isOverloaded,
+    );
+  }
+
+  WorkloadRollupSummary toWorkloadRollupSummary(WorkloadRollupSummaryDto dto) {
+    return WorkloadRollupSummary(
+      totalTeachers: dto.totalTeachers,
+      overloaded: dto.overloaded,
+      underloaded: dto.underloaded,
+      balanced: dto.balanced,
+      avgPeriods: dto.avgPeriods,
+    );
+  }
+
+  WorkloadRollup toWorkloadRollup(WorkloadRollupDto dto) {
+    return WorkloadRollup(
+      teachers: dto.teachers.map(toWorkloadRollupRow).toList(),
+      summary: toWorkloadRollupSummary(dto.summary),
+    );
+  }
+
   TimetableConflict toConflict(TimetableConflictDto dto) {
     return TimetableConflict(
       type: TimetableConflictType.values.firstWhere(

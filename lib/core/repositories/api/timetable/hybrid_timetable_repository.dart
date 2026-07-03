@@ -37,6 +37,13 @@ class HybridTimetableRepository implements TimetableRepository {
       _api.getWorkload(query: query, academicYearId: academicYearId);
 
   @override
+  Future<WorkloadRollup> getWorkloadRollup({
+    required RepositoryQuery query,
+    required String academicYearId,
+  }) =>
+      _api.getWorkloadRollup(query: query, academicYearId: academicYearId);
+
+  @override
   Future<TimetableConflictsBundle> getConflicts({
     required RepositoryQuery query,
     required String academicYearId,

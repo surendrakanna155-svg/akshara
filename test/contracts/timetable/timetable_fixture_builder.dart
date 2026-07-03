@@ -51,6 +51,31 @@ class TimetableFixtureBuilder {
     });
   }
 
+  /// GET /academic/timetables/workload/rollup — `{ teachers: [...], summary }`.
+  Map<String, dynamic> workloadRollupEnvelope(WorkloadRollup rollup) {
+    return envelope({
+      'teachers': [
+        for (final t in rollup.teachers)
+          {
+            'teacherId': t.teacherId,
+            'teacherName': t.teacherName,
+            'periodCount': t.periodCount,
+            'sections': t.sections,
+            'subjectIds': t.subjectIds,
+            'status': t.status.name,
+            'isOverloaded': t.isOverloaded,
+          },
+      ],
+      'summary': {
+        'totalTeachers': rollup.summary.totalTeachers,
+        'overloaded': rollup.summary.overloaded,
+        'underloaded': rollup.summary.underloaded,
+        'balanced': rollup.summary.balanced,
+        'avgPeriods': rollup.summary.avgPeriods,
+      },
+    });
+  }
+
   /// GET /academic/timetables/substitutions — resolved subs + server on-leave.
   Map<String, dynamic> dailySubstitutionsEnvelope(
     DailySubstitutionsBundle bundle,

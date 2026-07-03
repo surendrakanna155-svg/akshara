@@ -61,6 +61,17 @@ class TimetableRemoteDataSource {
     return items.map((item) => TeacherWorkloadDto.fromJson(item as Map<String, dynamic>)).toList();
   }
 
+  Future<WorkloadRollupDto> fetchWorkloadRollup({
+    required RepositoryQuery query,
+    required String academicYearId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      TimetableApiPaths.workloadRollup,
+      queryParameters: {..._queryParams(query), 'academicYearId': academicYearId},
+    );
+    return WorkloadRollupDto.fromJson(parseTimetableEnvelope(_responseMap(response)));
+  }
+
   Future<Map<String, dynamic>> fetchConflicts({
     required RepositoryQuery query,
     required String academicYearId,

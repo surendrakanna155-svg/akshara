@@ -2543,4 +2543,16 @@ abstract final class QaTestKeys {
       ValueKey<String>('student_homework_attachment_field');
   static const studentHomeworkSubmitConfirmButton =
       ValueKey<String>('student_homework_submit_confirm_button');
+
+  // --- Roadmap gap #9 — Workload dashboard (timetable hub) ---
+  static const timetableWorkloadDashboard =
+      ValueKey<String>('timetable_workload_dashboard');
+  static const timetableWorkloadSummaryHeader =
+      ValueKey<String>('timetable_workload_summary_header');
+  static const timetableWorkloadEmptyState =
+      ValueKey<String>('timetable_workload_empty_state');
+  static const timetableWorkloadExportButton =
+      ValueKey<String>('timetable_workload_export_button');
+  static ValueKey<String> timetableWorkloadRow(String teacherId) =>
+      ValueKey<String>('timetable_workload_row_$teacherId');
 }

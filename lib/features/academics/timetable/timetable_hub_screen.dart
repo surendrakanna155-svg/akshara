@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reports/akshara_report_export_service.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/widgets/akshara_empty_state.dart';
 import '../../../shared/widgets/akshara_error_state.dart';
 import '../../../shared/widgets/akshara_loading_state.dart';
@@ -15,6 +17,7 @@ import 'substitutions/daily_substitutions_screen.dart';
 import 'timetable_editor_tab.dart';
 import 'timetable_models.dart';
 import 'timetable_provider.dart';
+import 'timetable_workload_exporter.dart';
 
 /// Smart Timetable hub — dashboard, generation, conflicts, workload, publish (v7.5).
 class TimetableHubScreen extends ConsumerStatefulWidget {
@@ -222,33 +225,275 @@ class _TimetableConflictsTab extends ConsumerWidget {
   }
 }
 
+/// Roadmap gap #9 — the per-teacher workload dashboard, powered by the unified
+/// rollup (`/academic/timetables/workload/rollup`). A summary header
+/// (total / over / under / balanced / avg periods) sits over a per-teacher list,
+/// each row colour-coded by status with period count + section & subject chips.
 class _TimetableWorkloadTab extends ConsumerWidget {
   const _TimetableWorkloadTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final workloadAsync = ref.watch(timetableWorkloadProvider);
-    return workloadAsync.when(
+    final rollupAsync = ref.watch(timetableWorkloadRollupProvider);
+    return rollupAsync.when(
       loading: () => const AksharaLoadingState(semanticLabel: 'Loading teacher workload'),
-      error: (_, __) => const AksharaErrorState(message: 'Unable to load teacher workload.'),
-      data: (entries) => ListView.separated(
-        padding: const EdgeInsets.all(AksharaSpacing.s4),
-        itemCount: entries.length,
-        separatorBuilder: (_, __) => const SizedBox(height: AksharaSpacing.s2),
-        itemBuilder: (context, index) {
-          final entry = entries[index];
-          return ListTile(
-            tileColor: entry.isOverloaded
-                ? Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.35)
-                : null,
-            title: Text(entry.teacherName),
-            subtitle: Text('${entry.periodCount} periods / week'),
-            trailing: entry.isOverloaded
-                ? const Chip(label: Text('Overloaded'))
-                : null,
-          );
-        },
+      error: (_, __) => AksharaErrorState(
+        message: 'Unable to load teacher workload.',
+        onRetry: () => ref.invalidate(timetableWorkloadRollupProvider),
       ),
+      data: (rollup) => TimetableWorkloadDashboard(
+        rollup: rollup,
+        onExport: () => TimetableWorkloadExporter(
+          ref.read(aksharaReportExportServiceProvider),
+        ).shareCsv(rollup),
+      ),
+    );
+  }
+}
+
+/// The presentational workload dashboard (roadmap gap #9). Renders a summary
+/// header + a per-teacher list colour-coded by over/under/balanced status with
+/// section & subject chips, or an honest empty state when [rollup] has no
+/// teachers. Pure widget over a [WorkloadRollup] so it's directly testable.
+class TimetableWorkloadDashboard extends StatelessWidget {
+  const TimetableWorkloadDashboard({
+    super.key,
+    required this.rollup,
+    this.onExport,
+  });
+
+  final WorkloadRollup rollup;
+  final VoidCallback? onExport;
+
+  @override
+  Widget build(BuildContext context) {
+    // Honest empty state: no scheduled grid → no workload to show.
+    if (rollup.teachers.isEmpty) {
+      return const AksharaEmptyState(
+        key: QaTestKeys.timetableWorkloadEmptyState,
+        title: 'No workload yet',
+        message: 'Generate and publish a timetable to see per-teacher workload.',
+        icon: Icons.balance_outlined,
+      );
+    }
+    return ListView(
+      key: QaTestKeys.timetableWorkloadDashboard,
+      padding: const EdgeInsets.all(AksharaSpacing.s4),
+      children: [
+        _WorkloadSummaryHeader(summary: rollup.summary),
+        const SizedBox(height: AksharaSpacing.s3),
+        if (onExport != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              key: QaTestKeys.timetableWorkloadExportButton,
+              icon: const Icon(Icons.download_outlined, size: 18),
+              label: const Text('Export CSV'),
+              onPressed: onExport,
+            ),
+          ),
+        const SizedBox(height: AksharaSpacing.s2),
+        for (final teacher in rollup.teachers)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+            child: _WorkloadTeacherCard(teacher: teacher),
+          ),
+      ],
+    );
+  }
+}
+
+class _WorkloadSummaryHeader extends StatelessWidget {
+  const _WorkloadSummaryHeader({required this.summary});
+
+  final WorkloadRollupSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final akshara = context.akshara;
+    return Card(
+      key: QaTestKeys.timetableWorkloadSummaryHeader,
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Teacher workload', style: context.aksharaText.titleMedium),
+            const SizedBox(height: AksharaSpacing.s3),
+            Wrap(
+              spacing: AksharaSpacing.s3,
+              runSpacing: AksharaSpacing.s3,
+              children: [
+                _SummaryStat(label: 'Teachers', value: '${summary.totalTeachers}'),
+                _SummaryStat(
+                  label: 'Overloaded',
+                  value: '${summary.overloaded}',
+                  color: context.colors.error,
+                ),
+                _SummaryStat(
+                  label: 'Underloaded',
+                  value: '${summary.underloaded}',
+                  color: akshara.warning,
+                ),
+                _SummaryStat(
+                  label: 'Balanced',
+                  value: '${summary.balanced}',
+                  color: akshara.success,
+                ),
+                _SummaryStat(
+                  label: 'Avg periods',
+                  value: _formatAvg(summary.avgPeriods),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _formatAvg(double value) {
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(1);
+  }
+}
+
+class _SummaryStat extends StatelessWidget {
+  const _SummaryStat({required this.label, required this.value, this.color});
+
+  final String label;
+  final String value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 96,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: context.aksharaText.headlineSmall.copyWith(color: color),
+          ),
+          Text(label, style: context.aksharaText.labelMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkloadTeacherCard extends StatelessWidget {
+  const _WorkloadTeacherCard({required this.teacher});
+
+  final TeacherWorkloadRollup teacher;
+
+  @override
+  Widget build(BuildContext context) {
+    final (accent, statusLabel) = _statusStyle(context, teacher.status);
+    return Card(
+      key: QaTestKeys.timetableWorkloadRow(teacher.teacherId),
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: AksharaSpacing.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        teacher.teacherName,
+                        style: context.aksharaText.titleSmall,
+                      ),
+                      Text(
+                        '${teacher.periodCount} periods / week',
+                        style: context.aksharaText.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                Chip(
+                  label: Text(statusLabel),
+                  backgroundColor: accent.withValues(alpha: 0.15),
+                  side: BorderSide(color: accent),
+                  labelStyle: context.aksharaText.labelSmall.copyWith(color: accent),
+                ),
+              ],
+            ),
+            if (teacher.sections.isNotEmpty) ...[
+              const SizedBox(height: AksharaSpacing.s2),
+              _ChipRow(
+                icon: Icons.class_outlined,
+                labels: teacher.sections,
+              ),
+            ],
+            if (teacher.subjectIds.isNotEmpty) ...[
+              const SizedBox(height: AksharaSpacing.s2),
+              _ChipRow(
+                icon: Icons.menu_book_outlined,
+                labels: teacher.subjectIds,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  (Color, String) _statusStyle(BuildContext context, TeacherWorkloadStatus status) {
+    final akshara = context.akshara;
+    return switch (status) {
+      TeacherWorkloadStatus.over => (context.colors.error, 'Overloaded'),
+      TeacherWorkloadStatus.under => (akshara.warning, 'Under-utilised'),
+      TeacherWorkloadStatus.balanced => (akshara.success, 'Balanced'),
+    };
+  }
+}
+
+class _ChipRow extends StatelessWidget {
+  const _ChipRow({required this.icon, required this.labels});
+
+  final IconData icon;
+  final List<String> labels;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: AksharaSpacing.s1),
+          child: Icon(icon, size: 16, color: context.colors.onSurfaceVariant),
+        ),
+        const SizedBox(width: AksharaSpacing.s2),
+        Expanded(
+          child: Wrap(
+            spacing: AksharaSpacing.s2,
+            runSpacing: AksharaSpacing.s1,
+            children: [
+              for (final label in labels)
+                Chip(
+                  label: Text(label),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  labelStyle: context.aksharaText.labelSmall,
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
