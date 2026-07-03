@@ -37,6 +37,8 @@ import '../features/parent/communication/parent_communication_detail_screen.dart
 import '../features/parent/messages/parent_messages_screen.dart';
 import '../features/parent/shell/parent_shell.dart';
 import '../features/parent/ptm/parent_ptm_screen.dart';
+import '../features/parent/family/parent_family_view_screen.dart';
+import '../features/parent/actions/parent_action_inbox_screen.dart';
 import '../features/parent/transport/parent_transport_screen.dart';
 import '../features/parent/timetable/parent_timetable_screen.dart';
 import '../features/student_app/progress/student_progress_screen.dart';
@@ -314,6 +316,20 @@ GoRouter createAppRouter({
             name: 'parentPtm',
             pageBuilder: (context, state) => NoTransitionPage(
               child: parentPtmRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentFamily,
+            name: 'parentFamily',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentFamilyRouteBuilder(context, state),
+            ),
+          ),
+          GoRoute(
+            path: RouteNames.parentActionInbox,
+            name: 'parentActionInbox',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: parentActionInboxRouteBuilder(context, state),
             ),
           ),
           GoRoute(
@@ -2591,6 +2607,26 @@ Widget parentPtmRouteBuilder(BuildContext context, GoRouterState state) {
   }
   return ParentPtmScreen(
     onNotificationsTap: () => context.push(RouteNames.parentNotifications),
+  );
+}
+
+/// PAR-D2 — consolidated "all my children" family view.
+Widget parentFamilyRouteBuilder(BuildContext context, GoRouterState state) {
+  return ParentFamilyViewScreen(
+    onChildSelected: () => context.go(RouteNames.parentDashboard),
+  );
+}
+
+/// PAR-D4 — consolidated "what needs my action" inbox for the active child.
+Widget parentActionInboxRouteBuilder(BuildContext context, GoRouterState state) {
+  return Consumer(
+    builder: (context, ref, _) {
+      return ParentActionInboxScreen(
+        onActionTap: (actionId) =>
+            handleParentDashboardNavigation(context, actionId, ref: ref),
+        onNotificationsTap: () => context.push(RouteNames.parentNotifications),
+      );
+    },
   );
 }
 

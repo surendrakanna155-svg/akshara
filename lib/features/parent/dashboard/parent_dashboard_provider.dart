@@ -91,6 +91,13 @@ class ParentDashboardData {
           label: 'PTM',
           icon: Icons.groups_outlined,
         ),
+        // PAR-2 — Apply Leave promoted onto the dashboard quick-actions grid
+        // (previously reachable only via the "More" sheet).
+        DashboardQuickAction(
+          id: 'apply_leave',
+          label: 'Apply Leave',
+          icon: Icons.event_busy_outlined,
+        ),
       ],
       todaySummary: [
         TodaySummaryItem(

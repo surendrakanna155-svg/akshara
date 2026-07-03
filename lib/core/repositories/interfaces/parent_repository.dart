@@ -45,6 +45,26 @@ abstract class ParentRepository {
     required ParentLeaveSubmitRequest request,
   });
 
+  /// PAR-D1 — cancel/withdraw a PENDING leave the parent submitted for their OWN
+  /// child. Own-child + pending-only guards are enforced server-side; an
+  /// already-decided leave surfaces a 409 (LEAVE_NOT_PENDING) the caller shows
+  /// as "already decided". Wired to `POST /parent/leave/:id/cancel`.
+  Future<ParentLeaveCancelResult> cancelLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveId,
+  });
+
+  /// PAR-3 — attach a medical-certificate reference (file name + optional
+  /// storage path) to a PENDING own-child leave. Follows the HWK-7 attachment-
+  /// reference pattern (a reference/label; real upload pending storage). Wired
+  /// to `POST /parent/leave/:id/attachment`.
+  Future<ParentLeaveAttachmentResult> attachLeaveDocument({
+    required RepositoryQuery query,
+    required String leaveId,
+    required String fileName,
+    String? storagePath,
+  });
+
   Future<PaymentInitiationResult> initiatePayment({
     required RepositoryQuery query,
     required ParentPaymentInitiateRequest request,

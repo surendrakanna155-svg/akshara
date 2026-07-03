@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/config/staging_probe_ids.dart';
 import '../../core/repositories/repository_query.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../auth/auth_models.dart';
@@ -19,15 +18,13 @@ import 'profile/parent_profile_provider.dart';
 import 'receipts/parent_receipts_provider.dart';
 import 'timetable/parent_timetable_provider.dart';
 
-/// Maps parent auth child IDs to student IDs used by Phase 5 / SIS APIs.
-const Map<String, String> kParentChildToStudentId = {
-  'child-ravi': StagingProbeIds.studentAId,
-  'child-priya': StagingProbeIds.studentBId,
-  'child_ravi': StagingProbeIds.studentAId,
-  'child_ananya': StagingProbeIds.studentBId,
-};
-
-/// Profile mock IDs → auth session IDs.
+/// Profile-module child id ⇆ canonical active child id.
+///
+/// The profile module historically keyed a child by an underscore variant
+/// (`child_ravi`) while the auth/JWT `child_ids` value is the canonical id
+/// (`child-ravi`). These maps ONLY bridge that presentation-layer key — they
+/// are NOT an identity source. A student's identity is always the auth-backed
+/// child id from `child_ids`; never a client-supplied / hardcoded SIS id.
 const Map<String, String> kProfileChildToAuthId = {
   'child_ravi': 'child-ravi',
   'child_ananya': 'child-priya',
@@ -40,9 +37,6 @@ const Map<String, String> kAuthChildToProfileId = {
   'child-priya': 'child_ananya',
 };
 
-String parentStudentIdForChild(String childId) =>
-    kParentChildToStudentId[childId] ?? childId;
-
 /// Canonical active child for all parent modules (auth-backed).
 final parentActiveChildProvider = Provider<LinkedChild?>((ref) {
   final auth = ref.watch(authProvider);
@@ -51,11 +45,16 @@ final parentActiveChildProvider = Provider<LinkedChild?>((ref) {
       (auth.linkedChildren.isNotEmpty ? auth.linkedChildren.first : null);
 });
 
-/// Student ID for repository/API calls derived from active child.
+/// Student ID for repository/API calls, derived from the active child.
+///
+/// This is the auth-backed child id present in the JWT `child_ids` claim — the
+/// canonical student identity. It is NEVER a client-supplied or hardcoded SIS
+/// id; the backend re-validates membership against `child_ids` and 403s an
+/// unlinked child. Empty when no child is resolved (unauthenticated / no linked
+/// children), so callers fall through rather than leaking a demo student.
 final parentActiveStudentIdProvider = Provider<String>((ref) {
   final child = ref.watch(parentActiveChildProvider);
-  if (child == null) return StagingProbeIds.studentAId;
-  return parentStudentIdForChild(child.id);
+  return child?.id ?? '';
 });
 
 /// Tenant query scoped to the active child for ALL parent reads.

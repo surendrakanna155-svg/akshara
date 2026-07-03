@@ -34,6 +34,8 @@ void main() {
           .read(submitParentAttendanceCorrectionProvider.notifier)
           .execute(
             const ParentAttendanceCorrectionRequest(
+              // Real child id from the auth/child_ids path (no hardcoded SIS id).
+              sisStudentId: 'child-ravi',
               childName: 'Ravi Kumar',
               classLabel: '8-A',
               dateLabel: '5 Jun 2026',

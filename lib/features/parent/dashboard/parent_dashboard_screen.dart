@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/layout/mobile_dashboard_layout.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../auth/auth_provider.dart';
 import '../../notifications/notifications_provider.dart';
 import '../parent_active_child_provider.dart';
 import '../widgets/parent_child_switcher_sheet.dart';
@@ -16,6 +17,7 @@ import '../../../theme/theme_extensions.dart';
 import 'parent_dashboard_provider.dart';
 import 'widgets/event_card.dart';
 import 'widgets/notice_carousel.dart';
+import 'widgets/parent_reminder_banners.dart';
 
 /// Parent home dashboard — PA-01 `PA-01-ParentDashboard-M`.
 class ParentDashboardScreen extends ConsumerWidget {
@@ -36,6 +38,10 @@ class ParentDashboardScreen extends ConsumerWidget {
     final academic = ref.watch(parentAcademicSummaryProvider);
     final unreadNotifications = ref.watch(unreadNotificationsCountProvider);
     final activeChild = ref.watch(parentActiveChildProvider);
+    // PAR-D2 — the family view is only meaningful when >1 child is linked.
+    final isMultiChild = ref.watch(
+      authProvider.select((auth) => auth.linkedChildren.length > 1),
+    );
 
     return Scaffold(
       key: QaTestKeys.parentDashboardScreen,
@@ -90,6 +96,31 @@ class ParentDashboardScreen extends ConsumerWidget {
                         todaySummary: data.todaySummary,
                       ),
                       const SizedBox(height: AksharaSpacing.s4),
+                      // PAR-5 — deterministic, multi-type reminder banners from
+                      // real module data (fees/PTM/forms/homework/exams).
+                      ParentReminderBanners(
+                        onActionTap: _navigate,
+                      ),
+                      // PAR-D4 — "what needs my action" inbox entry point.
+                      AksharaSurfaceListTile(
+                        icon: Icons.checklist_outlined,
+                        title: 'Action Needed',
+                        subtitle:
+                            'Fees, meetings, forms & homework that need you',
+                        onTap: () => _navigate('action_inbox'),
+                      ),
+                      // PAR-D2 — family view (multi-child parents only).
+                      if (isMultiChild) ...[
+                        const SizedBox(height: AksharaSpacing.s3),
+                        AksharaSurfaceListTile(
+                          icon: Icons.family_restroom_outlined,
+                          title: 'My Children',
+                          subtitle:
+                              'A snapshot of all your children in one place',
+                          onTap: () => _navigate('family_view'),
+                        ),
+                      ],
+                      const SizedBox(height: AksharaSpacing.s3),
                       academic.when(
                         loading: () => const SizedBox.shrink(),
                         error: (_, __) => AksharaSectionError(

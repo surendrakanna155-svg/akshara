@@ -22,6 +22,33 @@ class ParentLeaveSubmitRequest {
   final String? attachmentName;
 }
 
+/// Result of cancelling a pending leave (PAR-D1). Mirrors the backend
+/// `POST /parent/leave/:id/cancel` envelope `{ id, status }`.
+class ParentLeaveCancelResult {
+  const ParentLeaveCancelResult({
+    required this.id,
+    required this.status,
+  });
+
+  final String id;
+  final LeaveStatus status;
+}
+
+/// Result of attaching a medical-cert reference to a pending leave (PAR-3).
+/// Mirrors the backend `POST /parent/leave/:id/attachment` envelope
+/// `{ id, hasAttachment, attachmentName }`.
+class ParentLeaveAttachmentResult {
+  const ParentLeaveAttachmentResult({
+    required this.id,
+    required this.hasAttachment,
+    required this.attachmentName,
+  });
+
+  final String id;
+  final bool hasAttachment;
+  final String attachmentName;
+}
+
 /// Domain request to initiate an online fee payment.
 class ParentPaymentInitiateRequest {
   const ParentPaymentInitiateRequest({
@@ -64,13 +91,13 @@ class ParentMessageSendRequest {
 /// Parent request to dispute / correct recorded attendance.
 class ParentAttendanceCorrectionRequest {
   const ParentAttendanceCorrectionRequest({
+    required this.sisStudentId,
     required this.childName,
     required this.classLabel,
     required this.dateLabel,
     required this.fromMark,
     required this.toMark,
     required this.reason,
-    this.sisStudentId = 'SIS-STU-RAVI-001',
   });
 
   final String sisStudentId;

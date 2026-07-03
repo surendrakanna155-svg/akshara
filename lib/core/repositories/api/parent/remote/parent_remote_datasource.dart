@@ -185,6 +185,40 @@ class ParentRemoteDataSource {
     return ParentLeaveRequestDto.fromJson(data);
   }
 
+  /// PAR-D1 — cancel a PENDING own-child leave. Returns the envelope data
+  /// `{ id, status }`. A 409 (LEAVE_NOT_PENDING) / 404 propagates as a
+  /// [DioException] the mapper turns into a friendly failure.
+  Future<Map<String, dynamic>> cancelLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ParentApiPaths.leaveCancel(leaveId),
+      queryParameters: _queryParams(query),
+    );
+    return _requireData(response);
+  }
+
+  /// PAR-3 — attach a medical-cert reference to a PENDING own-child leave.
+  /// Returns the envelope data `{ id, hasAttachment, attachmentName }`.
+  Future<Map<String, dynamic>> attachLeaveDocument({
+    required RepositoryQuery query,
+    required String leaveId,
+    required String fileName,
+    String? storagePath,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ParentApiPaths.leaveAttachment(leaveId),
+      queryParameters: _queryParams(query),
+      data: {
+        'fileName': fileName,
+        if (storagePath != null && storagePath.isNotEmpty)
+          'storagePath': storagePath,
+      },
+    );
+    return _requireData(response);
+  }
+
   /// Routes a pilot-critical write through the reliability platform when a
   /// [ReliableWriter] is available; otherwise a direct Dio call (legacy/online).
   /// Returns the response `data` map — the server row when confirmed, or

@@ -6,6 +6,16 @@ abstract class ParentMeetingsRepository {
     required RepositoryQuery query,
   });
 
+  /// PAR-1 — record the active parent's RSVP against a meeting for one of their
+  /// OWN children (own-child scope is enforced server-side against the JWT
+  /// `child_ids`). Returns the refreshed meeting reflecting the recorded RSVP.
+  Future<ParentMeetingRecord> rsvpMeeting({
+    required RepositoryQuery query,
+    required String meetingId,
+    required MeetingRsvpResponse response,
+    String? note,
+  });
+
   Future<ParentMeetingRecord> createMeeting({
     required RepositoryQuery query,
     required String studentId,

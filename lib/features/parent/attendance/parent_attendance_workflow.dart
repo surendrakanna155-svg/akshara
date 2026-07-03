@@ -5,6 +5,7 @@ import '../../../core/testing/qa_test_keys.dart';
 import '../../../shared/forms/akshara_form_field.dart';
 import '../../../shared/widgets/akshara_dialog.dart';
 import '../../../shared/widgets/akshara_motion.dart';
+import '../parent_active_child_provider.dart';
 import '../parent_mutations_provider.dart';
 import '../parent_requests.dart';
 import 'attendance_models.dart';
@@ -57,11 +58,16 @@ Future<void> showParentAttendanceCorrectionDialog(
 
   final messenger = scaffoldMessenger ?? ScaffoldMessenger.of(context);
 
+  // Never trust a client-supplied student id: resolve the active child's real
+  // id from the auth/child_ids path (validated server-side against child_ids).
+  final activeStudentId = ref.read(parentActiveStudentIdProvider);
+
   try {
     final result = await ref
         .read(submitParentAttendanceCorrectionProvider.notifier)
         .execute(
           ParentAttendanceCorrectionRequest(
+            sisStudentId: activeStudentId,
             childName: childName,
             classLabel: childClass,
             dateLabel: log.detailTitle,

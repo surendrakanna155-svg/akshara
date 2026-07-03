@@ -84,6 +84,18 @@ void main() {
               _fixtures.paymentInitiationEnvelope(paymentInitiation),
             ParentApiPaths.paymentsConfirm =>
               _fixtures.paymentConfirmationEnvelope(paymentConfirmation),
+            // PAR-D1 / PAR-3 leave write endpoints.
+            _ when path.endsWith('/cancel') =>
+              _fixtures.envelope(<String, dynamic>{
+                'id': submittedLeave.id,
+                'status': 'cancelled',
+              }),
+            _ when path.endsWith('/attachment') =>
+              _fixtures.envelope(<String, dynamic>{
+                'id': submittedLeave.id,
+                'hasAttachment': true,
+                'attachmentName': 'medical_cert.pdf',
+              }),
             _ => const {'data': {}},
           };
         }
@@ -172,6 +184,22 @@ void main() {
         ),
       );
       expect(confirmation.raw['receiptId'], paymentConfirmation.receiptId);
+
+      // PAR-D1 — cancel POSTs to /parent/leave/:id/cancel and returns {id,status}.
+      final cancelled = await remote.cancelLeaveRequest(
+        query: kQuery,
+        leaveId: submittedLeave.id,
+      );
+      expect(cancelled['status'], 'cancelled');
+
+      // PAR-3 — attach POSTs to /parent/leave/:id/attachment.
+      final attached = await remote.attachLeaveDocument(
+        query: kQuery,
+        leaveId: submittedLeave.id,
+        fileName: 'medical_cert.pdf',
+      );
+      expect(attached['hasAttachment'], true);
+      expect(attached['attachmentName'], 'medical_cert.pdf');
     });
 
     test('api repository matches mock dashboard data', () async {

@@ -128,6 +128,31 @@ class ApiParentRepository implements ParentRepository {
   }
 
   @override
+  Future<ParentLeaveCancelResult> cancelLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveId,
+  }) async {
+    final raw = await _remote.cancelLeaveRequest(query: query, leaveId: leaveId);
+    return _mapper.toLeaveCancelResult(raw);
+  }
+
+  @override
+  Future<ParentLeaveAttachmentResult> attachLeaveDocument({
+    required RepositoryQuery query,
+    required String leaveId,
+    required String fileName,
+    String? storagePath,
+  }) async {
+    final raw = await _remote.attachLeaveDocument(
+      query: query,
+      leaveId: leaveId,
+      fileName: fileName,
+      storagePath: storagePath,
+    );
+    return _mapper.toLeaveAttachmentResult(raw);
+  }
+
+  @override
   Future<PaymentInitiationResult> initiatePayment({
     required RepositoryQuery query,
     required ParentPaymentInitiateRequest request,

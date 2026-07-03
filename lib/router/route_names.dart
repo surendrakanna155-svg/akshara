@@ -31,6 +31,8 @@ abstract final class RouteNames {
   static const String parentMessages = '/parent/messages';
   static const String parentTransport = '/parent/transport';
   static const String parentPtm = '/parent/ptm';
+  static const String parentFamily = '/parent/family';
+  static const String parentActionInbox = '/parent/action-inbox';
   static const String parentNotifications = '/parent/notifications';
 
   static String parentReceiptDetail(String receiptId) =>

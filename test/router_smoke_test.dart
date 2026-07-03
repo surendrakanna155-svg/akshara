@@ -134,6 +134,8 @@ void main() {
         (RouteNames.parentPayment, 'Pay Fee'),
         (RouteNames.parentReceipts, 'Receipts'),
         (RouteNames.parentLeave, 'Leave Requests'),
+        (RouteNames.parentActionInbox, 'Action Needed'),
+        (RouteNames.parentFamily, 'My Children'),
       ];
 
       for (final (route, title) in routes) {

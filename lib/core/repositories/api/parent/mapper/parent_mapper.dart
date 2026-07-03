@@ -8,6 +8,7 @@ import '../../../../../features/parent/fees/fees_provider.dart';
 import '../../../../../features/parent/homework/homework_models.dart';
 import '../../../../../features/parent/leave/leave_models.dart';
 import '../../../../../features/parent/notices/notices_models.dart';
+import '../../../../../features/parent/parent_requests.dart';
 import '../../../../../features/parent/payment/payment_models.dart';
 import '../../../../../features/parent/profile/profile_models.dart';
 import '../../../../../features/parent/receipts/receipt_models.dart';
@@ -183,6 +184,21 @@ class ParentMapper {
       timeline: _mapLeaveTimeline(raw['timeline'] as List<dynamic>? ?? const []),
       hasAttachment: raw['hasAttachment'] as bool? ?? false,
       attachmentName: raw['attachmentName'] as String?,
+    );
+  }
+
+  ParentLeaveCancelResult toLeaveCancelResult(Map<String, dynamic> raw) {
+    return ParentLeaveCancelResult(
+      id: raw['id'] as String? ?? '',
+      status: ParentEnumCodec.parseLeaveStatus(raw['status'] as String?),
+    );
+  }
+
+  ParentLeaveAttachmentResult toLeaveAttachmentResult(Map<String, dynamic> raw) {
+    return ParentLeaveAttachmentResult(
+      id: raw['id'] as String? ?? '',
+      hasAttachment: raw['hasAttachment'] as bool? ?? true,
+      attachmentName: raw['attachmentName'] as String? ?? '',
     );
   }
 

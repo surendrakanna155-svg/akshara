@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/testing/qa_test_keys.dart';
 import '../../../../theme/spacing.dart';
 import '../../../../theme/theme_extensions.dart';
 import '../leave_models.dart';
@@ -96,21 +97,20 @@ class LeaveApplyForm extends ConsumerWidget {
                 .state = draft.copyWith(reason: value),
           ),
           const SizedBox(height: AksharaSpacing.s3),
+          // PAR-3 — medical-cert attachment REFERENCE (HWK-7 pattern: a file
+          // name / label, since a real parent storage bucket is deferred). The
+          // parent enters the document's name; on submit it is sent to the
+          // leave and, once the leave exists, to attachLeaveDocument.
           OutlinedButton.icon(
+            key: QaTestKeys.parentLeaveAttachmentButton,
             onPressed: isSubmitting
                 ? null
-                : () {
-                    ref.read(leaveApplyDraftProvider.notifier).state =
-                        draft.copyWith(
-                      hasAttachment: true,
-                      attachmentName: 'supporting_document.pdf',
-                    );
-                  },
+                : () => _promptAttachmentReference(context, ref, draft),
             icon: const Icon(Icons.attach_file_outlined),
             label: Text(
               draft.hasAttachment
                   ? (draft.attachmentName ?? 'Attachment added')
-                  : 'Add attachment (optional)',
+                  : 'Add medical certificate (optional)',
             ),
           ),
           const SizedBox(height: AksharaSpacing.s4),
@@ -133,5 +133,72 @@ class LeaveApplyForm extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// PAR-3 — collects an attachment REFERENCE (a file name / label). No real
+  /// upload: the reference is persisted on the leave (HWK-7 pattern) so the
+  /// school/HR side sees a medical certificate was cited; wiring a real parent
+  /// storage bucket is the documented residual.
+  Future<void> _promptAttachmentReference(
+    BuildContext context,
+    WidgetRef ref,
+    LeaveApplyDraft draft,
+  ) async {
+    final controller = TextEditingController(text: draft.attachmentName ?? '');
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Medical certificate'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter the document name / label to attach as a reference.',
+              ),
+              const SizedBox(height: AksharaSpacing.s3),
+              TextField(
+                key: QaTestKeys.parentLeaveAttachmentField,
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Document name',
+                  hintText: 'e.g. Dr Rao medical certificate.pdf',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            if (draft.hasAttachment)
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(''),
+                child: const Text('Remove'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              key: QaTestKeys.parentLeaveAttachmentConfirmButton,
+              onPressed: () =>
+                  Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('Attach'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // null = cancelled (no change); '' = remove; otherwise set the reference.
+    if (result == null) return;
+    final notifier = ref.read(leaveApplyDraftProvider.notifier);
+    if (result.isEmpty) {
+      notifier.state = draft.copyWith(hasAttachment: false, attachmentName: '');
+      return;
+    }
+    notifier.state =
+        draft.copyWith(hasAttachment: true, attachmentName: result);
   }
 }

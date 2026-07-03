@@ -45,21 +45,21 @@ class ApiParentMeetingsRepository implements ParentMeetingsRepository {
     ];
   }
 
-  /// Record the parent's RSVP against a meeting. Returns the refreshed record.
-  ///
-  /// Not on [ParentMeetingsRepository] (the shared interface predates the
-  /// parent RSVP route); exposed for the parent PTM screen to call directly.
-  Future<ParentMeetingRecord> rsvp({
+  /// PAR-1 — record the parent's RSVP against a meeting. Returns the refreshed
+  /// record. Wired to `POST /parent/meetings/:id/rsvp`; own-child scope is
+  /// enforced server-side against the JWT `child_ids`.
+  @override
+  Future<ParentMeetingRecord> rsvpMeeting({
     required RepositoryQuery query,
     required String meetingId,
-    required String response,
+    required MeetingRsvpResponse response,
     String? note,
   }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '$_base/$meetingId/rsvp',
       queryParameters: _queryParams(query),
       data: {
-        'response': response,
+        'response': response.wireValue,
         if (note != null) 'note': note,
       },
     );
@@ -144,6 +144,18 @@ class ApiParentMeetingsRepository implements ParentMeetingsRepository {
       actionItems: _toActionItems(raw['actionItems'] as List<dynamic>? ?? const []),
       followUps: _toFollowUps(raw['followUps'] as List<dynamic>? ?? const []),
       lastUpdatedAt: DateTime.tryParse(raw['lastUpdatedAt'] as String? ?? ''),
+      rsvp: _toRsvp(raw['rsvp']),
+    );
+  }
+
+  MeetingRsvp? _toRsvp(dynamic raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    final response = MeetingRsvpResponseX.tryParse(raw['response'] as String?);
+    if (response == null) return null;
+    return MeetingRsvp(
+      response: response,
+      note: raw['note'] as String?,
+      respondedAtLabel: raw['respondedAt'] as String?,
     );
   }
 

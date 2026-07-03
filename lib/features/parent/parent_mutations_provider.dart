@@ -13,9 +13,11 @@ import '../../core/security/permissions.dart';
 import '../../core/security/rbac_service.dart';
 import '../../core/tenant/tenant_provider.dart';
 import '../../features/auth/auth_provider.dart';
+import '../parent_meetings/parent_meeting_models.dart';
 import 'fees/fees_provider.dart';
 import 'leave/leave_models.dart';
 import 'leave/parent_leave_provider.dart';
+import 'parent_active_child_provider.dart';
 import 'parent_audit.dart';
 import 'parent_requests.dart';
 import 'payment/payment_models.dart';
@@ -133,6 +135,154 @@ class SubmitParentLeaveNotifier extends AsyncNotifier<LeaveRequest?> {
 final submitParentLeaveProvider =
     AsyncNotifierProvider<SubmitParentLeaveNotifier, LeaveRequest?>(
   SubmitParentLeaveNotifier.new,
+);
+
+/// PAR-D1 — cancel/withdraw a PENDING leave for the active child. Own-child +
+/// pending-only guards are enforced server-side; a 409 (already decided) is
+/// re-thrown so the screen can surface a friendly message. Audited.
+class CancelParentLeaveNotifier
+    extends AsyncNotifier<ParentLeaveCancelResult?> {
+  @override
+  FutureOr<ParentLeaveCancelResult?> build() => null;
+
+  Future<ParentLeaveCancelResult?> execute(String leaveId) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final rbac = ref.read(rbacServiceProvider);
+      if (!rbac.hasPermission(Permission.submitStudentLeave)) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'You do not have permission to cancel this leave.',
+            code: 'RBAC_SUBMITSTUDENTLEAVE',
+          ),
+        );
+      }
+      return _runMutation(
+        ref,
+        auditAction: 'cancelLeaveRequest',
+        entityId: leaveId,
+        metadata: {'leaveId': leaveId},
+        invalidateLeaveHistory: true,
+        action: () => ref.read(parentRepositoryProvider).cancelLeaveRequest(
+              query: ref.read(parentRepositoryQueryProvider),
+              leaveId: leaveId,
+            ),
+      );
+    });
+    // Re-throw the failure so the caller's try/catch surfaces the 409 message.
+    final err = state.error;
+    if (err != null) throw err;
+    return state.valueOrNull;
+  }
+}
+
+final cancelParentLeaveProvider =
+    AsyncNotifierProvider<CancelParentLeaveNotifier, ParentLeaveCancelResult?>(
+  CancelParentLeaveNotifier.new,
+);
+
+/// PAR-3 — attach a medical-cert reference to a PENDING leave (own-child). The
+/// reference is a file name / label (HWK-7 attachment-reference pattern);
+/// wiring a real storage bucket is a documented residual. Audited.
+class AttachParentLeaveDocumentNotifier
+    extends AsyncNotifier<ParentLeaveAttachmentResult?> {
+  @override
+  FutureOr<ParentLeaveAttachmentResult?> build() => null;
+
+  Future<ParentLeaveAttachmentResult?> execute({
+    required String leaveId,
+    required String fileName,
+    String? storagePath,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final rbac = ref.read(rbacServiceProvider);
+      if (!rbac.hasPermission(Permission.submitStudentLeave)) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'You do not have permission to attach to this leave.',
+            code: 'RBAC_SUBMITSTUDENTLEAVE',
+          ),
+        );
+      }
+      return _runMutation(
+        ref,
+        auditAction: 'attachLeaveDocument',
+        entityId: leaveId,
+        metadata: {'leaveId': leaveId, 'attachmentName': fileName},
+        invalidateLeaveHistory: true,
+        action: () => ref.read(parentRepositoryProvider).attachLeaveDocument(
+              query: ref.read(parentRepositoryQueryProvider),
+              leaveId: leaveId,
+              fileName: fileName,
+              storagePath: storagePath,
+            ),
+      );
+    });
+    final err = state.error;
+    if (err != null) throw err;
+    return state.valueOrNull;
+  }
+}
+
+final attachParentLeaveDocumentProvider = AsyncNotifierProvider<
+    AttachParentLeaveDocumentNotifier, ParentLeaveAttachmentResult?>(
+  AttachParentLeaveDocumentNotifier.new,
+);
+
+/// PAR-1 — record the parent's RSVP against a PTM meeting for their OWN child.
+/// Own-child scope is enforced server-side against the JWT `child_ids`; audited.
+class RsvpParentMeetingNotifier extends AsyncNotifier<ParentMeetingRecord?> {
+  @override
+  FutureOr<ParentMeetingRecord?> build() => null;
+
+  Future<ParentMeetingRecord?> execute({
+    required String meetingId,
+    required MeetingRsvpResponse response,
+    String? note,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final rbac = ref.read(rbacServiceProvider);
+      if (!rbac.hasPermission(Permission.viewParentExperience)) {
+        throw ApiFailureException(
+          const ApiFailure(
+            type: ApiFailureType.forbidden,
+            message: 'You do not have permission to respond to this meeting.',
+            code: 'RBAC_VIEWPARENTEXPERIENCE',
+          ),
+        );
+      }
+      final record = await ref
+          .read(parentMeetingsRepositoryProvider)
+          .rsvpMeeting(
+            query: ref.read(parentRepositoryQueryProvider),
+            meetingId: meetingId,
+            response: response,
+            note: note,
+          );
+      await recordParentAudit(
+        ref,
+        action: 'rsvpMeeting',
+        entityId: meetingId,
+        metadata: {'response': response.wireValue},
+      );
+      return record;
+    });
+    final err = state.error;
+    if (err != null) throw err;
+    return state.valueOrNull;
+  }
+}
+
+final rsvpParentMeetingProvider =
+    AsyncNotifierProvider<RsvpParentMeetingNotifier, ParentMeetingRecord?>(
+  RsvpParentMeetingNotifier.new,
 );
 
 class InitiateParentPaymentNotifier extends AsyncNotifier<PaymentInitiationResult?> {

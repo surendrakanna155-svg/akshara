@@ -289,5 +289,46 @@ abstract final class SchoolContentTranslationCatalog {
     AksharaLanguage.urdu:
         'بار بار ہوم ورک میں کمی نوٹ ہوئی۔ بروقت جمع کرانے کے لیے والدین سے مدد درکار ہے۔',
   },
+  // --- PAR-5 in-app reminder banner copy (deterministic — no LLM) -------------
+  'Fee payment is due': {
+    AksharaLanguage.telugu: 'ఫీజు చెల్లింపు బాకీ ఉంది',
+    AksharaLanguage.hindi: 'फीस भुगतान देय है',
+    AksharaLanguage.tamil: 'கட்டணம் செலுத்த வேண்டியுள்ளது',
+    AksharaLanguage.kannada: 'ಶುಲ್ಕ ಪಾವತಿ ಬಾಕಿ ಇದೆ',
+    AksharaLanguage.malayalam: 'ഫീസ് അടയ്ക്കാൻ ബാക്കിയുണ്ട്',
+    AksharaLanguage.urdu: 'فیس کی ادائیگی واجب ہے',
+  },
+  'An exam is coming up': {
+    AksharaLanguage.telugu: 'ఒక పరీక్ష రాబోతోంది',
+    AksharaLanguage.hindi: 'एक परीक्षा आने वाली है',
+    AksharaLanguage.tamil: 'ஒரு தேர்வு வரவிருக்கிறது',
+    AksharaLanguage.kannada: 'ಒಂದು ಪರೀಕ್ಷೆ ಬರಲಿದೆ',
+    AksharaLanguage.malayalam: 'ഒരു പരീക്ഷ വരാനിരിക്കുന്നു',
+    AksharaLanguage.urdu: 'ایک امتحان آنے والا ہے',
+  },
+  'A parent-teacher meeting is scheduled': {
+    AksharaLanguage.telugu: 'పేరెంట్-టీచర్ సమావేశం షెడ్యూల్ చేయబడింది',
+    AksharaLanguage.hindi: 'अभिभावक-शिक्षक बैठक निर्धारित है',
+    AksharaLanguage.tamil: 'பெற்றோர்-ஆசிரியர் கூட்டம் திட்டமிடப்பட்டுள்ளது',
+    AksharaLanguage.kannada: 'ಪೋಷಕ-ಶಿಕ್ಷಕ ಸಭೆ ನಿಗದಿಯಾಗಿದೆ',
+    AksharaLanguage.malayalam: 'രക്ഷിതാവ്-അധ്യാപക യോഗം ഷെഡ്യൂൾ ചെയ്തു',
+    AksharaLanguage.urdu: 'والدین-استاد میٹنگ طے ہے',
+  },
+  'A message needs your acknowledgement': {
+    AksharaLanguage.telugu: 'ఒక సందేశానికి మీ ధృవీకరణ అవసరం',
+    AksharaLanguage.hindi: 'एक संदेश को आपकी पुष्टि चाहिए',
+    AksharaLanguage.tamil: 'ஒரு செய்திக்கு உங்கள் உறுதிப்படுத்தல் தேவை',
+    AksharaLanguage.kannada: 'ಒಂದು ಸಂದೇಶಕ್ಕೆ ನಿಮ್ಮ ದೃಢೀಕರಣ ಬೇಕು',
+    AksharaLanguage.malayalam: 'ഒരു സന്ദേശത്തിന് നിങ്ങളുടെ സ്ഥിരീകരണം ആവശ്യമാണ്',
+    AksharaLanguage.urdu: 'ایک پیغام کو آپ کی تصدیق درکار ہے',
+  },
+  'Homework is due': {
+    AksharaLanguage.telugu: 'హోమ్‌వర్క్ బాకీ ఉంది',
+    AksharaLanguage.hindi: 'होमवर्क देय है',
+    AksharaLanguage.tamil: 'வீட்டுப்பாடம் நிலுவையில் உள்ளது',
+    AksharaLanguage.kannada: 'ಗೃಹಪಾಠ ಬಾಕಿ ಇದೆ',
+    AksharaLanguage.malayalam: 'ഹോംവർക്ക് ബാക്കിയുണ്ട്',
+    AksharaLanguage.urdu: 'ہوم ورک واجب ہے',
+  },
   };
 }

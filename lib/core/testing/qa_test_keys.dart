@@ -1848,6 +1848,52 @@ abstract final class QaTestKeys {
       ValueKey<String>('parent_transport_screen');
   static const parentPtmScreen = ValueKey<String>('parent_ptm_screen');
 
+  // --- Parent persona client (PAR-1..PAR-D4) ---
+  // PAR-1 PTM RSVP.
+  static ValueKey<String> parentPtmRsvpAcceptButton(String meetingId) =>
+      ValueKey<String>('parent_ptm_rsvp_accept_$meetingId');
+  static ValueKey<String> parentPtmRsvpDeclineButton(String meetingId) =>
+      ValueKey<String>('parent_ptm_rsvp_decline_$meetingId');
+  static ValueKey<String> parentPtmRsvpStatus(String meetingId) =>
+      ValueKey<String>('parent_ptm_rsvp_status_$meetingId');
+  // PAR-6 next-PTM hero.
+  static const parentPtmNextHero = ValueKey<String>('parent_ptm_next_hero');
+  // PAR-3 leave attachment reference input.
+  static const parentLeaveAttachmentButton =
+      ValueKey<String>('parent_leave_attachment_button');
+  static const parentLeaveAttachmentField =
+      ValueKey<String>('parent_leave_attachment_field');
+  static const parentLeaveAttachmentConfirmButton =
+      ValueKey<String>('parent_leave_attachment_confirm_button');
+  // PAR-D1 leave cancel.
+  static ValueKey<String> parentLeaveCancelButton(String leaveId) =>
+      ValueKey<String>('parent_leave_cancel_$leaveId');
+  static const parentLeaveCancelConfirmButton =
+      ValueKey<String>('parent_leave_cancel_confirm_button');
+  static const parentLeaveCancelSnackbar =
+      ValueKey<String>('parent_leave_cancel_snackbar');
+  // PAR-4 year-statement export.
+  static const parentFeesExportStatementButton =
+      ValueKey<String>('parent_fees_export_statement_button');
+  static const parentFeesExportCsvButton =
+      ValueKey<String>('parent_fees_export_csv_button');
+  static const parentFeesExportPdfButton =
+      ValueKey<String>('parent_fees_export_pdf_button');
+  // PAR-5 reminder banners.
+  static const parentReminderBanners =
+      ValueKey<String>('parent_reminder_banners');
+  static ValueKey<String> parentReminderBanner(String kind) =>
+      ValueKey<String>('parent_reminder_banner_$kind');
+  // PAR-D2 family (all children) view + PAR-D4 action inbox.
+  static const parentFamilyViewScreen =
+      ValueKey<String>('parent_family_view_screen');
+  static ValueKey<String> parentFamilyChildCard(String childId) =>
+      ValueKey<String>('parent_family_child_card_$childId');
+  static const parentActionInboxScreen =
+      ValueKey<String>('parent_action_inbox_screen');
+  static ValueKey<String> parentActionInboxItem(String itemId) =>
+      ValueKey<String>('parent_action_inbox_item_$itemId');
+
   static const studentDashboardScreen =
       ValueKey<String>('student_dashboard_screen');
   static ValueKey<String> studentDashboardQuickAction(String actionId) =>

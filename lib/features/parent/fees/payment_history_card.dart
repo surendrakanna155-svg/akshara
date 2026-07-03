@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/error_text.dart';
+import '../../../core/testing/qa_test_keys.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
 import '../../../theme/theme_extensions.dart';
+import '../parent_active_child_provider.dart';
+import '../receipts/parent_receipts_provider.dart';
+import '../receipts/receipt_models.dart';
 import 'fees_provider.dart';
+import 'parent_year_statement_exporter.dart';
 
 /// Single payment history row (used in list / bottom sheet).
 class PaymentHistoryCard extends StatelessWidget {
@@ -123,7 +130,11 @@ class PaymentHistoryCard extends StatelessWidget {
 }
 
 /// Bottom sheet listing all payment history entries.
-class PaymentHistorySheet extends StatelessWidget {
+///
+/// PAR-4 — the header carries an "Export year statement" action that builds a
+/// CSV or PDF fee statement from the active child's receipts (own-child scoped
+/// via [parentReceiptsFutureProvider]).
+class PaymentHistorySheet extends ConsumerWidget {
   const PaymentHistorySheet({
     super.key,
     required this.items,
@@ -134,7 +145,7 @@ class PaymentHistorySheet extends StatelessWidget {
   final void Function(PaymentHistoryItem item)? onItemTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final text = context.aksharaText;
 
@@ -151,9 +162,21 @@ class PaymentHistorySheet extends StatelessWidget {
               horizontal: AksharaSpacing.s4,
               vertical: AksharaSpacing.s2,
             ),
-            child: Text(
-              'Payment history',
-              style: text.titleMedium.copyWith(color: colors.onSurface),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Payment history',
+                    style: text.titleMedium.copyWith(color: colors.onSurface),
+                  ),
+                ),
+                TextButton.icon(
+                  key: QaTestKeys.parentFeesExportStatementButton,
+                  onPressed: () => _exportStatement(context, ref),
+                  icon: const Icon(Icons.download_outlined, size: 18),
+                  label: const Text('Export statement'),
+                ),
+              ],
             ),
           ),
           ConstrainedBox(
@@ -181,5 +204,53 @@ class PaymentHistorySheet extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// PAR-4 — lets the parent pick CSV or PDF, then exports the year statement
+  /// built from the active child's receipts. Own-child scoped: the receipts
+  /// come from the active-child-scoped [parentReceiptsFutureProvider].
+  Future<void> _exportStatement(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final exporter = ref.read(parentYearStatementExporterProvider);
+    final childName = ref.read(parentActiveChildProvider)?.name ?? '';
+    // Own-child receipts (the fees screen already has these loaded).
+    final List<FeeReceipt> receipts =
+        ref.read(parentReceiptsFutureProvider).valueOrNull ?? const [];
+
+    final format = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              key: QaTestKeys.parentFeesExportCsvButton,
+              leading: const Icon(Icons.table_chart_outlined),
+              title: const Text('Export as CSV'),
+              onTap: () => Navigator.of(context).pop('csv'),
+            ),
+            ListTile(
+              key: QaTestKeys.parentFeesExportPdfButton,
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Export as PDF'),
+              onTap: () => Navigator.of(context).pop('pdf'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (format == null) return;
+
+    try {
+      if (format == 'csv') {
+        await exporter.shareCsv(receipts: receipts, childName: childName);
+      } else {
+        await exporter.sharePdf(receipts: receipts, childName: childName);
+      }
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(aksharaErrorMessage(error))),
+      );
+    }
   }
 }

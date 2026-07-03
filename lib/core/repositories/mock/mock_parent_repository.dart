@@ -1,4 +1,5 @@
 import '../../../features/parent/academics/parent_academic_models.dart';
+import '../../errors/api_failure.dart';
 import 'mock_attendance_sync_store.dart';
 import 'mock_canonical_student_registry.dart';
 import '../../exams/exam_administration_store.dart';
@@ -209,6 +210,90 @@ class MockParentRepository implements ParentRepository {
     );
     _store.leaveRequests!.insert(0, leave);
     return leave;
+  }
+
+  @override
+  Future<ParentLeaveCancelResult> cancelLeaveRequest({
+    required RepositoryQuery query,
+    required String leaveId,
+  }) async {
+    await _ensureLeaveHistory();
+    final index =
+        _store.leaveRequests!.indexWhere((item) => item.id == leaveId);
+    // Not found → 404 (own-child scope: never confirm another parent's leave).
+    if (index < 0) {
+      throw ApiFailureException(
+        ApiFailure(
+          type: ApiFailureType.unknown,
+          message: 'Leave request not found: $leaveId',
+          code: 'NOT_FOUND',
+          statusCode: 404,
+        ),
+      );
+    }
+    final current = _store.leaveRequests![index];
+    // Pending-only immutability → 409 (mirrors backend LEAVE_NOT_PENDING).
+    if (current.status != LeaveStatus.pending) {
+      throw ApiFailureException(
+        const ApiFailure(
+          type: ApiFailureType.unknown,
+          message: 'This leave has already been decided and cannot be cancelled.',
+          code: 'LEAVE_NOT_PENDING',
+          statusCode: 409,
+        ),
+      );
+    }
+    _store.leaveRequests![index] = _copyLeaveWith(
+      current,
+      status: LeaveStatus.cancelled,
+    );
+    return ParentLeaveCancelResult(
+      id: leaveId,
+      status: LeaveStatus.cancelled,
+    );
+  }
+
+  @override
+  Future<ParentLeaveAttachmentResult> attachLeaveDocument({
+    required RepositoryQuery query,
+    required String leaveId,
+    required String fileName,
+    String? storagePath,
+  }) async {
+    await _ensureLeaveHistory();
+    final index =
+        _store.leaveRequests!.indexWhere((item) => item.id == leaveId);
+    if (index < 0) {
+      throw ApiFailureException(
+        ApiFailure(
+          type: ApiFailureType.unknown,
+          message: 'Leave request not found: $leaveId',
+          code: 'NOT_FOUND',
+          statusCode: 404,
+        ),
+      );
+    }
+    final current = _store.leaveRequests![index];
+    if (current.status != LeaveStatus.pending) {
+      throw ApiFailureException(
+        const ApiFailure(
+          type: ApiFailureType.unknown,
+          message: 'This leave has already been decided; no attachment allowed.',
+          code: 'LEAVE_NOT_PENDING',
+          statusCode: 409,
+        ),
+      );
+    }
+    _store.leaveRequests![index] = _copyLeaveWith(
+      current,
+      hasAttachment: true,
+      attachmentName: fileName,
+    );
+    return ParentLeaveAttachmentResult(
+      id: leaveId,
+      hasAttachment: true,
+      attachmentName: fileName,
+    );
   }
 
   @override
@@ -441,6 +526,30 @@ class MockParentRepository implements ParentRepository {
 
   Future<void> _ensureMessageThreads() async {
     _store.messageThreads ??= List<MessageThread>.from(_mockMessageThreads());
+  }
+
+  /// LeaveRequest is immutable and has no copyWith; rebuild it for the mock
+  /// cancel/attach mutations (PAR-D1 / PAR-3) preserving all other fields.
+  LeaveRequest _copyLeaveWith(
+    LeaveRequest current, {
+    LeaveStatus? status,
+    bool? hasAttachment,
+    String? attachmentName,
+  }) {
+    return LeaveRequest(
+      id: current.id,
+      childName: current.childName,
+      childClass: current.childClass,
+      fromDateLabel: current.fromDateLabel,
+      toDateLabel: current.toDateLabel,
+      reason: current.reason,
+      type: current.type,
+      status: status ?? current.status,
+      submittedLabel: current.submittedLabel,
+      timeline: current.timeline,
+      hasAttachment: hasAttachment ?? current.hasAttachment,
+      attachmentName: attachmentName ?? current.attachmentName,
+    );
   }
 
   ParentChildProfile _childProfileFor(String childId) {

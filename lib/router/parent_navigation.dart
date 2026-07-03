@@ -6,6 +6,8 @@ import '../core/config/staging_probe_ids.dart';
 import '../features/copilot/copilot_navigation.dart';
 import 'route_names.dart';
 import '../features/parent/parent_active_child_provider.dart';
+import '../features/parent/leave/leave_models.dart';
+import '../features/parent/leave/parent_leave_provider.dart';
 import '../features/parent/widgets/parent_child_switcher_sheet.dart';
 
 /// Maps PA-01 dashboard [actionId] values to GoRouter destinations.
@@ -38,6 +40,13 @@ void handleParentDashboardNavigation(
       context.go(RouteNames.parentReceipts);
     case 'leave':
       context.go(RouteNames.parentLeave);
+    case 'apply_leave':
+      // PAR-2 — open the leave screen directly on the "Apply leave" section.
+      if (ref != null) {
+        ref.read(parentLeaveSectionProvider.notifier).state =
+            LeaveScreenSection.apply;
+      }
+      context.go(RouteNames.parentLeave);
     case 'attendance':
     case 'today_see_all':
       context.go(RouteNames.parentAttendance);
@@ -53,6 +62,10 @@ void handleParentDashboardNavigation(
     case 'ptm':
     case 'parent_teacher_meeting':
       context.go(RouteNames.parentPtm);
+    case 'family_view':
+      context.push(RouteNames.parentFamily);
+    case 'action_inbox':
+      context.push(RouteNames.parentActionInbox);
     case 'notices':
       context.go(RouteNames.parentNotices);
     case 'events':

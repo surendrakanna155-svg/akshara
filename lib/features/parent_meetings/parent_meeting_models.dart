@@ -1,3 +1,54 @@
+/// A parent's recorded RSVP response to a PTM invitation (PAR-1).
+enum MeetingRsvpResponse { accepted, declined }
+
+extension MeetingRsvpResponseX on MeetingRsvpResponse {
+  /// Wire value posted to `POST /parent/meetings/:id/rsvp` (backend maps any
+  /// non-"decline" to "accept"; we send the precise verb).
+  String get wireValue => switch (this) {
+        MeetingRsvpResponse.accepted => 'accept',
+        MeetingRsvpResponse.declined => 'decline',
+      };
+
+  String get label => switch (this) {
+        MeetingRsvpResponse.accepted => 'Accepted',
+        MeetingRsvpResponse.declined => 'Declined',
+      };
+
+  /// Parses the backend `rsvp.response` value ("accept" | "decline").
+  static MeetingRsvpResponse? tryParse(String? raw) {
+    return switch (raw) {
+      'accept' || 'accepted' => MeetingRsvpResponse.accepted,
+      'decline' || 'declined' => MeetingRsvpResponse.declined,
+      _ => null,
+    };
+  }
+}
+
+/// The parent's RSVP on a meeting (null until they respond).
+class MeetingRsvp {
+  const MeetingRsvp({
+    required this.response,
+    this.note,
+    this.respondedAtLabel,
+  });
+
+  final MeetingRsvpResponse response;
+  final String? note;
+  final String? respondedAtLabel;
+
+  MeetingRsvp copyWith({
+    MeetingRsvpResponse? response,
+    String? note,
+    String? respondedAtLabel,
+  }) {
+    return MeetingRsvp(
+      response: response ?? this.response,
+      note: note ?? this.note,
+      respondedAtLabel: respondedAtLabel ?? this.respondedAtLabel,
+    );
+  }
+}
+
 class MeetingActionItem {
   const MeetingActionItem({
     required this.id,
@@ -83,6 +134,7 @@ class ParentMeetingRecord {
     this.actionItems = const [],
     this.followUps = const [],
     this.lastUpdatedAt,
+    this.rsvp,
   });
 
   final String id;
@@ -97,6 +149,9 @@ class ParentMeetingRecord {
   final List<MeetingFollowUp> followUps;
   final DateTime? lastUpdatedAt;
 
+  /// The parent's recorded RSVP (PAR-1); null until they respond.
+  final MeetingRsvp? rsvp;
+
   ParentMeetingRecord copyWith({
     String? id,
     String? studentId,
@@ -109,6 +164,7 @@ class ParentMeetingRecord {
     List<MeetingActionItem>? actionItems,
     List<MeetingFollowUp>? followUps,
     DateTime? lastUpdatedAt,
+    MeetingRsvp? rsvp,
   }) {
     return ParentMeetingRecord(
       id: id ?? this.id,
@@ -122,6 +178,7 @@ class ParentMeetingRecord {
       actionItems: actionItems ?? this.actionItems,
       followUps: followUps ?? this.followUps,
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+      rsvp: rsvp ?? this.rsvp,
     );
   }
 }

@@ -76,6 +76,27 @@ class MockParentMeetingsRepository implements ParentMeetingsRepository {
   }
 
   @override
+  Future<ParentMeetingRecord> rsvpMeeting({
+    required RepositoryQuery query,
+    required MeetingRsvpResponse response,
+    required String meetingId,
+    String? note,
+  }) async {
+    final index = _meetings.indexWhere((meeting) => meeting.id == meetingId);
+    if (index < 0) throw StateError('Meeting not found: $meetingId');
+    final updated = _meetings[index].copyWith(
+      rsvp: MeetingRsvp(
+        response: response,
+        note: note,
+        respondedAtLabel: DateTime.now().toIso8601String(),
+      ),
+      lastUpdatedAt: DateTime.now(),
+    );
+    _meetings[index] = updated;
+    return updated;
+  }
+
+  @override
   Future<ParentMeetingRecord> createMeeting({
     required RepositoryQuery query,
     required String studentId,
