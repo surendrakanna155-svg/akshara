@@ -80,9 +80,60 @@ class ApiDirectorRepository implements DirectorRepository {
         revenueCr: _double(m['revenueCr']),
         admissionsQtd: _int(m['admissionsQtd']),
         feeCollectionPercent: _int(m['feeCollectionPercent']),
+        // DIR-2 — additive money fields (absent on older payloads → 0).
+        billedInr: _int(m['billedInr']),
+        collectedInr: _int(m['collectedInr']),
+        outstandingInr: _int(m['outstandingInr']),
         healthScore: _int(m['healthScore']),
         status: _schoolStatus(m['status']),
       );
+
+  static DirectorCollectionReport _collectionReport(Map<String, dynamic> m) {
+    final totals = m['totals'] as Map<String, dynamic>? ?? const {};
+    return DirectorCollectionReport(
+      schools: (m['schools'] as List<dynamic>? ?? const [])
+          .map((e) => e as Map<String, dynamic>)
+          .map((e) => DirectorCollectionRow(
+                schoolId: _str(e['schoolId']),
+                name: _str(e['name']),
+                feeCollectionPercent: _int(e['feeCollectionPercent']),
+                billedInr: _int(e['billedInr']),
+                collectedInr: _int(e['collectedInr']),
+                outstandingInr: _int(e['outstandingInr']),
+              ))
+          .toList(growable: false),
+      totals: DirectorCollectionTotals(
+        billedInr: _int(totals['billedInr']),
+        collectedInr: _int(totals['collectedInr']),
+        outstandingInr: _int(totals['outstandingInr']),
+        feeCollectionPercent: _int(totals['feeCollectionPercent']),
+      ),
+    );
+  }
+
+  static DirectorSchoolSnapshot _snapshot(Map<String, dynamic> m) {
+    final admissions = m['admissions'] as Map<String, dynamic>? ?? const {};
+    final academic = m['academic'] as Map<String, dynamic>? ?? const {};
+    return DirectorSchoolSnapshot(
+      schoolId: _str(m['schoolId']),
+      schoolName: _str(m['schoolName']),
+      location: _str(m['location']),
+      students: _int(m['students']),
+      attendancePercent: _int(m['attendancePercent']),
+      feeCollectionPercent: _int(m['feeCollectionPercent']),
+      billedInr: _int(m['billedInr']),
+      collectedInr: _int(m['collectedInr']),
+      outstandingInr: _int(m['outstandingInr']),
+      admissionsInquiries: _int(admissions['inquiries']),
+      admissionsApplications: _int(admissions['applications']),
+      admissionsEnrolled: _int(admissions['enrolled']),
+      admissionsConversionPercent: _int(admissions['conversionPercent']),
+      academicPassPercent: _int(academic['passPercent']),
+      academicGradedEntries: _int(academic['gradedEntries']),
+      healthScore: _int(m['healthScore']),
+      status: _schoolStatus(m['status']),
+    );
+  }
 
   static List<DirectorSchoolRow> _schools(Object? list) =>
       (list as List<dynamic>? ?? const [])
@@ -259,6 +310,23 @@ class ApiDirectorRepository implements DirectorRepository {
   }) async {
     final rows = await _remote.fetchSchools(query: query);
     return rows.map(_school).toList(growable: false);
+  }
+
+  @override
+  Future<DirectorCollectionReport> getCollectionReport({
+    required RepositoryQuery query,
+  }) async {
+    return _collectionReport(await _remote.fetchCollections(query: query));
+  }
+
+  @override
+  Future<DirectorSchoolSnapshot> getSchoolSnapshot({
+    required RepositoryQuery query,
+    required String schoolId,
+  }) async {
+    return _snapshot(
+      await _remote.fetchSchoolSnapshot(query: query, schoolId: schoolId),
+    );
   }
 
   @override

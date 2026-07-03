@@ -1929,6 +1929,34 @@ abstract final class QaTestKeys {
   static const directorMetricInputSavedSnackbar =
       ValueKey<String>('director_metric_input_saved_snackbar');
 
+  // DIR-1 — sortable/ranked league table.
+  static const directorSchoolsSortSelector =
+      ValueKey<String>('director_schools_sort_selector');
+
+  // DIR-3 — league / collection table CSV+PDF export.
+  static const directorSchoolsExportCsvButton =
+      ValueKey<String>('director_schools_export_csv_button');
+  static const directorSchoolsExportPdfButton =
+      ValueKey<String>('director_schools_export_pdf_button');
+  static const directorCollectionExportCsvButton =
+      ValueKey<String>('director_collection_export_csv_button');
+  static const directorCollectionExportPdfButton =
+      ValueKey<String>('director_collection_export_pdf_button');
+  static const directorExportSnackbar =
+      ValueKey<String>('director_export_snackbar');
+
+  // DIR-2 — consolidated collection report section.
+  static const directorCollectionReportSection =
+      ValueKey<String>('director_collection_report_section');
+
+  // DIR-D1 — per-school read-only drill-down snapshot.
+  static ValueKey<String> directorSchoolRow(String schoolId) =>
+      ValueKey<String>('director_school_row_$schoolId');
+  static const directorSchoolSnapshotScreen =
+      ValueKey<String>('director_school_snapshot_screen');
+  static const directorSchoolSnapshotReadOnlyBanner =
+      ValueKey<String>('director_school_snapshot_read_only_banner');
+
   static ValueKey<String> branchTile(String branchId) =>
       ValueKey<String>('branch_tile_$branchId');
 

@@ -33,6 +33,23 @@ final directorSchoolsProvider = FutureProvider<List<DirectorSchoolRow>>((
       );
 });
 
+// DIR-2 — consolidated collection report (per-school + org totals).
+final directorCollectionReportProvider =
+    FutureProvider<DirectorCollectionReport>((ref) async {
+  return ref.read(directorRepositoryProvider).getCollectionReport(
+        query: ref.watch(repositoryQueryProvider),
+      );
+});
+
+// DIR-D1 — audited, read-only per-school drill-down snapshot (keyed by schoolId).
+final directorSchoolSnapshotProvider = FutureProvider.family<
+    DirectorSchoolSnapshot, String>((ref, schoolId) async {
+  return ref.read(directorRepositoryProvider).getSchoolSnapshot(
+        query: ref.watch(repositoryQueryProvider),
+        schoolId: schoolId,
+      );
+});
+
 final directorPortfolioProvider =
     FutureProvider<DirectorGrowthSnapshot>((ref) async {
   return ref.read(directorRepositoryProvider).getPortfolioAnalytics(

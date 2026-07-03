@@ -517,6 +517,13 @@ abstract final class RouteNames {
   static const String director = '/director';
   static const String directorDashboard = '/director/dashboard';
   static const String directorSchools = '/director/schools';
+
+  /// DIR-D1 — audited, read-only per-school drill-down snapshot
+  /// (`/director/schools/:id`). Guarded by viewDirectorPortal like every other
+  /// director route (longest-prefix match under `/director`).
+  static String directorSchoolSnapshot(String schoolId) =>
+      '$directorSchools/$schoolId';
+
   static const String directorPortfolio = '/director/portfolio';
   static const String directorRevenue = '/director/revenue';
   static const String directorGrowth = '/director/growth';

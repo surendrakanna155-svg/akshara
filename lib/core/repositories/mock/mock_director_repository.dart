@@ -21,6 +21,10 @@ class MockDirectorRepository implements DirectorRepository {
       revenueCr: 3.2,
       admissionsQtd: 128,
       feeCollectionPercent: 94,
+      // billed = collected (32000000) / 0.94, outstanding = billed − collected.
+      billedInr: 34042553,
+      collectedInr: 32000000,
+      outstandingInr: 2042553,
       healthScore: 91,
       status: DirectorSchoolStatus.topPerformer,
     ),
@@ -32,6 +36,9 @@ class MockDirectorRepository implements DirectorRepository {
       revenueCr: 2.4,
       admissionsQtd: 96,
       feeCollectionPercent: 88,
+      billedInr: 27272727,
+      collectedInr: 24000000,
+      outstandingInr: 3272727,
       healthScore: 78,
       status: DirectorSchoolStatus.onTrack,
     ),
@@ -43,6 +50,9 @@ class MockDirectorRepository implements DirectorRepository {
       revenueCr: 1.9,
       admissionsQtd: 72,
       feeCollectionPercent: 81,
+      billedInr: 23456790,
+      collectedInr: 19000000,
+      outstandingInr: 4456790,
       healthScore: 66,
       status: DirectorSchoolStatus.atRisk,
     ),
@@ -54,6 +64,9 @@ class MockDirectorRepository implements DirectorRepository {
       revenueCr: 1.2,
       admissionsQtd: 44,
       feeCollectionPercent: 73,
+      billedInr: 16438356,
+      collectedInr: 12000000,
+      outstandingInr: 4438356,
       healthScore: 54,
       status: DirectorSchoolStatus.critical,
     ),
@@ -161,6 +174,70 @@ class MockDirectorRepository implements DirectorRepository {
     required RepositoryQuery query,
   }) async {
     return _schools;
+  }
+
+  @override
+  Future<DirectorCollectionReport> getCollectionReport({
+    required RepositoryQuery query,
+  }) async {
+    // Mirrors the backend getCollectionReport: reuse the exact billed/collected/
+    // outstanding on each school row (no re-derivation), then sum for org totals.
+    final rows = [
+      for (final s in _schools)
+        DirectorCollectionRow(
+          schoolId: s.schoolId,
+          name: s.schoolName,
+          feeCollectionPercent: s.feeCollectionPercent,
+          billedInr: s.billedInr,
+          collectedInr: s.collectedInr,
+          outstandingInr: s.outstandingInr,
+        ),
+    ];
+    final billed = rows.fold<int>(0, (sum, r) => sum + r.billedInr);
+    final collected = rows.fold<int>(0, (sum, r) => sum + r.collectedInr);
+    final outstanding = rows.fold<int>(0, (sum, r) => sum + r.outstandingInr);
+    return DirectorCollectionReport(
+      schools: rows,
+      totals: DirectorCollectionTotals(
+        billedInr: billed,
+        collectedInr: collected,
+        outstandingInr: outstanding,
+        feeCollectionPercent:
+            billed > 0 ? ((collected / billed) * 100).round() : 0,
+      ),
+    );
+  }
+
+  @override
+  Future<DirectorSchoolSnapshot> getSchoolSnapshot({
+    required RepositoryQuery query,
+    required String schoolId,
+  }) async {
+    final school = _schools.firstWhere(
+      (s) => s.schoolId == schoolId,
+      orElse: () => _schools.first,
+    );
+    return DirectorSchoolSnapshot(
+      schoolId: school.schoolId,
+      schoolName: school.schoolName,
+      location: school.location,
+      students: school.students,
+      // Deterministic demo aggregates derived from the row so the drill-down has
+      // representative content (health mirrors the row's status band).
+      attendancePercent: (school.healthScore - 2).clamp(0, 100),
+      feeCollectionPercent: school.feeCollectionPercent,
+      billedInr: school.billedInr,
+      collectedInr: school.collectedInr,
+      outstandingInr: school.outstandingInr,
+      admissionsInquiries: school.admissionsQtd * 4,
+      admissionsApplications: school.admissionsQtd * 2,
+      admissionsEnrolled: school.admissionsQtd,
+      admissionsConversionPercent: 25,
+      academicPassPercent: (school.healthScore + 4).clamp(0, 100),
+      academicGradedEntries: school.students * 6,
+      healthScore: school.healthScore,
+      status: school.status,
+    );
   }
 
   @override

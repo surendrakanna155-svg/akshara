@@ -43,6 +43,20 @@ class DirectorRemoteDataSource {
         .cast<Map<String, dynamic>>();
   }
 
+  // DIR-2 — consolidated collection report: { schools: [...], totals: {...} }.
+  Future<Map<String, dynamic>> fetchCollections({
+    required RepositoryQuery query,
+  }) =>
+      _get('/director/collections', query);
+
+  // DIR-D1 — audited, read-only per-school snapshot. The backend audits this
+  // read; a foreign school → 404 (surfaces as an ApiFailure to the caller).
+  Future<Map<String, dynamic>> fetchSchoolSnapshot({
+    required RepositoryQuery query,
+    required String schoolId,
+  }) =>
+      _get('/director/schools/$schoolId/snapshot', query);
+
   Future<Map<String, dynamic>> fetchPortfolio({required RepositoryQuery query}) =>
       _get('/director/portfolio', query);
 

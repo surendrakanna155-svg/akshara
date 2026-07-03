@@ -2201,6 +2201,14 @@ GoRouter createAppRouter({
                   child: directorSchoolsRouteBuilder(context, state),
                 ),
               ),
+              // DIR-D1 — audited, read-only per-school drill-down.
+              GoRoute(
+                path: 'schools/:id',
+                name: 'directorSchoolSnapshot',
+                pageBuilder: (context, state) => NoTransitionPage(
+                  child: directorSchoolSnapshotRouteBuilder(context, state),
+                ),
+              ),
               GoRoute(
                 path: 'portfolio',
                 name: 'directorPortfolio',

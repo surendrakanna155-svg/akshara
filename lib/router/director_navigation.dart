@@ -9,6 +9,7 @@ import '../features/director/director_marketing_screen.dart';
 import '../features/director/director_portfolio_screen.dart';
 import '../features/director/director_reports_screen.dart';
 import '../features/director/director_revenue_screen.dart';
+import '../features/director/director_school_snapshot_screen.dart';
 import '../features/director/director_schools_screen.dart';
 import '../features/admin/models/admin_nav_models.dart';
 import '../features/entitlements/entitlement_module_gate.dart';
@@ -33,6 +34,16 @@ Widget directorSchoolsRouteBuilder(BuildContext context, GoRouterState state) {
   return const EntitlementModuleGate(
     module: AdminModule.director,
     child: DirectorSchoolsScreen(),
+  );
+}
+
+// DIR-D1 — audited, read-only per-school drill-down (`/director/schools/:id`).
+Widget directorSchoolSnapshotRouteBuilder(
+    BuildContext context, GoRouterState state) {
+  final schoolId = state.pathParameters['id'] ?? '';
+  return EntitlementModuleGate(
+    module: AdminModule.director,
+    child: DirectorSchoolSnapshotScreen(schoolId: schoolId),
   );
 }
 

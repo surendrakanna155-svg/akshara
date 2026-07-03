@@ -48,6 +48,9 @@ class DirectorSchoolRow {
     required this.revenueCr,
     required this.admissionsQtd,
     required this.feeCollectionPercent,
+    this.billedInr = 0,
+    this.collectedInr = 0,
+    this.outstandingInr = 0,
     required this.healthScore,
     required this.status,
   });
@@ -59,6 +62,111 @@ class DirectorSchoolRow {
   final double revenueCr;
   final int admissionsQtd;
   final int feeCollectionPercent;
+
+  // DIR-2 — the raw money inputs behind feeCollectionPercent (in rupees), so a
+  // consolidated collection view can show billed/collected/outstanding per
+  // school. `outstandingInr` is the still-uncollected receivable (billed −
+  // collected). Additive to the certified /director/schools contract; default
+  // to 0 so existing constructions (mock rows, board-pack schools) stay valid.
+  final int billedInr;
+  final int collectedInr;
+  final int outstandingInr;
+
+  final int healthScore;
+  final DirectorSchoolStatus status;
+}
+
+/// DIR-2 — one row of the consolidated collection report: a school's fee% plus
+/// the billed/collected/outstanding money behind it (in rupees). Backs
+/// GET /director/collections.
+@immutable
+class DirectorCollectionRow {
+  const DirectorCollectionRow({
+    required this.schoolId,
+    required this.name,
+    required this.feeCollectionPercent,
+    required this.billedInr,
+    required this.collectedInr,
+    required this.outstandingInr,
+  });
+
+  final String schoolId;
+  final String name;
+  final int feeCollectionPercent;
+  final int billedInr;
+  final int collectedInr;
+  final int outstandingInr;
+}
+
+/// DIR-2 — org-wide collection totals across every school in the portfolio.
+@immutable
+class DirectorCollectionTotals {
+  const DirectorCollectionTotals({
+    required this.billedInr,
+    required this.collectedInr,
+    required this.outstandingInr,
+    required this.feeCollectionPercent,
+  });
+
+  final int billedInr;
+  final int collectedInr;
+  final int outstandingInr;
+  final int feeCollectionPercent;
+}
+
+/// DIR-2 — the consolidated collection report: per-school rows + org totals.
+@immutable
+class DirectorCollectionReport {
+  const DirectorCollectionReport({
+    required this.schools,
+    required this.totals,
+  });
+
+  final List<DirectorCollectionRow> schools;
+  final DirectorCollectionTotals totals;
+}
+
+/// DIR-D1 — an audited, read-only per-school drill-down snapshot: school-level
+/// aggregates only (no student/parent PII). Backs
+/// GET /director/schools/{id}/snapshot. NOT impersonation — no writes, no
+/// persona/token switch.
+@immutable
+class DirectorSchoolSnapshot {
+  const DirectorSchoolSnapshot({
+    required this.schoolId,
+    required this.schoolName,
+    required this.location,
+    required this.students,
+    required this.attendancePercent,
+    required this.feeCollectionPercent,
+    required this.billedInr,
+    required this.collectedInr,
+    required this.outstandingInr,
+    required this.admissionsInquiries,
+    required this.admissionsApplications,
+    required this.admissionsEnrolled,
+    required this.admissionsConversionPercent,
+    required this.academicPassPercent,
+    required this.academicGradedEntries,
+    required this.healthScore,
+    required this.status,
+  });
+
+  final String schoolId;
+  final String schoolName;
+  final String location;
+  final int students;
+  final int attendancePercent;
+  final int feeCollectionPercent;
+  final int billedInr;
+  final int collectedInr;
+  final int outstandingInr;
+  final int admissionsInquiries;
+  final int admissionsApplications;
+  final int admissionsEnrolled;
+  final int admissionsConversionPercent;
+  final int academicPassPercent;
+  final int academicGradedEntries;
   final int healthScore;
   final DirectorSchoolStatus status;
 }

@@ -128,6 +128,19 @@ class _FailingActionDirectorRepository implements DirectorRepository {
       throw UnimplementedError();
 
   @override
+  Future<DirectorCollectionReport> getCollectionReport({
+    required RepositoryQuery query,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<DirectorSchoolSnapshot> getSchoolSnapshot({
+    required RepositoryQuery query,
+    required String schoolId,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
   Future<DirectorGrowthSnapshot> getPortfolioAnalytics({
     required RepositoryQuery query,
   }) async =>

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/reports/akshara_report_export_service.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/spacing.dart';
@@ -10,6 +11,7 @@ import '../copilot/copilot_context_provider.dart';
 import 'director_models.dart';
 import 'director_navigation.dart';
 import 'director_providers.dart';
+import 'reports/director_report_exporters.dart';
 import 'widgets/director_metric_input_editor.dart';
 import 'widgets/director_module_scaffold.dart';
 import 'widgets/director_shared_widgets.dart';
@@ -75,8 +77,239 @@ class DirectorRevenueScreen extends ConsumerWidget {
               const AksharaSectionHeader(title: 'School Revenue Table'),
               const SizedBox(height: AksharaSpacing.s3),
               _RevenueTable(schools: revenue.revenueBySchool),
+              const SizedBox(height: AksharaSpacing.s5),
+              // DIR-2 — consolidated collection report (per-school fee% +
+              // billed/collected/outstanding + org totals) from its own provider.
+              const _CollectionReportSection(),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// DIR-2 — consolidated collection report section: per-school fee% + billed /
+/// collected / outstanding, plus org totals, with its own CSV/PDF export.
+class _CollectionReportSection extends ConsumerWidget {
+  const _CollectionReportSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(directorCollectionReportProvider);
+    return Column(
+      key: QaTestKeys.directorCollectionReportSection,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const AksharaSectionHeader(title: 'Consolidated Collection Report'),
+        const SizedBox(height: AksharaSpacing.s3),
+        state.when(
+          loading: () => const AksharaLoadingState(),
+          error: (error, _) => AksharaErrorState.fromFailure(
+              apiFailureMapper.fromException(error)),
+          data: (report) => _CollectionReportBody(report: report),
+        ),
+      ],
+    );
+  }
+}
+
+class _CollectionReportBody extends ConsumerWidget {
+  const _CollectionReportBody({required this.report});
+
+  final DirectorCollectionReport report;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: AksharaSpacing.s3,
+          runSpacing: AksharaSpacing.s3,
+          children: [
+            DirectorMetricTile(
+              label: 'Billed',
+              value: '₹${report.totals.billedInr}',
+            ),
+            DirectorMetricTile(
+              label: 'Collected',
+              value: '₹${report.totals.collectedInr}',
+            ),
+            DirectorMetricTile(
+              label: 'Outstanding',
+              value: '₹${report.totals.outstandingInr}',
+            ),
+            DirectorMetricTile(
+              label: 'Fee Collection',
+              value: '${report.totals.feeCollectionPercent}%',
+            ),
+          ],
+        ),
+        const SizedBox(height: AksharaSpacing.s3),
+        Wrap(
+          spacing: AksharaSpacing.s3,
+          runSpacing: AksharaSpacing.s3,
+          children: [
+            OutlinedButton.icon(
+              key: QaTestKeys.directorCollectionExportCsvButton,
+              onPressed: () => _export(context, ref, pdf: false),
+              icon: const Icon(Icons.table_chart_outlined, size: 18),
+              label: const Text('Export CSV'),
+            ),
+            OutlinedButton.icon(
+              key: QaTestKeys.directorCollectionExportPdfButton,
+              onPressed: () => _export(context, ref, pdf: true),
+              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+              label: const Text('Export PDF'),
+            ),
+          ],
+        ),
+        const SizedBox(height: AksharaSpacing.s3),
+        _CollectionTable(report: report),
+      ],
+    );
+  }
+
+  Future<void> _export(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool pdf,
+  }) async {
+    final exporters =
+        DirectorReportExporters(ref.read(aksharaReportExportServiceProvider));
+    try {
+      if (pdf) {
+        await exporters.shareCollectionPdf(report);
+      } else {
+        await exporters.shareCollectionCsv(report);
+      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: QaTestKeys.directorExportSnackbar,
+          content: Text('Collection report exported (${pdf ? 'PDF' : 'CSV'})'),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not export collection report: $error')),
+      );
+    }
+  }
+}
+
+class _CollectionTable extends StatelessWidget {
+  const _CollectionTable({required this.report});
+
+  final DirectorCollectionReport report;
+
+  @override
+  Widget build(BuildContext context) {
+    final schools = report.schools;
+    if (AdminLayout.useCardLayout(context)) {
+      return Column(
+        children: [
+          for (final row in schools) ...[
+            _CollectionCard(row: row),
+            const SizedBox(height: AksharaSpacing.s3),
+          ],
+          _CollectionTotalsCard(totals: report.totals),
+        ],
+      );
+    }
+
+    return AksharaVirtualizedDataTable(
+      columns: const [
+        DataColumn(label: Text('School')),
+        DataColumn(label: Text('Fee %')),
+        DataColumn(label: Text('Billed')),
+        DataColumn(label: Text('Collected')),
+        DataColumn(label: Text('Outstanding')),
+      ],
+      rowCount: schools.length,
+      rowBuilder: (index) {
+        final row = schools[index];
+        return DataRow(
+          cells: [
+            DataCell(Text(row.name)),
+            DataCell(Text('${row.feeCollectionPercent}%')),
+            DataCell(Text('₹${row.billedInr}')),
+            DataCell(Text('₹${row.collectedInr}')),
+            DataCell(Text('₹${row.outstandingInr}')),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CollectionCard extends StatelessWidget {
+  const _CollectionCard({required this.row});
+
+  final DirectorCollectionRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    return Semantics(
+      label: 'Collection for ${row.name}',
+      child: Card(
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.all(AksharaSpacing.s4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(row.name, style: text.titleSmall),
+              const SizedBox(height: AksharaSpacing.s1),
+              Text(
+                'Fee ${row.feeCollectionPercent}% · Billed ₹${row.billedInr}',
+                style: text.bodySmall,
+              ),
+              Text(
+                'Collected ₹${row.collectedInr} · '
+                'Outstanding ₹${row.outstandingInr}',
+                style: text.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollectionTotalsCard extends StatelessWidget {
+  const _CollectionTotalsCard({required this.totals});
+
+  final DirectorCollectionTotals totals;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    return Card(
+      elevation: 0,
+      color: context.colors.primaryContainer.withValues(alpha: 0.35),
+      child: Padding(
+        padding: const EdgeInsets.all(AksharaSpacing.s4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Portfolio total', style: text.titleSmall),
+            const SizedBox(height: AksharaSpacing.s1),
+            Text(
+              'Fee ${totals.feeCollectionPercent}% · '
+              'Billed ₹${totals.billedInr}',
+              style: text.bodySmall,
+            ),
+            Text(
+              'Collected ₹${totals.collectedInr} · '
+              'Outstanding ₹${totals.outstandingInr}',
+              style: text.bodySmall,
+            ),
+          ],
         ),
       ),
     );

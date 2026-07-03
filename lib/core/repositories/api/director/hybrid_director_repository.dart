@@ -35,6 +35,26 @@ class HybridDirectorRepository implements DirectorRepository {
       );
 
   @override
+  Future<DirectorCollectionReport> getCollectionReport({
+    required RepositoryQuery query,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.getCollectionReport(query: query),
+        mockCall: () => _mock.getCollectionReport(query: query),
+      );
+
+  @override
+  Future<DirectorSchoolSnapshot> getSchoolSnapshot({
+    required RepositoryQuery query,
+    required String schoolId,
+  }) =>
+      withMockWriteFallback(
+        apiCall: () => _api.getSchoolSnapshot(query: query, schoolId: schoolId),
+        mockCall: () =>
+            _mock.getSchoolSnapshot(query: query, schoolId: schoolId),
+      );
+
+  @override
   Future<DirectorGrowthSnapshot> getPortfolioAnalytics({
     required RepositoryQuery query,
   }) =>
