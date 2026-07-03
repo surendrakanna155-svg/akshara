@@ -85,6 +85,27 @@ class VerifyStudentDocumentRequest {
   final String? note;
 }
 
+/// SIS-1 — domain request to issue a bonafide/study/conduct certificate.
+class IssueCertificateRequest {
+  const IssueCertificateRequest({
+    required this.type,
+    this.reason,
+  });
+
+  final SisCertificateType type;
+
+  /// Optional free-text reason (e.g. "for bank account opening").
+  final String? reason;
+}
+
+/// SIS-D1 — domain request to issue a Transfer Certificate (TC). No type: the
+/// TC engine is dedicated. `reason` is optional.
+class IssueTransferCertificateRequest {
+  const IssueTransferCertificateRequest({this.reason});
+
+  final String? reason;
+}
+
 /// Domain request to change a student's lifecycle status.
 class UpdateStudentStatusRequest {
   const UpdateStudentStatusRequest({required this.status});

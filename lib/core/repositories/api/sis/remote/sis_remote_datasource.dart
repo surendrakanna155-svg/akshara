@@ -7,6 +7,7 @@ import '../../../../../features/sis/sis_requests.dart';
 import '../dto/admissions_conversion_request_dto.dart';
 import '../dto/create_student_request_dto.dart';
 import '../dto/enrollment_request_dto.dart';
+import '../dto/sis_certificate_dto.dart';
 import '../dto/sis_academic_assignment_dto.dart';
 import '../dto/sis_conversion_dto.dart';
 import '../dto/sis_dashboard_dto.dart';
@@ -164,6 +165,49 @@ class SisRemoteDataSource {
       data: UpdateStudentStatusRequestDto.fromDomain(request).toJson(),
     );
     return _mapper.toStudentFromWriteResponse(_requireData(response));
+  }
+
+  /// SIS-1 — POST /sis/students/{id}/certificates. Returns the certificate DATA
+  /// for the client PDF.
+  Future<SisCertificateData> issueCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueCertificateRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      SisApiPaths.studentCertificates(studentId),
+      queryParameters: _queryParams(query),
+      data: IssueCertificateRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toCertificateData(_requireData(response));
+  }
+
+  /// SIS-D1 — POST /sis/students/{id}/transfer-certificate. Returns the TC DATA
+  /// (with serial) or surfaces 409 DUES_PENDING via the interceptor.
+  Future<SisCertificateData> issueTransferCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueTransferCertificateRequest request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      SisApiPaths.studentTransferCertificate(studentId),
+      queryParameters: _queryParams(query),
+      data: IssueTransferCertificateRequestDto.fromDomain(request).toJson(),
+    );
+    return _mapper.toCertificateData(_requireData(response));
+  }
+
+  /// SIS-1 — GET /sis/students/{id}/certificates. The issuance register.
+  Future<List<SisCertificateIssue>> listCertificates({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      SisApiPaths.studentCertificates(studentId),
+      queryParameters: _queryParams(query),
+    );
+    final dto = SisCertificateRegisterDto.fromJson(_responseMap(response));
+    return [for (final item in dto.items) _mapper.toCertificateIssue(item)];
   }
 
   Future<SisStudent> assignAcademicAssignment({

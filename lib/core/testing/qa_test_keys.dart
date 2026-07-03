@@ -142,10 +142,36 @@ abstract final class QaTestKeys {
   static const sisRegistryExportSuccessSnackbar =
       ValueKey<String>('sis_registry_export_success_snackbar');
 
+  static const sisProfilePublicId =
+      ValueKey<String>('sis_profile_public_id');
   static const sisEditProfileButton =
       ValueKey<String>('sis_edit_profile_button');
   static const sisEditProfileSaveButton =
       ValueKey<String>('sis_edit_profile_save_button');
+  static const sisEditProfileAdmissionField =
+      ValueKey<String>('sis_edit_profile_admission_field');
+
+  // SIS-1 — certificate issuance + transfer certificate (TC).
+  static const sisIssueCertificateButton =
+      ValueKey<String>('sis_issue_certificate_button');
+  static const sisIssueCertificateTypeField =
+      ValueKey<String>('sis_issue_certificate_type_field');
+  static const sisIssueCertificateReasonField =
+      ValueKey<String>('sis_issue_certificate_reason_field');
+  static const sisIssueCertificateSubmitButton =
+      ValueKey<String>('sis_issue_certificate_submit_button');
+  static const sisIssueCertificateSuccessSnackbar =
+      ValueKey<String>('sis_issue_certificate_success_snackbar');
+  static const sisTransferCertificateButton =
+      ValueKey<String>('sis_transfer_certificate_button');
+  static const sisTransferCertificateReasonField =
+      ValueKey<String>('sis_transfer_certificate_reason_field');
+  static const sisTransferCertificateSubmitButton =
+      ValueKey<String>('sis_transfer_certificate_submit_button');
+  static const sisTransferCertificateSuccessSnackbar =
+      ValueKey<String>('sis_transfer_certificate_success_snackbar');
+  static const sisCertificateRegister =
+      ValueKey<String>('sis_certificate_register');
   static const sisUploadDocumentButton =
       ValueKey<String>('sis_upload_document_button');
   static const sisUploadDocumentSubmitButton =

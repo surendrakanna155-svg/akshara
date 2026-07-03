@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../features/admissions/admissions_models.dart';
 import '../../../features/sis/sis_models.dart';
 import '../../../features/sis/sis_requests.dart';
+import '../../errors/api_failure.dart';
+import '../api/sis/dto/sis_enum_codec.dart';
 import '../interfaces/sis_repository.dart';
 import '../paginated_result.dart';
 import '../repository_query.dart';
@@ -64,6 +66,7 @@ class MockSisRepository implements SisRepository {
       id: 'SIS-STU-10421',
       studentName: 'Arjun Patel',
       admissionNumber: 'ADM-2026-0138',
+      publicStudentId: 'DPSKKP-0001',
       classLabel: '10',
       section: 'A',
       academicYear: '2026–27',
@@ -80,6 +83,7 @@ class MockSisRepository implements SisRepository {
       id: 'SIS-STU-10418',
       studentName: 'Emma Thomas',
       admissionNumber: 'ADM-2026-0135',
+      publicStudentId: 'DPSKKP-0002',
       classLabel: '7',
       section: 'A',
       academicYear: '2026–27',
@@ -695,6 +699,159 @@ class MockSisRepository implements SisRepository {
       MockAlumniWriteStore.instance.onboardFromSisStudent(updated);
     }
     return updated;
+  }
+
+  // ── SIS-1: certificate issuance + transfer certificate (TC) ─────────────────
+
+  static const String _mockSchoolName = 'Akshara Public School';
+  static const String _mockSchoolCode = 'DPSKKP';
+
+  SisCertificateData _buildCertificateData(
+    SisStudent student, {
+    required SisCertificateType type,
+    required String issueId,
+    required String? serialNo,
+    required String? reason,
+    required String status,
+  }) {
+    return SisCertificateData(
+      issueId: issueId,
+      type: type,
+      serialNo: serialNo,
+      reason: reason,
+      issuedAt: _todayIso(),
+      studentName: student.studentName,
+      publicStudentId: student.publicStudentId,
+      admissionNumber: student.admissionNumber,
+      className: student.classLabel,
+      section: student.section,
+      academicYear: student.academicYear,
+      dateOfBirth: student.dateOfBirth,
+      rollNumber: '',
+      guardianName: student.guardianName,
+      status: status,
+      schoolName: _mockSchoolName,
+      schoolCode: _mockSchoolCode,
+    );
+  }
+
+  @override
+  Future<SisCertificateData> issueCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueCertificateRequest request,
+  }) async {
+    await _ensureStudents(query);
+    final student = _store.findStudent(studentId);
+    if (student == null) throw StateError('Student not found: $studentId');
+
+    final reason = request.reason?.trim().isEmpty ?? true
+        ? null
+        : request.reason!.trim();
+    final issueId = _store.nextCertificateId();
+    _store.certificatesForStudent(studentId).insert(
+          0,
+          SisCertificateIssue(
+            id: issueId,
+            type: request.type,
+            serialNo: null,
+            reason: reason,
+            issuedBy: 'school.admin@akshara.demo',
+            issuedAt: _todayIso(),
+          ),
+        );
+    return _buildCertificateData(
+      student,
+      type: request.type,
+      issueId: issueId,
+      serialNo: null,
+      reason: reason,
+      status: SisEnumCodec.studentStatusToApi(student.status),
+    );
+  }
+
+  @override
+  Future<SisCertificateData> issueTransferCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueTransferCertificateRequest request,
+  }) async {
+    await _ensureStudents(query);
+    final index =
+        _store.students!.indexWhere((student) => student.id == studentId);
+    if (index < 0) throw StateError('Student not found: $studentId');
+    final student = _store.students![index];
+
+    // Mirror the backend TC engine: reject an already-terminal student, enforce
+    // the no-dues gate, then allocate a serial + flip status → transferred.
+    if (student.status == SisStudentStatus.transferred ||
+        student.status == SisStudentStatus.alumni) {
+      throw ApiFailureException(
+        ApiFailure(
+          type: ApiFailureType.unknown,
+          message:
+              'Cannot issue a Transfer Certificate: student is already ${SisEnumCodec.studentStatusToApi(student.status)}.',
+          code: 'VALIDATION_ERROR',
+        ),
+      );
+    }
+
+    // No-dues gate: a student with an open fee account still owes fees in the
+    // mock world (the profile fee summary carries a ₹75,000 balance).
+    if (student.feeAccountId != null) {
+      const outstanding = 75000;
+      throw ApiFailureException(
+        const ApiFailure(
+          type: ApiFailureType.unknown,
+          message:
+              'Cannot issue a Transfer Certificate: student has $outstanding outstanding in fees. Clear all dues first.',
+          code: 'DUES_PENDING',
+        ),
+      );
+    }
+
+    final serialNo =
+        _store.nextTcSerial(_mockSchoolCode, student.academicYear);
+    final reason = request.reason?.trim().isEmpty ?? true
+        ? null
+        : request.reason!.trim();
+    final issueId = _store.nextCertificateId();
+
+    final transferred =
+        _store.copyStudent(student, status: SisStudentStatus.transferred);
+    _store.students![index] = transferred;
+
+    _store.certificatesForStudent(studentId).insert(
+          0,
+          SisCertificateIssue(
+            id: issueId,
+            type: SisCertificateType.transfer,
+            serialNo: serialNo,
+            reason: reason,
+            issuedBy: 'school.admin@akshara.demo',
+            issuedAt: _todayIso(),
+          ),
+        );
+
+    return _buildCertificateData(
+      transferred,
+      type: SisCertificateType.transfer,
+      issueId: issueId,
+      serialNo: serialNo,
+      reason: reason,
+      status: SisEnumCodec.studentStatusToApi(SisStudentStatus.transferred),
+    );
+  }
+
+  @override
+  Future<List<SisCertificateIssue>> listCertificates({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    await _ensureStudents(query);
+    return List<SisCertificateIssue>.unmodifiable(
+      _store.certificatesForStudent(studentId),
+    );
   }
 
   @override

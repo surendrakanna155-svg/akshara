@@ -117,6 +117,7 @@ class SisStudent {
     required this.phone,
     required this.email,
     required this.enrolledAt,
+    this.publicStudentId,
     this.feeAccountId,
     this.isPlaceholder = false,
   });
@@ -124,6 +125,11 @@ class SisStudent {
   final String id;
   final String studentName;
   final String admissionNumber;
+
+  /// Permanent, per-school public student identifier
+  /// (`<SCHOOL_CODE>-<RUNNING_NUMBER>`, e.g. `DPSKKP-0001`). Null for a
+  /// code-less school (the backend sends an empty string in that case).
+  final String? publicStudentId;
   final String classLabel;
   final String section;
   final String academicYear;
@@ -311,6 +317,112 @@ class SisStudentProfile {
   final SisAttendanceSummary attendance;
   final List<SisDocumentSummary> documents;
   final List<SisTimelineEvent> timeline;
+}
+
+/// SIS-1 — the certificate types a school can issue. `transfer` is the
+/// Transfer Certificate (TC), which goes through the no-dues gated engine.
+enum SisCertificateType { bonafide, study, conduct, transfer }
+
+/// Presentation + API code for a certificate type.
+extension SisCertificateTypeX on SisCertificateType {
+  /// The backend API code (bonafide/study/conduct/transfer).
+  String get apiValue => switch (this) {
+        SisCertificateType.bonafide => 'bonafide',
+        SisCertificateType.study => 'study',
+        SisCertificateType.conduct => 'conduct',
+        SisCertificateType.transfer => 'transfer',
+      };
+
+  /// Short label for a picker / register row.
+  String get label => switch (this) {
+        SisCertificateType.bonafide => 'Bonafide',
+        SisCertificateType.study => 'Study',
+        SisCertificateType.conduct => 'Conduct',
+        SisCertificateType.transfer => 'Transfer',
+      };
+
+  /// The formal certificate title printed on the PDF.
+  String get certificateTitle => switch (this) {
+        SisCertificateType.bonafide => 'Bonafide Certificate',
+        SisCertificateType.study => 'Study Certificate',
+        SisCertificateType.conduct => 'Conduct Certificate',
+        SisCertificateType.transfer => 'Transfer Certificate',
+      };
+
+  static SisCertificateType parse(String? value) => switch (value) {
+        'bonafide' => SisCertificateType.bonafide,
+        'study' => SisCertificateType.study,
+        'conduct' => SisCertificateType.conduct,
+        'transfer' => SisCertificateType.transfer,
+        _ => SisCertificateType.bonafide,
+      };
+}
+
+/// SIS-1 — the certificate payload the client PDF renders from (returned by an
+/// issuance). Mirrors the backend `certificateDataToApi` shape.
+@immutable
+class SisCertificateData {
+  const SisCertificateData({
+    required this.issueId,
+    required this.type,
+    required this.serialNo,
+    required this.reason,
+    required this.issuedAt,
+    required this.studentName,
+    required this.publicStudentId,
+    required this.admissionNumber,
+    required this.className,
+    required this.section,
+    required this.academicYear,
+    required this.dateOfBirth,
+    required this.rollNumber,
+    required this.guardianName,
+    required this.status,
+    required this.schoolName,
+    required this.schoolCode,
+  });
+
+  final String issueId;
+  final SisCertificateType type;
+
+  /// Sequential TC serial (transfer only); null/empty for simple certificates.
+  final String? serialNo;
+  final String? reason;
+  final String issuedAt;
+
+  final String studentName;
+  final String? publicStudentId;
+  final String admissionNumber;
+  final String className;
+  final String section;
+  final String academicYear;
+  final String dateOfBirth;
+  final String rollNumber;
+  final String guardianName;
+  final String status;
+
+  final String schoolName;
+  final String schoolCode;
+}
+
+/// SIS-1 — one row in a student's certificate issuance register.
+@immutable
+class SisCertificateIssue {
+  const SisCertificateIssue({
+    required this.id,
+    required this.type,
+    required this.serialNo,
+    required this.reason,
+    required this.issuedBy,
+    required this.issuedAt,
+  });
+
+  final String id;
+  final SisCertificateType type;
+  final String? serialNo;
+  final String? reason;
+  final String issuedBy;
+  final String issuedAt;
 }
 
 @immutable

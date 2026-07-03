@@ -26,6 +26,7 @@ class SisReportExporters {
 
   static const List<String> registryHeaders = [
     'Admission #',
+    'Public ID',
     'Name',
     'Class',
     'Section',
@@ -39,6 +40,7 @@ class SisReportExporters {
       for (final student in students)
         [
           student.admissionNumber,
+          _psid(student.publicStudentId),
           student.studentName,
           student.classLabel,
           student.section,
@@ -48,6 +50,12 @@ class SisReportExporters {
         ],
     ];
   }
+
+  /// Public Student ID for a grid cell; "—" when the school has no code.
+  static String _psid(String? publicStudentId) =>
+      (publicStudentId == null || publicStudentId.trim().isEmpty)
+          ? '—'
+          : publicStudentId.trim();
 
   Future<void> shareRegistryCsv(List<SisStudent> students) {
     return _service.shareGridCsv(

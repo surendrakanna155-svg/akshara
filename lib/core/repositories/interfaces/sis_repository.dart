@@ -66,6 +66,30 @@ abstract class SisRepository {
     required UpdateStudentStatusRequest request,
   });
 
+  /// SIS-1 — issues a bonafide/study/conduct certificate for a student
+  /// (manageSis) and returns the certificate data for the client PDF.
+  Future<SisCertificateData> issueCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueCertificateRequest request,
+  });
+
+  /// SIS-D1 — issues a Transfer Certificate (manageSis). Throws when the student
+  /// still has outstanding fees (409 DUES_PENDING) — nothing is written; on
+  /// success the student's status auto-transitions to transferred.
+  Future<SisCertificateData> issueTransferCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueTransferCertificateRequest request,
+  });
+
+  /// SIS-1 — the certificate issuance register for a student (viewSis),
+  /// newest first.
+  Future<List<SisCertificateIssue>> listCertificates({
+    required RepositoryQuery query,
+    required String studentId,
+  });
+
   Future<SisStudent> assignAcademicAssignment({
     required RepositoryQuery query,
     required AcademicAssignmentRequest request,

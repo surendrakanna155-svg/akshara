@@ -13,6 +13,7 @@ import '../../../theme/theme_extensions.dart';
 import '../../admin/admin_layout.dart';
 import '../sis_async_state.dart';
 import '../sis_models.dart';
+import '../sis_mutations_provider.dart';
 import '../sis_navigation.dart';
 import '../sis_requests.dart';
 import '../sis_workflow_actions.dart';
@@ -79,19 +80,60 @@ class SisStudentProfileScreen extends ConsumerWidget {
           '${student.admissionNumber} · Class ${student.classLabel}-${student.section}',
           style: context.aksharaText.bodyMedium,
         ),
+        // Identity Platform: the permanent public student ID (F1/F2). Shows "—"
+        // for a code-less school (backend sends it null).
+        Text(
+          'Public ID: ${_psidLabel(student.publicStudentId)}',
+          key: QaTestKeys.sisProfilePublicId,
+          style: context.aksharaText.bodySmall,
+        ),
         const SizedBox(height: AksharaSpacing.s3),
-        AksharaManageAction(
-          permission: Permission.manageSis,
-          child: OutlinedButton.icon(
-            key: QaTestKeys.sisEditProfileButton,
-            onPressed: () => showSisProfileEditSheet(
-              context,
-              ref,
-              profile: profile,
+        Wrap(
+          spacing: AksharaSpacing.s2,
+          runSpacing: AksharaSpacing.s2,
+          children: [
+            AksharaManageAction(
+              permission: Permission.manageSis,
+              child: OutlinedButton.icon(
+                key: QaTestKeys.sisEditProfileButton,
+                onPressed: () => showSisProfileEditSheet(
+                  context,
+                  ref,
+                  profile: profile,
+                ),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Edit Profile'),
+              ),
             ),
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Edit Profile'),
-          ),
+            // SIS-1: issue a bonafide/study/conduct certificate → render PDF.
+            AksharaManageAction(
+              permission: Permission.manageSis,
+              child: OutlinedButton.icon(
+                key: QaTestKeys.sisIssueCertificateButton,
+                onPressed: () => showSisIssueCertificateDialog(
+                  context,
+                  ref,
+                  profile: profile,
+                ),
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: const Text('Issue certificate'),
+              ),
+            ),
+            // SIS-D1: transfer certificate (no-dues gated) → status transferred.
+            AksharaManageAction(
+              permission: Permission.manageSis,
+              child: OutlinedButton.icon(
+                key: QaTestKeys.sisTransferCertificateButton,
+                onPressed: () => showSisTransferCertificateDialog(
+                  context,
+                  ref,
+                  profile: profile,
+                ),
+                icon: const Icon(Icons.logout_outlined),
+                label: const Text('Transfer certificate'),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: AksharaSpacing.s4),
         SisKpiRow(
@@ -209,9 +251,20 @@ class SisStudentProfileScreen extends ConsumerWidget {
               ),
             ],
           ),
+        const SizedBox(height: AksharaSpacing.s6),
+        _DetailSection(
+          title: 'Certificates',
+          child: _CertificateRegister(studentId: student.id),
+        ),
       ],
     );
   }
+
+  /// Public Student ID shown on the header; "—" when the school has no code.
+  static String _psidLabel(String? publicStudentId) =>
+      (publicStudentId == null || publicStudentId.trim().isEmpty)
+          ? '—'
+          : publicStudentId.trim();
 
   static String _statusLabel(SisStudentStatus status) => switch (status) {
         SisStudentStatus.active => 'Active',
@@ -470,6 +523,85 @@ class _DocumentRow extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// SIS-1 — the certificate issuance register (bonafide/study/conduct + TC),
+/// newest first. Reads from [sisCertificateRegisterProvider].
+class _CertificateRegister extends ConsumerWidget {
+  const _CertificateRegister({required this.studentId});
+
+  final String studentId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final text = context.aksharaText;
+    final register = ref.watch(sisCertificateRegisterProvider(studentId));
+
+    return Material(
+      key: QaTestKeys.sisCertificateRegister,
+      child: register.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: AksharaSpacing.s3),
+          child: LinearProgressIndicator(),
+        ),
+        error: (_, __) => Text(
+          'Could not load the certificate register.',
+          style: text.bodySmall,
+        ),
+        data: (issues) {
+          if (issues.isEmpty) {
+            return Text(
+              'No certificates issued yet.',
+              style: text.bodyMedium,
+            );
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final issue in issues) _CertificateRow(issue: issue),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CertificateRow extends StatelessWidget {
+  const _CertificateRow({required this.issue});
+
+  final SisCertificateIssue issue;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.aksharaText;
+    final serial = issue.serialNo;
+    final reason = issue.reason;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AksharaSpacing.s2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${issue.type.certificateTitle}'
+                  '${serial != null && serial.isNotEmpty ? ' · $serial' : ''}',
+                  style: text.titleSmall,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            'Issued ${issue.issuedAt}'
+            '${reason != null && reason.isNotEmpty ? ' · $reason' : ''}',
+            style: text.bodySmall,
+          ),
         ],
       ),
     );

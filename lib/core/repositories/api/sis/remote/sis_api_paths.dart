@@ -27,4 +27,12 @@ abstract final class SisApiPaths {
 
   static String enrollment(String enrollmentId) =>
       '$base/enrollments/$enrollmentId';
+
+  /// SIS-1 — POST issue / GET the certificate register for a student.
+  static String studentCertificates(String studentId) =>
+      '$base/students/$studentId/certificates';
+
+  /// SIS-D1 — POST issue a Transfer Certificate for a student.
+  static String studentTransferCertificate(String studentId) =>
+      '$base/students/$studentId/transfer-certificate';
 }

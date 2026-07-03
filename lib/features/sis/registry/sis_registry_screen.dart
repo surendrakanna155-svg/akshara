@@ -20,6 +20,13 @@ import '../sis_models.dart';
 import '../widgets/sis_module_scaffold.dart';
 import 'sis_registry_provider.dart';
 
+/// Public Student ID cell/subtitle label; "—" when the school has no code
+/// (the backend sends the field null for a code-less school).
+String _registryPsidLabel(String? publicStudentId) =>
+    (publicStudentId == null || publicStudentId.trim().isEmpty)
+        ? '—'
+        : publicStudentId.trim();
+
 /// SIS-02 — Student Registry.
 class SisRegistryScreen extends ConsumerStatefulWidget {
   const SisRegistryScreen({super.key});
@@ -207,6 +214,7 @@ class _StudentRegistryTable extends StatelessWidget {
   static const _columns = [
     DataColumn(label: Text('Student')),
     DataColumn(label: Text('Admission No.')),
+    DataColumn(label: Text('Public ID')),
     DataColumn(label: Text('Class')),
     DataColumn(label: Text('Section')),
     DataColumn(label: Text('Status')),
@@ -237,6 +245,7 @@ class _StudentRegistryTable extends StatelessWidget {
               ),
             ),
             DataCell(Text(student.admissionNumber)),
+            DataCell(Text(_registryPsidLabel(student.publicStudentId))),
             DataCell(Text(student.classLabel)),
             DataCell(Text(student.section)),
             DataCell(_StudentStatusChip(status: student.status)),
@@ -520,6 +529,11 @@ class _StudentMobileCard extends StatelessWidget {
                 Text(
                   '${student.admissionNumber} · Class ${student.classLabel}-${student.section}',
                   style: text.bodySmall,
+                ),
+                // Identity Platform: permanent public student ID under the row.
+                Text(
+                  'Public ID: ${_registryPsidLabel(student.publicStudentId)}',
+                  style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
                 ),
                 // SIS-2: primary guardian contact where available.
                 if (student.guardianName.isNotEmpty ||

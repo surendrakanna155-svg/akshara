@@ -183,6 +183,87 @@ final verifyStudentDocumentProvider =
   VerifyStudentDocumentNotifier.new,
 );
 
+/// SIS-1 — issues a bonafide/study/conduct certificate (manageSis) and returns
+/// the certificate DATA for the client PDF. Refreshes the register on success.
+class IssueCertificateNotifier extends AsyncNotifier<SisCertificateData?> {
+  @override
+  FutureOr<SisCertificateData?> build() => null;
+
+  Future<SisCertificateData?> execute({
+    required String studentId,
+    required IssueCertificateRequest request,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final result = await _runMutation(
+        ref,
+        assertPermission: () => assertManageSis(ref),
+        action: () => ref.read(sisRepositoryProvider).issueCertificate(
+              query: ref.read(repositoryQueryProvider),
+              studentId: studentId,
+              request: request,
+            ),
+      );
+      ref.invalidate(sisCertificateRegisterProvider(studentId));
+      return result;
+    });
+    return state.valueOrNull;
+  }
+}
+
+final issueCertificateProvider =
+    AsyncNotifierProvider<IssueCertificateNotifier, SisCertificateData?>(
+  IssueCertificateNotifier.new,
+);
+
+/// SIS-D1 — issues a Transfer Certificate (manageSis). Surfaces 409
+/// DUES_PENDING as an [ApiFailureException]; on success the student's status
+/// flips to transferred, so the student read + register are invalidated.
+class IssueTransferCertificateNotifier
+    extends AsyncNotifier<SisCertificateData?> {
+  @override
+  FutureOr<SisCertificateData?> build() => null;
+
+  Future<SisCertificateData?> execute({
+    required String studentId,
+    required IssueTransferCertificateRequest request,
+  }) async {
+    if (state.isLoading) return state.valueOrNull;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final result = await _runMutation(
+        ref,
+        assertPermission: () => assertManageSis(ref),
+        invalidateStudents: true,
+        invalidateStudentId: studentId,
+        action: () => ref.read(sisRepositoryProvider).issueTransferCertificate(
+              query: ref.read(repositoryQueryProvider),
+              studentId: studentId,
+              request: request,
+            ),
+      );
+      ref.invalidate(sisCertificateRegisterProvider(studentId));
+      return result;
+    });
+    return state.valueOrNull;
+  }
+}
+
+final issueTransferCertificateProvider = AsyncNotifierProvider<
+    IssueTransferCertificateNotifier, SisCertificateData?>(
+  IssueTransferCertificateNotifier.new,
+);
+
+/// SIS-1 — the certificate issuance register for a student (viewSis).
+final sisCertificateRegisterProvider =
+    FutureProvider.family<List<SisCertificateIssue>, String>(
+  (ref, studentId) => ref.read(sisRepositoryProvider).listCertificates(
+        query: ref.read(repositoryQueryProvider),
+        studentId: studentId,
+      ),
+);
+
 class UpdateStudentStatusNotifier extends AsyncNotifier<SisStudent?> {
   @override
   FutureOr<SisStudent?> build() => null;

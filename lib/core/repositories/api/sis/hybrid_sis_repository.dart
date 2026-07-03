@@ -112,6 +112,37 @@ class HybridSisRepository implements SisRepository {
       );
 
   @override
+  Future<SisCertificateData> issueCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueCertificateRequest request,
+  }) =>
+      _api.issueCertificate(
+        query: query,
+        studentId: studentId,
+        request: request,
+      );
+
+  @override
+  Future<SisCertificateData> issueTransferCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueTransferCertificateRequest request,
+  }) =>
+      _api.issueTransferCertificate(
+        query: query,
+        studentId: studentId,
+        request: request,
+      );
+
+  @override
+  Future<List<SisCertificateIssue>> listCertificates({
+    required RepositoryQuery query,
+    required String studentId,
+  }) =>
+      _api.listCertificates(query: query, studentId: studentId);
+
+  @override
   Future<SisStudent> assignAcademicAssignment({
     required RepositoryQuery query,
     required AcademicAssignmentRequest request,

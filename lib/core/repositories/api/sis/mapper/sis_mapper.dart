@@ -142,6 +142,9 @@ class SisMapper {
       admissionNumber: raw['admissionNumber'] as String? ??
           raw['admission_number'] as String? ??
           '',
+      publicStudentId: _nullableString(
+        raw['publicStudentId'] ?? raw['public_student_id'],
+      ),
       classLabel: raw['className'] as String? ??
           raw['class_name'] as String? ??
           raw['classLabel'] as String? ??
@@ -196,6 +199,9 @@ class SisMapper {
       admissionNumber: profileRaw?['admissionNumber'] as String? ??
           profileRaw?['admission_number'] as String? ??
           '',
+      publicStudentId: _nullableString(
+        profileRaw?['publicStudentId'] ?? profileRaw?['public_student_id'],
+      ),
       classLabel: enrollmentRaw?['className'] as String? ??
           enrollmentRaw?['class_name'] as String? ??
           '',
@@ -249,6 +255,9 @@ class SisMapper {
       id: raw['id'] as String? ?? '',
       studentName: raw['studentName'] as String? ?? '',
       admissionNumber: raw['admissionNumber'] as String? ?? '',
+      publicStudentId: _nullableString(
+        raw['publicStudentId'] ?? raw['public_student_id'],
+      ),
       classLabel: raw['classLabel'] as String? ?? '',
       section: raw['section'] as String? ?? '',
       academicYear: raw['academicYear'] as String? ?? '',
@@ -271,6 +280,64 @@ class SisMapper {
       return toStudentProfile(SisStudentProfileDto(raw: raw)).student;
     }
     return toStudentFromDetail(raw);
+  }
+
+  /// SIS-1 — maps the certificate DATA envelope (from an issuance) to the
+  /// domain payload the client PDF renders from.
+  SisCertificateData toCertificateData(Map<String, dynamic> raw) {
+    final student = raw['student'] as Map<String, dynamic>? ?? const {};
+    final school = raw['school'] as Map<String, dynamic>? ?? const {};
+    return SisCertificateData(
+      issueId: raw['issueId'] as String? ?? raw['id'] as String? ?? '',
+      type: SisCertificateTypeX.parse(raw['certificateType'] as String?),
+      serialNo: _nullableString(raw['serialNo'] ?? raw['serial_no']),
+      reason: _nullableString(raw['reason']),
+      issuedAt: raw['issuedAt'] as String? ?? raw['issued_at'] as String? ?? '',
+      studentName: student['displayName'] as String? ??
+          student['display_name'] as String? ??
+          '',
+      publicStudentId: _nullableString(
+        student['publicStudentId'] ?? student['public_student_id'],
+      ),
+      admissionNumber: student['admissionNumber'] as String? ??
+          student['admission_number'] as String? ??
+          '',
+      className: student['className'] as String? ??
+          student['class_name'] as String? ??
+          '',
+      section: student['sectionName'] as String? ??
+          student['section_name'] as String? ??
+          '',
+      academicYear: student['academicYear'] as String? ??
+          student['academic_year'] as String? ??
+          '',
+      dateOfBirth: student['dateOfBirth'] as String? ??
+          student['date_of_birth'] as String? ??
+          '',
+      rollNumber: student['rollNumber'] as String? ??
+          student['roll_number'] as String? ??
+          '',
+      guardianName: student['guardianName'] as String? ??
+          student['guardian_name'] as String? ??
+          '',
+      status: student['status'] as String? ?? '',
+      schoolName: school['name'] as String? ?? '',
+      schoolCode: school['code'] as String? ?? '',
+    );
+  }
+
+  /// SIS-1 — maps one certificate issuance-register row.
+  SisCertificateIssue toCertificateIssue(Map<String, dynamic> raw) {
+    return SisCertificateIssue(
+      id: raw['id'] as String? ?? '',
+      type: SisCertificateTypeX.parse(
+        raw['type'] as String? ?? raw['certificateType'] as String?,
+      ),
+      serialNo: _nullableString(raw['serialNo'] ?? raw['serial_no']),
+      reason: _nullableString(raw['reason']),
+      issuedBy: raw['issuedBy'] as String? ?? raw['issued_by'] as String? ?? '',
+      issuedAt: raw['issuedAt'] as String? ?? raw['issued_at'] as String? ?? '',
+    );
   }
 
   SisDocumentSummary toDocumentSummary(Map<String, dynamic> raw) {
@@ -577,5 +644,16 @@ class SisMapper {
       for (final item in value)
         if (item != null) '$item',
     ];
+  }
+
+  /// Normalizes a possibly-empty backend string to a nullable value: the
+  /// backend sends `""` for absent fields (e.g. a code-less school's public
+  /// student ID), which the UI renders as "—" via a null.
+  static String? _nullableString(dynamic value) {
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return null;
   }
 }

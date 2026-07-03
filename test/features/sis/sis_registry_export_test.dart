@@ -47,6 +47,7 @@ void main() {
       id: 'stu-1',
       studentName: 'Arjun Patel',
       admissionNumber: 'ADM-2026-0138',
+      publicStudentId: 'DPSKKP-0001',
       classLabel: '10',
       section: 'A',
       academicYear: '2026–27',
@@ -59,9 +60,11 @@ void main() {
       enrolledAt: 'Jan 2026',
     );
 
-    test('headers form the 7-column registry grid incl. guardian fields', () {
+    test('headers form the 8-column registry grid incl. public ID + guardian',
+        () {
       expect(SisReportExporters.registryHeaders, const [
         'Admission #',
+        'Public ID',
         'Name',
         'Class',
         'Section',
@@ -71,11 +74,12 @@ void main() {
       ]);
     });
 
-    test('rows carry guardian name and phone for each student', () {
+    test('rows carry public ID, guardian name and phone for each student', () {
       final rows = SisReportExporters.registryRows(const [student]);
       expect(rows, hasLength(1));
       expect(rows.single, const [
         'ADM-2026-0138',
+        'DPSKKP-0001',
         'Arjun Patel',
         '10',
         'A',
@@ -83,6 +87,26 @@ void main() {
         'Kiran Patel',
         '+91 98765 11111',
       ]);
+    });
+
+    test('public ID column renders "—" when the school has no code', () {
+      const codeless = SisStudent(
+        id: 'stu-2',
+        studentName: 'No Code',
+        admissionNumber: 'ADM-2026-0200',
+        classLabel: '8',
+        section: 'B',
+        academicYear: '2026–27',
+        status: SisStudentStatus.active,
+        gender: 'Female',
+        dateOfBirth: '01 Jan 2013',
+        guardianName: 'Parent',
+        phone: '+91 90000 00000',
+        email: '',
+        enrolledAt: 'Jan 2026',
+      );
+      final rows = SisReportExporters.registryRows(const [codeless]);
+      expect(rows.single[1], '—');
     });
 
     test('grid CSV is a true multi-column grid, not key/value pairs', () {
@@ -93,9 +117,10 @@ void main() {
       );
       final lines = csv.trim().split('\n');
       expect(lines, hasLength(2));
-      expect(lines.first.split(',').length, 7);
+      expect(lines.first.split(',').length, 8);
       expect(lines.first, isNot(contains('Field')));
       expect(lines.last, contains('Kiran Patel'));
+      expect(lines.last, contains('DPSKKP-0001'));
     });
   });
 

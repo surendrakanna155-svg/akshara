@@ -149,6 +149,40 @@ class ApiSisRepository implements SisRepository {
   }
 
   @override
+  Future<SisCertificateData> issueCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueCertificateRequest request,
+  }) async {
+    return _remote.issueCertificate(
+      query: query,
+      studentId: studentId,
+      request: request,
+    );
+  }
+
+  @override
+  Future<SisCertificateData> issueTransferCertificate({
+    required RepositoryQuery query,
+    required String studentId,
+    required IssueTransferCertificateRequest request,
+  }) async {
+    return _remote.issueTransferCertificate(
+      query: query,
+      studentId: studentId,
+      request: request,
+    );
+  }
+
+  @override
+  Future<List<SisCertificateIssue>> listCertificates({
+    required RepositoryQuery query,
+    required String studentId,
+  }) async {
+    return _remote.listCertificates(query: query, studentId: studentId);
+  }
+
+  @override
   Future<SisStudent> assignAcademicAssignment({
     required RepositoryQuery query,
     required AcademicAssignmentRequest request,

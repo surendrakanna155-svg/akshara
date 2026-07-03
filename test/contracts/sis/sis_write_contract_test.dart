@@ -1,6 +1,7 @@
 import 'package:akshara_erp/core/repositories/api/sis/dto/academic_assignment_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/admissions_conversion_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/create_student_request_dto.dart';
+import 'package:akshara_erp/core/repositories/api/sis/dto/sis_certificate_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/upload_student_document_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/update_student_request_dto.dart';
 import 'package:akshara_erp/core/repositories/api/sis/dto/update_student_status_request_dto.dart';
@@ -102,6 +103,36 @@ void main() {
       ).toJson();
       expect(json['enrollmentId'], 'enr_1');
       expect(json['section'], 'A');
+    });
+
+    test('issue certificate request serializes type + optional reason', () {
+      final withReason = IssueCertificateRequestDto.fromDomain(
+        const IssueCertificateRequest(
+          type: SisCertificateType.bonafide,
+          reason: 'for bank',
+        ),
+      ).toJson();
+      expect(withReason['type'], 'bonafide');
+      expect(withReason['reason'], 'for bank');
+
+      final noReason = IssueCertificateRequestDto.fromDomain(
+        const IssueCertificateRequest(type: SisCertificateType.conduct),
+      ).toJson();
+      expect(noReason['type'], 'conduct');
+      expect(noReason.containsKey('reason'), isFalse);
+    });
+
+    test('transfer certificate request serializes only an optional reason', () {
+      final withReason = IssueTransferCertificateRequestDto.fromDomain(
+        const IssueTransferCertificateRequest(reason: 'relocation'),
+      ).toJson();
+      expect(withReason['reason'], 'relocation');
+      expect(withReason.containsKey('type'), isFalse);
+
+      final empty = IssueTransferCertificateRequestDto.fromDomain(
+        const IssueTransferCertificateRequest(),
+      ).toJson();
+      expect(empty.isEmpty, isTrue);
     });
   });
 

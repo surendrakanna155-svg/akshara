@@ -36,6 +36,12 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
   bool _saving = false;
   bool _dirty = false;
 
+  /// Identity Platform: the admission number is SET-ONCE server-side (409
+  /// ADMISSION_NUMBER_IMMUTABLE on a change). Once a student already has one it
+  /// is display-only here and we never send it back in the update.
+  bool get _admissionLocked =>
+      widget.profile.student.admissionNumber.trim().isNotEmpty;
+
   void _markDirty() {
     if (!_dirty) setState(() => _dirty = true);
   }
@@ -106,7 +112,14 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
             const Text('Edit student profile', style: TextStyle(fontSize: 18)),
             const SizedBox(height: AksharaSpacing.s3),
             _field(_studentNameController, 'Student name'),
-            _field(_admissionController, 'Admission number'),
+            if (_admissionLocked)
+              _readOnlyField(
+                _admissionController,
+                'Admission number',
+                helperText: 'Set once — cannot be changed.',
+              )
+            else
+              _field(_admissionController, 'Admission number'),
             _field(_classController, 'Class'),
             _field(_sectionController, 'Section'),
             _field(_academicYearController, 'Academic year'),
@@ -152,6 +165,30 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
     );
   }
 
+  /// A display-only field (e.g. the set-once admission number). Not editable,
+  /// so it is excluded from the dirty tracking and never posted back.
+  Widget _readOnlyField(
+    TextEditingController controller,
+    String label, {
+    required String helperText,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AksharaSpacing.s2),
+      child: TextField(
+        key: QaTestKeys.sisEditProfileAdmissionField,
+        controller: controller,
+        readOnly: true,
+        enabled: false,
+        buildCounter: (_, {required currentLength, required isFocused, maxLength}) =>
+            null,
+        decoration: InputDecoration(
+          labelText: label,
+          helperText: helperText,
+        ),
+      ),
+    );
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
@@ -159,7 +196,11 @@ class _SisProfileEditSheetState extends ConsumerState<SisProfileEditSheet> {
             studentId: widget.profile.student.id,
             request: UpdateStudentRequest(
               studentName: _studentNameController.text.trim(),
-              admissionNumber: _admissionController.text.trim(),
+              // Set-once: never resend an already-assigned admission number.
+              // (Backend no-ops equal values but 409s a change; dropping it
+              // keeps the update clean.)
+              admissionNumber:
+                  _admissionLocked ? null : _admissionController.text.trim(),
               classLabel: _classController.text.trim(),
               section: _sectionController.text.trim(),
               academicYear: _academicYearController.text.trim(),
