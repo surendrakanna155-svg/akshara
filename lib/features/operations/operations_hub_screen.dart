@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/security/permissions.dart';
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/widgets/akshara_view_action.dart';
 import '../../shared/widgets/widgets.dart';
 import '../../theme/theme_extensions.dart';
 import '../phase5/phase5_providers.dart';
@@ -18,7 +22,20 @@ class OperationsHubScreen extends ConsumerWidget {
     final hub = ref.watch(operationsHubProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('School Operations Hub')),
+      appBar: AppBar(
+        title: const Text('School Operations Hub'),
+        actions: [
+          AksharaViewAction(
+            permission: Permission.viewOperationsHub,
+            child: IconButton(
+              key: QaTestKeys.operationsHubExportButton,
+              tooltip: 'Export daily report',
+              icon: const Icon(Icons.download_outlined),
+              onPressed: () => _exportDailyReport(context, ref),
+            ),
+          ),
+        ],
+      ),
       body: hub.when(
         data: (h) {
           return ListView(
@@ -136,6 +153,69 @@ class OperationsHubScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(operationsHubProvider),
         ),
       ),
+    );
+  }
+
+  Future<void> _exportDailyReport(BuildContext context, WidgetRef ref) async {
+    final Uint8List? bytes;
+    try {
+      bytes = await ref
+          .read(exportOperationsHubReportProvider.notifier)
+          .execute();
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to export daily report: $error')),
+      );
+      return;
+    }
+    if (!context.mounted || bytes == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        key: QaTestKeys.operationsHubExportSuccessSnackbar,
+        content: Text('Daily school report PDF generated'),
+      ),
+    );
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AksharaSpacing.s4),
+            child: Wrap(
+              runSpacing: AksharaSpacing.s3,
+              children: [
+                ListTile(
+                  key: QaTestKeys.operationsHubExportPrintButton,
+                  leading: const Icon(Icons.print_outlined),
+                  title: const Text('Print daily report'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await ref
+                        .read(operationsHubPdfServiceProvider)
+                        .printDailyReport(bytes!);
+                  },
+                ),
+                ListTile(
+                  key: QaTestKeys.operationsHubExportShareButton,
+                  leading: const Icon(Icons.share_outlined),
+                  title: const Text('Share daily report'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await ref
+                        .read(operationsHubPdfServiceProvider)
+                        .shareDailyReport(
+                          bytes: bytes!,
+                          fileName: 'daily_school_report.pdf',
+                        );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

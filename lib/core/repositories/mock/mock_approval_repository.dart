@@ -143,6 +143,56 @@ class MockApprovalRepository implements ApprovalRepository {
   }
 
   @override
+  Future<BatchDecisionResult> batchDecide({
+    required RepositoryQuery query,
+    required BatchDecideApprovalsRequest request,
+  }) async {
+    // Mirror the backend contract: reject requires a non-empty comment; fail the
+    // WHOLE batch up front (matches the single-reject 422), not per-item skips.
+    final isReject = request.decision == ApprovalBatchDecision.reject;
+    if (isReject && (request.comment?.trim().isEmpty ?? true)) {
+      throw ApprovalRejectCommentRequiredException(
+        request.ids.isEmpty ? 'batch' : request.ids.first,
+      );
+    }
+
+    final status =
+        isReject ? ApprovalStatus.rejected : ApprovalStatus.approved;
+    final comment = request.comment?.trim();
+    final decided = <ApprovalBatchDecidedItem>[];
+    final skipped = <ApprovalBatchSkippedItem>[];
+    // De-dupe ids so a repeated id can't be decided twice in one batch.
+    final seen = <String>{};
+
+    for (final id in request.ids) {
+      if (!seen.add(id)) {
+        skipped.add(ApprovalBatchSkippedItem(id: id, reason: 'duplicate'));
+        continue;
+      }
+      final index = _indexScoped(query, id);
+      if (index == null) {
+        skipped.add(ApprovalBatchSkippedItem(id: id, reason: 'not found'));
+        continue;
+      }
+      final current = _requests[index];
+      if (current.status != ApprovalStatus.pending) {
+        skipped.add(ApprovalBatchSkippedItem(id: id, reason: 'not pending'));
+        continue;
+      }
+      _requests[index] = current.copyWith(
+        status: status,
+        decidedAt: DateTime.now().toUtc(),
+        decidedById: request.actorId,
+        decidedByName: request.actorName,
+        decisionComment: comment,
+      );
+      decided.add(ApprovalBatchDecidedItem(id: id, status: status));
+    }
+
+    return BatchDecisionResult(decided: decided, skipped: skipped);
+  }
+
+  @override
   Future<List<ApprovalAuditEntry>> listAuditEntries({
     required RepositoryQuery query,
     String? approvalRequestId,

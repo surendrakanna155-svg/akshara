@@ -75,6 +75,41 @@ class ApprovalRequest {
   }
 }
 
+/// PRI-1 — the decision applied to a whole batch of approvals.
+enum ApprovalBatchDecision { approve, reject }
+
+/// PRI-1 — one id that was decided by a batch call, with its resulting status.
+@immutable
+class ApprovalBatchDecidedItem {
+  const ApprovalBatchDecidedItem({required this.id, required this.status});
+
+  final String id;
+  final ApprovalStatus status;
+}
+
+/// PRI-1 — one id the batch could not decide (missing / forbidden / not
+/// pending / duplicate), with the server-reported reason.
+@immutable
+class ApprovalBatchSkippedItem {
+  const ApprovalBatchSkippedItem({required this.id, required this.reason});
+
+  final String id;
+  final String reason;
+}
+
+/// PRI-1 — partial result of a batch approve/reject. Per-item authority means a
+/// forbidden / non-pending / missing id is reported in [skipped], never thrown.
+@immutable
+class BatchDecisionResult {
+  const BatchDecisionResult({
+    this.decided = const [],
+    this.skipped = const [],
+  });
+
+  final List<ApprovalBatchDecidedItem> decided;
+  final List<ApprovalBatchSkippedItem> skipped;
+}
+
 /// Filter for listing approval requests.
 @immutable
 class ApprovalListFilter {

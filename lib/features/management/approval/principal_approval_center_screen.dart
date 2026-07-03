@@ -14,9 +14,13 @@ import '../management_models.dart';
 import '../widgets/management_kpi_row.dart';
 import '../widgets/management_module_scaffold.dart';
 import 'approval_center_provider.dart';
-import 'widgets/approval_detail_panel.dart';
+import 'widgets/approval_batch_action_bar.dart';
 import 'widgets/approval_queue_table.dart';
+import 'widgets/approval_detail_panel.dart';
 import 'widgets/approval_type_filter.dart';
+import 'widgets/approval_stale_banner.dart';
+import 'widgets/approval_unsubmitted_marks_card.dart';
+import 'widgets/principal_digest_card.dart';
 
 /// MG-07 / Principal Approval Center — unified cross-module inbox (M-D2).
 class PrincipalApprovalCenterScreen extends ConsumerWidget {
@@ -47,6 +51,10 @@ class PrincipalApprovalCenterScreen extends ConsumerWidget {
       onFilterSelected: (index) {
         ref.read(approvalCenterStatusFilterProvider.notifier).state = index;
         ref.read(approvalCenterSelectedIdProvider.notifier).state = null;
+        // Switching the status filter clears the batch selection + stale filter
+        // so a stale row selected under "Pending" can't be carried across.
+        ref.read(approvalCenterSelectionProvider.notifier).state = <String>{};
+        ref.read(approvalCenterStaleFilterProvider.notifier).state = false;
       },
       body: Semantics(
         container: true,
@@ -75,8 +83,16 @@ class PrincipalApprovalCenterScreen extends ConsumerWidget {
               else ...[
                 ManagementKpiRow(kpis: kpis),
                 const SizedBox(height: AksharaSpacing.s4),
+                // PRI-5 — stale (>48h) pending banner; tap to filter to stale.
+                const ApprovalStaleBanner(),
+                // PRI-4 — weekly principal digest (top priorities/risks).
+                const PrincipalDigestCard(),
+                // PRI-2 — unsubmitted marks exception list.
+                const ApprovalUnsubmittedMarksCard(),
                 const ApprovalTypeFilter(),
                 const SizedBox(height: AksharaSpacing.s4),
+                // PRI-1 — batch-action bar (visible when ≥1 request selected).
+                const ApprovalBatchActionBar(),
                 const AksharaSectionHeader(title: 'Approval queue'),
                 const SizedBox(height: AksharaSpacing.s3),
                 if (items.isEmpty)

@@ -1186,6 +1186,48 @@ abstract final class QaTestKeys {
   static const openApprovalCenterButton =
       ValueKey<String>('open_approval_center_button');
 
+  // ── PRI-1 — batch approve/reject on the Approval Center ──────────────────
+  /// Per-row multi-select checkbox in the batch queue.
+  static ValueKey<String> approvalSelectCheckbox(String approvalId) =>
+      ValueKey<String>('approval_select_$approvalId');
+
+  /// Batch action bar (shown when ≥1 request is selected).
+  static const approvalBatchBar = ValueKey<String>('approval_batch_bar');
+  static const approvalBatchApproveButton =
+      ValueKey<String>('approval_batch_approve_button');
+  static const approvalBatchRejectButton =
+      ValueKey<String>('approval_batch_reject_button');
+  static const approvalBatchClearButton =
+      ValueKey<String>('approval_batch_clear_button');
+  static const approvalBatchRejectDialogField =
+      ValueKey<String>('approval_batch_reject_dialog_field');
+  static const approvalBatchRejectDialogConfirm =
+      ValueKey<String>('approval_batch_reject_dialog_confirm');
+  static const approvalBatchResultSnackbar =
+      ValueKey<String>('approval_batch_result_snackbar');
+
+  // ── PRI-5 — stale (>48h) pending banner on the Approval Center ───────────
+  static const approvalStaleBanner =
+      ValueKey<String>('approval_stale_banner');
+
+  // ── PRI-2 — unsubmitted marks exception card ─────────────────────────────
+  static const approvalUnsubmittedMarksCard =
+      ValueKey<String>('approval_unsubmitted_marks_card');
+
+  // ── PRI-3 — Operations Hub daily-report export ───────────────────────────
+  static const operationsHubExportButton =
+      ValueKey<String>('operations_hub_export_button');
+  static const operationsHubExportSuccessSnackbar =
+      ValueKey<String>('operations_hub_export_success_snackbar');
+  static const operationsHubExportPrintButton =
+      ValueKey<String>('operations_hub_export_print_button');
+  static const operationsHubExportShareButton =
+      ValueKey<String>('operations_hub_export_share_button');
+
+  // ── PRI-4 — weekly principal digest card ─────────────────────────────────
+  static const principalDigestCard =
+      ValueKey<String>('principal_digest_card');
+
   static const managementDashboardExportButton =
       ValueKey<String>('management_dashboard_export_button');
 

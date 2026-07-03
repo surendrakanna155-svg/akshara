@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'approval_models.dart';
 import 'approval_request_type.dart';
 
 /// Payload to create a new approval request.
@@ -56,6 +57,25 @@ class RejectApprovalRequest {
   final String actorId;
   final String actorName;
   final String comment;
+}
+
+/// PRI-1 — a principal's batch approve/reject over many pending requests.
+/// `reject` requires a non-empty [comment] (whole-batch validation error).
+@immutable
+class BatchDecideApprovalsRequest {
+  const BatchDecideApprovalsRequest({
+    required this.ids,
+    required this.decision,
+    required this.actorId,
+    required this.actorName,
+    this.comment,
+  });
+
+  final List<String> ids;
+  final ApprovalBatchDecision decision;
+  final String actorId;
+  final String actorName;
+  final String? comment;
 }
 
 /// Requester or system cancellation of a pending approval.

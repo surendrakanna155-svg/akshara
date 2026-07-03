@@ -4,6 +4,7 @@ import '../../../../approvals/approval_request_type.dart';
 import '../../../../approvals/approval_status.dart';
 import '../dto/approval_audit_entry_dto.dart';
 import '../dto/approval_request_dto.dart';
+import '../dto/approval_request_payload_dto.dart';
 
 class ApprovalMapper {
   const ApprovalMapper();
@@ -42,6 +43,22 @@ class ApprovalMapper {
       tenantId: dto.tenantId,
       schoolId: dto.schoolId,
       metadata: dto.metadata,
+    );
+  }
+
+  BatchDecisionResult batchToDomain(BatchDecisionResultDto dto) {
+    return BatchDecisionResult(
+      decided: [
+        for (final item in dto.decided)
+          ApprovalBatchDecidedItem(
+            id: item.id,
+            status: _statusFromWire(item.status),
+          ),
+      ],
+      skipped: [
+        for (final item in dto.skipped)
+          ApprovalBatchSkippedItem(id: item.id, reason: item.reason),
+      ],
     );
   }
 

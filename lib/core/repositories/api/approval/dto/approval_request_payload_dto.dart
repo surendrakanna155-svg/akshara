@@ -65,6 +65,75 @@ class DecideApprovalRequestDto {
       };
 }
 
+/// PRI-1 — request body for POST /approvals/batch-decide.
+class BatchDecideApprovalsRequestDto {
+  const BatchDecideApprovalsRequestDto({
+    required this.ids,
+    required this.decision,
+    this.comment,
+  });
+
+  final List<String> ids;
+
+  /// Wire value: 'approve' | 'reject'.
+  final String decision;
+  final String? comment;
+
+  Map<String, dynamic> toJson() => {
+        'ids': ids,
+        'decision': decision,
+        if (comment != null) 'comment': comment,
+      };
+}
+
+/// PRI-1 — { decided: [{id, status}], skipped: [{id, reason}] }.
+class BatchDecisionResultDto {
+  const BatchDecisionResultDto({
+    required this.decided,
+    required this.skipped,
+  });
+
+  factory BatchDecisionResultDto.fromJson(Map<String, dynamic> json) {
+    final decidedRaw = json['decided'] as List<dynamic>? ?? const [];
+    final skippedRaw = json['skipped'] as List<dynamic>? ?? const [];
+    return BatchDecisionResultDto(
+      decided: [
+        for (final row in decidedRaw)
+          if (row is Map<String, dynamic>)
+            BatchDecidedItemDto(
+              id: row['id'] as String? ?? '',
+              status: row['status'] as String? ?? '',
+            ),
+      ],
+      skipped: [
+        for (final row in skippedRaw)
+          if (row is Map<String, dynamic>)
+            BatchSkippedItemDto(
+              id: row['id'] as String? ?? '',
+              reason: row['reason'] as String? ?? '',
+            ),
+      ],
+    );
+  }
+
+  final List<BatchDecidedItemDto> decided;
+  final List<BatchSkippedItemDto> skipped;
+}
+
+class BatchDecidedItemDto {
+  const BatchDecidedItemDto({required this.id, required this.status});
+
+  final String id;
+  final String status;
+}
+
+class BatchSkippedItemDto {
+  const BatchSkippedItemDto({required this.id, required this.reason});
+
+  final String id;
+  final String reason;
+}
+
 class ApprovalListFilterQuery {
   const ApprovalListFilterQuery({
     this.status,

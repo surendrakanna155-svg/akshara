@@ -4,6 +4,8 @@ import '../../approvals/approval_request_type.dart';
 import '../../approvals/approval_requests.dart';
 import '../repository_query.dart';
 
+export '../../approvals/approval_models.dart' show BatchDecisionResult;
+
 /// Contract for unified cross-module approval persistence (mock or API).
 abstract class ApprovalRepository {
   Future<List<ApprovalRequest>> listPending({
@@ -46,6 +48,15 @@ abstract class ApprovalRepository {
   Future<ApprovalRequest> cancel({
     required RepositoryQuery query,
     required CancelApprovalRequest request,
+  });
+
+  /// PRI-1 — batch approve/reject over many pending requests. Per-item authority
+  /// applies: a forbidden / non-pending / missing id is reported in
+  /// [BatchDecisionResult.skipped], not thrown. `reject` requires a non-empty
+  /// comment (whole-batch validation error).
+  Future<BatchDecisionResult> batchDecide({
+    required RepositoryQuery query,
+    required BatchDecideApprovalsRequest request,
   });
 
   Future<List<ApprovalAuditEntry>> listAuditEntries({

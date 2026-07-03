@@ -6,6 +6,9 @@ abstract final class ApprovalApiPaths {
   static const String entity = '$base/entity';
   static const String audit = '$base/audit';
 
+  /// PRI-1 — POST batch approve/reject: { ids, decision, comment? }.
+  static const String batchDecide = '$base/batch-decide';
+
   static String detail(String id) => '$base/$id';
   static String approve(String id) => '${detail(id)}/approve';
   static String reject(String id) => '${detail(id)}/reject';

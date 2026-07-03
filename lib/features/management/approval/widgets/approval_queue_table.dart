@@ -37,6 +37,8 @@ class ApprovalQueueTable extends ConsumerWidget {
       );
     }
 
+    final selection = ref.watch(approvalCenterSelectionProvider);
+
     return Semantics(
       container: true,
       label: 'Approval queue table, ${items.length} items',
@@ -48,6 +50,7 @@ class ApprovalQueueTable extends ConsumerWidget {
             dataRowMinHeight: 64,
             dataRowMaxHeight: 88,
             columns: const [
+              DataColumn(label: Text('Select')),
               DataColumn(label: Text('Title')),
               DataColumn(label: Text('Type')),
               DataColumn(label: Text('Requester')),
@@ -58,16 +61,29 @@ class ApprovalQueueTable extends ConsumerWidget {
             rows: [
               for (final item in items)
                 DataRow(
-                  selected: ref.watch(approvalCenterSelectedIdProvider) ==
-                      item.id,
-                  onSelectChanged: (_) => ref
-                      .read(approvalCenterSelectedIdProvider.notifier)
-                      .state = item.id,
+                  selected: selection.contains(item.id),
                   cells: [
-                    DataCell(Text(item.title)),
-                    DataCell(Text(item.type.label)),
-                    DataCell(Text(item.requesterName)),
-                    DataCell(Text(_formatDate(item.createdAt))),
+                    DataCell(_SelectCheckbox(
+                      item: item,
+                      selected: selection.contains(item.id),
+                    )),
+                    // Tapping a non-checkbox cell still opens the detail panel.
+                    DataCell(
+                      Text(item.title),
+                      onTap: () => _openDetail(ref, item),
+                    ),
+                    DataCell(
+                      Text(item.type.label),
+                      onTap: () => _openDetail(ref, item),
+                    ),
+                    DataCell(
+                      Text(item.requesterName),
+                      onTap: () => _openDetail(ref, item),
+                    ),
+                    DataCell(
+                      Text(_formatDate(item.createdAt)),
+                      onTap: () => _openDetail(ref, item),
+                    ),
                     DataCell(_StatusChip(status: item.status)),
                     DataCell(_ApprovalActions(item: item)),
                   ],
@@ -77,6 +93,10 @@ class ApprovalQueueTable extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  static void _openDetail(WidgetRef ref, ApprovalRequest item) {
+    ref.read(approvalCenterSelectedIdProvider.notifier).state = item.id;
   }
 
   static String _formatDate(DateTime value) => formatApprovalDate(value);
@@ -102,7 +122,20 @@ class _ApprovalMobileCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.title, style: text.titleSmall),
+                Row(
+                  children: [
+                    if (item.status == ApprovalStatus.pending)
+                      _SelectCheckbox(
+                        item: item,
+                        selected: ref
+                            .watch(approvalCenterSelectionProvider)
+                            .contains(item.id),
+                      ),
+                    Expanded(
+                      child: Text(item.title, style: text.titleSmall),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: AksharaSpacing.s2),
                 Text(
                   '${item.requesterName} · ${item.type.label} · ${_formatDate(item.createdAt)}',
@@ -149,6 +182,42 @@ class _ApprovalMobileCard extends ConsumerWidget {
   }
 
   static String _formatDate(DateTime value) => formatApprovalDate(value);
+}
+
+/// PRI-1 — per-row multi-select checkbox. Only pending requests are selectable
+/// (only they can be batch-decided); a non-pending row shows a disabled box.
+class _SelectCheckbox extends ConsumerWidget {
+  const _SelectCheckbox({required this.item, required this.selected});
+
+  final ApprovalRequest item;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectable = item.status == ApprovalStatus.pending;
+    return Semantics(
+      label: 'Select ${item.title} for batch decision',
+      checked: selected,
+      child: Checkbox(
+        key: QaTestKeys.approvalSelectCheckbox(item.id),
+        value: selected,
+        onChanged: selectable
+            ? (checked) {
+                final current = {
+                  ...ref.read(approvalCenterSelectionProvider),
+                };
+                if (checked == true) {
+                  current.add(item.id);
+                } else {
+                  current.remove(item.id);
+                }
+                ref.read(approvalCenterSelectionProvider.notifier).state =
+                    current;
+              }
+            : null,
+      ),
+    );
+  }
 }
 
 class _StatusChip extends StatelessWidget {

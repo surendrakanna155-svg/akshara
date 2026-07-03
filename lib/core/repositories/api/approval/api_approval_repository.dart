@@ -160,6 +160,34 @@ class ApiApprovalRepository implements ApprovalRepository {
   }
 
   @override
+  Future<BatchDecisionResult> batchDecide({
+    required RepositoryQuery query,
+    required BatchDecideApprovalsRequest request,
+  }) async {
+    final isReject = request.decision == ApprovalBatchDecision.reject;
+    // Mirror the single-reject + backend contract: a batch reject requires a
+    // non-empty comment. Fail before the round-trip (server 422s on the same).
+    if (isReject && (request.comment?.trim().isEmpty ?? true)) {
+      throw ApprovalRejectCommentRequiredException(
+        request.ids.isEmpty ? 'batch' : request.ids.first,
+      );
+    }
+    try {
+      final dto = await _remote.batchDecide(
+        query: query,
+        request: BatchDecideApprovalsRequestDto(
+          ids: request.ids,
+          decision: isReject ? 'reject' : 'approve',
+          comment: request.comment?.trim(),
+        ),
+      );
+      return _mapper.batchToDomain(dto);
+    } on DioException catch (error) {
+      throw _mapDioError(error, 'batch');
+    }
+  }
+
+  @override
   Future<List<ApprovalAuditEntry>> listAuditEntries({
     required RepositoryQuery query,
     String? approvalRequestId,

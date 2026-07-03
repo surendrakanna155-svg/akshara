@@ -123,6 +123,18 @@ class ApprovalRemoteDataSource {
     return ApprovalRequestDto.fromJson(_requireData(response));
   }
 
+  Future<BatchDecisionResultDto> batchDecide({
+    required RepositoryQuery query,
+    required BatchDecideApprovalsRequestDto request,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ApprovalApiPaths.batchDecide,
+      queryParameters: _queryParams(query),
+      data: request.toJson(),
+    );
+    return BatchDecisionResultDto.fromJson(_requireData(response));
+  }
+
   Future<List<ApprovalAuditEntryDto>> fetchAuditEntries({
     required RepositoryQuery query,
     String? approvalRequestId,

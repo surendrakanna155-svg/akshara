@@ -127,6 +127,33 @@ class ApprovalCenterService {
     return updated;
   }
 
+  /// PRI-1 — batch approve/reject. The server (API mode) owns the audit trail
+  /// and per-item authority; in mock mode there is no per-item RBAC, so the
+  /// caller (notifier) enforces the reachability permission. Audit rows are
+  /// recorded per decided id in mock mode to mirror the single-decision path.
+  Future<BatchDecisionResult> batchDecide({
+    required RepositoryQuery query,
+    required BatchDecideApprovalsRequest request,
+  }) async {
+    final result = await _repository.batchDecide(query: query, request: request);
+    if (!_serverManagesAudit) {
+      final action = request.decision == ApprovalBatchDecision.approve
+          ? ApprovalAuditAction.approved
+          : ApprovalAuditAction.rejected;
+      for (final item in result.decided) {
+        await _recordAudit(
+          query: query,
+          approvalRequestId: item.id,
+          action: action,
+          actorId: request.actorId,
+          actorName: request.actorName,
+          comment: request.comment?.trim(),
+        );
+      }
+    }
+    return result;
+  }
+
   Future<ApprovalRequest> cancelRequest({
     required RepositoryQuery query,
     required CancelApprovalRequest request,

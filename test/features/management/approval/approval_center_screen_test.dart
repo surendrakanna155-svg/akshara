@@ -86,7 +86,12 @@ void main() {
 
       await tester.tap(find.byKey(QaTestKeys.approvalTypeFilterAcademic));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Publish Class 8-A Mathematics results'));
+      // PRI-1..5 added banner/digest/exception cards above the queue, so the
+      // row can sit below the fold — scroll it into view before tapping.
+      final title = find.text('Publish Class 8-A Mathematics results');
+      await tester.ensureVisible(title);
+      await tester.pumpAndSettle();
+      await tester.tap(title);
       await tester.pumpAndSettle();
 
       expect(find.text('Approval history'), findsOneWidget);
