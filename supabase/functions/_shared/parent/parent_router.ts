@@ -14,6 +14,7 @@ import {
   handleDashboard,
   handleEvents,
   handleExams,
+  handleFeeCertificate,
   handleFees,
   handleHomework,
   handleLeave,
@@ -74,6 +75,10 @@ export function matchParentRoute(
     "/parent/timetable": handleTimetable,
     "/parent/fees": handleFees,
     "/parent/receipts": handleReceipts,
+    // PAR-D3 — annual / 80C fee-payment certificate DATA for the parent's own
+    // child (?academicYear=YYYY-YYYY or ?year=). Own-child scoped; PDF is
+    // rendered client-side in a later wave.
+    "/parent/fee-certificate": handleFeeCertificate,
     "/parent/notices": handleNotices,
     "/parent/events": handleEvents,
     "/parent/leave": handleLeave,

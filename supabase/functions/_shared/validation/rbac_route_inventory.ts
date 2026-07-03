@@ -107,6 +107,10 @@ export const RBAC_ROUTE_INVENTORY: RbacRouteRule[] = [
   { method: "POST", path: "/approvals/batch-decide", permission: "viewManagement", scope: "school", module: "approvals" },
   { method: "GET", path: "/control-center/dashboard", permission: "viewControlCenter", scope: "organization", module: "control_center" },
   { method: "GET", path: "/parent/dashboard", permission: null, scope: "parent", module: "parent" },
+  // PAR-D3 — annual / 80C fee-payment certificate DATA. Persona-scoped (no
+  // permission slug); own-child ownership is enforced server-side against the
+  // caller's JWT child_ids plus the finance_receipts/collections parent RLS.
+  { method: "GET", path: "/parent/fee-certificate", permission: null, scope: "parent", module: "parent" },
   { method: "POST", path: "/parent/payments/initiate", permission: null, scope: "parent", module: "parent" },
   { method: "POST", path: "/parent/payments/confirm", permission: null, scope: "parent", module: "parent" },
   { method: "POST", path: "/payments/intents/initiate", permission: null, scope: "parent", module: "payment" },

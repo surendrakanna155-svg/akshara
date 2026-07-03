@@ -436,6 +436,54 @@ export function createParentScopedReadHandlers(
     }
   }
 
+  // PAR-D3 — annual / 80C fee-payment certificate DATA for the parent's OWN
+  // child. Read-aggregate only (no mutation, no audit — matches the receipts
+  // read). Own-child scope is enforced by resolveParentStudentId against the
+  // caller's JWT child_ids (never a client-supplied student id), with the
+  // finance parent RLS policy as the second lock underneath.
+  async function handleFeeCertificate(
+    req: Request,
+    config: AppConfig,
+    errorMessage: string,
+  ): Promise<Response> {
+    const auth = await authenticateRequest(req, config);
+    if (!auth.ok) return auth.response;
+
+    const denied = requireRead(auth.claims);
+    if (denied) return denied;
+
+    const url = new URL(req.url);
+    const studentIdResult = resolveParentStudentId(auth.claims, url);
+    if (studentIdResult instanceof Response) return studentIdResult;
+
+    const academicYear = url.searchParams.get("academicYear") ??
+      url.searchParams.get("year");
+    const orgId = organizationIdFromClaims(auth.claims);
+    const schoolId = schoolIdFromClaims(auth.claims);
+
+    try {
+      const certificate = await runTenant(config, auth.claims, async (db) => {
+        const { buildFeeCertificateData } = await import(
+          "../pilot/pilot_operations_repository.ts"
+        );
+        return await buildFeeCertificateData(
+          db,
+          orgId,
+          schoolId,
+          studentIdResult,
+          academicYear,
+        );
+      });
+      return jsonResponse(envelope(certificate));
+    } catch (error) {
+      if (error instanceof TenantDbNotConfiguredError) {
+        return tenantDbNotConfiguredResponse(error);
+      }
+      console.error("parent fee certificate error:", error);
+      return errorEnvelope("INTERNAL_ERROR", errorMessage, 500);
+    }
+  }
+
   async function handleLeaveRequests(
     req: Request,
     config: AppConfig,
@@ -494,6 +542,7 @@ export function createParentScopedReadHandlers(
     handleList,
     handleDetail,
     handleFinanceReceipts,
+    handleFeeCertificate,
     handleLeaveRequests,
   };
 }

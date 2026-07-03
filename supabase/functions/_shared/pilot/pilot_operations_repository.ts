@@ -1476,6 +1476,184 @@ export async function overlayReceiptsFromFinance(
   };
 }
 
+// ─── PAR-D3 — annual / 80C fee-payment certificate DATA ─────────────────────
+//
+// Aggregates the child's REAL fee payments (finance_receipts → finance_collections)
+// for one financial/academic year into the data an 80C tax certificate needs. The
+// PDF itself is rendered client-side in a later wave; this endpoint only returns
+// the honest, tenant-authoritative numbers. Signatory title is a per-school
+// setting (schools.settings->>'feeCertificateSignatoryTitle'), defaulting to the
+// owner-ruled "Principal" — read-with-default, no settings subsystem added.
+//
+// Only `completed` collections count toward the certificate: a cancelled or
+// refunded payment is not a valid tax-deductible amount, so it must not inflate
+// the 80C total. Own-child scoping is enforced twice — the caller's JWT child_ids
+// at the handler, and the finance_receipts/collections parent RLS policy
+// (20260704000000_parent_student_finance_read_rls.sql, keyed on student_guardians)
+// underneath — so a child not linked to the parent yields zero rows either way.
+
+export interface FeeCertificatePayment {
+  date: string;
+  receiptNo: string;
+  amount: number;
+  paymentMethod: string;
+  description: string;
+}
+
+export interface FeeCertificateData {
+  schoolName: string;
+  guardianName: string;
+  studentName: string;
+  publicStudentId: string;
+  admissionNumber: string;
+  academicYear: string;
+  totalPaidAmount: number;
+  payments: FeeCertificatePayment[];
+  signatoryTitle: string;
+}
+
+/**
+ * Parse an academic/financial year label ("2025-2026", "2025-26" or a single
+ * "2025") into the [start, endExclusive) date window an Indian financial year
+ * spans: 1 Apr of the start year → 1 Apr of the next year. Returns null for an
+ * unparseable / missing input so the caller can fall back to the current FY.
+ */
+export function financialYearWindow(
+  academicYear: string | null | undefined,
+): { startYear: number; label: string; start: string; endExclusive: string } | null {
+  if (!academicYear) return null;
+  const match = academicYear.match(/^(\d{4})(?:\s*-\s*(\d{2,4}))?$/);
+  if (!match) return null;
+  const startYear = parseInt(match[1], 10);
+  if (!Number.isFinite(startYear)) return null;
+  const endYear = startYear + 1;
+  return {
+    startYear,
+    label: `${startYear}-${endYear}`,
+    start: `${startYear}-04-01`,
+    endExclusive: `${endYear}-04-01`,
+  };
+}
+
+/** The financial year (Apr–Mar) that `now` falls in. */
+export function currentFinancialYear(now = new Date()): {
+  startYear: number;
+  label: string;
+  start: string;
+  endExclusive: string;
+} {
+  const month = now.getUTCMonth(); // 0=Jan
+  const startYear = month >= 3 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+  return financialYearWindow(String(startYear))!;
+}
+
+export async function buildFeeCertificateData(
+  db: TenantQueryClient,
+  orgId: string,
+  schoolId: string,
+  studentId: string,
+  academicYear: string | null | undefined,
+): Promise<FeeCertificateData> {
+  const window = financialYearWindow(academicYear) ?? currentFinancialYear();
+
+  // School name + the per-school configurable signatory title. Both live on the
+  // schools row, which parent scope may read for its own active school (RLS
+  // schools_scope_access). Default signatory is the owner-ruled "Principal".
+  const schoolRows = await db.queryObject<{ name: string; signatory_title: string | null }>(
+    `SELECT name,
+            NULLIF(TRIM(settings->>'feeCertificateSignatoryTitle'), '') AS signatory_title
+       FROM schools
+      WHERE id = $1
+      LIMIT 1`,
+    [schoolId],
+  );
+  const schoolName = schoolRows[0]?.name ?? "Akshara Public School";
+  const signatoryTitle = schoolRows[0]?.signatory_title ?? "Principal";
+
+  // Child identity: display name (students), PSID + admission number
+  // (student_profiles). Scoped to org+school+student; parent RLS restricts the
+  // student/profile rows to the caller's own children.
+  const studentRows = await db.queryObject<{
+    display_name: string;
+    public_student_id: string | null;
+    admission_number: string | null;
+  }>(
+    `SELECT s.display_name,
+            sp.public_student_id,
+            sp.admission_number
+       FROM students s
+       LEFT JOIN student_profiles sp
+         ON sp.student_id = s.id
+        AND sp.organization_id = s.organization_id
+        AND sp.school_id = s.school_id
+      WHERE s.organization_id = $1 AND s.school_id = $2 AND s.id = $3
+      LIMIT 1`,
+    [orgId, schoolId, studentId],
+  );
+  const studentRow = studentRows[0];
+  const studentName = studentRow?.display_name ?? "Student";
+  const publicStudentId = studentRow?.public_student_id ?? "";
+  const admissionNumber = studentRow?.admission_number ?? "";
+
+  // Guardian (the parent making the request) — their own users row, readable
+  // under RLS users_self_access (id = app_current_user_id() = the parent's sub).
+  // A parent-scoped context sets parent_user_id; we read the caller's name for
+  // the certificate's "paid by" line.
+  const guardianRows = await db.queryObject<{ display_name: string }>(
+    `SELECT display_name FROM users WHERE id = app_current_user_id() LIMIT 1`,
+  );
+  const guardianName = guardianRows[0]?.display_name ?? "";
+
+  // The year's payments for THIS child. finance_receipts.receipt_date is the
+  // payment date the parent needs for 80C; join finance_collections for the
+  // student scope + payment method, and finance_invoices for a description.
+  // Only completed collections count (a cancelled/refunded one is not deductible).
+  const rows = await db.queryObject<{
+    date_label: string;
+    receipt_number: string;
+    amount: string;
+    payment_method: string;
+    invoice_number: string | null;
+  }>(
+    `SELECT to_char(r.receipt_date, 'DD Mon YYYY') AS date_label,
+            r.receipt_number,
+            r.amount::text AS amount,
+            c.payment_method,
+            i.invoice_number
+       FROM finance_receipts r
+       JOIN finance_collections c ON c.id = r.collection_id
+       LEFT JOIN finance_invoices i ON i.id = c.invoice_id
+      WHERE r.organization_id = $1 AND r.school_id = $2 AND c.student_id = $3
+        AND c.collection_status = 'completed'
+        AND r.receipt_date >= $4::date AND r.receipt_date < $5::date
+      ORDER BY r.receipt_date ASC, r.created_at ASC, r.id ASC`,
+    [orgId, schoolId, studentId, window.start, window.endExclusive],
+  );
+
+  const payments: FeeCertificatePayment[] = rows.map((row) => ({
+    date: row.date_label,
+    receiptNo: row.receipt_number,
+    amount: parseFloat(row.amount),
+    paymentMethod: row.payment_method,
+    description: row.invoice_number
+      ? `Fee payment · ${row.invoice_number}`
+      : "Fee payment",
+  }));
+  const totalPaidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+
+  return {
+    schoolName,
+    guardianName,
+    studentName,
+    publicStudentId,
+    admissionNumber,
+    academicYear: window.label,
+    totalPaidAmount,
+    payments,
+    signatoryTitle,
+  };
+}
+
 /**
  * Overlay the parent/student "exams" snapshot with the child's REAL published
  * exam results (and correct child identity). Mirrors the attendance/fees

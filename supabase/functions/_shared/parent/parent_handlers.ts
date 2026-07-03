@@ -9,6 +9,7 @@ const {
   handleList,
   handleDetail,
   handleFinanceReceipts,
+  handleFeeCertificate: handleFeeCertificateData,
   handleLeaveRequests,
 } = createParentScopedReadHandlers(parentStore);
 
@@ -40,6 +41,16 @@ export async function handleReceipts(req: Request, config: AppConfig): Promise<R
   // Real fee receipts from finance_receipts (not the stale parent_entities cache),
   // so a collection recorded by the office actually reaches the parent app.
   return await handleFinanceReceipts(req, config, "Failed to load parent receipts");
+}
+
+export async function handleFeeCertificate(
+  req: Request,
+  config: AppConfig,
+): Promise<Response> {
+  // PAR-D3 — annual / 80C fee-payment certificate DATA for the parent's own
+  // child. Aggregates the child's real finance_receipts for the requested
+  // financial/academic year (own-child scoped; the PDF is client-rendered).
+  return await handleFeeCertificateData(req, config, "Failed to load fee certificate");
 }
 
 export async function handleNotices(req: Request, config: AppConfig): Promise<Response> {
