@@ -98,6 +98,18 @@ class ParentReceiptsResponseDto {
   final PaginationDto? pagination;
 }
 
+/// PAR-D3 — the fee certificate is a single-object envelope (`{ data: {...} }`).
+class ParentFeeCertificateResponseDto {
+  const ParentFeeCertificateResponseDto({required this.raw});
+
+  factory ParentFeeCertificateResponseDto.fromJson(Map<String, dynamic> json) {
+    final envelope = ApiEnvelopeDto.fromJson(json);
+    return ParentFeeCertificateResponseDto(raw: envelope.requireData());
+  }
+
+  final Map<String, dynamic> raw;
+}
+
 class ParentNoticeDto {
   const ParentNoticeDto({required this.raw});
 

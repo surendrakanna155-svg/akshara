@@ -9,6 +9,7 @@ abstract final class ParentApiPaths {
   static const String timetable = '$base/timetable';
   static const String fees = '$base/fees';
   static const String receipts = '$base/receipts';
+  static const String feeCertificate = '$base/fee-certificate';
   static const String notices = '$base/notices';
   static const String events = '$base/events';
   static const String leave = '$base/leave';

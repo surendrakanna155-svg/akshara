@@ -3,6 +3,7 @@ import 'package:akshara_erp/features/parent/attendance/attendance_models.dart';
 import 'package:akshara_erp/features/parent/dashboard/parent_dashboard_provider.dart';
 import 'package:akshara_erp/features/parent/events/events_models.dart';
 import 'package:akshara_erp/features/parent/exams/exam_models.dart';
+import 'package:akshara_erp/features/parent/fees/fee_certificate_models.dart';
 import 'package:akshara_erp/features/parent/fees/fees_provider.dart';
 import 'package:akshara_erp/features/parent/homework/homework_models.dart';
 import 'package:akshara_erp/features/parent/leave/leave_models.dart';
@@ -278,6 +279,29 @@ class ParentFixtureBuilder {
             {'label': line.label, 'amount': line.amount},
         ],
       };
+
+  Map<String, dynamic> feeCertificateEnvelope(FeeCertificateData data) {
+    return envelope({
+      'schoolName': data.schoolName,
+      'guardianName': data.guardianName,
+      'studentName': data.studentName,
+      if (data.publicStudentId != null) 'publicStudentId': data.publicStudentId,
+      if (data.admissionNumber != null) 'admissionNumber': data.admissionNumber,
+      'academicYear': data.academicYear,
+      'totalPaidAmount': data.totalPaidAmount,
+      'signatoryTitle': data.signatoryTitle,
+      'payments': [
+        for (final p in data.payments)
+          {
+            'date': p.date,
+            'receiptNo': p.receiptNo,
+            'amount': p.amount,
+            'paymentMethod': p.paymentMethod,
+            'description': p.description,
+          },
+      ],
+    });
+  }
 
   Map<String, dynamic> noticeItem(ParentNotice notice) => {
         'id': notice.id,

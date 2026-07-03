@@ -4,6 +4,7 @@ import '../../../../../features/parent/attendance/attendance_models.dart';
 import '../../../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../../../features/parent/events/events_models.dart';
 import '../../../../../features/parent/exams/exam_models.dart';
+import '../../../../../features/parent/fees/fee_certificate_models.dart';
 import '../../../../../features/parent/fees/fees_provider.dart';
 import '../../../../../features/parent/homework/homework_models.dart';
 import '../../../../../features/parent/leave/leave_models.dart';
@@ -135,6 +136,43 @@ class ParentMapper {
       lineItems: _mapReceiptLineItems(raw['lineItems'] as List<dynamic>? ?? const []),
       schoolName: raw['schoolName'] as String? ?? 'Akshara Public School',
     );
+  }
+
+  FeeCertificateData toFeeCertificate(ParentFeeCertificateResponseDto dto) {
+    final raw = dto.raw;
+    final psid = raw['publicStudentId'] as String?;
+    final admission = raw['admissionNumber'] as String?;
+    return FeeCertificateData(
+      schoolName: raw['schoolName'] as String? ?? 'Akshara Public School',
+      guardianName: raw['guardianName'] as String? ?? '',
+      studentName: raw['studentName'] as String? ?? 'Student',
+      publicStudentId: (psid == null || psid.isEmpty) ? null : psid,
+      admissionNumber:
+          (admission == null || admission.isEmpty) ? null : admission,
+      academicYear: raw['academicYear'] as String? ?? '',
+      totalPaidAmount: _toDouble(raw['totalPaidAmount']),
+      payments: [
+        for (final item in raw['payments'] as List<dynamic>? ?? const [])
+          _toFeeCertificatePayment(item as Map<String, dynamic>),
+      ],
+      signatoryTitle: raw['signatoryTitle'] as String? ?? 'Principal',
+    );
+  }
+
+  FeeCertificatePayment _toFeeCertificatePayment(Map<String, dynamic> raw) {
+    return FeeCertificatePayment(
+      date: raw['date'] as String? ?? '',
+      receiptNo: raw['receiptNo'] as String? ?? '',
+      amount: _toDouble(raw['amount']),
+      paymentMethod: raw['paymentMethod'] as String? ?? '',
+      description: raw['description'] as String? ?? '',
+    );
+  }
+
+  double _toDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0;
+    return 0;
   }
 
   List<ParentNotice> toNotices(ParentNoticesResponseDto dto) {

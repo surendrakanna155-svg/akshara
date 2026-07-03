@@ -101,6 +101,21 @@ class ParentRemoteDataSource {
     return ParentReceiptsResponseDto.fromJson(_responseMap(response));
   }
 
+  Future<ParentFeeCertificateResponseDto> fetchFeeCertificate({
+    required RepositoryQuery query,
+    String? academicYear,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ParentApiPaths.feeCertificate,
+      queryParameters: {
+        ..._queryParams(query),
+        if (academicYear != null && academicYear.isNotEmpty)
+          'academicYear': academicYear,
+      },
+    );
+    return ParentFeeCertificateResponseDto.fromJson(_responseMap(response));
+  }
+
   Future<ParentNoticesResponseDto> fetchNotices({
     required RepositoryQuery query,
   }) async {

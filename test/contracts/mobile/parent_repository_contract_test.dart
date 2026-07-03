@@ -103,6 +103,30 @@ void main() {
       expect(mapped.length, mockData.length);
     });
 
+    test('getFeeCertificate DTO mapping matches mock output', () async {
+      final mockData = await mockRepo.getFeeCertificate(
+        query: kQuery,
+        academicYear: '2025-2026',
+      );
+      final mapped = _mapper.toFeeCertificate(
+        ParentFeeCertificateResponseDto.fromJson(
+          _fixtures.feeCertificateEnvelope(mockData),
+        ),
+      );
+      expect(mapped.studentName, mockData.studentName);
+      expect(mapped.academicYear, mockData.academicYear);
+      expect(mapped.totalPaidAmount, mockData.totalPaidAmount);
+      expect(mapped.payments.length, mockData.payments.length);
+      expect(mapped.signatoryTitle, mockData.signatoryTitle);
+      expect(mapped.publicStudentId, mockData.publicStudentId);
+      expect(mapped.admissionNumber, mockData.admissionNumber);
+    });
+
+    test('getFeeCertificate is a ParentRepository contract member', () {
+      expect(mockRepo.getFeeCertificate, isA<Function>());
+      expect(apiRepo.getFeeCertificate, isA<Function>());
+    });
+
     test('getNotices DTO mapping matches mock output', () async {
       final mockData = await mockRepo.getNotices(query: kQuery);
       final mapped = _mapper.toNotices(

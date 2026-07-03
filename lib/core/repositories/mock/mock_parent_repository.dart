@@ -14,6 +14,7 @@ import '../../../features/parent/attendance/attendance_models.dart';
 import '../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../features/parent/events/events_models.dart';
 import '../../../features/parent/exams/exam_models.dart';
+import '../../../features/parent/fees/fee_certificate_models.dart';
 import '../../../features/parent/fees/fees_provider.dart';
 import 'mock_fee_store.dart';
 import '../../../features/parent/homework/homework_models.dart';
@@ -111,6 +112,45 @@ class MockParentRepository implements ParentRepository {
       seedReceipts: _mockReceipts(),
     );
     return MockFeeStore.instance.receipts();
+  }
+
+  @override
+  Future<FeeCertificateData> getFeeCertificate({
+    required RepositoryQuery query,
+    String? academicYear,
+  }) async {
+    final child = MockCanonicalStudentRegistry.primaryMobileStudent;
+    final year = (academicYear == null || academicYear.isEmpty)
+        ? '2025-2026'
+        : academicYear;
+    const payments = <FeeCertificatePayment>[
+      FeeCertificatePayment(
+        date: '15 Apr 2025',
+        receiptNo: 'RCP-2025-8841',
+        amount: 18000,
+        paymentMethod: 'UPI',
+        description: 'Fee payment · INV-2025-0007',
+      ),
+      FeeCertificatePayment(
+        date: '10 Sep 2025',
+        receiptNo: 'RCP-2025-9204',
+        amount: 12000,
+        paymentMethod: 'Card',
+        description: 'Fee payment · INV-2025-0118',
+      ),
+    ];
+    return FeeCertificateData(
+      schoolName: 'Akshara Public School',
+      guardianName: child.guardianName ?? 'Suresh Kumar',
+      studentName: child.studentName,
+      publicStudentId: 'AKPS-0042',
+      admissionNumber: child.admissionNumber,
+      academicYear: year,
+      totalPaidAmount:
+          payments.fold<double>(0, (sum, p) => sum + p.amount),
+      payments: payments,
+      signatoryTitle: 'Principal',
+    );
   }
 
   @override

@@ -3,6 +3,7 @@ import '../../../../features/parent/attendance/attendance_models.dart';
 import '../../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../../features/parent/events/events_models.dart';
 import '../../../../features/parent/exams/exam_models.dart';
+import '../../../../features/parent/fees/fee_certificate_models.dart';
 import '../../../../features/parent/fees/fees_provider.dart';
 import '../../../../features/parent/homework/homework_models.dart';
 import '../../../../features/parent/leave/leave_models.dart';
@@ -74,6 +75,18 @@ class ApiParentRepository implements ParentRepository {
   Future<List<FeeReceipt>> getReceipts({required RepositoryQuery query}) async {
     final dto = await _remote.fetchReceipts(query: query);
     return _mapper.toReceipts(dto);
+  }
+
+  @override
+  Future<FeeCertificateData> getFeeCertificate({
+    required RepositoryQuery query,
+    String? academicYear,
+  }) async {
+    final dto = await _remote.fetchFeeCertificate(
+      query: query,
+      academicYear: academicYear,
+    );
+    return _mapper.toFeeCertificate(dto);
   }
 
   @override

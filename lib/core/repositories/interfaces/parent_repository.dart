@@ -3,6 +3,7 @@ import '../../../features/parent/attendance/attendance_models.dart';
 import '../../../features/parent/dashboard/parent_dashboard_provider.dart';
 import '../../../features/parent/events/events_models.dart';
 import '../../../features/parent/exams/exam_models.dart';
+import '../../../features/parent/fees/fee_certificate_models.dart';
 import '../../../features/parent/fees/fees_provider.dart';
 import '../../../features/parent/homework/homework_models.dart';
 import '../../../features/parent/leave/leave_models.dart';
@@ -28,6 +29,15 @@ abstract class ParentRepository {
   Future<ParentTimetableData> getTimetable({required RepositoryQuery query});
   Future<ParentFeesData> getFees({required RepositoryQuery query});
   Future<List<FeeReceipt>> getReceipts({required RepositoryQuery query});
+
+  /// PAR-D3 — the active child's annual (Section 80C) fee-payment certificate
+  /// for [academicYear] (`YYYY-YYYY`; the server falls back to the current FY
+  /// when null/garbage). Own-child scoped server-side. Wired to
+  /// `GET /parent/fee-certificate?academicYear=YYYY-YYYY`.
+  Future<FeeCertificateData> getFeeCertificate({
+    required RepositoryQuery query,
+    String? academicYear,
+  });
   Future<List<ParentNotice>> getNotices({required RepositoryQuery query});
   Future<ParentEventsData> getEvents({required RepositoryQuery query});
   Future<List<LeaveRequest>> getLeaveHistory({required RepositoryQuery query});

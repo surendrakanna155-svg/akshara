@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/error_text.dart';
+import '../../../core/repositories/repository_providers.dart';
 import '../../../core/testing/qa_test_keys.dart';
 import '../../../theme/radius.dart';
 import '../../../theme/spacing.dart';
@@ -9,7 +10,9 @@ import '../../../theme/theme_extensions.dart';
 import '../parent_active_child_provider.dart';
 import '../receipts/parent_receipts_provider.dart';
 import '../receipts/receipt_models.dart';
+import 'fee_certificate_models.dart';
 import 'fees_provider.dart';
+import 'parent_fee_certificate_pdf_service.dart';
 import 'parent_year_statement_exporter.dart';
 
 /// Single payment history row (used in list / bottom sheet).
@@ -179,6 +182,23 @@ class PaymentHistorySheet extends ConsumerWidget {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AksharaSpacing.s4,
+              0,
+              AksharaSpacing.s4,
+              AksharaSpacing.s2,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: QaTestKeys.parentFeeCertificateButton,
+                onPressed: () => _downloadFeeCertificate(context, ref),
+                icon: const Icon(Icons.workspace_premium_outlined, size: 18),
+                label: const Text('Fee payment certificate (80C)'),
+              ),
+            ),
+          ),
           ConstrainedBox(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.sizeOf(context).height * 0.5,
@@ -247,6 +267,90 @@ class PaymentHistorySheet extends ConsumerWidget {
       } else {
         await exporter.sharePdf(receipts: receipts, childName: childName);
       }
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(aksharaErrorMessage(error))),
+      );
+    }
+  }
+
+  /// PAR-D3 — the current Indian financial year (Apr 1 → Mar 31) label, e.g.
+  /// `2025-2026`. Matches the backend's `currentFinancialYear` convention.
+  static String currentFinancialYearLabel([DateTime? now]) {
+    final today = now ?? DateTime.now();
+    final startYear = today.month >= 4 ? today.year : today.year - 1;
+    return '$startYear-${startYear + 1}';
+  }
+
+  /// The most recent financial years offered in the certificate year picker
+  /// (current FY first).
+  static List<String> financialYearOptions([DateTime? now]) {
+    final current = currentFinancialYearLabel(now);
+    final startYear = int.parse(current.split('-').first);
+    return [for (var i = 0; i < 4; i++) '${startYear - i}-${startYear - i + 1}'];
+  }
+
+  /// PAR-D3 — picks an academic year (default current FY), fetches the active
+  /// child's 80C fee-payment certificate (own-child scoped server-side), and
+  /// renders/shares the PDF. Honest empty message when nothing was paid.
+  Future<void> _downloadFeeCertificate(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    final year = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          key: QaTestKeys.parentFeeCertificateYearPicker,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AksharaSpacing.s4),
+              child: Text(
+                'Select academic year',
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
+            ),
+            for (final option in financialYearOptions())
+              ListTile(
+                key: QaTestKeys.parentFeeCertificateYearOption(option),
+                leading: const Icon(Icons.event_outlined),
+                title: Text(option),
+                onTap: () => Navigator.of(sheetContext).pop(option),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (year == null) return;
+
+    final query = ref.read(parentRepositoryQueryProvider);
+    final repository = ref.read(parentRepositoryProvider);
+    final pdfService = ref.read(parentFeeCertificatePdfServiceProvider);
+
+    try {
+      final FeeCertificateData certificate = await repository.getFeeCertificate(
+        query: query,
+        academicYear: year,
+      );
+
+      if (certificate.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            key: QaTestKeys.parentFeeCertificateEmptyMessage,
+            content: Text('No payments recorded for $year'),
+          ),
+        );
+        return;
+      }
+
+      final bytes = await pdfService.buildCertificatePdf(certificate);
+      await pdfService.shareCertificate(
+        bytes: bytes,
+        academicYear: certificate.academicYear,
+      );
     } catch (error) {
       messenger.showSnackBar(
         SnackBar(content: Text(aksharaErrorMessage(error))),

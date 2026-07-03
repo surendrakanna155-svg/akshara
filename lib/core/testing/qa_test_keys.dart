@@ -1927,6 +1927,15 @@ abstract final class QaTestKeys {
       ValueKey<String>('parent_fees_export_csv_button');
   static const parentFeesExportPdfButton =
       ValueKey<String>('parent_fees_export_pdf_button');
+  // PAR-D3 fee payment certificate (80C).
+  static const parentFeeCertificateButton =
+      ValueKey<String>('parent_fee_certificate_button');
+  static const parentFeeCertificateYearPicker =
+      ValueKey<String>('parent_fee_certificate_year_picker');
+  static ValueKey<String> parentFeeCertificateYearOption(String year) =>
+      ValueKey<String>('parent_fee_certificate_year_option_$year');
+  static const parentFeeCertificateEmptyMessage =
+      ValueKey<String>('parent_fee_certificate_empty_message');
   // PAR-5 reminder banners.
   static const parentReminderBanners =
       ValueKey<String>('parent_reminder_banners');
