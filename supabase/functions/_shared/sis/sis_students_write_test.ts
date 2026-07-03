@@ -14,6 +14,7 @@ import {
   statusToDb,
 } from "./sis_status_codec.ts";
 import {
+  AdmissionNumberImmutableError,
   createStudent,
   DuplicateAdmissionNumberError,
   getStudent,
@@ -38,6 +39,7 @@ class WriteMockDb {
   inTransaction = false;
   committedStudents: Row[] = [];
   committedProfiles: Row[] = [];
+  updateProfileCalls = 0;
 
   beginTransaction() {
     this.inTransaction = true;
@@ -145,6 +147,7 @@ class WriteMockDb {
       return [] as T[];
     }
     if (sql.includes("UPDATE student_profiles SET")) {
+      this.updateProfileCalls++;
       const profile = this.profiles.find((row) => row.student_id === args[9]);
       if (profile) {
         profile.admission_number = args[0];
@@ -325,6 +328,89 @@ Deno.test("updateStudent updates profile and display name", async () => {
 
   assertEquals(detail.student.display_name, "Updated Name");
   assertEquals(detail.profile?.gender, "female");
+});
+
+function seedExistingStudent(db: WriteMockDb, admissionNumber = "ADM-001") {
+  db.committedStudents.push({
+    id: STUDENT_A,
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    student_code: "STU-001",
+    display_name: "Existing",
+    status: "active",
+    created_at: "2026-06-01T00:00:00.000Z",
+    updated_at: "2026-06-01T00:00:00.000Z",
+  });
+  db.committedProfiles.push({
+    id: "profile-a",
+    student_id: STUDENT_A,
+    organization_id: ORG,
+    school_id: SCHOOL_A,
+    admission_number: admissionNumber,
+    date_of_birth: null,
+    gender: "male",
+    blood_group: null,
+    address: null,
+    city: null,
+    state: null,
+    postal_code: null,
+    country: null,
+    created_at: "2026-06-01T00:00:00.000Z",
+    updated_at: "2026-06-01T00:00:00.000Z",
+  });
+}
+
+Deno.test("updateStudent rejects changing admission_number (C5 set-once lock)", async () => {
+  const db = new WriteMockDb();
+  seedExistingStudent(db, "ADM-001");
+
+  const error = await assertRejects(
+    () =>
+      withMockTransaction(db, (client) =>
+        updateStudent(client, ORG, SCHOOL_A, STUDENT_A, { admissionNumber: "ADM-CHANGED" })),
+    AdmissionNumberImmutableError,
+  );
+  // Carries current + attempted so the handler can audit the rejected attempt.
+  assertEquals(error.current, "ADM-001");
+  assertEquals(error.attempted, "ADM-CHANGED");
+  // No UPDATE was issued and the canonical value is unchanged (rolled back).
+  assertEquals(db.updateProfileCalls, 0);
+  assertEquals(db.committedProfiles[0]?.admission_number, "ADM-001");
+});
+
+Deno.test("updateStudent allows same-value admission_number no-op", async () => {
+  const db = new WriteMockDb();
+  seedExistingStudent(db, "ADM-001");
+
+  const detail = await withMockTransaction(db, (client) =>
+    updateStudent(client, ORG, SCHOOL_A, STUDENT_A, {
+      admissionNumber: "ADM-001",
+      gender: "female",
+    }));
+  assertEquals(detail.profile?.admission_number, "ADM-001");
+  assertEquals(detail.profile?.gender, "female");
+});
+
+Deno.test("updateStudent allows other-field update with admission_number omitted", async () => {
+  const db = new WriteMockDb();
+  seedExistingStudent(db, "ADM-001");
+
+  const detail = await withMockTransaction(db, (client) =>
+    updateStudent(client, ORG, SCHOOL_A, STUDENT_A, { gender: "female" }));
+  assertEquals(detail.profile?.admission_number, "ADM-001");
+  assertEquals(detail.profile?.gender, "female");
+});
+
+Deno.test("createStudent sets admission_number on a new student", async () => {
+  const db = new WriteMockDb();
+  const detail = await withMockTransaction(db, (client) =>
+    createStudent(client, ORG, SCHOOL_A, {
+      displayName: "Fresh Student",
+      admissionNumber: "ADM-FRESH-001",
+      createdBy: STAFF,
+    }));
+  assertEquals(detail.profile?.admission_number, "ADM-FRESH-001");
+  assertEquals(db.committedProfiles.length, 1);
 });
 
 Deno.test("updateStudentStatus applies lifecycle transition", async () => {

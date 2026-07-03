@@ -28,6 +28,7 @@ import type {
   UpdateStudentInput,
 } from "./sis_students_repository.ts";
 import {
+  AdmissionNumberImmutableError,
   createStudent,
   DuplicateAdmissionNumberError,
   getStudent,
@@ -174,6 +175,9 @@ function parseUpdateStudentInput(body: Record<string, unknown>): UpdateStudentIn
 function mapWriteError(error: unknown): Response | null {
   if (error instanceof StudentNotFoundError) {
     return errorEnvelope("NOT_FOUND", error.message, 404);
+  }
+  if (error instanceof AdmissionNumberImmutableError) {
+    return errorEnvelope("ADMISSION_NUMBER_IMMUTABLE", error.message, 409);
   }
   if (error instanceof DuplicateAdmissionNumberError) {
     return errorEnvelope("CONFLICT", error.message, 409);
@@ -415,6 +419,29 @@ export async function handleUpdateStudent(
   } catch (error) {
     if (error instanceof TenantDbNotConfiguredError) {
       return tenantDbNotConfiguredResponse(error);
+    }
+    // C5 set-once lock violation: the update transaction rolled back, so record
+    // the REJECTED attempt in its OWN fresh transaction — otherwise the audit
+    // would have rolled back with the refused write and left no trail. Best
+    // effort: a failure to audit must not change the 409 the caller sees.
+    if (error instanceof AdmissionNumberImmutableError) {
+      try {
+        await runTenant(config, auth.claims, async (db) => {
+          const resolved = await resolveStudentId(db, orgId, schoolId, studentId);
+          await emitMutationAudit(
+            db,
+            auth.claims,
+            sisAudit.admissionNumberChangeRejected(
+              resolved ?? studentId,
+              { attempted: error.attempted, current: error.current },
+              crypto.randomUUID(),
+            ),
+            req,
+          );
+        });
+      } catch (auditError) {
+        console.error("handleUpdateStudent rejection-audit error:", auditError);
+      }
     }
     const mapped = mapWriteError(error);
     if (mapped) return mapped;

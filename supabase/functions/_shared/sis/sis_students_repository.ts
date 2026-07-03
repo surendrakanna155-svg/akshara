@@ -127,6 +127,27 @@ export class DuplicateAdmissionNumberError extends Error {
   }
 }
 
+/**
+ * Identity rule C5 ("an id never changes"): a student's admission_number is
+ * SET-ONCE. Once a non-empty admission_number exists on the profile it is a
+ * hard, immutable, permanent identity value — there is NO self-service override.
+ * Attempting to change it to a different value is rejected (409). The
+ * DB trigger `reject_admission_number_change` (migration 20260847000000)
+ * backstops this guard against any direct/rogue UPDATE.
+ */
+export class AdmissionNumberImmutableError extends Error {
+  readonly attempted: string;
+  readonly current: string;
+  constructor(current: string, attempted: string) {
+    super(
+      `Admission number is set-once and cannot be changed (current: ${current}, attempted: ${attempted})`,
+    );
+    this.name = "AdmissionNumberImmutableError";
+    this.current = current;
+    this.attempted = attempted;
+  }
+}
+
 export class ValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -609,10 +630,22 @@ export async function updateStudent(
   const existing = await getStudent(db, organizationId, schoolId, studentId);
   if (!existing) throw new StudentNotFoundError(studentId);
 
-  if (input.admissionNumber?.trim()) {
+  if (input.admissionNumber !== undefined) {
     const admissionNumber = input.admissionNumber.trim();
-    if (await admissionNumberExists(db, organizationId, schoolId, admissionNumber, studentId)) {
-      throw new DuplicateAdmissionNumberError(admissionNumber);
+    if (admissionNumber) {
+      // C5 set-once identity lock: once a non-empty admission_number exists it
+      // is immutable. An incoming value that DIFFERS from the current one is a
+      // lock violation (409); an identical value is an idempotent no-op and is
+      // allowed so unchanged-value / other-field updates still succeed.
+      const current = (existing.profile?.admission_number ?? "").trim();
+      if (current && current !== admissionNumber) {
+        throw new AdmissionNumberImmutableError(current, admissionNumber);
+      }
+      // Duplicate check still applies for the legitimate first-time set (current
+      // empty) and the idempotent no-op is harmless (excludes self).
+      if (await admissionNumberExists(db, organizationId, schoolId, admissionNumber, studentId)) {
+        throw new DuplicateAdmissionNumberError(admissionNumber);
+      }
     }
   }
 

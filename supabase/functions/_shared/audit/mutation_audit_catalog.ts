@@ -588,6 +588,31 @@ export const sisAudit = {
       idempotencyKey: `sis.student.updated:${studentId}`,
     },
   }),
+  /**
+   * C5 set-once identity lock — a REJECTED attempt to change a student's
+   * immutable admission_number. Recorded so a lock-violation attempt leaves a
+   * durable trail even though the write itself is refused (409). `nonce` keys
+   * the outbox so every distinct attempt is captured, not deduped away.
+   */
+  admissionNumberChangeRejected: (
+    studentId: string,
+    detail: { attempted: string; current: string },
+    nonce: string,
+  ): MutationAuditSpec => ({
+    audit: {
+      eventType: "sis.student.admission_number.change_rejected",
+      category: "security",
+      entityType: "student",
+      entityId: studentId,
+      metadata: { studentId, attempted: detail.attempted, current: detail.current, attemptedAt: nonce },
+    },
+    domain: {
+      eventType: "sis.student.admission_number.change_rejected",
+      payload: { studentId, attempted: detail.attempted, current: detail.current },
+      sourceModule: "sis",
+      idempotencyKey: `sis.student.admission_number.change_rejected:${studentId}:${nonce}`,
+    },
+  }),
   studentStatusUpdated: (studentId: string, status: string): MutationAuditSpec => ({
     ...workflow("studentUpdated", "student", studentId, { studentId, status }),
     domain: {
