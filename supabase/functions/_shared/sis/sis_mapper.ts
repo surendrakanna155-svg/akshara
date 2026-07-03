@@ -35,6 +35,7 @@ export function studentDirectoryItemToApi(row: StudentDirectoryRow): Record<stri
     displayName: row.display_name,
     status: statusFromDb(row.status),
     admissionNumber: row.admission_number ?? "",
+    publicStudentId: row.public_student_id ?? "",
     academicYear: row.academic_year ?? "",
     className: row.class_name ?? "",
     sectionName: row.section_name ?? "",
@@ -80,6 +81,7 @@ export function studentDetailToApi(data: StudentDetailData): Record<string, unkn
       ? {
         id: profile.id,
         admissionNumber: profile.admission_number,
+        publicStudentId: profile.public_student_id ?? "",
         dateOfBirth: profile.date_of_birth,
         gender: profile.gender,
         bloodGroup: profile.blood_group,

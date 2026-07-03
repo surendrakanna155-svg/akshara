@@ -73,11 +73,14 @@ interface RowRecord {
  */
 class ImportFakeDb {
   students: StudentRecord[] = [];
-  profiles: Array<{ student_id: string }> = [];
+  profiles: Array<{ student_id: string; public_student_id?: unknown }> = [];
   enrollments: Array<{ student_id: string }> = [];
   guardians: Array<{ student_id: string }> = [];
   jobs: JobRecord[] = [];
   rows: RowRecord[] = [];
+  // PSID plumbing: per-school code + counter model for allocatePublicStudentId.
+  schoolCode: string | null = "IMPSCH";
+  counters = new Map<string, number>();
   private seq = 0;
 
   /** Pre-existing students keyed by admission number (DB-side dedupe source). */
@@ -116,6 +119,24 @@ class ImportFakeDb {
     if (s.startsWith("SAVEPOINT") || s.startsWith("RELEASE SAVEPOINT") ||
       s.startsWith("ROLLBACK TO SAVEPOINT")) {
       return [];
+    }
+
+    if (s.startsWith("SELECT code FROM schools")) {
+      return this.schoolCode === null ? [] : [{ code: this.schoolCode }];
+    }
+    if (s.startsWith("INSERT INTO school_public_id_counters")) {
+      const key = `${args[0]}|${args[1]}`;
+      const current = this.counters.get(key);
+      let allocated: number;
+      if (current === undefined) {
+        this.counters.set(key, 2);
+        allocated = 1;
+      } else {
+        const next = current + 1;
+        this.counters.set(key, next);
+        allocated = next - 1;
+      }
+      return [{ allocated }];
     }
 
     if (s.startsWith("INSERT INTO onboarding_import_jobs")) {
@@ -257,7 +278,8 @@ class ImportFakeDb {
       const admission = String(args[3]);
       const st = this.students.find((x) => x.id === studentId);
       if (st) st.admission_number = admission;
-      this.profiles.push({ student_id: studentId });
+      // createImportedStudent puts public_student_id at $5 (index 4).
+      this.profiles.push({ student_id: studentId, public_student_id: args[4] });
       return [];
     }
 

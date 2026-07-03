@@ -72,6 +72,9 @@ class FakeDb {
   guardians: Array<Record<string, unknown>> = [];
   jobs: JobRecord[] = [];
   rows: RowRecord[] = [];
+  // PSID plumbing: per-school code + counter model for allocatePublicStudentId.
+  schoolCode: string | null = "IMPSCH";
+  counters = new Map<string, number>();
   private seq = 0;
 
   private id(prefix: string): string {
@@ -87,6 +90,24 @@ class FakeDb {
   // deno-lint-ignore no-explicit-any
   private async run(sql: string, args: unknown[]): Promise<any[]> {
     const s = sql.replace(/\s+/g, " ").trim();
+
+    if (s.startsWith("SELECT code FROM schools")) {
+      return this.schoolCode === null ? [] : [{ code: this.schoolCode }];
+    }
+    if (s.startsWith("INSERT INTO school_public_id_counters")) {
+      const key = `${args[0]}|${args[1]}`;
+      const current = this.counters.get(key);
+      let allocated: number;
+      if (current === undefined) {
+        this.counters.set(key, 2);
+        allocated = 1;
+      } else {
+        const next = current + 1;
+        this.counters.set(key, next);
+        allocated = next - 1;
+      }
+      return [{ allocated }];
+    }
 
     if (s.startsWith("INSERT INTO onboarding_import_jobs")) {
       const isPlaceholder = s.includes("'student_placeholder'");
@@ -238,7 +259,8 @@ class FakeDb {
     }
 
     if (s.startsWith("INSERT INTO student_profiles")) {
-      this.profiles.push({ student_id: args[0] });
+      // Both onboarding INSERTs put public_student_id at $5 (index 4).
+      this.profiles.push({ student_id: args[0], public_student_id: args[4] });
       return [];
     }
 
@@ -360,6 +382,8 @@ Deno.test("createImportedStudent stores masked Aadhaar + hash, never raw", async
   assertEquals(student.aadhaar, "XXXXXXXX9012");
   assertEquals(student.aadhaar_hash, await hashAadhaar("123456789012"));
   assertEquals(student.aadhaar?.includes("12345678"), false);
+  // PSID: the imported student's profile is assigned CODE-0001 (set-once).
+  assertEquals(fake.profiles[0]?.public_student_id, "IMPSCH-0001");
 });
 
 Deno.test("generatePlaceholderStudents creates correct count, placeholders, no parent", async () => {
@@ -385,6 +409,10 @@ Deno.test("generatePlaceholderStudents creates correct count, placeholders, no p
   assertEquals(fake.students.every((st) => st.user_id === null), true);
   assertEquals(fake.students[0]?.display_name, "Grade 6A — Roll 1");
   assertEquals(fake.students[0]?.student_code, "PH-Grade6-A-1");
+  // PSID: every placeholder profile gets a sequential CODE-000N (set-once).
+  assertEquals(fake.profiles.length, 3);
+  const psids = fake.profiles.map((p) => p.public_student_id).sort();
+  assertEquals(psids, ["IMPSCH-0001", "IMPSCH-0002", "IMPSCH-0003"]);
 });
 
 Deno.test("generatePlaceholderStudents is idempotent (re-run creates no duplicates)", async () => {

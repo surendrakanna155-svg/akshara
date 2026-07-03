@@ -40,6 +40,9 @@ class WriteMockDb {
   committedStudents: Row[] = [];
   committedProfiles: Row[] = [];
   updateProfileCalls = 0;
+  // PSID plumbing: a per-school code + a counter model for allocatePublicStudentId.
+  schoolCode: string | null = "TESTSCH";
+  counters = new Map<string, number>();
 
   beginTransaction() {
     this.inTransaction = true;
@@ -72,6 +75,23 @@ class WriteMockDb {
   }
 
   async queryObject<T>(sql: string, args: unknown[] = []): Promise<T[]> {
+    if (sql.includes("SELECT code FROM schools")) {
+      return (this.schoolCode === null ? [] : [{ code: this.schoolCode }]) as T[];
+    }
+    if (sql.includes("INSERT INTO school_public_id_counters")) {
+      const key = `${args[0]}|${args[1]}`;
+      const current = this.counters.get(key);
+      let allocated: number;
+      if (current === undefined) {
+        this.counters.set(key, 2);
+        allocated = 1;
+      } else {
+        const next = current + 1;
+        this.counters.set(key, next);
+        allocated = next - 1;
+      }
+      return [{ allocated }] as T[];
+    }
     if (sql.includes("FROM student_profiles") && sql.includes("admission_number = $3")) {
       const matches = this.profiles.filter((row) =>
         row.organization_id === args[0] &&
@@ -110,21 +130,25 @@ class WriteMockDb {
       if (this.failProfileInsert) {
         throw new Error("forced profile insert failure");
       }
+      // Column order (createStudent): organization_id, school_id, student_id,
+      // admission_number, public_student_id, date_of_birth, gender, blood_group,
+      // address, city, state, postal_code, country, created_by.
       const row = {
         id: crypto.randomUUID(),
-        student_id: args[2],
         organization_id: args[0],
         school_id: args[1],
+        student_id: args[2],
         admission_number: args[3],
-        date_of_birth: args[4],
-        gender: args[5],
-        blood_group: args[6],
-        address: args[7],
-        city: args[8],
-        state: args[9],
-        postal_code: args[10],
-        country: args[11],
-        created_by: args[12],
+        public_student_id: args[4],
+        date_of_birth: args[5],
+        gender: args[6],
+        blood_group: args[7],
+        address: args[8],
+        city: args[9],
+        state: args[10],
+        postal_code: args[11],
+        country: args[12],
+        created_by: args[13],
         created_at: "2026-06-09T00:00:00.000Z",
         updated_at: "2026-06-09T00:00:00.000Z",
       };
@@ -251,6 +275,38 @@ Deno.test("createStudent inserts student and profile", async () => {
   assertEquals(db.committedStudents.length, 1);
   assertEquals(db.committedProfiles.length, 1);
   assertEquals(String(db.committedStudents[0]?.student_code).startsWith("STU-2026-"), true);
+});
+
+Deno.test("createStudent allocates and sets the Public Student ID (CODE-0001)", async () => {
+  const db = new WriteMockDb();
+  db.schoolCode = "DPSKKP";
+  const detail = await withMockTransaction(db, (client) =>
+    createStudent(client, ORG, SCHOOL_A, {
+      displayName: "PSID Student",
+      admissionNumber: "ADM-PSID-1",
+      createdBy: STAFF,
+    })
+  );
+  // The first student of the school gets CODE-0001; it round-trips to the detail.
+  assertEquals(db.committedProfiles[0]?.public_student_id, "DPSKKP-0001");
+  assertEquals(detail.profile?.public_student_id, "DPSKKP-0001");
+});
+
+Deno.test("createStudent fails when the school has no code (PSID precondition)", async () => {
+  const db = new WriteMockDb();
+  db.schoolCode = null;
+  await assertRejects(
+    () =>
+      withMockTransaction(db, (client) =>
+        createStudent(client, ORG, SCHOOL_A, {
+          displayName: "No Code Student",
+          admissionNumber: "ADM-NOCODE-1",
+          createdBy: STAFF,
+        })),
+  );
+  // Nothing is committed — the transaction rolls back cleanly.
+  assertEquals(db.committedStudents.length, 0);
+  assertEquals(db.committedProfiles.length, 0);
 });
 
 Deno.test("createStudent rolls back when profile insert fails", async () => {

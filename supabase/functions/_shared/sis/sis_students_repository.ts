@@ -9,6 +9,7 @@ import {
   parseApiStatus,
   statusToDb,
 } from "./sis_status_codec.ts";
+import { allocatePublicStudentId } from "./sis_public_student_id.ts";
 
 export interface StudentListFilters {
   search?: string;
@@ -24,6 +25,7 @@ export interface StudentDirectoryRow {
   display_name: string;
   status: string;
   admission_number: string | null;
+  public_student_id: string | null;
   academic_year: string | null;
   class_name: string | null;
   section_name: string | null;
@@ -70,6 +72,7 @@ export interface StudentProfileRow {
   id: string;
   student_id: string;
   admission_number: string;
+  public_student_id: string | null;
   date_of_birth: string | null;
   gender: string | null;
   blood_group: string | null;
@@ -212,6 +215,7 @@ function listSelectSql(): string {
     s.display_name,
     s.status,
     sp.admission_number,
+    sp.public_student_id,
     se.academic_year,
     se.class_name,
     se.section_name,
@@ -469,7 +473,8 @@ export async function getStudent(
   if (!student) return null;
 
   const profileRows = await db.queryObject<StudentProfileRow>(
-    `SELECT id, student_id, admission_number, date_of_birth::text AS date_of_birth,
+    `SELECT id, student_id, admission_number, public_student_id,
+            date_of_birth::text AS date_of_birth,
             gender, blood_group, address, city, state, postal_code, country,
             created_at, updated_at
      FROM student_profiles
@@ -573,6 +578,11 @@ export async function createStudent(
     throw new ValidationError("Could not allocate a unique student code; please retry");
   }
 
+  // PSID: allocate the permanent Public Student ID for this new profile. Set-once
+  // at creation; the counter is never-reused/gapped and concurrency-safe. Fails
+  // loudly if the school has no code (PSID requires it).
+  const publicStudentId = await allocatePublicStudentId(db, organizationId, schoolId);
+
   // RT-02: the admissionNumberExists() check above is TOCTOU-racy. The DB now
   // enforces UNIQUE(school_id, admission_number); map the violation to the same
   // DuplicateAdmissionNumberError (409) so a concurrent duplicate is rejected
@@ -581,19 +591,20 @@ export async function createStudent(
   try {
     await db.queryObject(
       `INSERT INTO student_profiles (
-        organization_id, school_id, student_id, admission_number,
+        organization_id, school_id, student_id, admission_number, public_student_id,
         date_of_birth, gender, blood_group, address, city, state, postal_code, country,
         created_by
       ) VALUES (
-        $1, $2, $3, $4,
-        $5::date, $6, $7, $8, $9, $10, $11, $12,
-        $13
+        $1, $2, $3, $4, $5,
+        $6::date, $7, $8, $9, $10, $11, $12, $13,
+        $14
       )`,
       [
         organizationId,
         schoolId,
         studentId,
         admissionNumber,
+        publicStudentId,
         input.dateOfBirth || null,
         input.gender ?? null,
         input.bloodGroup ?? null,

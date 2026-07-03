@@ -100,6 +100,7 @@ class MockSisStudentsDb {
       organization_id: ORG,
       school_id: SCHOOL_A,
       admission_number: "ADM-2026-PROBE001",
+      public_student_id: "STGSCH-0001",
       date_of_birth: "2014-05-15",
       gender: "male",
       blood_group: "O+",
@@ -246,6 +247,7 @@ class MockSisStudentsDb {
           display_name: student.display_name,
           status: student.status,
           admission_number: profile?.admission_number ?? null,
+          public_student_id: profile?.public_student_id ?? null,
           academic_year: enrollment?.academic_year ?? null,
           class_name: enrollment?.class_name ?? null,
           section_name: enrollment?.section_name ?? null,
@@ -415,6 +417,7 @@ Deno.test("studentDirectoryItemToApi uses camelCase response fields", () => {
     display_name: "Staging Student",
     status: "active",
     admission_number: "ADM-2026-PROBE001",
+    public_student_id: "STGSCH-0007",
     academic_year: "2026-27",
     class_name: "5",
     section_name: "A",
@@ -429,6 +432,8 @@ Deno.test("studentDirectoryItemToApi uses camelCase response fields", () => {
   assertEquals(api.studentId, STUDENT_A);
   assertEquals(api.guardianCount, 1);
   assertEquals(api.className, "5");
+  // PSID surfaced on the directory row.
+  assertEquals(api.publicStudentId, "STGSCH-0007");
   // SIS-2: primary guardian contact surfaced.
   assertEquals(api.guardianName, "Staging Parent");
   assertEquals(api.guardianPhone, "+919876543211");

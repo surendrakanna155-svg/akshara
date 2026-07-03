@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { allocatePublicStudentId } from "../sis/sis_public_student_id.ts";
 
 export interface StudentImportRow {
   studentName: string;
@@ -267,16 +268,19 @@ export async function createImportedStudent(
   );
   const studentId = inserted[0]!.id;
 
+  // PSID: permanent Public Student ID for the imported student's profile (set-once).
+  const publicStudentId = await allocatePublicStudentId(db, organizationId, schoolId);
   await db.queryObject(
     `INSERT INTO student_profiles (
-       student_id, organization_id, school_id, admission_number, gender,
-       date_of_birth, mother_name
-     ) VALUES ($1, $2, $3, $4, $5, NULLIF($6, '')::date, $7)`,
+       student_id, organization_id, school_id, admission_number, public_student_id,
+       gender, date_of_birth, mother_name
+     ) VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, '')::date, $8)`,
     [
       studentId,
       organizationId,
       schoolId,
       row.admissionNumber.trim(),
+      publicStudentId,
       row.gender ?? null,
       row.dateOfBirth ?? null,
       row.motherName ?? null,
@@ -378,12 +382,14 @@ export async function createPlaceholderStudent(
   }
   const studentId = inserted[0].id;
 
+  // PSID: permanent Public Student ID for the placeholder's profile (set-once).
+  const publicStudentId = await allocatePublicStudentId(db, organizationId, schoolId);
   await db.queryObject(
     `INSERT INTO student_profiles (
-       student_id, organization_id, school_id, admission_number
-     ) VALUES ($1, $2, $3, $4)
+       student_id, organization_id, school_id, admission_number, public_student_id
+     ) VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (student_id) DO NOTHING`,
-    [studentId, organizationId, schoolId, admissionNumber],
+    [studentId, organizationId, schoolId, admissionNumber, publicStudentId],
   );
 
   await db.queryObject(

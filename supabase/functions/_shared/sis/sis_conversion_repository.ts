@@ -2,6 +2,7 @@ import type { TenantQueryClient } from "../tenant_db.ts";
 import { resolveAcademicPlacement } from "../academic/academic_catalog_resolver.ts";
 import { clearCurrentEnrollmentsForStudent } from "./sis_enrollments_repository.ts";
 import { StudentNotFoundError } from "./sis_students_repository.ts";
+import { allocatePublicStudentId } from "./sis_public_student_id.ts";
 
 export interface AdmissionsEnrollmentSourceRow {
   id: string;
@@ -166,12 +167,17 @@ async function ensureProfile(
   if (existing) return existing;
 
   const admissionNumber = requireAdmissionNumber(source.admission_number, source.id);
+  // PSID: allocate the permanent Public Student ID for this newly-created profile.
+  // Set-once; if the ON CONFLICT DO NOTHING path fires (profile already existed)
+  // no row is inserted, so the allocated number is simply unused for this call —
+  // an existing profile keeps its original PSID and is never re-allocated.
+  const publicStudentId = await allocatePublicStudentId(db, organizationId, schoolId);
   const insertRows = await db.queryObject<{ id: string; admission_number: string }>(
     `INSERT INTO student_profiles (
-      organization_id, school_id, student_id, admission_number,
+      organization_id, school_id, student_id, admission_number, public_student_id,
       date_of_birth, gender, address, city, state, postal_code, country,
       created_by
-    ) VALUES ($1, $2, $3, $4, $5::date, $6, NULL, NULL, NULL, NULL, NULL, $7)
+    ) VALUES ($1, $2, $3, $4, $5, $6::date, $7, NULL, NULL, NULL, NULL, NULL, $8)
     ON CONFLICT (student_id) DO NOTHING
     RETURNING id, admission_number`,
     [
@@ -179,6 +185,7 @@ async function ensureProfile(
       schoolId,
       studentId,
       admissionNumber,
+      publicStudentId,
       parseDateOfBirth(source.date_of_birth),
       source.gender?.trim() || null,
       createdBy,

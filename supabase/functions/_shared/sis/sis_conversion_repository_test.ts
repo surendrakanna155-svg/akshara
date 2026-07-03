@@ -95,6 +95,9 @@ class MockConversionDb {
   sisEnrollments: Row[] = [];
   studentInsertCount = 0;
   lockedEnrollmentId: string | null = null;
+  // PSID plumbing: a per-school code + counter model for allocatePublicStudentId.
+  schoolCode: string | null = "CONVSCH";
+  counters = new Map<string, number>();
   years: Row[] = [
     {
       id: ACADEMIC_YEAR_SCHOOL_A,
@@ -203,6 +206,23 @@ class MockConversionDb {
       sql.includes("FROM classes") || sql.includes("FROM sections")) {
       return catalogRows;
     }
+    if (sql.includes("SELECT code FROM schools")) {
+      return (this.schoolCode === null ? [] : [{ code: this.schoolCode }]) as T[];
+    }
+    if (sql.includes("INSERT INTO school_public_id_counters")) {
+      const key = `${args[0]}|${args[1]}`;
+      const current = this.counters.get(key);
+      let allocated: number;
+      if (current === undefined) {
+        this.counters.set(key, 2);
+        allocated = 1;
+      } else {
+        const next = current + 1;
+        this.counters.set(key, next);
+        allocated = next - 1;
+      }
+      return [{ allocated }] as T[];
+    }
     if (sql.includes("FROM admissions_enrollments") && sql.includes("FOR UPDATE")) {
       const row = this.findAdmissions(String(args[0]), String(args[1]), String(args[2]));
       if (this.lockedEnrollmentId && this.lockedEnrollmentId !== args[0]) {
@@ -228,12 +248,15 @@ class MockConversionDb {
     if (sql.includes("INSERT INTO student_profiles")) {
       const existing = this.profiles.find((p) => p.student_id === args[2]);
       if (existing) return [] as T[];
+      // ensureProfile column order: organization_id, school_id, student_id,
+      // admission_number, public_student_id, date_of_birth, gender, ...
       const row = {
         id: crypto.randomUUID(),
         organization_id: args[0],
         school_id: args[1],
         student_id: args[2],
         admission_number: args[3],
+        public_student_id: args[4],
       };
       this.profiles.push(row);
       return [{ id: row.id, admission_number: row.admission_number }] as T[];
@@ -387,6 +410,8 @@ Deno.test("convertAdmissionsEnrollment creates profile and SIS enrollment", asyn
   assertEquals(mock.profiles.length, 1);
   assertEquals(mock.sisEnrollments.length, 1);
   assertEquals(mock.studentInsertCount, 0);
+  // PSID: the freshly-created conversion profile gets CODE-0001 (set-once).
+  assertEquals(mock.profiles[0]?.public_student_id, "CONVSCH-0001");
 });
 
 Deno.test("convertAdmissionsEnrollment is idempotent when already converted", async () => {
