@@ -210,6 +210,8 @@ export async function computeStudentRiskList(
         communicationGaps: s.communication_gaps,
         behaviorIncidents: s.behavior_incidents,
         timetableMissedSessions: s.timetable_missed_sessions,
+        feeOutstandingAmount: s.fee_outstanding_amount,
+        feeOverdueDays: s.fee_overdue_days,
       });
       return {
         studentId: s.student_id,

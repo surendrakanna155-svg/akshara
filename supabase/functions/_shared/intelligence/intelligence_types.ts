@@ -35,6 +35,15 @@ export interface StudentRiskInputs {
   communicationGaps: number;
   behaviorIncidents: number;
   timetableMissedSessions: number;
+  // feeOutstandingAmount: authoritative per-year fee balance (currency units) from
+  // finance_student_accounts.outstanding_amount — the same column collections
+  // decrement and the defaulters/finance-intelligence reads use. Default 0: a
+  // paid-up student, or a fresh school with no fee accounts yet, carries no fee
+  // risk (honest zero, never a fabricated balance).
+  feeOutstandingAmount?: number;
+  // feeOverdueDays: days past the earliest unpaid invoice due date (0 when no
+  // overdue invoice / no account). Currently informational for the reason text.
+  feeOverdueDays?: number;
 }
 
 export interface StudentRiskSnapshotRow {
@@ -67,4 +76,6 @@ export interface StudentSignalRow {
   communication_gaps: number;
   behavior_incidents: number;
   timetable_missed_sessions: number;
+  fee_outstanding_amount: number;
+  fee_overdue_days: number;
 }

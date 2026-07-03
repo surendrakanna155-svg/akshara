@@ -18,6 +18,7 @@ export async function loadStudentSignals(
   client: TenantQueryClient,
   organizationId: string,
   schoolId: string,
+  academicYearLabel?: string,
 ): Promise<StudentSignalRow[]> {
   const rows = await client.queryObject<{
     student_id: string;
@@ -30,6 +31,8 @@ export async function loadStudentSignals(
     hw_total: number;
     avg_marks_pct: number;
     behavior_incidents: number;
+    fee_outstanding: number;
+    fee_overdue_days: number;
   }>(
     `SELECT
        s.id AS student_id,
@@ -41,7 +44,9 @@ export async function loadStudentSignals(
        coalesce(hw.submitted, 0)::int AS hw_submitted,
        coalesce(hw.total, 0)::int AS hw_total,
        coalesce(marks.avg_pct, 70)::int AS avg_marks_pct,
-       coalesce(conduct.incident_count, 0)::int AS behavior_incidents
+       coalesce(conduct.incident_count, 0)::int AS behavior_incidents,
+       coalesce(fee.outstanding, 0)::numeric AS fee_outstanding,
+       coalesce(fee.overdue_days, 0)::int AS fee_overdue_days
      FROM students s
      LEFT JOIN LATERAL (
        SELECT class_name, section_name
@@ -79,9 +84,36 @@ export async function loadStudentSignals(
          AND sci.organization_id = $1 AND sci.school_id = $2
          AND sci.status IN ('open', 'escalated')
      ) conduct ON true
+     LEFT JOIN LATERAL (
+       -- fee_outstanding: AUTHORITATIVE per-year balance from
+       -- finance_student_accounts.outstanding_amount — the same column that
+       -- collections decrement and the finance defaulters / finance-intelligence
+       -- reads use. Scope to the current academic year when known ($3); when the
+       -- caller has no year, fall back to summing the student's OPEN accounts
+       -- (mirrors the defaulters read: status='open' AND outstanding_amount>0).
+       -- overdue_days is derived from the earliest unpaid finance_invoices due
+       -- date, exactly as the defaulters/intelligence handlers compute it.
+       SELECT
+         coalesce(sum(fsa.outstanding_amount), 0)::numeric AS outstanding,
+         coalesce(
+           max(EXTRACT(day FROM now() - fi.due_date)) FILTER (WHERE fi.id IS NOT NULL),
+           0
+         )::int AS overdue_days
+       FROM finance_student_accounts fsa
+       LEFT JOIN finance_invoices fi ON fi.student_id = fsa.student_id
+         AND fi.organization_id = fsa.organization_id
+         AND fi.school_id = fsa.school_id
+         AND fi.invoice_status IN ('issued', 'partially_paid')
+         AND fi.due_date < CURRENT_DATE
+       WHERE fsa.student_id = s.id
+         AND fsa.organization_id = $1 AND fsa.school_id = $2
+         AND fsa.status = 'open'
+         AND fsa.outstanding_amount > 0
+         AND ($3::text IS NULL OR fsa.academic_year = $3::text)
+     ) fee ON true
      WHERE s.organization_id = $1 AND s.school_id = $2 AND s.status = 'active'
      ORDER BY s.display_name`,
-    [organizationId, schoolId],
+    [organizationId, schoolId, academicYearLabel ?? null],
   );
 
   return rows.map((row) => {
@@ -110,6 +142,11 @@ export async function loadStudentSignals(
       // (attendance_records are day-level), so this is a coarse proxy derived from
       // day-level absences until per-period attendance exists.
       timetable_missed_sessions: row.absent_count > 5 ? 2 : 0,
+      // fee_outstanding_amount: authoritative per-year balance from
+      // finance_student_accounts.outstanding_amount (0 when the student has no
+      // open account or is fully paid up).
+      fee_outstanding_amount: Number(row.fee_outstanding) || 0,
+      fee_overdue_days: Number(row.fee_overdue_days) || 0,
     };
   });
 }
@@ -126,7 +163,12 @@ export async function computeAndStoreRiskSnapshots(
     [organizationId, schoolId],
   );
 
-  const signals = await loadStudentSignals(client, organizationId, schoolId);
+  const signals = await loadStudentSignals(
+    client,
+    organizationId,
+    schoolId,
+    academicYearLabel,
+  );
   const stored: StudentRiskSnapshotRow[] = [];
 
   for (const signal of signals) {
@@ -137,6 +179,8 @@ export async function computeAndStoreRiskSnapshots(
       communicationGaps: signal.communication_gaps,
       behaviorIncidents: signal.behavior_incidents,
       timetableMissedSessions: signal.timetable_missed_sessions,
+      feeOutstandingAmount: signal.fee_outstanding_amount,
+      feeOverdueDays: signal.fee_overdue_days,
     });
 
     const rows = await client.queryObject<StudentRiskSnapshotRow>(
