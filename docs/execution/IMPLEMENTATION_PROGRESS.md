@@ -98,6 +98,14 @@ implement → validate → `/eos` PASS → commit → append a journal row here.
 
 | 2026-07-04 | `c0f450f` | P1 | **P1-CODE-2** (Reliability polish, REL-6..9) | `lib/core/reliability/store/{reliability_store,in_memory_reliability_store,sqflite_reliability_store,reliability_store_opener}.dart` (reclaim + open result), `sync/sync_engine.dart` (reclaim + ordering + reachability gate), `connectivity/*` (isReachable), `sync_center/{sync_summary,sync_center_controller,sync_banner}.dart` + `reliability_providers.dart` + `main.dart` (degraded telemetry), `lib/core/network/interceptors/offline_read_cache_interceptor.dart` (TTL), +3 test files + fakes | **PASS** (EOS RELIABILITY) | analyze 0; full suite **3599 pass, 0 new failures** (2 known UX-7); +15 tests; backend untouched | REL-6, REL-7, REL-8, REL-9 | P1-CODE-2 |
 
+| 2026-07-04 | `370028c` | P1 | **P1-CODE-3 · ENG-7/ENG-8** (Backend hardening, part 1) | `api/app.ts` (central generic SERVER/CONFIG error), `_shared/http.ts` (`MAX_BULK_ITEMS`), exam/hr/approval/admissions/pilot/transport handlers (bulk caps), `api/qw4_error_paths_test.ts` + `api/eng8_bulk_cap_test.ts` | **PASS** (EOS SECURITY) | no raw internal error to client; 6 bulk arrays 422-before-DB; api 14/0; exam+hr+approval 132/0 | ENG-7(=SEC-6), ENG-8(=SEC-11) | P1-CODE-3 |
+
+| 2026-07-04 | `56e4942` | P1 | **P1-CODE-3 · ENG-10** (part 2) | attendance/promotion/parent-experience/memories/school-config/inventory-intelligence/subscription-admin handlers (18 val 400→422), memories/school-config/inventory route-contract tests | **PASS** (EOS ARCH) | validation failures uniformly 422; affected module tests 116/0 | ENG-10 | P1-CODE-3 |
+
+| 2026-07-04 | `3957fab` | P1 | **P1-CODE-3 · ENG-4/ENG-5** (part 3) | `api/eng4_5_forced_auth_test.ts` (forced-auth choke + route-registry lint) | **PASS** (EOS SECURITY) | unauth→401 across all module groups; 13/13; invariant continuously enforced | ENG-4, ENG-5 | P1-CODE-3 |
+
+| 2026-07-04 | `b4bee40` | P1 | **P1-CODE-3 · ENG-9/DB-6** (part 4, wave-close) | `_shared/config.ts` (`auditRetentionDays`), `_shared/audit/audit_repository.ts` (retention seam), `api/eng9_error_code_taxonomy_test.ts`, `_shared/audit/db6_retention_seam_test.ts`, 7 mock-config builders | **PASS** (EOS ARCH) | error-code taxonomy lint 2/2; audit-retention seam 3/3; **full deno 2021 pass, 0 new failures** (5 pre-existing probe-count drifts → ISO-COUNT); analyze 0 | ENG-9, DB-6 | P1-CODE-3 |
+
 *(Wave-2 onward: the executing session appends one row per task as each passes EOS and commits.)*
 
 ---
