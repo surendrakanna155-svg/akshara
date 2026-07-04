@@ -30,7 +30,7 @@
 | Phase | Tasks total | ✅ Complete | 🔵 In progress | ⚪ Pending | EOS-gated |
 |---|---:|---:|---:|---:|---|
 | **Planning** | — | ✅ FROZEN 2026-07-04 | — | — | audit-verified |
-| P0 — Truth/Docs/Live-Verify | 19 | 8 (DOC-1/2/3/4/5 **W1 ✅**; SEC-1, SEC-2, INFRA-2, CODE-1 **W2**) | 1 (W2 in progress) | 9 | per task |
+| P0 — Truth/Docs/Live-Verify | 19 | 9 (DOC-1/2/3/4/5 **W1 ✅**; SEC-1/2/3, INFRA-2, CODE-1 **W2**) | 1 (W2 in progress) | 8 | per task |
 | P1 — Backend & Code Fixes | 13 (+22 PROD waves incl. P1-PROD-22 staff-attendance GA track) | 0 | 0 | all | per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | per wave |
 | P3 — Adaptive AI (W1.1–1.5 · W2.0–2.9) | 2 (15 sub-waves) | 0 | 0 | all | per sub-wave |
@@ -83,6 +83,8 @@ implement → validate → `/eos` PASS → commit → append a journal row here.
 | 2026-07-04 | `619338b` | P0 | **P0-SEC-2** (W2) | `lib/features/auth/auth_session_storage.dart` (secure backend + legacy migrate/scrub), `lib/features/auth/auth_provider.dart` (provider wiring), +4 test files | **PASS** (EOS SEC) | `flutter analyze` 0; full suite 3563 pass, 0 new failures (2 pre-existing UX-7) | SEC-3 | P0-SEC-2 |
 
 | 2026-07-04 | `6408d90` | P0 | **P0-CODE-1** (W2) | `supabase/functions/_shared/finance/finance_collections_repository.ts` (row_version guard + CollectionConflictError), `finance_collections_handlers.ts` (409 + expectedVersion parse), `finance_mapper.ts` (collectionRowToApi), +4 test files (row_version literals + 3 ENG-1 tests) | **PASS** (EOS RELIABILITY) | deno finance 136/0; deno check clean; api typechecks | ENG-1 | P0-CODE-1 |
+
+| 2026-07-04 | `63358bc` | P0 | **P0-SEC-3** (W2) | `lib/router/app_router.dart` (QA route behind `kReleaseMode`), `lib/core/auth/auth_repository_providers.dart` (mock fail-closed) | **PASS** (EOS SEC) | `flutter analyze` 0; full suite 3563 pass, 0 new failures; router/auth/security 157/0 | SEC-9, SEC-10 | P0-SEC-3 |
 
 *(Wave-2 onward: the executing session appends one row per task as each passes EOS and commits.)*
 
