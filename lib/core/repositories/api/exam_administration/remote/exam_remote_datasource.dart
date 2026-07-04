@@ -193,12 +193,45 @@ class ExamRemoteDataSource {
     required RepositoryQuery query,
     required BulkUpdateExamMarksRequest request,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      ExamApiPaths.marksBatch(request.examId),
-      queryParameters: _queryParams(query),
-      data: _mapper.bulkMarksBody(request),
+    // REL-2: route the flagship "Save all" through the reliability platform so a
+    // full grid of dirty rows queues (idempotent, resumable) instead of being
+    // lost on interruption. Mirrors the per-cell `updateMark` above.
+    final ReliableWriter? reliable = _reliable;
+    if (reliable == null) {
+      final response = await _dio.post<Map<String, dynamic>>(
+        ExamApiPaths.marksBatch(request.examId),
+        queryParameters: _queryParams(query),
+        data: _mapper.bulkMarksBody(request),
+      );
+      return _mapper.toBulkResult(_requireData(response));
+    }
+    final MutationOutcome outcome = await reliable.runWrite(
+      type: OperationTypes.saveExamMarksDraft,
+      method: 'POST',
+      path: ExamApiPaths.marksBatch(request.examId),
+      body: _mapper.bulkMarksBody(request),
+      scope: _queryParams(query),
+      entityRef: 'examMarksBatch:${request.examId}',
     );
-    return _mapper.toBulkResult(_requireData(response));
+    final ResolvedWrite resolved = resolveWriteOutcome(
+      outcome,
+      // Offline projection: every dirty row is optimistically "updated"
+      // (queued); none failed. The real partial-success split arrives when the
+      // queued write drains.
+      optimistic: () => <String, dynamic>{
+        'updated': <Map<String, dynamic>>[
+          for (final entry in request.entries)
+            <String, dynamic>{
+              'id': entry.markEntryId,
+              'marksObtained':
+                  entry.status.isPresent ? entry.marksObtained : null,
+              'status': entry.status.wire,
+            },
+        ],
+        'failed': const <dynamic>[],
+      },
+    );
+    return _mapper.toBulkResult(resolved.data);
   }
 
   /// EXM-2 — marks-entry progress for the school (exams awaiting marks).
