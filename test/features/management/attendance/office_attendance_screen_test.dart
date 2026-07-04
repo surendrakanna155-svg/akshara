@@ -50,6 +50,30 @@ void main() {
           findsOneWidget);
     });
 
+    testWidgets(
+        'ATT-2 · monthly tab renders the students×days register matrix',
+        (tester) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(QaTestKeys.officeAttendanceTab('Monthly')));
+      await tester.pumpAndSettle();
+
+      // The monthly register header + the students×days matrix render.
+      expect(find.textContaining('Monthly register'), findsOneWidget);
+      expect(find.byType(DataTable), findsOneWidget);
+      // A student row from the real mock feed.
+      expect(find.textContaining('Arjun Patel'), findsWidgets);
+      // The trailing percent column header + per-day P/A/L/E code cells.
+      expect(find.text('%'), findsOneWidget);
+      expect(find.text('P'), findsWidgets);
+      // Export affordances on the monthly grid (ride the shared pipeline).
+      expect(find.byKey(QaTestKeys.officeAttendanceExportCsvButton),
+          findsOneWidget);
+      expect(find.byKey(QaTestKeys.officeAttendanceExportPdfButton),
+          findsOneWidget);
+    });
+
     testWidgets('pending tab lists classes that have not submitted',
         (tester) async {
       await tester.pumpWidget(_wrap());
