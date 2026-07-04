@@ -11,6 +11,20 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../test_helpers.dart';
 
+/// XCT-3: pick a date through the shared [AksharaDateField] picker (the field is
+/// read-only, so it can only be filled via the calendar). Selects the 15th of
+/// the initial month.
+Future<void> _pickHrDate(WidgetTester tester, String label) async {
+  final field = find.widgetWithText(TextFormField, label);
+  await tester.ensureVisible(field);
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('15'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('OK'));
+  await tester.pumpAndSettle();
+}
+
 /// Final HR slice widget tests:
 ///   HR-3  multi-select batch approve/reject bar (leave screen)
 ///   HR-D3 apply-leave-on-behalf dialog with the half-day option
@@ -174,14 +188,9 @@ void main() {
       await tester.tap(find.byKey(QaTestKeys.hrOnBehalfHalfDayCheckbox));
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextField, 'From date (YYYY-MM-DD)'),
-        '2026-07-05',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextField, 'To date (YYYY-MM-DD)'),
-        '2026-07-05',
-      );
+      // XCT-3: dates are now chosen via the shared date picker, not typed.
+      await _pickHrDate(tester, 'From date');
+      await _pickHrDate(tester, 'To date');
       await tester.ensureVisible(find.byKey(QaTestKeys.hrOnBehalfSubmitButton));
       await tester.tap(find.byKey(QaTestKeys.hrOnBehalfSubmitButton));
       await tester.pumpAndSettle();

@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../management_models.dart';
+import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../theme/spacing.dart';
 
 class ManagementDashboardPdfService {
@@ -15,6 +16,9 @@ class ManagementDashboardPdfService {
     required String periodLabel,
     required ManagementDashboardData data,
   }) async {
+    // XCT-1: both tables ride the ONE shared grid primitive (consistent
+    // border/header/cell styling with every other module export).
+    const export = AksharaReportExportService();
     final document = pw.Document();
     document.addPage(
       pw.MultiPage(
@@ -38,9 +42,9 @@ class ManagementDashboardPdfService {
             style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          pw.TableHelper.fromTextArray(
+          export.buildGridTable(
             headers: const ['Metric', 'Value', 'Detail'],
-            data: [
+            rows: [
               for (final kpi in data.kpis)
                 [
                   kpi.label,
@@ -48,9 +52,6 @@ class ManagementDashboardPdfService {
                   kpi.detail?.isNotEmpty == true ? kpi.detail! : '-',
                 ],
             ],
-            border: pw.TableBorder.all(color: PdfColors.grey400),
-            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
           ),
           pw.SizedBox(height: 12),
           pw.Text(
@@ -58,15 +59,12 @@ class ManagementDashboardPdfService {
             style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          pw.TableHelper.fromTextArray(
+          export.buildGridTable(
             headers: const ['Title', 'Requester', 'Amount', 'Status'],
-            data: [
+            rows: [
               for (final item in data.approvalQueue)
                 [item.title, item.requester, item.amount, item.status.name],
             ],
-            border: pw.TableBorder.all(color: PdfColors.grey400),
-            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
           ),
         ],
       ),

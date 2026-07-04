@@ -67,9 +67,11 @@ class FinanceAuditRegisterService {
           if (financeEvents.isEmpty)
             pw.Text('No finance audit events recorded yet.')
           else
-            pw.TableHelper.fromTextArray(
+            // XCT-1: the register table rides the ONE shared grid primitive
+            // (same instance whose CSV path is reused below).
+            const AksharaReportExportService().buildGridTable(
               headers: const ['Timestamp', 'Type', 'User', 'Entity', 'Action'],
-              data: [
+              rows: [
                 for (final event in financeEvents)
                   [
                     event.timestamp.toIso8601String(),
@@ -79,11 +81,6 @@ class FinanceAuditRegisterService {
                     event.metadata['action'] ?? '—',
                   ],
               ],
-              border: pw.TableBorder.all(color: PdfColors.grey400),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              cellAlignment: pw.Alignment.centerLeft,
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey200),
             ),
         ],
       ),

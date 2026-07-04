@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/repositories/repository_providers.dart';
+import '../../../shared/forms/akshara_date_field.dart';
 import '../../../shared/widgets/widgets.dart';
 import 'teacher_effectiveness_provider.dart';
 import '../../../core/errors/api_failure_mapper.dart';
@@ -165,7 +166,7 @@ class _TeacherEffectivenessScreenState extends ConsumerState<TeacherEffectivenes
       children: [
         TextField(controller: _studentNameController, decoration: const InputDecoration(labelText: 'Student name')),
         TextField(controller: _classController, decoration: const InputDecoration(labelText: 'Class')),
-        TextField(controller: _meetingDateController, decoration: const InputDecoration(labelText: 'Meeting date')),
+        AksharaDateField(controller: _meetingDateController, labelText: 'Meeting date'),
         TextField(controller: _attendanceController, decoration: const InputDecoration(labelText: 'Attendance %')),
         TextField(controller: _marksController, decoration: const InputDecoration(labelText: 'Recent marks %')),
         TextField(controller: _homeworkController, decoration: const InputDecoration(labelText: 'Homework %')),

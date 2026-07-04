@@ -4,6 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../core/reports/akshara_report_export_service.dart';
 import '../../theme/spacing.dart';
 import '../phase5/phase5_models.dart';
 
@@ -17,6 +18,8 @@ class OperationsHubPdfService {
     required String dateLabel,
     required OperationsHubSnapshot snapshot,
   }) async {
+    // XCT-1: every table rides the ONE shared grid primitive.
+    const export = AksharaReportExportService();
     final document = pw.Document();
     document.addPage(
       pw.MultiPage(
@@ -40,9 +43,9 @@ class OperationsHubPdfService {
             style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          pw.TableHelper.fromTextArray(
+          export.buildGridTable(
             headers: const ['Metric', 'Value'],
-            data: [
+            rows: [
               ['Attendance', '${snapshot.dailySummary.attendancePct}%'],
               [
                 'Collections today',
@@ -54,9 +57,6 @@ class OperationsHubPdfService {
               ],
               ['Critical alerts', '${snapshot.dailySummary.criticalAlerts}'],
             ],
-            border: pw.TableBorder.all(color: PdfColors.grey400),
-            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
           ),
           pw.SizedBox(height: 12),
           pw.Text(
@@ -67,16 +67,12 @@ class OperationsHubPdfService {
           if (snapshot.criticalAlerts.isEmpty)
             pw.Text('No critical alerts today.')
           else
-            pw.TableHelper.fromTextArray(
+            export.buildGridTable(
               headers: const ['Title', 'Module', 'Severity'],
-              data: [
+              rows: [
                 for (final alert in snapshot.criticalAlerts)
                   [alert.title, alert.module, alert.severity],
               ],
-              border: pw.TableBorder.all(color: PdfColors.grey400),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey200),
             ),
           pw.SizedBox(height: 12),
           pw.Text(
@@ -87,16 +83,12 @@ class OperationsHubPdfService {
           if (snapshot.pendingActions.isEmpty)
             pw.Text('No pending actions.')
           else
-            pw.TableHelper.fromTextArray(
+            export.buildGridTable(
               headers: const ['Title', 'Module'],
-              data: [
+              rows: [
                 for (final action in snapshot.pendingActions)
                   [action.title, action.module],
               ],
-              border: pw.TableBorder.all(color: PdfColors.grey400),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.grey200),
             ),
           pw.SizedBox(height: 12),
           pw.Text(
@@ -104,9 +96,9 @@ class OperationsHubPdfService {
             style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 6),
-          pw.TableHelper.fromTextArray(
+          export.buildGridTable(
             headers: const ['Widget', 'Count'],
-            data: [
+            rows: [
               ['Student risk alerts', '${snapshot.widgets.studentRiskAlerts}'],
               [
                 'Employee risk alerts',
@@ -115,9 +107,6 @@ class OperationsHubPdfService {
               ['Inventory alerts', '${snapshot.widgets.inventoryAlerts}'],
               ['Fee alerts', '${snapshot.widgets.feeAlerts}'],
             ],
-            border: pw.TableBorder.all(color: PdfColors.grey400),
-            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
           ),
         ],
       ),

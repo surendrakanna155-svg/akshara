@@ -14,6 +14,19 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../test_helpers.dart';
 
+/// XCT-3: pick a date through the shared read-only [AksharaDateField] picker
+/// (dates can no longer be typed). Selects the 15th of the initial month.
+Future<void> _pickHrDate(WidgetTester tester, String label) async {
+  final field = find.widgetWithText(TextFormField, label);
+  await tester.ensureVisible(field);
+  await tester.tap(field);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('15'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('OK'));
+  await tester.pumpAndSettle();
+}
+
 /// P1-CODE-5 · MOD-2 (client) — the payroll ENGINE workflow: define a salary
 /// structure → generate a draft run → process it, all against the real
 /// demo-backed mock write store (no stubbed mutations for the flow test).
@@ -238,11 +251,8 @@ void main() {
       // The old free-text "Employee name" field is gone (MOD-3).
       expect(find.widgetWithText(TextField, 'Employee name'), findsNothing);
 
-      await tester.enterText(
-          find.widgetWithText(TextField, 'From date (YYYY-MM-DD)'),
-          '2026-07-10');
-      await tester.enterText(
-          find.widgetWithText(TextField, 'To date (YYYY-MM-DD)'), '2026-07-11');
+      await _pickHrDate(tester, 'From date');
+      await _pickHrDate(tester, 'To date');
       await tester.tap(find.widgetWithText(FilledButton, 'Submit'));
       await tester.pumpAndSettle();
 
@@ -271,11 +281,8 @@ void main() {
       await tester.tap(find.text('Mrs. Rao').last);
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-          find.widgetWithText(TextField, 'From date (YYYY-MM-DD)'),
-          '2026-07-10');
-      await tester.enterText(
-          find.widgetWithText(TextField, 'To date (YYYY-MM-DD)'), '2026-07-11');
+      await _pickHrDate(tester, 'From date');
+      await _pickHrDate(tester, 'To date');
       await tester.tap(find.widgetWithText(FilledButton, 'Submit'));
       await tester.pumpAndSettle();
 

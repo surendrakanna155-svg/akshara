@@ -622,6 +622,34 @@ class AksharaReportExportService {
     return Printing.sharePdf(bytes: bytes, filename: name);
   }
 
+  /// XCT-1 — the ONE styled table primitive every module's grid/tabular PDF
+  /// rides. A single place for the border / header / cell styling so a table in
+  /// a finance export, a management dashboard, an operations report, or the
+  /// audit register all render identically. Columns at index [rightAlignFrom]
+  /// and beyond are right-aligned (for numeric/amount columns).
+  pw.Widget buildGridTable({
+    required List<String> headers,
+    required List<List<String>> rows,
+    int? rightAlignFrom,
+  }) {
+    final Map<int, pw.Alignment> cellAlignments = {};
+    if (rightAlignFrom != null) {
+      for (var i = rightAlignFrom; i < headers.length; i++) {
+        cellAlignments[i] = pw.Alignment.centerRight;
+      }
+    }
+    return pw.TableHelper.fromTextArray(
+      headers: headers,
+      data: rows,
+      border: pw.TableBorder.all(color: PdfColors.grey400),
+      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+      headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+      cellAlignment: pw.Alignment.centerLeft,
+      cellAlignments: cellAlignments,
+      cellStyle: const pw.TextStyle(fontSize: 9),
+    );
+  }
+
   /// Builds a multi-column grid PDF (paginated table). Columns at index
   /// [rightAlignFrom] and beyond are right-aligned (for numeric/amount columns).
   Future<Uint8List> buildGridReportPdf({
@@ -633,12 +661,6 @@ class AksharaReportExportService {
     int? rightAlignFrom,
   }) async {
     final document = pw.Document();
-    final Map<int, pw.Alignment> cellAlignments = {};
-    if (rightAlignFrom != null) {
-      for (var i = rightAlignFrom; i < headers.length; i++) {
-        cellAlignments[i] = pw.Alignment.centerRight;
-      }
-    }
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -656,15 +678,10 @@ class AksharaReportExportService {
                 style: const pw.TextStyle(fontSize: 10)),
           ],
           pw.SizedBox(height: 16),
-          pw.TableHelper.fromTextArray(
+          buildGridTable(
             headers: headers,
-            data: rows,
-            border: pw.TableBorder.all(color: PdfColors.grey400),
-            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-            cellAlignment: pw.Alignment.centerLeft,
-            cellAlignments: cellAlignments,
-            cellStyle: const pw.TextStyle(fontSize: 9),
+            rows: rows,
+            rightAlignFrom: rightAlignFrom,
           ),
         ],
       ),

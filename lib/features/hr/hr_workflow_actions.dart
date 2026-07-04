@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/testing/qa_test_keys.dart';
+import '../../shared/forms/akshara_date_field.dart';
 import 'hr_models.dart';
 import 'hr_mutations_provider.dart';
 import 'hr_providers.dart';
@@ -100,17 +101,13 @@ Future<void> showCreateHrLeaveDialog(BuildContext context, WidgetRef ref) async 
                 controller: reasonController,
                 decoration: const InputDecoration(labelText: 'Reason'),
               ),
-              TextField(
+              AksharaDateField(
                 controller: fromController,
-                decoration: const InputDecoration(
-                  labelText: 'From date (YYYY-MM-DD)',
-                ),
+                labelText: 'From date',
               ),
-              TextField(
+              AksharaDateField(
                 controller: toController,
-                decoration: const InputDecoration(
-                  labelText: 'To date (YYYY-MM-DD)',
-                ),
+                labelText: 'To date',
               ),
               TextField(
                 controller: daysController,
@@ -211,17 +208,13 @@ Future<void> showApplyLeaveOnBehalfDialog(
                 ],
                 onChanged: (v) => setState(() => leaveType = v ?? leaveType),
               ),
-              TextField(
+              AksharaDateField(
                 controller: fromController,
-                decoration: const InputDecoration(
-                  labelText: 'From date (YYYY-MM-DD)',
-                ),
+                labelText: 'From date',
               ),
-              TextField(
+              AksharaDateField(
                 controller: toController,
-                decoration: const InputDecoration(
-                  labelText: 'To date (YYYY-MM-DD)',
-                ),
+                labelText: 'To date',
               ),
               TextField(
                 controller: daysController,
@@ -816,11 +809,9 @@ Future<void> extendHrEmployeeProbation(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Extend probation'),
-      content: TextField(
+      content: AksharaDateField(
         controller: dateController,
-        decoration: const InputDecoration(
-          labelText: 'New probation end date (YYYY-MM-DD)',
-        ),
+        labelText: 'New probation end date',
       ),
       actions: [
         TextButton(
