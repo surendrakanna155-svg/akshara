@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.224.0/assert/mod.ts";
-import { claimsToTenantParams } from "./tenant_db.ts";
+import { assertEdgeTenantRole, claimsToTenantParams } from "./tenant_db.ts";
 import type { AccessTokenClaims } from "./jwt.ts";
 
 const baseClaims: AccessTokenClaims = {
@@ -49,4 +49,25 @@ Deno.test("claimsToTenantParams maps student scope", () => {
   });
   assertEquals(params.studentId, "student-record-1");
   assertEquals(params.scope, "student");
+});
+
+// P0-INFRA-6 / DB-2 — deploy-time edge role assertion.
+Deno.test("assertEdgeTenantRole accepts erp_tenant with NOBYPASSRLS", () => {
+  assertEquals(assertEdgeTenantRole({ role: "erp_tenant", bypassRls: false }), null);
+});
+
+Deno.test("assertEdgeTenantRole rejects service_role", () => {
+  const err = assertEdgeTenantRole({ role: "service_role", bypassRls: true });
+  assertEquals(err !== null, true);
+  assertEquals(err!.includes("service_role") || err!.includes("erp_tenant"), true);
+});
+
+Deno.test("assertEdgeTenantRole rejects erp_tenant that can bypass RLS", () => {
+  const err = assertEdgeTenantRole({ role: "erp_tenant", bypassRls: true });
+  assertEquals(err !== null, true);
+  assertEquals(err!.includes("BYPASS"), true);
+});
+
+Deno.test("assertEdgeTenantRole rejects an unknown/missing role", () => {
+  assertEquals(assertEdgeTenantRole({}) !== null, true);
 });

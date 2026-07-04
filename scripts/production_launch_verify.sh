@@ -78,6 +78,17 @@ else
   fail "tenant-access count=${PROBE_COUNT} expected=${EXPECTED_PROBES} pass=${PROBE_PASS}"
 fi
 
+# P0-INFRA-6 / DB-2: assert the edge connects as the non-bypass `erp_tenant` role
+# (never service_role). The health endpoint already 503s on a wrong role; this is
+# the explicit, self-documenting deploy gate.
+EDGE_ROLE=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['connection'].get('role',''))" 2>/dev/null || echo "")
+EDGE_BYPASS=$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['connection'].get('bypassRls',''))" 2>/dev/null || echo "")
+if [ "$EDGE_ROLE" = "erp_tenant" ] && [ "$EDGE_BYPASS" != "True" ]; then
+  pass "edge DB role is erp_tenant (NOBYPASSRLS)"
+else
+  fail "edge DB role='${EDGE_ROLE}' bypassRls='${EDGE_BYPASS}' — expected erp_tenant / NOBYPASSRLS (DB-2)"
+fi
+
 OPS=$(curl -sS "${BASE}/health/operations" ${health_headers[@]+"${health_headers[@]}"})
 OPS_STATUS=$(echo "$OPS" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'].get('status',''))" 2>/dev/null || echo "")
 [ "$OPS_STATUS" = "ok" ] && pass "health/operations snapshot ok" || fail "health/operations status=${OPS_STATUS}"

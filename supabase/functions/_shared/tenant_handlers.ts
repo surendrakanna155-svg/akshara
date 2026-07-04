@@ -4,6 +4,7 @@ import { createStorageAdmin } from "./storage/storage_service.ts";
 import type { AccessTokenClaims } from "./jwt.ts";
 import { envelope, errorEnvelope, jsonResponse } from "./http.ts";
 import {
+  assertEdgeTenantRole,
   probeTenantConnection,
   TenantDbNotConfiguredError,
   withTenantContext,
@@ -31,6 +32,20 @@ export async function handleTenantAccessHealth(
         status: "degraded",
         connection,
         isolation: { pass: false, error: connection.error ?? "Tenant DB unavailable" },
+      }),
+      { status: 503 },
+    );
+  }
+
+  // P0-INFRA-6 / DB-2: fail the health check (→ deploy fails) if the edge is not
+  // connected as the non-bypass `erp_tenant` role.
+  const roleError = assertEdgeTenantRole(connection);
+  if (roleError) {
+    return jsonResponse(
+      envelope({
+        status: "degraded",
+        connection,
+        isolation: { pass: false, error: roleError },
       }),
       { status: 503 },
     );

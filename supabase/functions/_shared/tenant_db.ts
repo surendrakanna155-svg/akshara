@@ -139,7 +139,7 @@ export async function withTenantContext<T>(
 /** Probe that the tenant connection is configured and authenticates as erp_tenant. */
 export async function probeTenantConnection(
   config: AppConfig,
-): Promise<{ ok: boolean; role?: string; error?: string }> {
+): Promise<{ ok: boolean; role?: string; bypassRls?: boolean; error?: string }> {
   if (!config.erpTenantDatabaseUrl) {
     return { ok: false, error: "ERP_TENANT_DATABASE_URL not set" };
   }
@@ -148,10 +148,20 @@ export async function probeTenantConnection(
   let client: PoolClient | null = null;
   try {
     client = await tenantPool(config.erpTenantDatabaseUrl).connect();
-    const result = await client.queryObject<{ role: string }>`
-      SELECT current_user::text AS role
+    // P0-INFRA-6 / DB-2: capture BOTH the connected role and whether it bypasses
+    // RLS, so a deploy can assert the edge runs as `erp_tenant` (NOBYPASSRLS) and
+    // never `service_role`.
+    const result = await client.queryObject<
+      { role: string; bypass_rls: boolean }
+    >`
+      SELECT current_user::text AS role,
+             (SELECT rolbypassrls FROM pg_roles WHERE rolname = current_user) AS bypass_rls
     `;
-    return { ok: true, role: result.rows[0]?.role };
+    return {
+      ok: true,
+      role: result.rows[0]?.role,
+      bypassRls: result.rows[0]?.bypass_rls ?? undefined,
+    };
   } catch (error) {
     return {
       ok: false,
@@ -160,4 +170,26 @@ export async function probeTenantConnection(
   } finally {
     client?.release();
   }
+}
+
+/**
+ * P0-INFRA-6 / DB-2: deploy-time assertion that the edge connects as the
+ * non-bypass `erp_tenant` role. Returns an error string when the role is wrong
+ * (not `erp_tenant`, or it can bypass RLS — e.g. `service_role`), else null.
+ * Pure + unit-testable; wired into the tenant-access health endpoint so a
+ * mis-configured DSN fails the health check (and therefore the deploy).
+ */
+export const EDGE_TENANT_ROLE = "erp_tenant";
+export function assertEdgeTenantRole(
+  connection: { role?: string; bypassRls?: boolean },
+): string | null {
+  if (connection.role !== EDGE_TENANT_ROLE) {
+    return `edge DB role is '${connection.role ?? "unknown"}', expected '${EDGE_TENANT_ROLE}' ` +
+      `(never service_role — the RLS control DB-2)`;
+  }
+  if (connection.bypassRls === true) {
+    return `edge DB role '${connection.role}' can BYPASS RLS (rolbypassrls=true); ` +
+      `it must be NOBYPASSRLS`;
+  }
+  return null;
 }

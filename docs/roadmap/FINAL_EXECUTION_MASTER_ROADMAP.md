@@ -100,18 +100,19 @@
 - **Evidence:** delivered test alert. **EOS gate:** OPS PASS. **Done when:** alert observed at a human sink.
 
 ### P0-INFRA-4 · 🟢 · INFRA · Fix backup script `$1` warning
-- **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending · **Finding:** LV-10
-- **Outcome:** no unbound-variable warning. **Evidence:** clean backup.log. **EOS gate:** OPS PASS. **Done when:** warning gone.
+- **Depends:** — · **Complexity:** S · **Status:** ✅ Resolved in-repo (2026-07-04, P0·W2); live redeploy ⏳ deferred · **Finding:** LV-10
+- **Outcome:** the `$1` bug (line 35) is already `"${1:-}"` in-repo; all backup scripts `bash -n` clean; remaining `$1` uses are inside always-called-with-args functions. The live warning was a **stale deployed script** — clears on the next (live-lane) redeploy of the current script.
+- **Evidence:** `bash -n` clean on all 5 scripts; `git show HEAD:…:35` = `${1:-}`. **EOS gate:** OPS PASS. **Done when:** warning gone (repo ✅; live redeploy ⏳).
 
 ### P0-INFRA-5 · 🟡 · INFRA · Rotate DB password out of the migration
-- **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending (live already rotated) · **Finding:** DB-1/OPS-6
-- **Outcome:** migration reads the tenant password from a vault/secret, not a literal; new provisioning safe.
-- **Evidence:** migration diff; provisioning test. **EOS gate:** MIGRATION PASS. **Done when:** no credential literal in git.
+- **Depends:** — · **Complexity:** S · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** DB-1/OPS-6
+- **Outcome:** `20260610100000` no longer ships a credential literal — the `erp_tenant` password is read from the `erp.tenant_password` GUC (set from a secret at deploy) via dynamic SQL, with an obviously-non-secret dev-only fallback. Fresh provisioning is safe; the live role is unchanged (`IF NOT EXISTS` no-op; rotate via `ALTER ROLE`).
+- **Evidence:** migration diff; **no credential literal remains in code** (grep). **EOS gate:** MIGRATION PASS. **Done when:** no credential literal in git ✅.
 
 ### P0-INFRA-6 · 🟠 · INFRA · Deploy-time `erp_tenant` assertion
-- **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending (verified live once) · **Finding:** DB-2
-- **Outcome:** a startup self-test/deploy check that the edge DSN role is `erp_tenant` (NOBYPASSRLS), never `service_role`.
-- **Evidence:** self-test output. **EOS gate:** SEC PASS. **Done when:** deploy fails if the role is wrong.
+- **Depends:** — · **Complexity:** S · **Status:** ✅ Code complete (2026-07-04, P0·W2); live assertion runs on next deploy ⏳ · **Finding:** DB-2
+- **Outcome:** `probeTenantConnection` now returns `role` + `bypassRls`; the pure `assertEdgeTenantRole()` rejects any role ≠ `erp_tenant` or `rolbypassrls=true` (e.g. `service_role`); `/health/tenant-access` returns **503** on a wrong role and `production_launch_verify.sh` asserts it → **the deploy fails if the role is wrong**.
+- **Evidence:** `tenant_db_test` +4 assertion tests; health/tenant tests 14/0; api entrypoint typechecks; verify-script `bash -n` clean. **EOS gate:** SEC PASS. **Done when:** deploy fails if the role is wrong (code ✅; live run ⏳ on the deferred live lane).
 
 ### P0-CODE-1 · 🟠 · CODE · Enforce finance `row_version`/409 (money lost-update)
 - **Depends:** — · **Complexity:** M · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** ENG-1

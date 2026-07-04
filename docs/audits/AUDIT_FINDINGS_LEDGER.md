@@ -45,9 +45,9 @@ disposition: a Master-Roadmap task (`docs/audits/MASTER_EXECUTION_ROADMAP.md`), 
 | LV-3 no off-site backup (= OPS-1 offsite half) | High | → **P0-INFRA-1** |
 | LV-1 no WAL/PITR (= OPS-1 RPO half) | High | → **P0-INFRA-2** |
 | LV-6 alert delivery unwired (= OPS-3) | Med | → **P0-INFRA-3** |
-| LV-10 backup script `$1` bug | Low | → **P0-INFRA-4** |
-| DB-1 = OPS-6 hardcoded DB password in migration (live-rotated; migration still ships default) | Med (was P0) | → **P0-INFRA-5** |
-| DB-2 hardening (deploy-time assert erp_tenant) | High | → **P0-INFRA-6** |
+| LV-10 backup script `$1` bug | Low | → **P0-INFRA-4** ✅ Fixed in-repo 2026-07-04 (line 35 `${1:-}`, `bash -n` clean); live redeploy ⏳ |
+| DB-1 = OPS-6 hardcoded DB password in migration (live-rotated; migration still ships default) | Med (was P0) | → **P0-INFRA-5** ✅ Fixed 2026-07-04 (P0·W2) — literal removed, reads `erp.tenant_password` GUC |
+| DB-2 hardening (deploy-time assert erp_tenant) | High | → **P0-INFRA-6** ✅ Code complete 2026-07-04 (P0·W2) — `assertEdgeTenantRole` + health 503 + verify-script gate; live run ⏳ |
 | ENG-1 finance `row_version` guard inert (money lost-update) | High | → **P0-CODE-1** ✅ Fixed 2026-07-04 (P0·W2) — effective on `finance_collections` cancel (409 + current row) |
 | ENG-3 = MOD-4 ~8 backend-less surfaces reachable-mock | High | → **P0-CODE-2** |
 | QA-3 CI never ran on branch + live-regression cron not started | High | → **P0-TEST-1**, **P0-TEST-3** |
