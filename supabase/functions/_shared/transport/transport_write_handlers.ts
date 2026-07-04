@@ -11,6 +11,7 @@ import {
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
 import { sendBroadcastMessage } from "../communication/communication_service.ts";
+import { MAX_BULK_ITEMS } from "../http.ts";
 import { resolveStudentId } from "../sis/sis_student_resolver.ts";
 import { assignFeeStructure } from "../finance/finance_assignments_repository.ts";
 
@@ -934,6 +935,12 @@ export async function handleBulkAllocateTransport(
       : Array.isArray(body.sis_student_ids)
       ? (body.sis_student_ids as unknown[]).map((x) => String(x))
       : [];
+    // ENG-8 (SEC-11): cap the bulk id array before any per-row DB work.
+    if (explicitIds.length > MAX_BULK_ITEMS) {
+      throw new WriteValidationError(
+        `Maximum ${MAX_BULK_ITEMS} student ids per request`,
+      );
+    }
     const className = str(body, "className", "class_name");
     const sectionName = str(body, "sectionName", "section_name");
 

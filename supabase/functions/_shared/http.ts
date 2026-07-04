@@ -15,6 +15,15 @@ export function envelope(data: unknown) {
   return { data, error: null };
 }
 
+/**
+ * ENG-8 (SEC-11): default cap on a client-supplied bulk-write array. Bounds
+ * per-request memory + per-row DB work so an oversized payload can't exhaust the
+ * edge worker (a cheap DoS). Bulk handlers validate `array.length <= this`
+ * BEFORE doing any work and reject with 422 otherwise. Generous enough for a
+ * whole-grade operation; individual endpoints may pass a tighter limit.
+ */
+export const MAX_BULK_ITEMS = 500;
+
 export function errorEnvelope(
   code: string,
   message: string,

@@ -1,5 +1,5 @@
 import type { AppConfig } from "../config.ts";
-import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
+import { envelope, errorEnvelope, jsonResponse, MAX_BULK_ITEMS, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
@@ -539,6 +539,10 @@ export async function handleBatchDecideApprovals(
   const rawIds = body.ids;
   if (!Array.isArray(rawIds) || rawIds.length === 0) {
     return errorEnvelope("VALIDATION_ERROR", "ids must be a non-empty array", 422);
+  }
+  // ENG-8 (SEC-11): cap the bulk array before any per-row DB work.
+  if (rawIds.length > MAX_BULK_ITEMS) {
+    return errorEnvelope("VALIDATION_ERROR", `Maximum ${MAX_BULK_ITEMS} ids per request`, 422);
   }
   const ids = rawIds.map((v) => String(v));
 

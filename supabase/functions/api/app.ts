@@ -242,7 +242,11 @@ export async function handleRequest(
   try {
     config = configLoader();
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Configuration error";
+    // ENG-7 (SEC-6): the real reason (e.g. "SUPABASE_URL missing") is logged
+    // server-side only; the client gets a generic message so backend
+    // configuration / env internals never leak. The correlation id (response
+    // header + log line) is how support ties the two together.
+    const detail = error instanceof Error ? error.message : "Configuration error";
     logRequest({
       method: req.method.toUpperCase(),
       path: routePath(req),
@@ -250,9 +254,12 @@ export async function handleRequest(
       durationMs: Date.now() - startedAt,
       correlationId,
       clientIp,
-      error: message,
+      error: detail,
     });
-    return withCors(errorEnvelope("CONFIG_ERROR", message, 500), correlationId);
+    return withCors(
+      errorEnvelope("CONFIG_ERROR", "Server configuration error.", 500),
+      correlationId,
+    );
   }
 
   const path = routePath(req);
@@ -322,7 +329,10 @@ export async function handleRequest(
     });
     return withCors(response, correlationId);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
+    // ENG-7 (SEC-6): never surface a raw internal error (DB text, stack detail,
+    // driver messages) to the client. The real message is logged server-side;
+    // the client gets a generic envelope, traceable via the correlation id.
+    const detail = error instanceof Error ? error.message : "Unexpected error";
     logRequest({
       method,
       path,
@@ -330,8 +340,11 @@ export async function handleRequest(
       durationMs: Date.now() - startedAt,
       correlationId,
       clientIp,
-      error: message,
+      error: detail,
     });
-    return withCors(errorEnvelope("SERVER_ERROR", message, 500), correlationId);
+    return withCors(
+      errorEnvelope("SERVER_ERROR", "An unexpected error occurred.", 500),
+      correlationId,
+    );
   }
 }

@@ -1,5 +1,5 @@
 import type { AppConfig } from "../../config.ts";
-import { envelope, errorEnvelope, jsonResponse, readJson } from "../../http.ts";
+import { envelope, errorEnvelope, jsonResponse, MAX_BULK_ITEMS, readJson } from "../../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
@@ -627,6 +627,12 @@ export async function handleBulkUpdateExamMarks(
     const rawEntries = body.entries;
     if (!Array.isArray(rawEntries)) {
       throw new ExamValidationError("entries array is required");
+    }
+    // ENG-8 (SEC-11): cap the bulk array before any per-row DB work.
+    if (rawEntries.length > MAX_BULK_ITEMS) {
+      throw new ExamValidationError(
+        `Maximum ${MAX_BULK_ITEMS} entries per request`,
+      );
     }
 
     const { organizationId, schoolId } = tenantIds(claims);

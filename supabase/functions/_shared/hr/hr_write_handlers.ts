@@ -11,6 +11,7 @@ import {
 } from "../entity_write/module_write_handlers.ts";
 import { createEntityWriteStore } from "../entity_write/entity_write_store.ts";
 import { emitMutationAudit, moduleEntityAudit } from "../audit/mutation_audit_catalog.ts";
+import { MAX_BULK_ITEMS } from "../http.ts";
 
 const writeStore = createEntityWriteStore("hr_entities", "Hr");
 const { runWrite } = createModuleWriteHandlers("manageHr");
@@ -491,6 +492,10 @@ export async function handleBatchDecideLeave(req: Request, config: AppConfig): P
     const rawIds = body.ids;
     if (!Array.isArray(rawIds) || rawIds.length === 0) {
       throw new WriteValidationError("ids must be a non-empty array");
+    }
+    // ENG-8 (SEC-11): cap the bulk array before any per-row DB work.
+    if (rawIds.length > MAX_BULK_ITEMS) {
+      throw new WriteValidationError(`Maximum ${MAX_BULK_ITEMS} ids per request`);
     }
     const ids = rawIds
       .map((value) => String(value ?? "").trim())

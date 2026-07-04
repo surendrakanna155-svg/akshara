@@ -1,5 +1,5 @@
 import type { AppConfig } from "../config.ts";
-import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
+import { envelope, errorEnvelope, jsonResponse, MAX_BULK_ITEMS, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
@@ -339,6 +339,10 @@ export async function handleBulkLeadActions(
     : [];
   if (leadIds.length === 0) {
     return errorEnvelope("VALIDATION_ERROR", "leadIds must be a non-empty array", 422);
+  }
+  // ENG-8 (SEC-11): cap the bulk array before any per-row DB work.
+  if (leadIds.length > MAX_BULK_ITEMS) {
+    return errorEnvelope("VALIDATION_ERROR", `Maximum ${MAX_BULK_ITEMS} leadIds per request`, 422);
   }
 
   const action = snakeStr(body, "action");

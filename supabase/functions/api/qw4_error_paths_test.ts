@@ -58,7 +58,10 @@ Deno.test("QA-B-064: a failing config loader yields a 500 CONFIG_ERROR envelope"
   assertEquals(res.status, 500);
   const env = await res.json();
   assertEquals(env.error.code, "CONFIG_ERROR");
-  assertEquals(env.error.message, "SUPABASE_URL missing");
+  // ENG-7 (SEC-6): the client gets a GENERIC message — the real reason
+  // ("SUPABASE_URL missing") is logged server-side only, never leaked.
+  assertEquals(env.error.message, "Server configuration error.");
+  assertEquals(env.error.message.includes("SUPABASE_URL"), false);
   // QA-B-068/069 — the CONFIG_ERROR path is also decorated with CORS + correlation id.
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
   assertEquals((res.headers.get("x-correlation-id") ?? "").length > 0, true);
@@ -140,6 +143,9 @@ Deno.test("QA-B-063: an uncaught throw during dispatch is mapped to a 500 SERVER
   const env = await res.json();
   assertEquals(env.data, null);
   assertEquals(env.error.code, "SERVER_ERROR");
+  // ENG-7 (SEC-6): the 500 body carries a GENERIC message — no raw internal /
+  // DB / stack detail leaks to the client (the real detail is logged only).
+  assertEquals(env.error.message, "An unexpected error occurred.");
   // CORS + correlation id are still attached on the 500 path.
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
   assertEquals((res.headers.get("x-correlation-id") ?? "").length > 0, true);

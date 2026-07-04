@@ -1,5 +1,5 @@
 import type { AppConfig } from "../config.ts";
-import { envelope, errorEnvelope, jsonResponse, readJson } from "../http.ts";
+import { envelope, errorEnvelope, jsonResponse, MAX_BULK_ITEMS, readJson } from "../http.ts";
 import {
   authenticateRequest,
   organizationIdFromClaims,
@@ -818,6 +818,14 @@ export async function handleTeacherHomeworkBulkReview(
     return errorEnvelope(
       "VALIDATION_ERROR",
       "homework_id or submission_ids is required",
+      422,
+    );
+  }
+  // ENG-8 (SEC-11): cap the bulk array before any per-row DB work.
+  if (submissionIds.length > MAX_BULK_ITEMS) {
+    return errorEnvelope(
+      "VALIDATION_ERROR",
+      `Maximum ${MAX_BULK_ITEMS} submission_ids per request`,
       422,
     );
   }
