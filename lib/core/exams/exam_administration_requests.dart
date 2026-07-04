@@ -40,6 +40,7 @@ class UpdateExamMarkRequest {
     required this.markEntryId,
     required this.marksObtained,
     this.status = ExamMarkStatus.present,
+    this.expectedVersion,
   });
 
   final String markEntryId;
@@ -51,6 +52,11 @@ class UpdateExamMarkRequest {
   /// EXM-D6 — attendance status. A non-present status marks the student
   /// absent/medical/debarred and clears their marks.
   final ExamMarkStatus status;
+
+  /// REL-5 — the `row_version` this edit was based on. Sent as `expectedVersion`
+  /// so the backend's optimistic-lock guard rejects a stale overwrite on the
+  /// FIRST write (not only on a post-conflict retry). Null ⇒ unconditional write.
+  final int? expectedVersion;
 }
 
 /// EXM-1 — one entry inside a fast bulk marks save. A non-present ([status] not

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,10 @@ import 'package:go_router/go_router.dart';
 import '../../core/config/finance_approval_config.dart';
 import '../../core/errors/api_failure.dart';
 import '../../core/errors/api_failure_mapper.dart';
+import '../../core/reliability/drafts/draft_autosave.dart';
+import '../../core/reliability/drafts/draft_model.dart';
+import '../../core/reliability/drafts/draft_providers.dart';
+import '../../core/reliability/model/draft_record.dart';
 import '../../core/testing/qa_test_keys.dart';
 import '../../router/route_names.dart';
 import '../../shared/forms/akshara_form_field.dart';
@@ -720,9 +726,12 @@ Future<void> showRecordCollectionDialog(
                   ? invoices.first.id
                   : (journeyInvoice ?? defaultInvoiceId)));
 
-  var selectedInvoiceId = preferredId;
-  final invoiceController = TextEditingController(text: preferredId);
-  final amountController = TextEditingController(text: defaultAmount);
+  // REL-3 — field state + draft autosave/recovery live in a ConsumerStatefulWidget
+  // so an interrupted collection (phone-lock / app-switch / kill) is never lost.
+  // The form reports the live values back through [onChanged]; the outer flow
+  // keeps ownership of the actual money mutation + success/error handling.
+  var invoiceId = preferredId;
+  var amount = defaultAmount;
   var paymentMethod = 'UPI';
 
   final confirmed = await showAksharaDialog<bool>(
@@ -731,45 +740,18 @@ Future<void> showRecordCollectionDialog(
       title: 'Record collection',
       icon: Icons.payments_outlined,
       scrollable: true,
-      content: AksharaDialogFormBody(
-        children: [
-          if (usePicker)
-            AksharaSearchableDropdown(
-              key: QaTestKeys.financeCollectionInvoiceField,
-              label: 'Invoice',
-              value: labelById[selectedInvoiceId] ?? labelById.values.first,
-              options: labelById.values.toList(),
-              onChanged: (label) {
-                final id = idByLabel[label];
-                if (id != null) selectedInvoiceId = id;
-              },
-            )
-          else
-            AksharaFormField(
-              key: QaTestKeys.financeCollectionInvoiceField,
-              label: 'Invoice ID',
-              controller: invoiceController,
-            ),
-          AksharaFormField(
-            key: QaTestKeys.financeCollectionAmountField,
-            label: 'Amount collected',
-            controller: amountController,
-            keyboardType: TextInputType.number,
-          ),
-          DropdownMenu<String>(
-            initialSelection: paymentMethod,
-            label: const Text('Payment method'),
-            expandedInsets: EdgeInsets.zero,
-            dropdownMenuEntries: const [
-              DropdownMenuEntry(value: 'Cash', label: 'Cash'),
-              DropdownMenuEntry(value: 'UPI', label: 'UPI'),
-              DropdownMenuEntry(value: 'Card', label: 'Card'),
-            ],
-            onSelected: (value) {
-              if (value != null) paymentMethod = value;
-            },
-          ),
-        ],
+      content: _RecordCollectionForm(
+        usePicker: usePicker,
+        labelById: labelById,
+        idByLabel: idByLabel,
+        initialInvoiceId: preferredId,
+        initialAmount: defaultAmount,
+        initialMethod: paymentMethod,
+        onChanged: (i, a, m) {
+          invoiceId = i;
+          amount = a;
+          paymentMethod = m;
+        },
       ),
       actions: _dialogActions(
         context,
@@ -782,18 +764,22 @@ Future<void> showRecordCollectionDialog(
 
   if (confirmed != true || !context.mounted) return;
 
-  final invoiceId =
-      usePicker ? selectedInvoiceId : invoiceController.text.trim();
-
   try {
     final result = await ref.read(createCollectionProvider.notifier).execute(
           CreateCollectionRequest(
-            invoiceId: invoiceId,
-            amountCollected: amountController.text.trim(),
+            invoiceId: invoiceId.trim(),
+            amountCollected: amount.trim(),
             paymentMethod: paymentMethod,
             collectionDate: 'Today',
           ),
         );
+    // REL-3 — a recorded (or safely queued) collection is done: drop the draft
+    // so it is never re-offered. Fees are INSERT + idempotency-key (REL-1), so
+    // there is no base row_version to overwrite (REL-5 documents this: the
+    // idempotency key — not optimistic concurrency — dedupes a retried collect).
+    unawaited(
+      ref.read(draftControllerProvider).discard(_kFeeCollectionDraftKey),
+    );
     if (!context.mounted || result == null) return;
     if (result.pendingSync) {
       // Refinement R1: an offline-recorded collection is NOT server-confirmed.
@@ -821,6 +807,231 @@ Future<void> showRecordCollectionDialog(
   } catch (error) {
     if (!context.mounted) return;
     _showMutationError(context, error);
+  }
+}
+
+/// REL-3 — one draft per cashier for the in-progress fee collection; scoped to
+/// the signed-in user by [DraftController].
+const String _kFeeCollectionDraftKey = 'fee_collection';
+
+/// REL-3 — the "Record collection" form body, extracted into a
+/// [ConsumerStatefulWidget] so it can mix in [DraftAutosaveMixin]: every field
+/// change autosaves a debounced draft (and the draft is flushed when the app is
+/// backgrounded), so a half-entered payment survives a phone-lock / app-switch /
+/// kill. Because it is a money form, a recovered draft is never silently
+/// prefilled — the cashier is asked to Resume or Discard first. The parent
+/// dialog keeps ownership of the actual mutation; this widget only reports the
+/// live field values back via [onChanged].
+class _RecordCollectionForm extends ConsumerStatefulWidget {
+  const _RecordCollectionForm({
+    required this.usePicker,
+    required this.labelById,
+    required this.idByLabel,
+    required this.initialInvoiceId,
+    required this.initialAmount,
+    required this.initialMethod,
+    required this.onChanged,
+  });
+
+  final bool usePicker;
+  final Map<String, String> labelById;
+  final Map<String, String> idByLabel;
+  final String initialInvoiceId;
+  final String initialAmount;
+  final String initialMethod;
+  final void Function(String invoiceId, String amount, String method) onChanged;
+
+  @override
+  ConsumerState<_RecordCollectionForm> createState() =>
+      _RecordCollectionFormState();
+}
+
+class _RecordCollectionFormState extends ConsumerState<_RecordCollectionForm>
+    with DraftAutosaveMixin {
+  late final TextEditingController _invoiceController;
+  late final TextEditingController _amountController;
+  late String _selectedInvoiceId;
+  late String _paymentMethod;
+
+  /// A recoverable draft awaiting the cashier's Resume / Discard choice. Held
+  /// (not applied) so we never silently prefill a money amount.
+  DraftRecord? _recoverable;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedInvoiceId = widget.initialInvoiceId;
+    _paymentMethod = widget.initialMethod;
+    _invoiceController = TextEditingController(text: widget.initialInvoiceId)
+      ..addListener(_notify);
+    _amountController = TextEditingController(text: widget.initialAmount)
+      ..addListener(_notify);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForDraft());
+  }
+
+  Future<void> _checkForDraft() async {
+    final record = await draftController.recover(_kFeeCollectionDraftKey);
+    if (record == null || !mounted) return;
+    setState(() => _recoverable = record);
+  }
+
+  String get _effectiveInvoiceId =>
+      widget.usePicker ? _selectedInvoiceId : _invoiceController.text.trim();
+
+  /// Report the live values to the parent + schedule a debounced autosave.
+  void _notify() {
+    widget.onChanged(
+      _effectiveInvoiceId,
+      _amountController.text,
+      _paymentMethod,
+    );
+    scheduleDraftSave();
+  }
+
+  void _resumeDraft() {
+    final record = _recoverable;
+    if (record == null) return;
+    final json = record.json;
+    final amount = json['amount']?.toString() ?? '';
+    final method = json['method']?.toString();
+    final invoiceId = json['invoiceId']?.toString();
+    setState(() {
+      if (amount.isNotEmpty) _amountController.text = amount;
+      if (method != null && method.isNotEmpty) _paymentMethod = method;
+      if (invoiceId != null &&
+          invoiceId.isNotEmpty &&
+          (!widget.usePicker || widget.labelById.containsKey(invoiceId))) {
+        _selectedInvoiceId = invoiceId;
+        _invoiceController.text = invoiceId;
+      }
+      _recoverable = null;
+    });
+    _notify();
+  }
+
+  void _discardDraft() {
+    unawaited(discardDraftOnSubmit(_kFeeCollectionDraftKey));
+    setState(() => _recoverable = null);
+  }
+
+  @override
+  DraftModel? buildDraftSnapshot() {
+    final amount = _amountController.text.trim();
+    // Nothing worth saving until an amount is entered — never leave a stray
+    // draft for an untouched form.
+    if (amount.isEmpty) return null;
+    return MapDraft(
+      _kFeeCollectionDraftKey,
+      <String, dynamic>{
+        'invoiceId': _effectiveInvoiceId,
+        'amount': amount,
+        'method': _paymentMethod,
+      },
+      draftLabel: 'Fee collection',
+    );
+  }
+
+  @override
+  void dispose() {
+    _invoiceController.dispose();
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AksharaDialogFormBody(
+      children: [
+        if (_recoverable != null) _buildResumePrompt(context),
+        if (widget.usePicker)
+          AksharaSearchableDropdown(
+            key: QaTestKeys.financeCollectionInvoiceField,
+            label: 'Invoice',
+            value: widget.labelById[_selectedInvoiceId] ??
+                widget.labelById.values.first,
+            options: widget.labelById.values.toList(),
+            onChanged: (label) {
+              final id = widget.idByLabel[label];
+              if (id != null) {
+                setState(() => _selectedInvoiceId = id);
+                _notify();
+              }
+            },
+          )
+        else
+          AksharaFormField(
+            key: QaTestKeys.financeCollectionInvoiceField,
+            label: 'Invoice ID',
+            controller: _invoiceController,
+          ),
+        AksharaFormField(
+          key: QaTestKeys.financeCollectionAmountField,
+          label: 'Amount collected',
+          controller: _amountController,
+          keyboardType: TextInputType.number,
+        ),
+        DropdownMenu<String>(
+          initialSelection: _paymentMethod,
+          label: const Text('Payment method'),
+          expandedInsets: EdgeInsets.zero,
+          dropdownMenuEntries: const [
+            DropdownMenuEntry(value: 'Cash', label: 'Cash'),
+            DropdownMenuEntry(value: 'UPI', label: 'UPI'),
+            DropdownMenuEntry(value: 'Card', label: 'Card'),
+          ],
+          onSelected: (value) {
+            if (value != null) {
+              setState(() => _paymentMethod = value);
+              _notify();
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResumePrompt(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 18, color: theme.colorScheme.onSecondaryContainer),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'You have an unsaved collection. Resume where you left off?',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: theme.colorScheme.onSecondaryContainer),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                key: QaTestKeys.financeCollectionDraftDiscardButton,
+                onPressed: _discardDraft,
+                child: const Text('Discard'),
+              ),
+              TextButton(
+                key: QaTestKeys.financeCollectionDraftResumeButton,
+                onPressed: _resumeDraft,
+                child: const Text('Resume'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

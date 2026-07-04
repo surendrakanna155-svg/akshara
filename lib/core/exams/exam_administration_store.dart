@@ -147,6 +147,7 @@ class ExamMarkRecord {
     this.marksObtained,
     this.published = false,
     this.status = ExamMarkStatus.present,
+    this.rowVersion,
   });
 
   final String id;
@@ -164,6 +165,12 @@ class ExamMarkRecord {
   /// and is shown via [ExamMarkStatus.displayCode].
   final ExamMarkStatus status;
 
+  /// REL-5 — the persisted optimistic-concurrency version this row was read at.
+  /// Carried into an edit as `expectedVersion` so the FIRST write (not only a
+  /// post-conflict retry) engages the server's lost-update guard. Null when the
+  /// read model predates versioning (backend then applies unconditionally).
+  final int? rowVersion;
+
   /// Display code (AB/ML/DB) for a non-present student, else null.
   String? get statusCode => status.displayCode;
 
@@ -172,6 +179,7 @@ class ExamMarkRecord {
     bool clearMarks = false,
     bool? published,
     ExamMarkStatus? status,
+    int? rowVersion,
   }) {
     return ExamMarkRecord(
       id: id,
@@ -182,6 +190,7 @@ class ExamMarkRecord {
       marksObtained: clearMarks ? null : (marksObtained ?? this.marksObtained),
       published: published ?? this.published,
       status: status ?? this.status,
+      rowVersion: rowVersion ?? this.rowVersion,
     );
   }
 }

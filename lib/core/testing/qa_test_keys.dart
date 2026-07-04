@@ -516,6 +516,13 @@ abstract final class QaTestKeys {
   static const financeCollectionSubmitButton =
       ValueKey<String>('finance_collection_submit_button');
 
+  // REL-3 — resume / discard the in-progress fee-collection draft.
+  static const financeCollectionDraftResumeButton =
+      ValueKey<String>('finance_collection_draft_resume_button');
+
+  static const financeCollectionDraftDiscardButton =
+      ValueKey<String>('finance_collection_draft_discard_button');
+
   static const financeCollectionSuccessSnackbar =
       ValueKey<String>('finance_collection_success_snackbar');
 

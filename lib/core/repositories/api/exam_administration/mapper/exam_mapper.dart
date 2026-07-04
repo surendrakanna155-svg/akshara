@@ -45,6 +45,7 @@ class ExamMapper {
     final status = ExamMarkStatus.fromWire(
       json['status'] as String? ?? json['attendance_status'] as String?,
     );
+    final versionRaw = json['rowVersion'] ?? json['row_version'];
     return ExamMarkRecord(
       id: json['id'] as String,
       examId: json['examId'] as String? ?? '',
@@ -57,6 +58,9 @@ class ExamMapper {
           : (marksRaw == null ? null : (marksRaw as num).toInt()),
       published: json['published'] as bool? ?? false,
       status: status,
+      // REL-5 — carry the read version so the next edit sends it as
+      // `expectedVersion` (first-write optimistic concurrency).
+      rowVersion: versionRaw is num ? versionRaw.toInt() : null,
     );
   }
 

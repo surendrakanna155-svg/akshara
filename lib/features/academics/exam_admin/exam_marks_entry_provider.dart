@@ -47,6 +47,7 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
     required String markEntryId,
     required int marksObtained,
     ExamMarkStatus status = ExamMarkStatus.present,
+    int? expectedVersion,
   }) async {
     final rbac = ref.read(rbacServiceProvider);
     if (!rbac.hasPermission(Permission.manageExamMarks)) {
@@ -69,6 +70,7 @@ class ExamMarksMutationNotifier extends AsyncNotifier<void> {
               markEntryId: markEntryId,
               marksObtained: marksObtained,
               status: status,
+              expectedVersion: expectedVersion,
             ),
           );
       ref.read(examAdminRefreshTickProvider.notifier).state++;

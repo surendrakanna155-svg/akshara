@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/reliability/drafts/draft_autosave.dart';
+import '../../../core/reliability/drafts/draft_model.dart';
 import '../../../core/reports/akshara_report_export_service.dart';
 import '../../../core/config/exam_approval_config.dart';
 import '../../../core/exams/exam_administration_requests.dart';
@@ -139,7 +143,8 @@ class _MarksEntryBody extends ConsumerStatefulWidget {
   ConsumerState<_MarksEntryBody> createState() => _MarksEntryBodyState();
 }
 
-class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody> {
+class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody>
+    with DraftAutosaveMixin {
   ExamSession get exam => widget.exam;
   List<ExamMarkRecord> get marks => widget.marks;
   bool get approvalRequired => widget.approvalRequired;
@@ -151,19 +156,85 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody> {
   final Map<String, FocusNode> _focusNodes = {};
   bool _savingAll = false;
 
+  // REL-3 — draft values recovered from a prior interrupted session, keyed by
+  // mark id. Applied when a row's controller is (re)created so an off-screen row
+  // scrolled into view rehydrates its typed-but-unsaved mark, not the persisted
+  // one. Cleared per-id once the row is saved through "Save all".
+  final Map<String, String> _resumedDraftValues = {};
+
+  /// REL-3 — one draft per exam marks grid; scoped to the signed-in teacher by
+  /// [DraftController]. `exam_marks:{examId}`.
+  String get _draftKey => 'exam_marks:${exam.id}';
+
   bool get _canEdit =>
       exam.phase == ExamLifecyclePhase.marksEntry ||
       exam.phase == ExamLifecyclePhase.scheduled;
 
   TextEditingController _controllerFor(ExamMarkRecord mark) {
-    return _controllers.putIfAbsent(
-      mark.id,
-      () => TextEditingController(text: mark.marksObtained?.toString() ?? ''),
-    );
+    return _controllers.putIfAbsent(mark.id, () {
+      final resumed = _resumedDraftValues[mark.id];
+      final controller = TextEditingController(
+        text: resumed ?? (mark.marksObtained?.toString() ?? ''),
+      );
+      // REL-3 — every keystroke schedules a debounced autosave of the dirty
+      // grid (also flushed when the app is backgrounded), so a half-entered
+      // roster survives a phone-lock / app-switch / kill.
+      controller.addListener(scheduleDraftSave);
+      return controller;
+    });
   }
 
   FocusNode _focusFor(String markId) =>
       _focusNodes.putIfAbsent(markId, FocusNode.new);
+
+  @override
+  void initState() {
+    super.initState();
+    // REL-3 — offer to resume a prior interrupted marks entry (WhatsApp-draft
+    // UX). Deferred to the first frame so the roster controllers exist.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      offerResumeIfAny(
+        draftKey: _draftKey,
+        onResume: (json) {
+          final rawMarks = (json['marks'] as Map?) ?? const {};
+          rawMarks.forEach((key, value) {
+            final id = key as String;
+            final text = value?.toString() ?? '';
+            _resumedDraftValues[id] = text;
+            _controllers[id]?.text = text;
+          });
+          if (mounted) setState(() {});
+        },
+      );
+    });
+  }
+
+  /// REL-3 — snapshot of every dirty, editable row (typed value differs from the
+  /// persisted mark). Returns null when nothing is worth saving so an untouched
+  /// grid never leaves a stray draft.
+  @override
+  DraftModel? buildDraftSnapshot() {
+    if (!_canEdit) return null;
+    final dirty = <String, dynamic>{};
+    for (final mark in marks) {
+      if (mark.published || !mark.status.isPresent) continue;
+      final controller = _controllers[mark.id];
+      if (controller == null) continue;
+      final raw = controller.text.trim();
+      if (raw.isEmpty) continue;
+      final parsed = int.tryParse(raw);
+      if (parsed == null) continue;
+      if (parsed == mark.marksObtained) continue; // unchanged vs persisted
+      dirty[mark.id] = raw;
+    }
+    if (dirty.isEmpty) return null;
+    return MapDraft(
+      _draftKey,
+      <String, dynamic>{'examId': exam.id, 'marks': dirty},
+      draftLabel: 'Marks · ${exam.classLabel} · ${exam.subject}',
+    );
+  }
 
   @override
   void dispose() {
@@ -223,6 +294,10 @@ class _MarksEntryBodyState extends ConsumerState<_MarksEntryBody> {
       final result = await ref
           .read(examMarksMutationProvider.notifier)
           .bulkSaveMarks(examId: exam.id, entries: entries);
+      // REL-3 — the typed marks are now persisted (or safely queued): drop the
+      // local draft + its resumed shadow so a completed grid is never re-offered.
+      _resumedDraftValues.clear();
+      unawaited(discardDraftOnSubmit(_draftKey));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -508,9 +583,16 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
   void didUpdateWidget(covariant _MarkEntryRow oldWidget) {
     super.didUpdateWidget(oldWidget);
     final current = widget.mark.marksObtained?.toString() ?? '';
-    // Only sync the field to the persisted value when the row is not being
-    // actively edited (focused) or saved — never clobber in-flight typing.
-    if (_controller.text != current && !_saving && !widget.focusNode.hasFocus) {
+    final previous = oldWidget.mark.marksObtained?.toString() ?? '';
+    // Pull the persisted value into the field only when the SERVER value
+    // actually changed (a save / roster refresh emitted a new mark) — not on
+    // every parent rebuild — so unsaved typing and a restored draft (REL-3) are
+    // never clobbered. Never override an actively edited (focused) or in-flight
+    // (saving) field.
+    if (current != previous &&
+        _controller.text != current &&
+        !_saving &&
+        !widget.focusNode.hasFocus) {
       _controller.text = current;
     }
   }
@@ -570,6 +652,9 @@ class _MarkEntryRowState extends ConsumerState<_MarkEntryRow> {
             markEntryId: widget.mark.id,
             marksObtained: marks,
             status: status,
+            // REL-5 — send the base row_version so a concurrent overwrite of
+            // this student's mark is caught on the first save (lost-update guard).
+            expectedVersion: widget.mark.rowVersion,
           );
     } catch (error) {
       if (!mounted) return;

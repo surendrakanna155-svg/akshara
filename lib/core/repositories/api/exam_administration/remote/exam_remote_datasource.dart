@@ -157,6 +157,11 @@ class ExamRemoteDataSource {
     final Map<String, dynamic> body = {
       'marksObtained': isPresent ? request.marksObtained : null,
       'status': request.status.wire,
+      // REL-5 — first-write optimistic concurrency: send the base row_version so
+      // the server's lost-update guard engages on the very first save. Omitted
+      // when the read model carried no version (legacy row) → unconditional write.
+      if (request.expectedVersion != null)
+        'expectedVersion': request.expectedVersion,
     };
     final ReliableWriter? reliable = _reliable;
     if (reliable == null) {
