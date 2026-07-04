@@ -91,20 +91,30 @@ export async function loadStudentSignals(
        -- reads use. Scope to the current academic year when known ($3); when the
        -- caller has no year, fall back to summing the student's OPEN accounts
        -- (mirrors the defaulters read: status='open' AND outstanding_amount>0).
-       -- overdue_days is derived from the earliest unpaid finance_invoices due
-       -- date, exactly as the defaulters/intelligence handlers compute it.
+       -- overdue_days is derived from the effective due date — the earliest
+       -- installment/term due date when a schedule exists, else the invoice's
+       -- own due_date — exactly as the finance defaulters/intelligence aging
+       -- computes it (FIN-6; mirrors finance_aging.overdueDaysSql).
        SELECT
          coalesce(sum(fsa.outstanding_amount), 0)::numeric AS outstanding,
          coalesce(
-           max(EXTRACT(day FROM now() - fi.due_date)) FILTER (WHERE fi.id IS NOT NULL),
+           max(EXTRACT(day FROM now() - fi.effective_due))
+             FILTER (WHERE fi.effective_due IS NOT NULL),
            0
          )::int AS overdue_days
        FROM finance_student_accounts fsa
-       LEFT JOIN finance_invoices fi ON fi.student_id = fsa.student_id
+       LEFT JOIN (
+         SELECT fi.student_id, fi.organization_id, fi.school_id,
+                COALESCE(
+                  (SELECT MIN(ii.due_date) FROM finance_invoice_installments ii
+                    WHERE ii.invoice_id = fi.id),
+                  fi.due_date) AS effective_due
+           FROM finance_invoices fi
+          WHERE fi.invoice_status IN ('issued', 'partially_paid')
+       ) fi ON fi.student_id = fsa.student_id
          AND fi.organization_id = fsa.organization_id
          AND fi.school_id = fsa.school_id
-         AND fi.invoice_status IN ('issued', 'partially_paid')
-         AND fi.due_date < CURRENT_DATE
+         AND fi.effective_due < CURRENT_DATE
        WHERE fsa.student_id = s.id
          AND fsa.organization_id = $1 AND fsa.school_id = $2
          AND fsa.status = 'open'

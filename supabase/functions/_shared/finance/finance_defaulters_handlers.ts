@@ -10,6 +10,7 @@ import {
 import { TenantDbNotConfiguredError, withTenantContext } from "../tenant_db.ts";
 import { tenantDbNotConfiguredResponse } from "../tenant_handlers.ts";
 import { listRecentContactsForStudents } from "./finance_recovery_repository.ts";
+import { overdueDaysSql } from "./finance_aging.ts";
 
 // STF-3 / INT-2 — GET /finance/defaulters. Aggregates real overdue student
 // accounts into the DefaultersDashboardData contract the Flutter client maps
@@ -84,13 +85,7 @@ export async function handleFinanceDefaulters(
               '') AS class_label,
             COALESCE(fsa.outstanding_amount, 0)::text AS outstanding,
             fsa.id::text AS fee_account_id,
-            COALESCE((
-              SELECT MAX(EXTRACT(day FROM now() - fi.due_date))::int
-                FROM finance_invoices fi
-               WHERE fi.student_id = fsa.student_id
-                 AND fi.organization_id = fsa.organization_id
-                 AND fi.invoice_status IN ('issued', 'partially_paid')
-                 AND fi.due_date < CURRENT_DATE), 0)::text AS days_overdue,
+            ${overdueDaysSql("fsa.student_id", "fsa.organization_id")}::text AS days_overdue,
             (SELECT u.phone FROM student_guardians sg
                JOIN users u ON u.id = sg.guardian_user_id
               WHERE sg.student_id = fsa.student_id AND u.phone IS NOT NULL

@@ -217,17 +217,39 @@ export async function issueInvoice(
     throw new InvalidInvoiceTransitionError(existing.invoice_status, "issue");
   }
 
+  // FIN-6: the issue transition now honours the school's `payments.due_days`
+  // setting (default 30) instead of a hardcoded +30, and generates the
+  // informational term-wise schedule — same as the create path. Removes the
+  // last hardcoded due date so ALL invoice aging keys off the configured
+  // schedule.
+  const now = new Date();
+  const invoiceDate = addDaysIso(now, 0);
+  const dueDays = parseInt(
+    await getFinanceSettingValue(db, organizationId, schoolId, "payments", "due_days", "30"),
+    10,
+  );
+  const dueDate = addDaysIso(now, Number.isFinite(dueDays) ? dueDays : 30);
+
   const rows = await db.queryObject<FinanceInvoiceRow>(
     `UPDATE finance_invoices
      SET invoice_status = 'issued',
-         invoice_date = CURRENT_DATE,
-         due_date = CURRENT_DATE + 30,
+         invoice_date = $4,
+         due_date = $5,
          updated_at = timezone('utc', now())
      WHERE id = $1 AND organization_id = $2 AND school_id = $3
      RETURNING *`,
-    [invoiceId, organizationId, schoolId],
+    [invoiceId, organizationId, schoolId, invoiceDate, dueDate],
   );
-  return rows[0]!;
+  const invoice = rows[0]!;
+  await generateInstallmentSchedule(
+    db,
+    organizationId,
+    schoolId,
+    invoice.id,
+    invoiceDate,
+    Number(invoice.total_amount ?? existing.total_amount),
+  );
+  return invoice;
 }
 
 export async function cancelInvoice(

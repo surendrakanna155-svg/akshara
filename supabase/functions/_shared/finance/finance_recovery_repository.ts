@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { overdueDaysSql } from "./finance_aging.ts";
 
 // FIN-R3/R4/R5/R6 — fee-recovery CRM data access over the tables created in
 // 20260823000000_finance_recovery_crm.sql. Additive: never touches the
@@ -160,13 +161,7 @@ export async function listCallQueue(
           '') AS class_label,
         COALESCE(fsa.outstanding_amount, 0)::text AS outstanding,
         fsa.id::text AS fee_account_id,
-        COALESCE((
-          SELECT MAX(EXTRACT(day FROM now() - fi.due_date))::int
-            FROM finance_invoices fi
-           WHERE fi.student_id = fsa.student_id
-             AND fi.organization_id = fsa.organization_id
-             AND fi.invoice_status IN ('issued', 'partially_paid')
-             AND fi.due_date < CURRENT_DATE), 0)::text AS days_overdue,
+        ${overdueDaysSql("fsa.student_id", "fsa.organization_id")}::text AS days_overdue,
         (SELECT u.phone FROM student_guardians sg
            JOIN users u ON u.id = sg.guardian_user_id
           WHERE sg.student_id = fsa.student_id AND u.phone IS NOT NULL

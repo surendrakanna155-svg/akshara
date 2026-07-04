@@ -1,4 +1,5 @@
 import type { TenantQueryClient } from "../tenant_db.ts";
+import { overdueDaysSql } from "./finance_aging.ts";
 
 export interface CollectionTrendPoint {
   month: string;
@@ -82,17 +83,12 @@ export async function computeFinanceCopilot(
     `SELECT fsa.student_id,
             COALESCE(s.display_name, 'Student') AS student_name,
             COALESCE(fsa.outstanding_amount, 0)::text AS outstanding,
-            COALESCE(MAX(EXTRACT(day FROM now() - fi.due_date)), 0)::text AS days_overdue
+            ${overdueDaysSql("fsa.student_id", "fsa.organization_id")}::text AS days_overdue
      FROM finance_student_accounts fsa
      LEFT JOIN students s ON s.id = fsa.student_id
-     LEFT JOIN finance_invoices fi ON fi.student_id = fsa.student_id
-       AND fi.organization_id = fsa.organization_id
-       AND fi.invoice_status IN ('issued', 'partially_paid')
-       AND fi.due_date < CURRENT_DATE
      WHERE fsa.organization_id = $1 AND fsa.school_id = $2
        AND fsa.status = 'open'
        AND fsa.outstanding_amount > 0
-     GROUP BY fsa.student_id, s.display_name, fsa.outstanding_amount
      ORDER BY fsa.outstanding_amount DESC
      LIMIT 20`,
     [orgId, schoolId],
