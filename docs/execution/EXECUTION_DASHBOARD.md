@@ -10,11 +10,11 @@
 
 | Field | Value |
 |---|---|
-| **Current Phase** | **P0 — Truth · Documentation · Live Verification** 🔴 (gates everything) |
-| **Current Wave** | **P0 · W2 — Safety Fixes** — all non-blocked legs ✅ **COMPLETE**; remainder ⏳ live-lane-gated |
-| **Wave Status** | **14 / 19 P0 tasks ✅.** W1 ✅ + W2 SEC-1/2/3, INFRA-4/5/6, CODE-1/2 ✅. ⛔ Remaining 5 (INFRA-1/3, TEST-1/2/3) **BLOCKED on the owner-provisioned live lane** — autonomous execution at the live boundary. |
-| **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (paused at live lane) |
-| **Last commit-gated wave** | **P0-CODE-2** (`3cbf45c`) — hide 8 backend-less surfaces; EOS FEATURE PASS, full suite 3567 pass |
+| **Current Phase** | **P1 — Remaining Backend & Code Fixes** 🟠 (P0 code/security ✅ 14/19; 5 live-lane tasks ⏳ owner-deferred) |
+| **Current Wave** | **P1-CODE-2 — Reliability polish** (REL-6..9) — 🔵 ready to start |
+| **Wave Status** | **P1-CODE-1 ✅ COMPLETE** (REL-1..5). P0: 14/19 ✅ code/security; 5 live-lane (INFRA-1/3, TEST-1/2/3) ⏳ owner-deferred to the dedicated live phase. |
+| **Planning** | 🔒 FROZEN 2026-07-04 → **AUTONOMOUS EXECUTION UNDER WAY** (P1 code waves; live lane deferred) |
+| **Last commit-gated wave** | **P1-CODE-1** (`afd1106`) — Reliability finish REL-1..5 (idempotency + boot/resume flush + bulk-marks ReliableWriter + drafts on marks & fee + first-write row_version); EOS RELIABILITY PASS, full suite 3584 pass |
 
 ## 2. Wave arithmetic
 
@@ -31,7 +31,7 @@ Waves as the roadmap + Autonomous Plan group them (a "wave" = one EOS-gated comm
 | P6 | 1 | P6-PILOT-1 (single + 3-school concurrent, stages 0–16) |
 | P7 | 1 | P7-CERT-1 (gates T/S/O/U/A/P/B/D + `QA-R-012`) |
 | P8 | 5 | P8-GA-1..5 |
-| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0 tasks), 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈66 (P5 variable) |
+| **Total** | **≈68** | **Completed: P0·W1 + W2 non-blocked legs (14/19 P0) + P1-CODE-1 (REL-1..5), 2026-07-04** · **Remaining:** P0 live-lane tail (INFRA-1/3, TEST-1/2/3) then ≈65 (P5 variable) |
 
 ## 3. Current Blockers
 

@@ -90,6 +90,12 @@ implement → validate → `/eos` PASS → commit → append a journal row here.
 
 | 2026-07-04 | `3cbf45c` | P0 | **P0-CODE-2** (W2) | `lib/router/surface_backend_gate.dart` (new gate), `lib/router/route_guards.dart` (ErpRouteGuard wiring), management/sis/control-center sub-navs (ConsumerWidget + filter), `test/router/surface_backend_gate_test.dart` | **PASS** (EOS FEATURE) | gate 4/4; analyze 0; full suite 3567 pass, 0 new failures | ENG-3/MOD-4 | P0-CODE-2 |
 
+| 2026-07-04 | `5908509` | P1 | **P1-CODE-1 · REL-1/REL-4** (Reliability finish, part 1) | Idempotency-Key Dio interceptor (all mutating verbs) + boot/app-resume `syncEngine.flush()` outbox flush | **PASS** (EOS RELIABILITY, wave-close `afd1106`) | universal idempotency (was ~4%); no dup on retry | REL-1, REL-4 | P1-CODE-1 |
+
+| 2026-07-04 | `66f9f35` | P1 | **P1-CODE-1 · REL-2** (part 2) | marks "Save all" (`bulkUpdateMarks`) routed through `ReliableWriter` (was raw `_dio.post`) | **PASS** (EOS RELIABILITY, wave-close `afd1106`) | grid Save-all queues idempotent/resumable | REL-2 | P1-CODE-1 |
+
+| 2026-07-04 | `afd1106` | P1 | **P1-CODE-1 · REL-3/REL-5** (part 3, wave-close) | `lib/features/academics/exam_admin/exam_marks_entry_screen.dart` (DraftAutosaveMixin on `_MarksEntryBodyState` + didUpdateWidget tighten), `lib/features/finance/finance_workflow_actions.dart` (extract `_RecordCollectionForm` + money-safe resume), exam store/requests/mapper/datasource/provider (`rowVersion`→`expectedVersion`), `lib/core/testing/qa_test_keys.dart`, +3 test files | **PASS** (EOS RELIABILITY) | analyze 0; full suite **3584 pass, 0 new failures** (2 known UX-7); +11 tests; backend untouched | REL-3, REL-5 | P1-CODE-1 |
+
 *(Wave-2 onward: the executing session appends one row per task as each passes EOS and commits.)*
 
 ---
