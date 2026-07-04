@@ -30,7 +30,7 @@
 | Phase | Tasks total | ✅ Complete | 🔵 In progress | ⚪ Pending | EOS-gated |
 |---|---:|---:|---:|---:|---|
 | **Planning** | — | ✅ FROZEN 2026-07-04 | — | — | audit-verified |
-| P0 — Truth/Docs/Live-Verify | 19 | 1 (P0-DOC-3, planning) | 0 | 18 | per task |
+| P0 — Truth/Docs/Live-Verify | 19 | 5 (DOC-1/2/3/4/5 — **W1 ✅ 2026-07-04**) | 0 | 14 | per task |
 | P1 — Backend & Code Fixes | 13 (+22 PROD waves incl. P1-PROD-22 staff-attendance GA track) | 0 | 0 | all | per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | per wave |
 | P3 — Adaptive AI (W1.1–1.5 · W2.0–2.9) | 2 (15 sub-waves) | 0 | 0 | all | per sub-wave |
@@ -40,10 +40,10 @@
 | P7 — Production Cert | 1 | 0 | 0 | 1 | QA-R-012 |
 | P8 — GA Readiness | 5 | 0 | 0 | 5 | RELEASE |
 
-**Overall:** 🔒 **PLANNING FROZEN (2026-07-04).** Implementation history starts from **Wave 1**. The next
-autonomous wave is defined in [`../roadmap/NEXT_ACTIVE_WAVE.md`](../roadmap/NEXT_ACTIVE_WAVE.md) (currently
-**P0 · W1 — Documentation Truth**). Execution begins on owner approval; each wave: implement → validate →
-`/eos` PASS → commit → append a journal row here.
+**Overall:** 🔵 **EXECUTING.** Planning frozen 2026-07-04; **Wave 1 (P0 · W1 — Documentation Truth) ✅ COMPLETE
+(commit `c2b8e27`, EOS DOCS PASS).** The next autonomous wave is defined in
+[`../roadmap/NEXT_ACTIVE_WAVE.md`](../roadmap/NEXT_ACTIVE_WAVE.md) (now **P0 · W2 — Safety Fixes**). Each wave:
+implement → validate → `/eos` PASS → commit → append a journal row here.
 
 ---
 
@@ -76,8 +76,9 @@ autonomous wave is defined in [`../roadmap/NEXT_ACTIVE_WAVE.md`](../roadmap/NEXT
 |---|---|---|---|---|---|---|---|---|
 | 2026-07-03 | (uncommitted) | Planning | P0-DOC-3 | docs/roadmap/*, docs/audits/*ROADMAP*, FINAL_QA_ROADMAP banner | n/a (planning) | ONE roadmap + ledger + pointers | DOC-3 | P0-DOC-3 |
 | 2026-07-04 | (uncommitted) | Planning | FREEZE | docs/roadmap/* (finalized), docs/design/adaptive-ai/ folded into P3, NEXT_ACTIVE_WAVE + FINALIZATION report | n/a (planning) | ROADMAP_FINALIZATION_REPORT.md | — | planning freeze |
+| 2026-07-04 | `c2b8e27` | P0 | **P0-DOC-1/2/4/5 (W1 — Documentation Truth)** | `docs/ProjectStatus.md` (rewrite), `docs/FINAL_QA_MASTER_TRACKER.md` (evidence-grade framing + over-claim re-scope), `docs/TechnicalDebt/TD-P0-01-RLS-Enforcement.md` (closed-with-residual), `docs/AuditArchitecture.md` (target-not-built banner), `docs/Operations/{Backup,Restore}-Runbook.md` (→ redirect stubs), `docs/README.md`, `.gitignore` (govern `.claude/skills|commands`; ignore golden-failure diffs + `flutter_*.log`), + ~600-file cleanup/governance tree committed · 766 files | **PASS** (EOS DOCS) | `flutter analyze` 0; docs-only (0 `lib/**`/`supabase/**`); tracker frozen (0 rows rewritten); cleanup = moves-to-archive (content preserved) | DOC-1, DOC-2, DOC-4/QA-1, DB-9/DOC-5, DB-6/DOC-6, DOC-7 | P0-DOC-1/2/4/5 |
 
-*(Wave-1 onward: the executing session appends one row per task as each passes EOS and commits.)*
+*(Wave-2 onward: the executing session appends one row per task as each passes EOS and commits.)*
 
 ---
 
