@@ -97,7 +97,7 @@ Hard gates: P0 gates P4/P6/P7/P8 · P1-CODE-1 → P2-UX-2 · P3-AI-1 → P3-AI-2
 | Phase | Wave units | ✅ Done | 🔵 In progress | ⚪ Pending | Gate |
 |---|---:|---:|---:|---:|---|
 | Planning | — | 🔒 FROZEN + reviewed | — | — | audit + final review |
-| P0 — Truth/Docs/Live-Verify | 3 (19 tasks; DOC-3 ✅) | **1** (W1 ✅) | 0 | 2 | EOS per task |
+| P0 — Truth/Docs/Live-Verify | 3 (19 tasks; DOC-3 ✅) | **1** (W1 ✅) | 1 (W2 — SEC-1 ✅; SEC-2/3, CODE-1, INFRA legs open) | 1 (W3) | EOS per task |
 | P1 — Backend & Code Fixes | 35 | 0 | 0 | 35 | EOS per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | EOS UX per wave |
 | P3 — Adaptive AI | 15 sub-waves | 0 | 0 | 15 | EOS AI per sub-wave |

@@ -30,7 +30,7 @@
 | Phase | Tasks total | ✅ Complete | 🔵 In progress | ⚪ Pending | EOS-gated |
 |---|---:|---:|---:|---:|---|
 | **Planning** | — | ✅ FROZEN 2026-07-04 | — | — | audit-verified |
-| P0 — Truth/Docs/Live-Verify | 19 | 5 (DOC-1/2/3/4/5 — **W1 ✅ 2026-07-04**) | 0 | 14 | per task |
+| P0 — Truth/Docs/Live-Verify | 19 | 6 (DOC-1/2/3/4/5 **W1 ✅**; SEC-1 **W2**) | 1 (W2 in progress) | 12 | per task |
 | P1 — Backend & Code Fixes | 13 (+22 PROD waves incl. P1-PROD-22 staff-attendance GA track) | 0 | 0 | all | per wave |
 | P2 — UI/UX | 5 | 0 | 0 | 5 | per wave |
 | P3 — Adaptive AI (W1.1–1.5 · W2.0–2.9) | 2 (15 sub-waves) | 0 | 0 | all | per sub-wave |
