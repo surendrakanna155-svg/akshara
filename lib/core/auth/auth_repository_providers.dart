@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../audit/audit_provider.dart';
@@ -52,6 +53,16 @@ final apiAuthRepositoryProvider = Provider<ApiAuthRepository>((ref) {
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   if (isAuthApiEnabled(ref)) {
     return ref.read(apiAuthRepositoryProvider);
+  }
+  // SEC-9: a release binary must never fall back to mock auth. `kReleaseMode` is
+  // a compile-time const, so in a release build the `return const
+  // MockAuthRepository()` below is dead code and the mock is tree-shaken out of
+  // the binary. In a valid release, API mode is force-enabled (SEC-1), so this
+  // path is unreachable anyway; the throw is the fail-closed backstop.
+  if (kReleaseMode) {
+    throw StateError(
+      'Mock auth is unavailable in a release build; ENABLE_API_MODE must be set.',
+    );
   }
   return const MockAuthRepository();
 });

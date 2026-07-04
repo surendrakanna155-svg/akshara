@@ -41,7 +41,7 @@ disposition: a Master-Roadmap task (`docs/audits/MASTER_EXECUTION_ROADMAP.md`), 
 | DOC-7 backup-runbook duplication | Low | → **P0-DOC-5** ✅ Fixed 2026-07-04 (P0·W1) |
 | SEC-1 release default=dev · SEC-2 debug-signing fallback | High | → **P0-SEC-1** ✅ Fixed 2026-07-04 (P0·W2) |
 | SEC-3 PII in plaintext SharedPreferences | High | → **P0-SEC-2** ✅ Fixed 2026-07-04 (P0·W2) |
-| SEC-9 mock/QA code in release binary · SEC-10 ENABLE_DEMO_AUTH prod-guard | Med | → **P0-SEC-3** |
+| SEC-9 mock/QA code in release binary · SEC-10 ENABLE_DEMO_AUTH prod-guard | Med | → **P0-SEC-3** ✅ Fixed 2026-07-04 (P0·W2) — mock repo + QA-login route behind `kReleaseMode` const-branch (tree-shaken out of release + fail-closed); demo-auth prod-guarded via SEC-1 |
 | LV-3 no off-site backup (= OPS-1 offsite half) | High | → **P0-INFRA-1** |
 | LV-1 no WAL/PITR (= OPS-1 RPO half) | High | → **P0-INFRA-2** |
 | LV-6 alert delivery unwired (= OPS-3) | Med | → **P0-INFRA-3** |

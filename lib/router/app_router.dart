@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -171,11 +172,18 @@ GoRouter createAppRouter({
         name: 'login',
         builder: (context, state) => const LoginScreen(),
       ),
-      GoRoute(
-        path: RouteNames.qaLogin,
-        name: 'qaLogin',
-        builder: (context, state) => const QaLoginScreen(),
-      ),
+      // SEC-10: the QA persona-login route is registered ONLY in non-release
+      // builds. `kReleaseMode` is a compile-time const, so in a release build
+      // this element is dead-code-eliminated and `QaLoginScreen` (with its
+      // hardcoded personas/phone numbers) is tree-shaken out of the binary.
+      // QA login is already runtime-disabled in production (SEC-1); this removes
+      // the code path and data from the shipped app entirely.
+      if (!kReleaseMode)
+        GoRoute(
+          path: RouteNames.qaLogin,
+          name: 'qaLogin',
+          builder: (context, state) => const QaLoginScreen(),
+        ),
       GoRoute(
         path: RouteNames.otpVerification,
         name: 'otp',

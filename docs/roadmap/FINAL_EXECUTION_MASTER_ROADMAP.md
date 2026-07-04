@@ -80,7 +80,7 @@
 - **Evidence:** code + test; no PII in SharedPreferences. **EOS gate:** SEC PASS. **Done when:** PII at rest encrypted.
 
 ### P0-SEC-3 · 🟡 · SEC · Exclude mock/QA auth from release; guard demo-auth
-- **Depends:** — · **Complexity:** S · **Status:** ⚪ Pending · **Finding:** SEC-9, SEC-10
+- **Depends:** — · **Complexity:** S · **Status:** ✅ Complete (2026-07-04, P0·W2) · **Finding:** SEC-9, SEC-10
 - **Outcome:** mock/QA auth compiled out of release (flavor); `ENABLE_DEMO_AUTH` production-guarded.
 - **Evidence:** release-binary scan. **EOS gate:** SEC PASS. **Done when:** no demo/mock auth in a prod build.
 
